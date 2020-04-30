@@ -2,9 +2,9 @@
 
 A **lighting fast GPU-accelerated** feature detection and matching library for Computer Vision on the web.
 
-[![Speedy feature detection](assets/demo-video.gif)](demos/video-features.html)
+[![Speedy feature detection](assets/demo-video.gif)](https://alemart.github.io/speedy-features.js/demos/video-features.html)
 
-[Click to open a demo](demos/video-features.html)
+[Click to open a demo](https://alemart.github.io/speedy-features.js/demos/video-features.html)
 
 ## Table of contents
 
@@ -33,10 +33,10 @@ Speedy is developed by [Alexandre Martins](https://github.com/alemart), a comput
 
 Try the demos and take a look at their source code:
 
-* [Hello, world!](demos/hello-world.html) (start here)
-* [Feature detection in an image](demos/image-features.html)
-* [Feature detection in a video](demos/video-features.html)
-* [Webcam demo](demos/webcam-features.html)
+* [Hello, world!](https://alemart.github.io/speedy-features.js/demos/hello-world.html) (start here)
+* [Feature detection in an image](https://alemart.github.io/speedy-features.js/demos/image-features.html)
+* [Feature detection in a video](https://alemart.github.io/speedy-features.js/demos/video-features.html)
+* [Webcam demo](https://alemart.github.io/speedy-features.js/demos/webcam-features.html)
 
 ## Installation
 
