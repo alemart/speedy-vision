@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Speedy feature detection in a video</title>
+        <script src="../dist/speedy-features.js" async></script>
+        <style>
+            form { display: flex; flex-wrap: wrap; align-items: baseline; margin-bottom: 1em; }
+            form > *:last-child { position: relative; left: 220px; }
+        </style>
+    </head>
+    <body>
+        <h1>Gotta go FAST!!!</h1>
+        <form>
+            <div>
+                Sensitivity:
+                <input type="range" min="20" max="80" value="50" id="slider">
+            </div>
+            <div>
+                FPS: <span id="fps">60</span>
+            </div>
+        </form>
+        <div>
+            <button id="play" onclick="pause()">Play / pause</button>
+        </div>
+        <video
+            src="../assets/roadrunner.mp4"
+            width="480" height="270"
+            loop muted hidden
+            title="Free video from https://pixabay.com/pt/videos/estrada-condu%C3%A7%C3%A3o-auto-estrada-1101/">
+        </video>
+        <script>
+window.onload = async function()
+{
+    // tell Speedy to load the video
+    const video = document.querySelector('video');
+    const media = await Speedy.load(video);
+    video.play();
+
+    // create a canvas to display the features
+    const canvas = createCanvas(media.width, media.height);
+    const context = canvas.getContext('2d');
+
+    // user controls
+    const slider = document.getElementById('slider');
+
+    // update features
+    let features = [];
+    function updateFeatures()
+    {
+        media.findFeatures({
+            method: 'fast',
+            settings: {
+                sensitivity: slider.value / 100.0,
+            }
+        }).then(f => {
+            features = f;
+            setTimeout(updateFeatures, 16);
+        });
+    }
+    updateFeatures();
+
+    // render video & features
+    function render()
+    {
+        context.drawImage(media.source, 0, 0);
+        renderFeatures(context, features, 4);
+        requestAnimationFrame(render);
+    }
+    render();
+
+    // display fps
+    const fps = document.getElementById('fps');
+    setInterval(() => fps.innerText = Speedy.fps.value, 500);
+}
+
+function createCanvas(width, height)
+{
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    document.body.appendChild(canvas);
+    return canvas;
+}
+
+function renderFeatures(context, features, size = 2, color = 'yellow')
+{
+    context.beginPath();
+    for(let feature of features)
+        context.rect(feature.x - size, feature.y - size, 2 * size, 2 * size);
+    context.strokeStyle = color;
+    context.stroke();
+}
+
+function pause()
+{
+    const video = document.querySelector('video');
+    if(video.paused)
+        video.play();
+    else
+        video.pause();
+}
+        </script>
+    </body>
+</html>

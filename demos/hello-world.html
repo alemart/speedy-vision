@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Speedy feature detection</title>
+        <script src="../dist/speedy-features.js" async></script>
+    </head>
+    <body>
+        <h1>Hello, Speedy!</h1>
+        <img src="../assets/speedy.jpg" alt="Image by JD Hancock (CC-BY)">
+        <script>
+window.onload = async function()
+{
+    // tell Speedy to load the image
+    const image = document.querySelector('img');
+    const media = await Speedy.load(image);
+
+    // create a canvas to display the features
+    const canvas = createCanvas(media.width, media.height);
+    const context = canvas.getContext('2d');
+
+    // find & render features
+    const features = await media.findFeatures();
+    context.drawImage(media.source, 0, 0);
+    renderFeatures(context, features);
+}
+
+function createCanvas(width, height)
+{
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    document.body.appendChild(canvas);
+    return canvas;
+}
+
+function renderFeatures(context, features, size = 2, color = 'yellow')
+{
+    context.beginPath();
+    for(let feature of features)
+        context.rect(feature.x - size, feature.y - size, 2 * size, 2 * size);
+    context.strokeStyle = color;
+    context.stroke();
+}
+        </script>
+    </body>
+</html>

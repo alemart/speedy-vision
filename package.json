@@ -1,0 +1,46 @@
+{
+  "name": "speedy-features.js",
+  "version": "0.1.0",
+  "description": "GPU-accelerated feature detection and matching for Computer Vision on the web",
+  "author": "Alexandre Martins <alemartf@gmail.com> (https://github.com/alemart)",
+  "homepage": "https://github.com/alemart/speedy-features.js",
+  "license": "Apache-2.0",
+  "main": "dist/speedy-features.js",
+  "scripts": {
+    "start": "webpack-dev-server --mode development",
+    "build": "npm run build-dev && npm run build-pro",
+    "build-dev": "NODE_ENV=development webpack --mode development",
+    "build-pro": "NODE_ENV=production webpack --mode production",
+    "watch": "webpack --watch",
+    "test": "ava"
+  },
+  "keywords": [
+    "computer vision",
+    "feature detection",
+    "feature extraction",
+    "feature description",
+    "feature matching",
+    "feature points",
+    "image corners",
+    "image features",
+    "image matching",
+    "interest points",
+    "corner detection",
+    "keypoint",
+    "descriptors",
+    "opencv",
+    "gpu",
+    "slam",
+    "fast"
+  ],
+  "devDependencies": {
+    "ava": "^3.8.1",
+    "clean-webpack-plugin": "^3.0.0",
+    "puppeteer": "^3.0.1",
+    "terser-webpack-plugin": "^2.3.6",
+    "webpack": "^4.42.1",
+    "webpack-cli": "^3.3.11",
+    "webpack-dev-server": "^3.10.3"
+  },
+  "dependencies": {}
+}

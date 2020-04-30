@@ -1,0 +1,156 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Webcam feature detection</title>
+        <script src="../dist/speedy-features.js" async></script>
+        <style>
+            form { display: flex; flex-wrap: wrap; align-items: baseline; }
+            form > * { margin: 0 1.5em 1em 0; }
+        </style>
+    </head>
+    <body>
+        <h1>Webcam demo</h1>
+        <form autocomplete="off">
+            <div>
+                Method:
+                <select id="method">
+                    <option value="fast9" selected>fast9 (default)</option>
+                    <option value="fast7">fast7</option>
+                    <option value="fast5">fast5</option>
+                </select>
+            </div>
+            <div>
+                Sensitivity:
+                <input type="range" min="20" max="80" value="50" id="slider">
+            </div>
+            <div>
+                Zoom:
+                <input type="radio" id="zoom-1" name="zoom" value="1"> <label for="zoom-1">1x</label>
+                <input type="radio" id="zoom-2" name="zoom" value="2"> <label for="zoom-2">2x</label>
+                <input type="radio" id="zoom-3" name="zoom" value="3"> <label for="zoom-3">3x</label>
+            </div>
+            <div>
+                FPS: <span id="fps">60</span>
+            </div>
+        </form>
+        <script>
+window.onload = async function()
+{
+    try {
+        // setup the camera
+        const video = await requestVideo();
+        const camera = createCanvas(video.videoWidth, video.videoHeight);
+        const camctx = camera.getContext('2d'); camera.hidden = true;
+        function renderCamera()
+        {
+            camctx.drawImage(video, 0, 0);
+            requestAnimationFrame(renderCamera);
+        }
+        renderCamera();
+
+        // tell Speedy to load the camera
+        const media = await Speedy.load(camera);
+
+        // create a canvas to display the features
+        const canvas = createCanvas(media.width, media.height);
+        const context = canvas.getContext('2d');
+
+        // user controls
+        const slider = document.getElementById('slider');
+        const method = document.getElementById('method');
+
+        // update features
+        let features = [];
+        function updateFeatures()
+        {
+            media.findFeatures({
+                method: method.value,
+                settings: {
+                    sensitivity: slider.value / 100.0,
+                }
+            }).then(f => {
+                features = f;
+                setTimeout(updateFeatures, 16);
+            });
+        }
+        updateFeatures();
+
+        // render video & features
+        function render()
+        {
+            context.drawImage(media.source, 0, 0);
+            renderFeatures(context, features, 4);
+            requestAnimationFrame(render);
+        }
+        render();
+
+        // display fps
+        const fps = document.getElementById('fps');
+        setInterval(() => fps.innerText = Speedy.fps.value, 500);
+
+        // adjust zoom
+        const zoom = document.getElementsByName('zoom');
+        zoom.forEach(z => (z.oninput = () => { if(z.checked) canvas.style.width = (media.width * z.value) + 'px'; }));
+        document.getElementById('zoom-2').click();
+    }
+    catch(err) {
+        alert(err.message);
+    }
+}
+
+function createCanvas(width, height)
+{
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    document.body.appendChild(canvas);
+    return canvas;
+}
+
+function renderFeatures(context, features, size = 2, color = 'yellow')
+{
+    context.beginPath();
+    for(let feature of features)
+        context.rect(feature.x - size, feature.y - size, 2 * size, 2 * size);
+    context.strokeStyle = color;
+    context.stroke();
+}
+
+function requestVideo(width = 426, height = 240)
+{
+    return new Promise((resolve, reject) => {
+        console.log('Accessing the webcam...');
+
+        if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
+            return reject(new Error('Unsupported browser: no mediaDevices.getUserMedia()'));
+
+        navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+                width: { ideal: width },
+                height: { ideal: height },
+                aspectRatio: { ideal: width / height },
+                facingMode: 'environment',
+            }
+        })
+        .then(stream => {
+            const video = document.createElement('video');
+            video.srcObject = stream;
+            video.onloadedmetadata = e => {
+                video.play();
+                console.log('The camera device is turned on!');
+                resolve(video, stream);
+            };
+        })
+        .catch(err => {
+            reject(new Error(
+                `Please give access to the camera and reload the page.\n` +
+                `${err.name}. ${err.message}.`
+            ));
+        });
+    });
+}
+        </script>
+    </body>
+</html>

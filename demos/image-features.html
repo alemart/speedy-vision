@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Speedy feature detection in an image</title>
+        <script src="../dist/speedy-features.js" async></script>
+        <style>
+            form { display: flex; flex-wrap: wrap; align-items: baseline; margin-bottom: 1em; }
+            form > *:last-child { position: relative; left: 450px; }
+        </style>
+    </head>
+    <body>
+        <h1>Image features</h1>
+        <form>
+            <div>
+                Sensitivity:
+                <input type="range" min="20" max="80" value="50" id="slider">
+            </div>
+            <div>
+                Found <span id="feature-count">0</span> features.
+            </div>
+        </form>
+        <img src="../assets/speedy-large.jpg" alt="Image by JD Hancock (CC-BY)" hidden>
+        <script>
+window.onload = async function()
+{
+    // tell Speedy to load the image
+    const image = document.querySelector('img');
+    const media = await Speedy.load(image);
+
+    // create a canvas to display the features
+    const canvas = createCanvas(media.width, media.height);
+    const context = canvas.getContext('2d');
+
+    // configure the slider
+    const slider = document.getElementById('slider');
+    slider.oninput = updateFeatures;
+
+    // update features
+    function updateFeatures()
+    {
+        // sensitivity is a value between 0.0 and 1.0
+        const sensitivity = slider.value / 100.0;
+
+        // find & render features
+        media.findFeatures({
+            method: 'fast', // use the FAST algorithm
+            settings: {
+                sensitivity: sensitivity,
+            }
+        }).then(features => {
+            context.drawImage(media.source, 0, 0);
+            renderFeatures(context, features, 4, 'white');
+            document.getElementById('feature-count').innerText = features.length;
+        });
+    }
+    updateFeatures();
+}
+
+function createCanvas(width, height)
+{
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    document.body.appendChild(canvas);
+    return canvas;
+}
+
+function renderFeatures(context, features, size = 2, color = 'yellow')
+{
+    context.beginPath();
+    for(let feature of features)
+        context.rect(feature.x - size, feature.y - size, 2 * size, 2 * size);
+    context.strokeStyle = color;
+    context.stroke();
+}
+        </script>
+    </body>
+</html>
