@@ -1,6 +1,6 @@
 # speedy-features.js
 
-A **lighting fast GPU-accelerated** feature detection and matching library for Computer Vision on the web.
+A **lightning fast GPU-accelerated** feature detection and matching library for Computer Vision on the web.
 
 [![Speedy feature detection](assets/demo-video.gif)](https://alemart.github.io/speedy-features.js/demos/video-features.html)
 
