@@ -9,7 +9,7 @@
  * Includes gpu.js (MIT license)
  * by the gpu.js team (http://gpu.rocks)
  * 
- * Date: 2020-04-30T19:59:33.432Z
+ * Date: 2020-04-30T21:12:39.704Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -20129,10 +20129,6 @@ class SpeedyMedia
             method: 'fast',
             settings: { },
         }, options);
-
-        // The media isn't ready yet
-        if(!this.ready)
-            return Promise.resolve([]);
 
         // Algorithm table
         const fn = ({
