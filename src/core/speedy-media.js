@@ -140,10 +140,6 @@ export class SpeedyMedia
             settings: { },
         }, options);
 
-        // The media isn't ready yet
-        if(!this.ready)
-            return Promise.resolve([]);
-
         // Algorithm table
         const fn = ({
             'fast' : settings => this._featureDetector.fast(9, settings),   // alias for fast9
