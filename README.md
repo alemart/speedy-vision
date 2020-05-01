@@ -40,7 +40,7 @@ Try the demos and take a look at their source code:
 
 ## Installation
 
-Download the latest release of speedy-feature.js and include it in the `<head>` section of your HTML page:
+Download the latest release of speedy-features.js and include it in the `<head>` section of your HTML page:
 
 ```html
 <script src="dist/speedy-features.min.js" async></script>
