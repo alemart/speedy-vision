@@ -22,7 +22,7 @@
 import { GPU } from '../../assets/gpu-browser'
 import { Utils } from '../utils/utils';
 import { rgb2grey } from '../gpu/colors';
-import { convolution } from '../gpu/convolution';
+import { conv2D, convX, convY } from '../gpu/convolution';
 import { encodeOffsets, encodeFeatureCount, encodeFeatures } from '../gpu/encode';
 import { fast5, fast7, fast9, fastScore8, fastScore12, fastScore16, fastSuppression } from '../gpu/fast';
 
@@ -137,13 +137,22 @@ function spawnKernels(gpu, width, height)
 
         // image filters
         filters: {
-            gauss5: createProgram(convolution([
+            // gaussian filter with sigma = 1.0
+            gauss1: createProgram(conv2D([
                 1, 4, 7, 4, 1,
                 4, 16, 26, 16, 4,
                 7, 26, 41, 26, 7,
                 4, 16, 26, 16, 4,
                 1, 4, 7, 4, 1,
             ], 1 / 237)),
+
+            // separable kernels for gaussian w/ sigma = 1.0
+            gauss1x: createProgram(convX([
+                0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
+            ])),//, 1 / 1.001)),
+            gauss1y: createProgram(convY([
+                0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
+            ])),//, 1 / 1.001)),
         },
 
         // feature detection
