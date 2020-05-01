@@ -25,7 +25,7 @@ module.exports = (env, argv) => ({
     new webpack.DefinePlugin({
       'PACKAGE_VERSION': JSON.stringify(version),
     }),
-  ].concat(argv.mode == 'development' ? [new CleanWebpackPlugin()] : []),
+  ],//.concat(argv.mode == 'development' ? [new CleanWebpackPlugin()] : []),
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: argv.mode == 'development' ? 'speedy-features.js' : 'speedy-features.min.js',
