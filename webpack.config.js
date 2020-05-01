@@ -25,7 +25,7 @@ module.exports = (env, argv) => ({
     new webpack.DefinePlugin({
       'PACKAGE_VERSION': JSON.stringify(version),
     }),
-  ],//.concat(argv.mode == 'development' ? [new CleanWebpackPlugin()] : []),
+  ],
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: argv.mode == 'development' ? 'speedy-features.js' : 'speedy-features.min.js',
@@ -36,7 +36,8 @@ module.exports = (env, argv) => ({
   devServer: {
       host: process.env.HOST || 'localhost',
       port: process.env.PORT || 8080,
-      writeToDisk: true,
+      contentBase: __dirname,
+      publicPath: '/dist/',
   },
   optimization: argv.mode == 'development' ? { minimize: false } : {
       minimizer: [new TerserPlugin({
