@@ -9,7 +9,7 @@
  * Includes gpu.js (MIT license)
  * by the gpu.js team (http://gpu.rocks)
  * 
- * Date: 2020-05-03T00:46:04.704Z
+ * Date: 2020-05-03T02:23:25.862Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -100,10 +100,445 @@ var Speedy =
 /************************************************************************/
 /******/ ({
 
-/***/ "./assets/gpu-browser.js":
-/*!*******************************!*\
-  !*** ./assets/gpu-browser.js ***!
-  \*******************************/
+/***/ "./src/core/feature-detector.js":
+/*!**************************************!*\
+  !*** ./src/core/feature-detector.js ***!
+  \**************************************/
+/*! exports provided: FeatureDetector */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FeatureDetector", function() { return FeatureDetector; });
+/* harmony import */ var _gpu_gpu_kernels__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu/gpu-kernels */ "./src/gpu/gpu-kernels.js");
+/* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-feature */ "./src/core/speedy-feature.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/*
+ * speedy-features.js
+ * GPU-accelerated feature detection and matching for Computer Vision on the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * feature-detector.js
+ * Feature detection facade
+ */
+
+
+
+
+
+/**
+ * FeatureDetector encapsulates
+ * feature detection algorithms
+ */
+class FeatureDetector
+{
+    /**
+     * Class constructor
+     * @param {SpeedyMedia} media
+     */
+    constructor(media)
+    {
+        this._media = media;
+        this._gpu = new _gpu_gpu_kernels__WEBPACK_IMPORTED_MODULE_0__["GPUKernels"](media.width, media.height);
+    }
+
+    /**
+     * FAST corner detection
+     * @param {number} [n] We'll run FAST-n, where n must be 9 (default), 7 or 5
+     * @param {object} [userSettings ]
+     */
+    fast(n = 9, userSettings = { })
+    {
+        // create settings object
+        const settings = Object.assign({ }, {
+            // default settings
+            threshold: 10,
+            denoise: true,
+        }, userSettings);
+
+        // convert a sensitivity value in [0,1],
+        // if it's defined, to a FAST threshold
+        if(settings.hasOwnProperty('sensitivity')) {
+            const sensitivity = Math.max(0, Math.min(settings.sensitivity, 1));
+            settings.threshold = 1 - Math.tanh(2.77 * sensitivity);
+        }
+        else {
+            const threshold = Math.max(0, Math.min(settings.threshold, 255));
+            settings.threshold = threshold / 255;
+        }
+
+        // validate input
+        if(n != 9 && n != 5 && n != 7)
+            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].fatal(`Not implemented: FAST-${n}`); // this shouldn't happen...
+
+        // pre-processing the image...
+        const smoothed = settings.denoise ?
+            this._gpu.filters.gauss1(this._media.source) :
+            this._media.source;
+        const greyscale = this._gpu.colors.rgb2grey(smoothed);
+
+        // keypoint detection
+        const rawCorners = (({
+            5:  () => this._gpu.keypoints.fast5(greyscale, settings.threshold),
+            7:  () => this._gpu.keypoints.fast7(greyscale, settings.threshold),
+            9:  () => this._gpu.keypoints.fast9(greyscale, settings.threshold),
+        })[n])();
+        const corners = this._gpu.keypoints.fastSuppression(rawCorners);
+
+        // encoding result
+        const offsets = this._gpu.encoders.encodeOffsets(corners);
+        const keypointCount = this._gpu.encoders.countKeypoints(offsets);
+        this._gpu.encoders.optimizeKeypointEncoder(keypointCount);
+        const pixels = this._gpu.encoders.encodeKeypoints(offsets); // bottleneck
+
+        // done!
+        return this._decodeKeypoints(pixels);
+    }
+
+    // reads the keypoints from a flattened array of encoded pixels
+    _decodeKeypoints(pixels)
+    {
+        const [ w, h ] = [ this._media.width, this._media.height ];
+        let keypoints = [], x, y;
+
+        for(let i = 0; i < pixels.length; i += 4) {
+            x = (pixels[i+1] << 8) | pixels[i];
+            y = (pixels[i+3] << 8) | pixels[i+2];
+            if(x < w && y < h)
+                keypoints.push(new _speedy_feature__WEBPACK_IMPORTED_MODULE_1__["SpeedyFeature"](x, y));
+            else
+                break;
+        }
+
+        return keypoints;
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/speedy-feature.js":
+/*!************************************!*\
+  !*** ./src/core/speedy-feature.js ***!
+  \************************************/
+/*! exports provided: SpeedyFeature */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyFeature", function() { return SpeedyFeature; });
+/*
+ * speedy-features.js
+ * GPU-accelerated feature detection and matching for Computer Vision on the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-feature.js
+ * SpeedyFeature implementation
+ */
+
+/**
+ * A SpeedyFeature is a "corner",
+ * in an image with a position
+ * and an optional descriptor
+ */
+class SpeedyFeature
+{
+    /**
+     * Creates a new SpeedyFeature
+     * @param {number} x X position
+     * @param {number} y Y position
+     * @param {FeatureDescriptor} [descriptor] Feature descriptor
+     */
+    constructor(x, y, descriptor = null)
+    {
+        this._x = x|0;
+        this._y = y|0;
+        this._descriptor = descriptor;
+    }
+
+    /**
+     * Converts a SpeedyFeature to a representative string
+     * @returns {string}
+     */
+    toString()
+    {
+        return `(${this._x},${this._y})`;
+    }
+
+    /**
+     * The X position of the feature point
+     * @returns {number} X position
+     */
+    get x()
+    {
+        return this._x;
+    }
+
+    /**
+     * The y position of the feature point
+     * @returns {number} Y position
+     */
+    get y()
+    {
+        return this._y;
+    }
+
+    /**
+     * The descriptor of the feature point, or null
+     * if there isn't any
+     * @return {FeatureDescriptor|null} feature descriptor
+     */
+    get descriptor()
+    {
+        return this._descriptor;
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/speedy-media.js":
+/*!**********************************!*\
+  !*** ./src/core/speedy-media.js ***!
+  \**********************************/
+/*! exports provided: SpeedyMedia */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMedia", function() { return SpeedyMedia; });
+/* harmony import */ var _feature_detector__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./feature-detector */ "./src/core/feature-detector.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/*
+ * speedy-features.js
+ * GPU-accelerated feature detection and matching for Computer Vision on the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-media.js
+ * SpeedyMedia implementation
+ */
+
+
+
+
+/**
+ * SpeedyMedia encapsulates a media element
+ * (e.g., image, video, canvas) and makes it
+ * ready for feature detection
+ */
+class SpeedyMedia
+{
+    /**
+     * Class constructor
+     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} mediaSource The image, video or canvas to extract the feature points
+     * @param {function} onload Function called as soon as the media has been loaded
+     */
+    constructor(mediaSource, onload = (err, media) => {})
+    {
+        // initialize attributes
+        this._mediaSource = mediaSource;
+        this._width = 0;
+        this._height = 0;
+        this._featureDetector = null;
+        this._descriptorType = null;
+
+        // load the media
+        const dimensions = getMediaDimensions(mediaSource);
+        if(dimensions != null) {
+            // try to load the media until it's ready
+            (function loadMedia(dimensions, k = 500) {
+                if(dimensions.width > 0 && dimensions.height > 0) {
+                    this._width = dimensions.width;
+                    this._height = dimensions.height;
+                    this._featureDetector = new _feature_detector__WEBPACK_IMPORTED_MODULE_0__["FeatureDetector"](this);
+                    _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].log(`Loaded SpeedyMedia with a ${mediaSource}.`);
+                    onload(null, this);
+                }
+                else if(k > 0)
+                    setTimeout(() => loadMedia.call(this, getMediaDimensions(mediaSource), k-1), 10);
+                else
+                    onload(_utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].error(`Can't load SpeedyMedia with a ${mediaSource}: timeout.`), null);
+            }).call(this, dimensions);
+        }
+        else {
+            // invalid media source
+            this._mediaSource = null;
+            onload(_utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].error(`Can't load SpeedyMedia with a ${mediaSource}: invalid media source.`), null);
+        }
+    }
+
+    /**
+     * The media element (image, video, canvas) encapsulated by this SpeedyMedia object
+     * @returns {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} the media element
+     */
+    get source()
+    {
+        return this._mediaSource;
+    }
+
+    /**
+     * Gets the width of the media image
+     * @returns {number} image width
+     */
+    get width()
+    {
+        return this._width;
+    }
+
+    /**
+     * Gets the height of the media image
+     * @returns {number} image height
+     */
+    get height()
+    {
+        return this._height;
+    }
+
+    /**
+     * The type of the media (image, video, canvas) attached to this SpeedyMedia object
+     * @returns {string} image | video | canvas
+     */
+    get type()
+    {
+        return getMediaType(this._mediaSource);
+    }
+
+    /**
+     * The name of the feature descriptor in use,
+     * or null if there isn't any
+     * @returns {string | null}
+     */
+    get descriptor()
+    {
+        return this._descriptorType;
+    }
+
+    /**
+     * Modifies the SpeedyMedia so that it outputs feature
+     * descriptors associated with feature points
+     * @param {string} descriptorType descriptor name
+     * @param {object} [options] descriptor options
+     * @returns {SpeedyMedia} the object itself
+     */
+    setDescriptor(descriptorType, options = { })
+    {
+        // TODO
+        this._descriptorType = descriptorType ? String(descriptorType).toLowerCase() : null;
+        return this;
+    }
+
+    /**
+     * Finds image features
+     * @param {object} [options] Configuration object
+     * @returns {Promise} A Promise returning an Array of SpeedyFeature objects
+     */
+    findFeatures(options =  { })
+    {
+        const config = Object.assign({ }, {
+            method: 'fast',
+            settings: { },
+        }, options);
+
+        // Algorithm table
+        const fn = ({
+            'fast' : settings => this._featureDetector.fast(9, settings),   // alias for fast9
+            'fast9': settings => this._featureDetector.fast(9, settings),   // FAST-9,16 (default)
+            'fast7': settings => this._featureDetector.fast(7, settings),   // FAST-7,12
+            'fast5': settings => this._featureDetector.fast(5, settings),   // FAST-5,8
+        });
+
+        // Run the algorithm
+        return new Promise((resolve, reject) => {
+            const method = String(config.method).toLowerCase();
+
+            if(fn.hasOwnProperty(method)) {
+                const features = fn[method].call(this, config.settings);
+                resolve(features);
+            }
+            else
+                reject(_utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].warning(`Invalid method "${method}" for detecting features.`));
+        });
+    }
+}
+
+// get the { width, height } of a certain HTML element (image, video, canvas...)
+function getMediaDimensions(mediaSource)
+{
+    if(mediaSource && mediaSource.constructor && mediaSource.constructor.name) {
+        const element = mediaSource.constructor.name, key = {
+            HTMLImageElement: { width: 'naturalWidth', height: 'naturalHeight' },
+            HTMLVideoElement: { width: 'videoWidth', height: 'videoHeight' },
+            HTMLCanvasElement: { width: 'width', height: 'height' },
+        };
+
+        if(key.hasOwnProperty(element)) {
+            return {
+                width: mediaSource[key[element].width],
+                height: mediaSource[key[element].height]
+            };
+        }
+    }
+
+    return null;
+}
+
+// get a string corresponding to the media type (image, video, canvas)
+function getMediaType(mediaSource)
+{
+    if(mediaSource && mediaSource.constructor && mediaSource.constructor.name) {
+        const element = mediaSource.constructor.name, type = {
+            HTMLImageElement: 'image',
+            HTMLVideoElement: 'video',
+            HTMLCanvasElement: 'canvas',
+        };
+
+        if(type.hasOwnProperty(element))
+            return type[element];
+    }
+
+    return 'null';
+}
+
+/***/ }),
+
+/***/ "./src/gpu/gpu-browser.js":
+/*!********************************!*\
+  !*** ./src/gpu/gpu-browser.js ***!
+  \********************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -19552,441 +19987,6 @@ module.exports = {
 
 /***/ }),
 
-/***/ "./src/core/feature-detector.js":
-/*!**************************************!*\
-  !*** ./src/core/feature-detector.js ***!
-  \**************************************/
-/*! exports provided: FeatureDetector */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FeatureDetector", function() { return FeatureDetector; });
-/* harmony import */ var _gpu_gpu_kernels__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu/gpu-kernels */ "./src/gpu/gpu-kernels.js");
-/* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-feature */ "./src/core/speedy-feature.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/*
- * speedy-features.js
- * GPU-accelerated feature detection and matching for Computer Vision on the web
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * feature-detector.js
- * Feature detection facade
- */
-
-
-
-
-
-/**
- * FeatureDetector encapsulates
- * feature detection algorithms
- */
-class FeatureDetector
-{
-    /**
-     * Class constructor
-     * @param {SpeedyMedia} media
-     */
-    constructor(media)
-    {
-        this._media = media;
-        this._gpu = new _gpu_gpu_kernels__WEBPACK_IMPORTED_MODULE_0__["GPUKernels"](media.width, media.height);
-    }
-
-    /**
-     * FAST corner detection
-     * @param {number} [n] We'll run FAST-n, where n must be 9 (default), 7 or 5
-     * @param {object} [userSettings ]
-     */
-    fast(n = 9, userSettings = { })
-    {
-        // create settings object
-        const settings = Object.assign({ }, {
-            // default settings
-            threshold: 10,
-            denoise: true,
-        }, userSettings);
-
-        // convert a sensitivity value in [0,1],
-        // if it's defined, to a FAST threshold
-        if(settings.hasOwnProperty('sensitivity')) {
-            const sensitivity = Math.max(0, Math.min(settings.sensitivity, 1));
-            settings.threshold = 1 - Math.tanh(2.77 * sensitivity);
-        }
-        else {
-            const threshold = Math.max(0, Math.min(settings.threshold, 255));
-            settings.threshold = threshold / 255;
-        }
-
-        // validate input
-        if(n != 9 && n != 5 && n != 7)
-            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].fatal(`Not implemented: FAST-${n}`); // this shouldn't happen...
-
-        // pre-processing the image...
-        const smoothed = settings.denoise ?
-            this._gpu.filters.gauss1(this._media.source) :
-            this._media.source;
-        const greyscale = this._gpu.colors.rgb2grey(smoothed);
-
-        // keypoint detection
-        const rawCorners = (({
-            5:  () => this._gpu.keypoints.fast5(greyscale, settings.threshold),
-            7:  () => this._gpu.keypoints.fast7(greyscale, settings.threshold),
-            9:  () => this._gpu.keypoints.fast9(greyscale, settings.threshold),
-        })[n])();
-        const corners = this._gpu.keypoints.fastSuppression(rawCorners);
-
-        // encoding result
-        const offsets = this._gpu.encoders.encodeOffsets(corners);
-        const keypointCount = this._gpu.encoders.countKeypoints(offsets);
-        this._gpu.encoders.optimizeKeypointEncoder(keypointCount);
-        const pixels = this._gpu.encoders.encodeKeypoints(offsets); // bottleneck
-
-        // done!
-        return this._decodeKeypoints(pixels);
-    }
-
-    // reads the keypoints from a flattened array of encoded pixels
-    _decodeKeypoints(pixels)
-    {
-        const [ w, h ] = [ this._media.width, this._media.height ];
-        let keypoints = [], x, y;
-
-        for(let i = 0; i < pixels.length; i += 4) {
-            x = (pixels[i+1] << 8) | pixels[i];
-            y = (pixels[i+3] << 8) | pixels[i+2];
-            if(x < w && y < h)
-                keypoints.push(new _speedy_feature__WEBPACK_IMPORTED_MODULE_1__["SpeedyFeature"](x, y));
-            else
-                break;
-        }
-
-        return keypoints;
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/speedy-feature.js":
-/*!************************************!*\
-  !*** ./src/core/speedy-feature.js ***!
-  \************************************/
-/*! exports provided: SpeedyFeature */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyFeature", function() { return SpeedyFeature; });
-/*
- * speedy-features.js
- * GPU-accelerated feature detection and matching for Computer Vision on the web
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * speedy-feature.js
- * SpeedyFeature implementation
- */
-
-/**
- * A SpeedyFeature is a "corner",
- * in an image with a position
- * and an optional descriptor
- */
-class SpeedyFeature
-{
-    /**
-     * Creates a new SpeedyFeature
-     * @param {number} x X position
-     * @param {number} y Y position
-     * @param {FeatureDescriptor} [descriptor] Feature descriptor
-     */
-    constructor(x, y, descriptor = null)
-    {
-        this._x = x|0;
-        this._y = y|0;
-        this._descriptor = descriptor;
-    }
-
-    /**
-     * Converts a SpeedyFeature to a representative string
-     * @returns {string}
-     */
-    toString()
-    {
-        return `(${this._x},${this._y})`;
-    }
-
-    /**
-     * The X position of the feature point
-     * @returns {number} X position
-     */
-    get x()
-    {
-        return this._x;
-    }
-
-    /**
-     * The y position of the feature point
-     * @returns {number} Y position
-     */
-    get y()
-    {
-        return this._y;
-    }
-
-    /**
-     * The descriptor of the feature point, or null
-     * if there isn't any
-     * @return {FeatureDescriptor|null} feature descriptor
-     */
-    get descriptor()
-    {
-        return this._descriptor;
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/speedy-media.js":
-/*!**********************************!*\
-  !*** ./src/core/speedy-media.js ***!
-  \**********************************/
-/*! exports provided: SpeedyMedia */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMedia", function() { return SpeedyMedia; });
-/* harmony import */ var _feature_detector__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./feature-detector */ "./src/core/feature-detector.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/*
- * speedy-features.js
- * GPU-accelerated feature detection and matching for Computer Vision on the web
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * speedy-media.js
- * SpeedyMedia implementation
- */
-
-
-
-
-/**
- * SpeedyMedia encapsulates a media element
- * (e.g., image, video, canvas) and makes it
- * ready for feature detection
- */
-class SpeedyMedia
-{
-    /**
-     * Class constructor
-     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} mediaSource The image, video or canvas to extract the feature points
-     * @param {function} onload Function called as soon as the media has been loaded
-     */
-    constructor(mediaSource, onload = (err, media) => {})
-    {
-        // initialize attributes
-        this._mediaSource = mediaSource;
-        this._width = 0;
-        this._height = 0;
-        this._featureDetector = null;
-        this._descriptorType = null;
-
-        // load the media
-        const dimensions = getMediaDimensions(mediaSource);
-        if(dimensions != null) {
-            // try to load the media until it's ready
-            (function loadMedia(dimensions, k = 500) {
-                if(dimensions.width > 0 && dimensions.height > 0) {
-                    this._width = dimensions.width;
-                    this._height = dimensions.height;
-                    this._featureDetector = new _feature_detector__WEBPACK_IMPORTED_MODULE_0__["FeatureDetector"](this);
-                    _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].log(`Loaded SpeedyMedia with a ${mediaSource}.`);
-                    onload(null, this);
-                }
-                else if(k > 0)
-                    setTimeout(() => loadMedia.call(this, getMediaDimensions(mediaSource), k-1), 10);
-                else
-                    onload(_utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].error(`Can't load SpeedyMedia with a ${mediaSource}: timeout.`), null);
-            }).call(this, dimensions);
-        }
-        else {
-            // invalid media source
-            this._mediaSource = null;
-            onload(_utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].error(`Can't load SpeedyMedia with a ${mediaSource}: invalid media source.`), null);
-        }
-    }
-
-    /**
-     * The media element (image, video, canvas) encapsulated by this SpeedyMedia object
-     * @returns {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} the media element
-     */
-    get source()
-    {
-        return this._mediaSource;
-    }
-
-    /**
-     * Gets the width of the media image
-     * @returns {number} image width
-     */
-    get width()
-    {
-        return this._width;
-    }
-
-    /**
-     * Gets the height of the media image
-     * @returns {number} image height
-     */
-    get height()
-    {
-        return this._height;
-    }
-
-    /**
-     * The type of the media (image, video, canvas) attached to this SpeedyMedia object
-     * @returns {string} image | video | canvas
-     */
-    get type()
-    {
-        return getMediaType(this._mediaSource);
-    }
-
-    /**
-     * The name of the feature descriptor in use,
-     * or null if there isn't any
-     * @returns {string | null}
-     */
-    get descriptor()
-    {
-        return this._descriptorType;
-    }
-
-    /**
-     * Modifies the SpeedyMedia so that it outputs feature
-     * descriptors associated with feature points
-     * @param {string} descriptorType descriptor name
-     * @param {object} [options] descriptor options
-     * @returns {SpeedyMedia} the object itself
-     */
-    setDescriptor(descriptorType, options = { })
-    {
-        // TODO
-        this._descriptorType = descriptorType ? String(descriptorType).toLowerCase() : null;
-        return this;
-    }
-
-    /**
-     * Finds image features
-     * @param {object} [options] Configuration object
-     * @returns {Promise} A Promise returning an Array of SpeedyFeature objects
-     */
-    findFeatures(options =  { })
-    {
-        const config = Object.assign({ }, {
-            method: 'fast',
-            settings: { },
-        }, options);
-
-        // Algorithm table
-        const fn = ({
-            'fast' : settings => this._featureDetector.fast(9, settings),   // alias for fast9
-            'fast9': settings => this._featureDetector.fast(9, settings),   // FAST-9,16 (default)
-            'fast7': settings => this._featureDetector.fast(7, settings),   // FAST-7,12
-            'fast5': settings => this._featureDetector.fast(5, settings),   // FAST-5,8
-        });
-
-        // Run the algorithm
-        return new Promise((resolve, reject) => {
-            const method = String(config.method).toLowerCase();
-
-            if(fn.hasOwnProperty(method)) {
-                const features = fn[method].call(this, config.settings);
-                resolve(features);
-            }
-            else
-                reject(_utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].warning(`Invalid method "${method}" for detecting features.`));
-        });
-    }
-}
-
-// get the { width, height } of a certain HTML element (image, video, canvas...)
-function getMediaDimensions(mediaSource)
-{
-    if(mediaSource && mediaSource.constructor && mediaSource.constructor.name) {
-        const element = mediaSource.constructor.name, key = {
-            HTMLImageElement: { width: 'naturalWidth', height: 'naturalHeight' },
-            HTMLVideoElement: { width: 'videoWidth', height: 'videoHeight' },
-            HTMLCanvasElement: { width: 'width', height: 'height' },
-        };
-
-        if(key.hasOwnProperty(element)) {
-            return {
-                width: mediaSource[key[element].width],
-                height: mediaSource[key[element].height]
-            };
-        }
-    }
-
-    return null;
-}
-
-// get a string corresponding to the media type (image, video, canvas)
-function getMediaType(mediaSource)
-{
-    if(mediaSource && mediaSource.constructor && mediaSource.constructor.name) {
-        const element = mediaSource.constructor.name, type = {
-            HTMLImageElement: 'image',
-            HTMLVideoElement: 'video',
-            HTMLCanvasElement: 'canvas',
-        };
-
-        if(type.hasOwnProperty(element))
-            return type[element];
-    }
-
-    return 'null';
-}
-
-/***/ }),
-
 /***/ "./src/gpu/gpu-colors.js":
 /*!*******************************!*\
   !*** ./src/gpu/gpu-colors.js ***!
@@ -20372,8 +20372,8 @@ class GPUKernelGroup
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUKernels", function() { return GPUKernels; });
-/* harmony import */ var _assets_gpu_browser__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../assets/gpu-browser */ "./assets/gpu-browser.js");
-/* harmony import */ var _assets_gpu_browser__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_assets_gpu_browser__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _gpu_browser__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gpu-browser */ "./src/gpu/gpu-browser.js");
+/* harmony import */ var _gpu_browser__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_gpu_browser__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _gpu_colors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./gpu-colors */ "./src/gpu/gpu-colors.js");
 /* harmony import */ var _gpu_filters__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./gpu-filters */ "./src/gpu/gpu-filters.js");
@@ -20435,7 +20435,7 @@ class GPUKernels
 
         // create GPU
         this._canvas = createCanvas(this._width, this._height);
-        this._gpu = new _assets_gpu_browser__WEBPACK_IMPORTED_MODULE_0__["GPU"]({
+        this._gpu = new _gpu_browser__WEBPACK_IMPORTED_MODULE_0__["GPU"]({
             canvas: this._canvas,
             context: this._canvas.getContext('webgl2', { premultipliedAlpha: true }) // we're using alpha
         });
