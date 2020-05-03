@@ -9,7 +9,7 @@
  * Includes gpu.js (MIT license)
  * by the gpu.js team (http://gpu.rocks)
  * 
- * Date: 2020-05-01T22:07:47.172Z
+ * Date: 2020-05-03T00:46:04.704Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -19562,7 +19562,7 @@ module.exports = {
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FeatureDetector", function() { return FeatureDetector; });
-/* harmony import */ var _gpu_programs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gpu-programs */ "./src/core/gpu-programs.js");
+/* harmony import */ var _gpu_gpu_kernels__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu/gpu-kernels */ "./src/gpu/gpu-kernels.js");
 /* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-feature */ "./src/core/speedy-feature.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /*
@@ -19603,7 +19603,7 @@ class FeatureDetector
     constructor(media)
     {
         this._media = media;
-        this._gpu = new _gpu_programs__WEBPACK_IMPORTED_MODULE_0__["GPUPrograms"](media.width, media.height);
+        this._gpu = new _gpu_gpu_kernels__WEBPACK_IMPORTED_MODULE_0__["GPUKernels"](media.width, media.height);
     }
 
     /**
@@ -19613,7 +19613,9 @@ class FeatureDetector
      */
     fast(n = 9, userSettings = { })
     {
+        // create settings object
         const settings = Object.assign({ }, {
+            // default settings
             threshold: 10,
             denoise: true,
         }, userSettings);
@@ -19635,262 +19637,45 @@ class FeatureDetector
 
         // pre-processing the image...
         const smoothed = settings.denoise ?
-            this._gpu.filters.gauss1x(this._gpu.filters.gauss1y(this._media.source)) :
+            this._gpu.filters.gauss1(this._media.source) :
             this._media.source;
-
         const greyscale = this._gpu.colors.rgb2grey(smoothed);
 
-        // feature detection
+        // keypoint detection
         const rawCorners = (({
-            5:  () => this._gpu.features.fast5(greyscale, settings.threshold),
-            7:  () => this._gpu.features.fast7(greyscale, settings.threshold),
-            9:  () => this._gpu.features.fast9(greyscale, settings.threshold),
+            5:  () => this._gpu.keypoints.fast5(greyscale, settings.threshold),
+            7:  () => this._gpu.keypoints.fast7(greyscale, settings.threshold),
+            9:  () => this._gpu.keypoints.fast9(greyscale, settings.threshold),
         })[n])();
-
-        const rawCornersWithScores = (({
-            5:  () => this._gpu.features.fastScore8(rawCorners, settings.threshold),
-            7:  () => this._gpu.features.fastScore12(rawCorners, settings.threshold),
-            9:  () => this._gpu.features.fastScore16(rawCorners, settings.threshold),
-        })[n])();
-
-        const corners = this._gpu.features.fastSuppression(rawCornersWithScores);
+        const corners = this._gpu.keypoints.fastSuppression(rawCorners);
 
         // encoding result
-        const offsets = this._gpu.encoding.encodeOffsets(corners);
-        this._gpu.encoding.encodeFeatureCount(offsets);
-        const pixel = this._gpu.encoding.encodeFeatureCount.getPixels();
-        this._gpu.optimizeEncoder((pixel[3] << 24) | (pixel[2] << 16) | (pixel[1] << 8) | pixel[0]);
-        this._gpu.encoding.encodeFeatures(offsets, this._gpu.encoderLength);
+        const offsets = this._gpu.encoders.encodeOffsets(corners);
+        const keypointCount = this._gpu.encoders.countKeypoints(offsets);
+        this._gpu.encoders.optimizeKeypointEncoder(keypointCount);
+        const pixels = this._gpu.encoders.encodeKeypoints(offsets); // bottleneck
 
         // done!
-        return this._decodeFeatures(this._gpu.encoding.encodeFeatures);
+        return this._decodeKeypoints(pixels);
     }
 
-    // reads the corners from a processed image
-    _decodeFeatures(texture)
+    // reads the keypoints from a flattened array of encoded pixels
+    _decodeKeypoints(pixels)
     {
         const [ w, h ] = [ this._media.width, this._media.height ];
-        const pixels = texture.getPixels(); // bottleneck
-        let features = [], p, x, y, count;
+        let keypoints = [], x, y;
 
         for(let i = 0; i < pixels.length; i += 4) {
             x = (pixels[i+1] << 8) | pixels[i];
             y = (pixels[i+3] << 8) | pixels[i+2];
             if(x < w && y < h)
-                features.push(new _speedy_feature__WEBPACK_IMPORTED_MODULE_1__["SpeedyFeature"](x, y));
+                keypoints.push(new _speedy_feature__WEBPACK_IMPORTED_MODULE_1__["SpeedyFeature"](x, y));
             else
                 break;
         }
 
-        return features;
+        return keypoints;
     }
-}
-
-/***/ }),
-
-/***/ "./src/core/gpu-programs.js":
-/*!**********************************!*\
-  !*** ./src/core/gpu-programs.js ***!
-  \**********************************/
-/*! exports provided: GPUPrograms */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUPrograms", function() { return GPUPrograms; });
-/* harmony import */ var _assets_gpu_browser__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../assets/gpu-browser */ "./assets/gpu-browser.js");
-/* harmony import */ var _assets_gpu_browser__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_assets_gpu_browser__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _gpu_colors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../gpu/colors */ "./src/gpu/colors.js");
-/* harmony import */ var _gpu_convolution__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../gpu/convolution */ "./src/gpu/convolution.js");
-/* harmony import */ var _gpu_encode__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../gpu/encode */ "./src/gpu/encode.js");
-/* harmony import */ var _gpu_fast__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../gpu/fast */ "./src/gpu/fast.js");
-/*
- * speedy-features.js
- * GPU-accelerated feature detection and matching for Computer Vision on the web
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * gpu-programs.js
- * A bridge between JavaScript and the GPU
- */
-
-
-
-
-
-
-
-
-
-// We won't admit more than MAX_FEATURE_POINTS per media.
-// The higher its value, the more work we have to perform
-// to transfer data from the GPU to the CPU.
-const MAX_ENCODER_LENGTH = 256;
-const MAX_FEATURE_POINTS = MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH; // 64K max !!!
-
-// Texture limits
-const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
-
-
-/**
- * Internal GPU programs for
- * accelerated computer vision
- */
-class GPUPrograms
-{
-    /**
-     * Creates a new set of GPU programs
-     * @param {number} width Texture width
-     * @param {number} height Texture height
-     */
-    constructor(width, height)
-    {
-        // read & validate texture size
-        this._width = +width | 0;
-        this._height = +height | 0;
-        if(this._width > MAX_TEXTURE_LENGTH || this._height > MAX_TEXTURE_LENGTH) {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].warning('Maximum texture size exceeded.');
-            this._width = Math.min(this._width, MAX_TEXTURE_LENGTH);
-            this._height = Math.min(this._height, MAX_TEXTURE_LENGTH);
-        }
-
-        // create GPU
-        this._encoderLength = MAX_ENCODER_LENGTH;
-        this._canvas = createCanvas(this._width, this._height);
-        this._gpu = new _assets_gpu_browser__WEBPACK_IMPORTED_MODULE_0__["GPU"]({
-            canvas: this._canvas,
-            context: this._canvas.getContext('webgl2', { premultipliedAlpha: true }) // we're using alpha
-        });
-
-        // spawn kernels
-        const kernels = spawnKernels(this._gpu, this._width, this._height);
-        for(let k in kernels)
-            this[k] = kernels[k];
-    }
-
-    /**
-     * The length of the feature encoder
-     * @returns {number}
-     */
-    get encoderLength()
-    {
-        return this._encoderLength;
-    }
-
-    /**
-     * Optimizes the feature encoder for an expected number of features
-     * @param {number} featureCount 
-     * @returns {number} nonzero if the encoder has been optimized
-     */
-    optimizeEncoder(featureCount)
-    {
-        const len = Math.ceil(Math.sqrt(featureCount + 4)); // add some slack
-        const newEncoderLength = Math.max(1, Math.min(len, MAX_ENCODER_LENGTH));
-        const oldEncoderLength = this._encoderLength;
-
-        if(newEncoderLength != this._encoderLength) {
-            for(let k in this.encoding) {
-                const kernel = this.encoding[k];
-                if(kernel.dynamicOutput) {
-                    this._encoderLength = newEncoderLength;
-                    kernel.setOutput([ newEncoderLength, newEncoderLength ]);
-                }
-            }
-        }
-
-        return newEncoderLength - oldEncoderLength;
-    }
-}
-
-function createCanvas(width, height)
-{
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    return canvas;
-}
-
-function spawnKernels(gpu, width, height)
-{
-    const defaultSettings = {
-        output: [width, height],
-        tactic: 'precision',
-        precision: 'unsigned', // graphical mode
-        graphical: true,
-        pipeline: true,
-        constants: { width, height }
-    };
-    
-    const createProgram = (fn, settings = {}) =>
-        gpu.createKernel(fn, Object.assign({}, defaultSettings, settings));
-
-    return {
-        // color conversions
-        colors: {
-            rgb2grey: createProgram(_gpu_colors__WEBPACK_IMPORTED_MODULE_2__["rgb2grey"]),
-        },
-
-        // image filters
-        filters: {
-            // gaussian filter with sigma = 1.0
-            gauss1: createProgram(Object(_gpu_convolution__WEBPACK_IMPORTED_MODULE_3__["conv2D"])([
-                1, 4, 7, 4, 1,
-                4, 16, 26, 16, 4,
-                7, 26, 41, 26, 7,
-                4, 16, 26, 16, 4,
-                1, 4, 7, 4, 1,
-            ], 1 / 237)),
-
-            // separable kernels for gaussian w/ sigma = 1.0
-            gauss1x: createProgram(Object(_gpu_convolution__WEBPACK_IMPORTED_MODULE_3__["convX"])([
-                0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
-            ])),//, 1 / 1.001)),
-            gauss1y: createProgram(Object(_gpu_convolution__WEBPACK_IMPORTED_MODULE_3__["convY"])([
-                0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
-            ])),//, 1 / 1.001)),
-        },
-
-        // feature detection
-        features: {
-            fast5: createProgram(_gpu_fast__WEBPACK_IMPORTED_MODULE_5__["fast5"]),
-            fast7: createProgram(_gpu_fast__WEBPACK_IMPORTED_MODULE_5__["fast7"]),
-            fast9: createProgram(_gpu_fast__WEBPACK_IMPORTED_MODULE_5__["fast9"]),
-            fastScore8: createProgram(_gpu_fast__WEBPACK_IMPORTED_MODULE_5__["fastScore8"]),
-            fastScore12: createProgram(_gpu_fast__WEBPACK_IMPORTED_MODULE_5__["fastScore12"]),
-            fastScore16: createProgram(_gpu_fast__WEBPACK_IMPORTED_MODULE_5__["fastScore16"]),
-            fastSuppression: createProgram(_gpu_fast__WEBPACK_IMPORTED_MODULE_5__["fastSuppression"]),
-        },
-
-        // texture encoding
-        encoding: {
-            encodeOffsets: createProgram(_gpu_encode__WEBPACK_IMPORTED_MODULE_4__["encodeOffsets"], {
-                loopMaxIterations: 1024,
-            }),
-            encodeFeatureCount: createProgram(_gpu_encode__WEBPACK_IMPORTED_MODULE_4__["encodeFeatureCount"], {
-                pipeline: false,
-                loopMaxIterations: 4 * MAX_FEATURE_POINTS,
-                output: [ 1, 1 ],
-            }),
-            encodeFeatures: createProgram(_gpu_encode__WEBPACK_IMPORTED_MODULE_4__["encodeFeatures"], {
-                pipeline: false,
-                dynamicOutput: true,
-                loopMaxIterations: 4 * MAX_FEATURE_POINTS,
-                output: [ MAX_ENCODER_LENGTH, MAX_ENCODER_LENGTH ],
-            }),
-        }
-    };
 }
 
 /***/ }),
@@ -20202,10 +19987,592 @@ function getMediaType(mediaSource)
 
 /***/ }),
 
-/***/ "./src/gpu/colors.js":
-/*!***************************!*\
-  !*** ./src/gpu/colors.js ***!
-  \***************************/
+/***/ "./src/gpu/gpu-colors.js":
+/*!*******************************!*\
+  !*** ./src/gpu/gpu-colors.js ***!
+  \*******************************/
+/*! exports provided: GPUColors */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUColors", function() { return GPUColors; });
+/* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
+/* harmony import */ var _shaders_colors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/colors */ "./src/gpu/shaders/colors.js");
+/*
+ * speedy-features.js
+ * GPU-accelerated feature detection and matching for Computer Vision on the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * gpu-colors.js
+ * Color conversion algorithms
+ */
+
+
+
+
+/**
+ * GPUColors
+ * Color conversions
+ */
+class GPUColors extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernelGroup"]
+{
+    /**
+     * Class constructor
+     * @param {GPU} gpu 
+     * @param {number} width 
+     * @param {number} height 
+     */
+    constructor(gpu, width, height)
+    {
+        super(gpu, width, height);
+        this
+            // convert to greyscale
+            .declare('rgb2grey', _shaders_colors__WEBPACK_IMPORTED_MODULE_1__["rgb2grey"])
+        ;
+    }
+}
+
+/***/ }),
+
+/***/ "./src/gpu/gpu-encoders.js":
+/*!*********************************!*\
+  !*** ./src/gpu/gpu-encoders.js ***!
+  \*********************************/
+/*! exports provided: GPUEncoders */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUEncoders", function() { return GPUEncoders; });
+/* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
+/* harmony import */ var _shaders_encoders__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/encoders */ "./src/gpu/shaders/encoders.js");
+/*
+ * speedy-features.js
+ * GPU-accelerated feature detection and matching for Computer Vision on the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * gpu-encoders.js
+ * Texture encoders
+ */
+
+
+
+
+// We won't admit more than MAX_FEATURE_POINTS per media.
+// The higher its value, the more work we have to perform
+// to transfer data from the GPU to the CPU.
+const MAX_ENCODER_LENGTH = 256;
+const MAX_FEATURE_POINTS = MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH; // 64K max !!!
+
+
+/**
+ * GPUEncoders
+ * Texture encoding
+ */
+class GPUEncoders extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernelGroup"]
+{
+    /**
+     * Class constructor
+     * @param {GPU} gpu 
+     * @param {number} width 
+     * @param {number} height 
+     */
+    constructor(gpu, width, height)
+    {
+        super(gpu, width, height);
+        this
+            .declare('encodeOffsets', _shaders_encoders__WEBPACK_IMPORTED_MODULE_1__["encodeOffsets"], {
+                loopMaxIterations: 1024
+            })
+
+            .declare('_encodeKeypointCount', _shaders_encoders__WEBPACK_IMPORTED_MODULE_1__["encodeKeypointCount"], {
+                pipeline: false,
+                loopMaxIterations: 4 * MAX_FEATURE_POINTS,
+                output: [ 1, 1 ],
+            })
+
+            .declare('_encodeKeypoints', _shaders_encoders__WEBPACK_IMPORTED_MODULE_1__["encodeKeypoints"], {
+                pipeline: false,
+                dynamicOutput: true, // resizable output
+                loopMaxIterations: 4 * MAX_FEATURE_POINTS,
+                output: [ MAX_ENCODER_LENGTH, MAX_ENCODER_LENGTH ],
+            })
+        ;
+
+        // setup internal properties
+        this._dynamicKernels = Object.getOwnPropertyNames(this)
+                                     .filter(k => this[k].dynamicOutput)
+                                     .map(k => this[k]);
+        this._keypointEncoderLength = MAX_ENCODER_LENGTH;
+    }
+
+    /**
+     * Counts the number of keypoints
+     * @param {} offsets image with encoded offsets
+     * @returns {number} number of keypoints
+     */
+    countKeypoints(offsets)
+    {
+        this._encodeKeypointCount(offsets);
+        const pixel = this._encodeKeypointCount.getPixels();
+        return ((pixel[3] << 24) | (pixel[2] << 16) | (pixel[1] << 8) | pixel[0]);
+    }
+
+    /**
+     * Optimizes the keypoint encoder for an expected number of keypoints
+     * @param {number} keypointCount
+     * @returns {number} nonzero if the encoder has been optimized
+     */
+    optimizeKeypointEncoder(keypointCount)
+    {
+        const len = Math.ceil(Math.sqrt(keypointCount + 4)); // add some slack
+        const newEncoderLength = Math.max(1, Math.min(len, MAX_ENCODER_LENGTH));
+        const oldEncoderLength = this._keypointEncoderLength;
+
+        if(newEncoderLength != oldEncoderLength) {
+            this._keypointEncoderLength = newEncoderLength;
+            for(let i = 0; i < this._dynamicKernels.length; i++)
+                this._dynamicKernels[i].setOutput([ newEncoderLength, newEncoderLength ]);
+        }
+
+        return newEncoderLength - oldEncoderLength;
+    }
+
+    /**
+     * Encodes the keypoints - this is a bottleneck!
+     * @param {} offsets image with encoded offsets
+     * @returns {Array<number>} pixels in the [r,g,b,a, ...] format
+     */
+    encodeKeypoints(offsets)
+    {
+        this._encodeKeypoints(offsets, this._keypointEncoderLength);
+        return this._encodeKeypoints.getPixels(); // bottleneck
+    }
+}
+
+/***/ }),
+
+/***/ "./src/gpu/gpu-filters.js":
+/*!********************************!*\
+  !*** ./src/gpu/gpu-filters.js ***!
+  \********************************/
+/*! exports provided: GPUFilters */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUFilters", function() { return GPUFilters; });
+/* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
+/* harmony import */ var _shaders_convolution__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/convolution */ "./src/gpu/shaders/convolution.js");
+/*
+ * speedy-features.js
+ * GPU-accelerated feature detection and matching for Computer Vision on the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * gpu-filters.js
+ * Image filtering on the GPU
+ */
+
+
+
+
+/**
+ * GPUFilters
+ * Image filtering
+ */
+class GPUFilters extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernelGroup"]
+{
+    /**
+     * Class constructor
+     * @param {GPU} gpu 
+     * @param {number} width 
+     * @param {number} height 
+     */
+    constructor(gpu, width, height)
+    {
+        super(gpu, width, height);
+        this
+            // separable kernels for gaussian (sigma = 1.0)
+            .compose('gauss1', '_gauss1x', '_gauss1y')
+            .declare('_gauss1x', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
+                0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
+            ]/*, 1 / 1.001*/))
+            .declare('_gauss1y', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
+                0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
+            ]/*, 1 / 1.001*/))
+
+            // (debug) gaussian filter (sigma = 1.0)
+            .declare('_gauss1', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["conv2D"])([
+                1, 4, 7, 4, 1,
+                4, 16, 26, 16, 4,
+                7, 26, 41, 26, 7,
+                4, 16, 26, 16, 4,
+                1, 4, 7, 4, 1,
+            ], 1 / 237))
+        ;
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/gpu/gpu-kernel-group.js":
+/*!*************************************!*\
+  !*** ./src/gpu/gpu-kernel-group.js ***!
+  \*************************************/
+/*! exports provided: GPUKernelGroup */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUKernelGroup", function() { return GPUKernelGroup; });
+/*
+ * speedy-features.js
+ * GPU-accelerated feature detection and matching for Computer Vision on the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * gpu-kernel-group.js
+ * An abstract group of GPU kernels
+ */
+
+/**
+ * GPUKernelGroup
+ * A semantically correlated group
+ * of kernels that run on the GPU
+ */
+
+class GPUKernelGroup
+{
+    /* protected */ constructor(gpu, width, height)
+    {
+        this._gpu = gpu;
+        this._width = Math.max(width|0, 1);
+        this._height = Math.max(height|0, 1);
+    }
+
+    /* protected */ declare(name, fn, settings = { })
+    {
+        // lazy instantiation of kernels
+        Object.defineProperty(this, name, {
+            get: function() {
+                const key = '__k_' + name;
+                return this[key] || (this[key] = this._spawnKernel(fn, settings))
+            }
+        });
+
+        return this;
+    }
+
+    /* protected */ compose(name, ...fn)
+    {
+        // function composition: functions are called in the order they are specified
+        // e.g., compose('h', 'f', 'g') means h(x) = g(f(x))
+        Object.defineProperty(this, name, {
+            get: function() {
+                const key = '__c_' + name;
+                return this[key] || (this[key] = (fn.length == 2) ? (() => {
+                    fn = fn.map(fi => this[fi]);
+                    return function compose(image, ...args) {
+                        return (fn[1])((fn[0])(image, ...args), ...args);
+                    };
+                })() : ((fn.length == 3) ? (() => {
+                    fn = fn.map(fi => this[fi]);
+                    return function compose(image, ...args) {
+                        return (fn[2])((fn[1])((fn[0])(image, ...args), ...args), ...args);
+                    };
+                })() : (() => {
+                    fn = fn.map(fi => this[fi]);
+                    return function compose(image, ...args) {
+                        return fn.reduce((img, fi) => fi(img, ...args), image);
+                    };
+                })));
+            }
+        });
+
+        return this;
+    }
+
+    /* private */ _spawnKernel(fn, settings = { })
+    {
+        const config = Object.assign({}, {
+            // default settings
+            output: [ this._width, this._height ],
+            tactic: 'precision', // highp
+            precision: 'unsigned', // graphical mode
+            graphical: true,
+            pipeline: true,
+            constants: {
+                width: this._width,
+                height: this._height
+            },
+        }, settings);
+
+        return this._gpu.createKernel(fn, config);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/gpu/gpu-kernels.js":
+/*!********************************!*\
+  !*** ./src/gpu/gpu-kernels.js ***!
+  \********************************/
+/*! exports provided: GPUKernels */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUKernels", function() { return GPUKernels; });
+/* harmony import */ var _assets_gpu_browser__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../assets/gpu-browser */ "./assets/gpu-browser.js");
+/* harmony import */ var _assets_gpu_browser__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_assets_gpu_browser__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _gpu_colors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./gpu-colors */ "./src/gpu/gpu-colors.js");
+/* harmony import */ var _gpu_filters__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./gpu-filters */ "./src/gpu/gpu-filters.js");
+/* harmony import */ var _gpu_keypoints__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./gpu-keypoints */ "./src/gpu/gpu-keypoints.js");
+/* harmony import */ var _gpu_encoders__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./gpu-encoders */ "./src/gpu/gpu-encoders.js");
+/*
+ * speedy-features.js
+ * GPU-accelerated feature detection and matching for Computer Vision on the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * gpu-kernels.js
+ * The set of all GPU kernel groups for accelerated computer vision
+ */
+
+
+
+
+
+
+
+
+// Texture limits
+const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
+
+
+/**
+ * The set of all GPU kernel groups for
+ * accelerated computer vision
+ */
+class GPUKernels
+{
+    /**
+     * Class constructor
+     * @param {number} width Texture width
+     * @param {number} height Texture height
+     */
+    constructor(width, height)
+    {
+        // read & validate texture size
+        this._width = +width | 0;
+        this._height = +height | 0;
+        if(this._width > MAX_TEXTURE_LENGTH || this._height > MAX_TEXTURE_LENGTH) {
+            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].warning('Maximum texture size exceeded.');
+            this._width = Math.min(this._width, MAX_TEXTURE_LENGTH);
+            this._height = Math.min(this._height, MAX_TEXTURE_LENGTH);
+        }
+
+        // create GPU
+        this._canvas = createCanvas(this._width, this._height);
+        this._gpu = new _assets_gpu_browser__WEBPACK_IMPORTED_MODULE_0__["GPU"]({
+            canvas: this._canvas,
+            context: this._canvas.getContext('webgl2', { premultipliedAlpha: true }) // we're using alpha
+        });
+
+        // spawn kernels
+        this._colors = new _gpu_colors__WEBPACK_IMPORTED_MODULE_2__["GPUColors"](this._gpu, this._width, this._height);
+        this._filters = new _gpu_filters__WEBPACK_IMPORTED_MODULE_3__["GPUFilters"](this._gpu, this._width, this._height);
+        this._keypoints = new _gpu_keypoints__WEBPACK_IMPORTED_MODULE_4__["GPUKeypoints"](this._gpu, this._width, this._height);
+        this._encoders = new _gpu_encoders__WEBPACK_IMPORTED_MODULE_5__["GPUEncoders"](this._gpu, this._width, this._height);
+    }
+
+    /**
+     * Colors kernel group
+     */
+    get colors()
+    {
+        return this._colors;
+    }
+
+    /**
+     * Filters kernel group
+     */
+    get filters()
+    {
+        return this._filters;
+    }
+
+    /**
+     * Keypoints kernel group
+     */
+    get keypoints()
+    {
+        return this._keypoints;
+    }
+
+    /**
+     * Encoders kernel group
+     */
+    get encoders()
+    {
+        return this._encoders;
+    }
+}
+
+// Create a canvas
+function createCanvas(width, height)
+{
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    return canvas;
+}
+
+
+/***/ }),
+
+/***/ "./src/gpu/gpu-keypoints.js":
+/*!**********************************!*\
+  !*** ./src/gpu/gpu-keypoints.js ***!
+  \**********************************/
+/*! exports provided: GPUKeypoints */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUKeypoints", function() { return GPUKeypoints; });
+/* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
+/* harmony import */ var _shaders_fast__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/fast */ "./src/gpu/shaders/fast.js");
+/*
+ * speedy-features.js
+ * GPU-accelerated feature detection and matching for Computer Vision on the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * gpu-keypoints.js
+ * Facade for various keypoint detection algorithms
+ */
+
+
+
+
+/**
+ * GPUKeypoints
+ * Keypoint detection
+ */
+class GPUKeypoints extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernelGroup"]
+{
+    /**
+     * Class constructor
+     * @param {GPU} gpu 
+     * @param {number} width 
+     * @param {number} height 
+     */
+    constructor(gpu, width, height)
+    {
+        super(gpu, width, height);
+        this
+            // FAST-9,16
+            .compose('fast9', '_fast9', '_fastScore16')
+            .declare('_fast9', _shaders_fast__WEBPACK_IMPORTED_MODULE_1__["fast9"]) // find corners
+            .declare('_fastScore16', _shaders_fast__WEBPACK_IMPORTED_MODULE_1__["fastScore16"]) // compute scores
+
+            // FAST-7,12
+            .compose('fast7', '_fast7', '_fastScore12')
+            .declare('_fast7', _shaders_fast__WEBPACK_IMPORTED_MODULE_1__["fast7"])
+            .declare('_fastScore12', _shaders_fast__WEBPACK_IMPORTED_MODULE_1__["fastScore12"])
+
+            // FAST-5,8
+            .compose('fast5', '_fast5', '_fastScore8')
+            .declare('_fast5', _shaders_fast__WEBPACK_IMPORTED_MODULE_1__["fast5"])
+            .declare('_fastScore8', _shaders_fast__WEBPACK_IMPORTED_MODULE_1__["fastScore8"])
+
+            // FAST Non-Maximum Suppression
+            .declare('fastSuppression', _shaders_fast__WEBPACK_IMPORTED_MODULE_1__["fastSuppression"])
+        ;
+    }
+}
+
+
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/colors.js":
+/*!***********************************!*\
+  !*** ./src/gpu/shaders/colors.js ***!
+  \***********************************/
 /*! exports provided: rgb2grey */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -20244,10 +20611,10 @@ function rgb2grey(image)
 
 /***/ }),
 
-/***/ "./src/gpu/convolution.js":
-/*!********************************!*\
-  !*** ./src/gpu/convolution.js ***!
-  \********************************/
+/***/ "./src/gpu/shaders/convolution.js":
+/*!****************************************!*\
+  !*** ./src/gpu/shaders/convolution.js ***!
+  \****************************************/
 /*! exports provided: conv2D, convX, convY */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -20256,7 +20623,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "conv2D", function() { return conv2D; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "convX", function() { return convX; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "convY", function() { return convY; });
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-features.js
  * GPU-accelerated feature detection and matching for Computer Vision on the web
@@ -20374,18 +20741,18 @@ function conv1D(axis, kernel, normalizationConstant)
 
 /***/ }),
 
-/***/ "./src/gpu/encode.js":
-/*!***************************!*\
-  !*** ./src/gpu/encode.js ***!
-  \***************************/
-/*! exports provided: encodeOffsets, encodeFeatureCount, encodeFeatures */
+/***/ "./src/gpu/shaders/encoders.js":
+/*!*************************************!*\
+  !*** ./src/gpu/shaders/encoders.js ***!
+  \*************************************/
+/*! exports provided: encodeOffsets, encodeKeypointCount, encodeKeypoints */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "encodeOffsets", function() { return encodeOffsets; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "encodeFeatureCount", function() { return encodeFeatureCount; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "encodeFeatures", function() { return encodeFeatures; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "encodeKeypointCount", function() { return encodeKeypointCount; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "encodeKeypoints", function() { return encodeKeypoints; });
 /*
  * speedy-features.js
  * GPU-accelerated feature detection and matching for Computer Vision on the web
@@ -20403,7 +20770,7 @@ __webpack_require__.r(__webpack_exports__);
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * encode.js
+ * encoders.js
  * Speedy image encoding algorithms
  */
 
@@ -20443,8 +20810,8 @@ function encodeOffsets(image)
     this.color(pixel[0], pixel[1], r / 255.0, pixel[3]);
 }
 
-// encode feature point count
-function encodeFeatureCount(image)
+// encode keypoint count
+function encodeKeypointCount(image)
 {
     const w = this.constants.width, h = this.constants.height;
     const size = w * h;
@@ -20470,8 +20837,8 @@ function encodeFeatureCount(image)
     this.color(cntLo / 255.0, cntHi / 255.0, 0, 0);
 }
 
-// encode feature points
-function encodeFeatures(image, encoderLength)
+// encode keypoints
+function encodeKeypoints(image, encoderLength)
 {
     const s = encoderLength;
     const w = this.constants.width, h = this.constants.height;
@@ -20512,10 +20879,10 @@ function encodeFeatures(image, encoderLength)
 
 /***/ }),
 
-/***/ "./src/gpu/fast.js":
-/*!*************************!*\
-  !*** ./src/gpu/fast.js ***!
-  \*************************/
+/***/ "./src/gpu/shaders/fast.js":
+/*!*********************************!*\
+  !*** ./src/gpu/shaders/fast.js ***!
+  \*********************************/
 /*! exports provided: fast9, fast7, fast5, fastScore16, fastScore12, fastScore8, fastSuppression */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 

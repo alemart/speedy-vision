@@ -19,7 +19,7 @@
  * Feature detection facade
  */
 
-import { GPUPrograms } from './gpu-programs';
+import { GPUKernels } from '../gpu/gpu-kernels';
 import { SpeedyFeature } from './speedy-feature';
 import { Utils } from '../utils/utils';
 
@@ -36,7 +36,7 @@ export class FeatureDetector
     constructor(media)
     {
         this._media = media;
-        this._gpu = new GPUPrograms(media.width, media.height);
+        this._gpu = new GPUKernels(media.width, media.height);
     }
 
     /**
@@ -46,7 +46,9 @@ export class FeatureDetector
      */
     fast(n = 9, userSettings = { })
     {
+        // create settings object
         const settings = Object.assign({ }, {
+            // default settings
             threshold: 10,
             denoise: true,
         }, userSettings);
@@ -68,53 +70,43 @@ export class FeatureDetector
 
         // pre-processing the image...
         const smoothed = settings.denoise ?
-            this._gpu.filters.gauss1x(this._gpu.filters.gauss1y(this._media.source)) :
+            this._gpu.filters.gauss1(this._media.source) :
             this._media.source;
-
         const greyscale = this._gpu.colors.rgb2grey(smoothed);
 
-        // feature detection
+        // keypoint detection
         const rawCorners = (({
-            5:  () => this._gpu.features.fast5(greyscale, settings.threshold),
-            7:  () => this._gpu.features.fast7(greyscale, settings.threshold),
-            9:  () => this._gpu.features.fast9(greyscale, settings.threshold),
+            5:  () => this._gpu.keypoints.fast5(greyscale, settings.threshold),
+            7:  () => this._gpu.keypoints.fast7(greyscale, settings.threshold),
+            9:  () => this._gpu.keypoints.fast9(greyscale, settings.threshold),
         })[n])();
-
-        const rawCornersWithScores = (({
-            5:  () => this._gpu.features.fastScore8(rawCorners, settings.threshold),
-            7:  () => this._gpu.features.fastScore12(rawCorners, settings.threshold),
-            9:  () => this._gpu.features.fastScore16(rawCorners, settings.threshold),
-        })[n])();
-
-        const corners = this._gpu.features.fastSuppression(rawCornersWithScores);
+        const corners = this._gpu.keypoints.fastSuppression(rawCorners);
 
         // encoding result
-        const offsets = this._gpu.encoding.encodeOffsets(corners);
-        this._gpu.encoding.encodeFeatureCount(offsets);
-        const pixel = this._gpu.encoding.encodeFeatureCount.getPixels();
-        this._gpu.optimizeEncoder((pixel[3] << 24) | (pixel[2] << 16) | (pixel[1] << 8) | pixel[0]);
-        this._gpu.encoding.encodeFeatures(offsets, this._gpu.encoderLength);
+        const offsets = this._gpu.encoders.encodeOffsets(corners);
+        const keypointCount = this._gpu.encoders.countKeypoints(offsets);
+        this._gpu.encoders.optimizeKeypointEncoder(keypointCount);
+        const pixels = this._gpu.encoders.encodeKeypoints(offsets); // bottleneck
 
         // done!
-        return this._decodeFeatures(this._gpu.encoding.encodeFeatures);
+        return this._decodeKeypoints(pixels);
     }
 
-    // reads the corners from a processed image
-    _decodeFeatures(texture)
+    // reads the keypoints from a flattened array of encoded pixels
+    _decodeKeypoints(pixels)
     {
         const [ w, h ] = [ this._media.width, this._media.height ];
-        const pixels = texture.getPixels(); // bottleneck
-        let features = [], p, x, y, count;
+        let keypoints = [], x, y;
 
         for(let i = 0; i < pixels.length; i += 4) {
             x = (pixels[i+1] << 8) | pixels[i];
             y = (pixels[i+3] << 8) | pixels[i+2];
             if(x < w && y < h)
-                features.push(new SpeedyFeature(x, y));
+                keypoints.push(new SpeedyFeature(x, y));
             else
                 break;
         }
 
-        return features;
+        return keypoints;
     }
 }

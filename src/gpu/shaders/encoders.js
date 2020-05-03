@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * encode.js
+ * encoders.js
  * Speedy image encoding algorithms
  */
 
@@ -55,8 +55,8 @@ export function encodeOffsets(image)
     this.color(pixel[0], pixel[1], r / 255.0, pixel[3]);
 }
 
-// encode feature point count
-export function encodeFeatureCount(image)
+// encode keypoint count
+export function encodeKeypointCount(image)
 {
     const w = this.constants.width, h = this.constants.height;
     const size = w * h;
@@ -82,8 +82,8 @@ export function encodeFeatureCount(image)
     this.color(cntLo / 255.0, cntHi / 255.0, 0, 0);
 }
 
-// encode feature points
-export function encodeFeatures(image, encoderLength)
+// encode keypoints
+export function encodeKeypoints(image, encoderLength)
 {
     const s = encoderLength;
     const w = this.constants.width, h = this.constants.height;
