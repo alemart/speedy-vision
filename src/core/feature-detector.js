@@ -20,7 +20,6 @@
  */
 
 import { GPUKernels } from '../gpu/gpu-kernels';
-import { SpeedyFeature } from './speedy-feature';
 import { Utils } from '../utils/utils';
 
 /**
@@ -42,7 +41,8 @@ export class FeatureDetector
     /**
      * FAST corner detection
      * @param {number} [n] We'll run FAST-n, where n must be 9 (default), 7 or 5
-     * @param {object} [userSettings ]
+     * @param {object} [userSettings]
+     * @returns {Array<SpeedyFeature>} keypoints
      */
     fast(n = 9, userSettings = { })
     {
@@ -83,30 +83,10 @@ export class FeatureDetector
         const corners = this._gpu.keypoints.fastSuppression(rawCorners);
 
         // encoding result
-        const offsets = this._gpu.encoders.encodeOffsets(corners);
+        const offsets = this._gpu.encoders.encodeKeypointOffsets(corners);
         const keypointCount = this._gpu.encoders.countKeypoints(offsets);
         this._gpu.encoders.optimizeKeypointEncoder(keypointCount);
-        const pixels = this._gpu.encoders.encodeKeypoints(offsets); // bottleneck
-
-        // done!
-        return this._decodeKeypoints(pixels);
-    }
-
-    // reads the keypoints from a flattened array of encoded pixels
-    _decodeKeypoints(pixels)
-    {
-        const [ w, h ] = [ this._media.width, this._media.height ];
-        let keypoints = [], x, y;
-
-        for(let i = 0; i < pixels.length; i += 4) {
-            x = (pixels[i+1] << 8) | pixels[i];
-            y = (pixels[i+3] << 8) | pixels[i+2];
-            if(x < w && y < h)
-                keypoints.push(new SpeedyFeature(x, y));
-            else
-                break;
-        }
-
-        return keypoints;
+        const pixels = this._gpu.encoders.encodeKeypoints(offsets);
+        return this._gpu.encoders.decodeKeypoints(pixels);
     }
 }

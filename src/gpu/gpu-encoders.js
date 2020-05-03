@@ -20,7 +20,8 @@
  */
 
 import { GPUKernelGroup } from './gpu-kernel-group';
-import { encodeOffsets, encodeKeypoints, encodeKeypointCount } from './shaders/encoders';
+import { encodeKeypointOffsets, encodeKeypoints, encodeKeypointCount } from './shaders/encoders';
+import { SpeedyFeature } from '../core/speedy-feature';
 
 // We won't admit more than MAX_FEATURE_POINTS per media.
 // The higher its value, the more work we have to perform
@@ -45,7 +46,8 @@ export class GPUEncoders extends GPUKernelGroup
     {
         super(gpu, width, height);
         this
-            .declare('encodeOffsets', encodeOffsets, {
+            // Keypoint encoding
+            .declare('encodeKeypointOffsets', encodeKeypointOffsets, {
                 loopMaxIterations: 1024
             })
 
@@ -69,6 +71,13 @@ export class GPUEncoders extends GPUKernelGroup
                                      .map(k => this[k]);
         this._keypointEncoderLength = MAX_ENCODER_LENGTH;
     }
+
+
+
+    // -------------------------------------------------------------------------
+    //                       KEYPOINT ENCODING
+    // -------------------------------------------------------------------------
+
 
     /**
      * Counts the number of keypoints
@@ -103,7 +112,7 @@ export class GPUEncoders extends GPUKernelGroup
     }
 
     /**
-     * Encodes the keypoints - this is a bottleneck!
+     * Encodes the keypoints with an image - this is a bottleneck!
      * @param {} offsets image with encoded offsets
      * @returns {Array<number>} pixels in the [r,g,b,a, ...] format
      */
@@ -111,5 +120,27 @@ export class GPUEncoders extends GPUKernelGroup
     {
         this._encodeKeypoints(offsets, this._keypointEncoderLength);
         return this._encodeKeypoints.getPixels(); // bottleneck
+    }
+
+    /**
+     * Decodes the keypoints, given a flattened image of encoded pixels
+     * @param {Array<number>} pixels pixels in the [r,g,b,a,...] format
+     * @returns {Array<SpeedyFeature>} keypoints
+     */
+    decodeKeypoints(pixels)
+    {
+        const [ w, h ] = [ this._width, this._height ];
+        let keypoints = [], x, y;
+
+        for(let i = 0; i < pixels.length; i += 4) {
+            x = (pixels[i+1] << 8) | pixels[i];
+            y = (pixels[i+3] << 8) | pixels[i+2];
+            if(x < w && y < h)
+                keypoints.push(new SpeedyFeature(x, y));
+            else
+                break;
+        }
+
+        return keypoints;
     }
 }

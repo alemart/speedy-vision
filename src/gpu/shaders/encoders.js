@@ -28,8 +28,8 @@
  * A - general purpose channel
  */
 
-// encode feature offsets
-export function encodeOffsets(image)
+// encode keypoint offsets
+export function encodeKeypointOffsets(image)
 {
     const maxIterations = 255; // 0 <= r,g,b <= 255
     const w = this.constants.width, h = this.constants.height;
