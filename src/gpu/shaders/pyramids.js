@@ -65,12 +65,6 @@ export function setBase(image)
     this.color(pixel[0], pixel[1], pixel[2], 0.5);
 }
 
-
-
-//
-// function generators
-//
-
 export function scale(scaleFactor)
 {
     const s = Math.max(0.0, scaleFactor);
@@ -85,7 +79,7 @@ export function scale(scaleFactor)
 
 export function setScale(newScale)
 {
-    // a = 0.5 means scale = 1
+    // alpha = 0.5 means scale = 1
     const s = Math.max(0.0, Math.min(newScale * 0.5, 1.0));
 
     const body  = `
