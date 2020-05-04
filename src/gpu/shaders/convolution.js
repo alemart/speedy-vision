@@ -50,11 +50,12 @@ export function conv2D(kernel, normalizationConstant = 1.0)
     const body = `
     const width = this.constants.width;
     const height = this.constants.height;
+    const pixel = image[this.thread.y][this.thread.x];
     let r = 0.0, g = 0.0, b = 0.0;
     let p = [0.0, 0.0, 0.0, 0.0];
     let x = 0, y = 0;
     ${foreachKernelElement(generateCode)}
-    this.color(r, g, b, 1.0);
+    this.color(r, g, b, pixel[3]);
     `;
 
     return new Function('image', body);
@@ -103,11 +104,12 @@ function conv1D(axis, kernel, normalizationConstant)
     const body = `
     const width = this.constants.width;
     const height = this.constants.height;
+    const pixel = image[this.thread.y][this.thread.x];
     let r = 0.0, g = 0.0, b = 0.0;
     let p = [0.0, 0.0, 0.0, 0.0];
     let x = 0, y = 0;
     ${foreachKernelElement(generateCode)}
-    this.color(r, g, b, 1.0);
+    this.color(r, g, b, pixel[3]);
     `;
 
     return new Function('image', body);
