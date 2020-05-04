@@ -35,8 +35,8 @@ export /* abstract */ class GPUKernelGroup
         this._width = Math.max(width|0, 1);
         this._height = Math.max(height|0, 1);
 
-        // declare an output kernel for debugging purposes
-        this.declare('output', identity, { pipeline: false });
+        // declare an image kernel for debugging purposes
+        this.declare('image', identity, { pipeline: false });
     }
 
     /* protected */ declare(name, fn, settings = { })

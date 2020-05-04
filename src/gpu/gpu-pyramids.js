@@ -25,8 +25,9 @@ import { convX, convY } from './shaders/convolution';
 import { upsample2, downsample2, upsample3, downsample3, setScale, scale } from './shaders/pyramids';
 
 // neat utilities
-const withOutput = (width, height) => ({ output: [ width|0, height|0 ] })
 const withSize = (width, height) => ({ output: [ width|0, height|0 ], constants: { width: width|0, height: height|0 }});
+const withCanvas = (width, height) => ({ output: [ width|0, height|0 ], pipeline: false })
+const withOutput = (width, height) => ({ output: [ width|0, height|0 ] })
 
 /**
  * GPUPyramids
@@ -117,27 +118,21 @@ export class GPUPyramids extends GPUKernelGroup
             .declare('_scale2/3', scale(2.0 / 3.0),
                 withSize(2 * this._width / 3, 2 * this._height / 3))
 
-            // debugging
-            .declare('output2', identity, {
-                pipeline: false,
-                output: [ 2 * this._width, 2 * this._height ]
-            })
-            .declare('output3', identity, {
-                pipeline: false,
-                output: [ 3 * this._width, 3 * this._height ]
-            })
-            .declare('output1/2', identity, {
-                pipeline: false,
-                output: [ ((1 + this._width) / 2) | 0, ((1 + this._height) / 2) | 0 ]
-            })
-            .declare('output3/2', identity, {
-                pipeline: false,
-                output: [ (3 * this._width / 2) | 0, (3 * this._height / 2) | 0 ]
-            })
-            .declare('output2/3', identity, {
-                pipeline: false,
-                output: [ (2 * this._width / 3) | 0, (2 * this._height / 3) | 0 ]
-            })
+            // kernels for debugging
+            .declare('_image2', identity,
+                withCanvas(2 * this._width, 2 * this._height))
+
+            .declare('_image3', identity,
+                withCanvas(3 * this._width, 3 * this._height))
+
+            .declare('_image1/2', identity,
+                withCanvas((1 + this._width) / 2, (1 + this._height) / 2))
+
+            .declare('_image3/2', identity,
+                withCanvas(3 * this._width / 2, 3 * this._height / 2))
+
+            .declare('_image2/3', identity,
+                withCanvas(2 * this._width / 3, 2 * this._height / 3))
         ;
     }
 }
