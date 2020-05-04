@@ -25,6 +25,7 @@ import { GPUColors } from './gpu-colors';
 import { GPUFilters } from './gpu-filters';
 import { GPUKeypoints } from './gpu-keypoints';
 import { GPUEncoders } from './gpu-encoders';
+import { GPUPyramids } from './gpu-pyramids';
 
 // Texture limits
 const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
@@ -64,6 +65,7 @@ export class GPUKernels
         this._filters = new GPUFilters(this._gpu, this._width, this._height);
         this._keypoints = new GPUKeypoints(this._gpu, this._width, this._height);
         this._encoders = new GPUEncoders(this._gpu, this._width, this._height);
+        this._pyramids = new GPUPyramids(this._gpu, this._width, this._height);
     }
 
     /**

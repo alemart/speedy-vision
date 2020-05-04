@@ -19,6 +19,8 @@
  * An abstract group of GPU kernels
  */
 
+import { identity } from './shaders/identity';
+
 /**
  * GPUKernelGroup
  * A semantically correlated group
@@ -32,6 +34,9 @@ export /* abstract */ class GPUKernelGroup
         this._gpu = gpu;
         this._width = Math.max(width|0, 1);
         this._height = Math.max(height|0, 1);
+
+        // declare an output kernel for debugging purposes
+        this.declare('output', identity, { pipeline: false });
     }
 
     /* protected */ declare(name, fn, settings = { })
@@ -64,12 +69,17 @@ export /* abstract */ class GPUKernelGroup
                     return function compose(image, ...args) {
                         return (fn[2])((fn[1])((fn[0])(image, ...args), ...args), ...args);
                     };
+                })() : ((fn.length == 4) ? (() => {
+                    fn = fn.map(fi => this[fi]);
+                    return function compose(image, ...args) {
+                        return (fn[3])((fn[2])((fn[1])((fn[0])(image, ...args), ...args), ...args), ...args);
+                    };
                 })() : (() => {
                     fn = fn.map(fi => this[fi]);
                     return function compose(image, ...args) {
                         return fn.reduce((img, fi) => fi(img, ...args), image);
                     };
-                })));
+                })())));
             }
         });
 

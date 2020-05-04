@@ -38,14 +38,17 @@ export class GPUFilters extends GPUKernelGroup
     {
         super(gpu, width, height);
         this
-            // separable kernels for gaussian (sigma = 1.0)
+            // separable kernels for gaussian smoothing
+            // gaussian approximation (sigma = 1.0)
             .compose('gauss1', '_gauss1x', '_gauss1y')
             .declare('_gauss1x', convX([
-                0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
-            ]/*, 1 / 1.001*/))
+                0.05, 0.25, 0.4, 0.25, 0.05
+                //0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
+            ]))
             .declare('_gauss1y', convY([
-                0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
-            ]/*, 1 / 1.001*/))
+                0.05, 0.25, 0.4, 0.25, 0.05
+                //0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
+            ]))
 
             // (debug) gaussian filter (sigma = 1.0)
             .declare('_gauss1', conv2D([
