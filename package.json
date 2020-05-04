@@ -1,6 +1,6 @@
 {
   "name": "speedy-features.js",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "GPU-accelerated feature detection and matching for Computer Vision on the web",
   "author": "Alexandre Martins <alemartf@gmail.com> (https://github.com/alemart)",
   "homepage": "https://github.com/alemart/speedy-features.js",
