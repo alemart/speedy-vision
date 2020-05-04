@@ -58,3 +58,40 @@ export function downsample3(image)
     
     this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
 }
+
+export function setBase(image)
+{
+    const pixel = image[this.thread.y][this.thread.x];
+    this.color(pixel[0], pixel[1], pixel[2], 0.5);
+}
+
+
+
+//
+// function generators
+//
+
+export function scale(scaleFactor)
+{
+    const s = Math.max(0.0, scaleFactor);
+
+    const body  = `
+    const pixel = image[this.thread.y][this.thread.x];
+    this.color(pixel[0], pixel[1], pixel[2], pixel[3] * ${s});
+    `;
+
+    return new Function('image', body);
+}
+
+export function setScale(newScale)
+{
+    // a = 0.5 means scale = 1
+    const s = Math.max(0.0, Math.min(newScale * 0.5, 1.0));
+
+    const body  = `
+    const pixel = image[this.thread.y][this.thread.x];
+    this.color(pixel[0], pixel[1], pixel[2], ${s});
+    `;
+
+    return new Function('image', body);
+}

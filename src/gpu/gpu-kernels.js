@@ -27,8 +27,9 @@ import { GPUKeypoints } from './gpu-keypoints';
 import { GPUEncoders } from './gpu-encoders';
 import { GPUPyramids } from './gpu-pyramids';
 
-// Texture limits
+// Limits
 const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
+const MAX_PYRAMID_LEVELS = 4;
 
 // Available kernel groups
 // (maps group name to class)
@@ -72,6 +73,38 @@ export class GPUKernels
 
         // spawn kernel groups
         spawnKernelGroups.call(this, this._gpu, this._width, this._height);
+
+        // spawn pyramids of kernel groups
+        this._pyramid = buildPyramid(this._gpu, this._width, this._height);
+        this._intraPyramid = buildPyramid(this._gpu, 3 * this._width / 2, 3 * this._height / 2);
+    }
+
+    /**
+     * Access the kernel groups of a pyramid level
+     * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS - 1
+     */
+    pyramid(level)
+    {
+        const lv = level | 0;
+
+        if(lv < 0 || lv >= MAX_PYRAMID_LEVELS)
+            Utils.fatal(`Invalid pyramid level: ${lv}`);
+
+        return this._pyramid[lv];
+    }
+
+    /**
+     * Access the kernel groups of an intra-pyramid level
+     * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS - 1
+     */
+    intraPyramid(level)
+    {
+        const lv = level | 0;
+
+        if(lv < 0 || lv >= MAX_PYRAMID_LEVELS)
+            Utils.fatal(`Invalid intra-pyramid level: ${lv}`);
+
+        return this._intraPyramid[lv];
     }
 }
 
@@ -89,6 +122,21 @@ function spawnKernelGroups(gpu, width, height)
             })()
         });
     }
+}
+
+// build a pyramid, where each level stores the kernel groups
+function buildPyramid(gpu, baseWidth, baseHeight, numLevels = MAX_PYRAMID_LEVELS)
+{
+    let pyramid = new Array(numLevels);
+    let width = baseWidth | 0, height = baseHeight | 0;
+
+    for(let i = 0; i < pyramid.length; i++) {
+        spawnKernelGroups.call(pyramid[i] = { }, gpu, width, height);
+        width = ((1 + width) / 2) | 0;
+        height = ((1 + height) / 2) | 0;
+    }
+
+    return pyramid;
 }
 
 // Create a canvas
