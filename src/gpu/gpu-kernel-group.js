@@ -43,10 +43,12 @@ export /* abstract */ class GPUKernelGroup
     {
         // lazy instantiation of kernels
         Object.defineProperty(this, name, {
-            get: function() {
+            get: (() => {
                 const key = '__k_' + name;
-                return this[key] || (this[key] = this._spawnKernel(fn, settings))
-            }
+                return (function() {
+                    return this[key] || (this[key] = this._spawnKernel(fn, settings));
+                }).bind(this);
+            })()
         });
 
         return this;
@@ -57,30 +59,32 @@ export /* abstract */ class GPUKernelGroup
         // function composition: functions are called in the order they are specified
         // e.g., compose('h', 'f', 'g') means h(x) = g(f(x))
         Object.defineProperty(this, name, {
-            get: function() {
+            get: (() => {
                 const key = '__c_' + name;
-                return this[key] || (this[key] = (fn.length == 2) ? (() => {
-                    fn = fn.map(fi => this[fi]);
-                    return function compose(image, ...args) {
-                        return (fn[1])((fn[0])(image, ...args), ...args);
-                    };
-                })() : ((fn.length == 3) ? (() => {
-                    fn = fn.map(fi => this[fi]);
-                    return function compose(image, ...args) {
-                        return (fn[2])((fn[1])((fn[0])(image, ...args), ...args), ...args);
-                    };
-                })() : ((fn.length == 4) ? (() => {
-                    fn = fn.map(fi => this[fi]);
-                    return function compose(image, ...args) {
-                        return (fn[3])((fn[2])((fn[1])((fn[0])(image, ...args), ...args), ...args), ...args);
-                    };
-                })() : (() => {
-                    fn = fn.map(fi => this[fi]);
-                    return function compose(image, ...args) {
-                        return fn.reduce((img, fi) => fi(img, ...args), image);
-                    };
-                })())));
-            }
+                return (function() {
+                    return this[key] || (this[key] = (fn.length == 2) ? (() => {
+                        fn = fn.map(fi => this[fi]);
+                        return function compose(image, ...args) {
+                            return (fn[1])((fn[0])(image, ...args), ...args);
+                        };
+                    })() : ((fn.length == 3) ? (() => {
+                        fn = fn.map(fi => this[fi]);
+                        return function compose(image, ...args) {
+                            return (fn[2])((fn[1])((fn[0])(image, ...args), ...args), ...args);
+                        };
+                    })() : ((fn.length == 4) ? (() => {
+                        fn = fn.map(fi => this[fi]);
+                        return function compose(image, ...args) {
+                            return (fn[3])((fn[2])((fn[1])((fn[0])(image, ...args), ...args), ...args), ...args);
+                        };
+                    })() : (() => {
+                        fn = fn.map(fi => this[fi]);
+                        return function compose(image, ...args) {
+                            return fn.reduce((img, fi) => fi(img, ...args), image);
+                        };
+                    })())));
+                }).bind(this);
+            })()
         });
 
         return this;

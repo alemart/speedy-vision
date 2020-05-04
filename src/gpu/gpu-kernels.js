@@ -30,6 +30,16 @@ import { GPUPyramids } from './gpu-pyramids';
 // Texture limits
 const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
 
+// Available kernel groups
+// (maps group name to class)
+const KERNEL_GROUPS = {
+    'colors': GPUColors,
+    'filters': GPUFilters,
+    'keypoints': GPUKeypoints,
+    'encoders': GPUEncoders,
+    'pyramids': GPUPyramids,
+};
+
 
 /**
  * The set of all GPU kernel groups for
@@ -60,44 +70,24 @@ export class GPUKernels
             context: this._canvas.getContext('webgl2', { premultipliedAlpha: true }) // we're using alpha
         });
 
-        // spawn kernels
-        this._colors = new GPUColors(this._gpu, this._width, this._height);
-        this._filters = new GPUFilters(this._gpu, this._width, this._height);
-        this._keypoints = new GPUKeypoints(this._gpu, this._width, this._height);
-        this._encoders = new GPUEncoders(this._gpu, this._width, this._height);
-        this._pyramids = new GPUPyramids(this._gpu, this._width, this._height);
+        // spawn kernel groups
+        spawnKernelGroups.call(this, this._gpu, this._width, this._height);
     }
+}
 
-    /**
-     * Colors kernel group
-     */
-    get colors()
-    {
-        return this._colors;
-    }
-
-    /**
-     * Filters kernel group
-     */
-    get filters()
-    {
-        return this._filters;
-    }
-
-    /**
-     * Keypoints kernel group
-     */
-    get keypoints()
-    {
-        return this._keypoints;
-    }
-
-    /**
-     * Encoders kernel group
-     */
-    get encoders()
-    {
-        return this._encoders;
+// Spawn kernel groups
+function spawnKernelGroups(gpu, width, height)
+{
+    // all kernel groups are available via getters
+    for(let g in KERNEL_GROUPS) {
+        Object.defineProperty(this, g, {
+            get: (() => {
+                const grp = '_' + g;
+                return (function() { // lazy instantiation
+                    return this[grp] || (this[grp] = new (KERNEL_GROUPS[g])(gpu, width, height));
+                }).bind(this);
+            })()
+        });
     }
 }
 
