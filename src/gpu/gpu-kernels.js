@@ -19,7 +19,7 @@
  * The set of all GPU kernel groups for accelerated computer vision
  */
 
-import { GPU } from './gpu-browser';
+const { GPU } = require(process.env.NODE_ENV == 'development' ? './gpu-js/gpu-browser' : './gpu-js/gpu-browser.min');
 import { Utils } from '../utils/utils';
 import { GPUColors } from './gpu-colors';
 import { GPUFilters } from './gpu-filters';
