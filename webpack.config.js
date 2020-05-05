@@ -2,28 +2,32 @@ const path = require('path');
 const webpack = require('webpack');
 const TerserPlugin = require('terser-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
-const { name, version, author, homepage, description, license } = require("./package.json");
+const package = require("./package.json");
 
 module.exports = (env, argv) => ({
   entry: './src/speedy.js',
   plugins: [
     new webpack.BannerPlugin({
-        banner: (date => [
+        banner: (({ name, version, homepage, description, year, author, license, date }) => [
             `${name} v${version}`,
             `${homepage}`,
             ``,
             `${description}`,
-            `Copyright 2020 ${author.replace('@', '(at)')}`,
-            `Released under the ${license} @license`,
+            `Copyright ${year} ${author}`,
+            `@license ${license}`,
             ``,
             `Includes gpu.js (MIT license)`,
             `by the gpu.js team (http://gpu.rocks)`,
             ``,
             `Date: ${date}`,
-        ].join('\n'))((new Date()).toISOString())
+        ].join('\n'))(Object.assign(package, {
+            'date': (new Date()).toISOString(),
+            'year': [...(new Set([2020, new Date().getFullYear()]))].join('-'),
+            'author': package.author.replace('@', '(at)'),
+        }))
     }),
     new webpack.DefinePlugin({
-      'PACKAGE_VERSION': JSON.stringify(version),
+      'PACKAGE_VERSION': JSON.stringify(package.version),
     }),
   ],
   output: {
