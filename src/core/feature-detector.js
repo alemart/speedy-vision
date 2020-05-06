@@ -76,17 +76,18 @@ export class FeatureDetector
 
         // keypoint detection
         const rawCorners = (({
-            5:  () => this._gpu.keypoints.fast5(greyscale, settings.threshold),
-            7:  () => this._gpu.keypoints.fast7(greyscale, settings.threshold),
-            9:  () => this._gpu.keypoints.fast9(greyscale, settings.threshold),
+            5: () => this._gpu.keypoints.fast5(greyscale, settings.threshold),
+            7: () => this._gpu.keypoints.fast7(greyscale, settings.threshold),
+            9: () => this._gpu.keypoints.fast9(greyscale, settings.threshold),
         })[n])();
         const corners = this._gpu.keypoints.fastSuppression(rawCorners);
 
         // encoding result
         const offsets = this._gpu.encoders.encodeKeypointOffsets(corners);
-        const keypointCount = this._gpu.encoders.countKeypoints(offsets);
-        this._gpu.encoders.optimizeKeypointEncoder(keypointCount);
+        //const keypointCount = this._gpu.encoders.countKeypoints(offsets); // performance penalty
         const pixels = this._gpu.encoders.encodeKeypoints(offsets);
-        return this._gpu.encoders.decodeKeypoints(pixels);
+        const keypoints = this._gpu.encoders.decodeKeypoints(pixels);
+        this._gpu.encoders.optimizeKeypointEncoder(keypoints.length);
+        return keypoints;
     }
 }

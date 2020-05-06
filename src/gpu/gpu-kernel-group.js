@@ -36,7 +36,7 @@ export /* abstract */ class GPUKernelGroup
         this._height = Math.max(height|0, 1);
 
         // declare an image kernel for debugging purposes
-        this.declare('image', identity, { pipeline: false });
+        this.declare('_image', identity, { pipeline: false });
     }
 
     /* protected */ declare(name, fn, settings = { })
@@ -92,7 +92,7 @@ export /* abstract */ class GPUKernelGroup
 
     /* private */ _spawnKernel(fn, settings = { })
     {
-        const config = Object.assign({}, {
+        const config = Object.assign({
             // default settings
             output: [ this._width, this._height ],
             tactic: 'precision', // highp
@@ -103,6 +103,7 @@ export /* abstract */ class GPUKernelGroup
                 width: this._width,
                 height: this._height
             },
+            //debug: true,
         }, settings);
 
         return this._gpu.createKernel(fn, config);

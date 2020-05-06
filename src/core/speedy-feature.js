@@ -20,9 +20,8 @@
  */
 
 /**
- * A SpeedyFeature is a "corner",
- * in an image with a position
- * and an optional descriptor
+ * A SpeedyFeature is a keypoint in an image,
+ * with optional scale, rotation and descriptor
  */
 export class SpeedyFeature
 {
@@ -30,12 +29,16 @@ export class SpeedyFeature
      * Creates a new SpeedyFeature
      * @param {number} x X position
      * @param {number} y Y position
+     * @param {number} [scale] Scale
+     * @param {number} [rotation] Rotation in radians
      * @param {FeatureDescriptor} [descriptor] Feature descriptor
      */
-    constructor(x, y, descriptor = null)
+    constructor(x, y, scale = 1.0, rotation = 0.0, descriptor = null)
     {
         this._x = x|0;
         this._y = y|0;
+        this._scale = +scale;
+        this._rotation = +rotation;
         this._descriptor = descriptor;
     }
 
@@ -64,6 +67,24 @@ export class SpeedyFeature
     get y()
     {
         return this._y;
+    }
+
+    /**
+     * The scale of the feature point
+     * @returns {number} Scale
+     */
+    get scale()
+    {
+        return this._scale;
+    }
+
+    /**
+     * The rotation of the feature point, in radians
+     * @returns {number} Angle in radians
+     */
+    get rotation()
+    {
+        return this._rotation;
     }
 
     /**

@@ -1,15 +1,15 @@
 /*!
- * speedy-features.js v0.1.0
+ * speedy-features.js v0.1.1
  * https://github.com/alemart/speedy-features.js
  * 
  * GPU-accelerated feature detection and matching for Computer Vision on the web
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
- * Released under the Apache-2.0 @license
+ * @license Apache-2.0
  * 
  * Includes gpu.js (MIT license)
  * by the gpu.js team (http://gpu.rocks)
  * 
- * Date: 2020-05-03T02:23:25.862Z
+ * Date: 2020-05-06T01:47:17.653Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -111,8 +111,7 @@ var Speedy =
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FeatureDetector", function() { return FeatureDetector; });
 /* harmony import */ var _gpu_gpu_kernels__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu/gpu-kernels */ "./src/gpu/gpu-kernels.js");
-/* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-feature */ "./src/core/speedy-feature.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-features.js
  * GPU-accelerated feature detection and matching for Computer Vision on the web
@@ -137,7 +136,6 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-
 /**
  * FeatureDetector encapsulates
  * feature detection algorithms
@@ -157,7 +155,8 @@ class FeatureDetector
     /**
      * FAST corner detection
      * @param {number} [n] We'll run FAST-n, where n must be 9 (default), 7 or 5
-     * @param {object} [userSettings ]
+     * @param {object} [userSettings]
+     * @returns {Array<SpeedyFeature>} keypoints
      */
     fast(n = 9, userSettings = { })
     {
@@ -181,7 +180,7 @@ class FeatureDetector
 
         // validate input
         if(n != 9 && n != 5 && n != 7)
-            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].fatal(`Not implemented: FAST-${n}`); // this shouldn't happen...
+            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Not implemented: FAST-${n}`); // this shouldn't happen...
 
         // pre-processing the image...
         const smoothed = settings.denoise ?
@@ -191,37 +190,18 @@ class FeatureDetector
 
         // keypoint detection
         const rawCorners = (({
-            5:  () => this._gpu.keypoints.fast5(greyscale, settings.threshold),
-            7:  () => this._gpu.keypoints.fast7(greyscale, settings.threshold),
-            9:  () => this._gpu.keypoints.fast9(greyscale, settings.threshold),
+            5: () => this._gpu.keypoints.fast5(greyscale, settings.threshold),
+            7: () => this._gpu.keypoints.fast7(greyscale, settings.threshold),
+            9: () => this._gpu.keypoints.fast9(greyscale, settings.threshold),
         })[n])();
         const corners = this._gpu.keypoints.fastSuppression(rawCorners);
 
         // encoding result
-        const offsets = this._gpu.encoders.encodeOffsets(corners);
-        const keypointCount = this._gpu.encoders.countKeypoints(offsets);
-        this._gpu.encoders.optimizeKeypointEncoder(keypointCount);
-        const pixels = this._gpu.encoders.encodeKeypoints(offsets); // bottleneck
-
-        // done!
-        return this._decodeKeypoints(pixels);
-    }
-
-    // reads the keypoints from a flattened array of encoded pixels
-    _decodeKeypoints(pixels)
-    {
-        const [ w, h ] = [ this._media.width, this._media.height ];
-        let keypoints = [], x, y;
-
-        for(let i = 0; i < pixels.length; i += 4) {
-            x = (pixels[i+1] << 8) | pixels[i];
-            y = (pixels[i+3] << 8) | pixels[i+2];
-            if(x < w && y < h)
-                keypoints.push(new _speedy_feature__WEBPACK_IMPORTED_MODULE_1__["SpeedyFeature"](x, y));
-            else
-                break;
-        }
-
+        const offsets = this._gpu.encoders.encodeKeypointOffsets(corners);
+        //const keypointCount = this._gpu.encoders.countKeypoints(offsets); // performance penalty
+        const pixels = this._gpu.encoders.encodeKeypoints(offsets);
+        const keypoints = this._gpu.encoders.decodeKeypoints(pixels);
+        this._gpu.encoders.optimizeKeypointEncoder(keypoints.length);
         return keypoints;
     }
 }
@@ -260,9 +240,8 @@ __webpack_require__.r(__webpack_exports__);
  */
 
 /**
- * A SpeedyFeature is a "corner",
- * in an image with a position
- * and an optional descriptor
+ * A SpeedyFeature is a keypoint in an image,
+ * with optional scale, rotation and descriptor
  */
 class SpeedyFeature
 {
@@ -270,12 +249,16 @@ class SpeedyFeature
      * Creates a new SpeedyFeature
      * @param {number} x X position
      * @param {number} y Y position
+     * @param {number} [scale] Scale
+     * @param {number} [rotation] Rotation in radians
      * @param {FeatureDescriptor} [descriptor] Feature descriptor
      */
-    constructor(x, y, descriptor = null)
+    constructor(x, y, scale = 1.0, rotation = 0.0, descriptor = null)
     {
         this._x = x|0;
         this._y = y|0;
+        this._scale = +scale;
+        this._rotation = +rotation;
         this._descriptor = descriptor;
     }
 
@@ -304,6 +287,24 @@ class SpeedyFeature
     get y()
     {
         return this._y;
+    }
+
+    /**
+     * The scale of the feature point
+     * @returns {number} Scale
+     */
+    get scale()
+    {
+        return this._scale;
+    }
+
+    /**
+     * The rotation of the feature point, in radians
+     * @returns {number} Angle in radians
+     */
+    get rotation()
+    {
+        return this._rotation;
     }
 
     /**
@@ -535,10 +536,321 @@ function getMediaType(mediaSource)
 
 /***/ }),
 
-/***/ "./src/gpu/gpu-browser.js":
+/***/ "./src/gpu/gpu-colors.js":
+/*!*******************************!*\
+  !*** ./src/gpu/gpu-colors.js ***!
+  \*******************************/
+/*! exports provided: GPUColors */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUColors", function() { return GPUColors; });
+/* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
+/* harmony import */ var _shaders_colors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/colors */ "./src/gpu/shaders/colors.js");
+/*
+ * speedy-features.js
+ * GPU-accelerated feature detection and matching for Computer Vision on the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * gpu-colors.js
+ * Color conversion algorithms
+ */
+
+
+
+
+/**
+ * GPUColors
+ * Color conversions
+ */
+class GPUColors extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernelGroup"]
+{
+    /**
+     * Class constructor
+     * @param {GPU} gpu 
+     * @param {number} width 
+     * @param {number} height 
+     */
+    constructor(gpu, width, height)
+    {
+        super(gpu, width, height);
+        this
+            // convert to greyscale
+            .declare('rgb2grey', _shaders_colors__WEBPACK_IMPORTED_MODULE_1__["rgb2grey"])
+        ;
+    }
+}
+
+/***/ }),
+
+/***/ "./src/gpu/gpu-encoders.js":
+/*!*********************************!*\
+  !*** ./src/gpu/gpu-encoders.js ***!
+  \*********************************/
+/*! exports provided: GPUEncoders */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUEncoders", function() { return GPUEncoders; });
+/* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
+/* harmony import */ var _shaders_encoders__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/encoders */ "./src/gpu/shaders/encoders.js");
+/* harmony import */ var _core_speedy_feature__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../core/speedy-feature */ "./src/core/speedy-feature.js");
+/*
+ * speedy-features.js
+ * GPU-accelerated feature detection and matching for Computer Vision on the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * gpu-encoders.js
+ * Texture encoders
+ */
+
+
+
+
+
+// We won't admit more than MAX_KEYPOINTS per media.
+// The larger this value is, the more data we need to transfer from the GPU.
+const MAX_DESCRIPTOR_SIZE = 64; // in bytes, must be divisible by 4
+const MAX_KEYPOINT_SIZE = 8 + MAX_DESCRIPTOR_SIZE; // in bytes, must be divisible by 4
+const MAX_PIXELS_PER_KEYPOINT = MAX_KEYPOINT_SIZE / 4; // in pixels
+const MAX_ENCODER_LENGTH = 300; // in pixels (if too large, WebGL may lose context - so be careful!)
+const MAX_KEYPOINTS = (MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH) / MAX_PIXELS_PER_KEYPOINT;
+const INITIAL_ENCODER_LENGTH = 256; // pick a large value < MAX (useful on static images when no encoder optimization is performed beforehand)
+const TWO_PI = 2.0 * Math.PI;
+
+
+/**
+ * GPUEncoders
+ * Texture encoding
+ */
+class GPUEncoders extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernelGroup"]
+{
+    /**
+     * Class constructor
+     * @param {GPU} gpu 
+     * @param {number} width 
+     * @param {number} height 
+     */
+    constructor(gpu, width, height)
+    {
+        super(gpu, width, height);
+        this
+            // Keypoint encoding
+            .declare('encodeKeypointOffsets', _shaders_encoders__WEBPACK_IMPORTED_MODULE_1__["encodeKeypointOffsets"], {
+                loopMaxIterations: 1024
+            })
+
+            .declare('_encodeKeypointCount', _shaders_encoders__WEBPACK_IMPORTED_MODULE_1__["encodeKeypointCount"], {
+                pipeline: false,
+                loopMaxIterations: 4 * MAX_KEYPOINTS,
+                output: [ 1, 1 ],
+            })
+
+            .declare('_encodeKeypoints', _shaders_encoders__WEBPACK_IMPORTED_MODULE_1__["encodeKeypoints"], {
+                pipeline: false,
+                dynamicOutput: true, // resizable output
+                loopMaxIterations: 4 * MAX_KEYPOINTS,
+                output: [ INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH ],
+            })
+        ;
+
+        // setup internal properties
+        this._dynamicKernels = Object.getOwnPropertyNames(this)
+                                     .filter(k => this[k].dynamicOutput)
+                                     .map(k => this[k]);
+        this._keypointEncoderLength = INITIAL_ENCODER_LENGTH;
+        this._descriptorSize = 0;
+    }
+
+
+
+    // -------------------------------------------------------------------------
+    //                       KEYPOINT ENCODING
+    // -------------------------------------------------------------------------
+
+
+    /**
+     * Counts the number of keypoints
+     * @param {} offsets image with encoded offsets
+     * @returns {number} number of keypoints
+     */
+    countKeypoints(offsets)
+    {
+        this._encodeKeypointCount(offsets);
+        const pixel = this._encodeKeypointCount.getPixels(); // bottleneck
+        return ((pixel[3] << 24) | (pixel[2] << 16) | (pixel[1] << 8) | pixel[0]);
+    }
+
+    /**
+     * Optimizes the keypoint encoder for an expected number of keypoints
+     * @param {number} keypointCount expected number of keypoints
+     * @returns {number} nonzero if the encoder has been optimized
+     */
+    optimizeKeypointEncoder(keypointCount)
+    {
+        const pixelsPerKeypoint = Math.ceil(2 + this._descriptorSize / 4);
+        const len = Math.ceil(Math.sqrt((50 + keypointCount) * pixelsPerKeypoint)); // add some slack
+        const newEncoderLength = Math.max(1, Math.min(len, MAX_ENCODER_LENGTH));
+        const oldEncoderLength = this._keypointEncoderLength;
+
+        if(newEncoderLength != oldEncoderLength) {
+            this._keypointEncoderLength = newEncoderLength;
+            for(let i = 0; i < this._dynamicKernels.length; i++)
+                this._dynamicKernels[i].setOutput([ newEncoderLength, newEncoderLength ]);
+        }
+
+        return newEncoderLength - oldEncoderLength;
+    }
+
+    /**
+     * Encodes the keypoints with an image - this is a bottleneck!
+     * @param {} offsets image with encoded offsets
+     * @returns {Array<number>} pixels in the [r,g,b,a, ...] format
+     */
+    encodeKeypoints(offsets)
+    {
+        this._encodeKeypoints(offsets, this._keypointEncoderLength, this._descriptorSize);
+        return this._encodeKeypoints.getPixels(); // bottleneck
+    }
+
+    /**
+     * Decodes the keypoints, given a flattened image of encoded pixels
+     * @param {Array<number>} pixels pixels in the [r,g,b,a,...] format
+     * @returns {Array<SpeedyFeature>} keypoints
+     */
+    decodeKeypoints(pixels)
+    {
+        const [ w, h ] = [ this._width, this._height ];
+        const pixelsPerKeypoint = 2 + this._descriptorSize / 4;
+        let keypoints = [], x, y, scale, rotation;
+
+        for(let i = 0; i < pixels.length; i += 4 * pixelsPerKeypoint) {
+            x = (pixels[i+1] << 8) | pixels[i];
+            y = (pixels[i+3] << 8) | pixels[i+2];
+            if(x < w && y < h) {
+                scale = pixels[i+4] / 255.0;
+                rotation = pixels[i+5] * TWO_PI / 255.0;
+                keypoints.push(new _core_speedy_feature__WEBPACK_IMPORTED_MODULE_2__["SpeedyFeature"](x, y, scale, rotation));
+            }
+            else
+                break;
+        }
+
+        return keypoints;
+    }
+}
+
+/***/ }),
+
+/***/ "./src/gpu/gpu-filters.js":
 /*!********************************!*\
-  !*** ./src/gpu/gpu-browser.js ***!
+  !*** ./src/gpu/gpu-filters.js ***!
   \********************************/
+/*! exports provided: GPUFilters */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUFilters", function() { return GPUFilters; });
+/* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
+/* harmony import */ var _shaders_convolution__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/convolution */ "./src/gpu/shaders/convolution.js");
+/*
+ * speedy-features.js
+ * GPU-accelerated feature detection and matching for Computer Vision on the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * gpu-filters.js
+ * Image filtering on the GPU
+ */
+
+
+
+
+/**
+ * GPUFilters
+ * Image filtering
+ */
+class GPUFilters extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernelGroup"]
+{
+    /**
+     * Class constructor
+     * @param {GPU} gpu 
+     * @param {number} width 
+     * @param {number} height 
+     */
+    constructor(gpu, width, height)
+    {
+        super(gpu, width, height);
+        this
+            // separable kernels for gaussian smoothing
+            // gaussian approximation (sigma = 1.0)
+            .compose('gauss1', '_gauss1x', '_gauss1y')
+            .declare('_gauss1x', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
+                0.05, 0.25, 0.4, 0.25, 0.05
+                //0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
+            ]))
+            .declare('_gauss1y', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
+                0.05, 0.25, 0.4, 0.25, 0.05
+                //0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
+            ]))
+
+            // (debug) gaussian filter (sigma = 1.0)
+            .declare('_gauss1', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["conv2D"])([
+                1, 4, 7, 4, 1,
+                4, 16, 26, 16, 4,
+                7, 26, 41, 26, 7,
+                4, 16, 26, 16, 4,
+                1, 4, 7, 4, 1,
+            ], 1 / 237))
+        ;
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/gpu/gpu-js/gpu-browser.js":
+/*!***************************************!*\
+  !*** ./src/gpu/gpu-js/gpu-browser.js ***!
+  \***************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -19987,272 +20299,6 @@ module.exports = {
 
 /***/ }),
 
-/***/ "./src/gpu/gpu-colors.js":
-/*!*******************************!*\
-  !*** ./src/gpu/gpu-colors.js ***!
-  \*******************************/
-/*! exports provided: GPUColors */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUColors", function() { return GPUColors; });
-/* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
-/* harmony import */ var _shaders_colors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/colors */ "./src/gpu/shaders/colors.js");
-/*
- * speedy-features.js
- * GPU-accelerated feature detection and matching for Computer Vision on the web
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * gpu-colors.js
- * Color conversion algorithms
- */
-
-
-
-
-/**
- * GPUColors
- * Color conversions
- */
-class GPUColors extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernelGroup"]
-{
-    /**
-     * Class constructor
-     * @param {GPU} gpu 
-     * @param {number} width 
-     * @param {number} height 
-     */
-    constructor(gpu, width, height)
-    {
-        super(gpu, width, height);
-        this
-            // convert to greyscale
-            .declare('rgb2grey', _shaders_colors__WEBPACK_IMPORTED_MODULE_1__["rgb2grey"])
-        ;
-    }
-}
-
-/***/ }),
-
-/***/ "./src/gpu/gpu-encoders.js":
-/*!*********************************!*\
-  !*** ./src/gpu/gpu-encoders.js ***!
-  \*********************************/
-/*! exports provided: GPUEncoders */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUEncoders", function() { return GPUEncoders; });
-/* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
-/* harmony import */ var _shaders_encoders__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/encoders */ "./src/gpu/shaders/encoders.js");
-/*
- * speedy-features.js
- * GPU-accelerated feature detection and matching for Computer Vision on the web
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * gpu-encoders.js
- * Texture encoders
- */
-
-
-
-
-// We won't admit more than MAX_FEATURE_POINTS per media.
-// The higher its value, the more work we have to perform
-// to transfer data from the GPU to the CPU.
-const MAX_ENCODER_LENGTH = 256;
-const MAX_FEATURE_POINTS = MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH; // 64K max !!!
-
-
-/**
- * GPUEncoders
- * Texture encoding
- */
-class GPUEncoders extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernelGroup"]
-{
-    /**
-     * Class constructor
-     * @param {GPU} gpu 
-     * @param {number} width 
-     * @param {number} height 
-     */
-    constructor(gpu, width, height)
-    {
-        super(gpu, width, height);
-        this
-            .declare('encodeOffsets', _shaders_encoders__WEBPACK_IMPORTED_MODULE_1__["encodeOffsets"], {
-                loopMaxIterations: 1024
-            })
-
-            .declare('_encodeKeypointCount', _shaders_encoders__WEBPACK_IMPORTED_MODULE_1__["encodeKeypointCount"], {
-                pipeline: false,
-                loopMaxIterations: 4 * MAX_FEATURE_POINTS,
-                output: [ 1, 1 ],
-            })
-
-            .declare('_encodeKeypoints', _shaders_encoders__WEBPACK_IMPORTED_MODULE_1__["encodeKeypoints"], {
-                pipeline: false,
-                dynamicOutput: true, // resizable output
-                loopMaxIterations: 4 * MAX_FEATURE_POINTS,
-                output: [ MAX_ENCODER_LENGTH, MAX_ENCODER_LENGTH ],
-            })
-        ;
-
-        // setup internal properties
-        this._dynamicKernels = Object.getOwnPropertyNames(this)
-                                     .filter(k => this[k].dynamicOutput)
-                                     .map(k => this[k]);
-        this._keypointEncoderLength = MAX_ENCODER_LENGTH;
-    }
-
-    /**
-     * Counts the number of keypoints
-     * @param {} offsets image with encoded offsets
-     * @returns {number} number of keypoints
-     */
-    countKeypoints(offsets)
-    {
-        this._encodeKeypointCount(offsets);
-        const pixel = this._encodeKeypointCount.getPixels();
-        return ((pixel[3] << 24) | (pixel[2] << 16) | (pixel[1] << 8) | pixel[0]);
-    }
-
-    /**
-     * Optimizes the keypoint encoder for an expected number of keypoints
-     * @param {number} keypointCount
-     * @returns {number} nonzero if the encoder has been optimized
-     */
-    optimizeKeypointEncoder(keypointCount)
-    {
-        const len = Math.ceil(Math.sqrt(keypointCount + 4)); // add some slack
-        const newEncoderLength = Math.max(1, Math.min(len, MAX_ENCODER_LENGTH));
-        const oldEncoderLength = this._keypointEncoderLength;
-
-        if(newEncoderLength != oldEncoderLength) {
-            this._keypointEncoderLength = newEncoderLength;
-            for(let i = 0; i < this._dynamicKernels.length; i++)
-                this._dynamicKernels[i].setOutput([ newEncoderLength, newEncoderLength ]);
-        }
-
-        return newEncoderLength - oldEncoderLength;
-    }
-
-    /**
-     * Encodes the keypoints - this is a bottleneck!
-     * @param {} offsets image with encoded offsets
-     * @returns {Array<number>} pixels in the [r,g,b,a, ...] format
-     */
-    encodeKeypoints(offsets)
-    {
-        this._encodeKeypoints(offsets, this._keypointEncoderLength);
-        return this._encodeKeypoints.getPixels(); // bottleneck
-    }
-}
-
-/***/ }),
-
-/***/ "./src/gpu/gpu-filters.js":
-/*!********************************!*\
-  !*** ./src/gpu/gpu-filters.js ***!
-  \********************************/
-/*! exports provided: GPUFilters */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUFilters", function() { return GPUFilters; });
-/* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
-/* harmony import */ var _shaders_convolution__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/convolution */ "./src/gpu/shaders/convolution.js");
-/*
- * speedy-features.js
- * GPU-accelerated feature detection and matching for Computer Vision on the web
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * gpu-filters.js
- * Image filtering on the GPU
- */
-
-
-
-
-/**
- * GPUFilters
- * Image filtering
- */
-class GPUFilters extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernelGroup"]
-{
-    /**
-     * Class constructor
-     * @param {GPU} gpu 
-     * @param {number} width 
-     * @param {number} height 
-     */
-    constructor(gpu, width, height)
-    {
-        super(gpu, width, height);
-        this
-            // separable kernels for gaussian (sigma = 1.0)
-            .compose('gauss1', '_gauss1x', '_gauss1y')
-            .declare('_gauss1x', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
-                0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
-            ]/*, 1 / 1.001*/))
-            .declare('_gauss1y', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
-                0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
-            ]/*, 1 / 1.001*/))
-
-            // (debug) gaussian filter (sigma = 1.0)
-            .declare('_gauss1', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["conv2D"])([
-                1, 4, 7, 4, 1,
-                4, 16, 26, 16, 4,
-                7, 26, 41, 26, 7,
-                4, 16, 26, 16, 4,
-                1, 4, 7, 4, 1,
-            ], 1 / 237))
-        ;
-    }
-}
-
-
-/***/ }),
-
 /***/ "./src/gpu/gpu-kernel-group.js":
 /*!*************************************!*\
   !*** ./src/gpu/gpu-kernel-group.js ***!
@@ -20263,6 +20309,7 @@ class GPUFilters extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKern
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUKernelGroup", function() { return GPUKernelGroup; });
+/* harmony import */ var _shaders_identity__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./shaders/identity */ "./src/gpu/shaders/identity.js");
 /*
  * speedy-features.js
  * GPU-accelerated feature detection and matching for Computer Vision on the web
@@ -20284,6 +20331,8 @@ __webpack_require__.r(__webpack_exports__);
  * An abstract group of GPU kernels
  */
 
+
+
 /**
  * GPUKernelGroup
  * A semantically correlated group
@@ -20297,16 +20346,21 @@ class GPUKernelGroup
         this._gpu = gpu;
         this._width = Math.max(width|0, 1);
         this._height = Math.max(height|0, 1);
+
+        // declare an image kernel for debugging purposes
+        this.declare('_image', _shaders_identity__WEBPACK_IMPORTED_MODULE_0__["identity"], { pipeline: false });
     }
 
     /* protected */ declare(name, fn, settings = { })
     {
         // lazy instantiation of kernels
         Object.defineProperty(this, name, {
-            get: function() {
+            get: (() => {
                 const key = '__k_' + name;
-                return this[key] || (this[key] = this._spawnKernel(fn, settings))
-            }
+                return (function() {
+                    return this[key] || (this[key] = this._spawnKernel(fn, settings));
+                }).bind(this);
+            })()
         });
 
         return this;
@@ -20317,25 +20371,32 @@ class GPUKernelGroup
         // function composition: functions are called in the order they are specified
         // e.g., compose('h', 'f', 'g') means h(x) = g(f(x))
         Object.defineProperty(this, name, {
-            get: function() {
+            get: (() => {
                 const key = '__c_' + name;
-                return this[key] || (this[key] = (fn.length == 2) ? (() => {
-                    fn = fn.map(fi => this[fi]);
-                    return function compose(image, ...args) {
-                        return (fn[1])((fn[0])(image, ...args), ...args);
-                    };
-                })() : ((fn.length == 3) ? (() => {
-                    fn = fn.map(fi => this[fi]);
-                    return function compose(image, ...args) {
-                        return (fn[2])((fn[1])((fn[0])(image, ...args), ...args), ...args);
-                    };
-                })() : (() => {
-                    fn = fn.map(fi => this[fi]);
-                    return function compose(image, ...args) {
-                        return fn.reduce((img, fi) => fi(img, ...args), image);
-                    };
-                })));
-            }
+                return (function() {
+                    return this[key] || (this[key] = (fn.length == 2) ? (() => {
+                        fn = fn.map(fi => this[fi]);
+                        return function compose(image, ...args) {
+                            return (fn[1])((fn[0])(image, ...args), ...args);
+                        };
+                    })() : ((fn.length == 3) ? (() => {
+                        fn = fn.map(fi => this[fi]);
+                        return function compose(image, ...args) {
+                            return (fn[2])((fn[1])((fn[0])(image, ...args), ...args), ...args);
+                        };
+                    })() : ((fn.length == 4) ? (() => {
+                        fn = fn.map(fi => this[fi]);
+                        return function compose(image, ...args) {
+                            return (fn[3])((fn[2])((fn[1])((fn[0])(image, ...args), ...args), ...args), ...args);
+                        };
+                    })() : (() => {
+                        fn = fn.map(fi => this[fi]);
+                        return function compose(image, ...args) {
+                            return fn.reduce((img, fi) => fi(img, ...args), image);
+                        };
+                    })())));
+                }).bind(this);
+            })()
         });
 
         return this;
@@ -20343,7 +20404,7 @@ class GPUKernelGroup
 
     /* private */ _spawnKernel(fn, settings = { })
     {
-        const config = Object.assign({}, {
+        const config = Object.assign({
             // default settings
             output: [ this._width, this._height ],
             tactic: 'precision', // highp
@@ -20354,6 +20415,7 @@ class GPUKernelGroup
                 width: this._width,
                 height: this._height
             },
+            //debug: true,
         }, settings);
 
         return this._gpu.createKernel(fn, config);
@@ -20372,13 +20434,12 @@ class GPUKernelGroup
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUKernels", function() { return GPUKernels; });
-/* harmony import */ var _gpu_browser__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gpu-browser */ "./src/gpu/gpu-browser.js");
-/* harmony import */ var _gpu_browser__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_gpu_browser__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _gpu_colors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./gpu-colors */ "./src/gpu/gpu-colors.js");
-/* harmony import */ var _gpu_filters__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./gpu-filters */ "./src/gpu/gpu-filters.js");
-/* harmony import */ var _gpu_keypoints__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./gpu-keypoints */ "./src/gpu/gpu-keypoints.js");
-/* harmony import */ var _gpu_encoders__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./gpu-encoders */ "./src/gpu/gpu-encoders.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _gpu_colors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./gpu-colors */ "./src/gpu/gpu-colors.js");
+/* harmony import */ var _gpu_filters__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./gpu-filters */ "./src/gpu/gpu-filters.js");
+/* harmony import */ var _gpu_keypoints__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./gpu-keypoints */ "./src/gpu/gpu-keypoints.js");
+/* harmony import */ var _gpu_encoders__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./gpu-encoders */ "./src/gpu/gpu-encoders.js");
+/* harmony import */ var _gpu_pyramids__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./gpu-pyramids */ "./src/gpu/gpu-pyramids.js");
 /*
  * speedy-features.js
  * GPU-accelerated feature detection and matching for Computer Vision on the web
@@ -20400,6 +20461,7 @@ __webpack_require__.r(__webpack_exports__);
  * The set of all GPU kernel groups for accelerated computer vision
  */
 
+const { GPU } = __webpack_require__(/*! ./gpu-js/gpu-browser */ "./src/gpu/gpu-js/gpu-browser.js");
 
 
 
@@ -20407,8 +20469,19 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-// Texture limits
+// Limits
 const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
+const MAX_PYRAMID_LEVELS = 4;
+
+// Available kernel groups
+// (maps group name to class)
+const KERNEL_GROUPS = {
+    'colors': _gpu_colors__WEBPACK_IMPORTED_MODULE_1__["GPUColors"],
+    'filters': _gpu_filters__WEBPACK_IMPORTED_MODULE_2__["GPUFilters"],
+    'keypoints': _gpu_keypoints__WEBPACK_IMPORTED_MODULE_3__["GPUKeypoints"],
+    'encoders': _gpu_encoders__WEBPACK_IMPORTED_MODULE_4__["GPUEncoders"],
+    'pyramids': _gpu_pyramids__WEBPACK_IMPORTED_MODULE_5__["GPUPyramids"],
+};
 
 
 /**
@@ -20428,67 +20501,112 @@ class GPUKernels
         this._width = +width | 0;
         this._height = +height | 0;
         if(this._width > MAX_TEXTURE_LENGTH || this._height > MAX_TEXTURE_LENGTH) {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].warning('Maximum texture size exceeded.');
+            _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].warning('Maximum texture size exceeded.');
             this._width = Math.min(this._width, MAX_TEXTURE_LENGTH);
             this._height = Math.min(this._height, MAX_TEXTURE_LENGTH);
         }
 
+        // create & configure canvas
+        this._canvas = this._createCanvas(this._width, this._height);
+        this._canvas.addEventListener('webglcontextlost', event => {
+            _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].warning(`Lost WebGL context.`);
+            event.preventDefault();
+        }, false);
+        this._canvas.addEventListener('webglcontextrestored', () => {
+            _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].warning(`Restored WebGL context.`);
+            this._initGPU();
+        }, false);
+
+        // initialize GPU
+        this._initGPU();
+    }
+
+    /**
+     * Access the kernel groups of a pyramid level
+     * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS - 1
+     */
+    pyramid(level)
+    {
+        const lv = level | 0;
+
+        if(lv < 0 || lv >= MAX_PYRAMID_LEVELS)
+            _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Invalid pyramid level: ${lv}`);
+
+        return this._pyramid[lv];
+    }
+
+    /**
+     * Access the kernel groups of an intra-pyramid level
+     * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS - 1
+     */
+    intraPyramid(level)
+    {
+        const lv = level | 0;
+
+        if(lv < 0 || lv >= MAX_PYRAMID_LEVELS)
+            _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Invalid intra-pyramid level: ${lv}`);
+
+        return this._intraPyramid[lv];
+    }
+
+    // initialize GPU
+    _initGPU()
+    {
         // create GPU
-        this._canvas = createCanvas(this._width, this._height);
-        this._gpu = new _gpu_browser__WEBPACK_IMPORTED_MODULE_0__["GPU"]({
+        this._gpu = new GPU({
             canvas: this._canvas,
             context: this._canvas.getContext('webgl2', { premultipliedAlpha: true }) // we're using alpha
         });
 
-        // spawn kernels
-        this._colors = new _gpu_colors__WEBPACK_IMPORTED_MODULE_2__["GPUColors"](this._gpu, this._width, this._height);
-        this._filters = new _gpu_filters__WEBPACK_IMPORTED_MODULE_3__["GPUFilters"](this._gpu, this._width, this._height);
-        this._keypoints = new _gpu_keypoints__WEBPACK_IMPORTED_MODULE_4__["GPUKeypoints"](this._gpu, this._width, this._height);
-        this._encoders = new _gpu_encoders__WEBPACK_IMPORTED_MODULE_5__["GPUEncoders"](this._gpu, this._width, this._height);
+        // spawn kernel groups
+        spawnKernelGroups.call(this, this._gpu, this._width, this._height);
+
+        // spawn pyramids of kernel groups
+        this._pyramid = this._buildPyramid(this._width, this._height);
+        this._intraPyramid = this._buildPyramid(3 * this._width / 2, 3 * this._height / 2);
     }
 
-    /**
-     * Colors kernel group
-     */
-    get colors()
+    // Create a canvas
+    _createCanvas(width, height)
     {
-        return this._colors;
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        return canvas;
     }
 
-    /**
-     * Filters kernel group
-     */
-    get filters()
+    // build a pyramid, where each level stores the kernel groups
+    _buildPyramid(baseWidth, baseHeight, numLevels = MAX_PYRAMID_LEVELS)
     {
-        return this._filters;
-    }
+        let pyramid = new Array(numLevels);
+        let width = baseWidth | 0, height = baseHeight | 0;
 
-    /**
-     * Keypoints kernel group
-     */
-    get keypoints()
-    {
-        return this._keypoints;
-    }
+        for(let i = 0; i < pyramid.length; i++) {
+            spawnKernelGroups.call(pyramid[i] = { }, this._gpu, width, height);
+            width = ((1 + width) / 2) | 0;
+            height = ((1 + height) / 2) | 0;
+        }
 
-    /**
-     * Encoders kernel group
-     */
-    get encoders()
-    {
-        return this._encoders;
+        return pyramid;
     }
 }
 
-// Create a canvas
-function createCanvas(width, height)
+// Spawn kernel groups
+function spawnKernelGroups(gpu, width, height)
 {
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    return canvas;
+    // all kernel groups are available via getters
+    for(let g in KERNEL_GROUPS) {
+        Object.defineProperty(this, g, {
+            get: (() => {
+                const grp = '_' + g;
+                return (function() { // lazy instantiation
+                    return this[grp] || (this[grp] = new (KERNEL_GROUPS[g])(gpu, width, height));
+                }).bind(this);
+            })(),
+            configurable: true // WebGL context may be lost
+        });
+    }
 }
-
 
 /***/ }),
 
@@ -20546,7 +20664,7 @@ class GPUKeypoints extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKe
         this
             // FAST-9,16
             .compose('fast9', '_fast9', '_fastScore16')
-            .declare('_fast9', _shaders_fast__WEBPACK_IMPORTED_MODULE_1__["fast9"]) // find corners
+            .declare('_fast9', _shaders_fast__WEBPACK_IMPORTED_MODULE_1__["fast9ml"]) // use 'ml' for multiple passes
             .declare('_fastScore16', _shaders_fast__WEBPACK_IMPORTED_MODULE_1__["fastScore16"]) // compute scores
 
             // FAST-7,12
@@ -20565,6 +20683,164 @@ class GPUKeypoints extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKe
     }
 }
 
+
+
+/***/ }),
+
+/***/ "./src/gpu/gpu-pyramids.js":
+/*!*********************************!*\
+  !*** ./src/gpu/gpu-pyramids.js ***!
+  \*********************************/
+/*! exports provided: GPUPyramids */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUPyramids", function() { return GPUPyramids; });
+/* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
+/* harmony import */ var _shaders_identity__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/identity */ "./src/gpu/shaders/identity.js");
+/* harmony import */ var _shaders_convolution__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./shaders/convolution */ "./src/gpu/shaders/convolution.js");
+/* harmony import */ var _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./shaders/pyramids */ "./src/gpu/shaders/pyramids.js");
+/*
+ * speedy-features.js
+ * GPU-accelerated feature detection and matching for Computer Vision on the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * gpu-pyramids.js
+ * Image pyramids
+ */
+
+
+
+
+
+
+// neat utilities
+const withSize = (width, height) => ({ output: [ width|0, height|0 ], constants: { width: width|0, height: height|0 }});
+const withOutput = (width, height) => ({ output: [ width|0, height|0 ] })
+const withCanvas = (width, height) => ({ output: [ width|0, height|0 ], pipeline: false })
+
+/**
+ * GPUPyramids
+ * Image pyramids
+ */
+class GPUPyramids extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernelGroup"]
+{
+    /**
+     * Class constructor
+     * @param {GPU} gpu 
+     * @param {number} width 
+     * @param {number} height 
+     */
+    constructor(gpu, width, height)
+    {
+        super(gpu, width, height);
+        this
+            // initialize pyramid
+            .declare('setBase', Object(_shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["setScale"])(1.0))
+ 
+            // pyramid operations
+            .compose('reduce', '_smoothX', '_smoothY', '_downsample2', '_scale1/2')
+            .compose('expand', '_upsample2', '_smoothX2', '_smoothY2', '_scale2')
+           
+            // intra-pyramid operations (between two pyramid levels)
+            .compose('intraReduce', '_upsample2', '_smoothX2', '_smoothY2', '_downsample3/2', '_scale2/3')
+            .compose('intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3', '_scale3/2')
+
+            // separable kernels for gaussian smoothing
+            // use [c, b, a, b, c] where a+2c = 2b and a+2b+2c = 1
+            // pick a = 0.4 for gaussian approximation (sigma = 1.0)
+            .declare('_smoothX', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
+                0.05, 0.25, 0.4, 0.25, 0.05
+            ]))
+            .declare('_smoothY', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
+                0.05, 0.25, 0.4, 0.25, 0.05
+            ]))
+
+            // smoothing for 2x image
+            // same rules as above with sum(k) = 2
+            .declare('_smoothX2', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
+                0.1, 0.5, 0.8, 0.5, 0.1
+            ]), withSize(2 * this._width, 2 * this._height))
+
+            .declare('_smoothY2', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
+                0.1, 0.5, 0.8, 0.5, 0.1
+            ], 1.0 / 2.0), withSize(2 * this._width, 2 * this._height))
+
+            // smoothing for 3x image
+            // use [1-b, b, 1, b, 1-b], where 0 < b < 1
+            .declare('_smoothX3', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
+                0.2, 0.8, 1.0, 0.8, 0.2
+            ]), withSize(3 * this._width, 3 * this._height))
+
+            .declare('_smoothY3', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
+                0.2, 0.8, 1.0, 0.8, 0.2
+            ], 1.0 / 3.0), withSize(3 * this._width, 3 * this._height))
+
+            // upsampling & downsampling
+            .declare('_upsample2', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["upsample2"],
+                withOutput(2 * this._width, 2 * this._height))
+
+            .declare('_downsample2', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["downsample2"],
+                withOutput((1 + this._width) / 2, (1 + this._height) / 2))
+
+            .declare('_upsample3', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["upsample3"],
+                withOutput(3 * this._width, 3 * this._height))
+
+            .declare('_downsample3', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["downsample3"],
+                withOutput((2 + this._width) / 3, (2 + this._height) / 3))
+
+            .declare('_downsample2/3', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["downsample2"],
+                withOutput(3 * this._width / 2, 3 * this._height / 2))
+
+            .declare('_downsample3/2', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["downsample3"],
+                withOutput(2 * this._width / 3, 2 * this._height / 3))
+
+            // adjust the scale coefficients
+            .declare('_scale2', Object(_shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(2.0),
+                withSize(2 * this._width, 2 * this._height))
+
+            .declare('_scale1/2', Object(_shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(0.5),
+                withSize((1 + this._width) / 2, (1 + this._height) / 2))
+
+            .declare('_scale3/2', Object(_shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(3.0 / 2.0),
+                withSize(3 * this._width / 2, 3 * this._height / 2))
+
+            .declare('_scale2/3', Object(_shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(2.0 / 3.0),
+                withSize(2 * this._width / 3, 2 * this._height / 3))
+
+            // kernels for debugging
+            /*
+            .declare('_image2', identity,
+                withCanvas(2 * this._width, 2 * this._height))
+
+            .declare('_image3', identity,
+                withCanvas(3 * this._width, 3 * this._height))
+
+            .declare('_image1/2', identity,
+                withCanvas((1 + this._width) / 2, (1 + this._height) / 2))
+
+            .declare('_image3/2', identity,
+                withCanvas(3 * this._width / 2, 3 * this._height / 2))
+
+            .declare('_image2/3', identity,
+                withCanvas(2 * this._width / 3, 2 * this._height / 3))
+            */
+        ;
+    }
+}
 
 
 /***/ }),
@@ -20676,11 +20952,12 @@ function conv2D(kernel, normalizationConstant = 1.0)
     const body = `
     const width = this.constants.width;
     const height = this.constants.height;
+    const pixel = image[this.thread.y][this.thread.x];
     let r = 0.0, g = 0.0, b = 0.0;
     let p = [0.0, 0.0, 0.0, 0.0];
     let x = 0, y = 0;
     ${foreachKernelElement(generateCode)}
-    this.color(r, g, b, 1.0);
+    this.color(r, g, b, pixel[3]);
     `;
 
     return new Function('image', body);
@@ -20729,11 +21006,12 @@ function conv1D(axis, kernel, normalizationConstant)
     const body = `
     const width = this.constants.width;
     const height = this.constants.height;
+    const pixel = image[this.thread.y][this.thread.x];
     let r = 0.0, g = 0.0, b = 0.0;
     let p = [0.0, 0.0, 0.0, 0.0];
     let x = 0, y = 0;
     ${foreachKernelElement(generateCode)}
-    this.color(r, g, b, 1.0);
+    this.color(r, g, b, pixel[3]);
     `;
 
     return new Function('image', body);
@@ -20745,12 +21023,12 @@ function conv1D(axis, kernel, normalizationConstant)
 /*!*************************************!*\
   !*** ./src/gpu/shaders/encoders.js ***!
   \*************************************/
-/*! exports provided: encodeOffsets, encodeKeypointCount, encodeKeypoints */
+/*! exports provided: encodeKeypointOffsets, encodeKeypointCount, encodeKeypoints */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "encodeOffsets", function() { return encodeOffsets; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "encodeKeypointOffsets", function() { return encodeKeypointOffsets; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "encodeKeypointCount", function() { return encodeKeypointCount; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "encodeKeypoints", function() { return encodeKeypoints; });
 /*
@@ -20775,18 +21053,35 @@ __webpack_require__.r(__webpack_exports__);
  */
 
 /*
- * Images are encoded as follows:
+ * Keypoint images are encoded as follows:
  *
  * R - "cornerness" score of the pixel (0 means it's not a feature)
  * G - pixel intensity (greyscale)
- * B - min(255, -1 + offset to the next feature)
+ * B - min(c, -1 + offset to the next feature) for a constant c in [1,255]
  * A - general purpose channel
+ * 
+ * 
+ * 
+ * Keypoints are encoded as follows:
+ * 
+ * each keypoint takes (2 + N/4) pixels of 32 bits
+ * 
+ *    1 pixel        1 pixel         N/4 pixels
+ * [  X  |  Y  ][ S | R | - | - ][  ...  D  ...  ]
+ * 
+ * X: keypoint_xpos (2 bytes)
+ * Y: keypoint_ypos (2 bytes)
+ * S: keypoint_pyramid_scale * 2 (1 byte)
+ * R: keypoint_rotation / (2 pi) (1 byte)
+ * -: unused
+ * D: descriptor binary string (N bytes)
+ * 
  */
 
-// encode feature offsets
-function encodeOffsets(image)
+// encode keypoint offsets
+function encodeKeypointOffsets(image)
 {
-    const maxIterations = 255; // 0 <= r,g,b <= 255
+    const maxIterations = 32; // c: determined experimentally for performance (max. 255)
     const w = this.constants.width, h = this.constants.height;
     let x = this.thread.x, y = this.thread.y;
     let next = image[y][x];
@@ -20821,9 +21116,10 @@ function encodeKeypointCount(image)
     // count feature points
     let px = image[0][0];
     while(i < size) {
-        i += 1 + px[2] * 255;
+        i += 1 + Math.floor(px[2] * 255);
         x = i % w;
         y = (i - x) / w;
+        if(y >= h) break;
         px = image[y][x];
 
         // got a point?
@@ -20838,43 +21134,60 @@ function encodeKeypointCount(image)
 }
 
 // encode keypoints
-function encodeKeypoints(image, encoderLength)
+function encodeKeypoints(image, encoderLength, descriptorSize)
 {
     const s = encoderLength;
     const w = this.constants.width, h = this.constants.height;
     const p = s * (s-1 - this.thread.y) + this.thread.x;
+    const d = 2 + descriptorSize / 4; // pixels per keypoint
+    const r = p % d;
+    const q = (p - r) / d;
     const size = w * h;
     let i = 0, cnt = 0;
     let x = 0, xLo = 0, xHi = 0;
     let y = 0, yLo = 0, yHi = 0;
+    let scale = 0, rotation = 0;
 
-    // p-th feature point doesn't exist
+    // q-th feature point doesn't exist
     this.color(1, 1, 1, 1);
 
-    // output the (x,y) position of the p-th
-    // feature point, if it exists
+    // find the q-th feature point,
+    // if it exists
     let px = image[0][0];
-    while(i < size) {
-        i += 1 + px[2] * 255;
+    if(r < 2) { while(i < size) {
+        i += 1 + Math.floor(px[2] * 255);
         x = i % w;
         y = (i - x) / w;
+        if(y >= h) break;
         px = image[y][x];
 
-        // p-th point?
+        // q-th point?
         if(px[0] > 0) {
-            if(cnt++ == p) {
-                xLo = x % 256;
-                xHi = (x - xLo) / 256;
+            if(cnt++ == q) {
+                // position pixel?
+                if(r == 0) {
+                    xLo = x % 256;
+                    xHi = (x - xLo) / 256;
 
-                y = h-1 - y;
-                yLo = y % 256;
-                yHi = (y - yLo) / 256;
+                    y = h-1 - y;
+                    yLo = y % 256;
+                    yHi = (y - yLo) / 256;
 
-                this.color(xLo / 255.0, xHi / 255.0, yLo / 255.0, yHi / 255.0);
-                break;
+                    this.color(xLo / 255.0, xHi / 255.0, yLo / 255.0, yHi / 255.0);
+                    break;
+                }
+
+                // keypoint properties pixel?
+                else {
+                    scale = px[3] * 2.0;
+                    rotation = 0;
+
+                    this.color(scale, rotation, 0, 0);
+                    break;
+                }
             }
         }
-    }
+    } }
 }
 
 /***/ }),
@@ -20883,7 +21196,7 @@ function encodeKeypoints(image, encoderLength)
 /*!*********************************!*\
   !*** ./src/gpu/shaders/fast.js ***!
   \*********************************/
-/*! exports provided: fast9, fast7, fast5, fastScore16, fastScore12, fastScore8, fastSuppression */
+/*! exports provided: fast9, fast7, fast5, fastScore16, fastScore12, fastScore8, fastSuppression, fast9ml */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -20895,6 +21208,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fastScore12", function() { return fastScore12; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fastScore8", function() { return fastScore8; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fastSuppression", function() { return fastSuppression; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fast9ml", function() { return fast9ml; });
 /*
  * speedy-features.js
  * GPU-accelerated feature detection and matching for Computer Vision on the web
@@ -21386,6 +21700,3101 @@ function fastSuppression(image)
     }
 }
 
+// FAST-9,16 implementation based on Machine Learning
+// Adapted from New BSD Licensed fast_9.c code found at
+// https://github.com/edrosten/fast-C-src
+function fast9ml(image, threshold)
+{
+    const x = this.thread.x, y = this.thread.y;
+    const pixel = image[y][x];
+
+    // assume it's not a corner
+    this.color(0, pixel[1], pixel[2], pixel[3]);
+
+    if(
+        x >= 3 && x < this.constants.width - 3 &&
+        y >= 3 && y < this.constants.height - 3
+    ) {
+        const t = Math.min(Math.max(0.0, threshold), 1.0);
+        const c = pixel[1];
+        const ct = c + t, c_t = c - t;
+        const p0 = image[y-3][x];
+        const p4 = image[y][x+3];
+        const p8 = image[y+3][x];
+        const p12 = image[y][x-3];
+
+        if(
+            // possible corner?
+            ((c_t > p0[1] || c_t > p8[1]) && (c_t > p4[1] || c_t > p12[1])) ||
+            ((ct < p0[1]  || ct < p8[1])  && (ct < p4[1]  || ct < p12[1]))
+        ) {
+        const p1 = image[y-3][x+1];
+        const p2 = image[y-2][x+2];
+        const p3 = image[y-1][x+3];
+        const p5 = image[y+1][x+3];
+        const p6 = image[y+2][x+2];
+        const p7 = image[y+3][x+1];
+        const p9 = image[y+3][x-1];
+        const p10 = image[y+2][x-2];
+        const p11 = image[y+1][x-3];
+        const p13 = image[y-1][x-3];
+        const p14 = image[y-2][x-2];
+        const p15 = image[y-3][x-1];
+        if(p0[1] > ct)
+         if(p1[1] > ct)
+          if(p2[1] > ct)
+           if(p3[1] > ct)
+            if(p4[1] > ct)
+             if(p5[1] > ct)
+              if(p6[1] > ct)
+               if(p7[1] > ct)
+                if(p8[1] > ct)
+                 this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                else
+                 if(p15[1] > ct)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  ;
+               else if(p7[1] < c_t)
+                if(p14[1] > ct)
+                 if(p15[1] > ct)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  ;
+                else if(p14[1] < c_t)
+                 if(p8[1] < c_t)
+                  if(p9[1] < c_t)
+                   if(p10[1] < c_t)
+                    if(p11[1] < c_t)
+                     if(p12[1] < c_t)
+                      if(p13[1] < c_t)
+                       if(p15[1] < c_t)
+                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                       else
+                        ;
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                if(p14[1] > ct)
+                 if(p15[1] > ct)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  ;
+                else
+                 ;
+              else if(p6[1] < c_t)
+               if(p15[1] > ct)
+                if(p13[1] > ct)
+                 if(p14[1] > ct)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  ;
+                else if(p13[1] < c_t)
+                 if(p7[1] < c_t)
+                  if(p8[1] < c_t)
+                   if(p9[1] < c_t)
+                    if(p10[1] < c_t)
+                     if(p11[1] < c_t)
+                      if(p12[1] < c_t)
+                       if(p14[1] < c_t)
+                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                       else
+                        ;
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                if(p7[1] < c_t)
+                 if(p8[1] < c_t)
+                  if(p9[1] < c_t)
+                   if(p10[1] < c_t)
+                    if(p11[1] < c_t)
+                     if(p12[1] < c_t)
+                      if(p13[1] < c_t)
+                       if(p14[1] < c_t)
+                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                       else
+                        ;
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               if(p13[1] > ct)
+                if(p14[1] > ct)
+                 if(p15[1] > ct)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  ;
+                else
+                 ;
+               else if(p13[1] < c_t)
+                if(p7[1] < c_t)
+                 if(p8[1] < c_t)
+                  if(p9[1] < c_t)
+                   if(p10[1] < c_t)
+                    if(p11[1] < c_t)
+                     if(p12[1] < c_t)
+                      if(p14[1] < c_t)
+                       if(p15[1] < c_t)
+                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                       else
+                        ;
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+             else if(p5[1] < c_t)
+              if(p14[1] > ct)
+               if(p12[1] > ct)
+                if(p13[1] > ct)
+                 if(p15[1] > ct)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    if(p8[1] > ct)
+                     if(p9[1] > ct)
+                      if(p10[1] > ct)
+                       if(p11[1] > ct)
+                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                       else
+                        ;
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 ;
+               else if(p12[1] < c_t)
+                if(p6[1] < c_t)
+                 if(p7[1] < c_t)
+                  if(p8[1] < c_t)
+                   if(p9[1] < c_t)
+                    if(p10[1] < c_t)
+                     if(p11[1] < c_t)
+                      if(p13[1] < c_t)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else if(p14[1] < c_t)
+               if(p7[1] < c_t)
+                if(p8[1] < c_t)
+                 if(p9[1] < c_t)
+                  if(p10[1] < c_t)
+                   if(p11[1] < c_t)
+                    if(p12[1] < c_t)
+                     if(p13[1] < c_t)
+                      if(p6[1] < c_t)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       if(p15[1] < c_t)
+                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                       else
+                        ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               if(p6[1] < c_t)
+                if(p7[1] < c_t)
+                 if(p8[1] < c_t)
+                  if(p9[1] < c_t)
+                   if(p10[1] < c_t)
+                    if(p11[1] < c_t)
+                     if(p12[1] < c_t)
+                      if(p13[1] < c_t)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+             else
+              if(p12[1] > ct)
+               if(p13[1] > ct)
+                if(p14[1] > ct)
+                 if(p15[1] > ct)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    if(p8[1] > ct)
+                     if(p9[1] > ct)
+                      if(p10[1] > ct)
+                       if(p11[1] > ct)
+                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                       else
+                        ;
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 ;
+               else
+                ;
+              else if(p12[1] < c_t)
+               if(p7[1] < c_t)
+                if(p8[1] < c_t)
+                 if(p9[1] < c_t)
+                  if(p10[1] < c_t)
+                   if(p11[1] < c_t)
+                    if(p13[1] < c_t)
+                     if(p14[1] < c_t)
+                      if(p6[1] < c_t)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       if(p15[1] < c_t)
+                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                       else
+                        ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+            else if(p4[1] < c_t)
+             if(p13[1] > ct)
+              if(p11[1] > ct)
+               if(p12[1] > ct)
+                if(p14[1] > ct)
+                 if(p15[1] > ct)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    if(p8[1] > ct)
+                     if(p9[1] > ct)
+                      if(p10[1] > ct)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p5[1] > ct)
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    if(p8[1] > ct)
+                     if(p9[1] > ct)
+                      if(p10[1] > ct)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                ;
+              else if(p11[1] < c_t)
+               if(p5[1] < c_t)
+                if(p6[1] < c_t)
+                 if(p7[1] < c_t)
+                  if(p8[1] < c_t)
+                   if(p9[1] < c_t)
+                    if(p10[1] < c_t)
+                     if(p12[1] < c_t)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+             else if(p13[1] < c_t)
+              if(p7[1] < c_t)
+               if(p8[1] < c_t)
+                if(p9[1] < c_t)
+                 if(p10[1] < c_t)
+                  if(p11[1] < c_t)
+                   if(p12[1] < c_t)
+                    if(p6[1] < c_t)
+                     if(p5[1] < c_t)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      if(p14[1] < c_t)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       ;
+                    else
+                     if(p14[1] < c_t)
+                      if(p15[1] < c_t)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       ;
+                     else
+                      ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+             else
+              if(p5[1] < c_t)
+               if(p6[1] < c_t)
+                if(p7[1] < c_t)
+                 if(p8[1] < c_t)
+                  if(p9[1] < c_t)
+                   if(p10[1] < c_t)
+                    if(p11[1] < c_t)
+                     if(p12[1] < c_t)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+            else
+             if(p11[1] > ct)
+              if(p12[1] > ct)
+               if(p13[1] > ct)
+                if(p14[1] > ct)
+                 if(p15[1] > ct)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    if(p8[1] > ct)
+                     if(p9[1] > ct)
+                      if(p10[1] > ct)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p5[1] > ct)
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    if(p8[1] > ct)
+                     if(p9[1] > ct)
+                      if(p10[1] > ct)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                ;
+              else
+               ;
+             else if(p11[1] < c_t)
+              if(p7[1] < c_t)
+               if(p8[1] < c_t)
+                if(p9[1] < c_t)
+                 if(p10[1] < c_t)
+                  if(p12[1] < c_t)
+                   if(p13[1] < c_t)
+                    if(p6[1] < c_t)
+                     if(p5[1] < c_t)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      if(p14[1] < c_t)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       ;
+                    else
+                     if(p14[1] < c_t)
+                      if(p15[1] < c_t)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       ;
+                     else
+                      ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+             else
+              ;
+           else if(p3[1] < c_t)
+            if(p10[1] > ct)
+             if(p11[1] > ct)
+              if(p12[1] > ct)
+               if(p13[1] > ct)
+                if(p14[1] > ct)
+                 if(p15[1] > ct)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    if(p8[1] > ct)
+                     if(p9[1] > ct)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p5[1] > ct)
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    if(p8[1] > ct)
+                     if(p9[1] > ct)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p4[1] > ct)
+                 if(p5[1] > ct)
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    if(p8[1] > ct)
+                     if(p9[1] > ct)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               ;
+             else
+              ;
+            else if(p10[1] < c_t)
+             if(p7[1] < c_t)
+              if(p8[1] < c_t)
+               if(p9[1] < c_t)
+                if(p11[1] < c_t)
+                 if(p6[1] < c_t)
+                  if(p5[1] < c_t)
+                   if(p4[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    if(p12[1] < c_t)
+                     if(p13[1] < c_t)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                  else
+                   if(p12[1] < c_t)
+                    if(p13[1] < c_t)
+                     if(p14[1] < c_t)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                 else
+                  if(p12[1] < c_t)
+                   if(p13[1] < c_t)
+                    if(p14[1] < c_t)
+                     if(p15[1] < c_t)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+             else
+              ;
+            else
+             ;
+           else
+            if(p10[1] > ct)
+             if(p11[1] > ct)
+              if(p12[1] > ct)
+               if(p13[1] > ct)
+                if(p14[1] > ct)
+                 if(p15[1] > ct)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    if(p8[1] > ct)
+                     if(p9[1] > ct)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p5[1] > ct)
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    if(p8[1] > ct)
+                     if(p9[1] > ct)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p4[1] > ct)
+                 if(p5[1] > ct)
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    if(p8[1] > ct)
+                     if(p9[1] > ct)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               ;
+             else
+              ;
+            else if(p10[1] < c_t)
+             if(p7[1] < c_t)
+              if(p8[1] < c_t)
+               if(p9[1] < c_t)
+                if(p11[1] < c_t)
+                 if(p12[1] < c_t)
+                  if(p6[1] < c_t)
+                   if(p5[1] < c_t)
+                    if(p4[1] < c_t)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     if(p13[1] < c_t)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                   else
+                    if(p13[1] < c_t)
+                     if(p14[1] < c_t)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                  else
+                   if(p13[1] < c_t)
+                    if(p14[1] < c_t)
+                     if(p15[1] < c_t)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+             else
+              ;
+            else
+             ;
+          else if(p2[1] < c_t)
+           if(p9[1] > ct)
+            if(p10[1] > ct)
+             if(p11[1] > ct)
+              if(p12[1] > ct)
+               if(p13[1] > ct)
+                if(p14[1] > ct)
+                 if(p15[1] > ct)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    if(p8[1] > ct)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p5[1] > ct)
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    if(p8[1] > ct)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p4[1] > ct)
+                 if(p5[1] > ct)
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    if(p8[1] > ct)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               if(p3[1] > ct)
+                if(p4[1] > ct)
+                 if(p5[1] > ct)
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    if(p8[1] > ct)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+             else
+              ;
+            else
+             ;
+           else if(p9[1] < c_t)
+            if(p7[1] < c_t)
+             if(p8[1] < c_t)
+              if(p10[1] < c_t)
+               if(p6[1] < c_t)
+                if(p5[1] < c_t)
+                 if(p4[1] < c_t)
+                  if(p3[1] < c_t)
+                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  else
+                   if(p11[1] < c_t)
+                    if(p12[1] < c_t)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                 else
+                  if(p11[1] < c_t)
+                   if(p12[1] < c_t)
+                    if(p13[1] < c_t)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p11[1] < c_t)
+                  if(p12[1] < c_t)
+                   if(p13[1] < c_t)
+                    if(p14[1] < c_t)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p11[1] < c_t)
+                 if(p12[1] < c_t)
+                  if(p13[1] < c_t)
+                   if(p14[1] < c_t)
+                    if(p15[1] < c_t)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               ;
+             else
+              ;
+            else
+             ;
+           else
+            ;
+          else
+           if(p9[1] > ct)
+            if(p10[1] > ct)
+             if(p11[1] > ct)
+              if(p12[1] > ct)
+               if(p13[1] > ct)
+                if(p14[1] > ct)
+                 if(p15[1] > ct)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    if(p8[1] > ct)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p5[1] > ct)
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    if(p8[1] > ct)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p4[1] > ct)
+                 if(p5[1] > ct)
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    if(p8[1] > ct)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               if(p3[1] > ct)
+                if(p4[1] > ct)
+                 if(p5[1] > ct)
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    if(p8[1] > ct)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+             else
+              ;
+            else
+             ;
+           else if(p9[1] < c_t)
+            if(p7[1] < c_t)
+             if(p8[1] < c_t)
+              if(p10[1] < c_t)
+               if(p11[1] < c_t)
+                if(p6[1] < c_t)
+                 if(p5[1] < c_t)
+                  if(p4[1] < c_t)
+                   if(p3[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    if(p12[1] < c_t)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                  else
+                   if(p12[1] < c_t)
+                    if(p13[1] < c_t)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                 else
+                  if(p12[1] < c_t)
+                   if(p13[1] < c_t)
+                    if(p14[1] < c_t)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p12[1] < c_t)
+                  if(p13[1] < c_t)
+                   if(p14[1] < c_t)
+                    if(p15[1] < c_t)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                ;
+              else
+               ;
+             else
+              ;
+            else
+             ;
+           else
+            ;
+         else if(p1[1] < c_t)
+          if(p8[1] > ct)
+           if(p9[1] > ct)
+            if(p10[1] > ct)
+             if(p11[1] > ct)
+              if(p12[1] > ct)
+               if(p13[1] > ct)
+                if(p14[1] > ct)
+                 if(p15[1] > ct)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p5[1] > ct)
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p4[1] > ct)
+                 if(p5[1] > ct)
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               if(p3[1] > ct)
+                if(p4[1] > ct)
+                 if(p5[1] > ct)
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+             else
+              if(p2[1] > ct)
+               if(p3[1] > ct)
+                if(p4[1] > ct)
+                 if(p5[1] > ct)
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+            else
+             ;
+           else
+            ;
+          else if(p8[1] < c_t)
+           if(p7[1] < c_t)
+            if(p9[1] < c_t)
+             if(p6[1] < c_t)
+              if(p5[1] < c_t)
+               if(p4[1] < c_t)
+                if(p3[1] < c_t)
+                 if(p2[1] < c_t)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p10[1] < c_t)
+                   if(p11[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p10[1] < c_t)
+                  if(p11[1] < c_t)
+                   if(p12[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p10[1] < c_t)
+                 if(p11[1] < c_t)
+                  if(p12[1] < c_t)
+                   if(p13[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               if(p10[1] < c_t)
+                if(p11[1] < c_t)
+                 if(p12[1] < c_t)
+                  if(p13[1] < c_t)
+                   if(p14[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+             else
+              if(p10[1] < c_t)
+               if(p11[1] < c_t)
+                if(p12[1] < c_t)
+                 if(p13[1] < c_t)
+                  if(p14[1] < c_t)
+                   if(p15[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+            else
+             ;
+           else
+            ;
+          else
+           ;
+         else
+          if(p8[1] > ct)
+           if(p9[1] > ct)
+            if(p10[1] > ct)
+             if(p11[1] > ct)
+              if(p12[1] > ct)
+               if(p13[1] > ct)
+                if(p14[1] > ct)
+                 if(p15[1] > ct)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p5[1] > ct)
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p4[1] > ct)
+                 if(p5[1] > ct)
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               if(p3[1] > ct)
+                if(p4[1] > ct)
+                 if(p5[1] > ct)
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+             else
+              if(p2[1] > ct)
+               if(p3[1] > ct)
+                if(p4[1] > ct)
+                 if(p5[1] > ct)
+                  if(p6[1] > ct)
+                   if(p7[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+            else
+             ;
+           else
+            ;
+          else if(p8[1] < c_t)
+           if(p7[1] < c_t)
+            if(p9[1] < c_t)
+             if(p10[1] < c_t)
+              if(p6[1] < c_t)
+               if(p5[1] < c_t)
+                if(p4[1] < c_t)
+                 if(p3[1] < c_t)
+                  if(p2[1] < c_t)
+                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  else
+                   if(p11[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                 else
+                  if(p11[1] < c_t)
+                   if(p12[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p11[1] < c_t)
+                  if(p12[1] < c_t)
+                   if(p13[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p11[1] < c_t)
+                 if(p12[1] < c_t)
+                  if(p13[1] < c_t)
+                   if(p14[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               if(p11[1] < c_t)
+                if(p12[1] < c_t)
+                 if(p13[1] < c_t)
+                  if(p14[1] < c_t)
+                   if(p15[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+             else
+              ;
+            else
+             ;
+           else
+            ;
+          else
+           ;
+        else if(p0[1] < c_t)
+         if(p1[1] > ct)
+          if(p8[1] > ct)
+           if(p7[1] > ct)
+            if(p9[1] > ct)
+             if(p6[1] > ct)
+              if(p5[1] > ct)
+               if(p4[1] > ct)
+                if(p3[1] > ct)
+                 if(p2[1] > ct)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p10[1] > ct)
+                   if(p11[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p10[1] > ct)
+                  if(p11[1] > ct)
+                   if(p12[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p10[1] > ct)
+                 if(p11[1] > ct)
+                  if(p12[1] > ct)
+                   if(p13[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               if(p10[1] > ct)
+                if(p11[1] > ct)
+                 if(p12[1] > ct)
+                  if(p13[1] > ct)
+                   if(p14[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+             else
+              if(p10[1] > ct)
+               if(p11[1] > ct)
+                if(p12[1] > ct)
+                 if(p13[1] > ct)
+                  if(p14[1] > ct)
+                   if(p15[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+            else
+             ;
+           else
+            ;
+          else if(p8[1] < c_t)
+           if(p9[1] < c_t)
+            if(p10[1] < c_t)
+             if(p11[1] < c_t)
+              if(p12[1] < c_t)
+               if(p13[1] < c_t)
+                if(p14[1] < c_t)
+                 if(p15[1] < c_t)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p5[1] < c_t)
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p4[1] < c_t)
+                 if(p5[1] < c_t)
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               if(p3[1] < c_t)
+                if(p4[1] < c_t)
+                 if(p5[1] < c_t)
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+             else
+              if(p2[1] < c_t)
+               if(p3[1] < c_t)
+                if(p4[1] < c_t)
+                 if(p5[1] < c_t)
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+            else
+             ;
+           else
+            ;
+          else
+           ;
+         else if(p1[1] < c_t)
+          if(p2[1] > ct)
+           if(p9[1] > ct)
+            if(p7[1] > ct)
+             if(p8[1] > ct)
+              if(p10[1] > ct)
+               if(p6[1] > ct)
+                if(p5[1] > ct)
+                 if(p4[1] > ct)
+                  if(p3[1] > ct)
+                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  else
+                   if(p11[1] > ct)
+                    if(p12[1] > ct)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                 else
+                  if(p11[1] > ct)
+                   if(p12[1] > ct)
+                    if(p13[1] > ct)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p11[1] > ct)
+                  if(p12[1] > ct)
+                   if(p13[1] > ct)
+                    if(p14[1] > ct)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p11[1] > ct)
+                 if(p12[1] > ct)
+                  if(p13[1] > ct)
+                   if(p14[1] > ct)
+                    if(p15[1] > ct)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               ;
+             else
+              ;
+            else
+             ;
+           else if(p9[1] < c_t)
+            if(p10[1] < c_t)
+             if(p11[1] < c_t)
+              if(p12[1] < c_t)
+               if(p13[1] < c_t)
+                if(p14[1] < c_t)
+                 if(p15[1] < c_t)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    if(p8[1] < c_t)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p5[1] < c_t)
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    if(p8[1] < c_t)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p4[1] < c_t)
+                 if(p5[1] < c_t)
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    if(p8[1] < c_t)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               if(p3[1] < c_t)
+                if(p4[1] < c_t)
+                 if(p5[1] < c_t)
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    if(p8[1] < c_t)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+             else
+              ;
+            else
+             ;
+           else
+            ;
+          else if(p2[1] < c_t)
+           if(p3[1] > ct)
+            if(p10[1] > ct)
+             if(p7[1] > ct)
+              if(p8[1] > ct)
+               if(p9[1] > ct)
+                if(p11[1] > ct)
+                 if(p6[1] > ct)
+                  if(p5[1] > ct)
+                   if(p4[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    if(p12[1] > ct)
+                     if(p13[1] > ct)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                  else
+                   if(p12[1] > ct)
+                    if(p13[1] > ct)
+                     if(p14[1] > ct)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                 else
+                  if(p12[1] > ct)
+                   if(p13[1] > ct)
+                    if(p14[1] > ct)
+                     if(p15[1] > ct)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+             else
+              ;
+            else if(p10[1] < c_t)
+             if(p11[1] < c_t)
+              if(p12[1] < c_t)
+               if(p13[1] < c_t)
+                if(p14[1] < c_t)
+                 if(p15[1] < c_t)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    if(p8[1] < c_t)
+                     if(p9[1] < c_t)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p5[1] < c_t)
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    if(p8[1] < c_t)
+                     if(p9[1] < c_t)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p4[1] < c_t)
+                 if(p5[1] < c_t)
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    if(p8[1] < c_t)
+                     if(p9[1] < c_t)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               ;
+             else
+              ;
+            else
+             ;
+           else if(p3[1] < c_t)
+            if(p4[1] > ct)
+             if(p13[1] > ct)
+              if(p7[1] > ct)
+               if(p8[1] > ct)
+                if(p9[1] > ct)
+                 if(p10[1] > ct)
+                  if(p11[1] > ct)
+                   if(p12[1] > ct)
+                    if(p6[1] > ct)
+                     if(p5[1] > ct)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      if(p14[1] > ct)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       ;
+                    else
+                     if(p14[1] > ct)
+                      if(p15[1] > ct)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       ;
+                     else
+                      ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+             else if(p13[1] < c_t)
+              if(p11[1] > ct)
+               if(p5[1] > ct)
+                if(p6[1] > ct)
+                 if(p7[1] > ct)
+                  if(p8[1] > ct)
+                   if(p9[1] > ct)
+                    if(p10[1] > ct)
+                     if(p12[1] > ct)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else if(p11[1] < c_t)
+               if(p12[1] < c_t)
+                if(p14[1] < c_t)
+                 if(p15[1] < c_t)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    if(p8[1] < c_t)
+                     if(p9[1] < c_t)
+                      if(p10[1] < c_t)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p5[1] < c_t)
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    if(p8[1] < c_t)
+                     if(p9[1] < c_t)
+                      if(p10[1] < c_t)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                ;
+              else
+               ;
+             else
+              if(p5[1] > ct)
+               if(p6[1] > ct)
+                if(p7[1] > ct)
+                 if(p8[1] > ct)
+                  if(p9[1] > ct)
+                   if(p10[1] > ct)
+                    if(p11[1] > ct)
+                     if(p12[1] > ct)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+            else if(p4[1] < c_t)
+             if(p5[1] > ct)
+              if(p14[1] > ct)
+               if(p7[1] > ct)
+                if(p8[1] > ct)
+                 if(p9[1] > ct)
+                  if(p10[1] > ct)
+                   if(p11[1] > ct)
+                    if(p12[1] > ct)
+                     if(p13[1] > ct)
+                      if(p6[1] > ct)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       if(p15[1] > ct)
+                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                       else
+                        ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else if(p14[1] < c_t)
+               if(p12[1] > ct)
+                if(p6[1] > ct)
+                 if(p7[1] > ct)
+                  if(p8[1] > ct)
+                   if(p9[1] > ct)
+                    if(p10[1] > ct)
+                     if(p11[1] > ct)
+                      if(p13[1] > ct)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else if(p12[1] < c_t)
+                if(p13[1] < c_t)
+                 if(p15[1] < c_t)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    if(p8[1] < c_t)
+                     if(p9[1] < c_t)
+                      if(p10[1] < c_t)
+                       if(p11[1] < c_t)
+                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                       else
+                        ;
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 ;
+               else
+                ;
+              else
+               if(p6[1] > ct)
+                if(p7[1] > ct)
+                 if(p8[1] > ct)
+                  if(p9[1] > ct)
+                   if(p10[1] > ct)
+                    if(p11[1] > ct)
+                     if(p12[1] > ct)
+                      if(p13[1] > ct)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+             else if(p5[1] < c_t)
+              if(p6[1] > ct)
+               if(p15[1] < c_t)
+                if(p13[1] > ct)
+                 if(p7[1] > ct)
+                  if(p8[1] > ct)
+                   if(p9[1] > ct)
+                    if(p10[1] > ct)
+                     if(p11[1] > ct)
+                      if(p12[1] > ct)
+                       if(p14[1] > ct)
+                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                       else
+                        ;
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else if(p13[1] < c_t)
+                 if(p14[1] < c_t)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  ;
+                else
+                 ;
+               else
+                if(p7[1] > ct)
+                 if(p8[1] > ct)
+                  if(p9[1] > ct)
+                   if(p10[1] > ct)
+                    if(p11[1] > ct)
+                     if(p12[1] > ct)
+                      if(p13[1] > ct)
+                       if(p14[1] > ct)
+                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                       else
+                        ;
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else if(p6[1] < c_t)
+               if(p7[1] > ct)
+                if(p14[1] > ct)
+                 if(p8[1] > ct)
+                  if(p9[1] > ct)
+                   if(p10[1] > ct)
+                    if(p11[1] > ct)
+                     if(p12[1] > ct)
+                      if(p13[1] > ct)
+                       if(p15[1] > ct)
+                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                       else
+                        ;
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else if(p14[1] < c_t)
+                 if(p15[1] < c_t)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  ;
+                else
+                 ;
+               else if(p7[1] < c_t)
+                if(p8[1] < c_t)
+                 this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                else
+                 if(p15[1] < c_t)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  ;
+               else
+                if(p14[1] < c_t)
+                 if(p15[1] < c_t)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  ;
+                else
+                 ;
+              else
+               if(p13[1] > ct)
+                if(p7[1] > ct)
+                 if(p8[1] > ct)
+                  if(p9[1] > ct)
+                   if(p10[1] > ct)
+                    if(p11[1] > ct)
+                     if(p12[1] > ct)
+                      if(p14[1] > ct)
+                       if(p15[1] > ct)
+                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                       else
+                        ;
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else if(p13[1] < c_t)
+                if(p14[1] < c_t)
+                 if(p15[1] < c_t)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+             else
+              if(p12[1] > ct)
+               if(p7[1] > ct)
+                if(p8[1] > ct)
+                 if(p9[1] > ct)
+                  if(p10[1] > ct)
+                   if(p11[1] > ct)
+                    if(p13[1] > ct)
+                     if(p14[1] > ct)
+                      if(p6[1] > ct)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       if(p15[1] > ct)
+                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                       else
+                        ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else if(p12[1] < c_t)
+               if(p13[1] < c_t)
+                if(p14[1] < c_t)
+                 if(p15[1] < c_t)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    if(p8[1] < c_t)
+                     if(p9[1] < c_t)
+                      if(p10[1] < c_t)
+                       if(p11[1] < c_t)
+                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                       else
+                        ;
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+            else
+             if(p11[1] > ct)
+              if(p7[1] > ct)
+               if(p8[1] > ct)
+                if(p9[1] > ct)
+                 if(p10[1] > ct)
+                  if(p12[1] > ct)
+                   if(p13[1] > ct)
+                    if(p6[1] > ct)
+                     if(p5[1] > ct)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      if(p14[1] > ct)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       ;
+                    else
+                     if(p14[1] > ct)
+                      if(p15[1] > ct)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       ;
+                     else
+                      ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+             else if(p11[1] < c_t)
+              if(p12[1] < c_t)
+               if(p13[1] < c_t)
+                if(p14[1] < c_t)
+                 if(p15[1] < c_t)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    if(p8[1] < c_t)
+                     if(p9[1] < c_t)
+                      if(p10[1] < c_t)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p5[1] < c_t)
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    if(p8[1] < c_t)
+                     if(p9[1] < c_t)
+                      if(p10[1] < c_t)
+                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      else
+                       ;
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                ;
+              else
+               ;
+             else
+              ;
+           else
+            if(p10[1] > ct)
+             if(p7[1] > ct)
+              if(p8[1] > ct)
+               if(p9[1] > ct)
+                if(p11[1] > ct)
+                 if(p12[1] > ct)
+                  if(p6[1] > ct)
+                   if(p5[1] > ct)
+                    if(p4[1] > ct)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     if(p13[1] > ct)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                   else
+                    if(p13[1] > ct)
+                     if(p14[1] > ct)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                  else
+                   if(p13[1] > ct)
+                    if(p14[1] > ct)
+                     if(p15[1] > ct)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+             else
+              ;
+            else if(p10[1] < c_t)
+             if(p11[1] < c_t)
+              if(p12[1] < c_t)
+               if(p13[1] < c_t)
+                if(p14[1] < c_t)
+                 if(p15[1] < c_t)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    if(p8[1] < c_t)
+                     if(p9[1] < c_t)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p5[1] < c_t)
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    if(p8[1] < c_t)
+                     if(p9[1] < c_t)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p4[1] < c_t)
+                 if(p5[1] < c_t)
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    if(p8[1] < c_t)
+                     if(p9[1] < c_t)
+                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     else
+                      ;
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               ;
+             else
+              ;
+            else
+             ;
+          else
+           if(p9[1] > ct)
+            if(p7[1] > ct)
+             if(p8[1] > ct)
+              if(p10[1] > ct)
+               if(p11[1] > ct)
+                if(p6[1] > ct)
+                 if(p5[1] > ct)
+                  if(p4[1] > ct)
+                   if(p3[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    if(p12[1] > ct)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                  else
+                   if(p12[1] > ct)
+                    if(p13[1] > ct)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                 else
+                  if(p12[1] > ct)
+                   if(p13[1] > ct)
+                    if(p14[1] > ct)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p12[1] > ct)
+                  if(p13[1] > ct)
+                   if(p14[1] > ct)
+                    if(p15[1] > ct)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                ;
+              else
+               ;
+             else
+              ;
+            else
+             ;
+           else if(p9[1] < c_t)
+            if(p10[1] < c_t)
+             if(p11[1] < c_t)
+              if(p12[1] < c_t)
+               if(p13[1] < c_t)
+                if(p14[1] < c_t)
+                 if(p15[1] < c_t)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    if(p8[1] < c_t)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p5[1] < c_t)
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    if(p8[1] < c_t)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p4[1] < c_t)
+                 if(p5[1] < c_t)
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    if(p8[1] < c_t)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               if(p3[1] < c_t)
+                if(p4[1] < c_t)
+                 if(p5[1] < c_t)
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    if(p8[1] < c_t)
+                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    else
+                     ;
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+             else
+              ;
+            else
+             ;
+           else
+            ;
+         else
+          if(p8[1] > ct)
+           if(p7[1] > ct)
+            if(p9[1] > ct)
+             if(p10[1] > ct)
+              if(p6[1] > ct)
+               if(p5[1] > ct)
+                if(p4[1] > ct)
+                 if(p3[1] > ct)
+                  if(p2[1] > ct)
+                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  else
+                   if(p11[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                 else
+                  if(p11[1] > ct)
+                   if(p12[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p11[1] > ct)
+                  if(p12[1] > ct)
+                   if(p13[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p11[1] > ct)
+                 if(p12[1] > ct)
+                  if(p13[1] > ct)
+                   if(p14[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               if(p11[1] > ct)
+                if(p12[1] > ct)
+                 if(p13[1] > ct)
+                  if(p14[1] > ct)
+                   if(p15[1] > ct)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+             else
+              ;
+            else
+             ;
+           else
+            ;
+          else if(p8[1] < c_t)
+           if(p9[1] < c_t)
+            if(p10[1] < c_t)
+             if(p11[1] < c_t)
+              if(p12[1] < c_t)
+               if(p13[1] < c_t)
+                if(p14[1] < c_t)
+                 if(p15[1] < c_t)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p5[1] < c_t)
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p4[1] < c_t)
+                 if(p5[1] < c_t)
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               if(p3[1] < c_t)
+                if(p4[1] < c_t)
+                 if(p5[1] < c_t)
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+             else
+              if(p2[1] < c_t)
+               if(p3[1] < c_t)
+                if(p4[1] < c_t)
+                 if(p5[1] < c_t)
+                  if(p6[1] < c_t)
+                   if(p7[1] < c_t)
+                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+            else
+             ;
+           else
+            ;
+          else
+           ;
+        else
+         if(p7[1] > ct)
+          if(p8[1] > ct)
+           if(p9[1] > ct)
+            if(p6[1] > ct)
+             if(p5[1] > ct)
+              if(p4[1] > ct)
+               if(p3[1] > ct)
+                if(p2[1] > ct)
+                 if(p1[1] > ct)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p10[1] > ct)
+                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  else
+                   ;
+                else
+                 if(p10[1] > ct)
+                  if(p11[1] > ct)
+                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p10[1] > ct)
+                 if(p11[1] > ct)
+                  if(p12[1] > ct)
+                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               if(p10[1] > ct)
+                if(p11[1] > ct)
+                 if(p12[1] > ct)
+                  if(p13[1] > ct)
+                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+             else
+              if(p10[1] > ct)
+               if(p11[1] > ct)
+                if(p12[1] > ct)
+                 if(p13[1] > ct)
+                  if(p14[1] > ct)
+                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+            else
+             if(p10[1] > ct)
+              if(p11[1] > ct)
+               if(p12[1] > ct)
+                if(p13[1] > ct)
+                 if(p14[1] > ct)
+                  if(p15[1] > ct)
+                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+             else
+              ;
+           else
+            ;
+          else
+           ;
+         else if(p7[1] < c_t)
+          if(p8[1] < c_t)
+           if(p9[1] < c_t)
+            if(p6[1] < c_t)
+             if(p5[1] < c_t)
+              if(p4[1] < c_t)
+               if(p3[1] < c_t)
+                if(p2[1] < c_t)
+                 if(p1[1] < c_t)
+                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 else
+                  if(p10[1] < c_t)
+                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  else
+                   ;
+                else
+                 if(p10[1] < c_t)
+                  if(p11[1] < c_t)
+                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p10[1] < c_t)
+                 if(p11[1] < c_t)
+                  if(p12[1] < c_t)
+                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               if(p10[1] < c_t)
+                if(p11[1] < c_t)
+                 if(p12[1] < c_t)
+                  if(p13[1] < c_t)
+                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+             else
+              if(p10[1] < c_t)
+               if(p11[1] < c_t)
+                if(p12[1] < c_t)
+                 if(p13[1] < c_t)
+                  if(p14[1] < c_t)
+                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+            else
+             if(p10[1] < c_t)
+              if(p11[1] < c_t)
+               if(p12[1] < c_t)
+                if(p13[1] < c_t)
+                 if(p14[1] < c_t)
+                  if(p15[1] < c_t)
+                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+             else
+              ;
+           else
+            ;
+          else
+           ;
+         else
+          ;
+        }
+    }
+}
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/identity.js":
+/*!*************************************!*\
+  !*** ./src/gpu/shaders/identity.js ***!
+  \*************************************/
+/*! exports provided: identity */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "identity", function() { return identity; });
+/*
+ * speedy-features.js
+ * GPU-accelerated feature detection and matching for Computer Vision on the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * identity.js
+ * Identity shader (for debugging)
+ */
+
+function identity(image)
+{
+    const pixel = image[this.thread.y][this.thread.x];
+
+    this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
+}
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/pyramids.js":
+/*!*************************************!*\
+  !*** ./src/gpu/shaders/pyramids.js ***!
+  \*************************************/
+/*! exports provided: upsample2, downsample2, upsample3, downsample3, setBase, scale, setScale */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "upsample2", function() { return upsample2; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "downsample2", function() { return downsample2; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "upsample3", function() { return upsample3; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "downsample3", function() { return downsample3; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "setBase", function() { return setBase; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "scale", function() { return scale; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "setScale", function() { return setScale; });
+/*
+ * speedy-features.js
+ * GPU-accelerated feature detection and matching for Computer Vision on the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * pyramids.js
+ * Code for pyramids
+ */
+
+function upsample2(image)
+{
+    const x = this.thread.x, y = this.thread.y;
+
+    if((x + y) % 2 == 0) {
+        const pixel = image[Math.floor(y / 2)][Math.floor(x / 2)];
+        this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
+    }
+    else
+        this.color(0, 0, 0, 1);
+}
+
+function downsample2(image)
+{
+    const x = this.thread.x, y = this.thread.y;
+    const pixel = image[y * 2][x * 2];
+
+    this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
+}
+
+function upsample3(image)
+{
+    const x = this.thread.x, y = this.thread.y;
+
+    if((x - (y % 3)) % 3 == 0) {
+        const pixel = image[Math.floor(y / 3)][Math.floor(x / 3)];
+        this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
+    }
+    else
+        this.color(0, 0, 0, 1);
+}
+
+function downsample3(image)
+{
+    const x = this.thread.x, y = this.thread.y;
+    const pixel = image[y * 3][x * 3];
+    
+    this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
+}
+
+function setBase(image)
+{
+    const pixel = image[this.thread.y][this.thread.x];
+    this.color(pixel[0], pixel[1], pixel[2], 0.5);
+}
+
+function scale(scaleFactor)
+{
+    const s = Math.max(0.0, scaleFactor);
+
+    const body  = `
+    const pixel = image[this.thread.y][this.thread.x];
+    this.color(pixel[0], pixel[1], pixel[2], pixel[3] * ${s});
+    `;
+
+    return new Function('image', body);
+}
+
+function setScale(newScale)
+{
+    // alpha = 0.5 means scale = 1
+    const s = Math.max(0.0, Math.min(newScale * 0.5, 1.0));
+
+    const body  = `
+    const pixel = image[this.thread.y][this.thread.x];
+    this.color(pixel[0], pixel[1], pixel[2], ${s});
+    `;
+
+    return new Function('image', body);
+}
+
 /***/ }),
 
 /***/ "./src/speedy.js":
@@ -21453,7 +24862,7 @@ class Speedy
      */
     static get version()
     {
-        return "0.1.0";
+        return "0.1.1";
     }
 
     /**

@@ -20,7 +20,7 @@
  */
 
 import { GPUKernelGroup } from './gpu-kernel-group';
-import { fast5, fast7, fast9, fastScore8, fastScore12, fastScore16, fastSuppression } from './shaders/fast';
+import { fast5, fast7, fast9, fast9ml, fastScore8, fastScore12, fastScore16, fastSuppression } from './shaders/fast';
 
 /**
  * GPUKeypoints
@@ -40,7 +40,7 @@ export class GPUKeypoints extends GPUKernelGroup
         this
             // FAST-9,16
             .compose('fast9', '_fast9', '_fastScore16')
-            .declare('_fast9', fast9) // find corners
+            .declare('_fast9', fast9ml) // use 'ml' for multiple passes
             .declare('_fastScore16', fastScore16) // compute scores
 
             // FAST-7,12

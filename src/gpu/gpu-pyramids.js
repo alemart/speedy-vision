@@ -26,8 +26,8 @@ import { upsample2, downsample2, upsample3, downsample3, setScale, scale } from 
 
 // neat utilities
 const withSize = (width, height) => ({ output: [ width|0, height|0 ], constants: { width: width|0, height: height|0 }});
-const withCanvas = (width, height) => ({ output: [ width|0, height|0 ], pipeline: false })
 const withOutput = (width, height) => ({ output: [ width|0, height|0 ] })
+const withCanvas = (width, height) => ({ output: [ width|0, height|0 ], pipeline: false })
 
 /**
  * GPUPyramids
@@ -119,6 +119,7 @@ export class GPUPyramids extends GPUKernelGroup
                 withSize(2 * this._width / 3, 2 * this._height / 3))
 
             // kernels for debugging
+            /*
             .declare('_image2', identity,
                 withCanvas(2 * this._width, 2 * this._height))
 
@@ -133,6 +134,7 @@ export class GPUPyramids extends GPUKernelGroup
 
             .declare('_image2/3', identity,
                 withCanvas(2 * this._width / 3, 2 * this._height / 3))
+            */
         ;
     }
 }

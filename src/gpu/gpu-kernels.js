@@ -64,19 +64,19 @@ export class GPUKernels
             this._height = Math.min(this._height, MAX_TEXTURE_LENGTH);
         }
 
-        // create GPU
-        this._canvas = createCanvas(this._width, this._height);
-        this._gpu = new GPU({
-            canvas: this._canvas,
-            context: this._canvas.getContext('webgl2', { premultipliedAlpha: true }) // we're using alpha
-        });
+        // create & configure canvas
+        this._canvas = this._createCanvas(this._width, this._height);
+        this._canvas.addEventListener('webglcontextlost', event => {
+            Utils.warning(`Lost WebGL context.`);
+            event.preventDefault();
+        }, false);
+        this._canvas.addEventListener('webglcontextrestored', () => {
+            Utils.warning(`Restored WebGL context.`);
+            this._initGPU();
+        }, false);
 
-        // spawn kernel groups
-        spawnKernelGroups.call(this, this._gpu, this._width, this._height);
-
-        // spawn pyramids of kernel groups
-        this._pyramid = buildPyramid(this._gpu, this._width, this._height);
-        this._intraPyramid = buildPyramid(this._gpu, 3 * this._width / 2, 3 * this._height / 2);
+        // initialize GPU
+        this._initGPU();
     }
 
     /**
@@ -106,6 +106,47 @@ export class GPUKernels
 
         return this._intraPyramid[lv];
     }
+
+    // initialize GPU
+    _initGPU()
+    {
+        // create GPU
+        this._gpu = new GPU({
+            canvas: this._canvas,
+            context: this._canvas.getContext('webgl2', { premultipliedAlpha: true }) // we're using alpha
+        });
+
+        // spawn kernel groups
+        spawnKernelGroups.call(this, this._gpu, this._width, this._height);
+
+        // spawn pyramids of kernel groups
+        this._pyramid = this._buildPyramid(this._width, this._height);
+        this._intraPyramid = this._buildPyramid(3 * this._width / 2, 3 * this._height / 2);
+    }
+
+    // Create a canvas
+    _createCanvas(width, height)
+    {
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        return canvas;
+    }
+
+    // build a pyramid, where each level stores the kernel groups
+    _buildPyramid(baseWidth, baseHeight, numLevels = MAX_PYRAMID_LEVELS)
+    {
+        let pyramid = new Array(numLevels);
+        let width = baseWidth | 0, height = baseHeight | 0;
+
+        for(let i = 0; i < pyramid.length; i++) {
+            spawnKernelGroups.call(pyramid[i] = { }, this._gpu, width, height);
+            width = ((1 + width) / 2) | 0;
+            height = ((1 + height) / 2) | 0;
+        }
+
+        return pyramid;
+    }
 }
 
 // Spawn kernel groups
@@ -119,31 +160,8 @@ function spawnKernelGroups(gpu, width, height)
                 return (function() { // lazy instantiation
                     return this[grp] || (this[grp] = new (KERNEL_GROUPS[g])(gpu, width, height));
                 }).bind(this);
-            })()
+            })(),
+            configurable: true // WebGL context may be lost
         });
     }
-}
-
-// build a pyramid, where each level stores the kernel groups
-function buildPyramid(gpu, baseWidth, baseHeight, numLevels = MAX_PYRAMID_LEVELS)
-{
-    let pyramid = new Array(numLevels);
-    let width = baseWidth | 0, height = baseHeight | 0;
-
-    for(let i = 0; i < pyramid.length; i++) {
-        spawnKernelGroups.call(pyramid[i] = { }, gpu, width, height);
-        width = ((1 + width) / 2) | 0;
-        height = ((1 + height) / 2) | 0;
-    }
-
-    return pyramid;
-}
-
-// Create a canvas
-function createCanvas(width, height)
-{
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    return canvas;
 }
