@@ -20,18 +20,35 @@
  */
 
 /*
- * Images are encoded as follows:
+ * Keypoint images are encoded as follows:
  *
  * R - "cornerness" score of the pixel (0 means it's not a feature)
  * G - pixel intensity (greyscale)
- * B - min(255, -1 + offset to the next feature)
+ * B - min(c, -1 + offset to the next feature) for a constant c in [1,255]
  * A - general purpose channel
+ * 
+ * 
+ * 
+ * Keypoints are encoded as follows:
+ * 
+ * each keypoint takes (2 + N/4) pixels of 32 bits
+ * 
+ *    1 pixel        1 pixel         N/4 pixels
+ * [  X  |  Y  ][ S | R | - | - ][  ...  D  ...  ]
+ * 
+ * X: keypoint_xpos (2 bytes)
+ * Y: keypoint_ypos (2 bytes)
+ * S: keypoint_pyramid_scale * 2 (1 byte)
+ * R: keypoint_rotation / (2 pi) (1 byte)
+ * -: unused
+ * D: descriptor binary string (N bytes)
+ * 
  */
 
 // encode keypoint offsets
 export function encodeKeypointOffsets(image)
 {
-    const maxIterations = 255; // 0 <= r,g,b <= 255
+    const maxIterations = 32; // c: determined experimentally for performance (max. 255)
     const w = this.constants.width, h = this.constants.height;
     let x = this.thread.x, y = this.thread.y;
     let next = image[y][x];
@@ -66,9 +83,10 @@ export function encodeKeypointCount(image)
     // count feature points
     let px = image[0][0];
     while(i < size) {
-        i += 1 + px[2] * 255;
+        i += 1 + Math.floor(px[2] * 255);
         x = i % w;
         y = (i - x) / w;
+        if(y >= h) break;
         px = image[y][x];
 
         // got a point?
@@ -83,41 +101,58 @@ export function encodeKeypointCount(image)
 }
 
 // encode keypoints
-export function encodeKeypoints(image, encoderLength)
+export function encodeKeypoints(image, encoderLength, descriptorSize)
 {
     const s = encoderLength;
     const w = this.constants.width, h = this.constants.height;
     const p = s * (s-1 - this.thread.y) + this.thread.x;
+    const d = 2 + descriptorSize / 4; // pixels per keypoint
+    const r = p % d;
+    const q = (p - r) / d;
     const size = w * h;
     let i = 0, cnt = 0;
     let x = 0, xLo = 0, xHi = 0;
     let y = 0, yLo = 0, yHi = 0;
+    let scale = 0, rotation = 0;
 
-    // p-th feature point doesn't exist
+    // q-th feature point doesn't exist
     this.color(1, 1, 1, 1);
 
-    // output the (x,y) position of the p-th
-    // feature point, if it exists
+    // find the q-th feature point,
+    // if it exists
     let px = image[0][0];
-    while(i < size) {
-        i += 1 + px[2] * 255;
+    if(r < 2) { while(i < size) {
+        i += 1 + Math.floor(px[2] * 255);
         x = i % w;
         y = (i - x) / w;
+        if(y >= h) break;
         px = image[y][x];
 
-        // p-th point?
+        // q-th point?
         if(px[0] > 0) {
-            if(cnt++ == p) {
-                xLo = x % 256;
-                xHi = (x - xLo) / 256;
+            if(cnt++ == q) {
+                // position pixel?
+                if(r == 0) {
+                    xLo = x % 256;
+                    xHi = (x - xLo) / 256;
 
-                y = h-1 - y;
-                yLo = y % 256;
-                yHi = (y - yLo) / 256;
+                    y = h-1 - y;
+                    yLo = y % 256;
+                    yHi = (y - yLo) / 256;
 
-                this.color(xLo / 255.0, xHi / 255.0, yLo / 255.0, yHi / 255.0);
-                break;
+                    this.color(xLo / 255.0, xHi / 255.0, yLo / 255.0, yHi / 255.0);
+                    break;
+                }
+
+                // keypoint properties pixel?
+                else {
+                    scale = px[3] * 2.0;
+                    rotation = 0;
+
+                    this.color(scale, rotation, 0, 0);
+                    break;
+                }
             }
         }
-    }
+    } }
 }

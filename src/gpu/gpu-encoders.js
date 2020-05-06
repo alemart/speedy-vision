@@ -23,11 +23,15 @@ import { GPUKernelGroup } from './gpu-kernel-group';
 import { encodeKeypointOffsets, encodeKeypoints, encodeKeypointCount } from './shaders/encoders';
 import { SpeedyFeature } from '../core/speedy-feature';
 
-// We won't admit more than MAX_FEATURE_POINTS per media.
-// The higher its value, the more work we have to perform
-// to transfer data from the GPU to the CPU.
-const MAX_ENCODER_LENGTH = 256;
-const MAX_FEATURE_POINTS = MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH; // 64K max !!!
+// We won't admit more than MAX_KEYPOINTS per media.
+// The larger this value is, the more data we need to transfer from the GPU.
+const MAX_DESCRIPTOR_SIZE = 64; // in bytes, must be divisible by 4
+const MAX_KEYPOINT_SIZE = 8 + MAX_DESCRIPTOR_SIZE; // in bytes, must be divisible by 4
+const MAX_PIXELS_PER_KEYPOINT = MAX_KEYPOINT_SIZE / 4; // in pixels
+const MAX_ENCODER_LENGTH = 300; // in pixels (if too large, WebGL may lose context - so be careful!)
+const MAX_KEYPOINTS = (MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH) / MAX_PIXELS_PER_KEYPOINT;
+const INITIAL_ENCODER_LENGTH = 256; // pick a large value < MAX (useful on static images when no encoder optimization is performed beforehand)
+const TWO_PI = 2.0 * Math.PI;
 
 
 /**
@@ -53,15 +57,15 @@ export class GPUEncoders extends GPUKernelGroup
 
             .declare('_encodeKeypointCount', encodeKeypointCount, {
                 pipeline: false,
-                loopMaxIterations: 4 * MAX_FEATURE_POINTS,
+                loopMaxIterations: 4 * MAX_KEYPOINTS,
                 output: [ 1, 1 ],
             })
 
             .declare('_encodeKeypoints', encodeKeypoints, {
                 pipeline: false,
                 dynamicOutput: true, // resizable output
-                loopMaxIterations: 4 * MAX_FEATURE_POINTS,
-                output: [ MAX_ENCODER_LENGTH, MAX_ENCODER_LENGTH ],
+                loopMaxIterations: 4 * MAX_KEYPOINTS,
+                output: [ INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH ],
             })
         ;
 
@@ -69,7 +73,8 @@ export class GPUEncoders extends GPUKernelGroup
         this._dynamicKernels = Object.getOwnPropertyNames(this)
                                      .filter(k => this[k].dynamicOutput)
                                      .map(k => this[k]);
-        this._keypointEncoderLength = MAX_ENCODER_LENGTH;
+        this._keypointEncoderLength = INITIAL_ENCODER_LENGTH;
+        this._descriptorSize = 0;
     }
 
 
@@ -87,18 +92,19 @@ export class GPUEncoders extends GPUKernelGroup
     countKeypoints(offsets)
     {
         this._encodeKeypointCount(offsets);
-        const pixel = this._encodeKeypointCount.getPixels();
+        const pixel = this._encodeKeypointCount.getPixels(); // bottleneck
         return ((pixel[3] << 24) | (pixel[2] << 16) | (pixel[1] << 8) | pixel[0]);
     }
 
     /**
      * Optimizes the keypoint encoder for an expected number of keypoints
-     * @param {number} keypointCount
+     * @param {number} keypointCount expected number of keypoints
      * @returns {number} nonzero if the encoder has been optimized
      */
     optimizeKeypointEncoder(keypointCount)
     {
-        const len = Math.ceil(Math.sqrt(keypointCount + 4)); // add some slack
+        const pixelsPerKeypoint = Math.ceil(2 + this._descriptorSize / 4);
+        const len = Math.ceil(Math.sqrt((50 + keypointCount) * pixelsPerKeypoint)); // add some slack
         const newEncoderLength = Math.max(1, Math.min(len, MAX_ENCODER_LENGTH));
         const oldEncoderLength = this._keypointEncoderLength;
 
@@ -118,7 +124,7 @@ export class GPUEncoders extends GPUKernelGroup
      */
     encodeKeypoints(offsets)
     {
-        this._encodeKeypoints(offsets, this._keypointEncoderLength);
+        this._encodeKeypoints(offsets, this._keypointEncoderLength, this._descriptorSize);
         return this._encodeKeypoints.getPixels(); // bottleneck
     }
 
@@ -130,13 +136,17 @@ export class GPUEncoders extends GPUKernelGroup
     decodeKeypoints(pixels)
     {
         const [ w, h ] = [ this._width, this._height ];
-        let keypoints = [], x, y;
+        const pixelsPerKeypoint = 2 + this._descriptorSize / 4;
+        let keypoints = [], x, y, scale, rotation;
 
-        for(let i = 0; i < pixels.length; i += 4) {
+        for(let i = 0; i < pixels.length; i += 4 * pixelsPerKeypoint) {
             x = (pixels[i+1] << 8) | pixels[i];
             y = (pixels[i+3] << 8) | pixels[i+2];
-            if(x < w && y < h)
-                keypoints.push(new SpeedyFeature(x, y));
+            if(x < w && y < h) {
+                scale = pixels[i+4] / 255.0;
+                rotation = pixels[i+5] * TWO_PI / 255.0;
+                keypoints.push(new SpeedyFeature(x, y, scale, rotation));
+            }
             else
                 break;
         }
