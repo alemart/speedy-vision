@@ -344,19 +344,14 @@ export class VariableStepTuner extends Tuner
      * @param {number} initialValue initial guess to input to the unknown system
      * @param {number} minValue minimum value accepted by the unknown system
      * @param {number} maxValue maximum value accepted by the unknown system
-     * @param {number} [initialStepSize] integer greater than 0
+     * @param {number} [initialStepSize] 2^k, where k is a non-negative integer
      */
-    constructor(initialValue, minValue, maxValue, initialStepSize = 4)
+    constructor(initialValue, minValue, maxValue, initialStepSize = 8)
     {
         super(initialValue, minValue, maxValue);
         this._minStepSize = 1;
-        this._maxStepSize = 8;
-        this._stepSize = this._clamp(initialStepSize | 0);
-    }
-
-    _clamp(step)
-    {
-        return Math.max(this._minStepSize, Math.min(step, this._maxStepSize));
+        this._maxStepSize = 1 << Math.round(Math.log2(initialStepSize));
+        this._stepSize = Math.max(this._minStepSize, this._maxStepSize | 0);
     }
 
     _nextState()
@@ -369,9 +364,7 @@ export class VariableStepTuner extends Tuner
         if(bucket.average >= prevBucket.average) {
             // next step size
             if(prevBucket.average < prevPrevBucket.average)
-                this._stepSize = this._clamp(this._stepSize >>= 2);
-            else
-                this._stepSize = this._clamp(this._stepSize <<= 1);
+                this._stepSize = Math.max(this._minStepSize, this._stepSize >> 1);
 
             // next state
             if(this._state <= this._prevState)
@@ -382,9 +375,7 @@ export class VariableStepTuner extends Tuner
         else {
             // next step size
             if(prevBucket.average > prevPrevBucket.average)
-                this._stepSize = this._clamp(this._stepSize >>= 2);
-            else
-                this._stepSize = this._clamp(this._stepSize <<= 1);
+                this._stepSize = Math.max(this._minStepSize, this._stepSize >> 1);
 
             // next state
             if(this._state >= this._prevState)
