@@ -76,7 +76,8 @@ class Bucket
         if(!this._isSmooth)
             this._smooth();
 
-        // approaches the distribution average as bucketSize -> inf
+        // the median filter does not introduce new data to the signal
+        // this._average approaches the mean of the distribution as bucketSize -> inf
         return this._average;
     }
 
@@ -229,6 +230,7 @@ class Bucket
         this._state = initialValue;
         this._prevState = initialValue;
         this._prevPrevState = initialValue;
+        this._initialState = initialValue;
         this._minState = minValue;
         this._maxState = maxValue;
         this._bucket = new Array(maxValue - minValue + 1).fill(null).map(x => new Bucket());
@@ -271,6 +273,20 @@ class Bucket
             // reset iteration counter
             this._iterations = 0;
         }
+    }
+
+    /**
+     * Reset the Tuner to its initial state
+     * Useful if you change on-the-fly the unknown system,
+     * so that there is a new target value you want to find
+     */
+    reset()
+    {
+        this._state = this._initialState;
+        this._prevState = this._initialState;
+        this._prevPrevState = this._initialState;
+        this._iterations = 0;
+        this._epoch = 0;
     }
 
     // this is magic
@@ -360,6 +376,15 @@ export class VariableStepTuner extends Tuner
         super(initialValue, minValue, maxValue);
         this._minStepSize = 1;
         this._maxStepSize = 1 << Math.round(Math.log2(initialStepSize));
+        this._stepSize = this._maxStepSize;
+    }
+    
+    /**
+     * Reset the Tuner
+     */
+    reset()
+    {
+        super.reset();
         this._stepSize = this._maxStepSize;
     }
 
