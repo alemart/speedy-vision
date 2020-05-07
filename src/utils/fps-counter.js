@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * utils/fps-counter.js
+ * fps-counter.js
  * A FPS counter
  */
 

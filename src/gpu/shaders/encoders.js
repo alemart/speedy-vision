@@ -26,23 +26,23 @@
  * G - pixel intensity (greyscale)
  * B - min(c, -1 + offset to the next feature) for a constant c in [1,255]
  * A - general purpose channel
- * 
- * 
- * 
+ *
+ *
+ *
  * Keypoints are encoded as follows:
- * 
+ *
  * each keypoint takes (2 + N/4) pixels of 32 bits
- * 
+ *
  *    1 pixel        1 pixel         N/4 pixels
  * [  X  |  Y  ][ S | R | - | - ][  ...  D  ...  ]
- * 
+ *
  * X: keypoint_xpos (2 bytes)
  * Y: keypoint_ypos (2 bytes)
  * S: keypoint_pyramid_scale * 2 (1 byte)
  * R: keypoint_rotation / (2 pi) (1 byte)
  * -: unused
  * D: descriptor binary string (N bytes)
- * 
+ *
  */
 
 // encode keypoint offsets
