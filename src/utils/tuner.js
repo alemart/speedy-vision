@@ -351,7 +351,7 @@ export class VariableStepTuner extends Tuner
         super(initialValue, minValue, maxValue);
         this._minStepSize = 1;
         this._maxStepSize = 1 << Math.round(Math.log2(initialStepSize));
-        this._stepSize = Math.max(this._minStepSize, this._maxStepSize | 0);
+        this._stepSize = this._maxStepSize;
     }
 
     _nextState()
