@@ -37,13 +37,13 @@ class Bucket
         if(bucketSize <= Bucket._WINDOW_SIZE)
             Utils.fatal(`Invalid bucketSize of ${bucketSize}`);
 
-        // implemented as a circular vector
+        // Bucket is implemented as a circular vector
         this._bucketSize = 1 << Math.ceil(Math.log2(bucketSize));
         this._head = this._bucketSize - 1;
-        this._rawData = new Float32Array(this._bucketSize);
-        this._smoothedData = new Float32Array(this._bucketSize);
+        this._rawData = new Float32Array(this._bucketSize).fill(0);
+        this._smoothedData = new Float32Array(this._bucketSize).fill(0);
         this._average = 0;
-        this.fill(0);
+        this._isSmooth = true;
     }
 
     /**
@@ -52,20 +52,9 @@ class Bucket
      */
     put(value)
     {
-        // put new value
         this._head = (this._head + 1) & (this._bucketSize - 1);
         this._rawData[this._head] = value;
-
-        // filter raw data & compute filtered average
-        this._average = 0;
-        for(let i = 0; i < this._bucketSize; i++) {
-            this._smoothedData[i] = this._median(this._window(i));
-            this._average += this._smoothedData[i];
-        }
-        this._average /= this._bucketSize;
-
-        // done
-        return this;
+        this._isSmooth = false;
     }
 
     /**
@@ -83,6 +72,10 @@ class Bucket
      */
     get average()
     {
+        // need to smooth the signal?
+        if(!this._isSmooth)
+            this._smooth();
+
         // approaches the distribution average as bucketSize -> inf
         return this._average;
     }
@@ -96,8 +89,24 @@ class Bucket
         this._rawData.fill(value);
         this._smoothedData.fill(value);
         this._average = value;
+        this._isSmooth = true;
         this._head = this._bucketSize - 1;
         return this;
+    }
+
+    // Apply the smoothing filter & compute the average
+    _smooth()
+    {
+        // smooth the signal & compute the average
+        this._average = 0;
+        for(let i = 0; i < this._bucketSize; i++) {
+            this._smoothedData[i] = this._median(this._window(i));
+            this._average += this._smoothedData[i];
+        }
+        this._average /= this._bucketSize;
+
+        // the signal has been smoothed
+        this._isSmooth = true;
     }
 
     // A window of size w around i
@@ -354,6 +363,7 @@ export class VariableStepTuner extends Tuner
         this._stepSize = this._maxStepSize;
     }
 
+    // Compute the next state
     _nextState()
     {
         const bucket = this._bucket[this._state - this._minState];
