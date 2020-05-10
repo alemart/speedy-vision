@@ -501,7 +501,7 @@ export class StochasticTuner extends Tuner
     }
 
     /**
-     * Optimization finished?
+     * Finished optimization?
      */
     finished()
     {
