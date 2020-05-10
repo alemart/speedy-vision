@@ -481,7 +481,6 @@ export class StochasticTuner extends Tuner
         this._costOfBestState = Infinity;
         this._initialTemperature = Math.max(0, initialTemperature);
         this._temperature = this._initialTemperature;
-        this._minTemperature = 1e-5;
         this._numIterations = 0; // no. of iterations in the current temperature
         this._maxIterationsPerTemperature = Math.max(1, maxIterationsPerTemperature);
         this._alpha = Math.max(0, Math.min(alpha, 1)); // geometric decrease rate
@@ -506,7 +505,7 @@ export class StochasticTuner extends Tuner
      */
     finished()
     {
-        return this._temperature <= this._minTemperature;
+        return this._temperature <= 1e-5;
     }
 
     // Pick the next state
@@ -514,7 +513,7 @@ export class StochasticTuner extends Tuner
     _nextState()
     {
         // finished simulation?
-        if(this._temperature <= this._minTemperature)
+        if(this.finished())
             return this._bestState;
 
         // pick a neighbor
