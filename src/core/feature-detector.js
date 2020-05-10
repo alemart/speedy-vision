@@ -83,10 +83,8 @@ export class FeatureDetector
         const corners = this._gpu.keypoints.fastSuppression(rawCorners);
 
         // encoding result
-        const offsets = this._gpu.encoders.encodeKeypointOffsets(corners);
-        //const keypointCount = this._gpu.encoders.countKeypoints(offsets); // performance penalty
-        const pixels = this._gpu.encoders.encodeKeypoints(offsets);
-        const keypoints = this._gpu.encoders.decodeKeypoints(pixels);
+        const encodedKeypoints = this._gpu.encoders.encodeKeypoints(corners);
+        const keypoints = this._gpu.encoders.decodeKeypoints(encodedKeypoints);
         this._gpu.encoders.optimizeKeypointEncoder(keypoints.length);
         return keypoints;
     }

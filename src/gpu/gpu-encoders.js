@@ -22,6 +22,8 @@
 import { GPUKernelGroup } from './gpu-kernel-group';
 import { encodeKeypointOffsets, encodeKeypoints, encodeKeypointCount } from './shaders/encoders';
 import { SpeedyFeature } from '../core/speedy-feature';
+import { StochasticTuner } from '../utils/tuner';
+import { Utils } from '../utils/utils'
 
 // We won't admit more than MAX_KEYPOINTS per media.
 // The larger this value is, the more data we need to transfer from the GPU.
@@ -32,6 +34,7 @@ const MAX_ENCODER_LENGTH = 300; // in pixels (if too large, WebGL may lose conte
 const MAX_KEYPOINTS = (MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH) / MAX_PIXELS_PER_KEYPOINT;
 const INITIAL_ENCODER_LENGTH = 256; // pick a large value < MAX (useful on static images when no encoder optimization is performed beforehand)
 const TWO_PI = 2.0 * Math.PI;
+const SQRT_TWO_PI = Math.sqrt(TWO_PI);
 
 
 /**
@@ -51,7 +54,7 @@ export class GPUEncoders extends GPUKernelGroup
         super(gpu, width, height);
         this
             // Keypoint encoding
-            .declare('encodeKeypointOffsets', encodeKeypointOffsets, {
+            .declare('_encodeKeypointOffsets', encodeKeypointOffsets, {
                 loopMaxIterations: 1024
             })
 
@@ -69,12 +72,15 @@ export class GPUEncoders extends GPUKernelGroup
             })
         ;
 
-        // setup internal properties
+        // setup internal data
+        let neighborFn = (s) => Math.round(Utils.gaussianNoise(s, 64)) % 256;
+        this._tuner = new StochasticTuner(48, 32, 255, 0.2, 4, 60, neighborFn);
         this._dynamicKernels = Object.getOwnPropertyNames(this)
                                      .filter(k => this[k].dynamicOutput)
                                      .map(k => this[k]);
         this._keypointEncoderLength = INITIAL_ENCODER_LENGTH;
         this._descriptorSize = 0;
+        this._spawnedAt = performance.now();
     }
 
 
@@ -89,12 +95,14 @@ export class GPUEncoders extends GPUKernelGroup
      * @param {} offsets image with encoded offsets
      * @returns {number} number of keypoints
      */
+    /*
     countKeypoints(offsets)
     {
         this._encodeKeypointCount(offsets);
         const pixel = this._encodeKeypointCount.getPixels(); // bottleneck
         return ((pixel[3] << 24) | (pixel[2] << 16) | (pixel[1] << 8) | pixel[0]);
     }
+    */
 
     /**
      * Optimizes the keypoint encoder for an expected number of keypoints
@@ -118,14 +126,32 @@ export class GPUEncoders extends GPUKernelGroup
     }
 
     /**
-     * Encodes the keypoints with an image - this is a bottleneck!
-     * @param {} offsets image with encoded offsets
+     * Encodes the keypoints of an image - this is a bottleneck!
+     * @param {} corners image with encoded corners
      * @returns {Array<number>} pixels in the [r,g,b,a, ...] format
      */
-    encodeKeypoints(offsets)
+    encodeKeypoints(corners)
     {
+        // encode keypoint offsets
+        const maxIterations = this._tuner.currentValue();
+        const start = performance.now();
+        const offsets = this._encodeKeypointOffsets(corners, maxIterations);
         this._encodeKeypoints(offsets, this._keypointEncoderLength, this._descriptorSize);
-        return this._encodeKeypoints.getPixels(); // bottleneck
+        const pixels = this._encodeKeypoints.getPixels(); // bottleneck
+
+        // tuner: drop noisy feedback when the page loads
+        if(performance.now() >= this._spawnedAt + 2000) {
+            const time = performance.now() - start;
+            this._tuner.feedObservation(time);
+        }
+
+        // debug
+        /*this._it = this._it || 1;
+        if((++this._it) % 90)
+            console.log(JSON.stringify(this._tuner.info()));*/
+
+        // done!
+        return pixels;
     }
 
     /**
@@ -151,6 +177,14 @@ export class GPUEncoders extends GPUKernelGroup
                 break;
         }
 
+        // developer's secret ;)
+        // reset the tuner
+        if(keypoints.length == 0) {
+            if(this._tuner.finished())
+                this._tuner.reset();
+        }
+
+        // done!
         return keypoints;
     }
 }

@@ -30,15 +30,19 @@ class Bucket
     /**
      * Class constructor
      * @param {number} bucketSize It should be a power of two
+     * @param {number} windowSize An odd positive number for filtering
      */
-    constructor(bucketSize = 32)
+    constructor(bucketSize = 32, windowSize = 5)
     {
+        // validate parameters
+        this._bucketSize = 1 << Math.ceil(Math.log2(bucketSize));
+        this._windowSize = windowSize + (1 - windowSize % 2);
+
         // bucketSize should be a power of 2
-        if(bucketSize <= Bucket._WINDOW_SIZE)
+        if(bucketSize < this._windowSize)
             Utils.fatal(`Invalid bucketSize of ${bucketSize}`);
 
         // Bucket is implemented as a circular vector
-        this._bucketSize = 1 << Math.ceil(Math.log2(bucketSize));
         this._head = this._bucketSize - 1;
         this._rawData = new Float32Array(this._bucketSize).fill(0);
         this._smoothedData = new Float32Array(this._bucketSize).fill(0);
@@ -105,6 +109,7 @@ class Bucket
             this._average += this._smoothedData[i];
         }
         this._average /= this._bucketSize;
+        //this._average = this._median(this._rawData);
 
         // the signal has been smoothed
         this._isSmooth = true;
@@ -114,7 +119,7 @@ class Bucket
     _window(i)
     {
         const arr = this._rawData;
-        const win = this._win || (this._win = new Float32Array(Bucket._WINDOW_SIZE));
+        const win = this._win || (this._win = new Float32Array(this._windowSize));
         const n = arr.length;
         const w = win.length;
         const wOver2 = w >> 1;
@@ -145,12 +150,6 @@ class Bucket
         return win;
     }
 
-    // window size (should be an odd number)
-    static get _WINDOW_SIZE()
-    {
-        return 5;
-    }
-
     // return the median of a sequence (note: the input is rearranged)
     _median(v)
     {
@@ -164,7 +163,7 @@ class Bucket
                 //   \  / \   /
                 //   node  node    [ min(v0,v1)  min(max(v0,v1),v2)  max(max(v0,v1),v2) ]
                 //      \   /
-                //      node       [ min(min(v0,v1),min(max(v0,v1),v2))  max(...)  max(v0,v1,v2) ]
+                //      node       [ min(min(v0,v1),min(max(v0,v1),v2))  max(min(...),min(...))  max(v0,v1,v2) ]
                 //       |
                 //     median      [ min(v0,v1,v2)  median  max(v0,v1,v2) ]
                 if(v[0] > v[1]) [v[0], v[1]] = [v[1], v[0]];
@@ -233,7 +232,7 @@ class Bucket
         this._initialState = initialValue;
         this._minState = minValue;
         this._maxState = maxValue;
-        this._bucket = new Array(maxValue - minValue + 1).fill(null).map(x => new Bucket());
+        this._bucket = new Array(maxValue - minValue + 1).fill(null).map(x => new Bucket(this._bucketSetup().size, this._bucketSetup().window));
         this._iterations = 0; // number of iterations in the same state
         this._epoch = 0; // number of state changes
     }
@@ -252,7 +251,7 @@ class Bucket
      */
     feedObservation(y)
     {
-        const bucket = this._bucket[this._state - this._minState];
+        const bucket = this._bucketOf(this._state);
 
         // feed the observation into the bucket of the current state
         bucket.put(y);
@@ -260,8 +259,11 @@ class Bucket
         // time to change state?
         if(++this._iterations >= bucket.size) {
             // initialize buckets
-            if(this._epoch++ == 0)
+            if(this._epoch++ == 0) {
                 this._bucket.forEach(bk => bk.fill(bucket.average));
+                if(!isFinite(this._costOfBestState))
+                    this._costOfBestState = bucket.average;
+            }
 
             // compute next state
             const prevPrevState = this._prevState;
@@ -289,6 +291,22 @@ class Bucket
         this._epoch = 0;
     }
 
+    // get the bucket of a state
+    _bucketOf(state)
+    {
+        state = Math.max(this._minState, Math.min(state, this._maxState));
+        return this._bucket[state - this._minState];
+    }
+
+    // the bucket may be reconfigured on subclasses
+    _bucketSetup()
+    {
+        return {
+            "size": 32,
+            "window": 5
+        };
+    }
+
     // this is magic
     /* abstract */ _nextState()
     {
@@ -297,10 +315,10 @@ class Bucket
     }
 
     // let me see stuff
-    _debug()
+    info()
     {
-        const bucket = this._bucket[this._state - this._minState];
-        const prevBucket = this._bucket[this._prevState - this._minState];
+        const bucket = this._bucketOf(this._state);
+        const prevBucket = this._bucketOf(this._prevState);
 
         return {
             now: this._state,
@@ -336,13 +354,10 @@ export class FixedStepTuner extends Tuner
     // smooth experience given a "good" initial state
     // (experience might suffer on min & max states)
     //
-    // TODO: improve convergence time with variable
-    // steps without penalizing the experience
-    //
     _nextState()
     {
-        const bucket = this._bucket[this._state - this._minState];
-        const prevBucket = this._bucket[this._prevState - this._minState];
+        const bucket = this._bucketOf(this._state);
+        const prevBucket = this._bucketOf(this._prevState);
 
         if(bucket.average >= prevBucket.average) {
             if(this._state <= this._prevState)
@@ -391,9 +406,9 @@ export class VariableStepTuner extends Tuner
     // Compute the next state
     _nextState()
     {
-        const bucket = this._bucket[this._state - this._minState];
-        const prevBucket = this._bucket[this._prevState - this._minState];
-        const prevPrevBucket = this._bucket[this._prevPrevState - this._minState];
+        const bucket = this._bucketOf(this._state);
+        const prevBucket = this._bucketOf(this._prevState);
+        const prevPrevBucket = this._bucketOf(this._prevPrevState);
         let nextState = this._state;
 
         if(bucket.average >= prevBucket.average) {
@@ -420,5 +435,140 @@ export class VariableStepTuner extends Tuner
         }
 
         return nextState;
+    }
+}
+
+/**
+ * A Tuner created for testing purposes
+ */
+export class TestTuner extends Tuner
+{
+    constructor(initialValue, minValue, maxValue)
+    {
+        super(initialValue, minValue, maxValue);
+        this._state = this._minState;
+    }
+
+    _nextState()
+    {
+        const bucket = this._bucketOf(this._state);
+        const nextState = this._state + 1;
+        console.log(`${this._state}: ${bucket.average},`);
+        return nextState > this._maxState ? this._minState : nextState;
+    }
+}
+
+/*
+ * Implementation of Simulated Annealing
+ */
+export class StochasticTuner extends Tuner
+{
+    /**
+     * Class constructor
+     * @param {number} initialValue initial guess to input to the unknown system
+     * @param {number} minValue minimum value accepted by the unknown system
+     * @param {number} maxValue maximum value accepted by the unknown system
+     * @param {number} alpha geometric decrease rate of the temperature
+     * @param {number} maxIterationsPerTemperature number of iterations before cooling down by alpha
+     * @param {number} initialTemperature initial temperature
+     * @param {Function<number>|null} neighborFn neighbor picking function: state -> state
+     */
+    constructor(initialValue, minValue, maxValue, alpha = 0.5, maxIterationsPerTemperature = 8, initialTemperature = 100, neighborFn = null)
+    {
+        super(initialValue, minValue, maxValue);
+
+        this._bestState = this._initialState;
+        this._costOfBestState = Infinity;
+        this._initialTemperature = Math.max(0, initialTemperature);
+        this._temperature = this._initialTemperature;
+        this._minTemperature = 1e-5;
+        this._numIterations = 0; // no. of iterations in the current temperature
+        this._maxIterationsPerTemperature = Math.max(1, maxIterationsPerTemperature);
+        this._alpha = Math.max(0, Math.min(alpha, 1)); // geometric decrease rate
+
+        if(!neighborFn)
+            neighborFn = (s) => this._minState + Math.floor(Math.random() * (this._maxState - this._minState + 1))
+        this._pickNeighbor = neighborFn;
+    }
+
+    /**
+     * Reset the Tuner
+     */
+    reset()
+    {
+        this._temperature = this._initialTemperature;
+        this._numIterations = 0;
+        // we shall not reset the best state...
+    }
+
+    /**
+     * Optimization finished?
+     */
+    finished()
+    {
+        return this._temperature <= this._minTemperature;
+    }
+
+    // Pick the next state
+    // Simulated Annealing
+    _nextState()
+    {
+        // finished simulation?
+        if(this._temperature <= this._minTemperature)
+            return this._bestState;
+
+        // pick a neighbor
+        let nextState = this._state;
+        let neighbor = this._pickNeighbor(this._state);
+        neighbor = Math.max(this._minState, Math.min(neighbor, this._maxState));
+
+        // evaluate the neighbor
+        const f = (s) => this._bucketOf(s).average;
+        if(f(neighbor) < f(this._state)) {
+            // the neighbor is better than the current state
+            nextState = neighbor;
+        }
+        else {
+            // the neighbor is not better than the current state,
+            // but we may admit it with a certain probability
+            if(Math.random() < Math.exp((f(this._state) - f(neighbor)) / this._temperature))
+                nextState = neighbor;
+        }
+
+        // update the best state
+        if(f(nextState) < this._costOfBestState) {
+            this._bestState = nextState;
+            this._costOfBestState = f(nextState);
+        }
+
+        // cool down
+        if(++this._numIterations >= this._maxIterationsPerTemperature) {
+            this._temperature *= this._alpha;
+            this._numIterations = 0;
+        }
+
+        // done
+        return nextState;
+    }
+
+    _bucketSetup()
+    {
+        return {
+            "size": 4,
+            "window": 3
+        };
+    }
+
+    // let me see stuff
+    info()
+    {
+        return {
+            best: [ this._bestState, this._costOfBestState ],
+            state: [ this._state, this._bucketOf(this._state).average ],
+            iterations: [ this._numIterations, this._maxIterationsPerTemperature ],
+            temperature: this._temperature,
+            alpha: this._alpha,
+            cool: this.finished(),
+        };
     }
 }

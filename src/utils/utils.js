@@ -70,4 +70,24 @@ export class Utils
         console.log('[speedy-features.js]', message);
         return message;
     }
+
+    /**
+     * Generates a random number with
+     * Gaussian distribution
+     * @param {number} mu
+     * @param {number} sigma
+     * @returns {number}
+     */
+    static gaussianNoise(mu = 0, sigma = 1)
+    {
+        // Box-Muller transformation
+        const TWO_PI = 2.0 * Math.PI;
+        
+        let a, b = Math.random();
+        do { a = Math.random(); } while(a <= Number.EPSILON);
+        let sin = Math.sin(TWO_PI * b), cos = Math.cos(TWO_PI * b);
+
+        let z = Math.sqrt(-2 * Math.log(a)) * Math.max(sin, cos);
+        return z * sigma + mu;
+    }
 }

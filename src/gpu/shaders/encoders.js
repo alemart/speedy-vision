@@ -46,9 +46,9 @@
  */
 
 // encode keypoint offsets
-export function encodeKeypointOffsets(image)
+// maxIterations is an integer in [1,255], determined experimentally
+export function encodeKeypointOffsets(image, maxIterations)
 {
-    const maxIterations = 32; // c: determined experimentally for performance (max. 255)
     const w = this.constants.width, h = this.constants.height;
     let x = this.thread.x, y = this.thread.y;
     let next = image[y][x];
