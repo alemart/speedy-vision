@@ -66,9 +66,7 @@ window.onload = async function()
         {
             media.findFeatures({
                 method: method.value,
-                settings: {
-                    sensitivity: slider.value / 100.0,
-                }
+                sensitivity: slider.value / 100.0,
             }).then(f => {
                 features = f;
                 setTimeout(updateFeatures, 16);

@@ -20,6 +20,7 @@
  */
 
 import { GPUKernels } from '../gpu/gpu-kernels';
+import { OnlineErrorTuner, TestTuner } from '../utils/tuner';
 import { Utils } from '../utils/utils';
 
 /**
@@ -36,26 +37,34 @@ export class FeatureDetector
     {
         this._media = media;
         this._gpu = new GPUKernels(media.width, media.height);
+        this._lastKeypointCount = 0;
+        this._sensitivityTuner = null;
     }
 
     /**
      * FAST corner detection
      * @param {number} [n] We'll run FAST-n, where n must be 9 (default), 7 or 5
-     * @param {object} [userSettings]
+     * @param {object} [settings] Additional settings
      * @returns {Array<SpeedyFeature>} keypoints
      */
-    fast(n = 9, userSettings = { })
+    fast(n = 9, settings = {})
     {
-        // create settings object
-        const settings = Object.assign({ }, {
-            // default settings
+        // default settings
+        settings = Object.assign({
             threshold: 10,
             denoise: true,
-        }, userSettings);
+        }, settings);
+
+        // convert the expected number of keypoints,
+        // if defined, into a sensitivity value
+        if(settings.hasOwnProperty('expected'))
+            settings.sensitivity = this._findSensitivity(settings.expected);
 
         // convert a sensitivity value in [0,1],
         // if it's defined, to a FAST threshold
         if(settings.hasOwnProperty('sensitivity')) {
+            // number of keypoints ideally increases linearly
+            // as the sensitivity is increased
             const sensitivity = Math.max(0, Math.min(settings.sensitivity, 1));
             settings.threshold = 1 - Math.tanh(2.77 * sensitivity);
         }
@@ -83,9 +92,38 @@ export class FeatureDetector
         const corners = this._gpu.keypoints.fastSuppression(rawCorners);
 
         // encoding result
+        return this._extractKeypoints(corners);
+    }
+
+    // given a corner-encoded texture,
+    // return an Array of keypoints
+    _extractKeypoints(corners)
+    {
         const encodedKeypoints = this._gpu.encoders.encodeKeypoints(corners);
         const keypoints = this._gpu.encoders.decodeKeypoints(encodedKeypoints);
         this._gpu.encoders.optimizeKeypointEncoder(keypoints.length);
+        this._lastKeypointCount = keypoints.length;
         return keypoints;
+    }
+
+    // find a sensitivity value in [0,1] such that
+    // the feature detector returns approximately the
+    // number of features you expect - within a
+    // tolerance, i.e., a percentage value
+    _findSensitivity(expected, tolerance = 0.10)
+    {
+        // spawn the tuner
+        this._sensitivityTuner = this._sensitivityTuner ||
+            new OnlineErrorTuner(0, 1200); // use a slightly wider interval for better stability
+            //new TestTuner(0, 1000);
+        const normalizer = 0.001;
+
+        // update tuner
+        this._sensitivityTuner.tolerance = tolerance;
+        this._sensitivityTuner.feedObservation(this._lastKeypointCount, expected);
+        const sensitivity = this._sensitivityTuner.currentValue() * normalizer;
+
+        // return the new sensitivity
+        return Math.max(0, Math.min(sensitivity, 1));
     }
 }

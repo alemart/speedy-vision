@@ -130,15 +130,15 @@ export class SpeedyMedia
 
     /**
      * Finds image features
-     * @param {object} [options] Configuration object
+     * @param {object} [settings] Configuration object
      * @returns {Promise} A Promise returning an Array of SpeedyFeature objects
      */
-    findFeatures(options =  { })
+    findFeatures(settings = {})
     {
-        const config = Object.assign({ }, {
+        // Default settings
+        settings = Object.assign({
             method: 'fast',
-            settings: { },
-        }, options);
+        }, settings);
 
         // Algorithm table
         const fn = ({
@@ -150,14 +150,14 @@ export class SpeedyMedia
 
         // Run the algorithm
         return new Promise((resolve, reject) => {
-            const method = String(config.method).toLowerCase();
+            const method = String(settings.method).toLowerCase();
 
             if(fn.hasOwnProperty(method)) {
-                const features = fn[method].call(this, config.settings);
+                const features = fn[method].call(this, settings);
                 resolve(features);
             }
             else
-                reject(Utils.warning(`Invalid method "${method}" for detecting features.`));
+                reject(Utils.warning(`Invalid method "${method}" for keypoint detection.`));
         });
     }
 }

@@ -2,32 +2,39 @@
 <html>
     <head>
         <meta charset="utf-8">
-        <title>Speedy feature detection in a video</title>
+        <title>Automatic sensitivity for keypoint detection</title>
         <script src="../dist/speedy-features.js" async></script>
         <style>
-            form { display: flex; flex-wrap: wrap; align-items: baseline; margin-bottom: 1em; }
-            form > *:last-child { position: relative; left: 220px; }
+            form { display: flex; flex-wrap: wrap; align-items: baseline; margin-bottom: 1em; width: 426px;}
+            form > *:last-child { float: left; position: relative; left: 240px; }
+            #expected-features { margin: 0.5em; }
         </style>
     </head>
     <body>
-        <h1>Gotta go FAST!!!</h1>
+        <h1>Automatic sensitivity</h1>
         <form>
             <div>
-                Sensitivity:
-                <input type="range" min="20" max="80" value="50" id="slider">
+                How many keypoints do you want?
+                <select id="expected-features">
+                    <option value="50">50</option>
+                    <option value="100" selected>100</option>
+                    <option value="200">200</option>
+                    <option value="300">300</option>
+                    <option value="500">500</option>
+                </select>
+                (10% tolerance)
             </div>
-            <div>
-                FPS: <span id="fps">60</span>
-            </div>
+            <div>Found <span id="feature-count">0</span> keypoints</div>
+            <div>FPS: <span id="fps">0</span></div>
         </form>
         <div>
             <button id="play" onclick="pause()">Play / pause</button>
         </div>
         <video
-            src="../assets/roadrunner.mp4"
-            width="480" height="270"
+            src="../assets/jelly.mp4"
+            width="426" height="240"
             loop muted hidden
-            title="Free video from https://pixabay.com/pt/videos/estrada-condu%C3%A7%C3%A3o-auto-estrada-1101/">
+            title="Free video by Chris Munnik from https://www.pexels.com/pt-br/video/3297379/">
         </video>
         <script>
 window.onload = async function()
@@ -36,24 +43,26 @@ window.onload = async function()
     const video = document.querySelector('video');
     const media = await Speedy.load(video);
     video.play();
+    video.pause();
 
     // create a canvas to display the features
     const canvas = createCanvas(media.width, media.height);
     const context = canvas.getContext('2d');
 
     // user controls
-    const slider = document.getElementById('slider');
+    const expected = document.getElementById('expected-features');
 
     // update features
     let features = [];
     function updateFeatures()
     {
+        let now = performance.now();
         media.findFeatures({
             method: 'fast',
-            sensitivity: slider.value / 100.0,
+            expected: expected.value,
         }).then(f => {
-            features = f;
             setTimeout(updateFeatures, 16);
+            features = f;
         });
     }
     updateFeatures();
@@ -70,6 +79,10 @@ window.onload = async function()
     // display fps
     const fps = document.getElementById('fps');
     setInterval(() => fps.innerText = Speedy.fps.value, 500);
+
+    // feature count
+    const featureCount = document.getElementById('feature-count');
+    setInterval(() => featureCount.innerText = features.length, 500);
 }
 
 function createCanvas(width, height)

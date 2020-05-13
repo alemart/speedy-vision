@@ -254,26 +254,29 @@ class Bucket
         const bucket = this._bucketOf(this._state);
 
         // feed the observation into the bucket of the current state
-        bucket.put(y);
+        bucket.put(+y);
 
         // time to change state?
         if(++this._iterations >= bucket.size) {
             // initialize buckets
-            if(this._epoch++ == 0) {
+            if(this._epoch == 0) {
                 this._bucket.forEach(bk => bk.fill(bucket.average));
                 if(!isFinite(this._costOfBestState))
                     this._costOfBestState = bucket.average;
             }
 
             // compute next state
+            const clip = s => Math.max(this._minState, Math.min(s | 0, this._maxState));
             const prevPrevState = this._prevState;
             const prevState = this._state;
-            this._state = this._nextState();
+            this._state = clip(this._nextState());
             this._prevState = prevState;
             this._prevPrevState = prevPrevState;
 
             // reset iteration counter
+            // and advance epoch number
             this._iterations = 0;
+            this._epoch++;
         }
     }
 
@@ -291,10 +294,19 @@ class Bucket
         this._epoch = 0;
     }
 
+    /**
+     * Finished optimization?
+     * @returns {boolean}
+     */
+    finished()
+    {
+        return false;
+    }
+
     // get the bucket of a state
     _bucketOf(state)
     {
-        state = Math.max(this._minState, Math.min(state, this._maxState));
+        state = Math.max(this._minState, Math.min(state | 0, this._maxState));
         return this._bucket[state - this._minState];
     }
 
@@ -314,7 +326,10 @@ class Bucket
         return this._state;
     }
 
-    // let me see stuff
+    /**
+     * Let me see stuff
+     * @returns {object}
+     */
     info()
     {
         const bucket = this._bucketOf(this._state);
@@ -323,118 +338,12 @@ class Bucket
         return {
             now: this._state,
             avg: bucket.average,
-            itr: this._iterations,
+            itr: [ this._iterations, this._epoch ],
             bkt: bucket._smoothedData,
             cur: new Array(bucket.size).fill(0).map((x, i) => i == bucket._head ? 1 : 0),
             prv: [ this._prevState, prevBucket.average ],
+            fim: this.finished(),
         };
-    }
-}
-
-/**
- * A Tuner with fixed steps
- */
-export class FixedStepTuner extends Tuner
-{
-    /**
-     * Class constructor
-     * @param {number} initialValue initial guess to input to the unknown system
-     * @param {number} minValue minimum value accepted by the unknown system
-     * @param {number} maxValue maximum value accepted by the unknown system
-     * @param {number} [stepSize] integer greater than 0
-     */
-    constructor(initialValue, minValue, maxValue, stepSize = 1)
-    {
-        super(initialValue, minValue, maxValue);
-        this._stepSize = Math.max(1, stepSize | 0);
-    }
-
-    //
-    // Slow convergence with fixed steps of 1, but
-    // smooth experience given a "good" initial state
-    // (experience might suffer on min & max states)
-    //
-    _nextState()
-    {
-        const bucket = this._bucketOf(this._state);
-        const prevBucket = this._bucketOf(this._prevState);
-
-        if(bucket.average >= prevBucket.average) {
-            if(this._state <= this._prevState)
-                return Math.min(this._maxState, this._state + this._stepSize);
-            else
-                return Math.max(this._minState, this._state - this._stepSize);
-        }
-        else {
-            if(this._state >= this._prevState)
-                return Math.min(this._maxState, this._state + this._stepSize);
-            else
-                return Math.max(this._minState, this._state - this._stepSize);
-        }
-    }
-}
-
-/**
- * A Tuner with variable steps
- */
-export class VariableStepTuner extends Tuner
-{
-    /**
-     * Class constructor
-     * @param {number} initialValue initial guess to input to the unknown system
-     * @param {number} minValue minimum value accepted by the unknown system
-     * @param {number} maxValue maximum value accepted by the unknown system
-     * @param {number} [initialStepSize] 2^k, where k is a non-negative integer
-     */
-    constructor(initialValue, minValue, maxValue, initialStepSize = 8)
-    {
-        super(initialValue, minValue, maxValue);
-        this._minStepSize = 1;
-        this._maxStepSize = 1 << Math.round(Math.log2(initialStepSize));
-        this._stepSize = this._maxStepSize;
-    }
-    
-    /**
-     * Reset the Tuner
-     */
-    reset()
-    {
-        super.reset();
-        this._stepSize = this._maxStepSize;
-    }
-
-    // Compute the next state
-    _nextState()
-    {
-        const bucket = this._bucketOf(this._state);
-        const prevBucket = this._bucketOf(this._prevState);
-        const prevPrevBucket = this._bucketOf(this._prevPrevState);
-        let nextState = this._state;
-
-        if(bucket.average >= prevBucket.average) {
-            // next step size
-            if(prevBucket.average < prevPrevBucket.average)
-                this._stepSize = Math.max(this._minStepSize, this._stepSize >> 1);
-
-            // next state
-            if(this._state <= this._prevState)
-                nextState = Math.min(this._maxState, this._state + this._stepSize);
-            else
-                nextState = Math.max(this._minState, this._state - this._stepSize);
-        }
-        else {
-            // next step size
-            if(prevBucket.average > prevPrevBucket.average)
-                this._stepSize = Math.max(this._minStepSize, this._stepSize >> 1);
-
-            // next state
-            if(this._state >= this._prevState)
-                nextState = Math.min(this._maxState, this._state + this._stepSize);
-            else
-                nextState = Math.max(this._minState, this._state - this._stepSize);
-        }
-
-        return nextState;
     }
 }
 
@@ -443,18 +352,40 @@ export class VariableStepTuner extends Tuner
  */
 export class TestTuner extends Tuner
 {
-    constructor(initialValue, minValue, maxValue)
+    /**
+     * Class constructor
+     * @param {number} minValue minimum integer accepted by the unknown system
+     * @param {number} maxValue maximum integer accepted by the unknown system
+     */
+    constructor(minValue, maxValue)
     {
-        super(initialValue, minValue, maxValue);
-        this._state = this._minState;
+        super(minValue, minValue, maxValue);
     }
 
+    // where should I go next?
     _nextState()
     {
-        const bucket = this._bucketOf(this._state);
+        //console.log(this.info());
         const nextState = this._state + 1;
-        console.log(`${this._state}: ${bucket.average},`);
         return nextState > this._maxState ? this._minState : nextState;
+    }
+
+    // bucket setup
+    _bucketSetup()
+    {
+        return {
+            "size": 4,
+            "window": 3
+        };
+    }
+
+    // let me see stuff
+    info()
+    {
+        return {
+            state: [ this._state, this._bucketOf(this._state).average ],
+            data: JSON.stringify(this._bucket.map(b => b.average)),
+        };
     }
 }
 
@@ -468,10 +399,10 @@ export class StochasticTuner extends Tuner
      * @param {number} initialValue initial guess to input to the unknown system
      * @param {number} minValue minimum value accepted by the unknown system
      * @param {number} maxValue maximum value accepted by the unknown system
-     * @param {number} alpha geometric decrease rate of the temperature
-     * @param {number} maxIterationsPerTemperature number of iterations before cooling down by alpha
-     * @param {number} initialTemperature initial temperature
-     * @param {Function<number>|null} neighborFn neighbor picking function: state -> state
+     * @param {number} [alpha] geometric decrease rate of the temperature
+     * @param {number} [maxIterationsPerTemperature] number of iterations before cooling down by alpha
+     * @param {number} [initialTemperature] initial temperature
+     * @param {Function<number,number?>} [neighborFn] neighbor picking function: state[,F(state)] -> state
      */
     constructor(initialValue, minValue, maxValue, alpha = 0.5, maxIterationsPerTemperature = 8, initialTemperature = 100, neighborFn = null)
     {
@@ -502,6 +433,7 @@ export class StochasticTuner extends Tuner
 
     /**
      * Finished optimization?
+     * @returns {boolean}
      */
     finished()
     {
@@ -517,12 +449,12 @@ export class StochasticTuner extends Tuner
             return this._bestState;
 
         // pick a neighbor
+        const f = (s) => this._bucketOf(s).average;
         let nextState = this._state;
-        let neighbor = this._pickNeighbor(this._state);
+        let neighbor = this._pickNeighbor(this._state, f(this._state)) | 0;
         neighbor = Math.max(this._minState, Math.min(neighbor, this._maxState));
 
         // evaluate the neighbor
-        const f = (s) => this._bucketOf(s).average;
         if(f(neighbor) < f(this._state)) {
             // the neighbor is better than the current state
             nextState = neighbor;
@@ -550,6 +482,7 @@ export class StochasticTuner extends Tuner
         return nextState;
     }
 
+    // bucket setup
     _bucketSetup()
     {
         return {
@@ -568,6 +501,268 @@ export class StochasticTuner extends Tuner
             temperature: this._temperature,
             alpha: this._alpha,
             cool: this.finished(),
+        };
+    }
+}
+
+/**
+ * Golden Section Search
+ */
+export class GoldenSectionTuner extends Tuner
+{
+    /**
+     * Class constructor
+     * @param {number} minValue minimum INTEGER accepted by the quadratic error system
+     * @param {number} maxValue maximum INTEGER accepted by the quadratic error system
+     * @param {number} tolerance terminating condition (interval size)
+     */
+    constructor(minValue, maxValue, tolerance = 0.001)
+    {
+        super(minValue, minValue, maxValue);
+        this._invphi = (Math.sqrt(5.0) - 1.0) / 2.0; // 1 / phi
+        this._tolerance = Math.max(0, tolerance);
+        this.reset();
+    }
+
+    /**
+     * Reset the tuner
+     */
+    reset()
+    {
+        this._xlo = Math.max(xlo, this._minState);
+        this._xhi = Math.min(xhi, this._maxState);
+        this._x1 = this._xhi - this._invphi * (this._xhi - this._xlo);
+        this._x2 = this._xlo + this._invphi * (this._xhi - this._xlo);
+
+        this._state = Math.floor(this._x1);
+        this._bestState = this._state;
+    }
+
+    /**
+     * Finished optimizing?
+     * @returns {boolean}
+     */
+    finished()
+    {
+        return this._xhi - this._xlo <= this._tolerance;
+    }
+
+    // Where should I go next?
+    _nextState()
+    {
+        const f = (s) => this._bucketOf(s).average;
+
+        // best state so far
+        if(f(this._state) < f(this._bestState))
+            this._bestState = this._state;
+
+        // finished?
+        if(this.finished())
+            return this._bestState;
+
+        // initial search
+        if(this._epoch == 0)
+            return Math.ceil(this._x2);
+
+        // evaluate the current interval
+        if(f(Math.floor(this._x1)) < f(Math.ceil(this._x2))) {
+            this._xhi = this._x2;
+            this._x2 = this._x1;
+            this._x1 = this._xhi - this._invphi * (this._xhi - this._xlo);
+            return Math.floor(this._x1);
+        }
+        else {
+            this._xlo = this._x1;
+            this._x1 = this._x2;
+            this._x2 = this._xlo + this._invphi * (this._xhi - this._xlo);
+            return Math.ceil(this._x2);
+        }
+    }
+
+    // Bucket setup
+    _bucketSetup()
+    {
+        return {
+            "size": 4,
+            "window": 3
+        };
+    }
+
+    // let me see stuff
+    info()
+    {
+        return {
+            now: this._state,
+            avg: this._bucketOf(this._state).average,
+            itr: [ this._iterations, this._epoch ],
+            int: [ this._xlo, this._xhi ],
+            sub: [ this._x1, this._x2 ],
+            done: this.finished(),
+        };
+    }
+}
+
+/**
+ * A Tuner for minimizing errors between observed and expected values
+ * 
+ * It should be an Online Tuner, that is, it should learn the
+ * best responses in real-time, as it goes
+ * 
+ * This is sort of a hill climbing / gradient descent algorithm
+ * with random elements and adapted for discrete space
+ */
+export class OnlineErrorTuner extends Tuner
+{
+    /**
+     * Class constructor
+     * @param {number} minValue minimum INTEGER accepted by the quadratic error system
+     * @param {number} maxValue maximum INTEGER accepted by the quadratic error system
+     * @param {number} tolerance percentage relative to the expected observation
+     * @param {number} learningRate hyperparameter
+     */
+    constructor(minValue, maxValue, tolerance = 0.1, learningRate = 0.15)
+    {
+        const initial = Math.round(Utils.gaussianNoise((minValue + maxValue) / 2, 5));
+        super(initial, minValue, maxValue);
+        this._tolerance = Math.max(0, tolerance);
+        this._bestState = this._initialState;
+        this._expected = null;
+        this._learningRate = Math.max(0, learningRate);
+    }
+
+    /**
+     * Reset the tuner
+     */
+    reset()
+    {
+        super.reset();
+        this._expected = null;
+    }
+
+    /**
+     * Feed an observed value and an expected value
+     * @param {number} observedValue
+     * @param {number} expectedValue
+     */
+    feedObservation(observedValue, expectedValue)
+    {
+        const obs = +observedValue;
+        const expected = +expectedValue;
+
+        // must reset the tuner?
+        if(expected !== this._expected)
+            this.reset();
+        this._expected = expected;
+
+        // feed an error measurement to the appropriate bucket
+        const err = ((obs - expected) * (obs - expected)) / (expected * expected);
+        super.feedObservation(err);
+    }
+
+    /**
+     * Finished optimizing?
+     * -- for now, that is...
+     *    it's an online tuner!
+     * @returns {boolean}
+     */
+    finished()
+    {
+        // error function
+        const E = (s) => Math.sqrt(this._bucketOf(s).average) * Math.abs(this._expected);
+
+        // compute values
+        const err = E(this._bestState);
+        const tol = this._tolerance;
+        const exp = this._expected;
+        //console.log('ERR', err, tol * exp);
+
+        // acceptable condition
+        return err <= tol * exp;
+    }
+
+    /**
+     * Tolerance value, a percentage relative
+     * to the expected value that we want
+     * @returns {boolean}
+     */
+    get tolerance()
+    {
+        return this._tolerance;
+    }
+
+    /**
+     * Set the tolerance, a percentage relative
+     * to the expected value that we want
+     */
+    set tolerance(value)
+    {
+        this._tolerance = Math.max(0, value);
+    }
+
+    // Where should I go next?
+    _nextState()
+    {
+        // finished?
+        if(this.finished())
+            return this._bestState;
+
+        // error function
+        const E = (s) => Math.sqrt(this._bucketOf(s).average) * Math.abs(this._expected);
+
+        // best state
+        if(E(this._state) < E(this._bestState))
+            this._bestState = this._state;
+
+        // the algorithm should avoid long hops, as this
+        // would cause discontinuities for the end-user
+        //const stepSize = this._learningRate * E(this._state);
+        const worldScale = Math.abs(this._maxState);
+        const G = (s) => Math.sqrt(this._bucketOf(s).average) * worldScale;
+        const stepSize = this._learningRate * G(this._state);
+
+        // move in the opposite direction of the error or in
+        // the direction of the error with a small probability
+        const sign = x => (x >= 0) - (x < 0); // -1 or 1
+        const direction = (
+            sign(E(this._state) - E(this._prevState)) *
+           -sign(this._state - this._prevState) *
+            sign(Math.random() - 0.15)
+        );
+        //console.warn("at state", this._state, direction > 0 ? '-->' : '<--');
+
+        // pick the next state
+        const weight = Utils.gaussianNoise(0.5, 0.1); // dodge local mimina
+        let newState = Math.round(this._state + direction * weight * stepSize);
+
+        // outside bounds?
+        if(newState > this._maxState)
+            newState = this._maxState;
+        else if(newState < this._minState)
+            newState = this._minState;
+
+        // done
+        return newState;
+    }
+
+    // Bucket setup
+    _bucketSetup()
+    {
+        return {
+            "size": 4,
+            "window": 3
+        };
+    }
+
+    // let me see stuff
+    info()
+    {
+        return {
+            now: [ this._state, this._prevState ],
+            bkt: this._bucketOf(this._state)._rawData,
+            cur: this._bucketOf(this._state)._head,
+            err: [ this._bucketOf(this._state).average, this._bucketOf(this._prevState).average ],
+            sqt: Math.sqrt(this._bucketOf(this._state).average),
+            done: this.finished(),
         };
     }
 }

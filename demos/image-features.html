@@ -45,9 +45,7 @@ window.onload = async function()
         // find & render features
         media.findFeatures({
             method: 'fast', // use the FAST algorithm
-            settings: {
-                sensitivity: sensitivity,
-            }
+            sensitivity: sensitivity,
         }).then(features => {
             context.drawImage(media.source, 0, 0);
             renderFeatures(context, features, 4, 'white');

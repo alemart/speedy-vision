@@ -9,7 +9,7 @@
  * Includes gpu.js (MIT license)
  * by the gpu.js team (http://gpu.rocks)
  * 
- * Date: 2020-05-06T01:47:17.653Z
+ * Date: 2020-05-10T00:52:19.521Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -197,10 +197,8 @@ class FeatureDetector
         const corners = this._gpu.keypoints.fastSuppression(rawCorners);
 
         // encoding result
-        const offsets = this._gpu.encoders.encodeKeypointOffsets(corners);
-        //const keypointCount = this._gpu.encoders.countKeypoints(offsets); // performance penalty
-        const pixels = this._gpu.encoders.encodeKeypoints(offsets);
-        const keypoints = this._gpu.encoders.decodeKeypoints(pixels);
+        const encodedKeypoints = this._gpu.encoders.encodeKeypoints(corners);
+        const keypoints = this._gpu.encoders.decodeKeypoints(encodedKeypoints);
         this._gpu.encoders.optimizeKeypointEncoder(keypoints.length);
         return keypoints;
     }
@@ -608,7 +606,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUEncoders", function() { return GPUEncoders; });
 /* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
 /* harmony import */ var _shaders_encoders__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/encoders */ "./src/gpu/shaders/encoders.js");
-/* harmony import */ var _core_speedy_feature__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../core/speedy-feature */ "./src/core/speedy-feature.js");
+/* harmony import */ var _utils_tuner__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/tuner */ "./src/utils/tuner.js");
+/* harmony import */ var _core_speedy_feature__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../core/speedy-feature */ "./src/core/speedy-feature.js");
 /*
  * speedy-features.js
  * GPU-accelerated feature detection and matching for Computer Vision on the web
@@ -629,6 +628,7 @@ __webpack_require__.r(__webpack_exports__);
  * gpu-encoders.js
  * Texture encoders
  */
+
 
 
 
@@ -662,7 +662,7 @@ class GPUEncoders extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKer
         super(gpu, width, height);
         this
             // Keypoint encoding
-            .declare('encodeKeypointOffsets', _shaders_encoders__WEBPACK_IMPORTED_MODULE_1__["encodeKeypointOffsets"], {
+            .declare('_encodeKeypointOffsets', _shaders_encoders__WEBPACK_IMPORTED_MODULE_1__["encodeKeypointOffsets"], {
                 loopMaxIterations: 1024
             })
 
@@ -680,7 +680,8 @@ class GPUEncoders extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKer
             })
         ;
 
-        // setup internal properties
+        // setup internal data
+        this._tuner = new _utils_tuner__WEBPACK_IMPORTED_MODULE_2__["StochasticTuner"](48, 16, 255, 0.2, 8, 60, 0.001);
         this._dynamicKernels = Object.getOwnPropertyNames(this)
                                      .filter(k => this[k].dynamicOutput)
                                      .map(k => this[k]);
@@ -700,12 +701,14 @@ class GPUEncoders extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKer
      * @param {} offsets image with encoded offsets
      * @returns {number} number of keypoints
      */
+    /*
     countKeypoints(offsets)
     {
         this._encodeKeypointCount(offsets);
         const pixel = this._encodeKeypointCount.getPixels(); // bottleneck
         return ((pixel[3] << 24) | (pixel[2] << 16) | (pixel[1] << 8) | pixel[0]);
     }
+    */
 
     /**
      * Optimizes the keypoint encoder for an expected number of keypoints
@@ -729,14 +732,29 @@ class GPUEncoders extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKer
     }
 
     /**
-     * Encodes the keypoints with an image - this is a bottleneck!
-     * @param {} offsets image with encoded offsets
+     * Encodes the keypoints of an image - this is a bottleneck!
+     * @param {} corners image with encoded corners
      * @returns {Array<number>} pixels in the [r,g,b,a, ...] format
      */
-    encodeKeypoints(offsets)
+    encodeKeypoints(corners)
     {
+        // encode keypoint offsets
+        const maxIterations = this._tuner.currentValue();
+
+        const start = performance.now();
+        const offsets = this._encodeKeypointOffsets(corners, maxIterations);
         this._encodeKeypoints(offsets, this._keypointEncoderLength, this._descriptorSize);
-        return this._encodeKeypoints.getPixels(); // bottleneck
+        const pixels = this._encodeKeypoints.getPixels(); // bottleneck
+        const time = performance.now() - start;
+        //this._tuner.feedObservation(Speedy.fps.value);
+
+        this._tuner.feedObservation(time);
+        //console.log(maxIterations);
+        this._it = this._it || 1;
+        if((++this._it) % 90) console.log(JSON.stringify(this._tuner.info()));
+
+        // done!
+        return pixels;
     }
 
     /**
@@ -756,7 +774,7 @@ class GPUEncoders extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKer
             if(x < w && y < h) {
                 scale = pixels[i+4] / 255.0;
                 rotation = pixels[i+5] * TWO_PI / 255.0;
-                keypoints.push(new _core_speedy_feature__WEBPACK_IMPORTED_MODULE_2__["SpeedyFeature"](x, y, scale, rotation));
+                keypoints.push(new _core_speedy_feature__WEBPACK_IMPORTED_MODULE_3__["SpeedyFeature"](x, y, scale, rotation));
             }
             else
                 break;
@@ -21059,29 +21077,29 @@ __webpack_require__.r(__webpack_exports__);
  * G - pixel intensity (greyscale)
  * B - min(c, -1 + offset to the next feature) for a constant c in [1,255]
  * A - general purpose channel
- * 
- * 
- * 
+ *
+ *
+ *
  * Keypoints are encoded as follows:
- * 
+ *
  * each keypoint takes (2 + N/4) pixels of 32 bits
- * 
+ *
  *    1 pixel        1 pixel         N/4 pixels
  * [  X  |  Y  ][ S | R | - | - ][  ...  D  ...  ]
- * 
+ *
  * X: keypoint_xpos (2 bytes)
  * Y: keypoint_ypos (2 bytes)
  * S: keypoint_pyramid_scale * 2 (1 byte)
  * R: keypoint_rotation / (2 pi) (1 byte)
  * -: unused
  * D: descriptor binary string (N bytes)
- * 
+ *
  */
 
 // encode keypoint offsets
-function encodeKeypointOffsets(image)
+// maxIterations is an integer in [1,255], determined experimentally
+function encodeKeypointOffsets(image, maxIterations)
 {
-    const maxIterations = 32; // c: determined experimentally for performance (max. 255)
     const w = this.constants.width, h = this.constants.height;
     let x = this.thread.x, y = this.thread.y;
     let next = image[y][x];
@@ -24911,7 +24929,7 @@ __webpack_require__.r(__webpack_exports__);
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * utils/fps-counter.js
+ * fps-counter.js
  * A FPS counter
  */
 
@@ -24980,6 +24998,579 @@ class FPSCounter
 
 /***/ }),
 
+/***/ "./src/utils/tuner.js":
+/*!****************************!*\
+  !*** ./src/utils/tuner.js ***!
+  \****************************/
+/*! exports provided: FixedStepTuner, VariableStepTuner, TestTuner, StochasticTuner */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FixedStepTuner", function() { return FixedStepTuner; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "VariableStepTuner", function() { return VariableStepTuner; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "TestTuner", function() { return TestTuner; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "StochasticTuner", function() { return StochasticTuner; });
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./utils */ "./src/utils/utils.js");
+/*
+ * speedy-features.js
+ * GPU-accelerated feature detection and matching for Computer Vision on the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * tuner.js
+ * A device designed to minimize the (noisy) output of a unknown system
+ */
+
+
+
+/**
+ * A Bucket of observations is used to give
+ * statistical treatment to (noisy) data
+ */
+class Bucket
+{
+    /**
+     * Class constructor
+     * @param {number} bucketSize It should be a power of two
+     * @param {number} windowSize An odd positive number for filtering
+     */
+    constructor(bucketSize = 32, windowSize = 5)
+    {
+        // validate parameters
+        this._bucketSize = 1 << Math.ceil(Math.log2(bucketSize));
+        this._windowSize = windowSize + (1 - windowSize % 2);
+
+        // bucketSize should be a power of 2
+        if(bucketSize < this._windowSize)
+            _utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Invalid bucketSize of ${bucketSize}`);
+
+        // Bucket is implemented as a circular vector
+        this._head = this._bucketSize - 1;
+        this._rawData = new Float32Array(this._bucketSize).fill(0);
+        this._smoothedData = new Float32Array(this._bucketSize).fill(0);
+        this._average = 0;
+        this._isSmooth = true;
+    }
+
+    /**
+     * Put a value in the bucket
+     * @param {number} value
+     */
+    put(value)
+    {
+        this._head = (this._head + 1) & (this._bucketSize - 1);
+        this._rawData[this._head] = value;
+        this._isSmooth = false;
+    }
+
+    /**
+     * Bucket size
+     * @returns {number}
+     */
+    get size()
+    {
+        return this._bucketSize;
+    }
+
+    /**
+     * Get smoothed average
+     * @returns {number}
+     */
+    get average()
+    {
+        // need to smooth the signal?
+        if(!this._isSmooth)
+            this._smooth();
+
+        // the median filter does not introduce new data to the signal
+        // this._average approaches the mean of the distribution as bucketSize -> inf
+        return this._average;
+    }
+
+    /**
+     * Fill the bucket with a value
+     * @param {number} value
+     */
+    fill(value)
+    {
+        this._rawData.fill(value);
+        this._smoothedData.fill(value);
+        this._average = value;
+        this._isSmooth = true;
+        this._head = this._bucketSize - 1;
+        return this;
+    }
+
+    // Apply the smoothing filter & compute the average
+    _smooth()
+    {
+        // smooth the signal & compute the average
+        this._average = 0;
+        for(let i = 0; i < this._bucketSize; i++) {
+            this._smoothedData[i] = this._median(this._window(i));
+            this._average += this._smoothedData[i];
+        }
+        this._average /= this._bucketSize;
+        //this._average = this._median(this._rawData);
+
+        // the signal has been smoothed
+        this._isSmooth = true;
+    }
+
+    // A window of size w around i
+    _window(i)
+    {
+        const arr = this._rawData;
+        const win = this._win || (this._win = new Float32Array(this._windowSize));
+        const n = arr.length;
+        const w = win.length;
+        const wOver2 = w >> 1;
+        const head = this._head;
+        const tail = (head + 1) & (n - 1);
+
+        for(let j = 0, k = -wOver2; k <= wOver2; k++) {
+            let pos = i + k;
+
+            // boundary conditions:
+            // reflect values
+            if(i <= head){
+                if(pos > head)
+                    pos = head + (head - pos);
+            }
+            else {
+                if(pos < tail)
+                    pos = tail + (tail - pos);
+            }
+            if(pos < 0)
+                pos += n;
+            else if(pos >= n)
+                pos -= n;
+
+            win[j++] = arr[pos];
+        }
+
+        return win;
+    }
+
+    // return the median of a sequence (note: the input is rearranged)
+    _median(v)
+    {
+        // fast median search for fixed length vectors
+        switch(v.length) {
+            case 1:
+                return v[0];
+
+            case 3:
+                //  v0   v1   v2   [ v0  v1  v2 ]
+                //   \  / \   /
+                //   node  node    [ min(v0,v1)  min(max(v0,v1),v2)  max(max(v0,v1),v2) ]
+                //      \   /
+                //      node       [ min(min(v0,v1),min(max(v0,v1),v2))  max(min(...),min(...))  max(v0,v1,v2) ]
+                //       |
+                //     median      [ min(v0,v1,v2)  median  max(v0,v1,v2) ]
+                if(v[0] > v[1]) [v[0], v[1]] = [v[1], v[0]];
+                if(v[1] > v[2]) [v[1], v[2]] = [v[2], v[1]];
+                if(v[0] > v[1]) [v[0], v[1]] = [v[1], v[0]];
+                return v[1];
+
+            case 5:
+                if(v[0] > v[1]) [v[0], v[1]] = [v[1], v[0]];
+                if(v[3] > v[4]) [v[3], v[4]] = [v[4], v[3]];
+                if(v[0] > v[3]) [v[0], v[3]] = [v[3], v[0]];
+                if(v[1] > v[4]) [v[1], v[4]] = [v[4], v[1]];
+                if(v[1] > v[2]) [v[1], v[2]] = [v[2], v[1]];
+                if(v[2] > v[3]) [v[2], v[3]] = [v[3], v[2]];
+                if(v[1] > v[2]) [v[1], v[2]] = [v[2], v[1]];
+                return v[2];
+
+            case 7:
+                if(v[0] > v[5]) [v[0], v[5]] = [v[5], v[0]];
+                if(v[0] > v[3]) [v[0], v[3]] = [v[3], v[0]];
+                if(v[1] > v[6]) [v[1], v[6]] = [v[6], v[1]];
+                if(v[2] > v[4]) [v[2], v[4]] = [v[4], v[2]];
+                if(v[0] > v[1]) [v[0], v[1]] = [v[1], v[0]];
+                if(v[3] > v[5]) [v[3], v[5]] = [v[5], v[3]];
+                if(v[2] > v[6]) [v[2], v[6]] = [v[6], v[2]];
+                if(v[2] > v[3]) [v[2], v[3]] = [v[3], v[2]];
+                if(v[3] > v[6]) [v[3], v[6]] = [v[6], v[3]];
+                if(v[4] > v[5]) [v[4], v[5]] = [v[5], v[4]];
+                if(v[1] > v[4]) [v[1], v[4]] = [v[4], v[1]];
+                if(v[1] > v[3]) [v[1], v[3]] = [v[3], v[1]];
+                if(v[3] > v[4]) [v[3], v[4]] = [v[4], v[3]];
+                return v[3];
+
+            default:
+                v.sort((a, b) => a - b);
+                return (v[(v.length - 1) >> 1] + v[v.length >> 1]) / 2;
+        }
+    }
+}
+
+/**
+ * A Tuner is a device designed to find
+ * an integer x that minimizes the output
+ * of a unknown system y = F(x) with noise
+ */
+/* abstract */ class Tuner
+{
+    /**
+     * Class constructor
+     * @param {number} initialValue initial guess to input to the unknown system
+     * @param {number} minValue minimum value accepted by the unknown system
+     * @param {number} maxValue maximum value accepted by the unknown system
+     */
+    constructor(initialValue, minValue, maxValue)
+    {
+        // validate parameters
+        if(minValue >= maxValue)
+            _utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Invalid boundaries [${minValue},${maxValue}] given to the Tuner`);
+        else if(initialValue < minValue || initialValue > maxValue)
+            _utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Invalid initial value (${initialValue}) given to the Tuner`);
+
+        // setup object
+        this._state = initialValue;
+        this._prevState = initialValue;
+        this._prevPrevState = initialValue;
+        this._initialState = initialValue;
+        this._minState = minValue;
+        this._maxState = maxValue;
+        this._bucket = new Array(maxValue - minValue + 1).fill(null).map(x => new Bucket(this._bucketSetup().size, this._bucketSetup().window));
+        this._iterations = 0; // number of iterations in the same state
+        this._epoch = 0; // number of state changes
+    }
+
+    /**
+     * The value to input to the unknown system
+     */
+    currentValue()
+    {
+        return this._state;
+    }
+
+    /**
+     * Feed the output y = F(x) of the unknown system
+     * when given an input x = this.currentValue()
+     */
+    feedObservation(y)
+    {
+        const bucket = this._bucketOf(this._state);
+
+        // feed the observation into the bucket of the current state
+        bucket.put(y);
+
+        // time to change state?
+        if(++this._iterations >= bucket.size) {
+            // initialize buckets
+            if(this._epoch++ == 0)
+                this._bucket.forEach(bk => bk.fill(bucket.average));
+
+            // compute next state
+            const prevPrevState = this._prevState;
+            const prevState = this._state;
+            this._state = this._nextState();
+            this._prevState = prevState;
+            this._prevPrevState = prevPrevState;
+
+            // reset iteration counter
+            this._iterations = 0;
+        }
+    }
+
+    /**
+     * Reset the Tuner to its initial state
+     * Useful if you change on-the-fly the unknown system,
+     * so that there is a new target value you want to find
+     */
+    reset()
+    {
+        this._state = this._initialState;
+        this._prevState = this._initialState;
+        this._prevPrevState = this._initialState;
+        this._iterations = 0;
+        this._epoch = 0;
+    }
+
+    // get the bucket of a state
+    _bucketOf(state)
+    {
+        state = Math.max(this._minState, Math.min(state, this._maxState));
+        return this._bucket[state - this._minState];
+    }
+
+    // the bucket may be reconfigured on subclasses
+    _bucketSetup()
+    {
+        return {
+            "size": 32,
+            "window": 5
+        };
+    }
+
+    // this is magic
+    /* abstract */ _nextState()
+    {
+        // Subclass responsibility
+        return this._state;
+    }
+
+    // let me see stuff
+    info()
+    {
+        const bucket = this._bucketOf(this._state);
+        const prevBucket = this._bucketOf(this._prevState);
+
+        return {
+            now: this._state,
+            avg: bucket.average,
+            itr: this._iterations,
+            bkt: bucket._smoothedData,
+            cur: new Array(bucket.size).fill(0).map((x, i) => i == bucket._head ? 1 : 0),
+            prv: [ this._prevState, prevBucket.average ],
+        };
+    }
+}
+
+/**
+ * A Tuner with fixed steps
+ */
+class FixedStepTuner extends Tuner
+{
+    /**
+     * Class constructor
+     * @param {number} initialValue initial guess to input to the unknown system
+     * @param {number} minValue minimum value accepted by the unknown system
+     * @param {number} maxValue maximum value accepted by the unknown system
+     * @param {number} [stepSize] integer greater than 0
+     */
+    constructor(initialValue, minValue, maxValue, stepSize = 1)
+    {
+        super(initialValue, minValue, maxValue);
+        this._stepSize = Math.max(1, stepSize | 0);
+    }
+
+    //
+    // Slow convergence with fixed steps of 1, but
+    // smooth experience given a "good" initial state
+    // (experience might suffer on min & max states)
+    //
+    _nextState()
+    {
+        const bucket = this._bucketOf(this._state);
+        const prevBucket = this._bucketOf(this._prevState);
+
+        if(bucket.average >= prevBucket.average) {
+            if(this._state <= this._prevState)
+                return Math.min(this._maxState, this._state + this._stepSize);
+            else
+                return Math.max(this._minState, this._state - this._stepSize);
+        }
+        else {
+            if(this._state >= this._prevState)
+                return Math.min(this._maxState, this._state + this._stepSize);
+            else
+                return Math.max(this._minState, this._state - this._stepSize);
+        }
+    }
+}
+
+/**
+ * A Tuner with variable steps
+ */
+class VariableStepTuner extends Tuner
+{
+    /**
+     * Class constructor
+     * @param {number} initialValue initial guess to input to the unknown system
+     * @param {number} minValue minimum value accepted by the unknown system
+     * @param {number} maxValue maximum value accepted by the unknown system
+     * @param {number} [initialStepSize] 2^k, where k is a non-negative integer
+     */
+    constructor(initialValue, minValue, maxValue, initialStepSize = 8)
+    {
+        super(initialValue, minValue, maxValue);
+        this._minStepSize = 1;
+        this._maxStepSize = 1 << Math.round(Math.log2(initialStepSize));
+        this._stepSize = this._maxStepSize;
+    }
+    
+    /**
+     * Reset the Tuner
+     */
+    reset()
+    {
+        super.reset();
+        this._stepSize = this._maxStepSize;
+    }
+
+    // Compute the next state
+    _nextState()
+    {
+        const bucket = this._bucketOf(this._state);
+        const prevBucket = this._bucketOf(this._prevState);
+        const prevPrevBucket = this._bucketOf(this._prevPrevState);
+        let nextState = this._state;
+
+        if(bucket.average >= prevBucket.average) {
+            // next step size
+            if(prevBucket.average < prevPrevBucket.average)
+                this._stepSize = Math.max(this._minStepSize, this._stepSize >> 1);
+
+            // next state
+            if(this._state <= this._prevState)
+                nextState = Math.min(this._maxState, this._state + this._stepSize);
+            else
+                nextState = Math.max(this._minState, this._state - this._stepSize);
+        }
+        else {
+            // next step size
+            if(prevBucket.average > prevPrevBucket.average)
+                this._stepSize = Math.max(this._minStepSize, this._stepSize >> 1);
+
+            // next state
+            if(this._state >= this._prevState)
+                nextState = Math.min(this._maxState, this._state + this._stepSize);
+            else
+                nextState = Math.max(this._minState, this._state - this._stepSize);
+        }
+
+        return nextState;
+    }
+}
+
+/**
+ * A Tuner created for testing purposes
+ */
+class TestTuner extends Tuner
+{
+    constructor(initialValue, minValue, maxValue)
+    {
+        super(initialValue, minValue, maxValue);
+        this._state = this._minState;
+    }
+
+    _nextState()
+    {
+        const bucket = this._bucketOf(this._state);
+        const nextState = this._state + 1;
+        console.log(`${this._state}: ${bucket.average},`);
+        return nextState > this._maxState ? this._minState : nextState;
+    }
+}
+
+/*
+ * Implementation of Simulated Annealing
+ */
+class StochasticTuner extends Tuner
+{
+    /**
+     * Class constructor
+     * @param {number} initialValue initial guess to input to the unknown system
+     * @param {number} minValue minimum value accepted by the unknown system
+     * @param {number} maxValue maximum value accepted by the unknown system
+     * @param {number} alpha geometric decrease rate of the temperature
+     * @param {number} maxIterationsPerTemperature number of iterations before cooling down by alpha
+     * @param {number} initialTemperature initial temperature
+     * @param {number} minTemperature temperature in which the tuner will stop
+     * @param {Function<number>|null} neighborFn neighbor picking function: state -> state
+     */
+    constructor(initialValue, minValue, maxValue, alpha = 0.5, maxIterationsPerTemperature = 8, initialTemperature = 100, minTemperature = 0.00001, neighborFn = null)
+    {
+        super(initialValue, minValue, maxValue);
+
+        this._bestState = this._initialState;
+        this._initialTemperature = Math.max(0, initialTemperature);
+        this._minTemperature = Math.max(0, minTemperature);
+        this._temperature = this._initialTemperature;
+        this._numIterations = 0; // no. of iterations in the current temperature
+        this._maxIterationsPerTemperature = Math.max(1, maxIterationsPerTemperature);
+        this._alpha = Math.max(0, Math.min(alpha, 1)); // geometric decrease rate
+
+        if(!neighborFn)
+            neighborFn = (s) => this._minState + Math.floor(Math.random() * (this._maxState - this._minState + 1))
+        this._pickNeighbor = neighborFn;
+    }
+
+    /**
+     * Reset the Tuner
+     */
+    reset()
+    {
+        this._temperature = this._initialTemperature;
+        this._numIterations = 0;
+    }
+
+    // Pick the next state
+    // Simulated Annealing
+    _nextState()
+    {
+        if(this._temperature <= this._minTemperature)
+            return this._bestState;
+
+        let nextState = this._state;
+        const f = (s) => this._bucketOf(s).average;
+        const neighbor = this._pickNeighbor(this._state);
+
+        if(f(neighbor) < f(this._state)) {
+            // the neighbor is better than the current state
+            nextState = neighbor;
+        }
+        else {
+            // the neighbor is not better than the current state,
+            // but we may admit it with a certain probability
+            if(Math.random() < Math.exp((f(this._state) - f(neighbor)) / this._temperature))
+                nextState = neighbor;
+        }
+
+        // update best state
+        if(f(nextState) < f(this._bestState))
+            this._bestState = nextState;
+
+        // cool down
+        if(++this._numIterations >= this._maxIterationsPerTemperature) {
+            this._temperature *= this._alpha;
+            this._numIterations = 0;
+        }
+
+        // done
+        return nextState;
+    }
+
+    _bucketSetup()
+    {
+        return {
+            "size": 4,
+            "window": 3
+        };
+    }
+
+    // let me see stuff
+    info()
+    {
+        return {
+            best: [ this._bestState, this._bucketOf(this._bestState).average ],
+            state: [ this._state, this._bucketOf(this._state).average ],
+            iterations: [ this._numIterations, this._maxIterationsPerTemperature ],
+            temperature: this._temperature,
+            alpha: this._alpha,
+            cool: (this._temperature <= this._minTemperature),
+        };
+    }
+}
+
+/***/ }),
+
 /***/ "./src/utils/utils.js":
 /*!****************************!*\
   !*** ./src/utils/utils.js ***!
@@ -25007,7 +25598,7 @@ __webpack_require__.r(__webpack_exports__);
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * utils/utils.js
+ * utils.js
  * Generic utilities
  */
 

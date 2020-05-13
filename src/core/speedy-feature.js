@@ -35,8 +35,8 @@ export class SpeedyFeature
      */
     constructor(x, y, scale = 1.0, rotation = 0.0, descriptor = null)
     {
-        this._x = x|0;
-        this._y = y|0;
+        this._x = +x;
+        this._y = +y;
         this._scale = +scale;
         this._rotation = +rotation;
         this._descriptor = descriptor;

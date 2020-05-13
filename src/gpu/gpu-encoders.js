@@ -34,7 +34,6 @@ const MAX_ENCODER_LENGTH = 300; // in pixels (if too large, WebGL may lose conte
 const MAX_KEYPOINTS = (MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH) / MAX_PIXELS_PER_KEYPOINT;
 const INITIAL_ENCODER_LENGTH = 256; // pick a large value < MAX (useful on static images when no encoder optimization is performed beforehand)
 const TWO_PI = 2.0 * Math.PI;
-const SQRT_TWO_PI = Math.sqrt(TWO_PI);
 
 
 /**
@@ -146,9 +145,7 @@ export class GPUEncoders extends GPUKernelGroup
         }
 
         // debug
-        /*this._it = this._it || 1;
-        if((++this._it) % 90)
-            console.log(JSON.stringify(this._tuner.info()));*/
+        //console.log(JSON.stringify(this._tuner.info()));
 
         // done!
         return pixels;

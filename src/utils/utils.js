@@ -85,9 +85,8 @@ export class Utils
         
         let a, b = Math.random();
         do { a = Math.random(); } while(a <= Number.EPSILON);
-        let sin = Math.sin(TWO_PI * b), cos = Math.cos(TWO_PI * b);
+        let z = Math.sqrt(-2 * Math.log(a)) * Math.sin(TWO_PI * b);
 
-        let z = Math.sqrt(-2 * Math.log(a)) * Math.max(sin, cos);
         return z * sigma + mu;
     }
 }
