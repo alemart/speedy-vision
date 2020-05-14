@@ -213,26 +213,25 @@ class Bucket
 {
     /**
      * Class constructor
-     * @param {number} initialValue initial guess to input to the unknown system
-     * @param {number} minValue minimum value accepted by the unknown system
-     * @param {number} maxValue maximum value accepted by the unknown system
+     * @param {number} initialState initial guess to input to the unknown system
+     * @param {number} minState minimum integer accepted by the unknown system
+     * @param {number} maxState maximum integer accepted by the unknown system
      */
-    constructor(initialValue, minValue, maxValue)
+    constructor(initialState, minState, maxState)
     {
         // validate parameters
-        if(minValue >= maxValue)
-            Utils.fatal(`Invalid boundaries [${minValue},${maxValue}] given to the Tuner`);
-        else if(initialValue < minValue || initialValue > maxValue)
-            Utils.fatal(`Invalid initial value (${initialValue}) given to the Tuner`);
+        if(minState >= maxState)
+            Utils.fatal(`Invalid boundaries [${minState},${maxState}] given to the Tuner`);
+        initialState = Math.max(minState, Math.min(initialState, maxState));
 
         // setup object
-        this._state = initialValue;
-        this._prevState = initialValue;
-        this._prevPrevState = initialValue;
-        this._initialState = initialValue;
-        this._minState = minValue;
-        this._maxState = maxValue;
-        this._bucket = new Array(maxValue - minValue + 1).fill(null).map(x => new Bucket(this._bucketSetup().size, this._bucketSetup().window));
+        this._state = initialState;
+        this._prevState = initialState;
+        this._prevPrevState = initialState;
+        this._initialState = initialState;
+        this._minState = minState;
+        this._maxState = maxState;
+        this._bucket = new Array(maxState - minState + 1).fill(null).map(x => new Bucket(this._bucketSetup().size, this._bucketSetup().window));
         this._iterations = 0; // number of iterations in the same state
         this._epoch = 0; // number of state changes
     }
@@ -354,12 +353,12 @@ export class TestTuner extends Tuner
 {
     /**
      * Class constructor
-     * @param {number} minValue minimum integer accepted by the unknown system
-     * @param {number} maxValue maximum integer accepted by the unknown system
+     * @param {number} minState minimum integer accepted by the unknown system
+     * @param {number} maxState maximum integer accepted by the unknown system
      */
-    constructor(minValue, maxValue)
+    constructor(minState, maxState)
     {
-        super(minValue, minValue, maxValue);
+        super(minState, minState, maxState);
     }
 
     // where should I go next?
@@ -396,17 +395,17 @@ export class StochasticTuner extends Tuner
 {
     /**
      * Class constructor
-     * @param {number} initialValue initial guess to input to the unknown system
-     * @param {number} minValue minimum value accepted by the unknown system
-     * @param {number} maxValue maximum value accepted by the unknown system
+     * @param {number} initialState initial guess to input to the unknown system
+     * @param {number} minState minimum integer accepted by the unknown system
+     * @param {number} maxState maximum integer accepted by the unknown system
      * @param {number} [alpha] geometric decrease rate of the temperature
      * @param {number} [maxIterationsPerTemperature] number of iterations before cooling down by alpha
      * @param {number} [initialTemperature] initial temperature
      * @param {Function<number,number?>} [neighborFn] neighbor picking function: state[,F(state)] -> state
      */
-    constructor(initialValue, minValue, maxValue, alpha = 0.5, maxIterationsPerTemperature = 8, initialTemperature = 100, neighborFn = null)
+    constructor(initialState, minState, maxState, alpha = 0.5, maxIterationsPerTemperature = 8, initialTemperature = 100, neighborFn = null)
     {
-        super(initialValue, minValue, maxValue);
+        super(initialState, minState, maxState);
 
         this._bestState = this._initialState;
         this._costOfBestState = Infinity;
@@ -512,13 +511,13 @@ export class GoldenSectionTuner extends Tuner
 {
     /**
      * Class constructor
-     * @param {number} minValue minimum INTEGER accepted by the quadratic error system
-     * @param {number} maxValue maximum INTEGER accepted by the quadratic error system
+     * @param {number} minState minimum INTEGER accepted by the quadratic error system
+     * @param {number} maxState maximum INTEGER accepted by the quadratic error system
      * @param {number} tolerance terminating condition (interval size)
      */
-    constructor(minValue, maxValue, tolerance = 0.001)
+    constructor(minState, maxState, tolerance = 0.001)
     {
-        super(minValue, minValue, maxValue);
+        super(minState, minState, maxState);
         this._invphi = (Math.sqrt(5.0) - 1.0) / 2.0; // 1 / phi
         this._tolerance = Math.max(0, tolerance);
         this.reset();
@@ -615,15 +614,15 @@ export class OnlineErrorTuner extends Tuner
 {
     /**
      * Class constructor
-     * @param {number} minValue minimum INTEGER accepted by the quadratic error system
-     * @param {number} maxValue maximum INTEGER accepted by the quadratic error system
+     * @param {number} minState minimum INTEGER accepted by the quadratic error system
+     * @param {number} maxState maximum INTEGER accepted by the quadratic error system
      * @param {number} tolerance percentage relative to the expected observation
      * @param {number} learningRate hyperparameter
      */
-    constructor(minValue, maxValue, tolerance = 0.1, learningRate = 0.15)
+    constructor(minState, maxState, tolerance = 0.1, learningRate = 0.05)
     {
-        const initial = Math.round(Utils.gaussianNoise((minValue + maxValue) / 2, 5));
-        super(initial, minValue, maxValue);
+        const initialState = Math.round(Utils.gaussianNoise((minState + maxState) / 2, 5));
+        super(initialState, minState, maxState);
         this._tolerance = Math.max(0, tolerance);
         this._bestState = this._initialState;
         this._expected = null;
@@ -731,14 +730,14 @@ export class OnlineErrorTuner extends Tuner
         //console.warn("at state", this._state, direction > 0 ? '-->' : '<--');
 
         // pick the next state
-        const weight = Utils.gaussianNoise(0.5, 0.1); // dodge local mimina
+        const weight = Utils.gaussianNoise(1.0, 0.1); // dodge local mimina
         let newState = Math.round(this._state + direction * weight * stepSize);
 
         // outside bounds?
         if(newState > this._maxState)
-            newState = this._maxState;
+            newState = this._bestState;
         else if(newState < this._minState)
-            newState = this._minState;
+            newState = this._bestState;
 
         // done
         return newState;

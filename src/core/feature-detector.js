@@ -110,8 +110,17 @@ export class FeatureDetector
     // the feature detector returns approximately the
     // number of features you expect - within a
     // tolerance, i.e., a percentage value
-    _findSensitivity(expected, tolerance = 0.10)
+    _findSensitivity(param)
     {
+        // grab the parameters
+        const expected = ({
+            number: 0, // how many keypoints do you expected?
+            tolerance: 0.10, // percentage relative to the expected number of keypoints
+            ...(typeof param == 'object' ? param : {
+                number: param | 0,
+            })
+        });
+
         // spawn the tuner
         this._sensitivityTuner = this._sensitivityTuner ||
             new OnlineErrorTuner(0, 1200); // use a slightly wider interval for better stability
@@ -119,8 +128,8 @@ export class FeatureDetector
         const normalizer = 0.001;
 
         // update tuner
-        this._sensitivityTuner.tolerance = tolerance;
-        this._sensitivityTuner.feedObservation(this._lastKeypointCount, expected);
+        this._sensitivityTuner.tolerance = expected.tolerance;
+        this._sensitivityTuner.feedObservation(this._lastKeypointCount, expected.number);
         const sensitivity = this._sensitivityTuner.currentValue() * normalizer;
 
         // return the new sensitivity
