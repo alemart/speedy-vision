@@ -61,6 +61,18 @@ export class Utils
     }
 
     /**
+     * Generates an enumeration
+     * @param {...string} values enumeration options
+     * @returns {object} enum object
+     */
+    static enum(...values)
+    {
+        return Object.freeze(
+            values.reduce((acc, cur) => ((acc[cur] = Symbol(cur)), acc), { })
+        );
+    }
+
+    /**
      * Generates a random number with
      * Gaussian distribution (mu, sigma)
      * @param {number} mu mean

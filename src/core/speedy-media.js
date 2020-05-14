@@ -22,6 +22,7 @@
 import { FeatureDetector } from './feature-detector';
 import { SpeedyError } from '../utils/errors';
 import { Utils } from '../utils/utils';
+import { MediaType, ColorFormat } from '../utils/types'
 
 /**
  * SpeedyMedia encapsulates a media element
@@ -32,20 +33,18 @@ export class SpeedyMedia
 {
     /**
      * Class constructor
-     * It assumes the media source is already loaded
-     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} mediaSource An image, video or canvas
+     * It assumes A VALID (!) media source that is already loaded
+     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|Texture} mediaSource An image, video or canvas
+     * @param {number} width media width
+     * @param {number} height media height
      */
-    /* private */ constructor(mediaSource)
+    /* private */ constructor(mediaSource, width, height)
     {
-        // validate the media
-        const dimensions = getMediaDimensions(mediaSource);
-        if(dimensions == null)
-            Utils.fatal(`Can't load SpeedyMedia with a ${mediaSource}: invalid media source.`);
-
-        // initialize attributes
         this._mediaSource = mediaSource;
-        this._width = dimensions.width;
-        this._height = dimensions.height;
+        this._width = width | 0;
+        this._height = height | 0;
+        this._mediaType = getMediaType(mediaSource);
+        this._colorFormat = ColorFormat.RGB;
         this._featureDetector = new FeatureDetector(this);
     }
 
@@ -63,7 +62,7 @@ export class SpeedyMedia
                 // try to load the media until it's ready
                 (function loadMedia(dimensions, k = 500) {
                     if(dimensions.width > 0 && dimensions.height > 0) {
-                        const media = new SpeedyMedia(mediaSource)
+                        const media = new SpeedyMedia(mediaSource, dimensions.width, dimensions.height);
                         Utils.log(`Loaded SpeedyMedia with a ${mediaSource}.`);
                         resolve(media);
                     }
@@ -109,11 +108,24 @@ export class SpeedyMedia
 
     /**
      * The type of the media (image, video, canvas) attached to this SpeedyMedia object
-     * @returns {string} image | video | canvas
+     * @returns {string} "image" | "video" | "canvas"
      */
     get type()
     {
-        return getMediaType(this._mediaSource);
+        switch(this._mediaType) {
+            case MediaType.Image:
+            case MediaType.Texture:
+                return 'image';
+
+            case MediaType.Video:
+                return 'video';
+
+            case MediaType.Canvas:
+                return 'canvas';
+
+            default: // this shouldn't happen
+                return 'unknown';
+        }
     }
 
     /**
@@ -176,14 +188,14 @@ function getMediaType(mediaSource)
 {
     if(mediaSource && mediaSource.constructor && mediaSource.constructor.name) {
         const element = mediaSource.constructor.name, type = {
-            HTMLImageElement: 'image',
-            HTMLVideoElement: 'video',
-            HTMLCanvasElement: 'canvas',
+            HTMLImageElement: MediaType.Image,
+            HTMLVideoElement: MediaType.Video,
+            HTMLCanvasElement: MediaType.Canvas,
         };
 
         if(type.hasOwnProperty(element))
             return type[element];
     }
 
-    return 'null';
+    return MediaType.Texture;
 }
