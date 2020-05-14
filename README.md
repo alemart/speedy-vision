@@ -38,7 +38,7 @@ Try the demos and take a look at their source code:
   * [Feature detection in an image](https://alemart.github.io/speedy-vision-js/demos/image-features.html)
   * [Feature detection in a video](https://alemart.github.io/speedy-vision-js/demos/video-features.html)
   * [Feature detection in a webcam](https://alemart.github.io/speedy-vision-js/demos/webcam-features.html)
-  * [Find a specific number of features](https://alemart.github.io/speedy-vision-js/demos/webcam-features.html) (automatic sensitivity)
+  * [Find a specific number of features](https://alemart.github.io/speedy-vision-js/demos/automatic-sensitivity.html) (automatic sensitivity)
 
 ## Installation
 
