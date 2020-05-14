@@ -120,6 +120,20 @@ One of the following: `"image"`, `"video"`, `"canvas"`.
 
 #### Playing with your media
 
+#### SpeedyMedia.draw()
+
+`SpeedyMedia.draw(canvas, x?, y?, width?, height?): void`
+
+Draws the media to a canvas.
+
+##### Arguments:
+
+* `canvas: HTMLCanvasElement`. A canvas element.
+* `x: number, optional`. The x-position to draw the media to. Defaults to `0`.
+* `y: number, optional`. The y-position to draw the media to. Defaults to `0`.
+* `width: number, optional`. The desired width. Defaults to `SpeedyMedia.width`.
+* `height: number, optional`. The desired height. Defaults to `SpeedyMedia.height`.
+
 ##### SpeedyMedia.clone()
 
 `SpeedyMedia.clone(): SpeedyMedia`
@@ -212,21 +226,23 @@ Expected numbers between 100 and 500 have been found to work well in practice (t
 ###### Example:
 
 ```js
-// setup
-const video = document.getElementById('my-video');
-const media = await Speedy.load(video);
-const FPS = 60;
+window.onload = async function() {
+    // setup
+    const video = document.getElementById('my-video');
+    const media = await Speedy.load(video);
+    const FPS = 60;
 
-// give me 100 feature points
-let features = [];
-setInterval(() => {
-    media.findFeatures({
-        expected: 100
-    }).then(f => {
-        features = f;
-        console.log(`Found ${features.length} features`);
-    });
-}, 1000.0 / FPS);
+    // give me 100 feature points
+    let features = [];
+    setInterval(() => {
+        media.findFeatures({
+            expected: 100
+        }).then(f => {
+            features = f;
+            console.log(`Found ${features.length} features`);
+        });
+    }, 1000.0 / FPS);
+}
 ```
 
 #### Examining your feature points

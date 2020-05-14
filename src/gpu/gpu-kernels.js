@@ -107,6 +107,14 @@ export class GPUKernels
         return this._intraPyramid[lv];
     }
 
+    /**
+     * Internal canvas
+     */
+    get canvas()
+    {
+        return this._canvas;
+    }
+
     // initialize GPU
     _initGPU()
     {

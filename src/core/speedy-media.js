@@ -19,10 +19,11 @@
  * SpeedyMedia implementation
  */
 
+import { GPUKernels } from '../gpu/gpu-kernels';
+import { MediaType, ColorFormat } from '../utils/types'
 import { FeatureDetector } from './feature-detector';
 import { SpeedyError } from '../utils/errors';
 import { Utils } from '../utils/utils';
-import { MediaType, ColorFormat } from '../utils/types'
 
 /**
  * SpeedyMedia encapsulates a media element
@@ -46,7 +47,8 @@ export class SpeedyMedia
         this._height = height | 0;
         this._mediaType = getMediaType(mediaSource);
         this._colorFormat = colorFormat;
-        this._featureDetector = new FeatureDetector(this);
+        this._gpu = new GPUKernels(this._width, this._height);
+        this._featureDetector = new FeatureDetector(this, this._gpu);
     }
 
     /**
@@ -141,6 +143,33 @@ export class SpeedyMedia
             this._height,
             this._colorFormat
         );
+    }
+
+    /**
+     * Draws the media to a canvas
+     * @param {HTMLCanvasElement} canvas canvas element
+     * @param {number} [x] x-position
+     * @param {number} [y] y-position
+     */
+    draw(canvas, x = 0, y = 0, width = this.width, height = this.height)
+    {
+        const ctx = canvas.getContext('2d');
+        
+        x = +x; y = +y;
+        width = Math.max(width, 0);
+        height = Math.max(height, 0);
+
+        switch(this._mediaType) {
+            case MediaType.Image:
+            case MediaType.Video:
+            case MediaType.Canvas:
+                ctx.drawImage(this._mediaSource, x, y, width, height);
+                break;
+
+            case MediaType.Texture:
+                ctx.drawImage(this._gpu.canvas, x, y, width, height);
+                break;
+        }
     }
 
     /**

@@ -19,7 +19,6 @@
  * Feature detection facade
  */
 
-import { GPUKernels } from '../gpu/gpu-kernels';
 import { OnlineErrorTuner, TestTuner } from '../utils/tuner';
 import { Utils } from '../utils/utils';
 
@@ -32,11 +31,12 @@ export class FeatureDetector
     /**
      * Class constructor
      * @param {SpeedyMedia} media
+     * @param {GPUKernels} gpu
      */
-    constructor(media)
+    constructor(media, gpu)
     {
         this._media = media;
-        this._gpu = new GPUKernels(media.width, media.height);
+        this._gpu = gpu;
         this._lastKeypointCount = 0;
         this._sensitivityTuner = null;
     }
