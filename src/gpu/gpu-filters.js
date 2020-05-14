@@ -1,6 +1,6 @@
 /*
- * speedy-features.js
- * GPU-accelerated feature detection and matching for Computer Vision on the web
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");

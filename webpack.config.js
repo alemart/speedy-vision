@@ -32,7 +32,7 @@ module.exports = (env, argv) => ({
   ],
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: argv.mode == 'development' ? 'speedy-features.js' : 'speedy-features.min.js',
+    filename: argv.mode == 'development' ? 'speedy-vision.js' : 'speedy-vision.min.js',
     library: 'Speedy',
     libraryTarget: 'var',
   },

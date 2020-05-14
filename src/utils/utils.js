@@ -1,6 +1,6 @@
 /*
- * speedy-features.js
- * GPU-accelerated feature detection and matching for Computer Vision on the web
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,7 +43,7 @@ export class Utils
     static error(text, ...args)
     {
         const message = [ text, ...args ].join(' ');
-        console.error('[speedy-features.js]', `ERROR: ${message}`);
+        console.error('[speedy-vision.js]', `ERROR: ${message}`);
         return new SpeedyError(message);
     }
 
@@ -56,7 +56,7 @@ export class Utils
     static warning(text, ...args)
     {
         const message = [ text, ...args ].join(' ');
-        console.warn('[speedy-features.js]', `WARNING: ${message}`);
+        console.warn('[speedy-vision.js]', `WARNING: ${message}`);
         return new SpeedyError(message);
     }
 
@@ -69,7 +69,7 @@ export class Utils
     static log(text, ...args)
     {
         const message = [ text, ...args ].join(' ');
-        console.log('[speedy-features.js]', message);
+        console.log('[speedy-vision.js]', message);
         return message;
     }
 

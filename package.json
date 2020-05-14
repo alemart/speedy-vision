@@ -1,11 +1,11 @@
 {
-  "name": "speedy-features.js",
-  "version": "0.1.1",
-  "description": "GPU-accelerated feature detection and matching for Computer Vision on the web",
+  "name": "speedy-vision.js",
+  "version": "0.2.0",
+  "description": "GPU-accelerated Computer Vision for the web",
   "author": "Alexandre Martins <alemartf@gmail.com> (https://github.com/alemart)",
-  "homepage": "https://github.com/alemart/speedy-features.js",
+  "homepage": "https://github.com/alemart/speedy-vision-js",
   "license": "Apache-2.0",
-  "main": "dist/speedy-features.js",
+  "main": "dist/speedy-vision.js",
   "scripts": {
     "start": "webpack-dev-server --mode development",
     "build": "npm run build-dev && npm run build-pro",
@@ -16,6 +16,7 @@
   },
   "keywords": [
     "computer vision",
+    "image processing",
     "feature detection",
     "feature extraction",
     "feature description",
