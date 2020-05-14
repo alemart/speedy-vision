@@ -12,9 +12,10 @@ A **lightning fast GPU-accelerated** feature detection and matching library for 
 * [Demos](#demos)
 * [Installation](#installation)
 * [API Reference](#api-reference)
-  * [Media elements](#media-elements)
+  * [Media routines](#media-routines)
   * [Feature detection](#feature-detection)
   * [Feature matching](#feature-matching)
+  * [Image processing](#image-processing)
   * [Extras](#extras)
 
 ## Motivation
@@ -33,12 +34,15 @@ Speedy is developed by [Alexandre Martins](https://github.com/alemart), a comput
 
 Try the demos and take a look at their source code:
 
+* [Hello, world!](https://alemart.github.io/speedy-vision-js/demos/hello-world.html) (start here)
 * Feature detection
-  * [Hello, world!](https://alemart.github.io/speedy-vision-js/demos/hello-world.html) (start here)
   * [Feature detection in an image](https://alemart.github.io/speedy-vision-js/demos/image-features.html)
   * [Feature detection in a video](https://alemart.github.io/speedy-vision-js/demos/video-features.html)
   * [Feature detection in a webcam](https://alemart.github.io/speedy-vision-js/demos/webcam-features.html)
   * [Find a specific number of features](https://alemart.github.io/speedy-vision-js/demos/automatic-sensitivity.html) (automatic sensitivity)
+* Image processing
+  * [Convert image to greyscale](https://alemart.github.io/speedy-vision-js/demos/greyscale-image.html)
+  * [Convert video to greyscale](https://alemart.github.io/speedy-vision-js/demos/greyscale-video.html)
 
 ## Installation
 
@@ -65,7 +69,7 @@ Check out the [Hello World demo](demos/hello-world.html) for a working example.
 
 ## API Reference
 
-### Media elements
+### Media routines
 
 Before you detect any features, you must provide Speedy some media. A `SpeedyMedia` object encapsulates a media object such as an image, a video, or a canvas.
 
@@ -120,13 +124,13 @@ One of the following: `"image"`, `"video"`, `"canvas"`.
 
 #### Playing with your media
 
-#### SpeedyMedia.draw()
+##### SpeedyMedia.draw()
 
 `SpeedyMedia.draw(canvas, x?, y?, width?, height?): void`
 
 Draws the media to a canvas.
 
-##### Arguments:
+###### Arguments:
 
 * `canvas: HTMLCanvasElement`. A canvas element.
 * `x: number, optional`. The x-position to draw the media to. Defaults to `0`.
@@ -136,13 +140,24 @@ Draws the media to a canvas.
 
 ##### SpeedyMedia.clone()
 
-`SpeedyMedia.clone(): SpeedyMedia`
+`SpeedyMedia.clone(options?): SpeedyMedia`
 
 Clones the `SpeedyMedia` object.
+
+###### Arguments:
+
+* `options: object, optional`. Configuration object.
+  * `deep: boolean`. Copy the internal components of the `SpeedyMedia`. Defaults to `false`.
 
 ###### Returns:
 
 A clone of the `SpeedyMedia` object.
+
+###### Example:
+
+```js
+const newMedia = media.clone();
+```
 
 ### Feature detection
 
@@ -152,7 +167,7 @@ A clone of the `SpeedyMedia` object.
 
 `SpeedyMedia.findFeatures(config?): Promise< Array<SpeedyFeature> >`
 
-Detects features in a `SpeedyMedia`.
+Detects feature points in a `SpeedyMedia`.
 
 ###### Arguments:
 
@@ -262,6 +277,10 @@ The x position of the image feature.
 The y position of the image feature.
 
 ### Feature matching
+
+Coming soon!
+
+### Image processing
 
 Coming soon!
 

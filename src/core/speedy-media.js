@@ -38,17 +38,36 @@ export class SpeedyMedia
      * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|Texture} mediaSource An image, video or canvas
      * @param {number} width media width
      * @param {number} height media height
-     * @param {ColorFormat} [colorFormat] color format
      */
-    /* private */ constructor(mediaSource, width, height, colorFormat = ColorFormat.RGB)
+    /* private */ constructor(mediaSource, width, height)
     {
-        this._mediaSource = mediaSource;
-        this._width = width | 0;
-        this._height = height | 0;
-        this._mediaType = getMediaType(mediaSource);
-        this._colorFormat = colorFormat;
-        this._gpu = new GPUKernels(this._width, this._height);
-        this._featureDetector = new FeatureDetector(this, this._gpu);
+        if(arguments.length > 1) {
+            // store data
+            this._source = mediaSource;
+            this._width = width | 0;
+            this._height = height | 0;
+            this._type = getMediaType(this._source);
+            this._colorFormat = ColorFormat.RGB;
+
+            // spawn relevant components
+            this._gpu = new GPUKernels(this._width, this._height);
+            this._featureDetector = new FeatureDetector(this, this._gpu);
+        }
+        else if(arguments.length == 1) {
+            // copy constructor (shallow copy)
+            const media = arguments[0];
+
+            this._source = media._source;
+            this._width = media._width;
+            this._height = media._height;
+            this._type = media._type;
+            this._colorFormat = media._colorFormat;
+
+            this._gpu = media._gpu;
+            this._featureDetector = media._featureDetector;
+        }
+        else
+            Utils.fatal(`Invalid instantiation of SpeedyMedia`);
     }
 
     /**
@@ -88,12 +107,12 @@ export class SpeedyMedia
      */
     get source()
     {
-        return this._mediaSource;
+        return this._source;
     }
 
     /**
-     * Gets the width of the media image
-     * @returns {number} image width
+     * Gets the width of the media
+     * @returns {number} media width
      */
     get width()
     {
@@ -101,8 +120,8 @@ export class SpeedyMedia
     }
 
     /**
-     * Gets the height of the media image
-     * @returns {number} image height
+     * Gets the height of the media
+     * @returns {number} media height
      */
     get height()
     {
@@ -110,14 +129,13 @@ export class SpeedyMedia
     }
 
     /**
-     * The type of the media (image, video, canvas) attached to this SpeedyMedia object
-     * @returns {string} "image" | "video" | "canvas"
+     * The type of the media attached to this SpeedyMedia object
+     * @returns {string} "image" | "video" | "canvas" | "texture"
      */
     get type()
     {
-        switch(this._mediaType) {
+        switch(this._type) {
             case MediaType.Image:
-            case MediaType.Texture:
                 return 'image';
 
             case MediaType.Video:
@@ -126,6 +144,9 @@ export class SpeedyMedia
             case MediaType.Canvas:
                 return 'canvas';
 
+            case MediaType.Texture: // the result of pipelining
+                return 'texture';
+
             default: // this shouldn't happen
                 return 'unknown';
         }
@@ -133,16 +154,41 @@ export class SpeedyMedia
 
     /**
      * Clones the SpeedyMedia object
+     * @param {object} options options object
      * @returns {SpeedyMedia} a clone object
      */
-    clone()
+    clone(options = {})
     {
-        return new SpeedyMedia(
-            this._mediaSource,
-            this._width,
-            this._height,
-            this._colorFormat
-        );
+        // Default settings
+        options = {
+            deep: false, // the default is: shallow copy
+            ...(options)
+        };
+
+        if(!options.deep) {
+            // shallow copy
+            return new SpeedyMedia(this);
+        }
+        else {
+            // deep copy
+            return new SpeedyMedia(
+                this._source,
+                this._width,
+                this._height
+            );
+        }
+    }
+
+    /**
+     * Runs a pipeline
+     * @param {SpeedyPipeline} pipeline
+     * @returns {Promise<SpeedyMedia>} a promise that resolves to A CLONE of this SpeedyMedia
+     */
+    run(pipeline)
+    {
+        const media = this.clone(); // shallow copy
+        media._type = MediaType.Texture;
+        return pipeline._run(media);
     }
 
     /**
@@ -150,20 +196,22 @@ export class SpeedyMedia
      * @param {HTMLCanvasElement} canvas canvas element
      * @param {number} [x] x-position
      * @param {number} [y] y-position
+     * @param {number} [width] desired width
+     * @param {number} [height] desired height
      */
     draw(canvas, x = 0, y = 0, width = this.width, height = this.height)
     {
         const ctx = canvas.getContext('2d');
-        
+
         x = +x; y = +y;
         width = Math.max(width, 0);
         height = Math.max(height, 0);
 
-        switch(this._mediaType) {
+        switch(this._type) {
             case MediaType.Image:
             case MediaType.Video:
             case MediaType.Canvas:
-                ctx.drawImage(this._mediaSource, x, y, width, height);
+                ctx.drawImage(this._source, x, y, width, height);
                 break;
 
             case MediaType.Texture:
@@ -230,17 +278,20 @@ function getMediaDimensions(mediaSource)
 // get a string corresponding to the media type (image, video, canvas)
 function getMediaType(mediaSource)
 {
-    if(mediaSource && mediaSource.constructor && mediaSource.constructor.name) {
-        const element = mediaSource.constructor.name, type = {
-            HTMLImageElement: MediaType.Image,
-            HTMLVideoElement: MediaType.Video,
-            HTMLCanvasElement: MediaType.Canvas,
-        };
+    if(mediaSource && mediaSource.constructor) {
+        switch(mediaSource.constructor.name) {
+            case 'HTMLImageElement':
+                return MediaType.Image;
 
-        if(type.hasOwnProperty(element))
-            return type[element];
-        else
-            return MediaType.Texture;
+            case 'HTMLVideoElement':
+                return MediaType.Video;
+
+            case 'HTMLCanvasElement':
+                return MediaType.Canvas;
+
+            default:
+                return MediaType.Texture;
+        }
     }
 
     Utils.fatal(`Can't get media type: invalid media source. ${mediaSource}`);

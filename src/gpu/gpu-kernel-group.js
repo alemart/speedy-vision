@@ -19,8 +19,6 @@
  * An abstract group of GPU kernels
  */
 
-import { identity } from './shaders/identity';
-
 /**
  * GPUKernelGroup
  * A semantically correlated group
@@ -34,9 +32,6 @@ export /* abstract */ class GPUKernelGroup
         this._gpu = gpu;
         this._width = Math.max(width|0, 1);
         this._height = Math.max(height|0, 1);
-
-        // declare an image kernel for debugging purposes
-        this.declare('_image', identity, { pipeline: false });
     }
 
     /* protected */ declare(name, fn, settings = { })

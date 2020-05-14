@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Convert video to greyscale</title>
+        <script src="../dist/speedy-vision.js" async></script>
+    </head>
+    <body>
+        <h1>Convert video to greyscale</h1>
+        <div>FPS: <span id="fps">60</span></div>
+        <video
+            src="../assets/jelly.mp4"
+            width="426" height="240"
+            loop muted controls autoplay
+            title="Free video by Chris Munnik from https://www.pexels.com/pt-br/video/3297379/">
+        </video>
+        <script>
+window.onload = async function()
+{
+    // create a pipeline that converts a media to greyscale
+    const pipeline = Speedy.pipeline()
+                           .convertTo('greyscale');
+
+    // tell Speedy to load the video
+    const video = document.querySelector('video');
+    const media = await Speedy.load(video);
+
+    // create a canvas for rendering
+    const canvas = createCanvas(media.width, media.height);
+
+    // render the greyscale video
+    async function render()
+    {
+        const transformedMedia = await media.run(pipeline);
+        transformedMedia.draw(canvas);
+        requestAnimationFrame(render);
+    }
+    render();
+
+    // display fps
+    const fps = document.getElementById('fps');
+    setInterval(() => fps.innerText = Speedy.fps.value, 500);
+}
+
+function createCanvas(width, height)
+{
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    document.body.appendChild(canvas);
+    return canvas;
+}
+        </script>
+    </body>
+</html>

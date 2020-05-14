@@ -21,6 +21,7 @@
 
 const { GPU } = require(process.env.NODE_ENV == 'development' ? './gpu-js/gpu-browser' : './gpu-js/gpu-browser.min');
 import { Utils } from '../utils/utils';
+import { GPUOutput } from './gpu-output';
 import { GPUColors } from './gpu-colors';
 import { GPUFilters } from './gpu-filters';
 import { GPUKeypoints } from './gpu-keypoints';
@@ -34,6 +35,7 @@ const MAX_PYRAMID_LEVELS = 4;
 // Available kernel groups
 // (maps group name to class)
 const KERNEL_GROUPS = {
+    'output': GPUOutput,
     'colors': GPUColors,
     'filters': GPUFilters,
     'keypoints': GPUKeypoints,
@@ -82,6 +84,7 @@ export class GPUKernels
     /**
      * Access the kernel groups of a pyramid level
      * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS - 1
+     * @returns {Array}
      */
     pyramid(level)
     {
@@ -96,6 +99,7 @@ export class GPUKernels
     /**
      * Access the kernel groups of an intra-pyramid level
      * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS - 1
+     * @returns {Array}
      */
     intraPyramid(level)
     {
@@ -109,6 +113,7 @@ export class GPUKernels
 
     /**
      * Internal canvas
+     * @returns {HTMLCanvasElement}
      */
     get canvas()
     {

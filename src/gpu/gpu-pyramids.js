@@ -120,6 +120,9 @@ export class GPUPyramids extends GPUKernelGroup
 
             // kernels for debugging
             /*
+            .declare('_image', identity,
+                withCanvas(this._width, this._height)
+                
             .declare('_image2', identity,
                 withCanvas(2 * this._width, 2 * this._height))
 

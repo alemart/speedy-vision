@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Convert image to greyscale</title>
+        <script src="../dist/speedy-vision.js" async></script>
+    </head>
+    <body>
+        <h1>Convert image to greyscale</h1>
+        <img src="../assets/speedy-wall.jpg" title="Image by Bride of Frankenstein (CC-BY)">
+        <script>
+window.onload = async function()
+{
+    // create a pipeline that converts a media to greyscale
+    const pipeline = Speedy.pipeline()
+                           .convertTo('greyscale');
+
+    // tell Speedy to load the image
+    const image = document.querySelector('img');
+    const media = await Speedy.load(image);
+
+    // run the pipeline
+    const transformedMedia = await media.run(pipeline);
+
+    // create a canvas to display the result
+    const canvas = createCanvas(transformedMedia.width, transformedMedia.height);
+    transformedMedia.draw(canvas);
+}
+
+function createCanvas(width, height)
+{
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    document.body.appendChild(canvas);
+    return canvas;
+}
+        </script>
+    </body>
+</html>
