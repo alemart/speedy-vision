@@ -118,6 +118,18 @@ The height of the media element, in pixels.
 
 One of the following: `"image"`, `"video"`, `"canvas"`.
 
+#### Playing with your media
+
+##### SpeedyMedia.clone()
+
+`SpeedyMedia.clone(): SpeedyMedia`
+
+Clones the `SpeedyMedia` object.
+
+###### Returns:
+
+A clone of the `SpeedyMedia` object.
+
 ### Feature detection
 
 #### Finding features

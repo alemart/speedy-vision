@@ -37,14 +37,15 @@ export class SpeedyMedia
      * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|Texture} mediaSource An image, video or canvas
      * @param {number} width media width
      * @param {number} height media height
+     * @param {ColorFormat} [colorFormat] color format
      */
-    /* private */ constructor(mediaSource, width, height)
+    /* private */ constructor(mediaSource, width, height, colorFormat = ColorFormat.RGB)
     {
         this._mediaSource = mediaSource;
         this._width = width | 0;
         this._height = height | 0;
         this._mediaType = getMediaType(mediaSource);
-        this._colorFormat = ColorFormat.RGB;
+        this._colorFormat = colorFormat;
         this._featureDetector = new FeatureDetector(this);
     }
 
@@ -129,9 +130,23 @@ export class SpeedyMedia
     }
 
     /**
+     * Clones the SpeedyMedia object
+     * @returns {SpeedyMedia} a clone object
+     */
+    clone()
+    {
+        return new SpeedyMedia(
+            this._mediaSource,
+            this._width,
+            this._height,
+            this._colorFormat
+        );
+    }
+
+    /**
      * Finds image features
      * @param {object} [settings] Configuration object
-     * @returns {Promise} A Promise returning an Array of SpeedyFeature objects
+     * @returns {Promise< Array<SpeedyFeature> >} A Promise returning an Array of SpeedyFeature objects
      */
     findFeatures(settings = {})
     {
@@ -195,7 +210,10 @@ function getMediaType(mediaSource)
 
         if(type.hasOwnProperty(element))
             return type[element];
+        else
+            return MediaType.Texture;
     }
 
-    return MediaType.Texture;
+    Utils.fatal(`Can't get media type: invalid media source. ${mediaSource}`);
+    return null;
 }
