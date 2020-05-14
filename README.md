@@ -133,7 +133,7 @@ Detects features in a `SpeedyMedia`.
 * `config: object, optional`. A configuration object that accepts the following keys (all are optional):
   * `method: string`. Name of the method to be used to detect the features.
   * `sensitivity: number`. A number between `0.0` and `1.0`. The higher the number, the more features you get.
-  * `expected: number | object`. The algorithm will automatically adjust the sensitivity value to get you *approximately* the number of features you ask. This options requires multiple calls to work (see the note on [automatic sensitivity](#automatic-sensitivity) below).
+  * `expected: number | object`. The algorithm will automatically adjust the sensitivity value to get you *approximately* the number of features you ask. This options requires multiple calls to work. For more information, read the section on [automatic sensitivity](#automatic-sensitivity).
 
 The configuration object accepts more keys depending on which method is specified. Currently, the following methods for feature detection are available:
 
@@ -144,18 +144,7 @@ The configuration object accepts more keys depending on which method is specifie
 |`"fast7"` | Runs the FAST-7,12 algorithm |
 |`"fast5"` | Runs the FAST-5,8 algorithm  |
 
-The default method is `"fast"`. Different methods yield different results.
-
-**FAST algorithm**
-
-For any variation of the FAST algorithm[1], the `config` object accepts the following additional keys:
-
-* `threshold: number`. An alternative to `sensitivity` representing the threshold paramter of FAST: an integer between `0` and `255`, inclusive. Lower thresholds get you more features.
-* `denoise: boolean`. Whether or not to apply a gaussian filter to denoise the image before finding the features. Defaults to `true`.
-
-Note: `config.sensitivity` is an easy-to-use parameter and does *not* map linearly to `config.threshold`.
-
-[1] Rosten, Edward; Drummond, Tom. "Machine learning for high-speed corner detection". European Conference on Computer Vision (ECCV-2006).
+The default method is `"fast"`. Different methods yield different results. Read the section on [detection methods](#detection-methods) to know more.
 
 ###### Returns:
 
@@ -169,9 +158,7 @@ window.onload = async function() {
     let media = await Speedy.load(image);
     let features = await media.findFeatures({
         method: 'fast',
-        settings: {
-            sensitivity: 0.5
-        }
+        sensitivity: 0.5
     });
 
     for(let feature of features) {
@@ -182,9 +169,24 @@ window.onload = async function() {
 }
 ```
 
-**Automatic sensitivity**
+##### Detection methods
 
-When you specify the number of features you expect to get, Speedy will automatically learn a sensitivity value that gives you that number (within a tolerance range). It takes a few calls to the feature detector for Speedy to adjust the sensitivity. Multiple calls is what you will be doing anyway if you need to detect features in a video (see the example below).
+Speedy can use different methods for detecting feature points. Depending on the method you choose, additional settings may be provided when calling `SpeedyMedia.findFeatures()`.
+
+###### FAST algorithm
+
+For any variation of the FAST algorithm[1], the `config` object accepts the following additional keys:
+
+* `threshold: number`. An alternative to `sensitivity` representing the threshold paramter of FAST: an integer between `0` and `255`, inclusive. Lower thresholds get you more features.
+* `denoise: boolean`. Whether or not to apply a gaussian filter to denoise the image before finding the features. Defaults to `true`.
+
+Note: `config.sensitivity` is an easy-to-use parameter and does *not* map linearly to `config.threshold`.
+
+[1] Rosten, Edward; Drummond, Tom. "Machine learning for high-speed corner detection". European Conference on Computer Vision (ECCV-2006).
+
+##### Automatic sensitivity
+
+When you specify the number of features you expect to get, Speedy will automatically learn a sensitivity value that gives you that amount (within a tolerance range). It takes a few calls to the feature detector for Speedy to adjust the sensitivity. Multiple calls is what you will be doing anyway if you need to detect features in a video (see the example below).
 
 Speedy finds the feature points on the GPU. Although this is an efficient process, downloading data from the GPU is an expensive operation. The more features you get, the more data has to be downloaded from the GPU. This impacts performance. The sensitivity value alone does not give you control of how many feature points you will get. **Setting an expected number of feature points may thus help you with stability and performance**. 
 
@@ -198,13 +200,14 @@ Expected numbers between 100 and 500 have been found to work well in practice (t
 ###### Example:
 
 ```js
-//const video = document.getElementById('my-video');
-//const media = await Speedy.load(video);
+// setup
+const video = document.getElementById('my-video');
+const media = await Speedy.load(video);
 const FPS = 60;
-let features = [];
 
 // give me 100 feature points
-setInterval(function() {
+let features = [];
+setInterval(() => {
     media.findFeatures({
         expected: 100
     }).then(f => {
