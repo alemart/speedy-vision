@@ -56,7 +56,6 @@ window.onload = async function()
     let features = [];
     function updateFeatures()
     {
-        let now = performance.now();
         media.findFeatures({
             method: 'fast',
             expected: expected.value,
