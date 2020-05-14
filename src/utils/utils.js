@@ -19,13 +19,15 @@
  * Generic utilities
  */
 
+class SpeedyError extends Error { }
+
 export class Utils
 {
     /**
      * Displays a fatal error
      * @param {string} text message text
      * @param  {...string} [args] optional text
-     * @throws {Error} an error object containing the message text
+     * @throws {SpeedyError} an error object containing the message text
      */
     static fatal(text, ...args)
     {
@@ -36,26 +38,26 @@ export class Utils
      * Generates an error
      * @param {string} text message text
      * @param  {...string} [args] optional text
-     * @returns {Error} an error object containing the message text
+     * @returns {SpeedyError} an error object containing the message text
      */
     static error(text, ...args)
     {
         const message = [ text, ...args ].join(' ');
         console.error('[speedy-features.js]', `ERROR: ${message}`);
-        return new Error(message);
+        return new SpeedyError(message);
     }
 
     /**
      * Generates a warning
      * @param {string} text message text
      * @param  {...string} [args] optional text
-     * @returns {Error} an error object containing the message text
+     * @returns {SpeedyError} an error object containing the message text
      */
     static warning(text, ...args)
     {
         const message = [ text, ...args ].join(' ');
         console.warn('[speedy-features.js]', `WARNING: ${message}`);
-        return new Error(message);
+        return new SpeedyError(message);
     }
 
     /**
@@ -73,10 +75,10 @@ export class Utils
 
     /**
      * Generates a random number with
-     * Gaussian distribution
-     * @param {number} mu
-     * @param {number} sigma
-     * @returns {number}
+     * Gaussian distribution (mu, sigma)
+     * @param {number} mu mean
+     * @param {number} sigma standard deviation
+     * @returns {number} random number
      */
     static gaussianNoise(mu = 0, sigma = 1)
     {
