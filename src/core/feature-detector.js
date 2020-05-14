@@ -114,7 +114,7 @@ export class FeatureDetector
     {
         // grab the parameters
         const expected = ({
-            number: 0, // how many keypoints do you expected?
+            number: 0, // how many keypoints do you expect?
             tolerance: 0.10, // percentage relative to the expected number of keypoints
             ...(typeof param == 'object' ? param : {
                 number: param | 0,

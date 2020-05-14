@@ -20,6 +20,7 @@
  */
 
 import { FeatureDetector } from './feature-detector';
+import { SpeedyError } from '../utils/errors';
 import { Utils } from '../utils/utils';
 
 /**
@@ -31,41 +32,52 @@ export class SpeedyMedia
 {
     /**
      * Class constructor
-     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} mediaSource The image, video or canvas to extract the feature points
-     * @param {function} onload Function called as soon as the media has been loaded
+     * It assumes the media source is already loaded
+     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} mediaSource An image, video or canvas
      */
-    constructor(mediaSource, onload = (err, media) => {})
+    /* private */ constructor(mediaSource)
     {
+        // validate the media
+        const dimensions = getMediaDimensions(mediaSource);
+        if(dimensions == null)
+            Utils.fatal(`Can't load SpeedyMedia with a ${mediaSource}: invalid media source.`);
+
         // initialize attributes
         this._mediaSource = mediaSource;
-        this._width = 0;
-        this._height = 0;
-        this._featureDetector = null;
-        this._descriptorType = null;
+        this._width = dimensions.width;
+        this._height = dimensions.height;
+        this._featureDetector = new FeatureDetector(this);
+    }
 
-        // load the media
-        const dimensions = getMediaDimensions(mediaSource);
-        if(dimensions != null) {
-            // try to load the media until it's ready
-            (function loadMedia(dimensions, k = 500) {
-                if(dimensions.width > 0 && dimensions.height > 0) {
-                    this._width = dimensions.width;
-                    this._height = dimensions.height;
-                    this._featureDetector = new FeatureDetector(this);
-                    Utils.log(`Loaded SpeedyMedia with a ${mediaSource}.`);
-                    onload(null, this);
-                }
-                else if(k > 0)
-                    setTimeout(() => loadMedia.call(this, getMediaDimensions(mediaSource), k-1), 10);
-                else
-                    onload(Utils.error(`Can't load SpeedyMedia with a ${mediaSource}: timeout.`), null);
-            }).call(this, dimensions);
-        }
-        else {
-            // invalid media source
-            this._mediaSource = null;
-            onload(Utils.error(`Can't load SpeedyMedia with a ${mediaSource}: invalid media source.`), null);
-        }
+    /**
+     * Load a media source
+     * Will wait until the HTML media source is loaded
+     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} mediaSource An image, video or canvas
+     * @returns {Promise<SpeedyMedia>}
+     */
+    static load(mediaSource)
+    {
+        return new Promise((resolve, reject) => {
+            const dimensions = getMediaDimensions(mediaSource);
+            if(dimensions != null) {
+                // try to load the media until it's ready
+                (function loadMedia(dimensions, k = 500) {
+                    if(dimensions.width > 0 && dimensions.height > 0) {
+                        const media = new SpeedyMedia(mediaSource)
+                        Utils.log(`Loaded SpeedyMedia with a ${mediaSource}.`);
+                        resolve(media);
+                    }
+                    else if(k > 0)
+                        setTimeout(() => loadMedia(getMediaDimensions(mediaSource), k-1), 10);
+                    else
+                        reject(new SpeedyError(`Can't load SpeedyMedia with a ${mediaSource}: timeout.`));
+                })(dimensions);
+            }
+            else {
+                // invalid media source
+                reject(new SpeedyError(`Can't load SpeedyMedia with a ${mediaSource}: invalid media source.`));
+            }
+        });
     }
 
     /**
@@ -105,30 +117,6 @@ export class SpeedyMedia
     }
 
     /**
-     * The name of the feature descriptor in use,
-     * or null if there isn't any
-     * @returns {string | null}
-     */
-    get descriptor()
-    {
-        return this._descriptorType;
-    }
-
-    /**
-     * Modifies the SpeedyMedia so that it outputs feature
-     * descriptors associated with feature points
-     * @param {string} descriptorType descriptor name
-     * @param {object} [options] descriptor options
-     * @returns {SpeedyMedia} the object itself
-     */
-    setDescriptor(descriptorType, options = { })
-    {
-        // TODO
-        this._descriptorType = descriptorType ? String(descriptorType).toLowerCase() : null;
-        return this;
-    }
-
-    /**
      * Finds image features
      * @param {object} [settings] Configuration object
      * @returns {Promise} A Promise returning an Array of SpeedyFeature objects
@@ -157,7 +145,7 @@ export class SpeedyMedia
                 resolve(features);
             }
             else
-                reject(Utils.warning(`Invalid method "${method}" for keypoint detection.`));
+                reject(new SpeedyError(`Invalid method "${method}" for keypoint detection.`));
         });
     }
 }

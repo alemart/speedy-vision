@@ -21,7 +21,6 @@
 
 import { SpeedyMedia } from './core/speedy-media';
 import { FPSCounter } from './utils/fps-counter';
-import { Utils } from './utils/utils';
 
 class Speedy
 {
@@ -32,14 +31,7 @@ class Speedy
      */
     static load(sourceElement)
     {
-        return new Promise((resolve, reject) => {
-            new SpeedyMedia(sourceElement, (err, media) => {
-                if(!err)
-                    resolve(media);
-                else
-                    reject(err);
-            });
-        });
+        return SpeedyMedia.load(sourceElement);
     }
 
     /**

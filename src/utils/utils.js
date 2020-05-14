@@ -19,7 +19,7 @@
  * Generic utilities
  */
 
-class SpeedyError extends Error { }
+import { SpeedyError } from './errors'
 
 export class Utils
 {
@@ -31,33 +31,20 @@ export class Utils
      */
     static fatal(text, ...args)
     {
-        throw Utils.error(text, ...args);
-    }
-
-    /**
-     * Generates an error
-     * @param {string} text message text
-     * @param  {...string} [args] optional text
-     * @returns {SpeedyError} an error object containing the message text
-     */
-    static error(text, ...args)
-    {
-        const message = [ text, ...args ].join(' ');
-        console.error('[speedy-vision.js]', `ERROR: ${message}`);
-        return new SpeedyError(message);
+        throw new SpeedyError(text, ...args);
     }
 
     /**
      * Generates a warning
      * @param {string} text message text
      * @param  {...string} [args] optional text
-     * @returns {SpeedyError} an error object containing the message text
+     * @returns {string} the message text
      */
     static warning(text, ...args)
     {
         const message = [ text, ...args ].join(' ');
-        console.warn('[speedy-vision.js]', `WARNING: ${message}`);
-        return new SpeedyError(message);
+        console.warn('[speedy-vision.js]', message);
+        return message;
     }
 
     /**
