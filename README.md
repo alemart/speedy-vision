@@ -2,9 +2,9 @@
 
 A **lightning fast GPU-accelerated** feature detection and matching library for Computer Vision on the web.
 
-[![Speedy feature detection](assets/demo-video.gif)](https://alemart.github.io/speedy-features.js/demos/video-features.html)
+[![Speedy feature detection](assets/demo-video.gif)](https://alemart.github.io/speedy-vision-js/demos/video-features.html)
 
-[Click to open a demo](https://alemart.github.io/speedy-features.js/demos/video-features.html)
+[Click to open a demo](https://alemart.github.io/speedy-vision-js/demos/video-features.html)
 
 ## Table of contents
 
@@ -33,10 +33,12 @@ Speedy is developed by [Alexandre Martins](https://github.com/alemart), a comput
 
 Try the demos and take a look at their source code:
 
-* [Hello, world!](https://alemart.github.io/speedy-features.js/demos/hello-world.html) (start here)
-* [Feature detection in an image](https://alemart.github.io/speedy-features.js/demos/image-features.html)
-* [Feature detection in a video](https://alemart.github.io/speedy-features.js/demos/video-features.html)
-* [Webcam demo](https://alemart.github.io/speedy-features.js/demos/webcam-features.html)
+* Feature detection
+  * [Hello, world!](https://alemart.github.io/speedy-vision-js/demos/hello-world.html) (start here)
+  * [Feature detection in an image](https://alemart.github.io/speedy-vision-js/demos/image-features.html)
+  * [Feature detection in a video](https://alemart.github.io/speedy-vision-js/demos/video-features.html)
+  * [Feature detection in a webcam](https://alemart.github.io/speedy-vision-js/demos/webcam-features.html)
+  * [Find a specific number of features](https://alemart.github.io/speedy-vision-js/demos/webcam-features.html) (automatic sensitivity)
 
 ## Installation
 
@@ -128,11 +130,12 @@ Detects features in a `SpeedyMedia`.
 
 ###### Arguments:
 
-* `config: object, optional`. A configuration object that accepts the following keys:
+* `config: object, optional`. A configuration object that accepts the following keys (all are optional):
   * `method: string`. Name of the method to be used to detect the features.
-  * `settings: object`. Method-specific settings.
+  * `sensitivity: number`. A number between `0.0` and `1.0`. The higher the number, the more features you get.
+  * `expected: number | object`. The algorithm will automatically adjust the sensitivity value to get you *approximately* the number of features you ask. This options requires multiple calls to work (see the note on [automatic sensitivity](#automatic-sensitivity) below).
 
-The following methods are currently available:
+The configuration object accepts more keys depending on which method is specified. Currently, the following methods for feature detection are available:
 
 | Method   | Description                  |
 |----------|------------------------------|
@@ -145,13 +148,12 @@ The default method is `"fast"`. Different methods yield different results.
 
 **FAST algorithm**
 
-For any variation of the FAST algorithm[1], the `settings` object accepts the following keys:
+For any variation of the FAST algorithm[1], the `config` object accepts the following additional keys:
 
-* `sensitivity: number`. A number between `0.0` and `1.0`. The higher the number, the more features you get.
 * `threshold: number`. An alternative to `sensitivity` representing the threshold paramter of FAST: an integer between `0` and `255`, inclusive. Lower thresholds get you more features.
 * `denoise: boolean`. Whether or not to apply a gaussian filter to denoise the image before finding the features. Defaults to `true`.
 
-Note: `sensitivity` is an easy-to-use parameter and does *not* map linearly to `threshold`.
+Note: `config.sensitivity` is an easy-to-use parameter and does *not* map linearly to `config.threshold`.
 
 [1] Rosten, Edward; Drummond, Tom. "Machine learning for high-speed corner detection". European Conference on Computer Vision (ECCV-2006).
 
@@ -178,6 +180,38 @@ window.onload = async function() {
         console.log(x, y);
     }
 }
+```
+
+**Automatic sensitivity**
+
+When you specify the number of features you expect to get, Speedy will automatically learn a sensitivity value that gives you that number (within a tolerance range). It takes a few calls to the feature detector for Speedy to adjust the sensitivity. Multiple calls is what you will be doing anyway if you need to detect features in a video (see the example below).
+
+Speedy finds the feature points on the GPU. Although this is an efficient process, downloading data from the GPU is an expensive operation. The more features you get, the more data has to be downloaded from the GPU. This impacts performance. The sensitivity value alone does not give you control of how many feature points you will get. **Setting an expected number of feature points may thus help you with stability and performance**. 
+
+The `config.expected` option can either be a number or an object with the following keys:
+
+* `number: number`. The number of features you expect to get.
+* `tolerance: number`. A range defined as a percentage relative to the number of features you expect. Defaults to `0.10` (10%).
+
+Expected numbers between 100 and 500 have been found to work well in practice (the less, the better). Your results may vary depending on your media. If you need very large numbers and don't care about the amount, it's easier to adjust the sensitivity manually. If you need small numbers, you might want to increase the tolerance.
+
+###### Example:
+
+```js
+//const video = document.getElementById('my-video');
+//const media = await Speedy.load(video);
+const FPS = 60;
+let features = [];
+
+// give me 100 feature points
+setInterval(function() {
+    media.findFeatures({
+        expected: 100
+    }).then(f => {
+        features = f;
+        console.log(`Found ${features.length} features`);
+    });
+}, 1000.0 / FPS);
 ```
 
 #### Examining your feature points
