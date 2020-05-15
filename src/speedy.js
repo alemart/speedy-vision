@@ -20,6 +20,7 @@
  */
 
 import { SpeedyMedia } from './core/speedy-media';
+import { SpeedyPipeline } from './core/speedy-pipeline';
 import { FPSCounter } from './utils/fps-counter';
 
 class Speedy
@@ -32,6 +33,15 @@ class Speedy
     static load(sourceElement)
     {
         return SpeedyMedia.load(sourceElement);
+    }
+
+    /**
+     * Creates a new pipeline
+     * @returns {SpeedyPipeline}
+     */
+    static pipeline()
+    {
+        return new SpeedyPipeline();
     }
 
     /**
@@ -56,5 +66,6 @@ class Speedy
 }
 
 export const load = Speedy.load;
+export const pipeline = Speedy.pipeline;
 export const version = Speedy.version;
 export const fps = Speedy.fps;

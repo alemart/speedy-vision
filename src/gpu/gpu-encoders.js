@@ -111,7 +111,7 @@ export class GPUEncoders extends GPUKernelGroup
     optimizeKeypointEncoder(keypointCount)
     {
         const pixelsPerKeypoint = Math.ceil(2 + this._descriptorSize / 4);
-        const len = Math.ceil(Math.sqrt((50 + keypointCount) * pixelsPerKeypoint)); // add some slack
+        const len = Math.ceil(Math.sqrt((4 + keypointCount) * pixelsPerKeypoint)); // add some slack
         const newEncoderLength = Math.max(1, Math.min(len, MAX_ENCODER_LENGTH));
         const oldEncoderLength = this._keypointEncoderLength;
 

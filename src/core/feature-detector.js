@@ -101,8 +101,13 @@ export class FeatureDetector
     {
         const encodedKeypoints = this._gpu.encoders.encodeKeypoints(corners);
         const keypoints = this._gpu.encoders.decodeKeypoints(encodedKeypoints);
-        this._gpu.encoders.optimizeKeypointEncoder(keypoints.length);
+
+        const slack = this._lastKeypointCount > 0 ? // approximates assuming continuity
+            Math.max(1, Math.min(keypoints.length / this._lastKeypointCount), 2) : 1;
+
+        this._gpu.encoders.optimizeKeypointEncoder(keypoints.length * slack);
         this._lastKeypointCount = keypoints.length;
+
         return keypoints;
     }
 

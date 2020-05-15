@@ -68,7 +68,7 @@ window.onload = async function()
     // render video & features
     function render()
     {
-        media.draw(canvas, 0, 0);
+        media.draw(canvas);
         renderFeatures(canvas, features, 4);
         requestAnimationFrame(render);
     }
