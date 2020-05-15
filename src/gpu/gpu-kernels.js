@@ -68,6 +68,12 @@ export class GPUKernels
 
         // create & configure canvas
         this._canvas = this._createCanvas(this._width, this._height);
+        this._context = this._canvas.getContext('webgl2', {
+            premultipliedAlpha: true, // we're store data in the alpha channel
+            preserveDrawingBuffer: false
+        });
+
+        // lost context?
         this._canvas.addEventListener('webglcontextlost', event => {
             Utils.warning(`Lost WebGL context.`);
             event.preventDefault();
@@ -126,7 +132,7 @@ export class GPUKernels
         // create GPU
         this._gpu = new GPU({
             canvas: this._canvas,
-            context: this._canvas.getContext('webgl2', { premultipliedAlpha: true }) // we're using alpha
+            context: this._context
         });
 
         // spawn kernel groups
