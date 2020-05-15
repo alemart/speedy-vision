@@ -132,9 +132,9 @@ Draws the media to a canvas.
 
 ###### Arguments:
 
-* `canvas: HTMLCanvasElement`. A canvas element.
-* `x: number, optional`. The x-position to draw the media to. Defaults to `0`.
-* `y: number, optional`. The y-position to draw the media to. Defaults to `0`.
+* `canvas: HTMLCanvasElement`. The canvas element to which we'll draw.
+* `x: number, optional`. An x-position in the canvas. Defaults to `0`.
+* `y: number, optional`. An y-position in the canvas. Defaults to `0`.
 * `width: number, optional`. The desired width. Defaults to `SpeedyMedia.width`.
 * `height: number, optional`. The desired height. Defaults to `SpeedyMedia.height`.
 
