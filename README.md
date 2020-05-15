@@ -257,7 +257,7 @@ window.onload = async function() {
         });
 
         console.log(`Found ${features.length} features`);
-        setTimeout(findFeatures, 1000.0 / FPS);
+        setTimeout(updateFeatures, 1000.0 / FPS);
     }
     updateFeatures();
 }
