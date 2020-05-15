@@ -22,7 +22,7 @@ A **lightning fast** GPU-accelerated Computer Vision library for the web.
 
 Try the demos and take a look at their source code:
 
-* [Hello, world!](https://alemart.github.io/speedy-vision-js/demos/hello-world.html) (start here)
+* [Hello, world!](https://alemart.github.io/speedy-vision-js/demos/hello-world.html)
 * Feature detection
   * [Feature detection in an image](https://alemart.github.io/speedy-vision-js/demos/image-features.html)
   * [Feature detection in a video](https://alemart.github.io/speedy-vision-js/demos/video-features.html)
@@ -245,18 +245,21 @@ window.onload = async function() {
     // setup
     const video = document.getElementById('my-video');
     const media = await Speedy.load(video);
-    const FPS = 60;
 
     // give me 100 feature points
     let features = [];
-    setInterval(() => {
-        media.findFeatures({
+    async function updateFeatures()
+    {
+        const FPS = 60;
+
+        features = await media.findFeatures({
             expected: 100
-        }).then(f => {
-            features = f;
-            console.log(`Found ${features.length} features`);
         });
-    }, 1000.0 / FPS);
+
+        console.log(`Found ${features.length} features`);
+        setTimeout(findFeatures, 1000.0 / FPS);
+    }
+    updateFeatures();
 }
 ```
 
