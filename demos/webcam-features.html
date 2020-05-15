@@ -54,7 +54,6 @@ window.onload = async function()
 
         // create a canvas to display the features
         const canvas = createCanvas(media.width, media.height);
-        const context = canvas.getContext('2d');
 
         // user controls
         const slider = document.getElementById('slider');
@@ -77,8 +76,8 @@ window.onload = async function()
         // render video & features
         function render()
         {
-            context.drawImage(media.source, 0, 0);
-            renderFeatures(context, features, 4);
+            media.draw(canvas);
+            renderFeatures(canvas, features, 4);
             requestAnimationFrame(render);
         }
         render();
@@ -106,8 +105,9 @@ function createCanvas(width, height)
     return canvas;
 }
 
-function renderFeatures(context, features, size = 2, color = 'yellow')
+function renderFeatures(canvas, features, size = 2, color = 'yellow')
 {
+    const context = canvas.getContext('2d');
     context.beginPath();
     for(let feature of features)
         context.rect(feature.x - size, feature.y - size, 2 * size, 2 * size);

@@ -30,13 +30,14 @@ window.onload = async function()
 
     // create a canvas to display the features
     const canvas = createCanvas(media.width, media.height);
-    const context = canvas.getContext('2d');
 
-    // configure the slider
+    // components
     const slider = document.getElementById('slider');
-    slider.oninput = updateFeatures;
+    const featureCount = document.getElementById('feature-count');
 
     // update features
+    const FPS = 60;
+    let features = [];
     function updateFeatures()
     {
         // sensitivity is a value between 0.0 and 1.0
@@ -46,13 +47,22 @@ window.onload = async function()
         media.findFeatures({
             method: 'fast', // use the FAST algorithm
             sensitivity: sensitivity,
-        }).then(features => {
-            context.drawImage(media.source, 0, 0);
-            renderFeatures(context, features, 4, 'white');
-            document.getElementById('feature-count').innerText = features.length;
+        }).then(f => {
+            features = f;
+            featureCount.innerText = features.length;
+            setTimeout(updateFeatures, 1000.0 / FPS);
         });
     }
     updateFeatures();
+
+    // render features
+    function render()
+    {
+        media.draw(canvas);
+        renderFeatures(canvas, features, 4, 'white');
+        requestAnimationFrame(render);
+    }
+    render();
 }
 
 function createCanvas(width, height)
@@ -64,8 +74,9 @@ function createCanvas(width, height)
     return canvas;
 }
 
-function renderFeatures(context, features, size = 2, color = 'yellow')
+function renderFeatures(canvas, features, size = 2, color = 'yellow')
 {
+    const context = canvas.getContext('2d');
     context.beginPath();
     for(let feature of features)
         context.rect(feature.x - size, feature.y - size, 2 * size, 2 * size);
