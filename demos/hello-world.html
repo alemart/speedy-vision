@@ -4,6 +4,9 @@
         <meta charset="utf-8">
         <title>Speedy feature detection</title>
         <script src="../dist/speedy-vision.js" async></script>
+        <style>
+            mark { position: absolute; top: 16px; right: 16px; background: none; }
+        </style>
     </head>
     <body>
         <h1>Hello, Speedy!</h1>
@@ -43,5 +46,6 @@ function renderFeatures(canvas, features, size = 2, color = 'yellow')
     context.stroke();
 }
         </script>
+        <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>
     </body>
 </html>

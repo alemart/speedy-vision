@@ -7,6 +7,7 @@
         <style>
             form { display: flex; flex-wrap: wrap; align-items: baseline; margin-bottom: 1em; }
             form > *:last-child { position: relative; left: 450px; }
+            mark { position: absolute; top: 16px; right: 16px; background: none; }
         </style>
     </head>
     <body>
@@ -84,5 +85,6 @@ function renderFeatures(canvas, features, size = 2, color = 'yellow')
     context.stroke();
 }
         </script>
+        <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>
     </body>
 </html>
