@@ -1,6 +1,6 @@
 # speedy-vision.js
 
-A **lightning fast GPU-accelerated** feature detection and matching library for Computer Vision on the web.
+A **lightning fast** GPU-accelerated Computer Vision library for the web.
 
 [![Speedy feature detection](assets/demo-video.gif)](https://alemart.github.io/speedy-vision-js/demos/video-features.html)
 
@@ -8,27 +8,15 @@ A **lightning fast GPU-accelerated** feature detection and matching library for 
 
 ## Table of contents
 
-* [Motivation](#motivation)
 * [Demos](#demos)
 * [Installation](#installation)
+* [Motivation](#motivation)
 * [API Reference](#api-reference)
   * [Media routines](#media-routines)
   * [Feature detection](#feature-detection)
   * [Feature matching](#feature-matching)
   * [Image processing](#image-processing)
   * [Extras](#extras)
-
-## Motivation
-
-Detecting features in an image is an important step of many computer vision algorithms. Traditionally, the computationally expensive nature of this process made it difficult to **bring interactive Computer Vision applications to the web browser**. The framerates were unsatisfactory for a compelling user experience. Speedy, a short name for speedy-vision.js, is a JavaScript library created to address this issue.
-
-Speedy's incredible performance on the web browser is possible thanks to its efficient GPU implementations and fast computer vision algorithms. With an easy-to-use API, Speedy is an excellent choice for real-time computer vision projects involving tasks such as: object detection in videos, pose estimation, Simultaneous Location and Mapping (SLAM), and many others.
-
-Speedy is developed by [Alexandre Martins](https://github.com/alemart), a computer scientist from Brazil. It is released under the [Apache-2.0 license](LICENSE) and uses the excellent [GPU.js](https://github.com/gpujs/gpu.js) library.
-
-![Feature detection](assets/demo-features.jpg)
-
-*Speedy feature detection - Photo by JD Hancock (CC-BY)*
 
 ## Demos
 
@@ -66,6 +54,18 @@ for(let feature of features)
 ```
 
 Check out the [Hello World demo](demos/hello-world.html) for a working example.
+
+## Motivation
+
+Detecting features in an image is an important step of many computer vision algorithms. Traditionally, the computationally expensive nature of this process made it difficult to **bring interactive Computer Vision applications to the web browser**. The framerates were unsatisfactory for a compelling user experience. Speedy, a short name for speedy-vision.js, is a JavaScript library created to address this issue.
+
+Speedy's incredible performance on the web browser is possible thanks to its efficient GPU implementations and fast computer vision algorithms. With an easy-to-use API, Speedy is an excellent choice for real-time computer vision projects involving tasks such as: object detection in videos, pose estimation, Simultaneous Location and Mapping (SLAM), and many others.
+
+Speedy is developed by [Alexandre Martins](https://github.com/alemart), a computer scientist from Brazil. It is released under the [Apache-2.0 license](LICENSE) and uses the excellent [GPU.js](https://github.com/gpujs/gpu.js) library.
+
+![Feature detection](assets/demo-features.jpg)
+
+*Speedy feature detection - Photo by JD Hancock (CC-BY)*
 
 ## API Reference
 
