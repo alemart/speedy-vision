@@ -308,6 +308,9 @@ const pipeline = Speedy.pipeline()                 // creates a new SpeedyPipeli
                        .convertTo('greyscale')     // add an operation to the pipeline
                        .blur();                    // add another operation to the pipeline
 
+// pipeline operations are executed
+// in the order they are declared
+
 // execute the pipeline on a SpeedyMedia
 const media = await Speedy.load(...);              // load some media (image, video, etc.)
 const processedMedia = await media.run(pipeline);  // processedMedia is a new SpeedyMedia object
