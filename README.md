@@ -140,7 +140,7 @@ Draws the media to a canvas.
 
 ##### SpeedyMedia.clone()
 
-`SpeedyMedia.clone(options?): SpeedyMedia`
+`SpeedyMedia.clone(options?: object): SpeedyMedia`
 
 Clones the `SpeedyMedia` object.
 
@@ -165,7 +165,7 @@ const newMedia = media.clone();
 
 ##### SpeedyMedia.findFeatures()
 
-`SpeedyMedia.findFeatures(config?): Promise< Array<SpeedyFeature> >`
+`SpeedyMedia.findFeatures(config?: object): Promise< Array<SpeedyFeature> >`
 
 Detects feature points in a `SpeedyMedia`.
 
@@ -339,7 +339,16 @@ Converts the media to a different color space. The following case-sensitive stri
 
 ##### Image filters
 
-Soon!
+When applying the filters, pixels at the borders are replicated.
+
+###### .blur
+
+`SpeedyPipeline.blur(options?: object): SpeedyPipeline`
+
+Blurs the media. The optional `options` object accepts the following keys:
+
+* `filter: string`. Name of the smoothing filter. One of the following: `"gaussian"`, `"box"`. Defaults to `"gaussian"`.
+* `size: number`. Kernel size. One of the following: `3`, `5` or `7`. Defaults to `5`.
 
 ### Extras
 

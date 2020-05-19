@@ -43,9 +43,14 @@ export class GPUFilters extends GPUKernelGroup
             .compose('gauss3', '_gauss3x', '_gauss3y') // size: 3x3
             .compose('gauss7', '_gauss7x', '_gauss7y') // size: 7x7
 
+            // box filters
+            .compose('box5', '_box5x', '_box5y') // size: 5x5
+            .compose('box3', '_box3x', '_box3y') // size: 3x3
+            .compose('box7', '_box7x', '_box7y') // size: 7x7
 
 
-            // separable kernels
+
+            // separable kernels (Gaussian)
             // see also: http://dev.theomader.com/gaussian-kernel-calculator/
             .declare('_gauss5x', convX([
                 0.05, 0.25, 0.4, 0.25, 0.05
@@ -78,6 +83,28 @@ export class GPUFilters extends GPUKernelGroup
                 4, 16, 26, 16, 4,
                 1, 4, 7, 4, 1,
             ], 1 / 237))
+
+
+
+            // separable kernels (Box filter)
+            .declare('_box3x', convX([
+                1, 1, 1
+            ], 1 / 3))
+            .declare('_box3y', convY([
+                1, 1, 1
+            ], 1 / 3))
+            .declare('_box5x', convX([
+                1, 1, 1, 1, 1
+            ], 1 / 5))
+            .declare('_box5y', convY([
+                1, 1, 1, 1, 1
+            ], 1 / 5))
+            .declare('_box7x', convX([
+                1, 1, 1, 1, 1, 1, 1
+            ], 1 / 7))
+            .declare('_box7y', convY([
+                1, 1, 1, 1, 1, 1, 1
+            ], 1 / 7))
         ;
     }
 }

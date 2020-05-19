@@ -63,3 +63,53 @@ PipelineOperation.ConvertToGreyscale = class extends SpeedyPipelineOperation
         return texture;
     }
 }
+
+
+
+// =====================================================
+//               IMAGE FILTERS
+// =====================================================
+
+/**
+ * Blur image
+ */
+PipelineOperation.Blur = class extends SpeedyPipelineOperation
+{
+    /**
+     * Blur operation
+     * @param {object} [options]
+     */
+    constructor(options)
+    {
+        const { filter, size } = (options = {
+            filter: 'gaussian',     // "gassuian" | "box"
+            size: 5,                // 3 | 5 | 7
+            ...options
+        });
+
+        // gaussian filter
+        if(filter == 'gaussian' && size == 5)
+            this._filter = 'gauss5';
+        else if(filter == 'gaussian' && size == 3)
+            this._filter = 'gauss3';
+        else if(filter == 'gaussian' && size == 7)
+            this._filter = 'gauss7';
+
+        // box filter
+        else if(filter == 'box' && size == 5)
+            this._filter = 'box5';
+        else if(filter == 'box' && size == 3)
+            this._filter = 'box3';
+        else if(filter == 'box' && size == 7)
+            this._filter = 'box7';
+
+        // error
+        else
+            Utils.fatal(`Invalid options passed to Blur: ${JSON.stringify(options)}`);
+    }
+
+    run(texture, gpu, media)
+    {
+        return gpu.filters[this._filter](texture);
+    }
+}
