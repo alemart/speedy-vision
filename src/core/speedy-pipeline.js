@@ -53,11 +53,11 @@ export class SpeedyPipeline
     }
 
     /**
-     * Adds an operation to the end of the pipeline
+     * Adds a new operation to the end of the pipeline
      * @param {SpeedyPipelineOperation} operation
      * @returns {SpeedyPipeline} the pipeline itself
      */
-    _put(operation)
+    _spawn(operation)
     {
         this._operations.push(operation);
         return this;
@@ -65,7 +65,7 @@ export class SpeedyPipeline
 
     /**
      * Runs the pipeline on a target media (it will be modified!)
-     * @param {SpeedyMedia} media
+     * @param {SpeedyMedia} media media to be modified
      * @returns {Promise<SpeedyMedia>} a promise that resolves to the provided media
      */
     _run(media)
@@ -85,6 +85,27 @@ export class SpeedyPipeline
 
 
     // =====================================================
+    //                    GENERIC
+    // =====================================================
+
+    /**
+     * Concatenates another pipeline into this one
+     * @param {SpeedyPipeline} pipeline
+     * @returns {SpeedyPipeline}
+     */
+    concat(pipeline)
+    {
+        if(pipeline instanceof SpeedyPipeline) {
+            this._operations = this._operations.concat(pipeline._operations);
+            return this;
+        }
+
+        Utils.fatal(`Invalid argument "${pipeline}" given to SpeedyPipeline.concatenate()`);
+        return this;
+    }
+
+
+    // =====================================================
     //               COLOR CONVERSIONS
     // =====================================================
 
@@ -96,7 +117,7 @@ export class SpeedyPipeline
     convertTo(colorSpace = null)
     {
         if(colorSpace == 'greyscale' || colorSpace == 'grayscale') {
-            return this._put(
+            return this._spawn(
                 new PipelineOperation.ConvertToGreyscale()
             );
         }
