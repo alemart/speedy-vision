@@ -19,7 +19,7 @@
  * Image filtering on the GPU
  */
 
-import { GPUKernelGroup } from './gpu-kernel-group';
+import { GPUKernelGroup } from '../gpu-kernel-group';
 import { conv2D, convX, convY } from './shaders/convolution';
 
 /**

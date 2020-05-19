@@ -19,7 +19,7 @@
  * Image pyramids
  */
 
-import { GPUKernelGroup } from './gpu-kernel-group';
+import { GPUKernelGroup } from '../gpu-kernel-group';
 import { identity } from './shaders/identity';
 import { convX, convY } from './shaders/convolution';
 import { upsample2, downsample2, upsample3, downsample3, setScale, scale } from './shaders/pyramids';

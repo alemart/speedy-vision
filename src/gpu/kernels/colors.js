@@ -15,18 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * gpu-output.js
- * Pipeline output
+ * gpu-colors.js
+ * Color conversion algorithms
  */
 
-import { GPUKernelGroup } from './gpu-kernel-group';
-import { identity } from './shaders/identity';
+import { GPUKernelGroup } from '../gpu-kernel-group';
+import { rgb2grey } from './shaders/colors';
 
 /**
- * GPUOutput
- * Pipeline output
+ * GPUColors
+ * Color conversions
  */
-export class GPUOutput extends GPUKernelGroup
+export class GPUColors extends GPUKernelGroup
 {
     /**
      * Class constructor
@@ -38,10 +38,8 @@ export class GPUOutput extends GPUKernelGroup
     {
         super(gpu, width, height);
         this
-            // output a texture from a pipeline
-            .declare('identity', identity, {
-                pipeline: false
-            })
+            // convert to greyscale
+            .declare('rgb2grey', rgb2grey)
         ;
     }
 }

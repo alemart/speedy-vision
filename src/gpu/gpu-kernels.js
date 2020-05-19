@@ -21,12 +21,12 @@
 
 const { GPU } = require(process.env.NODE_ENV == 'development' ? './gpu-js/gpu-browser' : './gpu-js/gpu-browser.min');
 import { Utils } from '../utils/utils';
-import { GPUOutput } from './gpu-output';
-import { GPUColors } from './gpu-colors';
-import { GPUFilters } from './gpu-filters';
-import { GPUKeypoints } from './gpu-keypoints';
-import { GPUEncoders } from './gpu-encoders';
-import { GPUPyramids } from './gpu-pyramids';
+import { GPUOutput } from './kernels/output';
+import { GPUColors } from './kernels/colors';
+import { GPUFilters } from './kernels/filters';
+import { GPUKeypoints } from './kernels/keypoints';
+import { GPUEncoders } from './kernels/encoders';
+import { GPUPyramids } from './kernels/pyramids';
 
 // Limits
 const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding

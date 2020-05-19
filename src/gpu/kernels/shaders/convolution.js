@@ -19,7 +19,7 @@
  * Convolution function generator
  */
 
-import { Utils } from "../../utils/utils";
+import { Utils } from "../../../utils/utils";
 const cartesian = (a, b) => [].concat(...a.map(a => b.map(b => [a,b]))); // [a] x [b]
 const symmetricRange = n => [...Array(2*n + 1).keys()].map(x => x-n);    // [-n, ..., n]
 

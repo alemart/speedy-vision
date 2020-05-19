@@ -19,7 +19,7 @@
  * Facade for various keypoint detection algorithms
  */
 
-import { GPUKernelGroup } from './gpu-kernel-group';
+import { GPUKernelGroup } from '../gpu-kernel-group';
 import { fast5, fast7, fast9, fast9ml, fastScore8, fastScore12, fastScore16, fastSuppression } from './shaders/fast';
 
 /**

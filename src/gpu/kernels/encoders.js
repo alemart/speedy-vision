@@ -19,11 +19,11 @@
  * Texture encoders
  */
 
-import { GPUKernelGroup } from './gpu-kernel-group';
+import { GPUKernelGroup } from '../gpu-kernel-group';
 import { encodeKeypointOffsets, encodeKeypoints, encodeKeypointCount } from './shaders/encoders';
-import { SpeedyFeature } from '../core/speedy-feature';
-import { StochasticTuner } from '../utils/tuner';
-import { Utils } from '../utils/utils'
+import { SpeedyFeature } from '../../core/speedy-feature';
+import { StochasticTuner } from '../../utils/tuner';
+import { Utils } from '../../utils/utils'
 
 // We won't admit more than MAX_KEYPOINTS per media.
 // The larger this value is, the more data we need to transfer from the GPU.
