@@ -79,7 +79,7 @@ PipelineOperation.Blur = class extends SpeedyPipelineOperation
      * Blur operation
      * @param {object} [options]
      */
-    constructor(options)
+    constructor(options = {})
     {
         const { filter, size } = (options = {
             filter: 'gaussian',     // "gassuian" | "box"
