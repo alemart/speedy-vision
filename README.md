@@ -292,9 +292,13 @@ Image processing is vital in Computer Vision applications. Speedy lets you trans
 
 ##### Speedy.pipeline()
 
-`Speedy.pipeline(): void`
+`Speedy.pipeline(): SpeedyPipeline`
 
 Creates a new, empty `SpeedyPipeline`.
+
+###### Returns:
+
+A new `SpeedyPipeline` instance.
 
 ###### Example:
 
