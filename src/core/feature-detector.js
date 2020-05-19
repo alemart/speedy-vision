@@ -79,7 +79,7 @@ export class FeatureDetector
 
         // pre-processing the image...
         const smoothed = settings.denoise ?
-            this._gpu.filters.gauss1(this._media.source) :
+            this._gpu.filters.gauss5(this._media.source) :
             this._media.source;
         const greyscale = this._gpu.colors.rgb2grey(smoothed);
 

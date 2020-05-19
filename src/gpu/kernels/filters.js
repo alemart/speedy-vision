@@ -38,20 +38,40 @@ export class GPUFilters extends GPUKernelGroup
     {
         super(gpu, width, height);
         this
-            // separable kernels for gaussian smoothing
-            // gaussian approximation (sigma = 1.0)
-            .compose('gauss1', '_gauss1x', '_gauss1y')
-            .declare('_gauss1x', convX([
+            // gaussian approximation (sigma approx. 1.0)
+            .compose('gauss5', '_gauss5x', '_gauss5y') // size: 5x5
+            .compose('gauss3', '_gauss3x', '_gauss3y') // size: 3x3
+            .compose('gauss7', '_gauss7x', '_gauss7y') // size: 7x7
+
+
+
+            // separable kernels
+            // see also: http://dev.theomader.com/gaussian-kernel-calculator/
+            .declare('_gauss5x', convX([
                 0.05, 0.25, 0.4, 0.25, 0.05
                 //0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
             ]))
-            .declare('_gauss1y', convY([
+            .declare('_gauss5y', convY([
                 0.05, 0.25, 0.4, 0.25, 0.05
                 //0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
+            ]))
+            .declare('_gauss3x', convX([
+                0.25, 0.5, 0.25
+                //0.27901, 0.44198, 0.27901
+            ]))
+            .declare('_gauss3y', convY([
+                0.25, 0.5, 0.25
+                //0.27901, 0.44198, 0.27901
+            ]))
+            .declare('_gauss7x', convX([
+                0.00598, 0.060626, 0.241843, 0.383103, 0.241843, 0.060626, 0.00598
+            ]))
+            .declare('_gauss7y', convY([
+                0.00598, 0.060626, 0.241843, 0.383103, 0.241843, 0.060626, 0.00598
             ]))
 
-            // (debug) gaussian filter (sigma = 1.0)
-            .declare('_gauss1', conv2D([
+            // (debug) gaussian filter
+            .declare('_gauss5', conv2D([
                 1, 4, 7, 4, 1,
                 4, 16, 26, 16, 4,
                 7, 26, 41, 26, 7,
