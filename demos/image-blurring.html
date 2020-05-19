@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Blurring an image</title>
+        <script src="../dist/speedy-vision.js" async></script>
+        <style>
+            mark { position: absolute; top: 16px; right: 16px; background: none; }
+        </style>
+    </head>
+    <body>
+        <h1>Blurring an image</h1>
+        <img src="../assets/speedy-wall.jpg" title="Image by Bride of Frankenstein (CC-BY)">
+        <script>
+window.onload = async function()
+{
+    // create a pipeline that blurs an image
+    const pipeline = Speedy.pipeline()
+                           .blur();
+
+    // tell Speedy to load the image
+    const image = document.querySelector('img');
+    const media = await Speedy.load(image);
+
+    // run the pipeline
+    const transformedMedia = await media.run(pipeline);
+
+    // create a canvas to display the result
+    const canvas = createCanvas(transformedMedia.width, transformedMedia.height);
+    transformedMedia.draw(canvas);
+}
+
+function createCanvas(width, height)
+{
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    document.body.appendChild(canvas);
+    return canvas;
+}
+        </script>
+        <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>
+    </body>
+</html>
