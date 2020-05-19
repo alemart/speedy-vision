@@ -285,7 +285,61 @@ Coming soon!
 
 ### Image processing
 
-Coming soon!
+Image processing is vital in Computer Vision applications. Speedy lets you transform images in multiple ways using the `SpeedyPipeline` interface. A `SpeedyPipeline` encodes a sequence of operations that take an image (or video) as input and give you an image as output. These operations are executed on the GPU. Furthermore, a pipeline is described using method chaining (see the example below).
+
+#### Creating a pipeline
+
+##### Speedy.pipeline()
+
+`Speedy.pipeline(): void`
+
+Creates a new, empty `SpeedyPipeline`.
+
+###### Example:
+
+```js
+// create a pipeline
+const pipeline = Speedy.pipeline()                 // creates a new SpeedyPipeline
+                       .convertTo('greyscale')     // add an operation to the pipeline
+                       .blur();                    // add another operation to the pipeline
+
+// execute the pipeline on a SpeedyMedia
+const media = await Speedy.load(...);              // load some media (image, video, etc.)
+const processedMedia = await media.run(pipeline);  // processedMedia is a new SpeedyMedia object
+```
+
+##### SpeedyPipeline.length
+
+`SpeedyPipeline.length: number, read-only`
+
+The number of operations of the pipeline.
+
+#### Pipeline operations
+
+The methods below can be chained together to create your own image processing pipelines. They all return the `SpeedyPipeline` instance they operate upon.
+
+##### Generic
+
+###### .concat
+
+`SpeedyPipeline.concat(pipeline: SpeedyPipeline): SpeedyPipeline`
+
+Concatenates another pipeline into the current one.
+
+##### Color conversion
+
+###### .convertTo
+
+`SpeedyPipeline.convertTo(converter: string): SpeedyPipeline`
+
+Converts the media to a different color space. The following case-sensitive strings can be passed as parameters:
+
+* `"greyscale"`: convert to greyscale
+* `"grayscale"`: an alias to `"greyscale"`
+
+##### Image filters
+
+Soon!
 
 ### Extras
 
