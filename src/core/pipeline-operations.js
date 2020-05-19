@@ -86,6 +86,7 @@ PipelineOperation.Blur = class extends SpeedyPipelineOperation
             size: 5,                // 3 | 5 | 7
             ...options
         });
+        super();
 
         // validate kernel size
         if(size != 3 && size != 5 && size != 7)

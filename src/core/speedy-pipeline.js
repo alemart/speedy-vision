@@ -111,7 +111,7 @@ export class SpeedyPipeline
 
     /**
      * Convert to a color space
-     * @param {string} colorSpace 'greyscale' | 'grayscale'
+     * @param {string} [colorSpace] 'greyscale' | 'grayscale'
      * @returns {SpeedyPipeline}
      */
     convertTo(colorSpace = null)
@@ -131,4 +131,16 @@ export class SpeedyPipeline
     // =====================================================
     //               IMAGE FILTERING
     // =====================================================
+
+    /**
+     * Image smoothing
+     * @param {object} [options]
+     * @returns {SpeedyPipeline}
+     */
+    blur(options = {})
+    {
+        return this._spawn(
+            new PipelineOperation.Blur(options)
+        );
+    }
 }
