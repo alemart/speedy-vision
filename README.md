@@ -338,7 +338,7 @@ Concatenates another pipeline into the current one.
 
 ###### .convertTo
 
-`SpeedyPipeline.convertTo(converter: string): SpeedyPipeline`
+`SpeedyPipeline.convertTo(dest: string): SpeedyPipeline`
 
 Converts the media to a different color space. The following case-sensitive strings can be passed as parameters:
 
@@ -351,7 +351,7 @@ When applying the filters, pixels at the borders are replicated.
 
 ###### .blur
 
-`SpeedyPipeline.blur(options?): SpeedyPipeline`
+`SpeedyPipeline.blur(options?: object): SpeedyPipeline`
 
 Blurs the media. The optional `options` object accepts the following keys:
 
