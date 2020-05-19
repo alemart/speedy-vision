@@ -141,7 +141,7 @@ Draws the media to a canvas.
 
 ##### SpeedyMedia.clone()
 
-`SpeedyMedia.clone(options?: object): SpeedyMedia`
+`SpeedyMedia.clone(options?): SpeedyMedia`
 
 Clones the `SpeedyMedia` object.
 
@@ -166,7 +166,7 @@ const newMedia = media.clone();
 
 ##### SpeedyMedia.findFeatures()
 
-`SpeedyMedia.findFeatures(config?: object): Promise< Array<SpeedyFeature> >`
+`SpeedyMedia.findFeatures(config?): Promise< Array<SpeedyFeature> >`
 
 Detects feature points in a `SpeedyMedia`.
 
@@ -348,7 +348,7 @@ When applying the filters, pixels at the borders are replicated.
 
 ###### .blur
 
-`SpeedyPipeline.blur(options?: object): SpeedyPipeline`
+`SpeedyPipeline.blur(options?): SpeedyPipeline`
 
 Blurs the media. The optional `options` object accepts the following keys:
 
