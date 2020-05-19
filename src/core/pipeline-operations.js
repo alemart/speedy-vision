@@ -87,25 +87,17 @@ PipelineOperation.Blur = class extends SpeedyPipelineOperation
             ...options
         });
 
-        // gaussian filter
-        if(filter == 'gaussian' && size == 5)
-            this._filter = 'gauss5';
-        else if(filter == 'gaussian' && size == 3)
-            this._filter = 'gauss3';
-        else if(filter == 'gaussian' && size == 7)
-            this._filter = 'gauss7';
+        // validate kernel size
+        if(size != 3 && size != 5 && size != 7)
+            Utils.fatal(`Invalid kernel size: ${size}`);
 
-        // box filter
-        else if(filter == 'box' && size == 5)
-            this._filter = 'box5';
-        else if(filter == 'box' && size == 3)
-            this._filter = 'box3';
-        else if(filter == 'box' && size == 7)
-            this._filter = 'box7';
-
-        // error
+        // select the appropriate filter
+        if(filter == 'gaussian')
+            this._filter = 'gauss' + size;
+        else if(filter == 'box')
+            this._filter = 'box' + size;
         else
-            Utils.fatal(`Invalid options passed to Blur: ${JSON.stringify(options)}`);
+            Utils.fatal(`Invalid filter: "${filter}"`);
     }
 
     run(texture, gpu, media)
