@@ -306,7 +306,7 @@ A new `SpeedyPipeline` instance.
 
 ```js
 // create a pipeline
-const pipeline = Speedy.pipeline()                 // creates a new SpeedyPipeline
+const pipeline = Speedy.pipeline()                 // create a new SpeedyPipeline
                        .convertTo('greyscale')     // add an operation to the pipeline
                        .blur();                    // add another operation to the pipeline
 
