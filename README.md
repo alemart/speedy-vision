@@ -72,29 +72,31 @@ Speedy is developed by [Alexandre Martins](https://github.com/alemart), a comput
 
 ### Media routines
 
-Before you detect any features, you must provide Speedy some media. A `SpeedyMedia` object encapsulates a media object such as an image, a video, or a canvas.
+A `SpeedyMedia` object encapsulates a media object: an image, a video, or a canvas.
 
 #### Loading your media
 
 ##### Speedy.load()
 
-`Speedy.load(sourceElement): Promise<SpeedyMedia>`
+`Speedy.load(source: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement): Promise<SpeedyMedia>`
 
-Tells Speedy to load `sourceElement`. The `sourceElement` parameter is the source from which you will extract the features.
+Tells Speedy to load `source`. The `source` parameter may be an image, a video or a canvas.
 
-###### Arguments:
+###### Arguments
 
-* `sourceElement: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement`. The media from which you intend to extract the features.
+* `source: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement`. The media source.
 
-###### Returns:
+###### Returns
 
 A `Promise<SpeedyMedia>` that resolves as soon as the media source is loaded.
 
-###### Example:
+###### Example
 
 ```js
-let image = document.getElementById('my-image');
-let media = await Speedy.load(image);
+window.onload = async function() {
+    let image = document.getElementById('my-image');
+    let media = await Speedy.load(image);
+}
 ```
 
 #### Examining your media
@@ -103,37 +105,37 @@ let media = await Speedy.load(image);
 
 `SpeedyMedia.source: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement, read-only`
 
-The media element associated with the `SpeedyMedia` object.
+The media source associated with the `SpeedyMedia` object.
 
 ##### SpeedyMedia.width
 
 `SpeedyMedia.width: number, read-only`
 
-The width of the media element, in pixels.
+The width of the media source, in pixels.
 
 ##### SpeedyMedia.height
 
 `SpeedyMedia.height: number, read-only`
 
-The height of the media element, in pixels.
+The height of the media source, in pixels.
 
 ##### SpeedyMedia.type
 
 `SpeedyMedia.type: string, read-only`
 
-One of the following: `"image"`, `"video"`, `"canvas"`.
+The type of the media source. One of the following: `"image"`, `"video"`, `"canvas"`, `"texture"`.
 
 #### Playing with your media
 
 ##### SpeedyMedia.draw()
 
-`SpeedyMedia.draw(canvas, x?, y?, width?, height?): void`
+`SpeedyMedia.draw(canvas: HTMLCanvasElement, x?: number, y?: number, width?: number, height?: number): void`
 
 Draws the media to a canvas.
 
-###### Arguments:
+###### Arguments
 
-* `canvas: HTMLCanvasElement`. The canvas element to which we'll draw.
+* `canvas: HTMLCanvasElement`. The canvas element to which you'll draw.
 * `x: number, optional`. An x-position in the canvas. Defaults to `0`.
 * `y: number, optional`. An y-position in the canvas. Defaults to `0`.
 * `width: number, optional`. The desired width. Defaults to `SpeedyMedia.width`.
@@ -141,20 +143,20 @@ Draws the media to a canvas.
 
 ##### SpeedyMedia.clone()
 
-`SpeedyMedia.clone(options?): SpeedyMedia`
+`SpeedyMedia.clone(options?: object): SpeedyMedia`
 
 Clones the `SpeedyMedia` object.
 
-###### Arguments:
+###### Arguments
 
 * `options: object, optional`. Configuration object.
   * `deep: boolean`. Copy the internal components of the `SpeedyMedia`. Defaults to `false`.
 
-###### Returns:
+###### Returns
 
 A clone of the `SpeedyMedia` object.
 
-###### Example:
+###### Example
 
 ```js
 const newMedia = media.clone();
@@ -166,11 +168,11 @@ const newMedia = media.clone();
 
 ##### SpeedyMedia.findFeatures()
 
-`SpeedyMedia.findFeatures(config?): Promise< Array<SpeedyFeature> >`
+`SpeedyMedia.findFeatures(config?: object): Promise< Array<SpeedyFeature> >`
 
 Detects feature points in a `SpeedyMedia`.
 
-###### Arguments:
+###### Arguments
 
 * `config: object, optional`. A configuration object that accepts the following keys (all are optional):
   * `method: string`. Name of the method to be used to detect the features.
@@ -188,11 +190,11 @@ The configuration object accepts more keys depending on which method is specifie
 
 The default method is `"fast"`. Different methods yield different results. Read the section on [detection methods](#detection-methods) to know more.
 
-###### Returns:
+###### Returns
 
 A `Promise` that resolves to an array of `SpeedyFeature` objects.
 
-###### Example:
+###### Example
 
 ```js
 window.onload = async function() {
@@ -239,7 +241,7 @@ The `config.expected` option can either be a number or an object with the follow
 
 Expected numbers between 100 and 500 have been found to work well in practice (the less, the better). Your results may vary depending on your media. If you need very large numbers and don't care about the amount, it's easier to adjust the sensitivity manually. If you need small numbers, you might want to increase the tolerance.
 
-###### Example:
+###### Example
 
 ```js
 window.onload = async function() {
@@ -296,11 +298,11 @@ Image processing is vital in Computer Vision applications. Speedy lets you trans
 
 Creates a new, empty `SpeedyPipeline`.
 
-###### Returns:
+###### Returns
 
 A new `SpeedyPipeline` instance.
 
-###### Example:
+###### Example
 
 ```js
 // create a pipeline
@@ -312,7 +314,7 @@ const pipeline = Speedy.pipeline()                 // creates a new SpeedyPipeli
 // in the order they are declared
 
 // execute the pipeline on a SpeedyMedia
-const media = await Speedy.load(...);              // load some media (image, video, etc.)
+const media = await Speedy.load(/* ... */);        // load some media (image, video, etc.)
 const processedMedia = await media.run(pipeline);  // processedMedia is a new SpeedyMedia object
 ```
 
@@ -370,7 +372,7 @@ Speedy includes a FPS counter for testing purposes. It will be created only if y
 
 Gets the FPS rate.
 
-###### Example:
+###### Example
 
 ```js
 console.log(Speedy.fps.value);
