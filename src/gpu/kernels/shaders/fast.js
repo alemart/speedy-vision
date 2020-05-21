@@ -460,15 +460,16 @@ export function fastSuppression(image)
 {
     const x = this.thread.x, y = this.thread.y;
     const pixel = image[y][x];
+    const score = pixel[0]; // corner score
 
-    this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
+    // discard corner
+    this.color(0, pixel[1], pixel[2], pixel[3]);
 
     if(
-        pixel[0] > 0 &&
+        score > 0 &&
         x > 0 && x < this.constants.width - 1 &&
         y > 0 && y < this.constants.height - 1
     ) {
-        const score = pixel[0]; // corner score
         const n0 = image[y-1][x]; // 8-neighbors
         const n1 = image[y-1][x+1];
         const n2 = image[y][x+1];
@@ -479,13 +480,15 @@ export function fastSuppression(image)
         const n7 = image[y-1][x-1];
 
         // compare my score to those of my neighbors
-        if(
-            score < n0[0] || score < n1[0] || score < n2[0] || score < n3[0] ||
-            score < n4[0] || score < n5[0] || score < n6[0] || score < n7[0]
-        ) {
-            // discard corner
-            this.color(0, pixel[1], pixel[2], pixel[3]);
-        }
+        if(score >= n0[0])
+         if(score >= n2[0])
+          if(score >= n4[0])
+           if(score >= n6[0])
+            if(score >= n1[0])
+             if(score >= n3[0])
+              if(score >= n5[0])
+               if(score >= n7[0])
+                this.color(score, pixel[1], pixel[2], pixel[3]); // restore corner
     }
 }
 
