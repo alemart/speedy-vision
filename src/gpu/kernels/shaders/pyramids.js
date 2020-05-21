@@ -27,8 +27,10 @@ export function upsample2(image)
         const pixel = image[Math.floor(y / 2)][Math.floor(x / 2)];
         this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
     }
-    else
-        this.color(0, 0, 0, 1);
+    else {
+        const thisPixel = image[y][x]; // preserve alpha (encodes scale)
+        this.color(0, 0, 0, thisPixel[3]);
+    }
 }
 
 export function downsample2(image)
@@ -47,8 +49,10 @@ export function upsample3(image)
         const pixel = image[Math.floor(y / 3)][Math.floor(x / 3)];
         this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
     }
-    else
-        this.color(0, 0, 0, 1);
+    else {
+        const thisPixel = image[y][x]; // preserve alpha (encodes scale)
+        this.color(0, 0, 0, thisPixel[3]);
+    }
 }
 
 export function downsample3(image)
@@ -57,12 +61,6 @@ export function downsample3(image)
     const pixel = image[y * 3][x * 3];
     
     this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
-}
-
-export function setBase(image)
-{
-    const pixel = image[this.thread.y][this.thread.x];
-    this.color(pixel[0], pixel[1], pixel[2], 0.5);
 }
 
 export function scale(scaleFactor)
