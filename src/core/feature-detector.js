@@ -30,12 +30,10 @@ export class FeatureDetector
 {
     /**
      * Class constructor
-     * @param {SpeedyMedia} media
      * @param {GPUKernels} gpu
      */
-    constructor(media, gpu)
+    constructor(gpu)
     {
-        this._media = media;
         this._gpu = gpu;
         this._lastKeypointCount = 0;
         this._sensitivityTuner = null;
@@ -43,17 +41,21 @@ export class FeatureDetector
 
     /**
      * FAST corner detection
+     * @param {SpeedyMedia} media The media
      * @param {number} [n] We'll run FAST-n, where n must be 9 (default), 7 or 5
      * @param {object} [settings] Additional settings
      * @returns {Array<SpeedyFeature>} keypoints
      */
-    fast(n = 9, settings = {})
+    fast(media, n = 9, settings = {})
     {
+        const gpu = this._gpu;
+
         // default settings
-        settings = Object.assign({
+        settings = {
             threshold: 10,
             denoise: true,
-        }, settings);
+            ...settings
+        };
 
         // convert the expected number of keypoints,
         // if defined, into a sensitivity value
@@ -62,52 +64,112 @@ export class FeatureDetector
 
         // convert a sensitivity value in [0,1],
         // if it's defined, to a FAST threshold
-        if(settings.hasOwnProperty('sensitivity')) {
-            // number of keypoints ideally increases linearly
-            // as the sensitivity is increased
-            const sensitivity = Math.max(0, Math.min(settings.sensitivity, 1));
-            settings.threshold = 1 - Math.tanh(2.77 * sensitivity);
-        }
-        else {
-            const threshold = Math.max(0, Math.min(settings.threshold, 255));
-            settings.threshold = threshold / 255;
-        }
+        if(settings.hasOwnProperty('sensitivity'))
+            settings.threshold = this._sensitivity2threshold(settings.sensitivity);
+        else
+            settings.threshold = this._normalizedThreshold(settings.threshold);
 
         // validate input
         if(n != 9 && n != 5 && n != 7)
             Utils.fatal(`Not implemented: FAST-${n}`); // this shouldn't happen...
 
         // pre-processing the image...
-        const smoothed = settings.denoise ?
-            this._gpu.filters.gauss5(this._media.source) :
-            this._media.source;
-        const greyscale = this._gpu.colors.rgb2grey(smoothed);
+        const source = settings.denoise ? gpu.filters.gauss5(media.source) : media.source;
+        const greyscale = gpu.colors.rgb2grey(source);
 
         // keypoint detection
         const rawCorners = (({
-            5: () => this._gpu.keypoints.fast5(greyscale, settings.threshold),
-            7: () => this._gpu.keypoints.fast7(greyscale, settings.threshold),
-            9: () => this._gpu.keypoints.fast9(greyscale, settings.threshold),
+            5: () => gpu.keypoints.fast5(greyscale, settings.threshold),
+            7: () => gpu.keypoints.fast7(greyscale, settings.threshold),
+            9: () => gpu.keypoints.fast9(greyscale, settings.threshold),
         })[n])();
-        const corners = this._gpu.keypoints.fastSuppression(rawCorners);
+        const corners = gpu.keypoints.fastSuppression(rawCorners);
 
         // encoding result
         return this._extractKeypoints(corners);
+    }
+
+    /**
+     * BRISK feature point detection
+     * @param {SpeedyMedia} media The media
+     * @param {object} [settings]
+     * @returns {Array<SpeedyFeature>}
+     */
+    brisk(media, settings = {})
+    {
+        const gpu = this._gpu;
+
+        // default settings
+        settings = {
+            threshold: 10,
+            denoise: true,
+            pyramidHeight: 4, // integer in [1,4]
+            ...settings
+        };
+
+        // convert settings.expected to settings.sensitivity
+        if(settings.hasOwnProperty('expected'))
+            settings.sensitivity = this._findSensitivity(settings.expected);
+
+        // convert settings.sensitivity to settings.threshold
+        if(settings.hasOwnProperty('sensitivity'))
+            settings.threshold = this._sensitivity2threshold(settings.sensitivity);
+        else
+            settings.threshold = this._normalizedThreshold(settings.threshold);
+
+        // clamp settings.pyramidHeight
+        settings.pyramidHeight = Math.max(1, Math.min(settings.pyramidHeight, 4)) | 0;
+
+        // pre-processing the image...
+        const source = settings.denoise ? gpu.filters.gauss5(media.source) : media.source;
+        const greyscale = gpu.colors.rgb2grey(source);
+
+        // create the pyramid
+        const pyramid = new Array(settings.pyramidHeight);
+        const intraPyramid = new Array(pyramid.length + 1);
+        pyramid[0] = gpu.pyramid(0).pyramids.setBase(greyscale); // base of the pyramid
+        intraPyramid[0] = gpu.pyramid(0).pyramids.intraExpand(pyramid[0]); // 1.5 * sizeof(base)
+        for(let i = 1; i < pyramid.length; i++)
+            pyramid[i] = gpu.pyramid(i-1).pyramids.reduce(pyramid[i-1]);
+        for(let i = 1; i < intraPyramid.length; i++)
+            intraPyramid[i] = gpu.intraPyramid(i-1).pyramids.reduce(intraPyramid[i-1]);
+
+        // get FAST corners of all pyramid levels
+        const pyramidCorners = new Array(pyramid.length);
+        const intraPyramidCorners = new Array(intraPyramid.length);
+        for(let j = 0; j < pyramidCorners.length; j++) {
+            pyramidCorners[j] = gpu.pyramid(j).keypoints.fast9(pyramid[j], settings.threshold);
+            pyramidCorners[j] = gpu.pyramid(j).keypoints.fastSuppression(pyramidCorners[j]);
+
+        }
+        for(let j = 0; j < intraPyramidCorners.length; j++) {
+            intraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.fast9(intraPyramid[j], settings.threshold);
+            intraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.fastSuppression(intraPyramidCorners[j]);
+        }
+
+        // extract keypoints
+        //const end = gpu.output.identity(pyramid[1]);
+        let keypoints = [];
+        keypoints = this._extractKeypoints(pyramidCorners[0]); // FIXME
+
+        // done!
+        return keypoints;
     }
 
     // given a corner-encoded texture,
     // return an Array of keypoints
     _extractKeypoints(corners)
     {
+        const gpu = this._gpu; this._gpu = this._gpu.pyramid(0);
         const encodedKeypoints = this._gpu.encoders.encodeKeypoints(corners);
         const keypoints = this._gpu.encoders.decodeKeypoints(encodedKeypoints);
-
         const slack = this._lastKeypointCount > 0 ? // approximates assuming continuity
             Math.max(1, Math.min(keypoints.length / this._lastKeypointCount), 2) : 1;
 
         this._gpu.encoders.optimizeKeypointEncoder(keypoints.length * slack);
         this._lastKeypointCount = keypoints.length;
 
+        this._gpu=gpu;
         return keypoints;
     }
 
@@ -118,13 +180,13 @@ export class FeatureDetector
     _findSensitivity(param)
     {
         // grab the parameters
-        const expected = ({
+        const expected = {
             number: 0, // how many keypoints do you expect?
             tolerance: 0.10, // percentage relative to the expected number of keypoints
             ...(typeof param == 'object' ? param : {
                 number: param | 0,
             })
-        });
+        };
 
         // spawn the tuner
         this._sensitivityTuner = this._sensitivityTuner ||
@@ -139,5 +201,23 @@ export class FeatureDetector
 
         // return the new sensitivity
         return Math.max(0, Math.min(sensitivity, 1));
+    }
+
+    // sensitivity in [0,1] -> pixel intensity threshold in [0,1]
+    // performs a non-linear conversion (used for FAST)
+    _sensitivity2threshold(sensitivity)
+    {
+        // the number of keypoints ideally increases linearly
+        // as the sensitivity is increased
+        sensitivity = Math.max(0, Math.min(sensitivity, 1));
+        return 1 - Math.tanh(2.77 * sensitivity);
+    }
+
+    // pixel threshold in [0,255] -> normalized threshold in [0,1]
+    // returns a clamped & normalized threshold
+    _normalizedThreshold(threshold)
+    {
+        threshold = Math.max(0, Math.min(threshold, 255));
+        return threshold / 255;
     }
 }

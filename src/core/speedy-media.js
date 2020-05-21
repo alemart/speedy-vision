@@ -27,8 +27,7 @@ import { Utils } from '../utils/utils';
 
 /**
  * SpeedyMedia encapsulates a media element
- * (e.g., image, video, canvas) and makes it
- * ready for feature detection
+ * (e.g., image, video, canvas)
  */
 export class SpeedyMedia
 {
@@ -51,7 +50,7 @@ export class SpeedyMedia
 
             // spawn relevant components
             this._gpu = new GPUKernels(this._width, this._height);
-            this._featureDetector = new FeatureDetector(this, this._gpu);
+            this._featureDetector = null; // lazy instantiation 
         }
         else if(arguments.length == 1) {
             // copy constructor (shallow copy)
@@ -232,12 +231,16 @@ export class SpeedyMedia
             method: 'fast',
         }, settings);
 
+        // Lazy instantiation
+        this._featureDetector = this._featureDetector || new FeatureDetector(this._gpu);
+
         // Algorithm table
         const fn = ({
-            'fast' : settings => this._featureDetector.fast(9, settings),   // alias for fast9
-            'fast9': settings => this._featureDetector.fast(9, settings),   // FAST-9,16 (default)
-            'fast7': settings => this._featureDetector.fast(7, settings),   // FAST-7,12
-            'fast5': settings => this._featureDetector.fast(5, settings),   // FAST-5,8
+            'fast' : (media, settings) => this._featureDetector.fast(media, 9, settings),   // alias for fast9
+            'fast9': (media, settings) => this._featureDetector.fast(media, 9, settings),   // FAST-9,16 (default)
+            'fast7': (media, settings) => this._featureDetector.fast(media, 7, settings),   // FAST-7,12
+            'fast5': (media, settings) => this._featureDetector.fast(media, 5, settings),   // FAST-5,8
+            'brisk': (media, settings) => this._featureDetector.brisk(media, settings),     // BRISK
         });
 
         // Run the algorithm
@@ -245,7 +248,7 @@ export class SpeedyMedia
             const method = String(settings.method).toLowerCase();
 
             if(fn.hasOwnProperty(method)) {
-                const features = fn[method].call(this, settings);
+                const features = (fn[method])(this, settings);
                 resolve(features);
             }
             else

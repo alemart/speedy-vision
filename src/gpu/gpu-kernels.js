@@ -69,7 +69,7 @@ export class GPUKernels
         // create & configure canvas
         this._canvas = this._createCanvas(this._width, this._height);
         this._context = this._canvas.getContext('webgl2', {
-            premultipliedAlpha: true, // we're store data in the alpha channel
+            premultipliedAlpha: true, // we're storing data in the alpha channel
             preserveDrawingBuffer: false
         });
 
@@ -89,6 +89,7 @@ export class GPUKernels
 
     /**
      * Access the kernel groups of a pyramid level
+     * sizeof(pyramid(i)) = sizeof(pyramid(0)) / 2^i
      * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS - 1
      * @returns {Array}
      */
@@ -104,14 +105,17 @@ export class GPUKernels
 
     /**
      * Access the kernel groups of an intra-pyramid level
-     * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS - 1
+     * The intra-pyramid encodes layers between pyramid layers
+     * sizeof(intraPyramid(0)) = 1.5 * sizeof(pyramid(0))
+     * sizeof(intraPyramid(1)) = 1.5 * sizeof(pyramid(1))
+     * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS
      * @returns {Array}
      */
     intraPyramid(level)
     {
         const lv = level | 0;
 
-        if(lv < 0 || lv >= MAX_PYRAMID_LEVELS)
+        if(lv < 0 || lv >= MAX_PYRAMID_LEVELS + 1)
             Utils.fatal(`Invalid intra-pyramid level: ${lv}`);
 
         return this._intraPyramid[lv];
@@ -139,8 +143,8 @@ export class GPUKernels
         spawnKernelGroups.call(this, this._gpu, this._width, this._height);
 
         // spawn pyramids of kernel groups
-        this._pyramid = this._buildPyramid(this._width, this._height);
-        this._intraPyramid = this._buildPyramid(3 * this._width / 2, 3 * this._height / 2);
+        this._pyramid = this._buildPyramid(this._width, this._height, MAX_PYRAMID_LEVELS);
+        this._intraPyramid = this._buildPyramid(3 * this._width / 2, 3 * this._height / 2, MAX_PYRAMID_LEVELS + 1);
     }
 
     // Create a canvas
@@ -153,7 +157,7 @@ export class GPUKernels
     }
 
     // build a pyramid, where each level stores the kernel groups
-    _buildPyramid(baseWidth, baseHeight, numLevels = MAX_PYRAMID_LEVELS)
+    _buildPyramid(baseWidth, baseHeight, numLevels)
     {
         let pyramid = new Array(numLevels);
         let width = baseWidth | 0, height = baseHeight | 0;
