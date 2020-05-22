@@ -129,7 +129,7 @@ export class SpeedyMedia
 
     /**
      * The type of the media attached to this SpeedyMedia object
-     * @returns {string} "image" | "video" | "canvas" | "texture"
+     * @returns {string} "image" | "video" | "canvas" | "internal"
      */
     get type()
     {
@@ -144,7 +144,7 @@ export class SpeedyMedia
                 return 'canvas';
 
             case MediaType.Texture: // the result of pipelining
-                return 'texture';
+                return 'internal';
 
             default: // this shouldn't happen
                 return 'unknown';

@@ -123,7 +123,7 @@ The height of the media source, in pixels.
 
 `SpeedyMedia.type: string, read-only`
 
-The type of the media source. One of the following: `"image"`, `"video"`, `"canvas"`, `"texture"`.
+The type of the media source. One of the following: `"image"`, `"video"`, `"canvas"`, `"internal"`.
 
 #### Playing with your media
 
