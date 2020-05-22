@@ -23,6 +23,7 @@ import { GPUKernelGroup } from '../gpu-kernel-group';
 import { fast5, fast7, fast9ml, fastScore8, fastScore12, fastScore16, fastSuppression } from './shaders/fast';
 import { merge, mergePyramidLevels, normalizeScale } from './shaders/keypoints';
 import { identity } from './shaders/identity';
+import { brisk } from './shaders/brisk';
 
 /**
  * GPUKeypoints
@@ -57,6 +58,9 @@ export class GPUKeypoints extends GPUKernelGroup
 
             // FAST Non-Maximum Suppression
             .declare('fastSuppression', fastSuppression)
+
+            // BRISK Scale-Space Non-Maximum Suppression
+            .declare('brisk', brisk)
 
             // Merge keypoints across multiple scales
             .declare('merge', merge)

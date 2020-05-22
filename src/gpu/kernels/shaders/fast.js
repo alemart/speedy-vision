@@ -21,7 +21,7 @@
 
 /*
  * This code is a GPU implementation of FAST,
- * "Features from Accelerated Segment Test"
+ * "Features from Accelerated Segment Test" [1]
  *
  * Reference:
  *

@@ -149,14 +149,21 @@ export class FeatureDetector
         }
 
         // scale space non-maximum suppression
-        // TODO
+        intraPyramidCorners[0] = gpu.intraPyramid(0).keypoints.brisk(intraPyramidCorners[0], intraPyramidCorners[0], pyramidCorners[0], 1.0, 2.0 / 3.0, 1);
+        for(let j = 0; j < pyramidCorners.length; j++) {
+            pyramidCorners[j] = gpu.pyramid(j).keypoints.brisk(pyramidCorners[j], intraPyramidCorners[j], intraPyramidCorners[j+1], 1.5, 0.75, 0);
+            if(j+1 < pyramidCorners.length)
+                intraPyramidCorners[j+1] = gpu.intraPyramid(j+1).keypoints.brisk(intraPyramidCorners[j+1], pyramidCorners[j], pyramidCorners[j+1], 4.0 / 3.0, 2.0 / 3.0, 0);
+            else
+                intraPyramidCorners[j+1] = gpu.intraPyramid(j+1).keypoints.brisk(intraPyramidCorners[j+1], pyramidCorners[j], intraPyramidCorners[j+1], 4.0 / 3.0, 1.0, -1);
+        }
 
         // merge all keypoints
         for(let j = pyramidCorners.length - 2; j >= 0; j--)
             pyramidCorners[j] = gpu.pyramid(j).keypoints.mergePyramidLevels(pyramidCorners[j], pyramidCorners[j+1]);
         for(let j = intraPyramidCorners.length - 2; j >= 0; j--)
             intraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.mergePyramidLevels(intraPyramidCorners[j], intraPyramidCorners[j+1]);
-        intraPyramidCorners[0] = gpu.intraPyramid(0).keypoints.normalizeScale(intraPyramidCorners[0], gpu.intraPyramid(0).scale);
+        intraPyramidCorners[0] = gpu.intraPyramid(0).keypoints.normalizeScale(intraPyramidCorners[0], 1.5);
         intraPyramidCorners[0] = gpu.pyramid(0).keypoints.crop(intraPyramidCorners[0]);
         const corners = gpu.pyramid(0).keypoints.merge(pyramidCorners[0], intraPyramidCorners[0]);
 
