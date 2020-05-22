@@ -97,6 +97,7 @@ export class FeatureDetector
      */
     brisk(media, settings = {})
     {
+        const MAX_PYRAMID_HEIGHT = 4;
         const gpu = this._gpu;
 
         // default settings
@@ -118,7 +119,7 @@ export class FeatureDetector
             settings.threshold = this._normalizedThreshold(settings.threshold);
 
         // clamp settings.pyramidHeight
-        settings.pyramidHeight = Math.max(1, Math.min(settings.pyramidHeight, 4)) | 0;
+        settings.pyramidHeight = Math.max(1, Math.min(settings.pyramidHeight, MAX_PYRAMID_HEIGHT)) | 0;
 
         // pre-processing the image...
         const source = settings.denoise ? gpu.filters.gauss5(media.source) : media.source;
@@ -147,29 +148,34 @@ export class FeatureDetector
             intraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.fastSuppression(intraPyramidCorners[j]);
         }
 
-        // extract keypoints
-        //const end = gpu.output.identity(pyramid[1]);
-        let keypoints = [];
-        keypoints = this._extractKeypoints(pyramidCorners[0]); // FIXME
+        // scale space non-maximum suppression
+        // TODO
+
+        // merge all keypoints
+        for(let j = pyramidCorners.length - 2; j >= 0; j--)
+            pyramidCorners[j] = gpu.pyramid(j).keypoints.mergePyramidLevels(pyramidCorners[j], pyramidCorners[j+1]);
+        for(let j = intraPyramidCorners.length - 2; j >= 0; j--)
+            intraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.mergePyramidLevels(intraPyramidCorners[j], intraPyramidCorners[j+1]);
+        intraPyramidCorners[0] = gpu.intraPyramid(0).keypoints.normalizeScale(intraPyramidCorners[0], gpu.intraPyramid(0).scale);
+        intraPyramidCorners[0] = gpu.pyramid(0).keypoints.crop(intraPyramidCorners[0]);
+        const corners = gpu.pyramid(0).keypoints.merge(pyramidCorners[0], intraPyramidCorners[0]);
 
         // done!
-        return keypoints;
+        return this._extractKeypoints(corners);
     }
 
     // given a corner-encoded texture,
     // return an Array of keypoints
-    _extractKeypoints(corners)
+    _extractKeypoints(corners, gpu = this._gpu)
     {
-        const gpu = this._gpu; this._gpu = this._gpu.pyramid(0);
-        const encodedKeypoints = this._gpu.encoders.encodeKeypoints(corners);
-        const keypoints = this._gpu.encoders.decodeKeypoints(encodedKeypoints);
+        const encodedKeypoints = gpu.encoders.encodeKeypoints(corners);
+        const keypoints = gpu.encoders.decodeKeypoints(encodedKeypoints);
         const slack = this._lastKeypointCount > 0 ? // approximates assuming continuity
             Math.max(1, Math.min(keypoints.length / this._lastKeypointCount), 2) : 1;
 
-        this._gpu.encoders.optimizeKeypointEncoder(keypoints.length * slack);
+        gpu.encoders.optimizeKeypointEncoder(keypoints.length * slack);
         this._lastKeypointCount = keypoints.length;
 
-        this._gpu=gpu;
         return keypoints;
     }
 

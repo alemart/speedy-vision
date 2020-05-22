@@ -161,11 +161,14 @@ export class GPUKernels
     {
         let pyramid = new Array(numLevels);
         let width = baseWidth | 0, height = baseHeight | 0;
+        let scale = baseWidth / this._width;
 
         for(let i = 0; i < pyramid.length; i++) {
-            spawnKernelGroups.call(pyramid[i] = { }, this._gpu, width, height);
+            pyramid[i] = { width, height, scale };
+            spawnKernelGroups.call(pyramid[i], this._gpu, width, height);
             width = ((1 + width) / 2) | 0;
             height = ((1 + height) / 2) | 0;
+            scale /= 2;
         }
 
         return pyramid;

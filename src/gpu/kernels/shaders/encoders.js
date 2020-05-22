@@ -146,7 +146,7 @@ export function encodeKeypoints(image, encoderLength, descriptorSize)
 
                 // keypoint properties pixel?
                 else {
-                    scale = px[3] * 2.0;
+                    scale = px[3];
                     rotation = 0;
 
                     this.color(scale, rotation, 0, 0);

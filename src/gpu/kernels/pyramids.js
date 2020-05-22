@@ -22,7 +22,8 @@
 import { GPUKernelGroup } from '../gpu-kernel-group';
 import { identity } from './shaders/identity';
 import { convX, convY } from './shaders/convolution';
-import { upsample2, downsample2, upsample3, downsample3, setScale, scale } from './shaders/pyramids';
+import { upsample2, downsample2, upsample3, downsample3 } from './shaders/pyramids';
+import { setScale, scale } from './shaders/scale';
 
 // neat utilities
 const withSize = (width, height) => ({ output: [ width|0, height|0 ], constants: { width: width|0, height: height|0 }});
@@ -56,9 +57,11 @@ export class GPUPyramids extends GPUKernelGroup
             .compose('intraReduce', '_upsample2', '_smoothX2', '_smoothY2', '_downsample3/2', '_scale2/3')
             .compose('intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3', '_scale3/2')
 
+
+            
             // separable kernels for gaussian smoothing
             // use [c, b, a, b, c] where a+2c = 2b and a+2b+2c = 1
-            // pick a = 0.4 for gaussian approximation (sigma = 1.0)
+            // pick a = 0.4 for gaussian approximation
             .declare('_smoothX', convX([
                 0.05, 0.25, 0.4, 0.25, 0.05
             ]))
@@ -112,7 +115,7 @@ export class GPUPyramids extends GPUKernelGroup
             .declare('_scale1/2', scale(0.5),
                 withSize((1 + this._width) / 2, (1 + this._height) / 2))
 
-            .declare('_scale3/2', scale(3.0 / 2.0),
+            .declare('_scale3/2', scale(1.5),
                 withSize(3 * this._width / 2, 3 * this._height / 2))
 
             .declare('_scale2/3', scale(2.0 / 3.0),
