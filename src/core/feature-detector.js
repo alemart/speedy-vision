@@ -97,14 +97,14 @@ export class FeatureDetector
      */
     brisk(media, settings = {})
     {
-        const MAX_PYRAMID_HEIGHT = 4;
+        const MIN_DEPTH = 1, MAX_DEPTH = 4;
         const gpu = this._gpu;
 
         // default settings
         settings = {
             threshold: 10,
             denoise: true,
-            pyramidHeight: 4, // integer in [1,4]
+            depth: 4, // integer in [MIN_DEPTH, MAX_DEPTH]
             ...settings
         };
 
@@ -118,15 +118,15 @@ export class FeatureDetector
         else
             settings.threshold = this._normalizedThreshold(settings.threshold);
 
-        // clamp settings.pyramidHeight
-        settings.pyramidHeight = Math.max(1, Math.min(settings.pyramidHeight, MAX_PYRAMID_HEIGHT)) | 0;
+        // clamp settings.depth (height of the image pyramid)
+        settings.depth = Math.max(MIN_DEPTH, Math.min(settings.depth, MAX_DEPTH)) | 0;
 
         // pre-processing the image...
         const source = settings.denoise ? gpu.filters.gauss5(media.source) : media.source;
         const greyscale = gpu.colors.rgb2grey(source);
 
         // create the pyramid
-        const pyramid = new Array(settings.pyramidHeight);
+        const pyramid = new Array(settings.depth);
         const intraPyramid = new Array(pyramid.length + 1);
         pyramid[0] = gpu.pyramid(0).pyramids.setBase(greyscale); // base of the pyramid
         intraPyramid[0] = gpu.pyramid(0).pyramids.intraExpand(pyramid[0]); // 1.5 * sizeof(base)
