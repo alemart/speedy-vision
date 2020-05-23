@@ -166,7 +166,8 @@ export class GPUEncoders extends GPUKernelGroup
             x = (pixels[i+1] << 8) | pixels[i];
             y = (pixels[i+3] << 8) | pixels[i+2];
             if(x < w && y < h) {
-                invScale2 = Math.ceil(200 * pixels[i+4] / 255.0) * 0.01;
+                //invScale2 = Math.ceil(200 * pixels[i+4] / 255.0) * 0.01;
+                invScale2 = (pixels[i+4] << 1) / 255.0;
                 scale = 0 < invScale2 && invScale2 < 2 ? 1.0 / invScale2 : 1.0;
                 rotation = pixels[i+5] * TWO_PI / 255.0;
                 keypoints.push(new SpeedyFeature(x, y, scale, rotation));

@@ -97,8 +97,8 @@ export class FeatureDetector
      */
     brisk(media, settings = {})
     {
-        const MIN_DEPTH = 1, MAX_DEPTH = 4;
         const gpu = this._gpu;
+        const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidHeight;
 
         // default settings
         settings = {
@@ -148,24 +148,26 @@ export class FeatureDetector
             intraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.fastSuppression(intraPyramidCorners[j]);
         }
 
-        // scale space non-maximum suppression
-        intraPyramidCorners[0] = gpu.intraPyramid(0).keypoints.brisk(intraPyramidCorners[0], intraPyramidCorners[0], pyramidCorners[0], 1.0, 2.0 / 3.0, 1);
-        for(let j = 0; j < pyramidCorners.length; j++) {
-            pyramidCorners[j] = gpu.pyramid(j).keypoints.brisk(pyramidCorners[j], intraPyramidCorners[j], intraPyramidCorners[j+1], 1.5, 0.75, 0);
-            if(j+1 < pyramidCorners.length)
-                intraPyramidCorners[j+1] = gpu.intraPyramid(j+1).keypoints.brisk(intraPyramidCorners[j+1], pyramidCorners[j], pyramidCorners[j+1], 4.0 / 3.0, 2.0 / 3.0, 0);
+        // scale space non-maximum suppression & interpolation
+        const suppressedPyramidCorners = new Array(pyramidCorners.length);
+        const suppressedIntraPyramidCorners = new Array(intraPyramidCorners.length);
+        suppressedIntraPyramidCorners[0] = gpu.intraPyramid(0).keypoints.brisk(intraPyramidCorners[0], intraPyramidCorners[0], pyramidCorners[0], 1.0, 2.0 / 3.0);
+        for(let j = 0; j < suppressedPyramidCorners.length; j++) {
+            suppressedPyramidCorners[j] = gpu.pyramid(j).keypoints.brisk(pyramidCorners[j], intraPyramidCorners[j], intraPyramidCorners[j+1], 1.5, 0.75);
+            if(j+1 < suppressedPyramidCorners.length)
+                suppressedIntraPyramidCorners[j+1] = gpu.intraPyramid(j+1).keypoints.brisk(intraPyramidCorners[j+1], pyramidCorners[j], pyramidCorners[j+1], 4.0 / 3.0, 2.0 / 3.0);
             else
-                intraPyramidCorners[j+1] = gpu.intraPyramid(j+1).keypoints.brisk(intraPyramidCorners[j+1], pyramidCorners[j], intraPyramidCorners[j+1], 4.0 / 3.0, 1.0, -1);
+                suppressedIntraPyramidCorners[j+1] = gpu.intraPyramid(j+1).keypoints.brisk(intraPyramidCorners[j+1], pyramidCorners[j], intraPyramidCorners[j+1], 4.0 / 3.0, 1.0);
         }
 
         // merge all keypoints
-        for(let j = pyramidCorners.length - 2; j >= 0; j--)
-            pyramidCorners[j] = gpu.pyramid(j).keypoints.mergePyramidLevels(pyramidCorners[j], pyramidCorners[j+1]);
-        for(let j = intraPyramidCorners.length - 2; j >= 0; j--)
-            intraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.mergePyramidLevels(intraPyramidCorners[j], intraPyramidCorners[j+1]);
-        intraPyramidCorners[0] = gpu.intraPyramid(0).keypoints.normalizeScale(intraPyramidCorners[0], 1.5);
-        intraPyramidCorners[0] = gpu.pyramid(0).keypoints.crop(intraPyramidCorners[0]);
-        const corners = gpu.pyramid(0).keypoints.merge(pyramidCorners[0], intraPyramidCorners[0]);
+        for(let j = suppressedPyramidCorners.length - 2; j >= 0; j--)
+            suppressedPyramidCorners[j] = gpu.pyramid(j).keypoints.mergePyramidLevels(suppressedPyramidCorners[j], suppressedPyramidCorners[j+1]);
+        for(let j = suppressedIntraPyramidCorners.length - 2; j >= 0; j--)
+            suppressedIntraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.mergePyramidLevels(suppressedIntraPyramidCorners[j], suppressedIntraPyramidCorners[j+1]);
+        suppressedIntraPyramidCorners[0] = gpu.intraPyramid(0).keypoints.normalizeScale(suppressedIntraPyramidCorners[0], 1.5);
+        suppressedIntraPyramidCorners[0] = gpu.pyramid(0).keypoints.crop(suppressedIntraPyramidCorners[0]);
+        const corners = gpu.pyramid(0).keypoints.merge(suppressedPyramidCorners[0], suppressedIntraPyramidCorners[0]);
 
         // done!
         return this._extractKeypoints(corners);

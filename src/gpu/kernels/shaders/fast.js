@@ -459,7 +459,7 @@ export function fastScore8(image, threshold)
 }
 
 // non-maximum suppression on 8-neighborhood based
-// on the corner score stored on the blue channel
+// on the corner score stored on the red channel
 export function fastSuppression(image)
 {
     const x = this.thread.x, y = this.thread.y;

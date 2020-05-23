@@ -59,7 +59,7 @@ export class GPUKeypoints extends GPUKernelGroup
             // FAST Non-Maximum Suppression
             .declare('fastSuppression', fastSuppression)
 
-            // BRISK Scale-Space Non-Maximum Suppression
+            // BRISK Scale-Space Non-Maximum Suppression & Interpolation
             .declare('brisk', brisk)
 
             // Merge keypoints across multiple scales

@@ -30,7 +30,7 @@ import { GPUPyramids } from './kernels/pyramids';
 
 // Limits
 const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
-const MAX_PYRAMID_LEVELS = 4;
+const MAX_PYRAMID_LEVELS = 5;
 
 // Available kernel groups
 // (maps group name to class)
@@ -119,6 +119,15 @@ export class GPUKernels
             Utils.fatal(`Invalid intra-pyramid level: ${lv}`);
 
         return this._intraPyramid[lv];
+    }
+
+    /**
+     * The height of the pyramid
+     * @returns {number}
+     */
+    get pyramidHeight()
+    {
+        return this._pyramid.length;
     }
 
     /**
