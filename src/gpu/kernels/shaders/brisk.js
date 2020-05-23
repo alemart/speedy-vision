@@ -133,15 +133,15 @@ export function brisk(image, layerA, layerB, scaleA, scaleB)
                         b11[2] * exb * eyb;
 
             // do a coarse optimization (in case a refined one fails)
-            if(isa > score && isa > isb) {
+            if(isa > score && isa > isb)
                 this.color(isa, p[1], p[2], a00[3]);
-            }
-            else if(isb > score && isb > isa) {
+            else if(isb > score && isb > isa)
                 this.color(isb, p[1], p[2], b00[3]);
-            }
+            else if(score > isa && score > isb)
+                this.color(score, p[1], p[2], p[3]);
 
             // fit a polynomial with the refined scores
-            // in the scale axis
+            // in the scale axis (i.e., log2(scale))
             // p(x) = ax^2 + bx + c
             const x1 = Math.log2(a00[3]), y1 = isa;
             const x2 = Math.log2(b00[3]), y2 = isb;
@@ -158,11 +158,10 @@ export function brisk(image, layerA, layerB, scaleA, scaleB)
                     const yv = c - (b * b) / (4.0 * a);
 
                     // new score & scale
-                    //const interpolatedScale = p[3];
                     const interpolatedScale = Math.pow(2.0, xv);
                     const interpolatedScore = yv;
 
-                    // make sure to cap the scale
+                    // cap the scale
                     if(interpolatedScale >= Math.min(p[3], Math.min(a00[3], b00[3]))) {
                         if(interpolatedScale <= Math.max(p[3], Math.max(a00[3], b00[3])))
                             this.color(interpolatedScore, p[1], p[2], interpolatedScale);
