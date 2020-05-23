@@ -31,6 +31,16 @@
  *
  */
 
+/*
+ * Pixels are encoded as follows:
+ *
+ * R: "cornerness" score IF the pixel is a corner, 0 otherwise
+ * G: pixel intensity (left untouched)
+ * B: "cornerness" score regardless if the pixel is a corner or not
+ *    (useful for other algorithms)
+ * A: left untouched
+ */
+
 // FAST-9_16: requires 9 contiguous pixels
 // on a circumference of 16 pixels
 export function fast9(image, threshold)
@@ -319,53 +329,51 @@ export function fastScore16(image, threshold)
 {
     const x = this.thread.x, y = this.thread.y;
     const pixel = image[y][x];
+    const ifCorner = (pixel[0] > 0) ? 1.0 : 0.0;
 
-    if(pixel[0] > 0) { // is it a corner?
-        const t = Math.min(Math.max(0.0, threshold), 1.0);
-        const p0 = image[y-3][x];
-        const p1 = image[y-3][x+1];
-        const p2 = image[y-2][x+2];
-        const p3 = image[y-1][x+3];
-        const p4 = image[y][x+3];
-        const p5 = image[y+1][x+3];
-        const p6 = image[y+2][x+2];
-        const p7 = image[y+3][x+1];
-        const p8 = image[y+3][x];
-        const p9 = image[y+3][x-1];
-        const p10 = image[y+2][x-2];
-        const p11 = image[y+1][x-3];
-        const p12 = image[y][x-3];
-        const p13 = image[y-1][x-3];
-        const p14 = image[y-2][x-2];
-        const p15 = image[y-3][x-1];
-        const c = pixel[1];
-        const ct = c + t, c_t = c - t;
-        let bs = 0.0, ds = 0.0;
+    // read neighbors
+    const t = Math.min(Math.max(0.0, threshold), 1.0);
+    const p0 = image[y-3][x];
+    const p1 = image[y-3][x+1];
+    const p2 = image[y-2][x+2];
+    const p3 = image[y-1][x+3];
+    const p4 = image[y][x+3];
+    const p5 = image[y+1][x+3];
+    const p6 = image[y+2][x+2];
+    const p7 = image[y+3][x+1];
+    const p8 = image[y+3][x];
+    const p9 = image[y+3][x-1];
+    const p10 = image[y+2][x-2];
+    const p11 = image[y+1][x-3];
+    const p12 = image[y][x-3];
+    const p13 = image[y-1][x-3];
+    const p14 = image[y-2][x-2];
+    const p15 = image[y-3][x-1];
+    const c = pixel[1];
+    const ct = c + t, c_t = c - t;
+    let bs = 0.0, ds = 0.0;
 
-        // read bright and dark pixels
-        if(c_t > p0[1])  bs += c_t - p0[1];  else if(ct < p0[1])  ds += p0[1] - ct;
-        if(c_t > p1[1])  bs += c_t - p1[1];  else if(ct < p1[1])  ds += p1[1] - ct;
-        if(c_t > p2[1])  bs += c_t - p2[1];  else if(ct < p2[1])  ds += p2[1] - ct;
-        if(c_t > p3[1])  bs += c_t - p3[1];  else if(ct < p3[1])  ds += p3[1] - ct;
-        if(c_t > p4[1])  bs += c_t - p4[1];  else if(ct < p4[1])  ds += p4[1] - ct;
-        if(c_t > p5[1])  bs += c_t - p5[1];  else if(ct < p5[1])  ds += p5[1] - ct;
-        if(c_t > p6[1])  bs += c_t - p6[1];  else if(ct < p6[1])  ds += p6[1] - ct;
-        if(c_t > p7[1])  bs += c_t - p7[1];  else if(ct < p7[1])  ds += p7[1] - ct;
-        if(c_t > p8[1])  bs += c_t - p8[1];  else if(ct < p8[1])  ds += p8[1] - ct;
-        if(c_t > p9[1])  bs += c_t - p9[1];  else if(ct < p9[1])  ds += p9[1] - ct;
-        if(c_t > p10[1]) bs += c_t - p10[1]; else if(ct < p10[1]) ds += p10[1] - ct;
-        if(c_t > p11[1]) bs += c_t - p11[1]; else if(ct < p11[1]) ds += p11[1] - ct;
-        if(c_t > p12[1]) bs += c_t - p12[1]; else if(ct < p12[1]) ds += p12[1] - ct;
-        if(c_t > p13[1]) bs += c_t - p13[1]; else if(ct < p13[1]) ds += p13[1] - ct;
-        if(c_t > p14[1]) bs += c_t - p14[1]; else if(ct < p14[1]) ds += p14[1] - ct;
-        if(c_t > p15[1]) bs += c_t - p15[1]; else if(ct < p15[1]) ds += p15[1] - ct;
+    // read bright and dark pixels
+    if(c_t > p0[1])  bs += c_t - p0[1];  else if(ct < p0[1])  ds += p0[1] - ct;
+    if(c_t > p1[1])  bs += c_t - p1[1];  else if(ct < p1[1])  ds += p1[1] - ct;
+    if(c_t > p2[1])  bs += c_t - p2[1];  else if(ct < p2[1])  ds += p2[1] - ct;
+    if(c_t > p3[1])  bs += c_t - p3[1];  else if(ct < p3[1])  ds += p3[1] - ct;
+    if(c_t > p4[1])  bs += c_t - p4[1];  else if(ct < p4[1])  ds += p4[1] - ct;
+    if(c_t > p5[1])  bs += c_t - p5[1];  else if(ct < p5[1])  ds += p5[1] - ct;
+    if(c_t > p6[1])  bs += c_t - p6[1];  else if(ct < p6[1])  ds += p6[1] - ct;
+    if(c_t > p7[1])  bs += c_t - p7[1];  else if(ct < p7[1])  ds += p7[1] - ct;
+    if(c_t > p8[1])  bs += c_t - p8[1];  else if(ct < p8[1])  ds += p8[1] - ct;
+    if(c_t > p9[1])  bs += c_t - p9[1];  else if(ct < p9[1])  ds += p9[1] - ct;
+    if(c_t > p10[1]) bs += c_t - p10[1]; else if(ct < p10[1]) ds += p10[1] - ct;
+    if(c_t > p11[1]) bs += c_t - p11[1]; else if(ct < p11[1]) ds += p11[1] - ct;
+    if(c_t > p12[1]) bs += c_t - p12[1]; else if(ct < p12[1]) ds += p12[1] - ct;
+    if(c_t > p13[1]) bs += c_t - p13[1]; else if(ct < p13[1]) ds += p13[1] - ct;
+    if(c_t > p14[1]) bs += c_t - p14[1]; else if(ct < p14[1]) ds += p14[1] - ct;
+    if(c_t > p15[1]) bs += c_t - p15[1]; else if(ct < p15[1]) ds += p15[1] - ct;
 
-        // corner score
-        const score = Math.max(bs, ds) / 16.0;
-        this.color(score, pixel[1], pixel[2], pixel[3]);
-    }
-    else
-        this.color(0, pixel[1], pixel[2], pixel[3]); // not a corner
+    // corner score
+    const score = Math.max(bs, ds) / 16.0;
+    this.color(score * ifCorner, pixel[1], score, pixel[3]);
 }
 
 // compute corner score considering a
@@ -374,45 +382,43 @@ export function fastScore12(image, threshold)
 {
     const x = this.thread.x, y = this.thread.y;
     const pixel = image[y][x];
+    const ifCorner = (pixel[0] > 0) ? 1.0 : 0.0;
 
-    if(pixel[0] > 0) { // is it a corner?
-        const t = Math.min(Math.max(0.0, threshold), 1.0);
-        const p0 = image[y-2][x];
-        const p1 = image[y-2][x+1];
-        const p2 = image[y-1][x+2];
-        const p3 = image[y][x+2];
-        const p4 = image[y+1][x+2];
-        const p5 = image[y+2][x+1];
-        const p6 = image[y+2][x];
-        const p7 = image[y+2][x-1];
-        const p8 = image[y+1][x-2];
-        const p9 = image[y][x-2];
-        const p10 = image[y-1][x-2];
-        const p11 = image[y-2][x-1];
-        const c = pixel[1];
-        const ct = c + t, c_t = c - t;
-        let bs = 0.0, ds = 0.0;
+    // read neighbors
+    const t = Math.min(Math.max(0.0, threshold), 1.0);
+    const p0 = image[y-2][x];
+    const p1 = image[y-2][x+1];
+    const p2 = image[y-1][x+2];
+    const p3 = image[y][x+2];
+    const p4 = image[y+1][x+2];
+    const p5 = image[y+2][x+1];
+    const p6 = image[y+2][x];
+    const p7 = image[y+2][x-1];
+    const p8 = image[y+1][x-2];
+    const p9 = image[y][x-2];
+    const p10 = image[y-1][x-2];
+    const p11 = image[y-2][x-1];
+    const c = pixel[1];
+    const ct = c + t, c_t = c - t;
+    let bs = 0.0, ds = 0.0;
 
-        // read bright and dark pixels
-        if(c_t > p0[1])  bs += c_t - p0[1];  else if(ct < p0[1])  ds += p0[1] - ct;
-        if(c_t > p1[1])  bs += c_t - p1[1];  else if(ct < p1[1])  ds += p1[1] - ct;
-        if(c_t > p2[1])  bs += c_t - p2[1];  else if(ct < p2[1])  ds += p2[1] - ct;
-        if(c_t > p3[1])  bs += c_t - p3[1];  else if(ct < p3[1])  ds += p3[1] - ct;
-        if(c_t > p4[1])  bs += c_t - p4[1];  else if(ct < p4[1])  ds += p4[1] - ct;
-        if(c_t > p5[1])  bs += c_t - p5[1];  else if(ct < p5[1])  ds += p5[1] - ct;
-        if(c_t > p6[1])  bs += c_t - p6[1];  else if(ct < p6[1])  ds += p6[1] - ct;
-        if(c_t > p7[1])  bs += c_t - p7[1];  else if(ct < p7[1])  ds += p7[1] - ct;
-        if(c_t > p8[1])  bs += c_t - p8[1];  else if(ct < p8[1])  ds += p8[1] - ct;
-        if(c_t > p9[1])  bs += c_t - p9[1];  else if(ct < p9[1])  ds += p9[1] - ct;
-        if(c_t > p10[1]) bs += c_t - p10[1]; else if(ct < p10[1]) ds += p10[1] - ct;
-        if(c_t > p11[1]) bs += c_t - p11[1]; else if(ct < p11[1]) ds += p11[1] - ct;
+    // read bright and dark pixels
+    if(c_t > p0[1])  bs += c_t - p0[1];  else if(ct < p0[1])  ds += p0[1] - ct;
+    if(c_t > p1[1])  bs += c_t - p1[1];  else if(ct < p1[1])  ds += p1[1] - ct;
+    if(c_t > p2[1])  bs += c_t - p2[1];  else if(ct < p2[1])  ds += p2[1] - ct;
+    if(c_t > p3[1])  bs += c_t - p3[1];  else if(ct < p3[1])  ds += p3[1] - ct;
+    if(c_t > p4[1])  bs += c_t - p4[1];  else if(ct < p4[1])  ds += p4[1] - ct;
+    if(c_t > p5[1])  bs += c_t - p5[1];  else if(ct < p5[1])  ds += p5[1] - ct;
+    if(c_t > p6[1])  bs += c_t - p6[1];  else if(ct < p6[1])  ds += p6[1] - ct;
+    if(c_t > p7[1])  bs += c_t - p7[1];  else if(ct < p7[1])  ds += p7[1] - ct;
+    if(c_t > p8[1])  bs += c_t - p8[1];  else if(ct < p8[1])  ds += p8[1] - ct;
+    if(c_t > p9[1])  bs += c_t - p9[1];  else if(ct < p9[1])  ds += p9[1] - ct;
+    if(c_t > p10[1]) bs += c_t - p10[1]; else if(ct < p10[1]) ds += p10[1] - ct;
+    if(c_t > p11[1]) bs += c_t - p11[1]; else if(ct < p11[1]) ds += p11[1] - ct;
 
-        // corner score
-        const score = Math.max(bs, ds) / 12.0;
-        this.color(score, pixel[1], pixel[2], pixel[3]);
-    }
-    else
-        this.color(0, pixel[1], pixel[2], pixel[3]); // not a corner
+    // corner score
+    const score = Math.max(bs, ds) / 12.0;
+    this.color(score * ifCorner, pixel[1], score, pixel[3]);
 }
 
 // compute corner score considering a
@@ -421,37 +427,35 @@ export function fastScore8(image, threshold)
 {
     const x = this.thread.x, y = this.thread.y;
     const pixel = image[y][x];
+    const ifCorner = (pixel[0] > 0) ? 1.0 : 0.0;
 
-    if(pixel[0] > 0) { // is it a corner?
-        const t = Math.min(Math.max(0.0, threshold), 1.0);
-        const p0 = image[y-1][x];
-        const p1 = image[y-1][x+1];
-        const p2 = image[y][x+1];
-        const p3 = image[y+1][x+1];
-        const p4 = image[y+1][x];
-        const p5 = image[y+1][x-1];
-        const p6 = image[y][x-1];
-        const p7 = image[y-1][x-1];
-        const c = pixel[1];
-        const ct = c + t, c_t = c - t;
-        let bs = 0.0, ds = 0.0;
+    // read neighbors
+    const t = Math.min(Math.max(0.0, threshold), 1.0);
+    const p0 = image[y-1][x];
+    const p1 = image[y-1][x+1];
+    const p2 = image[y][x+1];
+    const p3 = image[y+1][x+1];
+    const p4 = image[y+1][x];
+    const p5 = image[y+1][x-1];
+    const p6 = image[y][x-1];
+    const p7 = image[y-1][x-1];
+    const c = pixel[1];
+    const ct = c + t, c_t = c - t;
+    let bs = 0.0, ds = 0.0;
 
-        // read bright and dark pixels
-        if(c_t > p0[1]) bs += c_t - p0[1]; else if(ct < p0[1]) ds += p0[1] - ct;
-        if(c_t > p1[1]) bs += c_t - p1[1]; else if(ct < p1[1]) ds += p1[1] - ct;
-        if(c_t > p2[1]) bs += c_t - p2[1]; else if(ct < p2[1]) ds += p2[1] - ct;
-        if(c_t > p3[1]) bs += c_t - p3[1]; else if(ct < p3[1]) ds += p3[1] - ct;
-        if(c_t > p4[1]) bs += c_t - p4[1]; else if(ct < p4[1]) ds += p4[1] - ct;
-        if(c_t > p5[1]) bs += c_t - p5[1]; else if(ct < p5[1]) ds += p5[1] - ct;
-        if(c_t > p6[1]) bs += c_t - p6[1]; else if(ct < p6[1]) ds += p6[1] - ct;
-        if(c_t > p7[1]) bs += c_t - p7[1]; else if(ct < p7[1]) ds += p7[1] - ct;
+    // read bright and dark pixels
+    if(c_t > p0[1]) bs += c_t - p0[1]; else if(ct < p0[1]) ds += p0[1] - ct;
+    if(c_t > p1[1]) bs += c_t - p1[1]; else if(ct < p1[1]) ds += p1[1] - ct;
+    if(c_t > p2[1]) bs += c_t - p2[1]; else if(ct < p2[1]) ds += p2[1] - ct;
+    if(c_t > p3[1]) bs += c_t - p3[1]; else if(ct < p3[1]) ds += p3[1] - ct;
+    if(c_t > p4[1]) bs += c_t - p4[1]; else if(ct < p4[1]) ds += p4[1] - ct;
+    if(c_t > p5[1]) bs += c_t - p5[1]; else if(ct < p5[1]) ds += p5[1] - ct;
+    if(c_t > p6[1]) bs += c_t - p6[1]; else if(ct < p6[1]) ds += p6[1] - ct;
+    if(c_t > p7[1]) bs += c_t - p7[1]; else if(ct < p7[1]) ds += p7[1] - ct;
 
-        // corner score
-        const score = Math.max(bs, ds) / 8.0;
-        this.color(score, pixel[1], pixel[2], pixel[3]);
-    }
-    else
-        this.color(0, pixel[1], pixel[2], pixel[3]); // not a corner
+    // corner score
+    const score = Math.max(bs, ds) / 8.0;
+    this.color(score * ifCorner, pixel[1], score, pixel[3]);
 }
 
 // non-maximum suppression on 8-neighborhood based
