@@ -165,7 +165,7 @@ export function brisk(image, layerA, layerB, scaleA, scaleB, lgM, h)
                     if(xv >= Math.min(x1, Math.min(x2, x3))) {
                         if(xv <= Math.max(x1, Math.max(x2, x3))) {
                             const interpolatedScale = (lgM - xv) / (lgM + h);
-                            const interpolatedScore = yv;
+                            const interpolatedScore = Math.max(0, Math.min(yv, 1));
 
                             this.color(interpolatedScore, p[1], p[2], interpolatedScale);
                         }
