@@ -105,9 +105,6 @@ export function brisk(image, layerA, layerB, scaleA, scaleB, lgM, h)
         if(score >= b0m[0])
         if(score >= b1m[0])
         {
-            // restore the corner
-            this.color(score, p[1], p[2], p[3]);
-
             // -----------------------------------------
             // interpolate scale
             // -----------------------------------------
@@ -140,7 +137,7 @@ export function brisk(image, layerA, layerB, scaleA, scaleB, lgM, h)
                 this.color(isa, p[1], p[2], a00[3]);
             else if(isb > score && isb > isa)
                 this.color(isb, p[1], p[2], b00[3]);
-            else if(score > isa && score > isb)
+            else
                 this.color(score, p[1], p[2], p[3]);
 
             // fit a polynomial with the refined scores
