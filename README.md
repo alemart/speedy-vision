@@ -1,6 +1,6 @@
 # speedy-vision.js
 
-A **lightning fast** GPU-accelerated Computer Vision library for the web.
+A **lightning fast** GPU-accelerated Computer Vision library for the web, with a focus on feature detection and matching.
 
 [![Speedy feature detection](assets/demo-video.gif)](https://alemart.github.io/speedy-vision-js/demos/video-features.html)
 
@@ -176,20 +176,22 @@ Detects feature points in a `SpeedyMedia`.
 ###### Arguments
 
 * `config: object, optional`. A configuration object that accepts the following keys (all are optional):
-  * `method: string`. Name of the method to be used to detect the features.
+  * `method: string`. The name of the method to be used to detect the features (see the table below). Defaults to `"fast"`.
   * `sensitivity: number`. A number between `0.0` and `1.0`. The higher the number, the more features you get.
-  * `expected: number | object`. The algorithm will automatically adjust the sensitivity value to get you *approximately* the number of features you ask. This options requires multiple calls to work. For more information, read the section on [automatic sensitivity](#automatic-sensitivity).
+  * `expected: number | object`. Speedy will automatically adjust the sensitivity value to get you *approximately* the number of features you ask. This options requires multiple calls to work. For more information, read the section on [automatic sensitivity](#automatic-sensitivity).
+  * `denoise: boolean`. Whether or not to denoise the image before finding the features. Defaults to `true`.
 
 The configuration object accepts more keys depending on which method is specified. Currently, the following methods for feature detection are available:
 
-| Method   | Description                  |
-|----------|------------------------------|
-|`"fast"`  | An alias for `"fast9"`       |
-|`"fast9"` | Runs the FAST-9,16 algorithm |
-|`"fast7"` | Runs the FAST-7,12 algorithm |
-|`"fast5"` | Runs the FAST-5,8 algorithm  |
+| Method   | Description                     |
+|----------|---------------------------------|
+|`"fast"`  | An alias for `"fast9"`          |
+|`"fast9"` | Runs the FAST-9,16 algorithm    |
+|`"fast7"` | Runs the FAST-7,12 algorithm    |
+|`"fast5"` | Runs the FAST-5,8 algorithm     |
+|`"brisk"` | Runs the BRISK feature detector |
 
-The default method is `"fast"`. Different methods yield different results. Read the section on [detection methods](#detection-methods) to know more.
+Different methods yield different results. Read the section on [detection methods](#detection-methods) to know more.
 
 ###### Returns
 
@@ -220,14 +222,22 @@ Speedy can use different methods for detecting feature points. Depending on the 
 
 ###### FAST algorithm
 
-For any variation of the FAST algorithm[1], the `config` object accepts the following additional keys:
+For any variation of the FAST algorithm[1], the `config` object accepts the following additional key:
 
 * `threshold: number`. An alternative to `sensitivity` representing the threshold paramter of FAST: an integer between `0` and `255`, inclusive. Lower thresholds get you more features.
-* `denoise: boolean`. Whether or not to apply a gaussian filter to denoise the image before finding the features. Defaults to `true`.
 
 Note: `config.sensitivity` is an easy-to-use parameter and does *not* map linearly to `config.threshold`.
 
 [1] Rosten, Edward; Drummond, Tom. "Machine learning for high-speed corner detection". European Conference on Computer Vision (ECCV-2006).
+
+###### BRISK feature detector
+
+Speedy implements a modified version of the BRISK feature detector[2]. It is able to give you feature points at multiple scales, as it finds them in scale-space. The `config` object accepts the following additional keys:
+
+* `depth: number`. An integer between `1` and `4` telling how "deep" the algorithm should go when searching for keypoints in scale-space. The higher the value, the more robust it is against scale transformations (at a slighly higher computational cost). Defaults to `4`.
+* `threshold: number`. An integer between `0` and `255`, just like in FAST.
+
+[2] Leutenegger, Stefan; Chli, Margarita; Siegwart, Roland Y. "BRISK: Binary robust invariant scalable keypoints". International Conference on Computer Vision (ICCV-2011)
 
 ##### Automatic sensitivity
 
@@ -282,6 +292,18 @@ The x position of the image feature.
 `SpeedyFeature.y: number, read-only`
 
 The y position of the image feature.
+
+##### SpeedyFeature.scale
+
+`SpeedyFeature.scale: number, read-only`
+
+The scale of the image feature. Only a subset of the feature detection methods support scaled features. Defaults to `1.0`.
+
+##### SpeedyFeature.rotation
+
+`SpeedyFeature.rotation: number, read-only`
+
+The orientation angle of the image feature, in radians. Make sure to select a feature descriptor to be able to know the rotation. Defaults to `0.0`.
 
 ### Feature matching
 
