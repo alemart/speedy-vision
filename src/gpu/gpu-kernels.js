@@ -30,7 +30,7 @@ import { GPUPyramids } from './kernels/pyramids';
 
 // Limits
 const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
-const MAX_PYRAMID_LEVELS = 5;
+const MAX_PYRAMID_LEVELS = 4;
 
 // Available kernel groups
 // (maps group name to class)
@@ -83,8 +83,8 @@ export class GPUKernels
             this._initGPU();
         }, false);
 
-        // initialize GPU
-        this._initGPU();
+        // initialize the GPU
+        this._gpu = this._spawnGPU(this._canvas, this._context, this._width, this._height);
     }
 
     /**
@@ -122,12 +122,22 @@ export class GPUKernels
     }
 
     /**
-     * The height of the pyramid
+     * The number of layers of the pyramid
      * @returns {number}
      */
-    get pyramidHeight()
+    get pyramidSize()
     {
         return this._pyramid.length;
+    }
+
+    /**
+     * The maximum supported scale for a pyramid layer
+     * @returns {number}
+     */
+    get pyramidMaxScale()
+    {
+        // This is preferably a power of 2
+        return 2;
     }
 
     /**
@@ -139,21 +149,21 @@ export class GPUKernels
         return this._canvas;
     }
 
-    // initialize GPU
-    _initGPU()
+    // spawns a GPU instance
+    _spawnGPU(canvas, context, width, height)
     {
         // create GPU
-        this._gpu = new GPU({
-            canvas: this._canvas,
-            context: this._context
-        });
+        const gpu = new GPU({ canvas, context });
 
         // spawn kernel groups
-        spawnKernelGroups.call(this, this._gpu, this._width, this._height);
+        spawnKernelGroups.call(this, gpu, width, height);
 
         // spawn pyramids of kernel groups
-        this._pyramid = this._buildPyramid(this._width, this._height, MAX_PYRAMID_LEVELS);
-        this._intraPyramid = this._buildPyramid(3 * this._width / 2, 3 * this._height / 2, MAX_PYRAMID_LEVELS + 1);
+        this._pyramid = this._buildPyramid(gpu, width, height, 1.0, MAX_PYRAMID_LEVELS);
+        this._intraPyramid = this._buildPyramid(gpu, width, height, 1.5, MAX_PYRAMID_LEVELS + 1);
+
+        // done!
+        return gpu;
     }
 
     // Create a canvas
@@ -166,15 +176,15 @@ export class GPUKernels
     }
 
     // build a pyramid, where each level stores the kernel groups
-    _buildPyramid(baseWidth, baseHeight, numLevels)
+    _buildPyramid(gpu, imageWidth, imageHeight, baseScale, numLevels)
     {
+        let scale = +baseScale;
+        let width = (imageWidth * scale) | 0, height = (imageHeight * scale) | 0;
         let pyramid = new Array(numLevels);
-        let width = baseWidth | 0, height = baseHeight | 0;
-        let scale = baseWidth / this._width;
 
         for(let i = 0; i < pyramid.length; i++) {
             pyramid[i] = { width, height, scale };
-            spawnKernelGroups.call(pyramid[i], this._gpu, width, height);
+            spawnKernelGroups.call(pyramid[i], gpu, width, height);
             width = ((1 + width) / 2) | 0;
             height = ((1 + height) / 2) | 0;
             scale /= 2;

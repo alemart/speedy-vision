@@ -98,7 +98,7 @@ export class FeatureDetector
     brisk(media, settings = {})
     {
         const gpu = this._gpu;
-        const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidHeight;
+        const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidSize;
 
         // default settings
         settings = {
