@@ -28,6 +28,7 @@ Try the demos and take a look at their source code:
   * [Feature detection in a video](https://alemart.github.io/speedy-vision-js/demos/video-features.html)
   * [Feature detection in a webcam](https://alemart.github.io/speedy-vision-js/demos/webcam-features.html)
   * [Find a specific number of features](https://alemart.github.io/speedy-vision-js/demos/automatic-sensitivity.html) (automatic sensitivity)
+  * [Multi-scale feature detection](https://alemart.github.io/speedy-vision-js/demos/multi-scale.html)
 * Image processing
   * [Convert image to greyscale](https://alemart.github.io/speedy-vision-js/demos/greyscale-image.html)
   * [Convert video to greyscale](https://alemart.github.io/speedy-vision-js/demos/greyscale-video.html)
