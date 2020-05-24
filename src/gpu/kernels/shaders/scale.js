@@ -73,7 +73,6 @@ export function setScale(scale, pyramidHeight, pyramidMaxScale)
     const body  = `
     const pixel = image[this.thread.y][this.thread.x];
     this.color(pixel[0], pixel[1], pixel[2], ${alpha});
-    this.color(pixel[0], pixel[1], pixel[2], ${scale * 0.5});
     `;
 
     return new Function('image', body);
@@ -88,8 +87,8 @@ export function scale(scaleFactor, pyramidHeight, pyramidMaxScale)
     const body  = `
     const pixel = image[this.thread.y][this.thread.x];
     const delta = ${delta};
-    this.color(pixel[0], pixel[1], pixel[2], pixel[3] + delta);
-    this.color(pixel[0], pixel[1], pixel[2], pixel[3] * ${s});
+    const alpha = Math.max(0, Math.min(pixel[3] + delta, 1));
+    this.color(pixel[0], pixel[1], pixel[2], alpha);
     `;
 
     return new Function('image', body);

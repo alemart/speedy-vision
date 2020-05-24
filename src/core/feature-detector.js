@@ -99,7 +99,6 @@ export class FeatureDetector
     {
         const gpu = this._gpu;
         const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidHeight;
-        const lgM = Math.log2(gpu.pyramidMaxScale);
 
         // default settings
         settings = {
@@ -150,15 +149,16 @@ export class FeatureDetector
         }
 
         // scale space non-maximum suppression & interpolation
+        const lgM = Math.log2(gpu.pyramidMaxScale), h = gpu.pyramidHeight;
         const suppressedPyramidCorners = new Array(pyramidCorners.length);
         const suppressedIntraPyramidCorners = new Array(intraPyramidCorners.length);
-        suppressedIntraPyramidCorners[0] = gpu.intraPyramid(0).keypoints.brisk(intraPyramidCorners[0], intraPyramidCorners[0], pyramidCorners[0], 1.0, 2.0 / 3.0);
+        suppressedIntraPyramidCorners[0] = gpu.intraPyramid(0).keypoints.brisk(intraPyramidCorners[0], intraPyramidCorners[0], pyramidCorners[0], 1.0, 2.0 / 3.0, lgM, h);
         for(let j = 0; j < suppressedPyramidCorners.length; j++) {
-            suppressedPyramidCorners[j] = gpu.pyramid(j).keypoints.brisk(pyramidCorners[j], intraPyramidCorners[j], intraPyramidCorners[j+1], 1.5, 0.75);
+            suppressedPyramidCorners[j] = gpu.pyramid(j).keypoints.brisk(pyramidCorners[j], intraPyramidCorners[j], intraPyramidCorners[j+1], 1.5, 0.75, lgM, h);
             if(j+1 < suppressedPyramidCorners.length)
-                suppressedIntraPyramidCorners[j+1] = gpu.intraPyramid(j+1).keypoints.brisk(intraPyramidCorners[j+1], pyramidCorners[j], pyramidCorners[j+1], 4.0 / 3.0, 2.0 / 3.0);
+                suppressedIntraPyramidCorners[j+1] = gpu.intraPyramid(j+1).keypoints.brisk(intraPyramidCorners[j+1], pyramidCorners[j], pyramidCorners[j+1], 4.0 / 3.0, 2.0 / 3.0, lgM, h);
             else
-                suppressedIntraPyramidCorners[j+1] = gpu.intraPyramid(j+1).keypoints.brisk(intraPyramidCorners[j+1], pyramidCorners[j], intraPyramidCorners[j+1], 4.0 / 3.0, 1.0);
+                suppressedIntraPyramidCorners[j+1] = gpu.intraPyramid(j+1).keypoints.brisk(intraPyramidCorners[j+1], pyramidCorners[j], intraPyramidCorners[j+1], 4.0 / 3.0, 1.0, lgM, h);
         }
 
         // merge all keypoints

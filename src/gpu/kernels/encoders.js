@@ -159,17 +159,22 @@ export class GPUEncoders extends GPUKernelGroup
     decodeKeypoints(pixels)
     {
         const [ w, h ] = [ this._width, this._height ];
+        const hasRotation = this._descriptorSize > 0;
         const pixelsPerKeypoint = 2 + this._descriptorSize / 4;
-        let keypoints = [], x, y, scale, rotation, invScale2;
+        const lgM = Math.log2(this._gpu.pyramidMaxScale);
+        const pyrHeight = this._gpu.pyramidHeight;
+        let keypoints = [], x, y, scale, rotation;
 
         for(let i = 0; i < pixels.length; i += 4 * pixelsPerKeypoint) {
             x = (pixels[i+1] << 8) | pixels[i];
             y = (pixels[i+3] << 8) | pixels[i+2];
             if(x < w && y < h) {
-                //invScale2 = Math.ceil(200 * pixels[i+4] / 255.0) * 0.01;
-                invScale2 = (pixels[i+4] << 1) / 255.0;
-                scale = 0 < invScale2 && invScale2 < 2 ? 1.0 / invScale2 : 1.0;
-                rotation = pixels[i+5] * TWO_PI / 255.0;
+                scale = pixels[i+4] == 255 ? 1.0 :
+                    Math.pow(2.0, -lgM + (lgM + pyrHeight) * pixels[i+4] / 255.0);
+
+                rotation = !hasRotation ? 0.0 :
+                    pixels[i+5] * TWO_PI / 255.0;
+
                 keypoints.push(new SpeedyFeature(x, y, scale, rotation));
             }
             else

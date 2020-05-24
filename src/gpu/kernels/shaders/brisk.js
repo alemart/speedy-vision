@@ -40,7 +40,10 @@
 // scaleA and scaleB are RELATIVE to the image layer
 // I expect scaleA > 1 and scaleB < 1
 //
-export function brisk(image, layerA, layerB, scaleA, scaleB)
+// Note: lgM is log2(pyramidMaxScale)
+//       h is the height of the image pyramid
+//
+export function brisk(image, layerA, layerB, scaleA, scaleB, lgM, h)
 {
     const x = this.thread.x, y = this.thread.y;
     const p = image[y][x];
@@ -143,9 +146,10 @@ export function brisk(image, layerA, layerB, scaleA, scaleB)
             // fit a polynomial with the refined scores
             // in the scale axis (i.e., log2(scale))
             // p(x) = ax^2 + bx + c
-            const x1 = Math.log2(a00[3]), y1 = isa;
-            const x2 = Math.log2(b00[3]), y2 = isb;
-            const x3 = Math.log2(p[3]), y3 = score;
+            const y1 = isa, y2 = isb, y3 = score;
+            const x1 = lgM - (lgM + h) * a00[3];
+            const x2 = lgM - (lgM + h) * b00[3];
+            const x3 = lgM - (lgM + h) * p[3];
             const dn = (x1 - x2) * (x1 - x3) * (x2 - x3);
             if(Math.abs(dn) >= 0.00001) {
                 const a = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / dn;
@@ -153,18 +157,18 @@ export function brisk(image, layerA, layerB, scaleA, scaleB)
                     const b = (x3 * x3 * (y1 - y2) + x2 * x2 * (y3 - y1) + x1 * x1 * (y2 - y3)) / dn;
                     const c = (x2 * x3 * (x2 - x3) * y1 + x3 * x1 * (x3 - x1) * y2 + x1 * x2 * (x1 - x2) * y3) / dn;
                     
-                    // optimize the polynomial
+                    // maximize the polynomial
                     const xv = -b / (2.0 * a);
                     const yv = c - (b * b) / (4.0 * a);
 
                     // new score & scale
-                    const interpolatedScale = Math.pow(2.0, xv);
-                    const interpolatedScore = yv;
+                    if(xv >= Math.min(x1, Math.min(x2, x3))) {
+                        if(xv <= Math.max(x1, Math.max(x2, x3))) {
+                            const interpolatedScale = (lgM - xv) / (lgM + h);
+                            const interpolatedScore = yv;
 
-                    // cap the scale
-                    if(interpolatedScale >= Math.min(p[3], Math.min(a00[3], b00[3]))) {
-                        if(interpolatedScale <= Math.max(p[3], Math.max(a00[3], b00[3])))
                             this.color(interpolatedScore, p[1], p[2], interpolatedScale);
+                        }
                     }
                 }
             }
