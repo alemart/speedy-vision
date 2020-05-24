@@ -74,16 +74,6 @@ export function brisk(image, layerA, layerB, scaleA, scaleB, lgM, h)
         const b10 = layerB[yb][xb+1];
         const b01 = layerB[yb+1][xb];
         const b11 = layerB[yb+1][xb+1];
-        const am0 = layerA[ya][xa-1];
-        const am1 = layerA[ya+1][xa-1];
-        const amm = layerA[ya-1][xa-1];
-        const a0m = layerA[ya-1][xa];
-        const a1m = layerA[ya-1][xa+1];
-        const bm0 = layerB[yb][xb-1];
-        const bm1 = layerB[yb+1][xb-1];
-        const bmm = layerB[yb-1][xb-1];
-        const b0m = layerB[yb-1][xb];
-        const b1m = layerB[yb-1][xb+1];
 
         // scale-space non-maximum suppression
         if(score >= a00[0])
@@ -94,16 +84,6 @@ export function brisk(image, layerA, layerB, scaleA, scaleB, lgM, h)
         if(score >= b10[0])
         if(score >= b01[0])
         if(score >= b11[0])
-        if(score >= am0[0])
-        if(score >= am1[0])
-        if(score >= amm[0])
-        if(score >= a0m[0])
-        if(score >= a1m[0])
-        if(score >= bm0[0])
-        if(score >= bm1[0])
-        if(score >= bmm[0])
-        if(score >= b0m[0])
-        if(score >= b1m[0])
         {
             // -----------------------------------------
             // interpolate scale
