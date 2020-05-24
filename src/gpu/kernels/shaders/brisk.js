@@ -57,7 +57,7 @@ export function brisk(image, layerA, layerB, scaleA, scaleB)
         const widthA = Math.floor(width * scaleA), heightA = Math.floor(height * scaleA);
         const widthB = Math.floor(width * scaleB), heightB = Math.floor(height * scaleB);
 
-        // given a pixel in the image, take a 2x2 square in
+        // given a pixel in the image, pick a 2x2 square in
         // layers A and B: [xl,yl] x [xl+1,yl+1], l = a,b
         const xa = Math.min(Math.max(1, Math.ceil(xmid * scaleA - 1)), widthA - 2);
         const ya = Math.min(Math.max(1, Math.ceil(ymid * scaleA - 1)), heightA - 2);

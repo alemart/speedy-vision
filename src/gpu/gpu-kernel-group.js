@@ -27,13 +27,26 @@
 
 export /* abstract */ class GPUKernelGroup
 {
+    /**
+     * Class constructor
+     * @param {GPUInstance} gpu
+     * @param {number} width Texture width (depends on the pyramid layer)
+     * @param {number} height Texture height (depends on the pyramid layer)
+     */
     /* protected */ constructor(gpu, width, height)
     {
         this._gpu = gpu;
-        this._width = Math.max(width|0, 1);
-        this._height = Math.max(height|0, 1);
+        this._width = width;
+        this._height = height;
     }
 
+    /**
+     * Declare a kernel
+     * @param {string} name Kernel name
+     * @param {Function} fn Kernel code
+     * @param {object} settings Kernel settings
+     * @returns {GPUKernelGroup} This object
+     */
     /* protected */ declare(name, fn, settings = { })
     {
         // lazy instantiation of kernels
@@ -49,6 +62,12 @@ export /* abstract */ class GPUKernelGroup
         return this;
     }
 
+    /**
+     * Multi-pass composition
+     * @param {string} name Kernel name
+     * @param {string} fn Other kernels
+     * @returns {GPUKernelGroup} This object
+     */
     /* protected */ compose(name, ...fn)
     {
         // function composition: functions are called in the order they are specified
@@ -101,6 +120,6 @@ export /* abstract */ class GPUKernelGroup
             //debug: true,
         }, settings);
 
-        return this._gpu.createKernel(fn, config);
+        return this._gpu._gpu.createKernel(fn, config);
     }
 }

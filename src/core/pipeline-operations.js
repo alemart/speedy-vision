@@ -32,7 +32,7 @@ export const PipelineOperation = { };
     /**
      * Runs the pipeline operation
      * @param {Texture} texture
-     * @param {GPUKernels} gpu
+     * @param {GPUInstance} gpu
      * @param {SpeedyMedia} [media]
      * @returns {Texture}
      */

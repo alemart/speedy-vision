@@ -30,9 +30,9 @@ export class GPUColors extends GPUKernelGroup
 {
     /**
      * Class constructor
-     * @param {GPU} gpu 
-     * @param {number} width 
-     * @param {number} height 
+     * @param {GPUInstance} gpu
+     * @param {number} width
+     * @param {number} height
      */
     constructor(gpu, width, height)
     {

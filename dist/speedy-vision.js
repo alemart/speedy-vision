@@ -9,7 +9,7 @@
  * Includes gpu.js (MIT license)
  * by the gpu.js team (http://gpu.rocks)
  * 
- * Date: 2020-05-20T15:34:04.329Z
+ * Date: 2020-05-24T14:20:57.539Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -144,12 +144,10 @@ class FeatureDetector
 {
     /**
      * Class constructor
-     * @param {SpeedyMedia} media
      * @param {GPUKernels} gpu
      */
-    constructor(media, gpu)
+    constructor(gpu)
     {
-        this._media = media;
         this._gpu = gpu;
         this._lastKeypointCount = 0;
         this._sensitivityTuner = null;
@@ -157,17 +155,21 @@ class FeatureDetector
 
     /**
      * FAST corner detection
+     * @param {SpeedyMedia} media The media
      * @param {number} [n] We'll run FAST-n, where n must be 9 (default), 7 or 5
      * @param {object} [settings] Additional settings
      * @returns {Array<SpeedyFeature>} keypoints
      */
-    fast(n = 9, settings = {})
+    fast(media, n = 9, settings = {})
     {
+        const gpu = this._gpu;
+
         // default settings
-        settings = Object.assign({
+        settings = {
             threshold: 10,
             denoise: true,
-        }, settings);
+            ...settings
+        };
 
         // convert the expected number of keypoints,
         // if defined, into a sensitivity value
@@ -176,50 +178,126 @@ class FeatureDetector
 
         // convert a sensitivity value in [0,1],
         // if it's defined, to a FAST threshold
-        if(settings.hasOwnProperty('sensitivity')) {
-            // number of keypoints ideally increases linearly
-            // as the sensitivity is increased
-            const sensitivity = Math.max(0, Math.min(settings.sensitivity, 1));
-            settings.threshold = 1 - Math.tanh(2.77 * sensitivity);
-        }
-        else {
-            const threshold = Math.max(0, Math.min(settings.threshold, 255));
-            settings.threshold = threshold / 255;
-        }
+        if(settings.hasOwnProperty('sensitivity'))
+            settings.threshold = this._sensitivity2threshold(settings.sensitivity);
+        else
+            settings.threshold = this._normalizedThreshold(settings.threshold);
 
         // validate input
         if(n != 9 && n != 5 && n != 7)
             _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Not implemented: FAST-${n}`); // this shouldn't happen...
 
         // pre-processing the image...
-        const smoothed = settings.denoise ?
-            this._gpu.filters.gauss5(this._media.source) :
-            this._media.source;
-        const greyscale = this._gpu.colors.rgb2grey(smoothed);
+        const source = settings.denoise ? gpu.filters.gauss5(media.source) : media.source;
+        const greyscale = gpu.colors.rgb2grey(source);
 
         // keypoint detection
         const rawCorners = (({
-            5: () => this._gpu.keypoints.fast5(greyscale, settings.threshold),
-            7: () => this._gpu.keypoints.fast7(greyscale, settings.threshold),
-            9: () => this._gpu.keypoints.fast9(greyscale, settings.threshold),
+            5: () => gpu.keypoints.fast5(greyscale, settings.threshold),
+            7: () => gpu.keypoints.fast7(greyscale, settings.threshold),
+            9: () => gpu.keypoints.fast9(greyscale, settings.threshold),
         })[n])();
-        const corners = this._gpu.keypoints.fastSuppression(rawCorners);
+        const corners = gpu.keypoints.fastSuppression(rawCorners);
 
         // encoding result
         return this._extractKeypoints(corners);
     }
 
+    /**
+     * BRISK feature point detection
+     * @param {SpeedyMedia} media The media
+     * @param {object} [settings]
+     * @returns {Array<SpeedyFeature>}
+     */
+    brisk(media, settings = {})
+    {
+        const gpu = this._gpu;
+        const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidHeight;
+        const lgM = Math.log2(gpu.pyramidMaxScale);
+
+        // default settings
+        settings = {
+            threshold: 10,
+            denoise: true,
+            depth: 4, // integer in [MIN_DEPTH, MAX_DEPTH]
+            ...settings
+        };
+
+        // convert settings.expected to settings.sensitivity
+        if(settings.hasOwnProperty('expected'))
+            settings.sensitivity = this._findSensitivity(settings.expected);
+
+        // convert settings.sensitivity to settings.threshold
+        if(settings.hasOwnProperty('sensitivity'))
+            settings.threshold = this._sensitivity2threshold(settings.sensitivity);
+        else
+            settings.threshold = this._normalizedThreshold(settings.threshold);
+
+        // clamp settings.depth (height of the image pyramid)
+        settings.depth = Math.max(MIN_DEPTH, Math.min(settings.depth, MAX_DEPTH)) | 0;
+
+        // pre-processing the image...
+        const source = settings.denoise ? gpu.filters.gauss5(media.source) : media.source;
+        const greyscale = gpu.colors.rgb2grey(source);
+
+        // create the pyramid
+        const pyramid = new Array(settings.depth);
+        const intraPyramid = new Array(pyramid.length + 1);
+        pyramid[0] = gpu.pyramid(0).pyramids.setBase(greyscale); // base of the pyramid
+        intraPyramid[0] = gpu.pyramid(0).pyramids.intraExpand(pyramid[0]); // 1.5 * sizeof(base)
+        for(let i = 1; i < pyramid.length; i++)
+            pyramid[i] = gpu.pyramid(i-1).pyramids.reduce(pyramid[i-1]);
+        for(let i = 1; i < intraPyramid.length; i++)
+            intraPyramid[i] = gpu.intraPyramid(i-1).pyramids.reduce(intraPyramid[i-1]);
+
+        // get FAST corners of all pyramid levels
+        const pyramidCorners = new Array(pyramid.length);
+        const intraPyramidCorners = new Array(intraPyramid.length);
+        for(let j = 0; j < pyramidCorners.length; j++) {
+            pyramidCorners[j] = gpu.pyramid(j).keypoints.fast9(pyramid[j], settings.threshold);
+            pyramidCorners[j] = gpu.pyramid(j).keypoints.fastSuppression(pyramidCorners[j]);
+
+        }
+        for(let j = 0; j < intraPyramidCorners.length; j++) {
+            intraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.fast9(intraPyramid[j], settings.threshold);
+            intraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.fastSuppression(intraPyramidCorners[j]);
+        }
+
+        // scale space non-maximum suppression & interpolation
+        const suppressedPyramidCorners = new Array(pyramidCorners.length);
+        const suppressedIntraPyramidCorners = new Array(intraPyramidCorners.length);
+        suppressedIntraPyramidCorners[0] = gpu.intraPyramid(0).keypoints.brisk(intraPyramidCorners[0], intraPyramidCorners[0], pyramidCorners[0], 1.0, 2.0 / 3.0);
+        for(let j = 0; j < suppressedPyramidCorners.length; j++) {
+            suppressedPyramidCorners[j] = gpu.pyramid(j).keypoints.brisk(pyramidCorners[j], intraPyramidCorners[j], intraPyramidCorners[j+1], 1.5, 0.75);
+            if(j+1 < suppressedPyramidCorners.length)
+                suppressedIntraPyramidCorners[j+1] = gpu.intraPyramid(j+1).keypoints.brisk(intraPyramidCorners[j+1], pyramidCorners[j], pyramidCorners[j+1], 4.0 / 3.0, 2.0 / 3.0);
+            else
+                suppressedIntraPyramidCorners[j+1] = gpu.intraPyramid(j+1).keypoints.brisk(intraPyramidCorners[j+1], pyramidCorners[j], intraPyramidCorners[j+1], 4.0 / 3.0, 1.0);
+        }
+
+        // merge all keypoints
+        for(let j = suppressedPyramidCorners.length - 2; j >= 0; j--)
+            suppressedPyramidCorners[j] = gpu.pyramid(j).keypoints.mergePyramidLevels(suppressedPyramidCorners[j], suppressedPyramidCorners[j+1]);
+        for(let j = suppressedIntraPyramidCorners.length - 2; j >= 0; j--)
+            suppressedIntraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.mergePyramidLevels(suppressedIntraPyramidCorners[j], suppressedIntraPyramidCorners[j+1]);
+        suppressedIntraPyramidCorners[0] = gpu.intraPyramid(0).keypoints.normalizeScale(suppressedIntraPyramidCorners[0], 1.5);
+        suppressedIntraPyramidCorners[0] = gpu.pyramid(0).keypoints.crop(suppressedIntraPyramidCorners[0]);
+        const corners = gpu.pyramid(0).keypoints.merge(suppressedPyramidCorners[0], suppressedIntraPyramidCorners[0]);
+
+        // done!
+        return this._extractKeypoints(corners);
+    }
+
     // given a corner-encoded texture,
     // return an Array of keypoints
-    _extractKeypoints(corners)
+    _extractKeypoints(corners, gpu = this._gpu)
     {
-        const encodedKeypoints = this._gpu.encoders.encodeKeypoints(corners);
-        const keypoints = this._gpu.encoders.decodeKeypoints(encodedKeypoints);
-
+        const encodedKeypoints = gpu.encoders.encodeKeypoints(corners);
+        const keypoints = gpu.encoders.decodeKeypoints(encodedKeypoints);
         const slack = this._lastKeypointCount > 0 ? // approximates assuming continuity
             Math.max(1, Math.min(keypoints.length / this._lastKeypointCount), 2) : 1;
 
-        this._gpu.encoders.optimizeKeypointEncoder(keypoints.length * slack);
+        gpu.encoders.optimizeKeypointEncoder(keypoints.length * slack);
         this._lastKeypointCount = keypoints.length;
 
         return keypoints;
@@ -232,13 +310,13 @@ class FeatureDetector
     _findSensitivity(param)
     {
         // grab the parameters
-        const expected = ({
+        const expected = {
             number: 0, // how many keypoints do you expect?
             tolerance: 0.10, // percentage relative to the expected number of keypoints
             ...(typeof param == 'object' ? param : {
                 number: param | 0,
             })
-        });
+        };
 
         // spawn the tuner
         this._sensitivityTuner = this._sensitivityTuner ||
@@ -253,6 +331,24 @@ class FeatureDetector
 
         // return the new sensitivity
         return Math.max(0, Math.min(sensitivity, 1));
+    }
+
+    // sensitivity in [0,1] -> pixel intensity threshold in [0,1]
+    // performs a non-linear conversion (used for FAST)
+    _sensitivity2threshold(sensitivity)
+    {
+        // the number of keypoints ideally increases linearly
+        // as the sensitivity is increased
+        sensitivity = Math.max(0, Math.min(sensitivity, 1));
+        return 1 - Math.tanh(2.77 * sensitivity);
+    }
+
+    // pixel threshold in [0,255] -> normalized threshold in [0,1]
+    // returns a clamped & normalized threshold
+    _normalizedThreshold(threshold)
+    {
+        threshold = Math.max(0, Math.min(threshold, 255));
+        return threshold / 255;
     }
 }
 
@@ -537,8 +633,7 @@ __webpack_require__.r(__webpack_exports__);
 
 /**
  * SpeedyMedia encapsulates a media element
- * (e.g., image, video, canvas) and makes it
- * ready for feature detection
+ * (e.g., image, video, canvas)
  */
 class SpeedyMedia
 {
@@ -561,7 +656,7 @@ class SpeedyMedia
 
             // spawn relevant components
             this._gpu = new _gpu_gpu_kernels__WEBPACK_IMPORTED_MODULE_0__["GPUKernels"](this._width, this._height);
-            this._featureDetector = new _feature_detector__WEBPACK_IMPORTED_MODULE_2__["FeatureDetector"](this, this._gpu);
+            this._featureDetector = null; // lazy instantiation 
         }
         else if(arguments.length == 1) {
             // copy constructor (shallow copy)
@@ -640,7 +735,7 @@ class SpeedyMedia
 
     /**
      * The type of the media attached to this SpeedyMedia object
-     * @returns {string} "image" | "video" | "canvas" | "texture"
+     * @returns {string} "image" | "video" | "canvas" | "internal"
      */
     get type()
     {
@@ -655,7 +750,7 @@ class SpeedyMedia
                 return 'canvas';
 
             case _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Texture: // the result of pipelining
-                return 'texture';
+                return 'internal';
 
             default: // this shouldn't happen
                 return 'unknown';
@@ -742,12 +837,16 @@ class SpeedyMedia
             method: 'fast',
         }, settings);
 
+        // Lazy instantiation
+        this._featureDetector = this._featureDetector || new _feature_detector__WEBPACK_IMPORTED_MODULE_2__["FeatureDetector"](this._gpu);
+
         // Algorithm table
         const fn = ({
-            'fast' : settings => this._featureDetector.fast(9, settings),   // alias for fast9
-            'fast9': settings => this._featureDetector.fast(9, settings),   // FAST-9,16 (default)
-            'fast7': settings => this._featureDetector.fast(7, settings),   // FAST-7,12
-            'fast5': settings => this._featureDetector.fast(5, settings),   // FAST-5,8
+            'fast' : (media, settings) => this._featureDetector.fast(media, 9, settings),   // alias for fast9
+            'fast9': (media, settings) => this._featureDetector.fast(media, 9, settings),   // FAST-9,16 (default)
+            'fast7': (media, settings) => this._featureDetector.fast(media, 7, settings),   // FAST-7,12
+            'fast5': (media, settings) => this._featureDetector.fast(media, 5, settings),   // FAST-5,8
+            'brisk': (media, settings) => this._featureDetector.brisk(media, settings),     // BRISK
         });
 
         // Run the algorithm
@@ -755,7 +854,7 @@ class SpeedyMedia
             const method = String(settings.method).toLowerCase();
 
             if(fn.hasOwnProperty(method)) {
-                const features = fn[method].call(this, settings);
+                const features = (fn[method])(this, settings);
                 resolve(features);
             }
             else
@@ -20464,13 +20563,20 @@ __webpack_require__.r(__webpack_exports__);
 
 class GPUKernelGroup
 {
-    /* protected */ constructor(gpu, width, height)
+    /* protected */ constructor(gpu)
     {
         this._gpu = gpu;
-        this._width = Math.max(width|0, 1);
-        this._height = Math.max(height|0, 1);
+        this._width = gpu.width;
+        this._height = gpu.height;
     }
 
+    /**
+     * Declare a kernel
+     * @param {string} name Kernel name
+     * @param {Function} fn Kernel code
+     * @param {object} settings Kernel settings
+     * @returns {GPUKernelGroup} This object
+     */
     /* protected */ declare(name, fn, settings = { })
     {
         // lazy instantiation of kernels
@@ -20486,6 +20592,12 @@ class GPUKernelGroup
         return this;
     }
 
+    /**
+     * Multi-pass composition
+     * @param {string} name Kernel name
+     * @param {string} fn Other kernels
+     * @returns {GPUKernelGroup} This object
+     */
     /* protected */ compose(name, ...fn)
     {
         // function composition: functions are called in the order they are specified
@@ -20538,7 +20650,7 @@ class GPUKernelGroup
             //debug: true,
         }, settings);
 
-        return this._gpu.createKernel(fn, config);
+        return this._gpu._gpu.createKernel(fn, config);
     }
 }
 
@@ -20621,10 +20733,10 @@ class GPUKernels
     constructor(width, height)
     {
         // read & validate texture size
-        this._width = +width | 0;
-        this._height = +height | 0;
+        this._width = Math.max(1, +width | 0);
+        this._height = Math.max(1, +height | 0);
         if(this._width > MAX_TEXTURE_LENGTH || this._height > MAX_TEXTURE_LENGTH) {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].warning('Maximum texture size exceeded.');
+            _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].warning(`Maximum texture size exceeded (using ${this._width} x ${this._height}).`);
             this._width = Math.min(this._width, MAX_TEXTURE_LENGTH);
             this._height = Math.min(this._height, MAX_TEXTURE_LENGTH);
         }
@@ -20632,7 +20744,7 @@ class GPUKernels
         // create & configure canvas
         this._canvas = this._createCanvas(this._width, this._height);
         this._context = this._canvas.getContext('webgl2', {
-            premultipliedAlpha: true, // we're store data in the alpha channel
+            premultipliedAlpha: true, // we're storing data in the alpha channel
             preserveDrawingBuffer: false
         });
 
@@ -20646,12 +20758,31 @@ class GPUKernels
             this._initGPU();
         }, false);
 
-        // initialize GPU
-        this._initGPU();
+        // initialize the GPU
+        this._gpu = this._spawnGPU(this._canvas, this._context, this._width, this._height);
+    }
+
+    /**
+     * Texture width
+     * @returns {number}
+     */
+    get width()
+    {
+        return this._width;
+    }
+
+    /**
+     * Texture height
+     * @returns {number}
+     */
+    get height()
+    {
+        return this._height;
     }
 
     /**
      * Access the kernel groups of a pyramid level
+     * sizeof(pyramid(i)) = sizeof(pyramid(0)) / 2^i
      * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS - 1
      * @returns {Array}
      */
@@ -20667,17 +20798,39 @@ class GPUKernels
 
     /**
      * Access the kernel groups of an intra-pyramid level
-     * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS - 1
+     * The intra-pyramid encodes layers between pyramid layers
+     * sizeof(intraPyramid(0)) = 1.5 * sizeof(pyramid(0))
+     * sizeof(intraPyramid(1)) = 1.5 * sizeof(pyramid(1))
+     * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS
      * @returns {Array}
      */
     intraPyramid(level)
     {
         const lv = level | 0;
 
-        if(lv < 0 || lv >= MAX_PYRAMID_LEVELS)
+        if(lv < 0 || lv >= MAX_PYRAMID_LEVELS + 1)
             _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Invalid intra-pyramid level: ${lv}`);
 
         return this._intraPyramid[lv];
+    }
+
+    /**
+     * The number of layers of the pyramid
+     * @returns {number}
+     */
+    get pyramidHeight()
+    {
+        return MAX_PYRAMID_LEVELS;
+    }
+
+    /**
+     * The maximum supported scale for a pyramid layer
+     * @returns {number}
+     */
+    get pyramidMaxScale()
+    {
+        // This is preferably a power of 2
+        return 2;
     }
 
     /**
@@ -20689,21 +20842,21 @@ class GPUKernels
         return this._canvas;
     }
 
-    // initialize GPU
-    _initGPU()
+    // spawns a GPU instance
+    _spawnGPU(canvas, context, width, height)
     {
         // create GPU
-        this._gpu = new GPU({
-            canvas: this._canvas,
-            context: this._context
-        });
+        const gpu = new GPU({ canvas, context });
 
         // spawn kernel groups
-        spawnKernelGroups.call(this, this._gpu, this._width, this._height);
+        spawnKernelGroups.call(this, this);
 
         // spawn pyramids of kernel groups
-        this._pyramid = this._buildPyramid(this._width, this._height);
-        this._intraPyramid = this._buildPyramid(3 * this._width / 2, 3 * this._height / 2);
+        this._pyramid = this._buildPyramid(gpu, width, height, 1.0, MAX_PYRAMID_LEVELS);
+        this._intraPyramid = this._buildPyramid(gpu, width, height, 1.5, MAX_PYRAMID_LEVELS + 1);
+
+        // done!
+        return gpu;
     }
 
     // Create a canvas
@@ -20716,15 +20869,18 @@ class GPUKernels
     }
 
     // build a pyramid, where each level stores the kernel groups
-    _buildPyramid(baseWidth, baseHeight, numLevels = MAX_PYRAMID_LEVELS)
+    _buildPyramid(gpu, imageWidth, imageHeight, baseScale, numLevels)
     {
+        let scale = +baseScale;
+        let width = (imageWidth * scale) | 0, height = (imageHeight * scale) | 0;
         let pyramid = new Array(numLevels);
-        let width = baseWidth | 0, height = baseHeight | 0;
 
         for(let i = 0; i < pyramid.length; i++) {
-            spawnKernelGroups.call(pyramid[i] = { }, this._gpu, width, height);
+            pyramid[i] = { width, height, scale };
+            spawnKernelGroups.call(pyramid[i], this);
             width = ((1 + width) / 2) | 0;
             height = ((1 + height) / 2) | 0;
+            scale /= 2;
         }
 
         return pyramid;
@@ -20732,7 +20888,7 @@ class GPUKernels
 }
 
 // Spawn kernel groups
-function spawnKernelGroups(gpu, width, height)
+function spawnKernelGroups(gpu)
 {
     // all kernel groups are available via getters
     for(let g in KERNEL_GROUPS) {
@@ -20740,7 +20896,7 @@ function spawnKernelGroups(gpu, width, height)
             get: (() => {
                 const grp = '_' + g;
                 return (function() { // lazy instantiation
-                    return this[grp] || (this[grp] = new (KERNEL_GROUPS[g])(gpu, width, height));
+                    return this[grp] || (this[grp] = new (KERNEL_GROUPS[g])(gpu));
                 }).bind(this);
             })(),
             configurable: true // WebGL context may be lost
@@ -20794,13 +20950,11 @@ class GPUColors extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKerne
 {
     /**
      * Class constructor
-     * @param {GPU} gpu 
-     * @param {number} width 
-     * @param {number} height 
+     * @param {GPUKernels} gpu
      */
-    constructor(gpu, width, height)
+    constructor(gpu)
     {
-        super(gpu, width, height);
+        super(gpu);
         this
             // convert to greyscale
             .declare('rgb2grey', _shaders_colors__WEBPACK_IMPORTED_MODULE_1__["rgb2grey"])
@@ -20871,13 +21025,11 @@ class GPUEncoders extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKer
 {
     /**
      * Class constructor
-     * @param {GPU} gpu 
-     * @param {number} width 
-     * @param {number} height 
+     * @param {GPUKernels} gpu
      */
-    constructor(gpu, width, height)
+    constructor(gpu)
     {
-        super(gpu, width, height);
+        super(gpu);
         this
             // Keypoint encoding
             .declare('_encodeKeypointOffsets', _shaders_encoders__WEBPACK_IMPORTED_MODULE_1__["encodeKeypointOffsets"], {
@@ -20987,13 +21139,15 @@ class GPUEncoders extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKer
     {
         const [ w, h ] = [ this._width, this._height ];
         const pixelsPerKeypoint = 2 + this._descriptorSize / 4;
-        let keypoints = [], x, y, scale, rotation;
+        let keypoints = [], x, y, scale, rotation, invScale2;
 
         for(let i = 0; i < pixels.length; i += 4 * pixelsPerKeypoint) {
             x = (pixels[i+1] << 8) | pixels[i];
             y = (pixels[i+3] << 8) | pixels[i+2];
             if(x < w && y < h) {
-                scale = pixels[i+4] / 255.0;
+                //invScale2 = Math.ceil(200 * pixels[i+4] / 255.0) * 0.01;
+                invScale2 = (pixels[i+4] << 1) / 255.0;
+                scale = 0 < invScale2 && invScale2 < 2 ? 1.0 / invScale2 : 1.0;
                 rotation = pixels[i+5] * TWO_PI / 255.0;
                 keypoints.push(new _core_speedy_feature__WEBPACK_IMPORTED_MODULE_2__["SpeedyFeature"](x, y, scale, rotation));
             }
@@ -21059,13 +21213,11 @@ class GPUFilters extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKern
 {
     /**
      * Class constructor
-     * @param {GPU} gpu 
-     * @param {number} width 
-     * @param {number} height 
+     * @param {GPUKernels} gpu
      */
-    constructor(gpu, width, height)
+    constructor(gpu)
     {
-        super(gpu, width, height);
+        super(gpu);
         this
             // gaussian approximation (sigma approx. 1.0)
             .compose('gauss5', '_gauss5x', '_gauss5y') // size: 5x5
@@ -21153,6 +21305,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUKeypoints", function() { return GPUKeypoints; });
 /* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
 /* harmony import */ var _shaders_fast__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/fast */ "./src/gpu/kernels/shaders/fast.js");
+/* harmony import */ var _shaders_keypoints__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./shaders/keypoints */ "./src/gpu/kernels/shaders/keypoints.js");
+/* harmony import */ var _shaders_identity__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./shaders/identity */ "./src/gpu/kernels/shaders/identity.js");
+/* harmony import */ var _shaders_brisk__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./shaders/brisk */ "./src/gpu/kernels/shaders/brisk.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -21177,6 +21332,9 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
+
 /**
  * GPUKeypoints
  * Keypoint detection
@@ -21185,13 +21343,11 @@ class GPUKeypoints extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKe
 {
     /**
      * Class constructor
-     * @param {GPU} gpu 
-     * @param {number} width 
-     * @param {number} height 
+     * @param {GPUKernels} gpu
      */
-    constructor(gpu, width, height)
+    constructor(gpu)
     {
-        super(gpu, width, height);
+        super(gpu);
         this
             // FAST-9,16
             .compose('fast9', '_fast9', '_fastScore16')
@@ -21210,6 +21366,17 @@ class GPUKeypoints extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKe
 
             // FAST Non-Maximum Suppression
             .declare('fastSuppression', _shaders_fast__WEBPACK_IMPORTED_MODULE_1__["fastSuppression"])
+
+            // BRISK Scale-Space Non-Maximum Suppression & Interpolation
+            .declare('brisk', _shaders_brisk__WEBPACK_IMPORTED_MODULE_4__["brisk"])
+
+            // Merge keypoints across multiple scales
+            .declare('merge', _shaders_keypoints__WEBPACK_IMPORTED_MODULE_2__["merge"])
+            .declare('mergePyramidLevels', _shaders_keypoints__WEBPACK_IMPORTED_MODULE_2__["mergePyramidLevels"])
+            .declare('normalizeScale', _shaders_keypoints__WEBPACK_IMPORTED_MODULE_2__["normalizeScale"])
+
+            // Crop to output size
+            .declare('crop', _shaders_identity__WEBPACK_IMPORTED_MODULE_3__["identity"])
         ;
     }
 }
@@ -21262,13 +21429,11 @@ class GPUOutput extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKerne
 {
     /**
      * Class constructor
-     * @param {GPU} gpu 
-     * @param {number} width 
-     * @param {number} height 
+     * @param {GPUKernels} gpu
      */
-    constructor(gpu, width, height)
+    constructor(gpu)
     {
-        super(gpu, width, height);
+        super(gpu);
         this
             // output a texture from a pipeline
             .declare('identity', _shaders_identity__WEBPACK_IMPORTED_MODULE_1__["identity"], {
@@ -21294,6 +21459,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _shaders_identity__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/identity */ "./src/gpu/kernels/shaders/identity.js");
 /* harmony import */ var _shaders_convolution__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./shaders/convolution */ "./src/gpu/kernels/shaders/convolution.js");
 /* harmony import */ var _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./shaders/pyramids */ "./src/gpu/kernels/shaders/pyramids.js");
+/* harmony import */ var _shaders_scale__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./shaders/scale */ "./src/gpu/kernels/shaders/scale.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -21320,6 +21486,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 // neat utilities
 const withSize = (width, height) => ({ output: [ width|0, height|0 ], constants: { width: width|0, height: height|0 }});
 const withOutput = (width, height) => ({ output: [ width|0, height|0 ] })
@@ -21333,16 +21500,14 @@ class GPUPyramids extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKer
 {
     /**
      * Class constructor
-     * @param {GPU} gpu 
-     * @param {number} width 
-     * @param {number} height 
+     * @param {GPUKernels} gpu
      */
-    constructor(gpu, width, height)
+    constructor(gpu)
     {
-        super(gpu, width, height);
+        super(gpu);
         this
             // initialize pyramid
-            .declare('setBase', Object(_shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["setScale"])(1.0))
+            .declare('setBase', Object(_shaders_scale__WEBPACK_IMPORTED_MODULE_4__["setScale"])(1.0, gpu.pyramidHeight, gpu.pyramidMaxScale))
  
             // pyramid operations
             .compose('reduce', '_smoothX', '_smoothY', '_downsample2', '_scale1/2')
@@ -21352,9 +21517,11 @@ class GPUPyramids extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKer
             .compose('intraReduce', '_upsample2', '_smoothX2', '_smoothY2', '_downsample3/2', '_scale2/3')
             .compose('intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3', '_scale3/2')
 
+
+            
             // separable kernels for gaussian smoothing
             // use [c, b, a, b, c] where a+2c = 2b and a+2b+2c = 1
-            // pick a = 0.4 for gaussian approximation (sigma = 1.0)
+            // pick a = 0.4 for gaussian approximation
             .declare('_smoothX', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
                 0.05, 0.25, 0.4, 0.25, 0.05
             ]))
@@ -21402,16 +21569,16 @@ class GPUPyramids extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKer
                 withOutput(2 * this._width / 3, 2 * this._height / 3))
 
             // adjust the scale coefficients
-            .declare('_scale2', Object(_shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(2.0),
+            .declare('_scale2', Object(_shaders_scale__WEBPACK_IMPORTED_MODULE_4__["scale"])(2.0, gpu.pyramidHeight, gpu.pyramidMaxScale),
                 withSize(2 * this._width, 2 * this._height))
 
-            .declare('_scale1/2', Object(_shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(0.5),
+            .declare('_scale1/2', Object(_shaders_scale__WEBPACK_IMPORTED_MODULE_4__["scale"])(0.5, gpu.pyramidHeight, gpu.pyramidMaxScale),
                 withSize((1 + this._width) / 2, (1 + this._height) / 2))
 
-            .declare('_scale3/2', Object(_shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(3.0 / 2.0),
+            .declare('_scale3/2', Object(_shaders_scale__WEBPACK_IMPORTED_MODULE_4__["scale"])(1.5, gpu.pyramidHeight, gpu.pyramidMaxScale),
                 withSize(3 * this._width / 2, 3 * this._height / 2))
 
-            .declare('_scale2/3', Object(_shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(2.0 / 3.0),
+            .declare('_scale2/3', Object(_shaders_scale__WEBPACK_IMPORTED_MODULE_4__["scale"])(2.0 / 3.0, gpu.pyramidHeight, gpu.pyramidMaxScale),
                 withSize(2 * this._width / 3, 2 * this._height / 3))
 
             // kernels for debugging
@@ -21438,6 +21605,192 @@ class GPUPyramids extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKer
     }
 }
 
+
+/***/ }),
+
+/***/ "./src/gpu/kernels/shaders/brisk.js":
+/*!******************************************!*\
+  !*** ./src/gpu/kernels/shaders/brisk.js ***!
+  \******************************************/
+/*! exports provided: brisk */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "brisk", function() { return brisk; });
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * brisk.js
+ * BRISK feature detection
+ */
+
+/*
+ * This code implements a MODIFIED, GPU-based version
+ * of the BRISK [1] feature detection algorithm
+ * 
+ * Reference:
+ * 
+ * [1] Leutenegger, Stefan; Chli, Margarita; Siegwart, Roland Y.
+ *     "BRISK: Binary robust invariant scalable keypoints"
+ *     International Conference on Computer Vision (ICCV-2011)
+ */
+
+//
+// Modified BRISK algorithm
+// Scale-space non-maximum suppression & interpolation
+//
+// scale(image) = 1.0 (always)
+// scale(layerA) = scaleA = 1.5 (typically)
+// scale(layerB) = scaleB = scaleA / 2 < 1 (typically)
+// scaleA and scaleB are RELATIVE to the image layer
+// I expect scaleA > 1 and scaleB < 1
+//
+function brisk(image, layerA, layerB, scaleA, scaleB)
+{
+    const x = this.thread.x, y = this.thread.y;
+    const p = image[y][x];
+    const score = p[0];
+
+    // discard corner
+    this.color(0, p[1], p[2], p[3]);
+
+    // was it a corner?
+    if(score > 0) {
+        const xmid = x + 0.5, ymid = y + 0.5;
+        const width = this.constants.width;
+        const height = this.constants.height;
+        const widthA = Math.floor(width * scaleA), heightA = Math.floor(height * scaleA);
+        const widthB = Math.floor(width * scaleB), heightB = Math.floor(height * scaleB);
+
+        // given a pixel in the image, pick a 2x2 square in
+        // layers A and B: [xl,yl] x [xl+1,yl+1], l = a,b
+        const xa = Math.min(Math.max(1, Math.ceil(xmid * scaleA - 1)), widthA - 2);
+        const ya = Math.min(Math.max(1, Math.ceil(ymid * scaleA - 1)), heightA - 2);
+        const xb = Math.min(Math.max(1, Math.ceil(xmid * scaleB - 1)), widthB - 2);
+        const yb = Math.min(Math.max(1, Math.ceil(ymid * scaleB - 1)), heightB - 2);
+        const a00 = layerA[ya][xa];
+        const a10 = layerA[ya][xa+1];
+        const a01 = layerA[ya+1][xa];
+        const a11 = layerA[ya+1][xa+1];
+        const b00 = layerB[yb][xb];
+        const b10 = layerB[yb][xb+1];
+        const b01 = layerB[yb+1][xb];
+        const b11 = layerB[yb+1][xb+1];
+        const am0 = layerA[ya][xa-1];
+        const am1 = layerA[ya+1][xa-1];
+        const amm = layerA[ya-1][xa-1];
+        const a0m = layerA[ya-1][xa];
+        const a1m = layerA[ya-1][xa+1];
+        const bm0 = layerB[yb][xb-1];
+        const bm1 = layerB[yb+1][xb-1];
+        const bmm = layerB[yb-1][xb-1];
+        const b0m = layerB[yb-1][xb];
+        const b1m = layerB[yb-1][xb+1];
+
+        // scale-space non-maximum suppression
+        if(score >= a00[0])
+        if(score >= a10[0])
+        if(score >= a01[0])
+        if(score >= a11[0])
+        if(score >= b00[0])
+        if(score >= b10[0])
+        if(score >= b01[0])
+        if(score >= b11[0])
+        if(score >= am0[0])
+        if(score >= am1[0])
+        if(score >= amm[0])
+        if(score >= a0m[0])
+        if(score >= a1m[0])
+        if(score >= bm0[0])
+        if(score >= bm1[0])
+        if(score >= bmm[0])
+        if(score >= b0m[0])
+        if(score >= b1m[0])
+        {
+            // restore the corner
+            this.color(score, p[1], p[2], p[3]);
+
+            // -----------------------------------------
+            // interpolate scale
+            // -----------------------------------------
+            // We deviate from the original BRISK algorithm.
+            // Rather than fitting a 2D quadratic function,
+            // we compute the cornerness scores in the
+            // neighboring layers, with sub-pixel accuracy,
+            // using bilinear interpolation - for both
+            // speed & ease of computation
+
+            // (ex,ey) in [0,1] x [0,1]
+            let exa = xmid * scaleA, eya = ymid * scaleA;
+            let exb = xmid * scaleB, eyb = ymid * scaleB;
+            exa -= Math.floor(exa); eya -= Math.floor(eya);
+            exb -= Math.floor(exb); eyb -= Math.floor(eyb);
+
+            // isa, isb are the interpolated-refined scores of
+            // the current pixel in layers A and B, respectively
+            const isa = a00[2] * (1.0 - exa) * (1.0 - eya) +
+                        a10[2] * exa * (1.0 - eya) +
+                        a01[2] * (1.0 - exa) * eya +
+                        a11[2] * exa * eya;
+            const isb = b00[2] * (1.0 - exb) * (1.0 - eyb) +
+                        b10[2] * exb * (1.0 - eyb) +
+                        b01[2] * (1.0 - exb) * eyb +
+                        b11[2] * exb * eyb;
+
+            // do a coarse optimization (in case a refined one fails)
+            if(isa > score && isa > isb)
+                this.color(isa, p[1], p[2], a00[3]);
+            else if(isb > score && isb > isa)
+                this.color(isb, p[1], p[2], b00[3]);
+            else if(score > isa && score > isb)
+                this.color(score, p[1], p[2], p[3]);
+
+            // fit a polynomial with the refined scores
+            // in the scale axis (i.e., log2(scale))
+            // p(x) = ax^2 + bx + c
+            const x1 = Math.log2(a00[3]), y1 = isa;
+            const x2 = Math.log2(b00[3]), y2 = isb;
+            const x3 = Math.log2(p[3]), y3 = score;
+            const dn = (x1 - x2) * (x1 - x3) * (x2 - x3);
+            if(Math.abs(dn) >= 0.00001) {
+                const a = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / dn;
+                if(a < 0) {
+                    const b = (x3 * x3 * (y1 - y2) + x2 * x2 * (y3 - y1) + x1 * x1 * (y2 - y3)) / dn;
+                    const c = (x2 * x3 * (x2 - x3) * y1 + x3 * x1 * (x3 - x1) * y2 + x1 * x2 * (x1 - x2) * y3) / dn;
+                    
+                    // optimize the polynomial
+                    const xv = -b / (2.0 * a);
+                    const yv = c - (b * b) / (4.0 * a);
+
+                    // new score & scale
+                    const interpolatedScale = Math.pow(2.0, xv);
+                    const interpolatedScore = yv;
+
+                    // cap the scale
+                    if(interpolatedScale >= Math.min(p[3], Math.min(a00[3], b00[3]))) {
+                        if(interpolatedScale <= Math.max(p[3], Math.max(a00[3], b00[3])))
+                            this.color(interpolatedScore, p[1], p[2], interpolatedScale);
+                    }
+                }
+            }
+        }
+    }
+}
 
 /***/ }),
 
@@ -21775,7 +22128,7 @@ function encodeKeypoints(image, encoderLength, descriptorSize)
 
                 // keypoint properties pixel?
                 else {
-                    scale = px[3] * 2.0;
+                    scale = px[3];
                     rotation = 0;
 
                     this.color(scale, rotation, 0, 0);
@@ -21828,7 +22181,7 @@ __webpack_require__.r(__webpack_exports__);
 
 /*
  * This code is a GPU implementation of FAST,
- * "Features from Accelerated Segment Test"
+ * "Features from Accelerated Segment Test" [1]
  *
  * Reference:
  *
@@ -21836,6 +22189,16 @@ __webpack_require__.r(__webpack_exports__);
  *     "Machine learning for high-speed corner detection"
  *     European Conference on Computer Vision (ECCV-2006)
  *
+ */
+
+/*
+ * Pixels are encoded as follows:
+ *
+ * R: "cornerness" score IF the pixel is a corner, 0 otherwise
+ * G: pixel intensity (left untouched)
+ * B: "cornerness" score regardless if the pixel is a corner or not
+ *    (useful for other algorithms)
+ * A: left untouched
  */
 
 // FAST-9_16: requires 9 contiguous pixels
@@ -22126,53 +22489,51 @@ function fastScore16(image, threshold)
 {
     const x = this.thread.x, y = this.thread.y;
     const pixel = image[y][x];
+    const ifCorner = (pixel[0] > 0) ? 1.0 : 0.0;
 
-    if(pixel[0] > 0) { // is it a corner?
-        const t = Math.min(Math.max(0.0, threshold), 1.0);
-        const p0 = image[y-3][x];
-        const p1 = image[y-3][x+1];
-        const p2 = image[y-2][x+2];
-        const p3 = image[y-1][x+3];
-        const p4 = image[y][x+3];
-        const p5 = image[y+1][x+3];
-        const p6 = image[y+2][x+2];
-        const p7 = image[y+3][x+1];
-        const p8 = image[y+3][x];
-        const p9 = image[y+3][x-1];
-        const p10 = image[y+2][x-2];
-        const p11 = image[y+1][x-3];
-        const p12 = image[y][x-3];
-        const p13 = image[y-1][x-3];
-        const p14 = image[y-2][x-2];
-        const p15 = image[y-3][x-1];
-        const c = pixel[1];
-        const ct = c + t, c_t = c - t;
-        let bs = 0.0, ds = 0.0;
+    // read neighbors
+    const t = Math.min(Math.max(0.0, threshold), 1.0);
+    const p0 = image[y-3][x];
+    const p1 = image[y-3][x+1];
+    const p2 = image[y-2][x+2];
+    const p3 = image[y-1][x+3];
+    const p4 = image[y][x+3];
+    const p5 = image[y+1][x+3];
+    const p6 = image[y+2][x+2];
+    const p7 = image[y+3][x+1];
+    const p8 = image[y+3][x];
+    const p9 = image[y+3][x-1];
+    const p10 = image[y+2][x-2];
+    const p11 = image[y+1][x-3];
+    const p12 = image[y][x-3];
+    const p13 = image[y-1][x-3];
+    const p14 = image[y-2][x-2];
+    const p15 = image[y-3][x-1];
+    const c = pixel[1];
+    const ct = c + t, c_t = c - t;
+    let bs = 0.0, ds = 0.0;
 
-        // read bright and dark pixels
-        if(c_t > p0[1])  bs += c_t - p0[1];  else if(ct < p0[1])  ds += p0[1] - ct;
-        if(c_t > p1[1])  bs += c_t - p1[1];  else if(ct < p1[1])  ds += p1[1] - ct;
-        if(c_t > p2[1])  bs += c_t - p2[1];  else if(ct < p2[1])  ds += p2[1] - ct;
-        if(c_t > p3[1])  bs += c_t - p3[1];  else if(ct < p3[1])  ds += p3[1] - ct;
-        if(c_t > p4[1])  bs += c_t - p4[1];  else if(ct < p4[1])  ds += p4[1] - ct;
-        if(c_t > p5[1])  bs += c_t - p5[1];  else if(ct < p5[1])  ds += p5[1] - ct;
-        if(c_t > p6[1])  bs += c_t - p6[1];  else if(ct < p6[1])  ds += p6[1] - ct;
-        if(c_t > p7[1])  bs += c_t - p7[1];  else if(ct < p7[1])  ds += p7[1] - ct;
-        if(c_t > p8[1])  bs += c_t - p8[1];  else if(ct < p8[1])  ds += p8[1] - ct;
-        if(c_t > p9[1])  bs += c_t - p9[1];  else if(ct < p9[1])  ds += p9[1] - ct;
-        if(c_t > p10[1]) bs += c_t - p10[1]; else if(ct < p10[1]) ds += p10[1] - ct;
-        if(c_t > p11[1]) bs += c_t - p11[1]; else if(ct < p11[1]) ds += p11[1] - ct;
-        if(c_t > p12[1]) bs += c_t - p12[1]; else if(ct < p12[1]) ds += p12[1] - ct;
-        if(c_t > p13[1]) bs += c_t - p13[1]; else if(ct < p13[1]) ds += p13[1] - ct;
-        if(c_t > p14[1]) bs += c_t - p14[1]; else if(ct < p14[1]) ds += p14[1] - ct;
-        if(c_t > p15[1]) bs += c_t - p15[1]; else if(ct < p15[1]) ds += p15[1] - ct;
+    // read bright and dark pixels
+    if(c_t > p0[1])  bs += c_t - p0[1];  else if(ct < p0[1])  ds += p0[1] - ct;
+    if(c_t > p1[1])  bs += c_t - p1[1];  else if(ct < p1[1])  ds += p1[1] - ct;
+    if(c_t > p2[1])  bs += c_t - p2[1];  else if(ct < p2[1])  ds += p2[1] - ct;
+    if(c_t > p3[1])  bs += c_t - p3[1];  else if(ct < p3[1])  ds += p3[1] - ct;
+    if(c_t > p4[1])  bs += c_t - p4[1];  else if(ct < p4[1])  ds += p4[1] - ct;
+    if(c_t > p5[1])  bs += c_t - p5[1];  else if(ct < p5[1])  ds += p5[1] - ct;
+    if(c_t > p6[1])  bs += c_t - p6[1];  else if(ct < p6[1])  ds += p6[1] - ct;
+    if(c_t > p7[1])  bs += c_t - p7[1];  else if(ct < p7[1])  ds += p7[1] - ct;
+    if(c_t > p8[1])  bs += c_t - p8[1];  else if(ct < p8[1])  ds += p8[1] - ct;
+    if(c_t > p9[1])  bs += c_t - p9[1];  else if(ct < p9[1])  ds += p9[1] - ct;
+    if(c_t > p10[1]) bs += c_t - p10[1]; else if(ct < p10[1]) ds += p10[1] - ct;
+    if(c_t > p11[1]) bs += c_t - p11[1]; else if(ct < p11[1]) ds += p11[1] - ct;
+    if(c_t > p12[1]) bs += c_t - p12[1]; else if(ct < p12[1]) ds += p12[1] - ct;
+    if(c_t > p13[1]) bs += c_t - p13[1]; else if(ct < p13[1]) ds += p13[1] - ct;
+    if(c_t > p14[1]) bs += c_t - p14[1]; else if(ct < p14[1]) ds += p14[1] - ct;
+    if(c_t > p15[1]) bs += c_t - p15[1]; else if(ct < p15[1]) ds += p15[1] - ct;
 
-        // corner score
-        const score = Math.max(bs, ds) / 16.0;
-        this.color(score, pixel[1], pixel[2], pixel[3]);
-    }
-    else
-        this.color(0, pixel[1], pixel[2], pixel[3]); // not a corner
+    // corner score
+    const score = Math.max(bs, ds) / 16.0;
+    this.color(score * ifCorner, pixel[1], score, pixel[3]);
 }
 
 // compute corner score considering a
@@ -22181,45 +22542,43 @@ function fastScore12(image, threshold)
 {
     const x = this.thread.x, y = this.thread.y;
     const pixel = image[y][x];
+    const ifCorner = (pixel[0] > 0) ? 1.0 : 0.0;
 
-    if(pixel[0] > 0) { // is it a corner?
-        const t = Math.min(Math.max(0.0, threshold), 1.0);
-        const p0 = image[y-2][x];
-        const p1 = image[y-2][x+1];
-        const p2 = image[y-1][x+2];
-        const p3 = image[y][x+2];
-        const p4 = image[y+1][x+2];
-        const p5 = image[y+2][x+1];
-        const p6 = image[y+2][x];
-        const p7 = image[y+2][x-1];
-        const p8 = image[y+1][x-2];
-        const p9 = image[y][x-2];
-        const p10 = image[y-1][x-2];
-        const p11 = image[y-2][x-1];
-        const c = pixel[1];
-        const ct = c + t, c_t = c - t;
-        let bs = 0.0, ds = 0.0;
+    // read neighbors
+    const t = Math.min(Math.max(0.0, threshold), 1.0);
+    const p0 = image[y-2][x];
+    const p1 = image[y-2][x+1];
+    const p2 = image[y-1][x+2];
+    const p3 = image[y][x+2];
+    const p4 = image[y+1][x+2];
+    const p5 = image[y+2][x+1];
+    const p6 = image[y+2][x];
+    const p7 = image[y+2][x-1];
+    const p8 = image[y+1][x-2];
+    const p9 = image[y][x-2];
+    const p10 = image[y-1][x-2];
+    const p11 = image[y-2][x-1];
+    const c = pixel[1];
+    const ct = c + t, c_t = c - t;
+    let bs = 0.0, ds = 0.0;
 
-        // read bright and dark pixels
-        if(c_t > p0[1])  bs += c_t - p0[1];  else if(ct < p0[1])  ds += p0[1] - ct;
-        if(c_t > p1[1])  bs += c_t - p1[1];  else if(ct < p1[1])  ds += p1[1] - ct;
-        if(c_t > p2[1])  bs += c_t - p2[1];  else if(ct < p2[1])  ds += p2[1] - ct;
-        if(c_t > p3[1])  bs += c_t - p3[1];  else if(ct < p3[1])  ds += p3[1] - ct;
-        if(c_t > p4[1])  bs += c_t - p4[1];  else if(ct < p4[1])  ds += p4[1] - ct;
-        if(c_t > p5[1])  bs += c_t - p5[1];  else if(ct < p5[1])  ds += p5[1] - ct;
-        if(c_t > p6[1])  bs += c_t - p6[1];  else if(ct < p6[1])  ds += p6[1] - ct;
-        if(c_t > p7[1])  bs += c_t - p7[1];  else if(ct < p7[1])  ds += p7[1] - ct;
-        if(c_t > p8[1])  bs += c_t - p8[1];  else if(ct < p8[1])  ds += p8[1] - ct;
-        if(c_t > p9[1])  bs += c_t - p9[1];  else if(ct < p9[1])  ds += p9[1] - ct;
-        if(c_t > p10[1]) bs += c_t - p10[1]; else if(ct < p10[1]) ds += p10[1] - ct;
-        if(c_t > p11[1]) bs += c_t - p11[1]; else if(ct < p11[1]) ds += p11[1] - ct;
+    // read bright and dark pixels
+    if(c_t > p0[1])  bs += c_t - p0[1];  else if(ct < p0[1])  ds += p0[1] - ct;
+    if(c_t > p1[1])  bs += c_t - p1[1];  else if(ct < p1[1])  ds += p1[1] - ct;
+    if(c_t > p2[1])  bs += c_t - p2[1];  else if(ct < p2[1])  ds += p2[1] - ct;
+    if(c_t > p3[1])  bs += c_t - p3[1];  else if(ct < p3[1])  ds += p3[1] - ct;
+    if(c_t > p4[1])  bs += c_t - p4[1];  else if(ct < p4[1])  ds += p4[1] - ct;
+    if(c_t > p5[1])  bs += c_t - p5[1];  else if(ct < p5[1])  ds += p5[1] - ct;
+    if(c_t > p6[1])  bs += c_t - p6[1];  else if(ct < p6[1])  ds += p6[1] - ct;
+    if(c_t > p7[1])  bs += c_t - p7[1];  else if(ct < p7[1])  ds += p7[1] - ct;
+    if(c_t > p8[1])  bs += c_t - p8[1];  else if(ct < p8[1])  ds += p8[1] - ct;
+    if(c_t > p9[1])  bs += c_t - p9[1];  else if(ct < p9[1])  ds += p9[1] - ct;
+    if(c_t > p10[1]) bs += c_t - p10[1]; else if(ct < p10[1]) ds += p10[1] - ct;
+    if(c_t > p11[1]) bs += c_t - p11[1]; else if(ct < p11[1]) ds += p11[1] - ct;
 
-        // corner score
-        const score = Math.max(bs, ds) / 12.0;
-        this.color(score, pixel[1], pixel[2], pixel[3]);
-    }
-    else
-        this.color(0, pixel[1], pixel[2], pixel[3]); // not a corner
+    // corner score
+    const score = Math.max(bs, ds) / 12.0;
+    this.color(score * ifCorner, pixel[1], score, pixel[3]);
 }
 
 // compute corner score considering a
@@ -22228,54 +22587,53 @@ function fastScore8(image, threshold)
 {
     const x = this.thread.x, y = this.thread.y;
     const pixel = image[y][x];
+    const ifCorner = (pixel[0] > 0) ? 1.0 : 0.0;
 
-    if(pixel[0] > 0) { // is it a corner?
-        const t = Math.min(Math.max(0.0, threshold), 1.0);
-        const p0 = image[y-1][x];
-        const p1 = image[y-1][x+1];
-        const p2 = image[y][x+1];
-        const p3 = image[y+1][x+1];
-        const p4 = image[y+1][x];
-        const p5 = image[y+1][x-1];
-        const p6 = image[y][x-1];
-        const p7 = image[y-1][x-1];
-        const c = pixel[1];
-        const ct = c + t, c_t = c - t;
-        let bs = 0.0, ds = 0.0;
+    // read neighbors
+    const t = Math.min(Math.max(0.0, threshold), 1.0);
+    const p0 = image[y-1][x];
+    const p1 = image[y-1][x+1];
+    const p2 = image[y][x+1];
+    const p3 = image[y+1][x+1];
+    const p4 = image[y+1][x];
+    const p5 = image[y+1][x-1];
+    const p6 = image[y][x-1];
+    const p7 = image[y-1][x-1];
+    const c = pixel[1];
+    const ct = c + t, c_t = c - t;
+    let bs = 0.0, ds = 0.0;
 
-        // read bright and dark pixels
-        if(c_t > p0[1]) bs += c_t - p0[1]; else if(ct < p0[1]) ds += p0[1] - ct;
-        if(c_t > p1[1]) bs += c_t - p1[1]; else if(ct < p1[1]) ds += p1[1] - ct;
-        if(c_t > p2[1]) bs += c_t - p2[1]; else if(ct < p2[1]) ds += p2[1] - ct;
-        if(c_t > p3[1]) bs += c_t - p3[1]; else if(ct < p3[1]) ds += p3[1] - ct;
-        if(c_t > p4[1]) bs += c_t - p4[1]; else if(ct < p4[1]) ds += p4[1] - ct;
-        if(c_t > p5[1]) bs += c_t - p5[1]; else if(ct < p5[1]) ds += p5[1] - ct;
-        if(c_t > p6[1]) bs += c_t - p6[1]; else if(ct < p6[1]) ds += p6[1] - ct;
-        if(c_t > p7[1]) bs += c_t - p7[1]; else if(ct < p7[1]) ds += p7[1] - ct;
+    // read bright and dark pixels
+    if(c_t > p0[1]) bs += c_t - p0[1]; else if(ct < p0[1]) ds += p0[1] - ct;
+    if(c_t > p1[1]) bs += c_t - p1[1]; else if(ct < p1[1]) ds += p1[1] - ct;
+    if(c_t > p2[1]) bs += c_t - p2[1]; else if(ct < p2[1]) ds += p2[1] - ct;
+    if(c_t > p3[1]) bs += c_t - p3[1]; else if(ct < p3[1]) ds += p3[1] - ct;
+    if(c_t > p4[1]) bs += c_t - p4[1]; else if(ct < p4[1]) ds += p4[1] - ct;
+    if(c_t > p5[1]) bs += c_t - p5[1]; else if(ct < p5[1]) ds += p5[1] - ct;
+    if(c_t > p6[1]) bs += c_t - p6[1]; else if(ct < p6[1]) ds += p6[1] - ct;
+    if(c_t > p7[1]) bs += c_t - p7[1]; else if(ct < p7[1]) ds += p7[1] - ct;
 
-        // corner score
-        const score = Math.max(bs, ds) / 8.0;
-        this.color(score, pixel[1], pixel[2], pixel[3]);
-    }
-    else
-        this.color(0, pixel[1], pixel[2], pixel[3]); // not a corner
+    // corner score
+    const score = Math.max(bs, ds) / 8.0;
+    this.color(score * ifCorner, pixel[1], score, pixel[3]);
 }
 
 // non-maximum suppression on 8-neighborhood based
-// on the corner score stored on the blue channel
+// on the corner score stored on the red channel
 function fastSuppression(image)
 {
     const x = this.thread.x, y = this.thread.y;
     const pixel = image[y][x];
+    const score = pixel[0]; // corner score
 
-    this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
+    // discard corner
+    this.color(0, pixel[1], pixel[2], pixel[3]);
 
     if(
-        pixel[0] > 0 &&
+        score > 0 &&
         x > 0 && x < this.constants.width - 1 &&
         y > 0 && y < this.constants.height - 1
     ) {
-        const score = pixel[0]; // corner score
         const n0 = image[y-1][x]; // 8-neighbors
         const n1 = image[y-1][x+1];
         const n2 = image[y][x+1];
@@ -22286,13 +22644,15 @@ function fastSuppression(image)
         const n7 = image[y-1][x-1];
 
         // compare my score to those of my neighbors
-        if(
-            score < n0[0] || score < n1[0] || score < n2[0] || score < n3[0] ||
-            score < n4[0] || score < n5[0] || score < n6[0] || score < n7[0]
-        ) {
-            // discard corner
-            this.color(0, pixel[1], pixel[2], pixel[3]);
-        }
+        if(score >= n0[0])
+         if(score >= n2[0])
+          if(score >= n4[0])
+           if(score >= n6[0])
+            if(score >= n1[0])
+             if(score >= n3[0])
+              if(score >= n5[0])
+               if(score >= n7[0])
+                this.color(score, pixel[1], pixel[2], pixel[3]); // restore corner
     }
 }
 
@@ -25283,11 +25643,159 @@ function identity(image)
 
 /***/ }),
 
+/***/ "./src/gpu/kernels/shaders/keypoints.js":
+/*!**********************************************!*\
+  !*** ./src/gpu/kernels/shaders/keypoints.js ***!
+  \**********************************************/
+/*! exports provided: merge, mergePyramidLevels, normalizeScale */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "merge", function() { return merge; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "mergePyramidLevels", function() { return mergePyramidLevels; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "normalizeScale", function() { return normalizeScale; });
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * keypoints.js
+ * Generic keypoint routines
+ */
+
+// merge keypoints having the same scale
+// size(imageA) = size(imageB) = size(output)
+function merge(imageA, imageB)
+{
+    const a = imageA[this.thread.y][this.thread.x];
+    const b = imageB[this.thread.y][this.thread.x];
+
+    // copy corner score & scale
+    if(b[0] > a[0])
+        this.color(b[0], a[1], a[2], b[3]);
+    else
+        this.color(a[0], a[1], a[2], a[3]);
+}
+
+// merge keypoints at CONSECUTIVE pyramid levels
+// area(largerImage) = 4 x area(smallerImage)
+// size(largerImage) = size(output)
+function mergePyramidLevels(largerImage, smallerImage)
+{
+    const width = this.constants.width;
+    const height = this.constants.height;
+    const x = this.thread.x, y = this.thread.y;
+    const lg = largerImage[y][x];
+
+    if(x%2 + y%2 == 0) {
+        const sm = smallerImage[Math.floor(y / 2)][Math.floor(x / 2)];
+
+        // copy corner score & scale
+        if(sm[0] > lg[0])
+            this.color(sm[0], lg[1], lg[2], sm[3]);
+        else
+            this.color(lg[0], lg[1], lg[2], lg[3]);
+    }
+    else
+        this.color(lg[0], lg[1], lg[2], lg[3]);
+}
+
+// normalize keypoint positions, so that they are
+// positioned as if scale = 1.0 (base of the pyramid)
+// this assumes 1 < imageScale <= 2
+function normalizeScale(image, imageScale)
+{
+    const width = this.constants.width;
+    const height = this.constants.height;
+    const x = this.thread.x, y = this.thread.y;
+    const xs = x * imageScale, ys = y * imageScale;
+    const pixel = image[y][x];
+
+    // drop corner
+    this.color(0, pixel[1], pixel[2], pixel[3]);
+
+    // locate corner in a 2x2 square
+    if(x%2 + y%2 == 0 && xs+1 < width && ys+1 < height) {
+        const p0 = image[ys][xs];
+        const p1 = image[ys+1][xs];
+        const p2 = image[ys][xs+1];
+        const p3 = image[ys+1][xs+1];
+
+        if(p0[0] + p1[0] + p2[0] + p3[0] > 0) { // if there is a corner
+            let s = 1, m = 0;
+
+            // get scale & score of the maximum
+            if(p0[0] > p1[0]) {
+                if(p2[0] > p3[0]) {
+                    if(p0[0] > p2[0]) {
+                        m = p0[0];
+                        s = p0[3];
+                    }
+                    else {
+                        m = p2[0];
+                        s = p2[3];
+                    }
+                }
+                else {
+                    if(p0[0] > p3[0]) {
+                        m = p0[0];
+                        s = p0[3];
+                    }
+                    else {
+                        m = p3[0];
+                        s = p3[3];
+                    }                   
+                }
+            }
+            else {
+                if(p2[0] > p3[0]) {
+                    if(p1[0] > p2[0]) {
+                        m = p1[0];
+                        s = p1[3];
+                    }
+                    else {
+                        m = p2[0];
+                        s = p2[3];
+                    }
+                }
+                else {
+                    if(p1[0] > p3[0]) {
+                        m = p1[0];
+                        s = p1[3];
+                    }
+                    else {
+                        m = p3[0];
+                        s = p3[3];
+                    }                   
+                }               
+            }
+
+            // done
+            this.color(m, pixel[1], pixel[2], s);
+        }
+    }
+}
+
+/***/ }),
+
 /***/ "./src/gpu/kernels/shaders/pyramids.js":
 /*!*********************************************!*\
   !*** ./src/gpu/kernels/shaders/pyramids.js ***!
   \*********************************************/
-/*! exports provided: upsample2, downsample2, upsample3, downsample3, setBase, scale, setScale */
+/*! exports provided: upsample2, downsample2, upsample3, downsample3 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -25296,9 +25804,6 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "downsample2", function() { return downsample2; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "upsample3", function() { return upsample3; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "downsample3", function() { return downsample3; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "setBase", function() { return setBase; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "scale", function() { return scale; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "setScale", function() { return setScale; });
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -25317,7 +25822,7 @@ __webpack_require__.r(__webpack_exports__);
  * limitations under the License.
  *
  * pyramids.js
- * Code for pyramids
+ * Code for generating image pyramids
  */
 
 function upsample2(image)
@@ -25328,8 +25833,10 @@ function upsample2(image)
         const pixel = image[Math.floor(y / 2)][Math.floor(x / 2)];
         this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
     }
-    else
-        this.color(0, 0, 0, 1);
+    else {
+        const thisPixel = image[y][x]; // preserve alpha (encodes scale)
+        this.color(0, 0, 0, thisPixel[3]);
+    }
 }
 
 function downsample2(image)
@@ -25348,8 +25855,10 @@ function upsample3(image)
         const pixel = image[Math.floor(y / 3)][Math.floor(x / 3)];
         this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
     }
-    else
-        this.color(0, 0, 0, 1);
+    else {
+        const thisPixel = image[y][x]; // preserve alpha (encodes scale)
+        this.color(0, 0, 0, thisPixel[3]);
+    }
 }
 
 function downsample3(image)
@@ -25360,33 +25869,118 @@ function downsample3(image)
     this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
 }
 
-function setBase(image)
-{
-    const pixel = image[this.thread.y][this.thread.x];
-    this.color(pixel[0], pixel[1], pixel[2], 0.5);
-}
+/***/ }),
 
-function scale(scaleFactor)
+/***/ "./src/gpu/kernels/shaders/scale.js":
+/*!******************************************!*\
+  !*** ./src/gpu/kernels/shaders/scale.js ***!
+  \******************************************/
+/*! exports provided: setScale, scale */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "setScale", function() { return setScale; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "scale", function() { return scale; });
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * scale.js
+ * Dealing with scale
+ */
+
+/*
+ * Image scale is encoded in the alpha channel (a)
+ * according to the following model:
+ *
+ * a(x) = (log2(M) - log2(x)) / (log2(M) + h)
+ *
+ * where x := scale of the image in the pyramid
+ *            it may be 1, 0.5, 0.25, 0.125...
+ *            also 1.5, 0.75, 0.375... (intra-layers)
+ *
+ *       h := height (depth) of the pyramid, an integer
+ *
+ *       M := scale upper bound: the maximum supported
+ *            scale x for a pyramid layer, a constant
+ *            that is preferably a power of two
+ *            (e.g., M = 2)
+ *
+ *
+ *
+ * This model has some neat properties:
+ *
+ * Scale image by factor s:
+ * a(s*x) = a(x) - log2(s) / (log2(M) + h)
+ *
+ * Log of scale (scale-axis):
+ * log2(x) = log2(M) - (log2(M) + h) * a(x)
+ *
+ * Bounded output:
+ * 0 <= a(x) < 1
+ *
+ * Since x <= M, it follows that a(x) >= 0 for all x
+ * Since x > 1/2^h, it follows that a(x) < 1 for all x
+ * Thus, if alpha channel = 1.0, we have no scale data
+ *
+ *
+ *
+ * A note on image scale:
+ *
+ * scale = 1 means an image with its original size
+ * scale = 2 means double the size (thus, 4x the area)
+ * scale = 0.5 means half the size (thus, 1/4 the area)
+ * and so on...
+ */
+
+function setScale(scale, pyramidHeight, pyramidMaxScale)
 {
-    const s = Math.max(0.0, scaleFactor);
+    //const lgM = Math.log2(pyramidMaxScale), eps = 1e-5;
+    //const pyramidMinScale = Math.pow(2, -pyramidHeight) + eps;
+    //const x = Math.max(pyramidMinScale, Math.min(scale, pyramidMaxScale));
+    //const alpha = (lgM - Math.log2(x)) / (lgM + pyramidHeight);
+
+    const s = Math.max(0.0, Math.min(scale * 0.5, 1.0));
+    const alpha=1;
 
     const body  = `
     const pixel = image[this.thread.y][this.thread.x];
-    this.color(pixel[0], pixel[1], pixel[2], pixel[3] * ${s});
+    //this.color(pixel[0], pixel[1], pixel[2], ${alpha});
+    this.color(pixel[0], pixel[1], pixel[2], ${s});
     `;
+    //console.log(scale, pyramidHeight, pyramidMaxScale, lgM, body);
 
     return new Function('image', body);
 }
 
-function setScale(newScale)
+function scale(scaleFactor, pyramidHeight, pyramidMaxScale)
 {
-    // alpha = 0.5 means scale = 1
-    const s = Math.max(0.0, Math.min(newScale * 0.5, 1.0));
+    //const lgM = Math.log2(pyramidMaxScale);
+    const s = Math.max(1e-5, scaleFactor);
+    //const delta = -Math.log2(s) / (lgM + pyramidHeight);
+    const delta=1;
 
     const body  = `
     const pixel = image[this.thread.y][this.thread.x];
-    this.color(pixel[0], pixel[1], pixel[2], ${s});
+    //const delta = ${delta};
+    //this.color(pixel[0], pixel[1], pixel[2], pixel[3] + delta);
+    this.color(pixel[0], pixel[1], pixel[2], pixel[3] * ${s});
     `;
+    //console.log(body);
 
     return new Function('image', body);
 }

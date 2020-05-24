@@ -38,16 +38,16 @@ export class GPUPyramids extends GPUKernelGroup
 {
     /**
      * Class constructor
-     * @param {GPU} gpu 
-     * @param {number} width 
-     * @param {number} height 
+     * @param {GPUInstance} gpu
+     * @param {number} width
+     * @param {number} height
      */
     constructor(gpu, width, height)
     {
         super(gpu, width, height);
         this
             // initialize pyramid
-            .declare('setBase', setScale(1.0))
+            .declare('setBase', setScale(1.0, gpu.pyramidHeight, gpu.pyramidMaxScale))
  
             // pyramid operations
             .compose('reduce', '_smoothX', '_smoothY', '_downsample2', '_scale1/2')
@@ -109,16 +109,16 @@ export class GPUPyramids extends GPUKernelGroup
                 withOutput(2 * this._width / 3, 2 * this._height / 3))
 
             // adjust the scale coefficients
-            .declare('_scale2', scale(2.0),
+            .declare('_scale2', scale(2.0, gpu.pyramidHeight, gpu.pyramidMaxScale),
                 withSize(2 * this._width, 2 * this._height))
 
-            .declare('_scale1/2', scale(0.5),
+            .declare('_scale1/2', scale(0.5, gpu.pyramidHeight, gpu.pyramidMaxScale),
                 withSize((1 + this._width) / 2, (1 + this._height) / 2))
 
-            .declare('_scale3/2', scale(1.5),
+            .declare('_scale3/2', scale(1.5, gpu.pyramidHeight, gpu.pyramidMaxScale),
                 withSize(3 * this._width / 2, 3 * this._height / 2))
 
-            .declare('_scale2/3', scale(2.0 / 3.0),
+            .declare('_scale2/3', scale(2.0 / 3.0, gpu.pyramidHeight, gpu.pyramidMaxScale),
                 withSize(2 * this._width / 3, 2 * this._height / 3))
 
             // kernels for debugging

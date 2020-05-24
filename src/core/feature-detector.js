@@ -30,7 +30,7 @@ export class FeatureDetector
 {
     /**
      * Class constructor
-     * @param {GPUKernels} gpu
+     * @param {GPUInstance} gpu
      */
     constructor(gpu)
     {
@@ -98,7 +98,8 @@ export class FeatureDetector
     brisk(media, settings = {})
     {
         const gpu = this._gpu;
-        const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidSize;
+        const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidHeight;
+        const lgM = Math.log2(gpu.pyramidMaxScale);
 
         // default settings
         settings = {
