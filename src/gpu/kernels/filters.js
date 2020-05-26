@@ -21,6 +21,7 @@
 
 import { GPUKernelGroup } from '../gpu-kernel-group';
 import { conv2D, convX, convY } from './shaders/convolution';
+import { createGaussianKernel } from './shaders/gaussian';
 
 /**
  * GPUFilters
@@ -47,6 +48,10 @@ export class GPUFilters extends GPUKernelGroup
             .compose('box5', '_box5x', '_box5y') // size: 5x5
             .compose('box3', '_box3x', '_box3y') // size: 3x3
             .compose('box7', '_box7x', '_box7y') // size: 7x7
+
+            // create gaussian kernels with custom sigma
+            .declare('createGaussianKernel11', createGaussianKernel(11),
+                this.operation.hasTextureSize(11, 1))
 
 
 

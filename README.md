@@ -222,7 +222,7 @@ Speedy can use different methods for detecting feature points. Depending on the 
 
 ###### FAST algorithm
 
-For any variation of the FAST algorithm[1], the `config` object accepts the following additional key:
+For any variation of the FAST algorithm[1], the `config` object accepts the following additional, optional key:
 
 * `threshold: number`. An alternative to `sensitivity` representing the threshold paramter of FAST: an integer between `0` and `255`, inclusive. Lower thresholds get you more features.
 
@@ -230,7 +230,7 @@ Note: `config.sensitivity` is an easy-to-use parameter and does *not* map linear
 
 ###### BRISK feature detector
 
-Speedy implements a modified version of the BRISK feature detector[2]. It is able to give you feature points at multiple scales, as it finds them in scale-space. The `config` object accepts the following additional keys:
+Speedy implements a modified version of the BRISK feature detector[2]. It is able to give you feature points at multiple scales, as it finds them in scale-space. The `config` object accepts the following additional keys (all are optional):
 
 * `depth: number`. An integer between `1` and `4` telling how "deep" the algorithm should go when searching for keypoints in scale-space. The higher the value, the more robust it is against scale transformations (at a slighly higher computational cost). Defaults to `4`.
 * `threshold: number`. An integer between `0` and `255`, just like in FAST.
