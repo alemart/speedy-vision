@@ -75,7 +75,7 @@ export class SpeedyPipeline
                 let texture = media._source;
                 for(let i = 0; i < this._operations.length; i++)
                     texture = this._operations[i].run(texture, media._gpu, media);
-                media._source = media._gpu.output.identity(texture); // end of the pipeline
+                media._source = media._gpu.utils.output(texture); // end of the pipeline
                 resolve(media);
             }
             else

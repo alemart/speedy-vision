@@ -252,7 +252,7 @@ The `config.expected` option can either be a number or an object with the follow
 * `number: number`. The number of features you expect to get.
 * `tolerance: number`. A range defined as a percentage relative to the number of features you expect. Defaults to `0.10` (10%).
 
-Expected numbers between 100 and 500 have been found to work well in practice (the less, the better). Your results may vary depending on your media. If you need very large numbers and don't care about the amount, it's easier to adjust the sensitivity manually. If you need small numbers, you might want to increase the tolerance.
+Expected numbers between 100 and 500 have been found to work well in practice. Your results may vary depending on your media. If you need larger numbers and don't care about the exact amount, it's easier to adjust the sensitivity manually. If you need small numbers, you might want to increase the tolerance.
 
 ###### Example
 

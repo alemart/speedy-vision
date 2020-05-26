@@ -15,18 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * gpu-output.js
- * Pipeline output
+ * gpu-utils.js
+ * GPU utilities
  */
 
 import { GPUKernelGroup } from '../gpu-kernel-group';
 import { identity } from './shaders/identity';
 
 /**
- * GPUOutput
- * Pipeline output
+ * GPUUtils
+ * Utility operations
  */
-export class GPUOutput extends GPUKernelGroup
+export class GPUUtils extends GPUKernelGroup
 {
     /**
      * Class constructor
@@ -39,7 +39,7 @@ export class GPUOutput extends GPUKernelGroup
         super(gpu, width, height);
         this
             // output a texture from a pipeline
-            .declare('identity', identity, {
+            .declare('output', identity, {
                 pipeline: false
             })
         ;

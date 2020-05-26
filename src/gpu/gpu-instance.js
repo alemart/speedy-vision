@@ -21,7 +21,7 @@
 
 const { GPU } = require(process.env.NODE_ENV == 'development' ? './gpu-js/gpu-browser' : './gpu-js/gpu-browser.min');
 import { Utils } from '../utils/utils';
-import { GPUOutput } from './kernels/output';
+import { GPUUtils } from './kernels/utils';
 import { GPUColors } from './kernels/colors';
 import { GPUFilters } from './kernels/filters';
 import { GPUKeypoints } from './kernels/keypoints';
@@ -35,7 +35,7 @@ const MAX_PYRAMID_LEVELS = 4;
 // Available kernel groups
 // (maps group name to class name)
 const KERNEL_GROUPS = {
-    'output': GPUOutput,
+    'utils': GPUUtils,
     'colors': GPUColors,
     'filters': GPUFilters,
     'keypoints': GPUKeypoints,
