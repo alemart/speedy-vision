@@ -62,10 +62,10 @@ export function brisk(image, layerA, layerB, scaleA, scaleB, lgM, h)
 
         // given a pixel in the image, pick a 2x2 square in
         // layers A and B: [xl,yl] x [xl+1,yl+1], l = a,b
-        const xa = Math.min(Math.max(1, Math.ceil(xmid * scaleA - 1)), widthA - 2);
-        const ya = Math.min(Math.max(1, Math.ceil(ymid * scaleA - 1)), heightA - 2);
-        const xb = Math.min(Math.max(1, Math.ceil(xmid * scaleB - 1)), widthB - 2);
-        const yb = Math.min(Math.max(1, Math.ceil(ymid * scaleB - 1)), heightB - 2);
+        const xa = Math.min(Math.max(0, Math.ceil(xmid * scaleA - 1)), widthA - 2);
+        const ya = Math.min(Math.max(0, Math.ceil(ymid * scaleA - 1)), heightA - 2);
+        const xb = Math.min(Math.max(0, Math.ceil(xmid * scaleB - 1)), widthB - 2);
+        const yb = Math.min(Math.max(0, Math.ceil(ymid * scaleB - 1)), heightB - 2);
         const a00 = layerA[ya][xa];
         const a10 = layerA[ya][xa+1];
         const a01 = layerA[ya+1][xa];
