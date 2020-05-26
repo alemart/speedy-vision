@@ -1,7 +1,7 @@
 {
   "name": "speedy-vision.js",
-  "version": "0.2.0",
-  "description": "GPU-accelerated Computer Vision for the web",
+  "version": "0.2.1",
+  "description": "GPU-accelerated Computer Vision for JavaScript",
   "author": "Alexandre Martins <alemartf@gmail.com> (https://github.com/alemart)",
   "homepage": "https://github.com/alemart/speedy-vision-js",
   "license": "Apache-2.0",
@@ -32,7 +32,9 @@
     "opencv",
     "gpu",
     "slam",
-    "fast"
+    "fast",
+    "brisk",
+    "orb"
   ],
   "devDependencies": {
     "ava": "^3.8.1",
