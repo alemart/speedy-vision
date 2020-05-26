@@ -26,9 +26,7 @@ import { upsample2, downsample2, upsample3, downsample3 } from './shaders/pyrami
 import { setScale, scale } from './shaders/scale';
 
 // neat utilities
-const withSize = (width, height) => ({ output: [ width|0, height|0 ], constants: { width: width|0, height: height|0 }});
-const withOutput = (width, height) => ({ output: [ width|0, height|0 ] })
-const withCanvas = (width, height) => ({ output: [ width|0, height|0 ], pipeline: false })
+//const withCanvas = (width, height) => ({ output: [ width|0, height|0 ], pipeline: false })
 
 /**
  * GPUPyramids
@@ -73,53 +71,53 @@ export class GPUPyramids extends GPUKernelGroup
             // same rules as above with sum(k) = 2
             .declare('_smoothX2', convX([
                 0.1, 0.5, 0.8, 0.5, 0.1
-            ]), withSize(2 * this._width, 2 * this._height))
+            ]), this.operation.hasTextureSize(2 * this._width, 2 * this._height))
 
             .declare('_smoothY2', convY([
                 0.1, 0.5, 0.8, 0.5, 0.1
-            ], 1.0 / 2.0), withSize(2 * this._width, 2 * this._height))
+            ], 1.0 / 2.0), this.operation.hasTextureSize(2 * this._width, 2 * this._height))
 
             // smoothing for 3x image
             // use [1-b, b, 1, b, 1-b], where 0 < b < 1
             .declare('_smoothX3', convX([
                 0.2, 0.8, 1.0, 0.8, 0.2
-            ]), withSize(3 * this._width, 3 * this._height))
+            ]), this.operation.hasTextureSize(3 * this._width, 3 * this._height))
 
             .declare('_smoothY3', convY([
                 0.2, 0.8, 1.0, 0.8, 0.2
-            ], 1.0 / 3.0), withSize(3 * this._width, 3 * this._height))
+            ], 1.0 / 3.0), this.operation.hasTextureSize(3 * this._width, 3 * this._height))
 
             // upsampling & downsampling
             .declare('_upsample2', upsample2,
-                withOutput(2 * this._width, 2 * this._height))
+                this.operation.resizesATextureTo(2 * this._width, 2 * this._height))
 
             .declare('_downsample2', downsample2,
-                withOutput((1 + this._width) / 2, (1 + this._height) / 2))
+                this.operation.resizesATextureTo((1 + this._width) / 2, (1 + this._height) / 2))
 
             .declare('_upsample3', upsample3,
-                withOutput(3 * this._width, 3 * this._height))
+                this.operation.resizesATextureTo(3 * this._width, 3 * this._height))
 
             .declare('_downsample3', downsample3,
-                withOutput((2 + this._width) / 3, (2 + this._height) / 3))
+                this.operation.resizesATextureTo((2 + this._width) / 3, (2 + this._height) / 3))
 
             .declare('_downsample2/3', downsample2,
-                withOutput(3 * this._width / 2, 3 * this._height / 2))
+                this.operation.resizesATextureTo(3 * this._width / 2, 3 * this._height / 2))
 
             .declare('_downsample3/2', downsample3,
-                withOutput(2 * this._width / 3, 2 * this._height / 3))
+                this.operation.resizesATextureTo(2 * this._width / 3, 2 * this._height / 3))
 
             // adjust the scale coefficients
             .declare('_scale2', scale(2.0, gpu.pyramidHeight, gpu.pyramidMaxScale),
-                withSize(2 * this._width, 2 * this._height))
+                this.operation.hasTextureSize(2 * this._width, 2 * this._height))
 
             .declare('_scale1/2', scale(0.5, gpu.pyramidHeight, gpu.pyramidMaxScale),
-                withSize((1 + this._width) / 2, (1 + this._height) / 2))
+                this.operation.hasTextureSize((1 + this._width) / 2, (1 + this._height) / 2))
 
             .declare('_scale3/2', scale(1.5, gpu.pyramidHeight, gpu.pyramidMaxScale),
-                withSize(3 * this._width / 2, 3 * this._height / 2))
+                this.operation.hasTextureSize(3 * this._width / 2, 3 * this._height / 2))
 
             .declare('_scale2/3', scale(2.0 / 3.0, gpu.pyramidHeight, gpu.pyramidMaxScale),
-                withSize(2 * this._width / 3, 2 * this._height / 3))
+                this.operation.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
 
             // kernels for debugging
             /*

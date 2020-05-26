@@ -104,6 +104,34 @@ export /* abstract */ class GPUKernelGroup
         return this;
     }
 
+    /**
+     * Neat helpers to be used
+     * when defining operations
+     */
+    get operation()
+    {
+        return this._helpers || (this.helpers = {
+
+            // Set texture input/output size
+            // Dimensions are converted to integers
+            hasTextureSize(width, height) {
+                return {
+                    output: [ width|0, height|0 ],
+                    constants: { width: width|0, height: height|0 }
+                };
+            },
+
+            // Use this when resizing a texture
+            // (original kernel constants are preserved)
+            resizesATextureTo(width, height) {
+                return {
+                    output: [ width|0, height|0 ]
+                };
+            },
+
+        });
+    }
+
     /* private */ _spawnKernel(fn, settings = { })
     {
         const config = Object.assign({
