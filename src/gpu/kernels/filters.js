@@ -20,8 +20,9 @@
  */
 
 import { GPUKernelGroup } from '../gpu-kernel-group';
-import { conv2D, convX, convY } from './shaders/convolution';
-import { createGaussianKernel } from './shaders/gaussian';
+import { conv2D, convX, convY, texConvX, texConvY } from './shaders/convolution';
+import { createGaussianKernel, normalizeGaussianKernel } from './shaders/gaussian';
+import { identity } from './shaders/identity';
 
 /**
  * GPUFilters
@@ -49,9 +50,16 @@ export class GPUFilters extends GPUKernelGroup
             .compose('box3', '_box3x', '_box3y') // size: 3x3
             .compose('box7', '_box7x', '_box7y') // size: 7x7
 
+            // texture-based convolutions
+            .compose('texConvXY', 'texConvX', 'texConvY') // 2D convolution with same 1D separable kernel in both axes
+            .declare('texConvX', texConvX) // 1D convolution, x-axis
+            .declare('texConvY', texConvY) // 1D convolution, y-axis
+
             // create gaussian kernels with custom sigma
-            .declare('createGaussianKernel11', createGaussianKernel(11),
-                this.operation.hasTextureSize(11, 1))
+            .compose('createGaussianKernel11', '_createGaussianKernel11', '_normalizeGaussianKernel11') // 1D gaussian with kernel size = 11
+
+
+
 
 
 
@@ -79,15 +87,13 @@ export class GPUFilters extends GPUKernelGroup
             .declare('_gauss7y', convY([
                 0.00598, 0.060626, 0.241843, 0.383103, 0.241843, 0.060626, 0.00598
             ]))
-
-            // (debug) gaussian filter
-            .declare('_gauss5', conv2D([
+            /*.declare('_gauss5', conv2D([ // for testing
                 1, 4, 7, 4, 1,
                 4, 16, 26, 16, 4,
                 7, 26, 41, 26, 7,
                 4, 16, 26, 16, 4,
                 1, 4, 7, 4, 1,
-            ], 1 / 237))
+            ], 1 / 237))*/
 
 
 
@@ -110,6 +116,17 @@ export class GPUFilters extends GPUKernelGroup
             .declare('_box7y', convY([
                 1, 1, 1, 1, 1, 1, 1
             ], 1 / 7))
+
+
+            // texture-based convolution helpers
+            .declare('_createGaussianKernel11', createGaussianKernel(11),
+                this.operation.hasTextureSize(11, 1))
+            .declare('_normalizeGaussianKernel11', normalizeGaussianKernel(11),
+                this.operation.hasTextureSize(11, 1))
+            /*.declare('_readGaussianKernel11', identity, { // for testing
+                ...(this.operation.hasTextureSize(11, 1)),
+                pipeline: false
+            })*/
         ;
     }
 }

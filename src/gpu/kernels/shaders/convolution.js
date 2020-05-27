@@ -20,6 +20,7 @@
  */
 
 import { Utils } from "../../../utils/utils";
+import { normalizeGaussianKernel } from "./gaussian";
 const cartesian = (a, b) => [].concat(...a.map(a => b.map(b => [a,b]))); // [a] x [b]
 const symmetricRange = n => [...Array(2*n + 1).keys()].map(x => x-n);    // [-n, ..., n]
 
@@ -73,6 +74,12 @@ export function convY(kernel, normalizationConstant = 1.0)
     return conv1D('y', kernel, normalizationConstant);
 }
 
+// Generate a texture-based 1D convolution function on the x-axis
+export const texConvX = texConv1D('x');
+
+// Generate a texture-based 1D convolution function on the x-axis
+export const texConvY = texConv1D('y');
+
 // 1D convolution function generator
 function conv1D(axis, kernel, normalizationConstant)
 {
@@ -113,4 +120,49 @@ function conv1D(axis, kernel, normalizationConstant)
     `;
 
     return new Function('image', body);
+}
+
+// texture-based 1D convolution function generator
+// (the convolution kernel is stored in a texture)
+function texConv1D(axis)
+{
+    // validate input
+    if(axis != 'x' && axis != 'y')
+        Utils.fatal(`Can't perform tex 1D convolution: invalid axis "${axis}"`); // this should never happen
+
+    // code
+    const body = `
+    const N = Math.floor(kSize / 2);
+    const width = this.constants.width;
+    const height = this.constants.height;
+    const pixel = image[this.thread.y][this.thread.x];
+    let r = 0.0, g = 0.0, b = 0.0;
+    let p = [0.0, 0.0, 0.0, 0.0];
+    let k = [0.0, 0.0, 0.0, 0.0];
+    let x = this.thread.x, y = this.thread.y;
+
+    for(let i = -N; i <= N; i++) {
+    ` + ((axis == 'x') ? `
+        x = Math.max(0, Math.min(this.thread.x + i, width - 1));
+    ` : `
+        y = Math.max(0, Math.min(this.thread.y + i, height - 1));
+    ` ) + `
+
+        p = image[y][x];
+        k = texKernel[0][i + N];
+
+        r += p[0] * (k[0] * scale + offset);
+        g += p[1] * (k[1] * scale + offset);
+        b += p[2] * (k[2] * scale + offset);
+    }
+
+    this.color(r, g, b, pixel[3]);
+    `;
+
+    // image: target image
+    // texKernel: convolution kernel (all entries in [0,1])
+    // kSize: kernel size, odd positive integer (it won't be checked!)
+    // scale: multiply the kernel entries by a number (like 1.0)
+    // offset: add a number to all kernel entries (like 0.0)
+    return new Function('image', 'texKernel', 'kSize', 'scale', 'offset', body);
 }
