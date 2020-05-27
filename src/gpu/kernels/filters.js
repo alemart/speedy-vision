@@ -21,7 +21,7 @@
 
 import { GPUKernelGroup } from '../gpu-kernel-group';
 import { conv2D, convX, convY, texConvX, texConvY } from './shaders/convolution';
-import { createGaussianKernel, normalizeGaussianKernel } from './shaders/gaussian';
+import { createGaussianKernel } from './shaders/gaussian';
 import { identity } from './shaders/identity';
 
 /**
@@ -56,9 +56,12 @@ export class GPUFilters extends GPUKernelGroup
             .declare('texConvY', texConvY) // 1D convolution, y-axis
 
             // create gaussian kernels with custom sigma
-            .compose('createGaussianKernel11', '_createGaussianKernel11', '_normalizeGaussianKernel11') // 1D gaussian with kernel size = 11
-
-
+            .declare('createGaussianKernel11', createGaussianKernel(11), // 1D gaussian with kernel size = 11
+                this.operation.hasTextureSize(11, 1))
+            /*.declare('_readGaussianKernel11', identity, { // for testing
+                ...(this.operation.hasTextureSize(11, 1)),
+                pipeline: false
+            })*/
 
 
 
@@ -116,17 +119,6 @@ export class GPUFilters extends GPUKernelGroup
             .declare('_box7y', convY([
                 1, 1, 1, 1, 1, 1, 1
             ], 1 / 7))
-
-
-            // texture-based convolution helpers
-            .declare('_createGaussianKernel11', createGaussianKernel(11),
-                this.operation.hasTextureSize(11, 1))
-            .declare('_normalizeGaussianKernel11', normalizeGaussianKernel(11),
-                this.operation.hasTextureSize(11, 1))
-            /*.declare('_readGaussianKernel11', identity, { // for testing
-                ...(this.operation.hasTextureSize(11, 1)),
-                pipeline: false
-            })*/
         ;
     }
 }
