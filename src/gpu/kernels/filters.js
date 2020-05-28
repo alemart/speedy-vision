@@ -20,7 +20,7 @@
  */
 
 import { GPUKernelGroup } from '../gpu-kernel-group';
-import { conv2D, convX, convY, texConvX, texConvY } from './shaders/convolution';
+import { conv2D, convX, convY, texConvX, texConvY, texConv2D, createKernel2D } from './shaders/convolution';
 import { createGaussianKernel } from './shaders/gaussian';
 import { identity } from './shaders/identity';
 
@@ -51,17 +51,34 @@ export class GPUFilters extends GPUKernelGroup
             .compose('box7', '_box7x', '_box7y') // size: 7x7
 
             // texture-based convolutions
+            .declare('texConv2D', texConv2D) // 2D convolution with a texture
             .compose('texConvXY', 'texConvX', 'texConvY') // 2D convolution with same 1D separable kernel in both axes
             .declare('texConvX', texConvX) // 1D convolution, x-axis
             .declare('texConvY', texConvY) // 1D convolution, y-axis
 
-            // create gaussian kernels with custom sigma
-            .declare('createGaussianKernel11', createGaussianKernel(11), // 1D gaussian with kernel size = 11
+            // create custom convolution kernels
+            .declare('createGaussianKernel11x1', createGaussianKernel(11), // 1D gaussian with kernel size = 11 and custom sigma
                 this.operation.hasTextureSize(11, 1))
+            .declare('createKernel1x1', createKernel2D(1), // 1x1 texture kernel
+                this.operation.hasTextureSize(1, 1))
+            .declare('createKernel3x3', createKernel2D(3), // 3x3 texture kernel
+                this.operation.hasTextureSize(3, 3))
+            .declare('createKernel5x5', createKernel2D(5), // 5x5 texture kernel
+                this.operation.hasTextureSize(5, 5))
+            .declare('createKernel7x7', createKernel2D(7), // 7x7 texture kernel
+                this.operation.hasTextureSize(7, 7))
+            .declare('createKernel9x9', createKernel2D(9), // 9x9 texture kernel
+                this.operation.hasTextureSize(9, 9))
+            .declare('createKernel11x11', createKernel2D(11), // 11x11 texture kernel
+                this.operation.hasTextureSize(11, 11))
             /*.declare('_readGaussianKernel11', identity, { // for testing
                 ...(this.operation.hasTextureSize(11, 1)),
                 pipeline: false
             })*/
+            .declare('_readKernel3x3', identity, { // for testing
+                ...(this.operation.hasTextureSize(3, 3)),
+                pipeline: false
+            })
 
 
 
