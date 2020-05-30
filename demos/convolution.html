@@ -1,0 +1,195 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Cool effects with image convolutions</title>
+        <script src="../dist/speedy-vision.js" async></script>
+        <style>
+            form { display: flex; flex-wrap: wrap; align-items: baseline; margin-bottom: 1em; width: 512px;}
+            mark { position: absolute; top: 16px; right: 16px; background: none; }
+            select { margin: 0.5em; }
+        </style>
+    </head>
+    <body>
+        <h1>Image filters</h1>
+        <form>
+            Select the
+            <select id="template"></select>
+            convolution kernel or edit the fields below:
+            <table>
+                <tr>
+                    <td><input type="text" id="kernel-0" value="0"></td>
+                    <td><input type="text" id="kernel-1" value="0"></td>
+                    <td><input type="text" id="kernel-2" value="0"></td>
+                </tr>
+                <tr>
+                    <td><input type="text" id="kernel-3" value="0"></td>
+                    <td><input type="text" id="kernel-4" value="1"></td>
+                    <td><input type="text" id="kernel-5" value="0"></td>
+                </tr>
+                <tr>
+                    <td><input type="text" id="kernel-6" value="0"></td>
+                    <td><input type="text" id="kernel-7" value="0"></td>
+                    <td><input type="text" id="kernel-8" value="0"></td>
+                </tr>
+            </table>
+        </form>
+        <div>
+            <button id="play" onclick="pause()">Play / pause</button>
+            <span>FPS: <span id="fps">0</span></span>
+        </div>
+        <video
+            src="../assets/jelly.mp4"
+            width="426" height="240"
+            loop muted hidden
+            title="Free video by Chris Munnik from https://www.pexels.com/pt-br/video/3297379/">
+        </video>
+        <script>
+const template = {
+    "Original":
+    [
+        0, 0, 0,
+        0, 1, 0,
+        0, 0, 0,
+    ],
+
+    "Brighten":
+    [
+        0, 0, 0,
+        0, 2, 0,
+        0, 0, 0,
+    ],
+
+    "Blur":
+    [
+        0.11111, 0.11111, 0.11111,
+        0.11111, 0.11111, 0.11111,
+        0.11111, 0.11111, 0.11111,
+    ],
+
+    "Gaussian blur":
+    [
+        0.0625, 0.125, 0.0625,
+        0.125, 0.25, 0.125,
+        0.0625, 0.125, 0.0625,
+    ],
+
+    "Sharpen":
+    [
+         0,-1, 0,
+        -1, 5,-1,
+         0,-1, 0,
+    ],
+
+    "Emboss":
+    [
+        -2,-1, 0,
+        -1, 1, 1,
+         0, 1, 2
+    ],
+
+    "Edges":
+    [
+        1, 1, 1,
+        1,-8, 1,
+        1, 1, 1,
+    ],
+
+    "Horizontal lines":
+    [
+        -1,-1,-1,
+         2, 2, 2,
+        -1,-1,-1,
+    ],
+
+    "Vertical lines":
+    [
+        -1, 2,-1,
+        -1, 2,-1,
+        -1, 2,-1,
+    ],
+};
+
+window.onload = async function()
+{
+    let pipeline = Speedy.pipeline();
+
+    // tell Speedy to load the video
+    const video = document.querySelector('video');
+    const media = await Speedy.load(video);
+    video.play();
+
+    // create a canvas to display the features
+    const canvas = createCanvas(media.width, media.height, video.title);
+
+    // setup the <select> element
+    const templateSelector = document.getElementById('template');
+    for(let templateName in template) {
+        const option = document.createElement('option');
+        const text = document.createTextNode(templateName);
+        option.value = templateName;
+        option.selected = (option.value == 'Original');
+        option.appendChild(text);
+        templateSelector.appendChild(option);
+    }
+    templateSelector.onchange = () => {
+        const name = templateSelector.value;
+        kernelElement.forEach((inputField, i) => inputField.value = template[name][i]);
+        updatePipeline();
+    };
+
+    // update the pipeline as soon as a text field is changed
+    const kernelElement = [...Array(9).keys()].map(k => document.getElementById('kernel-' + k));
+    for(let inputField of kernelElement)
+        inputField.oninput = updatePipeline;
+
+    // update the pipeline
+    function updatePipeline()
+    {
+        const kernel = kernelElement.map(k => k.value);
+        pipeline = Speedy.pipeline()
+                         .convolve(kernel);
+    }
+
+    // render video & features
+    let transformedMedia = media;
+    async function p() {
+        transformedMedia = await media.run(pipeline);
+        setTimeout(p, 1000/60);
+    }
+    p();
+    async function render()
+    {
+        //const transformedMedia = await media.run(pipeline);
+        transformedMedia.draw(canvas);
+        requestAnimationFrame(render);
+    }
+    render();
+
+    // display fps
+    const fps = document.getElementById('fps');
+    setInterval(() => fps.innerText = Speedy.fps.value, 500);
+}
+
+function createCanvas(width, height, title)
+{
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    canvas.title = title;
+    document.body.appendChild(canvas);
+    return canvas;
+}
+
+function pause()
+{
+    const video = document.querySelector('video');
+    if(video.paused)
+        video.play();
+    else
+        video.pause();
+}
+        </script>
+        <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>
+    </body>
+</html>
