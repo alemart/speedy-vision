@@ -152,15 +152,9 @@ window.onload = async function()
     }
 
     // render video & features
-    let transformedMedia = media;
-    async function p() {
-        transformedMedia = await media.run(pipeline);
-        setTimeout(p, 1000/60);
-    }
-    p();
     async function render()
     {
-        //const transformedMedia = await media.run(pipeline);
+        const transformedMedia = await media.run(pipeline);
         transformedMedia.draw(canvas);
         requestAnimationFrame(render);
     }
