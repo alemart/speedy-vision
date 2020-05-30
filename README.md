@@ -30,6 +30,7 @@ Try the demos and take a look at their source code:
   * [Find a specific number of features](https://alemart.github.io/speedy-vision-js/demos/automatic-sensitivity.html) (automatic sensitivity)
   * [Multi-scale feature detection](https://alemart.github.io/speedy-vision-js/demos/multi-scale.html)
 * Image processing
+  * [Cool effects with image convolutions](https://alemart.github.io/speedy-vision-js/demos/convolution.html)
   * [Convert image to greyscale](https://alemart.github.io/speedy-vision-js/demos/greyscale-image.html)
   * [Convert video to greyscale](https://alemart.github.io/speedy-vision-js/demos/greyscale-video.html)
   * [Blurring an image](https://alemart.github.io/speedy-vision-js/demos/image-blurring.html)
@@ -384,6 +385,30 @@ Blurs the media. The optional `options` object accepts the following keys:
 
 * `filter: string`. Name of the smoothing filter. One of the following: `"gaussian"`, `"box"`. Defaults to `"gaussian"`.
 * `size: number`. Kernel size. One of the following: `3`, `5` or `7`. Defaults to `5`.
+
+###### .convolve
+
+`SpeedyPipeline.convolve(kernel: Array<number>, multiplier?: number): SpeedyPipeline`
+
+Performs an image convolution given a `kernel`. Currently, Speedy supports 3x3, 5x5, 7x7, 9x9 and 11x11 convolution kernels. Optionally, you may specify a `multiplier`: all kernel entries will be multiplied by it.
+
+```js
+// Example: Sharpening an image
+const pipeline = Speedy.pipeline()
+                       .convolve([
+                           0,-1, 0,
+                          -1, 5,-1,
+                           0,-1, 0,
+                       ]);
+
+const image = document.getElementById('my-image');
+const media = await Speedy.load(image);
+const transformedMedia = await media.run(pipeline);
+
+// Display the result
+const canvas = document.getElementById('my-canvas');
+transformedMedia.draw(canvas);
+```
 
 ### Extras
 
