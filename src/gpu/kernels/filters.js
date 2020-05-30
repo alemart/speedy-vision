@@ -59,8 +59,8 @@ export class GPUFilters extends GPUKernelGroup
             // create custom convolution kernels
             .declare('createGaussianKernel11x1', createGaussianKernel(11), // 1D gaussian with kernel size = 11 and custom sigma
                 this.operation.hasTextureSize(11, 1))
-            .declare('createKernel1x1', createKernel2D(1), // 1x1 texture kernel
-                this.operation.hasTextureSize(1, 1))
+            //.declare('createKernel1x1', createKernel2D(1), // 1x1 doesn't work properly (???)
+            //    this.operation.hasTextureSize(1, 1))
             .declare('createKernel3x3', createKernel2D(3), // 3x3 texture kernel
                 this.operation.hasTextureSize(3, 3))
             .declare('createKernel5x5', createKernel2D(5), // 5x5 texture kernel

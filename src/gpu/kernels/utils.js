@@ -38,6 +38,9 @@ export class GPUUtils extends GPUKernelGroup
     {
         super(gpu, width, height);
         this
+            // no-operation
+            .declare('identity', identity)
+
             // output a texture from a pipeline
             .declare('output', identity, {
                 pipeline: false

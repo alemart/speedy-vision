@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  * identity.js
- * Identity shader (for debugging)
+ * Identity shader
  */
 
 export function identity(image)

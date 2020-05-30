@@ -1,15 +1,15 @@
 /*!
- * speedy-vision.js v0.2.0
+ * speedy-vision.js v0.2.1
  * https://github.com/alemart/speedy-vision-js
  * 
- * GPU-accelerated Computer Vision for the web
+ * GPU-accelerated Computer Vision for JavaScript
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
  * Includes gpu.js (MIT license)
  * by the gpu.js team (http://gpu.rocks)
  * 
- * Date: 2020-05-24T14:20:57.539Z
+ * Date: 2020-05-30T22:02:31.842Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -144,7 +144,7 @@ class FeatureDetector
 {
     /**
      * Class constructor
-     * @param {GPUKernels} gpu
+     * @param {GPUInstance} gpu
      */
     constructor(gpu)
     {
@@ -213,7 +213,6 @@ class FeatureDetector
     {
         const gpu = this._gpu;
         const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidHeight;
-        const lgM = Math.log2(gpu.pyramidMaxScale);
 
         // default settings
         settings = {
@@ -264,15 +263,16 @@ class FeatureDetector
         }
 
         // scale space non-maximum suppression & interpolation
+        const lgM = Math.log2(gpu.pyramidMaxScale), h = gpu.pyramidHeight;
         const suppressedPyramidCorners = new Array(pyramidCorners.length);
         const suppressedIntraPyramidCorners = new Array(intraPyramidCorners.length);
-        suppressedIntraPyramidCorners[0] = gpu.intraPyramid(0).keypoints.brisk(intraPyramidCorners[0], intraPyramidCorners[0], pyramidCorners[0], 1.0, 2.0 / 3.0);
+        suppressedIntraPyramidCorners[0] = gpu.intraPyramid(0).keypoints.brisk(intraPyramidCorners[0], intraPyramidCorners[0], pyramidCorners[0], 1.0, 2.0 / 3.0, lgM, h);
         for(let j = 0; j < suppressedPyramidCorners.length; j++) {
-            suppressedPyramidCorners[j] = gpu.pyramid(j).keypoints.brisk(pyramidCorners[j], intraPyramidCorners[j], intraPyramidCorners[j+1], 1.5, 0.75);
+            suppressedPyramidCorners[j] = gpu.pyramid(j).keypoints.brisk(pyramidCorners[j], intraPyramidCorners[j], intraPyramidCorners[j+1], 1.5, 0.75, lgM, h);
             if(j+1 < suppressedPyramidCorners.length)
-                suppressedIntraPyramidCorners[j+1] = gpu.intraPyramid(j+1).keypoints.brisk(intraPyramidCorners[j+1], pyramidCorners[j], pyramidCorners[j+1], 4.0 / 3.0, 2.0 / 3.0);
+                suppressedIntraPyramidCorners[j+1] = gpu.intraPyramid(j+1).keypoints.brisk(intraPyramidCorners[j+1], pyramidCorners[j], pyramidCorners[j+1], 4.0 / 3.0, 2.0 / 3.0, lgM, h);
             else
-                suppressedIntraPyramidCorners[j+1] = gpu.intraPyramid(j+1).keypoints.brisk(intraPyramidCorners[j+1], pyramidCorners[j], intraPyramidCorners[j+1], 4.0 / 3.0, 1.0);
+                suppressedIntraPyramidCorners[j+1] = gpu.intraPyramid(j+1).keypoints.brisk(intraPyramidCorners[j+1], pyramidCorners[j], intraPyramidCorners[j+1], 4.0 / 3.0, 1.0, lgM, h);
         }
 
         // merge all keypoints
@@ -400,7 +400,7 @@ const PipelineOperation = { };
     /**
      * Runs the pipeline operation
      * @param {Texture} texture
-     * @param {GPUKernels} gpu
+     * @param {GPUInstance} gpu
      * @param {SpeedyMedia} [media]
      * @returns {Texture}
      */
@@ -472,6 +472,68 @@ PipelineOperation.Blur = class extends SpeedyPipelineOperation
     run(texture, gpu, media)
     {
         return gpu.filters[this._filter](texture);
+    }
+}
+
+/**
+ * Image convolution
+ */
+PipelineOperation.Convolve = class extends SpeedyPipelineOperation
+{
+    /**
+     * Perform a convolution
+     * Must provide a SQUARE kernel with size:
+     * 1x1, 3x3, 5x5, 7x7, 9x9 or 11x11
+     * @param {Array<number>} kernel convolution kernel
+     * @param {number} [multiplier] multiply all kernel entries by this number
+     */
+    constructor(kernel, multiplier = 1.0)
+    {
+        let kern = new Float32Array(kernel).map(x => x * multiplier);
+        const len = kern.length;
+        const size = Math.sqrt(len) | 0;
+        const method = ({
+            3:  'createKernel3x3',
+            5:  'createKernel5x5',
+            7:  'createKernel7x7',
+            9:  'createKernel9x9',
+            11: 'createKernel11x11',
+        })[size] || null;
+        super();
+
+        // validate kernel
+        if(size * size != len || !method)
+            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Cannot convolve with a ${size}x${size} kernel of ${len} elements`);
+
+        // normalize kernel entries to [0,1]
+        const min = Math.min(...kern), max = Math.max(...kern);
+        const offset = min;
+        const scale = Math.abs(max - min) > 1e-5 ? max - min : 1;
+        kern = kern.map(x => (x - offset) / scale);
+
+        // store the normalized kernel
+        this._scale = scale;
+        this._offset = offset;
+        this._kernel = kern;
+        this._method = method;
+        this._texKernel = null;
+        this._kernelSize = size;
+    }
+    
+    run(texture, gpu, media)
+    {
+        // instantiate the texture kernel
+        if(this._texKernel == null)
+            this._texKernel = gpu.filters[this._method](this._kernel);
+
+        // convolve
+        return gpu.filters.texConv2D(
+            gpu.utils.identity(texture), // identity() is needed when chaining convolutions
+            this._texKernel,
+            this._kernelSize,
+            this._scale,
+            this._offset
+        );
     }
 }
 
@@ -599,7 +661,7 @@ class SpeedyFeature
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMedia", function() { return SpeedyMedia; });
-/* harmony import */ var _gpu_gpu_kernels__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu/gpu-kernels */ "./src/gpu/gpu-kernels.js");
+/* harmony import */ var _gpu_gpu_instance__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu/gpu-instance */ "./src/gpu/gpu-instance.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _feature_detector__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./feature-detector */ "./src/core/feature-detector.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
@@ -655,7 +717,7 @@ class SpeedyMedia
             this._colorFormat = _utils_types__WEBPACK_IMPORTED_MODULE_1__["ColorFormat"].RGB;
 
             // spawn relevant components
-            this._gpu = new _gpu_gpu_kernels__WEBPACK_IMPORTED_MODULE_0__["GPUKernels"](this._width, this._height);
+            this._gpu = new _gpu_gpu_instance__WEBPACK_IMPORTED_MODULE_0__["GPUInstance"](this._width, this._height);
             this._featureDetector = null; // lazy instantiation 
         }
         else if(arguments.length == 1) {
@@ -1000,7 +1062,7 @@ class SpeedyPipeline
                 let texture = media._source;
                 for(let i = 0; i < this._operations.length; i++)
                     texture = this._operations[i].run(texture, media._gpu, media);
-                media._source = media._gpu.output.identity(texture); // end of the pipeline
+                media._source = media._gpu.utils.output(texture); // end of the pipeline
                 resolve(media);
             }
             else
@@ -1067,6 +1129,269 @@ class SpeedyPipeline
         return this._spawn(
             new _pipeline_operations__WEBPACK_IMPORTED_MODULE_0__["PipelineOperation"].Blur(options)
         );
+    }
+
+    /**
+     * Image convolution
+     * @param {Array<number>} kernel
+     * @param {number} [multiplier]
+     * @returns {SpeedyPipeline}
+     */
+    convolve(kernel, multiplier = 1.0)
+    {
+        return this._spawn(
+            new _pipeline_operations__WEBPACK_IMPORTED_MODULE_0__["PipelineOperation"].Convolve(kernel, multiplier)
+        );
+    }
+}
+
+/***/ }),
+
+/***/ "./src/gpu/gpu-instance.js":
+/*!*********************************!*\
+  !*** ./src/gpu/gpu-instance.js ***!
+  \*********************************/
+/*! exports provided: GPUInstance */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUInstance", function() { return GPUInstance; });
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _kernels_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./kernels/utils */ "./src/gpu/kernels/utils.js");
+/* harmony import */ var _kernels_colors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./kernels/colors */ "./src/gpu/kernels/colors.js");
+/* harmony import */ var _kernels_filters__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./kernels/filters */ "./src/gpu/kernels/filters.js");
+/* harmony import */ var _kernels_keypoints__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./kernels/keypoints */ "./src/gpu/kernels/keypoints.js");
+/* harmony import */ var _kernels_encoders__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./kernels/encoders */ "./src/gpu/kernels/encoders.js");
+/* harmony import */ var _kernels_pyramids__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./kernels/pyramids */ "./src/gpu/kernels/pyramids.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * gpu-instance.js
+ * The set of all GPU kernel groups for accelerated computer vision
+ */
+
+const { GPU } = __webpack_require__(/*! ./gpu-js/gpu-browser */ "./src/gpu/gpu-js/gpu-browser.js");
+
+
+
+
+
+
+
+
+// Limits
+const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
+const MAX_PYRAMID_LEVELS = 4;
+
+// Available kernel groups
+// (maps group name to class name)
+const KERNEL_GROUPS = {
+    'utils': _kernels_utils__WEBPACK_IMPORTED_MODULE_1__["GPUUtils"],
+    'colors': _kernels_colors__WEBPACK_IMPORTED_MODULE_2__["GPUColors"],
+    'filters': _kernels_filters__WEBPACK_IMPORTED_MODULE_3__["GPUFilters"],
+    'keypoints': _kernels_keypoints__WEBPACK_IMPORTED_MODULE_4__["GPUKeypoints"],
+    'encoders': _kernels_encoders__WEBPACK_IMPORTED_MODULE_5__["GPUEncoders"],
+    'pyramids': _kernels_pyramids__WEBPACK_IMPORTED_MODULE_6__["GPUPyramids"],
+};
+
+
+/**
+ * The set of all GPU kernel groups for
+ * accelerated computer vision
+ */
+class GPUInstance
+{
+    /**
+     * Class constructor
+     * @param {number} width Texture width
+     * @param {number} height Texture height
+     */
+    constructor(width, height)
+    {
+        // read & validate texture size
+        this._width = Math.max(1, +width | 0);
+        this._height = Math.max(1, +height | 0);
+        if(this._width > MAX_TEXTURE_LENGTH || this._height > MAX_TEXTURE_LENGTH) {
+            _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].warning(`Maximum texture size exceeded (using ${this._width} x ${this._height}).`);
+            this._width = Math.min(this._width, MAX_TEXTURE_LENGTH);
+            this._height = Math.min(this._height, MAX_TEXTURE_LENGTH);
+        }
+
+        // create & configure canvas
+        this._canvas = this._createCanvas(this._width, this._height);
+        this._context = this._canvas.getContext('webgl2', {
+            premultipliedAlpha: true, // we're storing data in the alpha channel
+            preserveDrawingBuffer: false
+        });
+
+        // lost context?
+        this._canvas.addEventListener('webglcontextlost', event => {
+            _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].warning(`Lost WebGL context.`);
+            event.preventDefault();
+        }, false);
+        this._canvas.addEventListener('webglcontextrestored', () => {
+            _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].warning(`Restored WebGL context.`);
+            this._initGPU();
+        }, false);
+
+        // initialize the GPU
+        this._gpu = this._spawnGPU(this._canvas, this._context, this._width, this._height);
+    }
+
+    /**
+     * Texture width
+     * @returns {number}
+     */
+    get width()
+    {
+        return this._width;
+    }
+
+    /**
+     * Texture height
+     * @returns {number}
+     */
+    get height()
+    {
+        return this._height;
+    }
+
+    /**
+     * Access the kernel groups of a pyramid level
+     * sizeof(pyramid(i)) = sizeof(pyramid(0)) / 2^i
+     * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS - 1
+     * @returns {Array}
+     */
+    pyramid(level)
+    {
+        const lv = level | 0;
+
+        if(lv < 0 || lv >= MAX_PYRAMID_LEVELS)
+            _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Invalid pyramid level: ${lv}`);
+
+        return this._pyramid[lv];
+    }
+
+    /**
+     * Access the kernel groups of an intra-pyramid level
+     * The intra-pyramid encodes layers between pyramid layers
+     * sizeof(intraPyramid(0)) = 1.5 * sizeof(pyramid(0))
+     * sizeof(intraPyramid(1)) = 1.5 * sizeof(pyramid(1))
+     * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS
+     * @returns {Array}
+     */
+    intraPyramid(level)
+    {
+        const lv = level | 0;
+
+        if(lv < 0 || lv >= MAX_PYRAMID_LEVELS + 1)
+            _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Invalid intra-pyramid level: ${lv}`);
+
+        return this._intraPyramid[lv];
+    }
+
+    /**
+     * The number of layers of the pyramid
+     * @returns {number}
+     */
+    get pyramidHeight()
+    {
+        return MAX_PYRAMID_LEVELS;
+    }
+
+    /**
+     * The maximum supported scale for a pyramid layer
+     * @returns {number}
+     */
+    get pyramidMaxScale()
+    {
+        // This is preferably a power of 2
+        return 2;
+    }
+
+    /**
+     * Internal canvas
+     * @returns {HTMLCanvasElement}
+     */
+    get canvas()
+    {
+        return this._canvas;
+    }
+
+    // spawns a GPU instance
+    _spawnGPU(canvas, context, width, height)
+    {
+        // create GPU
+        const gpu = new GPU({ canvas, context });
+
+        // spawn kernel groups
+        spawnKernelGroups.call(this, this, width, height);
+
+        // spawn pyramids of kernel groups
+        this._pyramid = this._buildPyramid(gpu, width, height, 1.0, MAX_PYRAMID_LEVELS);
+        this._intraPyramid = this._buildPyramid(gpu, width, height, 1.5, MAX_PYRAMID_LEVELS + 1);
+
+        // done!
+        return gpu;
+    }
+
+    // Create a canvas
+    _createCanvas(width, height)
+    {
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        return canvas;
+    }
+
+    // build a pyramid, where each level stores the kernel groups
+    _buildPyramid(gpu, imageWidth, imageHeight, baseScale, numLevels)
+    {
+        let scale = +baseScale;
+        let width = (imageWidth * scale) | 0, height = (imageHeight * scale) | 0;
+        let pyramid = new Array(numLevels);
+
+        for(let i = 0; i < pyramid.length; i++) {
+            pyramid[i] = { width, height, scale };
+            spawnKernelGroups.call(pyramid[i], this, width, height);
+            width = ((1 + width) / 2) | 0;
+            height = ((1 + height) / 2) | 0;
+            scale /= 2;
+        }
+
+        return pyramid;
+    }
+}
+
+// Spawn kernel groups
+function spawnKernelGroups(gpu, width, height)
+{
+    // all kernel groups are available via getters
+    for(let g in KERNEL_GROUPS) {
+        Object.defineProperty(this, g, {
+            get: (() => {
+                const grp = '_' + g;
+                return (function() { // lazy instantiation
+                    return this[grp] || (this[grp] = new (KERNEL_GROUPS[g])(gpu, width, height));
+                }).bind(this);
+            })(),
+            configurable: true // WebGL context may be lost
+        });
     }
 }
 
@@ -20563,11 +20888,17 @@ __webpack_require__.r(__webpack_exports__);
 
 class GPUKernelGroup
 {
-    /* protected */ constructor(gpu)
+    /**
+     * Class constructor
+     * @param {GPUInstance} gpu
+     * @param {number} width Texture width (depends on the pyramid layer)
+     * @param {number} height Texture height (depends on the pyramid layer)
+     */
+    /* protected */ constructor(gpu, width, height)
     {
         this._gpu = gpu;
-        this._width = gpu.width;
-        this._height = gpu.height;
+        this._width = width;
+        this._height = height;
     }
 
     /**
@@ -20634,6 +20965,34 @@ class GPUKernelGroup
         return this;
     }
 
+    /**
+     * Neat helpers to be used
+     * when defining operations
+     */
+    get operation()
+    {
+        return this._helpers || (this.helpers = {
+
+            // Set texture input/output size
+            // Dimensions are converted to integers
+            hasTextureSize(width, height) {
+                return {
+                    output: [ width|0, height|0 ],
+                    constants: { width: width|0, height: height|0 }
+                };
+            },
+
+            // Use this when resizing a texture
+            // (original kernel constants are preserved)
+            resizesATextureTo(width, height) {
+                return {
+                    output: [ width|0, height|0 ]
+                };
+            },
+
+        });
+    }
+
     /* private */ _spawnKernel(fn, settings = { })
     {
         const config = Object.assign({
@@ -20651,256 +21010,6 @@ class GPUKernelGroup
         }, settings);
 
         return this._gpu._gpu.createKernel(fn, config);
-    }
-}
-
-/***/ }),
-
-/***/ "./src/gpu/gpu-kernels.js":
-/*!********************************!*\
-  !*** ./src/gpu/gpu-kernels.js ***!
-  \********************************/
-/*! exports provided: GPUKernels */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUKernels", function() { return GPUKernels; });
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _kernels_output__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./kernels/output */ "./src/gpu/kernels/output.js");
-/* harmony import */ var _kernels_colors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./kernels/colors */ "./src/gpu/kernels/colors.js");
-/* harmony import */ var _kernels_filters__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./kernels/filters */ "./src/gpu/kernels/filters.js");
-/* harmony import */ var _kernels_keypoints__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./kernels/keypoints */ "./src/gpu/kernels/keypoints.js");
-/* harmony import */ var _kernels_encoders__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./kernels/encoders */ "./src/gpu/kernels/encoders.js");
-/* harmony import */ var _kernels_pyramids__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./kernels/pyramids */ "./src/gpu/kernels/pyramids.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for the web
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * gpu-kernels.js
- * The set of all GPU kernel groups for accelerated computer vision
- */
-
-const { GPU } = __webpack_require__(/*! ./gpu-js/gpu-browser */ "./src/gpu/gpu-js/gpu-browser.js");
-
-
-
-
-
-
-
-
-// Limits
-const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
-const MAX_PYRAMID_LEVELS = 4;
-
-// Available kernel groups
-// (maps group name to class)
-const KERNEL_GROUPS = {
-    'output': _kernels_output__WEBPACK_IMPORTED_MODULE_1__["GPUOutput"],
-    'colors': _kernels_colors__WEBPACK_IMPORTED_MODULE_2__["GPUColors"],
-    'filters': _kernels_filters__WEBPACK_IMPORTED_MODULE_3__["GPUFilters"],
-    'keypoints': _kernels_keypoints__WEBPACK_IMPORTED_MODULE_4__["GPUKeypoints"],
-    'encoders': _kernels_encoders__WEBPACK_IMPORTED_MODULE_5__["GPUEncoders"],
-    'pyramids': _kernels_pyramids__WEBPACK_IMPORTED_MODULE_6__["GPUPyramids"],
-};
-
-
-/**
- * The set of all GPU kernel groups for
- * accelerated computer vision
- */
-class GPUKernels
-{
-    /**
-     * Class constructor
-     * @param {number} width Texture width
-     * @param {number} height Texture height
-     */
-    constructor(width, height)
-    {
-        // read & validate texture size
-        this._width = Math.max(1, +width | 0);
-        this._height = Math.max(1, +height | 0);
-        if(this._width > MAX_TEXTURE_LENGTH || this._height > MAX_TEXTURE_LENGTH) {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].warning(`Maximum texture size exceeded (using ${this._width} x ${this._height}).`);
-            this._width = Math.min(this._width, MAX_TEXTURE_LENGTH);
-            this._height = Math.min(this._height, MAX_TEXTURE_LENGTH);
-        }
-
-        // create & configure canvas
-        this._canvas = this._createCanvas(this._width, this._height);
-        this._context = this._canvas.getContext('webgl2', {
-            premultipliedAlpha: true, // we're storing data in the alpha channel
-            preserveDrawingBuffer: false
-        });
-
-        // lost context?
-        this._canvas.addEventListener('webglcontextlost', event => {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].warning(`Lost WebGL context.`);
-            event.preventDefault();
-        }, false);
-        this._canvas.addEventListener('webglcontextrestored', () => {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].warning(`Restored WebGL context.`);
-            this._initGPU();
-        }, false);
-
-        // initialize the GPU
-        this._gpu = this._spawnGPU(this._canvas, this._context, this._width, this._height);
-    }
-
-    /**
-     * Texture width
-     * @returns {number}
-     */
-    get width()
-    {
-        return this._width;
-    }
-
-    /**
-     * Texture height
-     * @returns {number}
-     */
-    get height()
-    {
-        return this._height;
-    }
-
-    /**
-     * Access the kernel groups of a pyramid level
-     * sizeof(pyramid(i)) = sizeof(pyramid(0)) / 2^i
-     * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS - 1
-     * @returns {Array}
-     */
-    pyramid(level)
-    {
-        const lv = level | 0;
-
-        if(lv < 0 || lv >= MAX_PYRAMID_LEVELS)
-            _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Invalid pyramid level: ${lv}`);
-
-        return this._pyramid[lv];
-    }
-
-    /**
-     * Access the kernel groups of an intra-pyramid level
-     * The intra-pyramid encodes layers between pyramid layers
-     * sizeof(intraPyramid(0)) = 1.5 * sizeof(pyramid(0))
-     * sizeof(intraPyramid(1)) = 1.5 * sizeof(pyramid(1))
-     * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS
-     * @returns {Array}
-     */
-    intraPyramid(level)
-    {
-        const lv = level | 0;
-
-        if(lv < 0 || lv >= MAX_PYRAMID_LEVELS + 1)
-            _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Invalid intra-pyramid level: ${lv}`);
-
-        return this._intraPyramid[lv];
-    }
-
-    /**
-     * The number of layers of the pyramid
-     * @returns {number}
-     */
-    get pyramidHeight()
-    {
-        return MAX_PYRAMID_LEVELS;
-    }
-
-    /**
-     * The maximum supported scale for a pyramid layer
-     * @returns {number}
-     */
-    get pyramidMaxScale()
-    {
-        // This is preferably a power of 2
-        return 2;
-    }
-
-    /**
-     * Internal canvas
-     * @returns {HTMLCanvasElement}
-     */
-    get canvas()
-    {
-        return this._canvas;
-    }
-
-    // spawns a GPU instance
-    _spawnGPU(canvas, context, width, height)
-    {
-        // create GPU
-        const gpu = new GPU({ canvas, context });
-
-        // spawn kernel groups
-        spawnKernelGroups.call(this, this);
-
-        // spawn pyramids of kernel groups
-        this._pyramid = this._buildPyramid(gpu, width, height, 1.0, MAX_PYRAMID_LEVELS);
-        this._intraPyramid = this._buildPyramid(gpu, width, height, 1.5, MAX_PYRAMID_LEVELS + 1);
-
-        // done!
-        return gpu;
-    }
-
-    // Create a canvas
-    _createCanvas(width, height)
-    {
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        return canvas;
-    }
-
-    // build a pyramid, where each level stores the kernel groups
-    _buildPyramid(gpu, imageWidth, imageHeight, baseScale, numLevels)
-    {
-        let scale = +baseScale;
-        let width = (imageWidth * scale) | 0, height = (imageHeight * scale) | 0;
-        let pyramid = new Array(numLevels);
-
-        for(let i = 0; i < pyramid.length; i++) {
-            pyramid[i] = { width, height, scale };
-            spawnKernelGroups.call(pyramid[i], this);
-            width = ((1 + width) / 2) | 0;
-            height = ((1 + height) / 2) | 0;
-            scale /= 2;
-        }
-
-        return pyramid;
-    }
-}
-
-// Spawn kernel groups
-function spawnKernelGroups(gpu)
-{
-    // all kernel groups are available via getters
-    for(let g in KERNEL_GROUPS) {
-        Object.defineProperty(this, g, {
-            get: (() => {
-                const grp = '_' + g;
-                return (function() { // lazy instantiation
-                    return this[grp] || (this[grp] = new (KERNEL_GROUPS[g])(gpu));
-                }).bind(this);
-            })(),
-            configurable: true // WebGL context may be lost
-        });
     }
 }
 
@@ -20950,11 +21059,13 @@ class GPUColors extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKerne
 {
     /**
      * Class constructor
-     * @param {GPUKernels} gpu
+     * @param {GPUInstance} gpu
+     * @param {number} width
+     * @param {number} height
      */
-    constructor(gpu)
+    constructor(gpu, width, height)
     {
-        super(gpu);
+        super(gpu, width, height);
         this
             // convert to greyscale
             .declare('rgb2grey', _shaders_colors__WEBPACK_IMPORTED_MODULE_1__["rgb2grey"])
@@ -21025,11 +21136,13 @@ class GPUEncoders extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKer
 {
     /**
      * Class constructor
-     * @param {GPUKernels} gpu
+     * @param {GPUInstance} gpu
+     * @param {number} width
+     * @param {number} height
      */
-    constructor(gpu)
+    constructor(gpu, width, height)
     {
-        super(gpu);
+        super(gpu, width, height);
         this
             // Keypoint encoding
             .declare('_encodeKeypointOffsets', _shaders_encoders__WEBPACK_IMPORTED_MODULE_1__["encodeKeypointOffsets"], {
@@ -21138,17 +21251,22 @@ class GPUEncoders extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKer
     decodeKeypoints(pixels)
     {
         const [ w, h ] = [ this._width, this._height ];
+        const hasRotation = this._descriptorSize > 0;
         const pixelsPerKeypoint = 2 + this._descriptorSize / 4;
-        let keypoints = [], x, y, scale, rotation, invScale2;
+        const lgM = Math.log2(this._gpu.pyramidMaxScale);
+        const pyrHeight = this._gpu.pyramidHeight;
+        let keypoints = [], x, y, scale, rotation;
 
         for(let i = 0; i < pixels.length; i += 4 * pixelsPerKeypoint) {
             x = (pixels[i+1] << 8) | pixels[i];
             y = (pixels[i+3] << 8) | pixels[i+2];
             if(x < w && y < h) {
-                //invScale2 = Math.ceil(200 * pixels[i+4] / 255.0) * 0.01;
-                invScale2 = (pixels[i+4] << 1) / 255.0;
-                scale = 0 < invScale2 && invScale2 < 2 ? 1.0 / invScale2 : 1.0;
-                rotation = pixels[i+5] * TWO_PI / 255.0;
+                scale = pixels[i+4] == 255 ? 1.0 :
+                    Math.pow(2.0, -lgM + (lgM + pyrHeight) * pixels[i+4] / 255.0);
+
+                rotation = !hasRotation ? 0.0 :
+                    pixels[i+5] * TWO_PI / 255.0;
+
                 keypoints.push(new _core_speedy_feature__WEBPACK_IMPORTED_MODULE_2__["SpeedyFeature"](x, y, scale, rotation));
             }
             else
@@ -21181,6 +21299,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUFilters", function() { return GPUFilters; });
 /* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
 /* harmony import */ var _shaders_convolution__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/convolution */ "./src/gpu/kernels/shaders/convolution.js");
+/* harmony import */ var _shaders_gaussian__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./shaders/gaussian */ "./src/gpu/kernels/shaders/gaussian.js");
+/* harmony import */ var _shaders_identity__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./shaders/identity */ "./src/gpu/kernels/shaders/identity.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -21205,6 +21325,8 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
 /**
  * GPUFilters
  * Image filtering
@@ -21213,11 +21335,13 @@ class GPUFilters extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKern
 {
     /**
      * Class constructor
-     * @param {GPUKernels} gpu
+     * @param {GPUInstance} gpu
+     * @param {number} width
+     * @param {number} height
      */
-    constructor(gpu)
+    constructor(gpu, width, height)
     {
-        super(gpu);
+        super(gpu, width, height);
         this
             // gaussian approximation (sigma approx. 1.0)
             .compose('gauss5', '_gauss5x', '_gauss5y') // size: 5x5
@@ -21228,6 +21352,37 @@ class GPUFilters extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKern
             .compose('box5', '_box5x', '_box5y') // size: 5x5
             .compose('box3', '_box3x', '_box3y') // size: 3x3
             .compose('box7', '_box7x', '_box7y') // size: 7x7
+
+            // texture-based convolutions
+            .declare('texConv2D', _shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConv2D"]) // 2D convolution with a texture
+            .compose('texConvXY', 'texConvX', 'texConvY') // 2D convolution with same 1D separable kernel in both axes
+            .declare('texConvX', _shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"]) // 1D convolution, x-axis
+            .declare('texConvY', _shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"]) // 1D convolution, y-axis
+
+            // create custom convolution kernels
+            .declare('createGaussianKernel11x1', Object(_shaders_gaussian__WEBPACK_IMPORTED_MODULE_2__["createGaussianKernel"])(11), // 1D gaussian with kernel size = 11 and custom sigma
+                this.operation.hasTextureSize(11, 1))
+            //.declare('createKernel1x1', createKernel2D(1), // 1x1 doesn't work properly (???)
+            //    this.operation.hasTextureSize(1, 1))
+            .declare('createKernel3x3', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(3), // 3x3 texture kernel
+                this.operation.hasTextureSize(3, 3))
+            .declare('createKernel5x5', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(5), // 5x5 texture kernel
+                this.operation.hasTextureSize(5, 5))
+            .declare('createKernel7x7', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(7), // 7x7 texture kernel
+                this.operation.hasTextureSize(7, 7))
+            .declare('createKernel9x9', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(9), // 9x9 texture kernel
+                this.operation.hasTextureSize(9, 9))
+            .declare('createKernel11x11', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(11), // 11x11 texture kernel
+                this.operation.hasTextureSize(11, 11))
+            /*.declare('_readGaussianKernel11', identity, { // for testing
+                ...(this.operation.hasTextureSize(11, 1)),
+                pipeline: false
+            })*/
+            .declare('_readKernel3x3', _shaders_identity__WEBPACK_IMPORTED_MODULE_3__["identity"], { // for testing
+                ...(this.operation.hasTextureSize(3, 3)),
+                pipeline: false
+            })
+
 
 
 
@@ -21255,15 +21410,13 @@ class GPUFilters extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKern
             .declare('_gauss7y', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
                 0.00598, 0.060626, 0.241843, 0.383103, 0.241843, 0.060626, 0.00598
             ]))
-
-            // (debug) gaussian filter
-            .declare('_gauss5', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["conv2D"])([
+            /*.declare('_gauss5', conv2D([ // for testing
                 1, 4, 7, 4, 1,
                 4, 16, 26, 16, 4,
                 7, 26, 41, 26, 7,
                 4, 16, 26, 16, 4,
                 1, 4, 7, 4, 1,
-            ], 1 / 237))
+            ], 1 / 237))*/
 
 
 
@@ -21343,11 +21496,13 @@ class GPUKeypoints extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKe
 {
     /**
      * Class constructor
-     * @param {GPUKernels} gpu
+     * @param {GPUInstance} gpu
+     * @param {number} width
+     * @param {number} height
      */
-    constructor(gpu)
+    constructor(gpu, width, height)
     {
-        super(gpu);
+        super(gpu, width, height);
         this
             // FAST-9,16
             .compose('fast9', '_fast9', '_fastScore16')
@@ -21382,66 +21537,6 @@ class GPUKeypoints extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKe
 }
 
 
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/output.js":
-/*!***********************************!*\
-  !*** ./src/gpu/kernels/output.js ***!
-  \***********************************/
-/*! exports provided: GPUOutput */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUOutput", function() { return GPUOutput; });
-/* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
-/* harmony import */ var _shaders_identity__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/identity */ "./src/gpu/kernels/shaders/identity.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for the web
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * gpu-output.js
- * Pipeline output
- */
-
-
-
-
-/**
- * GPUOutput
- * Pipeline output
- */
-class GPUOutput extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernelGroup"]
-{
-    /**
-     * Class constructor
-     * @param {GPUKernels} gpu
-     */
-    constructor(gpu)
-    {
-        super(gpu);
-        this
-            // output a texture from a pipeline
-            .declare('identity', _shaders_identity__WEBPACK_IMPORTED_MODULE_1__["identity"], {
-                pipeline: false
-            })
-        ;
-    }
-}
 
 /***/ }),
 
@@ -21488,9 +21583,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // neat utilities
-const withSize = (width, height) => ({ output: [ width|0, height|0 ], constants: { width: width|0, height: height|0 }});
-const withOutput = (width, height) => ({ output: [ width|0, height|0 ] })
-const withCanvas = (width, height) => ({ output: [ width|0, height|0 ], pipeline: false })
+//const withCanvas = (width, height) => ({ output: [ width|0, height|0 ], pipeline: false })
 
 /**
  * GPUPyramids
@@ -21500,11 +21593,13 @@ class GPUPyramids extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKer
 {
     /**
      * Class constructor
-     * @param {GPUKernels} gpu
+     * @param {GPUInstance} gpu
+     * @param {number} width
+     * @param {number} height
      */
-    constructor(gpu)
+    constructor(gpu, width, height)
     {
-        super(gpu);
+        super(gpu, width, height);
         this
             // initialize pyramid
             .declare('setBase', Object(_shaders_scale__WEBPACK_IMPORTED_MODULE_4__["setScale"])(1.0, gpu.pyramidHeight, gpu.pyramidMaxScale))
@@ -21533,53 +21628,53 @@ class GPUPyramids extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKer
             // same rules as above with sum(k) = 2
             .declare('_smoothX2', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
                 0.1, 0.5, 0.8, 0.5, 0.1
-            ]), withSize(2 * this._width, 2 * this._height))
+            ]), this.operation.hasTextureSize(2 * this._width, 2 * this._height))
 
             .declare('_smoothY2', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
                 0.1, 0.5, 0.8, 0.5, 0.1
-            ], 1.0 / 2.0), withSize(2 * this._width, 2 * this._height))
+            ], 1.0 / 2.0), this.operation.hasTextureSize(2 * this._width, 2 * this._height))
 
             // smoothing for 3x image
             // use [1-b, b, 1, b, 1-b], where 0 < b < 1
             .declare('_smoothX3', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
                 0.2, 0.8, 1.0, 0.8, 0.2
-            ]), withSize(3 * this._width, 3 * this._height))
+            ]), this.operation.hasTextureSize(3 * this._width, 3 * this._height))
 
             .declare('_smoothY3', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
                 0.2, 0.8, 1.0, 0.8, 0.2
-            ], 1.0 / 3.0), withSize(3 * this._width, 3 * this._height))
+            ], 1.0 / 3.0), this.operation.hasTextureSize(3 * this._width, 3 * this._height))
 
             // upsampling & downsampling
             .declare('_upsample2', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["upsample2"],
-                withOutput(2 * this._width, 2 * this._height))
+                this.operation.resizesATextureTo(2 * this._width, 2 * this._height))
 
             .declare('_downsample2', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["downsample2"],
-                withOutput((1 + this._width) / 2, (1 + this._height) / 2))
+                this.operation.resizesATextureTo((1 + this._width) / 2, (1 + this._height) / 2))
 
             .declare('_upsample3', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["upsample3"],
-                withOutput(3 * this._width, 3 * this._height))
+                this.operation.resizesATextureTo(3 * this._width, 3 * this._height))
 
             .declare('_downsample3', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["downsample3"],
-                withOutput((2 + this._width) / 3, (2 + this._height) / 3))
+                this.operation.resizesATextureTo((2 + this._width) / 3, (2 + this._height) / 3))
 
             .declare('_downsample2/3', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["downsample2"],
-                withOutput(3 * this._width / 2, 3 * this._height / 2))
+                this.operation.resizesATextureTo(3 * this._width / 2, 3 * this._height / 2))
 
             .declare('_downsample3/2', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["downsample3"],
-                withOutput(2 * this._width / 3, 2 * this._height / 3))
+                this.operation.resizesATextureTo(2 * this._width / 3, 2 * this._height / 3))
 
             // adjust the scale coefficients
             .declare('_scale2', Object(_shaders_scale__WEBPACK_IMPORTED_MODULE_4__["scale"])(2.0, gpu.pyramidHeight, gpu.pyramidMaxScale),
-                withSize(2 * this._width, 2 * this._height))
+                this.operation.hasTextureSize(2 * this._width, 2 * this._height))
 
             .declare('_scale1/2', Object(_shaders_scale__WEBPACK_IMPORTED_MODULE_4__["scale"])(0.5, gpu.pyramidHeight, gpu.pyramidMaxScale),
-                withSize((1 + this._width) / 2, (1 + this._height) / 2))
+                this.operation.hasTextureSize((1 + this._width) / 2, (1 + this._height) / 2))
 
             .declare('_scale3/2', Object(_shaders_scale__WEBPACK_IMPORTED_MODULE_4__["scale"])(1.5, gpu.pyramidHeight, gpu.pyramidMaxScale),
-                withSize(3 * this._width / 2, 3 * this._height / 2))
+                this.operation.hasTextureSize(3 * this._width / 2, 3 * this._height / 2))
 
             .declare('_scale2/3', Object(_shaders_scale__WEBPACK_IMPORTED_MODULE_4__["scale"])(2.0 / 3.0, gpu.pyramidHeight, gpu.pyramidMaxScale),
-                withSize(2 * this._width / 3, 2 * this._height / 3))
+                this.operation.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
 
             // kernels for debugging
             /*
@@ -21660,7 +21755,10 @@ __webpack_require__.r(__webpack_exports__);
 // scaleA and scaleB are RELATIVE to the image layer
 // I expect scaleA > 1 and scaleB < 1
 //
-function brisk(image, layerA, layerB, scaleA, scaleB)
+// Note: lgM is log2(pyramidMaxScale)
+//       h is the height of the image pyramid
+//
+function brisk(image, layerA, layerB, scaleA, scaleB, lgM, h)
 {
     const x = this.thread.x, y = this.thread.y;
     const p = image[y][x];
@@ -21679,10 +21777,10 @@ function brisk(image, layerA, layerB, scaleA, scaleB)
 
         // given a pixel in the image, pick a 2x2 square in
         // layers A and B: [xl,yl] x [xl+1,yl+1], l = a,b
-        const xa = Math.min(Math.max(1, Math.ceil(xmid * scaleA - 1)), widthA - 2);
-        const ya = Math.min(Math.max(1, Math.ceil(ymid * scaleA - 1)), heightA - 2);
-        const xb = Math.min(Math.max(1, Math.ceil(xmid * scaleB - 1)), widthB - 2);
-        const yb = Math.min(Math.max(1, Math.ceil(ymid * scaleB - 1)), heightB - 2);
+        const xa = Math.min(Math.max(0, Math.ceil(xmid * scaleA - 1)), widthA - 2);
+        const ya = Math.min(Math.max(0, Math.ceil(ymid * scaleA - 1)), heightA - 2);
+        const xb = Math.min(Math.max(0, Math.ceil(xmid * scaleB - 1)), widthB - 2);
+        const yb = Math.min(Math.max(0, Math.ceil(ymid * scaleB - 1)), heightB - 2);
         const a00 = layerA[ya][xa];
         const a10 = layerA[ya][xa+1];
         const a01 = layerA[ya+1][xa];
@@ -21691,16 +21789,6 @@ function brisk(image, layerA, layerB, scaleA, scaleB)
         const b10 = layerB[yb][xb+1];
         const b01 = layerB[yb+1][xb];
         const b11 = layerB[yb+1][xb+1];
-        const am0 = layerA[ya][xa-1];
-        const am1 = layerA[ya+1][xa-1];
-        const amm = layerA[ya-1][xa-1];
-        const a0m = layerA[ya-1][xa];
-        const a1m = layerA[ya-1][xa+1];
-        const bm0 = layerB[yb][xb-1];
-        const bm1 = layerB[yb+1][xb-1];
-        const bmm = layerB[yb-1][xb-1];
-        const b0m = layerB[yb-1][xb];
-        const b1m = layerB[yb-1][xb+1];
 
         // scale-space non-maximum suppression
         if(score >= a00[0])
@@ -21711,20 +21799,7 @@ function brisk(image, layerA, layerB, scaleA, scaleB)
         if(score >= b10[0])
         if(score >= b01[0])
         if(score >= b11[0])
-        if(score >= am0[0])
-        if(score >= am1[0])
-        if(score >= amm[0])
-        if(score >= a0m[0])
-        if(score >= a1m[0])
-        if(score >= bm0[0])
-        if(score >= bm1[0])
-        if(score >= bmm[0])
-        if(score >= b0m[0])
-        if(score >= b1m[0])
         {
-            // restore the corner
-            this.color(score, p[1], p[2], p[3]);
-
             // -----------------------------------------
             // interpolate scale
             // -----------------------------------------
@@ -21757,15 +21832,16 @@ function brisk(image, layerA, layerB, scaleA, scaleB)
                 this.color(isa, p[1], p[2], a00[3]);
             else if(isb > score && isb > isa)
                 this.color(isb, p[1], p[2], b00[3]);
-            else if(score > isa && score > isb)
+            else
                 this.color(score, p[1], p[2], p[3]);
 
             // fit a polynomial with the refined scores
             // in the scale axis (i.e., log2(scale))
             // p(x) = ax^2 + bx + c
-            const x1 = Math.log2(a00[3]), y1 = isa;
-            const x2 = Math.log2(b00[3]), y2 = isb;
-            const x3 = Math.log2(p[3]), y3 = score;
+            const y1 = isa, y2 = isb, y3 = score;
+            const x1 = lgM - (lgM + h) * a00[3];
+            const x2 = lgM - (lgM + h) * b00[3];
+            const x3 = lgM - (lgM + h) * p[3];
             const dn = (x1 - x2) * (x1 - x3) * (x2 - x3);
             if(Math.abs(dn) >= 0.00001) {
                 const a = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / dn;
@@ -21773,18 +21849,18 @@ function brisk(image, layerA, layerB, scaleA, scaleB)
                     const b = (x3 * x3 * (y1 - y2) + x2 * x2 * (y3 - y1) + x1 * x1 * (y2 - y3)) / dn;
                     const c = (x2 * x3 * (x2 - x3) * y1 + x3 * x1 * (x3 - x1) * y2 + x1 * x2 * (x1 - x2) * y3) / dn;
                     
-                    // optimize the polynomial
+                    // maximize the polynomial
                     const xv = -b / (2.0 * a);
                     const yv = c - (b * b) / (4.0 * a);
 
                     // new score & scale
-                    const interpolatedScale = Math.pow(2.0, xv);
-                    const interpolatedScore = yv;
+                    if(xv >= Math.min(x1, Math.min(x2, x3))) {
+                        if(xv <= Math.max(x1, Math.max(x2, x3))) {
+                            const interpolatedScale = (lgM - xv) / (lgM + h);
+                            const interpolatedScore = Math.max(0, Math.min(yv, 1));
 
-                    // cap the scale
-                    if(interpolatedScale >= Math.min(p[3], Math.min(a00[3], b00[3]))) {
-                        if(interpolatedScale <= Math.max(p[3], Math.max(a00[3], b00[3])))
                             this.color(interpolatedScore, p[1], p[2], interpolatedScale);
+                        }
                     }
                 }
             }
@@ -21840,7 +21916,7 @@ function rgb2grey(image)
 /*!************************************************!*\
   !*** ./src/gpu/kernels/shaders/convolution.js ***!
   \************************************************/
-/*! exports provided: conv2D, convX, convY */
+/*! exports provided: conv2D, convX, convY, texConvX, texConvY, createKernel2D, texConv2D */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -21848,6 +21924,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "conv2D", function() { return conv2D; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "convX", function() { return convX; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "convY", function() { return convY; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConvX", function() { return texConvX; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConvY", function() { return texConvY; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createKernel2D", function() { return createKernel2D; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConv2D", function() { return texConv2D; });
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
@@ -21889,7 +21969,7 @@ function conv2D(kernel, normalizationConstant = 1.0)
 
     // code generator
     const foreachKernelElement = fn => cartesian(symmetricRange(N), symmetricRange(N)).reduce(
-        (acc, cur) => acc + fn(kernel32[(cur[0] + N) * kSize + (cur[1] + N)], cur[0], cur[1]),
+        (acc, cur) => acc + fn(kernel32[(kSize - 1 - (cur[0] + N)) * kSize + (cur[1] + N)], cur[0], cur[1]),
     '');
     const generateCode = (k, i, j) => `
     y = Math.min(Math.max(this.thread.y + (${i | 0}), 0), height - 1);
@@ -21924,6 +22004,74 @@ function convY(kernel, normalizationConstant = 1.0)
     return conv1D('y', kernel, normalizationConstant);
 }
 
+// Texture-based 1D convolution on the x-axis
+const texConvX = texConv1D('x');
+
+// Texture-based 1D convolution on the x-axis
+const texConvY = texConv1D('y');
+
+// Generate a texture-based 2D convolution kernel
+// of size (kernelSize x kernelSize), where all
+// entries belong to the [0, 1] range
+function createKernel2D(kernelSize)
+{
+    // validate input
+    kernelSize |= 0;
+    if(kernelSize < 1 || kernelSize % 2 == 0)
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't create a 2D texture kernel of size ${kernelSize}`);
+
+    // code
+    // note: invert kernel y-axis for WebGL
+    const body = `
+    const x = this.thread.x;
+    const y = ${kernelSize} - 1 - this.thread.y;
+    const k = arr[y * ${kernelSize} + x];
+    this.color(k, k, k, 1);
+    `;
+
+    // IMPORTANT: all entries of the input array are
+    // assumed to be in the [0, 1] range AND
+    // arr.length >= kernelSize * kernelSize
+    return new Function('arr', body);
+}
+
+// 2D convolution with a texture-based kernel of size
+// kernelSize x kernelSize, with optional scale & offset
+// By default, scale and offset are 1 and 0, respectively
+function texConv2D(image, texKernel, kernelSize, scale, offset)
+{
+    const N = Math.floor(kernelSize / 2);
+    const width = this.constants.width;
+    const height = this.constants.height;
+    const pixel = image[this.thread.y][this.thread.x];
+    let r = 0.0, g = 0.0, b = 0.0;
+    let p = [0.0, 0.0, 0.0, 0.0];
+    let k = [0.0, 0.0, 0.0, 0.0];
+    let x = this.thread.x, y = this.thread.y;
+
+    for(let j = -N; j <= N; j++) {
+        for(let i = -N; i <= N; i++) {
+            x = Math.max(0, Math.min(this.thread.x + i, width - 1));
+            y = Math.max(0, Math.min(this.thread.y + j, height - 1));
+
+            p = image[y][x];
+            k = texKernel[j + N][i + N];
+
+            r += p[0] * (k[0] * scale + offset);
+            g += p[1] * (k[1] * scale + offset);
+            b += p[2] * (k[2] * scale + offset);
+        }
+    }
+
+    this.color(r, g, b, pixel[3]);
+}
+
+
+
+// -------------------------------------
+// private stuff
+// -------------------------------------
+
 // 1D convolution function generator
 function conv1D(axis, kernel, normalizationConstant)
 {
@@ -21939,7 +22087,9 @@ function conv1D(axis, kernel, normalizationConstant)
 
     // code generator
     const foreachKernelElement = fn => symmetricRange(N).reduce(
-        (acc, cur) => acc + fn(kernel32[cur + N], cur),
+        (acc, cur) => (axis == 'x') ?
+            acc + fn(kernel32[cur + N], cur) :
+            acc + fn(kernel32[kSize - 1 - (cur + N)], cur), // invert y-axis for WebGL
     '');
     const generateCode = (k, i) => (((axis == 'x') ? `
     y = this.thread.y;
@@ -21964,6 +22114,51 @@ function conv1D(axis, kernel, normalizationConstant)
     `;
 
     return new Function('image', body);
+}
+
+// texture-based 1D convolution function generator
+// (the convolution kernel is stored in a texture)
+function texConv1D(axis)
+{
+    // validate input
+    if(axis != 'x' && axis != 'y')
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't perform tex 1D convolution: invalid axis "${axis}"`); // this should never happen
+
+    // code
+    const body = `
+    const N = Math.floor(kernelSize / 2);
+    const width = this.constants.width;
+    const height = this.constants.height;
+    const pixel = image[this.thread.y][this.thread.x];
+    let r = 0.0, g = 0.0, b = 0.0;
+    let p = [0.0, 0.0, 0.0, 0.0];
+    let k = [0.0, 0.0, 0.0, 0.0];
+    let x = this.thread.x, y = this.thread.y;
+
+    for(let i = -N; i <= N; i++) {
+    ` + ((axis == 'x') ? `
+        x = Math.max(0, Math.min(this.thread.x + i, width - 1));
+    ` : `
+        y = Math.max(0, Math.min(this.thread.y + i, height - 1));
+    ` ) + `
+
+        p = image[y][x];
+        k = texKernel[0][i + N];
+
+        r += p[0] * (k[0] * scale + offset);
+        g += p[1] * (k[1] * scale + offset);
+        b += p[2] * (k[2] * scale + offset);
+    }
+
+    this.color(r, g, b, pixel[3]);
+    `;
+
+    // image: target image
+    // texKernel: convolution kernel (all entries in [0,1])
+    // kernelSize: kernel size, odd positive integer (it won't be checked!)
+    // scale: multiply the kernel entries by a number (like 1.0)
+    // offset: add a number to all kernel entries (like 0.0)
+    return new Function('image', 'texKernel', 'kernelSize', 'scale', 'offset', body);
 }
 
 /***/ }),
@@ -25603,6 +25798,120 @@ function fast9ml(image, threshold)
 
 /***/ }),
 
+/***/ "./src/gpu/kernels/shaders/gaussian.js":
+/*!*********************************************!*\
+  !*** ./src/gpu/kernels/shaders/gaussian.js ***!
+  \*********************************************/
+/*! exports provided: createGaussianKernel */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createGaussianKernel", function() { return createGaussianKernel; });
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../utils/utils */ "./src/utils/utils.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * gaussian.js
+ * Gaussian kernel generator
+ */
+
+/*
+ * -----------------------------------------------------------------------------
+ * 1D Gaussian Kernel
+ * Lets generate a 1D Gaussian kernel with size kernelSize x 1 and custom sigma
+ * -----------------------------------------------------------------------------
+ * Let G(x) be a Gaussian function centered at 0 with fixed sigma:
+ *
+ * G(x) = (1 / (sigma * sqrt(2 * pi))) * exp(-(x / (sqrt(2) * sigma))^2)
+ * 
+ * In addition, let f(p) be a kernel value at pixel p, -k/2 <= p <= k/2:
+ * 
+ * f(p) = \int_{p - 0.5}^{p + 0.5} G(x) dx (integrate around p)
+ *      = \int_{0}^{p + 0.5} G(x) dx - \int_{0}^{p - 0.5} G(x) dx
+ * 
+ * Setting a constant c := sqrt(2) * sigma, it follows that:
+ * 
+ * f(p) = (1 / 2c) * (erf((p + 0.5) / c) - erf((p - 0.5) / c))
+ * 
+ * Practical tip: use kernelSize = (5 * sigma), kernelSize odd
+ */
+
+
+// Returns a function that creates a (kernelSize x 1)
+// texture encoding a 1D gaussian kernel with custom sigma
+function createGaussianKernel(kernelSize)
+{
+    // validate kernel size
+    kernelSize |= 0;
+    if(kernelSize < 1 || kernelSize % 2 == 0)
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Invalid kernel size given to createGaussianKernel: ${kernelSize} x 1`);
+
+    // constants
+    const N  =  kernelSize >> 1; // integer (floor, div 2)
+    const m  =  0.3275911;
+    const a1 =  0.254829592;
+    const a2 = -0.284496736;
+    const a3 =  1.421413741;
+    const a4 = -1.453152027;
+    const a5 =  1.061405429;
+    const sq =  Math.sqrt(2);
+
+    // function erf(x) = -erf(-x) can be approximated numerically. See:
+    // https://en.wikipedia.org/wiki/Error_function#Numerical_approximations
+    const body = `
+    const c = (+sigma) * ${sq};
+    let sum = 0.0, g = 0.0;
+
+    for(let j = 0; j < ${kernelSize}; j++) {
+        let xa = (j - ${N} + 0.5) / c;
+        let xb = (j - ${N} - 0.5) / c;
+        let sa = 1.0, sb = 1.0;
+
+        if(xa < 0.0) { sa = -1.0; xa = -xa; }
+        if(xb < 0.0) { sb = -1.0; xb = -xb; }
+
+        const ta = 1.0 / (1.0 + ${m} * xa);
+        const tb = 1.0 / (1.0 + ${m} * xb);
+        const pa = (((((${a5}) * ta + (${a4})) * ta + (${a3})) * ta + (${a2})) * ta + (${a1})) * ta;
+        const pb = (((((${a5}) * tb + (${a4})) * tb + (${a3})) * tb + (${a2})) * tb + (${a1})) * tb;
+        const ya = 1.0 - pa * Math.exp(-xa * xa);
+        const yb = 1.0 - pb * Math.exp(-xb * xb);
+
+        const erfa = sa * ya;
+        const erfb = sb * yb;
+        const fp = (erfa - erfb) / (2.0 * c);
+
+        sum += fp;
+        if(Math.abs(j - this.thread.x) < 1) //if(j == this.thread.x)
+            g = fp;
+    }
+
+    g /= sum;
+    this.color(g, g, g, 1);
+    `;
+
+    // Note: g * sum > 1. We normalize it so
+    // that the sum of the kernel entries is 1
+    return new Function('sigma', body);
+}
+
+/***/ }),
+
 /***/ "./src/gpu/kernels/shaders/identity.js":
 /*!*********************************************!*\
   !*** ./src/gpu/kernels/shaders/identity.js ***!
@@ -25631,7 +25940,7 @@ __webpack_require__.r(__webpack_exports__);
  * limitations under the License.
  *
  * identity.js
- * Identity shader (for debugging)
+ * Identity shader
  */
 
 function identity(image)
@@ -25900,7 +26209,7 @@ __webpack_require__.r(__webpack_exports__);
  * limitations under the License.
  *
  * scale.js
- * Dealing with scale
+ * Image scale encoding
  */
 
 /*
@@ -25949,40 +26258,98 @@ __webpack_require__.r(__webpack_exports__);
 
 function setScale(scale, pyramidHeight, pyramidMaxScale)
 {
-    //const lgM = Math.log2(pyramidMaxScale), eps = 1e-5;
-    //const pyramidMinScale = Math.pow(2, -pyramidHeight) + eps;
-    //const x = Math.max(pyramidMinScale, Math.min(scale, pyramidMaxScale));
-    //const alpha = (lgM - Math.log2(x)) / (lgM + pyramidHeight);
-
-    const s = Math.max(0.0, Math.min(scale * 0.5, 1.0));
-    const alpha=1;
+    const lgM = Math.log2(pyramidMaxScale), eps = 1e-5;
+    const pyramidMinScale = Math.pow(2, -pyramidHeight) + eps;
+    const x = Math.max(pyramidMinScale, Math.min(scale, pyramidMaxScale));
+    const alpha = (lgM - Math.log2(x)) / (lgM + pyramidHeight);
 
     const body  = `
     const pixel = image[this.thread.y][this.thread.x];
-    //this.color(pixel[0], pixel[1], pixel[2], ${alpha});
-    this.color(pixel[0], pixel[1], pixel[2], ${s});
+    this.color(pixel[0], pixel[1], pixel[2], ${alpha});
     `;
-    //console.log(scale, pyramidHeight, pyramidMaxScale, lgM, body);
 
     return new Function('image', body);
 }
 
 function scale(scaleFactor, pyramidHeight, pyramidMaxScale)
 {
-    //const lgM = Math.log2(pyramidMaxScale);
+    const lgM = Math.log2(pyramidMaxScale);
     const s = Math.max(1e-5, scaleFactor);
-    //const delta = -Math.log2(s) / (lgM + pyramidHeight);
-    const delta=1;
+    const delta = -Math.log2(s) / (lgM + pyramidHeight);
 
     const body  = `
     const pixel = image[this.thread.y][this.thread.x];
-    //const delta = ${delta};
-    //this.color(pixel[0], pixel[1], pixel[2], pixel[3] + delta);
-    this.color(pixel[0], pixel[1], pixel[2], pixel[3] * ${s});
+    const delta = ${delta};
+    const alpha = Math.max(0, Math.min(pixel[3] + delta, 1));
+    this.color(pixel[0], pixel[1], pixel[2], alpha);
     `;
-    //console.log(body);
 
     return new Function('image', body);
+}
+
+/***/ }),
+
+/***/ "./src/gpu/kernels/utils.js":
+/*!**********************************!*\
+  !*** ./src/gpu/kernels/utils.js ***!
+  \**********************************/
+/*! exports provided: GPUUtils */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUUtils", function() { return GPUUtils; });
+/* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
+/* harmony import */ var _shaders_identity__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/identity */ "./src/gpu/kernels/shaders/identity.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * gpu-utils.js
+ * GPU utilities
+ */
+
+
+
+
+/**
+ * GPUUtils
+ * Utility operations
+ */
+class GPUUtils extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernelGroup"]
+{
+    /**
+     * Class constructor
+     * @param {GPUInstance} gpu
+     * @param {number} width
+     * @param {number} height
+     */
+    constructor(gpu, width, height)
+    {
+        super(gpu, width, height);
+        this
+            // no-operation
+            .declare('identity', _shaders_identity__WEBPACK_IMPORTED_MODULE_1__["identity"])
+
+            // output a texture from a pipeline
+            .declare('output', _shaders_identity__WEBPACK_IMPORTED_MODULE_1__["identity"], {
+                pipeline: false
+            })
+        ;
+    }
 }
 
 /***/ }),
@@ -26055,7 +26422,7 @@ class Speedy
      */
     static get version()
     {
-        return "0.2.0";
+        return "0.2.1";
     }
 
     /**

@@ -143,4 +143,17 @@ export class SpeedyPipeline
             new PipelineOperation.Blur(options)
         );
     }
+
+    /**
+     * Image convolution
+     * @param {Array<number>} kernel
+     * @param {number} [multiplier]
+     * @returns {SpeedyPipeline}
+     */
+    convolve(kernel, multiplier = 1.0)
+    {
+        return this._spawn(
+            new PipelineOperation.Convolve(kernel, multiplier)
+        );
+    }
 }

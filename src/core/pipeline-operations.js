@@ -106,3 +106,65 @@ PipelineOperation.Blur = class extends SpeedyPipelineOperation
         return gpu.filters[this._filter](texture);
     }
 }
+
+/**
+ * Image convolution
+ */
+PipelineOperation.Convolve = class extends SpeedyPipelineOperation
+{
+    /**
+     * Perform a convolution
+     * Must provide a SQUARE kernel with size:
+     * 1x1, 3x3, 5x5, 7x7, 9x9 or 11x11
+     * @param {Array<number>} kernel convolution kernel
+     * @param {number} [multiplier] multiply all kernel entries by this number
+     */
+    constructor(kernel, multiplier = 1.0)
+    {
+        let kern = new Float32Array(kernel).map(x => x * multiplier);
+        const len = kern.length;
+        const size = Math.sqrt(len) | 0;
+        const method = ({
+            3:  'createKernel3x3',
+            5:  'createKernel5x5',
+            7:  'createKernel7x7',
+            9:  'createKernel9x9',
+            11: 'createKernel11x11',
+        })[size] || null;
+        super();
+
+        // validate kernel
+        if(size * size != len || !method)
+            Utils.fatal(`Cannot convolve with a ${size}x${size} kernel of ${len} elements`);
+
+        // normalize kernel entries to [0,1]
+        const min = Math.min(...kern), max = Math.max(...kern);
+        const offset = min;
+        const scale = Math.abs(max - min) > 1e-5 ? max - min : 1;
+        kern = kern.map(x => (x - offset) / scale);
+
+        // store the normalized kernel
+        this._scale = scale;
+        this._offset = offset;
+        this._kernel = kern;
+        this._method = method;
+        this._texKernel = null;
+        this._kernelSize = size;
+    }
+
+    run(texture, gpu, media)
+    {
+        // instantiate the texture kernel
+        if(this._texKernel == null)
+            this._texKernel = gpu.filters[this._method](this._kernel);
+
+        // convolve
+        return gpu.filters.texConv2D(
+            gpu.utils.identity(texture), // identity() is needed when chaining convolutions
+            this._texKernel,
+            this._kernelSize,
+            this._scale,
+            this._offset
+        );
+    }
+}
