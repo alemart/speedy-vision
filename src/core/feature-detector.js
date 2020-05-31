@@ -20,6 +20,7 @@
  */
 
 import { brisk as briskFeatures } from './algorithms/brisk.js';
+import { fast as fastFeatures } from './algorithms/fast.js';
 import { OnlineErrorTuner, TestTuner } from '../utils/tuner';
 import { Utils } from '../utils/utils';
 
@@ -70,24 +71,13 @@ export class FeatureDetector
         else
             settings.threshold = this._normalizedThreshold(settings.threshold);
 
-        // validate input
-        if(n != 9 && n != 5 && n != 7)
-            Utils.fatal(`Not implemented: FAST-${n}`); // this shouldn't happen...
-
         // pre-processing the image...
         const source = settings.denoise ? gpu.filters.gauss5(media.source) : media.source;
         const greyscale = gpu.colors.rgb2grey(source);
 
-        // keypoint detection
-        const rawCorners = (({
-            5: () => gpu.keypoints.fast5(greyscale, settings.threshold),
-            7: () => gpu.keypoints.fast7(greyscale, settings.threshold),
-            9: () => gpu.keypoints.fast9(greyscale, settings.threshold),
-        })[n])();
-        const corners = gpu.keypoints.fastSuppression(rawCorners);
-
-        // encoding result
-        return this._extractKeypoints(corners);
+        // extract features
+        const keypoints = fastFeatures(n, gpu, greyscale, settings);
+        return this._extractKeypoints(keypoints);
     }
 
     /**
