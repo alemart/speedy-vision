@@ -19,8 +19,8 @@
  * Feature detection facade
  */
 
-import { brisk as briskFeatures } from './algorithms/brisk.js';
-import { fast as fastFeatures } from './algorithms/fast.js';
+import { FAST } from './algorithms/fast.js';
+import { BRISK } from './algorithms/brisk.js';
 import { OnlineErrorTuner, TestTuner } from '../utils/tuner';
 import { Utils } from '../utils/utils';
 
@@ -67,16 +67,16 @@ export class FeatureDetector
         // convert a sensitivity value in [0,1],
         // if it's defined, to a FAST threshold
         if(settings.hasOwnProperty('sensitivity'))
-            settings.threshold = this._sensitivity2threshold(settings.sensitivity);
+            settings.threshold = FAST.sensitivity2threshold(settings.sensitivity);
         else
-            settings.threshold = this._normalizedThreshold(settings.threshold);
+            settings.threshold = FAST.normalizedThreshold(settings.threshold);
 
         // pre-processing the image...
         const source = settings.denoise ? gpu.filters.gauss5(media.source) : media.source;
         const greyscale = gpu.colors.rgb2grey(source);
 
         // extract features
-        const keypoints = fastFeatures(n, gpu, greyscale, settings);
+        const keypoints = FAST.run(n, gpu, greyscale, settings);
         return this._extractKeypoints(keypoints);
     }
 
@@ -89,13 +89,12 @@ export class FeatureDetector
     brisk(media, settings = {})
     {
         const gpu = this._gpu;
-        const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidHeight;
 
         // default settings
         settings = {
             threshold: 10,
             denoise: true,
-            depth: 4, // integer in [MIN_DEPTH, MAX_DEPTH]
+            depth: 4,
             ...settings
         };
 
@@ -105,19 +104,16 @@ export class FeatureDetector
 
         // convert settings.sensitivity to settings.threshold
         if(settings.hasOwnProperty('sensitivity'))
-            settings.threshold = this._sensitivity2threshold(settings.sensitivity);
+            settings.threshold = FAST.sensitivity2threshold(settings.sensitivity);
         else
-            settings.threshold = this._normalizedThreshold(settings.threshold);
-
-        // clamp settings.depth (height of the image pyramid)
-        settings.depth = Math.max(MIN_DEPTH, Math.min(settings.depth, MAX_DEPTH)) | 0;
+            settings.threshold = FAST.normalizedThreshold(settings.threshold);
 
         // pre-processing the image...
         const source = settings.denoise ? gpu.filters.gauss5(media.source) : media.source;
         const greyscale = gpu.colors.rgb2grey(source);
 
         // extract features
-        const keypoints = briskFeatures(gpu, greyscale, settings);
+        const keypoints = BRISK.run(gpu, greyscale, settings);
         return this._extractKeypoints(keypoints);
     }
 
@@ -164,23 +160,5 @@ export class FeatureDetector
 
         // return the new sensitivity
         return Math.max(0, Math.min(sensitivity, 1));
-    }
-
-    // sensitivity in [0,1] -> pixel intensity threshold in [0,1]
-    // performs a non-linear conversion (used for FAST)
-    _sensitivity2threshold(sensitivity)
-    {
-        // the number of keypoints ideally increases linearly
-        // as the sensitivity is increased
-        sensitivity = Math.max(0, Math.min(sensitivity, 1));
-        return 1 - Math.tanh(2.77 * sensitivity);
-    }
-
-    // pixel threshold in [0,255] -> normalized threshold in [0,1]
-    // returns a clamped & normalized threshold
-    _normalizedThreshold(threshold)
-    {
-        threshold = Math.max(0, Math.min(threshold, 255));
-        return threshold / 255;
     }
 }

@@ -23,26 +23,58 @@ import { Utils } from '../../utils/utils';
 
 /**
  * FAST corner detection
- * @param {number} n FAST parameter: 9, 7 or 5
- * @param {GPUInstance} gpu
- * @param {Texture} greyscale Greyscale image
- * @param {object} settings
- * @returns {Texture} features in a texture
  */
-export function fast(n, gpu, greyscale, settings)
+export class FAST
 {
-    // validate input
-    if(n != 9 && n != 5 && n != 7)
-        Utils.fatal(`Not implemented: FAST-${n}`); // this shouldn't happen...
+    /**
+     * Run the FAST corner detection algorithm
+     * @param {number} n FAST parameter: 9, 7 or 5
+     * @param {GPUInstance} gpu
+     * @param {Texture} greyscale Greyscale image
+     * @param {object} settings
+     * @returns {Texture} features in a texture
+     */
+    static run(n, gpu, greyscale, settings)
+    {
+        // validate input
+        if(n != 9 && n != 5 && n != 7)
+            Utils.fatal(`Not implemented: FAST-${n}`); // this shouldn't happen...
 
-    // keypoint detection
-    const rawCorners = (({
-        5: () => gpu.keypoints.fast5(greyscale, settings.threshold),
-        7: () => gpu.keypoints.fast7(greyscale, settings.threshold),
-        9: () => gpu.keypoints.fast9(greyscale, settings.threshold),
-    })[n])();
+        // keypoint detection
+        const rawCorners = (({
+            5: () => gpu.keypoints.fast5(greyscale, settings.threshold),
+            7: () => gpu.keypoints.fast7(greyscale, settings.threshold),
+            9: () => gpu.keypoints.fast9(greyscale, settings.threshold),
+        })[n])();
 
-    // non-maximum suppression
-    const corners = gpu.keypoints.fastSuppression(rawCorners);
-    return corners;
+        // non-maximum suppression
+        const corners = gpu.keypoints.fastSuppression(rawCorners);
+        return corners;
+    }
+
+    /**
+     * Sensitivity to threshold conversion
+     * sensitivity in [0,1] -> pixel intensity threshold in [0,1]
+     * performs a non-linear conversion (used for FAST)
+     * @param {number} sensitivity
+     * @returns {number} pixel intensity
+     */
+    static sensitivity2threshold(sensitivity)
+    {
+        // the number of keypoints ideally increases linearly
+        // as the sensitivity is increased
+        sensitivity = Math.max(0, Math.min(sensitivity, 1));
+        return 1 - Math.tanh(2.77 * sensitivity);
+    }
+
+    /**
+     * Normalize a threshold
+     * pixel threshold in [0,255] -> normalized threshold in [0,1]
+     * @returns {number} clamped & normalized threshold
+     */
+    static normalizedThreshold(threshold)
+    {
+        threshold = Math.max(0, Math.min(threshold, 255));
+        return threshold / 255;
+    }
 }
