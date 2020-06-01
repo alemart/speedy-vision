@@ -153,6 +153,42 @@ export function createKernel2D(kernelSize)
     return new Function('arr', body);
 }
 
+// Generate a texture-based 1D convolution kernel
+// of size (kernelSize x 1), where all entries
+// belong to the [0, 1] range
+export function createKernel1D(kernelSize)
+{
+    // validate input
+    kernelSize |= 0;
+    if(kernelSize < 1 || kernelSize % 2 == 0)
+        Utils.fatal(`Can't create a 1D texture kernel of size ${kernelSize}`);
+
+    // encode float in the [0,1] range to RGBA
+    // note: invert kernel y-axis for WebGL
+    // note 2: must scale the float to [0,1)
+    const body = `
+    const x = this.thread.x;
+    const k = arr[x] * 1.0;
+    const normalizer = 255.0 / 256.0;
+
+    const e0 = k * normalizer;
+    const r = e0 - Math.floor(e0);
+    const e1 = 255.0 * r;
+    const g = e1 - Math.floor(e1);
+    const e2 = 255.0 * g;
+    const b = e2 - Math.floor(e2);
+    const e3 = 255.0 * b;
+    const a = e3 - Math.floor(e3);
+
+    this.color(r, g, b, a);
+    `;
+
+    // IMPORTANT: all entries of the input array are
+    // assumed to be in the [0, 1] range AND
+    // arr.length >= kernelSize
+    return new Function('arr', body);
+}
+
 // 2D convolution with a texture-based kernel of size
 // kernelSize x kernelSize, with optional scale & offset
 // By default, scale and offset are 1 and 0, respectively
@@ -201,11 +237,6 @@ export function idConv2D(image, texKernel, kernelSize, scale, offset)
 
     this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
 }
-
-
-// -------------------------------------
-// private stuff
-// -------------------------------------
 
 // 1D convolution function generator
 function conv1D(axis, kernel, normalizationConstant)
@@ -265,7 +296,8 @@ function texConv1D(axis)
     const width = this.constants.width;
     const height = this.constants.height;
     const pixel = image[this.thread.y][this.thread.x];
-    let r = 0.0, g = 0.0, b = 0.0;
+    const denormalizer = 256.0 / 255.0;
+    let rgb = [0.0, 0.0, 0.0];
     let p = [0.0, 0.0, 0.0, 0.0];
     let k = [0.0, 0.0, 0.0, 0.0];
     let x = this.thread.x, y = this.thread.y;
@@ -273,19 +305,24 @@ function texConv1D(axis)
     for(let i = -N; i <= N; i++) {
     ` + ((axis == 'x') ? `
         x = Math.max(0, Math.min(this.thread.x + i, width - 1));
+        k = texKernel[0][i + N];
     ` : `
         y = Math.max(0, Math.min(this.thread.y + i, height - 1));
+        k = texKernel[0][-i + N];
     ` ) + `
 
         p = image[y][x];
-        k = texKernel[0][i + N];
 
-        r += p[0] * (k[0] * scale + offset);
-        g += p[1] * (k[1] * scale + offset);
-        b += p[2] * (k[2] * scale + offset);
+        val = (k[0] + k[1] / 255.0 + k[2] / 65025.0 + k[3] / 16581375.0) * denormalizer;
+        val *= scale;
+        val += offset;
+
+        rgb[0] += p[0] * val;
+        rgb[1] += p[1] * val;
+        rgb[2] += p[2] * val;
     }
 
-    this.color(r, g, b, pixel[3]);
+    this.color(rgb[0], rgb[1], rgb[2], pixel[3]);
     `;
 
     // image: target image

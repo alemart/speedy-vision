@@ -20,9 +20,9 @@
  */
 
 import { GPUKernelGroup } from '../gpu-kernel-group';
-import { conv2D, convX, convY, texConvX, texConvY, texConv2D, idConv2D, createKernel2D } from './shaders/convolution';
+import { conv2D, convX, convY, texConvX, texConvY, texConv2D, idConv2D, createKernel2D, createKernel1D } from './shaders/convolution';
 import { createGaussianKernel } from './shaders/gaussian';
-import { identity, identity2 } from './shaders/identity';
+import { identity } from './shaders/identity';
 
 /**
  * GPUFilters
@@ -83,8 +83,52 @@ export class GPUFilters extends GPUKernelGroup
                 ...(this.operation.hasTextureSize(11, 11)),
                 ...(this.operation.doesNotReuseTextures())
             })
-            /*.declare('_readKernel3x3', identity2, { // for testing
+            .declare('createKernel3x3', createKernel2D(3), { // 3x3 texture kernel
                 ...(this.operation.hasTextureSize(3, 3)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            .declare('createKernel5x5', createKernel2D(5), { // 5x5 texture kernel
+                ...(this.operation.hasTextureSize(5, 5)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            .declare('createKernel7x7', createKernel2D(7), { // 7x7 texture kernel
+                ...(this.operation.hasTextureSize(7, 7)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            .declare('createKernel9x9', createKernel2D(9), { // 9x9 texture kernel
+                ...(this.operation.hasTextureSize(9, 9)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            .declare('createKernel11x11', createKernel2D(11), { // 11x11 texture kernel
+                ...(this.operation.hasTextureSize(11, 11)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            .declare('createKernel3x1', createKernel1D(3), { // 3x1 texture kernel
+                ...(this.operation.hasTextureSize(3, 1)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            .declare('createKernel5x1', createKernel1D(5), { // 5x1 texture kernel
+                ...(this.operation.hasTextureSize(5, 1)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            .declare('createKernel7x1', createKernel1D(7), { // 7x1 texture kernel
+                ...(this.operation.hasTextureSize(7, 1)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            .declare('createKernel9x1', createKernel1D(9), { // 9x1 texture kernel
+                ...(this.operation.hasTextureSize(9, 1)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            .declare('createKernel11x1', createKernel1D(11), { // 11x1 texture kernel
+                ...(this.operation.hasTextureSize(11, 1)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            /*.declare('_readKernel3x3', identity, { // for testing
+                ...(this.operation.hasTextureSize(3, 3)),
+                ...(this.operation.isAnOutputOperation())
+            })
+            .declare('_readKernel3x1', identity, {
+                ...(this.operation.hasTextureSize(3, 1)),
                 ...(this.operation.isAnOutputOperation())
             })*/
 
