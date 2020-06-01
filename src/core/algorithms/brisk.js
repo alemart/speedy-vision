@@ -19,6 +19,11 @@
  * Modified BRISK algorithm
  */
 
+import { Utils } from '../../utils/utils';
+
+let gaussians = null;
+let shortPairs = null, longPairs = null;
+
 /**
  * BRISK feature detection
  */
@@ -34,7 +39,7 @@ export class BRISK
     static run(gpu, greyscale, settings)
     {
         const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidHeight;
-        
+
         // clamp settings.depth (height of the image pyramid)
         settings.depth = Math.max(MIN_DEPTH, Math.min(settings.depth, MAX_DEPTH)) | 0;
 
@@ -83,8 +88,70 @@ export class BRISK
         suppressedIntraPyramidCorners[0] = gpu.pyramid(0).keypoints.crop(suppressedIntraPyramidCorners[0]);
         const keypoints = gpu.pyramid(0).keypoints.merge(suppressedPyramidCorners[0], suppressedIntraPyramidCorners[0]);
 
+        // create gaussian kernels for different scales and radii
+        if(gaussians == null) {
+            // work with scales: sqrt(2), 1, 1/sqrt(2), 1/2, ...
+            const quantizedScales = [...Array(pyramid.length + intraPyramid.length).keys()]
+                .map(i => Math.pow(2.0, 0.5 * (1 - i))); // i == 1 - 2 * log2(v[i])
+
+            // for each scale, a brisk pattern produces 5 layers with different radii
+            const scaledPatterns = quantizedScales.map(briskPattern);
+            Utils.assert(
+                scaledPatterns[0].length == 5, // scaledPatterns is a n x 5 array
+                'Invalid BRISK pattern'
+            );
+
+            // create gaussian kernels
+            const kernels = scaledPatterns.map(layers => // 2D array
+                layers.map(layer => gpu.filters.createGaussianKernel11x1(layer.r))
+            );
+            const sigmas = scaledPatterns.map(layers =>
+                layers.map(layer => layer.r)
+            );
+            const distancesFromKeypoint = scaledPatterns.map(layers =>
+                layers.map(layer => layer.l)
+            );
+
+            // flatten 2D array
+            const flatten = arr => arr.reduce((v, e) => v.concat(e));
+
+            // index:   [ 0 , ... , 4 | 5 , ... , 9 | 10 , ... , 14 | ... ]
+            // scale:       sqrt(2)   |       1     |  1 / sqrt(2)  | ...
+            // sigma:  r1,r10,...,r20 | r1,r10,...  | r1,r10,...    | ...
+            gaussians = {
+                kernel: flatten(kernels),
+                sigma: flatten(sigmas),
+                distanceFromKeypoint: flatten(distancesFromKeypoint),
+            };
+            console.log(gaussians);
+        }
+
         // done!
         return keypoints;
+    }
+
+    /**
+     * Short distance pairings,
+     * for scale = 1.0. Format:
+     * [x1,y1,x2,y2, ...]. Thus,
+     * 4 elements for each pair
+     * @returns {Array<number>}
+     */
+    static get shortDistancePairs()
+    {
+        return shortPairs || (shortPairs = briskShortDistancePairs());
+    };
+
+    /**
+     * Long distance pairings,
+     * for scale = 1.0. Format:
+     * [x1,y1,x2,y2, ...]. Thus,
+     * 4 elements for each pair
+     * @returns {Array<number>}
+     */
+    static get longDistancePairs()
+    {
+        return longPairs || (longPairs = briskLongDistancePairs());
     }
 }
 
@@ -149,4 +216,60 @@ function briskPoints(layer)
         y: l * Math.sin(twoPi * j / n),
         r, l, j, n,
     }));
+}
+
+/**
+ * BRISK pair of points such that
+ * the distance of each is greater
+ * than (threshold*scale), or less
+ * than (-threshold*scale) if
+ * threshold < 0
+ * @param {number} threshold
+ * @param {number} [scale] pattern scale
+ * @returns {Array<number>} format [x1,y1,x2,y2, ...]
+ */
+function briskPairs(threshold, scale = 1.0)
+{
+    const flatten = arr => arr.reduce((v, e) => v.concat(e));
+    const p = flatten(briskPattern(scale).map(briskPoints));
+    const n = p.length, t = +threshold * scale;
+
+    const dist2 = (p, q) => (p.x - q.x) * (p.x - q.x) + (p.y - q.y) * (p.y - q.y);
+    const wanted = (t < 0) ? ((p,q) => dist2(p,q) < t*t) : ((p,q) => dist2(p,q) > t*t);
+    const pairs = [];
+
+    for(let i = 1; i < n; i++) {
+        for(let j = 0; j < i; j++) {
+            if(wanted(p[i], p[j])) {
+                pairs.push(p[i].x);
+                pairs.push(p[i].y);
+                pairs.push(p[j].x);
+                pairs.push(p[j].y);
+            }
+        }
+    }
+
+    return pairs;
+}
+
+/**
+ * BRISK short distance pairs
+ * @param {number} threshold pick pairs with distance < threshold*scale
+ * @param {number} [scale] pattern scale
+ * @returns {Array<number>} format [x1,y1,x2,y2, ...]
+ */
+function briskShortDistancePairs(threshold = 9.75, scale = 1.0)
+{
+    return briskPairs(-threshold, scale);
+}
+
+/**
+ * BRISK long distance pairs
+ * @param {number} threshold pick pairs with distance > threshold*scale
+ * @param {number} [scale] pattern scale
+ * @returns {Array<number>} format [x1,y1,x2,y2, ...]
+ */
+function briskLongDistancePairs(threshold = 13.67, scale = 1.0)
+{
+    return briskPairs(threshold, scale);
 }
