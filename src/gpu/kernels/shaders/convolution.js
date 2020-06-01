@@ -73,6 +73,43 @@ export function convY(kernel, normalizationConstant = 1.0)
     return conv1D('y', kernel, normalizationConstant);
 }
 
+/*
+ * ------------------------------------------------------------------
+ * Texture Encoding
+ * Encoding a float in [0,1) into RGB[A]
+ * ------------------------------------------------------------------
+ * Define frac(x) := x - floor(x)
+ * Of course, 0 <= frac(x) < 1.
+ * 
+ * Given a x in [0,1), it follows that x = frac(x).
+ * 
+ * Define e0 := x,
+ *        e1 := 255 frac(e0) = 255 x,
+ *        e2 := 255 frac(e1) = 255 frac(255 frac(e0)) = 255 frac(255 x),
+ *        e3 := 255 frac(e2) = 255 frac(255 frac(e1)) = 255 frac(255 frac(255 x)),
+ *        ...
+ *        more generally,
+ *        ej := 255 frac(e_{j-1}), j >= 1
+ * 
+ * Since x = frac(x) and e0 = x, it follows that
+ * x = 255 frac(e0) / 255 = e1 / 255 = (frac(e1) + floor(e1)) / 255 =
+ * (255 frac(e1) + 255 floor(e1)) / (255^2) = (e2 + 255 floor(e1)) / (255^2) =
+ * ((255 frac(e2) + 255 floor(e2)) + 255^2 floor(e1)) / (255^3) =
+ * (e3 + 255 floor(e2) + 255^2 floor(e1)) / (255^3) = 
+ * floor(e1) / 255 + floor(e2) / (255^2) + e3 / (255^3) = ... =
+ * floor(e1) / 255 + floor(e2) / (255^2) + floor(e3) / (255^3) + e4 / (255^4) = ... ~
+ * \sum_{i >= 1} floor(e_i) / 255^i
+ * 
+ * Observe that 0 <= e_j / 255 <= 1, meaning that e_j / 255 can be stored
+ * in a 8-bit color channel.
+ * 
+ * We now have approximations for x in [0,1):
+ * x ~ e1 / 255 <-- first order
+ * x ~ e1 / 255 + (e2 / 255) / 255 <-- second order
+ * x ~ e1 / 255 + (e2 / 255) / 255 + (e3 / 255) / (255^2) <-- RGB
+ * x ~ e1 / 255 + (e2 / 255) / 255 + (e3 / 255) / (255^2) + (e4 / 255) / (255^3) <-- RGBA
+ */
+
 // Texture-based 1D convolution on the x-axis
 export const texConvX = texConv1D('x');
 
@@ -89,13 +126,25 @@ export function createKernel2D(kernelSize)
     if(kernelSize < 1 || kernelSize % 2 == 0)
         Utils.fatal(`Can't create a 2D texture kernel of size ${kernelSize}`);
 
-    // code
+    // encode float in the [0,1] range to RGBA
     // note: invert kernel y-axis for WebGL
+    // note 2: must scale the float to [0,1)
     const body = `
     const x = this.thread.x;
     const y = ${kernelSize} - 1 - this.thread.y;
     const k = arr[y * ${kernelSize} + x];
-    this.color(k, k, k, 1);
+    const normalizer = 255.0 / 256.0;
+
+    const e0 = k * normalizer;
+    const r = e0 - Math.floor(e0);
+    const e1 = 255 * r;
+    const g = e1 - Math.floor(e1);
+    const e2 = 255 * g;
+    const b = e2 - Math.floor(e2);
+    const e3 = 255 * b;
+    const a = e3 - Math.floor(e3);
+
+    this.color(r, g, b, a);
     `;
 
     // IMPORTANT: all entries of the input array are
@@ -113,10 +162,12 @@ export function texConv2D(image, texKernel, kernelSize, scale, offset)
     const width = this.constants.width;
     const height = this.constants.height;
     const pixel = image[this.thread.y][this.thread.x];
+    const denormalizer = 256.0 / 255.0;
     let r = 0.0, g = 0.0, b = 0.0;
     let p = [0.0, 0.0, 0.0, 0.0];
     let k = [0.0, 0.0, 0.0, 0.0];
     let x = this.thread.x, y = this.thread.y;
+    let value = 0.0;
 
     for(let j = -N; j <= N; j++) {
         for(let i = -N; i <= N; i++) {
@@ -125,16 +176,28 @@ export function texConv2D(image, texKernel, kernelSize, scale, offset)
 
             p = image[y][x];
             k = texKernel[j + N][i + N];
+            value = (k[0] + k[1] / 255.0 + k[2] / 65025.0 + k[3] / 16581375.0) * denormalizer;
 
-            r += p[0] * (k[0] * scale + offset);
-            g += p[1] * (k[1] * scale + offset);
-            b += p[2] * (k[2] * scale + offset);
+            r += p[0] * (value * scale + offset);
+            g += p[1] * (value * scale + offset);
+            b += p[2] * (value * scale + offset);
         }
     }
 
+    r = Math.max(0, Math.min(r, 1));
+    g = Math.max(0, Math.min(g, 1));
+    b = Math.max(0, Math.min(b, 1));
+    
     this.color(r, g, b, pixel[3]);
 }
 
+// identity operation with the same parameters as texConv2D()
+export function idConv2D(image, texKernel, kernelSize, scale, offset)
+{
+    const pixel = image[this.thread.y][this.thread.x];
+
+    this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
+}
 
 
 // -------------------------------------
