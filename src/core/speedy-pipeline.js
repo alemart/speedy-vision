@@ -53,6 +53,20 @@ export class SpeedyPipeline
     }
 
     /**
+     * Cleanup pipeline memory
+     * @returns {Promise<SpeedyPipeline>} resolves as soon as the memory is released
+     */
+    release()
+    {
+        return new Promise((resolve, reject) => {
+            for(let i = this._operations.length - 1; i >= 0; i--)
+                this._operations[i].release();
+            this._operations.length = 0;
+            resolve(this);
+        });
+    }
+
+    /**
      * Adds a new operation to the end of the pipeline
      * @param {SpeedyPipelineOperation} operation
      * @returns {SpeedyPipeline} the pipeline itself
@@ -72,7 +86,7 @@ export class SpeedyPipeline
     {
         return new Promise((resolve, reject) => {
             if(media._type == MediaType.Texture) {
-                let texture = media._source;
+                let texture = media._gpu.utils.identity(media._source); // gpu.js may crash without identity()
                 for(let i = 0; i < this._operations.length; i++)
                     texture = this._operations[i].run(texture, media._gpu, media);
                 media._source = media._gpu.utils.output(texture); // end of the pipeline

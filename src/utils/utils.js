@@ -61,6 +61,18 @@ export class Utils
     }
 
     /**
+     * Assertion
+     * @param {boolean} expr expression
+     * @param {string} [text] error message
+     * @throws {SpeedyError}
+     */
+    static assert(expr, text = '')
+    {
+        if(!expr)
+            throw new SpeedyError('Assertion failed.', text);
+    }
+
+    /**
      * Generates an enumeration
      * @param {...string} values enumeration options
      * @returns {object} enum object

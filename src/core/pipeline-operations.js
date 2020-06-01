@@ -40,6 +40,13 @@ export const PipelineOperation = { };
     {
         return texture;
     }
+
+    /**
+     * Perform any necessary cleanup
+     */
+    release()
+    {
+    }
 }
 
 
@@ -160,11 +167,19 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
 
         // convolve
         return gpu.filters.texConv2D(
-            gpu.utils.identity(texture), // identity() is needed when chaining convolutions
+            texture,
             this._texKernel,
             this._kernelSize,
             this._scale,
             this._offset
         );
+    }
+
+    release()
+    {
+        if(this._texKernel != null) {
+            this._texKernel.delete();
+            this._texKernel = null;
+        }
     }
 }

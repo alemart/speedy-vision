@@ -20,9 +20,9 @@
  */
 
 import { GPUKernelGroup } from '../gpu-kernel-group';
-import { conv2D, convX, convY, texConvX, texConvY, texConv2D, createKernel2D } from './shaders/convolution';
+import { conv2D, convX, convY, texConvX, texConvY, texConv2D, idConv2D, createKernel2D } from './shaders/convolution';
 import { createGaussianKernel } from './shaders/gaussian';
-import { identity } from './shaders/identity';
+import { identity, identity2 } from './shaders/identity';
 
 /**
  * GPUFilters
@@ -49,36 +49,44 @@ export class GPUFilters extends GPUKernelGroup
             .compose('box5', '_box5x', '_box5y') // size: 5x5
             .compose('box3', '_box3x', '_box3y') // size: 3x3
             .compose('box7', '_box7x', '_box7y') // size: 7x7
+            .compose('box9', '_box9x', '_box9y') // size: 9x9
+            .compose('box11', '_box11x', '_box11y') // size: 11x11
 
             // texture-based convolutions
-            .declare('texConv2D', texConv2D) // 2D convolution with a texture
             .compose('texConvXY', 'texConvX', 'texConvY') // 2D convolution with same 1D separable kernel in both axes
             .declare('texConvX', texConvX) // 1D convolution, x-axis
             .declare('texConvY', texConvY) // 1D convolution, y-axis
+            .compose('texConv2D', '_idConv2D', '_texConv2D') // 2D convolution with a texture (use identity to enable chaining)
+            .declare('_texConv2D', texConv2D) // 2D convolution with a texture (not chainable)
+            .declare('_idConv2D', idConv2D) // identity operation
 
             // create custom convolution kernels
             .declare('createGaussianKernel11x1', createGaussianKernel(11), // 1D gaussian with kernel size = 11 and custom sigma
                 this.operation.hasTextureSize(11, 1))
-            //.declare('createKernel1x1', createKernel2D(1), // 1x1 doesn't work properly (???)
-            //    this.operation.hasTextureSize(1, 1))
-            .declare('createKernel3x3', createKernel2D(3), // 3x3 texture kernel
-                this.operation.hasTextureSize(3, 3))
-            .declare('createKernel5x5', createKernel2D(5), // 5x5 texture kernel
-                this.operation.hasTextureSize(5, 5))
-            .declare('createKernel7x7', createKernel2D(7), // 7x7 texture kernel
-                this.operation.hasTextureSize(7, 7))
-            .declare('createKernel9x9', createKernel2D(9), // 9x9 texture kernel
-                this.operation.hasTextureSize(9, 9))
-            .declare('createKernel11x11', createKernel2D(11), // 11x11 texture kernel
-                this.operation.hasTextureSize(11, 11))
-            /*.declare('_readGaussianKernel11', identity, { // for testing
-                ...(this.operation.hasTextureSize(11, 1)),
-                pipeline: false
-            })*/
-            .declare('_readKernel3x3', identity, { // for testing
+            .declare('createKernel3x3', createKernel2D(3), { // 3x3 texture kernel
                 ...(this.operation.hasTextureSize(3, 3)),
-                pipeline: false
+                ...(this.operation.doesNotReuseTextures())
             })
+            .declare('createKernel5x5', createKernel2D(5), { // 5x5 texture kernel
+                ...(this.operation.hasTextureSize(5, 5)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            .declare('createKernel7x7', createKernel2D(7), { // 7x7 texture kernel
+                ...(this.operation.hasTextureSize(7, 7)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            .declare('createKernel9x9', createKernel2D(9), { // 9x9 texture kernel
+                ...(this.operation.hasTextureSize(9, 9)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            .declare('createKernel11x11', createKernel2D(11), { // 11x11 texture kernel
+                ...(this.operation.hasTextureSize(11, 11)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            /*.declare('_readKernel3x3', identity2, { // for testing
+                ...(this.operation.hasTextureSize(3, 3)),
+                ...(this.operation.isAnOutputOperation())
+            })*/
 
 
 
@@ -136,6 +144,18 @@ export class GPUFilters extends GPUKernelGroup
             .declare('_box7y', convY([
                 1, 1, 1, 1, 1, 1, 1
             ], 1 / 7))
+            .declare('_box9x', convX([
+                1, 1, 1, 1, 1, 1, 1, 1, 1
+            ], 1 / 9))
+            .declare('_box9y', convY([
+                1, 1, 1, 1, 1, 1, 1, 1, 1
+            ], 1 / 9))
+            .declare('_box11x', convX([
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+            ], 1 / 11))
+            .declare('_box11y', convY([
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+            ], 1 / 11))
         ;
     }
 }

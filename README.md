@@ -344,6 +344,12 @@ const media = await Speedy.load(/* ... */);        // load some media (image, vi
 const processedMedia = await media.run(pipeline);  // processedMedia is a new SpeedyMedia object
 ```
 
+##### SpeedyPipeline.release()
+
+`SpeedyPipeline.release(): Promise<SpeedyPipeline>`
+
+Cleanup pipeline memory. The JavaScript engine has an automatic garbage collector, but this is still useful if you spawn lots of pipelines.
+
 ##### SpeedyPipeline.length
 
 `SpeedyPipeline.length: number, read-only`

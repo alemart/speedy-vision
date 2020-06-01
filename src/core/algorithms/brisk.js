@@ -135,7 +135,7 @@ export class BRISK
      * for scale = 1.0. Format:
      * [x1,y1,x2,y2, ...]. Thus,
      * 4 elements for each pair
-     * @returns {Array<number>}
+     * @returns {Float32Array<number>} flattened array
      */
     static get shortDistancePairs()
     {
@@ -147,7 +147,7 @@ export class BRISK
      * for scale = 1.0. Format:
      * [x1,y1,x2,y2, ...]. Thus,
      * 4 elements for each pair
-     * @returns {Array<number>}
+     * @returns {Float32Array<number>} flattened array
      */
     static get longDistancePairs()
     {
@@ -226,7 +226,7 @@ function briskPoints(layer)
  * threshold < 0
  * @param {number} threshold
  * @param {number} [scale] pattern scale
- * @returns {Array<number>} format [x1,y1,x2,y2, ...]
+ * @returns {Float32Array<number>} format [x1,y1,x2,y2, ...]
  */
 function briskPairs(threshold, scale = 1.0)
 {
@@ -249,14 +249,14 @@ function briskPairs(threshold, scale = 1.0)
         }
     }
 
-    return pairs;
+    return new Float32Array(pairs);
 }
 
 /**
  * BRISK short distance pairs
  * @param {number} threshold pick pairs with distance < threshold*scale
  * @param {number} [scale] pattern scale
- * @returns {Array<number>} format [x1,y1,x2,y2, ...]
+ * @returns {Float32Array<number>} format [x1,y1,x2,y2, ...]
  */
 function briskShortDistancePairs(threshold = 9.75, scale = 1.0)
 {
@@ -267,7 +267,7 @@ function briskShortDistancePairs(threshold = 9.75, scale = 1.0)
  * BRISK long distance pairs
  * @param {number} threshold pick pairs with distance > threshold*scale
  * @param {number} [scale] pattern scale
- * @returns {Array<number>} format [x1,y1,x2,y2, ...]
+ * @returns {Float32Array<number>} format [x1,y1,x2,y2, ...]
  */
 function briskLongDistancePairs(threshold = 13.67, scale = 1.0)
 {

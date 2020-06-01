@@ -37,8 +37,10 @@ export class FAST
     static run(n, gpu, greyscale, settings)
     {
         // validate input
-        if(n != 9 && n != 5 && n != 7)
-            Utils.fatal(`Not implemented: FAST-${n}`); // this shouldn't happen...
+        Utils.assert(
+            n == 9 || n == 7 || n == 5,
+            `Not implemented: FAST-${n}`
+        );
 
         // keypoint detection
         const rawCorners = (({

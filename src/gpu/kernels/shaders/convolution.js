@@ -132,16 +132,16 @@ export function createKernel2D(kernelSize)
     const body = `
     const x = this.thread.x;
     const y = ${kernelSize} - 1 - this.thread.y;
-    const k = arr[y * ${kernelSize} + x];
+    const k = arr[y * ${kernelSize} + x] * 1.0;
     const normalizer = 255.0 / 256.0;
 
     const e0 = k * normalizer;
     const r = e0 - Math.floor(e0);
-    const e1 = 255 * r;
+    const e1 = 255.0 * r;
     const g = e1 - Math.floor(e1);
-    const e2 = 255 * g;
+    const e2 = 255.0 * g;
     const b = e2 - Math.floor(e2);
-    const e3 = 255 * b;
+    const e3 = 255.0 * b;
     const a = e3 - Math.floor(e3);
 
     this.color(r, g, b, a);
@@ -163,11 +163,11 @@ export function texConv2D(image, texKernel, kernelSize, scale, offset)
     const height = this.constants.height;
     const pixel = image[this.thread.y][this.thread.x];
     const denormalizer = 256.0 / 255.0;
-    let r = 0.0, g = 0.0, b = 0.0;
+    let x = this.thread.x, y = this.thread.y;
     let p = [0.0, 0.0, 0.0, 0.0];
     let k = [0.0, 0.0, 0.0, 0.0];
-    let x = this.thread.x, y = this.thread.y;
-    let value = 0.0;
+    let rgb = [0.0, 0.0, 0.0];
+    let val = 0.0;
 
     for(let j = -N; j <= N; j++) {
         for(let i = -N; i <= N; i++) {
@@ -176,19 +176,22 @@ export function texConv2D(image, texKernel, kernelSize, scale, offset)
 
             p = image[y][x];
             k = texKernel[j + N][i + N];
-            value = (k[0] + k[1] / 255.0 + k[2] / 65025.0 + k[3] / 16581375.0) * denormalizer;
 
-            r += p[0] * (value * scale + offset);
-            g += p[1] * (value * scale + offset);
-            b += p[2] * (value * scale + offset);
+            val = (k[0] + k[1] / 255.0 + k[2] / 65025.0 + k[3] / 16581375.0) * denormalizer;
+            val *= scale;
+            val += offset;
+
+            rgb[0] += p[0] * val;
+            rgb[1] += p[1] * val;
+            rgb[2] += p[2] * val;
         }
     }
 
-    r = Math.max(0, Math.min(r, 1));
-    g = Math.max(0, Math.min(g, 1));
-    b = Math.max(0, Math.min(b, 1));
-    
-    this.color(r, g, b, pixel[3]);
+    /*rgb[0] = Math.max(0, Math.min(rgb[0], 1));
+    rgb[1] = Math.max(0, Math.min(rgb[1], 1));
+    rgb[2] = Math.max(0, Math.min(rgb[2], 1));*/
+
+    this.color(rgb[0], rgb[1], rgb[2], pixel[3]);
 }
 
 // identity operation with the same parameters as texConv2D()

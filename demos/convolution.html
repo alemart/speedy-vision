@@ -112,8 +112,6 @@ const template = {
 
 window.onload = async function()
 {
-    let pipeline = Speedy.pipeline();
-
     // tell Speedy to load the video
     const video = document.querySelector('video');
     const media = await Speedy.load(video);
@@ -144,9 +142,11 @@ window.onload = async function()
         inputField.oninput = updatePipeline;
 
     // update the pipeline
+    let pipeline = Speedy.pipeline();
     function updatePipeline()
     {
-        const kernel = kernelElement.map(k => k.value);
+        const kernel = kernelElement.map(k => +k.value);
+        pipeline.release(); // cleanup memory
         pipeline = Speedy.pipeline()
                          .convolve(kernel);
     }

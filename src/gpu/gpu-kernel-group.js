@@ -129,6 +129,22 @@ export /* abstract */ class GPUKernelGroup
                 };
             },
 
+            // Use it when we're supposed to see
+            // the texture or read its pixels
+            isAnOutputOperation() {
+                return {
+                    pipeline: false
+                };
+            },
+
+            // Use this when we're NOT supposed to
+            // reuse the kernel texture (which is default)
+            doesNotReuseTextures() {
+                return {
+                    immutable: true
+                };
+            },
+
         });
     }
 

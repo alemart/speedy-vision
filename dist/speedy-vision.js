@@ -9,7 +9,7 @@
  * Includes gpu.js (MIT license)
  * by the gpu.js team (http://gpu.rocks)
  * 
- * Date: 2020-05-30T22:02:31.842Z
+ * Date: 2020-06-01T22:41:41.918Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -100,6 +100,391 @@ var Speedy =
 /************************************************************************/
 /******/ ({
 
+/***/ "./src/core/algorithms/brisk.js":
+/*!**************************************!*\
+  !*** ./src/core/algorithms/brisk.js ***!
+  \**************************************/
+/*! exports provided: BRISK */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "BRISK", function() { return BRISK; });
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * brisk.js
+ * Modified BRISK algorithm
+ */
+
+
+
+let gaussians = null;
+let shortPairs = null, longPairs = null;
+
+/**
+ * BRISK feature detection
+ */
+class BRISK
+{
+    /**
+     * BRISK feature detection algorithm
+     * @param {GPUInstance} gpu
+     * @param {Texture} greyscale Greyscale image
+     * @param {object} settings
+     * @returns {Texture} features in a texture
+     */
+    static run(gpu, greyscale, settings)
+    {
+        const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidHeight;
+
+        // clamp settings.depth (height of the image pyramid)
+        settings.depth = Math.max(MIN_DEPTH, Math.min(settings.depth, MAX_DEPTH)) | 0;
+
+        // create the pyramid
+        const pyramid = new Array(settings.depth);
+        const intraPyramid = new Array(pyramid.length + 1);
+        pyramid[0] = gpu.pyramid(0).pyramids.setBase(greyscale); // base of the pyramid
+        intraPyramid[0] = gpu.pyramid(0).pyramids.intraExpand(pyramid[0]); // 1.5 * sizeof(base)
+        for(let i = 1; i < pyramid.length; i++)
+            pyramid[i] = gpu.pyramid(i-1).pyramids.reduce(pyramid[i-1]);
+        for(let i = 1; i < intraPyramid.length; i++)
+            intraPyramid[i] = gpu.intraPyramid(i-1).pyramids.reduce(intraPyramid[i-1]);
+
+        // get FAST corners of all pyramid levels
+        const pyramidCorners = new Array(pyramid.length);
+        const intraPyramidCorners = new Array(intraPyramid.length);
+        for(let j = 0; j < pyramidCorners.length; j++) {
+            pyramidCorners[j] = gpu.pyramid(j).keypoints.fast9(pyramid[j], settings.threshold);
+            pyramidCorners[j] = gpu.pyramid(j).keypoints.fastSuppression(pyramidCorners[j]);
+
+        }
+        for(let j = 0; j < intraPyramidCorners.length; j++) {
+            intraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.fast9(intraPyramid[j], settings.threshold);
+            intraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.fastSuppression(intraPyramidCorners[j]);
+        }
+
+        // scale space non-maximum suppression & interpolation
+        const lgM = Math.log2(gpu.pyramidMaxScale), h = gpu.pyramidHeight;
+        const suppressedPyramidCorners = new Array(pyramidCorners.length);
+        const suppressedIntraPyramidCorners = new Array(intraPyramidCorners.length);
+        suppressedIntraPyramidCorners[0] = gpu.intraPyramid(0).keypoints.brisk(intraPyramidCorners[0], intraPyramidCorners[0], pyramidCorners[0], 1.0, 2.0 / 3.0, lgM, h);
+        for(let j = 0; j < suppressedPyramidCorners.length; j++) {
+            suppressedPyramidCorners[j] = gpu.pyramid(j).keypoints.brisk(pyramidCorners[j], intraPyramidCorners[j], intraPyramidCorners[j+1], 1.5, 0.75, lgM, h);
+            if(j+1 < suppressedPyramidCorners.length)
+                suppressedIntraPyramidCorners[j+1] = gpu.intraPyramid(j+1).keypoints.brisk(intraPyramidCorners[j+1], pyramidCorners[j], pyramidCorners[j+1], 4.0 / 3.0, 2.0 / 3.0, lgM, h);
+            else
+                suppressedIntraPyramidCorners[j+1] = gpu.intraPyramid(j+1).keypoints.brisk(intraPyramidCorners[j+1], pyramidCorners[j], intraPyramidCorners[j+1], 4.0 / 3.0, 1.0, lgM, h);
+        }
+
+        // merge all keypoints
+        for(let j = suppressedPyramidCorners.length - 2; j >= 0; j--)
+            suppressedPyramidCorners[j] = gpu.pyramid(j).keypoints.mergePyramidLevels(suppressedPyramidCorners[j], suppressedPyramidCorners[j+1]);
+        for(let j = suppressedIntraPyramidCorners.length - 2; j >= 0; j--)
+            suppressedIntraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.mergePyramidLevels(suppressedIntraPyramidCorners[j], suppressedIntraPyramidCorners[j+1]);
+        suppressedIntraPyramidCorners[0] = gpu.intraPyramid(0).keypoints.normalizeScale(suppressedIntraPyramidCorners[0], 1.5);
+        suppressedIntraPyramidCorners[0] = gpu.pyramid(0).keypoints.crop(suppressedIntraPyramidCorners[0]);
+        const keypoints = gpu.pyramid(0).keypoints.merge(suppressedPyramidCorners[0], suppressedIntraPyramidCorners[0]);
+
+        // create gaussian kernels for different scales and radii
+        if(gaussians == null) {
+            // work with scales: sqrt(2), 1, 1/sqrt(2), 1/2, ...
+            const quantizedScales = [...Array(pyramid.length + intraPyramid.length).keys()]
+                .map(i => Math.pow(2.0, 0.5 * (1 - i))); // i == 1 - 2 * log2(v[i])
+
+            // for each scale, a brisk pattern produces 5 layers with different radii
+            const scaledPatterns = quantizedScales.map(briskPattern);
+            _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(
+                scaledPatterns[0].length == 5, // scaledPatterns is a n x 5 array
+                'Invalid BRISK pattern'
+            );
+
+            // create gaussian kernels
+            const kernels = scaledPatterns.map(layers => // 2D array
+                layers.map(layer => gpu.filters.createGaussianKernel11x1(layer.r))
+            );
+            const sigmas = scaledPatterns.map(layers =>
+                layers.map(layer => layer.r)
+            );
+            const distancesFromKeypoint = scaledPatterns.map(layers =>
+                layers.map(layer => layer.l)
+            );
+
+            // flatten 2D array
+            const flatten = arr => arr.reduce((v, e) => v.concat(e));
+
+            // index:   [ 0 , ... , 4 | 5 , ... , 9 | 10 , ... , 14 | ... ]
+            // scale:       sqrt(2)   |       1     |  1 / sqrt(2)  | ...
+            // sigma:  r1,r10,...,r20 | r1,r10,...  | r1,r10,...    | ...
+            gaussians = {
+                kernel: flatten(kernels),
+                sigma: flatten(sigmas),
+                distanceFromKeypoint: flatten(distancesFromKeypoint),
+            };
+            console.log(gaussians);
+        }
+
+        // done!
+        return keypoints;
+    }
+
+    /**
+     * Short distance pairings,
+     * for scale = 1.0. Format:
+     * [x1,y1,x2,y2, ...]. Thus,
+     * 4 elements for each pair
+     * @returns {Float32Array<number>} flattened array
+     */
+    static get shortDistancePairs()
+    {
+        return shortPairs || (shortPairs = briskShortDistancePairs());
+    };
+
+    /**
+     * Long distance pairings,
+     * for scale = 1.0. Format:
+     * [x1,y1,x2,y2, ...]. Thus,
+     * 4 elements for each pair
+     * @returns {Float32Array<number>} flattened array
+     */
+    static get longDistancePairs()
+    {
+        return longPairs || (longPairs = briskLongDistancePairs());
+    }
+}
+
+/**
+ * (Modified) BRISK pattern for 60 points:
+ * 5 layers with k_l colliding circles,
+ * each at a distance l_l from the origin
+ * with radius r_l. For each layer l=0..4,
+ * we have k_l = [1,10,14,15,20] circles
+ *
+ * @param {number} [scale] pattern scale
+ *                 (e.g, 1, 0.5, 0.25...)
+ * @returns {Array<object>}
+ */
+function briskPattern(scale = 1.0)
+{
+    const piOverTwo = Math.PI / 2.0;
+    const baseDistance = 4.21; // innermost layer for scale = 1
+
+    const s10 = Math.sin(piOverTwo / 10);
+    const s14 = Math.sin(piOverTwo / 14);
+    const s15 = Math.sin(piOverTwo / 15);
+    const s20 = Math.sin(piOverTwo / 20);
+
+    const l10 = baseDistance * scale;
+    const r10 = 2 * l10 * s10;
+
+    const r14 = (2 * (l10 + r10) * s14) / (1 - 2 * s14);
+    const l14 = l10 + r10 + r14;
+
+    const r15 = (2 * (l14 + r14) * s15) / (1 - 2 * s15);
+    const l15 = l14 + r14 + r15;
+
+    const r20 = (2 * (l15 + r15) * s20) / (1 - 2 * s20);
+    const l20 = l15 + r15 + r20;
+
+    const r1 = r10 * 0.8; // guess & plot!
+    const l1 = 0.0;
+
+    return [
+        { n: 1, r: r1, l: l1 },
+        { n: 10, r: r10, l: l10 },
+        { n: 14, r: r14, l: l14 },
+        { n: 15, r: r15, l: l15 },
+        { n: 20, r: r20, l: l20 },
+    ];
+}
+
+/**
+ * BRISK points given a
+ * {n, r, l} BRISK layer
+ * @param {object} layer
+ * @returns {Array<object>}
+ */
+function briskPoints(layer)
+{
+    const { n, r, l } = layer;
+    const twoPi = 2.0 * Math.PI;
+
+    return [...Array(n).keys()].map(j => ({
+        x: l * Math.cos(twoPi * j / n),
+        y: l * Math.sin(twoPi * j / n),
+        r, l, j, n,
+    }));
+}
+
+/**
+ * BRISK pair of points such that
+ * the distance of each is greater
+ * than (threshold*scale), or less
+ * than (-threshold*scale) if
+ * threshold < 0
+ * @param {number} threshold
+ * @param {number} [scale] pattern scale
+ * @returns {Float32Array<number>} format [x1,y1,x2,y2, ...]
+ */
+function briskPairs(threshold, scale = 1.0)
+{
+    const flatten = arr => arr.reduce((v, e) => v.concat(e));
+    const p = flatten(briskPattern(scale).map(briskPoints));
+    const n = p.length, t = +threshold * scale;
+
+    const dist2 = (p, q) => (p.x - q.x) * (p.x - q.x) + (p.y - q.y) * (p.y - q.y);
+    const wanted = (t < 0) ? ((p,q) => dist2(p,q) < t*t) : ((p,q) => dist2(p,q) > t*t);
+    const pairs = [];
+
+    for(let i = 1; i < n; i++) {
+        for(let j = 0; j < i; j++) {
+            if(wanted(p[i], p[j])) {
+                pairs.push(p[i].x);
+                pairs.push(p[i].y);
+                pairs.push(p[j].x);
+                pairs.push(p[j].y);
+            }
+        }
+    }
+
+    return new Float32Array(pairs);
+}
+
+/**
+ * BRISK short distance pairs
+ * @param {number} threshold pick pairs with distance < threshold*scale
+ * @param {number} [scale] pattern scale
+ * @returns {Float32Array<number>} format [x1,y1,x2,y2, ...]
+ */
+function briskShortDistancePairs(threshold = 9.75, scale = 1.0)
+{
+    return briskPairs(-threshold, scale);
+}
+
+/**
+ * BRISK long distance pairs
+ * @param {number} threshold pick pairs with distance > threshold*scale
+ * @param {number} [scale] pattern scale
+ * @returns {Float32Array<number>} format [x1,y1,x2,y2, ...]
+ */
+function briskLongDistancePairs(threshold = 13.67, scale = 1.0)
+{
+    return briskPairs(threshold, scale);
+}
+
+/***/ }),
+
+/***/ "./src/core/algorithms/fast.js":
+/*!*************************************!*\
+  !*** ./src/core/algorithms/fast.js ***!
+  \*************************************/
+/*! exports provided: FAST */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FAST", function() { return FAST; });
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * fast.js
+ * FAST corner detection
+ */
+
+
+
+/**
+ * FAST corner detection
+ */
+class FAST
+{
+    /**
+     * Run the FAST corner detection algorithm
+     * @param {number} n FAST parameter: 9, 7 or 5
+     * @param {GPUInstance} gpu
+     * @param {Texture} greyscale Greyscale image
+     * @param {object} settings
+     * @returns {Texture} features in a texture
+     */
+    static run(n, gpu, greyscale, settings)
+    {
+        // validate input
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(
+            n == 9 || n == 7 || n == 5,
+            `Not implemented: FAST-${n}`
+        );
+
+        // keypoint detection
+        const rawCorners = (({
+            5: () => gpu.keypoints.fast5(greyscale, settings.threshold),
+            7: () => gpu.keypoints.fast7(greyscale, settings.threshold),
+            9: () => gpu.keypoints.fast9(greyscale, settings.threshold),
+        })[n])();
+
+        // non-maximum suppression
+        const corners = gpu.keypoints.fastSuppression(rawCorners);
+        return corners;
+    }
+
+    /**
+     * Sensitivity to threshold conversion
+     * sensitivity in [0,1] -> pixel intensity threshold in [0,1]
+     * performs a non-linear conversion (used for FAST)
+     * @param {number} sensitivity
+     * @returns {number} pixel intensity
+     */
+    static sensitivity2threshold(sensitivity)
+    {
+        // the number of keypoints ideally increases linearly
+        // as the sensitivity is increased
+        sensitivity = Math.max(0, Math.min(sensitivity, 1));
+        return 1 - Math.tanh(2.77 * sensitivity);
+    }
+
+    /**
+     * Normalize a threshold
+     * pixel threshold in [0,255] -> normalized threshold in [0,1]
+     * @returns {number} clamped & normalized threshold
+     */
+    static normalizedThreshold(threshold)
+    {
+        threshold = Math.max(0, Math.min(threshold, 255));
+        return threshold / 255;
+    }
+}
+
+/***/ }),
+
 /***/ "./src/core/feature-detector.js":
 /*!**************************************!*\
   !*** ./src/core/feature-detector.js ***!
@@ -110,8 +495,10 @@ var Speedy =
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FeatureDetector", function() { return FeatureDetector; });
-/* harmony import */ var _utils_tuner__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/tuner */ "./src/utils/tuner.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./algorithms/fast.js */ "./src/core/algorithms/fast.js");
+/* harmony import */ var _algorithms_brisk_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./algorithms/brisk.js */ "./src/core/algorithms/brisk.js");
+/* harmony import */ var _utils_tuner__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/tuner */ "./src/utils/tuner.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -132,6 +519,8 @@ __webpack_require__.r(__webpack_exports__);
  * feature-detector.js
  * Feature detection facade
  */
+
+
 
 
 
@@ -179,28 +568,17 @@ class FeatureDetector
         // convert a sensitivity value in [0,1],
         // if it's defined, to a FAST threshold
         if(settings.hasOwnProperty('sensitivity'))
-            settings.threshold = this._sensitivity2threshold(settings.sensitivity);
+            settings.threshold = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FAST"].sensitivity2threshold(settings.sensitivity);
         else
-            settings.threshold = this._normalizedThreshold(settings.threshold);
-
-        // validate input
-        if(n != 9 && n != 5 && n != 7)
-            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Not implemented: FAST-${n}`); // this shouldn't happen...
+            settings.threshold = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FAST"].normalizedThreshold(settings.threshold);
 
         // pre-processing the image...
         const source = settings.denoise ? gpu.filters.gauss5(media.source) : media.source;
         const greyscale = gpu.colors.rgb2grey(source);
 
-        // keypoint detection
-        const rawCorners = (({
-            5: () => gpu.keypoints.fast5(greyscale, settings.threshold),
-            7: () => gpu.keypoints.fast7(greyscale, settings.threshold),
-            9: () => gpu.keypoints.fast9(greyscale, settings.threshold),
-        })[n])();
-        const corners = gpu.keypoints.fastSuppression(rawCorners);
-
-        // encoding result
-        return this._extractKeypoints(corners);
+        // extract features
+        const keypoints = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FAST"].run(n, gpu, greyscale, settings);
+        return this._extractKeypoints(keypoints);
     }
 
     /**
@@ -212,13 +590,12 @@ class FeatureDetector
     brisk(media, settings = {})
     {
         const gpu = this._gpu;
-        const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidHeight;
 
         // default settings
         settings = {
             threshold: 10,
             denoise: true,
-            depth: 4, // integer in [MIN_DEPTH, MAX_DEPTH]
+            depth: 4,
             ...settings
         };
 
@@ -228,64 +605,17 @@ class FeatureDetector
 
         // convert settings.sensitivity to settings.threshold
         if(settings.hasOwnProperty('sensitivity'))
-            settings.threshold = this._sensitivity2threshold(settings.sensitivity);
+            settings.threshold = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FAST"].sensitivity2threshold(settings.sensitivity);
         else
-            settings.threshold = this._normalizedThreshold(settings.threshold);
-
-        // clamp settings.depth (height of the image pyramid)
-        settings.depth = Math.max(MIN_DEPTH, Math.min(settings.depth, MAX_DEPTH)) | 0;
+            settings.threshold = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FAST"].normalizedThreshold(settings.threshold);
 
         // pre-processing the image...
         const source = settings.denoise ? gpu.filters.gauss5(media.source) : media.source;
         const greyscale = gpu.colors.rgb2grey(source);
 
-        // create the pyramid
-        const pyramid = new Array(settings.depth);
-        const intraPyramid = new Array(pyramid.length + 1);
-        pyramid[0] = gpu.pyramid(0).pyramids.setBase(greyscale); // base of the pyramid
-        intraPyramid[0] = gpu.pyramid(0).pyramids.intraExpand(pyramid[0]); // 1.5 * sizeof(base)
-        for(let i = 1; i < pyramid.length; i++)
-            pyramid[i] = gpu.pyramid(i-1).pyramids.reduce(pyramid[i-1]);
-        for(let i = 1; i < intraPyramid.length; i++)
-            intraPyramid[i] = gpu.intraPyramid(i-1).pyramids.reduce(intraPyramid[i-1]);
-
-        // get FAST corners of all pyramid levels
-        const pyramidCorners = new Array(pyramid.length);
-        const intraPyramidCorners = new Array(intraPyramid.length);
-        for(let j = 0; j < pyramidCorners.length; j++) {
-            pyramidCorners[j] = gpu.pyramid(j).keypoints.fast9(pyramid[j], settings.threshold);
-            pyramidCorners[j] = gpu.pyramid(j).keypoints.fastSuppression(pyramidCorners[j]);
-
-        }
-        for(let j = 0; j < intraPyramidCorners.length; j++) {
-            intraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.fast9(intraPyramid[j], settings.threshold);
-            intraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.fastSuppression(intraPyramidCorners[j]);
-        }
-
-        // scale space non-maximum suppression & interpolation
-        const lgM = Math.log2(gpu.pyramidMaxScale), h = gpu.pyramidHeight;
-        const suppressedPyramidCorners = new Array(pyramidCorners.length);
-        const suppressedIntraPyramidCorners = new Array(intraPyramidCorners.length);
-        suppressedIntraPyramidCorners[0] = gpu.intraPyramid(0).keypoints.brisk(intraPyramidCorners[0], intraPyramidCorners[0], pyramidCorners[0], 1.0, 2.0 / 3.0, lgM, h);
-        for(let j = 0; j < suppressedPyramidCorners.length; j++) {
-            suppressedPyramidCorners[j] = gpu.pyramid(j).keypoints.brisk(pyramidCorners[j], intraPyramidCorners[j], intraPyramidCorners[j+1], 1.5, 0.75, lgM, h);
-            if(j+1 < suppressedPyramidCorners.length)
-                suppressedIntraPyramidCorners[j+1] = gpu.intraPyramid(j+1).keypoints.brisk(intraPyramidCorners[j+1], pyramidCorners[j], pyramidCorners[j+1], 4.0 / 3.0, 2.0 / 3.0, lgM, h);
-            else
-                suppressedIntraPyramidCorners[j+1] = gpu.intraPyramid(j+1).keypoints.brisk(intraPyramidCorners[j+1], pyramidCorners[j], intraPyramidCorners[j+1], 4.0 / 3.0, 1.0, lgM, h);
-        }
-
-        // merge all keypoints
-        for(let j = suppressedPyramidCorners.length - 2; j >= 0; j--)
-            suppressedPyramidCorners[j] = gpu.pyramid(j).keypoints.mergePyramidLevels(suppressedPyramidCorners[j], suppressedPyramidCorners[j+1]);
-        for(let j = suppressedIntraPyramidCorners.length - 2; j >= 0; j--)
-            suppressedIntraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.mergePyramidLevels(suppressedIntraPyramidCorners[j], suppressedIntraPyramidCorners[j+1]);
-        suppressedIntraPyramidCorners[0] = gpu.intraPyramid(0).keypoints.normalizeScale(suppressedIntraPyramidCorners[0], 1.5);
-        suppressedIntraPyramidCorners[0] = gpu.pyramid(0).keypoints.crop(suppressedIntraPyramidCorners[0]);
-        const corners = gpu.pyramid(0).keypoints.merge(suppressedPyramidCorners[0], suppressedIntraPyramidCorners[0]);
-
-        // done!
-        return this._extractKeypoints(corners);
+        // extract features
+        const keypoints = _algorithms_brisk_js__WEBPACK_IMPORTED_MODULE_1__["BRISK"].run(gpu, greyscale, settings);
+        return this._extractKeypoints(keypoints);
     }
 
     // given a corner-encoded texture,
@@ -320,7 +650,7 @@ class FeatureDetector
 
         // spawn the tuner
         this._sensitivityTuner = this._sensitivityTuner ||
-            new _utils_tuner__WEBPACK_IMPORTED_MODULE_0__["OnlineErrorTuner"](0, 1200); // use a slightly wider interval for better stability
+            new _utils_tuner__WEBPACK_IMPORTED_MODULE_2__["OnlineErrorTuner"](0, 1200); // use a slightly wider interval for better stability
             //new TestTuner(0, 1000);
         const normalizer = 0.001;
 
@@ -331,24 +661,6 @@ class FeatureDetector
 
         // return the new sensitivity
         return Math.max(0, Math.min(sensitivity, 1));
-    }
-
-    // sensitivity in [0,1] -> pixel intensity threshold in [0,1]
-    // performs a non-linear conversion (used for FAST)
-    _sensitivity2threshold(sensitivity)
-    {
-        // the number of keypoints ideally increases linearly
-        // as the sensitivity is increased
-        sensitivity = Math.max(0, Math.min(sensitivity, 1));
-        return 1 - Math.tanh(2.77 * sensitivity);
-    }
-
-    // pixel threshold in [0,255] -> normalized threshold in [0,1]
-    // returns a clamped & normalized threshold
-    _normalizedThreshold(threshold)
-    {
-        threshold = Math.max(0, Math.min(threshold, 255));
-        return threshold / 255;
     }
 }
 
@@ -407,6 +719,13 @@ const PipelineOperation = { };
     run(texture, gpu, media)
     {
         return texture;
+    }
+
+    /**
+     * Perform any necessary cleanup
+     */
+    release()
+    {
     }
 }
 
@@ -519,7 +838,7 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
         this._texKernel = null;
         this._kernelSize = size;
     }
-    
+
     run(texture, gpu, media)
     {
         // instantiate the texture kernel
@@ -528,12 +847,20 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
 
         // convolve
         return gpu.filters.texConv2D(
-            gpu.utils.identity(texture), // identity() is needed when chaining convolutions
+            texture,
             this._texKernel,
             this._kernelSize,
             this._scale,
             this._offset
         );
+    }
+
+    release()
+    {
+        if(this._texKernel != null) {
+            this._texKernel.delete();
+            this._texKernel = null;
+        }
     }
 }
 
@@ -1040,6 +1367,20 @@ class SpeedyPipeline
     }
 
     /**
+     * Cleanup pipeline memory
+     * @returns {Promise<SpeedyPipeline>} resolves as soon as the memory is released
+     */
+    release()
+    {
+        return new Promise((resolve, reject) => {
+            for(let i = this._operations.length - 1; i >= 0; i--)
+                this._operations[i].release();
+            this._operations.length = 0;
+            resolve(this);
+        });
+    }
+
+    /**
      * Adds a new operation to the end of the pipeline
      * @param {SpeedyPipelineOperation} operation
      * @returns {SpeedyPipeline} the pipeline itself
@@ -1059,7 +1400,7 @@ class SpeedyPipeline
     {
         return new Promise((resolve, reject) => {
             if(media._type == _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Texture) {
-                let texture = media._source;
+                let texture = media._gpu.utils.identity(media._source); // gpu.js may crash without identity()
                 for(let i = 0; i < this._operations.length; i++)
                     texture = this._operations[i].run(texture, media._gpu, media);
                 media._source = media._gpu.utils.output(texture); // end of the pipeline
@@ -20990,6 +21331,22 @@ class GPUKernelGroup
                 };
             },
 
+            // Use it when we're supposed to see
+            // the texture or read its pixels
+            isAnOutputOperation() {
+                return {
+                    pipeline: false
+                };
+            },
+
+            // Use this when we're NOT supposed to
+            // reuse the kernel texture (which is default)
+            doesNotReuseTextures() {
+                return {
+                    immutable: true
+                };
+            },
+
         });
     }
 
@@ -21352,36 +21709,44 @@ class GPUFilters extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKern
             .compose('box5', '_box5x', '_box5y') // size: 5x5
             .compose('box3', '_box3x', '_box3y') // size: 3x3
             .compose('box7', '_box7x', '_box7y') // size: 7x7
+            .compose('box9', '_box9x', '_box9y') // size: 9x9
+            .compose('box11', '_box11x', '_box11y') // size: 11x11
 
             // texture-based convolutions
-            .declare('texConv2D', _shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConv2D"]) // 2D convolution with a texture
             .compose('texConvXY', 'texConvX', 'texConvY') // 2D convolution with same 1D separable kernel in both axes
             .declare('texConvX', _shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"]) // 1D convolution, x-axis
             .declare('texConvY', _shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"]) // 1D convolution, y-axis
+            .compose('texConv2D', '_idConv2D', '_texConv2D') // 2D convolution with a texture (use identity to enable chaining)
+            .declare('_texConv2D', _shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConv2D"]) // 2D convolution with a texture (not chainable)
+            .declare('_idConv2D', _shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["idConv2D"]) // identity operation
 
             // create custom convolution kernels
             .declare('createGaussianKernel11x1', Object(_shaders_gaussian__WEBPACK_IMPORTED_MODULE_2__["createGaussianKernel"])(11), // 1D gaussian with kernel size = 11 and custom sigma
                 this.operation.hasTextureSize(11, 1))
-            //.declare('createKernel1x1', createKernel2D(1), // 1x1 doesn't work properly (???)
-            //    this.operation.hasTextureSize(1, 1))
-            .declare('createKernel3x3', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(3), // 3x3 texture kernel
-                this.operation.hasTextureSize(3, 3))
-            .declare('createKernel5x5', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(5), // 5x5 texture kernel
-                this.operation.hasTextureSize(5, 5))
-            .declare('createKernel7x7', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(7), // 7x7 texture kernel
-                this.operation.hasTextureSize(7, 7))
-            .declare('createKernel9x9', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(9), // 9x9 texture kernel
-                this.operation.hasTextureSize(9, 9))
-            .declare('createKernel11x11', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(11), // 11x11 texture kernel
-                this.operation.hasTextureSize(11, 11))
-            /*.declare('_readGaussianKernel11', identity, { // for testing
-                ...(this.operation.hasTextureSize(11, 1)),
-                pipeline: false
-            })*/
-            .declare('_readKernel3x3', _shaders_identity__WEBPACK_IMPORTED_MODULE_3__["identity"], { // for testing
+            .declare('createKernel3x3', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(3), { // 3x3 texture kernel
                 ...(this.operation.hasTextureSize(3, 3)),
-                pipeline: false
+                ...(this.operation.doesNotReuseTextures())
             })
+            .declare('createKernel5x5', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(5), { // 5x5 texture kernel
+                ...(this.operation.hasTextureSize(5, 5)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            .declare('createKernel7x7', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(7), { // 7x7 texture kernel
+                ...(this.operation.hasTextureSize(7, 7)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            .declare('createKernel9x9', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(9), { // 9x9 texture kernel
+                ...(this.operation.hasTextureSize(9, 9)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            .declare('createKernel11x11', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(11), { // 11x11 texture kernel
+                ...(this.operation.hasTextureSize(11, 11)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            /*.declare('_readKernel3x3', identity2, { // for testing
+                ...(this.operation.hasTextureSize(3, 3)),
+                ...(this.operation.isAnOutputOperation())
+            })*/
 
 
 
@@ -21439,6 +21804,18 @@ class GPUFilters extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKern
             .declare('_box7y', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
                 1, 1, 1, 1, 1, 1, 1
             ], 1 / 7))
+            .declare('_box9x', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
+                1, 1, 1, 1, 1, 1, 1, 1, 1
+            ], 1 / 9))
+            .declare('_box9y', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
+                1, 1, 1, 1, 1, 1, 1, 1, 1
+            ], 1 / 9))
+            .declare('_box11x', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+            ], 1 / 11))
+            .declare('_box11y', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
+                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+            ], 1 / 11))
         ;
     }
 }
@@ -21916,7 +22293,7 @@ function rgb2grey(image)
 /*!************************************************!*\
   !*** ./src/gpu/kernels/shaders/convolution.js ***!
   \************************************************/
-/*! exports provided: conv2D, convX, convY, texConvX, texConvY, createKernel2D, texConv2D */
+/*! exports provided: conv2D, convX, convY, texConvX, texConvY, createKernel2D, texConv2D, idConv2D */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -21928,6 +22305,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConvY", function() { return texConvY; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createKernel2D", function() { return createKernel2D; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConv2D", function() { return texConv2D; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "idConv2D", function() { return idConv2D; });
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
@@ -22004,6 +22382,43 @@ function convY(kernel, normalizationConstant = 1.0)
     return conv1D('y', kernel, normalizationConstant);
 }
 
+/*
+ * ------------------------------------------------------------------
+ * Texture Encoding
+ * Encoding a float in [0,1) into RGB[A]
+ * ------------------------------------------------------------------
+ * Define frac(x) := x - floor(x)
+ * Of course, 0 <= frac(x) < 1.
+ * 
+ * Given a x in [0,1), it follows that x = frac(x).
+ * 
+ * Define e0 := x,
+ *        e1 := 255 frac(e0) = 255 x,
+ *        e2 := 255 frac(e1) = 255 frac(255 frac(e0)) = 255 frac(255 x),
+ *        e3 := 255 frac(e2) = 255 frac(255 frac(e1)) = 255 frac(255 frac(255 x)),
+ *        ...
+ *        more generally,
+ *        ej := 255 frac(e_{j-1}), j >= 1
+ * 
+ * Since x = frac(x) and e0 = x, it follows that
+ * x = 255 frac(e0) / 255 = e1 / 255 = (frac(e1) + floor(e1)) / 255 =
+ * (255 frac(e1) + 255 floor(e1)) / (255^2) = (e2 + 255 floor(e1)) / (255^2) =
+ * ((255 frac(e2) + 255 floor(e2)) + 255^2 floor(e1)) / (255^3) =
+ * (e3 + 255 floor(e2) + 255^2 floor(e1)) / (255^3) = 
+ * floor(e1) / 255 + floor(e2) / (255^2) + e3 / (255^3) = ... =
+ * floor(e1) / 255 + floor(e2) / (255^2) + floor(e3) / (255^3) + e4 / (255^4) = ... ~
+ * \sum_{i >= 1} floor(e_i) / 255^i
+ * 
+ * Observe that 0 <= e_j / 255 <= 1, meaning that e_j / 255 can be stored
+ * in a 8-bit color channel.
+ * 
+ * We now have approximations for x in [0,1):
+ * x ~ e1 / 255 <-- first order
+ * x ~ e1 / 255 + (e2 / 255) / 255 <-- second order
+ * x ~ e1 / 255 + (e2 / 255) / 255 + (e3 / 255) / (255^2) <-- RGB
+ * x ~ e1 / 255 + (e2 / 255) / 255 + (e3 / 255) / (255^2) + (e4 / 255) / (255^3) <-- RGBA
+ */
+
 // Texture-based 1D convolution on the x-axis
 const texConvX = texConv1D('x');
 
@@ -22020,13 +22435,25 @@ function createKernel2D(kernelSize)
     if(kernelSize < 1 || kernelSize % 2 == 0)
         _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't create a 2D texture kernel of size ${kernelSize}`);
 
-    // code
+    // encode float in the [0,1] range to RGBA
     // note: invert kernel y-axis for WebGL
+    // note 2: must scale the float to [0,1)
     const body = `
     const x = this.thread.x;
     const y = ${kernelSize} - 1 - this.thread.y;
-    const k = arr[y * ${kernelSize} + x];
-    this.color(k, k, k, 1);
+    const k = arr[y * ${kernelSize} + x] * 1.0;
+    const normalizer = 255.0 / 256.0;
+
+    const e0 = k * normalizer;
+    const r = e0 - Math.floor(e0);
+    const e1 = 255.0 * r;
+    const g = e1 - Math.floor(e1);
+    const e2 = 255.0 * g;
+    const b = e2 - Math.floor(e2);
+    const e3 = 255.0 * b;
+    const a = e3 - Math.floor(e3);
+
+    this.color(r, g, b, a);
     `;
 
     // IMPORTANT: all entries of the input array are
@@ -22044,10 +22471,12 @@ function texConv2D(image, texKernel, kernelSize, scale, offset)
     const width = this.constants.width;
     const height = this.constants.height;
     const pixel = image[this.thread.y][this.thread.x];
-    let r = 0.0, g = 0.0, b = 0.0;
+    const denormalizer = 256.0 / 255.0;
+    let x = this.thread.x, y = this.thread.y;
     let p = [0.0, 0.0, 0.0, 0.0];
     let k = [0.0, 0.0, 0.0, 0.0];
-    let x = this.thread.x, y = this.thread.y;
+    let rgb = [0.0, 0.0, 0.0];
+    let val = 0.0;
 
     for(let j = -N; j <= N; j++) {
         for(let i = -N; i <= N; i++) {
@@ -22057,15 +22486,30 @@ function texConv2D(image, texKernel, kernelSize, scale, offset)
             p = image[y][x];
             k = texKernel[j + N][i + N];
 
-            r += p[0] * (k[0] * scale + offset);
-            g += p[1] * (k[1] * scale + offset);
-            b += p[2] * (k[2] * scale + offset);
+            val = (k[0] + k[1] / 255.0 + k[2] / 65025.0 + k[3] / 16581375.0) * denormalizer;
+            val *= scale;
+            val += offset;
+
+            rgb[0] += p[0] * val;
+            rgb[1] += p[1] * val;
+            rgb[2] += p[2] * val;
         }
     }
 
-    this.color(r, g, b, pixel[3]);
+    /*rgb[0] = Math.max(0, Math.min(rgb[0], 1));
+    rgb[1] = Math.max(0, Math.min(rgb[1], 1));
+    rgb[2] = Math.max(0, Math.min(rgb[2], 1));*/
+
+    this.color(rgb[0], rgb[1], rgb[2], pixel[3]);
 }
 
+// identity operation with the same parameters as texConv2D()
+function idConv2D(image, texKernel, kernelSize, scale, offset)
+{
+    const pixel = image[this.thread.y][this.thread.x];
+
+    this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
+}
 
 
 // -------------------------------------
@@ -26345,9 +26789,8 @@ class GPUUtils extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernel
             .declare('identity', _shaders_identity__WEBPACK_IMPORTED_MODULE_1__["identity"])
 
             // output a texture from a pipeline
-            .declare('output', _shaders_identity__WEBPACK_IMPORTED_MODULE_1__["identity"], {
-                pipeline: false
-            })
+            .declare('output', _shaders_identity__WEBPACK_IMPORTED_MODULE_1__["identity"],
+                this.operation.isAnOutputOperation())
         ;
     }
 }
@@ -27506,6 +27949,18 @@ class Utils
         const message = [ text, ...args ].join(' ');
         console.log('[speedy-vision.js]', message);
         return message;
+    }
+
+    /**
+     * Assertion
+     * @param {boolean} expr expression
+     * @param {string} [text] error message
+     * @throws {SpeedyError}
+     */
+    static assert(expr, text = '')
+    {
+        if(!expr)
+            throw new _errors__WEBPACK_IMPORTED_MODULE_0__["SpeedyError"]('Assertion failed.', text);
     }
 
     /**

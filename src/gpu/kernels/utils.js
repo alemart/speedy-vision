@@ -42,9 +42,8 @@ export class GPUUtils extends GPUKernelGroup
             .declare('identity', identity)
 
             // output a texture from a pipeline
-            .declare('output', identity, {
-                pipeline: false
-            })
+            .declare('output', identity,
+                this.operation.isAnOutputOperation())
         ;
     }
 }
