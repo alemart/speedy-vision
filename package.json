@@ -37,9 +37,7 @@
     "orb"
   ],
   "devDependencies": {
-    "ava": "^3.8.1",
     "clean-webpack-plugin": "^3.0.0",
-    "puppeteer": "^3.0.1",
     "terser-webpack-plugin": "^2.3.6",
     "webpack": "^4.42.1",
     "webpack-cli": "^3.3.11",

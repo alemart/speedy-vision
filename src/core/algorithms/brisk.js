@@ -113,7 +113,7 @@ export class BRISK
             );
 
             // flatten 2D array
-            const flatten = arr => arr.reduce((v, e) => v.concat(e));
+            const flatten = arr => arr.reduce((v, e) => v.concat(e), []);
 
             // index:   [ 0 , ... , 4 | 5 , ... , 9 | 10 , ... , 14 | ... ]
             // scale:       sqrt(2)   |       1     |  1 / sqrt(2)  | ...
@@ -230,7 +230,7 @@ function briskPoints(layer)
  */
 function briskPairs(threshold, scale = 1.0)
 {
-    const flatten = arr => arr.reduce((v, e) => v.concat(e));
+    const flatten = arr => arr.reduce((v, e) => v.concat(e), []);
     const p = flatten(briskPattern(scale).map(briskPoints));
     const n = p.length, t = +threshold * scale;
 
