@@ -80,7 +80,7 @@ export class GPUInstance
         }, false);
         this._canvas.addEventListener('webglcontextrestored', () => {
             Utils.warning(`Restored WebGL context.`);
-            this._initGPU();
+            this._gpu = this._spawnGPU(this._canvas, this._context, this._width, this._height);
         }, false);
 
         // initialize the GPU

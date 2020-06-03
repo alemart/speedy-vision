@@ -172,7 +172,7 @@ export function createKernel1D(kernelSize)
     const normalizer = 255.0 / 256.0;
 
     const e0 = k * normalizer;
-    const r = e0 - Math.floor(e0);
+    const r = e0;
     const e1 = 255.0 * r;
     const g = e1 - Math.floor(e1);
     const e2 = 255.0 * g;
@@ -198,7 +198,7 @@ export function texConv2D(image, texKernel, kernelSize, scale, offset)
     const width = this.constants.width;
     const height = this.constants.height;
     const pixel = image[this.thread.y][this.thread.x];
-    const denormalizer = 256.0 / 255.0;
+    //const denormalizer = 256.0 / 255.0; // worsens data
     let x = this.thread.x, y = this.thread.y;
     let p = [0.0, 0.0, 0.0, 0.0];
     let k = [0.0, 0.0, 0.0, 0.0];
@@ -213,7 +213,7 @@ export function texConv2D(image, texKernel, kernelSize, scale, offset)
             p = image[y][x];
             k = texKernel[j + N][i + N];
 
-            val = (k[0] + k[1] / 255.0 + k[2] / 65025.0 + k[3] / 16581375.0) * denormalizer;
+            val = k[0] + k[1] / 255.0 + k[2] / 65025.0;// + k[3] / 16581375.0;
             val *= scale;
             val += offset;
 
@@ -296,7 +296,6 @@ function texConv1D(axis)
     const width = this.constants.width;
     const height = this.constants.height;
     const pixel = image[this.thread.y][this.thread.x];
-    const denormalizer = 256.0 / 255.0;
     let rgb = [0.0, 0.0, 0.0];
     let p = [0.0, 0.0, 0.0, 0.0];
     let k = [0.0, 0.0, 0.0, 0.0];
@@ -313,7 +312,7 @@ function texConv1D(axis)
 
         p = image[y][x];
 
-        val = (k[0] + k[1] / 255.0 + k[2] / 65025.0 + k[3] / 16581375.0) * denormalizer;
+        val = k[0] + k[1] / 255.0 + k[2] / 65025.0;
         val *= scale;
         val += offset;
 

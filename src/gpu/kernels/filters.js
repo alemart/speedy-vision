@@ -83,26 +83,6 @@ export class GPUFilters extends GPUKernelGroup
                 ...(this.operation.hasTextureSize(11, 11)),
                 ...(this.operation.doesNotReuseTextures())
             })
-            .declare('createKernel3x3', createKernel2D(3), { // 3x3 texture kernel
-                ...(this.operation.hasTextureSize(3, 3)),
-                ...(this.operation.doesNotReuseTextures())
-            })
-            .declare('createKernel5x5', createKernel2D(5), { // 5x5 texture kernel
-                ...(this.operation.hasTextureSize(5, 5)),
-                ...(this.operation.doesNotReuseTextures())
-            })
-            .declare('createKernel7x7', createKernel2D(7), { // 7x7 texture kernel
-                ...(this.operation.hasTextureSize(7, 7)),
-                ...(this.operation.doesNotReuseTextures())
-            })
-            .declare('createKernel9x9', createKernel2D(9), { // 9x9 texture kernel
-                ...(this.operation.hasTextureSize(9, 9)),
-                ...(this.operation.doesNotReuseTextures())
-            })
-            .declare('createKernel11x11', createKernel2D(11), { // 11x11 texture kernel
-                ...(this.operation.hasTextureSize(11, 11)),
-                ...(this.operation.doesNotReuseTextures())
-            })
             .declare('createKernel3x1', createKernel1D(3), { // 3x1 texture kernel
                 ...(this.operation.hasTextureSize(3, 1)),
                 ...(this.operation.doesNotReuseTextures())
