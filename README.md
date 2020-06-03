@@ -152,7 +152,7 @@ Clones the `SpeedyMedia` object.
 ###### Arguments
 
 * `options: object, optional`. Configuration object.
-  * `deep: boolean`. Copy the internal components of the `SpeedyMedia`. Defaults to `false`.
+  * `lightweight: boolean`. Perform a lightweight copy of the `SpeedyMedia`. A lightweight copy shares its internal buffers with the original media. Although faster to generate, lightweight clones of the same media are linked to each other. Change one, and you'll most likely change the other. This option defaults to `false`, i.e., no lightweight copies are created by default.
 
 ###### Returns
 
@@ -161,7 +161,7 @@ A clone of the `SpeedyMedia` object.
 ###### Example
 
 ```js
-const newMedia = media.clone();
+const clone = media.clone();
 ```
 
 ### Feature detection
@@ -355,6 +355,35 @@ Cleanup pipeline memory. The JavaScript engine has an automatic garbage collecto
 `SpeedyPipeline.length: number, read-only`
 
 The number of operations of the pipeline.
+
+#### Running a pipeline
+
+##### SpeedyMedia.run()
+
+`SpeedyMedia.run(pipeline: SpeedyPipeline): Promise<SpeedyMedia>`
+
+Runs the provided `pipeline`, outputting a [lightweight clone](#speedymediaclone) of the media containing the result.
+
+###### Arguments
+
+* `pipeline: SpeedyPipeline`.
+
+###### Returns
+
+A Promise that resolves to the resulting image: a new `SpeedyMedia` object.
+
+###### Example
+
+```js
+// How to blur an image
+const pipeline = Speedy.pipeline()
+                       .blur();
+
+const media = await Speedy.load(/* ... */);
+const blurred = await media.run(pipeline);
+```
+
+**Note:** while faster to generate, [lightweight clones are linked to each other](#speedymediaclone). Clone your media if you intend to run two or more pipelines with the same `SpeedyMedia` instance, e.g., write `await media.clone().run(pipeline)`.
 
 #### Pipeline operations
 

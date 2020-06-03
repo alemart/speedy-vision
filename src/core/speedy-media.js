@@ -160,11 +160,11 @@ export class SpeedyMedia
     {
         // Default settings
         options = {
-            deep: false, // the default is: shallow copy
+            lightweight: false,
             ...(options)
         };
 
-        if(!options.deep) {
+        if(options.lightweight) {
             // shallow copy
             return new SpeedyMedia(this);
         }
@@ -185,7 +185,7 @@ export class SpeedyMedia
      */
     run(pipeline)
     {
-        const media = this.clone(); // shallow copy
+        const media = this.clone({ lightweight: true });
         media._type = MediaType.Texture;
         return pipeline._run(media);
     }
