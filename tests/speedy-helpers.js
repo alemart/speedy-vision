@@ -21,7 +21,7 @@
 
 // Constants
 const PIXEL_TOLERANCE = 1; // pixel intensities within this tolerance are "close enough"
-const MAX_IMERR = 0.05; // max. "image error"
+const MAX_IMERR = 0.01; // max. image error (percentage)
 
 // Read pixels from a source
 function pixels(source)
@@ -122,7 +122,7 @@ function errcnt(a, b, tolerance = PIXEL_TOLERANCE) // error count: number of ele
     return subtract(a, b).filter(x => Math.abs(x) > tolerance).length;
 }
 
-function imerr(a, b, tolerance = PIXEL_TOLERANCE) // "image error": relative error count
+function relerrcnt(a, b, tolerance = PIXEL_TOLERANCE) // relative error count
 {
     const n = Math.max(a.length, b.length);
     return errcnt(a, b, tolerance) / n;
@@ -138,6 +138,11 @@ function mae(a, b) // mean absolute error
 {
     const diff = subtract(a, b);
     return diff.reduce((s, d) => s + Math.abs(d), 0) / diff.length;
+}
+
+function imerr(a, b) // "image error": a value in [0,1]
+{
+    return mae(a, b) / 255.0;
 }
 
 function l2dist(a, b) // Euclidean distance
@@ -259,7 +264,8 @@ var speedyMatchers =
                 `Arrays are expected to differ` :
                 `Arrays are not expected to differ, but ${(a.length > b.length ? a : b).filter((_, i) => a[i] !== b[i]).length} elements do differ. ` +
                 `They differ by at most ${errmax(a, b, 0)}\n` +
-                `Relative error count: ${imerr(a, b, tolerance)}\n` +
+                `Image error: ${imerr(a, b)}\n` +
+                `Relative error count: ${relerrcnt(a, b, tolerance)}\n` +
                 `Mean average error: ${mae(a, b)}`;
 
             return { pass, message };
@@ -279,7 +285,8 @@ var speedyMatchers =
                 `Arrays are expected to be nearly equal, but ${errcnt(a, b, tolerance)} pairs aren't so. ` +
                 `Their elements differ by at most ${errmax(a, b, tolerance)}, ` +
                 `whereas the test tolerance is ${tolerance}\n` +
-                `Relative error count: ${imerr(a, b, tolerance)}\n` +
+                `Image error: ${imerr(a, b)}\n` +
+                `Relative error count: ${relerrcnt(a, b, tolerance)}\n` +
                 `Mean average error: ${mae(a, b)}`;
                 
             return { pass, message };

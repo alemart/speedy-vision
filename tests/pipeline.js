@@ -57,15 +57,15 @@ describe('SpeedyPipeline', function() {
         const pipeline = Speedy.pipeline();
         const sameMedia = await media.run(pipeline);
 
-        const error = mae(pixels(media), pixels(sameMedia));
+        const error = imerr(pixels(media), pixels(sameMedia));
 
         display(media, 'Original image');
         display(sameMedia, 'After going through the GPU');
-        display(imageDiff(media, sameMedia), `Difference with error ${error}`);
+        display(imageDiff(media, sameMedia), `Error: ${error}`);
 
         expect(media.width).toBe(sameMedia.width);
         expect(media.height).toBe(sameMedia.height);
-        expect(pixels(media)).toBeElementwiseNearlyEqual(pixels(sameMedia)); // precision errors?
+        expect(error).toBeAnAcceptableImageError();
     });
 
     it('converts to greyscale', async function() {
@@ -100,7 +100,7 @@ describe('SpeedyPipeline', function() {
                 const pipeline = Speedy.pipeline().blur({ filter , size });
                 const blurred = await media.clone().run(pipeline);
 
-                const error = mae(pixels(blurred), pixels(media));
+                const error = imerr(pixels(blurred), pixels(media));
                 display(blurred, `Used ${filter} filter with kernel size = ${size}. Error: ${error}`);
 
                 // no FFT...
@@ -154,8 +154,15 @@ describe('SpeedyPipeline', function() {
 
             display(square, 'Original image');
             display(convolved3x3, 'Convolution 3x3');
+            display(imageDiff(square, convolved3x3), 'Difference');
+            print();
+            display(square, 'Original image');
             display(convolved5x5, 'Convolution 5x5');
+            display(imageDiff(square, convolved5x5), 'Difference');
+            print();
+            display(square, 'Original image');
             display(convolved7x7, 'Convolution 7x7');
+            display(imageDiff(square, convolved7x7), 'Difference');
 
             expect(pixels(convolved3x3))
             .toBeElementwiseNearlyEqual(pixels(square));
@@ -183,18 +190,18 @@ describe('SpeedyPipeline', function() {
                                        0, 0, 0,
                                    ]);
             const brightened = await media.run(pipeline);
+            const groundTruth = await Speedy.load(createCanvasFromPixels(
+                media.width, media.height,
+                pixels(media).map(p => p * 1.5)
+            ));
 
-            display(media);
-            display(brightened);
-            /*display(createCanvasFromPixels(media.width, media.height,
-                subtract(pixels(brightened), pixels(media)).map(x => x < 0 ? 255 : 0)
-            ));*/
+            const error = imerr(pixels(groundTruth), pixels(brightened));
 
-            expect(pixels(brightened))
-            .toBeElementwiseGreaterThanOrEqual(pixels(media));
+            display(groundTruth, 'Ground truth');
+            display(brightened, 'Image brightened by Speedy');
+            display(imageDiff(brightened, groundTruth), `Error: ${error}`);
 
-            expect(pixels(brightened))
-            .not.toBeElementwiseNearlyEqual(pixels(media));
+            expect(error).toBeAnAcceptableImageError();
         });
 
         it('darkens an image', async function() {
@@ -205,15 +212,18 @@ describe('SpeedyPipeline', function() {
                                        0, 0, 0,
                                    ]);
             const darkened = await media.run(pipeline);
+            const groundTruth = await Speedy.load(createCanvasFromPixels(
+                media.width, media.height,
+                pixels(media).map(p => p * 0.5)
+            ));
 
-            display(media);
-            display(darkened);
+            const error = imerr(pixels(groundTruth), pixels(darkened));
 
-            expect(pixels(darkened))
-            .toBeElementwiseLessThanOrEqual(pixels(media));
+            display(groundTruth, 'Ground truth');
+            display(darkened, 'Image darkened by Speedy');
+            display(imageDiff(darkened, groundTruth), `Error: ${error}`);
 
-            expect(pixels(darkened))
-            .not.toBeElementwiseNearlyEqual(pixels(media));
+            expect(error).toBeAnAcceptableImageError();
         });
 
         it('accepts chaining of convolutions', async function() {
@@ -237,11 +247,11 @@ describe('SpeedyPipeline', function() {
                                    ]);
             const convolved = await square.run(pipeline);
 
-            const error = mae(pixels(square), pixels(convolved));
+            const error = imerr(pixels(square), pixels(convolved));
 
             display(square, 'Original');
             display(convolved, 'Convolved');
-            display(imageDiff(convolved, square), `Difference with error = ${error}`);
+            display(imageDiff(convolved, square), `Error: ${error}`);
 
             expect(pixels(square))
             .toBeElementwiseNearlyEqual(pixels(convolved));
@@ -290,11 +300,11 @@ describe('SpeedyPipeline', function() {
                                    ]);
             const convolved = await square.run(pipeline);
 
-            const error = mae(pixels(square), pixels(convolved));
+            const error = imerr(pixels(square), pixels(convolved));
 
             display(square, 'Original');
             display(convolved, 'Convolved');
-            display(imageDiff(convolved, square), `Difference with error = ${error}`);
+            display(imageDiff(convolved, square), `Error: ${error}`);
 
             expect(pixels(square))
             .toBeElementwiseNearlyEqual(pixels(convolved));
@@ -321,11 +331,11 @@ describe('SpeedyPipeline', function() {
 
             display(sobelX, 'Ground truth');
             display(mySobelX, 'Sobel filter computed by Speedy');
-            display(imageDiff(sobelX, mySobelX), `Difference. Error: ${errorX}`);
+            display(imageDiff(sobelX, mySobelX), `Error: ${errorX}`);
             print();
             display(sobelY, 'Ground truth');
             display(mySobelY, 'Sobel filter computed by Speedy');
-            display(imageDiff(sobelY, mySobelY), `Difference. Error: ${errorY}`);
+            display(imageDiff(sobelY, mySobelY), `Error: ${errorY}`);
             print();
             display(square, 'Original image');
 
@@ -346,7 +356,7 @@ describe('SpeedyPipeline', function() {
             display(square, 'Original image');
             display(outline, 'Ground truth');
             display(myOutline, 'Outline computed by Speedy');
-            display(imageDiff(outline, myOutline), `Difference with error ${error}`);
+            display(imageDiff(outline, myOutline), `Error: ${error}`);
 
             expect(error).toBeAnAcceptableImageError();
         });

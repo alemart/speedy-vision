@@ -9,7 +9,7 @@
  * Includes gpu.js (MIT license)
  * by the gpu.js team (http://gpu.rocks)
  * 
- * Date: 2020-06-04T19:30:19.283Z
+ * Date: 2020-06-04T20:19:38.091Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -803,11 +803,11 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
      * Perform a convolution
      * Must provide a SQUARE kernel with size: 3x3, 5x5 or 7x7
      * @param {Array<number>} kernel convolution kernel
-     * @param {number} [multiplier] multiply all kernel entries by this number
+     * @param {number} [divisor] divide all kernel entries by this number
      */
-    constructor(kernel, multiplier = 1.0)
+    constructor(kernel, divisor = 1.0)
     {
-        let kern = new Float32Array(kernel).map(x => x * multiplier);
+        let kern = new Float32Array(kernel).map(x => x / divisor);
         const len = kern.length;
         const size = Math.sqrt(len) | 0;
         const method = ({
@@ -1474,13 +1474,13 @@ class SpeedyPipeline
     /**
      * Image convolution
      * @param {Array<number>} kernel
-     * @param {number} [multiplier]
+     * @param {number} [divisor]
      * @returns {SpeedyPipeline}
      */
-    convolve(kernel, multiplier = 1.0)
+    convolve(kernel, divisor = 1.0)
     {
         return this._spawn(
-            new _pipeline_operations__WEBPACK_IMPORTED_MODULE_0__["PipelineOperation"].Convolve(kernel, multiplier)
+            new _pipeline_operations__WEBPACK_IMPORTED_MODULE_0__["PipelineOperation"].Convolve(kernel, divisor)
         );
     }
 }
