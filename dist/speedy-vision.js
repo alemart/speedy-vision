@@ -1,5 +1,5 @@
 /*!
- * speedy-vision.js v0.2.1
+ * speedy-vision.js v0.2.2
  * https://github.com/alemart/speedy-vision-js
  * 
  * GPU-accelerated Computer Vision for JavaScript
@@ -9,7 +9,7 @@
  * Includes gpu.js (MIT license)
  * by the gpu.js team (http://gpu.rocks)
  * 
- * Date: 2020-06-04T02:32:40.706Z
+ * Date: 2020-06-04T03:41:17.177Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -26927,7 +26927,7 @@ class Speedy
      */
     static get version()
     {
-        return "0.2.1";
+        return "0.2.2";
     }
 
     /**
