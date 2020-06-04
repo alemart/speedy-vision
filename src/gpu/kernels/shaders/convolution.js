@@ -315,10 +315,11 @@ function texConv1D(kernelSize, axis)
     const foreachKernelElement = fn => symmetricRange(N).map(fn).join('\n');
     const generateCode = i => ((axis == 'x') ? `
     x = Math.max(0, Math.min(this.thread.x + (${i}), width - 1));
+    k = texKernel[0][${i + N}];
     ` : `
     y = Math.max(0, Math.min(this.thread.y + (${i}), height - 1));
+    k = texKernel[0][${-i + N}];
     `) + `
-    k = texKernel[0][${i + N}];
     p = image[y][x];
 
     val = k[0] + k[1] + k[2] / 256.0 + k[3] / 65536.0;
