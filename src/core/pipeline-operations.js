@@ -123,11 +123,11 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
      * Perform a convolution
      * Must provide a SQUARE kernel with size: 3x3, 5x5 or 7x7
      * @param {Array<number>} kernel convolution kernel
-     * @param {number} [multiplier] multiply all kernel entries by this number
+     * @param {number} [divisor] divide all kernel entries by this number
      */
-    constructor(kernel, multiplier = 1.0)
+    constructor(kernel, divisor = 1.0)
     {
-        let kern = new Float32Array(kernel).map(x => x * multiplier);
+        let kern = new Float32Array(kernel).map(x => x / divisor);
         const len = kern.length;
         const size = Math.sqrt(len) | 0;
         const method = ({

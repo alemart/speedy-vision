@@ -161,13 +161,13 @@ export class SpeedyPipeline
     /**
      * Image convolution
      * @param {Array<number>} kernel
-     * @param {number} [multiplier]
+     * @param {number} [divisor]
      * @returns {SpeedyPipeline}
      */
-    convolve(kernel, multiplier = 1.0)
+    convolve(kernel, divisor = 1.0)
     {
         return this._spawn(
-            new PipelineOperation.Convolve(kernel, multiplier)
+            new PipelineOperation.Convolve(kernel, divisor)
         );
     }
 }
