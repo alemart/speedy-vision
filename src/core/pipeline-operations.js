@@ -141,8 +141,10 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
         super();
 
         // validate kernel
-        if(size * size != len || !method)
-            Utils.fatal(`Cannot convolve with a ${size}x${size} kernel of ${len} elements`);
+        if(len == 1)
+            Utils.fatal(`Cannot convolve with a kernel containing a single element`);
+        else if(size * size != len || !method)
+            Utils.fatal(`Cannot convolve with a non-square kernel of ${len} elements`);
 
         // normalize kernel entries to [0,1]
         const min = Math.min(...kern), max = Math.max(...kern);
@@ -181,5 +183,6 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
             this._texKernel.delete();
             this._texKernel = null;
         }
+        super.release();
     }
 }

@@ -9,7 +9,7 @@
  * Includes gpu.js (MIT license)
  * by the gpu.js team (http://gpu.rocks)
  * 
- * Date: 2020-06-01T22:41:41.918Z
+ * Date: 2020-06-04T02:32:40.706Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -226,7 +226,7 @@ class BRISK
             );
 
             // flatten 2D array
-            const flatten = arr => arr.reduce((v, e) => v.concat(e));
+            const flatten = arr => arr.reduce((v, e) => v.concat(e), []);
 
             // index:   [ 0 , ... , 4 | 5 , ... , 9 | 10 , ... , 14 | ... ]
             // scale:       sqrt(2)   |       1     |  1 / sqrt(2)  | ...
@@ -343,7 +343,7 @@ function briskPoints(layer)
  */
 function briskPairs(threshold, scale = 1.0)
 {
-    const flatten = arr => arr.reduce((v, e) => v.concat(e));
+    const flatten = arr => arr.reduce((v, e) => v.concat(e), []);
     const p = flatten(briskPattern(scale).map(briskPoints));
     const n = p.length, t = +threshold * scale;
 
@@ -821,8 +821,10 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
         super();
 
         // validate kernel
-        if(size * size != len || !method)
-            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Cannot convolve with a ${size}x${size} kernel of ${len} elements`);
+        if(len == 1)
+            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Cannot convolve with a kernel containing a single element`);
+        else if(size * size != len || !method)
+            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Cannot convolve with a non-square kernel of ${len} elements`);
 
         // normalize kernel entries to [0,1]
         const min = Math.min(...kern), max = Math.max(...kern);
@@ -861,6 +863,7 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
             this._texKernel.delete();
             this._texKernel = null;
         }
+        super.release();
     }
 }
 
@@ -1155,11 +1158,11 @@ class SpeedyMedia
     {
         // Default settings
         options = {
-            deep: false, // the default is: shallow copy
+            lightweight: false,
             ...(options)
         };
 
-        if(!options.deep) {
+        if(options.lightweight) {
             // shallow copy
             return new SpeedyMedia(this);
         }
@@ -1180,7 +1183,7 @@ class SpeedyMedia
      */
     run(pipeline)
     {
-        const media = this.clone(); // shallow copy
+        const media = this.clone({ lightweight: true });
         media._type = _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Texture;
         return pipeline._run(media);
     }
@@ -1587,7 +1590,7 @@ class GPUInstance
         }, false);
         this._canvas.addEventListener('webglcontextrestored', () => {
             _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].warning(`Restored WebGL context.`);
-            this._initGPU();
+            this._gpu = this._spawnGPU(this._canvas, this._context, this._width, this._height);
         }, false);
 
         // initialize the GPU
@@ -21339,8 +21342,8 @@ class GPUKernelGroup
                 };
             },
 
-            // Use this when we're NOT supposed to
-            // reuse the kernel texture (which is default)
+            // Use this when we want to keep the
+            // kernel texture (they are reused default)
             doesNotReuseTextures() {
                 return {
                     immutable: true
@@ -21743,8 +21746,32 @@ class GPUFilters extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKern
                 ...(this.operation.hasTextureSize(11, 11)),
                 ...(this.operation.doesNotReuseTextures())
             })
-            /*.declare('_readKernel3x3', identity2, { // for testing
+            .declare('createKernel3x1', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(3), { // 3x1 texture kernel
+                ...(this.operation.hasTextureSize(3, 1)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            .declare('createKernel5x1', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(5), { // 5x1 texture kernel
+                ...(this.operation.hasTextureSize(5, 1)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            .declare('createKernel7x1', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(7), { // 7x1 texture kernel
+                ...(this.operation.hasTextureSize(7, 1)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            .declare('createKernel9x1', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(9), { // 9x1 texture kernel
+                ...(this.operation.hasTextureSize(9, 1)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            .declare('createKernel11x1', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(11), { // 11x1 texture kernel
+                ...(this.operation.hasTextureSize(11, 1)),
+                ...(this.operation.doesNotReuseTextures())
+            })
+            /*.declare('_readKernel3x3', identity, { // for testing
                 ...(this.operation.hasTextureSize(3, 3)),
+                ...(this.operation.isAnOutputOperation())
+            })
+            .declare('_readKernel3x1', identity, {
+                ...(this.operation.hasTextureSize(3, 1)),
                 ...(this.operation.isAnOutputOperation())
             })*/
 
@@ -22293,7 +22320,7 @@ function rgb2grey(image)
 /*!************************************************!*\
   !*** ./src/gpu/kernels/shaders/convolution.js ***!
   \************************************************/
-/*! exports provided: conv2D, convX, convY, texConvX, texConvY, createKernel2D, texConv2D, idConv2D */
+/*! exports provided: conv2D, convX, convY, texConvX, texConvY, createKernel2D, createKernel1D, texConv2D, idConv2D */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -22304,6 +22331,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConvX", function() { return texConvX; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConvY", function() { return texConvY; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createKernel2D", function() { return createKernel2D; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createKernel1D", function() { return createKernel1D; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConv2D", function() { return texConv2D; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "idConv2D", function() { return idConv2D; });
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../utils/utils */ "./src/utils/utils.js");
@@ -22385,38 +22413,39 @@ function convY(kernel, normalizationConstant = 1.0)
 /*
  * ------------------------------------------------------------------
  * Texture Encoding
- * Encoding a float in [0,1) into RGB[A]
+ * Encoding a float in [0,1] into RGB[A]
  * ------------------------------------------------------------------
  * Define frac(x) := x - floor(x)
  * Of course, 0 <= frac(x) < 1.
  * 
- * Given a x in [0,1), it follows that x = frac(x).
+ * Given: x in [0,1]
  * 
- * Define e0 := x,
- *        e1 := 255 frac(e0) = 255 x,
- *        e2 := 255 frac(e1) = 255 frac(255 frac(e0)) = 255 frac(255 x),
- *        e3 := 255 frac(e2) = 255 frac(255 frac(e1)) = 255 frac(255 frac(255 x)),
+ * Define e0 := floor(x),
+ *        e1 := 256 frac(x)
+ *        e2 := 256 frac(e1) = 256 frac(256 frac(x))
+ *        e3 := 256 frac(e2) = 256 frac(256 frac(e1)) = 256 frac(256 frac(256 frac(x))),
  *        ...
  *        more generally,
- *        ej := 255 frac(e_{j-1}), j >= 1
+ *        ej := 256 frac(e_{j-1}), j >= 2
  * 
- * Since x = frac(x) and e0 = x, it follows that
- * x = 255 frac(e0) / 255 = e1 / 255 = (frac(e1) + floor(e1)) / 255 =
- * (255 frac(e1) + 255 floor(e1)) / (255^2) = (e2 + 255 floor(e1)) / (255^2) =
- * ((255 frac(e2) + 255 floor(e2)) + 255^2 floor(e1)) / (255^3) =
- * (e3 + 255 floor(e2) + 255^2 floor(e1)) / (255^3) = 
- * floor(e1) / 255 + floor(e2) / (255^2) + e3 / (255^3) = ... =
- * floor(e1) / 255 + floor(e2) / (255^2) + floor(e3) / (255^3) + e4 / (255^4) = ... ~
- * \sum_{i >= 1} floor(e_i) / 255^i
+ * Since x = frac(x) + floor(x), it follows that
+ * x = floor(x) + 256 frac(x) / 256 = e0 + e1 / 256 = e0 + (frac(e1) + floor(e1)) / 256 =
+ * e0 + (256 frac(e1) + 256 floor(e1)) / (256^2) = e0 + (e2 + 256 floor(e1)) / (256^2) =
+ * e0 + ((256 frac(e2) + 256 floor(e2)) + 256^2 floor(e1)) / (256^3) =
+ * e0 + (e3 + 256 floor(e2) + 256^2 floor(e1)) / (256^3) = 
+ * floor(e0) + floor(e1) / 256 + floor(e2) / (256^2) + e3 / (256^3) = ... =
+ * floor(e0) + floor(e1) / 256 + floor(e2) / (256^2) + floor(e3) / (256^3) + e4 / (256^4) = ... ~
+ * \sum_{i >= 0} floor(e_i) / 256^i
  * 
- * Observe that 0 <= e_j / 255 <= 1, meaning that e_j / 255 can be stored
- * in a 8-bit color channel.
+ * Observe that e0 in {0, 1} and, for j >= 1, 0 <= e_j < 256, meaning that
+ * e0 and (e_j / 256) can be stored in a 8-bit color channel.
  * 
- * We now have approximations for x in [0,1):
- * x ~ e1 / 255 <-- first order
- * x ~ e1 / 255 + (e2 / 255) / 255 <-- second order
- * x ~ e1 / 255 + (e2 / 255) / 255 + (e3 / 255) / (255^2) <-- RGB
- * x ~ e1 / 255 + (e2 / 255) / 255 + (e3 / 255) / (255^2) + (e4 / 255) / (255^3) <-- RGBA
+ * We now have approximations for x:
+ * x ~ x0 <-- first order
+ * x ~ x0 + x1 / 256 <-- second order
+ * x ~ x0 + x1 / 256 + x2 / (256^2) <-- third order (RGB)
+ * x ~ x0 + x1 / 256 + x2 / (256^2) + x3 / (256^3) <-- fourth order (RGBA)
+ * where x_i = floor(e_i).
  */
 
 // Texture-based 1D convolution on the x-axis
@@ -22437,21 +22466,20 @@ function createKernel2D(kernelSize)
 
     // encode float in the [0,1] range to RGBA
     // note: invert kernel y-axis for WebGL
-    // note 2: must scale the float to [0,1)
     const body = `
     const x = this.thread.x;
     const y = ${kernelSize} - 1 - this.thread.y;
-    const k = arr[y * ${kernelSize} + x] * 1.0;
-    const normalizer = 255.0 / 256.0;
+    const val = arr[y * ${kernelSize} + x];
 
-    const e0 = k * normalizer;
-    const r = e0 - Math.floor(e0);
-    const e1 = 255.0 * r;
-    const g = e1 - Math.floor(e1);
-    const e2 = 255.0 * g;
-    const b = e2 - Math.floor(e2);
-    const e3 = 255.0 * b;
-    const a = e3 - Math.floor(e3);
+    const e0 = Math.floor(val);
+    const e1 = 256.0 * (val - e0);
+    const e2 = 256.0 * (e1 - Math.floor(e1));
+    const e3 = 256.0 * (e2 - Math.floor(e2));
+
+    const r = e0;
+    const g = Math.floor(e1) / 256.0;
+    const b = Math.floor(e2) / 256.0;
+    const a = Math.floor(e3) / 256.0;
 
     this.color(r, g, b, a);
     `;
@@ -22459,6 +22487,41 @@ function createKernel2D(kernelSize)
     // IMPORTANT: all entries of the input array are
     // assumed to be in the [0, 1] range AND
     // arr.length >= kernelSize * kernelSize
+    return new Function('arr', body);
+}
+
+// Generate a texture-based 1D convolution kernel
+// of size (kernelSize x 1), where all entries
+// belong to the [0, 1] range
+function createKernel1D(kernelSize)
+{
+    // validate input
+    kernelSize |= 0;
+    if(kernelSize < 1 || kernelSize % 2 == 0)
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't create a 1D texture kernel of size ${kernelSize}`);
+
+    // encode float in the [0,1] range to RGBA
+    // note: invert kernel y-axis for WebGL
+    const body = `
+    const x = this.thread.x;
+    const val = arr[x];
+
+    const e0 = Math.floor(val);
+    const e1 = 256.0 * (val - e0);
+    const e2 = 256.0 * (e1 - Math.floor(e1));
+    const e3 = 256.0 * (e2 - Math.floor(e2));
+    
+    const r = e0;
+    const g = Math.floor(e1) / 256.0;
+    const b = Math.floor(e2) / 256.0;
+    const a = Math.floor(e3) / 256.0;
+
+    this.color(r, g, b, a);
+    `;
+
+    // IMPORTANT: all entries of the input array are
+    // assumed to be in the [0, 1] range AND
+    // arr.length >= kernelSize
     return new Function('arr', body);
 }
 
@@ -22471,7 +22534,6 @@ function texConv2D(image, texKernel, kernelSize, scale, offset)
     const width = this.constants.width;
     const height = this.constants.height;
     const pixel = image[this.thread.y][this.thread.x];
-    const denormalizer = 256.0 / 255.0;
     let x = this.thread.x, y = this.thread.y;
     let p = [0.0, 0.0, 0.0, 0.0];
     let k = [0.0, 0.0, 0.0, 0.0];
@@ -22486,7 +22548,7 @@ function texConv2D(image, texKernel, kernelSize, scale, offset)
             p = image[y][x];
             k = texKernel[j + N][i + N];
 
-            val = (k[0] + k[1] / 255.0 + k[2] / 65025.0 + k[3] / 16581375.0) * denormalizer;
+            val = k[0] + k[1] + k[2] / 256.0 + k[3] / 65536.0;
             val *= scale;
             val += offset;
 
@@ -22510,11 +22572,6 @@ function idConv2D(image, texKernel, kernelSize, scale, offset)
 
     this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
 }
-
-
-// -------------------------------------
-// private stuff
-// -------------------------------------
 
 // 1D convolution function generator
 function conv1D(axis, kernel, normalizationConstant)
@@ -22574,7 +22631,7 @@ function texConv1D(axis)
     const width = this.constants.width;
     const height = this.constants.height;
     const pixel = image[this.thread.y][this.thread.x];
-    let r = 0.0, g = 0.0, b = 0.0;
+    let rgb = [0.0, 0.0, 0.0];
     let p = [0.0, 0.0, 0.0, 0.0];
     let k = [0.0, 0.0, 0.0, 0.0];
     let x = this.thread.x, y = this.thread.y;
@@ -22582,19 +22639,24 @@ function texConv1D(axis)
     for(let i = -N; i <= N; i++) {
     ` + ((axis == 'x') ? `
         x = Math.max(0, Math.min(this.thread.x + i, width - 1));
+        k = texKernel[0][i + N];
     ` : `
         y = Math.max(0, Math.min(this.thread.y + i, height - 1));
+        k = texKernel[0][i + N];
     ` ) + `
 
         p = image[y][x];
-        k = texKernel[0][i + N];
 
-        r += p[0] * (k[0] * scale + offset);
-        g += p[1] * (k[1] * scale + offset);
-        b += p[2] * (k[2] * scale + offset);
+        val = k[0] + k[1] + k[2] / 256.0 + k[3] / 65536.0;
+        val *= scale;
+        val += offset;
+
+        rgb[0] += p[0] * val;
+        rgb[1] += p[1] * val;
+        rgb[2] += p[2] * val;
     }
 
-    this.color(r, g, b, pixel[3]);
+    this.color(rgb[0], rgb[1], rgb[2], pixel[3]);
     `;
 
     // image: target image

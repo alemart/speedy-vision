@@ -76,38 +76,39 @@ export function convY(kernel, normalizationConstant = 1.0)
 /*
  * ------------------------------------------------------------------
  * Texture Encoding
- * Encoding a float in [0,1) into RGB[A]
+ * Encoding a float in [0,1] into RGB[A]
  * ------------------------------------------------------------------
  * Define frac(x) := x - floor(x)
  * Of course, 0 <= frac(x) < 1.
  * 
- * Given a x in [0,1), it follows that x = frac(x).
+ * Given: x in [0,1]
  * 
- * Define e0 := x,
- *        e1 := 255 frac(e0) = 255 x,
- *        e2 := 255 frac(e1) = 255 frac(255 frac(e0)) = 255 frac(255 x),
- *        e3 := 255 frac(e2) = 255 frac(255 frac(e1)) = 255 frac(255 frac(255 x)),
+ * Define e0 := floor(x),
+ *        e1 := 256 frac(x)
+ *        e2 := 256 frac(e1) = 256 frac(256 frac(x))
+ *        e3 := 256 frac(e2) = 256 frac(256 frac(e1)) = 256 frac(256 frac(256 frac(x))),
  *        ...
  *        more generally,
- *        ej := 255 frac(e_{j-1}), j >= 1
+ *        ej := 256 frac(e_{j-1}), j >= 2
  * 
- * Since x = frac(x) and e0 = x, it follows that
- * x = 255 frac(e0) / 255 = e1 / 255 = (frac(e1) + floor(e1)) / 255 =
- * (255 frac(e1) + 255 floor(e1)) / (255^2) = (e2 + 255 floor(e1)) / (255^2) =
- * ((255 frac(e2) + 255 floor(e2)) + 255^2 floor(e1)) / (255^3) =
- * (e3 + 255 floor(e2) + 255^2 floor(e1)) / (255^3) = 
- * floor(e1) / 255 + floor(e2) / (255^2) + e3 / (255^3) = ... =
- * floor(e1) / 255 + floor(e2) / (255^2) + floor(e3) / (255^3) + e4 / (255^4) = ... ~
- * \sum_{i >= 1} floor(e_i) / 255^i
+ * Since x = frac(x) + floor(x), it follows that
+ * x = floor(x) + 256 frac(x) / 256 = e0 + e1 / 256 = e0 + (frac(e1) + floor(e1)) / 256 =
+ * e0 + (256 frac(e1) + 256 floor(e1)) / (256^2) = e0 + (e2 + 256 floor(e1)) / (256^2) =
+ * e0 + ((256 frac(e2) + 256 floor(e2)) + 256^2 floor(e1)) / (256^3) =
+ * e0 + (e3 + 256 floor(e2) + 256^2 floor(e1)) / (256^3) = 
+ * floor(e0) + floor(e1) / 256 + floor(e2) / (256^2) + e3 / (256^3) = ... =
+ * floor(e0) + floor(e1) / 256 + floor(e2) / (256^2) + floor(e3) / (256^3) + e4 / (256^4) = ... ~
+ * \sum_{i >= 0} floor(e_i) / 256^i
  * 
- * Observe that 0 <= e_j / 255 <= 1, meaning that e_j / 255 can be stored
- * in a 8-bit color channel.
+ * Observe that e0 in {0, 1} and, for j >= 1, 0 <= e_j < 256, meaning that
+ * e0 and (e_j / 256) can be stored in a 8-bit color channel.
  * 
- * We now have approximations for x in [0,1):
- * x ~ e1 / 255 <-- first order
- * x ~ e1 / 255 + (e2 / 255) / 255 <-- second order
- * x ~ e1 / 255 + (e2 / 255) / 255 + (e3 / 255) / (255^2) <-- RGB
- * x ~ e1 / 255 + (e2 / 255) / 255 + (e3 / 255) / (255^2) + (e4 / 255) / (255^3) <-- RGBA
+ * We now have approximations for x:
+ * x ~ x0 <-- first order
+ * x ~ x0 + x1 / 256 <-- second order
+ * x ~ x0 + x1 / 256 + x2 / (256^2) <-- third order (RGB)
+ * x ~ x0 + x1 / 256 + x2 / (256^2) + x3 / (256^3) <-- fourth order (RGBA)
+ * where x_i = floor(e_i).
  */
 
 // Texture-based 1D convolution on the x-axis
@@ -128,21 +129,20 @@ export function createKernel2D(kernelSize)
 
     // encode float in the [0,1] range to RGBA
     // note: invert kernel y-axis for WebGL
-    // note 2: must scale the float to [0,1)
     const body = `
     const x = this.thread.x;
     const y = ${kernelSize} - 1 - this.thread.y;
-    const k = arr[y * ${kernelSize} + x] * 1.0;
-    const normalizer = 255.0 / 256.0;
+    const val = arr[y * ${kernelSize} + x];
 
-    const e0 = k * normalizer;
-    const r = e0 - Math.floor(e0);
-    const e1 = 255.0 * r;
-    const g = e1 - Math.floor(e1);
-    const e2 = 255.0 * g;
-    const b = e2 - Math.floor(e2);
-    const e3 = 255.0 * b;
-    const a = e3 - Math.floor(e3);
+    const e0 = Math.floor(val);
+    const e1 = 256.0 * (val - e0);
+    const e2 = 256.0 * (e1 - Math.floor(e1));
+    const e3 = 256.0 * (e2 - Math.floor(e2));
+
+    const r = e0;
+    const g = Math.floor(e1) / 256.0;
+    const b = Math.floor(e2) / 256.0;
+    const a = Math.floor(e3) / 256.0;
 
     this.color(r, g, b, a);
     `;
@@ -165,20 +165,19 @@ export function createKernel1D(kernelSize)
 
     // encode float in the [0,1] range to RGBA
     // note: invert kernel y-axis for WebGL
-    // note 2: must scale the float to [0,1)
     const body = `
     const x = this.thread.x;
-    const k = arr[x] * 1.0;
-    const normalizer = 255.0 / 256.0;
+    const val = arr[x];
 
-    const e0 = k * normalizer;
+    const e0 = Math.floor(val);
+    const e1 = 256.0 * (val - e0);
+    const e2 = 256.0 * (e1 - Math.floor(e1));
+    const e3 = 256.0 * (e2 - Math.floor(e2));
+    
     const r = e0;
-    const e1 = 255.0 * r;
-    const g = e1 - Math.floor(e1);
-    const e2 = 255.0 * g;
-    const b = e2 - Math.floor(e2);
-    const e3 = 255.0 * b;
-    const a = e3 - Math.floor(e3);
+    const g = Math.floor(e1) / 256.0;
+    const b = Math.floor(e2) / 256.0;
+    const a = Math.floor(e3) / 256.0;
 
     this.color(r, g, b, a);
     `;
@@ -198,7 +197,6 @@ export function texConv2D(image, texKernel, kernelSize, scale, offset)
     const width = this.constants.width;
     const height = this.constants.height;
     const pixel = image[this.thread.y][this.thread.x];
-    //const denormalizer = 256.0 / 255.0; // worsens data
     let x = this.thread.x, y = this.thread.y;
     let p = [0.0, 0.0, 0.0, 0.0];
     let k = [0.0, 0.0, 0.0, 0.0];
@@ -213,7 +211,7 @@ export function texConv2D(image, texKernel, kernelSize, scale, offset)
             p = image[y][x];
             k = texKernel[j + N][i + N];
 
-            val = k[0] + k[1] / 255.0 + k[2] / 65025.0;// + k[3] / 16581375.0;
+            val = k[0] + k[1] + k[2] / 256.0 + k[3] / 65536.0;
             val *= scale;
             val += offset;
 
@@ -307,12 +305,12 @@ function texConv1D(axis)
         k = texKernel[0][i + N];
     ` : `
         y = Math.max(0, Math.min(this.thread.y + i, height - 1));
-        k = texKernel[0][-i + N];
+        k = texKernel[0][i + N];
     ` ) + `
 
         p = image[y][x];
 
-        val = k[0] + k[1] / 255.0 + k[2] / 65025.0;
+        val = k[0] + k[1] + k[2] / 256.0 + k[3] / 65536.0;
         val *= scale;
         val += offset;
 

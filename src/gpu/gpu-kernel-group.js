@@ -137,8 +137,8 @@ export /* abstract */ class GPUKernelGroup
                 };
             },
 
-            // Use this when we're NOT supposed to
-            // reuse the kernel texture (which is default)
+            // Use this when we want to keep the
+            // kernel texture (they are reused default)
             doesNotReuseTextures() {
                 return {
                     immutable: true
