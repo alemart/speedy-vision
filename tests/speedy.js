@@ -15,16 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * media.js
+ * speedy.js
  * Unit testing
  */
 
-describe('SpeedyMedia', function() {
+describe('Speedy', function() {
 
-    it('can load an image');
-    it('can load a video');
-    it('has a valid source');
-    it('has a valid type');
-    it('has valid dimensions');
+    beforeEach(function() {
+        jasmine.addMatchers(speedyMatchers);
+    });
+
+    it('exists', function() {
+        expect(Speedy).toBeDefined();
+    });
+
+    it('is an object', function() {
+        expect(typeof Speedy).toBe('object');
+    });
+
+    it('has a version', function() {
+        expect(Speedy.version).toBeDefined();
+    });
 
 });

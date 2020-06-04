@@ -34,6 +34,7 @@ Try the demos and take a look at their source code:
   * [Convert image to greyscale](https://alemart.github.io/speedy-vision-js/demos/greyscale-image.html)
   * [Convert video to greyscale](https://alemart.github.io/speedy-vision-js/demos/greyscale-video.html)
   * [Blurring an image](https://alemart.github.io/speedy-vision-js/demos/image-blurring.html)
+* [Unit tests](https://alemart.github.io/speedy-vision-js/tests/index.html)
 
 ## Installation
 

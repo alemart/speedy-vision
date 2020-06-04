@@ -1,38 +1,28 @@
-const test = require('./ava-browser');
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * features.js
+ * Unit testing
+ */
 
-test.todo('Make GPU.js work with Puppeteer');
+describe('Feature detection', function() {
 
-test.skip('Find the corners of a square', async t => {
-    const output = await t.context.run(() => {
-        const image = document.getElementById('square');
-        const media = Speedy.load(image);
-        return new Promise(resolve => {
-            media.findFeatures().then(features => {
-                resolve(features.length);
-            });
-        });
-    });
+    it('finds the corners of a square');
+    it('finds no features when the sensitivity is zero');
+    it('gives you more features when you increase the sensitivity');
 
-    t.is(output, 4);
 });
-
-test.skip('Find no corners when the sensitivity is zero', async t => {
-    const output = await t.context.run(() => {
-        const image = document.getElementById('square');
-        const media = Speedy.load(image);
-        return new Promise(resolve => {
-            media.findFeatures({
-                method: 'fast',
-                settings: {
-                    sensitivity: 0
-                },
-            }).then(features => {
-                resolve(features.length);
-            });
-        });
-    });
-
-    t.is(output, 0);
-});
-
-test.todo('The higher the sensitivity, the more features you get');
