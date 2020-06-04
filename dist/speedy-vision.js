@@ -9,7 +9,7 @@
  * Includes gpu.js (MIT license)
  * by the gpu.js team (http://gpu.rocks)
  * 
- * Date: 2020-06-04T03:41:17.177Z
+ * Date: 2020-06-04T19:30:19.283Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -801,8 +801,7 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
 {
     /**
      * Perform a convolution
-     * Must provide a SQUARE kernel with size:
-     * 1x1, 3x3, 5x5, 7x7, 9x9 or 11x11
+     * Must provide a SQUARE kernel with size: 3x3, 5x5 or 7x7
      * @param {Array<number>} kernel convolution kernel
      * @param {number} [multiplier] multiply all kernel entries by this number
      */
@@ -812,11 +811,9 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
         const len = kern.length;
         const size = Math.sqrt(len) | 0;
         const method = ({
-            3:  'createKernel3x3',
-            5:  'createKernel5x5',
-            7:  'createKernel7x7',
-            9:  'createKernel9x9',
-            11: 'createKernel11x11',
+            3: ['createKernel3x3', 'texConv2D3'],
+            5: ['createKernel5x5', 'texConv2D5'],
+            7: ['createKernel7x7', 'texConv2D7'],
         })[size] || null;
         super();
 
@@ -833,10 +830,10 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
         kern = kern.map(x => (x - offset) / scale);
 
         // store the normalized kernel
+        this._method = method;
         this._scale = scale;
         this._offset = offset;
         this._kernel = kern;
-        this._method = method;
         this._texKernel = null;
         this._kernelSize = size;
     }
@@ -845,13 +842,12 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
     {
         // instantiate the texture kernel
         if(this._texKernel == null)
-            this._texKernel = gpu.filters[this._method](this._kernel);
+            this._texKernel = gpu.filters[this._method[0]](this._kernel);
 
         // convolve
-        return gpu.filters.texConv2D(
+        return gpu.filters[this._method[1]](
             texture,
             this._texKernel,
-            this._kernelSize,
             this._scale,
             this._offset
         );
@@ -21716,16 +21712,35 @@ class GPUFilters extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKern
             .compose('box11', '_box11x', '_box11y') // size: 11x11
 
             // texture-based convolutions
-            .compose('texConvXY', 'texConvX', 'texConvY') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX', _shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"]) // 1D convolution, x-axis
-            .declare('texConvY', _shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"]) // 1D convolution, y-axis
-            .compose('texConv2D', '_idConv2D', '_texConv2D') // 2D convolution with a texture (use identity to enable chaining)
-            .declare('_texConv2D', _shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConv2D"]) // 2D convolution with a texture (not chainable)
-            .declare('_idConv2D', _shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["idConv2D"]) // identity operation
+            .compose('texConv2D3', '_idConv2D3', '_texConv2D3') // 2D texture-based 3x3 convolution
+            .compose('texConv2D5', '_idConv2D5', '_texConv2D5') // 2D texture-based 5x5 convolution
+            .compose('texConv2D7', '_idConv2D7', '_texConv2D7') // 2D texture-based 7x7 convolution
+
+            .declare('_texConv2D3', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConv2D"])(3)) // 3x3 convolution with a texture (not chainable)
+            .declare('_idConv2D3', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["idConv2D"])(3)) // identity operation (enables chaining)
+            .declare('_texConv2D5', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConv2D"])(5)) // 5x5 convolution with a texture (not chainable)
+            .declare('_idConv2D5', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["idConv2D"])(5)) // identity operation (enables chaining)
+            .declare('_texConv2D7', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConv2D"])(7)) // 7x7 convolution with a texture (not chainable)
+            .declare('_idConv2D7', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["idConv2D"])(7)) // identity operation (enables chaining)
+
+            // texture-based separable convolutions
+            .compose('texConvXY3', 'texConvX3', 'texConvY3') // 2D convolution with same 1D separable kernel in both axes
+            .declare('texConvX3', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(3)) // 3x1 convolution, x-axis
+            .declare('texConvY3', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(3)) // 1x3 convolution, y-axis
+            .compose('texConvXY5', 'texConvX5', 'texConvY5') // 2D convolution with same 1D separable kernel in both axes
+            .declare('texConvX5', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(5)) // 5x1 convolution, x-axis
+            .declare('texConvY5', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(5)) // 1x5 convolution, y-axis
+            .compose('texConvXY7', 'texConvX7', 'texConvY7') // 2D convolution with same 1D separable kernel in both axes
+            .declare('texConvX7', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(7)) // 7x1 convolution, x-axis
+            .declare('texConvY7', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(7)) // 1x7 convolution, y-axis
+            .compose('texConvXY9', 'texConvX9', 'texConvY9') // 2D convolution with same 1D separable kernel in both axes
+            .declare('texConvX9', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(9)) // 9x1 convolution, x-axis
+            .declare('texConvY9', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(9)) // 1x9 convolution, y-axis
+            .compose('texConvXY11', 'texConvX11', 'texConvY11') // 2D convolution with same 1D separable kernel in both axes
+            .declare('texConvX11', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(11)) // 11x1 convolution, x-axis
+            .declare('texConvY11', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(11)) // 1x11 convolution, y-axis
 
             // create custom convolution kernels
-            .declare('createGaussianKernel11x1', Object(_shaders_gaussian__WEBPACK_IMPORTED_MODULE_2__["createGaussianKernel"])(11), // 1D gaussian with kernel size = 11 and custom sigma
-                this.operation.hasTextureSize(11, 1))
             .declare('createKernel3x3', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(3), { // 3x3 texture kernel
                 ...(this.operation.hasTextureSize(3, 3)),
                 ...(this.operation.doesNotReuseTextures())
@@ -21736,14 +21751,6 @@ class GPUFilters extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKern
             })
             .declare('createKernel7x7', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(7), { // 7x7 texture kernel
                 ...(this.operation.hasTextureSize(7, 7)),
-                ...(this.operation.doesNotReuseTextures())
-            })
-            .declare('createKernel9x9', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(9), { // 9x9 texture kernel
-                ...(this.operation.hasTextureSize(9, 9)),
-                ...(this.operation.doesNotReuseTextures())
-            })
-            .declare('createKernel11x11', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(11), { // 11x11 texture kernel
-                ...(this.operation.hasTextureSize(11, 11)),
                 ...(this.operation.doesNotReuseTextures())
             })
             .declare('createKernel3x1', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(3), { // 3x1 texture kernel
@@ -22320,7 +22327,7 @@ function rgb2grey(image)
 /*!************************************************!*\
   !*** ./src/gpu/kernels/shaders/convolution.js ***!
   \************************************************/
-/*! exports provided: conv2D, convX, convY, texConvX, texConvY, createKernel2D, createKernel1D, texConv2D, idConv2D */
+/*! exports provided: conv2D, convX, convY, createKernel2D, createKernel1D, texConv2D, idConv2D, texConvX, texConvY */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -22328,12 +22335,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "conv2D", function() { return conv2D; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "convX", function() { return convX; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "convY", function() { return convY; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConvX", function() { return texConvX; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConvY", function() { return texConvY; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createKernel2D", function() { return createKernel2D; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createKernel1D", function() { return createKernel1D; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConv2D", function() { return texConv2D; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "idConv2D", function() { return idConv2D; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConvX", function() { return texConvX; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConvY", function() { return texConvY; });
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
@@ -22410,6 +22417,50 @@ function convY(kernel, normalizationConstant = 1.0)
     return conv1D('y', kernel, normalizationConstant);
 }
 
+// 1D convolution function generator
+function conv1D(axis, kernel, normalizationConstant)
+{
+    const kernel32 = new Float32Array(kernel.map(x => (+x) * (+normalizationConstant)));
+    const kSize = kernel32.length;
+    const N = (kSize / 2) | 0;
+
+    // validate input
+    if(kSize < 1 || kSize % 2 == 0)
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't perform a 1D convolution with an invalid kSize of ${kSize}`);
+    else if(axis != 'x' && axis != 'y')
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't perform 1D convolution: invalid axis "${axis}"`); // this should never happen
+
+    // code generator
+    const foreachKernelElement = fn => symmetricRange(N).reduce(
+        (acc, cur) => (axis == 'x') ?
+            acc + fn(kernel32[cur + N], cur) :
+            acc + fn(kernel32[kSize - 1 - (cur + N)], cur), // invert y-axis for WebGL
+    '');
+    const generateCode = (k, i) => (((axis == 'x') ? `
+    y = this.thread.y;
+    x = Math.min(Math.max(this.thread.x + (${i | 0}), 0), width - 1);
+    ` : `
+    y = Math.min(Math.max(this.thread.y + (${i | 0}), 0), height - 1);
+    x = this.thread.x;
+    `) + `
+    p = image[y][x]; r += p[0] * ${+k}; g += p[1] * ${+k}; b += p[2] * ${+k};
+    `);
+
+    // shader
+    const body = `
+    const width = this.constants.width;
+    const height = this.constants.height;
+    const pixel = image[this.thread.y][this.thread.x];
+    let r = 0.0, g = 0.0, b = 0.0;
+    let p = [0.0, 0.0, 0.0, 0.0];
+    let x = 0, y = 0;
+    ${foreachKernelElement(generateCode)}
+    this.color(r, g, b, pixel[3]);
+    `;
+
+    return new Function('image', body);
+}
+
 /*
  * ------------------------------------------------------------------
  * Texture Encoding
@@ -22447,12 +22498,6 @@ function convY(kernel, normalizationConstant = 1.0)
  * x ~ x0 + x1 / 256 + x2 / (256^2) + x3 / (256^3) <-- fourth order (RGBA)
  * where x_i = floor(e_i).
  */
-
-// Texture-based 1D convolution on the x-axis
-const texConvX = texConv1D('x');
-
-// Texture-based 1D convolution on the x-axis
-const texConvY = texConv1D('y');
 
 // Generate a texture-based 2D convolution kernel
 // of size (kernelSize x kernelSize), where all
@@ -22528,9 +22573,40 @@ function createKernel1D(kernelSize)
 // 2D convolution with a texture-based kernel of size
 // kernelSize x kernelSize, with optional scale & offset
 // By default, scale and offset are 1 and 0, respectively
-function texConv2D(image, texKernel, kernelSize, scale, offset)
+function texConv2D(kernelSize)
 {
-    const N = Math.floor(kernelSize / 2);
+    // validate input
+    const N = kernelSize >> 1; // idiv 2
+    if(kernelSize < 1 || kernelSize % 2 == 0)
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't perform a texture-based 2D convolution with an invalid kernel size of ${kernelSize}`);
+
+    // utilities
+    const foreachKernelElement = fn => cartesian(symmetricRange(N), symmetricRange(N)).map(
+        ij => fn(ij[0], ij[1])
+    ).join('\n');
+
+    const generateCode = (i, j) => `
+    y = Math.max(0, Math.min(this.thread.y + (${i}), height - 1));
+    x = Math.max(0, Math.min(this.thread.x + (${j}), width - 1));
+
+    p = image[y][x];
+    k = texKernel[${i + N}][${j + N}];
+
+    val = k[0] + k[1] + k[2] / 256.0 + k[3] / 65536.0;
+    val *= scale;
+    val += offset;
+
+    rgb[0] += p[0] * val;
+    rgb[1] += p[1] * val;
+    rgb[2] += p[2] * val;
+    `;
+
+    // image: target image
+    // texKernel: convolution kernel (all entries in [0,1])
+    // scale: multiply the kernel entries by a number (like 1.0)
+    // offset: add a number to all kernel entries (like 0.0)
+    return new Function('image', 'texKernel', 'scale', 'offset',
+    `
     const width = this.constants.width;
     const height = this.constants.height;
     const pixel = image[this.thread.y][this.thread.x];
@@ -22540,94 +22616,71 @@ function texConv2D(image, texKernel, kernelSize, scale, offset)
     let rgb = [0.0, 0.0, 0.0];
     let val = 0.0;
 
-    for(let j = -N; j <= N; j++) {
-        for(let i = -N; i <= N; i++) {
-            x = Math.max(0, Math.min(this.thread.x + i, width - 1));
-            y = Math.max(0, Math.min(this.thread.y + j, height - 1));
+    ${foreachKernelElement(generateCode)}
 
-            p = image[y][x];
-            k = texKernel[j + N][i + N];
-
-            val = k[0] + k[1] + k[2] / 256.0 + k[3] / 65536.0;
-            val *= scale;
-            val += offset;
-
-            rgb[0] += p[0] * val;
-            rgb[1] += p[1] * val;
-            rgb[2] += p[2] * val;
-        }
-    }
-
-    /*rgb[0] = Math.max(0, Math.min(rgb[0], 1));
+    rgb[0] = Math.max(0, Math.min(rgb[0], 1));
     rgb[1] = Math.max(0, Math.min(rgb[1], 1));
-    rgb[2] = Math.max(0, Math.min(rgb[2], 1));*/
+    rgb[2] = Math.max(0, Math.min(rgb[2], 1));
 
     this.color(rgb[0], rgb[1], rgb[2], pixel[3]);
+    `
+    );
 }
 
 // identity operation with the same parameters as texConv2D()
-function idConv2D(image, texKernel, kernelSize, scale, offset)
+function idConv2D(kernelSize)
 {
+    return new Function('image', 'texKernel', 'scale', 'offset',
+    `
     const pixel = image[this.thread.y][this.thread.x];
-
     this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
+    `
+    );
 }
 
-// 1D convolution function generator
-function conv1D(axis, kernel, normalizationConstant)
-{
-    const kernel32 = new Float32Array(kernel.map(x => (+x) * (+normalizationConstant)));
-    const kSize = kernel32.length;
-    const N = (kSize / 2) | 0;
+// Texture-based 1D convolution on the x-axis
+const texConvX = kernelSize => texConv1D(kernelSize, 'x');
 
-    // validate input
-    if(kSize < 1 || kSize % 2 == 0)
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't perform a 1D convolution with an invalid kSize of ${kSize}`);
-    else if(axis != 'x' && axis != 'y')
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't perform 1D convolution: invalid axis "${axis}"`); // this should never happen
-
-    // code generator
-    const foreachKernelElement = fn => symmetricRange(N).reduce(
-        (acc, cur) => (axis == 'x') ?
-            acc + fn(kernel32[cur + N], cur) :
-            acc + fn(kernel32[kSize - 1 - (cur + N)], cur), // invert y-axis for WebGL
-    '');
-    const generateCode = (k, i) => (((axis == 'x') ? `
-    y = this.thread.y;
-    x = Math.min(Math.max(this.thread.x + (${i | 0}), 0), width - 1);
-    ` : `
-    y = Math.min(Math.max(this.thread.y + (${i | 0}), 0), height - 1);
-    x = this.thread.x;
-    `) + `
-    p = image[y][x]; r += p[0] * ${+k}; g += p[1] * ${+k}; b += p[2] * ${+k};
-    `);
-
-    // shader
-    const body = `
-    const width = this.constants.width;
-    const height = this.constants.height;
-    const pixel = image[this.thread.y][this.thread.x];
-    let r = 0.0, g = 0.0, b = 0.0;
-    let p = [0.0, 0.0, 0.0, 0.0];
-    let x = 0, y = 0;
-    ${foreachKernelElement(generateCode)}
-    this.color(r, g, b, pixel[3]);
-    `;
-
-    return new Function('image', body);
-}
+// Texture-based 1D convolution on the x-axis
+const texConvY = kernelSize => texConv1D(kernelSize, 'y');
 
 // texture-based 1D convolution function generator
 // (the convolution kernel is stored in a texture)
-function texConv1D(axis)
+function texConv1D(kernelSize, axis)
 {
     // validate input
-    if(axis != 'x' && axis != 'y')
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't perform tex 1D convolution: invalid axis "${axis}"`); // this should never happen
+    const N = kernelSize >> 1; // idiv 2
+    if(kernelSize < 1 || kernelSize % 2 == 0)
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't perform a texture-based 2D convolution with an invalid kernel size of ${kernelSize}`);
+    else if(axis != 'x' && axis != 'y')
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't perform a texture-based 1D convolution: invalid axis "${axis}"`); // this should never happen
 
-    // code
-    const body = `
-    const N = Math.floor(kernelSize / 2);
+    // utilities
+    const foreachKernelElement = fn => symmetricRange(N).map(fn).join('\n');
+    const generateCode = i => ((axis == 'x') ? `
+    x = Math.max(0, Math.min(this.thread.x + (${i}), width - 1));
+    k = texKernel[0][${i + N}];
+    ` : `
+    y = Math.max(0, Math.min(this.thread.y + (${i}), height - 1));
+    k = texKernel[0][${-i + N}];
+    `) + `
+    p = image[y][x];
+
+    val = k[0] + k[1] + k[2] / 256.0 + k[3] / 65536.0;
+    val *= scale;
+    val += offset;
+
+    rgb[0] += p[0] * val;
+    rgb[1] += p[1] * val;
+    rgb[2] += p[2] * val;
+    `;
+
+    // image: target image
+    // texKernel: convolution kernel (all entries in [0,1])
+    // scale: multiply the kernel entries by a number (like 1.0)
+    // offset: add a number to all kernel entries (like 0.0)
+    return new Function('image', 'texKernel', 'scale', 'offset',
+    `
     const width = this.constants.width;
     const height = this.constants.height;
     const pixel = image[this.thread.y][this.thread.x];
@@ -22636,35 +22689,11 @@ function texConv1D(axis)
     let k = [0.0, 0.0, 0.0, 0.0];
     let x = this.thread.x, y = this.thread.y;
 
-    for(let i = -N; i <= N; i++) {
-    ` + ((axis == 'x') ? `
-        x = Math.max(0, Math.min(this.thread.x + i, width - 1));
-        k = texKernel[0][i + N];
-    ` : `
-        y = Math.max(0, Math.min(this.thread.y + i, height - 1));
-        k = texKernel[0][i + N];
-    ` ) + `
-
-        p = image[y][x];
-
-        val = k[0] + k[1] + k[2] / 256.0 + k[3] / 65536.0;
-        val *= scale;
-        val += offset;
-
-        rgb[0] += p[0] * val;
-        rgb[1] += p[1] * val;
-        rgb[2] += p[2] * val;
-    }
+    ${foreachKernelElement(generateCode)}
 
     this.color(rgb[0], rgb[1], rgb[2], pixel[3]);
-    `;
-
-    // image: target image
-    // texKernel: convolution kernel (all entries in [0,1])
-    // kernelSize: kernel size, odd positive integer (it won't be checked!)
-    // scale: multiply the kernel entries by a number (like 1.0)
-    // offset: add a number to all kernel entries (like 0.0)
-    return new Function('image', 'texKernel', 'kernelSize', 'scale', 'offset', body);
+    `
+    );
 }
 
 /***/ }),
