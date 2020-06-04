@@ -89,6 +89,34 @@ function header(title)
     print('> ' + title);
 }
 
+// Image error: a value in [0,1]
+// the higher the value, the higher the error
+function imerr(imageA, imageB)
+{
+    const rgb1 = pixels(imageA).filter((_, i) => i % 4 < 3);
+    const rgb2 = pixels(imageB).filter((_, i) => i % 4 < 3);
+    return mae(rgb1, rgb2) / 255.0;
+}
+
+// Image difference for visual inspection
+function imdiff(mediaA, mediaB, normalize = true)
+{
+    const diff = subtract(pixels(mediaA), pixels(mediaB));
+    const min = normalize ? diff.reduce((m, p) => Math.min(m, p), 255) : 0;
+    const max = normalize ? diff.reduce((m, p) => Math.max(m, p), -255) : 255;
+
+    const normalized = multiply(
+        subtract(
+            diff,
+            Array(diff.length).fill(min)
+        ),
+        255.0 / (max - min)
+    );
+
+    return createCanvasFromPixels(mediaA.width, mediaA.height, normalized);
+}
+
+
 // Array operations
 function zeroes(n) // [ 0 ... 0 ]^T
 {
@@ -140,11 +168,6 @@ function mae(a, b) // mean absolute error
     return diff.reduce((s, d) => s + Math.abs(d), 0) / diff.length;
 }
 
-function imerr(a, b) // "image error": a value in [0,1]
-{
-    return mae(a, b) / 255.0;
-}
-
 function l2dist(a, b) // Euclidean distance
 {
     return Math.sqrt(subtract(a, b).reduce((s, d) => s + d * d, 0));
@@ -171,22 +194,6 @@ function variance(v) // variance
 function stddev(v) // standard deviation
 {
     return Math.sqrt(variance(v));
-}
-
-// Image difference for visual inspection
-function imageDiff(mediaA, mediaB, normalize = true)
-{
-    const diff = subtract(pixels(mediaA), pixels(mediaB));
-    const min = normalize ? diff.reduce((m, p) => Math.min(m, p), 255) : 0;
-    const max = normalize ? diff.reduce((m, p) => Math.max(m, p), -255) : 255;
-    const normalized = multiply(
-        subtract(
-            diff,
-            Array(diff.length).fill(min)
-        ),
-        255.0 / (max - min)
-    );
-    return createCanvasFromPixels(mediaA.width, mediaA.height, normalized);
 }
 
 // Utilities
@@ -264,7 +271,6 @@ var speedyMatchers =
                 `Arrays are expected to differ` :
                 `Arrays are not expected to differ, but ${(a.length > b.length ? a : b).filter((_, i) => a[i] !== b[i]).length} elements do differ. ` +
                 `They differ by at most ${errmax(a, b, 0)}\n` +
-                `Image error: ${imerr(a, b)}\n` +
                 `Relative error count: ${relerrcnt(a, b, tolerance)}\n` +
                 `Mean average error: ${mae(a, b)}`;
 
@@ -285,7 +291,6 @@ var speedyMatchers =
                 `Arrays are expected to be nearly equal, but ${errcnt(a, b, tolerance)} pairs aren't so. ` +
                 `Their elements differ by at most ${errmax(a, b, tolerance)}, ` +
                 `whereas the test tolerance is ${tolerance}\n` +
-                `Image error: ${imerr(a, b)}\n` +
                 `Relative error count: ${relerrcnt(a, b, tolerance)}\n` +
                 `Mean average error: ${mae(a, b)}`;
                 
