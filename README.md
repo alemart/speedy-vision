@@ -153,7 +153,7 @@ Clones the `SpeedyMedia` object.
 ###### Arguments
 
 * `options: object, optional`. Configuration object.
-  * `lightweight: boolean`. Perform a lightweight copy of the `SpeedyMedia`. A lightweight copy shares its internal buffers with the original media. Although faster to generate, lightweight clones of the same media are linked to each other. Change one, and you'll most likely change the other. This option defaults to `false`, i.e., no lightweight copies are created by default.
+  * `lightweight: boolean`. Create a lightweight clone of the `SpeedyMedia`. A lightweight clone shares its internal buffers with the original media. Although faster to generate, lightweight clones of the same media are linked to each other. Change one, and you'll most likely change the other. This option defaults to `false`, i.e., no lightweight clones are created by default.
 
 ###### Returns
 
