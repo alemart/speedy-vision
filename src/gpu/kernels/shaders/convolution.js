@@ -73,6 +73,50 @@ export function convY(kernel, normalizationConstant = 1.0)
     return conv1D('y', kernel, normalizationConstant);
 }
 
+// 1D convolution function generator
+function conv1D(axis, kernel, normalizationConstant)
+{
+    const kernel32 = new Float32Array(kernel.map(x => (+x) * (+normalizationConstant)));
+    const kSize = kernel32.length;
+    const N = (kSize / 2) | 0;
+
+    // validate input
+    if(kSize < 1 || kSize % 2 == 0)
+        Utils.fatal(`Can't perform a 1D convolution with an invalid kSize of ${kSize}`);
+    else if(axis != 'x' && axis != 'y')
+        Utils.fatal(`Can't perform 1D convolution: invalid axis "${axis}"`); // this should never happen
+
+    // code generator
+    const foreachKernelElement = fn => symmetricRange(N).reduce(
+        (acc, cur) => (axis == 'x') ?
+            acc + fn(kernel32[cur + N], cur) :
+            acc + fn(kernel32[kSize - 1 - (cur + N)], cur), // invert y-axis for WebGL
+    '');
+    const generateCode = (k, i) => (((axis == 'x') ? `
+    y = this.thread.y;
+    x = Math.min(Math.max(this.thread.x + (${i | 0}), 0), width - 1);
+    ` : `
+    y = Math.min(Math.max(this.thread.y + (${i | 0}), 0), height - 1);
+    x = this.thread.x;
+    `) + `
+    p = image[y][x]; r += p[0] * ${+k}; g += p[1] * ${+k}; b += p[2] * ${+k};
+    `);
+
+    // shader
+    const body = `
+    const width = this.constants.width;
+    const height = this.constants.height;
+    const pixel = image[this.thread.y][this.thread.x];
+    let r = 0.0, g = 0.0, b = 0.0;
+    let p = [0.0, 0.0, 0.0, 0.0];
+    let x = 0, y = 0;
+    ${foreachKernelElement(generateCode)}
+    this.color(r, g, b, pixel[3]);
+    `;
+
+    return new Function('image', body);
+}
+
 /*
  * ------------------------------------------------------------------
  * Texture Encoding
@@ -110,12 +154,6 @@ export function convY(kernel, normalizationConstant = 1.0)
  * x ~ x0 + x1 / 256 + x2 / (256^2) + x3 / (256^3) <-- fourth order (RGBA)
  * where x_i = floor(e_i).
  */
-
-// Texture-based 1D convolution on the x-axis
-export const texConvX = texConv1D('x');
-
-// Texture-based 1D convolution on the x-axis
-export const texConvY = texConv1D('y');
 
 // Generate a texture-based 2D convolution kernel
 // of size (kernelSize x kernelSize), where all
@@ -191,9 +229,40 @@ export function createKernel1D(kernelSize)
 // 2D convolution with a texture-based kernel of size
 // kernelSize x kernelSize, with optional scale & offset
 // By default, scale and offset are 1 and 0, respectively
-export function texConv2D(image, texKernel, kernelSize, scale, offset)
+export function texConv2D(kernelSize)
 {
-    const N = Math.floor(kernelSize / 2);
+    // validate input
+    const N = kernelSize >> 1; // idiv 2
+    if(kernelSize < 1 || kernelSize % 2 == 0)
+        Utils.fatal(`Can't perform a texture-based 2D convolution with an invalid kernel size of ${kernelSize}`);
+
+    // utilities
+    const foreachKernelElement = fn => cartesian(symmetricRange(N), symmetricRange(N)).map(
+        ij => fn(ij[0], ij[1])
+    ).join('\n');
+
+    const generateCode = (i, j) => `
+    y = Math.max(0, Math.min(this.thread.y + (${i}), height - 1));
+    x = Math.max(0, Math.min(this.thread.x + (${j}), width - 1));
+
+    p = image[y][x];
+    k = texKernel[${i + N}][${j + N}];
+
+    val = k[0] + k[1] + k[2] / 256.0 + k[3] / 65536.0;
+    val *= scale;
+    val += offset;
+
+    rgb[0] += p[0] * val;
+    rgb[1] += p[1] * val;
+    rgb[2] += p[2] * val;
+    `;
+
+    // image: target image
+    // texKernel: convolution kernel (all entries in [0,1])
+    // scale: multiply the kernel entries by a number (like 1.0)
+    // offset: add a number to all kernel entries (like 0.0)
+    return new Function('image', 'texKernel', 'scale', 'offset',
+    `
     const width = this.constants.width;
     const height = this.constants.height;
     const pixel = image[this.thread.y][this.thread.x];
@@ -203,94 +272,70 @@ export function texConv2D(image, texKernel, kernelSize, scale, offset)
     let rgb = [0.0, 0.0, 0.0];
     let val = 0.0;
 
-    for(let j = -N; j <= N; j++) {
-        for(let i = -N; i <= N; i++) {
-            x = Math.max(0, Math.min(this.thread.x + i, width - 1));
-            y = Math.max(0, Math.min(this.thread.y + j, height - 1));
+    ${foreachKernelElement(generateCode)}
 
-            p = image[y][x];
-            k = texKernel[j + N][i + N];
-
-            val = k[0] + k[1] + k[2] / 256.0 + k[3] / 65536.0;
-            val *= scale;
-            val += offset;
-
-            rgb[0] += p[0] * val;
-            rgb[1] += p[1] * val;
-            rgb[2] += p[2] * val;
-        }
-    }
-
-    /*rgb[0] = Math.max(0, Math.min(rgb[0], 1));
+    rgb[0] = Math.max(0, Math.min(rgb[0], 1));
     rgb[1] = Math.max(0, Math.min(rgb[1], 1));
-    rgb[2] = Math.max(0, Math.min(rgb[2], 1));*/
+    rgb[2] = Math.max(0, Math.min(rgb[2], 1));
 
     this.color(rgb[0], rgb[1], rgb[2], pixel[3]);
+    `
+    );
 }
 
 // identity operation with the same parameters as texConv2D()
-export function idConv2D(image, texKernel, kernelSize, scale, offset)
+export function idConv2D(kernelSize)
 {
+    return new Function('image', 'texKernel', 'scale', 'offset',
+    `
     const pixel = image[this.thread.y][this.thread.x];
-
     this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
+    `
+    );
 }
 
-// 1D convolution function generator
-function conv1D(axis, kernel, normalizationConstant)
-{
-    const kernel32 = new Float32Array(kernel.map(x => (+x) * (+normalizationConstant)));
-    const kSize = kernel32.length;
-    const N = (kSize / 2) | 0;
+// Texture-based 1D convolution on the x-axis
+export const texConvX = kernelSize => texConv1D(kernelSize, 'x');
 
-    // validate input
-    if(kSize < 1 || kSize % 2 == 0)
-        Utils.fatal(`Can't perform a 1D convolution with an invalid kSize of ${kSize}`);
-    else if(axis != 'x' && axis != 'y')
-        Utils.fatal(`Can't perform 1D convolution: invalid axis "${axis}"`); // this should never happen
-
-    // code generator
-    const foreachKernelElement = fn => symmetricRange(N).reduce(
-        (acc, cur) => (axis == 'x') ?
-            acc + fn(kernel32[cur + N], cur) :
-            acc + fn(kernel32[kSize - 1 - (cur + N)], cur), // invert y-axis for WebGL
-    '');
-    const generateCode = (k, i) => (((axis == 'x') ? `
-    y = this.thread.y;
-    x = Math.min(Math.max(this.thread.x + (${i | 0}), 0), width - 1);
-    ` : `
-    y = Math.min(Math.max(this.thread.y + (${i | 0}), 0), height - 1);
-    x = this.thread.x;
-    `) + `
-    p = image[y][x]; r += p[0] * ${+k}; g += p[1] * ${+k}; b += p[2] * ${+k};
-    `);
-
-    // shader
-    const body = `
-    const width = this.constants.width;
-    const height = this.constants.height;
-    const pixel = image[this.thread.y][this.thread.x];
-    let r = 0.0, g = 0.0, b = 0.0;
-    let p = [0.0, 0.0, 0.0, 0.0];
-    let x = 0, y = 0;
-    ${foreachKernelElement(generateCode)}
-    this.color(r, g, b, pixel[3]);
-    `;
-
-    return new Function('image', body);
-}
+// Texture-based 1D convolution on the x-axis
+export const texConvY = kernelSize => texConv1D(kernelSize, 'y');
 
 // texture-based 1D convolution function generator
 // (the convolution kernel is stored in a texture)
-function texConv1D(axis)
+function texConv1D(kernelSize, axis)
 {
     // validate input
-    if(axis != 'x' && axis != 'y')
-        Utils.fatal(`Can't perform tex 1D convolution: invalid axis "${axis}"`); // this should never happen
+    const N = kernelSize >> 1; // idiv 2
+    if(kernelSize < 1 || kernelSize % 2 == 0)
+        Utils.fatal(`Can't perform a texture-based 2D convolution with an invalid kernel size of ${kernelSize}`);
+    else if(axis != 'x' && axis != 'y')
+        Utils.fatal(`Can't perform a texture-based 1D convolution: invalid axis "${axis}"`); // this should never happen
 
-    // code
-    const body = `
-    const N = Math.floor(kernelSize / 2);
+    // utilities
+    const foreachKernelElement = fn => symmetricRange(N).map(fn).join('\n');
+    const generateCode = i => ((axis == 'x') ? `
+    x = Math.max(0, Math.min(this.thread.x + (${i}), width - 1));
+    ` : `
+    y = Math.max(0, Math.min(this.thread.y + (${i}), height - 1));
+    `) + `
+    k = texKernel[0][${i + N}];
+    p = image[y][x];
+
+    val = k[0] + k[1] + k[2] / 256.0 + k[3] / 65536.0;
+    val *= scale;
+    val += offset;
+
+    rgb[0] += p[0] * val;
+    rgb[1] += p[1] * val;
+    rgb[2] += p[2] * val;
+    `;
+
+    // image: target image
+    // texKernel: convolution kernel (all entries in [0,1])
+    // scale: multiply the kernel entries by a number (like 1.0)
+    // offset: add a number to all kernel entries (like 0.0)
+    return new Function('image', 'texKernel', 'scale', 'offset',
+    `
     const width = this.constants.width;
     const height = this.constants.height;
     const pixel = image[this.thread.y][this.thread.x];
@@ -299,33 +344,9 @@ function texConv1D(axis)
     let k = [0.0, 0.0, 0.0, 0.0];
     let x = this.thread.x, y = this.thread.y;
 
-    for(let i = -N; i <= N; i++) {
-    ` + ((axis == 'x') ? `
-        x = Math.max(0, Math.min(this.thread.x + i, width - 1));
-        k = texKernel[0][i + N];
-    ` : `
-        y = Math.max(0, Math.min(this.thread.y + i, height - 1));
-        k = texKernel[0][i + N];
-    ` ) + `
-
-        p = image[y][x];
-
-        val = k[0] + k[1] + k[2] / 256.0 + k[3] / 65536.0;
-        val *= scale;
-        val += offset;
-
-        rgb[0] += p[0] * val;
-        rgb[1] += p[1] * val;
-        rgb[2] += p[2] * val;
-    }
+    ${foreachKernelElement(generateCode)}
 
     this.color(rgb[0], rgb[1], rgb[2], pixel[3]);
-    `;
-
-    // image: target image
-    // texKernel: convolution kernel (all entries in [0,1])
-    // kernelSize: kernel size, odd positive integer (it won't be checked!)
-    // scale: multiply the kernel entries by a number (like 1.0)
-    // offset: add a number to all kernel entries (like 0.0)
-    return new Function('image', 'texKernel', 'kernelSize', 'scale', 'offset', body);
+    `
+    );
 }

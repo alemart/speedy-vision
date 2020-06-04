@@ -247,6 +247,59 @@ describe('SpeedyPipeline', function() {
             .toBeElementwiseNearlyEqual(pixels(convolved));
         });
 
+        it('accepts chaining of convolutions of different sizes', async function() {
+            const pipeline = Speedy.pipeline()
+                                   .convolve([
+                                       0, 0, 0,
+                                       0, 1, 0,
+                                       0, 0, 0,
+                                   ]).convolve([
+                                       0, 0, 0, 0, 0,
+                                       0, 0, 0, 0, 0,
+                                       0, 0, 1, 0, 0,
+                                       0, 0, 0, 0, 0,
+                                       0, 0, 0, 0, 0,
+                                   ]).convolve([
+                                       0, 0, 0, 0, 0, 0, 0,
+                                       0, 0, 0, 0, 0, 0, 0,
+                                       0, 0, 0, 0, 0, 0, 0,
+                                       0, 0, 0, 1, 0, 0, 0,
+                                       0, 0, 0, 0, 0, 0, 0,
+                                       0, 0, 0, 0, 0, 0, 0,
+                                       0, 0, 0, 0, 0, 0, 0,
+                                   ]).convolve([
+                                       0, 0, 0,
+                                       0, 1, 0,
+                                       0, 0, 0,
+                                   ]).convolve([
+                                       0, 0, 0,
+                                       0, 1, 0,
+                                       0, 0, 0,
+                                   ]).convolve([
+                                       0, 0, 0, 0, 0,
+                                       0, 0, 0, 0, 0,
+                                       0, 0, 1, 0, 0,
+                                       0, 0, 0, 0, 0,
+                                       0, 0, 0, 0, 0,
+                                   ]).convolve([
+                                       0, 0, 0, 0, 0,
+                                       0, 0, 0, 0, 0,
+                                       0, 0, 1, 0, 0,
+                                       0, 0, 0, 0, 0,
+                                       0, 0, 0, 0, 0,
+                                   ]);
+            const convolved = await square.run(pipeline);
+
+            const error = mae(pixels(square), pixels(convolved));
+
+            display(square, 'Original');
+            display(convolved, 'Convolved');
+            display(imageDiff(convolved, square), `Difference with error = ${error}`);
+
+            expect(pixels(square))
+            .toBeElementwiseNearlyEqual(pixels(convolved));
+        });
+
         it('convolves with a Sobel filter', async function() {
             const sobelX = await Speedy.load(await loadImage('square-sobel-x.png'));
             const sobelY = await Speedy.load(await loadImage('square-sobel-y.png'));

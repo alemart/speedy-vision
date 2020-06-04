@@ -426,7 +426,9 @@ Blurs the media. The optional `options` object accepts the following keys:
 
 `SpeedyPipeline.convolve(kernel: Array<number>, multiplier?: number): SpeedyPipeline`
 
-Performs an image convolution given a `kernel`. Currently, Speedy supports 3x3, 5x5, 7x7, 9x9 and 11x11 convolution kernels. Optionally, you may specify a `multiplier`: all kernel entries will be multiplied by it.
+Performs an image convolution given a `kernel`. Currently, Speedy supports 3x3, 5x5 and 7x7 convolution kernels. If you have a non-square kernel, pad it with zeroes.
+
+Optionally, you may specify a `multiplier`: all kernel entries will be multiplied by it.
 
 ```js
 // Example: Sharpening an image

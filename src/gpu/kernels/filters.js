@@ -53,16 +53,35 @@ export class GPUFilters extends GPUKernelGroup
             .compose('box11', '_box11x', '_box11y') // size: 11x11
 
             // texture-based convolutions
-            .compose('texConvXY', 'texConvX', 'texConvY') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX', texConvX) // 1D convolution, x-axis
-            .declare('texConvY', texConvY) // 1D convolution, y-axis
-            .compose('texConv2D', '_idConv2D', '_texConv2D') // 2D convolution with a texture (use identity to enable chaining)
-            .declare('_texConv2D', texConv2D) // 2D convolution with a texture (not chainable)
-            .declare('_idConv2D', idConv2D) // identity operation
+            .compose('texConv2D3', '_idConv2D3', '_texConv2D3') // 2D texture-based 3x3 convolution
+            .compose('texConv2D5', '_idConv2D5', '_texConv2D5') // 2D texture-based 5x5 convolution
+            .compose('texConv2D7', '_idConv2D7', '_texConv2D7') // 2D texture-based 7x7 convolution
+
+            .declare('_texConv2D3', texConv2D(3)) // 3x3 convolution with a texture (not chainable)
+            .declare('_idConv2D3', idConv2D(3)) // identity operation (enables chaining)
+            .declare('_texConv2D5', texConv2D(5)) // 5x5 convolution with a texture (not chainable)
+            .declare('_idConv2D5', idConv2D(5)) // identity operation (enables chaining)
+            .declare('_texConv2D7', texConv2D(7)) // 7x7 convolution with a texture (not chainable)
+            .declare('_idConv2D7', idConv2D(7)) // identity operation (enables chaining)
+
+            // texture-based separable convolutions
+            .compose('texConvXY3', 'texConvX3', 'texConvY3') // 2D convolution with same 1D separable kernel in both axes
+            .declare('texConvX3', texConvX(3)) // 3x1 convolution, x-axis
+            .declare('texConvY3', texConvY(3)) // 1x3 convolution, y-axis
+            .compose('texConvXY5', 'texConvX5', 'texConvY5') // 2D convolution with same 1D separable kernel in both axes
+            .declare('texConvX5', texConvX(5)) // 5x1 convolution, x-axis
+            .declare('texConvY5', texConvY(5)) // 1x5 convolution, y-axis
+            .compose('texConvXY7', 'texConvX7', 'texConvY7') // 2D convolution with same 1D separable kernel in both axes
+            .declare('texConvX7', texConvX(7)) // 7x1 convolution, x-axis
+            .declare('texConvY7', texConvY(7)) // 1x7 convolution, y-axis
+            .compose('texConvXY9', 'texConvX9', 'texConvY9') // 2D convolution with same 1D separable kernel in both axes
+            .declare('texConvX9', texConvX(9)) // 9x1 convolution, x-axis
+            .declare('texConvY9', texConvY(9)) // 1x9 convolution, y-axis
+            .compose('texConvXY11', 'texConvX11', 'texConvY11') // 2D convolution with same 1D separable kernel in both axes
+            .declare('texConvX11', texConvX(11)) // 11x1 convolution, x-axis
+            .declare('texConvY11', texConvY(11)) // 1x11 convolution, y-axis
 
             // create custom convolution kernels
-            .declare('createGaussianKernel11x1', createGaussianKernel(11), // 1D gaussian with kernel size = 11 and custom sigma
-                this.operation.hasTextureSize(11, 1))
             .declare('createKernel3x3', createKernel2D(3), { // 3x3 texture kernel
                 ...(this.operation.hasTextureSize(3, 3)),
                 ...(this.operation.doesNotReuseTextures())
@@ -73,14 +92,6 @@ export class GPUFilters extends GPUKernelGroup
             })
             .declare('createKernel7x7', createKernel2D(7), { // 7x7 texture kernel
                 ...(this.operation.hasTextureSize(7, 7)),
-                ...(this.operation.doesNotReuseTextures())
-            })
-            .declare('createKernel9x9', createKernel2D(9), { // 9x9 texture kernel
-                ...(this.operation.hasTextureSize(9, 9)),
-                ...(this.operation.doesNotReuseTextures())
-            })
-            .declare('createKernel11x11', createKernel2D(11), { // 11x11 texture kernel
-                ...(this.operation.hasTextureSize(11, 11)),
                 ...(this.operation.doesNotReuseTextures())
             })
             .declare('createKernel3x1', createKernel1D(3), { // 3x1 texture kernel

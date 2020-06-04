@@ -121,8 +121,7 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
 {
     /**
      * Perform a convolution
-     * Must provide a SQUARE kernel with size:
-     * 1x1, 3x3, 5x5, 7x7, 9x9 or 11x11
+     * Must provide a SQUARE kernel with size: 3x3, 5x5 or 7x7
      * @param {Array<number>} kernel convolution kernel
      * @param {number} [multiplier] multiply all kernel entries by this number
      */
@@ -132,11 +131,9 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
         const len = kern.length;
         const size = Math.sqrt(len) | 0;
         const method = ({
-            3:  'createKernel3x3',
-            5:  'createKernel5x5',
-            7:  'createKernel7x7',
-            9:  'createKernel9x9',
-            11: 'createKernel11x11',
+            3: ['createKernel3x3', 'texConv2D3'],
+            5: ['createKernel5x5', 'texConv2D5'],
+            7: ['createKernel7x7', 'texConv2D7'],
         })[size] || null;
         super();
 
@@ -153,10 +150,10 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
         kern = kern.map(x => (x - offset) / scale);
 
         // store the normalized kernel
+        this._method = method;
         this._scale = scale;
         this._offset = offset;
         this._kernel = kern;
-        this._method = method;
         this._texKernel = null;
         this._kernelSize = size;
     }
@@ -165,13 +162,12 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
     {
         // instantiate the texture kernel
         if(this._texKernel == null)
-            this._texKernel = gpu.filters[this._method](this._kernel);
+            this._texKernel = gpu.filters[this._method[0]](this._kernel);
 
         // convolve
-        return gpu.filters.texConv2D(
+        return gpu.filters[this._method[1]](
             texture,
             this._texKernel,
-            this._kernelSize,
             this._scale,
             this._offset
         );
