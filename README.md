@@ -17,6 +17,7 @@ A **lightning fast** GPU-accelerated Computer Vision library for JavaScript, wit
   * [Feature matching](#feature-matching)
   * [Image processing](#image-processing)
   * [Extras](#extras)
+* [Unit tests](https://alemart.github.io/speedy-vision-js/tests/index.html)
 
 ## Demos
 
@@ -34,7 +35,6 @@ Try the demos and take a look at their source code:
   * [Convert image to greyscale](https://alemart.github.io/speedy-vision-js/demos/greyscale-image.html)
   * [Convert video to greyscale](https://alemart.github.io/speedy-vision-js/demos/greyscale-video.html)
   * [Blurring an image](https://alemart.github.io/speedy-vision-js/demos/image-blurring.html)
-* [Unit tests](https://alemart.github.io/speedy-vision-js/tests/index.html)
 
 ## Installation
 
