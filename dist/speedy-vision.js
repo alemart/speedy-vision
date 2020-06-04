@@ -9,7 +9,7 @@
  * Includes gpu.js (MIT license)
  * by the gpu.js team (http://gpu.rocks)
  * 
- * Date: 2020-06-04T22:55:58.513Z
+ * Date: 2020-06-04T23:25:07.349Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -216,7 +216,8 @@ class BRISK
 
             // create gaussian kernels
             const kernels = scaledPatterns.map(layers => // 2D array
-                layers.map(layer => gpu.filters.createGaussianKernel11x1(layer.r))
+                //layers.map(layer => gpu.filters.createGaussianKernel11x1(layer.r))
+                layers.map(layer => 0) // FIXME
             );
             const sigmas = scaledPatterns.map(layers =>
                 layers.map(layer => layer.r)
