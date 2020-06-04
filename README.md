@@ -41,7 +41,7 @@ Try the demos and take a look at their source code:
 Download the latest release of speedy-vision.js and include it in the `<head>` section of your HTML page:
 
 ```html
-<script src="dist/speedy-vision.min.js" async></script>
+<script src="dist/speedy-vision.min.js"></script>
 ```
 
 Once you import the library, the `Speedy` object will be exposed.
