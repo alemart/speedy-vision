@@ -122,8 +122,9 @@ describe('SpeedyPipeline', function() {
             pipelines = [];
         });
 
-        afterEach(function() {
-            pipelines.forEach(pipeline => pipeline.release());
+        afterEach(async function() {
+            for(const pipeline of pipelines)
+                await pipeline.release();
         });
 
         it('convolves with identity kernels', async function() {
@@ -262,8 +263,8 @@ describe('SpeedyPipeline', function() {
                -1,-2,-1,
             ]));
 
-            const errorX = cerr(pixels(sobelX), pixels(mySobelX));
-            const errorY = cerr(pixels(sobelY), pixels(mySobelY));
+            const errorX = imerr(pixels(sobelX), pixels(mySobelX));
+            const errorY = imerr(pixels(sobelY), pixels(mySobelY));
 
             display(sobelX, 'Ground truth');
             display(mySobelX, 'Sobel filter computed by Speedy');
@@ -275,8 +276,8 @@ describe('SpeedyPipeline', function() {
             print();
             display(square, 'Original image');
 
-            expect(errorX).toBeLessThan(MAX_CERR);
-            expect(errorY).toBeLessThan(MAX_CERR);
+            expect(errorX).toBeAnAcceptableImageError();
+            expect(errorY).toBeAnAcceptableImageError();
         });
 
         it('captures outlines', async function() {
@@ -287,14 +288,14 @@ describe('SpeedyPipeline', function() {
                 -1,-1,-1,
             ]));
 
-            const error = cerr(pixels(outline), pixels(myOutline));
+            const error = imerr(pixels(outline), pixels(myOutline));
 
             display(square, 'Original image');
             display(outline, 'Ground truth');
             display(myOutline, 'Outline computed by Speedy');
             display(imageDiff(outline, myOutline), `Difference with error ${error}`);
 
-            expect(error).toBeLessThan(MAX_CERR);
+            expect(error).toBeAnAcceptableImageError();
         });
 
     });

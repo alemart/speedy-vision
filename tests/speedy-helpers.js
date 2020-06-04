@@ -1,3 +1,28 @@
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-helpers.js
+ * Helpers for Speedy's unit testing
+ */
+
+// Constants
+const PIXEL_TOLERANCE = 1; // pixel intensities within this tolerance are "close enough"
+const MAX_IMERR = 0.05; // max. "image error"
+
 // Read pixels from a source
 function pixels(source)
 {
@@ -87,23 +112,21 @@ function multiply(v, m = 1.0) // m v
     return v.map(x => x * m);
 }
 
-function errmax(a, b, tolerance = 1) // max absolute error of elements not nearly equal
+function errmax(a, b, tolerance = PIXEL_TOLERANCE) // max absolute error of elements not nearly equal
 {
     return subtract(a, b).map(x => Math.abs(x)).filter(e => e > tolerance).reduce((m, e) => Math.max(m, e), 0);
 }
 
-function errcnt(a, b, tolerance = 1) // number of elements not nearly equal
+function errcnt(a, b, tolerance = PIXEL_TOLERANCE) // error count: number of elements not nearly equal
 {
     return subtract(a, b).filter(x => Math.abs(x) > tolerance).length;
 }
 
-function cerr(a, b, tolerance = 1) // "count error": relative error count
+function imerr(a, b, tolerance = PIXEL_TOLERANCE) // "image error": relative error count
 {
     const n = Math.max(a.length, b.length);
     return errcnt(a, b, tolerance) / n;
 }
-
-const MAX_CERR = 1e-3; // maximum relative error count
 
 function rms(v) // root mean square
 {
@@ -235,7 +258,9 @@ var speedyMatchers =
             let message = pass ?
                 `Arrays are expected to differ` :
                 `Arrays are not expected to differ, but ${(a.length > b.length ? a : b).filter((_, i) => a[i] !== b[i]).length} elements do differ. ` +
-                `They differ by at most ${errmax(a, b, 0)}`;
+                `They differ by at most ${errmax(a, b, 0)}\n` +
+                `Relative error count: ${imerr(a, b, tolerance)}\n` +
+                `Mean average error: ${mae(a, b)}`;
 
             return { pass, message };
         }
@@ -243,7 +268,7 @@ var speedyMatchers =
 
     toBeElementwiseNearlyEqual: (util, customEqualityMatchers) =>
     ({
-        compare(a, b, tolerance = 1)
+        compare(a, b, tolerance = PIXEL_TOLERANCE)
         {
             let pass = (a.length == b.length);
             for(let i = 0; i < a.length && pass; i++)
@@ -251,9 +276,11 @@ var speedyMatchers =
 
             let message = pass ?
                 `Arrays are expected not to be nearly equal` :
-                `Arrays are expected to be nearly equal, but ${errcnt(a, b, tolerance)} fields aren't so. ` +
+                `Arrays are expected to be nearly equal, but ${errcnt(a, b, tolerance)} pairs aren't so. ` +
                 `Their elements differ by at most ${errmax(a, b, tolerance)}, ` +
-                `whereas the test tolerance is ${tolerance}`;
+                `whereas the test tolerance is ${tolerance}\n` +
+                `Relative error count: ${imerr(a, b, tolerance)}\n` +
+                `Mean average error: ${mae(a, b)}`;
                 
             return { pass, message };
         }
@@ -326,6 +353,19 @@ var speedyMatchers =
             return { pass, message };
         }
     }),
+
+    //
+    // Image matchers
+    //
+
+    toBeAnAcceptableImageError: (util, customEqualityMatchers) =>
+    ({
+        compare(err)
+        {
+            const pass = Math.abs(err) < MAX_IMERR;
+            return { pass };
+        }
+    }),
 };
 
 // add jasmine.currentTest
@@ -338,6 +378,6 @@ jasmine.getEnv().addReporter({
 window.addEventListener('load', () => {
     header('Speedy testing!');
     const msg = `Please note that the floating point precision may vary across different GPUs, ` +
-                `which may impact this testing. Results are available for visual inspection.`;
+                `which may impact this testing.\nResults are available for visual inspection.`;
     print(msg);
 });
