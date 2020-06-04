@@ -226,7 +226,7 @@ describe('SpeedyPipeline', function() {
             expect(error).toBeAnAcceptableImageError();
         });
 
-        it('accepts chaining of convolutions', async function() {
+        it('accepts chains of convolutions', async function() {
             const pipeline = Speedy.pipeline()
                                    .convolve([
                                        0, 0, 0,
@@ -257,7 +257,7 @@ describe('SpeedyPipeline', function() {
             .toBeElementwiseNearlyEqual(pixels(convolved));
         });
 
-        it('accepts chaining of convolutions of different sizes', async function() {
+        it('accepts chains of convolutions of different sizes', async function() {
             const pipeline = Speedy.pipeline()
                                    .convolve([
                                        0, 0, 0,
