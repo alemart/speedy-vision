@@ -61,6 +61,7 @@ window.onload = async function()
         const method = document.getElementById('method');
 
         // update features
+        const FPS = 60;
         let features = [];
         function updateFeatures()
         {
@@ -69,7 +70,7 @@ window.onload = async function()
                 sensitivity: slider.value / 100.0,
             }).then(f => {
                 features = f;
-                setTimeout(updateFeatures, 16);
+                setTimeout(updateFeatures, 1000.0 / FPS);
             });
         }
         updateFeatures();

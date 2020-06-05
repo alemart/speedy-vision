@@ -59,7 +59,6 @@ export class BRISK
         for(let j = 0; j < pyramidCorners.length; j++) {
             pyramidCorners[j] = gpu.pyramid(j).keypoints.fast9(pyramid[j], settings.threshold);
             pyramidCorners[j] = gpu.pyramid(j).keypoints.fastSuppression(pyramidCorners[j]);
-
         }
         for(let j = 0; j < intraPyramidCorners.length; j++) {
             intraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.fast9(intraPyramid[j], settings.threshold);
