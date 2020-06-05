@@ -49,6 +49,20 @@ function loadImage(assetName)
     });
 }
 
+// Loads a video
+function loadVideo(assetName)
+{
+    return new Promise((resolve, reject) => {
+        const video = document.createElement('video');
+        video.oncanplay = () => (video.play(), resolve(video));
+        video.onerror = () => reject(new Error(`Can't load ${assetName}`));
+        video.muted = true;
+        video.loop = true;
+        video.src = '../assets/' + assetName;
+        video.load();
+    });
+}
+
 // Displays a SpeedyMedia, Image or Canvas
 function display(source, title = '')
 {

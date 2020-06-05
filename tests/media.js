@@ -21,10 +21,85 @@
 
 describe('SpeedyMedia', function() {
 
-    it('can load an image');
-    it('can load a video');
-    it('has a valid source');
-    it('has a valid type');
-    it('has valid dimensions');
+    beforeEach(function() {
+        jasmine.addMatchers(speedyMatchers);
+    });
+
+    it('can load an image', function() {
+        return expectAsync(
+            loadImage('speedy-large.jpg').then(image =>
+                Speedy.load(image).then(media =>
+                    (display(media, 'Image'), Promise.resolve(media))
+                )
+            )
+        ).toBeResolved();
+    });
+
+    it('can load a video', function() {
+        return expectAsync(
+            loadVideo('jelly.mp4').then(video =>
+                Speedy.load(video).then(media =>
+                    (display(media, 'Video'), Promise.resolve(media))
+                )
+            )
+        ).toBeResolved();
+    });
+
+    it('has a valid source', async function() {
+        const image = await loadImage('speedy.jpg');
+        const media = await Speedy.load(image);
+
+        expect(media.source).toBe(image);
+    });
+
+    it('has a valid type', async function() {
+        const assets = {
+            'speedy.jpg': {
+                type: 'image',
+                data: await loadImage('speedy.jpg'),
+            },
+            'jelly.mp4': {
+                type: 'video',
+                data: await loadVideo('jelly.mp4'),
+            },
+        };
+
+        const files = Object.keys(assets);
+        for(const file of files) {
+            const source = assets[file].data;
+            const media = await Speedy.load(source);
+
+            expect(media.type).toBe(assets[file].type);
+        }
+    });
+
+    it('has valid dimensions', async function() {
+        const image = await loadImage('speedy.jpg');
+        const video = await loadVideo('jelly.mp4');
+        const media = [
+            await Speedy.load(image),
+            await Speedy.load(video),
+        ];
+
+        expect(media[0].width).toBe(image.naturalWidth);
+        expect(media[0].height).toBe(image.naturalHeight);
+
+        expect(media[1].width).toBe(video.videoWidth);
+        expect(media[1].height).toBe(video.videoHeight);
+    });
+
+    it('creates a clone with valid source, type and dimensions', async function() {
+        const image = await loadImage('speedy.jpg');
+        const media = await Speedy.load(image);
+
+        for(const lightweight of [true, false]) {
+            const clone = media.clone({ lightweight });
+
+            expect(clone.source).toBe(media.source);
+            expect(clone.type).toBe(media.type);
+            expect(clone.width).toBe(media.width);
+            expect(clone.height).toBe(media.height);
+        }
+    });
 
 });
