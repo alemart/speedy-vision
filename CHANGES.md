@@ -1,5 +1,12 @@
 # Release notes
 
+## 0.2.2 - June 7th, 2020
+
+* Added unit tests
+* Improved the texture encoding formula
+* Added Speedy.camera() to request camera access
+* General improvements
+
 ## 0.2.1 - May 30th, 2020
 
 * Improved scale-space computations
