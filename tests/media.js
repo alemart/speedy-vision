@@ -102,4 +102,19 @@ describe('SpeedyMedia', function() {
         }
     });
 
+    it('draws itself to a canvas', async function() {
+        const image = await loadImage('speedy-wall.jpg');
+        const media = await Speedy.load(image);
+        const canvas = createCanvas(image.naturalWidth, image.naturalHeight);
+
+        media.draw(canvas);
+        const error = imerr(image, canvas);
+
+        display(image, 'Original image');
+        display(canvas, 'Drawn by Speedy');
+        display(imdiff(image, canvas), `Error: ${error}`);
+
+        expect(error).toBeAnAcceptableImageError();
+    });
+
 });

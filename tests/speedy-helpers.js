@@ -291,11 +291,12 @@ function createCanvas(width, height, title = '')
     return canvas;
 }
 
-function createCanvasFromImage(filepath, title = '')
+function createCanvasFromImage(image, title = '')
 {
-    return loadImage(filepath).then(image =>
-        createCanvas(image.naturalWidth, image.naturalHeight, title)
-    );
+    const canvas = createCanvas(image.naturalWidth, image.naturalHeight, title);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(image, 0, 0);
+    return canvas;
 }
 
 function createCanvasFromCanvas(origCanvas, title = '')
