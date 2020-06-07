@@ -102,6 +102,49 @@ window.onload = async function() {
 }
 ```
 
+##### Speedy.camera()
+
+`Speedy.camera(width?: number, height?: number, options?: object): Promise<SpeedyMedia>`
+
+Loads a camera stream into a new `SpeedyMedia` object. This is a wrapper around `navigator.mediaDevices.getUserMedia()` provided for your convenience.
+
+###### Arguments
+
+* `width: number, optional`. The width of the stream. Defaults to `426`.
+* `height: number, optional`. The height of the stream. Defaults to `240`.
+* `options: object, optional`. Additional options to be passed to `navigator.mediaDevices.getUserMedia()`.
+
+###### Returns
+
+A `Promise<SpeedyMedia>` that resolves as soon as the media source is loaded with the camera stream.
+
+###### Example
+
+```js
+// Display the contents of a webcam
+window.onload = async function() {
+    const media = await Speedy.camera();
+    const canvas = createCanvas(media.width, media.height);
+
+    function render()
+    {
+        media.draw(canvas);
+        requestAnimationFrame(render);
+    }
+
+    render();
+}
+
+function createCanvas(width, height)
+{
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    document.body.appendChild(canvas);
+    return canvas;
+}
+```
+
 #### Examining your media
 
 ##### SpeedyMedia.source

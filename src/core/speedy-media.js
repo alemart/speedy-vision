@@ -101,6 +101,20 @@ export class SpeedyMedia
     }
 
     /**
+     * Loads a camera stream
+     * @param {number} [width] width of the stream
+     * @param {number} [height] height of the stream
+     * @param {object} [options] additional options to pass to getUserMedia()
+     * @returns {Promise<SpeedyMedia>}
+     */
+    static loadCameraStream(width = 426, height = 240, options = {})
+    {
+        return requestCameraStream(width, height, options).then(
+            video => SpeedyMedia.load(createCanvasFromVideo(video))
+        );
+    }
+
+    /**
      * The media element (image, video, canvas) encapsulated by this SpeedyMedia object
      * @returns {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} the media element
      */
@@ -299,4 +313,59 @@ function getMediaType(mediaSource)
 
     Utils.fatal(`Can't get media type: invalid media source. ${mediaSource}`);
     return null;
+}
+
+// webcam access
+function requestCameraStream(width, height, options = {})
+{
+    return new Promise((resolve, reject) => {
+        Utils.log('Accessing the webcam...');
+
+        if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
+            return reject(new SpeedyError('Unsupported browser: no mediaDevices.getUserMedia()'));
+
+        navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+                width: { ideal: width },
+                height: { ideal: height },
+                aspectRatio: { ideal: width / height },
+                facingMode: 'environment',
+            },
+            ...(options)
+        })
+        .then(stream => {
+            const video = document.createElement('video');
+            video.srcObject = stream;
+            video.onloadedmetadata = e => {
+                video.play();
+                Utils.log('The camera device is turned on!');
+                resolve(video, stream);
+            };
+        })
+        .catch(err => {
+            reject(new SpeedyError(
+                `Please give access to the camera and reload the page.\n` +
+                `${err.name}. ${err.message}.`
+            ));
+        });
+    });
+}
+
+// create a HTMLCanvasElement using a HTMLVideoElement
+function createCanvasFromVideo(video)
+{
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    function render() {
+        ctx.drawImage(video, 0, 0);
+        requestAnimationFrame(render);
+    }
+    render();
+
+    return canvas;
 }

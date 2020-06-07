@@ -36,6 +36,18 @@ class Speedy
     }
 
     /**
+     * Loads a camera stream
+     * @param {number} [width] width of the stream
+     * @param {number} [height] height of the stream
+     * @param {object} [options] additional options to pass to getUserMedia()
+     * @returns {Promise<SpeedyMedia>}
+     */
+    static camera(width = 426, height = 240, options = {})
+    {
+        return SpeedyMedia.loadCameraStream(width, height, options);
+    }
+
+    /**
      * Creates a new pipeline
      * @returns {SpeedyPipeline}
      */
@@ -66,6 +78,7 @@ class Speedy
 }
 
 export const load = Speedy.load;
+export const camera = Speedy.camera;
 export const pipeline = Speedy.pipeline;
 export const version = Speedy.version;
 export const fps = Speedy.fps;
