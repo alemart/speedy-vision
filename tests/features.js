@@ -71,6 +71,26 @@ describe('Feature detection', function() {
         });
     });
 
+    describe('Automatic sensitivity', function() {
+        const tests = [100, 200, 300];
+        const tolerance = 0.10;
+        const numRepetitions = 100;
+
+        for(const expected of tests) {
+            it(`finds ${expected} features within a ${(100 * tolerance).toFixed(2)}% tolerance margin`, async function() {
+                const features = await repeat(numRepetitions, () => media.findFeatures({ expected, tolerance }));
+                const actual = features.length;
+                const percentage = 100 * actual / expected;
+
+                print(`With ${numRepetitions} repetitions of the algorithm, we get ${actual} features (${percentage.toFixed(2)}%).`)
+                displayFeatures(media, features);
+
+                expect(actual).toBeLessThanOrEqual(expected * (1 + tolerance));
+                expect(actual).toBeGreaterThanOrEqual(expected * (1 - tolerance));
+            });
+        }
+    })
+
 
 
 
