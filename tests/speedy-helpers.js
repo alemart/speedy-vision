@@ -23,6 +23,12 @@
 const PIXEL_TOLERANCE = 1; // pixel intensities within this tolerance are "close enough"
 const MAX_IMERR = 0.01; // max. image error (percentage)
 
+
+
+//
+// Image utilities
+//
+
 // Read pixels from a source
 function pixels(source)
 {
@@ -63,6 +69,31 @@ function loadVideo(assetName)
     });
 }
 
+// Prints a message to the screen
+function print(message = '')
+{
+    if(jasmine.lastTest !== jasmine.currentTest) {
+        jasmine.lastTest = jasmine.currentTest;
+        header('It ' + jasmine.currentTest.description);
+    }
+
+    const pre = document.createElement('pre');
+    const text = document.createTextNode(message);
+    pre.appendChild(text);
+    document.body.appendChild(pre);
+
+    if(!message)
+        pre.style.margin = 0;
+}
+
+// Creates a header for visualization
+function header(title)
+{
+    const hr = document.createElement('hr');
+    document.body.appendChild(hr);
+    print('> ' + title);
+}
+
 // Displays a SpeedyMedia, Image or Canvas
 function display(source, title = '')
 {
@@ -83,24 +114,30 @@ function display(source, title = '')
     return canvas;
 }
 
-// Prints a message to the screen
-function print(message = '')
+// Displays a SpeedyMedia with features
+function displayFeatures(source, features = [], title = '', color = 'red')
 {
-    const pre = document.createElement('pre');
-    const text = document.createTextNode(message);
-    pre.appendChild(text);
-    document.body.appendChild(pre);
+    const canvas = display(source, title);
+    const context = canvas.getContext('2d');
+    const size = 2;
+    
+    context.beginPath();
+    for(let feature of features) {
+        let radius = size * feature.scale;
 
-    if(!message)
-        pre.style.margin = 0;
-}
+        // draw scaled circle
+        context.moveTo(feature.x + radius, feature.y);
+        context.arc(feature.x, feature.y, radius, 0, Math.PI * 2.0);
 
-// Creates a header for visualization
-function header(title)
-{
-    const hr = document.createElement('hr');
-    document.body.appendChild(hr);
-    print('> ' + title);
+        // draw rotation line
+        const sin = Math.sin(feature.rotation);
+        const cos = Math.cos(feature.rotation);
+        context.moveTo(feature.x, feature.y);
+        context.lineTo(feature.x + radius * cos, feature.y - radius * sin);
+    }
+    context.strokeStyle = color;
+    context.lineWidth = 2;
+    context.stroke();
 }
 
 // Image error: a value in [0,1]
@@ -131,7 +168,11 @@ function imdiff(mediaA, mediaB, normalize = true)
 }
 
 
+
+//
 // Array operations
+//
+
 function zeroes(n) // [ 0 ... 0 ]^T
 {
     return Array(n).fill(0);
@@ -210,7 +251,37 @@ function stddev(v) // standard deviation
     return Math.sqrt(variance(v));
 }
 
+function linspace(start, stop, num) // [ start , ... , stop ] with num linearly spaced elements
+{
+    if(num > 1) {
+        const step = (stop - start) / (num - 1);
+        return Array(num).fill(start).map((x, i) => x + i * step);
+    }
+    else
+        return num == 1 ? [(start + stop) / 2] : [];
+}
+
+
+
+//
 // Utilities
+//
+
+// repeat an async function n times
+async function repeat(n, fn)
+{
+    let result = null;
+
+    while(n-- > 0)
+        result = await fn();
+
+    return result;
+}
+
+
+//
+// Internal utilities
+//
 function createCanvas(width, height, title = '')
 {
     const canvas = document.createElement('canvas');

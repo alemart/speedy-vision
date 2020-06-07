@@ -21,8 +21,103 @@
 
 describe('Feature detection', function() {
 
-    it('finds the corners of a square');
-    it('finds no features when the sensitivity is zero');
-    it('gives you more features when you increase the sensitivity');
+    let media, square;
 
+    beforeEach(function() {
+        jasmine.addMatchers(speedyMatchers);
+    });
+
+    beforeEach(async function() {
+        const image = [ await loadImage('speedy.jpg'), await loadImage('square.png') ];
+        media = await Speedy.load(image[0]);
+        square = await Speedy.load(image[1]);
+    });
+
+    describe('FAST-9,16', function() {
+        runGenericTests('fast9');
+    });
+
+    describe('FAST-7,12', function() {
+        runGenericTests('fast7');
+    });
+
+    describe('FAST-5,8', function() {
+        runGenericTests('fast5');
+    });
+
+    describe('BRISK', function() {
+        runGenericTests('brisk');
+
+        it('gets you more features the deeper you go, given a fixed sensitivity', async function() {
+            const depths = [1, 2, 3, 4];
+            let lastNumFeatures = 0;
+
+            for(const depth of depths) {
+                const features = await repeat(5, () => media.findFeatures({
+                    method: 'brisk',
+                    sensitivity: 0.5,
+                    depth: depth,
+                }));
+                const numFeatures = features.length;
+
+                print(`With depth = ${depth}, we get ${numFeatures} features.`);
+                displayFeatures(media, features);
+
+                expect(numFeatures).toBeGreaterThanOrEqual(lastNumFeatures);
+                lastNumFeatures = numFeatures;
+            }
+            
+            expect(lastNumFeatures).toBeGreaterThan(0);
+        });
+    });
+
+    
+
+
+
+
+    //
+    // Tests that apply to all methods
+    //
+
+    function runGenericTests(method)
+    {
+        it(`finds the corners of a square (method: ${method})`, async function() {
+            const features = await square.findFeatures({ method });
+            const numFeatures = features.length;
+
+            print(`Found ${numFeatures} features.`);
+            displayFeatures(square, features);
+
+            expect(numFeatures).toBeGreaterThanOrEqual(4);
+        });
+
+        it(`finds no features when the sensitivity is zero (method: ${method})`, async function() {
+            const features = await square.findFeatures({ method, sensitivity: 0 });
+            const numFeatures = features.length;
+
+            print(`Found ${numFeatures} features.`);
+            displayFeatures(square, features);
+
+            expect(numFeatures).toBe(0);
+        });
+
+        it(`gives you more features the more you increase the sensitivity (method: ${method})`, async function() {
+            const v = linspace(0, 0.8, 5);
+            let lastNumFeatures = 0;
+
+            for(const sensitivity of v) {
+                const features = await repeat(3, () => media.findFeatures({ method, sensitivity }));
+                const numFeatures = features.length;
+
+                print(`With sensitivity = ${sensitivity}, we get ${numFeatures} features.`);
+                displayFeatures(media, features);
+
+                expect(numFeatures).toBeGreaterThanOrEqual(lastNumFeatures);
+                lastNumFeatures = numFeatures;
+            }
+            
+            expect(lastNumFeatures).toBeGreaterThan(0);
+        });
+    }
 });
