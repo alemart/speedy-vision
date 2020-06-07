@@ -9,7 +9,7 @@
  * Includes gpu.js (MIT license)
  * by the gpu.js team (http://gpu.rocks)
  * 
- * Date: 2020-06-04T23:25:07.349Z
+ * Date: 2020-06-07T00:22:49.108Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -172,7 +172,6 @@ class BRISK
         for(let j = 0; j < pyramidCorners.length; j++) {
             pyramidCorners[j] = gpu.pyramid(j).keypoints.fast9(pyramid[j], settings.threshold);
             pyramidCorners[j] = gpu.pyramid(j).keypoints.fastSuppression(pyramidCorners[j]);
-
         }
         for(let j = 0; j < intraPyramidCorners.length; j++) {
             intraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.fast9(intraPyramid[j], settings.threshold);
@@ -21478,10 +21477,10 @@ __webpack_require__.r(__webpack_exports__);
 // The larger this value is, the more data we need to transfer from the GPU.
 const MAX_DESCRIPTOR_SIZE = 64; // in bytes, must be divisible by 4
 const MAX_KEYPOINT_SIZE = 8 + MAX_DESCRIPTOR_SIZE; // in bytes, must be divisible by 4
-const MAX_PIXELS_PER_KEYPOINT = MAX_KEYPOINT_SIZE / 4; // in pixels
+const MAX_PIXELS_PER_KEYPOINT = (MAX_KEYPOINT_SIZE / 4) | 0; // in pixels
 const MAX_ENCODER_LENGTH = 300; // in pixels (if too large, WebGL may lose context - so be careful!)
-const MAX_KEYPOINTS = (MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH) / MAX_PIXELS_PER_KEYPOINT;
-const INITIAL_ENCODER_LENGTH = 256; // pick a large value < MAX (useful on static images when no encoder optimization is performed beforehand)
+const MAX_KEYPOINTS = ((MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH) / MAX_PIXELS_PER_KEYPOINT) | 0;
+const INITIAL_ENCODER_LENGTH = 128; // pick a large value <= MAX (useful on static images when no encoder optimization is performed beforehand)
 const TWO_PI = 2.0 * Math.PI;
 
 
@@ -21559,8 +21558,9 @@ class GPUEncoders extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKer
      */
     optimizeKeypointEncoder(keypointCount)
     {
+        const clampedKeypointCount = Math.max(0, Math.min(keypointCount, MAX_KEYPOINTS));
         const pixelsPerKeypoint = Math.ceil(2 + this._descriptorSize / 4);
-        const len = Math.ceil(Math.sqrt((4 + keypointCount) * pixelsPerKeypoint)); // add some slack
+        const len = Math.ceil(Math.sqrt((4 + clampedKeypointCount) * pixelsPerKeypoint)); // add some slack
         const newEncoderLength = Math.max(1, Math.min(len, MAX_ENCODER_LENGTH));
         const oldEncoderLength = this._keypointEncoderLength;
 
