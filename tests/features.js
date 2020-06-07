@@ -71,7 +71,7 @@ describe('Feature detection', function() {
         });
     });
 
-    
+
 
 
 
@@ -82,27 +82,27 @@ describe('Feature detection', function() {
 
     function runGenericTests(method)
     {
-        it(`finds the corners of a square (method: ${method})`, async function() {
+        it('finds the corners of a square', async function() {
             const features = await square.findFeatures({ method });
             const numFeatures = features.length;
 
-            print(`Found ${numFeatures} features.`);
+            print(`Found ${numFeatures} features with method "${method}".`);
             displayFeatures(square, features);
 
             expect(numFeatures).toBeGreaterThanOrEqual(4);
         });
 
-        it(`finds no features when the sensitivity is zero (method: ${method})`, async function() {
+        it('finds no features when the sensitivity is zero', async function() {
             const features = await square.findFeatures({ method, sensitivity: 0 });
             const numFeatures = features.length;
 
-            print(`Found ${numFeatures} features.`);
+            print(`Found ${numFeatures} features with method "${method}".`);
             displayFeatures(square, features);
 
             expect(numFeatures).toBe(0);
         });
 
-        it(`gives you more features the more you increase the sensitivity (method: ${method})`, async function() {
+        it('gives you more features the more you increase the sensitivity', async function() {
             const v = linspace(0, 0.8, 5);
             let lastNumFeatures = 0;
 
@@ -110,7 +110,7 @@ describe('Feature detection', function() {
                 const features = await repeat(3, () => media.findFeatures({ method, sensitivity }));
                 const numFeatures = features.length;
 
-                print(`With sensitivity = ${sensitivity}, we get ${numFeatures} features.`);
+                print(`With sensitivity = ${sensitivity.toFixed(2)} and method "${method}", we get ${numFeatures} features.`);
                 displayFeatures(media, features);
 
                 expect(numFeatures).toBeGreaterThanOrEqual(lastNumFeatures);
