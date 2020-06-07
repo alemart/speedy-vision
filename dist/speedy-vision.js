@@ -9,7 +9,7 @@
  * Includes gpu.js (MIT license)
  * by the gpu.js team (http://gpu.rocks)
  * 
- * Date: 2020-06-07T00:22:49.108Z
+ * Date: 2020-06-07T22:55:51.504Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -236,7 +236,7 @@ class BRISK
                 sigma: flatten(sigmas),
                 distanceFromKeypoint: flatten(distancesFromKeypoint),
             };
-            console.log(gaussians);
+            //console.log(gaussians);
         }
 
         // done!
@@ -1095,6 +1095,20 @@ class SpeedyMedia
     }
 
     /**
+     * Loads a camera stream
+     * @param {number} [width] width of the stream
+     * @param {number} [height] height of the stream
+     * @param {object} [options] additional options to pass to getUserMedia()
+     * @returns {Promise<SpeedyMedia>}
+     */
+    static loadCameraStream(width = 426, height = 240, options = {})
+    {
+        return requestCameraStream(width, height, options).then(
+            video => SpeedyMedia.load(createCanvasFromVideo(video))
+        );
+    }
+
+    /**
      * The media element (image, video, canvas) encapsulated by this SpeedyMedia object
      * @returns {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} the media element
      */
@@ -1293,6 +1307,61 @@ function getMediaType(mediaSource)
 
     _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].fatal(`Can't get media type: invalid media source. ${mediaSource}`);
     return null;
+}
+
+// webcam access
+function requestCameraStream(width, height, options = {})
+{
+    return new Promise((resolve, reject) => {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].log('Accessing the webcam...');
+
+        if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
+            return reject(new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["SpeedyError"]('Unsupported browser: no mediaDevices.getUserMedia()'));
+
+        navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+                width: { ideal: width },
+                height: { ideal: height },
+                aspectRatio: { ideal: width / height },
+                facingMode: 'environment',
+            },
+            ...(options)
+        })
+        .then(stream => {
+            const video = document.createElement('video');
+            video.srcObject = stream;
+            video.onloadedmetadata = e => {
+                video.play();
+                _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].log('The camera device is turned on!');
+                resolve(video, stream);
+            };
+        })
+        .catch(err => {
+            reject(new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["SpeedyError"](
+                `Please give access to the camera and reload the page.\n` +
+                `${err.name}. ${err.message}.`
+            ));
+        });
+    });
+}
+
+// create a HTMLCanvasElement using a HTMLVideoElement
+function createCanvasFromVideo(video)
+{
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    function render() {
+        ctx.drawImage(video, 0, 0);
+        requestAnimationFrame(render);
+    }
+    render();
+
+    return canvas;
 }
 
 /***/ }),
@@ -26893,12 +26962,13 @@ class GPUUtils extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernel
 /*!***********************!*\
   !*** ./src/speedy.js ***!
   \***********************/
-/*! exports provided: load, pipeline, version, fps */
+/*! exports provided: load, camera, pipeline, version, fps */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "load", function() { return load; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "camera", function() { return camera; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "pipeline", function() { return pipeline; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "version", function() { return version; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fps", function() { return fps; });
@@ -26943,6 +27013,18 @@ class Speedy
     }
 
     /**
+     * Loads a camera stream
+     * @param {number} [width] width of the stream
+     * @param {number} [height] height of the stream
+     * @param {object} [options] additional options to pass to getUserMedia()
+     * @returns {Promise<SpeedyMedia>}
+     */
+    static camera(width = 426, height = 240, options = {})
+    {
+        return _core_speedy_media__WEBPACK_IMPORTED_MODULE_0__["SpeedyMedia"].loadCameraStream(width, height, options);
+    }
+
+    /**
      * Creates a new pipeline
      * @returns {SpeedyPipeline}
      */
@@ -26973,6 +27055,7 @@ class Speedy
 }
 
 const load = Speedy.load;
+const camera = Speedy.camera;
 const pipeline = Speedy.pipeline;
 const version = Speedy.version;
 const fps = Speedy.fps;
