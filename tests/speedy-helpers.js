@@ -69,6 +69,14 @@ function loadVideo(assetName)
     });
 }
 
+// Creates a header for visualization
+function header(title)
+{
+    const hr = document.createElement('hr');
+    document.body.appendChild(hr);
+    print('> ' + title);
+}
+
 // Prints a message to the screen
 function print(message = '')
 {
@@ -84,14 +92,6 @@ function print(message = '')
 
     if(!message)
         pre.style.margin = 0;
-}
-
-// Creates a header for visualization
-function header(title)
-{
-    const hr = document.createElement('hr');
-    document.body.appendChild(hr);
-    print('> ' + title);
 }
 
 // Displays a SpeedyMedia, Image or Canvas
@@ -458,9 +458,9 @@ var speedyMatchers =
 
     toBeAnAcceptableImageError: (util, customEqualityMatchers) =>
     ({
-        compare(err)
+        compare(err, tolerance = MAX_IMERR)
         {
-            const pass = Math.abs(err) < MAX_IMERR;
+            const pass = Math.abs(err) < tolerance;
             return { pass };
         }
     }),
