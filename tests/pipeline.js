@@ -339,8 +339,8 @@ describe('SpeedyPipeline', function() {
             print();
             display(square, 'Original image');
 
-            expect(errorX).toBeAnAcceptableImageError();
-            expect(errorY).toBeAnAcceptableImageError();
+            expect(errorX).toBeAnAcceptableImageError(2);
+            expect(errorY).toBeAnAcceptableImageError(2);
         });
 
         it('captures outlines', async function() {

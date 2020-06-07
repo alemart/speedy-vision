@@ -123,7 +123,7 @@ export class BRISK
                 sigma: flatten(sigmas),
                 distanceFromKeypoint: flatten(distancesFromKeypoint),
             };
-            console.log(gaussians);
+            //console.log(gaussians);
         }
 
         // done!

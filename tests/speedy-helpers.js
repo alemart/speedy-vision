@@ -458,9 +458,9 @@ var speedyMatchers =
 
     toBeAnAcceptableImageError: (util, customEqualityMatchers) =>
     ({
-        compare(err, tolerance = MAX_IMERR)
+        compare(err, toleranceMultiplier = 1.0)
         {
-            const pass = Math.abs(err) < tolerance;
+            const pass = Math.abs(err) < toleranceMultiplier * MAX_IMERR;
             return { pass };
         }
     }),
