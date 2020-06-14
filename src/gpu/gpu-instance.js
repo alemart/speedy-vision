@@ -69,7 +69,7 @@ export class GPUInstance
         // create & configure canvas
         this._canvas = this._createCanvas(this._width, this._height);
         this._context = this._canvas.getContext('webgl2', {
-            premultipliedAlpha: true, // we're storing data in the alpha channel
+            premultipliedAlpha: false, // we're storing data in the alpha channel
             preserveDrawingBuffer: false
         });
 
