@@ -42,6 +42,6 @@ export class SpeedyError extends Error
      */
     get name()
     {
-        return 'SpeedyError';
+        return this.constructor.name;
     }
 }
