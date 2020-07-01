@@ -21434,7 +21434,7 @@ class GPUKernelGroup
             //debug: true,
         }, settings);
 
-        return this._gpu._gpu.createKernel(fn, config);
+        return this._gpu.core.createKernel(fn, config);
     }
 }
 

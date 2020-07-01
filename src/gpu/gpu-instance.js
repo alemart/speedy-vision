@@ -19,7 +19,7 @@
  * The set of all GPU kernel groups for accelerated computer vision
  */
 
-const { GPU } = require(process.env.NODE_ENV == 'development' ? './gpu-js/gpu-browser' : './gpu-js/gpu-browser.min');
+import { SpeedyGPUCore } from './speedy-gpu-core';
 import { Utils } from '../utils/utils';
 import { GPUUtils } from './kernels/utils';
 import { GPUColors } from './kernels/colors';
@@ -58,33 +58,16 @@ export class GPUInstance
     constructor(width, height)
     {
         // read & validate texture size
-        this._width = Math.max(1, +width | 0);
-        this._height = Math.max(1, +height | 0);
+        this._width = Math.max(1, width | 0);
+        this._height = Math.max(1, height | 0);
         if(this._width > MAX_TEXTURE_LENGTH || this._height > MAX_TEXTURE_LENGTH) {
             Utils.warning(`Maximum texture size exceeded (using ${this._width} x ${this._height}).`);
             this._width = Math.min(this._width, MAX_TEXTURE_LENGTH);
             this._height = Math.min(this._height, MAX_TEXTURE_LENGTH);
         }
 
-        // create & configure canvas
-        this._canvas = this._createCanvas(this._width, this._height);
-        this._context = this._canvas.getContext('webgl2', {
-            premultipliedAlpha: false, // we're storing data in the alpha channel
-            preserveDrawingBuffer: false
-        });
-
-        // lost context?
-        this._canvas.addEventListener('webglcontextlost', event => {
-            Utils.warning(`Lost WebGL context.`);
-            event.preventDefault();
-        }, false);
-        this._canvas.addEventListener('webglcontextrestored', () => {
-            Utils.warning(`Restored WebGL context.`);
-            this._gpu = this._spawnGPU(this._canvas, this._context, this._width, this._height);
-        }, false);
-
-        // initialize the GPU
-        this._gpu = this._spawnGPU(this._canvas, this._context, this._width, this._height);
+        // initialize the GPU core
+        this._core = this._spawnGPUCore(this._width, this._height);
     }
 
     /**
@@ -103,6 +86,15 @@ export class GPUInstance
     get height()
     {
         return this._height;
+    }
+
+    /**
+     * GPU core
+     * @returns {SpeedyGPUCore}
+     */
+    get core()
+    {
+        return this._core;
     }
 
     /**
@@ -164,14 +156,14 @@ export class GPUInstance
      */
     get canvas()
     {
-        return this._canvas;
+        return this._core.canvas;
     }
 
-    // spawns a GPU instance
-    _spawnGPU(canvas, context, width, height)
+    // spawns a SpeedyGPUCore instance
+    _spawnGPUCore(width, height)
     {
         // create GPU
-        const gpu = new GPU({ canvas, context });
+        const gpu = new SpeedyGPUCore(width, height);
 
         // spawn kernel groups
         spawnKernelGroups.call(this, this, width, height);
@@ -182,15 +174,6 @@ export class GPUInstance
 
         // done!
         return gpu;
-    }
-
-    // Create a canvas
-    _createCanvas(width, height)
-    {
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        return canvas;
     }
 
     // build a pyramid, where each level stores the kernel groups

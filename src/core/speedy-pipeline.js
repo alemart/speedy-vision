@@ -86,10 +86,11 @@ export class SpeedyPipeline
     {
         return new Promise((resolve, reject) => {
             if(media._type == MediaType.Texture) {
-                let texture = media._gpu.utils.identity(media._source); // gpu.js may crash without identity()
+                let texture = media._gpu.core.upload(media._source);
                 for(let i = 0; i < this._operations.length; i++)
                     texture = this._operations[i].run(texture, media._gpu, media);
-                media._source = media._gpu.utils.output(texture); // end of the pipeline
+                media._gpu.utils.output(texture); // end of the pipeline
+                media._source = media._gpu.canvas;
                 resolve(media);
             }
             else

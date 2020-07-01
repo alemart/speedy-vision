@@ -21,6 +21,7 @@
 
 import { ColorFormat } from '../utils/types';
 import { Utils } from '../utils/utils';
+import { GLUtils } from '../gpu/gl-utils';
 
 export const PipelineOperation = { };
 
@@ -161,8 +162,10 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
     run(texture, gpu, media)
     {
         // instantiate the texture kernel
-        if(this._texKernel == null)
+        if(this._texKernel == null) {
             this._texKernel = gpu.filters[this._method[0]](this._kernel);
+            this._texKernel.gl = gpu._gpu.gl;
+        }
 
         // convolve
         return gpu.filters[this._method[1]](
@@ -176,7 +179,8 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
     release()
     {
         if(this._texKernel != null) {
-            this._texKernel.delete();
+            //this._texKernel.delete();
+            GLUtils.destroyTexture(this._texKernel.gl, this._texKernel);
             this._texKernel = null;
         }
         super.release();

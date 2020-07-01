@@ -19,9 +19,17 @@
  * Identity shader
  */
 
-export function identity(image)
+/*export function identity(image)
 {
     const pixel = image[this.thread.y][this.thread.x];
 
     this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
+}*/
+export const identity = (image) => `
+uniform sampler2D image;
+
+void main()
+{
+    color = texture(image, texCoord);
 }
+`;

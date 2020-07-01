@@ -15,20 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * speedy-gpu.js
+ * speedy-gpu-core.js
  * GPGPU core
  */
 
-import { GLUtils } from './gl-utils.js';
 import { SpeedyProgram } from './speedy-program.js';
-
-// Limits
-const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
+import { GLUtils } from './gl-utils.js';
+import { Utils } from '../utils/utils';
 
 /**
  * Speedy GPGPU core
  */
-export class SpeedyGPU
+export class SpeedyGPUCore
 {
     /**
      * Class constructor
@@ -37,15 +35,9 @@ export class SpeedyGPU
      */
     constructor(width, height)
     {
-        // validate dimensions
-        width = Math.max(width | 0, 1);
-        height = Math.max(height | 0, 1);
-
-        if(width > MAX_TEXTURE_LENGTH || height > MAX_TEXTURE_LENGTH)
-            throw GLUtils.Error(`Maximum texture size exceeded (using ${width} x ${height}).`);
-
-        this._width = width;
-        this._height = height;
+        // set dimensions
+        this._width = Math.max(width | 0, 1);
+        this._height = Math.max(height | 0, 1);
 
         // setup GPU
         this._canvas = createCanvas(this._width, this._height);
@@ -103,7 +95,7 @@ export class SpeedyGPU
 
         // lost GL context?
         if(gl.isContextLost()) {
-            console.warn('Lost WebGL context');
+            Utils.warning('Lost WebGL context');
             this._gl = createWebGLContext(this._canvas);
             this._inputTexture = null;
             this._flipY = null;
@@ -127,7 +119,7 @@ export class SpeedyGPU
             this._inputTexture = GLUtils.createTexture(gl, gl.canvas.width, gl.canvas.height);
         }
         else if(width > gl.canvas.width || height > gl.canvas.height) {
-            console.warn(`Resizing input texture to ${width} x ${height}`)
+            Utils.warning(`Resizing input texture to ${width} x ${height}`)
             this._inputTexture = GLUtils.destroyTexture(inputTexture);
             return upload(data, width, height);
         }
@@ -145,6 +137,22 @@ export class SpeedyGPU
         // done!
         GLUtils.uploadToTexture(gl, this._inputTexture, data);
         return this._flipY(this._inputTexture);
+    }
+
+    /**
+     * Create a SpeedyProgram to be run on this GPGPU core
+     * @param {Function} shaderdecl A function that returns GLSL code
+     * @param {object} [options] SpeedyProgram options
+     * @returns {SpeedyProgram} new instance
+     */
+    createProgram(shaderdecl, options = { })
+    {
+        const gl = this._gl;
+
+        return new SpeedyProgram(gl, shaderdecl, {
+            output: [ gl.canvas.width, gl.canvas.height ],
+            ...options
+        });
     }
 
     /**
@@ -167,7 +175,7 @@ function createCanvas(width, height)
 
     if(inWorker) {
         if(typeof OffscreenCanvas !== 'function')
-            throw new GLError('OffscreenCanvas is not available in your browser. Please upgrade.');
+            throw GLUtils.Error('OffscreenCanvas is not available in your browser. Please upgrade.');
 
         return new OffscreenCanvas(width, height);
     }
@@ -192,7 +200,7 @@ function createWebGLContext(canvas)
     });
 
     if(!gl)
-        throw new GLError('WebGL2 is not available in your browser. Please upgrade.');
+        throw GLUtils.Error('WebGL2 is not available in your browser. Please upgrade.');
 
     return gl;
 }

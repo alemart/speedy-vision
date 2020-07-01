@@ -20,6 +20,7 @@
  */
 
 import { ShaderPreprocessor } from './shader-preprocessor.js';
+import { GLUtils } from './gl-utils.js';
 
 const LOCATION_ATTRIB_POSITION = 0;
 const LOCATION_ATTRIB_TEXCOORD = 1;
@@ -67,7 +68,7 @@ const UNIFORM_TYPES = {
  * A SpeedyProgram is a Function that
  * runs GPU-accelerated GLSL code
  */
-class SpeedyProgram extends Function
+export class SpeedyProgram extends Function
 {
     /**
      * Creates a new SpeedyProgram
@@ -175,6 +176,15 @@ class SpeedyProgram extends Function
 
         // return cached array
         return this._pixels;
+    }
+
+    /**
+     * WebGL rendering context
+     * @returns {WebGL2RenderingContext}
+     */
+    get gl()
+    {
+        return this._gl;
     }
 
     // Prepare the shader

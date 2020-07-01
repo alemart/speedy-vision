@@ -117,7 +117,9 @@ export /* abstract */ class GPUKernelGroup
             hasTextureSize(width, height) {
                 return {
                     output: [ width|0, height|0 ],
-                    constants: { width: width|0, height: height|0 }
+                    uniforms: {
+                        texSize: [ width|0, height|0 ]
+                    }
                 };
             },
 
@@ -125,15 +127,18 @@ export /* abstract */ class GPUKernelGroup
             // (original kernel constants are preserved)
             resizesATextureTo(width, height) {
                 return {
-                    output: [ width|0, height|0 ]
+                    output: [ width|0, height|0 ],
+                    uniforms: {
+                        texSize: [ this._width, this._height ]
+                    }
                 };
             },
 
-            // Use it when we're supposed to see
-            // the texture or read its pixels
+            // Use it when we're supposed to see the texture
+            // It will render to a canvas
             isAnOutputOperation() {
                 return {
-                    pipeline: false
+                    renderToTexture: false
                 };
             },
 
@@ -141,7 +146,7 @@ export /* abstract */ class GPUKernelGroup
             // kernel texture (they are reused default)
             doesNotReuseTextures() {
                 return {
-                    immutable: true
+                    recycleTexture: false
                 };
             },
 
@@ -150,20 +155,10 @@ export /* abstract */ class GPUKernelGroup
 
     /* private */ _spawnKernel(fn, settings = { })
     {
-        const config = Object.assign({
+        return this._gpu.core.createProgram(fn, {
             // default settings
             output: [ this._width, this._height ],
-            tactic: 'precision', // highp
-            precision: 'unsigned', // graphical mode
-            graphical: true,
-            pipeline: true,
-            constants: {
-                width: this._width,
-                height: this._height
-            },
-            //debug: true,
-        }, settings);
-
-        return this._gpu._gpu.createKernel(fn, config);
+            ...settings
+        });
     }
 }
