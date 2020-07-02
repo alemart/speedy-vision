@@ -42,7 +42,7 @@ precision highp sampler2D;
  
 out vec4 color;
 in vec2 texCoord;
-uniform ivec2 texSize;\n`;
+uniform vec2 texSize;\n`;
 
 const UNIFORM_TYPES = {
     'sampler2D':'uniform1i',
@@ -207,19 +207,15 @@ export class SpeedyProgram extends Function
 
         // create shader
         const source = shaderdecl();
-        /*const stdprog = options.renderToTexture ?
-            createStandardProgramWithFBO(gl, width, height, source, options.uniforms) :
-            createStandardProgram(gl, width, height, source, options.uniforms);*/
         let stdprog = createStandardProgram(gl, width, height, source, options.uniforms);
-
         if(options.renderToTexture)
             stdprog = attachFBO(stdprog);
 
         // validate arguments
-        const uniforms = functionArguments(shaderdecl);
-        for(let j = 0; j < uniforms.length; j++) {
-            if(!stdprog.uniform.hasOwnProperty(uniforms[j]))
-                throw GLUtils.Error(`Can't run shader: expected uniform "${uniforms[j]}"`);
+        const params = functionArguments(shaderdecl);
+        for(let j = 0; j < params.length; j++) {
+            if(!stdprog.uniform.hasOwnProperty(params[j]))
+                throw GLUtils.Error(`Can't run shader: expected uniform "${params[j]}"`);
         }
 
         // store context
@@ -227,7 +223,7 @@ export class SpeedyProgram extends Function
         this._source = source;
         this._options = options;
         this._stdprog = stdprog;
-        this._uniforms = uniforms;
+        this._params = params;
         this._pixels = null;
     }
 
@@ -237,10 +233,10 @@ export class SpeedyProgram extends Function
         const gl = this._gl;
         const options = this._options;
         const stdprog = this._stdprog;
-        const uniforms = this._uniforms;
+        const params = this._params;
         
         // matching arguments?
-        if(args.length != uniforms.length)
+        if(args.length != params.length)
             throw GLUtils.Error(`Can't run shader: incorrect number of arguments`);
 
         // use program
@@ -248,30 +244,26 @@ export class SpeedyProgram extends Function
 
         // set uniforms[i] to args[i]
         for(let i = 0, texNo = 0; i < args.length; i++) {
-            const argname = uniforms[i];
+            const argname = params[i];
             const uniform = stdprog.uniform[argname];
 
-            if(uniform.type == 'sampler2D') {
-                // set texture
-                if(texNo > gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
-                    throw GLUtils.Error(`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
-                else if(args[i] === stdprog.texture)
-                    throw GLUtils.Error(`Can't run shader: cannot use its output texture as an input to itself`);
-
-                gl.activeTexture(gl.TEXTURE0 + texNo);
-                gl.bindTexture(gl.TEXTURE_2D, args[i]);
-                gl.uniform1i(uniform.location, texNo);
-                texNo++;
+            if(uniform) {
+                // uniform variable matches parameter name
+                texNo = this._setUniform(uniform, args[i], texNo);
             }
-            else {
-                // set value
-                if(typeof args[i] == 'number' || typeof args[i] == 'boolean')
-                    (gl[UNIFORM_TYPES[uniform.type]])(uniform.location, args[i]);
-                else if(Array.isArray(args[i]))k
-                    (gl[UNIFORM_TYPES[uniform.type]])(uniform.location, ...(args[i]));
-                else
-                    throw GLUtils.Error(`Can't run shader: unrecognized argument "${args[i]}"`);
+            else if(Array.isArray(args[i])) {
+                // uniform array matches parameter name
+                const array = args[i];
+                if(stdprog.uniform.hasOwnProperty(`${argname}[${array.length}]`))
+                    throw GLUtils.Error(`Can't run shader: too many elements in array ${argname}`);
+                for(let j = 0; (uniform = stdprog.uniform[`${argname}[${j}]`]); j++) {
+                    if(j >= array.length)
+                        throw GLUtils.Error(`Can't run shader: too few arguments in array ${argname}`);
+                    texNo = this._setUniform(uniform, array[j], texNo);
+                }
             }
+            else
+                throw GLUtils.Error(`Can't run shader: expected array parameter for ${argname}`);
         }
 
         // render
@@ -311,23 +303,63 @@ export class SpeedyProgram extends Function
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         return outputTexture;
     }
+
+    // set uniform to value
+    _setUniform(uniform, value, texNo)
+    {
+        const gl = this._gl;
+
+        if(uniform.type == 'sampler2D') {
+            // set texture
+            if(texNo > gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
+                throw GLUtils.Error(`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
+            else if(value === this._stdprog.texture)
+                throw GLUtils.Error(`Can't run shader: cannot use its output texture as an input to itself`);
+
+            gl.activeTexture(gl.TEXTURE0 + texNo);
+            gl.bindTexture(gl.TEXTURE_2D, value);
+            gl.uniform1i(uniform.location, texNo);
+            texNo++;
+        }
+        else {
+            // set value
+            if(typeof value == 'number' || typeof value == 'boolean')
+                (gl[UNIFORM_TYPES[uniform.type]])(uniform.location, value);
+            else if(Array.isArray(value))
+                (gl[UNIFORM_TYPES[uniform.type]])(uniform.location, ...value);
+            else
+                throw GLUtils.Error(`Can't run shader: unrecognized argument "${value}"`);
+        }
+
+        return texNo;
+    }
 }
 
 // a dictionary specifying the types of all uniforms in the code
 function autodetectUniforms(shaderSource)
 {
-    //const sourceWithoutMultilineComments = shaderSource.replace(/\/\*(.|\s)*?\*\//g, ''); // strip /* */ comments
-    //const sourceWithoutComments = sourceWithoutMultilineComments.replace(/\/\/.*$/gm, ''); // strip // comments
     const sourceWithoutComments = shaderSource; // assume we've preprocessed the source already
-    const regex = /uniform\s+(\w+)\s+([^;]+)/g;
+    const regex = /uniform\s+(\w+)\s+([^\s;]+)/g;
     const uniforms = { };
 
     let match;
     while((match = regex.exec(sourceWithoutComments)) !== null) {
         const type = match[1];
         const names = match[2].split(',').map(name => name.trim()).filter(name => name); // trim & remove empty names
-        for(const name of names)
-            uniforms[name] = { type };
+        for(const name of names) {
+            if(name.endsWith(']')) {
+                // is it an array?
+                if(!(match = name.match(/(\w+)\[(\d+)\]$/)))
+                    throw GLUtils.Error(`Unspecified array length for ${name} in shader`);
+                const [ array, length ] = [ match[1], Number(match[2]) ];
+                for(let i = 0; i < length; i++)
+                    uniforms[`${array}[${i}]`] = { type };
+            }
+            else {
+                // regular uniform
+                uniforms[name] = { type };
+            }
+        }
     }
 
     return uniforms;
@@ -433,6 +465,8 @@ function createStandardProgram(gl, width, height, fragmentShaderSource, uniforms
     // autodetect uniforms, get their locations,
     // define their setters and set their default values
     const uniform = autodetectUniforms(source);
+    console.log('uniforms', uniform);
+    console.log(fragmentShaderSource);
     gl.useProgram(program);
     for(const u in uniform) {
         // get location
@@ -442,7 +476,7 @@ function createStandardProgram(gl, width, height, fragmentShaderSource, uniforms
         if(!UNIFORM_TYPES.hasOwnProperty(uniform[u].type))
             throw GLUtils.Error(`Unknown uniform type: ${uniform[u].type}`);
 
-        // must set a default alue?
+        // must set a default value?
         if(uniforms.hasOwnProperty(u)) {
             const value = uniforms[u];
             if(typeof value == 'number' || typeof value == 'boolean')

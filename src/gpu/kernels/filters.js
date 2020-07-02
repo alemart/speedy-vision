@@ -21,7 +21,6 @@
 
 import { GPUKernelGroup } from '../gpu-kernel-group';
 import { conv2D, convX, convY, texConvX, texConvY, texConv2D, idConv2D, createKernel2D, createKernel1D } from './shaders/convolution';
-import { createGaussianKernel } from './shaders/gaussian';
 import { identity } from './shaders/identity';
 
 /**

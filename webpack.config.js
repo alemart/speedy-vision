@@ -16,9 +16,6 @@ module.exports = (env, argv) => ({
             `Copyright ${year} ${author}`,
             `@license ${license}`,
             ``,
-            `Includes gpu.js (MIT license)`,
-            `by the gpu.js team (http://gpu.rocks)`,
-            ``,
             `Date: ${date}`,
         ].join('\n'))(Object.assign(package, {
             'date': (new Date()).toISOString(),
@@ -44,7 +41,7 @@ module.exports = (env, argv) => ({
       publicPath: '/dist/',
   },
   optimization: argv.mode == 'development' ? { minimize: false } : {
-      minimizer: [new TerserPlugin({
+      /*minimizer: [new TerserPlugin({
           terserOptions: {
               mangle: false,
               compress: {
@@ -55,7 +52,7 @@ module.exports = (env, argv) => ({
               },
           },
           extractComments: false,
-      })],
+      })],*/
       minimize: true,
   },
 });

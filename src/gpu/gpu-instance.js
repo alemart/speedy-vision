@@ -43,7 +43,6 @@ const KERNEL_GROUPS = {
     'pyramids': GPUPyramids,
 };
 
-
 /**
  * The set of all GPU kernel groups for
  * accelerated computer vision

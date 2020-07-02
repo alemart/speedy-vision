@@ -93,28 +93,31 @@ function conv1D(axis, kernel, normalizationConstant)
             acc + fn(kernel32[kSize - 1 - (cur + N)], cur), // invert y-axis for WebGL
     '');
     const generateCode = (k, i) => (((axis == 'x') ? `
-    y = this.thread.y;
-    x = Math.min(Math.max(this.thread.x + (${i | 0}), 0), width - 1);
+    offset = vec2(${i | 0}, 0);
     ` : `
-    y = Math.min(Math.max(this.thread.y + (${i | 0}), 0), height - 1);
-    x = this.thread.x;
+    offset = vec2(0, ${i | 0});
     `) + `
-    p = image[y][x]; r += p[0] * ${+k}; g += p[1] * ${+k}; b += p[2] * ${+k};
+    pixel += pixelAtOffset(image, offset) * (${+k});
     `);
 
     // shader
-    const body = `
-    const width = this.constants.width;
-    const height = this.constants.height;
-    const pixel = image[this.thread.y][this.thread.x];
-    let r = 0.0, g = 0.0, b = 0.0;
-    let p = [0.0, 0.0, 0.0, 0.0];
-    let x = 0, y = 0;
-    ${foreachKernelElement(generateCode)}
-    this.color(r, g, b, pixel[3]);
+    const shader = `
+    @include "pixel.glsl"
+
+    uniform sampler2D image;
+
+    void main()
+    {
+        vec2 offset;
+        vec4 pixel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        float alpha = texture(image, texCoord).a;
+        ${foreachKernelElement(generateCode)}
+        color = vec4(pixel.rgb, alpha);
+    }
     `;
 
-    return new Function('image', body);
+    // done!
+    return (image) => shader;
 }
 
 /*

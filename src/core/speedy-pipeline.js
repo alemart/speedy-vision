@@ -86,11 +86,18 @@ export class SpeedyPipeline
     {
         return new Promise((resolve, reject) => {
             if(media._type == MediaType.Texture) {
+                // upload the media to the GPU
                 let texture = media._gpu.core.upload(media._source);
+
+                // run the pipeline
                 for(let i = 0; i < this._operations.length; i++)
                     texture = this._operations[i].run(texture, media._gpu, media);
-                media._gpu.utils.output(texture); // end of the pipeline
+
+                // end of the pipeline
+                media._gpu.utils.output(texture);
                 media._source = media._gpu.canvas;
+
+                // done!
                 resolve(media);
             }
             else

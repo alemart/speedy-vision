@@ -19,7 +19,7 @@
  * Custom preprocessor for shaders
  */
 
-import { SHADER_LIB } from './shader-lib.js';
+import { ShaderLib } from './shader-lib.js';
 
 /**
  * Custom preprocessor for shaders
@@ -43,21 +43,8 @@ export class ShaderPreprocessor
         return String(code).replace(ShaderPreprocessor._commentsRegex[0], '')
                            .replace(ShaderPreprocessor._commentsRegex[1], '')
                            .replace(ShaderPreprocessor._includeRegex,
-                                (_, filename) => ShaderPreprocessor.readfileSync(filename)
+                                (_, filename) => ShaderLib.readfileSync(filename)
                             );
-    }
-
-    /**
-     * Reads a shader from the virtual filesystem
-     * @param {string} filename 
-     * @returns {string}
-     */
-    static readfileSync(filename)
-    {
-        if(SHADER_LIB.hasOwnProperty(filename))
-            return SHADER_LIB[filename];
-
-        throw GLUtils.Error(`Can't find \"${filename}\"`);
     }
 }
 

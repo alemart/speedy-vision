@@ -19,23 +19,45 @@
  * Common shader routines
  */
 
-export const SHADER_LIB = {
+import { GLUtils } from './gl-utils';
 
+const SHADER_LIB = {
+
+//
+// Pixel routines
+//
 'pixel.glsl': `
-// sou o pixel
-int oi() { return 2; }
 
-// hhii
+// Get pixel at a (x,y) position
+vec4 pixelAt(sampler2D tex, vec2 pos)
+{
+    return texture(tex, pos / texSize);
+}
+
+// Get pixel at the current position plus a (x,y) offset
+vec4 pixelAtOffset(sampler2D tex, vec2 offset)
+{
+    return texture(tex, texCoord + offset / texSize);
+}
 `,
-
-
-
-'texel.glsl': `
-// sou o texel
-`,
-
-
-
-'oneline.glsl': '//ONE LINE',
 
 };
+
+/**
+ * ShaderLib class
+ */
+export class ShaderLib
+{
+     /**
+     * Reads a shader from the virtual filesystem
+     * @param {string} filename 
+     * @returns {string}
+     */
+    static readfileSync(filename)
+    {
+        if(SHADER_LIB.hasOwnProperty(filename))
+            return SHADER_LIB[filename];
+
+        throw GLUtils.Error(`Can't find \"${filename}\"`);
+    }
+}

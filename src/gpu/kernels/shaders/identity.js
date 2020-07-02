@@ -19,14 +19,10 @@
  * Identity shader
  */
 
-/*export function identity(image)
-{
-    const pixel = image[this.thread.y][this.thread.x];
-
-    this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
-}*/
+// Identity shader: no-operation
 export const identity = (image) => `
 uniform sampler2D image;
+uniform float arr[12];
 
 void main()
 {
