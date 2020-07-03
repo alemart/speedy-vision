@@ -65,7 +65,7 @@ Detecting features in an image is an important step of many computer vision algo
 
 Speedy's incredible performance on the web browser is possible thanks to its efficient GPU implementations and fast computer vision algorithms. With an easy-to-use API, Speedy is an excellent choice for real-time computer vision projects involving tasks such as: object detection in videos, pose estimation, Simultaneous Location and Mapping (SLAM), and many others.
 
-Speedy is developed by [Alexandre Martins](https://github.com/alemart), a computer scientist from Brazil. It is released under the [Apache-2.0 license](LICENSE) and uses the excellent [GPU.js](https://github.com/gpujs/gpu.js) library.
+Speedy is developed by [Alexandre Martins](https://github.com/alemart), a computer scientist from Brazil. It is released under the [Apache-2.0 license](LICENSE).
 
 ![Feature detection](assets/demo-features.jpg)
 
