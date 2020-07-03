@@ -43,7 +43,7 @@ export class GPUUtils extends GPUKernelGroup
 
             // output a texture from a pipeline
             .declare('output', identity,
-                this.operation.isAnOutputOperation())
+                this.operation.displaysGraphics())
         ;
     }
 }

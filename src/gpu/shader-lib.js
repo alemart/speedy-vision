@@ -24,45 +24,12 @@ import { GLUtils } from './gl-utils';
 const SHADER_LIB = {
 
 //
-// Pixel routines
-//
-'pixel.glsl': `
-
-// Get pixel at a (x,y) position
-vec4 pixelAt(sampler2D tex, vec2 pos)
-{
-    return texture(tex, pos / texSize);
-}
-
-// Get pixel at the current position plus a (x,y) offset
-vec4 pixelAtOffset(sampler2D tex, vec2 offset)
-{
-    return texture(tex, texCoord + offset / texSize);
-}
-
-// Get the (x,y) position of the current pixel
-vec2 pixelPosition()
-{
-    return texCoord * texSize;
-}
-`,
-
-//
 // Thread utilities
 //
 'thread.glsl': `
 
 // Integer (x,y) position of the current texel
-ivec2 threadLocation()
-{
-    return ivec2(texCoord * texSize);
-}
-
-// Output size
-ivec2 outputSize()
-{
-    return ivec2(texSize);
-}
+#define threadLocation()    ivec2(texCoord * texSize)
 `,
 
 };

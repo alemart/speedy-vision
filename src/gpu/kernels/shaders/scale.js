@@ -70,12 +70,27 @@ export function setScale(scale, pyramidHeight, pyramidMaxScale)
     const x = Math.max(pyramidMinScale, Math.min(scale, pyramidMaxScale));
     const alpha = (lgM - Math.log2(x)) / (lgM + pyramidHeight);
 
+    /*
     const body  = `
     const pixel = image[this.thread.y][this.thread.x];
     this.color(pixel[0], pixel[1], pixel[2], ${alpha});
     `;
 
     return new Function('image', body);
+    */
+    return (image) => `
+    @include "thread.glsl"
+
+    uniform sampler2D image;
+
+    void main()
+    {
+        ivec2 thread = threadLocation();
+        vec4 pixel = texelFetch(image, thread, 0);
+
+        color = vec4(pixel.rgb, float(${alpha}));
+    }
+    `;
 }
 
 export function scale(scaleFactor, pyramidHeight, pyramidMaxScale)
@@ -84,12 +99,18 @@ export function scale(scaleFactor, pyramidHeight, pyramidMaxScale)
     const s = Math.max(1e-5, scaleFactor);
     const delta = -Math.log2(s) / (lgM + pyramidHeight);
 
-    const body  = `
-    const pixel = image[this.thread.y][this.thread.x];
-    const delta = ${delta};
-    const alpha = Math.max(0, Math.min(pixel[3] + delta, 1));
-    this.color(pixel[0], pixel[1], pixel[2], alpha);
-    `;
+    return (image) => `
+    @include "thread.glsl"
 
-    return new Function('image', body);
+    uniform sampler2D image;
+
+    void main()
+    {
+        ivec2 thread = threadLocation();
+        vec4 pixel = texelFetch(image, thread, 0);
+        float alpha = clamp(pixel.a + float(${delta}), 0.0f, 1.0f);
+
+        color = vec4(pixel.rgb, alpha);
+    }
+    `;
 }

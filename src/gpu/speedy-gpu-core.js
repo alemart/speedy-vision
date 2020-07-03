@@ -120,7 +120,7 @@ export class SpeedyGPUCore
         }
         else if(width > gl.canvas.width || height > gl.canvas.height) {
             Utils.warning(`Resizing input texture to ${width} x ${height}`)
-            this._inputTexture = GLUtils.destroyTexture(inputTexture);
+            this._inputTexture = GLUtils.destroyTexture(gl, inputTexture);
             return upload(data, width, height);
         }
 
@@ -208,11 +208,15 @@ function createWebGLContext(canvas)
 function flipY(image)
 {
     return `
+    @include "thread.glsl"
+
     uniform sampler2D image;
 
     void main() {
-        vec2 flippedY = vec2(texCoord.x, 1.0f - texCoord.y);
-        color = texture(image, flippedY);
+        ivec2 thread = threadLocation();
+        ivec2 flippedY = ivec2(thread.x, int(texSize.y) - 1 - thread.y);
+
+        color = texelFetch(image, flippedY, 0);
     }
     `;
 }

@@ -116,35 +116,21 @@ export /* abstract */ class GPUKernelGroup
             // Dimensions are converted to integers
             hasTextureSize(width, height) {
                 return {
-                    output: [ width|0, height|0 ],
-                    uniforms: {
-                        texSize: [ width|0, height|0 ]
-                    }
+                    output: [ width|0, height|0 ]
                 };
             },
 
-            // Use this when resizing a texture
-            // (original kernel constants are preserved)
-            resizesATextureTo(width, height) {
-                return {
-                    output: [ width|0, height|0 ],
-                    uniforms: {
-                        texSize: [ this._width, this._height ]
-                    }
-                };
-            },
-
+            // Render to canvas
             // Use it when we're supposed to see the texture
-            // It will render to a canvas
-            isAnOutputOperation() {
+            displaysGraphics() {
                 return {
                     renderToTexture: false
                 };
             },
 
-            // Use this when we want to keep the
-            // kernel texture (they are reused default)
-            doesNotReuseTextures() {
+            // Use this when we want to keep the kernel
+            // texture (they are recycled by default)
+            doesNotRecycleTextures() {
                 return {
                     recycleTexture: false
                 };

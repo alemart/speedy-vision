@@ -19,6 +19,7 @@
  * Code for generating image pyramids
  */
 
+/*
 export function upsample2(image)
 {
     const x = this.thread.x, y = this.thread.y;
@@ -32,7 +33,25 @@ export function upsample2(image)
         this.color(0, 0, 0, thisPixel[3]);
     }
 }
+*/
+export const upsample2 = image => `
+@include "thread.glsl"
 
+uniform sampler2D image;
+
+void main()
+{
+    ivec2 thread = threadLocation();
+    vec4 pixel = texelFetch(image, thread / 2, 0);
+
+    if((thread.x + thread.y) % 2 == 0)
+        color = pixel;
+    else
+        color = vec4(0.0f, 0.0f, 0.0f, pixel.a); // preserve scale
+}
+`;
+
+/*
 export function downsample2(image)
 {
     const x = this.thread.x, y = this.thread.y;
@@ -40,7 +59,20 @@ export function downsample2(image)
 
     this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
 }
+*/
+export const downsample2 = image => `
+@include "thread.glsl"
 
+uniform sampler2D image;
+
+void main()
+{
+    ivec2 thread = threadLocation();
+    color = texelFetch(image, thread * 2, 0);
+}
+`;
+
+/*
 export function upsample3(image)
 {
     const x = this.thread.x, y = this.thread.y;
@@ -54,7 +86,25 @@ export function upsample3(image)
         this.color(0, 0, 0, thisPixel[3]);
     }
 }
+*/
+export const upsample3 = image => `
+@include "thread.glsl"
 
+uniform sampler2D image;
+
+void main()
+{
+    ivec2 thread = threadLocation();
+    vec4 pixel = texelFetch(image, thread / 3, 0);
+
+    if((thread.x - (thread.y % 3) + 3) % 3 == 0)
+        color = pixel;
+    else
+        color = vec4(0.0f, 0.0f, 0.0f, pixel.a); // preserve scale
+}
+`;
+
+/*
 export function downsample3(image)
 {
     const x = this.thread.x, y = this.thread.y;
@@ -62,3 +112,15 @@ export function downsample3(image)
     
     this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
 }
+*/
+export const downsample3 = image => `
+@include "thread.glsl"
+
+uniform sampler2D image;
+
+void main()
+{
+    ivec2 thread = threadLocation();
+    color = texelFetch(image, thread * 3, 0);
+}
+`;

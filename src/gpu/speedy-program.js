@@ -209,10 +209,16 @@ export class SpeedyProgram extends Function
         };
 
         // get size
-        let [width, height] = options.output;
-        width = Math.max(1, width | 0);
-        height = Math.max(1, height | 0);
+        let width = Math.max(1, options.output[0] | 0);
+        let height = Math.max(1, options.output[1] | 0);
         options.output = [ width, height ];
+
+        // need to resize the canvas?
+        const canvas = gl.canvas;
+        if(width > canvas.width)
+            canvas.width = width;
+        if(height > canvas.height)
+            canvas.height = height;
 
         // create shader
         const source = shaderdecl();
@@ -358,8 +364,8 @@ function autodetectUniforms(shaderSource)
         for(const name of names) {
             if(name.endsWith(']')) {
                 // is it an array?
-                if(!(match = name.match(/(\w+)\[(\d+)\]$/)))
-                    throw GLUtils.Error(`Unspecified array length for ${name} in shader`);
+                if(!(match = name.match(/(\w+)\s*\[\s*(\d+)\s*\]$/)))
+                    throw GLUtils.Error(`Unspecified array length for uniform "${name}" in the shader`);
                 const [ array, length ] = [ match[1], Number(match[2]) ];
                 for(let i = 0; i < length; i++)
                     uniforms[`${array}[${i}]`] = { type };

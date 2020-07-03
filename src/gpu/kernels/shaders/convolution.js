@@ -45,7 +45,7 @@ export function conv2D(kernel, normalizationConstant = 1.0)
     ).join('\n');
 
     const generateCode = (k, dy, dx) => `
-        result += texelFetchOffset(image, thread, 0, ivec2(${dx | 0}, ${dy | 0})) * (${+k});
+        result += texelFetchOffset(image, thread, 0, ivec2(${dx | 0}, ${dy | 0})) * float(${+k});
     `;
 
     // shader
@@ -102,9 +102,9 @@ function conv1D(axis, kernel, normalizationConstant)
             acc + fn(kernel32[kSize - 1 - (cur + N)], cur), // invert y-axis for WebGL
     '');
     const generateCode = (k, i) => ((axis == 'x') ? `
-        pixel += texelFetchOffset(image, thread, 0, ivec2(${i | 0}, 0)) * (${+k});
+        pixel += texelFetchOffset(image, thread, 0, ivec2(${i | 0}, 0)) * float(${+k});
     ` : `
-        pixel += texelFetchOffset(image, thread, 0, ivec2(0, ${i | 0})) * (${+k});
+        pixel += texelFetchOffset(image, thread, 0, ivec2(0, ${i | 0})) * float(${+k});
     `);
 
     // shader

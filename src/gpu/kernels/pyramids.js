@@ -55,6 +55,22 @@ export class GPUPyramids extends GPUKernelGroup
             .compose('intraReduce', '_upsample2', '_smoothX2', '_smoothY2', '_downsample3/2', '_scale2/3')
             .compose('intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3', '_scale3/2')
 
+            // kernels for debugging
+            .declare('output', identity, {
+                ...this.operation.hasTextureSize(this._width, this._height),
+                ...this.operation.displaysGraphics()
+            })
+
+            .declare('output2', identity, {
+                ...this.operation.hasTextureSize(2 * this._width, 2 * this._height),
+                ...this.operation.displaysGraphics()
+            })
+
+            .declare('output3', identity, {
+                ...this.operation.hasTextureSize(3 * this._width, 3 * this._height),
+                ...this.operation.displaysGraphics()
+            })
+
 
             
             // separable kernels for gaussian smoothing
@@ -89,22 +105,22 @@ export class GPUPyramids extends GPUKernelGroup
 
             // upsampling & downsampling
             .declare('_upsample2', upsample2,
-                this.operation.resizesATextureTo(2 * this._width, 2 * this._height))
+                this.operation.hasTextureSize(2 * this._width, 2 * this._height))
 
             .declare('_downsample2', downsample2,
-                this.operation.resizesATextureTo((1 + this._width) / 2, (1 + this._height) / 2))
+                this.operation.hasTextureSize((1 + this._width) / 2, (1 + this._height) / 2))
 
             .declare('_upsample3', upsample3,
-                this.operation.resizesATextureTo(3 * this._width, 3 * this._height))
+                this.operation.hasTextureSize(3 * this._width, 3 * this._height))
 
             .declare('_downsample3', downsample3,
-                this.operation.resizesATextureTo((2 + this._width) / 3, (2 + this._height) / 3))
+                this.operation.hasTextureSize((2 + this._width) / 3, (2 + this._height) / 3))
 
             .declare('_downsample2/3', downsample2,
-                this.operation.resizesATextureTo(3 * this._width / 2, 3 * this._height / 2))
+                this.operation.hasTextureSize(3 * this._width / 2, 3 * this._height / 2))
 
             .declare('_downsample3/2', downsample3,
-                this.operation.resizesATextureTo(2 * this._width / 3, 2 * this._height / 3))
+                this.operation.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
 
             // adjust the scale coefficients
             .declare('_scale2', scale(2.0, gpu.pyramidHeight, gpu.pyramidMaxScale),
@@ -118,27 +134,6 @@ export class GPUPyramids extends GPUKernelGroup
 
             .declare('_scale2/3', scale(2.0 / 3.0, gpu.pyramidHeight, gpu.pyramidMaxScale),
                 this.operation.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
-
-            // kernels for debugging
-            /*
-            .declare('_image', identity,
-                withCanvas(this._width, this._height)
-                
-            .declare('_image2', identity,
-                withCanvas(2 * this._width, 2 * this._height))
-
-            .declare('_image3', identity,
-                withCanvas(3 * this._width, 3 * this._height))
-
-            .declare('_image1/2', identity,
-                withCanvas((1 + this._width) / 2, (1 + this._height) / 2))
-
-            .declare('_image3/2', identity,
-                withCanvas(3 * this._width / 2, 3 * this._height / 2))
-
-            .declare('_image2/3', identity,
-                withCanvas(2 * this._width / 3, 2 * this._height / 3))
-            */
         ;
     }
 }
