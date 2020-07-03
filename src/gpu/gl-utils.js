@@ -81,16 +81,31 @@ export class GLUtils
         gl.attachShader(program, fragmentShader);
         gl.linkProgram(program);
 
+        // error?
         if(!gl.getProgramParameter(program, gl.LINK_STATUS)) {
             const errors = [
-                gl.getProgramInfoLog(program),
                 gl.getShaderInfoLog(fragmentShader),
                 gl.getShaderInfoLog(vertexShader),
+                gl.getProgramInfoLog(program),
             ];
+
+            const spaces = i => (2 - Math.floor(Math.log10(i)));
+            const col = k => Array(spaces(k)).fill(' ').join('') + k + '. ';
+            const formattedSource = fragmentShaderSource.split('\n')
+                .map((line, no) => col(1+no) + line)
+                .join('\n');
+
             gl.deleteProgram(program);
             gl.deleteShader(fragmentShader);
             gl.deleteShader(vertexShader);
-            throw GLUtils.Error(`Can't create shader program. ${errors.join('\n')}`);
+
+            throw GLUtils.Error(
+                `Can't create shader program.\n\n` +
+                `---------- ERROR ----------\n` +
+                errors.join('\n') + '\n\n' +
+                `---------- SOURCE CODE ----------\n` +
+                formattedSource
+            );
         }
 
         return program;
@@ -217,10 +232,11 @@ export class GLUtils
 
     /**
      * Destroys a framebuffer object (FBO)
+     * @param {WebGL2RenderingContext} gl
      * @param {WebGLFramebuffer} fbo 
      * @returns {null}
      */
-    static destroyFramebuffer(fbo)
+    static destroyFramebuffer(gl, fbo)
     {
         gl.deleteFramebuffer(fbo);
         return null;

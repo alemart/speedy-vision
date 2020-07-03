@@ -39,6 +39,30 @@ vec4 pixelAtOffset(sampler2D tex, vec2 offset)
 {
     return texture(tex, texCoord + offset / texSize);
 }
+
+// Get the (x,y) position of the current pixel
+vec2 pixelPosition()
+{
+    return texCoord * texSize;
+}
+`,
+
+//
+// Thread utilities
+//
+'thread.glsl': `
+
+// Integer (x,y) position of the current texel
+ivec2 threadLocation()
+{
+    return ivec2(texCoord * texSize);
+}
+
+// Output size
+ivec2 outputSize()
+{
+    return ivec2(texSize);
+}
 `,
 
 };

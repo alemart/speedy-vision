@@ -150,7 +150,7 @@ export class SpeedyProgram extends Function
         y = Math.max(0, Math.min(y, height - 1));
 
         // read pixels
-        if(this._stdprog.fbo) {
+        if(this._stdprog.hasOwnProperty('fbo')) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._stdprog.fbo);
             gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -187,6 +187,15 @@ export class SpeedyProgram extends Function
         return this._gl;
     }
 
+    /**
+     * Read uniforms of the program (metadata)
+     * @returns {object}
+     */
+    get uniforms()
+    {
+        return this._stdprog.uniform;
+    }
+
     // Prepare the shader
     _init(gl, shaderdecl, options)
     {
@@ -214,8 +223,10 @@ export class SpeedyProgram extends Function
         // validate arguments
         const params = functionArguments(shaderdecl);
         for(let j = 0; j < params.length; j++) {
-            if(!stdprog.uniform.hasOwnProperty(params[j]))
-                throw GLUtils.Error(`Can't run shader: expected uniform "${params[j]}"`);
+            if(!stdprog.uniform.hasOwnProperty(params[j])) {
+                if(!stdprog.uniform.hasOwnProperty(params[j] + '[0]'))
+                    throw GLUtils.Error(`Can't run shader: expected uniform "${params[j]}"`);
+            }
         }
 
         // store context
@@ -245,25 +256,22 @@ export class SpeedyProgram extends Function
         // set uniforms[i] to args[i]
         for(let i = 0, texNo = 0; i < args.length; i++) {
             const argname = params[i];
-            const uniform = stdprog.uniform[argname];
+            let uniform = stdprog.uniform[argname];
 
             if(uniform) {
                 // uniform variable matches parameter name
                 texNo = this._setUniform(uniform, args[i], texNo);
             }
-            else if(Array.isArray(args[i])) {
+            else if(stdprog.uniform.hasOwnProperty(argname + '[0]')) {
                 // uniform array matches parameter name
                 const array = args[i];
                 if(stdprog.uniform.hasOwnProperty(`${argname}[${array.length}]`))
-                    throw GLUtils.Error(`Can't run shader: too many elements in array ${argname}`);
-                for(let j = 0; (uniform = stdprog.uniform[`${argname}[${j}]`]); j++) {
-                    if(j >= array.length)
-                        throw GLUtils.Error(`Can't run shader: too few arguments in array ${argname}`);
+                    throw GLUtils.Error(`Can't run shader: too few elements in array "${argname}"`);
+                for(let j = 0; (uniform = stdprog.uniform[`${argname}[${j}]`]); j++)
                     texNo = this._setUniform(uniform, array[j], texNo);
-                }
             }
             else
-                throw GLUtils.Error(`Can't run shader: expected array parameter for ${argname}`);
+                throw GLUtils.Error(`Can't run shader: unknown parameter "${argname}": ${args[i]}`);
         }
 
         // render
@@ -305,6 +313,7 @@ export class SpeedyProgram extends Function
     }
 
     // set uniform to value
+    // arrays of arbitrary size are not supported, only fixed-size vectors (vecX, ivecX, etc.)
     _setUniform(uniform, value, texNo)
     {
         const gl = this._gl;
@@ -339,7 +348,7 @@ export class SpeedyProgram extends Function
 function autodetectUniforms(shaderSource)
 {
     const sourceWithoutComments = shaderSource; // assume we've preprocessed the source already
-    const regex = /uniform\s+(\w+)\s+([^\s;]+)/g;
+    const regex = /uniform\s+(\w+)\s+([^;]+)/g;
     const uniforms = { };
 
     let match;
@@ -362,7 +371,7 @@ function autodetectUniforms(shaderSource)
         }
     }
 
-    return uniforms;
+    return Object.freeze(uniforms);
 }
 
 // names of function arguments
@@ -381,10 +390,10 @@ function functionArguments(fun)
             argname // handle trailing commas
         );
     }
-    else {
+    else
         throw GLUtils.Error(`Can't detect function arguments of ${code}`);
-        //return [];
-    }
+
+    return [];
 }
 
 // create VAO & VBO
@@ -465,8 +474,6 @@ function createStandardProgram(gl, width, height, fragmentShaderSource, uniforms
     // autodetect uniforms, get their locations,
     // define their setters and set their default values
     const uniform = autodetectUniforms(source);
-    console.log('uniforms', uniform);
-    console.log(fragmentShaderSource);
     gl.useProgram(program);
     for(const u in uniform) {
         // get location
@@ -486,6 +493,9 @@ function createStandardProgram(gl, width, height, fragmentShaderSource, uniforms
             else
                 throw GLUtils.Error(`Unrecognized uniform value: "${value}"`);
         }
+
+        // note: to set the default value of array arr, pass
+        // { 'arr[0]': val0, 'arr[1]': val1, ... } to uniforms
     }
 
     // done!
@@ -499,23 +509,6 @@ function createStandardProgram(gl, width, height, fragmentShaderSource, uniforms
     };
 }
 
-// TODO: attaach FBO, detach FBO for tex resize
-function createStandardProgramWithFBO(gl, width, height, fragmentShaderSource, uniforms = { })
-{
-    width = Math.max(width | 0, 1);
-    height = Math.max(height | 0, 1);
-
-    const texture = GLUtils.createTexture(gl, width, height);
-    const fbo = GLUtils.createFramebuffer(gl, texture);
-    const stdprog = createStandardProgram(gl, width, height, fragmentShaderSource, uniforms);
-
-    return {
-        ...stdprog,
-        texture,
-        fbo,
-    };
-}
-
 // Attach a framebuffer object to a standard program
 function attachFBO(stdprog)
 {
@@ -526,23 +519,22 @@ function attachFBO(stdprog)
     const texture = GLUtils.createTexture(gl, width, height);
     const fbo = GLUtils.createFramebuffer(gl, texture);
 
-    return {
-        ...stdprog,
+    return Object.assign(stdprog, {
         texture,
-        fbo,
-    };
+        fbo
+    });
 }
 
 // Detach a framebuffer object from a standard program
 function detachFBO(stdprog)
 {
     if(stdprog.hasOwnProperty('fbo')) {
-        GLUtils.destroyFramebuffer(stdprog.fbo);
+        GLUtils.destroyFramebuffer(stdprog.gl, stdprog.fbo);
         delete stdprog.fbo;
     }
 
     if(stdprog.hasOwnProperty('texture')) {
-        GLUtils.destroyTexture(stdprog.texture);
+        GLUtils.destroyTexture(stdprog.gl, stdprog.texture);
         delete stdprog.texture;
     }
 

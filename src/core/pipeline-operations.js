@@ -155,8 +155,9 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
         this._scale = scale;
         this._offset = offset;
         this._kernel = kern;
-        this._texKernel = null;
         this._kernelSize = size;
+        this._texKernel = null;
+        this._gl = null;
     }
 
     run(texture, gpu, media)
@@ -164,7 +165,7 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
         // instantiate the texture kernel
         if(this._texKernel == null) {
             this._texKernel = gpu.filters[this._method[0]](this._kernel);
-            this._texKernel.gl = gpu._gpu.gl;
+            this._gl = gpu.core.gl;
         }
 
         // convolve
@@ -179,9 +180,8 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
     release()
     {
         if(this._texKernel != null) {
-            //this._texKernel.delete();
-            GLUtils.destroyTexture(this._texKernel.gl, this._texKernel);
-            this._texKernel = null;
+            GLUtils.destroyTexture(this._gl, this._texKernel);
+            this._texKernel = this._gl = null;
         }
         super.release();
     }
