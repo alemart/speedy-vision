@@ -37,28 +37,37 @@ export function conv2D(kernel, normalizationConstant = 1.0)
         Utils.fatal(`Invalid 2D convolution kernel of ${kernel32.length} elements (expected: square)`);
 
     // code generator
-    const foreachKernelElement = fn => cartesian(symmetricRange(N), symmetricRange(N)).reduce(
-        (acc, cur) => acc + fn(kernel32[(kSize - 1 - (cur[0] + N)) * kSize + (cur[1] + N)], cur[0], cur[1]),
-    '');
-    const generateCode = (k, i, j) => `
-    y = Math.min(Math.max(this.thread.y + (${i | 0}), 0), height - 1);
-    x = Math.min(Math.max(this.thread.x + (${j | 0}), 0), width - 1);
-    p = image[y][x]; r += p[0] * ${+k}; g += p[1] * ${+k}; b += p[2] * ${+k};
+    const foreachKernelElement = fn => cartesian(symmetricRange(N), symmetricRange(N)).map(
+        cur => fn(
+            kernel32[(kSize - 1 - (cur[0] + N)) * kSize + (cur[1] + N)], // invert y-axis for WebGL
+            cur[0], cur[1]
+        )
+    ).join('\n');
+
+    const generateCode = (k, dy, dx) => `
+        result += texelFetchOffset(image, thread, 0, ivec2(${dx | 0}, ${dy | 0})) * (${+k});
     `;
 
     // shader
-    const body = `
-    const width = this.constants.width;
-    const height = this.constants.height;
-    const pixel = image[this.thread.y][this.thread.x];
-    let r = 0.0, g = 0.0, b = 0.0;
-    let p = [0.0, 0.0, 0.0, 0.0];
-    let x = 0, y = 0;
-    ${foreachKernelElement(generateCode)}
-    this.color(r, g, b, pixel[3]);
+    const shader = `
+    @include "thread.glsl"
+
+    uniform sampler2D image;
+
+    void main()
+    {
+        ivec2 thread = threadLocation();
+        vec4 result = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        float alpha = texelFetch(image, thread, 0).a;
+
+        ${foreachKernelElement(generateCode)}
+
+        color = vec4(result.rgb, alpha);
+    }
     `;
 
-    return new Function('image', body);
+    // done!
+    return (image) => shader;
 }
 
 // Generate a 1D convolution function on the x-axis
@@ -92,26 +101,26 @@ function conv1D(axis, kernel, normalizationConstant)
             acc + fn(kernel32[cur + N], cur) :
             acc + fn(kernel32[kSize - 1 - (cur + N)], cur), // invert y-axis for WebGL
     '');
-    const generateCode = (k, i) => (((axis == 'x') ? `
-    offset = vec2(${i | 0}, 0);
+    const generateCode = (k, i) => ((axis == 'x') ? `
+        pixel += texelFetchOffset(image, thread, 0, ivec2(${i | 0}, 0)) * (${+k});
     ` : `
-    offset = vec2(0, ${i | 0});
-    `) + `
-    pixel += pixelAtOffset(image, offset) * (${+k});
+        pixel += texelFetchOffset(image, thread, 0, ivec2(0, ${i | 0})) * (${+k});
     `);
 
     // shader
     const shader = `
-    @include "pixel.glsl"
+    @include "thread.glsl"
 
     uniform sampler2D image;
 
     void main()
     {
-        vec2 offset;
+        ivec2 thread = threadLocation();
         vec4 pixel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-        float alpha = texture(image, texCoord).a;
+        float alpha = texelFetch(image, thread, 0).a;
+
         ${foreachKernelElement(generateCode)}
+
         color = vec4(pixel.rgb, alpha);
     }
     `;
@@ -170,28 +179,30 @@ export function createKernel2D(kernelSize)
 
     // encode float in the [0,1] range to RGBA
     // note: invert kernel y-axis for WebGL
-    const body = `
-    const x = this.thread.x;
-    const y = ${kernelSize} - 1 - this.thread.y;
-    const val = arr[y * ${kernelSize} + x];
+    const shader = `
+    @include "thread.glsl"
 
-    const e0 = Math.floor(val);
-    const e1 = 256.0 * (val - e0);
-    const e2 = 256.0 * (e1 - Math.floor(e1));
-    const e3 = 256.0 * (e2 - Math.floor(e2));
+    uniform float kernel[${kernelSize * kernelSize}];
 
-    const r = e0;
-    const g = Math.floor(e1) / 256.0;
-    const b = Math.floor(e2) / 256.0;
-    const a = Math.floor(e3) / 256.0;
+    void main()
+    {
+        ivec2 thread = threadLocation();
+        float val = kernel[((${kernelSize}) - 1 - thread.y) * (${kernelSize}) + thread.x];
 
-    this.color(r, g, b, a);
+        float e0 = floor(val);
+        float e1 = 256.0f * fract(val);
+        float e2 = 256.0f * fract(e1);
+        float e3 = 256.0f * fract(e2);
+
+        color = vec4(e0, floor(e1) / 256.0f, floor(e2) / 256.0f, floor(e3) / 256.0f);
+    }
     `;
 
-    // IMPORTANT: all entries of the input array are
-    // assumed to be in the [0, 1] range AND
-    // arr.length >= kernelSize * kernelSize
-    return new Function('arr', body);
+    // IMPORTANT: all entries of the input kernel
+    // are assumed to be in the [0, 1] range AND
+    // kernel.length >= kernelSize * kernelSize
+    //return new Function('arr', body);
+    return (kernel) => shader;
 }
 
 // Generate a texture-based 1D convolution kernel
@@ -205,28 +216,30 @@ export function createKernel1D(kernelSize)
         Utils.fatal(`Can't create a 1D texture kernel of size ${kernelSize}`);
 
     // encode float in the [0,1] range to RGBA
-    // note: invert kernel y-axis for WebGL
-    const body = `
-    const x = this.thread.x;
-    const val = arr[x];
+    const shader = `
+    @include "thread.glsl"
 
-    const e0 = Math.floor(val);
-    const e1 = 256.0 * (val - e0);
-    const e2 = 256.0 * (e1 - Math.floor(e1));
-    const e3 = 256.0 * (e2 - Math.floor(e2));
-    
-    const r = e0;
-    const g = Math.floor(e1) / 256.0;
-    const b = Math.floor(e2) / 256.0;
-    const a = Math.floor(e3) / 256.0;
+    uniform float kernel[${kernelSize}];
 
-    this.color(r, g, b, a);
+    void main()
+    {
+        ivec2 thread = threadLocation();
+        float val = kernel[thread.x];
+
+        float e0 = floor(val);
+        float e1 = 256.0f * fract(val);
+        float e2 = 256.0f * fract(e1);
+        float e3 = 256.0f * fract(e2);
+
+        color = vec4(e0, floor(e1) / 256.0f, floor(e2) / 256.0f, floor(e3) / 256.0f);
+    }
     `;
 
-    // IMPORTANT: all entries of the input array are
-    // assumed to be in the [0, 1] range AND
-    // arr.length >= kernelSize
-    return new Function('arr', body);
+    // IMPORTANT: all entries of the input kernel
+    // are assumed to be in the [0, 1] range AND
+    // kernel.length >= kernelSize
+    //return new Function('arr', body);
+    return (kernel) => shader;
 }
 
 // 2D convolution with a texture-based kernel of size
@@ -245,56 +258,55 @@ export function texConv2D(kernelSize)
     ).join('\n');
 
     const generateCode = (i, j) => `
-    y = Math.max(0, Math.min(this.thread.y + (${i}), height - 1));
-    x = Math.max(0, Math.min(this.thread.x + (${j}), width - 1));
-
-    p = image[y][x];
-    k = texKernel[${i + N}][${j + N}];
-
-    val = k[0] + k[1] + k[2] / 256.0 + k[3] / 65536.0;
-    val *= scale;
-    val += offset;
-
-    rgb[0] += p[0] * val;
-    rgb[1] += p[1] * val;
-    rgb[2] += p[2] * val;
+        kernel = texelFetch(texKernel, ivec2(${i + N}, ${j + N}), 0);
+        value = dot(kernel, magic) * scale + offset;
+        result += texelFetchOffset(image, thread, 0, ivec2(${i}, ${j})) * value;
     `;
 
     // image: target image
     // texKernel: convolution kernel (all entries in [0,1])
     // scale: multiply the kernel entries by a number (like 1.0)
     // offset: add a number to all kernel entries (like 0.0)
-    return new Function('image', 'texKernel', 'scale', 'offset',
-    `
-    const width = this.constants.width;
-    const height = this.constants.height;
-    const pixel = image[this.thread.y][this.thread.x];
-    let x = this.thread.x, y = this.thread.y;
-    let p = [0.0, 0.0, 0.0, 0.0];
-    let k = [0.0, 0.0, 0.0, 0.0];
-    let rgb = [0.0, 0.0, 0.0];
-    let val = 0.0;
+    const shader = `
+    @include "thread.glsl"
 
-    ${foreachKernelElement(generateCode)}
+    const vec4 magic = vec4(1.0f, 1.0f, 1.0f / 256.0f, 1.0f / 65536.0f);
+    uniform sampler2D image, texKernel;
+    uniform float scale, offset;
 
-    rgb[0] = Math.max(0, Math.min(rgb[0], 1));
-    rgb[1] = Math.max(0, Math.min(rgb[1], 1));
-    rgb[2] = Math.max(0, Math.min(rgb[2], 1));
+    void main()
+    {
+        ivec2 thread = threadLocation();
+        vec4 kernel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        vec4 result = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        float alpha = texelFetch(image, thread, 0).a;
+        float value = 0.0f;
 
-    this.color(rgb[0], rgb[1], rgb[2], pixel[3]);
-    `
-    );
+        ${foreachKernelElement(generateCode)}
+
+        result = clamp(result, 0.0f, 1.0f);
+        color = vec4(result.rgb, alpha);
+    }
+    `;
+
+    return (image, texKernel, scale, offset) => shader;
 }
 
 // identity operation with the same parameters as texConv2D()
 export function idConv2D(kernelSize)
 {
-    return new Function('image', 'texKernel', 'scale', 'offset',
-    `
-    const pixel = image[this.thread.y][this.thread.x];
-    this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
-    `
-    );
+    return (image, texKernel, scale, offset) => `
+    @include "thread.glsl"
+
+    uniform sampler2D image, texKernel;
+    uniform float scale, offset;
+
+    void main()
+    {
+        ivec2 thread = threadLocation();
+        color = texelFetch(image, thread, 0);
+    }
+    `;
 }
 
 // Texture-based 1D convolution on the x-axis
@@ -317,40 +329,40 @@ function texConv1D(kernelSize, axis)
     // utilities
     const foreachKernelElement = fn => symmetricRange(N).map(fn).join('\n');
     const generateCode = i => ((axis == 'x') ? `
-    x = Math.max(0, Math.min(this.thread.x + (${i}), width - 1));
-    k = texKernel[0][${i + N}];
+        kernel = texelFetch(texKernel, ivec2(${i + N}, 0), 0);
+        value = dot(kernel, magic) * scale + offset;
+        result += texelFetchOffset(image, thread, 0, ivec2(${i}, 0)) * value;
     ` : `
-    y = Math.max(0, Math.min(this.thread.y + (${i}), height - 1));
-    k = texKernel[0][${-i + N}];
-    `) + `
-    p = image[y][x];
-
-    val = k[0] + k[1] + k[2] / 256.0 + k[3] / 65536.0;
-    val *= scale;
-    val += offset;
-
-    rgb[0] += p[0] * val;
-    rgb[1] += p[1] * val;
-    rgb[2] += p[2] * val;
-    `;
+        kernel = texelFetch(texKernel, ivec2(${-i + N}, 0), 0);
+        value = dot(kernel, magic) * scale + offset;
+        result += texelFetchOffset(image, thread, 0, ivec2(0, ${i})) * value;
+    `);
 
     // image: target image
     // texKernel: convolution kernel (all entries in [0,1])
     // scale: multiply the kernel entries by a number (like 1.0)
     // offset: add a number to all kernel entries (like 0.0)
-    return new Function('image', 'texKernel', 'scale', 'offset',
-    `
-    const width = this.constants.width;
-    const height = this.constants.height;
-    const pixel = image[this.thread.y][this.thread.x];
-    let rgb = [0.0, 0.0, 0.0];
-    let p = [0.0, 0.0, 0.0, 0.0];
-    let k = [0.0, 0.0, 0.0, 0.0];
-    let x = this.thread.x, y = this.thread.y;
+    const shader = `
+    @include "thread.glsl"
 
-    ${foreachKernelElement(generateCode)}
+    const vec4 magic = vec4(1.0f, 1.0f, 1.0f / 256.0f, 1.0f / 65536.0f);
+    uniform sampler2D image, texKernel;
+    uniform float scale, offset;
 
-    this.color(rgb[0], rgb[1], rgb[2], pixel[3]);
-    `
-    );
+    void main()
+    {
+        ivec2 thread = threadLocation();
+        vec4 kernel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        vec4 result = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        float alpha = texelFetch(image, thread, 0).a;
+        float value = 0.0f;
+
+        ${foreachKernelElement(generateCode)}
+
+        result = clamp(result, 0.0f, 1.0f);
+        color = vec4(result.rgb, alpha);
+    }
+    `;
+
+    return (image, texKernel, scale, offset) => shader;
 }

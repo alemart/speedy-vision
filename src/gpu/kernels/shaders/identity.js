@@ -22,7 +22,6 @@
 // Identity shader: no-operation
 export const identity = (image) => `
 uniform sampler2D image;
-uniform float arr[12];
 
 void main()
 {
