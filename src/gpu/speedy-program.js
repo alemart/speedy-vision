@@ -42,7 +42,9 @@ precision highp sampler2D;
  
 out vec4 color;
 in vec2 texCoord;
-uniform vec2 texSize;\n`;
+uniform vec2 texSize;
+
+@include "global.glsl"\n`;
 
 const UNIFORM_TYPES = {
     'sampler2D':'uniform1i',

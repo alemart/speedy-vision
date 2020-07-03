@@ -79,14 +79,12 @@ export function setScale(scale, pyramidHeight, pyramidMaxScale)
     return new Function('image', body);
     */
     return (image) => `
-    @include "thread.glsl"
-
     uniform sampler2D image;
 
     void main()
     {
         ivec2 thread = threadLocation();
-        vec4 pixel = texelFetch(image, thread, 0);
+        vec4 pixel = pixelAt(image, thread);
 
         color = vec4(pixel.rgb, float(${alpha}));
     }
@@ -100,14 +98,12 @@ export function scale(scaleFactor, pyramidHeight, pyramidMaxScale)
     const delta = -Math.log2(s) / (lgM + pyramidHeight);
 
     return (image) => `
-    @include "thread.glsl"
-
     uniform sampler2D image;
 
     void main()
     {
         ivec2 thread = threadLocation();
-        vec4 pixel = texelFetch(image, thread, 0);
+        vec4 pixel = pixelAt(image, thread);
         float alpha = clamp(pixel.a + float(${delta}), 0.0f, 1.0f);
 
         color = vec4(pixel.rgb, alpha);

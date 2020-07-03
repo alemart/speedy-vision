@@ -45,20 +45,18 @@ export function conv2D(kernel, normalizationConstant = 1.0)
     ).join('\n');
 
     const generateCode = (k, dy, dx) => `
-        result += texelFetchOffset(image, thread, 0, ivec2(${dx | 0}, ${dy | 0})) * float(${+k});
+        result += pixelAtOffset(image, thread, ivec2(${dx | 0}, ${dy | 0})) * float(${+k});
     `;
 
     // shader
     const shader = `
-    @include "thread.glsl"
-
     uniform sampler2D image;
 
     void main()
     {
         ivec2 thread = threadLocation();
+        float alpha = pixelAt(image, thread).a;
         vec4 result = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-        float alpha = texelFetch(image, thread, 0).a;
 
         ${foreachKernelElement(generateCode)}
 
@@ -102,22 +100,20 @@ function conv1D(axis, kernel, normalizationConstant)
             acc + fn(kernel32[kSize - 1 - (cur + N)], cur), // invert y-axis for WebGL
     '');
     const generateCode = (k, i) => ((axis == 'x') ? `
-        pixel += texelFetchOffset(image, thread, 0, ivec2(${i | 0}, 0)) * float(${+k});
+        pixel += pixelAtOffset(image, thread, ivec2(${i | 0}, 0)) * float(${+k});
     ` : `
-        pixel += texelFetchOffset(image, thread, 0, ivec2(0, ${i | 0})) * float(${+k});
+        pixel += pixelAtOffset(image, thread, ivec2(0, ${i | 0})) * float(${+k});
     `);
 
     // shader
     const shader = `
-    @include "thread.glsl"
-
     uniform sampler2D image;
 
     void main()
     {
         ivec2 thread = threadLocation();
+        float alpha = pixelAt(image, thread).a;
         vec4 pixel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-        float alpha = texelFetch(image, thread, 0).a;
 
         ${foreachKernelElement(generateCode)}
 
@@ -180,8 +176,6 @@ export function createKernel2D(kernelSize)
     // encode float in the [0,1] range to RGBA
     // note: invert kernel y-axis for WebGL
     const shader = `
-    @include "thread.glsl"
-
     uniform float kernel[${kernelSize * kernelSize}];
 
     void main()
@@ -217,8 +211,6 @@ export function createKernel1D(kernelSize)
 
     // encode float in the [0,1] range to RGBA
     const shader = `
-    @include "thread.glsl"
-
     uniform float kernel[${kernelSize}];
 
     void main()
@@ -258,9 +250,9 @@ export function texConv2D(kernelSize)
     ).join('\n');
 
     const generateCode = (i, j) => `
-        kernel = texelFetch(texKernel, ivec2(${i + N}, ${j + N}), 0);
+        kernel = pixelAt(texKernel, ivec2(${i + N}, ${j + N}));
         value = dot(kernel, magic) * scale + offset;
-        result += texelFetchOffset(image, thread, 0, ivec2(${i}, ${j})) * value;
+        result += pixelAtOffset(image, thread, ivec2(${i}, ${j})) * value;
     `;
 
     // image: target image
@@ -268,8 +260,6 @@ export function texConv2D(kernelSize)
     // scale: multiply the kernel entries by a number (like 1.0)
     // offset: add a number to all kernel entries (like 0.0)
     const shader = `
-    @include "thread.glsl"
-
     const vec4 magic = vec4(1.0f, 1.0f, 1.0f / 256.0f, 1.0f / 65536.0f);
     uniform sampler2D image, texKernel;
     uniform float scale, offset;
@@ -279,7 +269,7 @@ export function texConv2D(kernelSize)
         ivec2 thread = threadLocation();
         vec4 kernel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
         vec4 result = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-        float alpha = texelFetch(image, thread, 0).a;
+        float alpha = pixelAt(image, thread).a;
         float value = 0.0f;
 
         ${foreachKernelElement(generateCode)}
@@ -296,15 +286,13 @@ export function texConv2D(kernelSize)
 export function idConv2D(kernelSize)
 {
     return (image, texKernel, scale, offset) => `
-    @include "thread.glsl"
-
     uniform sampler2D image, texKernel;
     uniform float scale, offset;
 
     void main()
     {
         ivec2 thread = threadLocation();
-        color = texelFetch(image, thread, 0);
+        color = pixelAt(image, thread);
     }
     `;
 }
@@ -329,13 +317,13 @@ function texConv1D(kernelSize, axis)
     // utilities
     const foreachKernelElement = fn => symmetricRange(N).map(fn).join('\n');
     const generateCode = i => ((axis == 'x') ? `
-        kernel = texelFetch(texKernel, ivec2(${i + N}, 0), 0);
+        kernel = pixelAt(texKernel, ivec2(${i + N}, 0));
         value = dot(kernel, magic) * scale + offset;
-        result += texelFetchOffset(image, thread, 0, ivec2(${i}, 0)) * value;
+        result += pixelAtOffset(image, thread, ivec2(${i}, 0)) * value;
     ` : `
-        kernel = texelFetch(texKernel, ivec2(${-i + N}, 0), 0);
+        kernel = pixelAt(texKernel, ivec2(${-i + N}, 0));
         value = dot(kernel, magic) * scale + offset;
-        result += texelFetchOffset(image, thread, 0, ivec2(0, ${i})) * value;
+        result += pixelAtOffset(image, thread, ivec2(0, ${i})) * value;
     `);
 
     // image: target image
@@ -343,8 +331,6 @@ function texConv1D(kernelSize, axis)
     // scale: multiply the kernel entries by a number (like 1.0)
     // offset: add a number to all kernel entries (like 0.0)
     const shader = `
-    @include "thread.glsl"
-
     const vec4 magic = vec4(1.0f, 1.0f, 1.0f / 256.0f, 1.0f / 65536.0f);
     uniform sampler2D image, texKernel;
     uniform float scale, offset;
@@ -354,7 +340,7 @@ function texConv1D(kernelSize, axis)
         ivec2 thread = threadLocation();
         vec4 kernel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
         vec4 result = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-        float alpha = texelFetch(image, thread, 0).a;
+        float alpha = pixelAt(image, thread).a;
         float value = 0.0f;
 
         ${foreachKernelElement(generateCode)}

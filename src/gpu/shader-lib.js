@@ -24,12 +24,19 @@ import { GLUtils } from './gl-utils';
 const SHADER_LIB = {
 
 //
-// Thread utilities
+// Global utilities
+// (available in all shaders)
 //
-'thread.glsl': `
+'global.glsl':
+`
+// Integer position of the current texel
+#define threadLocation() ivec2(texCoord * texSize)
 
-// Integer (x,y) position of the current texel
-#define threadLocation()    ivec2(texCoord * texSize)
+// Get pixel at (x,y)
+#define pixelAt(img, pos) texelFetch((img), (pos), 0)
+
+// Get current pixel plus a constant (dx,dy) offset
+#define pixelAtOffset(img, thread, offset) texelFetchOffset((img), (thread), 0, (offset))
 `,
 
 };
@@ -49,6 +56,6 @@ export class ShaderLib
         if(SHADER_LIB.hasOwnProperty(filename))
             return SHADER_LIB[filename];
 
-        throw GLUtils.Error(`Can't find \"${filename}\"`);
+        throw GLUtils.Error(`Can't find file \"${filename}\"`);
     }
 }

@@ -21,15 +21,13 @@
 
 // Convert to greyscale
 export const rgb2grey = (image) => `
-@include "thread.glsl"
-
 const vec4 grey = vec4(0.299f, 0.587f, 0.114f, 0.0f);
 uniform sampler2D image;
 
 void main()
 {
     ivec2 thread = threadLocation();
-    vec4 pixel = texelFetch(image, thread, 0);
+    vec4 pixel = pixelAt(image, thread);
     float g = dot(pixel, grey);
     
     color = vec4(g, g, g, 1.0f);

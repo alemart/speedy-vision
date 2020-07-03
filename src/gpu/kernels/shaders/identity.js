@@ -21,13 +21,11 @@
 
 // Identity shader: no-operation
 export const identity = (image) => `
-@include "thread.glsl"
-
 uniform sampler2D image;
 
 void main()
 {
     ivec2 thread = threadLocation();
-    color = texelFetch(image, thread, 0);
+    color = pixelAt(image, thread);
 }
 `;

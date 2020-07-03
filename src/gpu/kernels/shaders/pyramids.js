@@ -35,14 +35,12 @@ export function upsample2(image)
 }
 */
 export const upsample2 = image => `
-@include "thread.glsl"
-
 uniform sampler2D image;
 
 void main()
 {
     ivec2 thread = threadLocation();
-    vec4 pixel = texelFetch(image, thread / 2, 0);
+    vec4 pixel = pixelAt(image, thread / 2);
 
     if((thread.x + thread.y) % 2 == 0)
         color = pixel;
@@ -61,14 +59,12 @@ export function downsample2(image)
 }
 */
 export const downsample2 = image => `
-@include "thread.glsl"
-
 uniform sampler2D image;
 
 void main()
 {
     ivec2 thread = threadLocation();
-    color = texelFetch(image, thread * 2, 0);
+    color = pixelAt(image, thread * 2);
 }
 `;
 
@@ -88,14 +84,12 @@ export function upsample3(image)
 }
 */
 export const upsample3 = image => `
-@include "thread.glsl"
-
 uniform sampler2D image;
 
 void main()
 {
     ivec2 thread = threadLocation();
-    vec4 pixel = texelFetch(image, thread / 3, 0);
+    vec4 pixel = pixelAt(image, thread / 3);
 
     if((thread.x - (thread.y % 3) + 3) % 3 == 0)
         color = pixel;
@@ -114,13 +108,11 @@ export function downsample3(image)
 }
 */
 export const downsample3 = image => `
-@include "thread.glsl"
-
 uniform sampler2D image;
 
 void main()
 {
     ivec2 thread = threadLocation();
-    color = texelFetch(image, thread * 3, 0);
+    color = pixelAt(image, thread * 3);
 }
 `;
