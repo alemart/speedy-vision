@@ -43,529 +43,564 @@
 
 // FAST-9_16: requires 9 contiguous pixels
 // on a circumference of 16 pixels
-export function fast9(image, threshold)
+export const fast9 = (image, threshold) => `
+uniform sampler2D image;
+uniform float threshold;
+
+void main()
 {
-    const x = this.thread.x, y = this.thread.y;
-    const pixel = image[y][x];
+    ivec2 thread = threadLocation();
+    ivec2 size = outputSize();
+    vec4 pixel = currentPixel(image);
 
     // assume it's not a corner
-    this.color(0, pixel[1], pixel[2], pixel[3]);
+    color = vec4(0.0f, pixel.gba);
 
     if(
-        x >= 3 && x < this.constants.width - 3 &&
-        y >= 3 && y < this.constants.height - 3
+        thread.x >= 3 && thread.x < size.x - 3 &&
+        thread.y >= 3 && thread.y < size.y - 3
     ) {
-        const t = Math.min(Math.max(0.0, threshold), 1.0);
-        const c = pixel[1];
-        const ct = c + t, c_t = c - t;
-        const p0 = image[y-3][x];
-        const p1 = image[y-3][x+1];
-        const p2 = image[y-2][x+2];
-        const p3 = image[y-1][x+3];
-        const p4 = image[y][x+3];
-        const p5 = image[y+1][x+3];
-        const p6 = image[y+2][x+2];
-        const p7 = image[y+3][x+1];
-        const p8 = image[y+3][x];
-        const p9 = image[y+3][x-1];
-        const p10 = image[y+2][x-2];
-        const p11 = image[y+1][x-3];
-        const p12 = image[y][x-3];
-        const p13 = image[y-1][x-3];
-        const p14 = image[y-2][x-2];
-        const p15 = image[y-3][x-1];
-        const possibleCorner =
-            ((c_t > p0[1] || c_t > p8[1]) && (c_t > p4[1] || c_t > p12[1])) ||
-            ((ct < p0[1]  || ct < p8[1])  && (ct < p4[1]  || ct < p12[1]))  ;
+        float t = clamp(threshold, 0.0f, 1.0f);
+        float c = pixel.g;
+        float ct = c + t, c_t = c - t;
+
+        float p0 = pixelAtOffset(image, ivec2(0, 3)).g;
+        float p1 = pixelAtOffset(image, ivec2(1, 3)).g;
+        float p2 = pixelAtOffset(image, ivec2(2, 2)).g;
+        float p3 = pixelAtOffset(image, ivec2(3, 1)).g;
+        float p4 = pixelAtOffset(image, ivec2(3, 0)).g;
+        float p5 = pixelAtOffset(image, ivec2(3, -1)).g;
+        float p6 = pixelAtOffset(image, ivec2(2, -2)).g;
+        float p7 = pixelAtOffset(image, ivec2(1, -3)).g;
+        float p8 = pixelAtOffset(image, ivec2(0, -3)).g;
+        float p9 = pixelAtOffset(image, ivec2(-1, -3)).g;
+        float p10 = pixelAtOffset(image, ivec2(-2, -2)).g;
+        float p11 = pixelAtOffset(image, ivec2(-3, -1)).g;
+        float p12 = pixelAtOffset(image, ivec2(-3, 0)).g;
+        float p13 = pixelAtOffset(image, ivec2(-3, 1)).g;
+        float p14 = pixelAtOffset(image, ivec2(-2, 2)).g;
+        float p15 = pixelAtOffset(image, ivec2(-1, 3)).g;
+
+        bool possibleCorner = 
+            ((c_t > p0 || c_t > p8) && (c_t > p4 || c_t > p12)) ||
+            ((ct < p0  || ct < p8)  && (ct < p4  || ct < p12))  ;
 
         if(possibleCorner) {
-            let bright = 0, dark = 0, bc = 0, dc = 0;
+            int bright = 0, dark = 0, bc = 0, dc = 0;
 
-            if(c_t > p0[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p0[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p1[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p1[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p2[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p2[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p3[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p3[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p4[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p4[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p5[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p5[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p6[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p6[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p7[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p7[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p8[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p8[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p9[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p9[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p10[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p10[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p11[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p11[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p12[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p12[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p13[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p13[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p14[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p14[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p15[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p15[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p0) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p0) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p1) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p1) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p2) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p2) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p3) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p3) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p4) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p4) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p5) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p5) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p6) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p6) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p7) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p7) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p8) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p8) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p9) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p9) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p10) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p10) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p11) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p11) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p12) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p12) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p13) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p13) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p14) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p14) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p15) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p15) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
 
             if(bright < 9 && dark < 9) {
 
                 if(bc > 0 && bc < 9) do {
-                    if(c_t > p0[1])           bc += 1; else break;
-                    if(c_t > p1[1] && bc < 9) bc += 1; else break;
-                    if(c_t > p2[1] && bc < 9) bc += 1; else break;
-                    if(c_t > p3[1] && bc < 9) bc += 1; else break;
-                    if(c_t > p4[1] && bc < 9) bc += 1; else break;
-                    if(c_t > p5[1] && bc < 9) bc += 1; else break;
-                    if(c_t > p6[1] && bc < 9) bc += 1; else break;
-                    if(c_t > p7[1] && bc < 9) bc += 1; else break;
+                    if(c_t > p0)           bc += 1; else break;
+                    if(c_t > p1 && bc < 9) bc += 1; else break;
+                    if(c_t > p2 && bc < 9) bc += 1; else break;
+                    if(c_t > p3 && bc < 9) bc += 1; else break;
+                    if(c_t > p4 && bc < 9) bc += 1; else break;
+                    if(c_t > p5 && bc < 9) bc += 1; else break;
+                    if(c_t > p6 && bc < 9) bc += 1; else break;
+                    if(c_t > p7 && bc < 9) bc += 1; else break;
                 } while(false);
 
                 if(dc > 0 && dc < 9) do {
-                    if(ct < p0[1])           dc += 1; else break;
-                    if(ct < p1[1] && dc < 9) dc += 1; else break;
-                    if(ct < p2[1] && dc < 9) dc += 1; else break;
-                    if(ct < p3[1] && dc < 9) dc += 1; else break;
-                    if(ct < p4[1] && dc < 9) dc += 1; else break;
-                    if(ct < p5[1] && dc < 9) dc += 1; else break;
-                    if(ct < p6[1] && dc < 9) dc += 1; else break;
-                    if(ct < p7[1] && dc < 9) dc += 1; else break;
+                    if(ct < p0)           dc += 1; else break;
+                    if(ct < p1 && dc < 9) dc += 1; else break;
+                    if(ct < p2 && dc < 9) dc += 1; else break;
+                    if(ct < p3 && dc < 9) dc += 1; else break;
+                    if(ct < p4 && dc < 9) dc += 1; else break;
+                    if(ct < p5 && dc < 9) dc += 1; else break;
+                    if(ct < p6 && dc < 9) dc += 1; else break;
+                    if(ct < p7 && dc < 9) dc += 1; else break;
                 } while(false);
 
                 // got a corner!
                 if(bc >= 9 || dc >= 9)
-                    this.color(1, pixel[1], pixel[2], pixel[3]);
+                    color = vec4(1.0f, pixel.gba);
 
             }
             else {
                 // got a corner!
-                this.color(1, pixel[1], pixel[2], pixel[3]);
+                color = vec4(1.0f, pixel.gba);
             }
         }
     }
 }
+`;
 
 // FAST-7_12: requires 7 contiguous pixels
 // on a circumference of 12 pixels
-export function fast7(image, threshold)
+export const fast7 = (image, threshold) => `
+uniform sampler2D image;
+uniform float threshold;
+
+void main()
 {
-    const x = this.thread.x, y = this.thread.y;
-    const pixel = image[y][x];
+    ivec2 thread = threadLocation();
+    ivec2 size = outputSize();
+    vec4 pixel = currentPixel(image);
 
     // assume it's not a corner
-    this.color(0, pixel[1], pixel[2], pixel[3]);
+    color = vec4(0.0f, pixel.gba);
 
     if(
-        x >= 3 && x < this.constants.width - 3 &&
-        y >= 3 && y < this.constants.height - 3
+        thread.x >= 3 && thread.x < size.x - 3 &&
+        thread.y >= 3 && thread.y < size.y - 3
     ) {
-        const t = Math.min(Math.max(0.0, threshold), 1.0);
-        const c = pixel[1];
-        const ct = c + t, c_t = c - t;
-        const p0 = image[y-2][x];
-        const p1 = image[y-2][x+1];
-        const p2 = image[y-1][x+2];
-        const p3 = image[y][x+2];
-        const p4 = image[y+1][x+2];
-        const p5 = image[y+2][x+1];
-        const p6 = image[y+2][x];
-        const p7 = image[y+2][x-1];
-        const p8 = image[y+1][x-2];
-        const p9 = image[y][x-2];
-        const p10 = image[y-1][x-2];
-        const p11 = image[y-2][x-1];
-        const possibleCorner =
-            ((c_t > p0[1] || c_t > p6[1]) && (c_t > p3[1] || c_t > p9[1])) ||
-            ((ct < p0[1]  || ct < p6[1])  && (ct < p3[1]  || ct < p9[1]))  ;
+        float t = clamp(threshold, 0.0f, 1.0f);
+        float c = pixel.g;
+        float ct = c + t, c_t = c - t;
+
+        float p0 = pixelAtOffset(image, ivec2(0, 2)).g;
+        float p1 = pixelAtOffset(image, ivec2(1, 2)).g;
+        float p2 = pixelAtOffset(image, ivec2(2, 1)).g;
+        float p3 = pixelAtOffset(image, ivec2(2, 0)).g;
+        float p4 = pixelAtOffset(image, ivec2(2, -1)).g;
+        float p5 = pixelAtOffset(image, ivec2(1, -2)).g;
+        float p6 = pixelAtOffset(image, ivec2(0, -2)).g;
+        float p7 = pixelAtOffset(image, ivec2(-1, -2)).g;
+        float p8 = pixelAtOffset(image, ivec2(-2, -1)).g;
+        float p9 = pixelAtOffset(image, ivec2(-2, 0)).g;
+        float p10 = pixelAtOffset(image, ivec2(-2, 1)).g;
+        float p11 = pixelAtOffset(image, ivec2(-1, 2)).g;
+
+        bool possibleCorner =
+            ((c_t > p0 || c_t > p6) && (c_t > p3 || c_t > p9)) ||
+            ((ct < p0  || ct < p6)  && (ct < p3  || ct < p9))  ;
 
         if(possibleCorner) {
             let bright = 0, dark = 0, bc = 0, dc = 0;
 
-            if(c_t > p0[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p0[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p1[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p1[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p2[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p2[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p3[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p3[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p4[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p4[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p5[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p5[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p6[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p6[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p7[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p7[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p8[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p8[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p9[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p9[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p10[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p10[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p11[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p11[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p0) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p0) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p1) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p1) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p2) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p2) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p3) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p3) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p4) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p4) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p5) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p5) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p6) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p6) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p7) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p7) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p8) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p8) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p9) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p9) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p10) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p10) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p11) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p11) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
 
             if(bright < 7 && dark < 7) {
 
                 if(bc > 0 && bc < 7) do {
-                    if(c_t > p0[1])           bc += 1; else break;
-                    if(c_t > p1[1] && bc < 7) bc += 1; else break;
-                    if(c_t > p2[1] && bc < 7) bc += 1; else break;
-                    if(c_t > p3[1] && bc < 7) bc += 1; else break;
-                    if(c_t > p4[1] && bc < 7) bc += 1; else break;
-                    if(c_t > p5[1] && bc < 7) bc += 1; else break;
+                    if(c_t > p0)           bc += 1; else break;
+                    if(c_t > p1 && bc < 7) bc += 1; else break;
+                    if(c_t > p2 && bc < 7) bc += 1; else break;
+                    if(c_t > p3 && bc < 7) bc += 1; else break;
+                    if(c_t > p4 && bc < 7) bc += 1; else break;
+                    if(c_t > p5 && bc < 7) bc += 1; else break;
                 } while(false);
 
                 if(dc > 0 && dc < 7) do {
-                    if(ct < p0[1])           dc += 1; else break;
-                    if(ct < p1[1] && dc < 7) dc += 1; else break;
-                    if(ct < p2[1] && dc < 7) dc += 1; else break;
-                    if(ct < p3[1] && dc < 7) dc += 1; else break;
-                    if(ct < p4[1] && dc < 7) dc += 1; else break;
-                    if(ct < p5[1] && dc < 7) dc += 1; else break;
+                    if(ct < p0)           dc += 1; else break;
+                    if(ct < p1 && dc < 7) dc += 1; else break;
+                    if(ct < p2 && dc < 7) dc += 1; else break;
+                    if(ct < p3 && dc < 7) dc += 1; else break;
+                    if(ct < p4 && dc < 7) dc += 1; else break;
+                    if(ct < p5 && dc < 7) dc += 1; else break;
                 } while(false);
 
                 // got a corner!
                 if(bc >= 7 || dc >= 7)
-                    this.color(1, pixel[1], pixel[2], pixel[3]);
+                    color = vec4(1.0f, pixel.gba);
 
             }
             else {
                 // got a corner!
-                this.color(1, pixel[1], pixel[2], pixel[3]);
+                color = vec4(1.0f, pixel.gba);
             }
         }
     }
 }
+`;
 
 // FAST-5_8: requires 5 contiguous pixels
 // on a circumference of 8 pixels
-export function fast5(image, threshold)
+export const fast5 = (image, threshold) => `
+uniform sampler2D image;
+uniform float threshold;
+
+void main()
 {
-    const x = this.thread.x, y = this.thread.y;
-    const pixel = image[y][x];
+    ivec2 thread = threadLocation();
+    ivec2 size = outputSize();
+    vec4 pixel = currentPixel(image);
 
     // assume it's not a corner
-    this.color(0, pixel[1], pixel[2], pixel[3]);
+    color = vec4(0.0f, pixel.gba);
 
     if(
-        x >= 3 && x < this.constants.width - 3 &&
-        y >= 3 && y < this.constants.height - 3
+        thread.x >= 3 && thread.x < size.x - 3 &&
+        thread.y >= 3 && thread.y < size.y - 3
     ) {
-        const t = Math.min(Math.max(0.0, threshold), 1.0);
-        const c = pixel[1];
-        const ct = c + t, c_t = c - t;
-        const p0 = image[y-1][x];
-        const p1 = image[y-1][x+1];
-        const p2 = image[y][x+1];
-        const p3 = image[y+1][x+1];
-        const p4 = image[y+1][x];
-        const p5 = image[y+1][x-1];
-        const p6 = image[y][x-1];
-        const p7 = image[y-1][x-1];
-        const possibleCorner =
-            ((c_t > p1[1] || c_t > p5[1]) && (c_t > p3[1] || c_t > p7[1])) ||
-            ((ct < p1[1]  || ct < p5[1])  && (ct < p3[1]  || ct < p7[1]))  ;
+        float t = clamp(threshold, 0.0f, 1.0f);
+        float c = pixel.g;
+        float ct = c + t, c_t = c - t;
+
+        float p0 = pixelAtOffset(image, ivec2(0, 1)).g;
+        float p1 = pixelAtOffset(image, ivec2(1, 1)).g;
+        float p2 = pixelAtOffset(image, ivec2(1, 0)).g;
+        float p3 = pixelAtOffset(image, ivec2(1, -1)).g;
+        float p4 = pixelAtOffset(image, ivec2(0, -1)).g;
+        float p5 = pixelAtOffset(image, ivec2(-1, -1)).g;
+        float p6 = pixelAtOffset(image, ivec2(-1, 0)).g;
+        float p7 = pixelAtOffset(image, ivec2(-1, 1)).g;
+
+        bool possibleCorner =
+            ((c_t > p1 || c_t > p5) && (c_t > p3 || c_t > p7)) ||
+            ((ct < p1  || ct < p5)  && (ct < p3  || ct < p7))  ;
 
         if(possibleCorner) {
             let bright = 0, dark = 0, bc = 0, dc = 0;
 
-            if(c_t > p0[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p0[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p1[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p1[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p2[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p2[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p3[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p3[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p4[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p4[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p5[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p5[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p6[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p6[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
-            if(c_t > p7[1]) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
-            else { bc = 0; if(ct < p7[1]) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p0) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p0) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p1) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p1) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p2) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p2) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p3) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p3) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p4) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p4) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p5) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p5) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p6) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p6) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
+            if(c_t > p7) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
+            else { bc = 0; if(ct < p7) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
 
             if(bright < 5 && dark < 5) {
 
                 if(bc > 0 && bc < 5) do {
-                    if(c_t > p0[1])           bc += 1; else break;
-                    if(c_t > p1[1] && bc < 5) bc += 1; else break;
-                    if(c_t > p2[1] && bc < 5) bc += 1; else break;
-                    if(c_t > p3[1] && bc < 5) bc += 1; else break;
+                    if(c_t > p0)           bc += 1; else break;
+                    if(c_t > p1 && bc < 5) bc += 1; else break;
+                    if(c_t > p2 && bc < 5) bc += 1; else break;
+                    if(c_t > p3 && bc < 5) bc += 1; else break;
                 } while(false);
 
                 if(dc > 0 && dc < 5) do {
-                    if(ct < p0[1])           dc += 1; else break;
-                    if(ct < p1[1] && dc < 5) dc += 1; else break;
-                    if(ct < p2[1] && dc < 5) dc += 1; else break;
-                    if(ct < p3[1] && dc < 5) dc += 1; else break;
+                    if(ct < p0)           dc += 1; else break;
+                    if(ct < p1 && dc < 5) dc += 1; else break;
+                    if(ct < p2 && dc < 5) dc += 1; else break;
+                    if(ct < p3 && dc < 5) dc += 1; else break;
                 } while(false);
 
                 // got a corner!
                 if(bc >= 5 || dc >= 5)
-                    this.color(1, pixel[1], pixel[2], pixel[3]);
+                    color = vec4(1.0f, pixel.gba);
 
             }
             else {
                 // got a corner!
-                this.color(1, pixel[1], pixel[2], pixel[3]);
+                color = vec4(1.0f, pixel.gba);
             }
         }
     }
 }
+`;
 
 // compute corner score considering a
 // neighboring circumference of 16 pixels
-export function fastScore16(image, threshold)
+export const fastScore16 = (image, threshold) => `
+uniform sampler2D image;
+uniform float threshold;
+
+void main()
 {
-    const x = this.thread.x, y = this.thread.y;
-    const pixel = image[y][x];
-    const ifCorner = (pixel[0] > 0) ? 1.0 : 0.0;
+    vec4 pixel = currentPixel(image);
+    float ifCorner = step(1.0f, pixel.r);
+    float t = clamp(threshold, 0.0f, 1.0f);
+    float c = pixel.g;
+    float ct = c + t, c_t = c - t;
 
     // read neighbors
-    const t = Math.min(Math.max(0.0, threshold), 1.0);
-    const p0 = image[y-3][x];
-    const p1 = image[y-3][x+1];
-    const p2 = image[y-2][x+2];
-    const p3 = image[y-1][x+3];
-    const p4 = image[y][x+3];
-    const p5 = image[y+1][x+3];
-    const p6 = image[y+2][x+2];
-    const p7 = image[y+3][x+1];
-    const p8 = image[y+3][x];
-    const p9 = image[y+3][x-1];
-    const p10 = image[y+2][x-2];
-    const p11 = image[y+1][x-3];
-    const p12 = image[y][x-3];
-    const p13 = image[y-1][x-3];
-    const p14 = image[y-2][x-2];
-    const p15 = image[y-3][x-1];
-    const c = pixel[1];
-    const ct = c + t, c_t = c - t;
-    let bs = 0.0, ds = 0.0;
+    float p0 = pixelAtOffset(image, ivec2(0, 3)).g;
+    float p1 = pixelAtOffset(image, ivec2(1, 3)).g;
+    float p2 = pixelAtOffset(image, ivec2(2, 2)).g;
+    float p3 = pixelAtOffset(image, ivec2(3, 1)).g;
+    float p4 = pixelAtOffset(image, ivec2(3, 0)).g;
+    float p5 = pixelAtOffset(image, ivec2(3, -1)).g;
+    float p6 = pixelAtOffset(image, ivec2(2, -2)).g;
+    float p7 = pixelAtOffset(image, ivec2(1, -3)).g;
+    float p8 = pixelAtOffset(image, ivec2(0, -3)).g;
+    float p9 = pixelAtOffset(image, ivec2(-1, -3)).g;
+    float p10 = pixelAtOffset(image, ivec2(-2, -2)).g;
+    float p11 = pixelAtOffset(image, ivec2(-3, -1)).g;
+    float p12 = pixelAtOffset(image, ivec2(-3, 0)).g;
+    float p13 = pixelAtOffset(image, ivec2(-3, 1)).g;
+    float p14 = pixelAtOffset(image, ivec2(-2, 2)).g;
+    float p15 = pixelAtOffset(image, ivec2(-1, 3)).g;
 
     // read bright and dark pixels
-    if(c_t > p0[1])  bs += c_t - p0[1];  else if(ct < p0[1])  ds += p0[1] - ct;
-    if(c_t > p1[1])  bs += c_t - p1[1];  else if(ct < p1[1])  ds += p1[1] - ct;
-    if(c_t > p2[1])  bs += c_t - p2[1];  else if(ct < p2[1])  ds += p2[1] - ct;
-    if(c_t > p3[1])  bs += c_t - p3[1];  else if(ct < p3[1])  ds += p3[1] - ct;
-    if(c_t > p4[1])  bs += c_t - p4[1];  else if(ct < p4[1])  ds += p4[1] - ct;
-    if(c_t > p5[1])  bs += c_t - p5[1];  else if(ct < p5[1])  ds += p5[1] - ct;
-    if(c_t > p6[1])  bs += c_t - p6[1];  else if(ct < p6[1])  ds += p6[1] - ct;
-    if(c_t > p7[1])  bs += c_t - p7[1];  else if(ct < p7[1])  ds += p7[1] - ct;
-    if(c_t > p8[1])  bs += c_t - p8[1];  else if(ct < p8[1])  ds += p8[1] - ct;
-    if(c_t > p9[1])  bs += c_t - p9[1];  else if(ct < p9[1])  ds += p9[1] - ct;
-    if(c_t > p10[1]) bs += c_t - p10[1]; else if(ct < p10[1]) ds += p10[1] - ct;
-    if(c_t > p11[1]) bs += c_t - p11[1]; else if(ct < p11[1]) ds += p11[1] - ct;
-    if(c_t > p12[1]) bs += c_t - p12[1]; else if(ct < p12[1]) ds += p12[1] - ct;
-    if(c_t > p13[1]) bs += c_t - p13[1]; else if(ct < p13[1]) ds += p13[1] - ct;
-    if(c_t > p14[1]) bs += c_t - p14[1]; else if(ct < p14[1]) ds += p14[1] - ct;
-    if(c_t > p15[1]) bs += c_t - p15[1]; else if(ct < p15[1]) ds += p15[1] - ct;
+    float bs = 0.0f, ds = 0.0f;
+    bs += max(c_t - p0, 0.0f);  ds += max(p0 - ct, 0.0f);
+    bs += max(c_t - p1, 0.0f);  ds += max(p1 - ct, 0.0f);
+    bs += max(c_t - p2, 0.0f);  ds += max(p2 - ct, 0.0f);
+    bs += max(c_t - p3, 0.0f);  ds += max(p3 - ct, 0.0f);
+    bs += max(c_t - p4, 0.0f);  ds += max(p4 - ct, 0.0f);
+    bs += max(c_t - p5, 0.0f);  ds += max(p5 - ct, 0.0f);
+    bs += max(c_t - p6, 0.0f);  ds += max(p6 - ct, 0.0f);
+    bs += max(c_t - p7, 0.0f);  ds += max(p7 - ct, 0.0f);
+    bs += max(c_t - p8, 0.0f);  ds += max(p8 - ct, 0.0f);
+    bs += max(c_t - p9, 0.0f);  ds += max(p9 - ct, 0.0f);
+    bs += max(c_t - p10, 0.0f); ds += max(p10 - ct, 0.0f);
+    bs += max(c_t - p11, 0.0f); ds += max(p11 - ct, 0.0f);
+    bs += max(c_t - p12, 0.0f); ds += max(p12 - ct, 0.0f);
+    bs += max(c_t - p13, 0.0f); ds += max(p13 - ct, 0.0f);
+    bs += max(c_t - p14, 0.0f); ds += max(p14 - ct, 0.0f);
+    bs += max(c_t - p15, 0.0f); ds += max(p15 - ct, 0.0f);
 
     // corner score
-    const score = Math.max(bs, ds) / 16.0;
-    this.color(score * ifCorner, pixel[1], score, pixel[3]);
+    float score = max(bs, ds) / 16.0f;
+    color = vec4(score * ifCorner, pixel.g, score, pixel.a);
 }
+`;
 
 // compute corner score considering a
 // neighboring circumference of 12 pixels
-export function fastScore12(image, threshold)
+export const fastScore12 = (image, threshold) => `
+uniform sampler2D image;
+uniform float threshold;
+
+void main()
 {
-    const x = this.thread.x, y = this.thread.y;
-    const pixel = image[y][x];
-    const ifCorner = (pixel[0] > 0) ? 1.0 : 0.0;
+    vec4 pixel = currentPixel(image);
+    float ifCorner = step(1.0f, pixel.r);
+    float t = clamp(threshold, 0.0f, 1.0f);
+    float c = pixel.g;
+    float ct = c + t, c_t = c - t;
 
     // read neighbors
-    const t = Math.min(Math.max(0.0, threshold), 1.0);
-    const p0 = image[y-2][x];
-    const p1 = image[y-2][x+1];
-    const p2 = image[y-1][x+2];
-    const p3 = image[y][x+2];
-    const p4 = image[y+1][x+2];
-    const p5 = image[y+2][x+1];
-    const p6 = image[y+2][x];
-    const p7 = image[y+2][x-1];
-    const p8 = image[y+1][x-2];
-    const p9 = image[y][x-2];
-    const p10 = image[y-1][x-2];
-    const p11 = image[y-2][x-1];
-    const c = pixel[1];
-    const ct = c + t, c_t = c - t;
-    let bs = 0.0, ds = 0.0;
+    float p0 = pixelAtOffset(image, ivec2(0, 2)).g;
+    float p1 = pixelAtOffset(image, ivec2(1, 2)).g;
+    float p2 = pixelAtOffset(image, ivec2(2, 1)).g;
+    float p3 = pixelAtOffset(image, ivec2(2, 0)).g;
+    float p4 = pixelAtOffset(image, ivec2(2, -1)).g;
+    float p5 = pixelAtOffset(image, ivec2(1, -2)).g;
+    float p6 = pixelAtOffset(image, ivec2(0, -2)).g;
+    float p7 = pixelAtOffset(image, ivec2(-1, -2)).g;
+    float p8 = pixelAtOffset(image, ivec2(-2, -1)).g;
+    float p9 = pixelAtOffset(image, ivec2(-2, 0)).g;
+    float p10 = pixelAtOffset(image, ivec2(-2, 1)).g;
+    float p11 = pixelAtOffset(image, ivec2(-1, 2)).g;
 
     // read bright and dark pixels
-    if(c_t > p0[1])  bs += c_t - p0[1];  else if(ct < p0[1])  ds += p0[1] - ct;
-    if(c_t > p1[1])  bs += c_t - p1[1];  else if(ct < p1[1])  ds += p1[1] - ct;
-    if(c_t > p2[1])  bs += c_t - p2[1];  else if(ct < p2[1])  ds += p2[1] - ct;
-    if(c_t > p3[1])  bs += c_t - p3[1];  else if(ct < p3[1])  ds += p3[1] - ct;
-    if(c_t > p4[1])  bs += c_t - p4[1];  else if(ct < p4[1])  ds += p4[1] - ct;
-    if(c_t > p5[1])  bs += c_t - p5[1];  else if(ct < p5[1])  ds += p5[1] - ct;
-    if(c_t > p6[1])  bs += c_t - p6[1];  else if(ct < p6[1])  ds += p6[1] - ct;
-    if(c_t > p7[1])  bs += c_t - p7[1];  else if(ct < p7[1])  ds += p7[1] - ct;
-    if(c_t > p8[1])  bs += c_t - p8[1];  else if(ct < p8[1])  ds += p8[1] - ct;
-    if(c_t > p9[1])  bs += c_t - p9[1];  else if(ct < p9[1])  ds += p9[1] - ct;
-    if(c_t > p10[1]) bs += c_t - p10[1]; else if(ct < p10[1]) ds += p10[1] - ct;
-    if(c_t > p11[1]) bs += c_t - p11[1]; else if(ct < p11[1]) ds += p11[1] - ct;
+    float bs = 0.0f, ds = 0.0f;
+    bs += max(c_t - p0, 0.0f);  ds += max(p0 - ct, 0.0f);
+    bs += max(c_t - p1, 0.0f);  ds += max(p1 - ct, 0.0f);
+    bs += max(c_t - p2, 0.0f);  ds += max(p2 - ct, 0.0f);
+    bs += max(c_t - p3, 0.0f);  ds += max(p3 - ct, 0.0f);
+    bs += max(c_t - p4, 0.0f);  ds += max(p4 - ct, 0.0f);
+    bs += max(c_t - p5, 0.0f);  ds += max(p5 - ct, 0.0f);
+    bs += max(c_t - p6, 0.0f);  ds += max(p6 - ct, 0.0f);
+    bs += max(c_t - p7, 0.0f);  ds += max(p7 - ct, 0.0f);
+    bs += max(c_t - p8, 0.0f);  ds += max(p8 - ct, 0.0f);
+    bs += max(c_t - p9, 0.0f);  ds += max(p9 - ct, 0.0f);
+    bs += max(c_t - p10, 0.0f); ds += max(p10 - ct, 0.0f);
+    bs += max(c_t - p11, 0.0f); ds += max(p11 - ct, 0.0f);
 
     // corner score
-    const score = Math.max(bs, ds) / 12.0;
-    this.color(score * ifCorner, pixel[1], score, pixel[3]);
+    float score = max(bs, ds) / 12.0f;
+    color = vec4(score * ifCorner, pixel.g, score, pixel.a);
 }
+`;
 
 // compute corner score considering a
 // neighboring circumference of 8 pixels
-export function fastScore8(image, threshold)
+export const fastScore8 = (image, threshold) => `
+uniform sampler2D image;
+uniform float threshold;
+
+void main()
 {
-    const x = this.thread.x, y = this.thread.y;
-    const pixel = image[y][x];
-    const ifCorner = (pixel[0] > 0) ? 1.0 : 0.0;
+    vec4 pixel = currentPixel(image);
+    float ifCorner = step(1.0f, pixel.r);
+    float t = clamp(threshold, 0.0f, 1.0f);
+    float c = pixel.g;
+    float ct = c + t, c_t = c - t;
 
     // read neighbors
-    const t = Math.min(Math.max(0.0, threshold), 1.0);
-    const p0 = image[y-1][x];
-    const p1 = image[y-1][x+1];
-    const p2 = image[y][x+1];
-    const p3 = image[y+1][x+1];
-    const p4 = image[y+1][x];
-    const p5 = image[y+1][x-1];
-    const p6 = image[y][x-1];
-    const p7 = image[y-1][x-1];
-    const c = pixel[1];
-    const ct = c + t, c_t = c - t;
-    let bs = 0.0, ds = 0.0;
+    float p0 = pixelAtOffset(image, ivec2(0, 1)).g;
+    float p1 = pixelAtOffset(image, ivec2(1, 1)).g;
+    float p2 = pixelAtOffset(image, ivec2(1, 0)).g;
+    float p3 = pixelAtOffset(image, ivec2(1, -1)).g;
+    float p4 = pixelAtOffset(image, ivec2(0, -1)).g;
+    float p5 = pixelAtOffset(image, ivec2(-1, -1)).g;
+    float p6 = pixelAtOffset(image, ivec2(-1, 0)).g;
+    float p7 = pixelAtOffset(image, ivec2(-1, 1)).g;
 
     // read bright and dark pixels
-    if(c_t > p0[1]) bs += c_t - p0[1]; else if(ct < p0[1]) ds += p0[1] - ct;
-    if(c_t > p1[1]) bs += c_t - p1[1]; else if(ct < p1[1]) ds += p1[1] - ct;
-    if(c_t > p2[1]) bs += c_t - p2[1]; else if(ct < p2[1]) ds += p2[1] - ct;
-    if(c_t > p3[1]) bs += c_t - p3[1]; else if(ct < p3[1]) ds += p3[1] - ct;
-    if(c_t > p4[1]) bs += c_t - p4[1]; else if(ct < p4[1]) ds += p4[1] - ct;
-    if(c_t > p5[1]) bs += c_t - p5[1]; else if(ct < p5[1]) ds += p5[1] - ct;
-    if(c_t > p6[1]) bs += c_t - p6[1]; else if(ct < p6[1]) ds += p6[1] - ct;
-    if(c_t > p7[1]) bs += c_t - p7[1]; else if(ct < p7[1]) ds += p7[1] - ct;
+    float bs = 0.0f, ds = 0.0f;
+    bs += max(c_t - p0, 0.0f); ds += max(p0 - ct, 0.0f);
+    bs += max(c_t - p1, 0.0f); ds += max(p1 - ct, 0.0f);
+    bs += max(c_t - p2, 0.0f); ds += max(p2 - ct, 0.0f);
+    bs += max(c_t - p3, 0.0f); ds += max(p3 - ct, 0.0f);
+    bs += max(c_t - p4, 0.0f); ds += max(p4 - ct, 0.0f);
+    bs += max(c_t - p5, 0.0f); ds += max(p5 - ct, 0.0f);
+    bs += max(c_t - p6, 0.0f); ds += max(p6 - ct, 0.0f);
+    bs += max(c_t - p7, 0.0f); ds += max(p7 - ct, 0.0f);
 
     // corner score
-    const score = Math.max(bs, ds) / 8.0;
-    this.color(score * ifCorner, pixel[1], score, pixel[3]);
+    float score = max(bs, ds) / 8.0f;
+    color = vec4(score * ifCorner, pixel.g, score, pixel.a);
 }
+`;
 
 // non-maximum suppression on 8-neighborhood based
 // on the corner score stored on the red channel
-export function fastSuppression(image)
+export const fastSuppression = image => `
+uniform sampler2D image;
+
+void main()
 {
-    const x = this.thread.x, y = this.thread.y;
-    const pixel = image[y][x];
-    const score = pixel[0]; // corner score
+    // 8-neighborhood
+    float p0 = pixelAtOffset(image, ivec2(0, 1)).r;
+    float p1 = pixelAtOffset(image, ivec2(1, 1)).r;
+    float p2 = pixelAtOffset(image, ivec2(1, 0)).r;
+    float p3 = pixelAtOffset(image, ivec2(1, -1)).r;
+    float p4 = pixelAtOffset(image, ivec2(0, -1)).r;
+    float p5 = pixelAtOffset(image, ivec2(-1, -1)).r;
+    float p6 = pixelAtOffset(image, ivec2(-1, 0)).r;
+    float p7 = pixelAtOffset(image, ivec2(-1, 1)).r;
 
-    // discard corner
-    this.color(0, pixel[1], pixel[2], pixel[3]);
+    // maximum score
+    float m = max(
+        max(max(p0, p1), max(p2, p3)),
+        max(max(p4, p5), max(p6, p7))
+    );
 
-    if(
-        score > 0 &&
-        x > 0 && x < this.constants.width - 1 &&
-        y > 0 && y < this.constants.height - 1
-    ) {
-        const n0 = image[y-1][x]; // 8-neighbors
-        const n1 = image[y-1][x+1];
-        const n2 = image[y][x+1];
-        const n3 = image[y+1][x+1];
-        const n4 = image[y+1][x];
-        const n5 = image[y+1][x-1];
-        const n6 = image[y][x-1];
-        const n7 = image[y-1][x-1];
-
-        // compare my score to those of my neighbors
-        if(score >= n0[0])
-         if(score >= n2[0])
-          if(score >= n4[0])
-           if(score >= n6[0])
-            if(score >= n1[0])
-             if(score >= n3[0])
-              if(score >= n5[0])
-               if(score >= n7[0])
-                this.color(score, pixel[1], pixel[2], pixel[3]); // restore corner
-    }
+    // non-maximum suppression
+    vec4 pixel = currentPixel(image);
+    float score = pixel.r >= m ? pixel.r : 0.0f;
+    color = vec4(score, pixel.gba);
 }
+`;
 
 // FAST-9,16 implementation based on Machine Learning
 // Adapted from New BSD Licensed fast_9.c code found at
 // https://github.com/edrosten/fast-C-src
-export function fast9ml(image, threshold)
+export const fast9ml = (image, threshold) => `
+uniform sampler2D image;
+uniform float threshold;
+
+void main()
 {
-    const x = this.thread.x, y = this.thread.y;
-    const pixel = image[y][x];
+    vec4 pixel = currentPixel(image);
 
     // assume it's not a corner
-    this.color(0, pixel[1], pixel[2], pixel[3]);
+    color = vec4(0.0f, pixel.gba);
 
+    // outside bounds?
+    ivec2 thread = threadLocation();
+    ivec2 size = outputSize();
+    if(x < 3 || y < 3 || x >= size.x - 3 || y >= size.y - 3)
+        return;
+
+    // is it a corner?
+    float t = clamp(threshold, 0.0f, 1.0f);
+    float c = pixel.g;
+    float ct = c + t, c_t = c - t;
+    float p0 = pixelAtOffset(image, ivec2(0, 3)).g;
+    float p4 = pixelAtOffset(image, ivec2(3, 0)).g;
+    float p8 = pixelAtOffset(image, ivec2(0, -3)).g;
+    float p12 = pixelAtOffset(image, ivec2(-3, 0)).g;
+
+    // possible corner?
     if(
-        x >= 3 && x < this.constants.width - 3 &&
-        y >= 3 && y < this.constants.height - 3
+        ((c_t > p0 || c_t > p8) && (c_t > p4 || c_t > p12)) ||
+        ((ct < p0  || ct < p8)  && (ct < p4  || ct < p12))
     ) {
-        const t = Math.min(Math.max(0.0, threshold), 1.0);
-        const c = pixel[1];
-        const ct = c + t, c_t = c - t;
-        const p0 = image[y-3][x];
-        const p4 = image[y][x+3];
-        const p8 = image[y+3][x];
-        const p12 = image[y][x-3];
+        float p1 = pixelAtOffset(image, ivec2(1, 3)).g;
+        float p2 = pixelAtOffset(image, ivec2(2, 2)).g;
+        float p3 = pixelAtOffset(image, ivec2(3, 1)).g;
+        float p5 = pixelAtOffset(image, ivec2(3, -1)).g;
+        float p6 = pixelAtOffset(image, ivec2(2, -2)).g;
+        float p7 = pixelAtOffset(image, ivec2(1, -3)).g;
+        float p9 = pixelAtOffset(image, ivec2(-1, -3)).g;
+        float p10 = pixelAtOffset(image, ivec2(-2, -2)).g;
+        float p11 = pixelAtOffset(image, ivec2(-3, -1)).g;
+        float p13 = pixelAtOffset(image, ivec2(-3, 1)).g;
+        float p14 = pixelAtOffset(image, ivec2(-2, 2)).g;
+        float p15 = pixelAtOffset(image, ivec2(-1, 3)).g;
 
-        if(
-            // possible corner?
-            ((c_t > p0[1] || c_t > p8[1]) && (c_t > p4[1] || c_t > p12[1])) ||
-            ((ct < p0[1]  || ct < p8[1])  && (ct < p4[1]  || ct < p12[1]))
-        ) {
-        const p1 = image[y-3][x+1];
-        const p2 = image[y-2][x+2];
-        const p3 = image[y-1][x+3];
-        const p5 = image[y+1][x+3];
-        const p6 = image[y+2][x+2];
-        const p7 = image[y+3][x+1];
-        const p9 = image[y+3][x-1];
-        const p10 = image[y+2][x-2];
-        const p11 = image[y+1][x-3];
-        const p13 = image[y-1][x-3];
-        const p14 = image[y-2][x-2];
-        const p15 = image[y-3][x-1];
-        if(p0[1] > ct)
-         if(p1[1] > ct)
-          if(p2[1] > ct)
-           if(p3[1] > ct)
-            if(p4[1] > ct)
-             if(p5[1] > ct)
-              if(p6[1] > ct)
-               if(p7[1] > ct)
-                if(p8[1] > ct)
-                 this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+        if(p0 > ct)
+         if(p1 > ct)
+          if(p2 > ct)
+           if(p3 > ct)
+            if(p4 > ct)
+             if(p5 > ct)
+              if(p6 > ct)
+               if(p7 > ct)
+                if(p8 > ct)
+                 color = vec4(1.0f, pixel.gba);
                 else
-                 if(p15[1] > ct)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p15 > ct)
+                  color = vec4(1.0f, pixel.gba);
                  else
                   ;
-               else if(p7[1] < c_t)
-                if(p14[1] > ct)
-                 if(p15[1] > ct)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               else if(p7 < c_t)
+                if(p14 > ct)
+                 if(p15 > ct)
+                  color = vec4(1.0f, pixel.gba);
                  else
                   ;
-                else if(p14[1] < c_t)
-                 if(p8[1] < c_t)
-                  if(p9[1] < c_t)
-                   if(p10[1] < c_t)
-                    if(p11[1] < c_t)
-                     if(p12[1] < c_t)
-                      if(p13[1] < c_t)
-                       if(p15[1] < c_t)
-                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                else if(p14 < c_t)
+                 if(p8 < c_t)
+                  if(p9 < c_t)
+                   if(p10 < c_t)
+                    if(p11 < c_t)
+                     if(p12 < c_t)
+                      if(p13 < c_t)
+                       if(p15 < c_t)
+                        color = vec4(1.0f, pixel.gba);
                        else
                         ;
                       else
@@ -583,29 +618,29 @@ export function fast9ml(image, threshold)
                 else
                  ;
                else
-                if(p14[1] > ct)
-                 if(p15[1] > ct)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p14 > ct)
+                 if(p15 > ct)
+                  color = vec4(1.0f, pixel.gba);
                  else
                   ;
                 else
                  ;
-              else if(p6[1] < c_t)
-               if(p15[1] > ct)
-                if(p13[1] > ct)
-                 if(p14[1] > ct)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+              else if(p6 < c_t)
+               if(p15 > ct)
+                if(p13 > ct)
+                 if(p14 > ct)
+                  color = vec4(1.0f, pixel.gba);
                  else
                   ;
-                else if(p13[1] < c_t)
-                 if(p7[1] < c_t)
-                  if(p8[1] < c_t)
-                   if(p9[1] < c_t)
-                    if(p10[1] < c_t)
-                     if(p11[1] < c_t)
-                      if(p12[1] < c_t)
-                       if(p14[1] < c_t)
-                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                else if(p13 < c_t)
+                 if(p7 < c_t)
+                  if(p8 < c_t)
+                   if(p9 < c_t)
+                    if(p10 < c_t)
+                     if(p11 < c_t)
+                      if(p12 < c_t)
+                       if(p14 < c_t)
+                        color = vec4(1.0f, pixel.gba);
                        else
                         ;
                       else
@@ -623,15 +658,15 @@ export function fast9ml(image, threshold)
                 else
                  ;
                else
-                if(p7[1] < c_t)
-                 if(p8[1] < c_t)
-                  if(p9[1] < c_t)
-                   if(p10[1] < c_t)
-                    if(p11[1] < c_t)
-                     if(p12[1] < c_t)
-                      if(p13[1] < c_t)
-                       if(p14[1] < c_t)
-                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p7 < c_t)
+                 if(p8 < c_t)
+                  if(p9 < c_t)
+                   if(p10 < c_t)
+                    if(p11 < c_t)
+                     if(p12 < c_t)
+                      if(p13 < c_t)
+                       if(p14 < c_t)
+                        color = vec4(1.0f, pixel.gba);
                        else
                         ;
                       else
@@ -649,24 +684,24 @@ export function fast9ml(image, threshold)
                 else
                  ;
               else
-               if(p13[1] > ct)
-                if(p14[1] > ct)
-                 if(p15[1] > ct)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               if(p13 > ct)
+                if(p14 > ct)
+                 if(p15 > ct)
+                  color = vec4(1.0f, pixel.gba);
                  else
                   ;
                 else
                  ;
-               else if(p13[1] < c_t)
-                if(p7[1] < c_t)
-                 if(p8[1] < c_t)
-                  if(p9[1] < c_t)
-                   if(p10[1] < c_t)
-                    if(p11[1] < c_t)
-                     if(p12[1] < c_t)
-                      if(p14[1] < c_t)
-                       if(p15[1] < c_t)
-                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               else if(p13 < c_t)
+                if(p7 < c_t)
+                 if(p8 < c_t)
+                  if(p9 < c_t)
+                   if(p10 < c_t)
+                    if(p11 < c_t)
+                     if(p12 < c_t)
+                      if(p14 < c_t)
+                       if(p15 < c_t)
+                        color = vec4(1.0f, pixel.gba);
                        else
                         ;
                       else
@@ -685,20 +720,20 @@ export function fast9ml(image, threshold)
                  ;
                else
                 ;
-             else if(p5[1] < c_t)
-              if(p14[1] > ct)
-               if(p12[1] > ct)
-                if(p13[1] > ct)
-                 if(p15[1] > ct)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+             else if(p5 < c_t)
+              if(p14 > ct)
+               if(p12 > ct)
+                if(p13 > ct)
+                 if(p15 > ct)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    if(p8[1] > ct)
-                     if(p9[1] > ct)
-                      if(p10[1] > ct)
-                       if(p11[1] > ct)
-                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    if(p8 > ct)
+                     if(p9 > ct)
+                      if(p10 > ct)
+                       if(p11 > ct)
+                        color = vec4(1.0f, pixel.gba);
                        else
                         ;
                       else
@@ -713,15 +748,15 @@ export function fast9ml(image, threshold)
                    ;
                 else
                  ;
-               else if(p12[1] < c_t)
-                if(p6[1] < c_t)
-                 if(p7[1] < c_t)
-                  if(p8[1] < c_t)
-                   if(p9[1] < c_t)
-                    if(p10[1] < c_t)
-                     if(p11[1] < c_t)
-                      if(p13[1] < c_t)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               else if(p12 < c_t)
+                if(p6 < c_t)
+                 if(p7 < c_t)
+                  if(p8 < c_t)
+                   if(p9 < c_t)
+                    if(p10 < c_t)
+                     if(p11 < c_t)
+                      if(p13 < c_t)
+                       color = vec4(1.0f, pixel.gba);
                       else
                        ;
                      else
@@ -738,19 +773,19 @@ export function fast9ml(image, threshold)
                  ;
                else
                 ;
-              else if(p14[1] < c_t)
-               if(p7[1] < c_t)
-                if(p8[1] < c_t)
-                 if(p9[1] < c_t)
-                  if(p10[1] < c_t)
-                   if(p11[1] < c_t)
-                    if(p12[1] < c_t)
-                     if(p13[1] < c_t)
-                      if(p6[1] < c_t)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+              else if(p14 < c_t)
+               if(p7 < c_t)
+                if(p8 < c_t)
+                 if(p9 < c_t)
+                  if(p10 < c_t)
+                   if(p11 < c_t)
+                    if(p12 < c_t)
+                     if(p13 < c_t)
+                      if(p6 < c_t)
+                       color = vec4(1.0f, pixel.gba);
                       else
-                       if(p15[1] < c_t)
-                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                       if(p15 < c_t)
+                        color = vec4(1.0f, pixel.gba);
                        else
                         ;
                      else
@@ -768,15 +803,15 @@ export function fast9ml(image, threshold)
                else
                 ;
               else
-               if(p6[1] < c_t)
-                if(p7[1] < c_t)
-                 if(p8[1] < c_t)
-                  if(p9[1] < c_t)
-                   if(p10[1] < c_t)
-                    if(p11[1] < c_t)
-                     if(p12[1] < c_t)
-                      if(p13[1] < c_t)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               if(p6 < c_t)
+                if(p7 < c_t)
+                 if(p8 < c_t)
+                  if(p9 < c_t)
+                   if(p10 < c_t)
+                    if(p11 < c_t)
+                     if(p12 < c_t)
+                      if(p13 < c_t)
+                       color = vec4(1.0f, pixel.gba);
                       else
                        ;
                      else
@@ -794,19 +829,19 @@ export function fast9ml(image, threshold)
                else
                 ;
              else
-              if(p12[1] > ct)
-               if(p13[1] > ct)
-                if(p14[1] > ct)
-                 if(p15[1] > ct)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+              if(p12 > ct)
+               if(p13 > ct)
+                if(p14 > ct)
+                 if(p15 > ct)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    if(p8[1] > ct)
-                     if(p9[1] > ct)
-                      if(p10[1] > ct)
-                       if(p11[1] > ct)
-                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    if(p8 > ct)
+                     if(p9 > ct)
+                      if(p10 > ct)
+                       if(p11 > ct)
+                        color = vec4(1.0f, pixel.gba);
                        else
                         ;
                       else
@@ -823,19 +858,19 @@ export function fast9ml(image, threshold)
                  ;
                else
                 ;
-              else if(p12[1] < c_t)
-               if(p7[1] < c_t)
-                if(p8[1] < c_t)
-                 if(p9[1] < c_t)
-                  if(p10[1] < c_t)
-                   if(p11[1] < c_t)
-                    if(p13[1] < c_t)
-                     if(p14[1] < c_t)
-                      if(p6[1] < c_t)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+              else if(p12 < c_t)
+               if(p7 < c_t)
+                if(p8 < c_t)
+                 if(p9 < c_t)
+                  if(p10 < c_t)
+                   if(p11 < c_t)
+                    if(p13 < c_t)
+                     if(p14 < c_t)
+                      if(p6 < c_t)
+                       color = vec4(1.0f, pixel.gba);
                       else
-                       if(p15[1] < c_t)
-                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                       if(p15 < c_t)
+                        color = vec4(1.0f, pixel.gba);
                        else
                         ;
                      else
@@ -854,20 +889,20 @@ export function fast9ml(image, threshold)
                 ;
               else
                ;
-            else if(p4[1] < c_t)
-             if(p13[1] > ct)
-              if(p11[1] > ct)
-               if(p12[1] > ct)
-                if(p14[1] > ct)
-                 if(p15[1] > ct)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+            else if(p4 < c_t)
+             if(p13 > ct)
+              if(p11 > ct)
+               if(p12 > ct)
+                if(p14 > ct)
+                 if(p15 > ct)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    if(p8[1] > ct)
-                     if(p9[1] > ct)
-                      if(p10[1] > ct)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    if(p8 > ct)
+                     if(p9 > ct)
+                      if(p10 > ct)
+                       color = vec4(1.0f, pixel.gba);
                       else
                        ;
                      else
@@ -879,13 +914,13 @@ export function fast9ml(image, threshold)
                   else
                    ;
                 else
-                 if(p5[1] > ct)
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    if(p8[1] > ct)
-                     if(p9[1] > ct)
-                      if(p10[1] > ct)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p5 > ct)
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    if(p8 > ct)
+                     if(p9 > ct)
+                      if(p10 > ct)
+                       color = vec4(1.0f, pixel.gba);
                       else
                        ;
                      else
@@ -900,15 +935,15 @@ export function fast9ml(image, threshold)
                   ;
                else
                 ;
-              else if(p11[1] < c_t)
-               if(p5[1] < c_t)
-                if(p6[1] < c_t)
-                 if(p7[1] < c_t)
-                  if(p8[1] < c_t)
-                   if(p9[1] < c_t)
-                    if(p10[1] < c_t)
-                     if(p12[1] < c_t)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+              else if(p11 < c_t)
+               if(p5 < c_t)
+                if(p6 < c_t)
+                 if(p7 < c_t)
+                  if(p8 < c_t)
+                   if(p9 < c_t)
+                    if(p10 < c_t)
+                     if(p12 < c_t)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -925,25 +960,25 @@ export function fast9ml(image, threshold)
                 ;
               else
                ;
-             else if(p13[1] < c_t)
-              if(p7[1] < c_t)
-               if(p8[1] < c_t)
-                if(p9[1] < c_t)
-                 if(p10[1] < c_t)
-                  if(p11[1] < c_t)
-                   if(p12[1] < c_t)
-                    if(p6[1] < c_t)
-                     if(p5[1] < c_t)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+             else if(p13 < c_t)
+              if(p7 < c_t)
+               if(p8 < c_t)
+                if(p9 < c_t)
+                 if(p10 < c_t)
+                  if(p11 < c_t)
+                   if(p12 < c_t)
+                    if(p6 < c_t)
+                     if(p5 < c_t)
+                      color = vec4(1.0f, pixel.gba);
                      else
-                      if(p14[1] < c_t)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      if(p14 < c_t)
+                       color = vec4(1.0f, pixel.gba);
                       else
                        ;
                     else
-                     if(p14[1] < c_t)
-                      if(p15[1] < c_t)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     if(p14 < c_t)
+                      if(p15 < c_t)
+                       color = vec4(1.0f, pixel.gba);
                       else
                        ;
                      else
@@ -961,15 +996,15 @@ export function fast9ml(image, threshold)
               else
                ;
              else
-              if(p5[1] < c_t)
-               if(p6[1] < c_t)
-                if(p7[1] < c_t)
-                 if(p8[1] < c_t)
-                  if(p9[1] < c_t)
-                   if(p10[1] < c_t)
-                    if(p11[1] < c_t)
-                     if(p12[1] < c_t)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+              if(p5 < c_t)
+               if(p6 < c_t)
+                if(p7 < c_t)
+                 if(p8 < c_t)
+                  if(p9 < c_t)
+                   if(p10 < c_t)
+                    if(p11 < c_t)
+                     if(p12 < c_t)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -987,19 +1022,19 @@ export function fast9ml(image, threshold)
               else
                ;
             else
-             if(p11[1] > ct)
-              if(p12[1] > ct)
-               if(p13[1] > ct)
-                if(p14[1] > ct)
-                 if(p15[1] > ct)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+             if(p11 > ct)
+              if(p12 > ct)
+               if(p13 > ct)
+                if(p14 > ct)
+                 if(p15 > ct)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    if(p8[1] > ct)
-                     if(p9[1] > ct)
-                      if(p10[1] > ct)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    if(p8 > ct)
+                     if(p9 > ct)
+                      if(p10 > ct)
+                       color = vec4(1.0f, pixel.gba);
                       else
                        ;
                      else
@@ -1011,13 +1046,13 @@ export function fast9ml(image, threshold)
                   else
                    ;
                 else
-                 if(p5[1] > ct)
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    if(p8[1] > ct)
-                     if(p9[1] > ct)
-                      if(p10[1] > ct)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p5 > ct)
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    if(p8 > ct)
+                     if(p9 > ct)
+                      if(p10 > ct)
+                       color = vec4(1.0f, pixel.gba);
                       else
                        ;
                      else
@@ -1034,25 +1069,25 @@ export function fast9ml(image, threshold)
                 ;
               else
                ;
-             else if(p11[1] < c_t)
-              if(p7[1] < c_t)
-               if(p8[1] < c_t)
-                if(p9[1] < c_t)
-                 if(p10[1] < c_t)
-                  if(p12[1] < c_t)
-                   if(p13[1] < c_t)
-                    if(p6[1] < c_t)
-                     if(p5[1] < c_t)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+             else if(p11 < c_t)
+              if(p7 < c_t)
+               if(p8 < c_t)
+                if(p9 < c_t)
+                 if(p10 < c_t)
+                  if(p12 < c_t)
+                   if(p13 < c_t)
+                    if(p6 < c_t)
+                     if(p5 < c_t)
+                      color = vec4(1.0f, pixel.gba);
                      else
-                      if(p14[1] < c_t)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      if(p14 < c_t)
+                       color = vec4(1.0f, pixel.gba);
                       else
                        ;
                     else
-                     if(p14[1] < c_t)
-                      if(p15[1] < c_t)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     if(p14 < c_t)
+                      if(p15 < c_t)
+                       color = vec4(1.0f, pixel.gba);
                       else
                        ;
                      else
@@ -1071,20 +1106,20 @@ export function fast9ml(image, threshold)
                ;
              else
               ;
-           else if(p3[1] < c_t)
-            if(p10[1] > ct)
-             if(p11[1] > ct)
-              if(p12[1] > ct)
-               if(p13[1] > ct)
-                if(p14[1] > ct)
-                 if(p15[1] > ct)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+           else if(p3 < c_t)
+            if(p10 > ct)
+             if(p11 > ct)
+              if(p12 > ct)
+               if(p13 > ct)
+                if(p14 > ct)
+                 if(p15 > ct)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    if(p8[1] > ct)
-                     if(p9[1] > ct)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    if(p8 > ct)
+                     if(p9 > ct)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -1094,12 +1129,12 @@ export function fast9ml(image, threshold)
                   else
                    ;
                 else
-                 if(p5[1] > ct)
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    if(p8[1] > ct)
-                     if(p9[1] > ct)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p5 > ct)
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    if(p8 > ct)
+                     if(p9 > ct)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -1111,13 +1146,13 @@ export function fast9ml(image, threshold)
                  else
                   ;
                else
-                if(p4[1] > ct)
-                 if(p5[1] > ct)
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    if(p8[1] > ct)
-                     if(p9[1] > ct)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p4 > ct)
+                 if(p5 > ct)
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    if(p8 > ct)
+                     if(p9 > ct)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -1134,28 +1169,28 @@ export function fast9ml(image, threshold)
                ;
              else
               ;
-            else if(p10[1] < c_t)
-             if(p7[1] < c_t)
-              if(p8[1] < c_t)
-               if(p9[1] < c_t)
-                if(p11[1] < c_t)
-                 if(p6[1] < c_t)
-                  if(p5[1] < c_t)
-                   if(p4[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+            else if(p10 < c_t)
+             if(p7 < c_t)
+              if(p8 < c_t)
+               if(p9 < c_t)
+                if(p11 < c_t)
+                 if(p6 < c_t)
+                  if(p5 < c_t)
+                   if(p4 < c_t)
+                    color = vec4(1.0f, pixel.gba);
                    else
-                    if(p12[1] < c_t)
-                     if(p13[1] < c_t)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    if(p12 < c_t)
+                     if(p13 < c_t)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
                      ;
                   else
-                   if(p12[1] < c_t)
-                    if(p13[1] < c_t)
-                     if(p14[1] < c_t)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   if(p12 < c_t)
+                    if(p13 < c_t)
+                     if(p14 < c_t)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -1163,11 +1198,11 @@ export function fast9ml(image, threshold)
                    else
                     ;
                  else
-                  if(p12[1] < c_t)
-                   if(p13[1] < c_t)
-                    if(p14[1] < c_t)
-                     if(p15[1] < c_t)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p12 < c_t)
+                   if(p13 < c_t)
+                    if(p14 < c_t)
+                     if(p15 < c_t)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -1187,19 +1222,19 @@ export function fast9ml(image, threshold)
             else
              ;
            else
-            if(p10[1] > ct)
-             if(p11[1] > ct)
-              if(p12[1] > ct)
-               if(p13[1] > ct)
-                if(p14[1] > ct)
-                 if(p15[1] > ct)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+            if(p10 > ct)
+             if(p11 > ct)
+              if(p12 > ct)
+               if(p13 > ct)
+                if(p14 > ct)
+                 if(p15 > ct)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    if(p8[1] > ct)
-                     if(p9[1] > ct)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    if(p8 > ct)
+                     if(p9 > ct)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -1209,12 +1244,12 @@ export function fast9ml(image, threshold)
                   else
                    ;
                 else
-                 if(p5[1] > ct)
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    if(p8[1] > ct)
-                     if(p9[1] > ct)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p5 > ct)
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    if(p8 > ct)
+                     if(p9 > ct)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -1226,13 +1261,13 @@ export function fast9ml(image, threshold)
                  else
                   ;
                else
-                if(p4[1] > ct)
-                 if(p5[1] > ct)
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    if(p8[1] > ct)
-                     if(p9[1] > ct)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p4 > ct)
+                 if(p5 > ct)
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    if(p8 > ct)
+                     if(p9 > ct)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -1249,34 +1284,34 @@ export function fast9ml(image, threshold)
                ;
              else
               ;
-            else if(p10[1] < c_t)
-             if(p7[1] < c_t)
-              if(p8[1] < c_t)
-               if(p9[1] < c_t)
-                if(p11[1] < c_t)
-                 if(p12[1] < c_t)
-                  if(p6[1] < c_t)
-                   if(p5[1] < c_t)
-                    if(p4[1] < c_t)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+            else if(p10 < c_t)
+             if(p7 < c_t)
+              if(p8 < c_t)
+               if(p9 < c_t)
+                if(p11 < c_t)
+                 if(p12 < c_t)
+                  if(p6 < c_t)
+                   if(p5 < c_t)
+                    if(p4 < c_t)
+                     color = vec4(1.0f, pixel.gba);
                     else
-                     if(p13[1] < c_t)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     if(p13 < c_t)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                    else
-                    if(p13[1] < c_t)
-                     if(p14[1] < c_t)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    if(p13 < c_t)
+                     if(p14 < c_t)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
                      ;
                   else
-                   if(p13[1] < c_t)
-                    if(p14[1] < c_t)
-                     if(p15[1] < c_t)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   if(p13 < c_t)
+                    if(p14 < c_t)
+                     if(p15 < c_t)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -1295,20 +1330,20 @@ export function fast9ml(image, threshold)
               ;
             else
              ;
-          else if(p2[1] < c_t)
-           if(p9[1] > ct)
-            if(p10[1] > ct)
-             if(p11[1] > ct)
-              if(p12[1] > ct)
-               if(p13[1] > ct)
-                if(p14[1] > ct)
-                 if(p15[1] > ct)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+          else if(p2 < c_t)
+           if(p9 > ct)
+            if(p10 > ct)
+             if(p11 > ct)
+              if(p12 > ct)
+               if(p13 > ct)
+                if(p14 > ct)
+                 if(p15 > ct)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    if(p8[1] > ct)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    if(p8 > ct)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -1316,11 +1351,11 @@ export function fast9ml(image, threshold)
                   else
                    ;
                 else
-                 if(p5[1] > ct)
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    if(p8[1] > ct)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p5 > ct)
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    if(p8 > ct)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -1330,12 +1365,12 @@ export function fast9ml(image, threshold)
                  else
                   ;
                else
-                if(p4[1] > ct)
-                 if(p5[1] > ct)
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    if(p8[1] > ct)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p4 > ct)
+                 if(p5 > ct)
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    if(p8 > ct)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -1347,13 +1382,13 @@ export function fast9ml(image, threshold)
                 else
                  ;
               else
-               if(p3[1] > ct)
-                if(p4[1] > ct)
-                 if(p5[1] > ct)
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    if(p8[1] > ct)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               if(p3 > ct)
+                if(p4 > ct)
+                 if(p5 > ct)
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    if(p8 > ct)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -1370,28 +1405,28 @@ export function fast9ml(image, threshold)
               ;
             else
              ;
-           else if(p9[1] < c_t)
-            if(p7[1] < c_t)
-             if(p8[1] < c_t)
-              if(p10[1] < c_t)
-               if(p6[1] < c_t)
-                if(p5[1] < c_t)
-                 if(p4[1] < c_t)
-                  if(p3[1] < c_t)
-                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+           else if(p9 < c_t)
+            if(p7 < c_t)
+             if(p8 < c_t)
+              if(p10 < c_t)
+               if(p6 < c_t)
+                if(p5 < c_t)
+                 if(p4 < c_t)
+                  if(p3 < c_t)
+                   color = vec4(1.0f, pixel.gba);
                   else
-                   if(p11[1] < c_t)
-                    if(p12[1] < c_t)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   if(p11 < c_t)
+                    if(p12 < c_t)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
                     ;
                  else
-                  if(p11[1] < c_t)
-                   if(p12[1] < c_t)
-                    if(p13[1] < c_t)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p11 < c_t)
+                   if(p12 < c_t)
+                    if(p13 < c_t)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -1399,11 +1434,11 @@ export function fast9ml(image, threshold)
                   else
                    ;
                 else
-                 if(p11[1] < c_t)
-                  if(p12[1] < c_t)
-                   if(p13[1] < c_t)
-                    if(p14[1] < c_t)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p11 < c_t)
+                  if(p12 < c_t)
+                   if(p13 < c_t)
+                    if(p14 < c_t)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -1413,12 +1448,12 @@ export function fast9ml(image, threshold)
                  else
                   ;
                else
-                if(p11[1] < c_t)
-                 if(p12[1] < c_t)
-                  if(p13[1] < c_t)
-                   if(p14[1] < c_t)
-                    if(p15[1] < c_t)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p11 < c_t)
+                 if(p12 < c_t)
+                  if(p13 < c_t)
+                   if(p14 < c_t)
+                    if(p15 < c_t)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -1438,19 +1473,19 @@ export function fast9ml(image, threshold)
            else
             ;
           else
-           if(p9[1] > ct)
-            if(p10[1] > ct)
-             if(p11[1] > ct)
-              if(p12[1] > ct)
-               if(p13[1] > ct)
-                if(p14[1] > ct)
-                 if(p15[1] > ct)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+           if(p9 > ct)
+            if(p10 > ct)
+             if(p11 > ct)
+              if(p12 > ct)
+               if(p13 > ct)
+                if(p14 > ct)
+                 if(p15 > ct)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    if(p8[1] > ct)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    if(p8 > ct)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -1458,11 +1493,11 @@ export function fast9ml(image, threshold)
                   else
                    ;
                 else
-                 if(p5[1] > ct)
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    if(p8[1] > ct)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p5 > ct)
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    if(p8 > ct)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -1472,12 +1507,12 @@ export function fast9ml(image, threshold)
                  else
                   ;
                else
-                if(p4[1] > ct)
-                 if(p5[1] > ct)
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    if(p8[1] > ct)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p4 > ct)
+                 if(p5 > ct)
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    if(p8 > ct)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -1489,13 +1524,13 @@ export function fast9ml(image, threshold)
                 else
                  ;
               else
-               if(p3[1] > ct)
-                if(p4[1] > ct)
-                 if(p5[1] > ct)
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    if(p8[1] > ct)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               if(p3 > ct)
+                if(p4 > ct)
+                 if(p5 > ct)
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    if(p8 > ct)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -1512,34 +1547,34 @@ export function fast9ml(image, threshold)
               ;
             else
              ;
-           else if(p9[1] < c_t)
-            if(p7[1] < c_t)
-             if(p8[1] < c_t)
-              if(p10[1] < c_t)
-               if(p11[1] < c_t)
-                if(p6[1] < c_t)
-                 if(p5[1] < c_t)
-                  if(p4[1] < c_t)
-                   if(p3[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+           else if(p9 < c_t)
+            if(p7 < c_t)
+             if(p8 < c_t)
+              if(p10 < c_t)
+               if(p11 < c_t)
+                if(p6 < c_t)
+                 if(p5 < c_t)
+                  if(p4 < c_t)
+                   if(p3 < c_t)
+                    color = vec4(1.0f, pixel.gba);
                    else
-                    if(p12[1] < c_t)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    if(p12 < c_t)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                   else
-                   if(p12[1] < c_t)
-                    if(p13[1] < c_t)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   if(p12 < c_t)
+                    if(p13 < c_t)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
                     ;
                  else
-                  if(p12[1] < c_t)
-                   if(p13[1] < c_t)
-                    if(p14[1] < c_t)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p12 < c_t)
+                   if(p13 < c_t)
+                    if(p14 < c_t)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -1547,11 +1582,11 @@ export function fast9ml(image, threshold)
                   else
                    ;
                 else
-                 if(p12[1] < c_t)
-                  if(p13[1] < c_t)
-                   if(p14[1] < c_t)
-                    if(p15[1] < c_t)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p12 < c_t)
+                  if(p13 < c_t)
+                   if(p14 < c_t)
+                    if(p15 < c_t)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -1570,29 +1605,29 @@ export function fast9ml(image, threshold)
              ;
            else
             ;
-         else if(p1[1] < c_t)
-          if(p8[1] > ct)
-           if(p9[1] > ct)
-            if(p10[1] > ct)
-             if(p11[1] > ct)
-              if(p12[1] > ct)
-               if(p13[1] > ct)
-                if(p14[1] > ct)
-                 if(p15[1] > ct)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+         else if(p1 < c_t)
+          if(p8 > ct)
+           if(p9 > ct)
+            if(p10 > ct)
+             if(p11 > ct)
+              if(p12 > ct)
+               if(p13 > ct)
+                if(p14 > ct)
+                 if(p15 > ct)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
                    ;
                 else
-                 if(p5[1] > ct)
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p5 > ct)
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -1600,11 +1635,11 @@ export function fast9ml(image, threshold)
                  else
                   ;
                else
-                if(p4[1] > ct)
-                 if(p5[1] > ct)
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p4 > ct)
+                 if(p5 > ct)
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -1614,12 +1649,12 @@ export function fast9ml(image, threshold)
                 else
                  ;
               else
-               if(p3[1] > ct)
-                if(p4[1] > ct)
-                 if(p5[1] > ct)
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               if(p3 > ct)
+                if(p4 > ct)
+                 if(p5 > ct)
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -1631,13 +1666,13 @@ export function fast9ml(image, threshold)
                else
                 ;
              else
-              if(p2[1] > ct)
-               if(p3[1] > ct)
-                if(p4[1] > ct)
-                 if(p5[1] > ct)
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+              if(p2 > ct)
+               if(p3 > ct)
+                if(p4 > ct)
+                 if(p5 > ct)
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -1654,28 +1689,28 @@ export function fast9ml(image, threshold)
              ;
            else
             ;
-          else if(p8[1] < c_t)
-           if(p7[1] < c_t)
-            if(p9[1] < c_t)
-             if(p6[1] < c_t)
-              if(p5[1] < c_t)
-               if(p4[1] < c_t)
-                if(p3[1] < c_t)
-                 if(p2[1] < c_t)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+          else if(p8 < c_t)
+           if(p7 < c_t)
+            if(p9 < c_t)
+             if(p6 < c_t)
+              if(p5 < c_t)
+               if(p4 < c_t)
+                if(p3 < c_t)
+                 if(p2 < c_t)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p10[1] < c_t)
-                   if(p11[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p10 < c_t)
+                   if(p11 < c_t)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
                    ;
                 else
-                 if(p10[1] < c_t)
-                  if(p11[1] < c_t)
-                   if(p12[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p10 < c_t)
+                  if(p11 < c_t)
+                   if(p12 < c_t)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -1683,11 +1718,11 @@ export function fast9ml(image, threshold)
                  else
                   ;
                else
-                if(p10[1] < c_t)
-                 if(p11[1] < c_t)
-                  if(p12[1] < c_t)
-                   if(p13[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p10 < c_t)
+                 if(p11 < c_t)
+                  if(p12 < c_t)
+                   if(p13 < c_t)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -1697,12 +1732,12 @@ export function fast9ml(image, threshold)
                 else
                  ;
               else
-               if(p10[1] < c_t)
-                if(p11[1] < c_t)
-                 if(p12[1] < c_t)
-                  if(p13[1] < c_t)
-                   if(p14[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               if(p10 < c_t)
+                if(p11 < c_t)
+                 if(p12 < c_t)
+                  if(p13 < c_t)
+                   if(p14 < c_t)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -1714,13 +1749,13 @@ export function fast9ml(image, threshold)
                else
                 ;
              else
-              if(p10[1] < c_t)
-               if(p11[1] < c_t)
-                if(p12[1] < c_t)
-                 if(p13[1] < c_t)
-                  if(p14[1] < c_t)
-                   if(p15[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+              if(p10 < c_t)
+               if(p11 < c_t)
+                if(p12 < c_t)
+                 if(p13 < c_t)
+                  if(p14 < c_t)
+                   if(p15 < c_t)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -1740,28 +1775,28 @@ export function fast9ml(image, threshold)
           else
            ;
          else
-          if(p8[1] > ct)
-           if(p9[1] > ct)
-            if(p10[1] > ct)
-             if(p11[1] > ct)
-              if(p12[1] > ct)
-               if(p13[1] > ct)
-                if(p14[1] > ct)
-                 if(p15[1] > ct)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+          if(p8 > ct)
+           if(p9 > ct)
+            if(p10 > ct)
+             if(p11 > ct)
+              if(p12 > ct)
+               if(p13 > ct)
+                if(p14 > ct)
+                 if(p15 > ct)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
                    ;
                 else
-                 if(p5[1] > ct)
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p5 > ct)
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -1769,11 +1804,11 @@ export function fast9ml(image, threshold)
                  else
                   ;
                else
-                if(p4[1] > ct)
-                 if(p5[1] > ct)
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p4 > ct)
+                 if(p5 > ct)
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -1783,12 +1818,12 @@ export function fast9ml(image, threshold)
                 else
                  ;
               else
-               if(p3[1] > ct)
-                if(p4[1] > ct)
-                 if(p5[1] > ct)
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               if(p3 > ct)
+                if(p4 > ct)
+                 if(p5 > ct)
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -1800,13 +1835,13 @@ export function fast9ml(image, threshold)
                else
                 ;
              else
-              if(p2[1] > ct)
-               if(p3[1] > ct)
-                if(p4[1] > ct)
-                 if(p5[1] > ct)
-                  if(p6[1] > ct)
-                   if(p7[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+              if(p2 > ct)
+               if(p3 > ct)
+                if(p4 > ct)
+                 if(p5 > ct)
+                  if(p6 > ct)
+                   if(p7 > ct)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -1823,34 +1858,34 @@ export function fast9ml(image, threshold)
              ;
            else
             ;
-          else if(p8[1] < c_t)
-           if(p7[1] < c_t)
-            if(p9[1] < c_t)
-             if(p10[1] < c_t)
-              if(p6[1] < c_t)
-               if(p5[1] < c_t)
-                if(p4[1] < c_t)
-                 if(p3[1] < c_t)
-                  if(p2[1] < c_t)
-                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+          else if(p8 < c_t)
+           if(p7 < c_t)
+            if(p9 < c_t)
+             if(p10 < c_t)
+              if(p6 < c_t)
+               if(p5 < c_t)
+                if(p4 < c_t)
+                 if(p3 < c_t)
+                  if(p2 < c_t)
+                   color = vec4(1.0f, pixel.gba);
                   else
-                   if(p11[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   if(p11 < c_t)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                  else
-                  if(p11[1] < c_t)
-                   if(p12[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p11 < c_t)
+                   if(p12 < c_t)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
                    ;
                 else
-                 if(p11[1] < c_t)
-                  if(p12[1] < c_t)
-                   if(p13[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p11 < c_t)
+                  if(p12 < c_t)
+                   if(p13 < c_t)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -1858,11 +1893,11 @@ export function fast9ml(image, threshold)
                  else
                   ;
                else
-                if(p11[1] < c_t)
-                 if(p12[1] < c_t)
-                  if(p13[1] < c_t)
-                   if(p14[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p11 < c_t)
+                 if(p12 < c_t)
+                  if(p13 < c_t)
+                   if(p14 < c_t)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -1872,12 +1907,12 @@ export function fast9ml(image, threshold)
                 else
                  ;
               else
-               if(p11[1] < c_t)
-                if(p12[1] < c_t)
-                 if(p13[1] < c_t)
-                  if(p14[1] < c_t)
-                   if(p15[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               if(p11 < c_t)
+                if(p12 < c_t)
+                 if(p13 < c_t)
+                  if(p14 < c_t)
+                   if(p15 < c_t)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -1890,206 +1925,206 @@ export function fast9ml(image, threshold)
                 ;
              else
               ;
+            else
+             ;
+           else
+            ;
+          else
+           ;
+        else if(p0 < c_t)
+         if(p1 > ct)
+          if(p8 > ct)
+           if(p7 > ct)
+            if(p9 > ct)
+             if(p6 > ct)
+              if(p5 > ct)
+               if(p4 > ct)
+                if(p3 > ct)
+                 if(p2 > ct)
+                  color = vec4(1.0f, pixel.gba);
+                 else
+                  if(p10 > ct)
+                   if(p11 > ct)
+                    color = vec4(1.0f, pixel.gba);
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p10 > ct)
+                  if(p11 > ct)
+                   if(p12 > ct)
+                    color = vec4(1.0f, pixel.gba);
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p10 > ct)
+                 if(p11 > ct)
+                  if(p12 > ct)
+                   if(p13 > ct)
+                    color = vec4(1.0f, pixel.gba);
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               if(p10 > ct)
+                if(p11 > ct)
+                 if(p12 > ct)
+                  if(p13 > ct)
+                   if(p14 > ct)
+                    color = vec4(1.0f, pixel.gba);
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+             else
+              if(p10 > ct)
+               if(p11 > ct)
+                if(p12 > ct)
+                 if(p13 > ct)
+                  if(p14 > ct)
+                   if(p15 > ct)
+                    color = vec4(1.0f, pixel.gba);
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
+            else
+             ;
+           else
+            ;
+          else if(p8 < c_t)
+           if(p9 < c_t)
+            if(p10 < c_t)
+             if(p11 < c_t)
+              if(p12 < c_t)
+               if(p13 < c_t)
+                if(p14 < c_t)
+                 if(p15 < c_t)
+                  color = vec4(1.0f, pixel.gba);
+                 else
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    color = vec4(1.0f, pixel.gba);
+                   else
+                    ;
+                  else
+                   ;
+                else
+                 if(p5 < c_t)
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    color = vec4(1.0f, pixel.gba);
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+               else
+                if(p4 < c_t)
+                 if(p5 < c_t)
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    color = vec4(1.0f, pixel.gba);
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+              else
+               if(p3 < c_t)
+                if(p4 < c_t)
+                 if(p5 < c_t)
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    color = vec4(1.0f, pixel.gba);
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+             else
+              if(p2 < c_t)
+               if(p3 < c_t)
+                if(p4 < c_t)
+                 if(p5 < c_t)
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    color = vec4(1.0f, pixel.gba);
+                   else
+                    ;
+                  else
+                   ;
+                 else
+                  ;
+                else
+                 ;
+               else
+                ;
+              else
+               ;
             else
              ;
            else
             ;
           else
            ;
-        else if(p0[1] < c_t)
-         if(p1[1] > ct)
-          if(p8[1] > ct)
-           if(p7[1] > ct)
-            if(p9[1] > ct)
-             if(p6[1] > ct)
-              if(p5[1] > ct)
-               if(p4[1] > ct)
-                if(p3[1] > ct)
-                 if(p2[1] > ct)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
-                 else
-                  if(p10[1] > ct)
-                   if(p11[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
-                   else
-                    ;
+         else if(p1 < c_t)
+          if(p2 > ct)
+           if(p9 > ct)
+            if(p7 > ct)
+             if(p8 > ct)
+              if(p10 > ct)
+               if(p6 > ct)
+                if(p5 > ct)
+                 if(p4 > ct)
+                  if(p3 > ct)
+                   color = vec4(1.0f, pixel.gba);
                   else
-                   ;
-                else
-                 if(p10[1] > ct)
-                  if(p11[1] > ct)
-                   if(p12[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
-                   else
-                    ;
-                  else
-                   ;
-                 else
-                  ;
-               else
-                if(p10[1] > ct)
-                 if(p11[1] > ct)
-                  if(p12[1] > ct)
-                   if(p13[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
-                   else
-                    ;
-                  else
-                   ;
-                 else
-                  ;
-                else
-                 ;
-              else
-               if(p10[1] > ct)
-                if(p11[1] > ct)
-                 if(p12[1] > ct)
-                  if(p13[1] > ct)
-                   if(p14[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
-                   else
-                    ;
-                  else
-                   ;
-                 else
-                  ;
-                else
-                 ;
-               else
-                ;
-             else
-              if(p10[1] > ct)
-               if(p11[1] > ct)
-                if(p12[1] > ct)
-                 if(p13[1] > ct)
-                  if(p14[1] > ct)
-                   if(p15[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
-                   else
-                    ;
-                  else
-                   ;
-                 else
-                  ;
-                else
-                 ;
-               else
-                ;
-              else
-               ;
-            else
-             ;
-           else
-            ;
-          else if(p8[1] < c_t)
-           if(p9[1] < c_t)
-            if(p10[1] < c_t)
-             if(p11[1] < c_t)
-              if(p12[1] < c_t)
-               if(p13[1] < c_t)
-                if(p14[1] < c_t)
-                 if(p15[1] < c_t)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
-                 else
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
-                   else
-                    ;
-                  else
-                   ;
-                else
-                 if(p5[1] < c_t)
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
-                   else
-                    ;
-                  else
-                   ;
-                 else
-                  ;
-               else
-                if(p4[1] < c_t)
-                 if(p5[1] < c_t)
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
-                   else
-                    ;
-                  else
-                   ;
-                 else
-                  ;
-                else
-                 ;
-              else
-               if(p3[1] < c_t)
-                if(p4[1] < c_t)
-                 if(p5[1] < c_t)
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
-                   else
-                    ;
-                  else
-                   ;
-                 else
-                  ;
-                else
-                 ;
-               else
-                ;
-             else
-              if(p2[1] < c_t)
-               if(p3[1] < c_t)
-                if(p4[1] < c_t)
-                 if(p5[1] < c_t)
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
-                   else
-                    ;
-                  else
-                   ;
-                 else
-                  ;
-                else
-                 ;
-               else
-                ;
-              else
-               ;
-            else
-             ;
-           else
-            ;
-          else
-           ;
-         else if(p1[1] < c_t)
-          if(p2[1] > ct)
-           if(p9[1] > ct)
-            if(p7[1] > ct)
-             if(p8[1] > ct)
-              if(p10[1] > ct)
-               if(p6[1] > ct)
-                if(p5[1] > ct)
-                 if(p4[1] > ct)
-                  if(p3[1] > ct)
-                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
-                  else
-                   if(p11[1] > ct)
-                    if(p12[1] > ct)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   if(p11 > ct)
+                    if(p12 > ct)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
                     ;
                  else
-                  if(p11[1] > ct)
-                   if(p12[1] > ct)
-                    if(p13[1] > ct)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p11 > ct)
+                   if(p12 > ct)
+                    if(p13 > ct)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -2097,11 +2132,11 @@ export function fast9ml(image, threshold)
                   else
                    ;
                 else
-                 if(p11[1] > ct)
-                  if(p12[1] > ct)
-                   if(p13[1] > ct)
-                    if(p14[1] > ct)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p11 > ct)
+                  if(p12 > ct)
+                   if(p13 > ct)
+                    if(p14 > ct)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -2111,12 +2146,12 @@ export function fast9ml(image, threshold)
                  else
                   ;
                else
-                if(p11[1] > ct)
-                 if(p12[1] > ct)
-                  if(p13[1] > ct)
-                   if(p14[1] > ct)
-                    if(p15[1] > ct)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p11 > ct)
+                 if(p12 > ct)
+                  if(p13 > ct)
+                   if(p14 > ct)
+                    if(p15 > ct)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -2133,19 +2168,19 @@ export function fast9ml(image, threshold)
               ;
             else
              ;
-           else if(p9[1] < c_t)
-            if(p10[1] < c_t)
-             if(p11[1] < c_t)
-              if(p12[1] < c_t)
-               if(p13[1] < c_t)
-                if(p14[1] < c_t)
-                 if(p15[1] < c_t)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+           else if(p9 < c_t)
+            if(p10 < c_t)
+             if(p11 < c_t)
+              if(p12 < c_t)
+               if(p13 < c_t)
+                if(p14 < c_t)
+                 if(p15 < c_t)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    if(p8[1] < c_t)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    if(p8 < c_t)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -2153,11 +2188,11 @@ export function fast9ml(image, threshold)
                   else
                    ;
                 else
-                 if(p5[1] < c_t)
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    if(p8[1] < c_t)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p5 < c_t)
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    if(p8 < c_t)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -2167,12 +2202,12 @@ export function fast9ml(image, threshold)
                  else
                   ;
                else
-                if(p4[1] < c_t)
-                 if(p5[1] < c_t)
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    if(p8[1] < c_t)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p4 < c_t)
+                 if(p5 < c_t)
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    if(p8 < c_t)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -2184,13 +2219,13 @@ export function fast9ml(image, threshold)
                 else
                  ;
               else
-               if(p3[1] < c_t)
-                if(p4[1] < c_t)
-                 if(p5[1] < c_t)
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    if(p8[1] < c_t)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               if(p3 < c_t)
+                if(p4 < c_t)
+                 if(p5 < c_t)
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    if(p8 < c_t)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -2209,30 +2244,30 @@ export function fast9ml(image, threshold)
              ;
            else
             ;
-          else if(p2[1] < c_t)
-           if(p3[1] > ct)
-            if(p10[1] > ct)
-             if(p7[1] > ct)
-              if(p8[1] > ct)
-               if(p9[1] > ct)
-                if(p11[1] > ct)
-                 if(p6[1] > ct)
-                  if(p5[1] > ct)
-                   if(p4[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+          else if(p2 < c_t)
+           if(p3 > ct)
+            if(p10 > ct)
+             if(p7 > ct)
+              if(p8 > ct)
+               if(p9 > ct)
+                if(p11 > ct)
+                 if(p6 > ct)
+                  if(p5 > ct)
+                   if(p4 > ct)
+                    color = vec4(1.0f, pixel.gba);
                    else
-                    if(p12[1] > ct)
-                     if(p13[1] > ct)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    if(p12 > ct)
+                     if(p13 > ct)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
                      ;
                   else
-                   if(p12[1] > ct)
-                    if(p13[1] > ct)
-                     if(p14[1] > ct)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   if(p12 > ct)
+                    if(p13 > ct)
+                     if(p14 > ct)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -2240,11 +2275,11 @@ export function fast9ml(image, threshold)
                    else
                     ;
                  else
-                  if(p12[1] > ct)
-                   if(p13[1] > ct)
-                    if(p14[1] > ct)
-                     if(p15[1] > ct)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p12 > ct)
+                   if(p13 > ct)
+                    if(p14 > ct)
+                     if(p15 > ct)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -2261,19 +2296,19 @@ export function fast9ml(image, threshold)
                ;
              else
               ;
-            else if(p10[1] < c_t)
-             if(p11[1] < c_t)
-              if(p12[1] < c_t)
-               if(p13[1] < c_t)
-                if(p14[1] < c_t)
-                 if(p15[1] < c_t)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+            else if(p10 < c_t)
+             if(p11 < c_t)
+              if(p12 < c_t)
+               if(p13 < c_t)
+                if(p14 < c_t)
+                 if(p15 < c_t)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    if(p8[1] < c_t)
-                     if(p9[1] < c_t)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    if(p8 < c_t)
+                     if(p9 < c_t)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -2283,12 +2318,12 @@ export function fast9ml(image, threshold)
                   else
                    ;
                 else
-                 if(p5[1] < c_t)
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    if(p8[1] < c_t)
-                     if(p9[1] < c_t)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p5 < c_t)
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    if(p8 < c_t)
+                     if(p9 < c_t)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -2300,13 +2335,13 @@ export function fast9ml(image, threshold)
                  else
                   ;
                else
-                if(p4[1] < c_t)
-                 if(p5[1] < c_t)
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    if(p8[1] < c_t)
-                     if(p9[1] < c_t)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p4 < c_t)
+                 if(p5 < c_t)
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    if(p8 < c_t)
+                     if(p9 < c_t)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -2325,27 +2360,27 @@ export function fast9ml(image, threshold)
               ;
             else
              ;
-           else if(p3[1] < c_t)
-            if(p4[1] > ct)
-             if(p13[1] > ct)
-              if(p7[1] > ct)
-               if(p8[1] > ct)
-                if(p9[1] > ct)
-                 if(p10[1] > ct)
-                  if(p11[1] > ct)
-                   if(p12[1] > ct)
-                    if(p6[1] > ct)
-                     if(p5[1] > ct)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+           else if(p3 < c_t)
+            if(p4 > ct)
+             if(p13 > ct)
+              if(p7 > ct)
+               if(p8 > ct)
+                if(p9 > ct)
+                 if(p10 > ct)
+                  if(p11 > ct)
+                   if(p12 > ct)
+                    if(p6 > ct)
+                     if(p5 > ct)
+                      color = vec4(1.0f, pixel.gba);
                      else
-                      if(p14[1] > ct)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      if(p14 > ct)
+                       color = vec4(1.0f, pixel.gba);
                       else
                        ;
                     else
-                     if(p14[1] > ct)
-                      if(p15[1] > ct)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     if(p14 > ct)
+                      if(p15 > ct)
+                       color = vec4(1.0f, pixel.gba);
                       else
                        ;
                      else
@@ -2362,16 +2397,16 @@ export function fast9ml(image, threshold)
                 ;
               else
                ;
-             else if(p13[1] < c_t)
-              if(p11[1] > ct)
-               if(p5[1] > ct)
-                if(p6[1] > ct)
-                 if(p7[1] > ct)
-                  if(p8[1] > ct)
-                   if(p9[1] > ct)
-                    if(p10[1] > ct)
-                     if(p12[1] > ct)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+             else if(p13 < c_t)
+              if(p11 > ct)
+               if(p5 > ct)
+                if(p6 > ct)
+                 if(p7 > ct)
+                  if(p8 > ct)
+                   if(p9 > ct)
+                    if(p10 > ct)
+                     if(p12 > ct)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -2386,18 +2421,18 @@ export function fast9ml(image, threshold)
                  ;
                else
                 ;
-              else if(p11[1] < c_t)
-               if(p12[1] < c_t)
-                if(p14[1] < c_t)
-                 if(p15[1] < c_t)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+              else if(p11 < c_t)
+               if(p12 < c_t)
+                if(p14 < c_t)
+                 if(p15 < c_t)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    if(p8[1] < c_t)
-                     if(p9[1] < c_t)
-                      if(p10[1] < c_t)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    if(p8 < c_t)
+                     if(p9 < c_t)
+                      if(p10 < c_t)
+                       color = vec4(1.0f, pixel.gba);
                       else
                        ;
                      else
@@ -2409,13 +2444,13 @@ export function fast9ml(image, threshold)
                   else
                    ;
                 else
-                 if(p5[1] < c_t)
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    if(p8[1] < c_t)
-                     if(p9[1] < c_t)
-                      if(p10[1] < c_t)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p5 < c_t)
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    if(p8 < c_t)
+                     if(p9 < c_t)
+                      if(p10 < c_t)
+                       color = vec4(1.0f, pixel.gba);
                       else
                        ;
                      else
@@ -2433,15 +2468,15 @@ export function fast9ml(image, threshold)
               else
                ;
              else
-              if(p5[1] > ct)
-               if(p6[1] > ct)
-                if(p7[1] > ct)
-                 if(p8[1] > ct)
-                  if(p9[1] > ct)
-                   if(p10[1] > ct)
-                    if(p11[1] > ct)
-                     if(p12[1] > ct)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+              if(p5 > ct)
+               if(p6 > ct)
+                if(p7 > ct)
+                 if(p8 > ct)
+                  if(p9 > ct)
+                   if(p10 > ct)
+                    if(p11 > ct)
+                     if(p12 > ct)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -2458,21 +2493,21 @@ export function fast9ml(image, threshold)
                 ;
               else
                ;
-            else if(p4[1] < c_t)
-             if(p5[1] > ct)
-              if(p14[1] > ct)
-               if(p7[1] > ct)
-                if(p8[1] > ct)
-                 if(p9[1] > ct)
-                  if(p10[1] > ct)
-                   if(p11[1] > ct)
-                    if(p12[1] > ct)
-                     if(p13[1] > ct)
-                      if(p6[1] > ct)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+            else if(p4 < c_t)
+             if(p5 > ct)
+              if(p14 > ct)
+               if(p7 > ct)
+                if(p8 > ct)
+                 if(p9 > ct)
+                  if(p10 > ct)
+                   if(p11 > ct)
+                    if(p12 > ct)
+                     if(p13 > ct)
+                      if(p6 > ct)
+                       color = vec4(1.0f, pixel.gba);
                       else
-                       if(p15[1] > ct)
-                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                       if(p15 > ct)
+                        color = vec4(1.0f, pixel.gba);
                        else
                         ;
                      else
@@ -2489,16 +2524,16 @@ export function fast9ml(image, threshold)
                  ;
                else
                 ;
-              else if(p14[1] < c_t)
-               if(p12[1] > ct)
-                if(p6[1] > ct)
-                 if(p7[1] > ct)
-                  if(p8[1] > ct)
-                   if(p9[1] > ct)
-                    if(p10[1] > ct)
-                     if(p11[1] > ct)
-                      if(p13[1] > ct)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+              else if(p14 < c_t)
+               if(p12 > ct)
+                if(p6 > ct)
+                 if(p7 > ct)
+                  if(p8 > ct)
+                   if(p9 > ct)
+                    if(p10 > ct)
+                     if(p11 > ct)
+                      if(p13 > ct)
+                       color = vec4(1.0f, pixel.gba);
                       else
                        ;
                      else
@@ -2513,18 +2548,18 @@ export function fast9ml(image, threshold)
                   ;
                 else
                  ;
-               else if(p12[1] < c_t)
-                if(p13[1] < c_t)
-                 if(p15[1] < c_t)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               else if(p12 < c_t)
+                if(p13 < c_t)
+                 if(p15 < c_t)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    if(p8[1] < c_t)
-                     if(p9[1] < c_t)
-                      if(p10[1] < c_t)
-                       if(p11[1] < c_t)
-                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    if(p8 < c_t)
+                     if(p9 < c_t)
+                      if(p10 < c_t)
+                       if(p11 < c_t)
+                        color = vec4(1.0f, pixel.gba);
                        else
                         ;
                       else
@@ -2542,15 +2577,15 @@ export function fast9ml(image, threshold)
                else
                 ;
               else
-               if(p6[1] > ct)
-                if(p7[1] > ct)
-                 if(p8[1] > ct)
-                  if(p9[1] > ct)
-                   if(p10[1] > ct)
-                    if(p11[1] > ct)
-                     if(p12[1] > ct)
-                      if(p13[1] > ct)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               if(p6 > ct)
+                if(p7 > ct)
+                 if(p8 > ct)
+                  if(p9 > ct)
+                   if(p10 > ct)
+                    if(p11 > ct)
+                     if(p12 > ct)
+                      if(p13 > ct)
+                       color = vec4(1.0f, pixel.gba);
                       else
                        ;
                      else
@@ -2567,18 +2602,18 @@ export function fast9ml(image, threshold)
                  ;
                else
                 ;
-             else if(p5[1] < c_t)
-              if(p6[1] > ct)
-               if(p15[1] < c_t)
-                if(p13[1] > ct)
-                 if(p7[1] > ct)
-                  if(p8[1] > ct)
-                   if(p9[1] > ct)
-                    if(p10[1] > ct)
-                     if(p11[1] > ct)
-                      if(p12[1] > ct)
-                       if(p14[1] > ct)
-                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+             else if(p5 < c_t)
+              if(p6 > ct)
+               if(p15 < c_t)
+                if(p13 > ct)
+                 if(p7 > ct)
+                  if(p8 > ct)
+                   if(p9 > ct)
+                    if(p10 > ct)
+                     if(p11 > ct)
+                      if(p12 > ct)
+                       if(p14 > ct)
+                        color = vec4(1.0f, pixel.gba);
                        else
                         ;
                       else
@@ -2593,23 +2628,23 @@ export function fast9ml(image, threshold)
                    ;
                  else
                   ;
-                else if(p13[1] < c_t)
-                 if(p14[1] < c_t)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                else if(p13 < c_t)
+                 if(p14 < c_t)
+                  color = vec4(1.0f, pixel.gba);
                  else
                   ;
                 else
                  ;
                else
-                if(p7[1] > ct)
-                 if(p8[1] > ct)
-                  if(p9[1] > ct)
-                   if(p10[1] > ct)
-                    if(p11[1] > ct)
-                     if(p12[1] > ct)
-                      if(p13[1] > ct)
-                       if(p14[1] > ct)
-                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p7 > ct)
+                 if(p8 > ct)
+                  if(p9 > ct)
+                   if(p10 > ct)
+                    if(p11 > ct)
+                     if(p12 > ct)
+                      if(p13 > ct)
+                       if(p14 > ct)
+                        color = vec4(1.0f, pixel.gba);
                        else
                         ;
                       else
@@ -2626,17 +2661,17 @@ export function fast9ml(image, threshold)
                   ;
                 else
                  ;
-              else if(p6[1] < c_t)
-               if(p7[1] > ct)
-                if(p14[1] > ct)
-                 if(p8[1] > ct)
-                  if(p9[1] > ct)
-                   if(p10[1] > ct)
-                    if(p11[1] > ct)
-                     if(p12[1] > ct)
-                      if(p13[1] > ct)
-                       if(p15[1] > ct)
-                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+              else if(p6 < c_t)
+               if(p7 > ct)
+                if(p14 > ct)
+                 if(p8 > ct)
+                  if(p9 > ct)
+                   if(p10 > ct)
+                    if(p11 > ct)
+                     if(p12 > ct)
+                      if(p13 > ct)
+                       if(p15 > ct)
+                        color = vec4(1.0f, pixel.gba);
                        else
                         ;
                       else
@@ -2651,40 +2686,40 @@ export function fast9ml(image, threshold)
                    ;
                  else
                   ;
-                else if(p14[1] < c_t)
-                 if(p15[1] < c_t)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                else if(p14 < c_t)
+                 if(p15 < c_t)
+                  color = vec4(1.0f, pixel.gba);
                  else
                   ;
                 else
                  ;
-               else if(p7[1] < c_t)
-                if(p8[1] < c_t)
-                 this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               else if(p7 < c_t)
+                if(p8 < c_t)
+                 color = vec4(1.0f, pixel.gba);
                 else
-                 if(p15[1] < c_t)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p15 < c_t)
+                  color = vec4(1.0f, pixel.gba);
                  else
                   ;
                else
-                if(p14[1] < c_t)
-                 if(p15[1] < c_t)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p14 < c_t)
+                 if(p15 < c_t)
+                  color = vec4(1.0f, pixel.gba);
                  else
                   ;
                 else
                  ;
               else
-               if(p13[1] > ct)
-                if(p7[1] > ct)
-                 if(p8[1] > ct)
-                  if(p9[1] > ct)
-                   if(p10[1] > ct)
-                    if(p11[1] > ct)
-                     if(p12[1] > ct)
-                      if(p14[1] > ct)
-                       if(p15[1] > ct)
-                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               if(p13 > ct)
+                if(p7 > ct)
+                 if(p8 > ct)
+                  if(p9 > ct)
+                   if(p10 > ct)
+                    if(p11 > ct)
+                     if(p12 > ct)
+                      if(p14 > ct)
+                       if(p15 > ct)
+                        color = vec4(1.0f, pixel.gba);
                        else
                         ;
                       else
@@ -2701,10 +2736,10 @@ export function fast9ml(image, threshold)
                   ;
                 else
                  ;
-               else if(p13[1] < c_t)
-                if(p14[1] < c_t)
-                 if(p15[1] < c_t)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               else if(p13 < c_t)
+                if(p14 < c_t)
+                 if(p15 < c_t)
+                  color = vec4(1.0f, pixel.gba);
                  else
                   ;
                 else
@@ -2712,19 +2747,19 @@ export function fast9ml(image, threshold)
                else
                 ;
              else
-              if(p12[1] > ct)
-               if(p7[1] > ct)
-                if(p8[1] > ct)
-                 if(p9[1] > ct)
-                  if(p10[1] > ct)
-                   if(p11[1] > ct)
-                    if(p13[1] > ct)
-                     if(p14[1] > ct)
-                      if(p6[1] > ct)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+              if(p12 > ct)
+               if(p7 > ct)
+                if(p8 > ct)
+                 if(p9 > ct)
+                  if(p10 > ct)
+                   if(p11 > ct)
+                    if(p13 > ct)
+                     if(p14 > ct)
+                      if(p6 > ct)
+                       color = vec4(1.0f, pixel.gba);
                       else
-                       if(p15[1] > ct)
-                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                       if(p15 > ct)
+                        color = vec4(1.0f, pixel.gba);
                        else
                         ;
                      else
@@ -2741,19 +2776,19 @@ export function fast9ml(image, threshold)
                  ;
                else
                 ;
-              else if(p12[1] < c_t)
-               if(p13[1] < c_t)
-                if(p14[1] < c_t)
-                 if(p15[1] < c_t)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+              else if(p12 < c_t)
+               if(p13 < c_t)
+                if(p14 < c_t)
+                 if(p15 < c_t)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    if(p8[1] < c_t)
-                     if(p9[1] < c_t)
-                      if(p10[1] < c_t)
-                       if(p11[1] < c_t)
-                        this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    if(p8 < c_t)
+                     if(p9 < c_t)
+                      if(p10 < c_t)
+                       if(p11 < c_t)
+                        color = vec4(1.0f, pixel.gba);
                        else
                         ;
                       else
@@ -2773,25 +2808,25 @@ export function fast9ml(image, threshold)
               else
                ;
             else
-             if(p11[1] > ct)
-              if(p7[1] > ct)
-               if(p8[1] > ct)
-                if(p9[1] > ct)
-                 if(p10[1] > ct)
-                  if(p12[1] > ct)
-                   if(p13[1] > ct)
-                    if(p6[1] > ct)
-                     if(p5[1] > ct)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+             if(p11 > ct)
+              if(p7 > ct)
+               if(p8 > ct)
+                if(p9 > ct)
+                 if(p10 > ct)
+                  if(p12 > ct)
+                   if(p13 > ct)
+                    if(p6 > ct)
+                     if(p5 > ct)
+                      color = vec4(1.0f, pixel.gba);
                      else
-                      if(p14[1] > ct)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                      if(p14 > ct)
+                       color = vec4(1.0f, pixel.gba);
                       else
                        ;
                     else
-                     if(p14[1] > ct)
-                      if(p15[1] > ct)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     if(p14 > ct)
+                      if(p15 > ct)
+                       color = vec4(1.0f, pixel.gba);
                       else
                        ;
                      else
@@ -2808,19 +2843,19 @@ export function fast9ml(image, threshold)
                 ;
               else
                ;
-             else if(p11[1] < c_t)
-              if(p12[1] < c_t)
-               if(p13[1] < c_t)
-                if(p14[1] < c_t)
-                 if(p15[1] < c_t)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+             else if(p11 < c_t)
+              if(p12 < c_t)
+               if(p13 < c_t)
+                if(p14 < c_t)
+                 if(p15 < c_t)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    if(p8[1] < c_t)
-                     if(p9[1] < c_t)
-                      if(p10[1] < c_t)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    if(p8 < c_t)
+                     if(p9 < c_t)
+                      if(p10 < c_t)
+                       color = vec4(1.0f, pixel.gba);
                       else
                        ;
                      else
@@ -2832,13 +2867,13 @@ export function fast9ml(image, threshold)
                   else
                    ;
                 else
-                 if(p5[1] < c_t)
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    if(p8[1] < c_t)
-                     if(p9[1] < c_t)
-                      if(p10[1] < c_t)
-                       this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p5 < c_t)
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    if(p8 < c_t)
+                     if(p9 < c_t)
+                      if(p10 < c_t)
+                       color = vec4(1.0f, pixel.gba);
                       else
                        ;
                      else
@@ -2858,34 +2893,34 @@ export function fast9ml(image, threshold)
              else
               ;
            else
-            if(p10[1] > ct)
-             if(p7[1] > ct)
-              if(p8[1] > ct)
-               if(p9[1] > ct)
-                if(p11[1] > ct)
-                 if(p12[1] > ct)
-                  if(p6[1] > ct)
-                   if(p5[1] > ct)
-                    if(p4[1] > ct)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+            if(p10 > ct)
+             if(p7 > ct)
+              if(p8 > ct)
+               if(p9 > ct)
+                if(p11 > ct)
+                 if(p12 > ct)
+                  if(p6 > ct)
+                   if(p5 > ct)
+                    if(p4 > ct)
+                     color = vec4(1.0f, pixel.gba);
                     else
-                     if(p13[1] > ct)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                     if(p13 > ct)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                    else
-                    if(p13[1] > ct)
-                     if(p14[1] > ct)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    if(p13 > ct)
+                     if(p14 > ct)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
                      ;
                   else
-                   if(p13[1] > ct)
-                    if(p14[1] > ct)
-                     if(p15[1] > ct)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   if(p13 > ct)
+                    if(p14 > ct)
+                     if(p15 > ct)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -2902,19 +2937,19 @@ export function fast9ml(image, threshold)
                ;
              else
               ;
-            else if(p10[1] < c_t)
-             if(p11[1] < c_t)
-              if(p12[1] < c_t)
-               if(p13[1] < c_t)
-                if(p14[1] < c_t)
-                 if(p15[1] < c_t)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+            else if(p10 < c_t)
+             if(p11 < c_t)
+              if(p12 < c_t)
+               if(p13 < c_t)
+                if(p14 < c_t)
+                 if(p15 < c_t)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    if(p8[1] < c_t)
-                     if(p9[1] < c_t)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    if(p8 < c_t)
+                     if(p9 < c_t)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -2924,12 +2959,12 @@ export function fast9ml(image, threshold)
                   else
                    ;
                 else
-                 if(p5[1] < c_t)
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    if(p8[1] < c_t)
-                     if(p9[1] < c_t)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p5 < c_t)
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    if(p8 < c_t)
+                     if(p9 < c_t)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -2941,13 +2976,13 @@ export function fast9ml(image, threshold)
                  else
                   ;
                else
-                if(p4[1] < c_t)
-                 if(p5[1] < c_t)
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    if(p8[1] < c_t)
-                     if(p9[1] < c_t)
-                      this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p4 < c_t)
+                 if(p5 < c_t)
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    if(p8 < c_t)
+                     if(p9 < c_t)
+                      color = vec4(1.0f, pixel.gba);
                      else
                       ;
                     else
@@ -2967,34 +3002,34 @@ export function fast9ml(image, threshold)
             else
              ;
           else
-           if(p9[1] > ct)
-            if(p7[1] > ct)
-             if(p8[1] > ct)
-              if(p10[1] > ct)
-               if(p11[1] > ct)
-                if(p6[1] > ct)
-                 if(p5[1] > ct)
-                  if(p4[1] > ct)
-                   if(p3[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+           if(p9 > ct)
+            if(p7 > ct)
+             if(p8 > ct)
+              if(p10 > ct)
+               if(p11 > ct)
+                if(p6 > ct)
+                 if(p5 > ct)
+                  if(p4 > ct)
+                   if(p3 > ct)
+                    color = vec4(1.0f, pixel.gba);
                    else
-                    if(p12[1] > ct)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                    if(p12 > ct)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                   else
-                   if(p12[1] > ct)
-                    if(p13[1] > ct)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   if(p12 > ct)
+                    if(p13 > ct)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
                     ;
                  else
-                  if(p12[1] > ct)
-                   if(p13[1] > ct)
-                    if(p14[1] > ct)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p12 > ct)
+                   if(p13 > ct)
+                    if(p14 > ct)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -3002,11 +3037,11 @@ export function fast9ml(image, threshold)
                   else
                    ;
                 else
-                 if(p12[1] > ct)
-                  if(p13[1] > ct)
-                   if(p14[1] > ct)
-                    if(p15[1] > ct)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p12 > ct)
+                  if(p13 > ct)
+                   if(p14 > ct)
+                    if(p15 > ct)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -3023,19 +3058,19 @@ export function fast9ml(image, threshold)
               ;
             else
              ;
-           else if(p9[1] < c_t)
-            if(p10[1] < c_t)
-             if(p11[1] < c_t)
-              if(p12[1] < c_t)
-               if(p13[1] < c_t)
-                if(p14[1] < c_t)
-                 if(p15[1] < c_t)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+           else if(p9 < c_t)
+            if(p10 < c_t)
+             if(p11 < c_t)
+              if(p12 < c_t)
+               if(p13 < c_t)
+                if(p14 < c_t)
+                 if(p15 < c_t)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    if(p8[1] < c_t)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    if(p8 < c_t)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -3043,11 +3078,11 @@ export function fast9ml(image, threshold)
                   else
                    ;
                 else
-                 if(p5[1] < c_t)
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    if(p8[1] < c_t)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p5 < c_t)
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    if(p8 < c_t)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -3057,12 +3092,12 @@ export function fast9ml(image, threshold)
                  else
                   ;
                else
-                if(p4[1] < c_t)
-                 if(p5[1] < c_t)
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    if(p8[1] < c_t)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p4 < c_t)
+                 if(p5 < c_t)
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    if(p8 < c_t)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -3074,13 +3109,13 @@ export function fast9ml(image, threshold)
                 else
                  ;
               else
-               if(p3[1] < c_t)
-                if(p4[1] < c_t)
-                 if(p5[1] < c_t)
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    if(p8[1] < c_t)
-                     this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               if(p3 < c_t)
+                if(p4 < c_t)
+                 if(p5 < c_t)
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    if(p8 < c_t)
+                     color = vec4(1.0f, pixel.gba);
                     else
                      ;
                    else
@@ -3100,34 +3135,34 @@ export function fast9ml(image, threshold)
            else
             ;
          else
-          if(p8[1] > ct)
-           if(p7[1] > ct)
-            if(p9[1] > ct)
-             if(p10[1] > ct)
-              if(p6[1] > ct)
-               if(p5[1] > ct)
-                if(p4[1] > ct)
-                 if(p3[1] > ct)
-                  if(p2[1] > ct)
-                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+          if(p8 > ct)
+           if(p7 > ct)
+            if(p9 > ct)
+             if(p10 > ct)
+              if(p6 > ct)
+               if(p5 > ct)
+                if(p4 > ct)
+                 if(p3 > ct)
+                  if(p2 > ct)
+                   color = vec4(1.0f, pixel.gba);
                   else
-                   if(p11[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                   if(p11 > ct)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                  else
-                  if(p11[1] > ct)
-                   if(p12[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p11 > ct)
+                   if(p12 > ct)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
                    ;
                 else
-                 if(p11[1] > ct)
-                  if(p12[1] > ct)
-                   if(p13[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p11 > ct)
+                  if(p12 > ct)
+                   if(p13 > ct)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -3135,11 +3170,11 @@ export function fast9ml(image, threshold)
                  else
                   ;
                else
-                if(p11[1] > ct)
-                 if(p12[1] > ct)
-                  if(p13[1] > ct)
-                   if(p14[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p11 > ct)
+                 if(p12 > ct)
+                  if(p13 > ct)
+                   if(p14 > ct)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -3149,12 +3184,12 @@ export function fast9ml(image, threshold)
                 else
                  ;
               else
-               if(p11[1] > ct)
-                if(p12[1] > ct)
-                 if(p13[1] > ct)
-                  if(p14[1] > ct)
-                   if(p15[1] > ct)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               if(p11 > ct)
+                if(p12 > ct)
+                 if(p13 > ct)
+                  if(p14 > ct)
+                   if(p15 > ct)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -3171,28 +3206,28 @@ export function fast9ml(image, threshold)
              ;
            else
             ;
-          else if(p8[1] < c_t)
-           if(p9[1] < c_t)
-            if(p10[1] < c_t)
-             if(p11[1] < c_t)
-              if(p12[1] < c_t)
-               if(p13[1] < c_t)
-                if(p14[1] < c_t)
-                 if(p15[1] < c_t)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+          else if(p8 < c_t)
+           if(p9 < c_t)
+            if(p10 < c_t)
+             if(p11 < c_t)
+              if(p12 < c_t)
+               if(p13 < c_t)
+                if(p14 < c_t)
+                 if(p15 < c_t)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
                    ;
                 else
-                 if(p5[1] < c_t)
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p5 < c_t)
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -3200,11 +3235,11 @@ export function fast9ml(image, threshold)
                  else
                   ;
                else
-                if(p4[1] < c_t)
-                 if(p5[1] < c_t)
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p4 < c_t)
+                 if(p5 < c_t)
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -3214,12 +3249,12 @@ export function fast9ml(image, threshold)
                 else
                  ;
               else
-               if(p3[1] < c_t)
-                if(p4[1] < c_t)
-                 if(p5[1] < c_t)
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               if(p3 < c_t)
+                if(p4 < c_t)
+                 if(p5 < c_t)
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -3231,13 +3266,13 @@ export function fast9ml(image, threshold)
                else
                 ;
              else
-              if(p2[1] < c_t)
-               if(p3[1] < c_t)
-                if(p4[1] < c_t)
-                 if(p5[1] < c_t)
-                  if(p6[1] < c_t)
-                   if(p7[1] < c_t)
-                    this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+              if(p2 < c_t)
+               if(p3 < c_t)
+                if(p4 < c_t)
+                 if(p5 < c_t)
+                  if(p6 < c_t)
+                   if(p7 < c_t)
+                    color = vec4(1.0f, pixel.gba);
                    else
                     ;
                   else
@@ -3257,34 +3292,34 @@ export function fast9ml(image, threshold)
           else
            ;
         else
-         if(p7[1] > ct)
-          if(p8[1] > ct)
-           if(p9[1] > ct)
-            if(p6[1] > ct)
-             if(p5[1] > ct)
-              if(p4[1] > ct)
-               if(p3[1] > ct)
-                if(p2[1] > ct)
-                 if(p1[1] > ct)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+         if(p7 > ct)
+          if(p8 > ct)
+           if(p9 > ct)
+            if(p6 > ct)
+             if(p5 > ct)
+              if(p4 > ct)
+               if(p3 > ct)
+                if(p2 > ct)
+                 if(p1 > ct)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p10[1] > ct)
-                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p10 > ct)
+                   color = vec4(1.0f, pixel.gba);
                   else
                    ;
                 else
-                 if(p10[1] > ct)
-                  if(p11[1] > ct)
-                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p10 > ct)
+                  if(p11 > ct)
+                   color = vec4(1.0f, pixel.gba);
                   else
                    ;
                  else
                   ;
                else
-                if(p10[1] > ct)
-                 if(p11[1] > ct)
-                  if(p12[1] > ct)
-                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p10 > ct)
+                 if(p11 > ct)
+                  if(p12 > ct)
+                   color = vec4(1.0f, pixel.gba);
                   else
                    ;
                  else
@@ -3292,11 +3327,11 @@ export function fast9ml(image, threshold)
                 else
                  ;
               else
-               if(p10[1] > ct)
-                if(p11[1] > ct)
-                 if(p12[1] > ct)
-                  if(p13[1] > ct)
-                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               if(p10 > ct)
+                if(p11 > ct)
+                 if(p12 > ct)
+                  if(p13 > ct)
+                   color = vec4(1.0f, pixel.gba);
                   else
                    ;
                  else
@@ -3306,12 +3341,12 @@ export function fast9ml(image, threshold)
                else
                 ;
              else
-              if(p10[1] > ct)
-               if(p11[1] > ct)
-                if(p12[1] > ct)
-                 if(p13[1] > ct)
-                  if(p14[1] > ct)
-                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+              if(p10 > ct)
+               if(p11 > ct)
+                if(p12 > ct)
+                 if(p13 > ct)
+                  if(p14 > ct)
+                   color = vec4(1.0f, pixel.gba);
                   else
                    ;
                  else
@@ -3323,13 +3358,13 @@ export function fast9ml(image, threshold)
               else
                ;
             else
-             if(p10[1] > ct)
-              if(p11[1] > ct)
-               if(p12[1] > ct)
-                if(p13[1] > ct)
-                 if(p14[1] > ct)
-                  if(p15[1] > ct)
-                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+             if(p10 > ct)
+              if(p11 > ct)
+               if(p12 > ct)
+                if(p13 > ct)
+                 if(p14 > ct)
+                  if(p15 > ct)
+                   color = vec4(1.0f, pixel.gba);
                   else
                    ;
                  else
@@ -3346,34 +3381,34 @@ export function fast9ml(image, threshold)
             ;
           else
            ;
-         else if(p7[1] < c_t)
-          if(p8[1] < c_t)
-           if(p9[1] < c_t)
-            if(p6[1] < c_t)
-             if(p5[1] < c_t)
-              if(p4[1] < c_t)
-               if(p3[1] < c_t)
-                if(p2[1] < c_t)
-                 if(p1[1] < c_t)
-                  this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+         else if(p7 < c_t)
+          if(p8 < c_t)
+           if(p9 < c_t)
+            if(p6 < c_t)
+             if(p5 < c_t)
+              if(p4 < c_t)
+               if(p3 < c_t)
+                if(p2 < c_t)
+                 if(p1 < c_t)
+                  color = vec4(1.0f, pixel.gba);
                  else
-                  if(p10[1] < c_t)
-                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                  if(p10 < c_t)
+                   color = vec4(1.0f, pixel.gba);
                   else
                    ;
                 else
-                 if(p10[1] < c_t)
-                  if(p11[1] < c_t)
-                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                 if(p10 < c_t)
+                  if(p11 < c_t)
+                   color = vec4(1.0f, pixel.gba);
                   else
                    ;
                  else
                   ;
                else
-                if(p10[1] < c_t)
-                 if(p11[1] < c_t)
-                  if(p12[1] < c_t)
-                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+                if(p10 < c_t)
+                 if(p11 < c_t)
+                  if(p12 < c_t)
+                   color = vec4(1.0f, pixel.gba);
                   else
                    ;
                  else
@@ -3381,11 +3416,11 @@ export function fast9ml(image, threshold)
                 else
                  ;
               else
-               if(p10[1] < c_t)
-                if(p11[1] < c_t)
-                 if(p12[1] < c_t)
-                  if(p13[1] < c_t)
-                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+               if(p10 < c_t)
+                if(p11 < c_t)
+                 if(p12 < c_t)
+                  if(p13 < c_t)
+                   color = vec4(1.0f, pixel.gba);
                   else
                    ;
                  else
@@ -3395,12 +3430,12 @@ export function fast9ml(image, threshold)
                else
                 ;
              else
-              if(p10[1] < c_t)
-               if(p11[1] < c_t)
-                if(p12[1] < c_t)
-                 if(p13[1] < c_t)
-                  if(p14[1] < c_t)
-                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+              if(p10 < c_t)
+               if(p11 < c_t)
+                if(p12 < c_t)
+                 if(p13 < c_t)
+                  if(p14 < c_t)
+                   color = vec4(1.0f, pixel.gba);
                   else
                    ;
                  else
@@ -3412,13 +3447,13 @@ export function fast9ml(image, threshold)
               else
                ;
             else
-             if(p10[1] < c_t)
-              if(p11[1] < c_t)
-               if(p12[1] < c_t)
-                if(p13[1] < c_t)
-                 if(p14[1] < c_t)
-                  if(p15[1] < c_t)
-                   this.color(1, pixel[1], pixel[2], pixel[3]); // corner
+             if(p10 < c_t)
+              if(p11 < c_t)
+               if(p12 < c_t)
+                if(p13 < c_t)
+                 if(p14 < c_t)
+                  if(p15 < c_t)
+                   color = vec4(1.0f, pixel.gba);
                   else
                    ;
                  else
@@ -3437,6 +3472,6 @@ export function fast9ml(image, threshold)
            ;
          else
           ;
-        }
     }
 }
+`;
