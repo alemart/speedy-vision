@@ -27,16 +27,24 @@ const SHADER_LIB = {
 // Global utilities
 // (available in all shaders)
 //
-'global.glsl':
+'global.glsl': gl =>
 `
 // Integer position of the current texel
 #define threadLocation() ivec2(texCoord * texSize)
 
+// Get current pixel (independent texture lookup)
+#define currentPixel(img) texture((img), texCoord)
+
 // Get pixel at (x,y)
 #define pixelAt(img, pos) texelFetch((img), (pos), 0)
 
-// Get current pixel plus a constant (dx,dy) offset
-#define pixelAtOffset(img, thread, offset) texelFetchOffset((img), (thread), 0, (offset))
+// Get the pixel at a constant (dx,dy) offset\n` +
+(
+    gl.MAX_PROGRAM_TEXEL_OFFSET >= 7 ?
+    `#define pixelAtOffset(img, offset) textureOffset((img), texCoord, (offset))\n` :
+    `#define pixelAtOffset(img, offset) texture((img), texCoord + vec2(offset) / texSize)\n`
+) +
+`
 `,
 
 };
@@ -48,13 +56,15 @@ export class ShaderLib
 {
      /**
      * Reads a shader from the virtual filesystem
+     * @param {WebGL2RenderingContext} gl
      * @param {string} filename 
      * @returns {string}
      */
-    static readfileSync(filename)
+    static readfileSync(gl, filename)
     {
+        console.warn(gl.MAX_PROGRAM_TEXEL_OFFSET >= 7, gl.MAX_PROGRAM_TEXEL_OFFSET);
         if(SHADER_LIB.hasOwnProperty(filename))
-            return SHADER_LIB[filename];
+            return (SHADER_LIB[filename])(gl);
 
         throw GLUtils.Error(`Can't find file \"${filename}\"`);
     }

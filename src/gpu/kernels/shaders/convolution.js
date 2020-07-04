@@ -39,13 +39,13 @@ export function conv2D(kernel, normalizationConstant = 1.0)
     // code generator
     const foreachKernelElement = fn => cartesian(symmetricRange(N), symmetricRange(N)).map(
         cur => fn(
-            kernel32[(kSize - 1 - (cur[0] + N)) * kSize + (cur[1] + N)], // invert y-axis for WebGL
+            kernel32[(cur[0] + N) * kSize + (cur[1] + N)],
             cur[0], cur[1]
         )
     ).join('\n');
 
     const generateCode = (k, dy, dx) => `
-        result += pixelAtOffset(image, thread, ivec2(${dx | 0}, ${dy | 0})) * float(${+k});
+        result += pixelAtOffset(image, ivec2(${dx | 0}, ${dy | 0})) * float(${+k});
     `;
 
     // shader
@@ -54,8 +54,7 @@ export function conv2D(kernel, normalizationConstant = 1.0)
 
     void main()
     {
-        ivec2 thread = threadLocation();
-        float alpha = pixelAt(image, thread).a;
+        float alpha = currentPixel(image).a;
         vec4 result = vec4(0.0f, 0.0f, 0.0f, 0.0f);
 
         ${foreachKernelElement(generateCode)}
@@ -95,14 +94,12 @@ function conv1D(axis, kernel, normalizationConstant)
 
     // code generator
     const foreachKernelElement = fn => symmetricRange(N).reduce(
-        (acc, cur) => (axis == 'x') ?
-            acc + fn(kernel32[cur + N], cur) :
-            acc + fn(kernel32[kSize - 1 - (cur + N)], cur), // invert y-axis for WebGL
+        (acc, cur) => acc + fn(kernel32[cur + N], cur),
     '');
     const generateCode = (k, i) => ((axis == 'x') ? `
-        pixel += pixelAtOffset(image, thread, ivec2(${i | 0}, 0)) * float(${+k});
+        pixel += pixelAtOffset(image, ivec2(${i | 0}, 0)) * float(${+k});
     ` : `
-        pixel += pixelAtOffset(image, thread, ivec2(0, ${i | 0})) * float(${+k});
+        pixel += pixelAtOffset(image, ivec2(0, ${i | 0})) * float(${+k});
     `);
 
     // shader
@@ -111,8 +108,7 @@ function conv1D(axis, kernel, normalizationConstant)
 
     void main()
     {
-        ivec2 thread = threadLocation();
-        float alpha = pixelAt(image, thread).a;
+        float alpha = currentPixel(image).a;
         vec4 pixel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
 
         ${foreachKernelElement(generateCode)}
@@ -174,14 +170,13 @@ export function createKernel2D(kernelSize)
         Utils.fatal(`Can't create a 2D texture kernel of size ${kernelSize}`);
 
     // encode float in the [0,1] range to RGBA
-    // note: invert kernel y-axis for WebGL
     const shader = `
     uniform float kernel[${kernelSize * kernelSize}];
 
     void main()
     {
         ivec2 thread = threadLocation();
-        float val = kernel[((${kernelSize}) - 1 - thread.y) * (${kernelSize}) + thread.x];
+        float val = kernel[(${kernelSize}) * thread.y + thread.x];
 
         float e0 = floor(val);
         float e1 = 256.0f * fract(val);
@@ -252,7 +247,7 @@ export function texConv2D(kernelSize)
     const generateCode = (i, j) => `
         kernel = pixelAt(texKernel, ivec2(${i + N}, ${j + N}));
         value = dot(kernel, magic) * scale + offset;
-        result += pixelAtOffset(image, thread, ivec2(${i}, ${j})) * value;
+        result += pixelAtOffset(image, ivec2(${i}, ${j})) * value;
     `;
 
     // image: target image
@@ -266,10 +261,9 @@ export function texConv2D(kernelSize)
 
     void main()
     {
-        ivec2 thread = threadLocation();
         vec4 kernel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
         vec4 result = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-        float alpha = pixelAt(image, thread).a;
+        float alpha = currentPixel(image).a;
         float value = 0.0f;
 
         ${foreachKernelElement(generateCode)}
@@ -291,8 +285,7 @@ export function idConv2D(kernelSize)
 
     void main()
     {
-        ivec2 thread = threadLocation();
-        color = pixelAt(image, thread);
+        color = currentPixel(image);
     }
     `;
 }
@@ -319,11 +312,11 @@ function texConv1D(kernelSize, axis)
     const generateCode = i => ((axis == 'x') ? `
         kernel = pixelAt(texKernel, ivec2(${i + N}, 0));
         value = dot(kernel, magic) * scale + offset;
-        result += pixelAtOffset(image, thread, ivec2(${i}, 0)) * value;
+        result += pixelAtOffset(image, ivec2(${i}, 0)) * value;
     ` : `
-        kernel = pixelAt(texKernel, ivec2(${-i + N}, 0));
+        kernel = pixelAt(texKernel, ivec2(${i + N}, 0));
         value = dot(kernel, magic) * scale + offset;
-        result += pixelAtOffset(image, thread, ivec2(0, ${i})) * value;
+        result += pixelAtOffset(image, ivec2(0, ${i})) * value;
     `);
 
     // image: target image
@@ -337,10 +330,9 @@ function texConv1D(kernelSize, axis)
 
     void main()
     {
-        ivec2 thread = threadLocation();
         vec4 kernel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
         vec4 result = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-        float alpha = pixelAt(image, thread).a;
+        float alpha = currentPixel(image).a;
         float value = 0.0f;
 
         ${foreachKernelElement(generateCode)}

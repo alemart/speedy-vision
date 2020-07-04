@@ -19,21 +19,6 @@
  * Code for generating image pyramids
  */
 
-/*
-export function upsample2(image)
-{
-    const x = this.thread.x, y = this.thread.y;
-
-    if((x + y) % 2 == 0) {
-        const pixel = image[Math.floor(y / 2)][Math.floor(x / 2)];
-        this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
-    }
-    else {
-        const thisPixel = image[y][x]; // preserve alpha (encodes scale)
-        this.color(0, 0, 0, thisPixel[3]);
-    }
-}
-*/
 export const upsample2 = image => `
 uniform sampler2D image;
 
@@ -49,15 +34,6 @@ void main()
 }
 `;
 
-/*
-export function downsample2(image)
-{
-    const x = this.thread.x, y = this.thread.y;
-    const pixel = image[y * 2][x * 2];
-
-    this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
-}
-*/
 export const downsample2 = image => `
 uniform sampler2D image;
 
@@ -68,21 +44,6 @@ void main()
 }
 `;
 
-/*
-export function upsample3(image)
-{
-    const x = this.thread.x, y = this.thread.y;
-
-    if((x - (y % 3)) % 3 == 0) {
-        const pixel = image[Math.floor(y / 3)][Math.floor(x / 3)];
-        this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
-    }
-    else {
-        const thisPixel = image[y][x]; // preserve alpha (encodes scale)
-        this.color(0, 0, 0, thisPixel[3]);
-    }
-}
-*/
 export const upsample3 = image => `
 uniform sampler2D image;
 
@@ -98,15 +59,6 @@ void main()
 }
 `;
 
-/*
-export function downsample3(image)
-{
-    const x = this.thread.x, y = this.thread.y;
-    const pixel = image[y * 3][x * 3];
-    
-    this.color(pixel[0], pixel[1], pixel[2], pixel[3]);
-}
-*/
 export const downsample3 = image => `
 uniform sampler2D image;
 

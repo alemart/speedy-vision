@@ -83,10 +83,7 @@ export function setScale(scale, pyramidHeight, pyramidMaxScale)
 
     void main()
     {
-        ivec2 thread = threadLocation();
-        vec4 pixel = pixelAt(image, thread);
-
-        color = vec4(pixel.rgb, float(${alpha}));
+        color = vec4(currentPixel(image).rgb, float(${alpha}));
     }
     `;
 }
@@ -102,8 +99,7 @@ export function scale(scaleFactor, pyramidHeight, pyramidMaxScale)
 
     void main()
     {
-        ivec2 thread = threadLocation();
-        vec4 pixel = pixelAt(image, thread);
+        vec4 pixel = currentPixel(image);
         float alpha = clamp(pixel.a + float(${delta}), 0.0f, 1.0f);
 
         color = vec4(pixel.rgb, alpha);

@@ -20,7 +20,7 @@
  */
 
 import { GPUKernelGroup } from '../gpu-kernel-group';
-import { identity } from './shaders/identity';
+import { identity, flipY } from './shaders/identity';
 
 /**
  * GPUUtils
@@ -42,7 +42,7 @@ export class GPUUtils extends GPUKernelGroup
             .declare('identity', identity)
 
             // output a texture from a pipeline
-            .declare('output', identity,
+            .declare('output', flipY,
                 this.operation.displaysGraphics())
         ;
     }

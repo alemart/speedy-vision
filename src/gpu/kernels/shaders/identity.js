@@ -25,7 +25,18 @@ uniform sampler2D image;
 
 void main()
 {
+    color = currentPixel(image);
+}
+`;
+
+// Flip y-axis for output
+export const flipY = (image) => `
+uniform sampler2D image;
+
+void main() {
     ivec2 thread = threadLocation();
-    color = pixelAt(image, thread);
+    ivec2 flippedY = ivec2(thread.x, int(texSize.y) - 1 - thread.y);
+
+    color = pixelAt(image, flippedY);
 }
 `;

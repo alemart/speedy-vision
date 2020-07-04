@@ -20,7 +20,7 @@
  */
 
 import { GPUKernelGroup } from '../gpu-kernel-group';
-import { identity } from './shaders/identity';
+import { flipY } from './shaders/identity';
 import { convX, convY } from './shaders/convolution';
 import { upsample2, downsample2, upsample3, downsample3 } from './shaders/pyramids';
 import { setScale, scale } from './shaders/scale';
@@ -56,17 +56,17 @@ export class GPUPyramids extends GPUKernelGroup
             .compose('intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3', '_scale3/2')
 
             // kernels for debugging
-            .declare('output', identity, {
+            .declare('output', flipY, {
                 ...this.operation.hasTextureSize(this._width, this._height),
                 ...this.operation.displaysGraphics()
             })
 
-            .declare('output2', identity, {
+            .declare('output2', flipY, {
                 ...this.operation.hasTextureSize(2 * this._width, 2 * this._height),
                 ...this.operation.displaysGraphics()
             })
 
-            .declare('output3', identity, {
+            .declare('output3', flipY, {
                 ...this.operation.hasTextureSize(3 * this._width, 3 * this._height),
                 ...this.operation.displaysGraphics()
             })

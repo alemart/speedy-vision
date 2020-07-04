@@ -466,7 +466,7 @@ function createStandardGeometry(gl)
 function createStandardProgram(gl, width, height, fragmentShaderSource, uniforms = { })
 {
     // compile shaders
-    const source = ShaderPreprocessor.run(DEFAULT_FRAGMENT_SHADER_PREFIX + fragmentShaderSource);
+    const source = ShaderPreprocessor.run(gl, DEFAULT_FRAGMENT_SHADER_PREFIX + fragmentShaderSource);
     const program = GLUtils.createProgram(gl, DEFAULT_VERTEX_SHADER, source);
 
     // setup geometry

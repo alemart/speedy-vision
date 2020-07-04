@@ -43,7 +43,6 @@ export class SpeedyGPUCore
         this._canvas = createCanvas(this._width, this._height);
         this._gl = createWebGLContext(this._canvas);
         this._inputTexture = null;
-        this._flipY = null;
     }
 
     /**
@@ -98,7 +97,6 @@ export class SpeedyGPUCore
             Utils.warning('Lost WebGL context');
             this._gl = createWebGLContext(this._canvas);
             this._inputTexture = null;
-            this._flipY = null;
             return upload(data, width, height);
         }
 
@@ -124,19 +122,11 @@ export class SpeedyGPUCore
             return upload(data, width, height);
         }
 
-        // Create flip-y shader after receiving the first inputTexture,
-        // so that the y-axis points down and (0,0) is at the top-left corner.
-        // This isn't the default of WebGL (ps: doing it in the vertex buffer
-        //                                      alternates coordinates)
-        if(this._flipY === null) {
-            this._flipY = new SpeedyProgram(gl, flipY, {
-                output: [ gl.canvas.width, gl.canvas.height ]
-            });
-        }
-
-        // done!
+        // done! note: the input texture is upside-down, i.e.,
+        // flipped on the y-axis. We need to unflip it on the
+        // output, so that (0,0) becomes the top-left corner
         GLUtils.uploadToTexture(gl, this._inputTexture, data);
-        return this._flipY(this._inputTexture);
+        return this._inputTexture;
     }
 
     /**

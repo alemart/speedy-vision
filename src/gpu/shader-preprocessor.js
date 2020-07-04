@@ -28,10 +28,11 @@ export class ShaderPreprocessor
 {
     /**
      * Runs the preprocessor
+     * @param {WebGL2RenderingContext} gl
      * @param {string} code 
      * @returns {string} preprocessed code
      */
-    static run(code)
+    static run(gl, code)
     {
         ShaderPreprocessor._includeRegex = ShaderPreprocessor._includeRegex ||
             (ShaderPreprocessor._includeRegex = /^\s*@\s*include\s+"(.*?)"/gm);
@@ -43,7 +44,7 @@ export class ShaderPreprocessor
         return String(code).replace(ShaderPreprocessor._commentsRegex[0], '')
                            .replace(ShaderPreprocessor._commentsRegex[1], '')
                            .replace(ShaderPreprocessor._includeRegex,
-                                (_, filename) => ShaderLib.readfileSync(filename)
+                                (_, filename) => ShaderLib.readfileSync(gl, filename)
                             );
     }
 }
