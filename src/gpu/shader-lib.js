@@ -62,7 +62,6 @@ export class ShaderLib
      */
     static readfileSync(gl, filename)
     {
-        console.warn(gl.MAX_PROGRAM_TEXEL_OFFSET >= 7, gl.MAX_PROGRAM_TEXEL_OFFSET);
         if(SHADER_LIB.hasOwnProperty(filename))
             return (SHADER_LIB[filename])(gl);
 
