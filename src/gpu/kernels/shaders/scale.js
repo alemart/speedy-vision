@@ -70,14 +70,6 @@ export function setScale(scale, pyramidHeight, pyramidMaxScale)
     const x = Math.max(pyramidMinScale, Math.min(scale, pyramidMaxScale));
     const alpha = (lgM - Math.log2(x)) / (lgM + pyramidHeight);
 
-    /*
-    const body  = `
-    const pixel = image[this.thread.y][this.thread.x];
-    this.color(pixel[0], pixel[1], pixel[2], ${alpha});
-    `;
-
-    return new Function('image', body);
-    */
     return (image) => `
     uniform sampler2D image;
 

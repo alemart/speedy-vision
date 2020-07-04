@@ -32,6 +32,9 @@ const SHADER_LIB = {
 // Integer position of the current texel
 #define threadLocation() ivec2(texCoord * texSize)
 
+// Output size
+#define outputSize() ivec2(texSize)
+
 // Get current pixel (independent texture lookup)
 #define currentPixel(img) texture((img), texCoord)
 

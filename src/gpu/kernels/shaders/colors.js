@@ -30,12 +30,5 @@ void main()
     float g = dot(pixel, grey);
     
     color = vec4(g, g, g, 1.0f);
-
-    ivec2 thread = threadLocation();
-    if(thread.y < 10) color.g = float(thread.x) / texSize.x;
-
-    if(thread.x < 25) color.r = float(thread.y) / texSize.y;
-
-    if(float(thread.x) >= texSize.x - 10.0f) color.g = color.r = 1.0f;
 }
 `;

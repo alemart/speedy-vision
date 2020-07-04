@@ -34,9 +34,9 @@ export const flipY = (image) => `
 uniform sampler2D image;
 
 void main() {
-    ivec2 thread = threadLocation();
-    ivec2 flippedY = ivec2(thread.x, int(texSize.y) - 1 - thread.y);
+    ivec2 pos = threadLocation();
+    pos.y = int(texSize.y) - 1 - pos.y;
 
-    color = pixelAt(image, flippedY);
+    color = pixelAt(image, pos);
 }
 `;
