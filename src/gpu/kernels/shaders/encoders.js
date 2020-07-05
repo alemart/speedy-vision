@@ -47,31 +47,24 @@
 
 // encode keypoint offsets
 // maxIterations is an integer in [1,255], determined experimentally
-export const encodeKeypointOffsets = (image, maxIterations) => `
+export const encodeKeypointOffsets = (image, imageSize, maxIterations) => `
 uniform sampler2D image;
+uniform ivec2 imageSize;
 uniform int maxIterations;
 
 void main()
 {
-    ivec2 pos = threadLocation();
-    ivec2 size = outputSize();
     vec4 pixel = currentPixel(image);
-    int offset = 0;
+    ivec2 pos = threadLocation();
+    int offset = -1;
 
-    while(offset < maxIterations) {
-        if(++pos.x >= size.x) {
-            pos.x = 0;
-            if(++pos.y >= size.y)
-                break;
-        }
-
-        if(pixelAt(image, pos).r > 0.0f)
-            break;
-
+    while(offset < maxIterations && pos.y < imageSize.y && pixelAt(image, pos).r == 0.0f) {
         ++offset;
+        pos.x = (pos.x + 1) % imageSize.x;
+        pos.y += int(pos.x == 0);
     }
 
-    color = vec4(pixel.rg, float(offset) / 255.0f, pixel.a);
+    color = vec4(pixel.rg, float(max(0, offset)) / 255.0f, pixel.a);
 }
 `;
 
@@ -85,18 +78,17 @@ uniform int descriptorSize;
 // q = 0, 1, 2...
 bool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)
 {
-    int i = 0, cnt = 0;
+    int i = 0, p = 0;
 
     for(position = ivec2(0, 0); position.y < imageSize.y; ) {
         pixel = pixelAt(image, position);
         if(pixel.r > 0.0f) {
-            if(cnt++ == q)
+            if(p++ == q)
                 return true;
         }
 
         i += 1 + int(pixel.b * 255.0f);
-        position.x = i % imageSize.x;
-        position.y = (i - position.x) / imageSize.x;
+        position = ivec2(i % imageSize.x, i / imageSize.x);
     }
 
     return false;
@@ -109,22 +101,20 @@ void main()
     ivec2 thread = threadLocation();
     int p = encoderLength * thread.y + thread.x;
     int d = 2 + descriptorSize / 4; // pixels per keypoint
-    int r = p % d;
-    int q = (p - r) / d; // q-th feature point
+    int q = p / d; // q-th feature point
 
     // q-th keypoint doesn't exist
     color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
     // find the q-th keypoint, if it exists
     if(findQthKeypoint(q, position, pixel)) {
+        int r = p % d;
         switch(r) {
             case 0: {
                 // write position
-                int xLo = position.x % 256;
-                int xHi = (position.x - xLo) / 256;
-                int yLo = position.y % 256;
-                int yHi = (position.y - yLo) / 256;
-                color = vec4(float(xLo), float(xHi), float(yLo), float(yHi)) / 255.0f;
+                ivec2 lo = position & 255;
+                ivec2 hi = position >> 8;
+                color = vec4(float(lo.x), float(hi.x), float(lo.y), float(hi.y)) / 255.0f;
                 break;
             }
 
@@ -138,6 +128,7 @@ void main()
 
             default: {
                 // write descriptor
+                int i = r - 2; // take the i-th descriptor pixel of the q-th keypoint (i = 0, 1...)
                 break;
             }
         }

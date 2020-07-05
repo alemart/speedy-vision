@@ -111,7 +111,7 @@ export class GPUEncoders extends GPUKernelGroup
 
         // encode keypoint offsets
         const start = performance.now();
-        const offsets = this._encodeKeypointOffsets(corners, maxIterations);
+        const offsets = this._encodeKeypointOffsets(corners, imageSize, maxIterations);
         this._encodeKeypoints(offsets, imageSize, encoderLength, descriptorSize);
         const pixels = this._encodeKeypoints.readPixelsSync();
 
