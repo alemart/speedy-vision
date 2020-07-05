@@ -104,18 +104,16 @@ bool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)
 
 void main()
 {
-    ivec2 thread = threadLocation();
-
-    // q-th keypoint doesn't exist
-    color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
-    //if(max(thread.x, thread.y) >= encoderLength) return;
-
     vec4 pixel;
     ivec2 position;
+    ivec2 thread = threadLocation();
     int p = encoderLength * thread.y + thread.x;
     int d = 2 + descriptorSize / 4; // pixels per keypoint
     int r = p % d;
     int q = (p - r) / d; // q-th feature point
+
+    // q-th keypoint doesn't exist
+    color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
     // find the q-th keypoint, if it exists
     if(findQthKeypoint(q, position, pixel)) {
