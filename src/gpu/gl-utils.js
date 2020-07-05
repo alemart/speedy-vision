@@ -51,9 +51,10 @@ export class GLUtils
 
     /**
      * Create a shader
-     * @param {WebGL2RenderingContext} gl 
-     * @param {number} type 
-     * @param {string} source 
+     * @param {WebGL2RenderingContext} gl
+     * @param {number} type
+     * @param {string} source
+     * @returns {WebGLShader}
      */
     static createShader(gl, type, source)
     {
@@ -67,9 +68,10 @@ export class GLUtils
 
     /**
      * Create a vertex-shader + fragment-shader program
-     * @param {WebGL2RenderingContext} gl 
-     * @param {string} vertexShaderSource 
-     * @param {string} fragmentShaderSource 
+     * @param {WebGL2RenderingContext} gl
+     * @param {string} vertexShaderSource
+     * @param {string} fragmentShaderSource
+     * @returns {WebGLProgram}
      */
     static createProgram(gl, vertexShaderSource, fragmentShaderSource)
     {
@@ -89,7 +91,7 @@ export class GLUtils
                 gl.getProgramInfoLog(program),
             ];
 
-            const spaces = i => (2 - Math.floor(Math.log10(i)));
+            const spaces = i => Math.max(0, 2 - Math.floor(Math.log10(i)));
             const col = k => Array(spaces(k)).fill(' ').join('') + k + '. ';
             const formattedSource = fragmentShaderSource.split('\n')
                 .map((line, no) => col(1+no) + line)

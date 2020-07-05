@@ -200,7 +200,7 @@ void main()
             ((ct < p0  || ct < p6)  && (ct < p3  || ct < p9))  ;
 
         if(possibleCorner) {
-            let bright = 0, dark = 0, bc = 0, dc = 0;
+            int bright = 0, dark = 0, bc = 0, dc = 0;
 
             if(c_t > p0) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
             else { bc = 0; if(ct < p0) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
@@ -298,7 +298,7 @@ void main()
             ((ct < p1  || ct < p5)  && (ct < p3  || ct < p7))  ;
 
         if(possibleCorner) {
-            let bright = 0, dark = 0, bc = 0, dc = 0;
+            int bright = 0, dark = 0, bc = 0, dc = 0;
 
             if(c_t > p0) { dc = 0; bc += 1; if(bc > bright) bright = bc; }
             else { bc = 0; if(ct < p0) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }
@@ -519,7 +519,7 @@ void main()
 
     // non-maximum suppression
     vec4 pixel = currentPixel(image);
-    float score = pixel.r >= m ? pixel.r : 0.0f;
+    float score = float(pixel.r >= m) * pixel.r;
     color = vec4(score, pixel.gba);
 }
 `;
@@ -541,7 +541,7 @@ void main()
     // outside bounds?
     ivec2 thread = threadLocation();
     ivec2 size = outputSize();
-    if(x < 3 || y < 3 || x >= size.x - 3 || y >= size.y - 3)
+    if(thread.x < 3 || thread.y < 3 || thread.x >= size.x - 3 || thread.y >= size.y - 3)
         return;
 
     // is it a corner?
@@ -554,10 +554,12 @@ void main()
     float p12 = pixelAtOffset(image, ivec2(-3, 0)).g;
 
     // possible corner?
+    /*
     if(
         ((c_t > p0 || c_t > p8) && (c_t > p4 || c_t > p12)) ||
         ((ct < p0  || ct < p8)  && (ct < p4  || ct < p12))
     ) {
+    */
         float p1 = pixelAtOffset(image, ivec2(1, 3)).g;
         float p2 = pixelAtOffset(image, ivec2(2, 2)).g;
         float p3 = pixelAtOffset(image, ivec2(3, 1)).g;
@@ -3472,6 +3474,6 @@ void main()
            ;
          else
           ;
-    }
+    //}
 }
 `;

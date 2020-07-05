@@ -103,7 +103,10 @@ export class SpeedyProgram extends Function
         // get size
         width = Math.max(1, width | 0);
         height = Math.max(1, height | 0);
-        options.output = [ width, height ];
+
+        // update options.output
+        options.output[0] = width;
+        options.output[1] = height;
 
         // resize stdprog
         if(options.renderToTexture)
@@ -118,10 +121,11 @@ export class SpeedyProgram extends Function
         // update texSize uniform
         const uniform = this._stdprog.uniform.texSize;
         (gl[UNIFORM_TYPES[uniform.type]])(uniform.location, width, height);
-        console.log(`Resized program to ${width} x ${height}`);
+        //console.log(`Resized program to ${width} x ${height}`);
 
         // invalidate pixel buffers
-        this._pixels = null;
+        if(this._pixels !== null && this._pixels.length < width * height * 4)
+            this._pixels = null;
     }
 
     /**

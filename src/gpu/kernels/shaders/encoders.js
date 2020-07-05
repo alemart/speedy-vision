@@ -22,9 +22,9 @@
 /*
  * Keypoint images are encoded as follows:
  *
- * R - "cornerness" score of the pixel (0 means it's not a feature)
+ * R - "cornerness" score of the pixel (0 means it's not a corner)
  * G - pixel intensity (greyscale)
- * B - min(c, -1 + offset to the next feature) for a constant c in [1,255]
+ * B - min(c, -1 + offset to the next feature) / 255, for a constant c in [1,255]
  * A - general purpose channel
  *
  *
@@ -47,112 +47,102 @@
 
 // encode keypoint offsets
 // maxIterations is an integer in [1,255], determined experimentally
-export function encodeKeypointOffsets(image, maxIterations)
-{
-    const w = this.constants.width, h = this.constants.height;
-    let x = this.thread.x, y = this.thread.y;
-    let next = image[y][x];
-    const pixel = image[y][x];
+export const encodeKeypointOffsets = (image, maxIterations) => `
+uniform sampler2D image;
+uniform int maxIterations;
 
-    let r = 0;
-    while(r < maxIterations) {
-        if(++x >= w) {
-            x = 0;
-            if(++y >= h)
+void main()
+{
+    ivec2 pos = threadLocation();
+    ivec2 size = outputSize();
+    vec4 pixel = currentPixel(image);
+    int offset = 0;
+
+    while(offset < maxIterations) {
+        if(++pos.x >= size.x) {
+            pos.x = 0;
+            if(++pos.y >= size.y)
                 break;
         }
 
-        next = image[y][x];
-        if(next[0] > 0)
+        if(pixelAt(image, pos).r > 0.0f)
             break;
 
-        ++r;
+        ++offset;
     }
 
-    this.color(pixel[0], pixel[1], r / 255.0, pixel[3]);
+    color = vec4(pixel.rg, float(offset) / 255.0f, pixel.a);
 }
-
-// encode keypoint count
-export function encodeKeypointCount(image)
-{
-    const w = this.constants.width, h = this.constants.height;
-    const size = w * h;
-    let x = 0, y = 0, i = 0;
-    let cnt = 0, cntLo = 0, cntHi = 0;
-
-    // count feature points
-    let px = image[0][0];
-    while(i < size) {
-        i += 1 + Math.floor(px[2] * 255);
-        x = i % w;
-        y = (i - x) / w;
-        if(y >= h) break;
-        px = image[y][x];
-
-        // got a point?
-        if(px[0] > 0)
-            cnt++;
-    }
-
-    // store feature point count (up to 64k)
-    cntLo = cnt % 256;
-    cntHi = (cnt - cntLo) / 256;
-    this.color(cntLo / 255.0, cntHi / 255.0, 0, 0);
-}
+`;
 
 // encode keypoints
-export function encodeKeypoints(image, encoderLength, descriptorSize)
+export const encodeKeypoints = (image, imageSize, encoderLength, descriptorSize) => `
+uniform sampler2D image;
+uniform ivec2 imageSize;
+uniform int encoderLength;
+uniform int descriptorSize;
+
+// q = 0, 1, 2...
+bool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)
 {
-    const s = encoderLength;
-    const w = this.constants.width, h = this.constants.height;
-    const p = s * (s-1 - this.thread.y) + this.thread.x;
-    const d = 2 + descriptorSize / 4; // pixels per keypoint
-    const r = p % d;
-    const q = (p - r) / d;
-    const size = w * h;
-    let i = 0, cnt = 0;
-    let x = 0, xLo = 0, xHi = 0;
-    let y = 0, yLo = 0, yHi = 0;
-    let scale = 0, rotation = 0;
+    int i = 0, cnt = 0;
 
-    // q-th feature point doesn't exist
-    this.color(1, 1, 1, 1);
+    for(position = ivec2(0, 0); position.y < imageSize.y; ) {
+        pixel = pixelAt(image, position);
+        if(pixel.r > 0.0f) {
+            if(cnt++ == q)
+                return true;
+        }
 
-    // find the q-th feature point,
-    // if it exists
-    let px = image[0][0];
-    if(r < 2) { while(i < size) {
-        i += 1 + Math.floor(px[2] * 255);
-        x = i % w;
-        y = (i - x) / w;
-        if(y >= h) break;
-        px = image[y][x];
+        i += 1 + int(pixel.b * 255.0f);
+        position.x = i % imageSize.x;
+        position.y = (i - position.x) / imageSize.x;
+    }
 
-        // q-th point?
-        if(px[0] > 0) {
-            if(cnt++ == q) {
-                // position pixel?
-                if(r == 0) {
-                    xLo = x % 256;
-                    xHi = (x - xLo) / 256;
+    return false;
+}
 
-                    y = h-1 - y;
-                    yLo = y % 256;
-                    yHi = (y - yLo) / 256;
+void main()
+{
+    ivec2 thread = threadLocation();
 
-                    this.color(xLo / 255.0, xHi / 255.0, yLo / 255.0, yHi / 255.0);
-                    break;
-                }
+    // q-th keypoint doesn't exist
+    color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    //if(max(thread.x, thread.y) >= encoderLength) return;
 
-                // keypoint properties pixel?
-                else {
-                    scale = px[3];
-                    rotation = 0;
+    vec4 pixel;
+    ivec2 position;
+    int p = encoderLength * thread.y + thread.x;
+    int d = 2 + descriptorSize / 4; // pixels per keypoint
+    int r = p % d;
+    int q = (p - r) / d; // q-th feature point
 
-                    this.color(scale, rotation, 0, 0);
-                    break;
-                }
+    // find the q-th keypoint, if it exists
+    if(findQthKeypoint(q, position, pixel)) {
+        switch(r) {
+            case 0: {
+                // write position
+                int xLo = position.x % 256;
+                int xHi = (position.x - xLo) / 256;
+                int yLo = position.y % 256;
+                int yHi = (position.y - yLo) / 256;
+                color = vec4(float(xLo), float(xHi), float(yLo), float(yHi)) / 255.0f;
+                break;
+            }
+
+            case 1: {
+                // write scale & rotation
+                float scale = pixel.a;
+                float rotation = 0.0f;
+                color = vec4(scale, rotation, 0.0f, 0.0f);
+                break;
+            }
+
+            default: {
+                // write descriptor
+                break;
             }
         }
-    } }
+    }
 }
+`;

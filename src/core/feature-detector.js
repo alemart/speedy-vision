@@ -72,7 +72,8 @@ export class FeatureDetector
             settings.threshold = FAST.normalizedThreshold(settings.threshold);
 
         // pre-processing the image...
-        const source = settings.denoise ? gpu.filters.gauss5(media.source) : media.source;
+        const texture = media._gpu.core.upload(media.source);
+        const source = settings.denoise ? gpu.filters.gauss5(texture) : texture;
         const greyscale = gpu.colors.rgb2grey(source);
 
         // extract features
