@@ -27,10 +27,11 @@ void main()
     ivec2 thread = threadLocation();
     vec4 pixel = pixelAt(image, thread / 2);
 
-    if((thread.x + thread.y) % 2 == 0)
-        color = pixel;
-    else
-        color = vec4(0.0f, 0.0f, 0.0f, pixel.a); // preserve scale
+    color = mix(
+        vec4(0.0f, 0.0f, 0.0f, pixel.a), // preserve scale
+        pixel,
+        ((thread.x + thread.y) & 1) == 0
+    );
 }
 `;
 
@@ -52,10 +53,11 @@ void main()
     ivec2 thread = threadLocation();
     vec4 pixel = pixelAt(image, thread / 3);
 
-    if((thread.x - (thread.y % 3) + 3) % 3 == 0)
-        color = pixel;
-    else
-        color = vec4(0.0f, 0.0f, 0.0f, pixel.a); // preserve scale
+    color = mix(
+        vec4(0.0f, 0.0f, 0.0f, pixel.a), // preserve scale
+        pixel,
+        ((thread.x - (thread.y % 3) + 3) % 3) == 0
+    );
 }
 `;
 
