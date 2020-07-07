@@ -194,17 +194,3 @@ function createWebGLContext(canvas)
 
     return gl;
 }
-
-function flipY(image)
-{
-    return `
-    uniform sampler2D image;
-
-    void main() {
-        ivec2 thread = threadLocation();
-        ivec2 flippedY = ivec2(thread.x, int(texSize.y) - 1 - thread.y);
-
-        color = pixelAt(image, flippedY);
-    }
-    `;
-}

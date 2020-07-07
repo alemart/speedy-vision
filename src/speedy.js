@@ -62,7 +62,7 @@ class Speedy
      */
     static get version()
     {
-        return PACKAGE_VERSION;
+        return __SPEEDY_VERSION__;
     }
 
     /**

@@ -21,8 +21,6 @@
 
 import { GPUKernelGroup } from '../gpu-kernel-group';
 import { fast5, fast7, fast9ml, fastScore8, fastScore12, fastScore16, fastSuppression } from './shaders/fast';
-import { merge, mergePyramidLevels, normalizeScale } from './shaders/keypoints';
-import { identity } from './shaders/identity';
 import { brisk } from './shaders/brisk';
 
 /**
@@ -61,14 +59,6 @@ export class GPUKeypoints extends GPUKernelGroup
 
             // BRISK Scale-Space Non-Maximum Suppression & Interpolation
             .declare('brisk', brisk)
-
-            // Merge keypoints across multiple scales
-            .declare('merge', merge)
-            .declare('mergePyramidLevels', mergePyramidLevels)
-            .declare('normalizeScale', normalizeScale)
-
-            // Crop to output size
-            .declare('crop', identity)
         ;
     }
 }

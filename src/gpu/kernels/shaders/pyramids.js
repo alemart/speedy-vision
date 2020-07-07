@@ -16,57 +16,98 @@
  * limitations under the License.
  *
  * pyramids.js
- * Code for generating image pyramids
+ * Image pyramids & scale-space utilities
  */
 
-export const upsample2 = image => `
-uniform sampler2D image;
+// pyramid generation
+export const upsample2 = image => require('./pyramids/upsample2.glsl');
+export const downsample2 = image => require('./pyramids/downsample2.glsl');
+export const upsample3 = image => require('./pyramids/upsample3.glsl');
+export const downsample3 = image => require('./pyramids/downsample3.glsl');
 
-void main()
+// utilities for merging keypoints across multiple scales
+export const mergeKeypoints = (target, source) => require('./pyramids/merge-keypoints.glsl');
+export const mergeKeypointsAtConsecutiveLevels = (largerImage, smallerImage) => require('./pyramids/merge-keypoints-at-consecutive-levels.glsl');
+export const normalizeKeypoints = (image, imageScale) => require('./pyramids/normalize-keypoints.glsl');
+
+// image scale
+
+/*
+ * Image scale is encoded in the alpha channel (a)
+ * according to the following model:
+ *
+ * a(x) = (log2(M) - log2(x)) / (log2(M) + h)
+ *
+ * where x := scale of the image in the pyramid
+ *            it may be 1, 0.5, 0.25, 0.125...
+ *            also 1.5, 0.75, 0.375... (intra-layers)
+ *
+ *       h := height (depth) of the pyramid, an integer
+ *
+ *       M := scale upper bound: the maximum supported
+ *            scale x for a pyramid layer, a constant
+ *            that is preferably a power of two
+ *            (e.g., M = 2)
+ *
+ *
+ *
+ * This model has some neat properties:
+ *
+ * Scale image by factor s:
+ * a(s*x) = a(x) - log2(s) / (log2(M) + h)
+ *
+ * Log of scale (scale-axis):
+ * log2(x) = log2(M) - (log2(M) + h) * a(x)
+ *
+ * Bounded output:
+ * 0 <= a(x) < 1
+ *
+ * Since x <= M, it follows that a(x) >= 0 for all x
+ * Since x > 1/2^h, it follows that a(x) < 1 for all x
+ * Thus, if alpha channel = 1.0, we have no scale data
+ *
+ *
+ *
+ * A note on image scale:
+ *
+ * scale = 1 means an image with its original size
+ * scale = 2 means double the size (thus, 4x the area)
+ * scale = 0.5 means half the size (thus, 1/4 the area)
+ * and so on...
+ */
+
+export function setScale(scale, pyramidHeight, pyramidMaxScale)
 {
-    ivec2 thread = threadLocation();
-    vec4 pixel = pixelAt(image, thread / 2);
+    const lgM = Math.log2(pyramidMaxScale), eps = 1e-5;
+    const pyramidMinScale = Math.pow(2, -pyramidHeight) + eps;
+    const x = Math.max(pyramidMinScale, Math.min(scale, pyramidMaxScale));
+    const alpha = (lgM - Math.log2(x)) / (lgM + pyramidHeight);
 
-    color = mix(
-        vec4(0.0f, 0.0f, 0.0f, pixel.a), // preserve scale
-        pixel,
-        ((thread.x + thread.y) & 1) == 0
-    );
+    return (image) => `
+    uniform sampler2D image;
+
+    void main()
+    {
+        color = vec4(currentPixel(image).rgb, float(${alpha}));
+    }
+    `;
 }
-`;
 
-export const downsample2 = image => `
-uniform sampler2D image;
-
-void main()
+export function scale(scaleFactor, pyramidHeight, pyramidMaxScale)
 {
-    ivec2 thread = threadLocation();
-    color = pixelAt(image, thread * 2);
+    const lgM = Math.log2(pyramidMaxScale);
+    const s = Math.max(1e-5, scaleFactor);
+    const delta = -Math.log2(s) / (lgM + pyramidHeight);
+
+    return (image) => `
+    uniform sampler2D image;
+
+    void main()
+    {
+        vec4 pixel = currentPixel(image);
+        float alpha = clamp(pixel.a + float(${delta}), 0.0f, 1.0f);
+
+        color = vec4(pixel.rgb, alpha);
+    }
+    `;
 }
-`;
-
-export const upsample3 = image => `
-uniform sampler2D image;
-
-void main()
-{
-    ivec2 thread = threadLocation();
-    vec4 pixel = pixelAt(image, thread / 3);
-
-    color = mix(
-        vec4(0.0f, 0.0f, 0.0f, pixel.a), // preserve scale
-        pixel,
-        ((thread.x - (thread.y % 3) + 3) % 3) == 0
-    );
-}
-`;
-
-export const downsample3 = image => `
-uniform sampler2D image;
-
-void main()
-{
-    ivec2 thread = threadLocation();
-    color = pixelAt(image, thread * 3);
-}
-`;

@@ -24,7 +24,7 @@ module.exports = (env, argv) => ({
         }))
     }),
     new webpack.DefinePlugin({
-      'PACKAGE_VERSION': JSON.stringify(package.version),
+      '__SPEEDY_VERSION__': JSON.stringify(package.version),
     }),
   ],
   output: {
@@ -32,6 +32,21 @@ module.exports = (env, argv) => ({
     filename: argv.mode == 'development' ? 'speedy-vision.js' : 'speedy-vision.min.js',
     library: 'Speedy',
     libraryTarget: 'var',
+  },
+  module: {
+    rules: [
+      {
+        test: /\.glsl$/i,
+        use: [
+          {
+            loader: 'raw-loader',
+            options: {
+              esModule: false,
+            },
+          },
+        ],
+      },
+    ],
   },
   devtool: argv.mode == 'development' ? 'source-map' : undefined,
   devServer: {

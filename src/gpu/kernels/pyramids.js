@@ -20,13 +20,11 @@
  */
 
 import { GPUKernelGroup } from '../gpu-kernel-group';
-import { flipY } from './shaders/identity';
+import { identity, flipY } from './shaders/utils';
 import { convX, convY } from './shaders/convolution';
 import { upsample2, downsample2, upsample3, downsample3 } from './shaders/pyramids';
-import { setScale, scale } from './shaders/scale';
-
-// neat utilities
-//const withCanvas = (width, height) => ({ output: [ width|0, height|0 ], pipeline: false })
+import { mergeKeypoints, mergeKeypointsAtConsecutiveLevels, normalizeKeypoints } from './shaders/pyramids';
+import { setScale, scale } from './shaders/pyramids';
 
 /**
  * GPUPyramids
@@ -54,6 +52,14 @@ export class GPUPyramids extends GPUKernelGroup
             // intra-pyramid operations (between two pyramid levels)
             .compose('intraReduce', '_upsample2', '_smoothX2', '_smoothY2', '_downsample3/2', '_scale2/3')
             .compose('intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3', '_scale3/2')
+
+            // Merge keypoints across multiple scales
+            .declare('mergeKeypoints', mergeKeypoints)
+            .declare('mergeKeypointsAtConsecutiveLevels', mergeKeypointsAtConsecutiveLevels)
+            .declare('normalizeKeypoints', normalizeKeypoints)
+
+            // Crop texture to width x height of the current pyramid level
+            .declare('crop', identity)
 
             // kernels for debugging
             .declare('output', flipY, {

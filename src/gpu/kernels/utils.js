@@ -20,7 +20,7 @@
  */
 
 import { GPUKernelGroup } from '../gpu-kernel-group';
-import { identity, flipY } from './shaders/identity';
+import { identity, flipY } from './shaders/utils';
 
 /**
  * GPUUtils

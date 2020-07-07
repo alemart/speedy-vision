@@ -80,12 +80,12 @@ export class BRISK
 
         // merge all keypoints
         for(let j = suppressedPyramidCorners.length - 2; j >= 0; j--)
-            suppressedPyramidCorners[j] = gpu.pyramid(j).keypoints.mergePyramidLevels(suppressedPyramidCorners[j], suppressedPyramidCorners[j+1]);
+            suppressedPyramidCorners[j] = gpu.pyramid(j).pyramids.mergeKeypointsAtConsecutiveLevels(suppressedPyramidCorners[j], suppressedPyramidCorners[j+1]);
         for(let j = suppressedIntraPyramidCorners.length - 2; j >= 0; j--)
-            suppressedIntraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.mergePyramidLevels(suppressedIntraPyramidCorners[j], suppressedIntraPyramidCorners[j+1]);
-        suppressedIntraPyramidCorners[0] = gpu.intraPyramid(0).keypoints.normalizeScale(suppressedIntraPyramidCorners[0], 1.5);
-        suppressedIntraPyramidCorners[0] = gpu.pyramid(0).keypoints.crop(suppressedIntraPyramidCorners[0]);
-        const keypoints = gpu.pyramid(0).keypoints.merge(suppressedPyramidCorners[0], suppressedIntraPyramidCorners[0]);
+            suppressedIntraPyramidCorners[j] = gpu.intraPyramid(j).pyramids.mergeKeypointsAtConsecutiveLevels(suppressedIntraPyramidCorners[j], suppressedIntraPyramidCorners[j+1]);
+        suppressedIntraPyramidCorners[0] = gpu.intraPyramid(0).pyramids.normalizeKeypoints(suppressedIntraPyramidCorners[0], 1.5);
+        suppressedIntraPyramidCorners[0] = gpu.pyramid(0).pyramids.crop(suppressedIntraPyramidCorners[0]);
+        const keypoints = gpu.pyramid(0).pyramids.mergeKeypoints(suppressedPyramidCorners[0], suppressedIntraPyramidCorners[0]);
 
         // create gaussian kernels for different scales and radii
         if(gaussians == null) {

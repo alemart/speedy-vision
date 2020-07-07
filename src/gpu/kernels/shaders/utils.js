@@ -15,28 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * identity.js
- * Identity shader
+ * utils.js
+ * Utility shaders
  */
 
 // Identity shader: no-operation
-export const identity = (image) => `
-uniform sampler2D image;
-
-void main()
-{
-    color = currentPixel(image);
-}
-`;
+export const identity = (image) => require('./utils/identity.glsl');
 
 // Flip y-axis for output
-export const flipY = (image) => `
-uniform sampler2D image;
-
-void main() {
-    ivec2 pos = threadLocation();
-    pos.y = int(texSize.y) - 1 - pos.y;
-
-    color = pixelAt(image, pos);
-}
-`;
+export const flipY = (image) => require('./utils/flip-y.glsl');
