@@ -72,9 +72,9 @@ export class FeatureDetector
             settings.threshold = FAST.normalizedThreshold(settings.threshold);
 
         // pre-processing the image...
-        const texture = media._gpu.core.upload(media.source);
-        const source = settings.denoise ? gpu.filters.gauss5(texture) : texture;
-        const greyscale = gpu.colors.rgb2grey(source);
+        const source = media._gpu.core.upload(media.source);
+        const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
+        const greyscale = gpu.colors.rgb2grey(texture);
 
         // extract features
         const keypoints = FAST.run(n, gpu, greyscale, settings);
@@ -110,8 +110,9 @@ export class FeatureDetector
             settings.threshold = FAST.normalizedThreshold(settings.threshold);
 
         // pre-processing the image...
-        const source = settings.denoise ? gpu.filters.gauss5(media.source) : media.source;
-        const greyscale = gpu.colors.rgb2grey(source);
+        const source = media._gpu.core.upload(media.source);
+        const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
+        const greyscale = gpu.colors.rgb2grey(texture);
 
         // extract features
         const keypoints = BRISK.run(gpu, greyscale, settings);

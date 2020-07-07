@@ -7,11 +7,12 @@ void main()
 {
     vec4 a = currentPixel(target);
     vec4 b = currentPixel(source);
+    bool cond = (b.r > a.r);
 
     // copy corner score & scale
     color = mix(
         a,
         vec4(b.r, a.gb, b.a),
-        b.r > a.r
+        bvec4(cond, cond, cond, cond)
     );
 }

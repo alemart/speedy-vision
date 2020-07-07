@@ -9,11 +9,12 @@ void main()
     ivec2 thread = threadLocation();
     vec4 lg = pixelAt(largerImage, thread);
     vec4 sm = pixelAt(smallerImage, thread / 2);
+    bool cond = (((thread.x & 1) + (thread.y & 1)) == 0) && (sm.r > lg.r);
 
     // copy corner score & scale
     color = mix(
         lg,
         vec4(sm.r, lg.gb, sm.a),
-        ((thread.x & 1) + (thread.y & 1)) == 0 && sm.r > lg.r
+        bvec4(cond, cond, cond, cond)
     );
 }
