@@ -18,18 +18,6 @@ void main()
 {
     vec4 pixel = threadPixel(image);
     float score = pixel.r;
-
-    // discard corner
-    color = vec4(0.0f, pixel.gba);
-    if(score == 0.0f)
-        return;
-
-    // was it a corner?
-    /*
-    vec2 zero = vec2(0.0f, 0.0f);
-    vec2 sizeA = floor(texSize * scaleA);
-    vec2 sizeB = floor(texSize * scaleB);
-    */
     ivec2 zero = ivec2(0, 0);
     ivec2 sizeA = textureSize(layerA, 0);
     ivec2 sizeB = textureSize(layerB, 0);
@@ -53,7 +41,8 @@ void main()
         max(max(a00.r, a10.r), max(a01.r, a11.r)),
         max(max(b00.r, b10.r), max(b01.r, b11.r))
     );
-    if(score < maxScore)
+    color = vec4(0.0f, pixel.gba); // discard corner
+    if(score < maxScore || score == 0.0f)
         return;
 
     // -----------------------------------------

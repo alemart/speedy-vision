@@ -24,7 +24,6 @@ void main()
     bool gotCorner = ((thread.x & 1) + (thread.y & 1) == 0) && // x and y are even
         (scaled.x + 1 < size.x && scaled.y + 1 < size.y) && // square is within bounds
         (p0.r + p1.r + p2.r + p3.r > 0.0f); // there is a corner
-    /*
     vec2 best = mix(
         vec2(0.0f, pixel.a), // drop corner
         mix(
@@ -42,54 +41,6 @@ void main()
         ),
         B2(gotCorner)
     );
-    */
-    float m, s;
-            // get scale & score of the maximum
-            if(p0.r > p1.r) {
-                if(p2.r > p3.r) {
-                    if(p0.r > p2.r) {
-                        m = p0.r;
-                        s = p0.a;
-                    }
-                    else {
-                        m = p2.r;
-                        s = p2.a;
-                    }
-                }
-                else {
-                    if(p0.r > p3.r) {
-                        m = p0.r;
-                        s = p0.a;
-                    }
-                    else {
-                        m = p3.r;
-                        s = p3.a;
-                    }                   
-                }
-            }
-            else {
-                if(p2.r > p3.r) {
-                    if(p1.r > p2.r) {
-                        m = p1.r;
-                        s = p1.a;
-                    }
-                    else {
-                        m = p2.r;
-                        s = p2.a;
-                    }
-                }
-                else {
-                    if(p1.r > p3.r) {
-                        m = p1.r;
-                        s = p1.a;
-                    }
-                    else {
-                        m = p3.r;
-                        s = p3.a;
-                    }                   
-                }               
-            }
-    vec2 best = vec2(m,s);
 
     // done
     color = vec4(best.x, pixel.gb, best.y);

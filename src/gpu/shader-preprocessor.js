@@ -44,22 +44,21 @@ export class ShaderPreprocessor
         return String(code).replace(ShaderPreprocessor._commentsRegex[0], '')
                            .replace(ShaderPreprocessor._commentsRegex[1], '')
                            .replace(ShaderPreprocessor._includeRegex,
-                                (_, filename) => ShaderPreprocessor.readfileSync(gl, filename)
+                                (_, filename) => readfileSync(gl, filename)
                             );
-    }
-
-     /**
-     * Reads a shader from the /shaders/include/ folder
-     * @param {WebGL2RenderingContext} gl
-     * @param {string} filename 
-     * @returns {string}
-     */
-    static readfileSync(gl, filename)
-    {
-        if(String(filename).match(/^[a-zA-Z0-9_\-]+\.glsl$/))
-            return require('./kernels/shaders/includes/' + filename);
-
-        throw GLUtils.Error(`Shader preprocessor: can't read file \"${filename}\"`);
     }
 }
 
+ /**
+ * Reads a shader from the /shaders/include/ folder
+ * @param {WebGL2RenderingContext} gl
+ * @param {string} filename
+ * @returns {string}
+ */
+function readfileSync(gl, filename)
+{
+    if(String(filename).match(/^[a-zA-Z0-9_\-]+\.glsl$/))
+        return require('./kernels/shaders/includes/' + filename);
+
+    throw GLUtils.Error(`Shader preprocessor: can't read file \"${filename}\"`);
+}
