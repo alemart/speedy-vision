@@ -19,6 +19,8 @@
  * Custom preprocessor for shaders
  */
 
+import { GLUtils } from './gl-utils';
+
 /**
  * Custom preprocessor for shaders
  */
@@ -54,7 +56,11 @@ export class ShaderPreprocessor
      */
     static readfileSync(gl, filename)
     {
-        return require('./kernels/shaders/includes/' + filename);
+        if(String(filename).match(/^[a-zA-Z0-9_]+\.glsl$/))
+            return require('./kernels/shaders/includes/' + filename);
+
+        GLUtils.Error(`Shader preprocessor: can't read file \"${filename}\"`);
+        return '';
     }
 }
 
