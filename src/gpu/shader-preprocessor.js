@@ -60,7 +60,6 @@ export class ShaderPreprocessor
             return require('./kernels/shaders/includes/' + filename);
 
         throw GLUtils.Error(`Shader preprocessor: can't read file \"${filename}\"`);
-        return '';
     }
 }
 
