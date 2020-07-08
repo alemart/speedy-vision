@@ -5,8 +5,8 @@ uniform sampler2D source;
 // size(target) = size(source) = size(output)
 void main()
 {
-    vec4 a = currentPixel(target);
-    vec4 b = currentPixel(source);
+    vec4 a = threadPixel(target);
+    vec4 b = threadPixel(source);
     bool cond = (b.r > a.r);
 
     // copy corner score & scale

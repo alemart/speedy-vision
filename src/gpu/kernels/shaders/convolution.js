@@ -54,7 +54,7 @@ export function conv2D(kernel, normalizationConstant = 1.0)
 
     void main()
     {
-        float alpha = currentPixel(image).a;
+        float alpha = threadPixel(image).a;
         vec4 result = vec4(0.0f, 0.0f, 0.0f, 0.0f);
 
         ${foreachKernelElement(generateCode)}
@@ -108,7 +108,7 @@ function conv1D(axis, kernel, normalizationConstant)
 
     void main()
     {
-        float alpha = currentPixel(image).a;
+        float alpha = threadPixel(image).a;
         vec4 pixel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
 
         ${foreachKernelElement(generateCode)}
@@ -263,7 +263,7 @@ export function texConv2D(kernelSize)
     {
         vec4 kernel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
         vec4 result = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-        float alpha = currentPixel(image).a;
+        float alpha = threadPixel(image).a;
         float value = 0.0f;
 
         ${foreachKernelElement(generateCode)}
@@ -285,7 +285,7 @@ export function idConv2D(kernelSize)
 
     void main()
     {
-        color = currentPixel(image);
+        color = threadPixel(image);
     }
     `;
 }
@@ -332,7 +332,7 @@ function texConv1D(kernelSize, axis)
     {
         vec4 kernel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
         vec4 result = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-        float alpha = currentPixel(image).a;
+        float alpha = threadPixel(image).a;
         float value = 0.0f;
 
         ${foreachKernelElement(generateCode)}

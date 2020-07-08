@@ -5,7 +5,7 @@ uniform float threshold;
 // neighboring circumference of 8 pixels
 void main()
 {
-    vec4 pixel = currentPixel(image);
+    vec4 pixel = threadPixel(image);
     float ifCorner = step(1.0f, pixel.r);
     float t = clamp(threshold, 0.0f, 1.0f);
     float c = pixel.g;

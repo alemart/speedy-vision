@@ -21,7 +21,7 @@ void main()
     );
 
     // non-maximum suppression
-    vec4 pixel = currentPixel(image);
+    vec4 pixel = threadPixel(image);
     float score = float(pixel.r >= m) * pixel.r;
     color = vec4(score, pixel.gba);
 }

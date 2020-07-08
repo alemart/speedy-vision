@@ -6,7 +6,7 @@ uniform float threshold;
 // https://github.com/edrosten/fast-C-src
 void main()
 {
-    vec4 pixel = currentPixel(image);
+    vec4 pixel = threadPixel(image);
     ivec2 thread = threadLocation();
     ivec2 size = outputSize();
 

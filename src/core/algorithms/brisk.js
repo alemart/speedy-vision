@@ -47,9 +47,9 @@ export class BRISK
         const pyramid = new Array(settings.depth);
         const intraPyramid = new Array(pyramid.length + 1);
         pyramid[0] = gpu.pyramid(0).pyramids.setBase(greyscale); // base of the pyramid
-        intraPyramid[0] = gpu.pyramid(0).pyramids.intraExpand(pyramid[0]); // 1.5 * sizeof(base)
         for(let i = 1; i < pyramid.length; i++)
             pyramid[i] = gpu.pyramid(i-1).pyramids.reduce(pyramid[i-1]);
+        intraPyramid[0] = gpu.pyramid(0).pyramids.intraExpand(pyramid[0]); // 1.5 * sizeof(base)
         for(let i = 1; i < intraPyramid.length; i++)
             intraPyramid[i] = gpu.intraPyramid(i-1).pyramids.reduce(intraPyramid[i-1]);
 
@@ -88,7 +88,7 @@ export class BRISK
         const keypoints = gpu.pyramid(0).pyramids.mergeKeypoints(suppressedPyramidCorners[0], suppressedIntraPyramidCorners[0]);
 
         // create gaussian kernels for different scales and radii
-        if(gaussians == null) {
+        if(0 && gaussians == null) {
             // work with scales: sqrt(2), 1, 1/sqrt(2), 1/2, ...
             const quantizedScales = [...Array(pyramid.length + intraPyramid.length).keys()]
                 .map(i => Math.pow(2.0, 0.5 * (1 - i))); // i == 1 - 2 * log2(v[i])

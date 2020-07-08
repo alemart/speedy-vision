@@ -7,7 +7,7 @@ void main()
 {
     ivec2 thread = threadLocation();
     ivec2 size = outputSize();
-    vec4 pixel = currentPixel(image);
+    vec4 pixel = threadPixel(image);
 
     // assume it's not a corner
     color = vec4(0.0f, pixel.gba);

@@ -20,11 +20,11 @@
  */
 
 import { GPUKernelGroup } from '../gpu-kernel-group';
-import { identity, flipY } from './shaders/utils';
+import { flipY } from './shaders/utils';
 import { convX, convY } from './shaders/convolution';
 import { upsample2, downsample2, upsample3, downsample3 } from './shaders/pyramids';
 import { mergeKeypoints, mergeKeypointsAtConsecutiveLevels, normalizeKeypoints } from './shaders/pyramids';
-import { setScale, scale } from './shaders/pyramids';
+import { setScale, scale, crop } from './shaders/pyramids';
 
 /**
  * GPUPyramids
@@ -59,7 +59,7 @@ export class GPUPyramids extends GPUKernelGroup
             .declare('normalizeKeypoints', normalizeKeypoints)
 
             // Crop texture to width x height of the current pyramid level
-            .declare('crop', identity)
+            .declare('crop', crop)
 
             // kernels for debugging
             .declare('output', flipY, {

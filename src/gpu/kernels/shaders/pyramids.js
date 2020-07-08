@@ -30,6 +30,9 @@ export const mergeKeypoints = (target, source) => require('./pyramids/merge-keyp
 export const mergeKeypointsAtConsecutiveLevels = (largerImage, smallerImage) => require('./pyramids/merge-keypoints-at-consecutive-levels.glsl');
 export const normalizeKeypoints = (image, imageScale) => require('./pyramids/normalize-keypoints.glsl');
 
+// misc
+export const crop = image => require('./pyramids/crop.glsl');
+
 // image scale
 
 /*
@@ -88,7 +91,7 @@ export function setScale(scale, pyramidHeight, pyramidMaxScale)
 
     void main()
     {
-        color = vec4(currentPixel(image).rgb, float(${alpha}));
+        color = vec4(threadPixel(image).rgb, float(${alpha}));
     }
     `;
 }
@@ -104,7 +107,7 @@ export function scale(scaleFactor, pyramidHeight, pyramidMaxScale)
 
     void main()
     {
-        vec4 pixel = currentPixel(image);
+        vec4 pixel = threadPixel(image);
         float alpha = clamp(pixel.a + float(${delta}), 0.0f, 1.0f);
 
         color = vec4(pixel.rgb, alpha);

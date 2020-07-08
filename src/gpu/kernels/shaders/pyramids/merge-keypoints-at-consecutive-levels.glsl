@@ -7,8 +7,8 @@ uniform sampler2D smallerImage;
 void main()
 {
     ivec2 thread = threadLocation();
-    vec4 lg = pixelAt(largerImage, thread);
-    vec4 sm = pixelAt(smallerImage, thread / 2);
+    vec4 lg = pixelAt(largerImage, min(thread, textureSize(largerImage, 0) - 1));
+    vec4 sm = pixelAt(smallerImage, min(thread / 2, textureSize(smallerImage, 0) - 1));
     bool cond = (((thread.x & 1) + (thread.y & 1)) == 0) && (sm.r > lg.r);
 
     // copy corner score & scale

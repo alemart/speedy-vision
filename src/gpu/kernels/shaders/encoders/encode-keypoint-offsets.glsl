@@ -5,7 +5,7 @@ uniform int maxIterations; // c
 // Blue = min(c, -1 + offset to the next keypoint) / 255, for a constant c in [1,255]
 void main()
 {
-    vec4 pixel = currentPixel(image);
+    vec4 pixel = threadPixel(image);
     ivec2 pos = threadLocation();
     int offset = -1;
 

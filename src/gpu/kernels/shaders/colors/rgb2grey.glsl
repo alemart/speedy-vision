@@ -4,7 +4,7 @@ uniform sampler2D image;
 // Convert to greyscale
 void main()
 {
-    vec4 pixel = currentPixel(image);
+    vec4 pixel = threadPixel(image);
     float g = dot(pixel, grey);
     
     color = vec4(g, g, g, 1.0f);

@@ -19,8 +19,6 @@
  * Custom preprocessor for shaders
  */
 
-import { ShaderLib } from './shader-lib.js';
-
 /**
  * Custom preprocessor for shaders
  */
@@ -44,8 +42,19 @@ export class ShaderPreprocessor
         return String(code).replace(ShaderPreprocessor._commentsRegex[0], '')
                            .replace(ShaderPreprocessor._commentsRegex[1], '')
                            .replace(ShaderPreprocessor._includeRegex,
-                                (_, filename) => ShaderLib.readfileSync(gl, filename)
+                                (_, filename) => ShaderPreprocessor.readfileSync(gl, filename)
                             );
+    }
+
+     /**
+     * Reads a shader from the /shaders/include/ folder
+     * @param {WebGL2RenderingContext} gl
+     * @param {string} filename 
+     * @returns {string}
+     */
+    static readfileSync(gl, filename)
+    {
+        return require('./kernels/shaders/includes/' + filename);
     }
 }
 

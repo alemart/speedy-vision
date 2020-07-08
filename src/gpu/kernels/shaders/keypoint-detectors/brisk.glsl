@@ -16,7 +16,7 @@ uniform float scaleA, scaleB, lgM, h;
 
 void main()
 {
-    vec4 pixel = currentPixel(image);
+    vec4 pixel = threadPixel(image);
     float score = pixel.r;
 
     // discard corner
@@ -25,15 +25,20 @@ void main()
         return;
 
     // was it a corner?
+    /*
     vec2 zero = vec2(0.0f, 0.0f);
     vec2 sizeA = floor(texSize * scaleA);
     vec2 sizeB = floor(texSize * scaleB);
+    */
+    ivec2 zero = ivec2(0, 0);
+    ivec2 sizeA = textureSize(layerA, 0);
+    ivec2 sizeB = textureSize(layerB, 0);
     vec2 mid = (texCoord * texSize) + vec2(0.5f, 0.5f);
 
     // given a pixel in the image, pick a 2x2 square in
     // layers A and B: [xl,yl] x [xl+1,yl+1], l = a,b
-    ivec2 pa = ivec2(clamp(ceil(mid * scaleA - 1.0f), zero, sizeA - 2.0f));
-    ivec2 pb = ivec2(clamp(ceil(mid * scaleB - 1.0f), zero, sizeB - 2.0f));
+    ivec2 pa = clamp(ivec2(ceil(mid * scaleA - 1.0f)), zero, sizeA - 2);
+    ivec2 pb = clamp(ivec2(ceil(mid * scaleB - 1.0f)), zero, sizeB - 2);
     vec4 a00 = pixelAt(layerA, pa);
     vec4 a10 = pixelAt(layerA, pa + ivec2(1, 0));
     vec4 a01 = pixelAt(layerA, pa + ivec2(0, 1));
