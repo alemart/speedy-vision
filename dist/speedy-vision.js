@@ -6,7 +6,7 @@
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-07-09T01:50:24.309Z
+ * Date: 2020-07-09T02:17:41.680Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap

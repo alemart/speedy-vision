@@ -53,18 +53,18 @@ module.exports = (env, argv) => ({
       publicPath: '/dist/',
   },
   optimization: argv.mode == 'development' ? { minimize: false } : {
-      /*minimizer: [new TerserPlugin({
+      minimizer: [new TerserPlugin({
           terserOptions: {
               mangle: false,
-              compress: {
+              /*compress: {
                   defaults: false,
-              },
+              },*/
               output: {
                   comments: /^!/,
               },
           },
           extractComments: false,
-      })],*/
+      })],
       minimize: true,
   },
 });
