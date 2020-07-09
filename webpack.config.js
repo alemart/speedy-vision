@@ -39,11 +39,8 @@ module.exports = (env, argv) => ({
         test: /\.glsl$/i,
         use: [
           {
-            loader: 'raw-loader',
-            options: {
-              esModule: false,
-            },
-          },
+            loader: path.resolve('webpack-glsl-minifier.js'),
+          }
         ],
       },
     ],
