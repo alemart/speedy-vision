@@ -102,4 +102,84 @@ export class Utils
 
         return z * sigma + mu;
     }
+
+    /**
+     * Generate a 1D gaussian kernel with custom sigma
+     * Tip: use kernelSize = (5 * sigma), kernelSize odd
+     * @param {number} sigma gaussian sigma
+     * @param {number} [kernelSize] kernel size, odd number
+     * @param {bool} [normalized] normalize entries so that their sum is 1
+     */
+    static gaussianKernel(sigma, kernelSize = -1, normalized = true)
+    {
+        /*
+         * Let G(x) be a Gaussian function centered at 0 with fixed sigma:
+         *
+         * G(x) = (1 / (sigma * sqrt(2 * pi))) * exp(-(x / (sqrt(2) * sigma))^2)
+         * 
+         * In addition, let f(p) be a kernel value at pixel p, -k/2 <= p <= k/2:
+         * 
+         * f(p) = \int_{p - 0.5}^{p + 0.5} G(x) dx (integrate around p)
+         *      = \int_{0}^{p + 0.5} G(x) dx - \int_{0}^{p - 0.5} G(x) dx
+         * 
+         * Setting a constant c := sqrt(2) * sigma, it follows that:
+         * 
+         * f(p) = (1 / 2c) * (erf((p + 0.5) / c) - erf((p - 0.5) / c))
+         */
+
+        // default kernel size
+        if(kernelSize < 0) {
+            kernelSize = Math.ceil(5.0 * sigma) | 0;
+            kernelSize += 1 - (kernelSize % 2);
+        }
+
+        // validate input
+        kernelSize |= 0;
+        if(kernelSize < 1 || kernelSize % 2 == 0)
+            Utils.fatal(`Invalid kernel size given to gaussianKernel: ${kernelSize} x 1`);
+        else if(sigma <= 0.0)
+            Utils.fatal(`Invalid sigma given to gaussianKernel: ${sigma}`);
+
+        // function erf(x) = -erf(-x) can be approximated numerically. See:
+        // https://en.wikipedia.org/wiki/Error_function#Numerical_approximations
+        const kernel = new Array(kernelSize);
+
+        // set constants
+        const N  =  kernelSize >> 1; // integer (floor, div 2)
+        const c  =  (+sigma) * Math.sqrt(2);
+        const m  =  0.3275911;
+        const a1 =  0.254829592;
+        const a2 = -0.284496736;
+        const a3 =  1.421413741;
+        const a4 = -1.453152027;
+        const a5 =  1.061405429;
+
+        // compute the kernel
+        let sum = 0.0;
+        for(let j = 0; j < kernelSize; j++) {
+            let xa = (j - N + 0.5) / c;
+            let xb = (j - N - 0.5) / c;
+            let sa = 1.0, sb = 1.0;
+
+            if(xa < 0.0) { sa = -1.0; xa = -xa; }
+            if(xb < 0.0) { sb = -1.0; xb = -xb; }
+
+            const ta = 1.0 / (1.0 + m * xa);
+            const tb = 1.0 / (1.0 + m * xb);
+            const pa = ((((a5 * ta + a4) * ta + a3) * ta + a2) * ta + a1) * ta;
+            const pb = ((((a5 * tb + a4) * tb + a3) * tb + a2) * tb + a1) * tb;
+            const ya = 1.0 - pa * Math.exp(-xa * xa);
+            const yb = 1.0 - pb * Math.exp(-xb * xb);
+
+            const erfa = sa * ya;
+            const erfb = sb * yb;
+            const fp = (erfa - erfb) / (2.0 * c);
+
+            kernel[j] = fp;
+            sum += fp;
+        }
+
+        // done!
+        return normalized ? kernel.map(k => k / sum) : kernel;
+    }
 }
