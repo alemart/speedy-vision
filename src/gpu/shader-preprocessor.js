@@ -58,7 +58,7 @@ export class ShaderPreprocessor
 function readfileSync(gl, filename)
 {
     if(String(filename).match(/^[a-zA-Z0-9_\-]+\.glsl$/))
-        return require('./shaders/includes/' + filename);
+        return require('./shaders/include/' + filename);
 
     throw GLUtils.Error(`Shader preprocessor: can't read file \"${filename}\"`);
 }
