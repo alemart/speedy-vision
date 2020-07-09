@@ -74,8 +74,8 @@ export const crop = image => require('./pyramids/crop.glsl');
  * A note on image scale:
  *
  * scale = 1 means an image with its original size
- * scale = 2 means double the size (thus, 4x the area)
- * scale = 0.5 means half the size (thus, 1/4 the area)
+ * scale = 2 means double the size (4x the area)
+ * scale = 0.5 means half the size (1/4 the area)
  * and so on...
  */
 
