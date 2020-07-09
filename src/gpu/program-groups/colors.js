@@ -15,12 +15,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * utils.js
- * Utility shaders
+ * gpu-colors.js
+ * Color conversion algorithms
  */
 
-// Identity shader: no-operation
-export const identity = (image) => require('./utils/identity.glsl');
+import { GPUProgramGroup } from '../gpu-program-group';
+import { rgb2grey } from './programs/colors';
 
-// Flip y-axis for output
-export const flipY = (image) => require('./utils/flip-y.glsl');
+/**
+ * GPUColors
+ * Color conversions
+ */
+export class GPUColors extends GPUProgramGroup
+{
+    /**
+     * Class constructor
+     * @param {SpeedyGPU} gpu
+     * @param {number} width
+     * @param {number} height
+     */
+    constructor(gpu, width, height)
+    {
+        super(gpu, width, height);
+        this
+            // convert to greyscale
+            .declare('rgb2grey', rgb2grey)
+        ;
+    }
+}

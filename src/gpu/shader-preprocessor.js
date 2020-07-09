@@ -50,7 +50,7 @@ export class ShaderPreprocessor
 }
 
  /**
- * Reads a shader from the /shaders/include/ folder
+ * Reads a shader from the shaders/include/ folder
  * @param {WebGL2RenderingContext} gl
  * @param {string} filename
  * @returns {string}
@@ -58,7 +58,7 @@ export class ShaderPreprocessor
 function readfileSync(gl, filename)
 {
     if(String(filename).match(/^[a-zA-Z0-9_\-]+\.glsl$/))
-        return require('./kernels/shaders/includes/' + filename);
+        return require('./shaders/includes/' + filename);
 
     throw GLUtils.Error(`Shader preprocessor: can't read file \"${filename}\"`);
 }

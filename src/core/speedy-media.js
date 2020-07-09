@@ -19,7 +19,7 @@
  * SpeedyMedia implementation
  */
 
-import { GPUInstance } from '../gpu/gpu-instance';
+import { SpeedyGPU } from '../gpu/speedy-gpu';
 import { MediaType, ColorFormat } from '../utils/types'
 import { FeatureDetector } from './feature-detector';
 import { SpeedyError } from '../utils/errors';
@@ -49,7 +49,7 @@ export class SpeedyMedia
             this._colorFormat = ColorFormat.RGB;
 
             // spawn relevant components
-            this._gpu = new GPUInstance(this._width, this._height);
+            this._gpu = new SpeedyGPU(this._width, this._height);
             this._featureDetector = null; // lazy instantiation 
         }
         else if(arguments.length == 1) {

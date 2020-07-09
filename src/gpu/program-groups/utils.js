@@ -15,22 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * gpu-colors.js
- * Color conversion algorithms
+ * gpu-utils.js
+ * GPU utilities
  */
 
-import { GPUKernelGroup } from '../gpu-kernel-group';
-import { rgb2grey } from './shaders/colors';
+import { GPUProgramGroup } from '../gpu-program-group';
+import { identity, flipY } from './programs/utils';
 
 /**
- * GPUColors
- * Color conversions
+ * GPUUtils
+ * Utility operations
  */
-export class GPUColors extends GPUKernelGroup
+export class GPUUtils extends GPUProgramGroup
 {
     /**
      * Class constructor
-     * @param {GPUInstance} gpu
+     * @param {SpeedyGPU} gpu
      * @param {number} width
      * @param {number} height
      */
@@ -38,8 +38,12 @@ export class GPUColors extends GPUKernelGroup
     {
         super(gpu, width, height);
         this
-            // convert to greyscale
-            .declare('rgb2grey', rgb2grey)
+            // no-operation
+            .declare('identity', identity)
+
+            // output a texture from a pipeline
+            .declare('output', flipY,
+                this.operation.displaysGraphics())
         ;
     }
 }

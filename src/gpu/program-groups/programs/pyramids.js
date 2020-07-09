@@ -20,18 +20,18 @@
  */
 
 // pyramid generation
-export const upsample2 = image => require('./pyramids/upsample2.glsl');
-export const downsample2 = image => require('./pyramids/downsample2.glsl');
-export const upsample3 = image => require('./pyramids/upsample3.glsl');
-export const downsample3 = image => require('./pyramids/downsample3.glsl');
+export const upsample2 = image => require('../../shaders/pyramids/upsample2.glsl');
+export const downsample2 = image => require('../../shaders/pyramids/downsample2.glsl');
+export const upsample3 = image => require('../../shaders/pyramids/upsample3.glsl');
+export const downsample3 = image => require('../../shaders/pyramids/downsample3.glsl');
 
 // utilities for merging keypoints across multiple scales
-export const mergeKeypoints = (target, source) => require('./pyramids/merge-keypoints.glsl');
-export const mergeKeypointsAtConsecutiveLevels = (largerImage, smallerImage) => require('./pyramids/merge-keypoints-at-consecutive-levels.glsl');
-export const normalizeKeypoints = (image, imageScale) => require('./pyramids/normalize-keypoints.glsl');
+export const mergeKeypoints = (target, source) => require('../../shaders/pyramids/merge-keypoints.glsl');
+export const mergeKeypointsAtConsecutiveLevels = (largerImage, smallerImage) => require('../../shaders/pyramids/merge-keypoints-at-consecutive-levels.glsl');
+export const normalizeKeypoints = (image, imageScale) => require('../../shaders/pyramids/normalize-keypoints.glsl');
 
 // misc
-export const crop = image => require('./pyramids/crop.glsl');
+export const crop = image => require('../../shaders/pyramids/crop.glsl');
 
 // image scale
 

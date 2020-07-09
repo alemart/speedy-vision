@@ -43,33 +43,33 @@
 
 // FAST-9_16: requires 9 contiguous pixels
 // on a circumference of 16 pixels
-export const fast9 = (image, threshold) => require('./keypoint-detectors/fast9.glsl');
+export const fast9 = (image, threshold) => require('../../shaders/keypoint-detectors/fast9.glsl');
 
 // FAST-9,16 implementation based on Machine Learning
 // Adapted from New BSD Licensed fast_9.c code found at
 // https://github.com/edrosten/fast-C-src
-export const fast9ml = (image, threshold) => require('./keypoint-detectors/fast9ml.glsl');
+export const fast9ml = (image, threshold) => require('../../shaders/keypoint-detectors/fast9ml.glsl');
 
 // FAST-7_12: requires 7 contiguous pixels
 // on a circumference of 12 pixels
-export const fast7 = (image, threshold) => require('./keypoint-detectors/fast7.glsl');
+export const fast7 = (image, threshold) => require('../../shaders/keypoint-detectors/fast7.glsl');
 
 // FAST-5_8: requires 5 contiguous pixels
 // on a circumference of 8 pixels
-export const fast5 = (image, threshold) => require('./keypoint-detectors/fast5.glsl');
+export const fast5 = (image, threshold) => require('../../shaders/keypoint-detectors/fast5.glsl');
 
 // compute corner score considering a
 // neighboring circumference of 16 pixels
-export const fastScore16 = (image, threshold) => require('./keypoint-detectors/fast-score16.glsl');
+export const fastScore16 = (image, threshold) => require('../../shaders/keypoint-detectors/fast-score16.glsl');
 
 // compute corner score considering a
 // neighboring circumference of 12 pixels
-export const fastScore12 = (image, threshold) => require('./keypoint-detectors/fast-score12.glsl');
+export const fastScore12 = (image, threshold) => require('../../shaders/keypoint-detectors/fast-score12.glsl');
 
 // compute corner score considering a
 // neighboring circumference of 8 pixels
-export const fastScore8 = (image, threshold) => require('./keypoint-detectors/fast-score8.glsl');
+export const fastScore8 = (image, threshold) => require('../../shaders/keypoint-detectors/fast-score8.glsl');
 
 // non-maximum suppression on 8-neighborhood based
 // on the corner score stored on the red channel
-export const fastSuppression = image => require('./keypoint-detectors/fast-suppression.glsl');
+export const fastSuppression = image => require('../../shaders/keypoint-detectors/fast-suppression.glsl');

@@ -15,21 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * gpu-kernel-group.js
- * An abstract group of GPU kernels
+ * gpu-program-group.js
+ * An abstract group of programs that run on the GPU
  */
 
 /**
- * GPUKernelGroup
+ * GPUProgramGroup
  * A semantically correlated group
- * of kernels that run on the GPU
+ * of programs that run on the GPU
  */
 
-export /* abstract */ class GPUKernelGroup
+export /* abstract */ class GPUProgramGroup
 {
     /**
      * Class constructor
-     * @param {GPUInstance} gpu
+     * @param {SpeedyGPU} gpu
      * @param {number} width Texture width (depends on the pyramid layer)
      * @param {number} height Texture height (depends on the pyramid layer)
      */
@@ -41,20 +41,20 @@ export /* abstract */ class GPUKernelGroup
     }
 
     /**
-     * Declare a kernel
-     * @param {string} name Kernel name
-     * @param {Function} fn Kernel code
-     * @param {object} settings Kernel settings
-     * @returns {GPUKernelGroup} This object
+     * Declare a program
+     * @param {string} name Program name
+     * @param {Function} shaderdecl Program params => code
+     * @param {object} settings Program settings
+     * @returns {GPUProgramGroup} This object
      */
-    /* protected */ declare(name, fn, settings = { })
+    /* protected */ declare(name, shaderdecl, settings = { })
     {
         // lazy instantiation of kernels
         Object.defineProperty(this, name, {
             get: (() => {
                 const key = '__k_' + name;
                 return (function() {
-                    return this[key] || (this[key] = this._spawnKernel(fn, settings));
+                    return this[key] || (this[key] = this._spawnProgram(shaderdecl, settings));
                 }).bind(this);
             })()
         });
@@ -64,9 +64,9 @@ export /* abstract */ class GPUKernelGroup
 
     /**
      * Multi-pass composition
-     * @param {string} name Kernel name
-     * @param {string} fn Other kernels
-     * @returns {GPUKernelGroup} This object
+     * @param {string} name Program name
+     * @param {string} fn Other programs
+     * @returns {GPUProgramGroup} This object
      */
     /* protected */ compose(name, ...fn)
     {
@@ -139,9 +139,9 @@ export /* abstract */ class GPUKernelGroup
         });
     }
 
-    /* private */ _spawnKernel(fn, settings = { })
+    /* private */ _spawnProgram(shaderdecl, settings = { })
     {
-        return this._gpu.core.createProgram(fn, {
+        return this._gpu.createProgram(shaderdecl, {
             // default settings
             output: [ this._width, this._height ],
             ...settings

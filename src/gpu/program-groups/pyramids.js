@@ -19,22 +19,22 @@
  * Image pyramids
  */
 
-import { GPUKernelGroup } from '../gpu-kernel-group';
-import { flipY } from './shaders/utils';
-import { convX, convY } from './shaders/convolution';
-import { upsample2, downsample2, upsample3, downsample3 } from './shaders/pyramids';
-import { mergeKeypoints, mergeKeypointsAtConsecutiveLevels, normalizeKeypoints } from './shaders/pyramids';
-import { setScale, scale, crop } from './shaders/pyramids';
+import { GPUProgramGroup } from '../gpu-program-group';
+import { flipY } from './programs/utils';
+import { convX, convY } from './programs/convolution';
+import { upsample2, downsample2, upsample3, downsample3 } from './programs/pyramids';
+import { mergeKeypoints, mergeKeypointsAtConsecutiveLevels, normalizeKeypoints } from './programs/pyramids';
+import { setScale, scale, crop } from './programs/pyramids';
 
 /**
  * GPUPyramids
  * Image pyramids
  */
-export class GPUPyramids extends GPUKernelGroup
+export class GPUPyramids extends GPUProgramGroup
 {
     /**
      * Class constructor
-     * @param {GPUInstance} gpu
+     * @param {SpeedyGPU} gpu
      * @param {number} width
      * @param {number} height
      */

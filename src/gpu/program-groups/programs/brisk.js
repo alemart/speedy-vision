@@ -29,4 +29,4 @@
  *     "BRISK: Binary robust invariant scalable keypoints"
  *     International Conference on Computer Vision (ICCV-2011)
  */
-export const brisk = (image, layerA, layerB, scaleA, scaleB, lgM, h) => require('./keypoint-detectors/brisk.glsl');
+export const brisk = (image, layerA, layerB, scaleA, scaleB, lgM, h) => require('../../shaders/keypoint-detectors/brisk.glsl');

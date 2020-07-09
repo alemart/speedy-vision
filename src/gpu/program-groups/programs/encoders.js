@@ -15,9 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * colors.js
- * Color conversions
+ * encoders.js
+ * Speedy image encoding algorithms
  */
 
-// Convert to greyscale
-export const rgb2grey = (image) => require('./colors/rgb2grey.glsl');
+// encode keypoint offsets: maxIterations is an integer in [1,255], determined experimentally
+export const encodeKeypointOffsets = (image, imageSize, maxIterations) => require('../../shaders/encoders/encode-keypoint-offsets.glsl');
+
+// encode keypoints
+export const encodeKeypoints = (image, imageSize, encoderLength, descriptorSize) => require('../../shaders/encoders/encode-keypoints.glsl');

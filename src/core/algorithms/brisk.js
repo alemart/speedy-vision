@@ -31,7 +31,7 @@ export class BRISK
 {
     /**
      * BRISK feature detection algorithm
-     * @param {GPUInstance} gpu
+     * @param {SpeedyGPU} gpu
      * @param {Texture} greyscale Greyscale image
      * @param {object} settings
      * @returns {Texture} features in a texture

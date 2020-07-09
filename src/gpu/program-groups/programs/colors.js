@@ -15,35 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * gpu-utils.js
- * GPU utilities
+ * colors.js
+ * Color conversions
  */
 
-import { GPUKernelGroup } from '../gpu-kernel-group';
-import { identity, flipY } from './shaders/utils';
-
-/**
- * GPUUtils
- * Utility operations
- */
-export class GPUUtils extends GPUKernelGroup
-{
-    /**
-     * Class constructor
-     * @param {GPUInstance} gpu
-     * @param {number} width
-     * @param {number} height
-     */
-    constructor(gpu, width, height)
-    {
-        super(gpu, width, height);
-        this
-            // no-operation
-            .declare('identity', identity)
-
-            // output a texture from a pipeline
-            .declare('output', flipY,
-                this.operation.displaysGraphics())
-        ;
-    }
-}
+// Convert to greyscale
+export const rgb2grey = (image) => require('../../shaders/colors/rgb2grey.glsl');

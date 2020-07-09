@@ -19,19 +19,19 @@
  * Facade for various keypoint detection algorithms
  */
 
-import { GPUKernelGroup } from '../gpu-kernel-group';
-import { fast5, fast7, fast9ml, fastScore8, fastScore12, fastScore16, fastSuppression } from './shaders/fast';
-import { brisk } from './shaders/brisk';
+import { GPUProgramGroup } from '../gpu-program-group';
+import { fast5, fast7, fast9ml, fastScore8, fastScore12, fastScore16, fastSuppression } from './programs/fast';
+import { brisk } from './programs/brisk';
 
 /**
  * GPUKeypoints
  * Keypoint detection
  */
-export class GPUKeypoints extends GPUKernelGroup
+export class GPUKeypoints extends GPUProgramGroup
 {
     /**
      * Class constructor
-     * @param {GPUInstance} gpu
+     * @param {SpeedyGPU} gpu
      * @param {number} width
      * @param {number} height
      */

@@ -32,7 +32,7 @@ export class FeatureDetector
 {
     /**
      * Class constructor
-     * @param {GPUInstance} gpu
+     * @param {SpeedyGPU} gpu
      */
     constructor(gpu)
     {
@@ -72,7 +72,7 @@ export class FeatureDetector
             settings.threshold = FAST.normalizedThreshold(settings.threshold);
 
         // pre-processing the image...
-        const source = media._gpu.core.upload(media.source);
+        const source = media._gpu.upload(media.source);
         const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
         const greyscale = gpu.colors.rgb2grey(texture);
 
@@ -110,7 +110,7 @@ export class FeatureDetector
             settings.threshold = FAST.normalizedThreshold(settings.threshold);
 
         // pre-processing the image...
-        const source = media._gpu.core.upload(media.source);
+        const source = media._gpu.upload(media.source);
         const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
         const greyscale = gpu.colors.rgb2grey(texture);
 

@@ -15,12 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * encoders.js
- * Speedy image encoding algorithms
+ * utils.js
+ * Utility shaders
  */
 
-// encode keypoint offsets: maxIterations is an integer in [1,255], determined experimentally
-export const encodeKeypointOffsets = (image, imageSize, maxIterations) => require('./encoders/encode-keypoint-offsets.glsl');
+// Identity shader: no-operation
+export const identity = (image) => require('../../shaders/utils/identity.glsl');
 
-// encode keypoints
-export const encodeKeypoints = (image, imageSize, encoderLength, descriptorSize) => require('./encoders/encode-keypoints.glsl');
+// Flip y-axis for output
+export const flipY = (image) => require('../../shaders/utils/flip-y.glsl');

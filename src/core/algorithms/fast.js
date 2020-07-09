@@ -29,7 +29,7 @@ export class FAST
     /**
      * Run the FAST corner detection algorithm
      * @param {number} n FAST parameter: 9, 7 or 5
-     * @param {GPUInstance} gpu
+     * @param {SpeedyGPU} gpu
      * @param {Texture} greyscale Greyscale image
      * @param {object} settings
      * @returns {Texture} features in a texture

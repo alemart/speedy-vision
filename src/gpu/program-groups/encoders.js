@@ -19,8 +19,8 @@
  * Texture encoders
  */
 
-import { GPUKernelGroup } from '../gpu-kernel-group';
-import { encodeKeypointOffsets, encodeKeypoints } from './shaders/encoders';
+import { GPUProgramGroup } from '../gpu-program-group';
+import { encodeKeypointOffsets, encodeKeypoints } from './programs/encoders';
 import { SpeedyFeature } from '../../core/speedy-feature';
 import { StochasticTuner } from '../../utils/tuner';
 import { Utils } from '../../utils/utils'
@@ -40,11 +40,11 @@ const TWO_PI = 2.0 * Math.PI;
  * GPUEncoders
  * Texture encoding
  */
-export class GPUEncoders extends GPUKernelGroup
+export class GPUEncoders extends GPUProgramGroup
 {
     /**
      * Class constructor
-     * @param {GPUInstance} gpu
+     * @param {SpeedyGPU} gpu
      * @param {number} width
      * @param {number} height
      */

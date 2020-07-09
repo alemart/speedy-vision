@@ -33,7 +33,7 @@ export const PipelineOperation = { };
     /**
      * Runs the pipeline operation
      * @param {Texture} texture
-     * @param {GPUInstance} gpu
+     * @param {SpeedyGPU} gpu
      * @param {SpeedyMedia} [media]
      * @returns {Texture}
      */
@@ -165,7 +165,7 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
         // instantiate the texture kernel
         if(this._texKernel == null) {
             this._texKernel = gpu.filters[this._method[0]](this._kernel);
-            this._gl = gpu.core.gl;
+            this._gl = gpu.gl;
         }
 
         // convolve
