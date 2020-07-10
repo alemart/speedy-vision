@@ -1,5 +1,9 @@
 # Release notes
 
+## 0.3.0 - July 9th, 2020
+
+* Ported the backend to WebGL2
+
 ## 0.2.2 - June 7th, 2020
 
 * Added unit tests
