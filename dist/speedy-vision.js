@@ -6,7 +6,7 @@
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-07-09T02:17:41.680Z
+ * Date: 2020-07-10T02:06:38.153Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -141,7 +141,7 @@ class BRISK
 {
     /**
      * BRISK feature detection algorithm
-     * @param {GPUInstance} gpu
+     * @param {SpeedyGPU} gpu
      * @param {Texture} greyscale Greyscale image
      * @param {object} settings
      * @returns {Texture} features in a texture
@@ -392,7 +392,7 @@ class FAST
     /**
      * Run the FAST corner detection algorithm
      * @param {number} n FAST parameter: 9, 7 or 5
-     * @param {GPUInstance} gpu
+     * @param {SpeedyGPU} gpu
      * @param {Texture} greyscale Greyscale image
      * @param {object} settings
      * @returns {Texture} features in a texture
@@ -494,7 +494,7 @@ class FeatureDetector
 {
     /**
      * Class constructor
-     * @param {GPUInstance} gpu
+     * @param {SpeedyGPU} gpu
      */
     constructor(gpu)
     {
@@ -534,7 +534,7 @@ class FeatureDetector
             settings.threshold = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FAST"].normalizedThreshold(settings.threshold);
 
         // pre-processing the image...
-        const source = media._gpu.core.upload(media.source);
+        const source = media._gpu.upload(media.source);
         const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
         const greyscale = gpu.colors.rgb2grey(texture);
 
@@ -572,7 +572,7 @@ class FeatureDetector
             settings.threshold = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FAST"].normalizedThreshold(settings.threshold);
 
         // pre-processing the image...
-        const source = media._gpu.core.upload(media.source);
+        const source = media._gpu.upload(media.source);
         const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
         const greyscale = gpu.colors.rgb2grey(texture);
 
@@ -677,7 +677,7 @@ const PipelineOperation = { };
     /**
      * Runs the pipeline operation
      * @param {Texture} texture
-     * @param {GPUInstance} gpu
+     * @param {SpeedyGPU} gpu
      * @param {SpeedyMedia} [media]
      * @returns {Texture}
      */
@@ -806,10 +806,16 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
 
     run(texture, gpu, media)
     {
+        // lost context?
+        if(gpu.gl.isContextLost()) {
+            this._texKernel = null;
+            this._gl = null;
+        }
+
         // instantiate the texture kernel
-        if(this._texKernel == null) {
+        else if(this._texKernel == null) {
             this._texKernel = gpu.filters[this._method[0]](this._kernel);
-            this._gl = gpu.core.gl;
+            this._gl = gpu.gl;
         }
 
         // convolve
@@ -955,7 +961,7 @@ class SpeedyFeature
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMedia", function() { return SpeedyMedia; });
-/* harmony import */ var _gpu_gpu_instance__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu/gpu-instance */ "./src/gpu/gpu-instance.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _feature_detector__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./feature-detector */ "./src/core/feature-detector.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
@@ -1011,7 +1017,7 @@ class SpeedyMedia
             this._colorFormat = _utils_types__WEBPACK_IMPORTED_MODULE_1__["ColorFormat"].RGB;
 
             // spawn relevant components
-            this._gpu = new _gpu_gpu_instance__WEBPACK_IMPORTED_MODULE_0__["GPUInstance"](this._width, this._height);
+            this._gpu = new _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_0__["SpeedyGPU"](this._width, this._height);
             this._featureDetector = null; // lazy instantiation 
         }
         else if(arguments.length == 1) {
@@ -1437,7 +1443,7 @@ class SpeedyPipeline
         return new Promise((resolve, reject) => {
             if(media._type == _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Texture) {
                 // upload the media to the GPU
-                let texture = media._gpu.core.upload(media._source);
+                let texture = media._gpu.upload(media._source);
 
                 // run the pipeline
                 for(let i = 0; i < this._operations.length; i++)
@@ -1629,7 +1635,7 @@ class GLUtils
         gl.linkProgram(program);
 
         // error?
-        if(!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        if(!gl.getProgramParameter(program, gl.LINK_STATUS) && !gl.isContextLost()) {
             const errors = [
                 gl.getShaderInfoLog(fragmentShader),
                 gl.getShaderInfoLog(vertexShader),
@@ -1731,6 +1737,9 @@ class GLUtils
     {
         const names = Object.keys(textureMap);
 
+        if(gl.isContextLost())
+            return;
+
         if(names.length > gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
             throw GLUtils.Error(`Can't bind ${names.length} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
 
@@ -1792,24 +1801,16 @@ class GLUtils
 
 /***/ }),
 
-/***/ "./src/gpu/gpu-instance.js":
-/*!*********************************!*\
-  !*** ./src/gpu/gpu-instance.js ***!
-  \*********************************/
-/*! exports provided: GPUInstance */
+/***/ "./src/gpu/gpu-program-group.js":
+/*!**************************************!*\
+  !*** ./src/gpu/gpu-program-group.js ***!
+  \**************************************/
+/*! exports provided: GPUProgramGroup */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUInstance", function() { return GPUInstance; });
-/* harmony import */ var _speedy_gpu_core__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-gpu-core */ "./src/gpu/speedy-gpu-core.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _kernels_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./kernels/utils */ "./src/gpu/kernels/utils.js");
-/* harmony import */ var _kernels_colors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./kernels/colors */ "./src/gpu/kernels/colors.js");
-/* harmony import */ var _kernels_filters__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./kernels/filters */ "./src/gpu/kernels/filters.js");
-/* harmony import */ var _kernels_keypoints__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./kernels/keypoints */ "./src/gpu/kernels/keypoints.js");
-/* harmony import */ var _kernels_encoders__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./kernels/encoders */ "./src/gpu/kernels/encoders.js");
-/* harmony import */ var _kernels_pyramids__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./kernels/pyramids */ "./src/gpu/kernels/pyramids.js");
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUProgramGroup", function() { return GPUProgramGroup; });
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -1827,247 +1828,21 @@ __webpack_require__.r(__webpack_exports__);
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * gpu-instance.js
- * The set of all GPU kernel groups for accelerated computer vision
- */
-
-
-
-
-
-
-
-
-
-
-// Limits
-const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
-const MAX_PYRAMID_LEVELS = 4;
-
-// Available kernel groups
-// (maps group name to class name)
-const KERNEL_GROUPS = {
-    'utils': _kernels_utils__WEBPACK_IMPORTED_MODULE_2__["GPUUtils"],
-    'colors': _kernels_colors__WEBPACK_IMPORTED_MODULE_3__["GPUColors"],
-    'filters': _kernels_filters__WEBPACK_IMPORTED_MODULE_4__["GPUFilters"],
-    'keypoints': _kernels_keypoints__WEBPACK_IMPORTED_MODULE_5__["GPUKeypoints"],
-    'encoders': _kernels_encoders__WEBPACK_IMPORTED_MODULE_6__["GPUEncoders"],
-    'pyramids': _kernels_pyramids__WEBPACK_IMPORTED_MODULE_7__["GPUPyramids"],
-};
-
-/**
- * The set of all GPU kernel groups for
- * accelerated computer vision
- */
-class GPUInstance
-{
-    /**
-     * Class constructor
-     * @param {number} width Texture width
-     * @param {number} height Texture height
-     */
-    constructor(width, height)
-    {
-        // read & validate texture size
-        this._width = Math.max(1, width | 0);
-        this._height = Math.max(1, height | 0);
-        if(this._width > MAX_TEXTURE_LENGTH || this._height > MAX_TEXTURE_LENGTH) {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].warning(`Maximum texture size exceeded (using ${this._width} x ${this._height}).`);
-            this._width = Math.min(this._width, MAX_TEXTURE_LENGTH);
-            this._height = Math.min(this._height, MAX_TEXTURE_LENGTH);
-        }
-
-        // initialize the GPU core
-        this._core = this._spawnGPUCore(this._width, this._height);
-    }
-
-    /**
-     * Texture width
-     * @returns {number}
-     */
-    get width()
-    {
-        return this._width;
-    }
-
-    /**
-     * Texture height
-     * @returns {number}
-     */
-    get height()
-    {
-        return this._height;
-    }
-
-    /**
-     * GPU core
-     * @returns {SpeedyGPUCore}
-     */
-    get core()
-    {
-        return this._core;
-    }
-
-    /**
-     * Access the kernel groups of a pyramid level
-     * sizeof(pyramid(i)) = sizeof(pyramid(0)) / 2^i
-     * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS - 1
-     * @returns {Array}
-     */
-    pyramid(level)
-    {
-        const lv = level | 0;
-
-        if(lv < 0 || lv >= MAX_PYRAMID_LEVELS)
-            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Invalid pyramid level: ${lv}`);
-
-        return this._pyramid[lv];
-    }
-
-    /**
-     * Access the kernel groups of an intra-pyramid level
-     * The intra-pyramid encodes layers between pyramid layers
-     * sizeof(intraPyramid(0)) = 1.5 * sizeof(pyramid(0))
-     * sizeof(intraPyramid(1)) = 1.5 * sizeof(pyramid(1))
-     * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS
-     * @returns {Array}
-     */
-    intraPyramid(level)
-    {
-        const lv = level | 0;
-
-        if(lv < 0 || lv >= MAX_PYRAMID_LEVELS + 1)
-            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Invalid intra-pyramid level: ${lv}`);
-
-        return this._intraPyramid[lv];
-    }
-
-    /**
-     * The number of layers of the pyramid
-     * @returns {number}
-     */
-    get pyramidHeight()
-    {
-        return MAX_PYRAMID_LEVELS;
-    }
-
-    /**
-     * The maximum supported scale for a pyramid layer
-     * @returns {number}
-     */
-    get pyramidMaxScale()
-    {
-        // This is preferably a power of 2
-        return 2;
-    }
-
-    /**
-     * Internal canvas
-     * @returns {HTMLCanvasElement}
-     */
-    get canvas()
-    {
-        return this._core.canvas;
-    }
-
-    // spawns a SpeedyGPUCore instance
-    _spawnGPUCore(width, height)
-    {
-        // create GPU
-        const gpu = new _speedy_gpu_core__WEBPACK_IMPORTED_MODULE_0__["SpeedyGPUCore"](width, height);
-
-        // spawn kernel groups
-        spawnKernelGroups.call(this, this, width, height);
-
-        // spawn pyramids of kernel groups
-        this._pyramid = this._buildPyramid(gpu, width, height, 1.0, MAX_PYRAMID_LEVELS);
-        this._intraPyramid = this._buildPyramid(gpu, width, height, 1.5, MAX_PYRAMID_LEVELS + 1);
-
-        // done!
-        return gpu;
-    }
-
-    // build a pyramid, where each level stores the kernel groups
-    _buildPyramid(gpu, imageWidth, imageHeight, baseScale, numLevels)
-    {
-        let scale = +baseScale;
-        let width = (imageWidth * scale) | 0, height = (imageHeight * scale) | 0;
-        let pyramid = new Array(numLevels);
-
-        for(let i = 0; i < pyramid.length; i++) {
-            pyramid[i] = { width, height, scale };
-            spawnKernelGroups.call(pyramid[i], this, width, height);
-            width = ((1 + width) / 2) | 0;
-            height = ((1 + height) / 2) | 0;
-            scale /= 2;
-        }
-
-        return pyramid;
-    }
-}
-
-// Spawn kernel groups
-function spawnKernelGroups(gpu, width, height)
-{
-    // all kernel groups are available via getters
-    for(let g in KERNEL_GROUPS) {
-        Object.defineProperty(this, g, {
-            get: (() => {
-                const grp = '_' + g;
-                return (function() { // lazy instantiation
-                    return this[grp] || (this[grp] = new (KERNEL_GROUPS[g])(gpu, width, height));
-                }).bind(this);
-            })(),
-            configurable: true // WebGL context may be lost
-        });
-    }
-}
-
-
-/***/ }),
-
-/***/ "./src/gpu/gpu-kernel-group.js":
-/*!*************************************!*\
-  !*** ./src/gpu/gpu-kernel-group.js ***!
-  \*************************************/
-/*! exports provided: GPUKernelGroup */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUKernelGroup", function() { return GPUKernelGroup; });
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for the web
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * gpu-kernel-group.js
- * An abstract group of GPU kernels
+ * gpu-program-group.js
+ * An abstract group of programs that run on the GPU
  */
 
 /**
- * GPUKernelGroup
+ * GPUProgramGroup
  * A semantically correlated group
- * of kernels that run on the GPU
+ * of programs that run on the GPU
  */
 
-class GPUKernelGroup
+class GPUProgramGroup
 {
     /**
      * Class constructor
-     * @param {GPUInstance} gpu
+     * @param {SpeedyGPU} gpu
      * @param {number} width Texture width (depends on the pyramid layer)
      * @param {number} height Texture height (depends on the pyramid layer)
      */
@@ -2079,20 +1854,20 @@ class GPUKernelGroup
     }
 
     /**
-     * Declare a kernel
-     * @param {string} name Kernel name
-     * @param {Function} fn Kernel code
-     * @param {object} settings Kernel settings
-     * @returns {GPUKernelGroup} This object
+     * Declare a program
+     * @param {string} name Program name
+     * @param {Function} shaderdecl Program params => code
+     * @param {object} settings Program settings
+     * @returns {GPUProgramGroup} This object
      */
-    /* protected */ declare(name, fn, settings = { })
+    /* protected */ declare(name, shaderdecl, settings = { })
     {
         // lazy instantiation of kernels
         Object.defineProperty(this, name, {
             get: (() => {
                 const key = '__k_' + name;
                 return (function() {
-                    return this[key] || (this[key] = this._spawnKernel(fn, settings));
+                    return this[key] || (this[key] = this._createProgram(shaderdecl, settings));
                 }).bind(this);
             })()
         });
@@ -2102,9 +1877,9 @@ class GPUKernelGroup
 
     /**
      * Multi-pass composition
-     * @param {string} name Kernel name
-     * @param {string} fn Other kernels
-     * @returns {GPUKernelGroup} This object
+     * @param {string} name Program name
+     * @param {string} fn Other programs
+     * @returns {GPUProgramGroup} This object
      */
     /* protected */ compose(name, ...fn)
     {
@@ -2144,9 +1919,9 @@ class GPUKernelGroup
 
     /**
      * Neat helpers to be used
-     * when defining operations
+     * when defining programs
      */
-    get operation()
+    get program()
     {
         return this._helpers || (this.helpers = {
 
@@ -2177,9 +1952,9 @@ class GPUKernelGroup
         });
     }
 
-    /* private */ _spawnKernel(fn, settings = { })
+    /* private */ _createProgram(shaderdecl, settings = { })
     {
-        return this._gpu.core.createProgram(fn, {
+        return this._gpu.createProgram(shaderdecl, {
             // default settings
             output: [ this._width, this._height ],
             ...settings
@@ -2189,18 +1964,18 @@ class GPUKernelGroup
 
 /***/ }),
 
-/***/ "./src/gpu/kernels/colors.js":
-/*!***********************************!*\
-  !*** ./src/gpu/kernels/colors.js ***!
-  \***********************************/
+/***/ "./src/gpu/program-groups/colors.js":
+/*!******************************************!*\
+  !*** ./src/gpu/program-groups/colors.js ***!
+  \******************************************/
 /*! exports provided: GPUColors */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUColors", function() { return GPUColors; });
-/* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
-/* harmony import */ var _shaders_colors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/colors */ "./src/gpu/kernels/shaders/colors.js");
+/* harmony import */ var _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-program-group */ "./src/gpu/gpu-program-group.js");
+/* harmony import */ var _programs_colors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./programs/colors */ "./src/gpu/program-groups/programs/colors.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -2229,11 +2004,11 @@ __webpack_require__.r(__webpack_exports__);
  * GPUColors
  * Color conversions
  */
-class GPUColors extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernelGroup"]
+class GPUColors extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUProgramGroup"]
 {
     /**
      * Class constructor
-     * @param {GPUInstance} gpu
+     * @param {SpeedyGPU} gpu
      * @param {number} width
      * @param {number} height
      */
@@ -2242,25 +2017,25 @@ class GPUColors extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKerne
         super(gpu, width, height);
         this
             // convert to greyscale
-            .declare('rgb2grey', _shaders_colors__WEBPACK_IMPORTED_MODULE_1__["rgb2grey"])
+            .declare('rgb2grey', _programs_colors__WEBPACK_IMPORTED_MODULE_1__["rgb2grey"])
         ;
     }
 }
 
 /***/ }),
 
-/***/ "./src/gpu/kernels/encoders.js":
-/*!*************************************!*\
-  !*** ./src/gpu/kernels/encoders.js ***!
-  \*************************************/
+/***/ "./src/gpu/program-groups/encoders.js":
+/*!********************************************!*\
+  !*** ./src/gpu/program-groups/encoders.js ***!
+  \********************************************/
 /*! exports provided: GPUEncoders */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUEncoders", function() { return GPUEncoders; });
-/* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
-/* harmony import */ var _shaders_encoders__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/encoders */ "./src/gpu/kernels/shaders/encoders.js");
+/* harmony import */ var _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-program-group */ "./src/gpu/gpu-program-group.js");
+/* harmony import */ var _programs_encoders__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./programs/encoders */ "./src/gpu/program-groups/programs/encoders.js");
 /* harmony import */ var _core_speedy_feature__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../core/speedy-feature */ "./src/core/speedy-feature.js");
 /* harmony import */ var _utils_tuner__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/tuner */ "./src/utils/tuner.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
@@ -2306,11 +2081,11 @@ const TWO_PI = 2.0 * Math.PI;
  * GPUEncoders
  * Texture encoding
  */
-class GPUEncoders extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernelGroup"]
+class GPUEncoders extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUProgramGroup"]
 {
     /**
      * Class constructor
-     * @param {GPUInstance} gpu
+     * @param {SpeedyGPU} gpu
      * @param {number} width
      * @param {number} height
      */
@@ -2319,8 +2094,8 @@ class GPUEncoders extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKer
         super(gpu, width, height);
         this
             // Keypoint encoding
-            .declare('_encodeKeypointOffsets', _shaders_encoders__WEBPACK_IMPORTED_MODULE_1__["encodeKeypointOffsets"])
-            .declare('_encodeKeypoints', _shaders_encoders__WEBPACK_IMPORTED_MODULE_1__["encodeKeypoints"], {
+            .declare('_encodeKeypointOffsets', _programs_encoders__WEBPACK_IMPORTED_MODULE_1__["encodeKeypointOffsets"])
+            .declare('_encodeKeypoints', _programs_encoders__WEBPACK_IMPORTED_MODULE_1__["encodeKeypoints"], {
                 output: [ INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH ],
                 renderToTexture: false
             })
@@ -2438,18 +2213,18 @@ class GPUEncoders extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKer
 
 /***/ }),
 
-/***/ "./src/gpu/kernels/filters.js":
-/*!************************************!*\
-  !*** ./src/gpu/kernels/filters.js ***!
-  \************************************/
+/***/ "./src/gpu/program-groups/filters.js":
+/*!*******************************************!*\
+  !*** ./src/gpu/program-groups/filters.js ***!
+  \*******************************************/
 /*! exports provided: GPUFilters */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUFilters", function() { return GPUFilters; });
-/* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
-/* harmony import */ var _shaders_convolution__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/convolution */ "./src/gpu/kernels/shaders/convolution.js");
+/* harmony import */ var _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-program-group */ "./src/gpu/gpu-program-group.js");
+/* harmony import */ var _programs_convolution__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./programs/convolution */ "./src/gpu/program-groups/programs/convolution.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -2478,11 +2253,11 @@ __webpack_require__.r(__webpack_exports__);
  * GPUFilters
  * Image filtering
  */
-class GPUFilters extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernelGroup"]
+class GPUFilters extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUProgramGroup"]
 {
     /**
      * Class constructor
-     * @param {GPUInstance} gpu
+     * @param {SpeedyGPU} gpu
      * @param {number} width
      * @param {number} height
      */
@@ -2507,70 +2282,70 @@ class GPUFilters extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKern
             .compose('texConv2D5', '_idConv2D5', '_texConv2D5') // 2D texture-based 5x5 convolution
             .compose('texConv2D7', '_idConv2D7', '_texConv2D7') // 2D texture-based 7x7 convolution
 
-            .declare('_texConv2D3', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConv2D"])(3)) // 3x3 convolution with a texture (not chainable)
-            .declare('_idConv2D3', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["idConv2D"])(3)) // identity operation (enables chaining)
-            .declare('_texConv2D5', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConv2D"])(5)) // 5x5 convolution with a texture (not chainable)
-            .declare('_idConv2D5', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["idConv2D"])(5)) // identity operation (enables chaining)
-            .declare('_texConv2D7', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConv2D"])(7)) // 7x7 convolution with a texture (not chainable)
-            .declare('_idConv2D7', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["idConv2D"])(7)) // identity operation (enables chaining)
+            .declare('_texConv2D3', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConv2D"])(3)) // 3x3 convolution with a texture (not chainable)
+            .declare('_idConv2D3', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["idConv2D"])(3)) // identity operation (enables chaining)
+            .declare('_texConv2D5', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConv2D"])(5)) // 5x5 convolution with a texture (not chainable)
+            .declare('_idConv2D5', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["idConv2D"])(5)) // identity operation (enables chaining)
+            .declare('_texConv2D7', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConv2D"])(7)) // 7x7 convolution with a texture (not chainable)
+            .declare('_idConv2D7', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["idConv2D"])(7)) // identity operation (enables chaining)
 
             // texture-based separable convolutions
             .compose('texConvXY3', 'texConvX3', 'texConvY3') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX3', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(3)) // 3x1 convolution, x-axis
-            .declare('texConvY3', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(3)) // 1x3 convolution, y-axis
+            .declare('texConvX3', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(3)) // 3x1 convolution, x-axis
+            .declare('texConvY3', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(3)) // 1x3 convolution, y-axis
             .compose('texConvXY5', 'texConvX5', 'texConvY5') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX5', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(5)) // 5x1 convolution, x-axis
-            .declare('texConvY5', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(5)) // 1x5 convolution, y-axis
+            .declare('texConvX5', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(5)) // 5x1 convolution, x-axis
+            .declare('texConvY5', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(5)) // 1x5 convolution, y-axis
             .compose('texConvXY7', 'texConvX7', 'texConvY7') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX7', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(7)) // 7x1 convolution, x-axis
-            .declare('texConvY7', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(7)) // 1x7 convolution, y-axis
+            .declare('texConvX7', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(7)) // 7x1 convolution, x-axis
+            .declare('texConvY7', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(7)) // 1x7 convolution, y-axis
             .compose('texConvXY9', 'texConvX9', 'texConvY9') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX9', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(9)) // 9x1 convolution, x-axis
-            .declare('texConvY9', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(9)) // 1x9 convolution, y-axis
+            .declare('texConvX9', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(9)) // 9x1 convolution, x-axis
+            .declare('texConvY9', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(9)) // 1x9 convolution, y-axis
             .compose('texConvXY11', 'texConvX11', 'texConvY11') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX11', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(11)) // 11x1 convolution, x-axis
-            .declare('texConvY11', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(11)) // 1x11 convolution, y-axis
+            .declare('texConvX11', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(11)) // 11x1 convolution, x-axis
+            .declare('texConvY11', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(11)) // 1x11 convolution, y-axis
 
             // create custom convolution kernels
-            .declare('createKernel3x3', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(3), { // 3x3 texture kernel
-                ...(this.operation.hasTextureSize(3, 3)),
-                ...(this.operation.doesNotRecycleTextures())
+            .declare('createKernel3x3', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(3), { // 3x3 texture kernel
+                ...(this.program.hasTextureSize(3, 3)),
+                ...(this.program.doesNotRecycleTextures())
             })
-            .declare('createKernel5x5', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(5), { // 5x5 texture kernel
-                ...(this.operation.hasTextureSize(5, 5)),
-                ...(this.operation.doesNotRecycleTextures())
+            .declare('createKernel5x5', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(5), { // 5x5 texture kernel
+                ...(this.program.hasTextureSize(5, 5)),
+                ...(this.program.doesNotRecycleTextures())
             })
-            .declare('createKernel7x7', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(7), { // 7x7 texture kernel
-                ...(this.operation.hasTextureSize(7, 7)),
-                ...(this.operation.doesNotRecycleTextures())
+            .declare('createKernel7x7', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(7), { // 7x7 texture kernel
+                ...(this.program.hasTextureSize(7, 7)),
+                ...(this.program.doesNotRecycleTextures())
             })
-            .declare('createKernel3x1', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(3), { // 3x1 texture kernel
-                ...(this.operation.hasTextureSize(3, 1)),
-                ...(this.operation.doesNotRecycleTextures())
+            .declare('createKernel3x1', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(3), { // 3x1 texture kernel
+                ...(this.program.hasTextureSize(3, 1)),
+                ...(this.program.doesNotRecycleTextures())
             })
-            .declare('createKernel5x1', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(5), { // 5x1 texture kernel
-                ...(this.operation.hasTextureSize(5, 1)),
-                ...(this.operation.doesNotRecycleTextures())
+            .declare('createKernel5x1', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(5), { // 5x1 texture kernel
+                ...(this.program.hasTextureSize(5, 1)),
+                ...(this.program.doesNotRecycleTextures())
             })
-            .declare('createKernel7x1', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(7), { // 7x1 texture kernel
-                ...(this.operation.hasTextureSize(7, 1)),
-                ...(this.operation.doesNotRecycleTextures())
+            .declare('createKernel7x1', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(7), { // 7x1 texture kernel
+                ...(this.program.hasTextureSize(7, 1)),
+                ...(this.program.doesNotRecycleTextures())
             })
-            .declare('createKernel9x1', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(9), { // 9x1 texture kernel
-                ...(this.operation.hasTextureSize(9, 1)),
-                ...(this.operation.doesNotRecycleTextures())
+            .declare('createKernel9x1', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(9), { // 9x1 texture kernel
+                ...(this.program.hasTextureSize(9, 1)),
+                ...(this.program.doesNotRecycleTextures())
             })
-            .declare('createKernel11x1', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(11), { // 11x1 texture kernel
-                ...(this.operation.hasTextureSize(11, 1)),
-                ...(this.operation.doesNotRecycleTextures())
+            .declare('createKernel11x1', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(11), { // 11x1 texture kernel
+                ...(this.program.hasTextureSize(11, 1)),
+                ...(this.program.doesNotRecycleTextures())
             })
             /*.declare('_readKernel3x3', identity, { // for testing
-                ...(this.operation.hasTextureSize(3, 3)),
-                ...(this.operation.displaysGraphics())
+                ...(this.program.hasTextureSize(3, 3)),
+                ...(this.program.displaysGraphics())
             })
             .declare('_readKernel3x1', identity, {
-                ...(this.operation.hasTextureSize(3, 1)),
-                ...(this.operation.displaysGraphics())
+                ...(this.program.hasTextureSize(3, 1)),
+                ...(this.program.displaysGraphics())
             })*/
 
 
@@ -2578,26 +2353,26 @@ class GPUFilters extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKern
 
             // separable kernels (Gaussian)
             // see also: http://dev.theomader.com/gaussian-kernel-calculator/
-            .declare('_gauss5x', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
+            .declare('_gauss5x', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
                 0.05, 0.25, 0.4, 0.25, 0.05
                 //0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
             ]))
-            .declare('_gauss5y', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
+            .declare('_gauss5y', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
                 0.05, 0.25, 0.4, 0.25, 0.05
                 //0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
             ]))
-            .declare('_gauss3x', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
+            .declare('_gauss3x', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
                 0.25, 0.5, 0.25
                 //0.27901, 0.44198, 0.27901
             ]))
-            .declare('_gauss3y', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
+            .declare('_gauss3y', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
                 0.25, 0.5, 0.25
                 //0.27901, 0.44198, 0.27901
             ]))
-            .declare('_gauss7x', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
+            .declare('_gauss7x', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
                 0.00598, 0.060626, 0.241843, 0.383103, 0.241843, 0.060626, 0.00598
             ]))
-            .declare('_gauss7y', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
+            .declare('_gauss7y', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
                 0.00598, 0.060626, 0.241843, 0.383103, 0.241843, 0.060626, 0.00598
             ]))
             /*.declare('_gauss5', conv2D([ // for testing
@@ -2611,34 +2386,34 @@ class GPUFilters extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKern
 
 
             // separable kernels (Box filter)
-            .declare('_box3x', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
+            .declare('_box3x', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
                 1, 1, 1
             ], 1 / 3))
-            .declare('_box3y', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
+            .declare('_box3y', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
                 1, 1, 1
             ], 1 / 3))
-            .declare('_box5x', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
+            .declare('_box5x', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
                 1, 1, 1, 1, 1
             ], 1 / 5))
-            .declare('_box5y', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
+            .declare('_box5y', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
                 1, 1, 1, 1, 1
             ], 1 / 5))
-            .declare('_box7x', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
+            .declare('_box7x', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
                 1, 1, 1, 1, 1, 1, 1
             ], 1 / 7))
-            .declare('_box7y', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
+            .declare('_box7y', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
                 1, 1, 1, 1, 1, 1, 1
             ], 1 / 7))
-            .declare('_box9x', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
+            .declare('_box9x', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
                 1, 1, 1, 1, 1, 1, 1, 1, 1
             ], 1 / 9))
-            .declare('_box9y', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
+            .declare('_box9y', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
                 1, 1, 1, 1, 1, 1, 1, 1, 1
             ], 1 / 9))
-            .declare('_box11x', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
+            .declare('_box11x', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
                 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
             ], 1 / 11))
-            .declare('_box11y', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
+            .declare('_box11y', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
                 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
             ], 1 / 11))
         ;
@@ -2648,19 +2423,19 @@ class GPUFilters extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKern
 
 /***/ }),
 
-/***/ "./src/gpu/kernels/keypoints.js":
-/*!**************************************!*\
-  !*** ./src/gpu/kernels/keypoints.js ***!
-  \**************************************/
+/***/ "./src/gpu/program-groups/keypoints.js":
+/*!*********************************************!*\
+  !*** ./src/gpu/program-groups/keypoints.js ***!
+  \*********************************************/
 /*! exports provided: GPUKeypoints */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUKeypoints", function() { return GPUKeypoints; });
-/* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
-/* harmony import */ var _shaders_fast__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/fast */ "./src/gpu/kernels/shaders/fast.js");
-/* harmony import */ var _shaders_brisk__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./shaders/brisk */ "./src/gpu/kernels/shaders/brisk.js");
+/* harmony import */ var _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-program-group */ "./src/gpu/gpu-program-group.js");
+/* harmony import */ var _programs_fast__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./programs/fast */ "./src/gpu/program-groups/programs/fast.js");
+/* harmony import */ var _programs_brisk__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./programs/brisk */ "./src/gpu/program-groups/programs/brisk.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -2690,11 +2465,11 @@ __webpack_require__.r(__webpack_exports__);
  * GPUKeypoints
  * Keypoint detection
  */
-class GPUKeypoints extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernelGroup"]
+class GPUKeypoints extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUProgramGroup"]
 {
     /**
      * Class constructor
-     * @param {GPUInstance} gpu
+     * @param {SpeedyGPU} gpu
      * @param {number} width
      * @param {number} height
      */
@@ -2704,24 +2479,24 @@ class GPUKeypoints extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKe
         this
             // FAST-9,16
             .compose('fast9', '_fast9', '_fastScore16')
-            .declare('_fast9', _shaders_fast__WEBPACK_IMPORTED_MODULE_1__["fast9ml"]) // use 'ml' for multiple passes
-            .declare('_fastScore16', _shaders_fast__WEBPACK_IMPORTED_MODULE_1__["fastScore16"]) // compute scores
+            .declare('_fast9', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fast9ml"]) // use 'ml' for multiple passes
+            .declare('_fastScore16', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fastScore16"]) // compute scores
 
             // FAST-7,12
             .compose('fast7', '_fast7', '_fastScore12')
-            .declare('_fast7', _shaders_fast__WEBPACK_IMPORTED_MODULE_1__["fast7"])
-            .declare('_fastScore12', _shaders_fast__WEBPACK_IMPORTED_MODULE_1__["fastScore12"])
+            .declare('_fast7', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fast7"])
+            .declare('_fastScore12', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fastScore12"])
 
             // FAST-5,8
             .compose('fast5', '_fast5', '_fastScore8')
-            .declare('_fast5', _shaders_fast__WEBPACK_IMPORTED_MODULE_1__["fast5"])
-            .declare('_fastScore8', _shaders_fast__WEBPACK_IMPORTED_MODULE_1__["fastScore8"])
+            .declare('_fast5', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fast5"])
+            .declare('_fastScore8', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fastScore8"])
 
             // FAST Non-Maximum Suppression
-            .declare('fastSuppression', _shaders_fast__WEBPACK_IMPORTED_MODULE_1__["fastSuppression"])
+            .declare('fastSuppression', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fastSuppression"])
 
             // BRISK Scale-Space Non-Maximum Suppression & Interpolation
-            .declare('brisk', _shaders_brisk__WEBPACK_IMPORTED_MODULE_2__["brisk"])
+            .declare('brisk', _programs_brisk__WEBPACK_IMPORTED_MODULE_2__["brisk"])
         ;
     }
 }
@@ -2730,173 +2505,10 @@ class GPUKeypoints extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKe
 
 /***/ }),
 
-/***/ "./src/gpu/kernels/pyramids.js":
-/*!*************************************!*\
-  !*** ./src/gpu/kernels/pyramids.js ***!
-  \*************************************/
-/*! exports provided: GPUPyramids */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUPyramids", function() { return GPUPyramids; });
-/* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
-/* harmony import */ var _shaders_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/utils */ "./src/gpu/kernels/shaders/utils.js");
-/* harmony import */ var _shaders_convolution__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./shaders/convolution */ "./src/gpu/kernels/shaders/convolution.js");
-/* harmony import */ var _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./shaders/pyramids */ "./src/gpu/kernels/shaders/pyramids.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for the web
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * gpu-pyramids.js
- * Image pyramids
- */
-
-
-
-
-
-
-
-
-/**
- * GPUPyramids
- * Image pyramids
- */
-class GPUPyramids extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernelGroup"]
-{
-    /**
-     * Class constructor
-     * @param {GPUInstance} gpu
-     * @param {number} width
-     * @param {number} height
-     */
-    constructor(gpu, width, height)
-    {
-        super(gpu, width, height);
-        this
-            // initialize pyramid
-            .declare('setBase', Object(_shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["setScale"])(1.0, gpu.pyramidHeight, gpu.pyramidMaxScale))
- 
-            // pyramid operations
-            .compose('reduce', '_smoothX', '_smoothY', '_downsample2', '_scale1/2')
-            .compose('expand', '_upsample2', '_smoothX2', '_smoothY2', '_scale2')
-           
-            // intra-pyramid operations (between two pyramid levels)
-            .compose('intraReduce', '_upsample2', '_smoothX2', '_smoothY2', '_downsample3/2', '_scale2/3')
-            .compose('intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3', '_scale3/2')
-
-            // Merge keypoints across multiple scales
-            .declare('mergeKeypoints', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["mergeKeypoints"])
-            .declare('mergeKeypointsAtConsecutiveLevels', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["mergeKeypointsAtConsecutiveLevels"])
-            .declare('normalizeKeypoints', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["normalizeKeypoints"])
-
-            // Crop texture to width x height of the current pyramid level
-            .declare('crop', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["crop"])
-
-            // kernels for debugging
-            .declare('output', _shaders_utils__WEBPACK_IMPORTED_MODULE_1__["flipY"], {
-                ...this.operation.hasTextureSize(this._width, this._height),
-                ...this.operation.displaysGraphics()
-            })
-
-            .declare('output2', _shaders_utils__WEBPACK_IMPORTED_MODULE_1__["flipY"], {
-                ...this.operation.hasTextureSize(2 * this._width, 2 * this._height),
-                ...this.operation.displaysGraphics()
-            })
-
-            .declare('output3', _shaders_utils__WEBPACK_IMPORTED_MODULE_1__["flipY"], {
-                ...this.operation.hasTextureSize(3 * this._width, 3 * this._height),
-                ...this.operation.displaysGraphics()
-            })
-
-
-            
-            // separable kernels for gaussian smoothing
-            // use [c, b, a, b, c] where a+2c = 2b and a+2b+2c = 1
-            // pick a = 0.4 for gaussian approximation
-            .declare('_smoothX', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
-                0.05, 0.25, 0.4, 0.25, 0.05
-            ]))
-            .declare('_smoothY', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
-                0.05, 0.25, 0.4, 0.25, 0.05
-            ]))
-
-            // smoothing for 2x image
-            // same rules as above with sum(k) = 2
-            .declare('_smoothX2', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
-                0.1, 0.5, 0.8, 0.5, 0.1
-            ]), this.operation.hasTextureSize(2 * this._width, 2 * this._height))
-
-            .declare('_smoothY2', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
-                0.1, 0.5, 0.8, 0.5, 0.1
-            ], 1.0 / 2.0), this.operation.hasTextureSize(2 * this._width, 2 * this._height))
-
-            // smoothing for 3x image
-            // use [1-b, b, 1, b, 1-b], where 0 < b < 1
-            .declare('_smoothX3', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
-                0.2, 0.8, 1.0, 0.8, 0.2
-            ]), this.operation.hasTextureSize(3 * this._width, 3 * this._height))
-
-            .declare('_smoothY3', Object(_shaders_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
-                0.2, 0.8, 1.0, 0.8, 0.2
-            ], 1.0 / 3.0), this.operation.hasTextureSize(3 * this._width, 3 * this._height))
-
-            // upsampling & downsampling
-            .declare('_upsample2', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["upsample2"],
-                this.operation.hasTextureSize(2 * this._width, 2 * this._height))
-
-            .declare('_downsample2', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["downsample2"],
-                this.operation.hasTextureSize((1 + this._width) / 2, (1 + this._height) / 2))
-
-            .declare('_upsample3', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["upsample3"],
-                this.operation.hasTextureSize(3 * this._width, 3 * this._height))
-
-            .declare('_downsample3', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["downsample3"],
-                this.operation.hasTextureSize((2 + this._width) / 3, (2 + this._height) / 3))
-
-            .declare('_downsample2/3', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["downsample2"],
-                this.operation.hasTextureSize(3 * this._width / 2, 3 * this._height / 2))
-
-            .declare('_downsample3/2', _shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["downsample3"],
-                this.operation.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
-
-            // adjust the scale coefficients
-            .declare('_scale2', Object(_shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(2.0, gpu.pyramidHeight, gpu.pyramidMaxScale),
-                this.operation.hasTextureSize(2 * this._width, 2 * this._height))
-
-            .declare('_scale1/2', Object(_shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(0.5, gpu.pyramidHeight, gpu.pyramidMaxScale),
-                this.operation.hasTextureSize((1 + this._width) / 2, (1 + this._height) / 2))
-
-            .declare('_scale3/2', Object(_shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(1.5, gpu.pyramidHeight, gpu.pyramidMaxScale),
-                this.operation.hasTextureSize(3 * this._width / 2, 3 * this._height / 2))
-
-            .declare('_scale2/3', Object(_shaders_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(2.0 / 3.0, gpu.pyramidHeight, gpu.pyramidMaxScale),
-                this.operation.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
-        ;
-    }
-}
-
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/brisk.js":
-/*!******************************************!*\
-  !*** ./src/gpu/kernels/shaders/brisk.js ***!
-  \******************************************/
+/***/ "./src/gpu/program-groups/programs/brisk.js":
+/*!**************************************************!*\
+  !*** ./src/gpu/program-groups/programs/brisk.js ***!
+  \**************************************************/
 /*! exports provided: brisk */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -2934,14 +2546,14 @@ __webpack_require__.r(__webpack_exports__);
  *     "BRISK: Binary robust invariant scalable keypoints"
  *     International Conference on Computer Vision (ICCV-2011)
  */
-const brisk = (image, layerA, layerB, scaleA, scaleB, lgM, h) => __webpack_require__(/*! ./keypoint-detectors/brisk.glsl */ "./src/gpu/kernels/shaders/keypoint-detectors/brisk.glsl");
+const brisk = (image, layerA, layerB, scaleA, scaleB, lgM, h) => __webpack_require__(/*! ../../shaders/keypoint-detectors/brisk.glsl */ "./src/gpu/shaders/keypoint-detectors/brisk.glsl");
 
 /***/ }),
 
-/***/ "./src/gpu/kernels/shaders/colors.js":
-/*!*******************************************!*\
-  !*** ./src/gpu/kernels/shaders/colors.js ***!
-  \*******************************************/
+/***/ "./src/gpu/program-groups/programs/colors.js":
+/*!***************************************************!*\
+  !*** ./src/gpu/program-groups/programs/colors.js ***!
+  \***************************************************/
 /*! exports provided: rgb2grey */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -2970,25 +2582,14 @@ __webpack_require__.r(__webpack_exports__);
  */
 
 // Convert to greyscale
-const rgb2grey = (image) => __webpack_require__(/*! ./colors/rgb2grey.glsl */ "./src/gpu/kernels/shaders/colors/rgb2grey.glsl");
+const rgb2grey = (image) => __webpack_require__(/*! ../../shaders/colors/rgb2grey.glsl */ "./src/gpu/shaders/colors/rgb2grey.glsl");
 
 /***/ }),
 
-/***/ "./src/gpu/kernels/shaders/colors/rgb2grey.glsl":
-/*!******************************************************!*\
-  !*** ./src/gpu/kernels/shaders/colors/rgb2grey.glsl ***!
-  \******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "const vec4 grey = vec4(0.299f, 0.587f, 0.114f, 0.0f);\nuniform sampler2D image;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat g = dot(pixel, grey);\ncolor = vec4(g, g, g, 1.0f);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/convolution.js":
-/*!************************************************!*\
-  !*** ./src/gpu/kernels/shaders/convolution.js ***!
-  \************************************************/
+/***/ "./src/gpu/program-groups/programs/convolution.js":
+/*!********************************************************!*\
+  !*** ./src/gpu/program-groups/programs/convolution.js ***!
+  \********************************************************/
 /*! exports provided: conv2D, convX, convY, createKernel2D, createKernel1D, texConv2D, idConv2D, texConvX, texConvY */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -3353,10 +2954,10 @@ function texConv1D(kernelSize, axis)
 
 /***/ }),
 
-/***/ "./src/gpu/kernels/shaders/encoders.js":
-/*!*********************************************!*\
-  !*** ./src/gpu/kernels/shaders/encoders.js ***!
-  \*********************************************/
+/***/ "./src/gpu/program-groups/programs/encoders.js":
+/*!*****************************************************!*\
+  !*** ./src/gpu/program-groups/programs/encoders.js ***!
+  \*****************************************************/
 /*! exports provided: encodeKeypointOffsets, encodeKeypoints */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -3386,39 +2987,17 @@ __webpack_require__.r(__webpack_exports__);
  */
 
 // encode keypoint offsets: maxIterations is an integer in [1,255], determined experimentally
-const encodeKeypointOffsets = (image, imageSize, maxIterations) => __webpack_require__(/*! ./encoders/encode-keypoint-offsets.glsl */ "./src/gpu/kernels/shaders/encoders/encode-keypoint-offsets.glsl");
+const encodeKeypointOffsets = (image, imageSize, maxIterations) => __webpack_require__(/*! ../../shaders/encoders/encode-keypoint-offsets.glsl */ "./src/gpu/shaders/encoders/encode-keypoint-offsets.glsl");
 
 // encode keypoints
-const encodeKeypoints = (image, imageSize, encoderLength, descriptorSize) => __webpack_require__(/*! ./encoders/encode-keypoints.glsl */ "./src/gpu/kernels/shaders/encoders/encode-keypoints.glsl");
+const encodeKeypoints = (image, imageSize, encoderLength, descriptorSize) => __webpack_require__(/*! ../../shaders/encoders/encode-keypoints.glsl */ "./src/gpu/shaders/encoders/encode-keypoints.glsl");
 
 /***/ }),
 
-/***/ "./src/gpu/kernels/shaders/encoders/encode-keypoint-offsets.glsl":
-/*!***********************************************************************!*\
-  !*** ./src/gpu/kernels/shaders/encoders/encode-keypoint-offsets.glsl ***!
-  \***********************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nuniform ivec2 imageSize;\nuniform int maxIterations;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 pos = threadLocation();\nint offset = -1;\nwhile(offset < maxIterations && pos.y < imageSize.y && pixelAt(image, pos).r == 0.0f) {\n++offset;\npos.x = (pos.x + 1) % imageSize.x;\npos.y += int(pos.x == 0);\n}\ncolor = vec4(pixel.rg, float(max(0, offset)) / 255.0f, pixel.a);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/encoders/encode-keypoints.glsl":
-/*!****************************************************************!*\
-  !*** ./src/gpu/kernels/shaders/encoders/encode-keypoints.glsl ***!
-  \****************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nuniform ivec2 imageSize;\nuniform int encoderLength;\nuniform int descriptorSize;\nbool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)\n{\nint i = 0, p = 0;\nfor(position = ivec2(0, 0); position.y < imageSize.y; ) {\npixel = pixelAt(image, position);\nif(pixel.r > 0.0f) {\nif(p++ == q)\nreturn true;\n}\ni += 1 + int(pixel.b * 255.0f);\nposition = ivec2(i % imageSize.x, i / imageSize.x);\n}\nreturn false;\n}\nvoid main()\n{\nvec4 pixel;\nivec2 position;\nivec2 thread = threadLocation();\nint p = encoderLength * thread.y + thread.x;\nint d = 2 + descriptorSize / 4;\nint q = p / d;\ncolor = vec4(1.0f, 1.0f, 1.0f, 1.0f);\nif(findQthKeypoint(q, position, pixel)) {\nint r = p % d;\nswitch(r) {\ncase 0: {\nivec2 lo = position & 255;\nivec2 hi = position >> 8;\ncolor = vec4(float(lo.x), float(hi.x), float(lo.y), float(hi.y)) / 255.0f;\nbreak;\n}\ncase 1: {\nfloat scale = pixel.a;\nfloat rotation = 0.0f;\ncolor = vec4(scale, rotation, 0.0f, 0.0f);\nbreak;\n}\ndefault: {\nint i = r - 2;\nbreak;\n}\n}\n}\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/fast.js":
-/*!*****************************************!*\
-  !*** ./src/gpu/kernels/shaders/fast.js ***!
-  \*****************************************/
+/***/ "./src/gpu/program-groups/programs/fast.js":
+/*!*************************************************!*\
+  !*** ./src/gpu/program-groups/programs/fast.js ***!
+  \*************************************************/
 /*! exports provided: fast9, fast9ml, fast7, fast5, fastScore16, fastScore12, fastScore8, fastSuppression */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -3477,186 +3056,43 @@ __webpack_require__.r(__webpack_exports__);
 
 // FAST-9_16: requires 9 contiguous pixels
 // on a circumference of 16 pixels
-const fast9 = (image, threshold) => __webpack_require__(/*! ./keypoint-detectors/fast9.glsl */ "./src/gpu/kernels/shaders/keypoint-detectors/fast9.glsl");
+const fast9 = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoint-detectors/fast9.glsl */ "./src/gpu/shaders/keypoint-detectors/fast9.glsl");
 
 // FAST-9,16 implementation based on Machine Learning
 // Adapted from New BSD Licensed fast_9.c code found at
 // https://github.com/edrosten/fast-C-src
-const fast9ml = (image, threshold) => __webpack_require__(/*! ./keypoint-detectors/fast9ml.glsl */ "./src/gpu/kernels/shaders/keypoint-detectors/fast9ml.glsl");
+const fast9ml = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoint-detectors/fast9ml.glsl */ "./src/gpu/shaders/keypoint-detectors/fast9ml.glsl");
 
 // FAST-7_12: requires 7 contiguous pixels
 // on a circumference of 12 pixels
-const fast7 = (image, threshold) => __webpack_require__(/*! ./keypoint-detectors/fast7.glsl */ "./src/gpu/kernels/shaders/keypoint-detectors/fast7.glsl");
+const fast7 = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoint-detectors/fast7.glsl */ "./src/gpu/shaders/keypoint-detectors/fast7.glsl");
 
 // FAST-5_8: requires 5 contiguous pixels
 // on a circumference of 8 pixels
-const fast5 = (image, threshold) => __webpack_require__(/*! ./keypoint-detectors/fast5.glsl */ "./src/gpu/kernels/shaders/keypoint-detectors/fast5.glsl");
+const fast5 = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoint-detectors/fast5.glsl */ "./src/gpu/shaders/keypoint-detectors/fast5.glsl");
 
 // compute corner score considering a
 // neighboring circumference of 16 pixels
-const fastScore16 = (image, threshold) => __webpack_require__(/*! ./keypoint-detectors/fast-score16.glsl */ "./src/gpu/kernels/shaders/keypoint-detectors/fast-score16.glsl");
+const fastScore16 = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoint-detectors/fast-score16.glsl */ "./src/gpu/shaders/keypoint-detectors/fast-score16.glsl");
 
 // compute corner score considering a
 // neighboring circumference of 12 pixels
-const fastScore12 = (image, threshold) => __webpack_require__(/*! ./keypoint-detectors/fast-score12.glsl */ "./src/gpu/kernels/shaders/keypoint-detectors/fast-score12.glsl");
+const fastScore12 = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoint-detectors/fast-score12.glsl */ "./src/gpu/shaders/keypoint-detectors/fast-score12.glsl");
 
 // compute corner score considering a
 // neighboring circumference of 8 pixels
-const fastScore8 = (image, threshold) => __webpack_require__(/*! ./keypoint-detectors/fast-score8.glsl */ "./src/gpu/kernels/shaders/keypoint-detectors/fast-score8.glsl");
+const fastScore8 = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoint-detectors/fast-score8.glsl */ "./src/gpu/shaders/keypoint-detectors/fast-score8.glsl");
 
 // non-maximum suppression on 8-neighborhood based
 // on the corner score stored on the red channel
-const fastSuppression = image => __webpack_require__(/*! ./keypoint-detectors/fast-suppression.glsl */ "./src/gpu/kernels/shaders/keypoint-detectors/fast-suppression.glsl");
+const fastSuppression = image => __webpack_require__(/*! ../../shaders/keypoint-detectors/fast-suppression.glsl */ "./src/gpu/shaders/keypoint-detectors/fast-suppression.glsl");
 
 /***/ }),
 
-/***/ "./src/gpu/kernels/shaders/includes sync recursive ^\\.\\/.*$":
-/*!********************************************************!*\
-  !*** ./src/gpu/kernels/shaders/includes sync ^\.\/.*$ ***!
-  \********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-var map = {
-	"./global.glsl": "./src/gpu/kernels/shaders/includes/global.glsl"
-};
-
-
-function webpackContext(req) {
-	var id = webpackContextResolve(req);
-	return __webpack_require__(id);
-}
-function webpackContextResolve(req) {
-	if(!__webpack_require__.o(map, req)) {
-		var e = new Error("Cannot find module '" + req + "'");
-		e.code = 'MODULE_NOT_FOUND';
-		throw e;
-	}
-	return map[req];
-}
-webpackContext.keys = function webpackContextKeys() {
-	return Object.keys(map);
-};
-webpackContext.resolve = webpackContextResolve;
-module.exports = webpackContext;
-webpackContext.id = "./src/gpu/kernels/shaders/includes sync recursive ^\\.\\/.*$";
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/includes/global.glsl":
-/*!******************************************************!*\
-  !*** ./src/gpu/kernels/shaders/includes/global.glsl ***!
-  \******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "#define threadLocation() ivec2(texCoord * texSize)\n#define outputSize() ivec2(texSize)\n#define threadPixel(img) textureLod((img), texCoord, 0.0f)\n#define pixelAt(img, pos) texelFetch((img), (pos), 0)\n#define pixelAtOffset(img, offset) textureLodOffset((img), texCoord, 0.0f, (offset))"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/keypoint-detectors/brisk.glsl":
-/*!***************************************************************!*\
-  !*** ./src/gpu/kernels/shaders/keypoint-detectors/brisk.glsl ***!
-  \***************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image, layerA, layerB;\nuniform float scaleA, scaleB, lgM, h;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat score = pixel.r;\nivec2 zero = ivec2(0, 0);\nivec2 sizeA = textureSize(layerA, 0);\nivec2 sizeB = textureSize(layerB, 0);\nvec2 mid = (texCoord * texSize) + vec2(0.5f, 0.5f);\nivec2 pa = clamp(ivec2(ceil(mid * scaleA - 1.0f)), zero, sizeA - 2);\nivec2 pb = clamp(ivec2(ceil(mid * scaleB - 1.0f)), zero, sizeB - 2);\nvec4 a00 = pixelAt(layerA, pa);\nvec4 a10 = pixelAt(layerA, pa + ivec2(1, 0));\nvec4 a01 = pixelAt(layerA, pa + ivec2(0, 1));\nvec4 a11 = pixelAt(layerA, pa + ivec2(1, 1));\nvec4 b00 = pixelAt(layerB, pb);\nvec4 b10 = pixelAt(layerB, pb + ivec2(1, 0));\nvec4 b01 = pixelAt(layerB, pb + ivec2(0, 1));\nvec4 b11 = pixelAt(layerB, pb + ivec2(1, 1));\nfloat maxScore = max(\nmax(max(a00.r, a10.r), max(a01.r, a11.r)),\nmax(max(b00.r, b10.r), max(b01.r, b11.r))\n);\ncolor = vec4(0.0f, pixel.gba);\nif(score < maxScore || score == 0.0f)\nreturn;\nvec2 ea = fract(mid * scaleA);\nvec2 eb = fract(mid * scaleB);\nfloat isa = a00.b * (1.0f - ea.x) * (1.0f - ea.y) +\na10.b * ea.x * (1.0f - ea.y) +\na01.b * (1.0f - ea.x) * ea.y +\na11.b * ea.x * ea.y;\nfloat isb = b00.b * (1.0f - eb.x) * (1.0f - eb.y) +\nb10.b * eb.x * (1.0f - eb.y) +\nb01.b * (1.0f - eb.x) * eb.y +\nb11.b * eb.x * eb.y;\nbool cond1 = (isa > score && isa > isb);\nbool cond2 = (isb > score && isb > isa);\ncolor = mix(\nmix(\npixel,\nvec4(isb, pixel.gb, b00.a),\nbvec4(cond2, cond2, cond2, cond2)\n),\nvec4(isa, pixel.gb, a00.a),\nbvec4(cond1, cond1, cond1, cond1)\n);\nfloat y1 = isa, y2 = isb, y3 = score;\nfloat x1 = lgM - (lgM + h) * a00.a;\nfloat x2 = lgM - (lgM + h) * b00.a;\nfloat x3 = lgM - (lgM + h) * pixel.a;\nfloat dn = (x1 - x2) * (x1 - x3) * (x2 - x3);\nif(abs(dn) < 0.00001f)\nreturn;\nfloat a = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / dn;\nif(a >= 0.0f)\nreturn;\nfloat b = (x3 * x3 * (y1 - y2) + x2 * x2 * (y3 - y1) + x1 * x1 * (y2 - y3)) / dn;\nfloat c = (x2 * x3 * (x2 - x3) * y1 + x3 * x1 * (x3 - x1) * y2 + x1 * x2 * (x1 - x2) * y3) / dn;\nfloat xv = -b / (2.0f * a);\nfloat yv = c - (b * b) / (4.0f * a);\nif(xv < min(x1, min(x2, x3)) || xv > max(x1, max(x2, x3)))\nreturn;\nfloat interpolatedScale = (lgM - xv) / (lgM + h);\nfloat interpolatedScore = clamp(yv, 0.0f, 1.0f);\ncolor = vec4(interpolatedScore, pixel.gb, interpolatedScale);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/keypoint-detectors/fast-score12.glsl":
-/*!**********************************************************************!*\
-  !*** ./src/gpu/kernels/shaders/keypoint-detectors/fast-score12.glsl ***!
-  \**********************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat ifCorner = step(1.0f, pixel.r);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 2)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 2)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 1)).g;\nfloat p3 = pixelAtOffset(image, ivec2(2, 0)).g;\nfloat p4 = pixelAtOffset(image, ivec2(2, -1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(1, -2)).g;\nfloat p6 = pixelAtOffset(image, ivec2(0, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(-1, -2)).g;\nfloat p8 = pixelAtOffset(image, ivec2(-2, -1)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-2, 0)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, 1)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-1, 2)).g;\nfloat bs = 0.0f, ds = 0.0f;\nbs += max(c_t - p0, 0.0f);  ds += max(p0 - ct, 0.0f);\nbs += max(c_t - p1, 0.0f);  ds += max(p1 - ct, 0.0f);\nbs += max(c_t - p2, 0.0f);  ds += max(p2 - ct, 0.0f);\nbs += max(c_t - p3, 0.0f);  ds += max(p3 - ct, 0.0f);\nbs += max(c_t - p4, 0.0f);  ds += max(p4 - ct, 0.0f);\nbs += max(c_t - p5, 0.0f);  ds += max(p5 - ct, 0.0f);\nbs += max(c_t - p6, 0.0f);  ds += max(p6 - ct, 0.0f);\nbs += max(c_t - p7, 0.0f);  ds += max(p7 - ct, 0.0f);\nbs += max(c_t - p8, 0.0f);  ds += max(p8 - ct, 0.0f);\nbs += max(c_t - p9, 0.0f);  ds += max(p9 - ct, 0.0f);\nbs += max(c_t - p10, 0.0f); ds += max(p10 - ct, 0.0f);\nbs += max(c_t - p11, 0.0f); ds += max(p11 - ct, 0.0f);\nfloat score = max(bs, ds) / 12.0f;\ncolor = vec4(score * ifCorner, pixel.g, score, pixel.a);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/keypoint-detectors/fast-score16.glsl":
-/*!**********************************************************************!*\
-  !*** ./src/gpu/kernels/shaders/keypoint-detectors/fast-score16.glsl ***!
-  \**********************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat ifCorner = step(1.0f, pixel.r);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 3)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 3)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 2)).g;\nfloat p3 = pixelAtOffset(image, ivec2(3, 1)).g;\nfloat p4 = pixelAtOffset(image, ivec2(3, 0)).g;\nfloat p5 = pixelAtOffset(image, ivec2(3, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(2, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(1, -3)).g;\nfloat p8 = pixelAtOffset(image, ivec2(0, -3)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-1, -3)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, -2)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-3, -1)).g;\nfloat p12 = pixelAtOffset(image, ivec2(-3, 0)).g;\nfloat p13 = pixelAtOffset(image, ivec2(-3, 1)).g;\nfloat p14 = pixelAtOffset(image, ivec2(-2, 2)).g;\nfloat p15 = pixelAtOffset(image, ivec2(-1, 3)).g;\nfloat bs = 0.0f, ds = 0.0f;\nbs += max(c_t - p0, 0.0f);  ds += max(p0 - ct, 0.0f);\nbs += max(c_t - p1, 0.0f);  ds += max(p1 - ct, 0.0f);\nbs += max(c_t - p2, 0.0f);  ds += max(p2 - ct, 0.0f);\nbs += max(c_t - p3, 0.0f);  ds += max(p3 - ct, 0.0f);\nbs += max(c_t - p4, 0.0f);  ds += max(p4 - ct, 0.0f);\nbs += max(c_t - p5, 0.0f);  ds += max(p5 - ct, 0.0f);\nbs += max(c_t - p6, 0.0f);  ds += max(p6 - ct, 0.0f);\nbs += max(c_t - p7, 0.0f);  ds += max(p7 - ct, 0.0f);\nbs += max(c_t - p8, 0.0f);  ds += max(p8 - ct, 0.0f);\nbs += max(c_t - p9, 0.0f);  ds += max(p9 - ct, 0.0f);\nbs += max(c_t - p10, 0.0f); ds += max(p10 - ct, 0.0f);\nbs += max(c_t - p11, 0.0f); ds += max(p11 - ct, 0.0f);\nbs += max(c_t - p12, 0.0f); ds += max(p12 - ct, 0.0f);\nbs += max(c_t - p13, 0.0f); ds += max(p13 - ct, 0.0f);\nbs += max(c_t - p14, 0.0f); ds += max(p14 - ct, 0.0f);\nbs += max(c_t - p15, 0.0f); ds += max(p15 - ct, 0.0f);\nfloat score = max(bs, ds) / 16.0f;\ncolor = vec4(score * ifCorner, pixel.g, score, pixel.a);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/keypoint-detectors/fast-score8.glsl":
-/*!*********************************************************************!*\
-  !*** ./src/gpu/kernels/shaders/keypoint-detectors/fast-score8.glsl ***!
-  \*********************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat ifCorner = step(1.0f, pixel.r);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 1)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 1)).g;\nfloat p2 = pixelAtOffset(image, ivec2(1, 0)).g;\nfloat p3 = pixelAtOffset(image, ivec2(1, -1)).g;\nfloat p4 = pixelAtOffset(image, ivec2(0, -1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(-1, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(-1, 0)).g;\nfloat p7 = pixelAtOffset(image, ivec2(-1, 1)).g;\nfloat bs = 0.0f, ds = 0.0f;\nbs += max(c_t - p0, 0.0f); ds += max(p0 - ct, 0.0f);\nbs += max(c_t - p1, 0.0f); ds += max(p1 - ct, 0.0f);\nbs += max(c_t - p2, 0.0f); ds += max(p2 - ct, 0.0f);\nbs += max(c_t - p3, 0.0f); ds += max(p3 - ct, 0.0f);\nbs += max(c_t - p4, 0.0f); ds += max(p4 - ct, 0.0f);\nbs += max(c_t - p5, 0.0f); ds += max(p5 - ct, 0.0f);\nbs += max(c_t - p6, 0.0f); ds += max(p6 - ct, 0.0f);\nbs += max(c_t - p7, 0.0f); ds += max(p7 - ct, 0.0f);\nfloat score = max(bs, ds) / 8.0f;\ncolor = vec4(score * ifCorner, pixel.g, score, pixel.a);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/keypoint-detectors/fast-suppression.glsl":
-/*!**************************************************************************!*\
-  !*** ./src/gpu/kernels/shaders/keypoint-detectors/fast-suppression.glsl ***!
-  \**************************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nvoid main()\n{\nfloat p0 = pixelAtOffset(image, ivec2(0, 1)).r;\nfloat p1 = pixelAtOffset(image, ivec2(1, 1)).r;\nfloat p2 = pixelAtOffset(image, ivec2(1, 0)).r;\nfloat p3 = pixelAtOffset(image, ivec2(1, -1)).r;\nfloat p4 = pixelAtOffset(image, ivec2(0, -1)).r;\nfloat p5 = pixelAtOffset(image, ivec2(-1, -1)).r;\nfloat p6 = pixelAtOffset(image, ivec2(-1, 0)).r;\nfloat p7 = pixelAtOffset(image, ivec2(-1, 1)).r;\nfloat m = max(\nmax(max(p0, p1), max(p2, p3)),\nmax(max(p4, p5), max(p6, p7))\n);\nvec4 pixel = threadPixel(image);\nfloat score = float(pixel.r >= m) * pixel.r;\ncolor = vec4(score, pixel.gba);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/keypoint-detectors/fast5.glsl":
-/*!***************************************************************!*\
-  !*** ./src/gpu/kernels/shaders/keypoint-detectors/fast5.glsl ***!
-  \***************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nvec4 pixel = threadPixel(image);\ncolor = vec4(0.0f, pixel.gba);\nif(\nthread.x >= 3 && thread.x < size.x - 3 &&\nthread.y >= 3 && thread.y < size.y - 3\n) {\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 1)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 1)).g;\nfloat p2 = pixelAtOffset(image, ivec2(1, 0)).g;\nfloat p3 = pixelAtOffset(image, ivec2(1, -1)).g;\nfloat p4 = pixelAtOffset(image, ivec2(0, -1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(-1, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(-1, 0)).g;\nfloat p7 = pixelAtOffset(image, ivec2(-1, 1)).g;\nbool possibleCorner =\n((c_t > p1 || c_t > p5) && (c_t > p3 || c_t > p7)) ||\n((ct < p1  || ct < p5)  && (ct < p3  || ct < p7))  ;\nif(possibleCorner) {\nint bright = 0, dark = 0, bc = 0, dc = 0;\nif(c_t > p0) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p0) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p1) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p1) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p2) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p2) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p3) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p3) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p4) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p4) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p5) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p5) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p6) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p6) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p7) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p7) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(bright < 5 && dark < 5) {\nif(bc > 0 && bc < 5) do {\nif(c_t > p0)           bc += 1; else break;\nif(c_t > p1 && bc < 5) bc += 1; else break;\nif(c_t > p2 && bc < 5) bc += 1; else break;\nif(c_t > p3 && bc < 5) bc += 1; else break;\n} while(false);\nif(dc > 0 && dc < 5) do {\nif(ct < p0)           dc += 1; else break;\nif(ct < p1 && dc < 5) dc += 1; else break;\nif(ct < p2 && dc < 5) dc += 1; else break;\nif(ct < p3 && dc < 5) dc += 1; else break;\n} while(false);\nif(bc >= 5 || dc >= 5)\ncolor = vec4(1.0f, pixel.gba);\n}\nelse {\ncolor = vec4(1.0f, pixel.gba);\n}\n}\n}\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/keypoint-detectors/fast7.glsl":
-/*!***************************************************************!*\
-  !*** ./src/gpu/kernels/shaders/keypoint-detectors/fast7.glsl ***!
-  \***************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nvec4 pixel = threadPixel(image);\ncolor = vec4(0.0f, pixel.gba);\nif(\nthread.x >= 3 && thread.x < size.x - 3 &&\nthread.y >= 3 && thread.y < size.y - 3\n) {\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 2)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 2)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 1)).g;\nfloat p3 = pixelAtOffset(image, ivec2(2, 0)).g;\nfloat p4 = pixelAtOffset(image, ivec2(2, -1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(1, -2)).g;\nfloat p6 = pixelAtOffset(image, ivec2(0, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(-1, -2)).g;\nfloat p8 = pixelAtOffset(image, ivec2(-2, -1)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-2, 0)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, 1)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-1, 2)).g;\nbool possibleCorner =\n((c_t > p0 || c_t > p6) && (c_t > p3 || c_t > p9)) ||\n((ct < p0  || ct < p6)  && (ct < p3  || ct < p9))  ;\nif(possibleCorner) {\nint bright = 0, dark = 0, bc = 0, dc = 0;\nif(c_t > p0) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p0) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p1) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p1) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p2) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p2) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p3) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p3) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p4) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p4) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p5) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p5) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p6) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p6) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p7) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p7) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p8) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p8) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p9) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p9) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p10) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p10) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p11) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p11) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(bright < 7 && dark < 7) {\nif(bc > 0 && bc < 7) do {\nif(c_t > p0)           bc += 1; else break;\nif(c_t > p1 && bc < 7) bc += 1; else break;\nif(c_t > p2 && bc < 7) bc += 1; else break;\nif(c_t > p3 && bc < 7) bc += 1; else break;\nif(c_t > p4 && bc < 7) bc += 1; else break;\nif(c_t > p5 && bc < 7) bc += 1; else break;\n} while(false);\nif(dc > 0 && dc < 7) do {\nif(ct < p0)           dc += 1; else break;\nif(ct < p1 && dc < 7) dc += 1; else break;\nif(ct < p2 && dc < 7) dc += 1; else break;\nif(ct < p3 && dc < 7) dc += 1; else break;\nif(ct < p4 && dc < 7) dc += 1; else break;\nif(ct < p5 && dc < 7) dc += 1; else break;\n} while(false);\nif(bc >= 7 || dc >= 7)\ncolor = vec4(1.0f, pixel.gba);\n}\nelse {\ncolor = vec4(1.0f, pixel.gba);\n}\n}\n}\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/keypoint-detectors/fast9.glsl":
-/*!***************************************************************!*\
-  !*** ./src/gpu/kernels/shaders/keypoint-detectors/fast9.glsl ***!
-  \***************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nvec4 pixel = threadPixel(image);\ncolor = vec4(0.0f, pixel.gba);\nif(\nthread.x >= 3 && thread.x < size.x - 3 &&\nthread.y >= 3 && thread.y < size.y - 3\n) {\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 3)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 3)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 2)).g;\nfloat p3 = pixelAtOffset(image, ivec2(3, 1)).g;\nfloat p4 = pixelAtOffset(image, ivec2(3, 0)).g;\nfloat p5 = pixelAtOffset(image, ivec2(3, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(2, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(1, -3)).g;\nfloat p8 = pixelAtOffset(image, ivec2(0, -3)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-1, -3)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, -2)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-3, -1)).g;\nfloat p12 = pixelAtOffset(image, ivec2(-3, 0)).g;\nfloat p13 = pixelAtOffset(image, ivec2(-3, 1)).g;\nfloat p14 = pixelAtOffset(image, ivec2(-2, 2)).g;\nfloat p15 = pixelAtOffset(image, ivec2(-1, 3)).g;\nbool possibleCorner =\n((c_t > p0 || c_t > p8) && (c_t > p4 || c_t > p12)) ||\n((ct < p0  || ct < p8)  && (ct < p4  || ct < p12))  ;\nif(possibleCorner) {\nint bright = 0, dark = 0, bc = 0, dc = 0;\nif(c_t > p0) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p0) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p1) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p1) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p2) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p2) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p3) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p3) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p4) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p4) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p5) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p5) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p6) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p6) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p7) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p7) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p8) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p8) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p9) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p9) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p10) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p10) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p11) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p11) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p12) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p12) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p13) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p13) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p14) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p14) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p15) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p15) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(bright < 9 && dark < 9) {\nif(bc > 0 && bc < 9) do {\nif(c_t > p0)           bc += 1; else break;\nif(c_t > p1 && bc < 9) bc += 1; else break;\nif(c_t > p2 && bc < 9) bc += 1; else break;\nif(c_t > p3 && bc < 9) bc += 1; else break;\nif(c_t > p4 && bc < 9) bc += 1; else break;\nif(c_t > p5 && bc < 9) bc += 1; else break;\nif(c_t > p6 && bc < 9) bc += 1; else break;\nif(c_t > p7 && bc < 9) bc += 1; else break;\n} while(false);\nif(dc > 0 && dc < 9) do {\nif(ct < p0)           dc += 1; else break;\nif(ct < p1 && dc < 9) dc += 1; else break;\nif(ct < p2 && dc < 9) dc += 1; else break;\nif(ct < p3 && dc < 9) dc += 1; else break;\nif(ct < p4 && dc < 9) dc += 1; else break;\nif(ct < p5 && dc < 9) dc += 1; else break;\nif(ct < p6 && dc < 9) dc += 1; else break;\nif(ct < p7 && dc < 9) dc += 1; else break;\n} while(false);\nif(bc >= 9 || dc >= 9)\ncolor = vec4(1.0f, pixel.gba);\n}\nelse {\ncolor = vec4(1.0f, pixel.gba);\n}\n}\n}\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/keypoint-detectors/fast9ml.glsl":
-/*!*****************************************************************!*\
-  !*** ./src/gpu/kernels/shaders/keypoint-detectors/fast9ml.glsl ***!
-  \*****************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 thread = threadLocation();\nivec2 size = outputSize();\ncolor = vec4(0.0f, pixel.gba);\nif(thread.x < 3 || thread.y < 3 || thread.x >= size.x - 3 || thread.y >= size.y - 3)\nreturn;\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 3)).g;\nfloat p4 = pixelAtOffset(image, ivec2(3, 0)).g;\nfloat p8 = pixelAtOffset(image, ivec2(0, -3)).g;\nfloat p12 = pixelAtOffset(image, ivec2(-3, 0)).g;\nif(!(\n((c_t > p0 || c_t > p8) && (c_t > p4 || c_t > p12)) ||\n((ct < p0  || ct < p8)  && (ct < p4  || ct < p12))\n))\nreturn;\nfloat p1 = pixelAtOffset(image, ivec2(1, 3)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 2)).g;\nfloat p3 = pixelAtOffset(image, ivec2(3, 1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(3, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(2, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(1, -3)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-1, -3)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, -2)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-3, -1)).g;\nfloat p13 = pixelAtOffset(image, ivec2(-3, 1)).g;\nfloat p14 = pixelAtOffset(image, ivec2(-2, 2)).g;\nfloat p15 = pixelAtOffset(image, ivec2(-1, 3)).g;\nif(p0 > ct)\nif(p1 > ct)\nif(p2 > ct)\nif(p3 > ct)\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse if(p7 < c_t)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse if(p14 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse if(p6 < c_t)\nif(p15 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse if(p13 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse if(p13 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p5 < c_t)\nif(p14 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p12 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p14 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p6 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p12 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p6 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p4 < c_t)\nif(p13 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p11 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p12 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p13 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p11 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p3 < c_t)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p10 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p11 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\nif(p4 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p12 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p10 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\nif(p4 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p2 < c_t)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 > ct)\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p9 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p10 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\nif(p4 < c_t)\nif(p3 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p11 < c_t)\nif(p12 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 > ct)\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p9 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\nif(p4 < c_t)\nif(p3 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p12 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p12 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p1 < c_t)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 > ct)\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p2 > ct)\nif(p3 > ct)\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p8 < c_t)\nif(p7 < c_t)\nif(p9 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\nif(p4 < c_t)\nif(p3 < c_t)\nif(p2 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p10 < c_t)\nif(p11 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 > ct)\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p2 > ct)\nif(p3 > ct)\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p8 < c_t)\nif(p7 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\nif(p4 < c_t)\nif(p3 < c_t)\nif(p2 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p11 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p11 < c_t)\nif(p12 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p0 < c_t)\nif(p1 > ct)\nif(p8 > ct)\nif(p7 > ct)\nif(p9 > ct)\nif(p6 > ct)\nif(p5 > ct)\nif(p4 > ct)\nif(p3 > ct)\nif(p2 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p10 > ct)\nif(p11 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 < c_t)\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p2 < c_t)\nif(p3 < c_t)\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p1 < c_t)\nif(p2 > ct)\nif(p9 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p10 > ct)\nif(p6 > ct)\nif(p5 > ct)\nif(p4 > ct)\nif(p3 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p11 > ct)\nif(p12 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 < c_t)\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p2 < c_t)\nif(p3 > ct)\nif(p10 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p11 > ct)\nif(p6 > ct)\nif(p5 > ct)\nif(p4 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p12 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p3 < c_t)\nif(p4 > ct)\nif(p13 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p6 > ct)\nif(p5 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p13 < c_t)\nif(p11 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p12 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p11 < c_t)\nif(p12 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p4 < c_t)\nif(p5 > ct)\nif(p14 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p6 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p14 < c_t)\nif(p12 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p12 < c_t)\nif(p13 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p5 < c_t)\nif(p6 > ct)\nif(p15 < c_t)\nif(p13 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p6 < c_t)\nif(p7 > ct)\nif(p14 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse if(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p13 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p12 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p6 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p6 > ct)\nif(p5 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p6 > ct)\nif(p5 > ct)\nif(p4 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p9 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p6 > ct)\nif(p5 > ct)\nif(p4 > ct)\nif(p3 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p12 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p12 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 < c_t)\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p8 > ct)\nif(p7 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p6 > ct)\nif(p5 > ct)\nif(p4 > ct)\nif(p3 > ct)\nif(p2 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p11 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 < c_t)\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p2 < c_t)\nif(p3 < c_t)\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p6 > ct)\nif(p5 > ct)\nif(p4 > ct)\nif(p3 > ct)\nif(p2 > ct)\nif(p1 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p10 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\nif(p4 < c_t)\nif(p3 < c_t)\nif(p2 < c_t)\nif(p1 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p10 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/pyramids.js":
-/*!*********************************************!*\
-  !*** ./src/gpu/kernels/shaders/pyramids.js ***!
-  \*********************************************/
+/***/ "./src/gpu/program-groups/programs/pyramids.js":
+/*!*****************************************************!*\
+  !*** ./src/gpu/program-groups/programs/pyramids.js ***!
+  \*****************************************************/
 /*! exports provided: upsample2, downsample2, upsample3, downsample3, mergeKeypoints, mergeKeypointsAtConsecutiveLevels, normalizeKeypoints, crop, setScale, scale */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -3694,18 +3130,18 @@ __webpack_require__.r(__webpack_exports__);
  */
 
 // pyramid generation
-const upsample2 = image => __webpack_require__(/*! ./pyramids/upsample2.glsl */ "./src/gpu/kernels/shaders/pyramids/upsample2.glsl");
-const downsample2 = image => __webpack_require__(/*! ./pyramids/downsample2.glsl */ "./src/gpu/kernels/shaders/pyramids/downsample2.glsl");
-const upsample3 = image => __webpack_require__(/*! ./pyramids/upsample3.glsl */ "./src/gpu/kernels/shaders/pyramids/upsample3.glsl");
-const downsample3 = image => __webpack_require__(/*! ./pyramids/downsample3.glsl */ "./src/gpu/kernels/shaders/pyramids/downsample3.glsl");
+const upsample2 = image => __webpack_require__(/*! ../../shaders/pyramids/upsample2.glsl */ "./src/gpu/shaders/pyramids/upsample2.glsl");
+const downsample2 = image => __webpack_require__(/*! ../../shaders/pyramids/downsample2.glsl */ "./src/gpu/shaders/pyramids/downsample2.glsl");
+const upsample3 = image => __webpack_require__(/*! ../../shaders/pyramids/upsample3.glsl */ "./src/gpu/shaders/pyramids/upsample3.glsl");
+const downsample3 = image => __webpack_require__(/*! ../../shaders/pyramids/downsample3.glsl */ "./src/gpu/shaders/pyramids/downsample3.glsl");
 
 // utilities for merging keypoints across multiple scales
-const mergeKeypoints = (target, source) => __webpack_require__(/*! ./pyramids/merge-keypoints.glsl */ "./src/gpu/kernels/shaders/pyramids/merge-keypoints.glsl");
-const mergeKeypointsAtConsecutiveLevels = (largerImage, smallerImage) => __webpack_require__(/*! ./pyramids/merge-keypoints-at-consecutive-levels.glsl */ "./src/gpu/kernels/shaders/pyramids/merge-keypoints-at-consecutive-levels.glsl");
-const normalizeKeypoints = (image, imageScale) => __webpack_require__(/*! ./pyramids/normalize-keypoints.glsl */ "./src/gpu/kernels/shaders/pyramids/normalize-keypoints.glsl");
+const mergeKeypoints = (target, source) => __webpack_require__(/*! ../../shaders/pyramids/merge-keypoints.glsl */ "./src/gpu/shaders/pyramids/merge-keypoints.glsl");
+const mergeKeypointsAtConsecutiveLevels = (largerImage, smallerImage) => __webpack_require__(/*! ../../shaders/pyramids/merge-keypoints-at-consecutive-levels.glsl */ "./src/gpu/shaders/pyramids/merge-keypoints-at-consecutive-levels.glsl");
+const normalizeKeypoints = (image, imageScale) => __webpack_require__(/*! ../../shaders/pyramids/normalize-keypoints.glsl */ "./src/gpu/shaders/pyramids/normalize-keypoints.glsl");
 
 // misc
-const crop = image => __webpack_require__(/*! ./pyramids/crop.glsl */ "./src/gpu/kernels/shaders/pyramids/crop.glsl");
+const crop = image => __webpack_require__(/*! ../../shaders/pyramids/crop.glsl */ "./src/gpu/shaders/pyramids/crop.glsl");
 
 // image scale
 
@@ -3791,98 +3227,10 @@ function scale(scaleFactor, pyramidHeight, pyramidMaxScale)
 
 /***/ }),
 
-/***/ "./src/gpu/kernels/shaders/pyramids/crop.glsl":
-/*!****************************************************!*\
-  !*** ./src/gpu/kernels/shaders/pyramids/crop.glsl ***!
-  \****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nivec2 zero = ivec2(0, 0);\ncolor = pixelAt(image, clamp(thread, zero, size - 1));\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/pyramids/downsample2.glsl":
-/*!***********************************************************!*\
-  !*** ./src/gpu/kernels/shaders/pyramids/downsample2.glsl ***!
-  \***********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 pos = min(thread * 2, textureSize(image, 0) - 1);\ncolor = pixelAt(image, pos);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/pyramids/downsample3.glsl":
-/*!***********************************************************!*\
-  !*** ./src/gpu/kernels/shaders/pyramids/downsample3.glsl ***!
-  \***********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 pos = min(thread * 3, textureSize(image, 0) - 1);\ncolor = pixelAt(image, pos);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/pyramids/merge-keypoints-at-consecutive-levels.glsl":
-/*!*************************************************************************************!*\
-  !*** ./src/gpu/kernels/shaders/pyramids/merge-keypoints-at-consecutive-levels.glsl ***!
-  \*************************************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D largerImage;\nuniform sampler2D smallerImage;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 lg = pixelAt(largerImage, min(thread, textureSize(largerImage, 0) - 1));\nvec4 sm = pixelAt(smallerImage, min(thread / 2, textureSize(smallerImage, 0) - 1));\nbool cond = (((thread.x & 1) + (thread.y & 1)) == 0) && (sm.r > lg.r);\ncolor = mix(\nlg,\nvec4(sm.r, lg.gb, sm.a),\nbvec4(cond, cond, cond, cond)\n);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/pyramids/merge-keypoints.glsl":
-/*!***************************************************************!*\
-  !*** ./src/gpu/kernels/shaders/pyramids/merge-keypoints.glsl ***!
-  \***************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D target;\nuniform sampler2D source;\nvoid main()\n{\nvec4 a = threadPixel(target);\nvec4 b = threadPixel(source);\nbool cond = (b.r > a.r);\ncolor = mix(\na,\nvec4(b.r, a.gb, b.a),\nbvec4(cond, cond, cond, cond)\n);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/pyramids/normalize-keypoints.glsl":
-/*!*******************************************************************!*\
-  !*** ./src/gpu/kernels/shaders/pyramids/normalize-keypoints.glsl ***!
-  \*******************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nuniform float imageScale;\n#define B2(expr) bvec2((expr),(expr))\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nivec2 scaled = ivec2((texCoord * texSize) * imageScale);\nivec2 imageSize = textureSize(image, 0);\nvec4 pixel = threadPixel(image);\nvec4 p0 = pixelAt(image, min(scaled, imageSize-1));\nvec4 p1 = pixelAt(image, min(scaled + ivec2(0, 1), imageSize-1));\nvec4 p2 = pixelAt(image, min(scaled + ivec2(1, 0), imageSize-1));\nvec4 p3 = pixelAt(image, min(scaled + ivec2(1, 1), imageSize-1));\nbool gotCorner = ((thread.x & 1) + (thread.y & 1) == 0) &&\n(scaled.x + 1 < size.x && scaled.y + 1 < size.y) &&\n(p0.r + p1.r + p2.r + p3.r > 0.0f);\nvec2 best = mix(\nvec2(0.0f, pixel.a),\nmix(\nmix(\nmix(p3.ra, p1.ra, B2(p1.r > p3.r)),\nmix(p2.ra, p1.ra, B2(p1.r > p2.r)),\nB2(p2.r > p3.r)\n),\nmix(\nmix(p3.ra, p0.ra, B2(p0.r > p3.r)),\nmix(p2.ra, p0.ra, B2(p0.r > p2.r)),\nB2(p2.r > p3.r)\n),\nB2(p0.r > p1.r)\n),\nB2(gotCorner)\n);\ncolor = vec4(best.x, pixel.gb, best.y);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/pyramids/upsample2.glsl":
-/*!*********************************************************!*\
-  !*** ./src/gpu/kernels/shaders/pyramids/upsample2.glsl ***!
-  \*********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = pixelAt(image, thread / 2);\nbool cond = (((thread.x + thread.y) & 1) == 0);\ncolor = mix(\nvec4(0.0f, 0.0f, 0.0f, pixel.a),\npixel,\nbvec4(cond, cond, cond, cond)\n);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/pyramids/upsample3.glsl":
-/*!*********************************************************!*\
-  !*** ./src/gpu/kernels/shaders/pyramids/upsample3.glsl ***!
-  \*********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = pixelAt(image, thread / 3);\nbool cond = ((thread.x - (thread.y % 3) + 3) % 3) == 0;\ncolor = mix(\nvec4(0.0f, 0.0f, 0.0f, pixel.a),\npixel,\nbvec4(cond, cond, cond, cond)\n);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/shaders/utils.js":
-/*!******************************************!*\
-  !*** ./src/gpu/kernels/shaders/utils.js ***!
-  \******************************************/
+/***/ "./src/gpu/program-groups/programs/utils.js":
+/*!**************************************************!*\
+  !*** ./src/gpu/program-groups/programs/utils.js ***!
+  \**************************************************/
 /*! exports provided: identity, flipY */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -3912,47 +3260,188 @@ __webpack_require__.r(__webpack_exports__);
  */
 
 // Identity shader: no-operation
-const identity = (image) => __webpack_require__(/*! ./utils/identity.glsl */ "./src/gpu/kernels/shaders/utils/identity.glsl");
+const identity = (image) => __webpack_require__(/*! ../../shaders/utils/identity.glsl */ "./src/gpu/shaders/utils/identity.glsl");
 
 // Flip y-axis for output
-const flipY = (image) => __webpack_require__(/*! ./utils/flip-y.glsl */ "./src/gpu/kernels/shaders/utils/flip-y.glsl");
+const flipY = (image) => __webpack_require__(/*! ../../shaders/utils/flip-y.glsl */ "./src/gpu/shaders/utils/flip-y.glsl");
 
 /***/ }),
 
-/***/ "./src/gpu/kernels/shaders/utils/flip-y.glsl":
-/*!***************************************************!*\
-  !*** ./src/gpu/kernels/shaders/utils/flip-y.glsl ***!
-  \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
+/***/ "./src/gpu/program-groups/pyramids.js":
+/*!********************************************!*\
+  !*** ./src/gpu/program-groups/pyramids.js ***!
+  \********************************************/
+/*! exports provided: GPUPyramids */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
 
-module.exports = "uniform sampler2D image;\nvoid main() {\nivec2 pos = threadLocation();\npos.y = int(texSize.y) - 1 - pos.y;\ncolor = pixelAt(image, pos);\n}"
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUPyramids", function() { return GPUPyramids; });
+/* harmony import */ var _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-program-group */ "./src/gpu/gpu-program-group.js");
+/* harmony import */ var _programs_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./programs/utils */ "./src/gpu/program-groups/programs/utils.js");
+/* harmony import */ var _programs_convolution__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./programs/convolution */ "./src/gpu/program-groups/programs/convolution.js");
+/* harmony import */ var _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./programs/pyramids */ "./src/gpu/program-groups/programs/pyramids.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * gpu-pyramids.js
+ * Image pyramids
+ */
+
+
+
+
+
+
+
+
+/**
+ * GPUPyramids
+ * Image pyramids
+ */
+class GPUPyramids extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUProgramGroup"]
+{
+    /**
+     * Class constructor
+     * @param {SpeedyGPU} gpu
+     * @param {number} width
+     * @param {number} height
+     */
+    constructor(gpu, width, height)
+    {
+        super(gpu, width, height);
+        this
+            // initialize pyramid
+            .declare('setBase', Object(_programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["setScale"])(1.0, gpu.pyramidHeight, gpu.pyramidMaxScale))
+ 
+            // pyramid operations
+            .compose('reduce', '_smoothX', '_smoothY', '_downsample2', '_scale1/2')
+            .compose('expand', '_upsample2', '_smoothX2', '_smoothY2', '_scale2')
+           
+            // intra-pyramid operations (between two pyramid levels)
+            .compose('intraReduce', '_upsample2', '_smoothX2', '_smoothY2', '_downsample3/2', '_scale2/3')
+            .compose('intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3', '_scale3/2')
+
+            // Merge keypoints across multiple scales
+            .declare('mergeKeypoints', _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["mergeKeypoints"])
+            .declare('mergeKeypointsAtConsecutiveLevels', _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["mergeKeypointsAtConsecutiveLevels"])
+            .declare('normalizeKeypoints', _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["normalizeKeypoints"])
+
+            // Crop texture to width x height of the current pyramid level
+            .declare('crop', _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["crop"])
+
+            // kernels for debugging
+            .declare('output', _programs_utils__WEBPACK_IMPORTED_MODULE_1__["flipY"], {
+                ...this.program.hasTextureSize(this._width, this._height),
+                ...this.program.displaysGraphics()
+            })
+
+            .declare('output2', _programs_utils__WEBPACK_IMPORTED_MODULE_1__["flipY"], {
+                ...this.program.hasTextureSize(2 * this._width, 2 * this._height),
+                ...this.program.displaysGraphics()
+            })
+
+            .declare('output3', _programs_utils__WEBPACK_IMPORTED_MODULE_1__["flipY"], {
+                ...this.program.hasTextureSize(3 * this._width, 3 * this._height),
+                ...this.program.displaysGraphics()
+            })
+
+
+            
+            // separable kernels for gaussian smoothing
+            // use [c, b, a, b, c] where a+2c = 2b and a+2b+2c = 1
+            // pick a = 0.4 for gaussian approximation
+            .declare('_smoothX', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
+                0.05, 0.25, 0.4, 0.25, 0.05
+            ]))
+            .declare('_smoothY', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
+                0.05, 0.25, 0.4, 0.25, 0.05
+            ]))
+
+            // smoothing for 2x image
+            // same rules as above with sum(k) = 2
+            .declare('_smoothX2', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
+                0.1, 0.5, 0.8, 0.5, 0.1
+            ]), this.program.hasTextureSize(2 * this._width, 2 * this._height))
+
+            .declare('_smoothY2', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
+                0.1, 0.5, 0.8, 0.5, 0.1
+            ], 1.0 / 2.0), this.program.hasTextureSize(2 * this._width, 2 * this._height))
+
+            // smoothing for 3x image
+            // use [1-b, b, 1, b, 1-b], where 0 < b < 1
+            .declare('_smoothX3', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
+                0.2, 0.8, 1.0, 0.8, 0.2
+            ]), this.program.hasTextureSize(3 * this._width, 3 * this._height))
+
+            .declare('_smoothY3', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
+                0.2, 0.8, 1.0, 0.8, 0.2
+            ], 1.0 / 3.0), this.program.hasTextureSize(3 * this._width, 3 * this._height))
+
+            // upsampling & downsampling
+            .declare('_upsample2', _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["upsample2"],
+                this.program.hasTextureSize(2 * this._width, 2 * this._height))
+
+            .declare('_downsample2', _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["downsample2"],
+                this.program.hasTextureSize((1 + this._width) / 2, (1 + this._height) / 2))
+
+            .declare('_upsample3', _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["upsample3"],
+                this.program.hasTextureSize(3 * this._width, 3 * this._height))
+
+            .declare('_downsample3', _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["downsample3"],
+                this.program.hasTextureSize((2 + this._width) / 3, (2 + this._height) / 3))
+
+            .declare('_downsample2/3', _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["downsample2"],
+                this.program.hasTextureSize(3 * this._width / 2, 3 * this._height / 2))
+
+            .declare('_downsample3/2', _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["downsample3"],
+                this.program.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
+
+            // adjust the scale coefficients
+            .declare('_scale2', Object(_programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(2.0, gpu.pyramidHeight, gpu.pyramidMaxScale),
+                this.program.hasTextureSize(2 * this._width, 2 * this._height))
+
+            .declare('_scale1/2', Object(_programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(0.5, gpu.pyramidHeight, gpu.pyramidMaxScale),
+                this.program.hasTextureSize((1 + this._width) / 2, (1 + this._height) / 2))
+
+            .declare('_scale3/2', Object(_programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(1.5, gpu.pyramidHeight, gpu.pyramidMaxScale),
+                this.program.hasTextureSize(3 * this._width / 2, 3 * this._height / 2))
+
+            .declare('_scale2/3', Object(_programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(2.0 / 3.0, gpu.pyramidHeight, gpu.pyramidMaxScale),
+                this.program.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
+        ;
+    }
+}
+
 
 /***/ }),
 
-/***/ "./src/gpu/kernels/shaders/utils/identity.glsl":
-/*!*****************************************************!*\
-  !*** ./src/gpu/kernels/shaders/utils/identity.glsl ***!
-  \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nvoid main()\n{\ncolor = threadPixel(image);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/kernels/utils.js":
-/*!**********************************!*\
-  !*** ./src/gpu/kernels/utils.js ***!
-  \**********************************/
+/***/ "./src/gpu/program-groups/utils.js":
+/*!*****************************************!*\
+  !*** ./src/gpu/program-groups/utils.js ***!
+  \*****************************************/
 /*! exports provided: GPUUtils */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUUtils", function() { return GPUUtils; });
-/* harmony import */ var _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-kernel-group */ "./src/gpu/gpu-kernel-group.js");
-/* harmony import */ var _shaders_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./shaders/utils */ "./src/gpu/kernels/shaders/utils.js");
+/* harmony import */ var _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-program-group */ "./src/gpu/gpu-program-group.js");
+/* harmony import */ var _programs_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./programs/utils */ "./src/gpu/program-groups/programs/utils.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -3981,11 +3470,11 @@ __webpack_require__.r(__webpack_exports__);
  * GPUUtils
  * Utility operations
  */
-class GPUUtils extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernelGroup"]
+class GPUUtils extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUProgramGroup"]
 {
     /**
      * Class constructor
-     * @param {GPUInstance} gpu
+     * @param {SpeedyGPU} gpu
      * @param {number} width
      * @param {number} height
      */
@@ -3994,11 +3483,11 @@ class GPUUtils extends _gpu_kernel_group__WEBPACK_IMPORTED_MODULE_0__["GPUKernel
         super(gpu, width, height);
         this
             // no-operation
-            .declare('identity', _shaders_utils__WEBPACK_IMPORTED_MODULE_1__["identity"])
+            .declare('identity', _programs_utils__WEBPACK_IMPORTED_MODULE_1__["identity"])
 
             // output a texture from a pipeline
-            .declare('output', _shaders_utils__WEBPACK_IMPORTED_MODULE_1__["flipY"],
-                this.operation.displaysGraphics())
+            .declare('output', _programs_utils__WEBPACK_IMPORTED_MODULE_1__["flipY"],
+                this.program.displaysGraphics())
         ;
     }
 }
@@ -4068,7 +3557,7 @@ class ShaderPreprocessor
 }
 
  /**
- * Reads a shader from the /shaders/include/ folder
+ * Reads a shader from the shaders/include/ folder
  * @param {WebGL2RenderingContext} gl
  * @param {string} filename
  * @returns {string}
@@ -4076,26 +3565,318 @@ class ShaderPreprocessor
 function readfileSync(gl, filename)
 {
     if(String(filename).match(/^[a-zA-Z0-9_\-]+\.glsl$/))
-        return __webpack_require__("./src/gpu/kernels/shaders/includes sync recursive ^\\.\\/.*$")("./" + filename);
+        return __webpack_require__("./src/gpu/shaders/include sync recursive ^\\.\\/.*$")("./" + filename);
 
     throw _gl_utils__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].Error(`Shader preprocessor: can't read file \"${filename}\"`);
 }
 
 /***/ }),
 
-/***/ "./src/gpu/speedy-gpu-core.js":
-/*!************************************!*\
-  !*** ./src/gpu/speedy-gpu-core.js ***!
-  \************************************/
-/*! exports provided: SpeedyGPUCore */
+/***/ "./src/gpu/shaders/colors/rgb2grey.glsl":
+/*!**********************************************!*\
+  !*** ./src/gpu/shaders/colors/rgb2grey.glsl ***!
+  \**********************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "const vec4 grey = vec4(0.299f, 0.587f, 0.114f, 0.0f);\nuniform sampler2D image;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat g = dot(pixel, grey);\ncolor = vec4(g, g, g, 1.0f);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/encoders/encode-keypoint-offsets.glsl":
+/*!***************************************************************!*\
+  !*** ./src/gpu/shaders/encoders/encode-keypoint-offsets.glsl ***!
+  \***************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nuniform ivec2 imageSize;\nuniform int maxIterations;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 pos = threadLocation();\nint offset = -1;\nwhile(offset < maxIterations && pos.y < imageSize.y && pixelAt(image, pos).r == 0.0f) {\n++offset;\npos.x = (pos.x + 1) % imageSize.x;\npos.y += int(pos.x == 0);\n}\ncolor = vec4(pixel.rg, float(max(0, offset)) / 255.0f, pixel.a);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/encoders/encode-keypoints.glsl":
+/*!********************************************************!*\
+  !*** ./src/gpu/shaders/encoders/encode-keypoints.glsl ***!
+  \********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nuniform ivec2 imageSize;\nuniform int encoderLength;\nuniform int descriptorSize;\nbool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)\n{\nint i = 0, p = 0;\nfor(position = ivec2(0, 0); position.y < imageSize.y; ) {\npixel = pixelAt(image, position);\nif(pixel.r > 0.0f) {\nif(p++ == q)\nreturn true;\n}\ni += 1 + int(pixel.b * 255.0f);\nposition = ivec2(i % imageSize.x, i / imageSize.x);\n}\nreturn false;\n}\nvoid main()\n{\nvec4 pixel;\nivec2 position;\nivec2 thread = threadLocation();\nint p = encoderLength * thread.y + thread.x;\nint d = 2 + descriptorSize / 4;\nint q = p / d;\ncolor = vec4(1.0f, 1.0f, 1.0f, 1.0f);\nif(findQthKeypoint(q, position, pixel)) {\nint r = p % d;\nswitch(r) {\ncase 0: {\nivec2 lo = position & 255;\nivec2 hi = position >> 8;\ncolor = vec4(float(lo.x), float(hi.x), float(lo.y), float(hi.y)) / 255.0f;\nbreak;\n}\ncase 1: {\nfloat scale = pixel.a;\nfloat rotation = 0.0f;\ncolor = vec4(scale, rotation, 0.0f, 0.0f);\nbreak;\n}\ndefault: {\nint i = r - 2;\nbreak;\n}\n}\n}\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/include sync recursive ^\\.\\/.*$":
+/*!***********************************************!*\
+  !*** ./src/gpu/shaders/include sync ^\.\/.*$ ***!
+  \***********************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+var map = {
+	"./global.glsl": "./src/gpu/shaders/include/global.glsl"
+};
+
+
+function webpackContext(req) {
+	var id = webpackContextResolve(req);
+	return __webpack_require__(id);
+}
+function webpackContextResolve(req) {
+	if(!__webpack_require__.o(map, req)) {
+		var e = new Error("Cannot find module '" + req + "'");
+		e.code = 'MODULE_NOT_FOUND';
+		throw e;
+	}
+	return map[req];
+}
+webpackContext.keys = function webpackContextKeys() {
+	return Object.keys(map);
+};
+webpackContext.resolve = webpackContextResolve;
+module.exports = webpackContext;
+webpackContext.id = "./src/gpu/shaders/include sync recursive ^\\.\\/.*$";
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/include/global.glsl":
+/*!*********************************************!*\
+  !*** ./src/gpu/shaders/include/global.glsl ***!
+  \*********************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "#define threadLocation() ivec2(texCoord * texSize)\n#define outputSize() ivec2(texSize)\n#define threadPixel(img) textureLod((img), texCoord, 0.0f)\n#define pixelAt(img, pos) texelFetch((img), (pos), 0)\n#define pixelAtOffset(img, offset) textureLodOffset((img), texCoord, 0.0f, (offset))"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoint-detectors/brisk.glsl":
+/*!*******************************************************!*\
+  !*** ./src/gpu/shaders/keypoint-detectors/brisk.glsl ***!
+  \*******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image, layerA, layerB;\nuniform float scaleA, scaleB, lgM, h;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat score = pixel.r;\nivec2 zero = ivec2(0, 0);\nivec2 sizeA = textureSize(layerA, 0);\nivec2 sizeB = textureSize(layerB, 0);\nvec2 mid = (texCoord * texSize) + vec2(0.5f, 0.5f);\nivec2 pa = clamp(ivec2(ceil(mid * scaleA - 1.0f)), zero, sizeA - 2);\nivec2 pb = clamp(ivec2(ceil(mid * scaleB - 1.0f)), zero, sizeB - 2);\nvec4 a00 = pixelAt(layerA, pa);\nvec4 a10 = pixelAt(layerA, pa + ivec2(1, 0));\nvec4 a01 = pixelAt(layerA, pa + ivec2(0, 1));\nvec4 a11 = pixelAt(layerA, pa + ivec2(1, 1));\nvec4 b00 = pixelAt(layerB, pb);\nvec4 b10 = pixelAt(layerB, pb + ivec2(1, 0));\nvec4 b01 = pixelAt(layerB, pb + ivec2(0, 1));\nvec4 b11 = pixelAt(layerB, pb + ivec2(1, 1));\nfloat maxScore = max(\nmax(max(a00.r, a10.r), max(a01.r, a11.r)),\nmax(max(b00.r, b10.r), max(b01.r, b11.r))\n);\ncolor = vec4(0.0f, pixel.gba);\nif(score < maxScore || score == 0.0f)\nreturn;\nvec2 ea = fract(mid * scaleA);\nvec2 eb = fract(mid * scaleB);\nfloat isa = a00.b * (1.0f - ea.x) * (1.0f - ea.y) +\na10.b * ea.x * (1.0f - ea.y) +\na01.b * (1.0f - ea.x) * ea.y +\na11.b * ea.x * ea.y;\nfloat isb = b00.b * (1.0f - eb.x) * (1.0f - eb.y) +\nb10.b * eb.x * (1.0f - eb.y) +\nb01.b * (1.0f - eb.x) * eb.y +\nb11.b * eb.x * eb.y;\nbool cond1 = (isa > score && isa > isb);\nbool cond2 = (isb > score && isb > isa);\ncolor = mix(\nmix(\npixel,\nvec4(isb, pixel.gb, b00.a),\nbvec4(cond2, cond2, cond2, cond2)\n),\nvec4(isa, pixel.gb, a00.a),\nbvec4(cond1, cond1, cond1, cond1)\n);\nfloat y1 = isa, y2 = isb, y3 = score;\nfloat x1 = lgM - (lgM + h) * a00.a;\nfloat x2 = lgM - (lgM + h) * b00.a;\nfloat x3 = lgM - (lgM + h) * pixel.a;\nfloat dn = (x1 - x2) * (x1 - x3) * (x2 - x3);\nif(abs(dn) < 0.00001f)\nreturn;\nfloat a = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / dn;\nif(a >= 0.0f)\nreturn;\nfloat b = (x3 * x3 * (y1 - y2) + x2 * x2 * (y3 - y1) + x1 * x1 * (y2 - y3)) / dn;\nfloat c = (x2 * x3 * (x2 - x3) * y1 + x3 * x1 * (x3 - x1) * y2 + x1 * x2 * (x1 - x2) * y3) / dn;\nfloat xv = -b / (2.0f * a);\nfloat yv = c - (b * b) / (4.0f * a);\nif(xv < min(x1, min(x2, x3)) || xv > max(x1, max(x2, x3)))\nreturn;\nfloat interpolatedScale = (lgM - xv) / (lgM + h);\nfloat interpolatedScore = clamp(yv, 0.0f, 1.0f);\ncolor = vec4(interpolatedScore, pixel.gb, interpolatedScale);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoint-detectors/fast-score12.glsl":
+/*!**************************************************************!*\
+  !*** ./src/gpu/shaders/keypoint-detectors/fast-score12.glsl ***!
+  \**************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat ifCorner = step(1.0f, pixel.r);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 2)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 2)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 1)).g;\nfloat p3 = pixelAtOffset(image, ivec2(2, 0)).g;\nfloat p4 = pixelAtOffset(image, ivec2(2, -1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(1, -2)).g;\nfloat p6 = pixelAtOffset(image, ivec2(0, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(-1, -2)).g;\nfloat p8 = pixelAtOffset(image, ivec2(-2, -1)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-2, 0)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, 1)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-1, 2)).g;\nfloat bs = 0.0f, ds = 0.0f;\nbs += max(c_t - p0, 0.0f);  ds += max(p0 - ct, 0.0f);\nbs += max(c_t - p1, 0.0f);  ds += max(p1 - ct, 0.0f);\nbs += max(c_t - p2, 0.0f);  ds += max(p2 - ct, 0.0f);\nbs += max(c_t - p3, 0.0f);  ds += max(p3 - ct, 0.0f);\nbs += max(c_t - p4, 0.0f);  ds += max(p4 - ct, 0.0f);\nbs += max(c_t - p5, 0.0f);  ds += max(p5 - ct, 0.0f);\nbs += max(c_t - p6, 0.0f);  ds += max(p6 - ct, 0.0f);\nbs += max(c_t - p7, 0.0f);  ds += max(p7 - ct, 0.0f);\nbs += max(c_t - p8, 0.0f);  ds += max(p8 - ct, 0.0f);\nbs += max(c_t - p9, 0.0f);  ds += max(p9 - ct, 0.0f);\nbs += max(c_t - p10, 0.0f); ds += max(p10 - ct, 0.0f);\nbs += max(c_t - p11, 0.0f); ds += max(p11 - ct, 0.0f);\nfloat score = max(bs, ds) / 12.0f;\ncolor = vec4(score * ifCorner, pixel.g, score, pixel.a);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoint-detectors/fast-score16.glsl":
+/*!**************************************************************!*\
+  !*** ./src/gpu/shaders/keypoint-detectors/fast-score16.glsl ***!
+  \**************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat ifCorner = step(1.0f, pixel.r);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 3)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 3)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 2)).g;\nfloat p3 = pixelAtOffset(image, ivec2(3, 1)).g;\nfloat p4 = pixelAtOffset(image, ivec2(3, 0)).g;\nfloat p5 = pixelAtOffset(image, ivec2(3, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(2, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(1, -3)).g;\nfloat p8 = pixelAtOffset(image, ivec2(0, -3)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-1, -3)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, -2)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-3, -1)).g;\nfloat p12 = pixelAtOffset(image, ivec2(-3, 0)).g;\nfloat p13 = pixelAtOffset(image, ivec2(-3, 1)).g;\nfloat p14 = pixelAtOffset(image, ivec2(-2, 2)).g;\nfloat p15 = pixelAtOffset(image, ivec2(-1, 3)).g;\nfloat bs = 0.0f, ds = 0.0f;\nbs += max(c_t - p0, 0.0f);  ds += max(p0 - ct, 0.0f);\nbs += max(c_t - p1, 0.0f);  ds += max(p1 - ct, 0.0f);\nbs += max(c_t - p2, 0.0f);  ds += max(p2 - ct, 0.0f);\nbs += max(c_t - p3, 0.0f);  ds += max(p3 - ct, 0.0f);\nbs += max(c_t - p4, 0.0f);  ds += max(p4 - ct, 0.0f);\nbs += max(c_t - p5, 0.0f);  ds += max(p5 - ct, 0.0f);\nbs += max(c_t - p6, 0.0f);  ds += max(p6 - ct, 0.0f);\nbs += max(c_t - p7, 0.0f);  ds += max(p7 - ct, 0.0f);\nbs += max(c_t - p8, 0.0f);  ds += max(p8 - ct, 0.0f);\nbs += max(c_t - p9, 0.0f);  ds += max(p9 - ct, 0.0f);\nbs += max(c_t - p10, 0.0f); ds += max(p10 - ct, 0.0f);\nbs += max(c_t - p11, 0.0f); ds += max(p11 - ct, 0.0f);\nbs += max(c_t - p12, 0.0f); ds += max(p12 - ct, 0.0f);\nbs += max(c_t - p13, 0.0f); ds += max(p13 - ct, 0.0f);\nbs += max(c_t - p14, 0.0f); ds += max(p14 - ct, 0.0f);\nbs += max(c_t - p15, 0.0f); ds += max(p15 - ct, 0.0f);\nfloat score = max(bs, ds) / 16.0f;\ncolor = vec4(score * ifCorner, pixel.g, score, pixel.a);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoint-detectors/fast-score8.glsl":
+/*!*************************************************************!*\
+  !*** ./src/gpu/shaders/keypoint-detectors/fast-score8.glsl ***!
+  \*************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat ifCorner = step(1.0f, pixel.r);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 1)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 1)).g;\nfloat p2 = pixelAtOffset(image, ivec2(1, 0)).g;\nfloat p3 = pixelAtOffset(image, ivec2(1, -1)).g;\nfloat p4 = pixelAtOffset(image, ivec2(0, -1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(-1, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(-1, 0)).g;\nfloat p7 = pixelAtOffset(image, ivec2(-1, 1)).g;\nfloat bs = 0.0f, ds = 0.0f;\nbs += max(c_t - p0, 0.0f); ds += max(p0 - ct, 0.0f);\nbs += max(c_t - p1, 0.0f); ds += max(p1 - ct, 0.0f);\nbs += max(c_t - p2, 0.0f); ds += max(p2 - ct, 0.0f);\nbs += max(c_t - p3, 0.0f); ds += max(p3 - ct, 0.0f);\nbs += max(c_t - p4, 0.0f); ds += max(p4 - ct, 0.0f);\nbs += max(c_t - p5, 0.0f); ds += max(p5 - ct, 0.0f);\nbs += max(c_t - p6, 0.0f); ds += max(p6 - ct, 0.0f);\nbs += max(c_t - p7, 0.0f); ds += max(p7 - ct, 0.0f);\nfloat score = max(bs, ds) / 8.0f;\ncolor = vec4(score * ifCorner, pixel.g, score, pixel.a);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoint-detectors/fast-suppression.glsl":
+/*!******************************************************************!*\
+  !*** ./src/gpu/shaders/keypoint-detectors/fast-suppression.glsl ***!
+  \******************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nvoid main()\n{\nfloat p0 = pixelAtOffset(image, ivec2(0, 1)).r;\nfloat p1 = pixelAtOffset(image, ivec2(1, 1)).r;\nfloat p2 = pixelAtOffset(image, ivec2(1, 0)).r;\nfloat p3 = pixelAtOffset(image, ivec2(1, -1)).r;\nfloat p4 = pixelAtOffset(image, ivec2(0, -1)).r;\nfloat p5 = pixelAtOffset(image, ivec2(-1, -1)).r;\nfloat p6 = pixelAtOffset(image, ivec2(-1, 0)).r;\nfloat p7 = pixelAtOffset(image, ivec2(-1, 1)).r;\nfloat m = max(\nmax(max(p0, p1), max(p2, p3)),\nmax(max(p4, p5), max(p6, p7))\n);\nvec4 pixel = threadPixel(image);\nfloat score = float(pixel.r >= m) * pixel.r;\ncolor = vec4(score, pixel.gba);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoint-detectors/fast5.glsl":
+/*!*******************************************************!*\
+  !*** ./src/gpu/shaders/keypoint-detectors/fast5.glsl ***!
+  \*******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nvec4 pixel = threadPixel(image);\ncolor = vec4(0.0f, pixel.gba);\nif(\nthread.x >= 3 && thread.x < size.x - 3 &&\nthread.y >= 3 && thread.y < size.y - 3\n) {\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 1)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 1)).g;\nfloat p2 = pixelAtOffset(image, ivec2(1, 0)).g;\nfloat p3 = pixelAtOffset(image, ivec2(1, -1)).g;\nfloat p4 = pixelAtOffset(image, ivec2(0, -1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(-1, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(-1, 0)).g;\nfloat p7 = pixelAtOffset(image, ivec2(-1, 1)).g;\nbool possibleCorner =\n((c_t > p1 || c_t > p5) && (c_t > p3 || c_t > p7)) ||\n((ct < p1  || ct < p5)  && (ct < p3  || ct < p7))  ;\nif(possibleCorner) {\nint bright = 0, dark = 0, bc = 0, dc = 0;\nif(c_t > p0) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p0) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p1) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p1) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p2) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p2) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p3) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p3) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p4) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p4) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p5) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p5) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p6) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p6) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p7) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p7) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(bright < 5 && dark < 5) {\nif(bc > 0 && bc < 5) do {\nif(c_t > p0)           bc += 1; else break;\nif(c_t > p1 && bc < 5) bc += 1; else break;\nif(c_t > p2 && bc < 5) bc += 1; else break;\nif(c_t > p3 && bc < 5) bc += 1; else break;\n} while(false);\nif(dc > 0 && dc < 5) do {\nif(ct < p0)           dc += 1; else break;\nif(ct < p1 && dc < 5) dc += 1; else break;\nif(ct < p2 && dc < 5) dc += 1; else break;\nif(ct < p3 && dc < 5) dc += 1; else break;\n} while(false);\nif(bc >= 5 || dc >= 5)\ncolor = vec4(1.0f, pixel.gba);\n}\nelse {\ncolor = vec4(1.0f, pixel.gba);\n}\n}\n}\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoint-detectors/fast7.glsl":
+/*!*******************************************************!*\
+  !*** ./src/gpu/shaders/keypoint-detectors/fast7.glsl ***!
+  \*******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nvec4 pixel = threadPixel(image);\ncolor = vec4(0.0f, pixel.gba);\nif(\nthread.x >= 3 && thread.x < size.x - 3 &&\nthread.y >= 3 && thread.y < size.y - 3\n) {\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 2)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 2)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 1)).g;\nfloat p3 = pixelAtOffset(image, ivec2(2, 0)).g;\nfloat p4 = pixelAtOffset(image, ivec2(2, -1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(1, -2)).g;\nfloat p6 = pixelAtOffset(image, ivec2(0, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(-1, -2)).g;\nfloat p8 = pixelAtOffset(image, ivec2(-2, -1)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-2, 0)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, 1)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-1, 2)).g;\nbool possibleCorner =\n((c_t > p0 || c_t > p6) && (c_t > p3 || c_t > p9)) ||\n((ct < p0  || ct < p6)  && (ct < p3  || ct < p9))  ;\nif(possibleCorner) {\nint bright = 0, dark = 0, bc = 0, dc = 0;\nif(c_t > p0) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p0) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p1) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p1) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p2) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p2) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p3) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p3) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p4) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p4) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p5) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p5) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p6) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p6) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p7) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p7) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p8) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p8) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p9) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p9) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p10) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p10) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p11) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p11) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(bright < 7 && dark < 7) {\nif(bc > 0 && bc < 7) do {\nif(c_t > p0)           bc += 1; else break;\nif(c_t > p1 && bc < 7) bc += 1; else break;\nif(c_t > p2 && bc < 7) bc += 1; else break;\nif(c_t > p3 && bc < 7) bc += 1; else break;\nif(c_t > p4 && bc < 7) bc += 1; else break;\nif(c_t > p5 && bc < 7) bc += 1; else break;\n} while(false);\nif(dc > 0 && dc < 7) do {\nif(ct < p0)           dc += 1; else break;\nif(ct < p1 && dc < 7) dc += 1; else break;\nif(ct < p2 && dc < 7) dc += 1; else break;\nif(ct < p3 && dc < 7) dc += 1; else break;\nif(ct < p4 && dc < 7) dc += 1; else break;\nif(ct < p5 && dc < 7) dc += 1; else break;\n} while(false);\nif(bc >= 7 || dc >= 7)\ncolor = vec4(1.0f, pixel.gba);\n}\nelse {\ncolor = vec4(1.0f, pixel.gba);\n}\n}\n}\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoint-detectors/fast9.glsl":
+/*!*******************************************************!*\
+  !*** ./src/gpu/shaders/keypoint-detectors/fast9.glsl ***!
+  \*******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nvec4 pixel = threadPixel(image);\ncolor = vec4(0.0f, pixel.gba);\nif(\nthread.x >= 3 && thread.x < size.x - 3 &&\nthread.y >= 3 && thread.y < size.y - 3\n) {\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 3)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 3)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 2)).g;\nfloat p3 = pixelAtOffset(image, ivec2(3, 1)).g;\nfloat p4 = pixelAtOffset(image, ivec2(3, 0)).g;\nfloat p5 = pixelAtOffset(image, ivec2(3, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(2, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(1, -3)).g;\nfloat p8 = pixelAtOffset(image, ivec2(0, -3)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-1, -3)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, -2)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-3, -1)).g;\nfloat p12 = pixelAtOffset(image, ivec2(-3, 0)).g;\nfloat p13 = pixelAtOffset(image, ivec2(-3, 1)).g;\nfloat p14 = pixelAtOffset(image, ivec2(-2, 2)).g;\nfloat p15 = pixelAtOffset(image, ivec2(-1, 3)).g;\nbool possibleCorner =\n((c_t > p0 || c_t > p8) && (c_t > p4 || c_t > p12)) ||\n((ct < p0  || ct < p8)  && (ct < p4  || ct < p12))  ;\nif(possibleCorner) {\nint bright = 0, dark = 0, bc = 0, dc = 0;\nif(c_t > p0) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p0) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p1) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p1) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p2) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p2) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p3) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p3) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p4) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p4) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p5) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p5) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p6) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p6) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p7) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p7) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p8) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p8) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p9) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p9) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p10) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p10) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p11) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p11) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p12) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p12) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p13) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p13) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p14) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p14) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p15) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p15) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(bright < 9 && dark < 9) {\nif(bc > 0 && bc < 9) do {\nif(c_t > p0)           bc += 1; else break;\nif(c_t > p1 && bc < 9) bc += 1; else break;\nif(c_t > p2 && bc < 9) bc += 1; else break;\nif(c_t > p3 && bc < 9) bc += 1; else break;\nif(c_t > p4 && bc < 9) bc += 1; else break;\nif(c_t > p5 && bc < 9) bc += 1; else break;\nif(c_t > p6 && bc < 9) bc += 1; else break;\nif(c_t > p7 && bc < 9) bc += 1; else break;\n} while(false);\nif(dc > 0 && dc < 9) do {\nif(ct < p0)           dc += 1; else break;\nif(ct < p1 && dc < 9) dc += 1; else break;\nif(ct < p2 && dc < 9) dc += 1; else break;\nif(ct < p3 && dc < 9) dc += 1; else break;\nif(ct < p4 && dc < 9) dc += 1; else break;\nif(ct < p5 && dc < 9) dc += 1; else break;\nif(ct < p6 && dc < 9) dc += 1; else break;\nif(ct < p7 && dc < 9) dc += 1; else break;\n} while(false);\nif(bc >= 9 || dc >= 9)\ncolor = vec4(1.0f, pixel.gba);\n}\nelse {\ncolor = vec4(1.0f, pixel.gba);\n}\n}\n}\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoint-detectors/fast9ml.glsl":
+/*!*********************************************************!*\
+  !*** ./src/gpu/shaders/keypoint-detectors/fast9ml.glsl ***!
+  \*********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 thread = threadLocation();\nivec2 size = outputSize();\ncolor = vec4(0.0f, pixel.gba);\nif(thread.x < 3 || thread.y < 3 || thread.x >= size.x - 3 || thread.y >= size.y - 3)\nreturn;\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 3)).g;\nfloat p4 = pixelAtOffset(image, ivec2(3, 0)).g;\nfloat p8 = pixelAtOffset(image, ivec2(0, -3)).g;\nfloat p12 = pixelAtOffset(image, ivec2(-3, 0)).g;\nif(!(\n((c_t > p0 || c_t > p8) && (c_t > p4 || c_t > p12)) ||\n((ct < p0  || ct < p8)  && (ct < p4  || ct < p12))\n))\nreturn;\nfloat p1 = pixelAtOffset(image, ivec2(1, 3)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 2)).g;\nfloat p3 = pixelAtOffset(image, ivec2(3, 1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(3, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(2, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(1, -3)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-1, -3)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, -2)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-3, -1)).g;\nfloat p13 = pixelAtOffset(image, ivec2(-3, 1)).g;\nfloat p14 = pixelAtOffset(image, ivec2(-2, 2)).g;\nfloat p15 = pixelAtOffset(image, ivec2(-1, 3)).g;\nif(p0 > ct)\nif(p1 > ct)\nif(p2 > ct)\nif(p3 > ct)\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse if(p7 < c_t)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse if(p14 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse if(p6 < c_t)\nif(p15 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse if(p13 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse if(p13 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p5 < c_t)\nif(p14 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p12 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p14 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p6 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p12 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p6 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p4 < c_t)\nif(p13 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p11 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p12 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p13 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p11 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p3 < c_t)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p10 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p11 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\nif(p4 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p12 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p10 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\nif(p4 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p2 < c_t)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 > ct)\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p9 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p10 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\nif(p4 < c_t)\nif(p3 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p11 < c_t)\nif(p12 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 > ct)\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p9 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\nif(p4 < c_t)\nif(p3 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p12 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p12 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p1 < c_t)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 > ct)\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p2 > ct)\nif(p3 > ct)\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p8 < c_t)\nif(p7 < c_t)\nif(p9 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\nif(p4 < c_t)\nif(p3 < c_t)\nif(p2 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p10 < c_t)\nif(p11 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 > ct)\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p2 > ct)\nif(p3 > ct)\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p8 < c_t)\nif(p7 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\nif(p4 < c_t)\nif(p3 < c_t)\nif(p2 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p11 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p11 < c_t)\nif(p12 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p0 < c_t)\nif(p1 > ct)\nif(p8 > ct)\nif(p7 > ct)\nif(p9 > ct)\nif(p6 > ct)\nif(p5 > ct)\nif(p4 > ct)\nif(p3 > ct)\nif(p2 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p10 > ct)\nif(p11 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 < c_t)\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p2 < c_t)\nif(p3 < c_t)\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p1 < c_t)\nif(p2 > ct)\nif(p9 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p10 > ct)\nif(p6 > ct)\nif(p5 > ct)\nif(p4 > ct)\nif(p3 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p11 > ct)\nif(p12 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 < c_t)\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p2 < c_t)\nif(p3 > ct)\nif(p10 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p11 > ct)\nif(p6 > ct)\nif(p5 > ct)\nif(p4 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p12 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p3 < c_t)\nif(p4 > ct)\nif(p13 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p6 > ct)\nif(p5 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p13 < c_t)\nif(p11 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p12 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p11 < c_t)\nif(p12 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p4 < c_t)\nif(p5 > ct)\nif(p14 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p6 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p14 < c_t)\nif(p12 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p12 < c_t)\nif(p13 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p5 < c_t)\nif(p6 > ct)\nif(p15 < c_t)\nif(p13 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p6 < c_t)\nif(p7 > ct)\nif(p14 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse if(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p13 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p12 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p6 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p6 > ct)\nif(p5 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p6 > ct)\nif(p5 > ct)\nif(p4 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p9 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p6 > ct)\nif(p5 > ct)\nif(p4 > ct)\nif(p3 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p12 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p12 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 < c_t)\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p8 > ct)\nif(p7 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p6 > ct)\nif(p5 > ct)\nif(p4 > ct)\nif(p3 > ct)\nif(p2 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p11 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 < c_t)\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p2 < c_t)\nif(p3 < c_t)\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p6 > ct)\nif(p5 > ct)\nif(p4 > ct)\nif(p3 > ct)\nif(p2 > ct)\nif(p1 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p10 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\nif(p4 < c_t)\nif(p3 < c_t)\nif(p2 < c_t)\nif(p1 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p10 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/pyramids/crop.glsl":
+/*!********************************************!*\
+  !*** ./src/gpu/shaders/pyramids/crop.glsl ***!
+  \********************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nivec2 zero = ivec2(0, 0);\ncolor = pixelAt(image, clamp(thread, zero, size - 1));\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/pyramids/downsample2.glsl":
+/*!***************************************************!*\
+  !*** ./src/gpu/shaders/pyramids/downsample2.glsl ***!
+  \***************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 pos = min(thread * 2, textureSize(image, 0) - 1);\ncolor = pixelAt(image, pos);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/pyramids/downsample3.glsl":
+/*!***************************************************!*\
+  !*** ./src/gpu/shaders/pyramids/downsample3.glsl ***!
+  \***************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 pos = min(thread * 3, textureSize(image, 0) - 1);\ncolor = pixelAt(image, pos);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/pyramids/merge-keypoints-at-consecutive-levels.glsl":
+/*!*****************************************************************************!*\
+  !*** ./src/gpu/shaders/pyramids/merge-keypoints-at-consecutive-levels.glsl ***!
+  \*****************************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D largerImage;\nuniform sampler2D smallerImage;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 lg = pixelAt(largerImage, min(thread, textureSize(largerImage, 0) - 1));\nvec4 sm = pixelAt(smallerImage, min(thread / 2, textureSize(smallerImage, 0) - 1));\nbool cond = (((thread.x & 1) + (thread.y & 1)) == 0) && (sm.r > lg.r);\ncolor = mix(\nlg,\nvec4(sm.r, lg.gb, sm.a),\nbvec4(cond, cond, cond, cond)\n);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/pyramids/merge-keypoints.glsl":
+/*!*******************************************************!*\
+  !*** ./src/gpu/shaders/pyramids/merge-keypoints.glsl ***!
+  \*******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D target;\nuniform sampler2D source;\nvoid main()\n{\nvec4 a = threadPixel(target);\nvec4 b = threadPixel(source);\nbool cond = (b.r > a.r);\ncolor = mix(\na,\nvec4(b.r, a.gb, b.a),\nbvec4(cond, cond, cond, cond)\n);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/pyramids/normalize-keypoints.glsl":
+/*!***********************************************************!*\
+  !*** ./src/gpu/shaders/pyramids/normalize-keypoints.glsl ***!
+  \***********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nuniform float imageScale;\n#define B2(expr) bvec2((expr),(expr))\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nivec2 scaled = ivec2((texCoord * texSize) * imageScale);\nivec2 imageSize = textureSize(image, 0);\nvec4 pixel = threadPixel(image);\nvec4 p0 = pixelAt(image, min(scaled, imageSize-1));\nvec4 p1 = pixelAt(image, min(scaled + ivec2(0, 1), imageSize-1));\nvec4 p2 = pixelAt(image, min(scaled + ivec2(1, 0), imageSize-1));\nvec4 p3 = pixelAt(image, min(scaled + ivec2(1, 1), imageSize-1));\nbool gotCorner = ((thread.x & 1) + (thread.y & 1) == 0) &&\n(scaled.x + 1 < size.x && scaled.y + 1 < size.y) &&\n(p0.r + p1.r + p2.r + p3.r > 0.0f);\nvec2 best = mix(\nvec2(0.0f, pixel.a),\nmix(\nmix(\nmix(p3.ra, p1.ra, B2(p1.r > p3.r)),\nmix(p2.ra, p1.ra, B2(p1.r > p2.r)),\nB2(p2.r > p3.r)\n),\nmix(\nmix(p3.ra, p0.ra, B2(p0.r > p3.r)),\nmix(p2.ra, p0.ra, B2(p0.r > p2.r)),\nB2(p2.r > p3.r)\n),\nB2(p0.r > p1.r)\n),\nB2(gotCorner)\n);\ncolor = vec4(best.x, pixel.gb, best.y);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/pyramids/upsample2.glsl":
+/*!*************************************************!*\
+  !*** ./src/gpu/shaders/pyramids/upsample2.glsl ***!
+  \*************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = pixelAt(image, thread / 2);\nbool cond = (((thread.x + thread.y) & 1) == 0);\ncolor = mix(\nvec4(0.0f, 0.0f, 0.0f, pixel.a),\npixel,\nbvec4(cond, cond, cond, cond)\n);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/pyramids/upsample3.glsl":
+/*!*************************************************!*\
+  !*** ./src/gpu/shaders/pyramids/upsample3.glsl ***!
+  \*************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = pixelAt(image, thread / 3);\nbool cond = ((thread.x - (thread.y % 3) + 3) % 3) == 0;\ncolor = mix(\nvec4(0.0f, 0.0f, 0.0f, pixel.a),\npixel,\nbvec4(cond, cond, cond, cond)\n);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/utils/flip-y.glsl":
+/*!*******************************************!*\
+  !*** ./src/gpu/shaders/utils/flip-y.glsl ***!
+  \*******************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nvoid main() {\nivec2 pos = threadLocation();\npos.y = int(texSize.y) - 1 - pos.y;\ncolor = pixelAt(image, pos);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/utils/identity.glsl":
+/*!*********************************************!*\
+  !*** ./src/gpu/shaders/utils/identity.glsl ***!
+  \*********************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nvoid main()\n{\ncolor = threadPixel(image);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/speedy-gpu.js":
+/*!*******************************!*\
+  !*** ./src/gpu/speedy-gpu.js ***!
+  \*******************************/
+/*! exports provided: SpeedyGPU */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyGPUCore", function() { return SpeedyGPUCore; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyGPU", function() { return SpeedyGPU; });
 /* harmony import */ var _speedy_program_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-program.js */ "./src/gpu/speedy-program.js");
 /* harmony import */ var _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./gl-utils.js */ "./src/gpu/gl-utils.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _program_groups_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./program-groups/utils */ "./src/gpu/program-groups/utils.js");
+/* harmony import */ var _program_groups_colors__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./program-groups/colors */ "./src/gpu/program-groups/colors.js");
+/* harmony import */ var _program_groups_filters__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./program-groups/filters */ "./src/gpu/program-groups/filters.js");
+/* harmony import */ var _program_groups_keypoints__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./program-groups/keypoints */ "./src/gpu/program-groups/keypoints.js");
+/* harmony import */ var _program_groups_encoders__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./program-groups/encoders */ "./src/gpu/program-groups/encoders.js");
+/* harmony import */ var _program_groups_pyramids__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./program-groups/pyramids */ "./src/gpu/program-groups/pyramids.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -4113,56 +3894,63 @@ __webpack_require__.r(__webpack_exports__);
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * speedy-gpu-core.js
- * GPGPU core
+ * speedy-gpu.js
+ * GPU routines for accelerated computer vision
  */
 
 
 
 
+
+
+
+
+
+
+
+// Limits
+const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
+const MAX_PYRAMID_LEVELS = 4;
+
+// Available program groups
+// (maps group name to class name)
+const PROGRAM_GROUPS = {
+    'utils': _program_groups_utils__WEBPACK_IMPORTED_MODULE_3__["GPUUtils"],
+    'colors': _program_groups_colors__WEBPACK_IMPORTED_MODULE_4__["GPUColors"],
+    'filters': _program_groups_filters__WEBPACK_IMPORTED_MODULE_5__["GPUFilters"],
+    'keypoints': _program_groups_keypoints__WEBPACK_IMPORTED_MODULE_6__["GPUKeypoints"],
+    'encoders': _program_groups_encoders__WEBPACK_IMPORTED_MODULE_7__["GPUEncoders"],
+    'pyramids': _program_groups_pyramids__WEBPACK_IMPORTED_MODULE_8__["GPUPyramids"],
+};
 
 /**
- * Speedy GPGPU core
+ * GPU routines for
+ * accelerated computer vision
  */
-class SpeedyGPUCore
+class SpeedyGPU
 {
     /**
      * Class constructor
-     * @param {number} width in pixels
-     * @param {number} height in pixels
+     * @param {number} width Texture width
+     * @param {number} height Texture height
      */
     constructor(width, height)
     {
-        // set dimensions
-        this._width = Math.max(width | 0, 1);
-        this._height = Math.max(height | 0, 1);
+        // read & validate texture size
+        this._width = Math.max(1, width | 0);
+        this._height = Math.max(1, height | 0);
+        if(this._width > MAX_TEXTURE_LENGTH || this._height > MAX_TEXTURE_LENGTH) {
+            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning(`Maximum texture size exceeded (using ${this._width} x ${this._height}).`);
+            this._width = Math.min(this._width, MAX_TEXTURE_LENGTH);
+            this._height = Math.min(this._height, MAX_TEXTURE_LENGTH);
+        }
 
-        // setup GPU
-        this._canvas = createCanvas(this._width, this._height);
-        this._gl = createWebGLContext(this._canvas);
-        this._inputTexture = null;
+        // setup WebGL
+        this._setupWebGL();
     }
 
     /**
-     * WebGL context
-     * @returns {WebGL2RenderingContext}
-     */
-    get gl()
-    {
-        return this._gl;
-    }
-
-    /**
-     * Canvas element
-     * @returns {HTMLCanvasElement|OffscreenCanvas}
-     */
-    get canvas()
-    {
-        return this._canvas;
-    }
-
-    /**
-     * Width in pixels
+     * Texture width
      * @returns {number}
      */
     get width()
@@ -4171,12 +3959,84 @@ class SpeedyGPUCore
     }
 
     /**
-     * Height in pixels
+     * Texture height
      * @returns {number}
      */
     get height()
     {
         return this._height;
+    }
+
+    /**
+     * Access the program groups of a pyramid level
+     * sizeof(pyramid(i)) = sizeof(pyramid(0)) / 2^i
+     * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS - 1
+     * @returns {Array}
+     */
+    pyramid(level)
+    {
+        const lv = level | 0;
+
+        if(lv < 0 || lv >= MAX_PYRAMID_LEVELS)
+            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].fatal(`Invalid pyramid level: ${lv}`);
+
+        return this._pyramid[lv];
+    }
+
+    /**
+     * Access the program groups of an intra-pyramid level
+     * The intra-pyramid encodes layers between pyramid layers
+     * sizeof(intraPyramid(0)) = 1.5 * sizeof(pyramid(0))
+     * sizeof(intraPyramid(1)) = 1.5 * sizeof(pyramid(1))
+     * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS
+     * @returns {Array}
+     */
+    intraPyramid(level)
+    {
+        const lv = level | 0;
+
+        if(lv < 0 || lv >= MAX_PYRAMID_LEVELS + 1)
+            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].fatal(`Invalid intra-pyramid level: ${lv}`);
+
+        return this._intraPyramid[lv];
+    }
+
+    /**
+     * The number of layers of the pyramid
+     * @returns {number}
+     */
+    get pyramidHeight()
+    {
+        return MAX_PYRAMID_LEVELS;
+    }
+
+    /**
+     * The maximum supported scale for a pyramid layer
+     * @returns {number}
+     */
+    get pyramidMaxScale()
+    {
+        // This is preferably a power of 2
+        return 2;
+    }
+
+    /**
+     * WebGL context
+     * Be careful when caching this, as the context may be lost!
+     * @returns {WebGL2RenderingContext}
+     */
+    get gl()
+    {
+        return this._gl;
+    }
+
+    /**
+     * Internal canvas
+     * @returns {HTMLCanvasElement|OffscreenCanvas}
+     */
+    get canvas()
+    {
+        return this._canvas;
     }
 
     /**
@@ -4192,10 +4052,8 @@ class SpeedyGPUCore
 
         // lost GL context?
         if(gl.isContextLost()) {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning('Lost WebGL context');
-            this._gl = createWebGLContext(this._canvas);
-            this._inputTexture = null;
-            return upload(data, width, height);
+            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning(`Can't upload texture without a WebGL context`);
+            return (this._inputTexture = null);
         }
 
         // default values
@@ -4217,7 +4075,7 @@ class SpeedyGPUCore
         else if(width > gl.canvas.width || height > gl.canvas.height) {
             _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning(`Resizing input texture to ${width} x ${height}`)
             this._inputTexture = _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].destroyTexture(gl, inputTexture);
-            return upload(data, width, height);
+            return this.upload(data, width, height);
         }
 
         // done! note: the input texture is upside-down, i.e.,
@@ -4228,7 +4086,7 @@ class SpeedyGPUCore
     }
 
     /**
-     * Create a SpeedyProgram to be run on this GPGPU core
+     * Create a SpeedyProgram that runs on the GPU
      * @param {Function} shaderdecl A function that returns GLSL code
      * @param {object} [options] SpeedyProgram options
      * @returns {SpeedyProgram} new instance
@@ -4246,7 +4104,7 @@ class SpeedyGPUCore
     /**
      * Clear the internal canvas
      */
-    clearCanvas()
+    /*clearCanvas()
     {
         const gl = this._gl;
 
@@ -4254,9 +4112,85 @@ class SpeedyGPUCore
         gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
         gl.clearColor(0, 0, 0, 1);
         gl.clear(gl.COLOR_BUFFER_BIT);
+    }*/
+
+    /**
+     * Lose & restore the WebGL context
+     * @param {number} [timeToRestore] in seconds
+     * @return {Promise} resolves as soon as the context is restored
+     */
+    loseAndRestoreWebGLContext(timeToRestore = 1.0)
+    {
+        const ext = this._gl.getExtension('WEBGL_lose_context');
+
+        if(ext) {
+            ext.loseContext();
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    ext.restoreContext();
+                    resolve();
+                }, timeToRestore * 1000.0);
+            });
+        }
+        else
+            throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error(`WEBGL_lose_context is unavailable`);
+    }
+
+    // setup WebGL
+    _setupWebGL()
+    {
+        const width = this._width;
+        const height = this._height;
+
+        // initializing
+        this._pyramid = null;
+        this._intraPyramid = null;
+        this._inputTexture = null;
+        if(this._canvas !== undefined)
+            delete this._canvas;
+
+        // create canvas
+        this._canvas = createCanvas(width, height);
+        this._canvas.addEventListener('webglcontextlost', ev => {
+            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning('Lost WebGL context');
+            ev.preventDefault();
+        }, false);
+        this._canvas.addEventListener('webglcontextrestored', ev => {
+            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning('Restoring WebGL context...');
+            this._setupWebGL();
+        }, false);
+
+        // create WebGL context
+        this._gl = createWebGLContext(this._canvas);
+
+        // spawn program groups
+        spawnProgramGroups.call(this, this, width, height);
+
+        // spawn pyramids of program groups
+        this._pyramid = this._buildPyramid(width, height, 1.0, MAX_PYRAMID_LEVELS);
+        this._intraPyramid = this._buildPyramid(width, height, 1.5, MAX_PYRAMID_LEVELS + 1);
+    }
+
+    // build a pyramid, where each level stores the program groups
+    _buildPyramid(imageWidth, imageHeight, baseScale, numLevels)
+    {
+        let scale = +baseScale;
+        let width = (imageWidth * scale) | 0, height = (imageHeight * scale) | 0;
+        let pyramid = new Array(numLevels);
+
+        for(let i = 0; i < pyramid.length; i++) {
+            pyramid[i] = { width, height, scale };
+            spawnProgramGroups.call(pyramid[i], this, width, height);
+            width = ((1 + width) / 2) | 0;
+            height = ((1 + height) / 2) | 0;
+            scale /= 2;
+        }
+
+        return pyramid;
     }
 }
 
+// Create a canvas
 function createCanvas(width, height)
 {
     const inWorker = (typeof importScripts === 'function') && (typeof WorkerGlobalScope !== 'undefined');
@@ -4275,6 +4209,7 @@ function createCanvas(width, height)
     }
 }
 
+// Create a WebGL2 context
 function createWebGLContext(canvas)
 {
     const gl = canvas.getContext('webgl2', {
@@ -4288,9 +4223,39 @@ function createWebGLContext(canvas)
     });
 
     if(!gl)
-        throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error('WebGL2 is not available in your browser. Please upgrade.');
+        throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error('WebGL2 is not available in your browser. Try in a different browser.');
 
     return gl;
+}
+
+// Spawn program groups
+function spawnProgramGroups(gpu, width, height)
+{
+    // counter for handling lost WebGL context
+    if(spawnProgramGroups._cnt === undefined)
+        spawnProgramGroups._cnt = 0;
+    if(gpu == this) // false on pyramids
+        ++spawnProgramGroups._cnt;
+    const cnt = spawnProgramGroups._cnt;
+
+    // all program groups are available via getters
+    for(let g in PROGRAM_GROUPS) {
+        Object.defineProperty(this, g, {
+            get: (() => {
+                const grp = ('_' + g) + cnt, prevGrp = ('_' + g) + (cnt - 1);
+
+                // remove old groups (GL context lost)
+                if(this.hasOwnProperty(prevGrp))
+                    delete this[prevGrp];
+
+                // lazy instantiation
+                return (function() {
+                    return this[grp] || (this[grp] = new (PROGRAM_GROUPS[g])(gpu, width, height));
+                }).bind(this);
+            })(),
+            configurable: true // WebGL context may be lost
+        });
+    }
 }
 
 /***/ }),
@@ -4405,6 +4370,10 @@ class SpeedyProgram extends Function
         const gl = this._gl;
         const options = this._options;
 
+        // lost context?
+        if(gl.isContextLost())
+            return;
+
         // no need to resize?
         if(width === this._stdprog.width && height === this._stdprog.height)
             return;
@@ -4450,7 +4419,10 @@ class SpeedyProgram extends Function
     {
         const gl = this._gl;
         const pixels = this._pixels || (this._pixels = new Uint8Array(this._stdprog.width * this._stdprog.height * 4));
-        //const flippedPixels = this._flippedPixels || (this._flippedPixels = new Uint8Array(pixels.length));
+
+        // lost context?
+        if(gl.isContextLost())
+            return pixels;
 
         // default values
         if(width < 0)
@@ -4473,33 +4445,8 @@ class SpeedyProgram extends Function
         else
             gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
 
-        // flip y-axis
-        /*
-        let a, b;
-        for(let i = 0; i < height; i++) {
-            for(let j = 0; j < width; j++) {
-                a = 4 * (i * width + j);
-                b = 4 * ((height - 1 - i) * width + j);
-                pixels[a + 0] = flippedPixels[b + 0];
-                pixels[a + 1] = flippedPixels[b + 1];
-                pixels[a + 2] = flippedPixels[b + 2];
-                pixels[a + 3] = flippedPixels[b + 3];
-            }
-        }
-        return this._flippedPixels;
-        */
-
         // return cached array
-        return this._pixels;
-    }
-
-    /**
-     * WebGL rendering context
-     * @returns {WebGL2RenderingContext}
-     */
-    get gl()
-    {
-        return this._gl;
+        return pixels;
     }
 
     /**
@@ -4535,6 +4482,8 @@ class SpeedyProgram extends Function
         if(height > canvas.height)
             canvas.height = height;
 
+        // if(gl.isContextLost()) ...
+
         // create shader
         const source = shaderdecl();
         let stdprog = createStandardProgram(gl, width, height, source, options.uniforms);
@@ -4566,6 +4515,10 @@ class SpeedyProgram extends Function
         const options = this._options;
         const stdprog = this._stdprog;
         const params = this._params;
+
+        // skip things
+        if(gl.isContextLost())
+            return stdprog.texture || null;
         
         // matching arguments?
         if(args.length != params.length)
@@ -6073,6 +6026,86 @@ class Utils
         let z = Math.sqrt(-2 * Math.log(a)) * Math.sin(TWO_PI * b);
 
         return z * sigma + mu;
+    }
+
+    /**
+     * Generate a 1D gaussian kernel with custom sigma
+     * Tip: use kernelSize = (5 * sigma), kernelSize odd
+     * @param {number} sigma gaussian sigma
+     * @param {number} [kernelSize] kernel size, odd number
+     * @param {bool} [normalized] normalize entries so that their sum is 1
+     */
+    static gaussianKernel(sigma, kernelSize = -1, normalized = true)
+    {
+        /*
+         * Let G(x) be a Gaussian function centered at 0 with fixed sigma:
+         *
+         * G(x) = (1 / (sigma * sqrt(2 * pi))) * exp(-(x / (sqrt(2) * sigma))^2)
+         * 
+         * In addition, let f(p) be a kernel value at pixel p, -k/2 <= p <= k/2:
+         * 
+         * f(p) = \int_{p - 0.5}^{p + 0.5} G(x) dx (integrate around p)
+         *      = \int_{0}^{p + 0.5} G(x) dx - \int_{0}^{p - 0.5} G(x) dx
+         * 
+         * Setting a constant c := sqrt(2) * sigma, it follows that:
+         * 
+         * f(p) = (1 / 2c) * (erf((p + 0.5) / c) - erf((p - 0.5) / c))
+         */
+
+        // default kernel size
+        if(kernelSize < 0) {
+            kernelSize = Math.ceil(5.0 * sigma) | 0;
+            kernelSize += 1 - (kernelSize % 2);
+        }
+
+        // validate input
+        kernelSize |= 0;
+        if(kernelSize < 1 || kernelSize % 2 == 0)
+            Utils.fatal(`Invalid kernel size given to gaussianKernel: ${kernelSize} x 1`);
+        else if(sigma <= 0.0)
+            Utils.fatal(`Invalid sigma given to gaussianKernel: ${sigma}`);
+
+        // function erf(x) = -erf(-x) can be approximated numerically. See:
+        // https://en.wikipedia.org/wiki/Error_function#Numerical_approximations
+        const kernel = new Array(kernelSize);
+
+        // set constants
+        const N  =  kernelSize >> 1; // integer (floor, div 2)
+        const c  =  (+sigma) * Math.sqrt(2);
+        const m  =  0.3275911;
+        const a1 =  0.254829592;
+        const a2 = -0.284496736;
+        const a3 =  1.421413741;
+        const a4 = -1.453152027;
+        const a5 =  1.061405429;
+
+        // compute the kernel
+        let sum = 0.0;
+        for(let j = 0; j < kernelSize; j++) {
+            let xa = (j - N + 0.5) / c;
+            let xb = (j - N - 0.5) / c;
+            let sa = 1.0, sb = 1.0;
+
+            if(xa < 0.0) { sa = -1.0; xa = -xa; }
+            if(xb < 0.0) { sb = -1.0; xb = -xb; }
+
+            const ta = 1.0 / (1.0 + m * xa);
+            const tb = 1.0 / (1.0 + m * xb);
+            const pa = ((((a5 * ta + a4) * ta + a3) * ta + a2) * ta + a1) * ta;
+            const pb = ((((a5 * tb + a4) * tb + a3) * tb + a2) * tb + a1) * tb;
+            const ya = 1.0 - pa * Math.exp(-xa * xa);
+            const yb = 1.0 - pb * Math.exp(-xb * xb);
+
+            const erfa = sa * ya;
+            const erfb = sb * yb;
+            const fp = (erfa - erfb) / (2.0 * c);
+
+            kernel[j] = fp;
+            sum += fp;
+        }
+
+        // done!
+        return normalized ? kernel.map(k => k / sum) : kernel;
     }
 }
 
