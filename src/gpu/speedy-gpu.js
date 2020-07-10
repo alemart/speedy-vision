@@ -68,7 +68,6 @@ export class SpeedyGPU
 
         // setup WebGL
         this._setupWebGL();
-        window.loseContext = () => this.loseWebGLContext(); // DEBUG
     }
 
     /**
@@ -239,14 +238,20 @@ export class SpeedyGPU
     /**
      * Lose & restore the WebGL context
      * @param {number} [timeToRestore] in seconds
+     * @return {Promise} resolves as soon as the context is restored
      */
-    loseWebGLContext(timeToRestore = 1.0)
+    loseAndRestoreWebGLContext(timeToRestore = 1.0)
     {
         const ext = this._gl.getExtension('WEBGL_lose_context');
 
         if(ext) {
             ext.loseContext();
-            setTimeout(() => ext.restoreContext(), timeToRestore * 1000.0);
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    ext.restoreContext();
+                    resolve();
+                }, timeToRestore * 1000.0);
+            });
         }
         else
             throw GLUtils.Error(`WEBGL_lose_context is unavailable`);
