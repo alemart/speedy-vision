@@ -81,44 +81,44 @@ export class GPUFilters extends GPUProgramGroup
 
             // create custom convolution kernels
             .declare('createKernel3x3', createKernel2D(3), { // 3x3 texture kernel
-                ...(this.operation.hasTextureSize(3, 3)),
-                ...(this.operation.doesNotRecycleTextures())
+                ...(this.program.hasTextureSize(3, 3)),
+                ...(this.program.doesNotRecycleTextures())
             })
             .declare('createKernel5x5', createKernel2D(5), { // 5x5 texture kernel
-                ...(this.operation.hasTextureSize(5, 5)),
-                ...(this.operation.doesNotRecycleTextures())
+                ...(this.program.hasTextureSize(5, 5)),
+                ...(this.program.doesNotRecycleTextures())
             })
             .declare('createKernel7x7', createKernel2D(7), { // 7x7 texture kernel
-                ...(this.operation.hasTextureSize(7, 7)),
-                ...(this.operation.doesNotRecycleTextures())
+                ...(this.program.hasTextureSize(7, 7)),
+                ...(this.program.doesNotRecycleTextures())
             })
             .declare('createKernel3x1', createKernel1D(3), { // 3x1 texture kernel
-                ...(this.operation.hasTextureSize(3, 1)),
-                ...(this.operation.doesNotRecycleTextures())
+                ...(this.program.hasTextureSize(3, 1)),
+                ...(this.program.doesNotRecycleTextures())
             })
             .declare('createKernel5x1', createKernel1D(5), { // 5x1 texture kernel
-                ...(this.operation.hasTextureSize(5, 1)),
-                ...(this.operation.doesNotRecycleTextures())
+                ...(this.program.hasTextureSize(5, 1)),
+                ...(this.program.doesNotRecycleTextures())
             })
             .declare('createKernel7x1', createKernel1D(7), { // 7x1 texture kernel
-                ...(this.operation.hasTextureSize(7, 1)),
-                ...(this.operation.doesNotRecycleTextures())
+                ...(this.program.hasTextureSize(7, 1)),
+                ...(this.program.doesNotRecycleTextures())
             })
             .declare('createKernel9x1', createKernel1D(9), { // 9x1 texture kernel
-                ...(this.operation.hasTextureSize(9, 1)),
-                ...(this.operation.doesNotRecycleTextures())
+                ...(this.program.hasTextureSize(9, 1)),
+                ...(this.program.doesNotRecycleTextures())
             })
             .declare('createKernel11x1', createKernel1D(11), { // 11x1 texture kernel
-                ...(this.operation.hasTextureSize(11, 1)),
-                ...(this.operation.doesNotRecycleTextures())
+                ...(this.program.hasTextureSize(11, 1)),
+                ...(this.program.doesNotRecycleTextures())
             })
             /*.declare('_readKernel3x3', identity, { // for testing
-                ...(this.operation.hasTextureSize(3, 3)),
-                ...(this.operation.displaysGraphics())
+                ...(this.program.hasTextureSize(3, 3)),
+                ...(this.program.displaysGraphics())
             })
             .declare('_readKernel3x1', identity, {
-                ...(this.operation.hasTextureSize(3, 1)),
-                ...(this.operation.displaysGraphics())
+                ...(this.program.hasTextureSize(3, 1)),
+                ...(this.program.displaysGraphics())
             })*/
 
 

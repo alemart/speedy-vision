@@ -63,18 +63,18 @@ export class GPUPyramids extends GPUProgramGroup
 
             // kernels for debugging
             .declare('output', flipY, {
-                ...this.operation.hasTextureSize(this._width, this._height),
-                ...this.operation.displaysGraphics()
+                ...this.program.hasTextureSize(this._width, this._height),
+                ...this.program.displaysGraphics()
             })
 
             .declare('output2', flipY, {
-                ...this.operation.hasTextureSize(2 * this._width, 2 * this._height),
-                ...this.operation.displaysGraphics()
+                ...this.program.hasTextureSize(2 * this._width, 2 * this._height),
+                ...this.program.displaysGraphics()
             })
 
             .declare('output3', flipY, {
-                ...this.operation.hasTextureSize(3 * this._width, 3 * this._height),
-                ...this.operation.displaysGraphics()
+                ...this.program.hasTextureSize(3 * this._width, 3 * this._height),
+                ...this.program.displaysGraphics()
             })
 
 
@@ -93,53 +93,53 @@ export class GPUPyramids extends GPUProgramGroup
             // same rules as above with sum(k) = 2
             .declare('_smoothX2', convX([
                 0.1, 0.5, 0.8, 0.5, 0.1
-            ]), this.operation.hasTextureSize(2 * this._width, 2 * this._height))
+            ]), this.program.hasTextureSize(2 * this._width, 2 * this._height))
 
             .declare('_smoothY2', convY([
                 0.1, 0.5, 0.8, 0.5, 0.1
-            ], 1.0 / 2.0), this.operation.hasTextureSize(2 * this._width, 2 * this._height))
+            ], 1.0 / 2.0), this.program.hasTextureSize(2 * this._width, 2 * this._height))
 
             // smoothing for 3x image
             // use [1-b, b, 1, b, 1-b], where 0 < b < 1
             .declare('_smoothX3', convX([
                 0.2, 0.8, 1.0, 0.8, 0.2
-            ]), this.operation.hasTextureSize(3 * this._width, 3 * this._height))
+            ]), this.program.hasTextureSize(3 * this._width, 3 * this._height))
 
             .declare('_smoothY3', convY([
                 0.2, 0.8, 1.0, 0.8, 0.2
-            ], 1.0 / 3.0), this.operation.hasTextureSize(3 * this._width, 3 * this._height))
+            ], 1.0 / 3.0), this.program.hasTextureSize(3 * this._width, 3 * this._height))
 
             // upsampling & downsampling
             .declare('_upsample2', upsample2,
-                this.operation.hasTextureSize(2 * this._width, 2 * this._height))
+                this.program.hasTextureSize(2 * this._width, 2 * this._height))
 
             .declare('_downsample2', downsample2,
-                this.operation.hasTextureSize((1 + this._width) / 2, (1 + this._height) / 2))
+                this.program.hasTextureSize((1 + this._width) / 2, (1 + this._height) / 2))
 
             .declare('_upsample3', upsample3,
-                this.operation.hasTextureSize(3 * this._width, 3 * this._height))
+                this.program.hasTextureSize(3 * this._width, 3 * this._height))
 
             .declare('_downsample3', downsample3,
-                this.operation.hasTextureSize((2 + this._width) / 3, (2 + this._height) / 3))
+                this.program.hasTextureSize((2 + this._width) / 3, (2 + this._height) / 3))
 
             .declare('_downsample2/3', downsample2,
-                this.operation.hasTextureSize(3 * this._width / 2, 3 * this._height / 2))
+                this.program.hasTextureSize(3 * this._width / 2, 3 * this._height / 2))
 
             .declare('_downsample3/2', downsample3,
-                this.operation.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
+                this.program.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
 
             // adjust the scale coefficients
             .declare('_scale2', scale(2.0, gpu.pyramidHeight, gpu.pyramidMaxScale),
-                this.operation.hasTextureSize(2 * this._width, 2 * this._height))
+                this.program.hasTextureSize(2 * this._width, 2 * this._height))
 
             .declare('_scale1/2', scale(0.5, gpu.pyramidHeight, gpu.pyramidMaxScale),
-                this.operation.hasTextureSize((1 + this._width) / 2, (1 + this._height) / 2))
+                this.program.hasTextureSize((1 + this._width) / 2, (1 + this._height) / 2))
 
             .declare('_scale3/2', scale(1.5, gpu.pyramidHeight, gpu.pyramidMaxScale),
-                this.operation.hasTextureSize(3 * this._width / 2, 3 * this._height / 2))
+                this.program.hasTextureSize(3 * this._width / 2, 3 * this._height / 2))
 
             .declare('_scale2/3', scale(2.0 / 3.0, gpu.pyramidHeight, gpu.pyramidMaxScale),
-                this.operation.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
+                this.program.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
         ;
     }
 }

@@ -106,9 +106,9 @@ export /* abstract */ class GPUProgramGroup
 
     /**
      * Neat helpers to be used
-     * when defining operations
+     * when defining programs
      */
-    get operation()
+    get program()
     {
         return this._helpers || (this.helpers = {
 

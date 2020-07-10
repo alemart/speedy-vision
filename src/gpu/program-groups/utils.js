@@ -43,7 +43,7 @@ export class GPUUtils extends GPUProgramGroup
 
             // output a texture from a pipeline
             .declare('output', flipY,
-                this.operation.displaysGraphics())
+                this.program.displaysGraphics())
         ;
     }
 }
