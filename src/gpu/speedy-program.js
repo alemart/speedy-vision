@@ -96,6 +96,10 @@ export class SpeedyProgram extends Function
         const gl = this._gl;
         const options = this._options;
 
+        // lost context?
+        if(gl.isContextLost())
+            return;
+
         // no need to resize?
         if(width === this._stdprog.width && height === this._stdprog.height)
             return;
@@ -141,7 +145,10 @@ export class SpeedyProgram extends Function
     {
         const gl = this._gl;
         const pixels = this._pixels || (this._pixels = new Uint8Array(this._stdprog.width * this._stdprog.height * 4));
-        //const flippedPixels = this._flippedPixels || (this._flippedPixels = new Uint8Array(pixels.length));
+
+        // lost context?
+        if(gl.isContextLost())
+            return pixels;
 
         // default values
         if(width < 0)
@@ -164,33 +171,8 @@ export class SpeedyProgram extends Function
         else
             gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
 
-        // flip y-axis
-        /*
-        let a, b;
-        for(let i = 0; i < height; i++) {
-            for(let j = 0; j < width; j++) {
-                a = 4 * (i * width + j);
-                b = 4 * ((height - 1 - i) * width + j);
-                pixels[a + 0] = flippedPixels[b + 0];
-                pixels[a + 1] = flippedPixels[b + 1];
-                pixels[a + 2] = flippedPixels[b + 2];
-                pixels[a + 3] = flippedPixels[b + 3];
-            }
-        }
-        return this._flippedPixels;
-        */
-
         // return cached array
-        return this._pixels;
-    }
-
-    /**
-     * WebGL rendering context
-     * @returns {WebGL2RenderingContext}
-     */
-    get gl()
-    {
-        return this._gl;
+        return pixels;
     }
 
     /**
@@ -226,6 +208,8 @@ export class SpeedyProgram extends Function
         if(height > canvas.height)
             canvas.height = height;
 
+        // if(gl.isContextLost()) ...
+
         // create shader
         const source = shaderdecl();
         let stdprog = createStandardProgram(gl, width, height, source, options.uniforms);
@@ -257,6 +241,10 @@ export class SpeedyProgram extends Function
         const options = this._options;
         const stdprog = this._stdprog;
         const params = this._params;
+
+        // skip things
+        if(gl.isContextLost())
+            return stdprog.texture || null;
         
         // matching arguments?
         if(args.length != params.length)

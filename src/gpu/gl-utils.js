@@ -84,7 +84,7 @@ export class GLUtils
         gl.linkProgram(program);
 
         // error?
-        if(!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        if(!gl.getProgramParameter(program, gl.LINK_STATUS) && !gl.isContextLost()) {
             const errors = [
                 gl.getShaderInfoLog(fragmentShader),
                 gl.getShaderInfoLog(vertexShader),
@@ -185,6 +185,9 @@ export class GLUtils
     static bindTextures(gl, textureMap, locationMap)
     {
         const names = Object.keys(textureMap);
+
+        if(gl.isContextLost())
+            return;
 
         if(names.length > gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
             throw GLUtils.Error(`Can't bind ${names.length} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);

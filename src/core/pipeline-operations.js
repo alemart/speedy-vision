@@ -162,8 +162,14 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
 
     run(texture, gpu, media)
     {
+        // lost context?
+        if(gpu.gl.isContextLost()) {
+            this._texKernel = null;
+            this._gl = null;
+        }
+
         // instantiate the texture kernel
-        if(this._texKernel == null) {
+        else if(this._texKernel == null) {
             this._texKernel = gpu.filters[this._method[0]](this._kernel);
             this._gl = gpu.gl;
         }

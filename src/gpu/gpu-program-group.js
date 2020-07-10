@@ -54,7 +54,7 @@ export /* abstract */ class GPUProgramGroup
             get: (() => {
                 const key = '__k_' + name;
                 return (function() {
-                    return this[key] || (this[key] = this._spawnProgram(shaderdecl, settings));
+                    return this[key] || (this[key] = this._createProgram(shaderdecl, settings));
                 }).bind(this);
             })()
         });
@@ -139,7 +139,7 @@ export /* abstract */ class GPUProgramGroup
         });
     }
 
-    /* private */ _spawnProgram(shaderdecl, settings = { })
+    /* private */ _createProgram(shaderdecl, settings = { })
     {
         return this._gpu.createProgram(shaderdecl, {
             // default settings

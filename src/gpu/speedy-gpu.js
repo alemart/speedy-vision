@@ -66,15 +66,9 @@ export class SpeedyGPU
             this._height = Math.min(this._height, MAX_TEXTURE_LENGTH);
         }
 
-        // setup GPU
-        this._canvas = createCanvas(this._width, this._height);
-        this._gl = createWebGLContext(this._canvas);
-        this._inputTexture = null;
-
-        // setup program groups
-        this._pyramid = null;
-        this._intraPyramid = null;
-        this._setupProgramGroups(this._width, this._height);
+        // setup WebGL
+        this._setupWebGL();
+        window.loseContext = () => this.loseWebGLContext(); // DEBUG
     }
 
     /**
@@ -150,6 +144,7 @@ export class SpeedyGPU
 
     /**
      * WebGL context
+     * Be careful when caching this, as the context may be lost!
      * @returns {WebGL2RenderingContext}
      */
     get gl()
@@ -179,10 +174,8 @@ export class SpeedyGPU
 
         // lost GL context?
         if(gl.isContextLost()) {
-            Utils.warning('Lost WebGL context');
-            this._gl = this.createWebGLContext(this._canvas);
-            this._inputTexture = null;
-            return this.upload(data, width, height);
+            Utils.warning(`Can't upload texture without a WebGL context`);
+            return (this._inputTexture = null);
         }
 
         // default values
@@ -243,9 +236,49 @@ export class SpeedyGPU
         gl.clear(gl.COLOR_BUFFER_BIT);
     }*/
 
-    // setup program groups
-    _setupProgramGroups(width, height)
+    /**
+     * Lose & restore the WebGL context
+     * @param {number} [timeToRestore] in seconds
+     */
+    loseWebGLContext(timeToRestore = 1.0)
     {
+        const ext = this._gl.getExtension('WEBGL_lose_context');
+
+        if(ext) {
+            ext.loseContext();
+            setTimeout(() => ext.restoreContext(), timeToRestore * 1000.0);
+        }
+        else
+            throw GLUtils.Error(`WEBGL_lose_context is unavailable`);
+    }
+
+    // setup WebGL
+    _setupWebGL()
+    {
+        const width = this._width;
+        const height = this._height;
+
+        // initializing
+        this._pyramid = null;
+        this._intraPyramid = null;
+        this._inputTexture = null;
+        if(this._canvas !== undefined)
+            delete this._canvas;
+
+        // create canvas
+        this._canvas = createCanvas(width, height);
+        this._canvas.addEventListener('webglcontextlost', ev => {
+            Utils.warning('Lost WebGL context');
+            ev.preventDefault();
+        }, false);
+        this._canvas.addEventListener('webglcontextrestored', ev => {
+            Utils.warning('Restoring WebGL context...');
+            this._setupWebGL();
+        }, false);
+
+        // create WebGL context
+        this._gl = createWebGLContext(this._canvas);
+
         // spawn program groups
         spawnProgramGroups.call(this, this, width, height);
 
@@ -306,7 +339,7 @@ function createWebGLContext(canvas)
     });
 
     if(!gl)
-        throw GLUtils.Error('WebGL2 is not available in your browser. Please upgrade.');
+        throw GLUtils.Error('WebGL2 is not available in your browser. Try in a different browser.');
 
     return gl;
 }
@@ -314,12 +347,25 @@ function createWebGLContext(canvas)
 // Spawn program groups
 function spawnProgramGroups(gpu, width, height)
 {
+    // counter for handling lost WebGL context
+    if(spawnProgramGroups._cnt === undefined)
+        spawnProgramGroups._cnt = 0;
+    if(gpu == this) // false on pyramids
+        ++spawnProgramGroups._cnt;
+    const cnt = spawnProgramGroups._cnt;
+
     // all program groups are available via getters
     for(let g in PROGRAM_GROUPS) {
         Object.defineProperty(this, g, {
             get: (() => {
-                const grp = '_' + g;
-                return (function() { // lazy instantiation
+                const grp = ('_' + g) + cnt, prevGrp = ('_' + g) + (cnt - 1);
+
+                // remove old groups (GL context lost)
+                if(this.hasOwnProperty(prevGrp))
+                    delete this[prevGrp];
+
+                // lazy instantiation
+                return (function() {
                     return this[grp] || (this[grp] = new (PROGRAM_GROUPS[g])(gpu, width, height));
                 }).bind(this);
             })(),
