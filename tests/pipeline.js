@@ -363,4 +363,21 @@ describe('SpeedyPipeline', function() {
 
     });
 
+    describe('WebGL context loss', function() {
+        it('handles context loss', async function() {
+            const pipeline = Speedy.pipeline().blur();
+
+            const img1 = await media.clone().run(pipeline);
+            await media._gpu.loseAndRestoreWebGLContext();
+            const img2 = await media.clone().run(pipeline);
+
+            print(`Lose WebGL context, repeat the algorithm`);
+            display(img1, 'Before losing context');
+            display(img2, 'After losing context');
+
+            const error = imerr(img1, img2);
+            expect(error).toBeAnAcceptableImageError();
+        });
+    });
+
 });
