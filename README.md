@@ -212,7 +212,7 @@ const clone = media.clone();
 
 `SpeedyMedia.release(): Promise`
 
-Releases internal resources associated with this `SpeedyMedia`. You will no longer be able to use it, nor any of its lightweight clones.
+Releases internal resources associated with this `SpeedyMedia`. You will no longer be able to use it, nor any of its [lightweight clones](#speedymediaclone).
 
 ###### Returns
 
