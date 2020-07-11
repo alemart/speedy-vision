@@ -172,8 +172,8 @@ export class SpeedyMedia
     release()
     {
         if(this._gpu) {
-            this._gpu.loseWebGLContext();
             this._featureDetector = null;
+            this._gpu.loseWebGLContext();
             this._gpu = null;
             this._source = null;
         }

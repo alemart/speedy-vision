@@ -169,7 +169,15 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
         }
 
         // instantiate the texture kernel
-        else if(this._texKernel == null) {
+        else if(this._texKernel == null || (this._gl !== null && this._gl !== gpu.gl)) {
+            // warn about performance
+            if(this._gl !== gpu.gl) {
+                const warn = 'Performance warning: recreating texture kernel for a different context. ' +
+                             'Consider duplicating the pipeline when using convolutions for different ' +
+                             'media objects.';
+                Utils.warning(warn);
+            }
+
             this._texKernel = gpu.filters[this._method[0]](this._kernel);
             this._gl = gpu.gl;
         }
