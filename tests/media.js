@@ -50,6 +50,8 @@ describe('SpeedyMedia', function() {
         const media = await Speedy.load(image);
 
         expect(media.source).toBe(image);
+
+        await media.release();
     });
 
     it('has a valid type', async function() {
@@ -70,6 +72,8 @@ describe('SpeedyMedia', function() {
             const media = await Speedy.load(source);
 
             expect(media.type).toBe(assets[file].type);
+            
+            await media.release();
         }
     });
 
@@ -86,6 +90,9 @@ describe('SpeedyMedia', function() {
 
         expect(media[1].width).toBe(video.videoWidth);
         expect(media[1].height).toBe(video.videoHeight);
+
+        await media[0].release();
+        await media[1].release();
     });
 
     it('creates a clone with valid source, type and dimensions', async function() {
@@ -100,6 +107,8 @@ describe('SpeedyMedia', function() {
             expect(clone.width).toBe(media.width);
             expect(clone.height).toBe(media.height);
         }
+        
+        await media.release();
     });
 
     it('draws itself to a canvas', async function() {
@@ -115,6 +124,8 @@ describe('SpeedyMedia', function() {
         display(imdiff(image, canvas), `Error: ${error}`);
 
         expect(error).toBeAnAcceptableImageError();
+        
+        await media.release();
     });
 
 });

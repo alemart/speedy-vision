@@ -310,7 +310,7 @@ function createCanvasFromCanvas(origCanvas, title = '')
 function createCanvasFromSpeedyMedia(media, title = '')
 {
     const canvas = createCanvas(media.width, media.height, title);
-    const isAnimated = media.type != 'image';
+    const isAnimated = media.type == 'video'; //media.type != 'image'; // for tests
 
     if(isAnimated) {
         function animate() {

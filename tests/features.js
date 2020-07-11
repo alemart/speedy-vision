@@ -33,6 +33,11 @@ describe('Feature detection', function() {
         square = await Speedy.load(image[1]);
     });
 
+    afterEach(async function() {
+        await media.release();
+        await square.release();
+    });
+
     describe('FAST-9,16', function() {
         runGenericTests('fast9');
     });
@@ -91,14 +96,14 @@ describe('Feature detection', function() {
         }
     })
 
-    describe('WebGL context loss', function() {
-        it('handles context loss', async function() {
+    describe('Context loss', function() {
+        it('recovers from WebGL context loss', async function() {
             const settings = { method: 'fast' };
             const f1 = await media.findFeatures(settings);
             await media._gpu.loseAndRestoreWebGLContext();
             const f2 = await media.findFeatures(settings);
 
-            print(`Lose WebGL context, repeat the algorithm`);
+            print('Lose WebGL context, repeat the algorithm');
             displayFeatures(media, f1, 'Before losing context');
             displayFeatures(media, f2, 'After losing context');
 

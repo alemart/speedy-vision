@@ -210,9 +210,13 @@ const clone = media.clone();
 
 ##### SpeedyMedia.release()
 
-`SpeedyMedia.release(): void`
+`SpeedyMedia.release(): Promise`
 
 Releases internal resources associated with this `SpeedyMedia`. You will no longer be able to use it, nor any of its lightweight clones.
+
+###### Returns
+
+A `Promise` that resolves as soon as the resources are released.
 
 ### Feature detection
 
@@ -414,13 +418,15 @@ The number of operations of the pipeline.
 
 Runs the provided `pipeline`, outputting a [lightweight clone](#speedymediaclone) of the media containing the result.
 
+**Note:** while faster to generate, lightweight clones are linked to each other. Clone your media if you intend to run two or more pipelines with the same `SpeedyMedia` instance, e.g., write `await media.clone().run(pipeline)`.
+
 ###### Arguments
 
 * `pipeline: SpeedyPipeline`.
 
 ###### Returns
 
-A Promise that resolves to the resulting image: a new `SpeedyMedia` object.
+A `Promise` that resolves to the resulting image: a new `SpeedyMedia` object.
 
 ###### Example
 
@@ -432,8 +438,6 @@ const pipeline = Speedy.pipeline()
 const media = await Speedy.load(/* ... */);
 const blurred = await media.run(pipeline);
 ```
-
-**Note:** while faster to generate, [lightweight clones are linked to each other](#speedymediaclone). Clone your media if you intend to run two or more pipelines with the same `SpeedyMedia` instance, e.g., write `await media.clone().run(pipeline)`.
 
 #### Pipeline operations
 

@@ -31,14 +31,20 @@ describe('SpeedyPipeline', function() {
         media = await Speedy.load(image);
     });
 
-    it('is a SpeedyPipeline object', function() {
+    afterEach(async function() {
+        await media.release();
+    });
+
+    it('is a SpeedyPipeline object', async function() {
         const pipeline = Speedy.pipeline();
         
         expect(typeof pipeline).toBe('object');
         expect(pipeline.constructor.name).toBe('SpeedyPipeline');
+
+        await pipeline.release();
     });
 
-    it('accepts the concatenation of pipelines', function() {
+    it('accepts the concatenation of pipelines', async function() {
         const pipeline = Speedy.pipeline();
         const pl = Speedy.pipeline().blur();
 
@@ -51,6 +57,8 @@ describe('SpeedyPipeline', function() {
         expect(pipeline.length).toBe(4);
         pipeline.concat(pipeline);
         expect(pipeline.length).toBe(8);
+        
+        await pipeline.release();
     });
 
     it('does nothing if the pipeline is empty', async function() {
@@ -66,6 +74,8 @@ describe('SpeedyPipeline', function() {
         expect(media.width).toBe(sameMedia.width);
         expect(media.height).toBe(sameMedia.height);
         expect(error).toBeAnAcceptableImageError();
+        
+        await pipeline.release();
     });
 
     it('converts to greyscale', async function() {
@@ -83,6 +93,8 @@ describe('SpeedyPipeline', function() {
         // Not equal to the original media
         const pix = pixels(media).filter((p, i) => i % 4 < 3);
         expect(pix).not.toBeElementwiseNearlyEqual(rrr);
+        
+        await pipeline.release();
     });
 
     it('blurs an image', async function() {
@@ -108,6 +120,8 @@ describe('SpeedyPipeline', function() {
                 expect(error).toBeLessThan(0.2);
 
                 lastError = error;
+                
+                await pipeline.release();
             }
         }
 
@@ -125,6 +139,8 @@ describe('SpeedyPipeline', function() {
         afterEach(async function() {
             for(const pipeline of pipelines)
                 await pipeline.release();
+
+            await square.release();
         });
 
         it('convolves with identity kernels', async function() {
@@ -202,6 +218,9 @@ describe('SpeedyPipeline', function() {
             display(imdiff(brightened, groundTruth), `Error: ${error}`);
 
             expect(error).toBeAnAcceptableImageError();
+
+            await pipeline.release();
+            await groundTruth.release();
         });
 
         it('darkens an image', async function() {
@@ -224,6 +243,9 @@ describe('SpeedyPipeline', function() {
             display(imdiff(darkened, groundTruth), `Error: ${error}`);
 
             expect(error).toBeAnAcceptableImageError();
+
+            await pipeline.release();
+            await groundTruth.release();
         });
 
         it('accepts chains of convolutions', async function() {
@@ -255,6 +277,8 @@ describe('SpeedyPipeline', function() {
 
             expect(pixels(square))
             .toBeElementwiseNearlyEqual(pixels(convolved));
+
+            await pipeline.release();
         });
 
         it('accepts chains of convolutions of different sizes', async function() {
@@ -308,6 +332,8 @@ describe('SpeedyPipeline', function() {
 
             expect(pixels(square))
             .toBeElementwiseNearlyEqual(pixels(convolved));
+            
+            await pipeline.release();
         });
 
         it('convolves with a Sobel filter', async function() {
@@ -341,6 +367,9 @@ describe('SpeedyPipeline', function() {
 
             expect(errorX).toBeAnAcceptableImageError(2);
             expect(errorY).toBeAnAcceptableImageError(2);
+
+            await sobelX.release();
+            await sobelY.release();
         });
 
         it('captures outlines', async function() {
@@ -359,25 +388,34 @@ describe('SpeedyPipeline', function() {
             display(imdiff(outline, myOutline), `Error: ${error}`);
 
             expect(error).toBeAnAcceptableImageError();
+
+            await outline.release();
         });
 
     });
 
-    describe('WebGL context loss', function() {
-        it('handles context loss', async function() {
-            const pipeline = Speedy.pipeline().blur();
+    it('recovers from WebGL context loss', async function() {
+        const pipeline = Speedy.pipeline().blur().convolve([
+            -1,-1,-1,
+            -1, 3, 0,
+            -1, 0, 2
+        ]);
+        media = media.clone();
 
-            const img1 = await media.clone().run(pipeline);
-            await media._gpu.loseAndRestoreWebGLContext();
-            const img2 = await media.clone().run(pipeline);
+        const img1 = (await media.run(pipeline)).clone();
+        await media._gpu.loseAndRestoreWebGLContext();
+        const img2 = (await media.run(pipeline)).clone();
 
-            print(`Lose WebGL context, repeat the algorithm`);
-            display(img1, 'Before losing context');
-            display(img2, 'After losing context');
+        print('Lose WebGL context, repeat the algorithm');
+        display(img1, 'Before losing context');
+        display(img2, 'After losing context');
 
-            const error = imerr(img1, img2);
-            expect(error).toBeAnAcceptableImageError();
-        });
+        const error = imerr(img1, img2);
+        expect(error).toBeAnAcceptableImageError();
+
+        await img2.release();
+        await img1.release();
+        await pipeline.release();
     });
 
 });
