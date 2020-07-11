@@ -211,7 +211,7 @@ export class SpeedyMedia
         else {
             // deep copy
             let source = this._source;
-            if(this._type == MediaType.Texture)
+            if(this._type == MediaType.Texture || this._type == MediaType.Canvas)
                 source = createCanvasFromStaticMedia(this); // won't share WebGL context
             return new SpeedyMedia(source, this._width, this._height);
         }
