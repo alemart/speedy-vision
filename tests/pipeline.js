@@ -400,7 +400,6 @@ describe('SpeedyPipeline', function() {
             -1, 3, 0,
             -1, 0, 2
         ]);
-        media = media.clone();
 
         const img1 = (await media.run(pipeline)).clone();
         await media._gpu.loseAndRestoreWebGLContext();
