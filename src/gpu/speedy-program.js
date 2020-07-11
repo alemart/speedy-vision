@@ -399,7 +399,7 @@ function functionArguments(fun)
 // create VAO & VBO
 function createStandardGeometry(gl)
 {
-    // cached values?
+    // got cached values for this WebGL context?
     const f = createStandardGeometry;
     const cache = f._cache || (f._cache = new WeakMap());
     if(cache.has(gl))
@@ -446,8 +446,10 @@ function createStandardGeometry(gl)
                            0);         // offset
     gl.enableVertexAttribArray(LOCATION_ATTRIB_TEXCOORD);
 
-    // unbind & return
+    // unbind
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+    // cache & return
     const result = { vao, vbo };
     cache.set(gl, result);
     return result;

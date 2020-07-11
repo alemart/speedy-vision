@@ -57,6 +57,9 @@ export class SpeedyGPU
      */
     constructor(width, height)
     {
+        // does the browser support WebGL2?
+        checkWebGL2Availability();
+
         // read & validate texture size
         this._width = Math.max(1, width | 0);
         this._height = Math.max(1, height | 0);
@@ -330,6 +333,13 @@ function createCanvas(width, height)
     }
 }
 
+// Checks if the browser supports WebGL2
+function checkWebGL2Availability()
+{
+    if(typeof WebGL2RenderingContext === 'undefined')
+        throw GLUtils.Error('WebGL2 is required by this application, but it\'s not available in your browser. Please use a different browser.');
+}
+
 // Create a WebGL2 context
 function createWebGLContext(canvas)
 {
@@ -344,7 +354,7 @@ function createWebGLContext(canvas)
     });
 
     if(!gl)
-        throw GLUtils.Error('WebGL2 is not available in your browser. Try in a different browser.');
+        throw GLUtils.Error('Can\'t create WebGL2 context. Try in a different browser.');
 
     return gl;
 }
