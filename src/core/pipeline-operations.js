@@ -171,7 +171,7 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
         // instantiate the texture kernel
         else if(this._texKernel == null || (this._gl !== gpu.gl && this._gl !== null)) {
             // warn about performance
-            if(this._gl !== gpu.gl) {
+            if(this._gl !== gpu.gl && this._gl !== null) {
                 const warn = 'Performance warning: need to recreate the texture kernel. ' +
                              'Consider duplicating the pipeline when using convolutions ' +
                              'for different media objects.';
