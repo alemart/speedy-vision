@@ -204,6 +204,11 @@ export class SpeedyMedia
             ...(options)
         };
 
+        // has the media been released?
+        if(this.isReleased())
+            Utils.fatal('Can\'t clone a SpeedyMedia that has been released');
+
+        // clone the object
         if(options.lightweight) {
             // shallow copy
             return new SpeedyMedia(this);
