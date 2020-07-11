@@ -241,7 +241,8 @@ export class SpeedyGPU
     /**
      * Lose & restore the WebGL context
      * @param {number} [timeToRestore] in seconds
-     * @return {Promise} resolves as soon as the context is restored
+     * @return {Promise} resolves as soon as the context is restored,
+     *                   or as soon as it is lost if timeToRestore is Infinity
      */
     loseAndRestoreWebGLContext(timeToRestore = 1.0)
     {
@@ -250,14 +251,27 @@ export class SpeedyGPU
         if(ext) {
             ext.loseContext();
             return new Promise(resolve => {
-                setTimeout(() => {
-                    ext.restoreContext();
-                    resolve();
-                }, timeToRestore * 1000.0);
+                if(isFinite(timeToRestore)) {
+                    setTimeout(() => {
+                        ext.restoreContext();
+                        resolve();
+                    }, Math.max(timeToRestore, 0) * 1000.0);
+                }
+                else
+                    resolve(); // won't restore
             });
         }
         else
-            throw GLUtils.Error(`WEBGL_lose_context is unavailable`);
+            throw GLUtils.Error('WEBGL_lose_context is unavailable');
+    }
+
+    /**
+     * Lose the WebGL context.
+     * This is a way to manually free resources.
+     */
+    loseWebGLContext()
+    {
+        return this.loseAndRestoreWebGLContext(Infinity);
     }
 
     // setup WebGL

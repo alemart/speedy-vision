@@ -196,7 +196,7 @@ Clones the `SpeedyMedia` object.
 ###### Arguments
 
 * `options: object, optional`. Configuration object.
-  * `lightweight: boolean`. Create a lightweight clone of the `SpeedyMedia`. A lightweight clone shares its internal buffers with the original media. Although faster to generate, lightweight clones of the same media are linked to each other. Change one, and you'll most likely change the other. This option defaults to `false`, i.e., no lightweight clones are created by default.
+  * `lightweight: boolean`. Create a lightweight clone of the `SpeedyMedia`. A lightweight clone shares its internal resources with the original media. Although faster to generate, lightweight clones of the same media are linked to each other. Change one, and you'll most likely change the other. This option defaults to `false`.
 
 ###### Returns
 
@@ -207,6 +207,12 @@ A clone of the `SpeedyMedia` object.
 ```js
 const clone = media.clone();
 ```
+
+##### SpeedyMedia.release()
+
+`SpeedyMedia.release(): void`
+
+Releases internal resources associated with this `SpeedyMedia`. You will no longer be able to use it, nor any of its lightweight clones.
 
 ### Feature detection
 

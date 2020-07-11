@@ -166,6 +166,20 @@ export class SpeedyMedia
     }
 
     /**
+     * Releases resources associated with this media.
+     * You will no longer be able to use it, nor any of its lightweight clones.
+     */
+    release()
+    {
+        if(this._gpu) {
+            this._gpu.loseWebGLContext();
+            this._featureDetector = null;
+            this._gpu = null;
+            this._source = null;
+        }
+    }
+
+    /**
      * Clones the SpeedyMedia object
      * @param {object} options options object
      * @returns {SpeedyMedia} a clone object
