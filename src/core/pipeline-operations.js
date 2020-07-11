@@ -166,12 +166,14 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
         if(gpu.gl.isContextLost()) {
             this._texKernel = null;
             this._gl = null;
+            // convolve with a null texKernel anyway,
+            // SpeedyProgram handles lost contexts
         }
 
         // instantiate the texture kernel
         else if(this._texKernel == null || (this._gl !== gpu.gl && this._gl !== null)) {
             // warn about performance
-            if(this._gl !== gpu.gl && this._gl !== null) {
+            if(this._gl !== gpu.gl && this._gl !== null && !this._gl.isContextLost()) {
                 const warn = 'Performance warning: need to recreate the texture kernel. ' +
                              'Consider duplicating the pipeline when using convolutions ' +
                              'for different media objects.';

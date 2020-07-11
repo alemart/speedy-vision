@@ -246,7 +246,12 @@ export class SpeedyGPU
      */
     loseAndRestoreWebGLContext(timeToRestore = 1.0)
     {
-        const ext = this._gl.getExtension('WEBGL_lose_context');
+        const gl = this._gl;
+
+        if(gl.isContextLost())
+            return Promise.reject('Context already lost');
+
+        const ext = gl.getExtension('WEBGL_lose_context');
 
         if(ext) {
             ext.loseContext();
@@ -254,7 +259,7 @@ export class SpeedyGPU
                 if(isFinite(timeToRestore)) {
                     setTimeout(() => {
                         ext.restoreContext();
-                        resolve();
+                        setTimeout(() => resolve(), 1); // next frame
                     }, Math.max(timeToRestore, 0) * 1000.0);
                 }
                 else
@@ -271,6 +276,7 @@ export class SpeedyGPU
      */
     loseWebGLContext()
     {
+        this._omitGLContextWarning = true;
         return this.loseAndRestoreWebGLContext(Infinity);
     }
 
@@ -284,17 +290,20 @@ export class SpeedyGPU
         this._pyramid = null;
         this._intraPyramid = null;
         this._inputTexture = null;
+        this._omitGLContextWarning = false;
         if(this._canvas !== undefined)
             delete this._canvas;
 
         // create canvas
         this._canvas = createCanvas(width, height);
         this._canvas.addEventListener('webglcontextlost', ev => {
-            Utils.warning('Lost WebGL context');
+            if(!this._omitGLContextWarning)
+                Utils.warning('Lost WebGL context');
             ev.preventDefault();
         }, false);
         this._canvas.addEventListener('webglcontextrestored', ev => {
-            Utils.warning('Restoring WebGL context...');
+            if(!this._omitGLContextWarning)
+                Utils.warning('Restoring WebGL context...');
             this._setupWebGL();
         }, false);
 

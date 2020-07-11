@@ -168,15 +168,27 @@ export class SpeedyMedia
     /**
      * Releases resources associated with this media.
      * You will no longer be able to use it, nor any of its lightweight clones.
+     * @returns {Promise} resolves as soon as the resources are released
      */
     release()
     {
-        if(this._gpu) {
+        if(!this.isReleased()) {
             this._featureDetector = null;
             this._gpu.loseWebGLContext();
             this._gpu = null;
             this._source = null;
         }
+
+        return Promise.resolve();
+    }
+
+    /**
+     * Is this SpeedyMedia released?
+     * @returns {bool}
+     */
+    isReleased()
+    {
+        return this._gpu == null;
     }
 
     /**
@@ -198,11 +210,10 @@ export class SpeedyMedia
         }
         else {
             // deep copy
-            return new SpeedyMedia(
-                this._source,
-                this._width,
-                this._height
-            );
+            let source = this._source;
+            if(this._type == MediaType.Texture)
+                source = createCanvasFromStaticMedia(this); // won't share WebGL context
+            return new SpeedyMedia(source, this._width, this._height);
         }
     }
 
@@ -213,6 +224,11 @@ export class SpeedyMedia
      */
     run(pipeline)
     {
+        // has the media been released?
+        if(this.isReleased())
+            Utils.fatal('Can\'t run pipeline: SpeedyMedia has been released');
+
+        // run the pipeline
         const media = this.clone({ lightweight: true });
         media._type = MediaType.Texture;
         return pipeline._run(media);
@@ -228,6 +244,11 @@ export class SpeedyMedia
      */
     draw(canvas, x = 0, y = 0, width = this.width, height = this.height)
     {
+        // fail silently if the media been released
+        if(this.isReleased())
+            return;
+
+        // draw
         const ctx = canvas.getContext('2d');
 
         x = +x; y = +y;
@@ -258,6 +279,10 @@ export class SpeedyMedia
         settings = Object.assign({
             method: 'fast',
         }, settings);
+
+        // has the media been released?
+        if(this.isReleased())
+            Utils.fatal('Can\'t find features: SpeedyMedia has been released');
 
         // Lazy instantiation
         this._featureDetector = this._featureDetector || new FeatureDetector(this._gpu);
@@ -380,6 +405,18 @@ function createCanvasFromVideo(video)
         requestAnimationFrame(render);
     }
     render();
+
+    return canvas;
+}
+
+// create a (static) HTMLCanvasElement using a SpeedyMedia as source
+function createCanvasFromStaticMedia(media)
+{
+    const canvas = document.createElement('canvas');
+
+    canvas.width = media.width;
+    canvas.height = media.height;
+    media.draw(canvas);
 
     return canvas;
 }
