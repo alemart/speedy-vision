@@ -176,6 +176,9 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
                              'Consider duplicating the pipeline when using convolutions ' +
                              'for different media objects.';
                 Utils.warning(warn);
+
+                // release old texture
+                GLUtils.destroyTexture(this._gl, this._texKernel);
             }
 
             this._texKernel = gpu.filters[this._method[0]](this._kernel);
