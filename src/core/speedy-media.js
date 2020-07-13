@@ -37,8 +37,9 @@ export class SpeedyMedia
      * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|Texture} mediaSource An image, video or canvas
      * @param {number} width media width
      * @param {number} height media height
+     * @param {object} [options] options object
      */
-    /* private */ constructor(mediaSource, width, height)
+    /* private */ constructor(mediaSource, width, height, options = { })
     {
         if(arguments.length > 1) {
             // store data
@@ -47,6 +48,11 @@ export class SpeedyMedia
             this._height = height | 0;
             this._type = getMediaType(this._source);
             this._colorFormat = ColorFormat.RGB;
+
+            // set options
+            this._options = Object.freeze(Object.assign({
+                useAsyncTransfer: (this._type != MediaType.Image),
+            }, options));
 
             // spawn relevant components
             this._gpu = new SpeedyGPU(this._width, this._height);
@@ -166,6 +172,15 @@ export class SpeedyMedia
     }
 
     /**
+     * Returns a read-only object featuring options related to this SpeedyMedia
+     * @returns {object}
+     */
+    get options()
+    {
+        return this._options;
+    }
+
+    /**
      * Releases resources associated with this media.
      * You will no longer be able to use it, nor any of its lightweight clones.
      * @returns {Promise} resolves as soon as the resources are released
@@ -276,7 +291,7 @@ export class SpeedyMedia
     /**
      * Finds image features
      * @param {object} [settings] Configuration object
-     * @returns {Promise< Array<SpeedyFeature> >} A Promise returning an Array of SpeedyFeature objects
+     * @returns {Promise<Array<SpeedyFeature>>} A Promise returning an Array of SpeedyFeature objects
      */
     findFeatures(settings = {})
     {
@@ -293,7 +308,7 @@ export class SpeedyMedia
         this._featureDetector = this._featureDetector || new FeatureDetector(this._gpu);
 
         // Algorithm table
-        const fn = ({
+        const fn = this._featureDetector._table || (this._featureDetector._table = {
             'fast' : (media, settings) => this._featureDetector.fast(media, 9, settings),   // alias for fast9
             'fast9': (media, settings) => this._featureDetector.fast(media, 9, settings),   // FAST-9,16 (default)
             'fast7': (media, settings) => this._featureDetector.fast(media, 7, settings),   // FAST-7,12
@@ -301,17 +316,13 @@ export class SpeedyMedia
             'brisk': (media, settings) => this._featureDetector.brisk(media, settings),     // BRISK
         });
 
-        // Run the algorithm
-        return new Promise((resolve, reject) => {
-            const method = String(settings.method).toLowerCase();
+        // Validate method
+        const method = String(settings.method).toLowerCase();
+        if(!fn.hasOwnProperty(method))
+            Utils.fatal(`Invalid method "${method}" for keypoint detection.`);
 
-            if(fn.hasOwnProperty(method)) {
-                const features = (fn[method])(this, settings);
-                resolve(features);
-            }
-            else
-                reject(new SpeedyError(`Invalid method "${method}" for keypoint detection.`));
-        });
+        // Run the algorithm
+        return (fn[method])(this, settings);
     }
 }
 

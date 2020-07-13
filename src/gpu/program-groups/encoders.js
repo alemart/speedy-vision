@@ -33,6 +33,7 @@ const MAX_PIXELS_PER_KEYPOINT = (MAX_KEYPOINT_SIZE / 4) | 0; // in pixels
 const MAX_ENCODER_LENGTH = 300; // in pixels (if too large, WebGL may lose context - so be careful!)
 const MAX_KEYPOINTS = ((MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH) / MAX_PIXELS_PER_KEYPOINT) | 0;
 const INITIAL_ENCODER_LENGTH = 128; // pick a large value <= MAX (useful on static images when no encoder optimization is performed beforehand)
+const INITIAL_ENCODER_LENGTH_ASYNC = 16; // TODO TODO TODO
 const TWO_PI = 2.0 * Math.PI;
 
 
@@ -99,9 +100,10 @@ export class GPUEncoders extends GPUProgramGroup
     /**
      * Encodes the keypoints of an image - this is a bottleneck!
      * @param {WebGLTexture} corners image with encoded corners
-     * @returns {Array<number>} pixels in the [r,g,b,a, ...] format
+     * @param {bool} [useAsyncTransfer] transfer data from the GPU without blocking the CPU
+     * @returns {Promise<Array<Uint8Array>>} pixels in the [r,g,b,a, ...] format
      */
-    encodeKeypoints(corners)
+    async encodeKeypoints(corners, useAsyncTransfer = true)
     {
         // parameters
         const encoderLength = this._keypointEncoderLength;
@@ -109,23 +111,47 @@ export class GPUEncoders extends GPUProgramGroup
         const imageSize = [ this._width, this._height ];
         const maxIterations = this._tuner.currentValue();
 
-        // encode keypoint offsets
-        const start = performance.now();
-        const offsets = this._encodeKeypointOffsets(corners, imageSize, maxIterations);
-        this._encodeKeypoints(offsets, imageSize, encoderLength, descriptorSize);
-        const pixels = this._encodeKeypoints.readPixelsSync();
+        // encode keypoints
+        //try {
+            // encode offsets
+            let encodingTime = performance.now();
+            const offsets = this._encodeKeypointOffsets(corners, imageSize, maxIterations);
+            this._encodeKeypoints(offsets, imageSize, encoderLength, descriptorSize);
+            encodingTime = performance.now() - encodingTime;
 
-        // tuner: drop noisy feedback when the page loads
-        if(performance.now() >= this._spawnedAt + 2000) {
-            const time = performance.now() - start;
-            this._tuner.feedObservation(time);
-        }
+            // read data from the GPU
+            let pixels, transferTime;
+            if(useAsyncTransfer) {
+                const status = { };
+                pixels = await this._encodeKeypoints.readPixelsAsync(0, 0, -1, -1, status);
+                transferTime = status.time;
+            }
+            else {
+                transferTime = performance.now();
+                pixels = this._encodeKeypoints.readPixelsSync(); // bottleneck
+                transferTime = performance.now() - transferTime;
+            }
 
-        // debug
-        //console.log(JSON.stringify(this._tuner.info()));
+            // tuner: drop noisy feedback when the page loads
+            if(performance.now() >= this._spawnedAt + 2000) {
+                const time = encodingTime + transferTime;
+                this._tuner.feedObservation(time);
+            }
 
-        // done!
-        return pixels;
+            // debug
+            /*
+            window._m = window._m || 0;
+            window._m = 0.9 * window._m + 0.1 * transferTime;
+            console.log(window._m);
+            //console.log(JSON.stringify(this._tuner.info()));
+            */
+
+            // done!
+            return pixels;
+        /*}
+        catch(err) {
+            Utils.fatal(err);
+        }*/
     }
 
     /**

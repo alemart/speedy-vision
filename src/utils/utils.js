@@ -85,6 +85,35 @@ export class Utils
     }
 
     /**
+     * Similar to setTimeout(fn, 0), but without the ~4ms delay.
+     * Although much faster than setTimeout, this may be resource-hungry
+     * (heavy on battery) if used in a loop. Use with care.
+     * Implementation based on David Baron's, but adapted for ES6 classes
+     * @param {Function} fn
+     */
+    //static setZeroTimeout(fn) { setTimeout(fn); }
+    static get setZeroTimeout()
+    {
+        return this._setZeroTimeout || (this._setZeroTimeout = (() => {
+            const msgId = '0%' + Math.random().toString(36).slice(2);
+            const queue = [];
+
+            window.addEventListener('message', ev => {
+                if(ev.source === window && ev.data === msgId) {
+                    event.stopPropagation();
+                    queue.shift().call(window);
+                }
+            }, true);
+
+            // make it efficient
+            return function setZeroTimeout(fn) {
+                queue.push(fn);
+                window.postMessage(msgId, '*');
+            }
+        })());
+    }
+
+    /**
      * Generates a random number with
      * Gaussian distribution (mu, sigma)
      * @param {number} mu mean

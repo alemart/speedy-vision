@@ -19,6 +19,8 @@
  * WebGL utilities
  */
 
+import { Utils } from '../utils/utils';
+
 /**
  * WebGL-related error
  */
@@ -47,6 +49,28 @@ export class GLUtils
     static Error(message)
     {
         return new GLError(message);
+    }
+
+    /**
+     * Get a GLError error object describing the latest WebGL error
+     * @param {WebGL2RenderingContext} gl 
+     * @returns {string}
+     */
+    static getError(gl)
+    {
+        const recognizedErrors = [
+            'NO_ERROR',
+            'INVALID_ENUM',
+            'INVALID_VALUE',
+            'INVALID_OPERATION',
+            'INVALID_FRAMEBUFFER_OPERATION',
+            'OUT_OF_MEMORY',
+            'CONTEXT_LOST_WEBGL',
+        ];
+
+        const glError = gl.getError();
+        const message = recognizedErrors.find(error => gl[error] == glError) || 'Unknown';
+        return GLUtils.Error(message);
     }
 
     /**
@@ -245,5 +269,68 @@ export class GLUtils
     {
         gl.deleteFramebuffer(fbo);
         return null;
+    }
+
+    /**
+     * Waits for a sync object to become signaled
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLSync} sync sync object
+     * @param {GLbitfield} [flags] may be gl.SYNC_FLUSH_COMMANDS_BIT or 0
+     * @returns {Promise} a promise that resolves as soon as the sync object becomes signaled
+     */
+    static clientWaitAsync(gl, sync, flags = 0)
+    {
+        return new Promise((resolve, reject) => {
+            function checkStatus() {
+                const status = gl.clientWaitSync(sync, flags, 0);
+                if(status == gl.TIMEOUT_EXPIRED)
+                    Utils.setZeroTimeout(checkStatus);
+                else if(status == gl.WAIT_FAILED)
+                    reject(GLUtils.getError(gl));
+                else
+                    resolve();
+            }
+            checkStatus();
+        });
+    }
+
+    /**
+     * Reads data from a WebGLBuffer into an ArrayBufferView
+     * This is like gl.getBufferSubData(), but async
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLBuffer} glBuffer will be bound to target
+     * @param {GLenum} target
+     * @param {GLintptr} srcByteOffset usually 0
+     * @param {ArrayBufferView} destBuffer
+     * @param {GLuint} [destOffset]
+     * @param {GLuint} [length]
+     * @param {object} [outStatus] output parameter: status object featuring additional info
+     * @returns {Promise<ArrayBufferView>} a promise that resolves to destBuffer
+     */
+    static getBufferSubDataAsync(gl, glBuffer, target, srcByteOffset, destBuffer, destOffset = 0, length = 0, outStatus = null)
+    {
+        return new Promise((resolve, reject) => {
+            const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+            const start = performance.now();
+
+            // empty internal command queues and send them to the GPU asap
+            gl.flush(); // make sure the sync command is read
+
+            // wait for the commands to be processed by the GPU
+            this.clientWaitAsync(gl, sync).then(() => {
+                gl.bindBuffer(target, glBuffer);
+                gl.getBufferSubData(target, srcByteOffset, destBuffer, destOffset, length);
+                gl.bindBuffer(target, null);
+                if(outStatus != null)
+                    outStatus.time = performance.now() - start;
+                resolve(destBuffer);
+            }).catch(err => {
+                if(outStatus != null)
+                    outStatus.time = performance.now() - start;
+                reject(GLUtils.Error(`Can't getBufferSubDataAsync(): got ${err.message} in clientWaitAsync()`));
+            }).finally(() => {
+                gl.deleteSync(sync);
+            });
+        });
     }
 }

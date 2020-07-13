@@ -46,7 +46,7 @@ export class FeatureDetector
      * @param {SpeedyMedia} media The media
      * @param {number} [n] We'll run FAST-n, where n must be 9 (default), 7 or 5
      * @param {object} [settings] Additional settings
-     * @returns {Array<SpeedyFeature>} keypoints
+     * @returns {Promise<Array<SpeedyFeature>>} keypoints
      */
     fast(media, n = 9, settings = {})
     {
@@ -78,14 +78,14 @@ export class FeatureDetector
 
         // extract features
         const keypoints = FAST.run(n, gpu, greyscale, settings);
-        return this._extractKeypoints(keypoints);
+        return this._extractKeypoints(keypoints, media.options.useAsyncTransfer);
     }
 
     /**
      * BRISK feature point detection
      * @param {SpeedyMedia} media The media
      * @param {object} [settings]
-     * @returns {Array<SpeedyFeature>}
+     * @returns {Promise<Array<SpeedyFeature>>}
      */
     brisk(media, settings = {})
     {
@@ -116,22 +116,28 @@ export class FeatureDetector
 
         // extract features
         const keypoints = BRISK.run(gpu, greyscale, settings);
-        return this._extractKeypoints(keypoints);
+        return this._extractKeypoints(keypoints, media.options.useAsyncTransfer);
     }
 
     // given a corner-encoded texture,
-    // return an Array of keypoints
-    _extractKeypoints(corners, gpu = this._gpu)
+    // return a Promise that resolves to
+    // an Array of keypoints
+    _extractKeypoints(corners, useAsyncTransfer = true, gpu = this._gpu)
     {
-        const encodedKeypoints = gpu.encoders.encodeKeypoints(corners);
-        const keypoints = gpu.encoders.decodeKeypoints(encodedKeypoints);
-        const slack = this._lastKeypointCount > 0 ? // approximates assuming continuity
-            Math.max(1, Math.min(keypoints.length / this._lastKeypointCount), 2) : 1;
+        return new Promise((resolve, reject) => {
+            gpu.encoders.encodeKeypoints(corners, useAsyncTransfer).then(encodedKeypoints => {
+                const keypoints = gpu.encoders.decodeKeypoints(encodedKeypoints);
+                const slack = this._lastKeypointCount > 0 ? // approximates assuming continuity
+                    Math.max(1, Math.min(keypoints.length / this._lastKeypointCount), 2) : 1;
 
-        gpu.encoders.optimizeKeypointEncoder(keypoints.length * slack);
-        this._lastKeypointCount = keypoints.length;
+                gpu.encoders.optimizeKeypointEncoder(keypoints.length * slack);
+                this._lastKeypointCount = keypoints.length;
 
-        return keypoints;
+                resolve(keypoints);
+            }).catch(err => {
+                reject(err);
+            });
+        });
     }
 
     // find a sensitivity value in [0,1] such that
