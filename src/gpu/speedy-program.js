@@ -68,7 +68,7 @@ const UNIFORM_TYPES = {
 };
 
 // number of pixel buffer objects
-const PBO_COUNT = 2;
+const PIXEL_BUFFER_COUNT = 2;
 
 /**
  * A SpeedyProgram is a Function that
@@ -131,11 +131,8 @@ export class SpeedyProgram extends Function
         (gl[UNIFORM_TYPES[uniform.type]])(uniform.location, width, height);
         //console.log(`Resized program to ${width} x ${height}`);
 
-        // invalidate pixel buffers
-        //return;
-        if(this._pboSize[0] * this._pboSize[1] < width * height) {
-            this._allocatePBOs(width, height);
-        }
+        // reallocate pixel buffers
+        this._reallocatePixelBuffers(width, height);
     }
 
     /**
@@ -167,21 +164,21 @@ export class SpeedyProgram extends Function
         x = Math.max(0, Math.min(x, width - 1));
         y = Math.max(0, Math.min(y, height - 1));
 
-        // allocate the pixels array
-        if(this._pixels == null)
-            this._allocatePBOs(this._stdprog.width, this._stdprog.height);
+        // allocate the pixel buffers
+        if(this._pixelBuffer == null)
+            this._reallocatePixelBuffers(this._stdprog.width, this._stdprog.height);
 
         // read pixels
         if(this._stdprog.hasOwnProperty('fbo')) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._stdprog.fbo);
-            gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, this._pixels[0]);
+            gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, this._pixelBuffer[0]);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         }
         else
-            gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, this._pixels[0]);
+            gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, this._pixelBuffer[0]);
 
         // done!
-        return this._pixels[0];
+        return this._pixelBuffer[0];
     }
 
     /**
@@ -214,65 +211,69 @@ export class SpeedyProgram extends Function
         x = Math.max(0, Math.min(x, width - 1));
         y = Math.max(0, Math.min(y, height - 1));
 
-        // allocate the PBOs
-        if(this._pixels == null)
-            this._allocatePBOs(this._stdprog.width, this._stdprog.height);
+        // allocate the pixel buffers
+        if(this._pixelBuffer == null)
+            this._reallocatePixelBuffers(this._stdprog.width, this._stdprog.height);
 
-        // use these PBOs
-        const wantedPBO = this._pboIndex;
-        this._pboIndex = (this._pboIndex + 1) % PBO_COUNT;
-        const nextPBO = this._pboIndex;
+        // use these buffers
+        const wantedPBO = this._pixelBufferIndex;
+        this._pixelBufferIndex = (this._pixelBufferIndex + 1) % PIXEL_BUFFER_COUNT;
+        const nextPBO = this._pixelBufferIndex;
+
+        // create a PBO
+        const pbo = gl.createBuffer();
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
+        gl.bufferData(gl.PIXEL_PACK_BUFFER, this._pixelBuffer[nextPBO].byteLength, gl.STREAM_READ);
 
         // schedule a DMA transfer
-        //console.log('DMA SCHEDULED to', nextPBO);
-        
         if(this._stdprog.hasOwnProperty('fbo')) {
-            gl.bindBuffer(gl.PIXEL_BACK_BUFFER, this._pbo[nextPBO]);
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._stdprog.fbo);
             gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
         }
         else {
-            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, this._pbo[nextPBO]);
             gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
-            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
         }
 
-        GLUtils.getBufferSubDataAsync(gl, this._pbo[nextPBO],
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+
+        // wait for DMA transfer
+        GLUtils.getBufferSubDataAsync(gl, pbo,
             gl.PIXEL_PACK_BUFFER,
             0,
-            this._pixels[nextPBO],
+            this._pixelBuffer[nextPBO],
             0,
             0,
-            this._pboStatus[nextPBO]
+            this._pixelBufferStatus[nextPBO]
         ).then(() => {
             Utils.setZeroTimeout(() => { // next step
                 //console.log('DMA DONE to ', nextPBO);
-                this._pboReady[nextPBO] = true;
+                this._pixelBufferReady[nextPBO] = true;
             });
         }).catch(err => {
             Utils.fatal(err);
+        }).finally(() => {
+            gl.deleteBuffer(pbo);
         });
 
         // fill in the status object
         if(outStatus != null)
-            outStatus.time = this._pboStatus[wantedPBO].time;
+            outStatus.time = this._pixelBufferStatus[wantedPBO].time;
 
-        // return the wanted pixels array
+        // return the wanted pixel buffer
         return new Promise((resolve, reject) => {
             const start = performance.now();
-            let performanceCounter = 10;
+            let performanceCounter = 30;
             const that = this;
 
             function waitUntilPBOIsReady() {
-                if(that._pboReady[wantedPBO]) {
+                if(that._pixelBufferReady[wantedPBO]) {
                     //console.log('RETURNED ', wantedPBO);
-                    that._pboReady[wantedPBO] = false;
-                    resolve(that._pixels[wantedPBO]);
+                    that._pixelBufferReady[wantedPBO] = false;
+                    resolve(that._pixelBuffer[wantedPBO]);
                 }
                 else {
-                    if(0 == --performanceCounter && 0 == that._pboAlarm++) {
+                    if(0 == --performanceCounter && 0 == that._pixelBufferAlarm++) {
                         const time = performance.now() - start;
                         Utils.warning(`Performance warning: waiting too many cycles for PBO readiness (${time} ms). Consider using sync transfer.`);
                     }
@@ -342,7 +343,7 @@ export class SpeedyProgram extends Function
         this._options = options;
         this._stdprog = stdprog;
         this._params = params;
-        this._preallocatePBOs();
+        this._initPixelBuffers();
     }
 
     // Run the SpeedyProgram
@@ -454,62 +455,46 @@ export class SpeedyProgram extends Function
         return texNo;
     }
 
-    // preallocate PBOs (initialize some properties)
-    _preallocatePBOs()
+    // initialize pixel buffers (no allocation is done)
+    _initPixelBuffers()
     {
-        this._pixels = null;
-        this._pbo = null;
-        this._pboStatus = Array(PBO_COUNT);
-        this._pboReady = Array(PBO_COUNT);
-        this._pboSize = [0, 0];
-        this._pboIndex = 0;
-        this._pboAlarm = 0;
+        this._pixelBuffer = null;
+        this._pixelBufferStatus = Array(PIXEL_BUFFER_COUNT);
+        this._pixelBufferReady = Array(PIXEL_BUFFER_COUNT);
+        this._pixelBufferSize = [0, 0];
+        this._pixelBufferIndex = 0;
+        this._pixelBufferAlarm = 0;
 
-        for(let i = 0; i < PBO_COUNT; i++) {
-            this._pboStatus[i] = { time: 0 };
-            this._pboReady[i] = false;           
+        for(let i = 0; i < PIXEL_BUFFER_COUNT; i++) {
+            this._pixelBufferStatus[i] = { time: 0 };
+            this._pixelBufferReady[i] = false;
         }
 
-        this._pboReady[this._pboIndex] = true;
+        this._pixelBufferReady[this._pixelBufferIndex] = true;
     }
 
-    // allocate PBOs
-    _allocatePBOs(width, height)
+    // resize pixel buffers
+    _reallocatePixelBuffers(width, height)
     {
-        const gl = this._gl;
-        let i;
+        // skip realloc
+        if(width * height <= this._pixelBufferSize[0] * this._pixelBufferSize[1])
+            return;
 
         // update size
-        this._pboSize[0] = width;
-        this._pboSize[1] = height;
+        this._pixelBufferSize[0] = width;
+        this._pixelBufferSize[1] = height;
 
         // reallocate pixels array
-        const oldPixelsArray = this._pixels;
-        this._pixels = Array(PBO_COUNT);
-        for(i = 0; i < PBO_COUNT; i++) {
-            this._pixels[i] = createPixelsArray(width, height);
+        const oldPixelsArray = this._pixelBuffer;
+        this._pixelBuffer = Array(PIXEL_BUFFER_COUNT);
+        for(let i = 0; i < PIXEL_BUFFER_COUNT; i++) {
+            this._pixelBuffer[i] = createPixelBuffer(width, height);
             if(oldPixelsArray) {
-                if(oldPixelsArray[i].length > this._pixels[i].length)
-                    this._pixels[i].set(oldPixelsArray[i].slice(0, this._pixels[i].length));
+                if(oldPixelsArray[i].length > this._pixelBuffer[i].length)
+                    this._pixelBuffer[i].set(oldPixelsArray[i].slice(0, this._pixelBuffer[i].length));
                 else
-                    this._pixels[i].set(oldPixelsArray[i]);
+                    this._pixelBuffer[i].set(oldPixelsArray[i]);
             }
-        }
-        
-        // release previous PBOs
-        const oldPBOArray = this._pbo;
-        if(oldPBOArray) {
-            for(i = 0; i < oldPBOArray.length; i++)
-                gl.deleteBuffer(oldPBOArray[i]);
-        }
-
-        // allocate new PBOs
-        this._pbo = Array(PBO_COUNT);
-        for(i = 0; i < PBO_COUNT; i++) {
-            this._pbo[i] = gl.createBuffer();
-            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, this._pbo[i]);
-            gl.bufferData(gl.PIXEL_PACK_BUFFER, this._pixels[i].byteLength, gl.DYNAMIC_READ);
-            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
         }
     }
 }
@@ -713,8 +698,8 @@ function detachFBO(stdprog)
     return stdprog;
 }
 
-// create a w x h array for RGBA data
-function createPixelsArray(width, height)
+// create a width x height buffer for RGBA data
+function createPixelBuffer(width, height)
 {
     const pixels = new Uint8Array(width * height * 4);
     pixels[0] = pixels[1] = pixels[2] = pixels[3] = 255; // will be recognized as empty

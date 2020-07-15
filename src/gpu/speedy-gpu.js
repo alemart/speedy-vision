@@ -259,7 +259,7 @@ export class SpeedyGPU
                 if(isFinite(timeToRestore)) {
                     setTimeout(() => {
                         ext.restoreContext();
-                        setTimeout(() => resolve(), 1); // next frame
+                        setTimeout(() => resolve(), 0); // next frame
                     }, Math.max(timeToRestore, 0) * 1000.0);
                 }
                 else

@@ -51,7 +51,7 @@ export class SpeedyMedia
 
             // set options
             this._options = Object.freeze(Object.assign({
-                useAsyncTransfer: (this._type != MediaType.Image) && !navigator.userAgent.includes('Firefox'),
+                useAsyncTransfer: (this._type != MediaType.Image),
             }, options));
 
             // spawn relevant components

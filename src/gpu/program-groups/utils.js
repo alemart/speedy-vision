@@ -41,6 +41,9 @@ export class GPUUtils extends GPUProgramGroup
             // no-operation
             .declare('identity', identity)
 
+            // flip y-axis
+            .declare('flipY', flipY)
+
             // output a texture from a pipeline
             .declare('output', flipY,
                 this.program.displaysGraphics())

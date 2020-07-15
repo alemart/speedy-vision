@@ -70,7 +70,7 @@ export class GLUtils
 
         const glError = gl.getError();
         const message = recognizedErrors.find(error => gl[error] == glError) || 'Unknown';
-        return GLUtils.Error(message);
+        return new GLError(message);
     }
 
     /**
@@ -142,24 +142,24 @@ export class GLUtils
      * @param {WebGL2RenderingContext} gl 
      * @param {number} width in pixels
      * @param {number} height in pixels
-     * @param {number} format 
      * @returns {WebGLTexture}
      */
-    static createTexture(gl, width, height, format = null)
+    static createTexture(gl, width, height)
     {
+        // validate dimensions
+        if(width <= 0 || height <= 0)
+            throw GLUtils.Error(`Invalid dimensions given to createTexture()`);
+
+        // create texture
         const texture = gl.createTexture();
 
-        // use default format
-        if(format === null)
-            format = gl.RGBA8;
-        
         // setup texture
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
-        gl.texStorage2D(gl.TEXTURE_2D, 1, format, width, height);
+        gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, width, height);
 
         // unbind & return
         gl.bindTexture(gl.TEXTURE_2D, null);
@@ -281,15 +281,22 @@ export class GLUtils
     static clientWaitAsync(gl, sync, flags = 0)
     {
         return new Promise((resolve, reject) => {
+            const isFirefox = navigator.userAgent.includes('Firefox');
+
             function checkStatus() {
                 const status = gl.clientWaitSync(sync, flags, 0);
                 if(status == gl.TIMEOUT_EXPIRED)
                     Utils.setZeroTimeout(checkStatus);
-                else if(status == gl.WAIT_FAILED)
-                    reject(GLUtils.getError(gl));
+                else if(status == gl.WAIT_FAILED) {
+                    if(isFirefox && gl.getError() == gl.NO_ERROR) // firefox bug?
+                        Utils.setZeroTimeout(checkStatus);
+                    else
+                        reject(GLUtils.getError(gl));
+                }
                 else
                     resolve();
             }
+
             checkStatus();
         });
     }
@@ -317,10 +324,11 @@ export class GLUtils
             gl.flush(); // make sure the sync command is read
 
             // wait for the commands to be processed by the GPU
-            this.clientWaitAsync(gl, sync).then(() => {
+            GLUtils.clientWaitAsync(gl, sync).then(() => {
                 gl.bindBuffer(target, glBuffer);
                 gl.getBufferSubData(target, srcByteOffset, destBuffer, destOffset, length);
                 gl.bindBuffer(target, null);
+
                 if(outStatus != null)
                     outStatus.time = performance.now() - start;
                 resolve(destBuffer);
