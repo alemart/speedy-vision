@@ -247,7 +247,6 @@ export class SpeedyProgram extends Function
             this._pixelBufferStatus[nextPBO]
         ).then(() => {
             Utils.setZeroTimeout(() => { // next step
-                //console.log('DMA DONE to ', nextPBO);
                 this._pixelBufferReady[nextPBO] = true;
             });
         }).catch(err => {
@@ -280,9 +279,7 @@ export class SpeedyProgram extends Function
                         //else
                             that._pixelBufferAlarm = 0;
                     }
-                    Utils.setZeroTimeout(waitUntilPBOIsReady);
-                    //setTimeout(waitUntilPBOIsReady); // easier on the CPU than setZeroTimeout
-                    //console.log('PBO WAIT for', wantedPBO, -(performanceCounter-10));
+                    Utils.setZeroTimeout(waitUntilPBOIsReady); // wantedPBO should have been ready!
                 }
             }
 
