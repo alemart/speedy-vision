@@ -267,7 +267,6 @@ export class SpeedyProgram extends Function
 
             function waitUntilPBOIsReady() {
                 if(that._pixelBufferReady[wantedPBO]) {
-                    //console.log('RETURNED ', wantedPBO);
                     that._pixelBufferReady[wantedPBO] = false;
                     resolve(that._pixelBuffer[wantedPBO]);
                 }
