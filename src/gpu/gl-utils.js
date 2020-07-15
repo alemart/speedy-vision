@@ -159,7 +159,8 @@ export class GLUtils
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
-        gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, width, height);
+        //gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, width, height);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
 
         // unbind & return
         gl.bindTexture(gl.TEXTURE_2D, null);
@@ -182,23 +183,38 @@ export class GLUtils
      * Upload pixel data to a WebGL texture
      * @param {WebGL2RenderingContext} gl 
      * @param {WebGLTexture} texture 
+     * @param {GLsizei} width texture width
+     * @param {GLsizei} height texture height
      * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} pixels 
      * @returns {WebGLTexture} texture
      */
-    static uploadToTexture(gl, texture, pixels)
+    static uploadToTexture(gl, texture, width, height, pixels)
     {
         // Prefer calling uploadToTexture() before gl.useProgram() to avoid the
         // needless switching of GL programs internally. See also:
         // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices
         gl.bindTexture(gl.TEXTURE_2D, texture);
+        /*
+        // slower than texImage2D, unlike the spec?
         gl.texSubImage2D(gl.TEXTURE_2D,     // target
                          0,                 // mip level
                          0,                 // x-offset
                          0,                 // y-offset
+                         width,             // texture width
+                         height,            // texture height
                          gl.RGBA,           // source format
                          gl.UNSIGNED_BYTE,  // source type
                          pixels);           // source data
-
+        */
+        gl.texImage2D(gl.TEXTURE_2D,        // target
+                      0,                    // mip level
+                      gl.RGBA8,             // internal format
+                      width,                // texture width
+                      height,               // texture height
+                      0,                    // border
+                      gl.RGBA,              // source format
+                      gl.UNSIGNED_BYTE,     // source type
+                      pixels);              // source data
         gl.bindTexture(gl.TEXTURE_2D, null);
         return texture;
     }
