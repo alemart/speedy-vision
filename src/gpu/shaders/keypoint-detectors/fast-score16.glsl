@@ -27,10 +27,8 @@ uniform float threshold;
 void main()
 {
     vec4 pixel = threadPixel(image);
-    float ifCorner = step(1.0f, pixel.r);
     float t = clamp(threshold, 0.0f, 1.0f);
-    float c = pixel.g;
-    float ct = c + t, c_t = c - t;
+    float ct = pixel.g + t, c_t = pixel.g - t;
 
     // read neighbors
     float p0 = pixelAtOffset(image, ivec2(0, 3)).g;
@@ -71,5 +69,5 @@ void main()
 
     // corner score
     float score = max(bs, ds) / 16.0f;
-    color = vec4(score * ifCorner, pixel.g, score, pixel.a);
+    color = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);
 }
