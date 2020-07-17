@@ -43,7 +43,7 @@
 
 // FAST-9_16: requires 9 contiguous pixels
 // on a circumference of 16 pixels
-export const fast9 = (image, threshold) => require('../../shaders/keypoint-detectors/fast9ml.glsl');
+export const fast9 = (image, threshold) => require('../../shaders/keypoint-detectors/fast9lg.glsl');
 
 // FAST-7_12: requires 7 contiguous pixels
 // on a circumference of 12 pixels
