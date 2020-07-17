@@ -306,13 +306,17 @@ export class GLUtils
                     //Utils.setZeroTimeout(checkStatus);
                 }
                 else if(status == gl.WAIT_FAILED) {
-                    if(isFirefox && gl.getError() == gl.NO_ERROR) // firefox bug?
-                        setTimeout(checkStatus, 0); //Utils.setZeroTimeout(checkStatus);
-                    else
+                    if(isFirefox && gl.getError() == gl.NO_ERROR) { // firefox bug?
+                        setTimeout(checkStatus, 0);
+                        //Utils.setZeroTimeout(checkStatus);
+                    }
+                    else {
                         reject(GLUtils.getError(gl));
+                    }
                 }
-                else
+                else {
                     resolve();
+                }
             }
 
             checkStatus();

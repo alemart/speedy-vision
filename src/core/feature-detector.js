@@ -33,12 +33,14 @@ export class FeatureDetector
     /**
      * Class constructor
      * @param {SpeedyGPU} gpu
+     * @param {boolean} [optimizeForDynamicUsage] optimize for calling the feature detector continuously
      */
-    constructor(gpu)
+    constructor(gpu, optimizeForDynamicUsage)
     {
         this._gpu = gpu;
         this._lastKeypointCount = 0;
         this._sensitivityTuner = null;
+        this._optimizeForDynamicUsage = optimizeForDynamicUsage;
     }
 
     /**
@@ -78,7 +80,7 @@ export class FeatureDetector
 
         // extract features
         const keypoints = FAST.run(n, gpu, greyscale, settings);
-        return this._extractKeypoints(keypoints, media.options.usage == 'dynamic');
+        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage);
     }
 
     /**
@@ -116,7 +118,7 @@ export class FeatureDetector
 
         // extract features
         const keypoints = BRISK.run(gpu, greyscale, settings);
-        return this._extractKeypoints(keypoints, media.options.usage == 'dynamic');
+        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage);
     }
 
     // given a corner-encoded texture,
@@ -155,6 +157,12 @@ export class FeatureDetector
             })
         };
 
+        // show warning if static usage
+        if(!this._optimizeForDynamicUsage && !this._findSensitivity._warning) {
+            Utils.warning(`Finding an expected number of features in a media configured for static usage`);
+            this._findSensitivity._warning = true;
+        }
+
         // spawn the tuner
         this._sensitivityTuner = this._sensitivityTuner ||
             new OnlineErrorTuner(0, 1200); // use a slightly wider interval for better stability
@@ -162,8 +170,8 @@ export class FeatureDetector
         const normalizer = 0.001;
 
         // update tuner
-        this._sensitivityTuner.tolerance = expected.tolerance;
-        this._sensitivityTuner.feedObservation(this._lastKeypointCount, expected.number);
+        this._sensitivityTuner.tolerance = Math.max(expected.tolerance, 0);
+        this._sensitivityTuner.feedObservation(this._lastKeypointCount, Math.max(expected.number, 0));
         const sensitivity = this._sensitivityTuner.currentValue() * normalizer;
 
         // return the new sensitivity

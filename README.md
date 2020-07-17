@@ -243,7 +243,7 @@ Detects feature points in a `SpeedyMedia`.
 * `config: object, optional`. A configuration object that accepts the following keys (all are optional):
   * `method: string`. The name of the method to be used to detect the features (see the table below).
   * `sensitivity: number`. A number between `0.0` and `1.0`. The higher the number, the more features you get.
-  * `expected: number | object`. Speedy will automatically adjust the sensitivity value to get you *approximately* the number of features you ask. This options requires multiple calls to work. For more information, read the section on [automatic sensitivity](#automatic-sensitivity).
+  * `expected: number | object`. Speedy will automatically adjust the sensitivity value to get you *approximately* the number of features you ask. For more information, read the section on [automatic sensitivity](#automatic-sensitivity).
   * `denoise: boolean`. Whether or not to denoise the image before finding the features. Defaults to `true`.
 
 The configuration object accepts more keys depending on which method is specified. Currently, the following methods for feature detection are available:
@@ -308,9 +308,11 @@ Speedy implements a modified version of the BRISK feature detector[2]. It is abl
 
 ##### Automatic sensitivity
 
-When you specify the number of features you expect to get, Speedy will automatically learn a sensitivity value that gives you that amount of features (within a tolerance range). It takes a few calls to the feature detector for Speedy to adjust the sensitivity. Multiple calls is what you will be doing anyway if you need to detect features in a video (see the example below).
+Sensitivity alone does not give you control of how many feature points you will get. When you specify the number of features you expect to get, Speedy will automatically learn a sensitivity value that gives you that amount of features, within a tolerance range.
 
-Speedy finds the feature points on the GPU. Although this is an efficient process, downloading data from the GPU is an expensive operation. The more features you get, the more data has to be downloaded from the GPU. This impacts performance. The sensitivity value alone does not give you control of how many feature points you will get. **Setting an expected number of feature points may thus help you with stability and performance**. 
+Automatic sensitivity is meant to be used with media configured for [dynamic usage](#speedymediaoptions). It takes a few calls to the feature detector for Speedy to adjust the sensitivity. Multiple calls is what you will be doing anyway if you need to detect features in a video (see the example below).
+
+Speedy finds the feature points on the GPU. Although this is an efficient process, downloading data from the GPU is expensive. The more features you get, the more data has to be downloaded. **Setting an expected number of feature points may thus help you with stability and performance**.
 
 The `config.expected` option can either be a number or an object with the following keys:
 
@@ -327,12 +329,13 @@ window.onload = async function() {
     const video = document.getElementById('my-video');
     const media = await Speedy.load(video);
 
-    // give me 100 feature points
+    // find features
     let features = [];
     async function updateFeatures()
     {
         const FPS = 60;
 
+        // give me approximately 100 feature points
         features = await media.findFeatures({
             expected: 100
         });

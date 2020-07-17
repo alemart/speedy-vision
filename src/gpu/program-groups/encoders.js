@@ -55,14 +55,14 @@ export class GPUEncoders extends GPUProgramGroup
             // Keypoint encoding
             .declare('_encodeKeypointOffsets', encodeKeypointOffsets)
             .declare('_encodeKeypoints', encodeKeypoints, {
-                ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH),
+                output: [INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH],
                 renderToTexture: false
             })
         ;
 
         // setup internal data
         let neighborFn = (s) => Math.round(Utils.gaussianNoise(s, 64)) % 256;
-        this._tuner = new StochasticTuner(48, 32, 48, 0.2, 8, 60, neighborFn);
+        this._tuner = new StochasticTuner(48, 32, 48/*255*/, 0.2, 8, 60, neighborFn);
         this._keypointEncoderLength = INITIAL_ENCODER_LENGTH;
         this._descriptorSize = 0;
         this._spawnedAt = performance.now();
@@ -98,7 +98,7 @@ export class GPUEncoders extends GPUProgramGroup
 
     /**
      * Encodes the keypoints of an image - this is a bottleneck!
-     * @param {WebGLTexture} corners image with encoded corners
+     * @param {WebGLTexture} corners texture with encoded corners
      * @param {bool} [useAsyncTransfer] transfer data from the GPU without blocking the CPU
      * @returns {Promise<Array<Uint8Array>>} pixels in the [r,g,b,a, ...] format
      */

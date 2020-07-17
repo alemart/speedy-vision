@@ -308,7 +308,7 @@ export class SpeedyMedia
             Utils.fatal('Can\'t find features: SpeedyMedia has been released');
 
         // Lazy instantiation
-        this._featureDetector = this._featureDetector || new FeatureDetector(this._gpu);
+        this._featureDetector = this._featureDetector || new FeatureDetector(this._gpu, this.options.usage == 'dynamic');
 
         // Algorithm table
         const fn = this._featureDetector._table || (this._featureDetector._table = {
@@ -380,7 +380,7 @@ function buildOptions(options, defaultOptions)
         (...args) => Utils.warning(`Invalid option when loading media.`, ...args));
 
     // build options object
-    options = Object.assign({}, options, defaultOptions);
+    options = Object.assign(defaultOptions, options);
 
     // validate
     if(options.usage != 'dynamic' && options.usage != 'static') {

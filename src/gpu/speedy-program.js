@@ -246,9 +246,7 @@ export class SpeedyProgram extends Function
             0,
             this._pixelBufferStatus[nextPBO]
         ).then(() => {
-            Utils.setZeroTimeout(() => { // next step
-                this._pixelBufferReady[nextPBO] = true;
-            });
+            this._pixelBufferReady[nextPBO] = true;
         }).catch(err => {
             Utils.fatal(err);
         }).finally(() => {
@@ -271,6 +269,10 @@ export class SpeedyProgram extends Function
                     resolve(that._pixelBuffer[wantedPBO]);
                 }
                 else {
+                    // wantedPBO should have been ready!
+                    setTimeout(waitUntilPBOIsReady, 0); // easier on the CPU
+                    //Utils.setZeroTimeout(waitUntilPBOIsReady);
+
                     /*if(30 == ++performanceCounter && 3 == ++that._pixelBufferAlarm) {
                         const time = performance.now() - start;
                         if(time >= 6)
@@ -278,12 +280,10 @@ export class SpeedyProgram extends Function
                         //else
                             //that._pixelBufferAlarm = 0;
                     }*/
-                    //Utils.setZeroTimeout(waitUntilPBOIsReady); // wantedPBO should have been ready!
-                    setTimeout(waitUntilPBOIsReady, 0);
                 }
             }
 
-            waitUntilPBOIsReady();
+            Utils.setZeroTimeout(waitUntilPBOIsReady); // wait until next frame
         });
     }
 
