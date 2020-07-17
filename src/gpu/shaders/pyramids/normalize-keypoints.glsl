@@ -47,19 +47,23 @@ void main()
         (all(lessThan(scaled + one, size))) && // square is within bounds
         (p0.r + p1.r + p2.r + p3.r > 0.0f); // there is a corner
 
-    vec2 best = gotCorner ? mix( // FIXME
+    vec2 best = mix(
+        vec2(0.0f, pixel.a), // drop corner
         mix(
-            p1.r > p3.r ? p1.ra : p3.ra,
-            p1.r > p2.r ? p1.ra : p2.ra,
-            B2(p2.r > p3.r)
+            mix(
+                p1.r > p3.r ? p1.ra : p3.ra,
+                p1.r > p2.r ? p1.ra : p2.ra,
+                B2(p2.r > p3.r)
+            ),
+            mix(
+                p0.r > p3.r ? p0.ra : p3.ra,
+                p0.r > p2.r ? p0.ra : p2.ra,
+                B2(p2.r > p3.r)
+            ),
+            B2(p0.r > p1.r)
         ),
-        mix(
-            p0.r > p3.r ? p0.ra : p3.ra,
-            p0.r > p2.r ? p0.ra : p2.ra,
-            B2(p2.r > p3.r)
-        ),
-        B2(p0.r > p1.r)
-    ) : vec2(0.0f, pixel.a); // drop corner
+        B2(gotCorner, gotCorner)
+    );
 
     // done
     color = vec4(best.x, pixel.gb, best.y);
