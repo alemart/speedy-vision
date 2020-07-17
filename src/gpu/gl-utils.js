@@ -209,9 +209,9 @@ export class GLUtils
         gl.texImage2D(gl.TEXTURE_2D,        // target
                       0,                    // mip level
                       gl.RGBA8,             // internal format
-                      width,                // texture width
-                      height,               // texture height
-                      0,                    // border
+                      //width,                // texture width
+                      //height,               // texture height
+                      //0,                    // border
                       gl.RGBA,              // source format
                       gl.UNSIGNED_BYTE,     // source type
                       pixels);              // source data

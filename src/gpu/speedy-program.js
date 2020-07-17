@@ -262,8 +262,8 @@ export class SpeedyProgram extends Function
         // return the wanted pixel buffer
         return new Promise((resolve, reject) => {
             const start = performance.now();
-            let performanceCounter = 0;
             const that = this;
+            //let performanceCounter = 0;
 
             function waitUntilPBOIsReady() {
                 if(that._pixelBufferReady[wantedPBO]) {
@@ -271,13 +271,13 @@ export class SpeedyProgram extends Function
                     resolve(that._pixelBuffer[wantedPBO]);
                 }
                 else {
-                    if(30 == ++performanceCounter && 3 == ++that._pixelBufferAlarm) {
+                    /*if(30 == ++performanceCounter && 3 == ++that._pixelBufferAlarm) {
                         const time = performance.now() - start;
                         if(time >= 6)
                             Utils.warning(`Performance warning: waiting too many cycles for PBO readiness (${time} ms). Consider using sync transfer if you aren't switching tasks.`);
                         //else
-                            that._pixelBufferAlarm = 0;
-                    }
+                            //that._pixelBufferAlarm = 0;
+                    }*/
                     Utils.setZeroTimeout(waitUntilPBOIsReady); // wantedPBO should have been ready!
                 }
             }

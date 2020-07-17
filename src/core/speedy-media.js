@@ -79,9 +79,10 @@ export class SpeedyMedia
      * Load a media source
      * Will wait until the HTML media source is loaded
      * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} mediaSource An image, video or canvas
+     * @param {object} [options] options object
      * @returns {Promise<SpeedyMedia>}
      */
-    static load(mediaSource)
+    static load(mediaSource, options = { })
     {
         return new Promise((resolve, reject) => {
             const dimensions = getMediaDimensions(mediaSource);
@@ -89,7 +90,7 @@ export class SpeedyMedia
                 // try to load the media until it's ready
                 (function loadMedia(dimensions, k = 500) {
                     if(dimensions.width > 0 && dimensions.height > 0) {
-                        const media = new SpeedyMedia(mediaSource, dimensions.width, dimensions.height);
+                        const media = new SpeedyMedia(mediaSource, dimensions.width, dimensions.height, options);
                         Utils.log(`Loaded SpeedyMedia with a ${mediaSource}.`);
                         resolve(media);
                     }

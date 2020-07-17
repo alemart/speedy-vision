@@ -21,6 +21,7 @@
 
 uniform sampler2D image;
 uniform float threshold;
+const ivec4 margin = ivec4(3, 3, 4, 4);
 
 // FAST-9,16 implementation based on Machine Learning
 // Adapted from New BSD Licensed fast_9.c code found at
@@ -35,7 +36,8 @@ void main()
     color = vec4(0.0f, pixel.gba);
 
     // outside bounds?
-    if(thread.x < 3 || thread.y < 3 || thread.x >= size.x - 3 || thread.y >= size.y - 3)
+    //if(thread.x < 3 || thread.y < 3 || thread.x >= size.x - 3 || thread.y >= size.y - 3)
+    if(any(lessThan(ivec4(thread, size - thread), margin)))
         return;
 
     // is it a corner?
@@ -47,7 +49,7 @@ void main()
     float p8 = pixelAtOffset(image, ivec2(0, -3)).g;
     float p12 = pixelAtOffset(image, ivec2(-3, 0)).g;
 
-    // not a corner
+    // quick test: not a corner
     if(!(
         ((c_t > p0 || c_t > p8) && (c_t > p4 || c_t > p12)) ||
         ((ct < p0  || ct < p8)  && (ct < p4  || ct < p12))

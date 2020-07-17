@@ -37,7 +37,7 @@ window.onload = async function()
 {
     // tell Speedy to load the image
     const image = document.querySelector('img');
-    const media = await Speedy.load(image);
+    const media = await Speedy.load(image, { useAsyncTransfer: true });
 
     // create a canvas to display the features
     const canvas = createCanvas(media.width, media.height, image.title);

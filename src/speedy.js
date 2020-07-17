@@ -28,11 +28,12 @@ class Speedy
     /**
      * Loads a SpeedyMedia object based on the provided source element
      * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} sourceElement The source media
+     * @param {object} [options] Additional options
      * @returns {Promise<SpeedyMedia>}
      */
-    static load(sourceElement)
+    static load(sourceElement, options = { })
     {
-        return SpeedyMedia.load(sourceElement);
+        return SpeedyMedia.load(sourceElement, options);
     }
 
     /**

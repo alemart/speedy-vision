@@ -43,12 +43,7 @@
 
 // FAST-9_16: requires 9 contiguous pixels
 // on a circumference of 16 pixels
-export const fast9 = (image, threshold) => require('../../shaders/keypoint-detectors/fast9.glsl');
-
-// FAST-9,16 implementation based on Machine Learning
-// Adapted from New BSD Licensed fast_9.c code found at
-// https://github.com/edrosten/fast-C-src
-export const fast9ml = (image, threshold) => require('../../shaders/keypoint-detectors/fast9ml.glsl');
+export const fast9 = (image, threshold) => require('../../shaders/keypoint-detectors/fast9ml.glsl');
 
 // FAST-7_12: requires 7 contiguous pixels
 // on a circumference of 12 pixels
