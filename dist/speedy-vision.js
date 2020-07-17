@@ -1,12 +1,12 @@
 /*!
- * speedy-vision.js v0.3.0
+ * speedy-vision.js v0.3.1
  * https://github.com/alemart/speedy-vision-js
  * 
  * GPU-accelerated Computer Vision for the web
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-07-10T02:07:28.198Z
+ * Date: 2020-07-17T23:04:00.091Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -495,12 +495,14 @@ class FeatureDetector
     /**
      * Class constructor
      * @param {SpeedyGPU} gpu
+     * @param {boolean} [optimizeForDynamicUsage] optimize for calling the feature detector continuously
      */
-    constructor(gpu)
+    constructor(gpu, optimizeForDynamicUsage)
     {
         this._gpu = gpu;
         this._lastKeypointCount = 0;
         this._sensitivityTuner = null;
+        this._optimizeForDynamicUsage = optimizeForDynamicUsage;
     }
 
     /**
@@ -508,7 +510,7 @@ class FeatureDetector
      * @param {SpeedyMedia} media The media
      * @param {number} [n] We'll run FAST-n, where n must be 9 (default), 7 or 5
      * @param {object} [settings] Additional settings
-     * @returns {Array<SpeedyFeature>} keypoints
+     * @returns {Promise<Array<SpeedyFeature>>} keypoints
      */
     fast(media, n = 9, settings = {})
     {
@@ -540,14 +542,14 @@ class FeatureDetector
 
         // extract features
         const keypoints = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FAST"].run(n, gpu, greyscale, settings);
-        return this._extractKeypoints(keypoints);
+        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage);
     }
 
     /**
      * BRISK feature point detection
      * @param {SpeedyMedia} media The media
      * @param {object} [settings]
-     * @returns {Array<SpeedyFeature>}
+     * @returns {Promise<Array<SpeedyFeature>>}
      */
     brisk(media, settings = {})
     {
@@ -578,22 +580,28 @@ class FeatureDetector
 
         // extract features
         const keypoints = _algorithms_brisk_js__WEBPACK_IMPORTED_MODULE_1__["BRISK"].run(gpu, greyscale, settings);
-        return this._extractKeypoints(keypoints);
+        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage);
     }
 
     // given a corner-encoded texture,
-    // return an Array of keypoints
-    _extractKeypoints(corners, gpu = this._gpu)
+    // return a Promise that resolves to
+    // an Array of keypoints
+    _extractKeypoints(corners, useAsyncTransfer = true, gpu = this._gpu)
     {
-        const encodedKeypoints = gpu.encoders.encodeKeypoints(corners);
-        const keypoints = gpu.encoders.decodeKeypoints(encodedKeypoints);
-        const slack = this._lastKeypointCount > 0 ? // approximates assuming continuity
-            Math.max(1, Math.min(keypoints.length / this._lastKeypointCount), 2) : 1;
+        return new Promise((resolve, reject) => {
+            gpu.encoders.encodeKeypoints(corners, useAsyncTransfer).then(encodedKeypoints => {
+                const keypoints = gpu.encoders.decodeKeypoints(encodedKeypoints);
+                const slack = this._lastKeypointCount > 0 ? // approximates assuming continuity
+                    Math.max(1, Math.min(keypoints.length / this._lastKeypointCount), 2) : 1;
 
-        gpu.encoders.optimizeKeypointEncoder(keypoints.length * slack);
-        this._lastKeypointCount = keypoints.length;
+                gpu.encoders.optimizeKeypointEncoder(keypoints.length * slack);
+                this._lastKeypointCount = keypoints.length;
 
-        return keypoints;
+                resolve(keypoints);
+            }).catch(err => {
+                reject(err);
+            });
+        });
     }
 
     // find a sensitivity value in [0,1] such that
@@ -611,6 +619,12 @@ class FeatureDetector
             })
         };
 
+        // show warning if static usage
+        if(!this._optimizeForDynamicUsage && !this._findSensitivity._warning) {
+            _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].warning(`Finding an expected number of features in a media configured for static usage`);
+            this._findSensitivity._warning = true;
+        }
+
         // spawn the tuner
         this._sensitivityTuner = this._sensitivityTuner ||
             new _utils_tuner__WEBPACK_IMPORTED_MODULE_2__["OnlineErrorTuner"](0, 1200); // use a slightly wider interval for better stability
@@ -618,8 +632,8 @@ class FeatureDetector
         const normalizer = 0.001;
 
         // update tuner
-        this._sensitivityTuner.tolerance = expected.tolerance;
-        this._sensitivityTuner.feedObservation(this._lastKeypointCount, expected.number);
+        this._sensitivityTuner.tolerance = Math.max(expected.tolerance, 0);
+        this._sensitivityTuner.feedObservation(this._lastKeypointCount, Math.max(expected.number, 0));
         const sensitivity = this._sensitivityTuner.currentValue() * normalizer;
 
         // return the new sensitivity
@@ -810,10 +824,23 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
         if(gpu.gl.isContextLost()) {
             this._texKernel = null;
             this._gl = null;
+            // convolve with a null texKernel anyway,
+            // SpeedyProgram handles lost contexts
         }
 
         // instantiate the texture kernel
-        else if(this._texKernel == null) {
+        else if(this._texKernel == null || (this._gl !== gpu.gl && this._gl !== null)) {
+            // warn about performance
+            if(this._gl !== gpu.gl && this._gl !== null && !this._gl.isContextLost()) {
+                const warn = 'Performance warning: need to recreate the texture kernel. ' +
+                             'Consider duplicating the pipeline when using convolutions ' +
+                             'for different media objects.';
+                _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].warning(warn);
+
+                // release old texture
+                _gpu_gl_utils__WEBPACK_IMPORTED_MODULE_2__["GLUtils"].destroyTexture(this._gl, this._texKernel);
+            }
+
             this._texKernel = gpu.filters[this._method[0]](this._kernel);
             this._gl = gpu.gl;
         }
@@ -1005,8 +1032,9 @@ class SpeedyMedia
      * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|Texture} mediaSource An image, video or canvas
      * @param {number} width media width
      * @param {number} height media height
+     * @param {object} [options] options object
      */
-    /* private */ constructor(mediaSource, width, height)
+    /* private */ constructor(mediaSource, width, height, options = { })
     {
         if(arguments.length > 1) {
             // store data
@@ -1015,6 +1043,11 @@ class SpeedyMedia
             this._height = height | 0;
             this._type = getMediaType(this._source);
             this._colorFormat = _utils_types__WEBPACK_IMPORTED_MODULE_1__["ColorFormat"].RGB;
+
+            // set options
+            this._options = buildOptions(options, {
+                usage: (this._type != _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Image) ? 'dynamic' : 'static',
+            });
 
             // spawn relevant components
             this._gpu = new _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_0__["SpeedyGPU"](this._width, this._height);
@@ -1041,9 +1074,10 @@ class SpeedyMedia
      * Load a media source
      * Will wait until the HTML media source is loaded
      * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} mediaSource An image, video or canvas
+     * @param {object} [options] options object
      * @returns {Promise<SpeedyMedia>}
      */
-    static load(mediaSource)
+    static load(mediaSource, options = { })
     {
         return new Promise((resolve, reject) => {
             const dimensions = getMediaDimensions(mediaSource);
@@ -1051,7 +1085,7 @@ class SpeedyMedia
                 // try to load the media until it's ready
                 (function loadMedia(dimensions, k = 500) {
                     if(dimensions.width > 0 && dimensions.height > 0) {
-                        const media = new SpeedyMedia(mediaSource, dimensions.width, dimensions.height);
+                        const media = new SpeedyMedia(mediaSource, dimensions.width, dimensions.height, options);
                         _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].log(`Loaded SpeedyMedia with a ${mediaSource}.`);
                         resolve(media);
                     }
@@ -1072,13 +1106,14 @@ class SpeedyMedia
      * Loads a camera stream
      * @param {number} [width] width of the stream
      * @param {number} [height] height of the stream
-     * @param {object} [options] additional options to pass to getUserMedia()
+     * @param {object} [cameraOptions] additional options to pass to getUserMedia()
+     * @param {object} [mediaOptions] additional options for advanced configuration of the SpeedyMedia
      * @returns {Promise<SpeedyMedia>}
      */
-    static loadCameraStream(width = 426, height = 240, options = {})
+    static loadCameraStream(width = 426, height = 240, cameraOptions = {}, mediaOptions = {})
     {
-        return requestCameraStream(width, height, options).then(
-            video => SpeedyMedia.load(createCanvasFromVideo(video))
+        return requestCameraStream(width, height, cameraOptions).then(
+            video => SpeedyMedia.load(createCanvasFromVideo(video), mediaOptions)
         );
     }
 
@@ -1134,6 +1169,42 @@ class SpeedyMedia
     }
 
     /**
+     * Returns a read-only object featuring advanced options
+     * related to this SpeedyMedia object
+     * @returns {object}
+     */
+    get options()
+    {
+        return this._options;
+    }
+
+    /**
+     * Releases resources associated with this media.
+     * You will no longer be able to use it, nor any of its lightweight clones.
+     * @returns {Promise} resolves as soon as the resources are released
+     */
+    release()
+    {
+        if(!this.isReleased()) {
+            this._featureDetector = null;
+            this._gpu.loseWebGLContext();
+            this._gpu = null;
+            this._source = null;
+        }
+
+        return Promise.resolve();
+    }
+
+    /**
+     * Is this SpeedyMedia released?
+     * @returns {bool}
+     */
+    isReleased()
+    {
+        return this._gpu == null;
+    }
+
+    /**
      * Clones the SpeedyMedia object
      * @param {object} options options object
      * @returns {SpeedyMedia} a clone object
@@ -1146,17 +1217,21 @@ class SpeedyMedia
             ...(options)
         };
 
+        // has the media been released?
+        if(this.isReleased())
+            _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].fatal('Can\'t clone a SpeedyMedia that has been released');
+
+        // clone the object
         if(options.lightweight) {
             // shallow copy
             return new SpeedyMedia(this);
         }
         else {
             // deep copy
-            return new SpeedyMedia(
-                this._source,
-                this._width,
-                this._height
-            );
+            let source = this._source;
+            if(this._type == _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Texture || this._type == _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Canvas)
+                source = createCanvasFromStaticMedia(this); // won't share WebGL context
+            return new SpeedyMedia(source, this._width, this._height);
         }
     }
 
@@ -1167,6 +1242,11 @@ class SpeedyMedia
      */
     run(pipeline)
     {
+        // has the media been released?
+        if(this.isReleased())
+            _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].fatal('Can\'t run pipeline: SpeedyMedia has been released');
+
+        // run the pipeline
         const media = this.clone({ lightweight: true });
         media._type = _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Texture;
         return pipeline._run(media);
@@ -1182,6 +1262,11 @@ class SpeedyMedia
      */
     draw(canvas, x = 0, y = 0, width = this.width, height = this.height)
     {
+        // fail silently if the media been released
+        if(this.isReleased())
+            return;
+
+        // draw
         const ctx = canvas.getContext('2d');
 
         x = +x; y = +y;
@@ -1204,7 +1289,7 @@ class SpeedyMedia
     /**
      * Finds image features
      * @param {object} [settings] Configuration object
-     * @returns {Promise< Array<SpeedyFeature> >} A Promise returning an Array of SpeedyFeature objects
+     * @returns {Promise<Array<SpeedyFeature>>} A Promise returning an Array of SpeedyFeature objects
      */
     findFeatures(settings = {})
     {
@@ -1213,11 +1298,15 @@ class SpeedyMedia
             method: 'fast',
         }, settings);
 
+        // has the media been released?
+        if(this.isReleased())
+            _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].fatal('Can\'t find features: SpeedyMedia has been released');
+
         // Lazy instantiation
-        this._featureDetector = this._featureDetector || new _feature_detector__WEBPACK_IMPORTED_MODULE_2__["FeatureDetector"](this._gpu);
+        this._featureDetector = this._featureDetector || new _feature_detector__WEBPACK_IMPORTED_MODULE_2__["FeatureDetector"](this._gpu, this.options.usage == 'dynamic');
 
         // Algorithm table
-        const fn = ({
+        const fn = this._featureDetector._table || (this._featureDetector._table = {
             'fast' : (media, settings) => this._featureDetector.fast(media, 9, settings),   // alias for fast9
             'fast9': (media, settings) => this._featureDetector.fast(media, 9, settings),   // FAST-9,16 (default)
             'fast7': (media, settings) => this._featureDetector.fast(media, 7, settings),   // FAST-7,12
@@ -1225,17 +1314,13 @@ class SpeedyMedia
             'brisk': (media, settings) => this._featureDetector.brisk(media, settings),     // BRISK
         });
 
-        // Run the algorithm
-        return new Promise((resolve, reject) => {
-            const method = String(settings.method).toLowerCase();
+        // Validate method
+        const method = String(settings.method).toLowerCase();
+        if(!fn.hasOwnProperty(method))
+            _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].fatal(`Invalid method "${method}" for keypoint detection.`);
 
-            if(fn.hasOwnProperty(method)) {
-                const features = (fn[method])(this, settings);
-                resolve(features);
-            }
-            else
-                reject(new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["SpeedyError"](`Invalid method "${method}" for keypoint detection.`));
-        });
+        // Run the algorithm
+        return (fn[method])(this, settings);
     }
 }
 
@@ -1281,6 +1366,25 @@ function getMediaType(mediaSource)
 
     _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].fatal(`Can't get media type: invalid media source. ${mediaSource}`);
     return null;
+}
+
+// build & validate options object
+function buildOptions(options, defaultOptions)
+{
+    const warn = buildOptions._err || (buildOptions._err = 
+        (...args) => _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].warning(`Invalid option when loading media.`, ...args));
+
+    // build options object
+    options = Object.assign(defaultOptions, options);
+
+    // validate
+    if(options.usage != 'dynamic' && options.usage != 'static') {
+        warn(`Unrecognized usage: "${options.usage}"`);
+        options.usage = defaultOptions.usage;
+    }
+
+    // done!
+    return Object.freeze(options); // must be read-only
 }
 
 // webcam access
@@ -1334,6 +1438,18 @@ function createCanvasFromVideo(video)
         requestAnimationFrame(render);
     }
     render();
+
+    return canvas;
+}
+
+// create a (static) HTMLCanvasElement using a SpeedyMedia as source
+function createCanvasFromStaticMedia(media)
+{
+    const canvas = document.createElement('canvas');
+
+    canvas.width = media.width;
+    canvas.height = media.height;
+    media.draw(canvas);
 
     return canvas;
 }
@@ -1549,6 +1665,7 @@ class SpeedyPipeline
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GLError", function() { return GLError; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GLUtils", function() { return GLUtils; });
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -1569,6 +1686,8 @@ __webpack_require__.r(__webpack_exports__);
  * gl-utils.js
  * WebGL utilities
  */
+
+
 
 /**
  * WebGL-related error
@@ -1597,6 +1716,28 @@ class GLUtils
      */
     static Error(message)
     {
+        return new GLError(message);
+    }
+
+    /**
+     * Get a GLError error object describing the latest WebGL error
+     * @param {WebGL2RenderingContext} gl 
+     * @returns {string}
+     */
+    static getError(gl)
+    {
+        const recognizedErrors = [
+            'NO_ERROR',
+            'INVALID_ENUM',
+            'INVALID_VALUE',
+            'INVALID_OPERATION',
+            'INVALID_FRAMEBUFFER_OPERATION',
+            'OUT_OF_MEMORY',
+            'CONTEXT_LOST_WEBGL',
+        ];
+
+        const glError = gl.getError();
+        const message = recognizedErrors.find(error => gl[error] == glError) || 'Unknown';
         return new GLError(message);
     }
 
@@ -1669,24 +1810,25 @@ class GLUtils
      * @param {WebGL2RenderingContext} gl 
      * @param {number} width in pixels
      * @param {number} height in pixels
-     * @param {number} format 
      * @returns {WebGLTexture}
      */
-    static createTexture(gl, width, height, format = null)
+    static createTexture(gl, width, height)
     {
+        // validate dimensions
+        if(width <= 0 || height <= 0)
+            throw GLUtils.Error(`Invalid dimensions given to createTexture()`);
+
+        // create texture
         const texture = gl.createTexture();
 
-        // use default format
-        if(format === null)
-            format = gl.RGBA8;
-        
         // setup texture
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
-        gl.texStorage2D(gl.TEXTURE_2D, 1, format, width, height);
+        //gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, width, height);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
 
         // unbind & return
         gl.bindTexture(gl.TEXTURE_2D, null);
@@ -1709,23 +1851,38 @@ class GLUtils
      * Upload pixel data to a WebGL texture
      * @param {WebGL2RenderingContext} gl 
      * @param {WebGLTexture} texture 
+     * @param {GLsizei} width texture width
+     * @param {GLsizei} height texture height
      * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} pixels 
      * @returns {WebGLTexture} texture
      */
-    static uploadToTexture(gl, texture, pixels)
+    static uploadToTexture(gl, texture, width, height, pixels)
     {
         // Prefer calling uploadToTexture() before gl.useProgram() to avoid the
         // needless switching of GL programs internally. See also:
         // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices
         gl.bindTexture(gl.TEXTURE_2D, texture);
+        /*
+        // slower than texImage2D, unlike the spec?
         gl.texSubImage2D(gl.TEXTURE_2D,     // target
                          0,                 // mip level
                          0,                 // x-offset
                          0,                 // y-offset
+                         width,             // texture width
+                         height,            // texture height
                          gl.RGBA,           // source format
                          gl.UNSIGNED_BYTE,  // source type
                          pixels);           // source data
-
+        */
+        gl.texImage2D(gl.TEXTURE_2D,        // target
+                      0,                    // mip level
+                      gl.RGBA8,             // internal format
+                      //width,                // texture width
+                      //height,               // texture height
+                      //0,                    // border
+                      gl.RGBA,              // source format
+                      gl.UNSIGNED_BYTE,     // source type
+                      pixels);              // source data
         gl.bindTexture(gl.TEXTURE_2D, null);
         return texture;
     }
@@ -1796,6 +1953,83 @@ class GLUtils
     {
         gl.deleteFramebuffer(fbo);
         return null;
+    }
+
+    /**
+     * Waits for a sync object to become signaled
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLSync} sync sync object
+     * @param {GLbitfield} [flags] may be gl.SYNC_FLUSH_COMMANDS_BIT or 0
+     * @returns {Promise} a promise that resolves as soon as the sync object becomes signaled
+     */
+    static clientWaitAsync(gl, sync, flags = 0)
+    {
+        return new Promise((resolve, reject) => {
+            const isFirefox = navigator.userAgent.includes('Firefox');
+
+            function checkStatus() {
+                const status = gl.clientWaitSync(sync, flags, 0);
+                if(status == gl.TIMEOUT_EXPIRED) {
+                    setTimeout(checkStatus, 0); // easier on the CPU
+                    //Utils.setZeroTimeout(checkStatus);
+                }
+                else if(status == gl.WAIT_FAILED) {
+                    if(isFirefox && gl.getError() == gl.NO_ERROR) { // firefox bug?
+                        setTimeout(checkStatus, 0);
+                        //Utils.setZeroTimeout(checkStatus);
+                    }
+                    else {
+                        reject(GLUtils.getError(gl));
+                    }
+                }
+                else {
+                    resolve();
+                }
+            }
+
+            checkStatus();
+        });
+    }
+
+    /**
+     * Reads data from a WebGLBuffer into an ArrayBufferView
+     * This is like gl.getBufferSubData(), but async
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLBuffer} glBuffer will be bound to target
+     * @param {GLenum} target
+     * @param {GLintptr} srcByteOffset usually 0
+     * @param {ArrayBufferView} destBuffer
+     * @param {GLuint} [destOffset]
+     * @param {GLuint} [length]
+     * @param {object} [outStatus] output parameter: status object featuring additional info
+     * @returns {Promise<ArrayBufferView>} a promise that resolves to destBuffer
+     */
+    static getBufferSubDataAsync(gl, glBuffer, target, srcByteOffset, destBuffer, destOffset = 0, length = 0, outStatus = null)
+    {
+        return new Promise((resolve, reject) => {
+            const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+            const start = performance.now();
+
+            // empty internal command queues and send them to the GPU asap
+            gl.flush(); // make sure the sync command is read
+
+            // wait for the commands to be processed by the GPU
+            GLUtils.clientWaitAsync(gl, sync).then(() => {
+                gl.bindBuffer(target, glBuffer);
+                gl.getBufferSubData(target, srcByteOffset, destBuffer, destOffset, length);
+                gl.bindBuffer(target, null);
+
+                if(outStatus != null)
+                    outStatus.time = performance.now() - start;
+                resolve(destBuffer);
+            }).catch(err => {
+                if(outStatus != null)
+                    outStatus.time = performance.now() - start;
+                reject(GLUtils.Error(`Can't getBufferSubDataAsync(): got ${err.message} in clientWaitAsync()`));
+            }).finally(() => {
+                gl.deleteSync(sync);
+            });
+        });
     }
 }
 
@@ -2096,14 +2330,14 @@ class GPUEncoders extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPr
             // Keypoint encoding
             .declare('_encodeKeypointOffsets', _programs_encoders__WEBPACK_IMPORTED_MODULE_1__["encodeKeypointOffsets"])
             .declare('_encodeKeypoints', _programs_encoders__WEBPACK_IMPORTED_MODULE_1__["encodeKeypoints"], {
-                output: [ INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH ],
+                output: [INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH],
                 renderToTexture: false
             })
         ;
 
         // setup internal data
         let neighborFn = (s) => Math.round(_utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].gaussianNoise(s, 64)) % 256;
-        this._tuner = new _utils_tuner__WEBPACK_IMPORTED_MODULE_3__["StochasticTuner"](48, 32, 255, 0.2, 4, 60, neighborFn);
+        this._tuner = new _utils_tuner__WEBPACK_IMPORTED_MODULE_3__["StochasticTuner"](48, 32, 48/*255*/, 0.2, 8, 60, neighborFn);
         this._keypointEncoderLength = INITIAL_ENCODER_LENGTH;
         this._descriptorSize = 0;
         this._spawnedAt = performance.now();
@@ -2125,7 +2359,7 @@ class GPUEncoders extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPr
     {
         const clampedKeypointCount = Math.max(0, Math.min(keypointCount, MAX_KEYPOINTS));
         const pixelsPerKeypoint = Math.ceil(2 + this._descriptorSize / 4);
-        const len = Math.ceil(Math.sqrt((4 + clampedKeypointCount) * pixelsPerKeypoint)); // add some slack
+        const len = Math.ceil(Math.sqrt((4 + clampedKeypointCount * 1.05) * pixelsPerKeypoint)); // add some slack
         const newEncoderLength = Math.max(1, Math.min(len, MAX_ENCODER_LENGTH));
         const oldEncoderLength = this._keypointEncoderLength;
 
@@ -2139,10 +2373,11 @@ class GPUEncoders extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPr
 
     /**
      * Encodes the keypoints of an image - this is a bottleneck!
-     * @param {WebGLTexture} corners image with encoded corners
-     * @returns {Array<number>} pixels in the [r,g,b,a, ...] format
+     * @param {WebGLTexture} corners texture with encoded corners
+     * @param {bool} [useAsyncTransfer] transfer data from the GPU without blocking the CPU
+     * @returns {Promise<Array<Uint8Array>>} pixels in the [r,g,b,a, ...] format
      */
-    encodeKeypoints(corners)
+    async encodeKeypoints(corners, useAsyncTransfer = true)
     {
         // parameters
         const encoderLength = this._keypointEncoderLength;
@@ -2150,23 +2385,49 @@ class GPUEncoders extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPr
         const imageSize = [ this._width, this._height ];
         const maxIterations = this._tuner.currentValue();
 
-        // encode keypoint offsets
-        const start = performance.now();
-        const offsets = this._encodeKeypointOffsets(corners, imageSize, maxIterations);
-        this._encodeKeypoints(offsets, imageSize, encoderLength, descriptorSize);
-        const pixels = this._encodeKeypoints.readPixelsSync();
+        // encode keypoints
+        try {
+            // encode offsets
+            let encodingTime = performance.now();
+            const offsets = this._encodeKeypointOffsets(corners, imageSize, maxIterations);
+            this._encodeKeypoints(offsets, imageSize, encoderLength, descriptorSize);
+            encodingTime = performance.now() - encodingTime;
 
-        // tuner: drop noisy feedback when the page loads
-        if(performance.now() >= this._spawnedAt + 2000) {
-            const time = performance.now() - start;
-            this._tuner.feedObservation(time);
+            // read data from the GPU
+            let pixels, transferTime;
+            if(useAsyncTransfer) {
+                const status = { };
+                pixels = await this._encodeKeypoints.readPixelsAsync(0, 0, -1, -1, status);
+                transferTime = status.time;
+            }
+            else {
+                transferTime = performance.now();
+                pixels = this._encodeKeypoints.readPixelsSync(); // bottleneck
+                transferTime = performance.now() - transferTime;
+            }
+
+            // tuner: drop noisy feedback when the page loads
+            if(performance.now() >= this._spawnedAt + 2000) {
+                const time = encodingTime + transferTime;
+                this._tuner.feedObservation(time);
+            }
+
+            // debug
+            /*
+            window._p = window._p || 0;
+            window._m = window._m || 0;
+            window._m = 0.9 * window._m + 0.1 * (encodingTime + transferTime);
+            if(window._p++ % 100 == 0)
+                console.log(window._m, ' | ', maxIterations);
+            //console.log(JSON.stringify(this._tuner.info()));
+            */
+
+            // done!
+            return pixels;
         }
-
-        // debug
-        //console.log(JSON.stringify(this._tuner.info()));
-
-        // done!
-        return pixels;
+        catch(err) {
+            _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].fatal(err);
+        }
     }
 
     /**
@@ -2181,22 +2442,22 @@ class GPUEncoders extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPr
         const pixelsPerKeypoint = 2 + this._descriptorSize / 4;
         const lgM = Math.log2(this._gpu.pyramidMaxScale);
         const pyrHeight = this._gpu.pyramidHeight;
-        let keypoints = [], x, y, scale, rotation;
+        const keypoints = [];
+        let x, y, scale, rotation;
 
         for(let i = 0; i < pixels.length; i += 4 * pixelsPerKeypoint) {
             x = (pixels[i+1] << 8) | pixels[i];
             y = (pixels[i+3] << 8) | pixels[i+2];
-            if(x < w && y < h) {
-                scale = pixels[i+4] == 255 ? 1.0 :
-                    Math.pow(2.0, -lgM + (lgM + pyrHeight) * pixels[i+4] / 255.0);
-
-                rotation = !hasRotation ? 0.0 :
-                    pixels[i+5] * TWO_PI / 255.0;
-
-                keypoints.push(new _core_speedy_feature__WEBPACK_IMPORTED_MODULE_2__["SpeedyFeature"](x, y, scale, rotation));
-            }
-            else
+            if(x >= w || y >= h)
                 break;
+
+            scale = pixels[i+4] == 255 ? 1.0 :
+                Math.pow(2.0, -lgM + (lgM + pyrHeight) * pixels[i+4] / 255.0);
+
+            rotation = !hasRotation ? 0.0 :
+                pixels[i+5] * TWO_PI / 255.0;
+
+            keypoints.push(new _core_speedy_feature__WEBPACK_IMPORTED_MODULE_2__["SpeedyFeature"](x, y, scale, rotation));
         }
 
         // developer's secret ;)
@@ -2479,7 +2740,7 @@ class GPUKeypoints extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUP
         this
             // FAST-9,16
             .compose('fast9', '_fast9', '_fastScore16')
-            .declare('_fast9', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fast9ml"]) // use 'ml' for multiple passes
+            .declare('_fast9', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fast9"]) // find corners
             .declare('_fastScore16', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fastScore16"]) // compute scores
 
             // FAST-7,12
@@ -2998,13 +3259,12 @@ const encodeKeypoints = (image, imageSize, encoderLength, descriptorSize) => __w
 /*!*************************************************!*\
   !*** ./src/gpu/program-groups/programs/fast.js ***!
   \*************************************************/
-/*! exports provided: fast9, fast9ml, fast7, fast5, fastScore16, fastScore12, fastScore8, fastSuppression */
+/*! exports provided: fast9, fast7, fast5, fastScore16, fastScore12, fastScore8, fastSuppression */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fast9", function() { return fast9; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fast9ml", function() { return fast9ml; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fast7", function() { return fast7; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fast5", function() { return fast5; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fastScore16", function() { return fastScore16; });
@@ -3056,12 +3316,7 @@ __webpack_require__.r(__webpack_exports__);
 
 // FAST-9_16: requires 9 contiguous pixels
 // on a circumference of 16 pixels
-const fast9 = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoint-detectors/fast9.glsl */ "./src/gpu/shaders/keypoint-detectors/fast9.glsl");
-
-// FAST-9,16 implementation based on Machine Learning
-// Adapted from New BSD Licensed fast_9.c code found at
-// https://github.com/edrosten/fast-C-src
-const fast9ml = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoint-detectors/fast9ml.glsl */ "./src/gpu/shaders/keypoint-detectors/fast9ml.glsl");
+const fast9 = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoint-detectors/fast9lg.glsl */ "./src/gpu/shaders/keypoint-detectors/fast9lg.glsl");
 
 // FAST-7_12: requires 7 contiguous pixels
 // on a circumference of 12 pixels
@@ -3427,7 +3682,6 @@ class GPUPyramids extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPr
     }
 }
 
-
 /***/ }),
 
 /***/ "./src/gpu/program-groups/utils.js":
@@ -3484,6 +3738,9 @@ class GPUUtils extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUProgr
         this
             // no-operation
             .declare('identity', _programs_utils__WEBPACK_IMPORTED_MODULE_1__["identity"])
+
+            // flip y-axis
+            .declare('flipY', _programs_utils__WEBPACK_IMPORTED_MODULE_1__["flipY"])
 
             // output a texture from a pipeline
             .declare('output', _programs_utils__WEBPACK_IMPORTED_MODULE_1__["flipY"],
@@ -3656,7 +3913,7 @@ module.exports = "#define threadLocation() ivec2(texCoord * texSize)\n#define ou
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image, layerA, layerB;\nuniform float scaleA, scaleB, lgM, h;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat score = pixel.r;\nivec2 zero = ivec2(0, 0);\nivec2 sizeA = textureSize(layerA, 0);\nivec2 sizeB = textureSize(layerB, 0);\nvec2 mid = (texCoord * texSize) + vec2(0.5f, 0.5f);\nivec2 pa = clamp(ivec2(ceil(mid * scaleA - 1.0f)), zero, sizeA - 2);\nivec2 pb = clamp(ivec2(ceil(mid * scaleB - 1.0f)), zero, sizeB - 2);\nvec4 a00 = pixelAt(layerA, pa);\nvec4 a10 = pixelAt(layerA, pa + ivec2(1, 0));\nvec4 a01 = pixelAt(layerA, pa + ivec2(0, 1));\nvec4 a11 = pixelAt(layerA, pa + ivec2(1, 1));\nvec4 b00 = pixelAt(layerB, pb);\nvec4 b10 = pixelAt(layerB, pb + ivec2(1, 0));\nvec4 b01 = pixelAt(layerB, pb + ivec2(0, 1));\nvec4 b11 = pixelAt(layerB, pb + ivec2(1, 1));\nfloat maxScore = max(\nmax(max(a00.r, a10.r), max(a01.r, a11.r)),\nmax(max(b00.r, b10.r), max(b01.r, b11.r))\n);\ncolor = vec4(0.0f, pixel.gba);\nif(score < maxScore || score == 0.0f)\nreturn;\nvec2 ea = fract(mid * scaleA);\nvec2 eb = fract(mid * scaleB);\nfloat isa = a00.b * (1.0f - ea.x) * (1.0f - ea.y) +\na10.b * ea.x * (1.0f - ea.y) +\na01.b * (1.0f - ea.x) * ea.y +\na11.b * ea.x * ea.y;\nfloat isb = b00.b * (1.0f - eb.x) * (1.0f - eb.y) +\nb10.b * eb.x * (1.0f - eb.y) +\nb01.b * (1.0f - eb.x) * eb.y +\nb11.b * eb.x * eb.y;\nbool cond1 = (isa > score && isa > isb);\nbool cond2 = (isb > score && isb > isa);\ncolor = mix(\nmix(\npixel,\nvec4(isb, pixel.gb, b00.a),\nbvec4(cond2, cond2, cond2, cond2)\n),\nvec4(isa, pixel.gb, a00.a),\nbvec4(cond1, cond1, cond1, cond1)\n);\nfloat y1 = isa, y2 = isb, y3 = score;\nfloat x1 = lgM - (lgM + h) * a00.a;\nfloat x2 = lgM - (lgM + h) * b00.a;\nfloat x3 = lgM - (lgM + h) * pixel.a;\nfloat dn = (x1 - x2) * (x1 - x3) * (x2 - x3);\nif(abs(dn) < 0.00001f)\nreturn;\nfloat a = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / dn;\nif(a >= 0.0f)\nreturn;\nfloat b = (x3 * x3 * (y1 - y2) + x2 * x2 * (y3 - y1) + x1 * x1 * (y2 - y3)) / dn;\nfloat c = (x2 * x3 * (x2 - x3) * y1 + x3 * x1 * (x3 - x1) * y2 + x1 * x2 * (x1 - x2) * y3) / dn;\nfloat xv = -b / (2.0f * a);\nfloat yv = c - (b * b) / (4.0f * a);\nif(xv < min(x1, min(x2, x3)) || xv > max(x1, max(x2, x3)))\nreturn;\nfloat interpolatedScale = (lgM - xv) / (lgM + h);\nfloat interpolatedScore = clamp(yv, 0.0f, 1.0f);\ncolor = vec4(interpolatedScore, pixel.gb, interpolatedScale);\n}"
+module.exports = "uniform sampler2D image, layerA, layerB;\nuniform float scaleA, scaleB, lgM, h;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat score = pixel.r;\nivec2 zero = ivec2(0, 0);\nivec2 sizeA = textureSize(layerA, 0);\nivec2 sizeB = textureSize(layerB, 0);\nvec2 mid = (texCoord * texSize) + vec2(0.5f, 0.5f);\nivec2 pa = clamp(ivec2(ceil(mid * scaleA - 1.0f)), zero, sizeA - 2);\nivec2 pb = clamp(ivec2(ceil(mid * scaleB - 1.0f)), zero, sizeB - 2);\nvec4 a00 = pixelAt(layerA, pa);\nvec4 a10 = pixelAt(layerA, pa + ivec2(1, 0));\nvec4 a01 = pixelAt(layerA, pa + ivec2(0, 1));\nvec4 a11 = pixelAt(layerA, pa + ivec2(1, 1));\nvec4 b00 = pixelAt(layerB, pb);\nvec4 b10 = pixelAt(layerB, pb + ivec2(1, 0));\nvec4 b01 = pixelAt(layerB, pb + ivec2(0, 1));\nvec4 b11 = pixelAt(layerB, pb + ivec2(1, 1));\nfloat maxScore = max(\nmax(max(a00.r, a10.r), max(a01.r, a11.r)),\nmax(max(b00.r, b10.r), max(b01.r, b11.r))\n);\ncolor = vec4(0.0f, pixel.gba);\nif(score < maxScore || score == 0.0f)\nreturn;\nvec2 ea = fract(mid * scaleA);\nvec2 eb = fract(mid * scaleB);\nfloat isa = a00.b * (1.0f - ea.x) * (1.0f - ea.y) +\na10.b * ea.x * (1.0f - ea.y) +\na01.b * (1.0f - ea.x) * ea.y +\na11.b * ea.x * ea.y;\nfloat isb = b00.b * (1.0f - eb.x) * (1.0f - eb.y) +\nb10.b * eb.x * (1.0f - eb.y) +\nb01.b * (1.0f - eb.x) * eb.y +\nb11.b * eb.x * eb.y;\ncolor = (isa > score && isa > isb) ? vec4(isa, pixel.gb, a00.a) : pixel;\ncolor = (isb > score && isb > isa) ? vec4(isb, pixel.gb, b00.a) : pixel;\nfloat y1 = isa, y2 = isb, y3 = score;\nfloat x1 = lgM - (lgM + h) * a00.a;\nfloat x2 = lgM - (lgM + h) * b00.a;\nfloat x3 = lgM - (lgM + h) * pixel.a;\nfloat dn = (x1 - x2) * (x1 - x3) * (x2 - x3);\nif(abs(dn) < 0.00001f)\nreturn;\nfloat a = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / dn;\nif(a >= 0.0f)\nreturn;\nfloat b = (x3 * x3 * (y1 - y2) + x2 * x2 * (y3 - y1) + x1 * x1 * (y2 - y3)) / dn;\nfloat c = (x2 * x3 * (x2 - x3) * y1 + x3 * x1 * (x3 - x1) * y2 + x1 * x2 * (x1 - x2) * y3) / dn;\nfloat xv = -b / (2.0f * a);\nfloat yv = c - (b * b) / (4.0f * a);\nif(xv < min(x1, min(x2, x3)) || xv > max(x1, max(x2, x3)))\nreturn;\nfloat interpolatedScale = (lgM - xv) / (lgM + h);\nfloat interpolatedScore = clamp(yv, 0.0f, 1.0f);\ncolor = vec4(interpolatedScore, pixel.gb, interpolatedScale);\n}"
 
 /***/ }),
 
@@ -3667,7 +3924,7 @@ module.exports = "uniform sampler2D image, layerA, layerB;\nuniform float scaleA
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat ifCorner = step(1.0f, pixel.r);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 2)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 2)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 1)).g;\nfloat p3 = pixelAtOffset(image, ivec2(2, 0)).g;\nfloat p4 = pixelAtOffset(image, ivec2(2, -1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(1, -2)).g;\nfloat p6 = pixelAtOffset(image, ivec2(0, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(-1, -2)).g;\nfloat p8 = pixelAtOffset(image, ivec2(-2, -1)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-2, 0)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, 1)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-1, 2)).g;\nfloat bs = 0.0f, ds = 0.0f;\nbs += max(c_t - p0, 0.0f);  ds += max(p0 - ct, 0.0f);\nbs += max(c_t - p1, 0.0f);  ds += max(p1 - ct, 0.0f);\nbs += max(c_t - p2, 0.0f);  ds += max(p2 - ct, 0.0f);\nbs += max(c_t - p3, 0.0f);  ds += max(p3 - ct, 0.0f);\nbs += max(c_t - p4, 0.0f);  ds += max(p4 - ct, 0.0f);\nbs += max(c_t - p5, 0.0f);  ds += max(p5 - ct, 0.0f);\nbs += max(c_t - p6, 0.0f);  ds += max(p6 - ct, 0.0f);\nbs += max(c_t - p7, 0.0f);  ds += max(p7 - ct, 0.0f);\nbs += max(c_t - p8, 0.0f);  ds += max(p8 - ct, 0.0f);\nbs += max(c_t - p9, 0.0f);  ds += max(p9 - ct, 0.0f);\nbs += max(c_t - p10, 0.0f); ds += max(p10 - ct, 0.0f);\nbs += max(c_t - p11, 0.0f); ds += max(p11 - ct, 0.0f);\nfloat score = max(bs, ds) / 12.0f;\ncolor = vec4(score * ifCorner, pixel.g, score, pixel.a);\n}"
+module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 2)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 2)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 1)).g;\nfloat p3 = pixelAtOffset(image, ivec2(2, 0)).g;\nfloat p4 = pixelAtOffset(image, ivec2(2, -1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(1, -2)).g;\nfloat p6 = pixelAtOffset(image, ivec2(0, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(-1, -2)).g;\nfloat p8 = pixelAtOffset(image, ivec2(-2, -1)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-2, 0)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, 1)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-1, 2)).g;\nfloat bs = 0.0f, ds = 0.0f;\nbs += max(c_t - p0, 0.0f);  ds += max(p0 - ct, 0.0f);\nbs += max(c_t - p1, 0.0f);  ds += max(p1 - ct, 0.0f);\nbs += max(c_t - p2, 0.0f);  ds += max(p2 - ct, 0.0f);\nbs += max(c_t - p3, 0.0f);  ds += max(p3 - ct, 0.0f);\nbs += max(c_t - p4, 0.0f);  ds += max(p4 - ct, 0.0f);\nbs += max(c_t - p5, 0.0f);  ds += max(p5 - ct, 0.0f);\nbs += max(c_t - p6, 0.0f);  ds += max(p6 - ct, 0.0f);\nbs += max(c_t - p7, 0.0f);  ds += max(p7 - ct, 0.0f);\nbs += max(c_t - p8, 0.0f);  ds += max(p8 - ct, 0.0f);\nbs += max(c_t - p9, 0.0f);  ds += max(p9 - ct, 0.0f);\nbs += max(c_t - p10, 0.0f); ds += max(p10 - ct, 0.0f);\nbs += max(c_t - p11, 0.0f); ds += max(p11 - ct, 0.0f);\nfloat score = max(bs, ds) / 12.0f;\ncolor = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);\n}"
 
 /***/ }),
 
@@ -3678,7 +3935,7 @@ module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main(
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat ifCorner = step(1.0f, pixel.r);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 3)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 3)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 2)).g;\nfloat p3 = pixelAtOffset(image, ivec2(3, 1)).g;\nfloat p4 = pixelAtOffset(image, ivec2(3, 0)).g;\nfloat p5 = pixelAtOffset(image, ivec2(3, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(2, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(1, -3)).g;\nfloat p8 = pixelAtOffset(image, ivec2(0, -3)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-1, -3)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, -2)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-3, -1)).g;\nfloat p12 = pixelAtOffset(image, ivec2(-3, 0)).g;\nfloat p13 = pixelAtOffset(image, ivec2(-3, 1)).g;\nfloat p14 = pixelAtOffset(image, ivec2(-2, 2)).g;\nfloat p15 = pixelAtOffset(image, ivec2(-1, 3)).g;\nfloat bs = 0.0f, ds = 0.0f;\nbs += max(c_t - p0, 0.0f);  ds += max(p0 - ct, 0.0f);\nbs += max(c_t - p1, 0.0f);  ds += max(p1 - ct, 0.0f);\nbs += max(c_t - p2, 0.0f);  ds += max(p2 - ct, 0.0f);\nbs += max(c_t - p3, 0.0f);  ds += max(p3 - ct, 0.0f);\nbs += max(c_t - p4, 0.0f);  ds += max(p4 - ct, 0.0f);\nbs += max(c_t - p5, 0.0f);  ds += max(p5 - ct, 0.0f);\nbs += max(c_t - p6, 0.0f);  ds += max(p6 - ct, 0.0f);\nbs += max(c_t - p7, 0.0f);  ds += max(p7 - ct, 0.0f);\nbs += max(c_t - p8, 0.0f);  ds += max(p8 - ct, 0.0f);\nbs += max(c_t - p9, 0.0f);  ds += max(p9 - ct, 0.0f);\nbs += max(c_t - p10, 0.0f); ds += max(p10 - ct, 0.0f);\nbs += max(c_t - p11, 0.0f); ds += max(p11 - ct, 0.0f);\nbs += max(c_t - p12, 0.0f); ds += max(p12 - ct, 0.0f);\nbs += max(c_t - p13, 0.0f); ds += max(p13 - ct, 0.0f);\nbs += max(c_t - p14, 0.0f); ds += max(p14 - ct, 0.0f);\nbs += max(c_t - p15, 0.0f); ds += max(p15 - ct, 0.0f);\nfloat score = max(bs, ds) / 16.0f;\ncolor = vec4(score * ifCorner, pixel.g, score, pixel.a);\n}"
+module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 3)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 3)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 2)).g;\nfloat p3 = pixelAtOffset(image, ivec2(3, 1)).g;\nfloat p4 = pixelAtOffset(image, ivec2(3, 0)).g;\nfloat p5 = pixelAtOffset(image, ivec2(3, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(2, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(1, -3)).g;\nfloat p8 = pixelAtOffset(image, ivec2(0, -3)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-1, -3)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, -2)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-3, -1)).g;\nfloat p12 = pixelAtOffset(image, ivec2(-3, 0)).g;\nfloat p13 = pixelAtOffset(image, ivec2(-3, 1)).g;\nfloat p14 = pixelAtOffset(image, ivec2(-2, 2)).g;\nfloat p15 = pixelAtOffset(image, ivec2(-1, 3)).g;\nfloat bs = 0.0f, ds = 0.0f;\nbs += max(c_t - p0, 0.0f);  ds += max(p0 - ct, 0.0f);\nbs += max(c_t - p1, 0.0f);  ds += max(p1 - ct, 0.0f);\nbs += max(c_t - p2, 0.0f);  ds += max(p2 - ct, 0.0f);\nbs += max(c_t - p3, 0.0f);  ds += max(p3 - ct, 0.0f);\nbs += max(c_t - p4, 0.0f);  ds += max(p4 - ct, 0.0f);\nbs += max(c_t - p5, 0.0f);  ds += max(p5 - ct, 0.0f);\nbs += max(c_t - p6, 0.0f);  ds += max(p6 - ct, 0.0f);\nbs += max(c_t - p7, 0.0f);  ds += max(p7 - ct, 0.0f);\nbs += max(c_t - p8, 0.0f);  ds += max(p8 - ct, 0.0f);\nbs += max(c_t - p9, 0.0f);  ds += max(p9 - ct, 0.0f);\nbs += max(c_t - p10, 0.0f); ds += max(p10 - ct, 0.0f);\nbs += max(c_t - p11, 0.0f); ds += max(p11 - ct, 0.0f);\nbs += max(c_t - p12, 0.0f); ds += max(p12 - ct, 0.0f);\nbs += max(c_t - p13, 0.0f); ds += max(p13 - ct, 0.0f);\nbs += max(c_t - p14, 0.0f); ds += max(p14 - ct, 0.0f);\nbs += max(c_t - p15, 0.0f); ds += max(p15 - ct, 0.0f);\nfloat score = max(bs, ds) / 16.0f;\ncolor = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);\n}"
 
 /***/ }),
 
@@ -3689,7 +3946,7 @@ module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main(
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat ifCorner = step(1.0f, pixel.r);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 1)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 1)).g;\nfloat p2 = pixelAtOffset(image, ivec2(1, 0)).g;\nfloat p3 = pixelAtOffset(image, ivec2(1, -1)).g;\nfloat p4 = pixelAtOffset(image, ivec2(0, -1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(-1, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(-1, 0)).g;\nfloat p7 = pixelAtOffset(image, ivec2(-1, 1)).g;\nfloat bs = 0.0f, ds = 0.0f;\nbs += max(c_t - p0, 0.0f); ds += max(p0 - ct, 0.0f);\nbs += max(c_t - p1, 0.0f); ds += max(p1 - ct, 0.0f);\nbs += max(c_t - p2, 0.0f); ds += max(p2 - ct, 0.0f);\nbs += max(c_t - p3, 0.0f); ds += max(p3 - ct, 0.0f);\nbs += max(c_t - p4, 0.0f); ds += max(p4 - ct, 0.0f);\nbs += max(c_t - p5, 0.0f); ds += max(p5 - ct, 0.0f);\nbs += max(c_t - p6, 0.0f); ds += max(p6 - ct, 0.0f);\nbs += max(c_t - p7, 0.0f); ds += max(p7 - ct, 0.0f);\nfloat score = max(bs, ds) / 8.0f;\ncolor = vec4(score * ifCorner, pixel.g, score, pixel.a);\n}"
+module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 1)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 1)).g;\nfloat p2 = pixelAtOffset(image, ivec2(1, 0)).g;\nfloat p3 = pixelAtOffset(image, ivec2(1, -1)).g;\nfloat p4 = pixelAtOffset(image, ivec2(0, -1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(-1, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(-1, 0)).g;\nfloat p7 = pixelAtOffset(image, ivec2(-1, 1)).g;\nfloat bs = 0.0f, ds = 0.0f;\nbs += max(c_t - p0, 0.0f); ds += max(p0 - ct, 0.0f);\nbs += max(c_t - p1, 0.0f); ds += max(p1 - ct, 0.0f);\nbs += max(c_t - p2, 0.0f); ds += max(p2 - ct, 0.0f);\nbs += max(c_t - p3, 0.0f); ds += max(p3 - ct, 0.0f);\nbs += max(c_t - p4, 0.0f); ds += max(p4 - ct, 0.0f);\nbs += max(c_t - p5, 0.0f); ds += max(p5 - ct, 0.0f);\nbs += max(c_t - p6, 0.0f); ds += max(p6 - ct, 0.0f);\nbs += max(c_t - p7, 0.0f); ds += max(p7 - ct, 0.0f);\nfloat score = max(bs, ds) / 8.0f;\ncolor = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);\n}"
 
 /***/ }),
 
@@ -3726,25 +3983,14 @@ module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main(
 
 /***/ }),
 
-/***/ "./src/gpu/shaders/keypoint-detectors/fast9.glsl":
-/*!*******************************************************!*\
-  !*** ./src/gpu/shaders/keypoint-detectors/fast9.glsl ***!
-  \*******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nvec4 pixel = threadPixel(image);\ncolor = vec4(0.0f, pixel.gba);\nif(\nthread.x >= 3 && thread.x < size.x - 3 &&\nthread.y >= 3 && thread.y < size.y - 3\n) {\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 3)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 3)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 2)).g;\nfloat p3 = pixelAtOffset(image, ivec2(3, 1)).g;\nfloat p4 = pixelAtOffset(image, ivec2(3, 0)).g;\nfloat p5 = pixelAtOffset(image, ivec2(3, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(2, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(1, -3)).g;\nfloat p8 = pixelAtOffset(image, ivec2(0, -3)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-1, -3)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, -2)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-3, -1)).g;\nfloat p12 = pixelAtOffset(image, ivec2(-3, 0)).g;\nfloat p13 = pixelAtOffset(image, ivec2(-3, 1)).g;\nfloat p14 = pixelAtOffset(image, ivec2(-2, 2)).g;\nfloat p15 = pixelAtOffset(image, ivec2(-1, 3)).g;\nbool possibleCorner =\n((c_t > p0 || c_t > p8) && (c_t > p4 || c_t > p12)) ||\n((ct < p0  || ct < p8)  && (ct < p4  || ct < p12))  ;\nif(possibleCorner) {\nint bright = 0, dark = 0, bc = 0, dc = 0;\nif(c_t > p0) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p0) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p1) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p1) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p2) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p2) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p3) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p3) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p4) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p4) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p5) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p5) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p6) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p6) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p7) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p7) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p8) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p8) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p9) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p9) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p10) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p10) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p11) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p11) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p12) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p12) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p13) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p13) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p14) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p14) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p15) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p15) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(bright < 9 && dark < 9) {\nif(bc > 0 && bc < 9) do {\nif(c_t > p0)           bc += 1; else break;\nif(c_t > p1 && bc < 9) bc += 1; else break;\nif(c_t > p2 && bc < 9) bc += 1; else break;\nif(c_t > p3 && bc < 9) bc += 1; else break;\nif(c_t > p4 && bc < 9) bc += 1; else break;\nif(c_t > p5 && bc < 9) bc += 1; else break;\nif(c_t > p6 && bc < 9) bc += 1; else break;\nif(c_t > p7 && bc < 9) bc += 1; else break;\n} while(false);\nif(dc > 0 && dc < 9) do {\nif(ct < p0)           dc += 1; else break;\nif(ct < p1 && dc < 9) dc += 1; else break;\nif(ct < p2 && dc < 9) dc += 1; else break;\nif(ct < p3 && dc < 9) dc += 1; else break;\nif(ct < p4 && dc < 9) dc += 1; else break;\nif(ct < p5 && dc < 9) dc += 1; else break;\nif(ct < p6 && dc < 9) dc += 1; else break;\nif(ct < p7 && dc < 9) dc += 1; else break;\n} while(false);\nif(bc >= 9 || dc >= 9)\ncolor = vec4(1.0f, pixel.gba);\n}\nelse {\ncolor = vec4(1.0f, pixel.gba);\n}\n}\n}\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/keypoint-detectors/fast9ml.glsl":
+/***/ "./src/gpu/shaders/keypoint-detectors/fast9lg.glsl":
 /*!*********************************************************!*\
-  !*** ./src/gpu/shaders/keypoint-detectors/fast9ml.glsl ***!
+  !*** ./src/gpu/shaders/keypoint-detectors/fast9lg.glsl ***!
   \*********************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 thread = threadLocation();\nivec2 size = outputSize();\ncolor = vec4(0.0f, pixel.gba);\nif(thread.x < 3 || thread.y < 3 || thread.x >= size.x - 3 || thread.y >= size.y - 3)\nreturn;\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 3)).g;\nfloat p4 = pixelAtOffset(image, ivec2(3, 0)).g;\nfloat p8 = pixelAtOffset(image, ivec2(0, -3)).g;\nfloat p12 = pixelAtOffset(image, ivec2(-3, 0)).g;\nif(!(\n((c_t > p0 || c_t > p8) && (c_t > p4 || c_t > p12)) ||\n((ct < p0  || ct < p8)  && (ct < p4  || ct < p12))\n))\nreturn;\nfloat p1 = pixelAtOffset(image, ivec2(1, 3)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 2)).g;\nfloat p3 = pixelAtOffset(image, ivec2(3, 1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(3, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(2, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(1, -3)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-1, -3)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, -2)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-3, -1)).g;\nfloat p13 = pixelAtOffset(image, ivec2(-3, 1)).g;\nfloat p14 = pixelAtOffset(image, ivec2(-2, 2)).g;\nfloat p15 = pixelAtOffset(image, ivec2(-1, 3)).g;\nif(p0 > ct)\nif(p1 > ct)\nif(p2 > ct)\nif(p3 > ct)\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse if(p7 < c_t)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse if(p14 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse if(p6 < c_t)\nif(p15 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse if(p13 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse if(p13 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p5 < c_t)\nif(p14 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p12 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p14 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p6 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p12 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p6 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p4 < c_t)\nif(p13 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p11 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p12 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p13 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p11 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p3 < c_t)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p10 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p11 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\nif(p4 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p12 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p10 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\nif(p4 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p2 < c_t)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 > ct)\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p9 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p10 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\nif(p4 < c_t)\nif(p3 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p11 < c_t)\nif(p12 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 > ct)\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p9 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\nif(p4 < c_t)\nif(p3 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p12 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p12 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p1 < c_t)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 > ct)\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p2 > ct)\nif(p3 > ct)\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p8 < c_t)\nif(p7 < c_t)\nif(p9 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\nif(p4 < c_t)\nif(p3 < c_t)\nif(p2 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p10 < c_t)\nif(p11 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 > ct)\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p2 > ct)\nif(p3 > ct)\nif(p4 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p8 < c_t)\nif(p7 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\nif(p4 < c_t)\nif(p3 < c_t)\nif(p2 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p11 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p11 < c_t)\nif(p12 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p0 < c_t)\nif(p1 > ct)\nif(p8 > ct)\nif(p7 > ct)\nif(p9 > ct)\nif(p6 > ct)\nif(p5 > ct)\nif(p4 > ct)\nif(p3 > ct)\nif(p2 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p10 > ct)\nif(p11 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 < c_t)\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p2 < c_t)\nif(p3 < c_t)\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p1 < c_t)\nif(p2 > ct)\nif(p9 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p10 > ct)\nif(p6 > ct)\nif(p5 > ct)\nif(p4 > ct)\nif(p3 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p11 > ct)\nif(p12 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 < c_t)\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p2 < c_t)\nif(p3 > ct)\nif(p10 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p11 > ct)\nif(p6 > ct)\nif(p5 > ct)\nif(p4 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p12 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p3 < c_t)\nif(p4 > ct)\nif(p13 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p6 > ct)\nif(p5 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p13 < c_t)\nif(p11 > ct)\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p12 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p11 < c_t)\nif(p12 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p4 < c_t)\nif(p5 > ct)\nif(p14 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p6 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p14 < c_t)\nif(p12 > ct)\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p12 < c_t)\nif(p13 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p6 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p5 < c_t)\nif(p6 > ct)\nif(p15 < c_t)\nif(p13 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p6 < c_t)\nif(p7 > ct)\nif(p14 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse if(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p13 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p12 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p6 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p6 > ct)\nif(p5 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p6 > ct)\nif(p5 > ct)\nif(p4 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p9 > ct)\nif(p7 > ct)\nif(p8 > ct)\nif(p10 > ct)\nif(p11 > ct)\nif(p6 > ct)\nif(p5 > ct)\nif(p4 > ct)\nif(p3 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p12 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p12 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 < c_t)\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\nif(p8 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p8 > ct)\nif(p7 > ct)\nif(p9 > ct)\nif(p10 > ct)\nif(p6 > ct)\nif(p5 > ct)\nif(p4 > ct)\nif(p3 > ct)\nif(p2 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p11 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p8 < c_t)\nif(p9 < c_t)\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p3 < c_t)\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p2 < c_t)\nif(p3 < c_t)\nif(p4 < c_t)\nif(p5 < c_t)\nif(p6 < c_t)\nif(p7 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p7 > ct)\nif(p8 > ct)\nif(p9 > ct)\nif(p6 > ct)\nif(p5 > ct)\nif(p4 > ct)\nif(p3 > ct)\nif(p2 > ct)\nif(p1 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p10 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 > ct)\nif(p11 > ct)\nif(p12 > ct)\nif(p13 > ct)\nif(p14 > ct)\nif(p15 > ct)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse if(p7 < c_t)\nif(p8 < c_t)\nif(p9 < c_t)\nif(p6 < c_t)\nif(p5 < c_t)\nif(p4 < c_t)\nif(p3 < c_t)\nif(p2 < c_t)\nif(p1 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\nif(p10 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\nif(p10 < c_t)\nif(p11 < c_t)\nif(p12 < c_t)\nif(p13 < c_t)\nif(p14 < c_t)\nif(p15 < c_t)\ncolor = vec4(1.0f, pixel.gba);\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\nelse\n;\n}"
+module.exports = "uniform sampler2D image;\nuniform float threshold;\nconst ivec4 margin = ivec4(3, 3, 4, 4);\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 thread = threadLocation();\nivec2 size = outputSize();\ncolor = vec4(0.0f, pixel.gba);\nif(any(lessThan(ivec4(thread, size - thread), margin)))\nreturn;\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 3)).g;\nfloat p4 = pixelAtOffset(image, ivec2(3, 0)).g;\nfloat p8 = pixelAtOffset(image, ivec2(0, -3)).g;\nfloat p12 = pixelAtOffset(image, ivec2(-3, 0)).g;\nif(!(\n((c_t > p0 || c_t > p8) && (c_t > p4 || c_t > p12)) ||\n((ct < p0  || ct < p8)  && (ct < p4  || ct < p12))\n))\nreturn;\nfloat p1 = pixelAtOffset(image, ivec2(1, 3)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 2)).g;\nfloat p3 = pixelAtOffset(image, ivec2(3, 1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(3, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(2, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(1, -3)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-1, -3)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, -2)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-3, -1)).g;\nfloat p13 = pixelAtOffset(image, ivec2(-3, 1)).g;\nfloat p14 = pixelAtOffset(image, ivec2(-2, 2)).g;\nfloat p15 = pixelAtOffset(image, ivec2(-1, 3)).g;\nbool A=(p0>ct),B=(p1>ct),C=(p2>ct),D=(p3>ct),E=(p4>ct),F=(p5>ct),G=(p6>ct),H=(p7>ct),I=(p8>ct),J=(p9>ct),K=(p10>ct),L=(p11>ct),M=(p12>ct),N=(p13>ct),O=(p14>ct),P=(p15>ct),a=(p0<c_t),b=(p1<c_t),c=(p2<c_t),d=(p3<c_t),e=(p4<c_t),f=(p5<c_t),g=(p6<c_t),h=(p7<c_t),i=(p8<c_t),j=(p9<c_t),k=(p10<c_t),l=(p11<c_t),m=(p12<c_t),n=(p13<c_t),o=(p14<c_t),p=(p15<c_t);\nbool isCorner=A&&(B&&(K&&L&&J&&(M&&N&&O&&P||G&&H&&I&&(M&&N&&O||F&&(M&&N||E&&(M||D))))||C&&(K&&L&&M&&(N&&O&&P||G&&H&&I&&J&&(N&&O||F&&(N||E)))||D&&(N&&(L&&M&&(K&&G&&H&&I&&J&&(O||F)||O&&P)||k&&l&&m&&e&&f&&g&&h&&i&&j)||E&&(O&&(M&&N&&(K&&L&&G&&H&&I&&J||P)||k&&l&&m&&n&&f&&g&&h&&i&&j)||F&&(P&&(N&&O||k&&l&&m&&n&&o&&g&&h&&i&&j)||G&&(O&&P||H&&(P||I)||k&&l&&m&&n&&o&&p&&h&&i&&j)||k&&l&&m&&n&&o&&h&&i&&j&&(p||g))||k&&l&&m&&n&&h&&i&&j&&(o&&(p||g)||f&&(o&&p||g)))||k&&l&&m&&h&&i&&j&&(n&&(o&&p||g&&(o||f))||e&&(n&&o&&p||g&&(n&&o||f))))||k&&l&&h&&i&&j&&(m&&(n&&o&&p||g&&(n&&o||f&&(n||e)))||d&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e)))))||k&&h&&i&&j&&(l&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d))))))||K&&I&&J&&(L&&M&&N&&O&&P||G&&H&&(L&&M&&N&&O||F&&(L&&M&&N||E&&(L&&M||D&&(L||C)))))||h&&i&&j&&(b&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c)))))||k&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c)))))))||B&&(H&&I&&J&&(K&&L&&M&&N&&O&&P&&a||G&&(K&&L&&M&&N&&O&&a||F&&(K&&L&&M&&N&&a||E&&(K&&L&&M&&a||D&&(K&&L&&a||C)))))||a&&k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||C&&(K&&H&&I&&J&&(L&&M&&N&&O&&P&&a&&b||G&&(L&&M&&N&&O&&a&&b||F&&(L&&M&&N&&a&&b||E&&(L&&M&&a&&b||D))))||a&&b&&k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d)))))||D&&(K&&L&&H&&I&&J&&(M&&N&&O&&P&&a&&b&&c||G&&(M&&N&&O&&a&&b&&c||F&&(M&&N&&a&&b&&c||E)))||a&&b&&k&&l&&m&&c&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e))))||E&&(K&&L&&M&&H&&I&&J&&(N&&O&&P&&a&&b&&c&&d||G&&(N&&O&&a&&b&&c&&d||F))||a&&b&&l&&m&&n&&c&&d&&(k&&g&&h&&i&&j&&(o||f)||o&&p))||F&&(K&&L&&M&&N&&H&&I&&J&&(O&&P&&a&&b&&c&&d&&e||G)||a&&b&&m&&n&&o&&c&&d&&e&&(k&&l&&g&&h&&i&&j||p))||G&&(K&&L&&M&&N&&O&&H&&I&&J||a&&b&&n&&o&&p&&c&&d&&e&&f)||H&&(K&&L&&M&&N&&O&&P&&I&&J||a&&b&&o&&p&&c&&d&&e&&f&&g)||a&&(b&&(k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(k&&l&&m&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e)))||d&&(l&&m&&n&&(k&&g&&h&&i&&j&&(o||f)||o&&p)||e&&(m&&n&&o&&(k&&l&&g&&h&&i&&j||p)||f&&(n&&o&&p||g&&(o&&p||h&&(p||i)))))))||k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||h&&i&&j&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c&&(b||k))))));\ncolor = vec4(float(isCorner), pixel.gba);\n}"
 
 /***/ }),
 
@@ -3788,7 +4034,7 @@ module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threa
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D largerImage;\nuniform sampler2D smallerImage;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 lg = pixelAt(largerImage, min(thread, textureSize(largerImage, 0) - 1));\nvec4 sm = pixelAt(smallerImage, min(thread / 2, textureSize(smallerImage, 0) - 1));\nbool cond = (((thread.x & 1) + (thread.y & 1)) == 0) && (sm.r > lg.r);\ncolor = mix(\nlg,\nvec4(sm.r, lg.gb, sm.a),\nbvec4(cond, cond, cond, cond)\n);\n}"
+module.exports = "uniform sampler2D largerImage;\nuniform sampler2D smallerImage;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 lg = pixelAt(largerImage, min(thread, textureSize(largerImage, 0) - 1));\nvec4 sm = pixelAt(smallerImage, min(thread / 2, textureSize(smallerImage, 0) - 1));\ncolor = ((((thread.x & 1) + (thread.y & 1)) == 0) && (sm.r > lg.r)) ? vec4(sm.r, lg.gb, sm.a) : lg;\n}"
 
 /***/ }),
 
@@ -3799,7 +4045,7 @@ module.exports = "uniform sampler2D largerImage;\nuniform sampler2D smallerImage
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D target;\nuniform sampler2D source;\nvoid main()\n{\nvec4 a = threadPixel(target);\nvec4 b = threadPixel(source);\nbool cond = (b.r > a.r);\ncolor = mix(\na,\nvec4(b.r, a.gb, b.a),\nbvec4(cond, cond, cond, cond)\n);\n}"
+module.exports = "uniform sampler2D target;\nuniform sampler2D source;\nvoid main()\n{\nvec4 a = threadPixel(target);\nvec4 b = threadPixel(source);\ncolor = (b.r > a.r) ? vec4(b.r, a.gb, b.a) : a;\n}"
 
 /***/ }),
 
@@ -3810,7 +4056,7 @@ module.exports = "uniform sampler2D target;\nuniform sampler2D source;\nvoid mai
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nuniform float imageScale;\n#define B2(expr) bvec2((expr),(expr))\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nivec2 scaled = ivec2((texCoord * texSize) * imageScale);\nivec2 imageSize = textureSize(image, 0);\nvec4 pixel = threadPixel(image);\nvec4 p0 = pixelAt(image, min(scaled, imageSize-1));\nvec4 p1 = pixelAt(image, min(scaled + ivec2(0, 1), imageSize-1));\nvec4 p2 = pixelAt(image, min(scaled + ivec2(1, 0), imageSize-1));\nvec4 p3 = pixelAt(image, min(scaled + ivec2(1, 1), imageSize-1));\nbool gotCorner = ((thread.x & 1) + (thread.y & 1) == 0) &&\n(scaled.x + 1 < size.x && scaled.y + 1 < size.y) &&\n(p0.r + p1.r + p2.r + p3.r > 0.0f);\nvec2 best = mix(\nvec2(0.0f, pixel.a),\nmix(\nmix(\nmix(p3.ra, p1.ra, B2(p1.r > p3.r)),\nmix(p2.ra, p1.ra, B2(p1.r > p2.r)),\nB2(p2.r > p3.r)\n),\nmix(\nmix(p3.ra, p0.ra, B2(p0.r > p3.r)),\nmix(p2.ra, p0.ra, B2(p0.r > p2.r)),\nB2(p2.r > p3.r)\n),\nB2(p0.r > p1.r)\n),\nB2(gotCorner)\n);\ncolor = vec4(best.x, pixel.gb, best.y);\n}"
+module.exports = "uniform sampler2D image;\nuniform float imageScale;\nconst ivec2 one = ivec2(1, 1);\n#define B2(expr) bvec2((expr),(expr))\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nivec2 scaled = ivec2((texCoord * texSize) * imageScale);\nivec2 imageSize = textureSize(image, 0);\nvec4 pixel = threadPixel(image);\nvec4 p0 = pixelAt(image, min(scaled, imageSize-1));\nvec4 p1 = pixelAt(image, min(scaled + ivec2(0, 1), imageSize-1));\nvec4 p2 = pixelAt(image, min(scaled + ivec2(1, 0), imageSize-1));\nvec4 p3 = pixelAt(image, min(scaled + ivec2(1, 1), imageSize-1));\nbool gotCorner = ((thread.x & 1) + (thread.y & 1) == 0) &&\n(all(lessThan(scaled + one, size))) &&\n(p0.r + p1.r + p2.r + p3.r > 0.0f);\nvec2 best = mix(\nvec2(0.0f, pixel.a),\nmix(\nmix(\np1.r > p3.r ? p1.ra : p3.ra,\np1.r > p2.r ? p1.ra : p2.ra,\nB2(p2.r > p3.r)\n),\nmix(\np0.r > p3.r ? p0.ra : p3.ra,\np0.r > p2.r ? p0.ra : p2.ra,\nB2(p2.r > p3.r)\n),\nB2(p0.r > p1.r)\n),\nB2(gotCorner)\n);\ncolor = vec4(best.x, pixel.gb, best.y);\n}"
 
 /***/ }),
 
@@ -3821,7 +4067,7 @@ module.exports = "uniform sampler2D image;\nuniform float imageScale;\n#define B
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = pixelAt(image, thread / 2);\nbool cond = (((thread.x + thread.y) & 1) == 0);\ncolor = mix(\nvec4(0.0f, 0.0f, 0.0f, pixel.a),\npixel,\nbvec4(cond, cond, cond, cond)\n);\n}"
+module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = pixelAt(image, thread / 2);\ncolor = (((thread.x + thread.y) & 1) == 0) ? pixel : vec4(0.0f, 0.0f, 0.0f, pixel.a);\n}"
 
 /***/ }),
 
@@ -3832,7 +4078,7 @@ module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threa
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = pixelAt(image, thread / 3);\nbool cond = ((thread.x - (thread.y % 3) + 3) % 3) == 0;\ncolor = mix(\nvec4(0.0f, 0.0f, 0.0f, pixel.a),\npixel,\nbvec4(cond, cond, cond, cond)\n);\n}"
+module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = pixelAt(image, thread / 3);\nbool cond = ((thread.x - (thread.y % 3) + 3) % 3) == 0;\ncolor = (((thread.x - (thread.y % 3) + 3) % 3) == 0) ? pixel : vec4(0.0f, 0.0f, 0.0f, pixel.a);\n}"
 
 /***/ }),
 
@@ -3936,6 +4182,9 @@ class SpeedyGPU
      */
     constructor(width, height)
     {
+        // does the browser support WebGL2?
+        checkWebGL2Availability();
+
         // read & validate texture size
         this._width = Math.max(1, width | 0);
         this._height = Math.max(1, height | 0);
@@ -4070,19 +4319,25 @@ class SpeedyGPU
         if(this._inputTexture === null) {
             gl.canvas.width = Math.max(gl.canvas.width, width);
             gl.canvas.height = Math.max(gl.canvas.height, height);
-            this._inputTexture = _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].createTexture(gl, gl.canvas.width, gl.canvas.height);
+            this._inputTexture = Array(2).fill(null).map(_ =>
+                _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].createTexture(gl, gl.canvas.width, gl.canvas.height));
         }
         else if(width > gl.canvas.width || height > gl.canvas.height) {
             _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning(`Resizing input texture to ${width} x ${height}`)
-            this._inputTexture = _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].destroyTexture(gl, inputTexture);
+            this._inputTexture.forEach(inputTexture =>
+                _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].destroyTexture(gl, inputTexture));
             return this.upload(data, width, height);
         }
+
+        // use round-robin to mitigate WebGL's implicit synchronization
+        // and maybe minimize texture upload times
+        this._inputTextureIndex = 1 - this._inputTextureIndex;
 
         // done! note: the input texture is upside-down, i.e.,
         // flipped on the y-axis. We need to unflip it on the
         // output, so that (0,0) becomes the top-left corner
-        _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].uploadToTexture(gl, this._inputTexture, data);
-        return this._inputTexture;
+        _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].uploadToTexture(gl, this._inputTexture[this._inputTextureIndex], width, height, data);
+        return this._inputTexture[this._inputTextureIndex];
     }
 
     /**
@@ -4117,23 +4372,43 @@ class SpeedyGPU
     /**
      * Lose & restore the WebGL context
      * @param {number} [timeToRestore] in seconds
-     * @return {Promise} resolves as soon as the context is restored
+     * @return {Promise} resolves as soon as the context is restored,
+     *                   or as soon as it is lost if timeToRestore is Infinity
      */
     loseAndRestoreWebGLContext(timeToRestore = 1.0)
     {
-        const ext = this._gl.getExtension('WEBGL_lose_context');
+        const gl = this._gl;
+
+        if(gl.isContextLost())
+            return Promise.reject('Context already lost');
+
+        const ext = gl.getExtension('WEBGL_lose_context');
 
         if(ext) {
             ext.loseContext();
             return new Promise(resolve => {
-                setTimeout(() => {
-                    ext.restoreContext();
-                    resolve();
-                }, timeToRestore * 1000.0);
+                if(isFinite(timeToRestore)) {
+                    setTimeout(() => {
+                        ext.restoreContext();
+                        setTimeout(() => resolve(), 0); // next frame
+                    }, Math.max(timeToRestore, 0) * 1000.0);
+                }
+                else
+                    resolve(); // won't restore
             });
         }
         else
-            throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error(`WEBGL_lose_context is unavailable`);
+            throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error('WEBGL_lose_context is unavailable');
+    }
+
+    /**
+     * Lose the WebGL context.
+     * This is a way to manually free resources.
+     */
+    loseWebGLContext()
+    {
+        this._omitGLContextWarning = true;
+        return this.loseAndRestoreWebGLContext(Infinity);
     }
 
     // setup WebGL
@@ -4146,17 +4421,21 @@ class SpeedyGPU
         this._pyramid = null;
         this._intraPyramid = null;
         this._inputTexture = null;
+        this._inputTextureIndex = 0;
+        this._omitGLContextWarning = false;
         if(this._canvas !== undefined)
             delete this._canvas;
 
         // create canvas
         this._canvas = createCanvas(width, height);
         this._canvas.addEventListener('webglcontextlost', ev => {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning('Lost WebGL context');
+            if(!this._omitGLContextWarning)
+                _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning('Lost WebGL context');
             ev.preventDefault();
         }, false);
         this._canvas.addEventListener('webglcontextrestored', ev => {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning('Restoring WebGL context...');
+            if(!this._omitGLContextWarning)
+                _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning('Restoring WebGL context...');
             this._setupWebGL();
         }, false);
 
@@ -4209,6 +4488,13 @@ function createCanvas(width, height)
     }
 }
 
+// Checks if the browser supports WebGL2
+function checkWebGL2Availability()
+{
+    if(typeof WebGL2RenderingContext === 'undefined')
+        throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error('WebGL2 is required by this application, but it\'s not available in your browser. Please use a different browser.');
+}
+
 // Create a WebGL2 context
 function createWebGLContext(canvas)
 {
@@ -4223,7 +4509,7 @@ function createWebGLContext(canvas)
     });
 
     if(!gl)
-        throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error('WebGL2 is not available in your browser. Try in a different browser.');
+        throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error('Can\'t create WebGL2 context. Try in a different browser.');
 
     return gl;
 }
@@ -4272,6 +4558,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyProgram", function() { return SpeedyProgram; });
 /* harmony import */ var _shader_preprocessor_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./shader-preprocessor.js */ "./src/gpu/shader-preprocessor.js");
 /* harmony import */ var _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./gl-utils.js */ "./src/gpu/gl-utils.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -4292,6 +4579,7 @@ __webpack_require__.r(__webpack_exports__);
  * speedy-program.js
  * SpeedyProgram class
  */
+
 
 
 
@@ -4340,6 +4628,9 @@ const UNIFORM_TYPES = {
     'bvec4':    'uniform4i',
 };
 
+// number of pixel buffer objects
+const PIXEL_BUFFER_COUNT = 2;
+
 /**
  * A SpeedyProgram is a Function that
  * runs GPU-accelerated GLSL code
@@ -4387,23 +4678,22 @@ class SpeedyProgram extends Function
         options.output[1] = height;
 
         // resize stdprog
-        if(options.renderToTexture)
-            this._stdprog = detachFBO(this._stdprog);
+        //if(options.renderToTexture)
+        //    this._stdprog = detachFBO(this._stdprog);
 
         this._stdprog.width = width;
         this._stdprog.height = height;
 
-        if(options.renderToTexture)
-            this._stdprog = attachFBO(this._stdprog);
+        //if(options.renderToTexture)
+        //    this._stdprog = attachFBO(this._stdprog);
 
         // update texSize uniform
         const uniform = this._stdprog.uniform.texSize;
         (gl[UNIFORM_TYPES[uniform.type]])(uniform.location, width, height);
         //console.log(`Resized program to ${width} x ${height}`);
 
-        // invalidate pixel buffers
-        if(this._pixels !== null && this._pixels.length < width * height * 4)
-            this._pixels = null;
+        // reallocate pixel buffers
+        this._reallocatePixelBuffers(width, height);
     }
 
     /**
@@ -4418,7 +4708,6 @@ class SpeedyProgram extends Function
     readPixelsSync(x = 0, y = 0, width = -1, height = -1)
     {
         const gl = this._gl;
-        const pixels = this._pixels || (this._pixels = new Uint8Array(this._stdprog.width * this._stdprog.height * 4));
 
         // lost context?
         if(gl.isContextLost())
@@ -4436,17 +4725,127 @@ class SpeedyProgram extends Function
         x = Math.max(0, Math.min(x, width - 1));
         y = Math.max(0, Math.min(y, height - 1));
 
+        // allocate the pixel buffers
+        if(this._pixelBuffer == null)
+            this._reallocatePixelBuffers(this._stdprog.width, this._stdprog.height);
+
         // read pixels
         if(this._stdprog.hasOwnProperty('fbo')) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._stdprog.fbo);
-            gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+            gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, this._pixelBuffer[0]);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         }
         else
-            gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+            gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, this._pixelBuffer[0]);
 
-        // return cached array
-        return pixels;
+        // done!
+        return this._pixelBuffer[0];
+    }
+
+    /**
+     * Read pixels from the output texture asynchronously with PBOs.
+     * You may optionally specify a (x,y,width,height) sub-rectangle.
+     * @param {number} [x]
+     * @param {number} [y] 
+     * @param {number} [width]
+     * @param {number} [height]
+     * @param {object} [outStatus] optional status output featuring additional info
+     * @returns {Promise<Uint8Array>} resolves to an array of pixels in the RGBA format
+     */
+    readPixelsAsync(x = 0, y = 0, width = -1, height = -1, outStatus = null)
+    {
+        const gl = this._gl;
+
+        // lost context?
+        if(gl.isContextLost())
+            return Promise.resolve(pixels);
+
+        // default values
+        if(width < 0)
+            width = this._stdprog.width;
+        if(height < 0)
+            height = this._stdprog.height;
+
+        // clamp values
+        width = Math.min(width, this._stdprog.width);
+        height = Math.min(height, this._stdprog.height);
+        x = Math.max(0, Math.min(x, width - 1));
+        y = Math.max(0, Math.min(y, height - 1));
+
+        // allocate the pixel buffers
+        if(this._pixelBuffer == null)
+            this._reallocatePixelBuffers(this._stdprog.width, this._stdprog.height);
+
+        // use these buffers
+        const wantedPBO = this._pixelBufferIndex;
+        this._pixelBufferIndex = (this._pixelBufferIndex + 1) % PIXEL_BUFFER_COUNT;
+        const nextPBO = this._pixelBufferIndex;
+
+        // create a PBO
+        const pbo = gl.createBuffer();
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
+        gl.bufferData(gl.PIXEL_PACK_BUFFER, this._pixelBuffer[nextPBO].byteLength, gl.STREAM_READ);
+
+        // schedule a DMA transfer
+        if(this._stdprog.hasOwnProperty('fbo')) {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this._stdprog.fbo);
+            gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        }
+        else {
+            gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+        }
+
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+
+        // wait for DMA transfer
+        _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].getBufferSubDataAsync(gl, pbo,
+            gl.PIXEL_PACK_BUFFER,
+            0,
+            this._pixelBuffer[nextPBO],
+            0,
+            0,
+            this._pixelBufferStatus[nextPBO]
+        ).then(() => {
+            this._pixelBufferReady[nextPBO] = true;
+        }).catch(err => {
+            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].fatal(err);
+        }).finally(() => {
+            gl.deleteBuffer(pbo);
+        });
+
+        // fill in the status object
+        if(outStatus != null)
+            outStatus.time = this._pixelBufferStatus[wantedPBO].time;
+
+        // return the wanted pixel buffer
+        return new Promise((resolve, reject) => {
+            const start = performance.now();
+            const that = this;
+            //let performanceCounter = 0;
+
+            function waitUntilPBOIsReady() {
+                if(that._pixelBufferReady[wantedPBO]) {
+                    that._pixelBufferReady[wantedPBO] = false;
+                    resolve(that._pixelBuffer[wantedPBO]);
+                }
+                else {
+                    // wantedPBO should have been ready!
+                    setTimeout(waitUntilPBOIsReady, 0); // easier on the CPU
+                    //Utils.setZeroTimeout(waitUntilPBOIsReady);
+
+                    /*if(30 == ++performanceCounter && 3 == ++that._pixelBufferAlarm) {
+                        const time = performance.now() - start;
+                        if(time >= 6)
+                            Utils.warning(`Performance warning: waiting too many cycles for PBO readiness (${time} ms). Consider using sync transfer if you aren't switching tasks.`);
+                        //else
+                            //that._pixelBufferAlarm = 0;
+                    }*/
+                }
+            }
+
+            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].setZeroTimeout(waitUntilPBOIsReady); // wait until next frame
+        });
     }
 
     /**
@@ -4505,7 +4904,7 @@ class SpeedyProgram extends Function
         this._options = options;
         this._stdprog = stdprog;
         this._params = params;
-        this._pixels = null;
+        this._initPixelBuffers();
     }
 
     // Run the SpeedyProgram
@@ -4616,6 +5015,49 @@ class SpeedyProgram extends Function
 
         return texNo;
     }
+
+    // initialize pixel buffers (no allocation is done)
+    _initPixelBuffers()
+    {
+        this._pixelBuffer = null;
+        this._pixelBufferStatus = Array(PIXEL_BUFFER_COUNT);
+        this._pixelBufferReady = Array(PIXEL_BUFFER_COUNT);
+        this._pixelBufferSize = [0, 0];
+        this._pixelBufferIndex = 0;
+        this._pixelBufferAlarm = 0;
+
+        for(let i = 0; i < PIXEL_BUFFER_COUNT; i++) {
+            this._pixelBufferStatus[i] = { time: 0 };
+            this._pixelBufferReady[i] = false;
+        }
+
+        this._pixelBufferReady[this._pixelBufferIndex] = true;
+    }
+
+    // resize pixel buffers
+    _reallocatePixelBuffers(width, height)
+    {
+        // skip realloc
+        if(width * height <= this._pixelBufferSize[0] * this._pixelBufferSize[1])
+            return;
+
+        // update size
+        this._pixelBufferSize[0] = width;
+        this._pixelBufferSize[1] = height;
+
+        // reallocate pixels array
+        const oldPixelsArray = this._pixelBuffer;
+        this._pixelBuffer = Array(PIXEL_BUFFER_COUNT);
+        for(let i = 0; i < PIXEL_BUFFER_COUNT; i++) {
+            this._pixelBuffer[i] = createPixelBuffer(width, height);
+            if(oldPixelsArray) {
+                if(oldPixelsArray[i].length > this._pixelBuffer[i].length)
+                    this._pixelBuffer[i].set(oldPixelsArray[i].slice(0, this._pixelBuffer[i].length));
+                else
+                    this._pixelBuffer[i].set(oldPixelsArray[i]);
+            }
+        }
+    }
 }
 
 // a dictionary specifying the types of all uniforms in the code
@@ -4673,7 +5115,7 @@ function functionArguments(fun)
 // create VAO & VBO
 function createStandardGeometry(gl)
 {
-    // cached values?
+    // got cached values for this WebGL context?
     const f = createStandardGeometry;
     const cache = f._cache || (f._cache = new WeakMap());
     if(cache.has(gl))
@@ -4720,8 +5162,10 @@ function createStandardGeometry(gl)
                            0);         // offset
     gl.enableVertexAttribArray(LOCATION_ATTRIB_TEXCOORD);
 
-    // unbind & return
+    // unbind
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+    // cache & return
     const result = { vao, vbo };
     cache.set(gl, result);
     return result;
@@ -4815,6 +5259,14 @@ function detachFBO(stdprog)
     return stdprog;
 }
 
+// create a width x height buffer for RGBA data
+function createPixelBuffer(width, height)
+{
+    const pixels = new Uint8Array(width * height * 4);
+    pixels.fill(255, 0, 4); // will be recognized as empty
+    return pixels;
+}
+
 /***/ }),
 
 /***/ "./src/speedy.js":
@@ -4864,23 +5316,25 @@ class Speedy
     /**
      * Loads a SpeedyMedia object based on the provided source element
      * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} sourceElement The source media
+     * @param {object} [options] Additional options for advanced configuration
      * @returns {Promise<SpeedyMedia>}
      */
-    static load(sourceElement)
+    static load(sourceElement, options = { })
     {
-        return _core_speedy_media__WEBPACK_IMPORTED_MODULE_0__["SpeedyMedia"].load(sourceElement);
+        return _core_speedy_media__WEBPACK_IMPORTED_MODULE_0__["SpeedyMedia"].load(sourceElement, options);
     }
 
     /**
      * Loads a camera stream
      * @param {number} [width] width of the stream
      * @param {number} [height] height of the stream
-     * @param {object} [options] additional options to pass to getUserMedia()
+     * @param {object} [cameraOptions] additional options to pass to getUserMedia()
+     * @param {object} [mediaOptions] additional options for advanced configuration of the SpeedyMedia
      * @returns {Promise<SpeedyMedia>}
      */
-    static camera(width = 426, height = 240, options = {})
+    static camera(width = 426, height = 240, cameraOptions = {}, mediaOptions = {})
     {
-        return _core_speedy_media__WEBPACK_IMPORTED_MODULE_0__["SpeedyMedia"].loadCameraStream(width, height, options);
+        return _core_speedy_media__WEBPACK_IMPORTED_MODULE_0__["SpeedyMedia"].loadCameraStream(width, height, cameraOptions, mediaOptions);
     }
 
     /**
@@ -4898,7 +5352,7 @@ class Speedy
      */
     static get version()
     {
-        return "0.3.0";
+        return "0.3.1";
     }
 
     /**
@@ -6007,6 +6461,35 @@ class Utils
         return Object.freeze(
             values.reduce((acc, cur) => ((acc[cur] = Symbol(cur)), acc), { })
         );
+    }
+
+    /**
+     * Similar to setTimeout(fn, 0), but without the ~4ms delay.
+     * Although much faster than setTimeout, this may be resource-hungry
+     * (heavy on battery) if used in a loop. Use with care.
+     * Implementation based on David Baron's, but adapted for ES6 classes
+     * @param {Function} fn
+     */
+    //static setZeroTimeout(fn) { setTimeout(fn); }
+    static get setZeroTimeout()
+    {
+        return this._setZeroTimeout || (this._setZeroTimeout = (() => {
+            const msgId = '0%' + Math.random().toString(36).slice(2);
+            const queue = [];
+
+            window.addEventListener('message', ev => {
+                if(ev.source === window && ev.data === msgId) {
+                    event.stopPropagation();
+                    queue.shift().call(window);
+                }
+            }, true);
+
+            // make it efficient
+            return function setZeroTimeout(fn) {
+                queue.push(fn);
+                window.postMessage(msgId, '*');
+            }
+        })());
     }
 
     /**
