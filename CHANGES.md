@@ -1,5 +1,12 @@
 # Release notes
 
+## 0.3.1 - July 17th, 2020
+
+* Improved performance when downloading data from the GPU
+* Added optional usage hint to be specified when loading new media
+* Created a shorter implementation of the FAST feature detector
+* Bugfixes & improvements
+
 ## 0.3.0 - July 9th, 2020
 
 * Ported the backend to WebGL2
