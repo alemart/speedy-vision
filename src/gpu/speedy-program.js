@@ -278,7 +278,8 @@ export class SpeedyProgram extends Function
                         //else
                             //that._pixelBufferAlarm = 0;
                     }*/
-                    Utils.setZeroTimeout(waitUntilPBOIsReady); // wantedPBO should have been ready!
+                    //Utils.setZeroTimeout(waitUntilPBOIsReady); // wantedPBO should have been ready!
+                    setTimeout(waitUntilPBOIsReady, 0);
                 }
             }
 
