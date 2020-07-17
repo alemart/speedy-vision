@@ -84,7 +84,7 @@ export class GPUEncoders extends GPUProgramGroup
     {
         const clampedKeypointCount = Math.max(0, Math.min(keypointCount, MAX_KEYPOINTS));
         const pixelsPerKeypoint = Math.ceil(2 + this._descriptorSize / 4);
-        const len = Math.ceil(Math.sqrt((4 + clampedKeypointCount) * pixelsPerKeypoint)); // add some slack
+        const len = Math.ceil(Math.sqrt((4 + clampedKeypointCount * 1.05) * pixelsPerKeypoint)); // add some slack
         const newEncoderLength = Math.max(1, Math.min(len, MAX_ENCODER_LENGTH));
         const oldEncoderLength = this._keypointEncoderLength;
 
@@ -167,22 +167,22 @@ export class GPUEncoders extends GPUProgramGroup
         const pixelsPerKeypoint = 2 + this._descriptorSize / 4;
         const lgM = Math.log2(this._gpu.pyramidMaxScale);
         const pyrHeight = this._gpu.pyramidHeight;
-        let keypoints = [], x, y, scale, rotation;
+        const keypoints = [];
+        let x, y, scale, rotation;
 
         for(let i = 0; i < pixels.length; i += 4 * pixelsPerKeypoint) {
             x = (pixels[i+1] << 8) | pixels[i];
             y = (pixels[i+3] << 8) | pixels[i+2];
-            if(x < w && y < h) {
-                scale = pixels[i+4] == 255 ? 1.0 :
-                    Math.pow(2.0, -lgM + (lgM + pyrHeight) * pixels[i+4] / 255.0);
-
-                rotation = !hasRotation ? 0.0 :
-                    pixels[i+5] * TWO_PI / 255.0;
-
-                keypoints.push(new SpeedyFeature(x, y, scale, rotation));
-            }
-            else
+            if(x >= w || y >= h)
                 break;
+
+            scale = pixels[i+4] == 255 ? 1.0 :
+                Math.pow(2.0, -lgM + (lgM + pyrHeight) * pixels[i+4] / 255.0);
+
+            rotation = !hasRotation ? 0.0 :
+                pixels[i+5] * TWO_PI / 255.0;
+
+            keypoints.push(new SpeedyFeature(x, y, scale, rotation));
         }
 
         // developer's secret ;)

@@ -702,6 +702,6 @@ function detachFBO(stdprog)
 function createPixelBuffer(width, height)
 {
     const pixels = new Uint8Array(width * height * 4);
-    pixels[0] = pixels[1] = pixels[2] = pixels[3] = 255; // will be recognized as empty
+    pixels.fill(255, 0, 4); // will be recognized as empty
     return pixels;
 }
