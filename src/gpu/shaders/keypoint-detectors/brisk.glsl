@@ -92,17 +92,8 @@ void main()
                 b11.b * eb.x * eb.y;
 
     // do a coarse optimization (if the refined one fails...)
-    bool cond1 = (isa > score && isa > isb);
-    bool cond2 = (isb > score && isb > isa);
-    color = mix(
-        mix(
-            pixel,
-            vec4(isb, pixel.gb, b00.a),
-            bvec4(cond2, cond2, cond2, cond2)
-        ),
-        vec4(isa, pixel.gb, a00.a),
-        bvec4(cond1, cond1, cond1, cond1)
-    );
+    color = (isa > score && isa > isb) ? vec4(isa, pixel.gb, a00.a) : pixel;
+    color = (isb > score && isb > isa) ? vec4(isb, pixel.gb, b00.a) : pixel;
 
     // fit a polynomial with the refined scores
     // in the scale axis (i.e., log2(scale))

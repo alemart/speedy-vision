@@ -26,9 +26,6 @@ void main()
     vec4 pixel = pixelAt(image, thread / 3);
     bool cond = ((thread.x - (thread.y % 3) + 3) % 3) == 0;
 
-    color = mix(
-        vec4(0.0f, 0.0f, 0.0f, pixel.a), // preserve scale
-        pixel,
-        bvec4(cond, cond, cond, cond)
-    );
+    // preserve scale
+    color = (((thread.x - (thread.y % 3) + 3) % 3) == 0) ? pixel : vec4(0.0f, 0.0f, 0.0f, pixel.a);
 }

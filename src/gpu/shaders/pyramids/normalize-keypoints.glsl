@@ -21,6 +21,7 @@
 
 uniform sampler2D image;
 uniform float imageScale;
+const ivec2 one = ivec2(1, 1);
 
 #define B2(expr) bvec2((expr),(expr))
 
@@ -43,25 +44,22 @@ void main()
     // if there is a corner, take the scale & score of the one with the maximum score
     // if there is no corner in the 2x2 square, drop the corner
     bool gotCorner = ((thread.x & 1) + (thread.y & 1) == 0) && // x and y are even
-        (scaled.x + 1 < size.x && scaled.y + 1 < size.y) && // square is within bounds
+        (all(lessThan(scaled + one, size))) && // square is within bounds
         (p0.r + p1.r + p2.r + p3.r > 0.0f); // there is a corner
-    vec2 best = mix(
-        vec2(0.0f, pixel.a), // drop corner
+
+    vec2 best = gotCorner ? mix( // FIXME
         mix(
-            mix(
-                mix(p3.ra, p1.ra, B2(p1.r > p3.r)),
-                mix(p2.ra, p1.ra, B2(p1.r > p2.r)),
-                B2(p2.r > p3.r)
-            ),
-            mix(
-                mix(p3.ra, p0.ra, B2(p0.r > p3.r)),
-                mix(p2.ra, p0.ra, B2(p0.r > p2.r)),
-                B2(p2.r > p3.r)
-            ),
-            B2(p0.r > p1.r)
+            p1.r > p3.r ? p1.ra : p3.ra,
+            p1.r > p2.r ? p1.ra : p2.ra,
+            B2(p2.r > p3.r)
         ),
-        B2(gotCorner)
-    );
+        mix(
+            p0.r > p3.r ? p0.ra : p3.ra,
+            p0.r > p2.r ? p0.ra : p2.ra,
+            B2(p2.r > p3.r)
+        ),
+        B2(p0.r > p1.r)
+    ) : vec2(0.0f, pixel.a); // drop corner
 
     // done
     color = vec4(best.x, pixel.gb, best.y);
