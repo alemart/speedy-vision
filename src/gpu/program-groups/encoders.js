@@ -33,7 +33,6 @@ const MAX_PIXELS_PER_KEYPOINT = (MAX_KEYPOINT_SIZE / 4) | 0; // in pixels
 const MAX_ENCODER_LENGTH = 300; // in pixels (if too large, WebGL may lose context - so be careful!)
 const MAX_KEYPOINTS = ((MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH) / MAX_PIXELS_PER_KEYPOINT) | 0;
 const INITIAL_ENCODER_LENGTH = 128; // pick a large value <= MAX (useful on static images when no encoder optimization is performed beforehand)
-const INITIAL_ENCODER_LENGTH_ASYNC = 16; // TODO TODO TODO
 const TWO_PI = 2.0 * Math.PI;
 
 
@@ -56,14 +55,14 @@ export class GPUEncoders extends GPUProgramGroup
             // Keypoint encoding
             .declare('_encodeKeypointOffsets', encodeKeypointOffsets)
             .declare('_encodeKeypoints', encodeKeypoints, {
-                output: [ INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH ],
+                ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH),
                 renderToTexture: false
             })
         ;
 
         // setup internal data
         let neighborFn = (s) => Math.round(Utils.gaussianNoise(s, 64)) % 256;
-        this._tuner = new StochasticTuner(48, 32, 255, 0.2, 4, 60, neighborFn);
+        this._tuner = new StochasticTuner(48, 32, 48, 0.2, 8, 60, neighborFn);
         this._keypointEncoderLength = INITIAL_ENCODER_LENGTH;
         this._descriptorSize = 0;
         this._spawnedAt = performance.now();
@@ -112,7 +111,7 @@ export class GPUEncoders extends GPUProgramGroup
         const maxIterations = this._tuner.currentValue();
 
         // encode keypoints
-        //try {
+        try {
             // encode offsets
             let encodingTime = performance.now();
             const offsets = this._encodeKeypointOffsets(corners, imageSize, maxIterations);
@@ -140,18 +139,20 @@ export class GPUEncoders extends GPUProgramGroup
 
             // debug
             /*
+            window._p = window._p || 0;
             window._m = window._m || 0;
-            window._m = 0.9 * window._m + 0.1 * transferTime;
-            console.log(window._m);
+            window._m = 0.9 * window._m + 0.1 * (encodingTime + transferTime);
+            if(window._p++ % 100 == 0)
+                console.log(window._m, ' | ', maxIterations);
             //console.log(JSON.stringify(this._tuner.info()));
             */
 
             // done!
             return pixels;
-        /*}
+        }
         catch(err) {
             Utils.fatal(err);
-        }*/
+        }
     }
 
     /**

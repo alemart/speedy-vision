@@ -28,7 +28,7 @@ class Speedy
     /**
      * Loads a SpeedyMedia object based on the provided source element
      * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} sourceElement The source media
-     * @param {object} [options] Additional options
+     * @param {object} [options] Additional options for advanced configuration
      * @returns {Promise<SpeedyMedia>}
      */
     static load(sourceElement, options = { })
@@ -40,12 +40,13 @@ class Speedy
      * Loads a camera stream
      * @param {number} [width] width of the stream
      * @param {number} [height] height of the stream
-     * @param {object} [options] additional options to pass to getUserMedia()
+     * @param {object} [cameraOptions] additional options to pass to getUserMedia()
+     * @param {object} [mediaOptions] additional options for advanced configuration of the SpeedyMedia
      * @returns {Promise<SpeedyMedia>}
      */
-    static camera(width = 426, height = 240, options = {})
+    static camera(width = 426, height = 240, cameraOptions = {}, mediaOptions = {})
     {
-        return SpeedyMedia.loadCameraStream(width, height, options);
+        return SpeedyMedia.loadCameraStream(width, height, cameraOptions, mediaOptions);
     }
 
     /**

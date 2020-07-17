@@ -117,14 +117,14 @@ export class SpeedyProgram extends Function
         options.output[1] = height;
 
         // resize stdprog
-        if(options.renderToTexture)
-            this._stdprog = detachFBO(this._stdprog);
+        //if(options.renderToTexture)
+        //    this._stdprog = detachFBO(this._stdprog);
 
         this._stdprog.width = width;
         this._stdprog.height = height;
 
-        if(options.renderToTexture)
-            this._stdprog = attachFBO(this._stdprog);
+        //if(options.renderToTexture)
+        //    this._stdprog = attachFBO(this._stdprog);
 
         // update texSize uniform
         const uniform = this._stdprog.uniform.texSize;

@@ -78,7 +78,7 @@ export class FeatureDetector
 
         // extract features
         const keypoints = FAST.run(n, gpu, greyscale, settings);
-        return this._extractKeypoints(keypoints, media.options.useAsyncTransfer);
+        return this._extractKeypoints(keypoints, media.options.usage == 'dynamic');
     }
 
     /**
@@ -116,7 +116,7 @@ export class FeatureDetector
 
         // extract features
         const keypoints = BRISK.run(gpu, greyscale, settings);
-        return this._extractKeypoints(keypoints, media.options.useAsyncTransfer);
+        return this._extractKeypoints(keypoints, media.options.usage == 'dynamic');
     }
 
     // given a corner-encoded texture,

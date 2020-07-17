@@ -37,7 +37,9 @@ window.onload = async function()
 {
     // tell Speedy to load the image
     const image = document.querySelector('img');
-    const media = await Speedy.load(image, { useAsyncTransfer: true });
+    const media = await Speedy.load(image, {
+        usage: 'dynamic'
+    });
 
     // create a canvas to display the features
     const canvas = createCanvas(media.width, media.height, image.title);
@@ -48,7 +50,7 @@ window.onload = async function()
     const featureCount = document.getElementById('feature-count');
 
     // update features
-    const FPS = 15;
+    const FPS = 30;
     let features = [];
     function updateFeatures()
     {

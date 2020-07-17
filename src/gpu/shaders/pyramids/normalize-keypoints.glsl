@@ -62,7 +62,7 @@ void main()
             ),
             B2(p0.r > p1.r)
         ),
-        B2(gotCorner, gotCorner)
+        B2(gotCorner)
     );
 
     // done

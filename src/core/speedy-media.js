@@ -50,9 +50,9 @@ export class SpeedyMedia
             this._colorFormat = ColorFormat.RGB;
 
             // set options
-            this._options = Object.freeze(Object.assign({
-                useAsyncTransfer: (this._type != MediaType.Image),
-            }, options));
+            this._options = buildOptions(options, {
+                usage: (this._type != MediaType.Image) ? 'dynamic' : 'static',
+            });
 
             // spawn relevant components
             this._gpu = new SpeedyGPU(this._width, this._height);
@@ -111,13 +111,14 @@ export class SpeedyMedia
      * Loads a camera stream
      * @param {number} [width] width of the stream
      * @param {number} [height] height of the stream
-     * @param {object} [options] additional options to pass to getUserMedia()
+     * @param {object} [cameraOptions] additional options to pass to getUserMedia()
+     * @param {object} [mediaOptions] additional options for advanced configuration of the SpeedyMedia
      * @returns {Promise<SpeedyMedia>}
      */
-    static loadCameraStream(width = 426, height = 240, options = {})
+    static loadCameraStream(width = 426, height = 240, cameraOptions = {}, mediaOptions = {})
     {
-        return requestCameraStream(width, height, options).then(
-            video => SpeedyMedia.load(createCanvasFromVideo(video))
+        return requestCameraStream(width, height, cameraOptions).then(
+            video => SpeedyMedia.load(createCanvasFromVideo(video), mediaOptions)
         );
     }
 
@@ -173,7 +174,8 @@ export class SpeedyMedia
     }
 
     /**
-     * Returns a read-only object featuring options related to this SpeedyMedia
+     * Returns a read-only object featuring advanced options
+     * related to this SpeedyMedia object
      * @returns {object}
      */
     get options()
@@ -369,6 +371,25 @@ function getMediaType(mediaSource)
 
     Utils.fatal(`Can't get media type: invalid media source. ${mediaSource}`);
     return null;
+}
+
+// build & validate options object
+function buildOptions(options, defaultOptions)
+{
+    const warn = buildOptions._err || (buildOptions._err = 
+        (...args) => Utils.warning(`Invalid option when loading media.`, ...args));
+
+    // build options object
+    options = Object.assign({}, options, defaultOptions);
+
+    // validate
+    if(options.usage != 'dynamic' && options.usage != 'static') {
+        warn(`Unrecognized usage: "${options.usage}"`);
+        options.usage = defaultOptions.usage;
+    }
+
+    // done!
+    return Object.freeze(options); // must be read-only
 }
 
 // webcam access
