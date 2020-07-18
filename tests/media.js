@@ -36,13 +36,14 @@ describe('SpeedyMedia', function() {
     });
 
     it('can load a video', function() {
-        return expectAsync(
-            loadVideo('jelly.mp4').then(video =>
-                Speedy.load(video).then(media =>
-                    (display(media, 'Video'), Promise.resolve(media))
-                )
-            )
-        ).toBeResolved();
+       return expectAsync(new Promise((resolve => {
+           loadVideo('jelly.mp4').then(video => {
+               Speedy.load(video).then(media => {
+                   resolve(media);
+                   display(media, 'Video');
+               });
+            });
+       }))).toBeResolved();
     });
 
     it('has a valid source', async function() {

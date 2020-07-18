@@ -62,10 +62,10 @@ function loadVideo(assetName)
         const video = document.createElement('video');
         video.oncanplay = () => (video.play(), resolve(video));
         video.onerror = () => reject(new Error(`Can't load ${assetName}`));
-        video.muted = true;
+        video.defaultMuted = video.muted = true;
+        video.autoplay = true;
         video.loop = true;
         video.src = '../assets/' + assetName;
-        video.load();
     });
 }
 
