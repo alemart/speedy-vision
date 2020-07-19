@@ -45,21 +45,21 @@ void main()
     float p11 = pixelAtOffset(image, ivec2(-1, 2)).g;
 
     // read bright and dark pixels
-    float bs = 0.0f, ds = 0.0f;
-    bs += max(c_t - p0, 0.0f);  ds += max(p0 - ct, 0.0f);
-    bs += max(c_t - p1, 0.0f);  ds += max(p1 - ct, 0.0f);
-    bs += max(c_t - p2, 0.0f);  ds += max(p2 - ct, 0.0f);
-    bs += max(c_t - p3, 0.0f);  ds += max(p3 - ct, 0.0f);
-    bs += max(c_t - p4, 0.0f);  ds += max(p4 - ct, 0.0f);
-    bs += max(c_t - p5, 0.0f);  ds += max(p5 - ct, 0.0f);
-    bs += max(c_t - p6, 0.0f);  ds += max(p6 - ct, 0.0f);
-    bs += max(c_t - p7, 0.0f);  ds += max(p7 - ct, 0.0f);
-    bs += max(c_t - p8, 0.0f);  ds += max(p8 - ct, 0.0f);
-    bs += max(c_t - p9, 0.0f);  ds += max(p9 - ct, 0.0f);
-    bs += max(c_t - p10, 0.0f); ds += max(p10 - ct, 0.0f);
-    bs += max(c_t - p11, 0.0f); ds += max(p11 - ct, 0.0f);
+    vec2 scores = vec2(0.0f, 0.0f);
+    scores += vec2(max(c_t - p0, 0.0f), max(p0 - ct, 0.0f));
+    scores += vec2(max(c_t - p1, 0.0f), max(p1 - ct, 0.0f));
+    scores += vec2(max(c_t - p2, 0.0f), max(p2 - ct, 0.0f));
+    scores += vec2(max(c_t - p3, 0.0f), max(p3 - ct, 0.0f));
+    scores += vec2(max(c_t - p4, 0.0f), max(p4 - ct, 0.0f));
+    scores += vec2(max(c_t - p5, 0.0f), max(p5 - ct, 0.0f));
+    scores += vec2(max(c_t - p6, 0.0f), max(p6 - ct, 0.0f));
+    scores += vec2(max(c_t - p7, 0.0f), max(p7 - ct, 0.0f));
+    scores += vec2(max(c_t - p8, 0.0f), max(p8 - ct, 0.0f));
+    scores += vec2(max(c_t - p9, 0.0f), max(p9 - ct, 0.0f));
+    scores += vec2(max(c_t - p10, 0.0f), max(p10 - ct, 0.0f));
+    scores += vec2(max(c_t - p11, 0.0f), max(p11 - ct, 0.0f));
 
     // corner score
-    float score = max(bs, ds) / 12.0f;
+    float score = max(scores.x, scores.y) / 12.0f;
     color = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);
 }

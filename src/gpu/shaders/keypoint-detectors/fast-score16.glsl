@@ -22,6 +22,9 @@
 uniform sampler2D image;
 uniform float threshold;
 
+const vec4 zeroes = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+const vec4 ones = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+
 // compute corner score considering a
 // neighboring circumference of 16 pixels
 void main()
@@ -31,43 +34,45 @@ void main()
     float ct = pixel.g + t, c_t = pixel.g - t;
 
     // read neighbors
-    float p0 = pixelAtOffset(image, ivec2(0, 3)).g;
-    float p1 = pixelAtOffset(image, ivec2(1, 3)).g;
-    float p2 = pixelAtOffset(image, ivec2(2, 2)).g;
-    float p3 = pixelAtOffset(image, ivec2(3, 1)).g;
-    float p4 = pixelAtOffset(image, ivec2(3, 0)).g;
-    float p5 = pixelAtOffset(image, ivec2(3, -1)).g;
-    float p6 = pixelAtOffset(image, ivec2(2, -2)).g;
-    float p7 = pixelAtOffset(image, ivec2(1, -3)).g;
-    float p8 = pixelAtOffset(image, ivec2(0, -3)).g;
-    float p9 = pixelAtOffset(image, ivec2(-1, -3)).g;
-    float p10 = pixelAtOffset(image, ivec2(-2, -2)).g;
-    float p11 = pixelAtOffset(image, ivec2(-3, -1)).g;
-    float p12 = pixelAtOffset(image, ivec2(-3, 0)).g;
-    float p13 = pixelAtOffset(image, ivec2(-3, 1)).g;
-    float p14 = pixelAtOffset(image, ivec2(-2, 2)).g;
-    float p15 = pixelAtOffset(image, ivec2(-1, 3)).g;
+    mat4 mp = mat4(
+        pixelAtOffset(image, ivec2(0, 3)).g,
+        pixelAtOffset(image, ivec2(1, 3)).g,
+        pixelAtOffset(image, ivec2(2, 2)).g,
+        pixelAtOffset(image, ivec2(3, 1)).g,
+        pixelAtOffset(image, ivec2(3, 0)).g,
+        pixelAtOffset(image, ivec2(3, -1)).g,
+        pixelAtOffset(image, ivec2(2, -2)).g,
+        pixelAtOffset(image, ivec2(1, -3)).g,
+        pixelAtOffset(image, ivec2(0, -3)).g,
+        pixelAtOffset(image, ivec2(-1, -3)).g,
+        pixelAtOffset(image, ivec2(-2, -2)).g,
+        pixelAtOffset(image, ivec2(-3, -1)).g,
+        pixelAtOffset(image, ivec2(-3, 0)).g,
+        pixelAtOffset(image, ivec2(-3, 1)).g,
+        pixelAtOffset(image, ivec2(-2, 2)).g,
+        pixelAtOffset(image, ivec2(-1, 3)).g
+    );
 
-    // read bright and dark pixels
-    float bs = 0.0f, ds = 0.0f;
-    bs += max(c_t - p0, 0.0f);  ds += max(p0 - ct, 0.0f);
-    bs += max(c_t - p1, 0.0f);  ds += max(p1 - ct, 0.0f);
-    bs += max(c_t - p2, 0.0f);  ds += max(p2 - ct, 0.0f);
-    bs += max(c_t - p3, 0.0f);  ds += max(p3 - ct, 0.0f);
-    bs += max(c_t - p4, 0.0f);  ds += max(p4 - ct, 0.0f);
-    bs += max(c_t - p5, 0.0f);  ds += max(p5 - ct, 0.0f);
-    bs += max(c_t - p6, 0.0f);  ds += max(p6 - ct, 0.0f);
-    bs += max(c_t - p7, 0.0f);  ds += max(p7 - ct, 0.0f);
-    bs += max(c_t - p8, 0.0f);  ds += max(p8 - ct, 0.0f);
-    bs += max(c_t - p9, 0.0f);  ds += max(p9 - ct, 0.0f);
-    bs += max(c_t - p10, 0.0f); ds += max(p10 - ct, 0.0f);
-    bs += max(c_t - p11, 0.0f); ds += max(p11 - ct, 0.0f);
-    bs += max(c_t - p12, 0.0f); ds += max(p12 - ct, 0.0f);
-    bs += max(c_t - p13, 0.0f); ds += max(p13 - ct, 0.0f);
-    bs += max(c_t - p14, 0.0f); ds += max(p14 - ct, 0.0f);
-    bs += max(c_t - p15, 0.0f); ds += max(p15 - ct, 0.0f);
+    // build auxiliary matrices
+    mat4 mct = mp - mat4(
+        ct, ct, ct, ct,
+        ct, ct, ct, ct,
+        ct, ct, ct, ct,
+        ct, ct, ct, ct
+    ), mc_t = mat4(
+        c_t, c_t, c_t, c_t,
+        c_t, c_t, c_t, c_t,
+        c_t, c_t, c_t, c_t,
+        c_t, c_t, c_t, c_t
+    ) - mp;
+
+    // compute bright and dark pixels
+    vec4 bs = max(mc_t[0], zeroes), ds = max(mct[0], zeroes);
+    bs += max(mc_t[1], zeroes); ds += max(mct[1], zeroes);
+    bs += max(mc_t[2], zeroes); ds += max(mct[2], zeroes);
+    bs += max(mc_t[3], zeroes); ds += max(mct[3], zeroes);
 
     // corner score
-    float score = max(bs, ds) / 16.0f;
+    float score = max(dot(bs, ones), dot(ds, ones)) / 16.0f;
     color = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);
 }
