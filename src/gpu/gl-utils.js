@@ -219,6 +219,19 @@ export class GLUtils
         return texture;
     }
 
+    /**
+     * Generate texture mipmap
+     * @param {WebGL2RenderingContext} gl 
+     * @param {WebGLTexture} texture 
+     */
+    static generateMipmap(gl, texture)
+    {
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+    }
+
     // bind the textures and assign their numbers
     // textureMap: { 'textureName': <texture> , ... }
     // locationMap: { 'textureName': <uniformLocation> , ... }
