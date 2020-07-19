@@ -38,9 +38,12 @@
 // Get current pixel (independent texture lookup)
 #define threadPixel(img) textureLod((img), texCoord, 0.0f)
 
-// Get pixel at (x,y): REQUIRES MANUAL BOUNDARY CHECKING
+// Get pixel at (x,y) in texel space
 #define pixelAt(img, pos) texelFetch((img), (pos), 0)
 
 // Get the pixel at a constant (dx,dy) offset from the thread pixel (use |dx|,|dy| <= 7)
 // This assumes textureSize(img, 0) == ivec2(texSize), i.e., input size == output size
 #define pixelAtOffset(img, offset) textureLodOffset((img), texCoord, 0.0f, (offset))
+
+// Get pixel (x,y) in a specific level-of-detail
+#define pixelAtLod(img, pos, lod) texelFetch((img), (pos), (lod))
