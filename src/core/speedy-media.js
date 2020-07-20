@@ -312,11 +312,12 @@ export class SpeedyMedia
 
         // Algorithm table
         const fn = this._featureDetector._table || (this._featureDetector._table = {
-            'fast' : (media, settings) => this._featureDetector.fast(media, 9, settings),   // alias for fast9
-            'fast9': (media, settings) => this._featureDetector.fast(media, 9, settings),   // FAST-9,16 (default)
-            'fast7': (media, settings) => this._featureDetector.fast(media, 7, settings),   // FAST-7,12
-            'fast5': (media, settings) => this._featureDetector.fast(media, 5, settings),   // FAST-5,8
-            'brisk': (media, settings) => this._featureDetector.brisk(media, settings),     // BRISK
+            'fast' :     (media, settings) => this._featureDetector.fast(media, 9, settings),   // alias for fast9
+            'fast9':     (media, settings) => this._featureDetector.fast(media, 9, settings),   // FAST-9,16 (default)
+            'fast7':     (media, settings) => this._featureDetector.fast(media, 7, settings),   // FAST-7,12
+            'fast5':     (media, settings) => this._featureDetector.fast(media, 5, settings),   // FAST-5,8
+            'fast9plus': (media, settings) => this._featureDetector.fastPlus(media, 9, settings), // FAST-9,16 augmented with scale & orientation
+            'brisk':     (media, settings) => this._featureDetector.brisk(media, settings),     // BRISK
         });
 
         // Validate method

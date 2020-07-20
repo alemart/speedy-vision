@@ -19,7 +19,7 @@
  * Feature detection facade
  */
 
-import { FAST } from './algorithms/fast.js';
+import { FAST, FASTPlus } from './algorithms/fast.js';
 import { BRISK } from './algorithms/brisk.js';
 import { OnlineErrorTuner, TestTuner } from '../utils/tuner';
 import { Utils } from '../utils/utils';
@@ -79,7 +79,48 @@ export class FeatureDetector
         const greyscale = gpu.colors.rgb2grey(texture);
 
         // extract features
-        const keypoints = FAST.run(n, gpu, greyscale, settings);
+        const keypoints = FAST.run(gpu, greyscale, n, settings);
+        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage);
+    }
+
+    /**
+     * FAST corner detection augmented with scale & orientation
+     * @param {SpeedyMedia} media The media
+     * @param {number} [n] must be 9
+     * @param {object} [settings] Additional settings
+     * @returns {Promise<Array<SpeedyFeature>>} keypoints
+     */
+    fastPlus(media, n = 9, settings = {})
+    {
+        const gpu = this._gpu;
+
+        // default settings
+        settings = {
+            depth: 4,
+            threshold: 10,
+            denoise: true,
+            ...settings
+        };
+
+        // convert the expected number of keypoints,
+        // if defined, into a sensitivity value
+        if(settings.hasOwnProperty('expected'))
+            settings.sensitivity = this._findSensitivity(settings.expected);
+
+        // convert a sensitivity value in [0,1],
+        // if it's defined, to a FAST threshold
+        if(settings.hasOwnProperty('sensitivity'))
+            settings.threshold = FASTPlus.sensitivity2threshold(settings.sensitivity);
+        else
+            settings.threshold = FASTPlus.normalizedThreshold(settings.threshold);
+
+        // pre-processing the image...
+        const source = media._gpu.upload(media.source);
+        const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
+        const greyscale = gpu.colors.rgb2grey(texture);
+
+        // extract features
+        const keypoints = FASTPlus.run(gpu, greyscale, n, settings);
         return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage);
     }
 

@@ -29,19 +29,23 @@ export class FAST
 {
     /**
      * Run the FAST corner detection algorithm
-     * @param {number} n FAST parameter: 9, 7 or 5
      * @param {SpeedyGPU} gpu
      * @param {WebGLTexture} greyscale Greyscale image
+     * @param {number} n FAST parameter: 9, 7 or 5
      * @param {object} settings
-     * @returns {Texture} features in a texture
+     * @returns {WebGLTexture} corners
      */
-    static run(n, gpu, greyscale, settings)
+    static run(gpu, greyscale, n, settings)
     {
         // validate input
         Utils.assert(
             n == 9 || n == 7 || n == 5,
             `Not implemented: FAST-${n}`
         );
+
+        // default settings
+        if(!settings.hasOwnProperty('threshold'))
+            settings.threshold = 10;
 
         // virtual table
         const vtable = this.run._vtable || (this.run._vtable = {
@@ -51,7 +55,6 @@ export class FAST
         });
 
         // keypoint detection
-        //GLUtils.generateMipmap(gpu.gl, greyscale);
         const fast = (vtable[n])(gpu);
         const rawCorners = fast(greyscale, settings.threshold);
 
@@ -84,5 +87,60 @@ export class FAST
     {
         threshold = Math.max(0, Math.min(threshold, 255));
         return threshold / 255;
+    }
+}
+
+/**
+ * FAST corner detector augmented with scale & orientation
+ */
+export class FASTPlus extends FAST
+{
+     /**
+     * Run the FAST corner detection algorithm
+     * @param {SpeedyGPU} gpu
+     * @param {WebGLTexture} greyscale Greyscale image
+     * @param {number} n must be 9
+     * @param {object} settings
+     * @returns {WebGLTexture} corners
+     */
+    static run(gpu, greyscale, n, settings)
+    {
+        // validate input
+        Utils.assert(
+            n == 9,
+            `Not implemented: FAST-${n}-plus`
+        );
+
+        // default settings
+        if(!settings.hasOwnProperty('threshold'))
+            settings.threshold = 10;
+        if(!settings.hasOwnProperty('depth'))
+            settings.depth = 4; // how many pyramid levels to check
+
+        // prepare data
+        const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidHeight;
+        const depth = Math.max(MIN_DEPTH, Math.min(settings.depth | 0, MAX_DEPTH));
+        const maxLod = depth - 1;
+        const log2PyrMaxScale = Math.log2(gpu.pyramidMaxScale);
+        const pyrMaxLevels = gpu.pyramidHeight;
+
+        // generate pyramid
+        const pyramid = greyscale;
+        GLUtils.generateMipmap(gpu.gl, pyramid);
+
+        // select algorithm
+        const fastPyr = gpu.keypoints.fast9pyr;
+
+        // keypoint detection
+        let multiScaleCorners = fastPyr(pyramid, settings.threshold, 0.0, Math.min(1.0, maxLod), log2PyrMaxScale, pyrMaxLevels, true);
+        if(maxLod > 1.0) {
+            const tmp = gpu.utils.identity(multiScaleCorners);
+            multiScaleCorners = fastPyr(tmp, settings.threshold, 2.0, maxLod, log2PyrMaxScale, pyrMaxLevels, false);
+        }
+        const orientedMultiScaleCorners = multiScaleCorners; // TODO
+
+        // non-maximum suppression
+        const corners = gpu.keypoints.fastSuppression(orientedMultiScaleCorners); // redo for multi-scale?
+        return corners;
     }
 }

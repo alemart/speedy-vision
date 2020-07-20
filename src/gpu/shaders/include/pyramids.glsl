@@ -15,25 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * pyramids.js
- * Image pyramids & scale-space utilities
+ * pyramids.glsl
+ * Pyramid & scale-space utilities
  */
 
-// pyramid generation
-export const upsample2 = image => require('../../shaders/pyramids/upsample2.glsl');
-export const downsample2 = image => require('../../shaders/pyramids/downsample2.glsl');
-export const upsample3 = image => require('../../shaders/pyramids/upsample3.glsl');
-export const downsample3 = image => require('../../shaders/pyramids/downsample3.glsl');
+/**
+ * Get current pixel at a specific level-of-detail
+ * @param {sampler2D} img
+ * @param {float} lod level-of-detail (0 is the base level)
+ */
+#define pyrPixel(img, lod) textureLod((img), texCoord, (lod))
 
-// utilities for merging keypoints across multiple scales
-export const mergeKeypoints = (target, source) => require('../../shaders/pyramids/merge-keypoints.glsl');
-export const mergeKeypointsAtConsecutiveLevels = (largerImage, smallerImage) => require('../../shaders/pyramids/merge-keypoints-at-consecutive-levels.glsl');
-export const normalizeKeypoints = (image, imageScale) => require('../../shaders/pyramids/normalize-keypoints.glsl');
-
-// misc
-export const crop = image => require('../../shaders/pyramids/crop.glsl');
-
-// image scale
+/**
+ * Get the pixel at a constant offset from the thread pixel at a specific LOD.
+ * This assumes textureSize(img, 0) == ivec2(texSize), i.e., input size == output size
+ * @param {sampler2D} img
+ * @param {float} lod level-of-detail
+ * @param {float} pot must be 2^lod
+ * @param {ivec2} offset the offset you would use for lod = 0
+ * @returns {vec4} pixel
+ */
+#define pyrPixelAtOffset(img, lod, pot, offset) textureLod((img), texCoord + ((pot) * vec2(offset)) / texSize, (lod))
 
 /*
  * Image scale is encoded in the alpha channel (a)
@@ -81,38 +83,26 @@ export const crop = image => require('../../shaders/pyramids/crop.glsl');
  * and so on...
  */
 
-export function setScale(scale, pyramidHeight, pyramidMaxScale)
+/**
+ * Encode a pyramid level-of-detail to a float in [0,1]
+ * @param {float} lod a value in [0, pyrMaxLevels]
+ * @param {float} log2PyrMaxScale log2(gpu.pyramidMaxScale)
+ * @param {float} pyrMaxLevels gpu.pyramidHeight
+ * @returns {float} encoded LOD in [0,1]
+ */
+float encodeLod(float lod, float log2PyrMaxScale, float pyrMaxLevels)
 {
-    const lgM = Math.log2(pyramidMaxScale), eps = 1e-5;
-    const pyramidMinScale = Math.pow(2, -pyramidHeight) + eps;
-    const x = Math.max(pyramidMinScale, Math.min(scale, pyramidMaxScale));
-    const alpha = (lgM - Math.log2(x)) / (lgM + pyramidHeight);
-
-    return (image) => `
-    uniform sampler2D image;
-
-    void main()
-    {
-        color = vec4(threadPixel(image).rgb, float(${alpha}));
-    }
-    `;
+    return (log2PyrMaxScale + lod) / (log2PyrMaxScale + pyrMaxLevels);
 }
 
-export function scale(scaleFactor, pyramidHeight, pyramidMaxScale)
+/**
+ * Decode a pyramid level-of-detail from a float in [0,1]
+ * @param {float} encodedLod alpha channel
+ * @param {float} log2PyrMaxScale log2(gpu.pyramidMaxScale)
+ * @param {float} pyrMaxLevels gpu.pyramidMaxLevels
+ * @returns {float} LOD
+ */
+float decodeLod(float encodedLod, float log2PyrMaxScale, float pyrMaxLevels)
 {
-    const lgM = Math.log2(pyramidMaxScale);
-    const s = Math.max(1e-5, scaleFactor);
-    const delta = -Math.log2(s) / (lgM + pyramidHeight);
-
-    return (image) => `
-    uniform sampler2D image;
-
-    void main()
-    {
-        vec4 pixel = threadPixel(image);
-        float alpha = clamp(pixel.a + float(${delta}), 0.0f, 1.0f);
-
-        color = vec4(pixel.rgb, alpha);
-    }
-    `;
+    return encodedLod * (log2PyrMaxScale + pyrMaxLevels) - log2PyrMaxScale;
 }
