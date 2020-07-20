@@ -1,12 +1,12 @@
 /*!
- * speedy-vision.js v0.3.1
+ * speedy-vision.js v0.4.0
  * https://github.com/alemart/speedy-vision-js
  * 
  * GPU-accelerated Computer Vision for the web
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-07-17T23:04:00.091Z
+ * Date: 2020-07-19T23:06:51.393Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -361,6 +361,7 @@ function briskLongDistancePairs(threshold = 13.67, scale = 1.0)
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FAST", function() { return FAST; });
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _gpu_gl_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../gpu/gl-utils */ "./src/gpu/gl-utils.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -384,6 +385,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /**
  * FAST corner detection
  */
@@ -393,7 +395,7 @@ class FAST
      * Run the FAST corner detection algorithm
      * @param {number} n FAST parameter: 9, 7 or 5
      * @param {SpeedyGPU} gpu
-     * @param {Texture} greyscale Greyscale image
+     * @param {WebGLTexture} greyscale Greyscale image
      * @param {object} settings
      * @returns {Texture} features in a texture
      */
@@ -404,6 +406,7 @@ class FAST
             n == 9 || n == 7 || n == 5,
             `Not implemented: FAST-${n}`
         );
+        //GLUtils.generateMipmap(gpu.gl, greyscale);
 
         // keypoint detection
         const rawCorners = (({
@@ -720,6 +723,7 @@ PipelineOperation.ConvertToGreyscale = class extends SpeedyPipelineOperation
 {
     run(texture, gpu, media)
     {
+        _gpu_gl_utils__WEBPACK_IMPORTED_MODULE_2__["GLUtils"].generateMipmap(gpu.gl, texture);
         if(media._colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].RGB)
             texture = gpu.colors.rgb2grey(texture);
         else if(media._colorFormat != _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
@@ -1885,6 +1889,19 @@ class GLUtils
                       pixels);              // source data
         gl.bindTexture(gl.TEXTURE_2D, null);
         return texture;
+    }
+
+    /**
+     * Generate texture mipmap with bilinear interpolation
+     * @param {WebGL2RenderingContext} gl 
+     * @param {WebGLTexture} texture 
+     */
+    static generateMipmap(gl, texture)
+    {
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.bindTexture(gl.TEXTURE_2D, null);
     }
 
     // bind the textures and assign their numbers
@@ -3836,7 +3853,7 @@ function readfileSync(gl, filename)
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "const vec4 grey = vec4(0.299f, 0.587f, 0.114f, 0.0f);\nuniform sampler2D image;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat g = dot(pixel, grey);\ncolor = vec4(g, g, g, 1.0f);\n}"
+module.exports = "const vec4 grey = vec4(0.299f, 0.587f, 0.114f, 0.0f);\nuniform sampler2D image;\nvoid main()\n{\nfloat lod = 1.0f;\nvec3 pos = vec3(texCoord, pow(2.0f, lod));\ncolor = textureProjLodOffset(image, pos, lod, ivec2(0,-7));\n}"
 
 /***/ }),
 
@@ -3924,7 +3941,7 @@ module.exports = "uniform sampler2D image, layerA, layerB;\nuniform float scaleA
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 2)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 2)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 1)).g;\nfloat p3 = pixelAtOffset(image, ivec2(2, 0)).g;\nfloat p4 = pixelAtOffset(image, ivec2(2, -1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(1, -2)).g;\nfloat p6 = pixelAtOffset(image, ivec2(0, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(-1, -2)).g;\nfloat p8 = pixelAtOffset(image, ivec2(-2, -1)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-2, 0)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, 1)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-1, 2)).g;\nfloat bs = 0.0f, ds = 0.0f;\nbs += max(c_t - p0, 0.0f);  ds += max(p0 - ct, 0.0f);\nbs += max(c_t - p1, 0.0f);  ds += max(p1 - ct, 0.0f);\nbs += max(c_t - p2, 0.0f);  ds += max(p2 - ct, 0.0f);\nbs += max(c_t - p3, 0.0f);  ds += max(p3 - ct, 0.0f);\nbs += max(c_t - p4, 0.0f);  ds += max(p4 - ct, 0.0f);\nbs += max(c_t - p5, 0.0f);  ds += max(p5 - ct, 0.0f);\nbs += max(c_t - p6, 0.0f);  ds += max(p6 - ct, 0.0f);\nbs += max(c_t - p7, 0.0f);  ds += max(p7 - ct, 0.0f);\nbs += max(c_t - p8, 0.0f);  ds += max(p8 - ct, 0.0f);\nbs += max(c_t - p9, 0.0f);  ds += max(p9 - ct, 0.0f);\nbs += max(c_t - p10, 0.0f); ds += max(p10 - ct, 0.0f);\nbs += max(c_t - p11, 0.0f); ds += max(p11 - ct, 0.0f);\nfloat score = max(bs, ds) / 12.0f;\ncolor = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);\n}"
+module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 2)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 2)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 1)).g;\nfloat p3 = pixelAtOffset(image, ivec2(2, 0)).g;\nfloat p4 = pixelAtOffset(image, ivec2(2, -1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(1, -2)).g;\nfloat p6 = pixelAtOffset(image, ivec2(0, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(-1, -2)).g;\nfloat p8 = pixelAtOffset(image, ivec2(-2, -1)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-2, 0)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, 1)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-1, 2)).g;\nvec2 scores = vec2(0.0f, 0.0f);\nscores += vec2(max(c_t - p0, 0.0f), max(p0 - ct, 0.0f));\nscores += vec2(max(c_t - p1, 0.0f), max(p1 - ct, 0.0f));\nscores += vec2(max(c_t - p2, 0.0f), max(p2 - ct, 0.0f));\nscores += vec2(max(c_t - p3, 0.0f), max(p3 - ct, 0.0f));\nscores += vec2(max(c_t - p4, 0.0f), max(p4 - ct, 0.0f));\nscores += vec2(max(c_t - p5, 0.0f), max(p5 - ct, 0.0f));\nscores += vec2(max(c_t - p6, 0.0f), max(p6 - ct, 0.0f));\nscores += vec2(max(c_t - p7, 0.0f), max(p7 - ct, 0.0f));\nscores += vec2(max(c_t - p8, 0.0f), max(p8 - ct, 0.0f));\nscores += vec2(max(c_t - p9, 0.0f), max(p9 - ct, 0.0f));\nscores += vec2(max(c_t - p10, 0.0f), max(p10 - ct, 0.0f));\nscores += vec2(max(c_t - p11, 0.0f), max(p11 - ct, 0.0f));\nfloat score = max(scores.x, scores.y) / 12.0f;\ncolor = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);\n}"
 
 /***/ }),
 
@@ -3935,7 +3952,7 @@ module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main(
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 3)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 3)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 2)).g;\nfloat p3 = pixelAtOffset(image, ivec2(3, 1)).g;\nfloat p4 = pixelAtOffset(image, ivec2(3, 0)).g;\nfloat p5 = pixelAtOffset(image, ivec2(3, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(2, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(1, -3)).g;\nfloat p8 = pixelAtOffset(image, ivec2(0, -3)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-1, -3)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, -2)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-3, -1)).g;\nfloat p12 = pixelAtOffset(image, ivec2(-3, 0)).g;\nfloat p13 = pixelAtOffset(image, ivec2(-3, 1)).g;\nfloat p14 = pixelAtOffset(image, ivec2(-2, 2)).g;\nfloat p15 = pixelAtOffset(image, ivec2(-1, 3)).g;\nfloat bs = 0.0f, ds = 0.0f;\nbs += max(c_t - p0, 0.0f);  ds += max(p0 - ct, 0.0f);\nbs += max(c_t - p1, 0.0f);  ds += max(p1 - ct, 0.0f);\nbs += max(c_t - p2, 0.0f);  ds += max(p2 - ct, 0.0f);\nbs += max(c_t - p3, 0.0f);  ds += max(p3 - ct, 0.0f);\nbs += max(c_t - p4, 0.0f);  ds += max(p4 - ct, 0.0f);\nbs += max(c_t - p5, 0.0f);  ds += max(p5 - ct, 0.0f);\nbs += max(c_t - p6, 0.0f);  ds += max(p6 - ct, 0.0f);\nbs += max(c_t - p7, 0.0f);  ds += max(p7 - ct, 0.0f);\nbs += max(c_t - p8, 0.0f);  ds += max(p8 - ct, 0.0f);\nbs += max(c_t - p9, 0.0f);  ds += max(p9 - ct, 0.0f);\nbs += max(c_t - p10, 0.0f); ds += max(p10 - ct, 0.0f);\nbs += max(c_t - p11, 0.0f); ds += max(p11 - ct, 0.0f);\nbs += max(c_t - p12, 0.0f); ds += max(p12 - ct, 0.0f);\nbs += max(c_t - p13, 0.0f); ds += max(p13 - ct, 0.0f);\nbs += max(c_t - p14, 0.0f); ds += max(p14 - ct, 0.0f);\nbs += max(c_t - p15, 0.0f); ds += max(p15 - ct, 0.0f);\nfloat score = max(bs, ds) / 16.0f;\ncolor = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);\n}"
+module.exports = "uniform sampler2D image;\nuniform float threshold;\nconst vec4 zeroes = vec4(0.0f, 0.0f, 0.0f, 0.0f);\nconst vec4 ones = vec4(1.0f, 1.0f, 1.0f, 1.0f);\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nmat4 mp = mat4(\npixelAtOffset(image, ivec2(0, 3)).g,\npixelAtOffset(image, ivec2(1, 3)).g,\npixelAtOffset(image, ivec2(2, 2)).g,\npixelAtOffset(image, ivec2(3, 1)).g,\npixelAtOffset(image, ivec2(3, 0)).g,\npixelAtOffset(image, ivec2(3, -1)).g,\npixelAtOffset(image, ivec2(2, -2)).g,\npixelAtOffset(image, ivec2(1, -3)).g,\npixelAtOffset(image, ivec2(0, -3)).g,\npixelAtOffset(image, ivec2(-1, -3)).g,\npixelAtOffset(image, ivec2(-2, -2)).g,\npixelAtOffset(image, ivec2(-3, -1)).g,\npixelAtOffset(image, ivec2(-3, 0)).g,\npixelAtOffset(image, ivec2(-3, 1)).g,\npixelAtOffset(image, ivec2(-2, 2)).g,\npixelAtOffset(image, ivec2(-1, 3)).g\n);\nmat4 mct = mp - mat4(\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct\n), mc_t = mat4(\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t\n) - mp;\nvec4 bs = max(mc_t[0], zeroes), ds = max(mct[0], zeroes);\nbs += max(mc_t[1], zeroes); ds += max(mct[1], zeroes);\nbs += max(mc_t[2], zeroes); ds += max(mct[2], zeroes);\nbs += max(mc_t[3], zeroes); ds += max(mct[3], zeroes);\nfloat score = max(dot(bs, ones), dot(ds, ones)) / 16.0f;\ncolor = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);\n}"
 
 /***/ }),
 
@@ -3946,7 +3963,7 @@ module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main(
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 1)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 1)).g;\nfloat p2 = pixelAtOffset(image, ivec2(1, 0)).g;\nfloat p3 = pixelAtOffset(image, ivec2(1, -1)).g;\nfloat p4 = pixelAtOffset(image, ivec2(0, -1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(-1, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(-1, 0)).g;\nfloat p7 = pixelAtOffset(image, ivec2(-1, 1)).g;\nfloat bs = 0.0f, ds = 0.0f;\nbs += max(c_t - p0, 0.0f); ds += max(p0 - ct, 0.0f);\nbs += max(c_t - p1, 0.0f); ds += max(p1 - ct, 0.0f);\nbs += max(c_t - p2, 0.0f); ds += max(p2 - ct, 0.0f);\nbs += max(c_t - p3, 0.0f); ds += max(p3 - ct, 0.0f);\nbs += max(c_t - p4, 0.0f); ds += max(p4 - ct, 0.0f);\nbs += max(c_t - p5, 0.0f); ds += max(p5 - ct, 0.0f);\nbs += max(c_t - p6, 0.0f); ds += max(p6 - ct, 0.0f);\nbs += max(c_t - p7, 0.0f); ds += max(p7 - ct, 0.0f);\nfloat score = max(bs, ds) / 8.0f;\ncolor = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);\n}"
+module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 1)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 1)).g;\nfloat p2 = pixelAtOffset(image, ivec2(1, 0)).g;\nfloat p3 = pixelAtOffset(image, ivec2(1, -1)).g;\nfloat p4 = pixelAtOffset(image, ivec2(0, -1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(-1, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(-1, 0)).g;\nfloat p7 = pixelAtOffset(image, ivec2(-1, 1)).g;\nvec2 scores = vec2(0.0f, 0.0f);\nscores += vec2(max(c_t - p0, 0.0f), max(p0 - ct, 0.0f));\nscores += vec2(max(c_t - p1, 0.0f), max(p1 - ct, 0.0f));\nscores += vec2(max(c_t - p2, 0.0f), max(p2 - ct, 0.0f));\nscores += vec2(max(c_t - p3, 0.0f), max(p3 - ct, 0.0f));\nscores += vec2(max(c_t - p4, 0.0f), max(p4 - ct, 0.0f));\nscores += vec2(max(c_t - p5, 0.0f), max(p5 - ct, 0.0f));\nscores += vec2(max(c_t - p6, 0.0f), max(p6 - ct, 0.0f));\nscores += vec2(max(c_t - p7, 0.0f), max(p7 - ct, 0.0f));\nfloat score = max(scores.x, scores.y) / 8.0f;\ncolor = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);\n}"
 
 /***/ }),
 
@@ -4156,7 +4173,8 @@ __webpack_require__.r(__webpack_exports__);
 
 // Limits
 const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
-const MAX_PYRAMID_LEVELS = 4;
+const PYRAMID_MAX_LEVELS = 4; // max depth in scale-space
+const PYRAMID_MAX_SCALE = 2; // preferably a power of 2 (image scale can go up to this)
 
 // Available program groups
 // (maps group name to class name)
@@ -4219,14 +4237,14 @@ class SpeedyGPU
     /**
      * Access the program groups of a pyramid level
      * sizeof(pyramid(i)) = sizeof(pyramid(0)) / 2^i
-     * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS - 1
+     * @param {number} level a number in 0, 1, ..., PYRAMID_MAX_LEVELS - 1
      * @returns {Array}
      */
     pyramid(level)
     {
         const lv = level | 0;
 
-        if(lv < 0 || lv >= MAX_PYRAMID_LEVELS)
+        if(lv < 0 || lv >= PYRAMID_MAX_LEVELS)
             _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].fatal(`Invalid pyramid level: ${lv}`);
 
         return this._pyramid[lv];
@@ -4237,14 +4255,14 @@ class SpeedyGPU
      * The intra-pyramid encodes layers between pyramid layers
      * sizeof(intraPyramid(0)) = 1.5 * sizeof(pyramid(0))
      * sizeof(intraPyramid(1)) = 1.5 * sizeof(pyramid(1))
-     * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS
+     * @param {number} level a number in 0, 1, ..., PYRAMID_MAX_LEVELS
      * @returns {Array}
      */
     intraPyramid(level)
     {
         const lv = level | 0;
 
-        if(lv < 0 || lv >= MAX_PYRAMID_LEVELS + 1)
+        if(lv < 0 || lv >= PYRAMID_MAX_LEVELS + 1)
             _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].fatal(`Invalid intra-pyramid level: ${lv}`);
 
         return this._intraPyramid[lv];
@@ -4256,7 +4274,7 @@ class SpeedyGPU
      */
     get pyramidHeight()
     {
-        return MAX_PYRAMID_LEVELS;
+        return PYRAMID_MAX_LEVELS;
     }
 
     /**
@@ -4265,8 +4283,7 @@ class SpeedyGPU
      */
     get pyramidMaxScale()
     {
-        // This is preferably a power of 2
-        return 2;
+        return PYRAMID_MAX_SCALE;
     }
 
     /**
@@ -4446,8 +4463,8 @@ class SpeedyGPU
         spawnProgramGroups.call(this, this, width, height);
 
         // spawn pyramids of program groups
-        this._pyramid = this._buildPyramid(width, height, 1.0, MAX_PYRAMID_LEVELS);
-        this._intraPyramid = this._buildPyramid(width, height, 1.5, MAX_PYRAMID_LEVELS + 1);
+        this._pyramid = this._buildPyramid(width, height, 1.0, PYRAMID_MAX_LEVELS);
+        this._intraPyramid = this._buildPyramid(width, height, 1.5, PYRAMID_MAX_LEVELS + 1);
     }
 
     // build a pyramid, where each level stores the program groups
@@ -5352,7 +5369,7 @@ class Speedy
      */
     static get version()
     {
-        return "0.3.1";
+        return "0.4.0";
     }
 
     /**

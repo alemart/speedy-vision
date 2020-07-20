@@ -20,6 +20,7 @@
  */
 
 import { Utils } from '../../utils/utils';
+import { GLUtils } from '../../gpu/gl-utils';
 
 /**
  * FAST corner detection
@@ -30,7 +31,7 @@ export class FAST
      * Run the FAST corner detection algorithm
      * @param {number} n FAST parameter: 9, 7 or 5
      * @param {SpeedyGPU} gpu
-     * @param {Texture} greyscale Greyscale image
+     * @param {WebGLTexture} greyscale Greyscale image
      * @param {object} settings
      * @returns {Texture} features in a texture
      */
@@ -42,12 +43,17 @@ export class FAST
             `Not implemented: FAST-${n}`
         );
 
+        // virtual table
+        const vtable = this.run._vtable || (this.run._vtable = {
+            5: gpu => gpu.keypoints.fast5,
+            7: gpu => gpu.keypoints.fast7,
+            9: gpu => gpu.keypoints.fast9,
+        });
+
         // keypoint detection
-        const rawCorners = (({
-            5: () => gpu.keypoints.fast5(greyscale, settings.threshold),
-            7: () => gpu.keypoints.fast7(greyscale, settings.threshold),
-            9: () => gpu.keypoints.fast9(greyscale, settings.threshold),
-        })[n])();
+        //GLUtils.generateMipmap(gpu.gl, greyscale);
+        const fast = (vtable[n])(gpu);
+        const rawCorners = fast(greyscale, settings.threshold);
 
         // non-maximum suppression
         const corners = gpu.keypoints.fastSuppression(rawCorners);

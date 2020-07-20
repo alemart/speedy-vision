@@ -220,7 +220,7 @@ export class GLUtils
     }
 
     /**
-     * Generate texture mipmap
+     * Generate texture mipmap with bilinear interpolation
      * @param {WebGL2RenderingContext} gl 
      * @param {WebGLTexture} texture 
      */

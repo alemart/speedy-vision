@@ -81,8 +81,19 @@ function renderFeatures(canvas, features, size = 2, color = 'yellow')
 {
     const context = canvas.getContext('2d');
     context.beginPath();
-    for(let feature of features)
-        context.rect(feature.x - size, feature.y - size, 2 * size, 2 * size);
+    for(let feature of features) {
+        let radius = size * feature.scale;
+
+        // draw scaled circle
+        context.moveTo(feature.x + radius, feature.y);
+        context.arc(feature.x, feature.y, radius, 0, Math.PI * 2.0);
+
+        // draw rotation line
+        const sin = Math.sin(feature.rotation);
+        const cos = Math.cos(feature.rotation);
+        context.moveTo(feature.x, feature.y);
+        context.lineTo(feature.x + radius * cos, feature.y - radius * sin);
+    }
     context.strokeStyle = color;
     context.stroke();
 }

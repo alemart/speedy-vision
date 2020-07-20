@@ -31,6 +31,8 @@
     "descriptors",
     "webgl",
     "webgl2",
+    "opengl",
+    "opengl es",
     "opencv",
     "gpu",
     "gpgpu",

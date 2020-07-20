@@ -91,7 +91,7 @@ function renderFeatures(canvas, features, size = 2, color = 'yellow')
     const context = canvas.getContext('2d');
     context.beginPath();
     for(let feature of features)
-        context.rect(feature.x - size, feature.y - size, 2 * size, 2 * size);
+        context.rect(feature.x - size, feature.y - size, 2 * size * feature.scale, 2 * size * feature.scale);
     context.strokeStyle = color;
     context.stroke();
 }

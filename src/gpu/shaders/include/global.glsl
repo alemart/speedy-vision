@@ -44,6 +44,3 @@
 // Get the pixel at a constant (dx,dy) offset from the thread pixel (use |dx|,|dy| <= 7)
 // This assumes textureSize(img, 0) == ivec2(texSize), i.e., input size == output size
 #define pixelAtOffset(img, offset) textureLodOffset((img), texCoord, 0.0f, (offset))
-
-// Get pixel (x,y) in a specific level-of-detail
-#define pixelAtLod(img, pos, lod) texelFetch((img), (pos), (lod))

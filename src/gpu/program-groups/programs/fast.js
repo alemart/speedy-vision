@@ -45,6 +45,10 @@
 // on a circumference of 16 pixels
 export const fast9 = (image, threshold) => require('../../shaders/keypoint-detectors/fast9lg.glsl');
 
+// FAST-9_16 on scale-space
+// Requires image mipmap
+export const fast9pyr = (image, threshold) => require('../../shaders/keypoint-detectors/fast9pyr.glsl');
+
 // FAST-7_12: requires 7 contiguous pixels
 // on a circumference of 12 pixels
 export const fast7 = (image, threshold) => require('../../shaders/keypoint-detectors/fast7.glsl');

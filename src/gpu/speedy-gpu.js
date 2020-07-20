@@ -31,7 +31,8 @@ import { GPUPyramids } from './program-groups/pyramids';
 
 // Limits
 const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
-const MAX_PYRAMID_LEVELS = 4;
+const PYRAMID_MAX_LEVELS = 4; // max depth in scale-space
+const PYRAMID_MAX_SCALE = 2; // preferably a power of 2 (image scale can go up to this)
 
 // Available program groups
 // (maps group name to class name)
@@ -94,14 +95,14 @@ export class SpeedyGPU
     /**
      * Access the program groups of a pyramid level
      * sizeof(pyramid(i)) = sizeof(pyramid(0)) / 2^i
-     * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS - 1
+     * @param {number} level a number in 0, 1, ..., PYRAMID_MAX_LEVELS - 1
      * @returns {Array}
      */
     pyramid(level)
     {
         const lv = level | 0;
 
-        if(lv < 0 || lv >= MAX_PYRAMID_LEVELS)
+        if(lv < 0 || lv >= PYRAMID_MAX_LEVELS)
             Utils.fatal(`Invalid pyramid level: ${lv}`);
 
         return this._pyramid[lv];
@@ -112,14 +113,14 @@ export class SpeedyGPU
      * The intra-pyramid encodes layers between pyramid layers
      * sizeof(intraPyramid(0)) = 1.5 * sizeof(pyramid(0))
      * sizeof(intraPyramid(1)) = 1.5 * sizeof(pyramid(1))
-     * @param {number} level a number in 0, 1, ..., MAX_PYRAMID_LEVELS
+     * @param {number} level a number in 0, 1, ..., PYRAMID_MAX_LEVELS
      * @returns {Array}
      */
     intraPyramid(level)
     {
         const lv = level | 0;
 
-        if(lv < 0 || lv >= MAX_PYRAMID_LEVELS + 1)
+        if(lv < 0 || lv >= PYRAMID_MAX_LEVELS + 1)
             Utils.fatal(`Invalid intra-pyramid level: ${lv}`);
 
         return this._intraPyramid[lv];
@@ -131,7 +132,7 @@ export class SpeedyGPU
      */
     get pyramidHeight()
     {
-        return MAX_PYRAMID_LEVELS;
+        return PYRAMID_MAX_LEVELS;
     }
 
     /**
@@ -140,8 +141,7 @@ export class SpeedyGPU
      */
     get pyramidMaxScale()
     {
-        // This is preferably a power of 2
-        return 2;
+        return PYRAMID_MAX_SCALE;
     }
 
     /**
@@ -321,8 +321,8 @@ export class SpeedyGPU
         spawnProgramGroups.call(this, this, width, height);
 
         // spawn pyramids of program groups
-        this._pyramid = this._buildPyramid(width, height, 1.0, MAX_PYRAMID_LEVELS);
-        this._intraPyramid = this._buildPyramid(width, height, 1.5, MAX_PYRAMID_LEVELS + 1);
+        this._pyramid = this._buildPyramid(width, height, 1.0, PYRAMID_MAX_LEVELS);
+        this._intraPyramid = this._buildPyramid(width, height, 1.5, PYRAMID_MAX_LEVELS + 1);
     }
 
     // build a pyramid, where each level stores the program groups
