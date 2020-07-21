@@ -39,7 +39,7 @@ void main()
     if(pixel.r == 0.0f)
         return;
 
-    // read near 8-neighborhood
+    // read inner ring: 8-neighborhood
     vec4 p0 = pixelAtOffset(image, ivec2(0, 1));
     vec4 p1 = pixelAtOffset(image, ivec2(1, 1));
     vec4 p2 = pixelAtOffset(image, ivec2(1, 0));
@@ -49,7 +49,7 @@ void main()
     vec4 p6 = pixelAtOffset(image, ivec2(-1, 0));
     vec4 p7 = pixelAtOffset(image, ivec2(-1, 1));
 
-    // read far 16-neighborhood
+    // read middle ring
     vec4 q0 = pixelAtOffset(image, ivec2(0, 2));
     vec4 q1 = pixelAtOffset(image, ivec2(1, 2));
     vec4 q2 = pixelAtOffset(image, ivec2(2, 2));
@@ -67,12 +67,30 @@ void main()
     vec4 q14 = pixelAtOffset(image, ivec2(-2, 2));
     vec4 q15 = pixelAtOffset(image, ivec2(-1, 2));
 
+    // read outer ring
+    vec4 r0 = pixelAtOffset(image, ivec2(0, 3));
+    vec4 r1 = pixelAtOffset(image, ivec2(1, 3));
+    vec4 r2 = pixelAtOffset(image, ivec2(3, 1));
+    vec4 r3 = pixelAtOffset(image, ivec2(3, 0));
+    vec4 r4 = pixelAtOffset(image, ivec2(3, -1));
+    vec4 r5 = pixelAtOffset(image, ivec2(1, -3));
+    vec4 r6 = pixelAtOffset(image, ivec2(0, -3));
+    vec4 r7 = pixelAtOffset(image, ivec2(-1, -3));
+    vec4 r8 = pixelAtOffset(image, ivec2(-3, -1));
+    vec4 r9 = pixelAtOffset(image, ivec2(-3, 0));
+    vec4 r10 = pixelAtOffset(image, ivec2(-3, 1));
+    vec4 r11 = pixelAtOffset(image, ivec2(-1, 3));
+    vec4 r12 = pixelAtOffset(image, ivec2(0, 4));
+    vec4 r13 = pixelAtOffset(image, ivec2(4, 0));
+    vec4 r14 = pixelAtOffset(image, ivec2(0, -4));
+    vec4 r15 = pixelAtOffset(image, ivec2(-4, 0));
+
     // get scores in (lodPlus, lodMinus)-scaled neighborhood
     float lodPlus = min(lod + lodJump, pyrMaxLevels - 1.0f);
     float lodMinus = max(lod - lodJump, 0.0f);
     float alphaPlus = encodeLod(lodPlus, log2PyrMaxScale, pyrMaxLevels);
     float alphaMinus = encodeLod(lodMinus, log2PyrMaxScale, pyrMaxLevels);
-    mat3 nearScore = mat3(
+    mat3 innerScore = mat3(
         p0.r * float(abs(p0.a - alphaPlus) < scaleEps || abs(p0.a - alphaMinus) < scaleEps),
         p1.r * float(abs(p1.a - alphaPlus) < scaleEps || abs(p1.a - alphaMinus) < scaleEps),
         p2.r * float(abs(p2.a - alphaPlus) < scaleEps || abs(p2.a - alphaMinus) < scaleEps),
@@ -83,7 +101,7 @@ void main()
         p7.r * float(abs(p7.a - alphaPlus) < scaleEps || abs(p7.a - alphaMinus) < scaleEps),
         0.0f
     );
-    mat4 farScore = mat4(
+    mat4 middleScore = mat4(
         q0.r * float(abs(q0.a - alphaPlus) < scaleEps || abs(q0.a - alphaMinus) < scaleEps),
         q1.r * float(abs(q1.a - alphaPlus) < scaleEps || abs(q1.a - alphaMinus) < scaleEps),
         q2.r * float(abs(q2.a - alphaPlus) < scaleEps || abs(q2.a - alphaMinus) < scaleEps),
@@ -101,13 +119,33 @@ void main()
         q14.r * float(abs(q14.a - alphaPlus) < scaleEps || abs(q14.a - alphaMinus) < scaleEps),
         q15.r * float(abs(q15.a - alphaPlus) < scaleEps || abs(q15.a - alphaMinus) < scaleEps)
     );
+    mat4 outerScore = mat4(
+        r0.r * float(abs(r0.a - alphaPlus) < scaleEps || abs(r0.a - alphaMinus) < scaleEps),
+        r1.r * float(abs(r1.a - alphaPlus) < scaleEps || abs(r1.a - alphaMinus) < scaleEps),
+        r2.r * float(abs(r2.a - alphaPlus) < scaleEps || abs(r2.a - alphaMinus) < scaleEps),
+        r3.r * float(abs(r3.a - alphaPlus) < scaleEps || abs(r3.a - alphaMinus) < scaleEps),
+        r4.r * float(abs(r4.a - alphaPlus) < scaleEps || abs(r4.a - alphaMinus) < scaleEps),
+        r5.r * float(abs(r5.a - alphaPlus) < scaleEps || abs(r5.a - alphaMinus) < scaleEps),
+        r6.r * float(abs(r6.a - alphaPlus) < scaleEps || abs(r6.a - alphaMinus) < scaleEps),
+        r7.r * float(abs(r7.a - alphaPlus) < scaleEps || abs(r7.a - alphaMinus) < scaleEps),
+        r8.r * float(abs(r8.a - alphaPlus) < scaleEps || abs(r8.a - alphaMinus) < scaleEps),
+        r9.r * float(abs(r9.a - alphaPlus) < scaleEps || abs(r9.a - alphaMinus) < scaleEps),
+        r10.r * float(abs(r10.a - alphaPlus) < scaleEps || abs(r10.a - alphaMinus) < scaleEps),
+        r11.r * float(abs(r11.a - alphaPlus) < scaleEps || abs(r11.a - alphaMinus) < scaleEps),
+        r12.r * float(abs(r12.a - alphaPlus) < scaleEps || abs(r12.a - alphaMinus) < scaleEps),
+        r13.r * float(abs(r13.a - alphaPlus) < scaleEps || abs(r13.a - alphaMinus) < scaleEps),
+        r14.r * float(abs(r14.a - alphaPlus) < scaleEps || abs(r14.a - alphaMinus) < scaleEps),
+        r15.r * float(abs(r15.a - alphaPlus) < scaleEps || abs(r15.a - alphaMinus) < scaleEps)
+    );
 
     // find maximum score
-    vec3 maxNearScore3 = max(nearScore[0], max(nearScore[1], nearScore[2]));
-    vec4 maxFarScore4 = max(max(farScore[0], farScore[1]), max(farScore[2], farScore[3]));
-    float maxNearScore = max(maxNearScore3.x, max(maxNearScore3.y, maxNearScore3.z));
-    float maxFarScore = max(max(maxFarScore4.x, maxFarScore4.y), max(maxFarScore4.z, maxFarScore4.w));
-    float maxScore = max(maxNearScore, maxFarScore);
+    vec3 maxInnerScore3 = max(innerScore[0], max(innerScore[1], innerScore[2]));
+    vec4 maxMiddleScore4 = max(max(middleScore[0], middleScore[1]), max(middleScore[2], middleScore[3]));
+    vec4 maxOuterScore4 = max(max(outerScore[0], outerScore[1]), max(outerScore[2], outerScore[3]));
+    float maxInnerScore = max(maxInnerScore3.x, max(maxInnerScore3.y, maxInnerScore3.z));
+    float maxMiddleScore = max(max(maxMiddleScore4.x, maxMiddleScore4.y), max(maxMiddleScore4.z, maxMiddleScore4.w));
+    float maxOuterScore = max(max(maxOuterScore4.x, maxOuterScore4.y), max(maxOuterScore4.z, maxOuterScore4.w));
+    float maxScore = max(maxInnerScore, max(maxMiddleScore, maxOuterScore));
 
     // non-maximum suppression
     float myScore = step(maxScore, pixel.r) * pixel.r;

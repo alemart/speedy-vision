@@ -62,7 +62,7 @@ window.onload = async function()
     {
         media.findFeatures({
             method: multiscale.checked ? 'fast9plus' : 'fast',
-            expected: expected.value,
+            expected: expected.value, // automatic sensitivity
             depth: 3, // for multiscale only
         }).then(f => {
             setTimeout(updateFeatures, 1000.0 / FPS);
