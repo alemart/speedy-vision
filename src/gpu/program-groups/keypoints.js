@@ -20,7 +20,7 @@
  */
 
 import { GPUProgramGroup } from '../gpu-program-group';
-import { fast5, fast7, fast9, fast9pyr, fastScore8, fastScore12, fastScore16, fastSuppression } from './programs/fast';
+import { fast5, fast7, fast9, fast9pyr, fastScore8, fastScore12, fastScore16, fastSuppression, multiscaleSuppression, samescaleSuppression } from './programs/fast';
 import { brisk } from './programs/brisk';
 
 /**
@@ -62,6 +62,10 @@ export class GPUKeypoints extends GPUProgramGroup
 
             // BRISK Scale-Space Non-Maximum Suppression & Interpolation
             .declare('brisk', brisk)
+
+            // Generic multi-scale non-maximum suppression
+            .declare('multiscaleSuppression', multiscaleSuppression)
+            .declare('samescaleSuppression', samescaleSuppression)
         ;
     }
 }

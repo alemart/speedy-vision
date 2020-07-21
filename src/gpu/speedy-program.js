@@ -39,7 +39,7 @@ void main() {
 const DEFAULT_FRAGMENT_SHADER_PREFIX = `#version 300 es
 precision highp float;
 precision highp int;
-precision highp sampler2D;
+precision mediump sampler2D;
  
 out vec4 color;
 in vec2 texCoord;

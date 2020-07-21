@@ -22,7 +22,7 @@
 uniform sampler2D image;
 
 // non-maximum suppression on 8-neighborhood based
-// on the corner score stored on the red channel
+// on the corner score stored in the red channel
 void main()
 {
     // 8-neighborhood
@@ -43,6 +43,6 @@ void main()
 
     // non-maximum suppression
     vec4 pixel = threadPixel(image);
-    float score = float(pixel.r >= m) * pixel.r;
+    float score = step(m, pixel.r) * pixel.r;
     color = vec4(score, pixel.gba);
 }

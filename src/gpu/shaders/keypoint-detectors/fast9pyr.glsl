@@ -44,10 +44,10 @@ void main()
     color = resetCorners ? vec4(0.0f, pixel.g, 0.0f, pixel.a) : pixel;
 
     // outside bounds?
-    /*
+    ///*
     if(any(lessThan(ivec4(thread, size - thread), margin)))
         return;
-    */
+    //*/
 
     // for each level-of-detail of the image
     for(float lod = minLod; lod <= maxLod; (lod += 1.0f), (pot += pot)) {
@@ -66,13 +66,13 @@ void main()
         );
 
         // quick test: not a corner
-        /*
+        ///*
         if(!(
             ((c_t > p4k.x || c_t > p4k.z) && (c_t > p4k.y || c_t > p4k.w)) ||
             ((ct < p4k.x  || ct < p4k.z)  && (ct < p4k.y  || ct < p4k.w))
         ))
             continue;
-        */
+        //*/
 
         // read neighbors
         mat4 mp = mat4(
@@ -124,6 +124,10 @@ void main()
 
         // is it the best corner so far?
         bool isBestCorner = isCorner && (score > color.r);
+
+        // discard repeated corners when lod > 0
+        ivec2 remainder = thread % (1 << int(lod));
+        isBestCorner = isBestCorner && (remainder.x + remainder.y == 0);
 
         // done
         color = isBestCorner ? vec4(score, color.g, score, scale) : color;

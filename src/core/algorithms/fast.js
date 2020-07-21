@@ -120,7 +120,7 @@ export class FASTPlus extends FAST
         // prepare data
         const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidHeight;
         const depth = Math.max(MIN_DEPTH, Math.min(settings.depth | 0, MAX_DEPTH));
-        const maxLod = depth - 1;
+        const maxLod = 3;//depth - 1;
         const log2PyrMaxScale = Math.log2(gpu.pyramidMaxScale);
         const pyrMaxLevels = gpu.pyramidHeight;
 
@@ -140,7 +140,8 @@ export class FASTPlus extends FAST
         const orientedMultiScaleCorners = multiScaleCorners; // TODO
 
         // non-maximum suppression
-        const corners = gpu.keypoints.fastSuppression(orientedMultiScaleCorners); // redo for multi-scale?
-        return corners;
+        const suppressed1 = gpu.keypoints.samescaleSuppression(orientedMultiScaleCorners, log2PyrMaxScale, pyrMaxLevels);
+        const suppressed2 = gpu.keypoints.multiscaleSuppression(suppressed1, 1.0, log2PyrMaxScale, pyrMaxLevels);
+        return suppressed2;
     }
 }
