@@ -30,6 +30,8 @@
         </form>
         <div>
             <button id="play" onclick="pause()">Play / pause</button>
+            <label for="multiscale">Multi-scale?</label>
+            <input type="checkbox" id="multiscale">
         </div>
         <video
             src="../assets/jelly.mp4"
@@ -51,6 +53,7 @@ window.onload = async function()
 
     // user controls
     const expected = document.getElementById('expected-features');
+    const multiscale = document.getElementById('multiscale');
 
     // update features
     const FPS = 30;
@@ -58,8 +61,9 @@ window.onload = async function()
     function updateFeatures()
     {
         media.findFeatures({
-            method: 'fast',
+            method: multiscale.checked ? 'fast9plus' : 'fast',
             expected: expected.value,
+            depth: 3, // for multiscale only
         }).then(f => {
             setTimeout(updateFeatures, 1000.0 / FPS);
             features = f;
@@ -98,8 +102,19 @@ function renderFeatures(canvas, features, size = 2, color = 'yellow')
 {
     const context = canvas.getContext('2d');
     context.beginPath();
-    for(let feature of features)
-        context.rect(feature.x - size, feature.y - size, 2 * size, 2 * size);
+    for(let feature of features) {
+        let radius = size * feature.scale;
+
+        // draw scaled circle
+        context.moveTo(feature.x + radius, feature.y);
+        context.arc(feature.x, feature.y, radius, 0, Math.PI * 2.0);
+
+        // draw rotation line
+        const sin = Math.sin(feature.rotation);
+        const cos = Math.cos(feature.rotation);
+        context.moveTo(feature.x, feature.y);
+        context.lineTo(feature.x + radius * cos, feature.y - radius * sin);
+    }
     context.strokeStyle = color;
     context.stroke();
 }

@@ -120,7 +120,7 @@ export class FASTPlus extends FAST
         // prepare data
         const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidHeight;
         const depth = Math.max(MIN_DEPTH, Math.min(settings.depth | 0, MAX_DEPTH));
-        const maxLod = 3;//depth - 1;
+        const maxLod = depth - 1;
         const log2PyrMaxScale = Math.log2(gpu.pyramidMaxScale);
         const pyrMaxLevels = gpu.pyramidHeight;
 

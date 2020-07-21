@@ -48,7 +48,7 @@ window.onload = async function()
 
         // find & render features
         media.findFeatures({
-            method: 'fast', // use the FAST algorithm
+            method: 'fast9', // use the FAST algorithm
             sensitivity: sensitivity,
         }).then(f => {
             features = f;

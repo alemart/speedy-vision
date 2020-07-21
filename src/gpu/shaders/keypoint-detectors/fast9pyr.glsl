@@ -128,6 +128,7 @@ void main()
         // discard repeated corners when lod > 0
         ivec2 remainder = thread % (1 << int(lod));
         isBestCorner = isBestCorner && (remainder.x + remainder.y == 0);
+        //isBestCorner = isBestCorner && (int(lod) == 0 || remainder.x * remainder.y == 1);
 
         // done
         color = isBestCorner ? vec4(score, color.g, score, scale) : color;
