@@ -122,13 +122,12 @@ void main()
         bs += max(mc_t[3], zeroes); ds += max(mct[3], zeroes);
         float score = max(dot(bs, ones), dot(ds, ones)) / 16.0f;
 
+        // discard repeated corners when lod > 0
+        ivec2 remainder = thread % int(pot);
+        score *= float(remainder.x + remainder.y == 0);
+
         // is it the best corner so far?
         bool isBestCorner = isCorner && (score > color.r);
-
-        // discard repeated corners when lod > 0
-        ivec2 remainder = thread % (1 << int(lod));
-        isBestCorner = isBestCorner && (remainder.x + remainder.y == 0);
-        //isBestCorner = isBestCorner && (int(lod) == 0 || remainder.x * remainder.y == 1);
 
         // done
         color = isBestCorner ? vec4(score, color.g, score, scale) : color;
