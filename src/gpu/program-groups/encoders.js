@@ -142,7 +142,7 @@ export class GPUEncoders extends GPUProgramGroup
             window._p = window._p || 0;
             window._m = window._m || 0;
             window._m = 0.9 * window._m + 0.1 * (encodingTime + transferTime);
-            if(window._p++ % 100 == 0)
+            if(window._p++ % 50 == 0)
                 console.log(window._m, ' | ', maxIterations);
             //console.log(JSON.stringify(this._tuner.info()));
             */

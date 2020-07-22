@@ -315,13 +315,13 @@ export class GLUtils
             function checkStatus() {
                 const status = gl.clientWaitSync(sync, flags, 0);
                 if(status == gl.TIMEOUT_EXPIRED) {
-                    setTimeout(checkStatus, 0); // easier on the CPU
-                    //Utils.setZeroTimeout(checkStatus);
+                    //setTimeout(checkStatus, 0); // easier on the CPU
+                    Utils.setZeroTimeout(checkStatus);
                 }
                 else if(status == gl.WAIT_FAILED) {
                     if(isFirefox && gl.getError() == gl.NO_ERROR) { // firefox bug?
-                        setTimeout(checkStatus, 0);
-                        //Utils.setZeroTimeout(checkStatus);
+                        //setTimeout(checkStatus, 0);
+                        Utils.setZeroTimeout(checkStatus);
                     }
                     else {
                         reject(GLUtils.getError(gl));
@@ -346,10 +346,9 @@ export class GLUtils
      * @param {ArrayBufferView} destBuffer
      * @param {GLuint} [destOffset]
      * @param {GLuint} [length]
-     * @param {object} [outStatus] output parameter: status object featuring additional info
-     * @returns {Promise<ArrayBufferView>} a promise that resolves to destBuffer
+     * @returns {Promise<Number>} a promise that resolves to the time it took to read the data (in ms)
      */
-    static getBufferSubDataAsync(gl, glBuffer, target, srcByteOffset, destBuffer, destOffset = 0, length = 0, outStatus = null)
+    static getBufferSubDataAsync(gl, glBuffer, target, srcByteOffset, destBuffer, destOffset = 0, length = 0)
     {
         return new Promise((resolve, reject) => {
             const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
@@ -363,13 +362,8 @@ export class GLUtils
                 gl.bindBuffer(target, glBuffer);
                 gl.getBufferSubData(target, srcByteOffset, destBuffer, destOffset, length);
                 gl.bindBuffer(target, null);
-
-                if(outStatus != null)
-                    outStatus.time = performance.now() - start;
-                resolve(destBuffer);
+                resolve(performance.now() - start);
             }).catch(err => {
-                if(outStatus != null)
-                    outStatus.time = performance.now() - start;
                 reject(GLUtils.Error(`Can't getBufferSubDataAsync(): got ${err.message} in clientWaitAsync()`));
             }).finally(() => {
                 gl.deleteSync(sync);

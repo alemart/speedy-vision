@@ -238,15 +238,16 @@ export class SpeedyProgram extends Function
         gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
 
         // wait for DMA transfer
+        this._queue = this._queue || [];
         GLUtils.getBufferSubDataAsync(gl, pbo,
             gl.PIXEL_PACK_BUFFER,
             0,
             this._pixelBuffer[nextPBO],
             0,
-            0,
-            this._pixelBufferStatus[nextPBO]
-        ).then(() => {
-            this._pixelBufferReady[nextPBO] = true;
+            0
+        ).then(timeInMs => {
+            this._pixelBufferQueue.push(nextPBO);
+            this._pixelBufferStatus[nextPBO].time = timeInMs;
         }).catch(err => {
             Utils.fatal(err.message);
         }).finally(() => {
@@ -264,12 +265,11 @@ export class SpeedyProgram extends Function
             //let performanceCounter = 0;
 
             function waitUntilPBOIsReady() {
-                if(that._pixelBufferReady[wantedPBO]) {
-                    that._pixelBufferReady[wantedPBO] = false;
-                    resolve(that._pixelBuffer[wantedPBO]);
+                if(that._pixelBufferQueue.length > 0) {
+                    const readyPBO = that._pixelBufferQueue.shift();
+                    resolve(that._pixelBuffer[readyPBO]);
                 }
                 else {
-                    // wantedPBO should have been ready!
                     setTimeout(waitUntilPBOIsReady, 0); // easier on the CPU
                     //Utils.setZeroTimeout(waitUntilPBOIsReady);
 
@@ -460,17 +460,13 @@ export class SpeedyProgram extends Function
     {
         this._pixelBuffer = null;
         this._pixelBufferStatus = Array(PIXEL_BUFFER_COUNT);
-        this._pixelBufferReady = Array(PIXEL_BUFFER_COUNT);
+        this._pixelBufferQueue = [];
         this._pixelBufferSize = [0, 0];
         this._pixelBufferIndex = 0;
-        this._pixelBufferAlarm = 0;
+        //this._pixelBufferAlarm = 0;
 
-        for(let i = 0; i < PIXEL_BUFFER_COUNT; i++) {
+        for(let i = 0; i < PIXEL_BUFFER_COUNT; i++)
             this._pixelBufferStatus[i] = { time: 0 };
-            this._pixelBufferReady[i] = false;
-        }
-
-        this._pixelBufferReady[this._pixelBufferIndex] = true;
     }
 
     // resize pixel buffers
