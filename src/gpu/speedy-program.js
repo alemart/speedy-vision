@@ -238,7 +238,6 @@ export class SpeedyProgram extends Function
         gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
 
         // wait for DMA transfer
-        this._queue = this._queue || [];
         GLUtils.getBufferSubDataAsync(gl, pbo,
             gl.PIXEL_PACK_BUFFER,
             0,
