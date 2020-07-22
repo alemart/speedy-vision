@@ -115,7 +115,7 @@ export class FASTPlus extends FAST
         if(!settings.hasOwnProperty('threshold'))
             settings.threshold = 10;
         if(!settings.hasOwnProperty('depth'))
-            settings.depth = 4; // how many pyramid levels to check
+            settings.depth = 3; // how many pyramid levels to check
 
         // prepare data
         const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidHeight;

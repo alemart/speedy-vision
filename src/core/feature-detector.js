@@ -96,7 +96,7 @@ export class FeatureDetector
 
         // default settings
         settings = {
-            depth: 4,
+            depth: 3,
             threshold: 10,
             denoise: true,
             ...settings

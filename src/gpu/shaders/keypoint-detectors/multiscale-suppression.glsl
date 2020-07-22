@@ -27,6 +27,11 @@ uniform float log2PyrMaxScale, pyrMaxLevels;
 
 const float scaleEps = 1e-5;
 
+// settings (better suppression = more texture reads)
+#define ENABLE_INNER_RING
+#define ENABLE_MIDDLE_RING
+#define ENABLE_OUTER_RING
+
 // non-maximum suppression on 8-neighborhood
 // based on the corner score and scale
 void main()
@@ -40,6 +45,7 @@ void main()
         return;
 
     // read inner ring: 8-neighborhood
+#ifdef ENABLE_INNER_RING
     vec4 p0 = pixelAtOffset(image, ivec2(0, 1));
     vec4 p1 = pixelAtOffset(image, ivec2(1, 1));
     vec4 p2 = pixelAtOffset(image, ivec2(1, 0));
@@ -48,8 +54,13 @@ void main()
     vec4 p5 = pixelAtOffset(image, ivec2(-1, -1));
     vec4 p6 = pixelAtOffset(image, ivec2(-1, 0));
     vec4 p7 = pixelAtOffset(image, ivec2(-1, 1));
+#else
+    vec4 p0, p1, p2, p3, p4, p5, p6, p7;
+    p0=p1=p2=p3=p4=p5=p6=p7=vec4(0.0f, 0.0f, 0.0f, 1.0f);
+#endif
 
     // read middle ring
+#ifdef ENABLE_MIDDLE_RING
     vec4 q0 = pixelAtOffset(image, ivec2(0, 2));
     vec4 q1 = pixelAtOffset(image, ivec2(1, 2));
     vec4 q2 = pixelAtOffset(image, ivec2(2, 2));
@@ -66,8 +77,13 @@ void main()
     vec4 q13 = pixelAtOffset(image, ivec2(-2, 1));
     vec4 q14 = pixelAtOffset(image, ivec2(-2, 2));
     vec4 q15 = pixelAtOffset(image, ivec2(-1, 2));
+#else
+    vec4 q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15;
+    q0=q1=q2=q3=q4=q5=q6=q7=q8=q9=q10=q11=q12=q13=q14=q15=vec4(0.0f,0.0f,0.0f,1.0f);
+#endif
 
     // read outer ring
+#ifdef ENABLE_OUTER_RING
     vec4 r0 = pixelAtOffset(image, ivec2(0, 3));
     vec4 r1 = pixelAtOffset(image, ivec2(1, 3));
     vec4 r2 = pixelAtOffset(image, ivec2(3, 1));
@@ -84,6 +100,10 @@ void main()
     vec4 r13 = pixelAtOffset(image, ivec2(4, 0));
     vec4 r14 = pixelAtOffset(image, ivec2(0, -4));
     vec4 r15 = pixelAtOffset(image, ivec2(-4, 0));
+#else
+    vec4 r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15;
+    r0=r1=r2=r3=r4=r5=r6=r7=r8=r9=r10=r11=r12=r13=r14=r15=vec4(0.0f,0.0f,0.0f,1.0f);
+#endif
 
     // get scores in (lodPlus, lodMinus)-scaled neighborhood
     float lodPlus = min(lod + lodJump, pyrMaxLevels - 1.0f);
