@@ -248,7 +248,7 @@ export class SpeedyProgram extends Function
         ).then(() => {
             this._pixelBufferReady[nextPBO] = true;
         }).catch(err => {
-            Utils.fatal(err);
+            Utils.fatal(err.message);
         }).finally(() => {
             gl.deleteBuffer(pbo);
         });
