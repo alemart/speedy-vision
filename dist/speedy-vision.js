@@ -6,7 +6,7 @@
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-07-19T23:06:51.393Z
+ * Date: 2020-07-22T03:13:15.084Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -354,12 +354,13 @@ function briskLongDistancePairs(threshold = 13.67, scale = 1.0)
 /*!*************************************!*\
   !*** ./src/core/algorithms/fast.js ***!
   \*************************************/
-/*! exports provided: FAST */
+/*! exports provided: FAST, FASTPlus */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FAST", function() { return FAST; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FASTPlus", function() { return FASTPlus; });
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _gpu_gl_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../gpu/gl-utils */ "./src/gpu/gl-utils.js");
 /*
@@ -393,27 +394,34 @@ class FAST
 {
     /**
      * Run the FAST corner detection algorithm
-     * @param {number} n FAST parameter: 9, 7 or 5
      * @param {SpeedyGPU} gpu
      * @param {WebGLTexture} greyscale Greyscale image
+     * @param {number} n FAST parameter: 9, 7 or 5
      * @param {object} settings
-     * @returns {Texture} features in a texture
+     * @returns {WebGLTexture} corners
      */
-    static run(n, gpu, greyscale, settings)
+    static run(gpu, greyscale, n, settings)
     {
         // validate input
         _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(
             n == 9 || n == 7 || n == 5,
             `Not implemented: FAST-${n}`
         );
-        //GLUtils.generateMipmap(gpu.gl, greyscale);
+
+        // default settings
+        if(!settings.hasOwnProperty('threshold'))
+            settings.threshold = 10;
+
+        // virtual table
+        const vtable = this.run._vtable || (this.run._vtable = {
+            5: gpu => gpu.keypoints.fast5,
+            7: gpu => gpu.keypoints.fast7,
+            9: gpu => gpu.keypoints.fast9,
+        });
 
         // keypoint detection
-        const rawCorners = (({
-            5: () => gpu.keypoints.fast5(greyscale, settings.threshold),
-            7: () => gpu.keypoints.fast7(greyscale, settings.threshold),
-            9: () => gpu.keypoints.fast9(greyscale, settings.threshold),
-        })[n])();
+        const fast = (vtable[n])(gpu);
+        const rawCorners = fast(greyscale, settings.threshold);
 
         // non-maximum suppression
         const corners = gpu.keypoints.fastSuppression(rawCorners);
@@ -444,6 +452,62 @@ class FAST
     {
         threshold = Math.max(0, Math.min(threshold, 255));
         return threshold / 255;
+    }
+}
+
+/**
+ * FAST corner detector augmented with scale & orientation
+ */
+class FASTPlus extends FAST
+{
+     /**
+     * Run the FAST corner detection algorithm
+     * @param {SpeedyGPU} gpu
+     * @param {WebGLTexture} greyscale Greyscale image
+     * @param {number} n must be 9
+     * @param {object} settings
+     * @returns {WebGLTexture} corners
+     */
+    static run(gpu, greyscale, n, settings)
+    {
+        // validate input
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(
+            n == 9,
+            `Not implemented: FAST-${n}-plus`
+        );
+
+        // default settings
+        if(!settings.hasOwnProperty('threshold'))
+            settings.threshold = 10;
+        if(!settings.hasOwnProperty('depth'))
+            settings.depth = 3; // how many pyramid levels to check
+
+        // prepare data
+        const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidHeight;
+        const depth = Math.max(MIN_DEPTH, Math.min(settings.depth | 0, MAX_DEPTH));
+        const maxLod = depth - 1;
+        const log2PyrMaxScale = Math.log2(gpu.pyramidMaxScale);
+        const pyrMaxLevels = gpu.pyramidHeight;
+
+        // generate pyramid
+        const pyramid = greyscale;
+        _gpu_gl_utils__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].generateMipmap(gpu.gl, pyramid);
+
+        // select algorithm
+        const fastPyr = gpu.keypoints.fast9pyr;
+
+        // keypoint detection
+        let multiScaleCorners = fastPyr(pyramid, settings.threshold, 0.0, Math.min(1.0, maxLod), log2PyrMaxScale, pyrMaxLevels, true);
+        if(maxLod > 1.0) {
+            const tmp = gpu.utils.identity(multiScaleCorners);
+            multiScaleCorners = fastPyr(tmp, settings.threshold, 2.0, maxLod, log2PyrMaxScale, pyrMaxLevels, false);
+        }
+        const orientedMultiScaleCorners = multiScaleCorners; // TODO
+
+        // non-maximum suppression
+        const suppressed1 = gpu.keypoints.samescaleSuppression(orientedMultiScaleCorners, log2PyrMaxScale, pyrMaxLevels);
+        const suppressed2 = gpu.keypoints.multiscaleSuppression(suppressed1, 1.0, log2PyrMaxScale, pyrMaxLevels);
+        return suppressed2;
     }
 }
 
@@ -544,7 +608,48 @@ class FeatureDetector
         const greyscale = gpu.colors.rgb2grey(texture);
 
         // extract features
-        const keypoints = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FAST"].run(n, gpu, greyscale, settings);
+        const keypoints = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FAST"].run(gpu, greyscale, n, settings);
+        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage);
+    }
+
+    /**
+     * FAST corner detection augmented with scale & orientation
+     * @param {SpeedyMedia} media The media
+     * @param {number} [n] must be 9
+     * @param {object} [settings] Additional settings
+     * @returns {Promise<Array<SpeedyFeature>>} keypoints
+     */
+    fastPlus(media, n = 9, settings = {})
+    {
+        const gpu = this._gpu;
+
+        // default settings
+        settings = {
+            depth: 3,
+            threshold: 10,
+            denoise: true,
+            ...settings
+        };
+
+        // convert the expected number of keypoints,
+        // if defined, into a sensitivity value
+        if(settings.hasOwnProperty('expected'))
+            settings.sensitivity = this._findSensitivity(settings.expected);
+
+        // convert a sensitivity value in [0,1],
+        // if it's defined, to a FAST threshold
+        if(settings.hasOwnProperty('sensitivity'))
+            settings.threshold = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FASTPlus"].sensitivity2threshold(settings.sensitivity);
+        else
+            settings.threshold = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FASTPlus"].normalizedThreshold(settings.threshold);
+
+        // pre-processing the image...
+        const source = media._gpu.upload(media.source);
+        const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
+        const greyscale = gpu.colors.rgb2grey(texture);
+
+        // extract features
+        const keypoints = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FASTPlus"].run(gpu, greyscale, n, settings);
         return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage);
     }
 
@@ -723,7 +828,6 @@ PipelineOperation.ConvertToGreyscale = class extends SpeedyPipelineOperation
 {
     run(texture, gpu, media)
     {
-        _gpu_gl_utils__WEBPACK_IMPORTED_MODULE_2__["GLUtils"].generateMipmap(gpu.gl, texture);
         if(media._colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].RGB)
             texture = gpu.colors.rgb2grey(texture);
         else if(media._colorFormat != _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
@@ -1311,11 +1415,12 @@ class SpeedyMedia
 
         // Algorithm table
         const fn = this._featureDetector._table || (this._featureDetector._table = {
-            'fast' : (media, settings) => this._featureDetector.fast(media, 9, settings),   // alias for fast9
-            'fast9': (media, settings) => this._featureDetector.fast(media, 9, settings),   // FAST-9,16 (default)
-            'fast7': (media, settings) => this._featureDetector.fast(media, 7, settings),   // FAST-7,12
-            'fast5': (media, settings) => this._featureDetector.fast(media, 5, settings),   // FAST-5,8
-            'brisk': (media, settings) => this._featureDetector.brisk(media, settings),     // BRISK
+            'fast' :     (media, settings) => this._featureDetector.fast(media, 9, settings),   // alias for fast9
+            'fast9':     (media, settings) => this._featureDetector.fast(media, 9, settings),   // FAST-9,16 (default)
+            'fast7':     (media, settings) => this._featureDetector.fast(media, 7, settings),   // FAST-7,12
+            'fast5':     (media, settings) => this._featureDetector.fast(media, 5, settings),   // FAST-5,8
+            'fast9plus': (media, settings) => this._featureDetector.fastPlus(media, 9, settings), // FAST-9,16 augmented with scale & orientation
+            'brisk':     (media, settings) => this._featureDetector.brisk(media, settings),     // BRISK
         });
 
         // Validate method
@@ -1987,13 +2092,13 @@ class GLUtils
             function checkStatus() {
                 const status = gl.clientWaitSync(sync, flags, 0);
                 if(status == gl.TIMEOUT_EXPIRED) {
-                    setTimeout(checkStatus, 0); // easier on the CPU
-                    //Utils.setZeroTimeout(checkStatus);
+                    //setTimeout(checkStatus, 0); // easier on the CPU
+                    _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].setZeroTimeout(checkStatus);
                 }
                 else if(status == gl.WAIT_FAILED) {
                     if(isFirefox && gl.getError() == gl.NO_ERROR) { // firefox bug?
-                        setTimeout(checkStatus, 0);
-                        //Utils.setZeroTimeout(checkStatus);
+                        //setTimeout(checkStatus, 0);
+                        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].setZeroTimeout(checkStatus);
                     }
                     else {
                         reject(GLUtils.getError(gl));
@@ -2018,10 +2123,9 @@ class GLUtils
      * @param {ArrayBufferView} destBuffer
      * @param {GLuint} [destOffset]
      * @param {GLuint} [length]
-     * @param {object} [outStatus] output parameter: status object featuring additional info
-     * @returns {Promise<ArrayBufferView>} a promise that resolves to destBuffer
+     * @returns {Promise<Number>} a promise that resolves to the time it took to read the data (in ms)
      */
-    static getBufferSubDataAsync(gl, glBuffer, target, srcByteOffset, destBuffer, destOffset = 0, length = 0, outStatus = null)
+    static getBufferSubDataAsync(gl, glBuffer, target, srcByteOffset, destBuffer, destOffset = 0, length = 0)
     {
         return new Promise((resolve, reject) => {
             const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
@@ -2035,13 +2139,8 @@ class GLUtils
                 gl.bindBuffer(target, glBuffer);
                 gl.getBufferSubData(target, srcByteOffset, destBuffer, destOffset, length);
                 gl.bindBuffer(target, null);
-
-                if(outStatus != null)
-                    outStatus.time = performance.now() - start;
-                resolve(destBuffer);
+                resolve(performance.now() - start);
             }).catch(err => {
-                if(outStatus != null)
-                    outStatus.time = performance.now() - start;
                 reject(GLUtils.Error(`Can't getBufferSubDataAsync(): got ${err.message} in clientWaitAsync()`));
             }).finally(() => {
                 gl.deleteSync(sync);
@@ -2434,7 +2533,7 @@ class GPUEncoders extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPr
             window._p = window._p || 0;
             window._m = window._m || 0;
             window._m = 0.9 * window._m + 0.1 * (encodingTime + transferTime);
-            if(window._p++ % 100 == 0)
+            if(window._p++ % 50 == 0)
                 console.log(window._m, ' | ', maxIterations);
             //console.log(JSON.stringify(this._tuner.info()));
             */
@@ -2770,11 +2869,18 @@ class GPUKeypoints extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUP
             .declare('_fast5', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fast5"])
             .declare('_fastScore8', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fastScore8"])
 
+            // FAST-9,16 plus
+            .declare('fast9pyr', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fast9pyr"])
+
             // FAST Non-Maximum Suppression
             .declare('fastSuppression', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fastSuppression"])
 
             // BRISK Scale-Space Non-Maximum Suppression & Interpolation
             .declare('brisk', _programs_brisk__WEBPACK_IMPORTED_MODULE_2__["brisk"])
+
+            // Generic multi-scale non-maximum suppression
+            .declare('multiscaleSuppression', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["multiscaleSuppression"])
+            .declare('samescaleSuppression', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["samescaleSuppression"])
         ;
     }
 }
@@ -3276,18 +3382,21 @@ const encodeKeypoints = (image, imageSize, encoderLength, descriptorSize) => __w
 /*!*************************************************!*\
   !*** ./src/gpu/program-groups/programs/fast.js ***!
   \*************************************************/
-/*! exports provided: fast9, fast7, fast5, fastScore16, fastScore12, fastScore8, fastSuppression */
+/*! exports provided: fast9, fast9pyr, fast7, fast5, fastScore16, fastScore12, fastScore8, fastSuppression, multiscaleSuppression, samescaleSuppression */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fast9", function() { return fast9; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fast9pyr", function() { return fast9pyr; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fast7", function() { return fast7; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fast5", function() { return fast5; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fastScore16", function() { return fastScore16; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fastScore12", function() { return fastScore12; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fastScore8", function() { return fastScore8; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fastSuppression", function() { return fastSuppression; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "multiscaleSuppression", function() { return multiscaleSuppression; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "samescaleSuppression", function() { return samescaleSuppression; });
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -3335,6 +3444,10 @@ __webpack_require__.r(__webpack_exports__);
 // on a circumference of 16 pixels
 const fast9 = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoint-detectors/fast9lg.glsl */ "./src/gpu/shaders/keypoint-detectors/fast9lg.glsl");
 
+// FAST-9_16 on scale-space
+// Requires image mipmap
+const fast9pyr = (image, threshold, minLod, maxLod, log2PyrMaxScale, pyrMaxLevels, resetCorners) => __webpack_require__(/*! ../../shaders/keypoint-detectors/fast9pyr.glsl */ "./src/gpu/shaders/keypoint-detectors/fast9pyr.glsl");
+
 // FAST-7_12: requires 7 contiguous pixels
 // on a circumference of 12 pixels
 const fast7 = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoint-detectors/fast7.glsl */ "./src/gpu/shaders/keypoint-detectors/fast7.glsl");
@@ -3358,6 +3471,10 @@ const fastScore8 = (image, threshold) => __webpack_require__(/*! ../../shaders/k
 // non-maximum suppression on 8-neighborhood based
 // on the corner score stored on the red channel
 const fastSuppression = image => __webpack_require__(/*! ../../shaders/keypoint-detectors/fast-suppression.glsl */ "./src/gpu/shaders/keypoint-detectors/fast-suppression.glsl");
+
+// generic scale-space non-maximum suppression
+const multiscaleSuppression = (image, lodJump, log2PyrMaxScale, pyrMaxLevels) => __webpack_require__(/*! ../../shaders/keypoint-detectors/multiscale-suppression.glsl */ "./src/gpu/shaders/keypoint-detectors/multiscale-suppression.glsl");
+const samescaleSuppression = (image, log2PyrMaxScale, pyrMaxLevels) => __webpack_require__(/*! ../../shaders/keypoint-detectors/samescale-suppression.glsl */ "./src/gpu/shaders/keypoint-detectors/samescale-suppression.glsl");
 
 /***/ }),
 
@@ -3425,18 +3542,20 @@ const crop = image => __webpack_require__(/*! ../../shaders/pyramids/crop.glsl *
  *
  * where x := scale of the image in the pyramid
  *            it may be 1, 0.5, 0.25, 0.125...
- *            also 1.5, 0.75, 0.375... (intra-layers)
+ *            also sqrt(2)/2, sqrt(2)/4... (intra-layers)
+ *            (note that lod = -log2(x))
  *
  *       h := height (depth) of the pyramid, an integer
+ *            (this is gpu.pyramidHeight)
  *
  *       M := scale upper bound: the maximum supported
  *            scale x for a pyramid layer, a constant
  *            that is preferably a power of two
- *            (e.g., M = 2)
+ *            (this is gpu.pyramidMaxScale)
  *
  *
  *
- * This model has some neat properties:
+ * This model has neat properties:
  *
  * Scale image by factor s:
  * a(s*x) = a(x) - log2(s) / (log2(M) + h)
@@ -3853,7 +3972,7 @@ function readfileSync(gl, filename)
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "const vec4 grey = vec4(0.299f, 0.587f, 0.114f, 0.0f);\nuniform sampler2D image;\nvoid main()\n{\nfloat lod = 1.0f;\nvec3 pos = vec3(texCoord, pow(2.0f, lod));\ncolor = textureProjLodOffset(image, pos, lod, ivec2(0,-7));\n}"
+module.exports = "const vec4 grey = vec4(0.299f, 0.587f, 0.114f, 0.0f);\nuniform sampler2D image;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat g = dot(pixel, grey);\ncolor = vec4(g, g, g, 1.0f);\n}"
 
 /***/ }),
 
@@ -3887,7 +4006,9 @@ module.exports = "uniform sampler2D image;\nuniform ivec2 imageSize;\nuniform in
 /***/ (function(module, exports, __webpack_require__) {
 
 var map = {
-	"./global.glsl": "./src/gpu/shaders/include/global.glsl"
+	"./global.glsl": "./src/gpu/shaders/include/global.glsl",
+	"./math.glsl": "./src/gpu/shaders/include/math.glsl",
+	"./pyramids.glsl": "./src/gpu/shaders/include/pyramids.glsl"
 };
 
 
@@ -3920,6 +4041,28 @@ webpackContext.id = "./src/gpu/shaders/include sync recursive ^\\.\\/.*$";
 /***/ (function(module, exports) {
 
 module.exports = "#define threadLocation() ivec2(texCoord * texSize)\n#define outputSize() ivec2(texSize)\n#define threadPixel(img) textureLod((img), texCoord, 0.0f)\n#define pixelAt(img, pos) texelFetch((img), (pos), 0)\n#define pixelAtOffset(img, offset) textureLodOffset((img), texCoord, 0.0f, (offset))"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/include/math.glsl":
+/*!*******************************************!*\
+  !*** ./src/gpu/shaders/include/math.glsl ***!
+  \*******************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "#ifndef _MATH_GLSL\n#define _MATH_GLSL\n#define PI              3.14159265359f\n#define PI_OVER_2       1.57079632679f\n#define PI_OVER_4       0.78539816339f\n#define USE_FAST_ATAN\n#ifdef USE_FAST_ATAN\nfloat fastAtan(float x)\n{\nfloat w = 1.0f - abs(x);\nreturn (w >= 0.0f) ?\n(PI_OVER_4 + 0.273f * w) * x :\nsign(x) * PI_OVER_2 - (PI_OVER_4 + 0.273f * (1.0f - abs(1.0f / x))) / x;\n}\n#else\n#define fastAtan(x) atan(x)\n#endif\n#ifdef USE_FAST_ATAN\nfloat fastAtan2(float y, float x)\n{\nreturn (x == 0.0f) ? PI_OVER_2 * sign(y) : fastAtan(y / x) + float(x < 0.0f) * PI * sign(y);\n}\n#else\n#define fastAtan2(y, x) atan((y), (x))\n#endif\n#endif"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/include/pyramids.glsl":
+/*!***********************************************!*\
+  !*** ./src/gpu/shaders/include/pyramids.glsl ***!
+  \***********************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "#define pyrPixel(img, lod) textureLod((img), texCoord, (lod))\n#define pyrPixelAtOffset(img, lod, pot, offset) textureLod((img), texCoord + ((pot) * vec2(offset)) / texSize, (lod))\nfloat encodeLod(float lod, float log2PyrMaxScale, float pyrMaxLevels)\n{\nreturn (log2PyrMaxScale + lod) / (log2PyrMaxScale + pyrMaxLevels);\n}\nfloat decodeLod(float encodedLod, float log2PyrMaxScale, float pyrMaxLevels)\n{\nreturn encodedLod * (log2PyrMaxScale + pyrMaxLevels) - log2PyrMaxScale;\n}"
 
 /***/ }),
 
@@ -3974,7 +4117,7 @@ module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main(
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nvoid main()\n{\nfloat p0 = pixelAtOffset(image, ivec2(0, 1)).r;\nfloat p1 = pixelAtOffset(image, ivec2(1, 1)).r;\nfloat p2 = pixelAtOffset(image, ivec2(1, 0)).r;\nfloat p3 = pixelAtOffset(image, ivec2(1, -1)).r;\nfloat p4 = pixelAtOffset(image, ivec2(0, -1)).r;\nfloat p5 = pixelAtOffset(image, ivec2(-1, -1)).r;\nfloat p6 = pixelAtOffset(image, ivec2(-1, 0)).r;\nfloat p7 = pixelAtOffset(image, ivec2(-1, 1)).r;\nfloat m = max(\nmax(max(p0, p1), max(p2, p3)),\nmax(max(p4, p5), max(p6, p7))\n);\nvec4 pixel = threadPixel(image);\nfloat score = float(pixel.r >= m) * pixel.r;\ncolor = vec4(score, pixel.gba);\n}"
+module.exports = "uniform sampler2D image;\nvoid main()\n{\nfloat p0 = pixelAtOffset(image, ivec2(0, 1)).r;\nfloat p1 = pixelAtOffset(image, ivec2(1, 1)).r;\nfloat p2 = pixelAtOffset(image, ivec2(1, 0)).r;\nfloat p3 = pixelAtOffset(image, ivec2(1, -1)).r;\nfloat p4 = pixelAtOffset(image, ivec2(0, -1)).r;\nfloat p5 = pixelAtOffset(image, ivec2(-1, -1)).r;\nfloat p6 = pixelAtOffset(image, ivec2(-1, 0)).r;\nfloat p7 = pixelAtOffset(image, ivec2(-1, 1)).r;\nfloat m = max(\nmax(max(p0, p1), max(p2, p3)),\nmax(max(p4, p5), max(p6, p7))\n);\nvec4 pixel = threadPixel(image);\nfloat score = step(m, pixel.r) * pixel.r;\ncolor = vec4(score, pixel.gba);\n}"
 
 /***/ }),
 
@@ -4008,6 +4151,39 @@ module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main(
 /***/ (function(module, exports) {
 
 module.exports = "uniform sampler2D image;\nuniform float threshold;\nconst ivec4 margin = ivec4(3, 3, 4, 4);\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 thread = threadLocation();\nivec2 size = outputSize();\ncolor = vec4(0.0f, pixel.gba);\nif(any(lessThan(ivec4(thread, size - thread), margin)))\nreturn;\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 3)).g;\nfloat p4 = pixelAtOffset(image, ivec2(3, 0)).g;\nfloat p8 = pixelAtOffset(image, ivec2(0, -3)).g;\nfloat p12 = pixelAtOffset(image, ivec2(-3, 0)).g;\nif(!(\n((c_t > p0 || c_t > p8) && (c_t > p4 || c_t > p12)) ||\n((ct < p0  || ct < p8)  && (ct < p4  || ct < p12))\n))\nreturn;\nfloat p1 = pixelAtOffset(image, ivec2(1, 3)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 2)).g;\nfloat p3 = pixelAtOffset(image, ivec2(3, 1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(3, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(2, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(1, -3)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-1, -3)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, -2)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-3, -1)).g;\nfloat p13 = pixelAtOffset(image, ivec2(-3, 1)).g;\nfloat p14 = pixelAtOffset(image, ivec2(-2, 2)).g;\nfloat p15 = pixelAtOffset(image, ivec2(-1, 3)).g;\nbool A=(p0>ct),B=(p1>ct),C=(p2>ct),D=(p3>ct),E=(p4>ct),F=(p5>ct),G=(p6>ct),H=(p7>ct),I=(p8>ct),J=(p9>ct),K=(p10>ct),L=(p11>ct),M=(p12>ct),N=(p13>ct),O=(p14>ct),P=(p15>ct),a=(p0<c_t),b=(p1<c_t),c=(p2<c_t),d=(p3<c_t),e=(p4<c_t),f=(p5<c_t),g=(p6<c_t),h=(p7<c_t),i=(p8<c_t),j=(p9<c_t),k=(p10<c_t),l=(p11<c_t),m=(p12<c_t),n=(p13<c_t),o=(p14<c_t),p=(p15<c_t);\nbool isCorner=A&&(B&&(K&&L&&J&&(M&&N&&O&&P||G&&H&&I&&(M&&N&&O||F&&(M&&N||E&&(M||D))))||C&&(K&&L&&M&&(N&&O&&P||G&&H&&I&&J&&(N&&O||F&&(N||E)))||D&&(N&&(L&&M&&(K&&G&&H&&I&&J&&(O||F)||O&&P)||k&&l&&m&&e&&f&&g&&h&&i&&j)||E&&(O&&(M&&N&&(K&&L&&G&&H&&I&&J||P)||k&&l&&m&&n&&f&&g&&h&&i&&j)||F&&(P&&(N&&O||k&&l&&m&&n&&o&&g&&h&&i&&j)||G&&(O&&P||H&&(P||I)||k&&l&&m&&n&&o&&p&&h&&i&&j)||k&&l&&m&&n&&o&&h&&i&&j&&(p||g))||k&&l&&m&&n&&h&&i&&j&&(o&&(p||g)||f&&(o&&p||g)))||k&&l&&m&&h&&i&&j&&(n&&(o&&p||g&&(o||f))||e&&(n&&o&&p||g&&(n&&o||f))))||k&&l&&h&&i&&j&&(m&&(n&&o&&p||g&&(n&&o||f&&(n||e)))||d&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e)))))||k&&h&&i&&j&&(l&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d))))))||K&&I&&J&&(L&&M&&N&&O&&P||G&&H&&(L&&M&&N&&O||F&&(L&&M&&N||E&&(L&&M||D&&(L||C)))))||h&&i&&j&&(b&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c)))))||k&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c)))))))||B&&(H&&I&&J&&(K&&L&&M&&N&&O&&P&&a||G&&(K&&L&&M&&N&&O&&a||F&&(K&&L&&M&&N&&a||E&&(K&&L&&M&&a||D&&(K&&L&&a||C)))))||a&&k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||C&&(K&&H&&I&&J&&(L&&M&&N&&O&&P&&a&&b||G&&(L&&M&&N&&O&&a&&b||F&&(L&&M&&N&&a&&b||E&&(L&&M&&a&&b||D))))||a&&b&&k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d)))))||D&&(K&&L&&H&&I&&J&&(M&&N&&O&&P&&a&&b&&c||G&&(M&&N&&O&&a&&b&&c||F&&(M&&N&&a&&b&&c||E)))||a&&b&&k&&l&&m&&c&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e))))||E&&(K&&L&&M&&H&&I&&J&&(N&&O&&P&&a&&b&&c&&d||G&&(N&&O&&a&&b&&c&&d||F))||a&&b&&l&&m&&n&&c&&d&&(k&&g&&h&&i&&j&&(o||f)||o&&p))||F&&(K&&L&&M&&N&&H&&I&&J&&(O&&P&&a&&b&&c&&d&&e||G)||a&&b&&m&&n&&o&&c&&d&&e&&(k&&l&&g&&h&&i&&j||p))||G&&(K&&L&&M&&N&&O&&H&&I&&J||a&&b&&n&&o&&p&&c&&d&&e&&f)||H&&(K&&L&&M&&N&&O&&P&&I&&J||a&&b&&o&&p&&c&&d&&e&&f&&g)||a&&(b&&(k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(k&&l&&m&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e)))||d&&(l&&m&&n&&(k&&g&&h&&i&&j&&(o||f)||o&&p)||e&&(m&&n&&o&&(k&&l&&g&&h&&i&&j||p)||f&&(n&&o&&p||g&&(o&&p||h&&(p||i)))))))||k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||h&&i&&j&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c&&(b||k))))));\ncolor = vec4(float(isCorner), pixel.gba);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoint-detectors/fast9pyr.glsl":
+/*!**********************************************************!*\
+  !*** ./src/gpu/shaders/keypoint-detectors/fast9pyr.glsl ***!
+  \**********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\nuniform float threshold;\nuniform float minLod, maxLod;\nuniform float log2PyrMaxScale, pyrMaxLevels;\nuniform bool resetCorners;\nconst ivec4 margin = ivec4(3, 3, 4, 4);\nconst vec4 zeroes = vec4(0.0f, 0.0f, 0.0f, 0.0f);\nconst vec4 ones = vec4(1.0f, 1.0f, 1.0f, 1.0f);\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat pot = pow(2.0f, minLod);\ncolor = resetCorners ? vec4(0.0f, pixel.g, 0.0f, pixel.a) : pixel;\nfor(float lod = minLod; lod <= maxLod; (lod += 1.0f), (pot += pot)) {\npixel = pyrPixel(image, lod);\nct = pixel.g + t;\nc_t = pixel.g - t;\nvec4 p4k = vec4(\npyrPixelAtOffset(image, lod, pot, ivec2(0, 3)).g,\npyrPixelAtOffset(image, lod, pot, ivec2(3, 0)).g,\npyrPixelAtOffset(image, lod, pot, ivec2(0, -3)).g,\npyrPixelAtOffset(image, lod, pot, ivec2(-3, 0)).g\n);\nmat4 mp = mat4(\np4k.x,\np4k.y,\np4k.z,\np4k.w,\npyrPixelAtOffset(image, lod, pot, ivec2(1, 3)).g,\npyrPixelAtOffset(image, lod, pot, ivec2(3, -1)).g,\npyrPixelAtOffset(image, lod, pot, ivec2(-1, -3)).g,\npyrPixelAtOffset(image, lod, pot, ivec2(-3, 1)).g,\npyrPixelAtOffset(image, lod, pot, ivec2(2, 2)).g,\npyrPixelAtOffset(image, lod, pot, ivec2(2, -2)).g,\npyrPixelAtOffset(image, lod, pot, ivec2(-2, -2)).g,\npyrPixelAtOffset(image, lod, pot, ivec2(-2, 2)).g,\npyrPixelAtOffset(image, lod, pot, ivec2(3, 1)).g,\npyrPixelAtOffset(image, lod, pot, ivec2(1, -3)).g,\npyrPixelAtOffset(image, lod, pot, ivec2(-3, -1)).g,\npyrPixelAtOffset(image, lod, pot, ivec2(-1, 3)).g\n);\nbool A=(mp[0][0]>ct),B=(mp[1][0]>ct),C=(mp[2][0]>ct),D=(mp[3][0]>ct),E=(mp[0][1]>ct),F=(mp[1][1]>ct),G=(mp[2][1]>ct),H=(mp[3][1]>ct),I=(mp[0][2]>ct),J=(mp[1][2]>ct),K=(mp[2][2]>ct),L=(mp[3][2]>ct),M=(mp[0][3]>ct),N=(mp[1][3]>ct),O=(mp[2][3]>ct),P=(mp[3][3]>ct),a=(mp[0][0]<c_t),b=(mp[1][0]<c_t),c=(mp[2][0]<c_t),d=(mp[3][0]<c_t),e=(mp[0][1]<c_t),f=(mp[1][1]<c_t),g=(mp[2][1]<c_t),h=(mp[3][1]<c_t),i=(mp[0][2]<c_t),j=(mp[1][2]<c_t),k=(mp[2][2]<c_t),l=(mp[3][2]<c_t),m=(mp[0][3]<c_t),n=(mp[1][3]<c_t),o=(mp[2][3]<c_t),p=(mp[3][3]<c_t);\nbool isCorner=A&&(B&&(K&&L&&J&&(M&&N&&O&&P||G&&H&&I&&(M&&N&&O||F&&(M&&N||E&&(M||D))))||C&&(K&&L&&M&&(N&&O&&P||G&&H&&I&&J&&(N&&O||F&&(N||E)))||D&&(N&&(L&&M&&(K&&G&&H&&I&&J&&(O||F)||O&&P)||k&&l&&m&&e&&f&&g&&h&&i&&j)||E&&(O&&(M&&N&&(K&&L&&G&&H&&I&&J||P)||k&&l&&m&&n&&f&&g&&h&&i&&j)||F&&(P&&(N&&O||k&&l&&m&&n&&o&&g&&h&&i&&j)||G&&(O&&P||H&&(P||I)||k&&l&&m&&n&&o&&p&&h&&i&&j)||k&&l&&m&&n&&o&&h&&i&&j&&(p||g))||k&&l&&m&&n&&h&&i&&j&&(o&&(p||g)||f&&(o&&p||g)))||k&&l&&m&&h&&i&&j&&(n&&(o&&p||g&&(o||f))||e&&(n&&o&&p||g&&(n&&o||f))))||k&&l&&h&&i&&j&&(m&&(n&&o&&p||g&&(n&&o||f&&(n||e)))||d&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e)))))||k&&h&&i&&j&&(l&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d))))))||K&&I&&J&&(L&&M&&N&&O&&P||G&&H&&(L&&M&&N&&O||F&&(L&&M&&N||E&&(L&&M||D&&(L||C)))))||h&&i&&j&&(b&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c)))))||k&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c)))))))||B&&(H&&I&&J&&(K&&L&&M&&N&&O&&P&&a||G&&(K&&L&&M&&N&&O&&a||F&&(K&&L&&M&&N&&a||E&&(K&&L&&M&&a||D&&(K&&L&&a||C)))))||a&&k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||C&&(K&&H&&I&&J&&(L&&M&&N&&O&&P&&a&&b||G&&(L&&M&&N&&O&&a&&b||F&&(L&&M&&N&&a&&b||E&&(L&&M&&a&&b||D))))||a&&b&&k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d)))))||D&&(K&&L&&H&&I&&J&&(M&&N&&O&&P&&a&&b&&c||G&&(M&&N&&O&&a&&b&&c||F&&(M&&N&&a&&b&&c||E)))||a&&b&&k&&l&&m&&c&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e))))||E&&(K&&L&&M&&H&&I&&J&&(N&&O&&P&&a&&b&&c&&d||G&&(N&&O&&a&&b&&c&&d||F))||a&&b&&l&&m&&n&&c&&d&&(k&&g&&h&&i&&j&&(o||f)||o&&p))||F&&(K&&L&&M&&N&&H&&I&&J&&(O&&P&&a&&b&&c&&d&&e||G)||a&&b&&m&&n&&o&&c&&d&&e&&(k&&l&&g&&h&&i&&j||p))||G&&(K&&L&&M&&N&&O&&H&&I&&J||a&&b&&n&&o&&p&&c&&d&&e&&f)||H&&(K&&L&&M&&N&&O&&P&&I&&J||a&&b&&o&&p&&c&&d&&e&&f&&g)||a&&(b&&(k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(k&&l&&m&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e)))||d&&(l&&m&&n&&(k&&g&&h&&i&&j&&(o||f)||o&&p)||e&&(m&&n&&o&&(k&&l&&g&&h&&i&&j||p)||f&&(n&&o&&p||g&&(o&&p||h&&(p||i)))))))||k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||h&&i&&j&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c&&(b||k))))));\nfloat scale = encodeLod(lod, log2PyrMaxScale, pyrMaxLevels);\nmat4 mct = mp - mat4(\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct\n), mc_t = mat4(\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t\n) - mp;\nvec4 bs = max(mc_t[0], zeroes), ds = max(mct[0], zeroes);\nbs += max(mc_t[1], zeroes); ds += max(mct[1], zeroes);\nbs += max(mc_t[2], zeroes); ds += max(mct[2], zeroes);\nbs += max(mc_t[3], zeroes); ds += max(mct[3], zeroes);\nfloat score = max(dot(bs, ones), dot(ds, ones)) / 16.0f;\nivec2 remainder = thread % int(pot);\nscore *= float(remainder.x + remainder.y == 0);\nbool isBestCorner = isCorner && (score > color.r);\ncolor = isBestCorner ? vec4(score, color.g, score, scale) : color;\n}\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoint-detectors/multiscale-suppression.glsl":
+/*!************************************************************************!*\
+  !*** ./src/gpu/shaders/keypoint-detectors/multiscale-suppression.glsl ***!
+  \************************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\nuniform float lodJump;\nuniform float log2PyrMaxScale, pyrMaxLevels;\nconst float scaleEps = 1e-5;\n#define ENABLE_INNER_RING\n#define ENABLE_MIDDLE_RING\n#define ENABLE_OUTER_RING\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat lod = decodeLod(pixel.a, log2PyrMaxScale, pyrMaxLevels);\ncolor = pixel;\nif(pixel.r == 0.0f)\nreturn;\n#ifdef ENABLE_INNER_RING\nvec4 p0 = pixelAtOffset(image, ivec2(0, 1));\nvec4 p1 = pixelAtOffset(image, ivec2(1, 1));\nvec4 p2 = pixelAtOffset(image, ivec2(1, 0));\nvec4 p3 = pixelAtOffset(image, ivec2(1, -1));\nvec4 p4 = pixelAtOffset(image, ivec2(0, -1));\nvec4 p5 = pixelAtOffset(image, ivec2(-1, -1));\nvec4 p6 = pixelAtOffset(image, ivec2(-1, 0));\nvec4 p7 = pixelAtOffset(image, ivec2(-1, 1));\n#else\nvec4 p0, p1, p2, p3, p4, p5, p6, p7;\np0 = p1 = p2 = p3 = p4 = p5 = p6 = p7 = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n#endif\n#ifdef ENABLE_MIDDLE_RING\nvec4 q0 = pixelAtOffset(image, ivec2(0, 2));\nvec4 q1 = pixelAtOffset(image, ivec2(1, 2));\nvec4 q2 = pixelAtOffset(image, ivec2(2, 2));\nvec4 q3 = pixelAtOffset(image, ivec2(2, 1));\nvec4 q4 = pixelAtOffset(image, ivec2(2, 0));\nvec4 q5 = pixelAtOffset(image, ivec2(2, -1));\nvec4 q6 = pixelAtOffset(image, ivec2(2, -2));\nvec4 q7 = pixelAtOffset(image, ivec2(1, -2));\nvec4 q8 = pixelAtOffset(image, ivec2(0, -2));\nvec4 q9 = pixelAtOffset(image, ivec2(-1, -2));\nvec4 q10 = pixelAtOffset(image, ivec2(-2, -2));\nvec4 q11 = pixelAtOffset(image, ivec2(-2, -1));\nvec4 q12 = pixelAtOffset(image, ivec2(-2, 0));\nvec4 q13 = pixelAtOffset(image, ivec2(-2, 1));\nvec4 q14 = pixelAtOffset(image, ivec2(-2, 2));\nvec4 q15 = pixelAtOffset(image, ivec2(-1, 2));\n#else\nvec4 q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15;\nq0 = q1 = q2 = q3 = q4 = q5 = q6 = q7 = q8 = q9 = q10 =\nq11 = q12 = q13 = q14 = q15= vec4(0.0f, 0.0f, 0.0f, 1.0f);\n#endif\n#ifdef ENABLE_OUTER_RING\nvec4 r0 = pixelAtOffset(image, ivec2(0, 3));\nvec4 r1 = pixelAtOffset(image, ivec2(1, 3));\nvec4 r2 = pixelAtOffset(image, ivec2(3, 1));\nvec4 r3 = pixelAtOffset(image, ivec2(3, 0));\nvec4 r4 = pixelAtOffset(image, ivec2(3, -1));\nvec4 r5 = pixelAtOffset(image, ivec2(1, -3));\nvec4 r6 = pixelAtOffset(image, ivec2(0, -3));\nvec4 r7 = pixelAtOffset(image, ivec2(-1, -3));\nvec4 r8 = pixelAtOffset(image, ivec2(-3, -1));\nvec4 r9 = pixelAtOffset(image, ivec2(-3, 0));\nvec4 r10 = pixelAtOffset(image, ivec2(-3, 1));\nvec4 r11 = pixelAtOffset(image, ivec2(-1, 3));\nvec4 r12 = pixelAtOffset(image, ivec2(0, 4));\nvec4 r13 = pixelAtOffset(image, ivec2(4, 0));\nvec4 r14 = pixelAtOffset(image, ivec2(0, -4));\nvec4 r15 = pixelAtOffset(image, ivec2(-4, 0));\n#else\nvec4 r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15;\nr0 = r1 = r2 = r3 = r4 = r5 = r6 = r7 = r8 = r9 = r10 =\nr11 = r12 = r13 = r14 = r15 = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n#endif\nfloat lodPlus = min(lod + lodJump, pyrMaxLevels - 1.0f);\nfloat lodMinus = max(lod - lodJump, 0.0f);\nfloat alphaPlus = encodeLod(lodPlus, log2PyrMaxScale, pyrMaxLevels);\nfloat alphaMinus = encodeLod(lodMinus, log2PyrMaxScale, pyrMaxLevels);\nmat3 innerScore = mat3(\np0.r * float(abs(p0.a - alphaPlus) < scaleEps || abs(p0.a - alphaMinus) < scaleEps),\np1.r * float(abs(p1.a - alphaPlus) < scaleEps || abs(p1.a - alphaMinus) < scaleEps),\np2.r * float(abs(p2.a - alphaPlus) < scaleEps || abs(p2.a - alphaMinus) < scaleEps),\np3.r * float(abs(p3.a - alphaPlus) < scaleEps || abs(p3.a - alphaMinus) < scaleEps),\np4.r * float(abs(p4.a - alphaPlus) < scaleEps || abs(p4.a - alphaMinus) < scaleEps),\np5.r * float(abs(p5.a - alphaPlus) < scaleEps || abs(p5.a - alphaMinus) < scaleEps),\np6.r * float(abs(p6.a - alphaPlus) < scaleEps || abs(p6.a - alphaMinus) < scaleEps),\np7.r * float(abs(p7.a - alphaPlus) < scaleEps || abs(p7.a - alphaMinus) < scaleEps),\n0.0f\n);\nmat4 middleScore = mat4(\nq0.r * float(abs(q0.a - alphaPlus) < scaleEps || abs(q0.a - alphaMinus) < scaleEps),\nq1.r * float(abs(q1.a - alphaPlus) < scaleEps || abs(q1.a - alphaMinus) < scaleEps),\nq2.r * float(abs(q2.a - alphaPlus) < scaleEps || abs(q2.a - alphaMinus) < scaleEps),\nq3.r * float(abs(q3.a - alphaPlus) < scaleEps || abs(q3.a - alphaMinus) < scaleEps),\nq4.r * float(abs(q4.a - alphaPlus) < scaleEps || abs(q4.a - alphaMinus) < scaleEps),\nq5.r * float(abs(q5.a - alphaPlus) < scaleEps || abs(q5.a - alphaMinus) < scaleEps),\nq6.r * float(abs(q6.a - alphaPlus) < scaleEps || abs(q6.a - alphaMinus) < scaleEps),\nq7.r * float(abs(q7.a - alphaPlus) < scaleEps || abs(q7.a - alphaMinus) < scaleEps),\nq8.r * float(abs(q8.a - alphaPlus) < scaleEps || abs(q8.a - alphaMinus) < scaleEps),\nq9.r * float(abs(q9.a - alphaPlus) < scaleEps || abs(q9.a - alphaMinus) < scaleEps),\nq10.r * float(abs(q10.a - alphaPlus) < scaleEps || abs(q10.a - alphaMinus) < scaleEps),\nq11.r * float(abs(q11.a - alphaPlus) < scaleEps || abs(q11.a - alphaMinus) < scaleEps),\nq12.r * float(abs(q12.a - alphaPlus) < scaleEps || abs(q12.a - alphaMinus) < scaleEps),\nq13.r * float(abs(q13.a - alphaPlus) < scaleEps || abs(q13.a - alphaMinus) < scaleEps),\nq14.r * float(abs(q14.a - alphaPlus) < scaleEps || abs(q14.a - alphaMinus) < scaleEps),\nq15.r * float(abs(q15.a - alphaPlus) < scaleEps || abs(q15.a - alphaMinus) < scaleEps)\n);\nmat4 outerScore = mat4(\nr0.r * float(abs(r0.a - alphaPlus) < scaleEps || abs(r0.a - alphaMinus) < scaleEps),\nr1.r * float(abs(r1.a - alphaPlus) < scaleEps || abs(r1.a - alphaMinus) < scaleEps),\nr2.r * float(abs(r2.a - alphaPlus) < scaleEps || abs(r2.a - alphaMinus) < scaleEps),\nr3.r * float(abs(r3.a - alphaPlus) < scaleEps || abs(r3.a - alphaMinus) < scaleEps),\nr4.r * float(abs(r4.a - alphaPlus) < scaleEps || abs(r4.a - alphaMinus) < scaleEps),\nr5.r * float(abs(r5.a - alphaPlus) < scaleEps || abs(r5.a - alphaMinus) < scaleEps),\nr6.r * float(abs(r6.a - alphaPlus) < scaleEps || abs(r6.a - alphaMinus) < scaleEps),\nr7.r * float(abs(r7.a - alphaPlus) < scaleEps || abs(r7.a - alphaMinus) < scaleEps),\nr8.r * float(abs(r8.a - alphaPlus) < scaleEps || abs(r8.a - alphaMinus) < scaleEps),\nr9.r * float(abs(r9.a - alphaPlus) < scaleEps || abs(r9.a - alphaMinus) < scaleEps),\nr10.r * float(abs(r10.a - alphaPlus) < scaleEps || abs(r10.a - alphaMinus) < scaleEps),\nr11.r * float(abs(r11.a - alphaPlus) < scaleEps || abs(r11.a - alphaMinus) < scaleEps),\nr12.r * float(abs(r12.a - alphaPlus) < scaleEps || abs(r12.a - alphaMinus) < scaleEps),\nr13.r * float(abs(r13.a - alphaPlus) < scaleEps || abs(r13.a - alphaMinus) < scaleEps),\nr14.r * float(abs(r14.a - alphaPlus) < scaleEps || abs(r14.a - alphaMinus) < scaleEps),\nr15.r * float(abs(r15.a - alphaPlus) < scaleEps || abs(r15.a - alphaMinus) < scaleEps)\n);\nvec3 maxInnerScore3 = max(innerScore[0], max(innerScore[1], innerScore[2]));\nvec4 maxMiddleScore4 = max(max(middleScore[0], middleScore[1]), max(middleScore[2], middleScore[3]));\nvec4 maxOuterScore4 = max(max(outerScore[0], outerScore[1]), max(outerScore[2], outerScore[3]));\nfloat maxInnerScore = max(maxInnerScore3.x, max(maxInnerScore3.y, maxInnerScore3.z));\nfloat maxMiddleScore = max(max(maxMiddleScore4.x, maxMiddleScore4.y), max(maxMiddleScore4.z, maxMiddleScore4.w));\nfloat maxOuterScore = max(max(maxOuterScore4.x, maxOuterScore4.y), max(maxOuterScore4.z, maxOuterScore4.w));\nfloat maxScore = max(maxInnerScore, max(maxMiddleScore, maxOuterScore));\nfloat myScore = step(maxScore, pixel.r) * pixel.r;\ncolor = vec4(myScore, pixel.gba);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoint-detectors/samescale-suppression.glsl":
+/*!***********************************************************************!*\
+  !*** ./src/gpu/shaders/keypoint-detectors/samescale-suppression.glsl ***!
+  \***********************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\nuniform float log2PyrMaxScale, pyrMaxLevels;\nconst float scaleEps = 1e-5;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 thread = threadLocation();\nfloat lod = decodeLod(pixel.a, log2PyrMaxScale, pyrMaxLevels);\nfloat pot = pow(2.0f, lod);\ncolor = pixel;\nif(pixel.r == 0.0f)\nreturn;\nvec4 p0 = pixelAtOffset(image, ivec2(0, 1));\nvec4 p1 = pixelAtOffset(image, ivec2(1, 1));\nvec4 p2 = pixelAtOffset(image, ivec2(1, 0));\nvec4 p3 = pixelAtOffset(image, ivec2(1, -1));\nvec4 p4 = pixelAtOffset(image, ivec2(0, -1));\nvec4 p5 = pixelAtOffset(image, ivec2(-1, -1));\nvec4 p6 = pixelAtOffset(image, ivec2(-1, 0));\nvec4 p7 = pixelAtOffset(image, ivec2(-1, 1));\nmat3 score = mat3(\np0.r * float(abs(p0.a - pixel.a) < scaleEps),\np1.r * float(abs(p1.a - pixel.a) < scaleEps),\np2.r * float(abs(p2.a - pixel.a) < scaleEps),\np3.r * float(abs(p3.a - pixel.a) < scaleEps),\np4.r * float(abs(p4.a - pixel.a) < scaleEps),\np5.r * float(abs(p5.a - pixel.a) < scaleEps),\np6.r * float(abs(p6.a - pixel.a) < scaleEps),\np7.r * float(abs(p7.a - pixel.a) < scaleEps),\n0.0f\n);\nvec3 maxScore3 = max(score[0], max(score[1], score[2]));\nfloat maxScore = max(maxScore3.x, max(maxScore3.y, maxScore3.z));\nfloat myScore = step(maxScore, pixel.r) * pixel.r;\ncolor = vec4(myScore, pixel.gba);\n}"
 
 /***/ }),
 
@@ -4617,7 +4793,7 @@ void main() {
 const DEFAULT_FRAGMENT_SHADER_PREFIX = `#version 300 es
 precision highp float;
 precision highp int;
-precision highp sampler2D;
+precision mediump sampler2D;
  
 out vec4 color;
 in vec2 texCoord;
@@ -4821,12 +4997,12 @@ class SpeedyProgram extends Function
             0,
             this._pixelBuffer[nextPBO],
             0,
-            0,
-            this._pixelBufferStatus[nextPBO]
-        ).then(() => {
-            this._pixelBufferReady[nextPBO] = true;
+            0
+        ).then(timeInMs => {
+            this._pixelBufferQueue.push(nextPBO);
+            this._pixelBufferStatus[nextPBO].time = timeInMs;
         }).catch(err => {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].fatal(err);
+            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].fatal(err.message);
         }).finally(() => {
             gl.deleteBuffer(pbo);
         });
@@ -4842,12 +5018,11 @@ class SpeedyProgram extends Function
             //let performanceCounter = 0;
 
             function waitUntilPBOIsReady() {
-                if(that._pixelBufferReady[wantedPBO]) {
-                    that._pixelBufferReady[wantedPBO] = false;
-                    resolve(that._pixelBuffer[wantedPBO]);
+                if(that._pixelBufferQueue.length > 0) {
+                    const readyPBO = that._pixelBufferQueue.shift();
+                    resolve(that._pixelBuffer[readyPBO]);
                 }
                 else {
-                    // wantedPBO should have been ready!
                     setTimeout(waitUntilPBOIsReady, 0); // easier on the CPU
                     //Utils.setZeroTimeout(waitUntilPBOIsReady);
 
@@ -5038,17 +5213,13 @@ class SpeedyProgram extends Function
     {
         this._pixelBuffer = null;
         this._pixelBufferStatus = Array(PIXEL_BUFFER_COUNT);
-        this._pixelBufferReady = Array(PIXEL_BUFFER_COUNT);
+        this._pixelBufferQueue = [];
         this._pixelBufferSize = [0, 0];
         this._pixelBufferIndex = 0;
-        this._pixelBufferAlarm = 0;
+        //this._pixelBufferAlarm = 0;
 
-        for(let i = 0; i < PIXEL_BUFFER_COUNT; i++) {
+        for(let i = 0; i < PIXEL_BUFFER_COUNT; i++)
             this._pixelBufferStatus[i] = { time: 0 };
-            this._pixelBufferReady[i] = false;
-        }
-
-        this._pixelBufferReady[this._pixelBufferIndex] = true;
     }
 
     // resize pixel buffers
