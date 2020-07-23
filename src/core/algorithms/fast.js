@@ -134,6 +134,8 @@ export class FASTPlus extends FAST
         // keypoint detection
         let multiScaleCorners = fastPyr(pyramid, settings.threshold, 0.0, Math.min(1.0, maxLod), log2PyrMaxScale, pyrMaxLevels, true);
         if(maxLod > 1.0) {
+            // nao, os dois precisam receber pyramid que tem o mipmap
+            // e fazer merge depois
             const tmp = gpu.utils.identity(multiScaleCorners);
             multiScaleCorners = fastPyr(tmp, settings.threshold, 2.0, maxLod, log2PyrMaxScale, pyrMaxLevels, false);
         }

@@ -68,7 +68,7 @@ const UNIFORM_TYPES = {
 };
 
 // number of pixel buffer objects
-const PIXEL_BUFFER_COUNT = 2;
+const PBO_COUNT = 2; // used to get a performance boost in gl.readPixels()
 
 /**
  * A SpeedyProgram is a Function that
@@ -150,7 +150,7 @@ export class SpeedyProgram extends Function
 
         // lost context?
         if(gl.isContextLost())
-            return pixels;
+            return this._pixelBuffer[0];
 
         // default values
         if(width < 0)
@@ -165,7 +165,7 @@ export class SpeedyProgram extends Function
         y = Math.max(0, Math.min(y, height - 1));
 
         // allocate the pixel buffers
-        if(this._pixelBuffer == null)
+        if(this._pixelBuffer[0] == null)
             this._reallocatePixelBuffers(this._stdprog.width, this._stdprog.height);
 
         // read pixels
@@ -188,16 +188,15 @@ export class SpeedyProgram extends Function
      * @param {number} [y] 
      * @param {number} [width]
      * @param {number} [height]
-     * @param {object} [outStatus] optional status output featuring additional info
      * @returns {Promise<Uint8Array>} resolves to an array of pixels in the RGBA format
      */
-    readPixelsAsync(x = 0, y = 0, width = -1, height = -1, outStatus = null)
+    readPixelsAsync(x = 0, y = 0, width = -1, height = -1)
     {
         const gl = this._gl;
 
         // lost context?
         if(gl.isContextLost())
-            return Promise.resolve(pixels);
+            return Promise.resolve(this._pixelBuffer[0]);
 
         // default values
         if(width < 0)
@@ -212,77 +211,37 @@ export class SpeedyProgram extends Function
         y = Math.max(0, Math.min(y, height - 1));
 
         // allocate the pixel buffers
-        if(this._pixelBuffer == null)
+        if(this._pixelBuffer[0] == null)
             this._reallocatePixelBuffers(this._stdprog.width, this._stdprog.height);
 
-        // use these buffers
-        const wantedPBO = this._pixelBufferIndex;
-        this._pixelBufferIndex = (this._pixelBufferIndex + 1) % PIXEL_BUFFER_COUNT;
-        const nextPBO = this._pixelBufferIndex;
-
-        // create a PBO
-        const pbo = gl.createBuffer();
-        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
-        gl.bufferData(gl.PIXEL_PACK_BUFFER, this._pixelBuffer[nextPBO].byteLength, gl.STREAM_READ);
-
-        // schedule a DMA transfer
-        if(this._stdprog.hasOwnProperty('fbo')) {
-            gl.bindFramebuffer(gl.FRAMEBUFFER, this._stdprog.fbo);
-            gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        // GPU needs to produce data
+        if(this._pboProducerQueue.length > 0) {
+            const nextPBO = this._pboProducerQueue.shift();
+            downloadDMA(gl, this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
+                this._pboConsumerQueue.push(nextPBO);
+            });
         }
-        else {
-            gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
-        }
-
-        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-
-        // wait for DMA transfer
-        GLUtils.getBufferSubDataAsync(gl, pbo,
-            gl.PIXEL_PACK_BUFFER,
-            0,
-            this._pixelBuffer[nextPBO],
-            0,
-            0
-        ).then(timeInMs => {
-            this._pixelBufferQueue.push(nextPBO);
-            this._pixelBufferStatus[nextPBO].time = timeInMs;
-        }).catch(err => {
-            Utils.fatal(err.message);
-        }).finally(() => {
-            gl.deleteBuffer(pbo);
+        else waitForQueueNotEmpty(this._pboProducerQueue).then(waitTime => {
+            const nextPBO = this._pboProducerQueue.shift();
+            downloadDMA(gl, this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
+                this._pboConsumerQueue.push(nextPBO);
+            });
         });
 
-        // fill in the status object
-        if(outStatus != null)
-            outStatus.time = this._pixelBufferStatus[wantedPBO].time;
-
-        // return the wanted pixel buffer
-        return new Promise((resolve, reject) => {
-            const start = performance.now();
-            const that = this;
-            //let performanceCounter = 0;
-
-            function waitUntilPBOIsReady() {
-                if(that._pixelBufferQueue.length > 0) {
-                    const readyPBO = that._pixelBufferQueue.shift();
-                    resolve(that._pixelBuffer[readyPBO]);
-                }
-                else {
-                    setTimeout(waitUntilPBOIsReady, 0); // easier on the CPU
-                    //Utils.setZeroTimeout(waitUntilPBOIsReady);
-
-                    /*if(30 == ++performanceCounter && 3 == ++that._pixelBufferAlarm) {
-                        const time = performance.now() - start;
-                        if(time >= 6)
-                            Utils.warning(`Performance warning: waiting too many cycles for PBO readiness (${time} ms). Consider using sync transfer if you aren't switching tasks.`);
-                        //else
-                            //that._pixelBufferAlarm = 0;
-                    }*/
-                }
-            }
-
-            Utils.setZeroTimeout(waitUntilPBOIsReady); // wait until next frame
+        // CPU needs to consume data
+        if(this._pboConsumerQueue.length > 0) {
+            const readyPBO = this._pboConsumerQueue.shift();
+            return new Promise(resolve => {
+                resolve(this._pixelBuffer[readyPBO]);
+                this._pboProducerQueue.push(readyPBO); // enqueue AFTER resolve()
+            });
+        }
+        else return new Promise(resolve => {
+            waitForQueueNotEmpty(this._pboConsumerQueue).then(waitTime => {
+                const readyPBO = this._pboConsumerQueue.shift();
+                resolve(this._pixelBuffer[readyPBO]);
+                this._pboProducerQueue.push(readyPBO); // enqueue AFTER resolve()
+            });
         });
     }
 
@@ -454,18 +413,13 @@ export class SpeedyProgram extends Function
         return texNo;
     }
 
-    // initialize pixel buffers (no allocation is done)
+    // initialize pixel buffers
     _initPixelBuffers()
     {
-        this._pixelBuffer = null;
-        this._pixelBufferStatus = Array(PIXEL_BUFFER_COUNT);
-        this._pixelBufferQueue = [];
+        this._pixelBuffer = Array(PBO_COUNT).fill(null);
         this._pixelBufferSize = [0, 0];
-        this._pixelBufferIndex = 0;
-        //this._pixelBufferAlarm = 0;
-
-        for(let i = 0; i < PIXEL_BUFFER_COUNT; i++)
-            this._pixelBufferStatus[i] = { time: 0 };
+        this._pboConsumerQueue = Array(PBO_COUNT).fill(0).map((_, i) => i);
+        this._pboProducerQueue = [];
     }
 
     // resize pixel buffers
@@ -480,19 +434,25 @@ export class SpeedyProgram extends Function
         this._pixelBufferSize[1] = height;
 
         // reallocate pixels array
-        const oldPixelsArray = this._pixelBuffer;
-        this._pixelBuffer = Array(PIXEL_BUFFER_COUNT);
-        for(let i = 0; i < PIXEL_BUFFER_COUNT; i++) {
+        for(let i = 0; i < PBO_COUNT; i++) {
+            const oldBuffer = this._pixelBuffer[i];
             this._pixelBuffer[i] = createPixelBuffer(width, height);
-            if(oldPixelsArray) {
-                if(oldPixelsArray[i].length > this._pixelBuffer[i].length)
-                    this._pixelBuffer[i].set(oldPixelsArray[i].slice(0, this._pixelBuffer[i].length));
+
+            if(oldBuffer) {
+                if(oldBuffer.length > this._pixelBuffer[i].length)
+                    this._pixelBuffer[i].set(oldBuffer.slice(0, this._pixelBuffer[i].length));
                 else
-                    this._pixelBuffer[i].set(oldPixelsArray[i]);
+                    this._pixelBuffer[i].set(oldBuffer);
             }
         }
     }
 }
+
+// =============================================================
+
+//
+// Parsing
+//
 
 // a dictionary specifying the types of all uniforms in the code
 function autodetectUniforms(shaderSource)
@@ -545,6 +505,37 @@ function functionArguments(fun)
 
     return [];
 }
+
+
+
+
+
+//
+// Consumer-producer
+//
+
+// wait for a queue to be not empty
+function waitForQueueNotEmpty(queue)
+{
+    return new Promise(resolve => {
+        const start = performance.now();
+        function wait() {
+            if(queue.length > 0)
+                resolve(performance.now() - start);
+            else
+                //Utils.setZeroTimeout(wait);
+                setTimeout(wait, 0);
+        }
+        wait();
+    });
+}
+
+
+
+
+//
+// WebGL
+//
 
 // create VAO & VBO
 function createStandardGeometry(gl)
@@ -699,4 +690,41 @@ function createPixelBuffer(width, height)
     const pixels = new Uint8Array(width * height * 4);
     pixels.fill(255, 0, 4); // will be recognized as empty
     return pixels;
+}
+
+// download data to an Uint8Array using a Pixel Buffer Object (PBO)
+// you may optionally specify a FBO to read pixels from a texture
+function downloadDMA(gl, arrayBuffer, x, y, width, height, fbo = null)
+{
+    // create a PBO
+    const pbo = gl.createBuffer();
+    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
+    gl.bufferData(gl.PIXEL_PACK_BUFFER, arrayBuffer.byteLength, gl.STREAM_READ);
+
+    // read pixels into PBO
+    if(fbo) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+    else {
+        gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+    }
+
+    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+
+    // wait for DMA transfer
+    return GLUtils.getBufferSubDataAsync(gl, pbo,
+        gl.PIXEL_PACK_BUFFER,
+        0,
+        arrayBuffer,
+        0,
+        0
+    ).then(timeInMs => {
+        return timeInMs;
+    }).catch(err => {
+        throw err;
+    }).finally(() => {
+        gl.deleteBuffer(pbo);
+    });
 }

@@ -315,13 +315,13 @@ export class GLUtils
             function checkStatus() {
                 const status = gl.clientWaitSync(sync, flags, 0);
                 if(status == gl.TIMEOUT_EXPIRED) {
-                    //setTimeout(checkStatus, 0); // easier on the CPU
-                    Utils.setZeroTimeout(checkStatus);
+                    setTimeout(checkStatus, 0); // easier on the CPU
+                    //Utils.setZeroTimeout(checkStatus);
                 }
                 else if(status == gl.WAIT_FAILED) {
                     if(isFirefox && gl.getError() == gl.NO_ERROR) { // firefox bug?
-                        //setTimeout(checkStatus, 0);
-                        Utils.setZeroTimeout(checkStatus);
+                        setTimeout(checkStatus, 0);
+                        //Utils.setZeroTimeout(checkStatus);
                     }
                     else {
                         reject(GLUtils.getError(gl));
@@ -350,24 +350,22 @@ export class GLUtils
      */
     static getBufferSubDataAsync(gl, glBuffer, target, srcByteOffset, destBuffer, destOffset = 0, length = 0)
     {
-        return new Promise((resolve, reject) => {
-            const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-            const start = performance.now();
+        const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+        const start = performance.now();
 
-            // empty internal command queues and send them to the GPU asap
-            gl.flush(); // make sure the sync command is read
+        // empty internal command queues and send them to the GPU asap
+        gl.flush(); // make sure the sync command is read
 
-            // wait for the commands to be processed by the GPU
-            GLUtils.clientWaitAsync(gl, sync).then(() => {
-                gl.bindBuffer(target, glBuffer);
-                gl.getBufferSubData(target, srcByteOffset, destBuffer, destOffset, length);
-                gl.bindBuffer(target, null);
-                resolve(performance.now() - start);
-            }).catch(err => {
-                reject(GLUtils.Error(`Can't getBufferSubDataAsync(): got ${err.message} in clientWaitAsync()`));
-            }).finally(() => {
-                gl.deleteSync(sync);
-            });
+        // wait for the commands to be processed by the GPU
+        return GLUtils.clientWaitAsync(gl, sync).then(() => {
+            gl.bindBuffer(target, glBuffer);
+            gl.getBufferSubData(target, srcByteOffset, destBuffer, destOffset, length);
+            gl.bindBuffer(target, null);
+            return performance.now() - start;
+        }).catch(err => {
+            throw GLUtils.Error(`Can't getBufferSubDataAsync(): got ${err.message} in clientWaitAsync()`);
+        }).finally(() => {
+            gl.deleteSync(sync);
         });
     }
 }

@@ -121,9 +121,9 @@ export class GPUEncoders extends GPUProgramGroup
             // read data from the GPU
             let pixels, transferTime;
             if(useAsyncTransfer) {
-                const status = { };
-                pixels = await this._encodeKeypoints.readPixelsAsync(0, 0, -1, -1, status);
-                transferTime = status.time;
+                transferTime = performance.now();
+                pixels = await this._encodeKeypoints.readPixelsAsync(0, 0, -1, -1);
+                transferTime = performance.now() - transferTime;
             }
             else {
                 transferTime = performance.now();
@@ -138,14 +138,14 @@ export class GPUEncoders extends GPUProgramGroup
             }
 
             // debug
-            /*
+            ///*
             window._p = window._p || 0;
             window._m = window._m || 0;
             window._m = 0.9 * window._m + 0.1 * (encodingTime + transferTime);
             if(window._p++ % 50 == 0)
                 console.log(window._m, ' | ', maxIterations);
             //console.log(JSON.stringify(this._tuner.info()));
-            */
+            //*/
 
             // done!
             return pixels;
