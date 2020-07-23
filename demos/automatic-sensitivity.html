@@ -75,8 +75,7 @@ window.onload = async function()
     {
         media.draw(canvas);
         renderFeatures(canvas, features, 4);
-        //requestAnimationFrame(render);
-        setTimeout(render, 1000.0 / FPS);
+        requestAnimationFrame(render);
     }
     render();
 
