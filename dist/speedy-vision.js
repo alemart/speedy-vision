@@ -1,12 +1,12 @@
 /*!
- * speedy-vision.js v0.4.0
+ * speedy-vision.js v0.3.2
  * https://github.com/alemart/speedy-vision-js
  * 
  * GPU-accelerated Computer Vision for the web
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-07-22T03:13:15.084Z
+ * Date: 2020-07-23T21:30:56.653Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -499,6 +499,8 @@ class FASTPlus extends FAST
         // keypoint detection
         let multiScaleCorners = fastPyr(pyramid, settings.threshold, 0.0, Math.min(1.0, maxLod), log2PyrMaxScale, pyrMaxLevels, true);
         if(maxLod > 1.0) {
+            // nao, os dois precisam receber pyramid que tem o mipmap
+            // e fazer merge depois
             const tmp = gpu.utils.identity(multiScaleCorners);
             multiScaleCorners = fastPyr(tmp, settings.threshold, 2.0, maxLod, log2PyrMaxScale, pyrMaxLevels, false);
         }
@@ -2092,13 +2094,13 @@ class GLUtils
             function checkStatus() {
                 const status = gl.clientWaitSync(sync, flags, 0);
                 if(status == gl.TIMEOUT_EXPIRED) {
-                    //setTimeout(checkStatus, 0); // easier on the CPU
-                    _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].setZeroTimeout(checkStatus);
+                    setTimeout(checkStatus, 0); // easier on the CPU
+                    //Utils.setZeroTimeout(checkStatus);
                 }
                 else if(status == gl.WAIT_FAILED) {
                     if(isFirefox && gl.getError() == gl.NO_ERROR) { // firefox bug?
-                        //setTimeout(checkStatus, 0);
-                        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].setZeroTimeout(checkStatus);
+                        setTimeout(checkStatus, 0);
+                        //Utils.setZeroTimeout(checkStatus);
                     }
                     else {
                         reject(GLUtils.getError(gl));
@@ -2127,24 +2129,22 @@ class GLUtils
      */
     static getBufferSubDataAsync(gl, glBuffer, target, srcByteOffset, destBuffer, destOffset = 0, length = 0)
     {
-        return new Promise((resolve, reject) => {
-            const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-            const start = performance.now();
+        const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+        const start = performance.now();
 
-            // empty internal command queues and send them to the GPU asap
-            gl.flush(); // make sure the sync command is read
+        // empty internal command queues and send them to the GPU asap
+        gl.flush(); // make sure the sync command is read
 
-            // wait for the commands to be processed by the GPU
-            GLUtils.clientWaitAsync(gl, sync).then(() => {
-                gl.bindBuffer(target, glBuffer);
-                gl.getBufferSubData(target, srcByteOffset, destBuffer, destOffset, length);
-                gl.bindBuffer(target, null);
-                resolve(performance.now() - start);
-            }).catch(err => {
-                reject(GLUtils.Error(`Can't getBufferSubDataAsync(): got ${err.message} in clientWaitAsync()`));
-            }).finally(() => {
-                gl.deleteSync(sync);
-            });
+        // wait for the commands to be processed by the GPU
+        return GLUtils.clientWaitAsync(gl, sync).then(() => {
+            gl.bindBuffer(target, glBuffer);
+            gl.getBufferSubData(target, srcByteOffset, destBuffer, destOffset, length);
+            gl.bindBuffer(target, null);
+            return performance.now() - start;
+        }).catch(err => {
+            throw GLUtils.Error(`Can't getBufferSubDataAsync(): got ${err.message} in clientWaitAsync()`);
+        }).finally(() => {
+            gl.deleteSync(sync);
         });
     }
 }
@@ -2512,9 +2512,9 @@ class GPUEncoders extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPr
             // read data from the GPU
             let pixels, transferTime;
             if(useAsyncTransfer) {
-                const status = { };
-                pixels = await this._encodeKeypoints.readPixelsAsync(0, 0, -1, -1, status);
-                transferTime = status.time;
+                transferTime = performance.now();
+                pixels = await this._encodeKeypoints.readPixelsAsync(0, 0, -1, -1);
+                transferTime = performance.now() - transferTime;
             }
             else {
                 transferTime = performance.now();
@@ -2529,14 +2529,14 @@ class GPUEncoders extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPr
             }
 
             // debug
-            /*
+            ///*
             window._p = window._p || 0;
             window._m = window._m || 0;
             window._m = 0.9 * window._m + 0.1 * (encodingTime + transferTime);
             if(window._p++ % 50 == 0)
                 console.log(window._m, ' | ', maxIterations);
             //console.log(JSON.stringify(this._tuner.info()));
-            */
+            //*/
 
             // done!
             return pixels;
@@ -4694,7 +4694,7 @@ function createWebGLContext(canvas)
     const gl = canvas.getContext('webgl2', {
         premultipliedAlpha: false,
         preserveDrawingBuffer: false,
-        preferLowPowerToHighPerformance: false,
+        //preferLowPowerToHighPerformance: false,
         alpha: true,
         antialias: false,
         depth: false,
@@ -4822,7 +4822,7 @@ const UNIFORM_TYPES = {
 };
 
 // number of pixel buffer objects
-const PIXEL_BUFFER_COUNT = 2;
+const PBO_COUNT = 2; // used to get a performance boost in gl.readPixels()
 
 /**
  * A SpeedyProgram is a Function that
@@ -4904,7 +4904,7 @@ class SpeedyProgram extends Function
 
         // lost context?
         if(gl.isContextLost())
-            return pixels;
+            return this._pixelBuffer[0];
 
         // default values
         if(width < 0)
@@ -4919,7 +4919,7 @@ class SpeedyProgram extends Function
         y = Math.max(0, Math.min(y, height - 1));
 
         // allocate the pixel buffers
-        if(this._pixelBuffer == null)
+        if(this._pixelBuffer[0] == null)
             this._reallocatePixelBuffers(this._stdprog.width, this._stdprog.height);
 
         // read pixels
@@ -4942,16 +4942,15 @@ class SpeedyProgram extends Function
      * @param {number} [y] 
      * @param {number} [width]
      * @param {number} [height]
-     * @param {object} [outStatus] optional status output featuring additional info
      * @returns {Promise<Uint8Array>} resolves to an array of pixels in the RGBA format
      */
-    readPixelsAsync(x = 0, y = 0, width = -1, height = -1, outStatus = null)
+    readPixelsAsync(x = 0, y = 0, width = -1, height = -1)
     {
         const gl = this._gl;
 
         // lost context?
         if(gl.isContextLost())
-            return Promise.resolve(pixels);
+            return Promise.resolve(this._pixelBuffer[0]);
 
         // default values
         if(width < 0)
@@ -4966,77 +4965,37 @@ class SpeedyProgram extends Function
         y = Math.max(0, Math.min(y, height - 1));
 
         // allocate the pixel buffers
-        if(this._pixelBuffer == null)
+        if(this._pixelBuffer[0] == null)
             this._reallocatePixelBuffers(this._stdprog.width, this._stdprog.height);
 
-        // use these buffers
-        const wantedPBO = this._pixelBufferIndex;
-        this._pixelBufferIndex = (this._pixelBufferIndex + 1) % PIXEL_BUFFER_COUNT;
-        const nextPBO = this._pixelBufferIndex;
-
-        // create a PBO
-        const pbo = gl.createBuffer();
-        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
-        gl.bufferData(gl.PIXEL_PACK_BUFFER, this._pixelBuffer[nextPBO].byteLength, gl.STREAM_READ);
-
-        // schedule a DMA transfer
-        if(this._stdprog.hasOwnProperty('fbo')) {
-            gl.bindFramebuffer(gl.FRAMEBUFFER, this._stdprog.fbo);
-            gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        // GPU needs to produce data
+        if(this._pboProducerQueue.length > 0) {
+            const nextPBO = this._pboProducerQueue.shift();
+            downloadDMA(gl, this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
+                this._pboConsumerQueue.push(nextPBO);
+            });
         }
-        else {
-            gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
-        }
-
-        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-
-        // wait for DMA transfer
-        _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].getBufferSubDataAsync(gl, pbo,
-            gl.PIXEL_PACK_BUFFER,
-            0,
-            this._pixelBuffer[nextPBO],
-            0,
-            0
-        ).then(timeInMs => {
-            this._pixelBufferQueue.push(nextPBO);
-            this._pixelBufferStatus[nextPBO].time = timeInMs;
-        }).catch(err => {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].fatal(err.message);
-        }).finally(() => {
-            gl.deleteBuffer(pbo);
+        else waitForQueueNotEmpty(this._pboProducerQueue).then(waitTime => {
+            const nextPBO = this._pboProducerQueue.shift();
+            downloadDMA(gl, this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
+                this._pboConsumerQueue.push(nextPBO);
+            });
         });
 
-        // fill in the status object
-        if(outStatus != null)
-            outStatus.time = this._pixelBufferStatus[wantedPBO].time;
-
-        // return the wanted pixel buffer
-        return new Promise((resolve, reject) => {
-            const start = performance.now();
-            const that = this;
-            //let performanceCounter = 0;
-
-            function waitUntilPBOIsReady() {
-                if(that._pixelBufferQueue.length > 0) {
-                    const readyPBO = that._pixelBufferQueue.shift();
-                    resolve(that._pixelBuffer[readyPBO]);
-                }
-                else {
-                    setTimeout(waitUntilPBOIsReady, 0); // easier on the CPU
-                    //Utils.setZeroTimeout(waitUntilPBOIsReady);
-
-                    /*if(30 == ++performanceCounter && 3 == ++that._pixelBufferAlarm) {
-                        const time = performance.now() - start;
-                        if(time >= 6)
-                            Utils.warning(`Performance warning: waiting too many cycles for PBO readiness (${time} ms). Consider using sync transfer if you aren't switching tasks.`);
-                        //else
-                            //that._pixelBufferAlarm = 0;
-                    }*/
-                }
-            }
-
-            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].setZeroTimeout(waitUntilPBOIsReady); // wait until next frame
+        // CPU needs to consume data
+        if(this._pboConsumerQueue.length > 0) {
+            const readyPBO = this._pboConsumerQueue.shift();
+            return new Promise(resolve => {
+                resolve(this._pixelBuffer[readyPBO]);
+                this._pboProducerQueue.push(readyPBO); // enqueue AFTER resolve()
+            });
+        }
+        else return new Promise(resolve => {
+            waitForQueueNotEmpty(this._pboConsumerQueue).then(waitTime => {
+                const readyPBO = this._pboConsumerQueue.shift();
+                resolve(this._pixelBuffer[readyPBO]);
+                this._pboProducerQueue.push(readyPBO); // enqueue AFTER resolve()
+            });
         });
     }
 
@@ -5208,18 +5167,13 @@ class SpeedyProgram extends Function
         return texNo;
     }
 
-    // initialize pixel buffers (no allocation is done)
+    // initialize pixel buffers
     _initPixelBuffers()
     {
-        this._pixelBuffer = null;
-        this._pixelBufferStatus = Array(PIXEL_BUFFER_COUNT);
-        this._pixelBufferQueue = [];
+        this._pixelBuffer = Array(PBO_COUNT).fill(null);
         this._pixelBufferSize = [0, 0];
-        this._pixelBufferIndex = 0;
-        //this._pixelBufferAlarm = 0;
-
-        for(let i = 0; i < PIXEL_BUFFER_COUNT; i++)
-            this._pixelBufferStatus[i] = { time: 0 };
+        this._pboConsumerQueue = Array(PBO_COUNT).fill(0).map((_, i) => i);
+        this._pboProducerQueue = [];
     }
 
     // resize pixel buffers
@@ -5234,19 +5188,25 @@ class SpeedyProgram extends Function
         this._pixelBufferSize[1] = height;
 
         // reallocate pixels array
-        const oldPixelsArray = this._pixelBuffer;
-        this._pixelBuffer = Array(PIXEL_BUFFER_COUNT);
-        for(let i = 0; i < PIXEL_BUFFER_COUNT; i++) {
+        for(let i = 0; i < PBO_COUNT; i++) {
+            const oldBuffer = this._pixelBuffer[i];
             this._pixelBuffer[i] = createPixelBuffer(width, height);
-            if(oldPixelsArray) {
-                if(oldPixelsArray[i].length > this._pixelBuffer[i].length)
-                    this._pixelBuffer[i].set(oldPixelsArray[i].slice(0, this._pixelBuffer[i].length));
+
+            if(oldBuffer) {
+                if(oldBuffer.length > this._pixelBuffer[i].length)
+                    this._pixelBuffer[i].set(oldBuffer.slice(0, this._pixelBuffer[i].length));
                 else
-                    this._pixelBuffer[i].set(oldPixelsArray[i]);
+                    this._pixelBuffer[i].set(oldBuffer);
             }
         }
     }
 }
+
+// =============================================================
+
+//
+// Parsing
+//
 
 // a dictionary specifying the types of all uniforms in the code
 function autodetectUniforms(shaderSource)
@@ -5299,6 +5259,37 @@ function functionArguments(fun)
 
     return [];
 }
+
+
+
+
+
+//
+// Consumer-producer
+//
+
+// wait for a queue to be not empty
+function waitForQueueNotEmpty(queue)
+{
+    return new Promise(resolve => {
+        const start = performance.now();
+        function wait() {
+            if(queue.length > 0)
+                resolve(performance.now() - start);
+            else
+                //Utils.setZeroTimeout(wait);
+                setTimeout(wait, 0);
+        }
+        wait();
+    });
+}
+
+
+
+
+//
+// WebGL
+//
 
 // create VAO & VBO
 function createStandardGeometry(gl)
@@ -5455,6 +5446,43 @@ function createPixelBuffer(width, height)
     return pixels;
 }
 
+// download data to an Uint8Array using a Pixel Buffer Object (PBO)
+// you may optionally specify a FBO to read pixels from a texture
+function downloadDMA(gl, arrayBuffer, x, y, width, height, fbo = null)
+{
+    // create a PBO
+    const pbo = gl.createBuffer();
+    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
+    gl.bufferData(gl.PIXEL_PACK_BUFFER, arrayBuffer.byteLength, gl.STREAM_READ);
+
+    // read pixels into PBO
+    if(fbo) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    }
+    else {
+        gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+    }
+
+    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+
+    // wait for DMA transfer
+    return _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].getBufferSubDataAsync(gl, pbo,
+        gl.PIXEL_PACK_BUFFER,
+        0,
+        arrayBuffer,
+        0,
+        0
+    ).then(timeInMs => {
+        return timeInMs;
+    }).catch(err => {
+        throw err;
+    }).finally(() => {
+        gl.deleteBuffer(pbo);
+    });
+}
+
 /***/ }),
 
 /***/ "./src/speedy.js":
@@ -5540,7 +5568,7 @@ class Speedy
      */
     static get version()
     {
-        return "0.4.0";
+        return "0.3.2";
     }
 
     /**
@@ -6654,11 +6682,11 @@ class Utils
     /**
      * Similar to setTimeout(fn, 0), but without the ~4ms delay.
      * Although much faster than setTimeout, this may be resource-hungry
-     * (heavy on battery) if used in a loop. Use with care.
+     * (heavy on battery) if used in a loop. Use with caution.
      * Implementation based on David Baron's, but adapted for ES6 classes
      * @param {Function} fn
      */
-    //static setZeroTimeout(fn) { setTimeout(fn); }
+    //static setZeroTimeout(fn) { setTimeout(fn, 0); } // easier on the CPU
     static get setZeroTimeout()
     {
         return this._setZeroTimeout || (this._setZeroTimeout = (() => {
