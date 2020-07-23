@@ -315,13 +315,13 @@ export class GLUtils
             function checkStatus() {
                 const status = gl.clientWaitSync(sync, flags, 0);
                 if(status == gl.TIMEOUT_EXPIRED) {
-                    setTimeout(checkStatus, 0); // easier on the CPU
-                    //Utils.setZeroTimeout(checkStatus);
+                    //setTimeout(checkStatus, 0); // easier on the CPU
+                    Utils.setZeroTimeout(checkStatus);
                 }
                 else if(status == gl.WAIT_FAILED) {
                     if(isFirefox && gl.getError() == gl.NO_ERROR) { // firefox bug?
-                        setTimeout(checkStatus, 0);
-                        //Utils.setZeroTimeout(checkStatus);
+                        //setTimeout(checkStatus, 0);
+                        Utils.setZeroTimeout(checkStatus);
                     }
                     else {
                         reject(GLUtils.getError(gl));

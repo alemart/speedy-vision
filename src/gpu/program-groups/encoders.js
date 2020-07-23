@@ -82,7 +82,7 @@ export class GPUEncoders extends GPUProgramGroup
      */
     optimizeKeypointEncoder(keypointCount)
     {
-        const clampedKeypointCount = Math.max(0, Math.min(keypointCount, MAX_KEYPOINTS));
+        const clampedKeypointCount = Math.max(0, Math.min(Math.ceil(keypointCount), MAX_KEYPOINTS));
         const pixelsPerKeypoint = Math.ceil(2 + this._descriptorSize / 4);
         const len = Math.ceil(Math.sqrt((4 + clampedKeypointCount * 1.05) * pixelsPerKeypoint)); // add some slack
         const newEncoderLength = Math.max(1, Math.min(len, MAX_ENCODER_LENGTH));
@@ -138,14 +138,14 @@ export class GPUEncoders extends GPUProgramGroup
             }
 
             // debug
-            ///*
+            /*
             window._p = window._p || 0;
             window._m = window._m || 0;
             window._m = 0.9 * window._m + 0.1 * (encodingTime + transferTime);
             if(window._p++ % 50 == 0)
                 console.log(window._m, ' | ', maxIterations);
             //console.log(JSON.stringify(this._tuner.info()));
-            //*/
+            */
 
             // done!
             return pixels;

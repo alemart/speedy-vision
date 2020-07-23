@@ -24,6 +24,9 @@ import { BRISK } from './algorithms/brisk.js';
 import { OnlineErrorTuner, TestTuner } from '../utils/tuner';
 import { Utils } from '../utils/utils';
 
+// constants
+const OPTIMIZER_GROWTH_WEIGHT = 0.02; // in [0,1]
+
 /**
  * FeatureDetector encapsulates
  * feature detection algorithms
@@ -162,24 +165,26 @@ export class FeatureDetector
         return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage);
     }
 
-    // given a corner-encoded texture,
-    // return a Promise that resolves to
-    // an Array of keypoints
+    // given a corner-encoded texture, return a Promise
+    // that resolves to an Array of keypoints
     _extractKeypoints(corners, useAsyncTransfer = true, gpu = this._gpu)
     {
-        return new Promise((resolve, reject) => {
-            gpu.encoders.encodeKeypoints(corners, useAsyncTransfer).then(encodedKeypoints => {
-                const keypoints = gpu.encoders.decodeKeypoints(encodedKeypoints);
-                const slack = this._lastKeypointCount > 0 ? // approximates assuming continuity
-                    Math.max(1, Math.min(keypoints.length / this._lastKeypointCount), 2) : 1;
+        return gpu.encoders.encodeKeypoints(corners, useAsyncTransfer).then(encodedKeypoints => {
+            // when processing a video, we expect that the number of keypoints
+            // in time is a relatively smooth curve
+            const keypoints = gpu.encoders.decodeKeypoints(encodedKeypoints);
+            const currCount = Math.max(keypoints.length, 64); // may explode if abrupt video changes
+            const prevCount = Math.max(this._lastKeypointCount, 64);
+            const newCount = Math.ceil(OPTIMIZER_GROWTH_WEIGHT * currCount + (1.0 - OPTIMIZER_GROWTH_WEIGHT) * prevCount);
 
-                gpu.encoders.optimizeKeypointEncoder(keypoints.length * slack);
-                this._lastKeypointCount = keypoints.length;
+            gpu.encoders.optimizeKeypointEncoder(newCount);
+            this._lastKeypointCount = newCount;
+            //document.querySelector('mark').innerHTML = gpu.encoders._keypointEncoderLength;
 
-                resolve(keypoints);
-            }).catch(err => {
-                reject(err);
-            });
+            // let's cap it if keypoints.length explodes (noise)
+            return keypoints.slice(0, newCount);
+        }).catch(err => {
+            throw err;
         });
     }
 

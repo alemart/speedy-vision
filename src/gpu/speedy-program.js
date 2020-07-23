@@ -68,7 +68,9 @@ const UNIFORM_TYPES = {
 };
 
 // number of pixel buffer objects
-const PBO_COUNT = 2; // used to get a performance boost in gl.readPixels()
+// used to get a performance boost in gl.readPixels()
+// (1 seems to perform better on mobile, 2 on the PC?)
+const PBO_COUNT = 1;
 
 /**
  * A SpeedyProgram is a Function that
