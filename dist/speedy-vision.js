@@ -6,7 +6,7 @@
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-07-23T21:30:56.653Z
+ * Date: 2020-07-24T01:30:06.185Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -168,11 +168,9 @@ class BRISK
         const intraPyramidCorners = new Array(intraPyramid.length);
         for(let j = 0; j < pyramidCorners.length; j++) {
             pyramidCorners[j] = gpu.pyramid(j).keypoints.fast9(pyramid[j], settings.threshold);
-            pyramidCorners[j] = gpu.pyramid(j).keypoints.fastSuppression(pyramidCorners[j]);
         }
         for(let j = 0; j < intraPyramidCorners.length; j++) {
             intraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.fast9(intraPyramid[j], settings.threshold);
-            intraPyramidCorners[j] = gpu.intraPyramid(j).keypoints.fastSuppression(intraPyramidCorners[j]);
         }
 
         // scale space non-maximum suppression & interpolation
@@ -421,11 +419,7 @@ class FAST
 
         // keypoint detection
         const fast = (vtable[n])(gpu);
-        const rawCorners = fast(greyscale, settings.threshold);
-
-        // non-maximum suppression
-        const corners = gpu.keypoints.fastSuppression(rawCorners);
-        return corners;
+        return fast(greyscale, settings.threshold);
     }
 
     /**
@@ -554,6 +548,9 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+// constants
+const OPTIMIZER_GROWTH_WEIGHT = 0.02; // in [0,1]
 
 /**
  * FeatureDetector encapsulates
@@ -693,24 +690,29 @@ class FeatureDetector
         return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage);
     }
 
-    // given a corner-encoded texture,
-    // return a Promise that resolves to
-    // an Array of keypoints
+    // given a corner-encoded texture, return a Promise
+    // that resolves to an Array of keypoints
     _extractKeypoints(corners, useAsyncTransfer = true, gpu = this._gpu)
     {
-        return new Promise((resolve, reject) => {
-            gpu.encoders.encodeKeypoints(corners, useAsyncTransfer).then(encodedKeypoints => {
-                const keypoints = gpu.encoders.decodeKeypoints(encodedKeypoints);
-                const slack = this._lastKeypointCount > 0 ? // approximates assuming continuity
-                    Math.max(1, Math.min(keypoints.length / this._lastKeypointCount), 2) : 1;
+        return gpu.encoders.encodeKeypoints(corners, useAsyncTransfer).then(encodedKeypoints => {
+            // when processing a video, we expect that the number of keypoints
+            // in time is a relatively smooth curve
+            const keypoints = gpu.encoders.decodeKeypoints(encodedKeypoints);
+            const currCount = Math.max(keypoints.length, 64); // may explode if abrupt video changes
+            const prevCount = Math.max(this._lastKeypointCount, 64);
+            const newCount = Math.ceil(OPTIMIZER_GROWTH_WEIGHT * currCount + (1.0 - OPTIMIZER_GROWTH_WEIGHT) * prevCount);
 
-                gpu.encoders.optimizeKeypointEncoder(keypoints.length * slack);
-                this._lastKeypointCount = keypoints.length;
+            gpu.encoders.optimizeKeypointEncoder(newCount);
+            this._lastKeypointCount = newCount;
+            //document.querySelector('mark').innerHTML = gpu.encoders._keypointEncoderLength;
 
-                resolve(keypoints);
-            }).catch(err => {
-                reject(err);
-            });
+            // let's cap it if keypoints.length explodes (noise)
+            if(useAsyncTransfer && keypoints.length > newCount)
+                return keypoints.slice(0, newCount);
+            else
+                return keypoints;
+        }).catch(err => {
+            throw err;
         });
     }
 
@@ -2094,13 +2096,13 @@ class GLUtils
             function checkStatus() {
                 const status = gl.clientWaitSync(sync, flags, 0);
                 if(status == gl.TIMEOUT_EXPIRED) {
-                    setTimeout(checkStatus, 0); // easier on the CPU
-                    //Utils.setZeroTimeout(checkStatus);
+                    //setTimeout(checkStatus, 0); // easier on the CPU
+                    _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].setZeroTimeout(checkStatus);
                 }
                 else if(status == gl.WAIT_FAILED) {
                     if(isFirefox && gl.getError() == gl.NO_ERROR) { // firefox bug?
-                        setTimeout(checkStatus, 0);
-                        //Utils.setZeroTimeout(checkStatus);
+                        //setTimeout(checkStatus, 0);
+                        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].setZeroTimeout(checkStatus);
                     }
                     else {
                         reject(GLUtils.getError(gl));
@@ -2473,7 +2475,7 @@ class GPUEncoders extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPr
      */
     optimizeKeypointEncoder(keypointCount)
     {
-        const clampedKeypointCount = Math.max(0, Math.min(keypointCount, MAX_KEYPOINTS));
+        const clampedKeypointCount = Math.max(0, Math.min(Math.ceil(keypointCount), MAX_KEYPOINTS));
         const pixelsPerKeypoint = Math.ceil(2 + this._descriptorSize / 4);
         const len = Math.ceil(Math.sqrt((4 + clampedKeypointCount * 1.05) * pixelsPerKeypoint)); // add some slack
         const newEncoderLength = Math.max(1, Math.min(len, MAX_ENCODER_LENGTH));
@@ -2529,14 +2531,14 @@ class GPUEncoders extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPr
             }
 
             // debug
-            ///*
+            /*
             window._p = window._p || 0;
             window._m = window._m || 0;
             window._m = 0.9 * window._m + 0.1 * (encodingTime + transferTime);
             if(window._p++ % 50 == 0)
                 console.log(window._m, ' | ', maxIterations);
             //console.log(JSON.stringify(this._tuner.info()));
-            //*/
+            */
 
             // done!
             return pixels;
@@ -2855,25 +2857,23 @@ class GPUKeypoints extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUP
         super(gpu, width, height);
         this
             // FAST-9,16
-            .compose('fast9', '_fast9', '_fastScore16')
+            .compose('fast9', '_fast9', '_fastScore16', '_fastSuppression')
             .declare('_fast9', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fast9"]) // find corners
             .declare('_fastScore16', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fastScore16"]) // compute scores
+            .declare('_fastSuppression', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fastSuppression"]) // non-maximum suppression
 
             // FAST-7,12
-            .compose('fast7', '_fast7', '_fastScore12')
+            .compose('fast7', '_fast7', '_fastScore12', '_fastSuppression')
             .declare('_fast7', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fast7"])
             .declare('_fastScore12', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fastScore12"])
 
             // FAST-5,8
-            .compose('fast5', '_fast5', '_fastScore8')
+            .compose('fast5', '_fast5', '_fastScore8', '_fastSuppression')
             .declare('_fast5', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fast5"])
             .declare('_fastScore8', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fastScore8"])
 
             // FAST-9,16 plus
             .declare('fast9pyr', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fast9pyr"])
-
-            // FAST Non-Maximum Suppression
-            .declare('fastSuppression', _programs_fast__WEBPACK_IMPORTED_MODULE_1__["fastSuppression"])
 
             // BRISK Scale-Space Non-Maximum Suppression & Interpolation
             .declare('brisk', _programs_brisk__WEBPACK_IMPORTED_MODULE_2__["brisk"])
@@ -3470,7 +3470,7 @@ const fastScore8 = (image, threshold) => __webpack_require__(/*! ../../shaders/k
 
 // non-maximum suppression on 8-neighborhood based
 // on the corner score stored on the red channel
-const fastSuppression = image => __webpack_require__(/*! ../../shaders/keypoint-detectors/fast-suppression.glsl */ "./src/gpu/shaders/keypoint-detectors/fast-suppression.glsl");
+const fastSuppression = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoint-detectors/fast-suppression.glsl */ "./src/gpu/shaders/keypoint-detectors/fast-suppression.glsl");
 
 // generic scale-space non-maximum suppression
 const multiscaleSuppression = (image, lodJump, log2PyrMaxScale, pyrMaxLevels) => __webpack_require__(/*! ../../shaders/keypoint-detectors/multiscale-suppression.glsl */ "./src/gpu/shaders/keypoint-detectors/multiscale-suppression.glsl");
@@ -4117,7 +4117,7 @@ module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main(
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nvoid main()\n{\nfloat p0 = pixelAtOffset(image, ivec2(0, 1)).r;\nfloat p1 = pixelAtOffset(image, ivec2(1, 1)).r;\nfloat p2 = pixelAtOffset(image, ivec2(1, 0)).r;\nfloat p3 = pixelAtOffset(image, ivec2(1, -1)).r;\nfloat p4 = pixelAtOffset(image, ivec2(0, -1)).r;\nfloat p5 = pixelAtOffset(image, ivec2(-1, -1)).r;\nfloat p6 = pixelAtOffset(image, ivec2(-1, 0)).r;\nfloat p7 = pixelAtOffset(image, ivec2(-1, 1)).r;\nfloat m = max(\nmax(max(p0, p1), max(p2, p3)),\nmax(max(p4, p5), max(p6, p7))\n);\nvec4 pixel = threadPixel(image);\nfloat score = step(m, pixel.r) * pixel.r;\ncolor = vec4(score, pixel.gba);\n}"
+module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nfloat p0 = pixelAtOffset(image, ivec2(0, 1)).r;\nfloat p1 = pixelAtOffset(image, ivec2(1, 1)).r;\nfloat p2 = pixelAtOffset(image, ivec2(1, 0)).r;\nfloat p3 = pixelAtOffset(image, ivec2(1, -1)).r;\nfloat p4 = pixelAtOffset(image, ivec2(0, -1)).r;\nfloat p5 = pixelAtOffset(image, ivec2(-1, -1)).r;\nfloat p6 = pixelAtOffset(image, ivec2(-1, 0)).r;\nfloat p7 = pixelAtOffset(image, ivec2(-1, 1)).r;\nfloat m = max(\nmax(max(p0, p1), max(p2, p3)),\nmax(max(p4, p5), max(p6, p7))\n);\nvec4 pixel = threadPixel(image);\nfloat score = step(m, pixel.r) * pixel.r;\ncolor = vec4(score, pixel.gba);\n}"
 
 /***/ }),
 
@@ -4822,7 +4822,9 @@ const UNIFORM_TYPES = {
 };
 
 // number of pixel buffer objects
-const PBO_COUNT = 2; // used to get a performance boost in gl.readPixels()
+// used to get a performance boost in gl.readPixels()
+// (1 seems to perform better on mobile, 2 on the PC?)
+const PBO_COUNT = 1;
 
 /**
  * A SpeedyProgram is a Function that
