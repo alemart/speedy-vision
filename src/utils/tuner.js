@@ -655,8 +655,8 @@ export class OnlineErrorTuner extends Tuner
         this._expected = expected;
 
         // discard noise
-        const possibleNoise = (Math.abs(observedValue) > 2 * Math.abs(this._lastObservation));
-        this._lastObservation = observedValue;
+        const possibleNoise = (Math.abs(obs) > 2 * Math.abs(this._lastObservation));
+        this._lastObservation = obs;
         if(possibleNoise)
             return;
 
