@@ -182,7 +182,10 @@ export class FeatureDetector
             //document.querySelector('mark').innerHTML = gpu.encoders._keypointEncoderLength;
 
             // let's cap it if keypoints.length explodes (noise)
-            return keypoints.slice(0, newCount);
+            if(useAsyncTransfer && keypoints.length > newCount)
+                return keypoints.slice(0, newCount);
+            else
+                return keypoints;
         }).catch(err => {
             throw err;
         });

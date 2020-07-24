@@ -71,7 +71,7 @@ export const fastScore8 = (image, threshold) => require('../../shaders/keypoint-
 
 // non-maximum suppression on 8-neighborhood based
 // on the corner score stored on the red channel
-export const fastSuppression = image => require('../../shaders/keypoint-detectors/fast-suppression.glsl');
+export const fastSuppression = (image, threshold) => require('../../shaders/keypoint-detectors/fast-suppression.glsl');
 
 // generic scale-space non-maximum suppression
 export const multiscaleSuppression = (image, lodJump, log2PyrMaxScale, pyrMaxLevels) => require('../../shaders/keypoint-detectors/multiscale-suppression.glsl');

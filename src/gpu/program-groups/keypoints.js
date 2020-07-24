@@ -40,25 +40,23 @@ export class GPUKeypoints extends GPUProgramGroup
         super(gpu, width, height);
         this
             // FAST-9,16
-            .compose('fast9', '_fast9', '_fastScore16')
+            .compose('fast9', '_fast9', '_fastScore16', '_fastSuppression')
             .declare('_fast9', fast9) // find corners
             .declare('_fastScore16', fastScore16) // compute scores
+            .declare('_fastSuppression', fastSuppression) // non-maximum suppression
 
             // FAST-7,12
-            .compose('fast7', '_fast7', '_fastScore12')
+            .compose('fast7', '_fast7', '_fastScore12', '_fastSuppression')
             .declare('_fast7', fast7)
             .declare('_fastScore12', fastScore12)
 
             // FAST-5,8
-            .compose('fast5', '_fast5', '_fastScore8')
+            .compose('fast5', '_fast5', '_fastScore8', '_fastSuppression')
             .declare('_fast5', fast5)
             .declare('_fastScore8', fastScore8)
 
             // FAST-9,16 plus
             .declare('fast9pyr', fast9pyr)
-
-            // FAST Non-Maximum Suppression
-            .declare('fastSuppression', fastSuppression)
 
             // BRISK Scale-Space Non-Maximum Suppression & Interpolation
             .declare('brisk', brisk)

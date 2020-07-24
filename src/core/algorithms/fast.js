@@ -56,11 +56,7 @@ export class FAST
 
         // keypoint detection
         const fast = (vtable[n])(gpu);
-        const rawCorners = fast(greyscale, settings.threshold);
-
-        // non-maximum suppression
-        const corners = gpu.keypoints.fastSuppression(rawCorners);
-        return corners;
+        return fast(greyscale, settings.threshold);
     }
 
     /**
