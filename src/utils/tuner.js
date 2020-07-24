@@ -627,6 +627,7 @@ export class OnlineErrorTuner extends Tuner
         this._bestState = this._initialState;
         this._expected = null;
         this._learningRate = Math.max(0, learningRate);
+        this._lastObservation = 0;
     }
 
     /**
@@ -652,6 +653,12 @@ export class OnlineErrorTuner extends Tuner
         if(expected !== this._expected)
             this.reset();
         this._expected = expected;
+
+        // discard noise
+        const possibleNoise = (Math.abs(observedValue) > 2 * Math.abs(this._lastObservation));
+        this._lastObservation = observedValue;
+        if(possibleNoise)
+            return;
 
         // feed an error measurement to the appropriate bucket
         const err = ((obs - expected) * (obs - expected)) / (expected * expected);
@@ -701,6 +708,16 @@ export class OnlineErrorTuner extends Tuner
     // Where should I go next?
     _nextState()
     {
+        // debug
+        /*
+        const dE = (s) => Math.sqrt(this._bucketOf(s).average) * Math.abs(this._expected);
+        let dnewState=(this._prevState+1)%(this._maxState+1)+this._minState;
+        this._arr = this._arr || [];
+        this._arr[dnewState] = dE(dnewState);
+        if(dnewState==this._minState) console.log(JSON.stringify(this._arr));
+        return dnewState;
+        */
+
         // finished?
         if(this.finished())
             return this._bestState;
@@ -721,10 +738,11 @@ export class OnlineErrorTuner extends Tuner
 
         // move in the opposite direction of the error or in
         // the direction of the error with a small probability
-        const sign = x => (x >= 0) - (x < 0); // -1 or 1
+        const sign = x => Number(x >= 0) - Number(x < 0); // -1 or 1
+        const derr = E(this._state) - E(this._prevState);
         const direction = (
-            sign(E(this._state) - E(this._prevState)) *
-           -sign(this._state - this._prevState) *
+            sign(derr) *
+            sign(derr != 0 ? -(this._state - this._prevState) : 1) *
             sign(Math.random() - 0.15)
         );
         //console.warn("at state", this._state, direction > 0 ? '-->' : '<--');

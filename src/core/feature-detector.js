@@ -42,6 +42,7 @@ export class FeatureDetector
     {
         this._gpu = gpu;
         this._lastKeypointCount = 0;
+        this._lastKeypointEncoderOutput = 0;
         this._sensitivityTuner = null;
         this._optimizeForDynamicUsage = optimizeForDynamicUsage;
     }
@@ -177,8 +178,9 @@ export class FeatureDetector
             const prevCount = Math.max(this._lastKeypointCount, 64);
             const newCount = Math.ceil(OPTIMIZER_GROWTH_WEIGHT * currCount + (1.0 - OPTIMIZER_GROWTH_WEIGHT) * prevCount);
 
-            gpu.encoders.optimizeKeypointEncoder(newCount);
             this._lastKeypointCount = newCount;
+            this._lastKeypointEncoderOutput = keypoints.length;
+            gpu.encoders.optimizeKeypointEncoder(newCount);
             //document.querySelector('mark').innerHTML = gpu.encoders._keypointEncoderLength;
 
             // let's cap it if keypoints.length explodes (noise)
@@ -220,7 +222,7 @@ export class FeatureDetector
 
         // update tuner
         this._sensitivityTuner.tolerance = Math.max(expected.tolerance, 0);
-        this._sensitivityTuner.feedObservation(this._lastKeypointCount, Math.max(expected.number, 0));
+        this._sensitivityTuner.feedObservation(this._lastKeypointEncoderOutput, Math.max(expected.number, 0));
         const sensitivity = this._sensitivityTuner.currentValue() * normalizer;
 
         // return the new sensitivity
