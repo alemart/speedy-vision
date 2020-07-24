@@ -603,14 +603,12 @@ export class GoldenSectionTuner extends Tuner
 
 /**
  * A Tuner for minimizing errors between observed and expected values
- * 
- * It should be an Online Tuner, that is, it should learn the
- * best responses in real-time, as it goes
+ * It's an online tuner: it learns the best responses in real-time
  * 
  * This is sort of a hill climbing / gradient descent algorithm
  * with random elements and adapted for discrete space
  */
-export class OnlineErrorTuner extends Tuner
+export class SensitivityTuner extends Tuner
 {
     /**
      * Class constructor

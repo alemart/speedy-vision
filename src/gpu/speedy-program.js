@@ -219,13 +219,13 @@ export class SpeedyProgram extends Function
         // GPU needs to produce data
         if(this._pboProducerQueue.length > 0) {
             const nextPBO = this._pboProducerQueue.shift();
-            downloadDMA(gl, this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
+            downloadDMA(gl, this._pbo[nextPBO], this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
                 this._pboConsumerQueue.push(nextPBO);
             });
         }
         else waitForQueueNotEmpty(this._pboProducerQueue).then(waitTime => {
             const nextPBO = this._pboProducerQueue.shift();
-            downloadDMA(gl, this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
+            downloadDMA(gl, this._pbo[nextPBO], this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
                 this._pboConsumerQueue.push(nextPBO);
             });
         });
@@ -303,7 +303,7 @@ export class SpeedyProgram extends Function
         this._options = options;
         this._stdprog = stdprog;
         this._params = params;
-        this._initPixelBuffers();
+        this._initPixelBuffers(gl);
     }
 
     // Run the SpeedyProgram
@@ -416,12 +416,13 @@ export class SpeedyProgram extends Function
     }
 
     // initialize pixel buffers
-    _initPixelBuffers()
+    _initPixelBuffers(gl)
     {
         this._pixelBuffer = Array(PBO_COUNT).fill(null);
         this._pixelBufferSize = [0, 0];
         this._pboConsumerQueue = Array(PBO_COUNT).fill(0).map((_, i) => i);
         this._pboProducerQueue = [];
+        this._pbo = Array(PBO_COUNT).fill(null).map(() => gl.createBuffer());
     }
 
     // resize pixel buffers
@@ -525,8 +526,7 @@ function waitForQueueNotEmpty(queue)
             if(queue.length > 0)
                 resolve(performance.now() - start);
             else
-                //Utils.setZeroTimeout(wait);
-                setTimeout(wait, 0);
+                setTimeout(wait, 0); // Utils.setZeroTimeout may hinder performance (GLUtils already calls it)
         }
         wait();
     });
@@ -696,10 +696,14 @@ function createPixelBuffer(width, height)
 
 // download data to an Uint8Array using a Pixel Buffer Object (PBO)
 // you may optionally specify a FBO to read pixels from a texture
-function downloadDMA(gl, arrayBuffer, x, y, width, height, fbo = null)
+function downloadDMA(gl, pbo, arrayBuffer, x, y, width, height, fbo = null)
 {
     // create a PBO
-    const pbo = gl.createBuffer();
+    const ownPBO = (pbo == null);
+    if(ownPBO)
+        pbo = gl.createBuffer();
+
+    // bind the PBO
     gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
     gl.bufferData(gl.PIXEL_PACK_BUFFER, arrayBuffer.byteLength, gl.STREAM_READ);
 
@@ -727,6 +731,7 @@ function downloadDMA(gl, arrayBuffer, x, y, width, height, fbo = null)
     }).catch(err => {
         throw err;
     }).finally(() => {
-        gl.deleteBuffer(pbo);
+        if(ownPBO)
+            gl.deleteBuffer(pbo);
     });
 }

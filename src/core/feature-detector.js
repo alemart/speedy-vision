@@ -21,7 +21,7 @@
 
 import { FAST, FASTPlus } from './algorithms/fast.js';
 import { BRISK } from './algorithms/brisk.js';
-import { OnlineErrorTuner, TestTuner } from '../utils/tuner';
+import { SensitivityTuner, TestTuner } from '../utils/tuner';
 import { Utils } from '../utils/utils';
 
 // constants
@@ -216,7 +216,7 @@ export class FeatureDetector
 
         // spawn the tuner
         this._sensitivityTuner = this._sensitivityTuner ||
-            new OnlineErrorTuner(0, 1200); // use a slightly wider interval for better stability
+            new SensitivityTuner(0, 1200); // use a slightly wider interval for better stability
             //new TestTuner(0, 1000);
         const normalizer = 0.001;
 
