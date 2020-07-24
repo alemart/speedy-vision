@@ -19,6 +19,18 @@
  * FAST-9,16 corner detector with logical expressions
  */
 
+/*
+ * This is a GPU implementation of FAST,
+ * "Features from Accelerated Segment Test" [1]
+ *
+ * Reference:
+ *
+ * [1] Rosten, Edward; Drummond, Tom.
+ *     "Machine learning for high-speed corner detection"
+ *     European Conference on Computer Vision (ECCV-2006)
+ *
+ */
+
 uniform sampler2D image;
 uniform float threshold;
 const ivec4 margin = ivec4(3, 3, 4, 4);

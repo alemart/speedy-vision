@@ -23,6 +23,7 @@
 #define _MATH_GLSL
 
 // constants
+#define TWO_PI          6.28318530718f
 #define PI              3.14159265359f
 #define PI_OVER_2       1.57079632679f
 #define PI_OVER_4       0.78539816339f

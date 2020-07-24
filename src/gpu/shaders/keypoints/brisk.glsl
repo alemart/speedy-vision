@@ -20,6 +20,17 @@
  */
 
 /*
+ * This implements a MODIFIED, GPU-based version
+ * of the BRISK [1] feature detection algorithm
+ * 
+ * Reference:
+ * 
+ * [1] Leutenegger, Stefan; Chli, Margarita; Siegwart, Roland Y.
+ *     "BRISK: Binary robust invariant scalable keypoints"
+ *     International Conference on Computer Vision (ICCV-2011)
+ */
+
+/*
  * Modified BRISK algorithm
  * Scale-space non-maximum suppression & interpolation
  *

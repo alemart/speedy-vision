@@ -20,8 +20,13 @@
  */
 
 import { GPUProgramGroup } from '../gpu-program-group';
-import { fast5, fast7, fast9, fast9pyr, fastScore8, fastScore12, fastScore16, fastSuppression, multiscaleSuppression, samescaleSuppression } from './programs/fast';
-import { brisk } from './programs/brisk';
+import {
+    fast5, fast7, fast9, fast9pyr,
+    fastScore8, fastScore12, fastScore16,
+    fastSuppression, multiscaleSuppression, samescaleSuppression,
+    orientationViaCentroid,
+    brisk
+} from './programs/keypoints';
 
 /**
  * GPUKeypoints
@@ -64,6 +69,9 @@ export class GPUKeypoints extends GPUProgramGroup
             // Generic multi-scale non-maximum suppression
             .declare('multiscaleSuppression', multiscaleSuppression)
             .declare('samescaleSuppression', samescaleSuppression)
+
+            // Generic orientation finder
+            .declare('orientationViaCentroid', orientationViaCentroid)
         ;
     }
 }

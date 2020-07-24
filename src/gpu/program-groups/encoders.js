@@ -34,6 +34,7 @@ const MAX_ENCODER_LENGTH = 300; // in pixels (if too large, WebGL may lose conte
 const MAX_KEYPOINTS = ((MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH) / MAX_PIXELS_PER_KEYPOINT) | 0;
 const INITIAL_ENCODER_LENGTH = 128; // pick a large value <= MAX (useful on static images when no encoder optimization is performed beforehand)
 const TWO_PI = 2.0 * Math.PI;
+const PI = Math.PI;
 
 
 /**
@@ -158,12 +159,12 @@ export class GPUEncoders extends GPUProgramGroup
     /**
      * Decodes the keypoints, given a flattened image of encoded pixels
      * @param {Array<number>} pixels pixels in the [r,g,b,a,...] format
+     * @param {boolean} hasRotation do encoded pixels include rotation?
      * @returns {Array<SpeedyFeature>} keypoints
      */
-    decodeKeypoints(pixels)
+    decodeKeypoints(pixels, hasRotation = true)
     {
         const [ w, h ] = [ this._width, this._height ];
-        const hasRotation = this._descriptorSize > 0;
         const pixelsPerKeypoint = 2 + this._descriptorSize / 4;
         const lgM = Math.log2(this._gpu.pyramidMaxScale);
         const pyrHeight = this._gpu.pyramidHeight;
@@ -180,7 +181,7 @@ export class GPUEncoders extends GPUProgramGroup
                 Math.pow(2.0, -lgM + (lgM + pyrHeight) * pixels[i+4] / 255.0);
 
             rotation = !hasRotation ? 0.0 :
-                pixels[i+5] * TWO_PI / 255.0;
+                (pixels[i+5] * TWO_PI - PI) / 255.0;
 
             keypoints.push(new SpeedyFeature(x, y, scale, rotation));
         }

@@ -23,9 +23,12 @@
  * Keypoint images are encoded as follows:
  *
  * R - "cornerness" score of the pixel (0 means it's not a corner)
- * G - pixel intensity (greyscale)
- * B - min(c, -1 + offset to the next feature) / 255, for a constant c in [1,255]
- * A - general purpose channel
+ * G - pixel intensity | skip offset
+ * B - keypoint orientation
+ * A - keypoint scale
+ *
+ * skip offset := min(c, -1 + offset to the next feature) / 255,
+ * for a constant c in [1,255]
  *
  *
  * Keypoints are encoded as follows:
@@ -60,7 +63,7 @@ bool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)
                 return true;
         }
 
-        i += 1 + int(pixel.b * 255.0f);
+        i += 1 + int(pixel.g * 255.0f);
         position = ivec2(i % imageSize.x, i / imageSize.x);
     }
 
@@ -94,7 +97,7 @@ void main()
             case 1: {
                 // write scale & rotation
                 float scale = pixel.a;
-                float rotation = 0.0f;
+                float rotation = pixel.b;
                 color = vec4(scale, rotation, 0.0f, 0.0f);
                 break;
             }

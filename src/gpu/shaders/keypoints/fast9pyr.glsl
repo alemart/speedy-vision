@@ -66,13 +66,13 @@ void main()
         );
 
         // quick test: not a corner
-        ///*
+        /*
         if(!(
             ((c_t > p4k.x || c_t > p4k.z) && (c_t > p4k.y || c_t > p4k.w)) ||
             ((ct < p4k.x  || ct < p4k.z)  && (ct < p4k.y  || ct < p4k.w))
         ))
             continue;
-        //*/
+        */
 
         // read neighbors
         mat4 mp = mat4(

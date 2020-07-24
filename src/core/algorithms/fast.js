@@ -129,17 +129,19 @@ export class FASTPlus extends FAST
 
         // keypoint detection
         let multiScaleCorners = fastPyr(pyramid, settings.threshold, 0.0, Math.min(1.0, maxLod), log2PyrMaxScale, pyrMaxLevels, true);
-        if(maxLod > 1.0) {
+        /*if(maxLod > 1.0) {
             // nao, os dois precisam receber pyramid que tem o mipmap
             // e fazer merge depois
             const tmp = gpu.utils.identity(multiScaleCorners);
             multiScaleCorners = fastPyr(tmp, settings.threshold, 2.0, maxLod, log2PyrMaxScale, pyrMaxLevels, false);
-        }
-        const orientedMultiScaleCorners = multiScaleCorners; // TODO
+        }*/
 
         // non-maximum suppression
-        const suppressed1 = gpu.keypoints.samescaleSuppression(orientedMultiScaleCorners, log2PyrMaxScale, pyrMaxLevels);
+        const suppressed1 = gpu.keypoints.samescaleSuppression(multiScaleCorners, log2PyrMaxScale, pyrMaxLevels);
         const suppressed2 = gpu.keypoints.multiscaleSuppression(suppressed1, 1.0, log2PyrMaxScale, pyrMaxLevels);
-        return suppressed2;
+
+        // compute orientation
+        const orientedCorners = gpu.keypoints.orientationViaCentroid(suppressed2, 2);
+        return orientedCorners;
     }
 }
