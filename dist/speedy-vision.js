@@ -6,7 +6,7 @@
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-07-24T01:30:06.185Z
+ * Date: 2020-07-24T04:12:18.663Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -567,6 +567,7 @@ class FeatureDetector
     {
         this._gpu = gpu;
         this._lastKeypointCount = 0;
+        this._lastKeypointEncoderOutput = 0;
         this._sensitivityTuner = null;
         this._optimizeForDynamicUsage = optimizeForDynamicUsage;
     }
@@ -702,8 +703,9 @@ class FeatureDetector
             const prevCount = Math.max(this._lastKeypointCount, 64);
             const newCount = Math.ceil(OPTIMIZER_GROWTH_WEIGHT * currCount + (1.0 - OPTIMIZER_GROWTH_WEIGHT) * prevCount);
 
-            gpu.encoders.optimizeKeypointEncoder(newCount);
             this._lastKeypointCount = newCount;
+            this._lastKeypointEncoderOutput = keypoints.length;
+            gpu.encoders.optimizeKeypointEncoder(newCount);
             //document.querySelector('mark').innerHTML = gpu.encoders._keypointEncoderLength;
 
             // let's cap it if keypoints.length explodes (noise)
@@ -745,7 +747,7 @@ class FeatureDetector
 
         // update tuner
         this._sensitivityTuner.tolerance = Math.max(expected.tolerance, 0);
-        this._sensitivityTuner.feedObservation(this._lastKeypointCount, Math.max(expected.number, 0));
+        this._sensitivityTuner.feedObservation(this._lastKeypointEncoderOutput, Math.max(expected.number, 0));
         const sensitivity = this._sensitivityTuner.currentValue() * normalizer;
 
         // return the new sensitivity
@@ -6393,6 +6395,7 @@ class OnlineErrorTuner extends Tuner
         this._bestState = this._initialState;
         this._expected = null;
         this._learningRate = Math.max(0, learningRate);
+        this._lastObservation = 0;
     }
 
     /**
@@ -6418,6 +6421,12 @@ class OnlineErrorTuner extends Tuner
         if(expected !== this._expected)
             this.reset();
         this._expected = expected;
+
+        // discard noise
+        const possibleNoise = (Math.abs(observedValue) > 2 * Math.abs(this._lastObservation));
+        this._lastObservation = observedValue;
+        if(possibleNoise)
+            return;
 
         // feed an error measurement to the appropriate bucket
         const err = ((obs - expected) * (obs - expected)) / (expected * expected);
@@ -6467,6 +6476,16 @@ class OnlineErrorTuner extends Tuner
     // Where should I go next?
     _nextState()
     {
+        // debug
+        /*
+        const dE = (s) => Math.sqrt(this._bucketOf(s).average) * Math.abs(this._expected);
+        let dnewState=(this._prevState+1)%(this._maxState+1)+this._minState;
+        this._arr = this._arr || [];
+        this._arr[dnewState] = dE(dnewState);
+        if(dnewState==this._minState) console.log(JSON.stringify(this._arr));
+        return dnewState;
+        */
+
         // finished?
         if(this.finished())
             return this._bestState;
@@ -6487,10 +6506,11 @@ class OnlineErrorTuner extends Tuner
 
         // move in the opposite direction of the error or in
         // the direction of the error with a small probability
-        const sign = x => (x >= 0) - (x < 0); // -1 or 1
+        const sign = x => Number(x >= 0) - Number(x < 0); // -1 or 1
+        const derr = E(this._state) - E(this._prevState);
         const direction = (
-            sign(E(this._state) - E(this._prevState)) *
-           -sign(this._state - this._prevState) *
+            sign(derr) *
+            sign(derr != 0 ? -(this._state - this._prevState) : 1) *
             sign(Math.random() - 0.15)
         );
         //console.warn("at state", this._state, direction > 0 ? '-->' : '<--');
