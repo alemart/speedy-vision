@@ -177,7 +177,8 @@ export class FeatureDetector
 
             this._lastKeypointCount = newCount;
             this._lastKeypointEncoderOutput = keypoints.length;
-            gpu.encoders.optimizeKeypointEncoder(newCount);
+            if(useAsyncTransfer) // FIXME: use some other flag?
+                gpu.encoders.optimizeKeypointEncoder(newCount);
             //document.querySelector('mark').innerHTML = gpu.encoders._keypointEncoderLength;
 
             // let's cap it if keypoints.length explodes (noise)
