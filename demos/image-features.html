@@ -6,19 +6,18 @@
         <script src="../dist/speedy-vision.js"></script>
         <style>
             form { display: flex; flex-wrap: wrap; align-items: baseline; margin-bottom: 1em; }
-            form > *:last-child { position: relative; left: 450px; }
             mark { position: absolute; top: 16px; right: 16px; background: none; }
         </style>
     </head>
     <body>
-        <h1>Image features</h1>
+        <h1>Finding features in an image</h1>
         <form>
             <div>
-                Sensitivity:
-                <input type="range" min="20" max="80" value="50" id="slider">
-            </div>
-            <div>
-                Found <span id="feature-count">0</span> features.
+                <label for="sensitivity">Sensitivity</label>
+                <input type="range" min="20" max="70" value="45" id="sensitivity">
+                <label for="multiscale">Multi-scale</label>
+                <input type="checkbox" id="multiscale">
+                <span style="margin-left:2em">Found <span id="feature-count">0</span> features</span>
             </div>
         </form>
         <img src="../assets/speedy-large.jpg" title="Image by JD Hancock (CC-BY)" hidden>
@@ -35,11 +34,12 @@ window.onload = async function()
     const canvas = createCanvas(media.width, media.height);
 
     // components
-    const slider = document.getElementById('slider');
+    const slider = document.getElementById('sensitivity');
+    const multiscale = document.getElementById('multiscale');
     const featureCount = document.getElementById('feature-count');
 
     // update features
-    const FPS = 30;
+    const FPS = 60;
     let features = [];
     function updateFeatures()
     {
@@ -48,7 +48,7 @@ window.onload = async function()
 
         // find & render features
         media.findFeatures({
-            method: 'fast9', // use the FAST algorithm
+            method: multiscale.checked ? 'fast9plus' : 'fast',
             sensitivity: sensitivity,
         }).then(f => {
             features = f;

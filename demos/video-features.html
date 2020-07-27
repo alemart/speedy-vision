@@ -6,7 +6,6 @@
         <script src="../dist/speedy-vision.js"></script>
         <style>
             form { display: flex; flex-wrap: wrap; align-items: baseline; margin-bottom: 1em; }
-            form > *:last-child { position: relative; left: 220px; }
             mark { position: absolute; top: 16px; right: 16px; background: none; }
         </style>
     </head>
@@ -18,15 +17,14 @@
                 <input type="range" min="20" max="80" value="50" id="sensitivity">
                 <label for="multiscale">Multi-scale</label>
                 <input type="checkbox" id="multiscale">
-            </div>
-            <div>
-                FPS: <span id="fps">60</span>
+                <span style="margin-left:2em">FPS: <span id="fps">60</span></span>
             </div>
         </form>
         <div>
             <button id="play" onclick="pause()">Play / pause</button>
             <label for="speed-slider">Video speed</label>
             <input type="range" id="speed-slider" min="10" max="200" value="100">
+            Found <span id="feature-count">0</span> keypoints
         </div>
         <video
             src="../assets/roadrunner.mp4"
@@ -45,9 +43,10 @@ window.onload = async function()
     // create a canvas to display the features
     const canvas = createCanvas(media.width, media.height);
 
-    // user controls
+    // elements
     const slider = document.getElementById('sensitivity');
     const multiscale = document.getElementById('multiscale');
+    const featureCount = document.getElementById('feature-count');
 
     // update features
     const FPS = 60;
@@ -63,6 +62,7 @@ window.onload = async function()
             sensitivity: sensitivity,
         }).then(f => {
             features = f;
+            featureCount.innerText = features.length;
             setTimeout(updateFeatures, 1000.0 / FPS);
         });
     }
