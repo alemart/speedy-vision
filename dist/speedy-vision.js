@@ -6,7 +6,7 @@
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-07-27T23:05:42.491Z
+ * Date: 2020-07-27T23:21:44.723Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -698,7 +698,8 @@ class FeatureDetector
 
             this._lastKeypointCount = newCount;
             this._lastKeypointEncoderOutput = keypoints.length;
-            gpu.encoders.optimizeKeypointEncoder(newCount);
+            if(useAsyncTransfer) // FIXME: use some other flag?
+                gpu.encoders.optimizeKeypointEncoder(newCount);
             //document.querySelector('mark').innerHTML = gpu.encoders._keypointEncoderLength;
 
             // let's cap it if keypoints.length explodes (noise)
