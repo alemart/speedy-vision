@@ -22,8 +22,8 @@
 @include "pyramids.glsl"
 
 uniform sampler2D image;
-uniform float lodJump; // use 0.5 for sqrt(2) consecutive intra-levels and 1.0 for consecutive pyramid levels
 uniform float log2PyrMaxScale, pyrMaxLevels;
+uniform bool usePyrSubLevels; // scaling factor of sqrt(2) if true, or 2 if false
 
 const float scaleEps = 1e-5;
 
@@ -38,6 +38,8 @@ void main()
 {
     vec4 pixel = threadPixel(image);
     float lod = decodeLod(pixel.a, log2PyrMaxScale, pyrMaxLevels);
+    //float lodJump = 1.0f - float(usePyrSubLevels) * 0.5f; // doesn't work as well?
+    float lodJump = 1.0f;
 
     // not a corner?
     color = pixel;

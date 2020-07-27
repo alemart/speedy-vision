@@ -40,8 +40,8 @@
  *
  * X: keypoint_xpos (2 bytes)
  * Y: keypoint_ypos (2 bytes)
- * S: keypoint_pyramid_scale * 2 (1 byte)
- * R: keypoint_rotation / (2 pi) (1 byte)
+ * S: keypoint_scale (1 byte)
+ * R: keypoint_rotation (1 byte)
  * -: unused
  * D: descriptor binary string (N bytes)
  */

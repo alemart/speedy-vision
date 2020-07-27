@@ -15,23 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * orientation-via-centroid.glsl
- * Find the orientation of a keypoint using its intensity centroid
+ * multiscale-orientation-via-centroid.glsl
+ * Find keypoint orientation in scale-space
  */
 
 @include "math.glsl"
+@include "pyramids.glsl"
 
+// corners without orientation
 uniform sampler2D corners;
 
 // We'll consider a circular patch of size (2r+1) x (2r+1)
 // around the keypoint, where r = 0, 1, 2 or 3 (radius)
 uniform int patchRadius;
 
+// pyramid data
+uniform sampler2D pyramid;
+uniform float log2PyrMaxScale, pyrMaxLevels;
+
 // Keypoint orientation will be stored in the blue channel
 void main()
 {
     vec4 pixel = threadPixel(corners);
-    vec2 m = vec2(0.0f, 0.0f); // (m10, m01) image moments
     float angle = 0.5f; // keypoint orientation in [0,1]
 
     // skip if not a corner
@@ -39,21 +44,26 @@ void main()
     if(pixel.r == 0.0f)
         return;
 
+    // multiscale data
+    float lod = decodeLod(pixel.a, log2PyrMaxScale, pyrMaxLevels);
+    float pot = pow(2.0f, lod);
+
     // Compute image moments
+    vec2 m = vec2(0.0f, 0.0f); // (m10, m01)
     if(patchRadius >= 1) {
         mat4 p; // pixel intensities
 
         p[0] = vec4(
-            pixelAtOffset(corners, ivec2(0, -1)).g,
-            pixelAtOffset(corners, ivec2(1, -1)).g,
-            pixelAtOffset(corners, ivec2(1, 0)).g,
-            pixelAtOffset(corners, ivec2(1, 1)).g
+            pyrPixelAtOffset(pyramid, lod, pot, ivec2(0, -1)).g,
+            pyrPixelAtOffset(pyramid, lod, pot, ivec2(1, -1)).g,
+            pyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 0)).g,
+            pyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 1)).g
         );
         p[1] = vec4(
-            pixelAtOffset(corners, ivec2(0, 1)).g,
-            pixelAtOffset(corners, ivec2(-1, 1)).g,
-            pixelAtOffset(corners, ivec2(-1, 0)).g,
-            pixelAtOffset(corners, ivec2(-1, -1)).g
+            pyrPixelAtOffset(pyramid, lod, pot, ivec2(0, 1)).g,
+            pyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 1)).g,
+            pyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 0)).g,
+            pyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, -1)).g
         );
 
         m += vec2(0.0f, -p[0][0]);
@@ -67,22 +77,22 @@ void main()
 
         if(patchRadius >= 2) {
             p[0] = vec4(
-                pixelAtOffset(corners, ivec2(0, -2)).g,
-                pixelAtOffset(corners, ivec2(1, -2)).g,
-                pixelAtOffset(corners, ivec2(2, -1)).g,
-                pixelAtOffset(corners, ivec2(2, 0)).g
+                pyrPixelAtOffset(pyramid, lod, pot, ivec2(0, -2)).g,
+                pyrPixelAtOffset(pyramid, lod, pot, ivec2(1, -2)).g,
+                pyrPixelAtOffset(pyramid, lod, pot, ivec2(2, -1)).g,
+                pyrPixelAtOffset(pyramid, lod, pot, ivec2(2, 0)).g
             );
             p[1] = vec4(
-                pixelAtOffset(corners, ivec2(2, 1)).g,
-                pixelAtOffset(corners, ivec2(1, 2)).g,
-                pixelAtOffset(corners, ivec2(0, 2)).g,
-                pixelAtOffset(corners, ivec2(-1, 2)).g
+                pyrPixelAtOffset(pyramid, lod, pot, ivec2(2, 1)).g,
+                pyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 2)).g,
+                pyrPixelAtOffset(pyramid, lod, pot, ivec2(0, 2)).g,
+                pyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 2)).g
             );
             p[2] = vec4(
-                pixelAtOffset(corners, ivec2(-2, 1)).g,
-                pixelAtOffset(corners, ivec2(-2, 0)).g,
-                pixelAtOffset(corners, ivec2(-2, -1)).g,
-                pixelAtOffset(corners, ivec2(-1, -2)).g
+                pyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, 1)).g,
+                pyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, 0)).g,
+                pyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, -1)).g,
+                pyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, -2)).g
             );
 
             m += vec2(0.0f, -2.0f * p[0][0]);
@@ -100,28 +110,28 @@ void main()
 
             if(patchRadius >= 3) {
                 p[0] = vec4(
-                    pixelAtOffset(corners, ivec2(0, -3)).g,
-                    pixelAtOffset(corners, ivec2(1, -3)).g,
-                    pixelAtOffset(corners, ivec2(2, -2)).g,
-                    pixelAtOffset(corners, ivec2(3, -1)).g
+                    pyrPixelAtOffset(pyramid, lod, pot, ivec2(0, -3)).g,
+                    pyrPixelAtOffset(pyramid, lod, pot, ivec2(1, -3)).g,
+                    pyrPixelAtOffset(pyramid, lod, pot, ivec2(2, -2)).g,
+                    pyrPixelAtOffset(pyramid, lod, pot, ivec2(3, -1)).g
                 );
                 p[1] = vec4(
-                    pixelAtOffset(corners, ivec2(3, 0)).g,
-                    pixelAtOffset(corners, ivec2(3, 1)).g,
-                    pixelAtOffset(corners, ivec2(2, 2)).g,
-                    pixelAtOffset(corners, ivec2(1, 3)).g
+                    pyrPixelAtOffset(pyramid, lod, pot, ivec2(3, 0)).g,
+                    pyrPixelAtOffset(pyramid, lod, pot, ivec2(3, 1)).g,
+                    pyrPixelAtOffset(pyramid, lod, pot, ivec2(2, 2)).g,
+                    pyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 3)).g
                 );
                 p[2] = vec4(
-                    pixelAtOffset(corners, ivec2(0, 3)).g,
-                    pixelAtOffset(corners, ivec2(-1, 3)).g,
-                    pixelAtOffset(corners, ivec2(-2, 2)).g,
-                    pixelAtOffset(corners, ivec2(-3, 1)).g
+                    pyrPixelAtOffset(pyramid, lod, pot, ivec2(0, 3)).g,
+                    pyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 3)).g,
+                    pyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, 2)).g,
+                    pyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, 1)).g
                 );
                 p[3] = vec4(
-                    pixelAtOffset(corners, ivec2(-3, 0)).g,
-                    pixelAtOffset(corners, ivec2(-3, -1)).g,
-                    pixelAtOffset(corners, ivec2(-2, -2)).g,
-                    pixelAtOffset(corners, ivec2(-1, -3)).g
+                    pyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, 0)).g,
+                    pyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, -1)).g,
+                    pyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, -2)).g,
+                    pyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, -3)).g
                 );
 
                 m += vec2(0.0f, -3.0f * p[0][0]);

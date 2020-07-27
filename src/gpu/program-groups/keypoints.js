@@ -24,7 +24,7 @@ import {
     fast5, fast7, fast9, fast9pyr,
     fastScore8, fastScore12, fastScore16,
     fastSuppression, multiscaleSuppression, samescaleSuppression,
-    orientationViaCentroid,
+    orientationViaCentroid, multiscaleOrientationViaCentroid,
     brisk
 } from './programs/keypoints';
 
@@ -72,6 +72,7 @@ export class GPUKeypoints extends GPUProgramGroup
 
             // Generic orientation finder
             .declare('orientationViaCentroid', orientationViaCentroid)
+            .declare('multiscaleOrientationViaCentroid', multiscaleOrientationViaCentroid)
         ;
     }
 }

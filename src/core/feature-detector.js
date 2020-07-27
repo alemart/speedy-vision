@@ -60,7 +60,6 @@ export class FeatureDetector
 
         // default settings
         settings = {
-            threshold: 10,
             denoise: true,
             ...settings
         };
@@ -100,8 +99,6 @@ export class FeatureDetector
 
         // default settings
         settings = {
-            depth: 3,
-            threshold: 10,
             denoise: true,
             ...settings
         };

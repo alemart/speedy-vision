@@ -115,33 +115,27 @@ export class FASTPlus extends FAST
 
         // prepare data
         const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidHeight;
-        const depth = Math.max(MIN_DEPTH, Math.min(settings.depth | 0, MAX_DEPTH));
+        const depth = Math.max(MIN_DEPTH, Math.min(+(settings.depth), MAX_DEPTH));
         const maxLod = depth - 1;
         const log2PyrMaxScale = Math.log2(gpu.pyramidMaxScale);
         const pyrMaxLevels = gpu.pyramidHeight;
+
+        // select algorithm
+        const multiscaleFast = gpu.keypoints.fast9pyr;
 
         // generate pyramid
         const pyramid = greyscale;
         GLUtils.generateMipmap(gpu.gl, pyramid);
 
-        // select algorithm
-        const fastPyr = gpu.keypoints.fast9pyr;
-
         // keypoint detection
-        let multiScaleCorners = fastPyr(pyramid, settings.threshold, 0.0, Math.min(1.0, maxLod), log2PyrMaxScale, pyrMaxLevels, true);
-        /*if(maxLod > 1.0) {
-            // nao, os dois precisam receber pyramid que tem o mipmap
-            // e fazer merge depois
-            const tmp = gpu.utils.identity(multiScaleCorners);
-            multiScaleCorners = fastPyr(tmp, settings.threshold, 2.0, maxLod, log2PyrMaxScale, pyrMaxLevels, false);
-        }*/
+        const multiScaleCorners = multiscaleFast(pyramid, settings.threshold, 0, maxLod, log2PyrMaxScale, pyrMaxLevels, true);
 
         // non-maximum suppression
         const suppressed1 = gpu.keypoints.samescaleSuppression(multiScaleCorners, log2PyrMaxScale, pyrMaxLevels);
-        const suppressed2 = gpu.keypoints.multiscaleSuppression(suppressed1, 1.0, log2PyrMaxScale, pyrMaxLevels);
+        const suppressed2 = gpu.keypoints.multiscaleSuppression(suppressed1, log2PyrMaxScale, pyrMaxLevels, true);
 
         // compute orientation
-        const orientedCorners = gpu.keypoints.orientationViaCentroid(suppressed2, 2);
+        const orientedCorners = gpu.keypoints.multiscaleOrientationViaCentroid(suppressed2, 3, pyramid, log2PyrMaxScale, pyrMaxLevels);
         return orientedCorners;
     }
 }

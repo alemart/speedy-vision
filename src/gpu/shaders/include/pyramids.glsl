@@ -21,21 +21,21 @@
 
 /**
  * Get current pixel at a specific level-of-detail
- * @param {sampler2D} img
+ * @param {sampler2D} pyr pyramid
  * @param {float} lod level-of-detail (0 is the base level)
  */
-#define pyrPixel(img, lod) textureLod((img), texCoord, (lod))
+#define pyrPixel(pyr, lod) textureLod((pyr), texCoord, (lod))
 
 /**
  * Get the pixel at a constant offset from the thread pixel at a specific LOD.
- * This assumes textureSize(img, 0) == ivec2(texSize), i.e., input size == output size
- * @param {sampler2D} img
+ * This assumes textureSize(pyr, 0) == ivec2(texSize), i.e., input size == output size
+ * @param {sampler2D} pyr puramid
  * @param {float} lod level-of-detail
  * @param {float} pot must be 2^lod
  * @param {ivec2} offset the offset you would use for lod = 0
- * @returns {vec4} pixel
+ * @returns {vec4} pixel data
  */
-#define pyrPixelAtOffset(img, lod, pot, offset) textureLod((img), texCoord + ((pot) * vec2(offset)) / texSize, (lod))
+#define pyrPixelAtOffset(pyr, lod, pot, offset) textureLod((pyr), texCoord + ((pot) * vec2(offset)) / texSize, (lod))
 
 /*
  * Image scale is encoded in the alpha channel (a)

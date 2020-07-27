@@ -41,7 +41,7 @@ export const fast9 = (image, threshold) => require('../../shaders/keypoints/fast
 
 // FAST-9_16 on scale-space
 // Requires image mipmap
-export const fast9pyr = (image, threshold, minLod, maxLod, log2PyrMaxScale, pyrMaxLevels, resetCorners) => require('../../shaders/keypoints/fast9pyr.glsl');
+export const fast9pyr = (pyramid, threshold, minLod, maxLod, log2PyrMaxScale, pyrMaxLevels, usePyrSubLevels) => require('../../shaders/keypoints/fast9pyr.glsl');
 
 // FAST-7_12: requires 7 contiguous pixels
 // on a circumference of 12 pixels
@@ -81,8 +81,9 @@ export const brisk = (image, layerA, layerB, scaleA, scaleB, lgM, h) => require(
 //
 
 // scale-space non-maximum suppression
-export const multiscaleSuppression = (image, lodJump, log2PyrMaxScale, pyrMaxLevels) => require('../../shaders/keypoints/multiscale-suppression.glsl');
+export const multiscaleSuppression = (image, log2PyrMaxScale, pyrMaxLevels, usePyrSubLevels) => require('../../shaders/keypoints/multiscale-suppression.glsl');
 export const samescaleSuppression = (image, log2PyrMaxScale, pyrMaxLevels) => require('../../shaders/keypoints/samescale-suppression.glsl');
 
 // find keypoint orientation
-export const orientationViaCentroid = (image, patchRadius) => require('../../shaders/keypoints/orientation-via-centroid.glsl');
+export const orientationViaCentroid = (corners, patchRadius) => require('../../shaders/keypoints/orientation-via-centroid.glsl');
+export const multiscaleOrientationViaCentroid = (corners, patchRadius, pyramid, log2PyrMaxScale, pyrMaxLevels) => require('../../shaders/keypoints/multiscale-orientation-via-centroid.glsl');

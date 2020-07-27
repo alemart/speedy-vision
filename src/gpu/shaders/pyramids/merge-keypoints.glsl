@@ -30,5 +30,5 @@ void main()
     vec4 b = threadPixel(source);
 
     // copy corner score & scale
-    color = (b.r > a.r) ? vec4(b.r, a.gb, b.a) : a;
+    color = (b.r > a.r) ? b : a;
 }
