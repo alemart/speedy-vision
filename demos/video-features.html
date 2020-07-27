@@ -14,8 +14,10 @@
         <h1>Gotta go FAST!!!</h1>
         <form>
             <div>
-                Sensitivity:
-                <input type="range" min="20" max="80" value="50" id="slider">
+                <label for="sensitivity">Sensitivity</label>
+                <input type="range" min="20" max="80" value="50" id="sensitivity">
+                <label for="multiscale">Multi-scale</label>
+                <input type="checkbox" id="multiscale">
             </div>
             <div>
                 FPS: <span id="fps">60</span>
@@ -23,6 +25,8 @@
         </form>
         <div>
             <button id="play" onclick="pause()">Play / pause</button>
+            <label for="speed-slider">Video speed</label>
+            <input type="range" id="speed-slider" min="10" max="200" value="100">
         </div>
         <video
             src="../assets/roadrunner.mp4"
@@ -42,7 +46,8 @@ window.onload = async function()
     const canvas = createCanvas(media.width, media.height);
 
     // user controls
-    const slider = document.getElementById('slider');
+    const slider = document.getElementById('sensitivity');
+    const multiscale = document.getElementById('multiscale');
 
     // update features
     const FPS = 60;
@@ -54,7 +59,7 @@ window.onload = async function()
 
         // find & render features
         media.findFeatures({
-            method: 'fast',
+            method: multiscale.checked ? 'fast9plus' : 'fast',
             sensitivity: sensitivity,
         }).then(f => {
             features = f;
@@ -75,6 +80,10 @@ window.onload = async function()
     // display fps
     const fps = document.getElementById('fps');
     setInterval(() => fps.innerText = Speedy.fps.value, 500);
+
+    // video speed
+    const speedSlider = document.getElementById('speed-slider');
+    speedSlider.oninput = () => video.playbackRate = speedSlider.value * 0.01;
 }
 
 function createCanvas(width, height)
@@ -90,8 +99,19 @@ function renderFeatures(canvas, features, size = 2, color = 'yellow')
 {
     const context = canvas.getContext('2d');
     context.beginPath();
-    for(let feature of features)
-        context.rect(feature.x - size, feature.y - size, 2 * size * feature.scale, 2 * size * feature.scale);
+    for(let feature of features) {
+        let radius = size * feature.scale;
+
+        // draw scaled circle
+        context.moveTo(feature.x + radius, feature.y);
+        context.arc(feature.x, feature.y, radius, 0, Math.PI * 2.0);
+
+        // draw rotation line
+        const sin = Math.sin(feature.rotation);
+        const cos = Math.cos(feature.rotation);
+        context.moveTo(feature.x, feature.y);
+        context.lineTo(feature.x + radius * cos, feature.y - radius * sin);
+    }
     context.strokeStyle = color;
     context.stroke();
 }

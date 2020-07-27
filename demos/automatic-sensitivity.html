@@ -30,8 +30,10 @@
         </form>
         <div>
             <button id="play" onclick="pause()">Play / pause</button>
-            <label for="multiscale">Multi-scale?</label>
+            <label for="multiscale">Multi-scale</label>
             <input type="checkbox" id="multiscale">
+            <label for="speed-slider">Video speed</label>
+            <input type="range" id="speed-slider" min="10" max="200" value="100">
         </div>
         <video
             src="../assets/jelly.mp4"
@@ -86,6 +88,11 @@ window.onload = async function()
     // feature count
     const featureCount = document.getElementById('feature-count');
     setInterval(() => featureCount.innerText = features.length, 500);
+
+    // video speed
+    const speedSlider = document.getElementById('speed-slider');
+    speedSlider.oninput = () => video.playbackRate = speedSlider.value * 0.01;
+
 }
 
 function createCanvas(width, height)
