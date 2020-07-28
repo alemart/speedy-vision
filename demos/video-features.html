@@ -41,7 +41,7 @@ window.onload = async function()
     video.play();
 
     // create a canvas to display the features
-    const canvas = createCanvas(media.width, media.height);
+    const canvas = createCanvas(media.width, media.height, video.title);
 
     // elements
     const slider = document.getElementById('sensitivity');
@@ -86,11 +86,12 @@ window.onload = async function()
     speedSlider.oninput = () => video.playbackRate = speedSlider.value * 0.01;
 }
 
-function createCanvas(width, height)
+function createCanvas(width, height, title)
 {
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
+    canvas.title = title;
     document.body.appendChild(canvas);
     return canvas;
 }

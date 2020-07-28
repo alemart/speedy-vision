@@ -29,7 +29,7 @@ window.onload = async function()
     const media = await Speedy.load(video);
 
     // create a canvas for rendering
-    const canvas = createCanvas(media.width, media.height);
+    const canvas = createCanvas(media.width, media.height, video.title);
 
     // render the greyscale video
     async function render()
@@ -45,11 +45,12 @@ window.onload = async function()
     setInterval(() => fps.innerText = Speedy.fps.value, 500);
 }
 
-function createCanvas(width, height)
+function createCanvas(width, height, title)
 {
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
+    canvas.title = title;
     document.body.appendChild(canvas);
     return canvas;
 }

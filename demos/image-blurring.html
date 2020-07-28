@@ -26,15 +26,16 @@ window.onload = async function()
     const transformedMedia = await media.run(pipeline);
 
     // create a canvas to display the result
-    const canvas = createCanvas(transformedMedia.width, transformedMedia.height);
+    const canvas = createCanvas(transformedMedia.width, transformedMedia.height, image.title);
     transformedMedia.draw(canvas);
 }
 
-function createCanvas(width, height)
+function createCanvas(width, height, title)
 {
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
+    canvas.title = title;
     document.body.appendChild(canvas);
     return canvas;
 }
