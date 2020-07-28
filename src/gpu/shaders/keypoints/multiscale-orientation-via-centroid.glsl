@@ -46,7 +46,7 @@ void main()
 
     // multiscale data
     float lod = decodeLod(pixel.a, log2PyrMaxScale, pyrMaxLevels);
-    float pot = pow(2.0f, lod);
+    float pot = exp2(lod);
 
     // Compute image moments
     vec2 m = vec2(0.0f, 0.0f); // (m10, m01)

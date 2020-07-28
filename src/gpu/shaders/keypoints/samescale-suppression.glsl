@@ -35,7 +35,7 @@ void main()
     vec4 pixel = threadPixel(image);
     ivec2 thread = threadLocation();
     float lod = decodeLod(pixel.a, log2PyrMaxScale, pyrMaxLevels);
-    float pot = pow(2.0f, lod);
+    float pot = exp2(lod);
 
     // not a corner?
     color = pixel;

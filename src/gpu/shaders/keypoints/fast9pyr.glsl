@@ -38,7 +38,7 @@ void main()
     ivec2 size = outputSize();
     float t = clamp(threshold, 0.0f, 1.0f);
     float ct = pixel.g + t, c_t = pixel.g - t;
-    float pot = pow(2.0f, minLod);
+    float pot = exp2(minLod);
     float lodJump = 1.0f - float(usePyrSubLevels) * 0.5f;
     vec2 best = vec2(0.0f, pixel.a);
 
@@ -52,7 +52,7 @@ void main()
     //*/
 
     // for each level of the pyramid
-    for(float lod = minLod; lod <= maxLod; pot = pow(2.0f, (lod += lodJump))) {
+    for(float lod = minLod; lod <= maxLod; pot = exp2(lod += lodJump)) {
 
         // update current pixel
         pixel = pyrPixel(pyramid, lod);
