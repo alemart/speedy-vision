@@ -1,0 +1,147 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Find the best keypoints up to a limit</title>
+        <script src="../dist/speedy-vision.js"></script>
+        <style>
+            form { display: flex; flex-wrap: wrap; align-items: baseline; margin-bottom: 1em; }
+            mark { position: absolute; top: 16px; right: 16px; background: none; }
+        </style>
+    </head>
+    <body>
+        <h1>Find the best keypoints</h1>
+        <form>
+            <div>
+                Give me the
+                <select id="feature-limit">
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="200" selected>200</option>
+                    <option value="300">300</option>
+                    <option value="500">500</option>
+                    <option value="800">800</option>
+                </select>
+                best keypoints (according to cornerness score)
+            </div>
+        </form>
+        <form>
+            <div>
+                <label for="sensitivity">Sensitivity</label>
+                <input type="range" min="0" max="90" value="45" id="sensitivity">
+                <label for="multiscale">Multi-scale</label>
+                <input type="checkbox" id="multiscale">
+                <span style="margin-left:2em">FPS: <span id="fps">60</span></span>
+            </div>
+        </form>
+        <div>
+            <button id="play" onclick="pause()">Play / pause</button>
+            <label for="speed-slider">Video speed</label>
+            <input type="range" id="speed-slider" min="10" max="200" value="100">
+            Found <span id="feature-count">0</span> keypoints
+        </div>
+        <video
+            src="../assets/people.mp4"
+            width="640" height="360"
+            loop muted hidden
+            title="Free to use video (CC0) by Free Videos, https://www.pexels.com/pt-br/foto/853889/">
+        </video>
+        <script>
+window.onload = async function()
+{
+    // tell Speedy to load the video
+    const video = document.querySelector('video');
+    const media = await Speedy.load(video);
+    video.play();
+
+    // create a canvas to display the features
+    const canvas = createCanvas(media.width, media.height, video.title);
+
+    // elements
+    const slider = document.getElementById('sensitivity');
+    const multiscale = document.getElementById('multiscale');
+    const featureCount = document.getElementById('feature-count');
+    const featureLimit = document.getElementById('feature-limit');
+
+    // update features
+    const FPS = 60;
+    let features = [];
+    function updateFeatures()
+    {
+        // sensitivity is a value between 0.0 and 1.0
+        const sensitivity = slider.value / 100.0;
+
+        // find & render features
+        media.findFeatures({
+            method: multiscale.checked ? 'fast9plus' : 'fast',
+            sensitivity: sensitivity,
+            sort: true, // sort by descending cornerness score
+        }).then(f => {
+            features = f.slice(0, featureLimit.value); // cap the number of features
+            featureCount.innerText = features.length;
+            setTimeout(updateFeatures, 1000.0 / FPS);
+        });
+    }
+    updateFeatures();
+
+    // render video & features
+    function render()
+    {
+        media.draw(canvas);
+        renderFeatures(canvas, features, 4);
+        requestAnimationFrame(render);
+    }
+    render();
+
+    // display fps
+    const fps = document.getElementById('fps');
+    setInterval(() => fps.innerText = Speedy.fps.value, 500);
+
+    // video speed
+    const speedSlider = document.getElementById('speed-slider');
+    speedSlider.oninput = () => video.playbackRate = speedSlider.value * 0.01;
+}
+
+function createCanvas(width, height, title)
+{
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    canvas.title = title;
+    document.body.appendChild(canvas);
+    return canvas;
+}
+
+function renderFeatures(canvas, features, size = 2, color = 'yellow')
+{
+    const context = canvas.getContext('2d');
+    context.beginPath();
+    for(let feature of features) {
+        let radius = size * feature.scale;
+
+        // draw scaled circle
+        context.moveTo(feature.x + radius, feature.y);
+        context.arc(feature.x, feature.y, radius, 0, Math.PI * 2.0);
+
+        // draw rotation line
+        const sin = Math.sin(feature.rotation);
+        const cos = Math.cos(feature.rotation);
+        context.moveTo(feature.x, feature.y);
+        context.lineTo(feature.x + radius * cos, feature.y - radius * sin);
+    }
+    context.strokeStyle = color;
+    context.stroke();
+}
+
+function pause()
+{
+    const video = document.querySelector('video');
+    if(video.paused)
+        video.play();
+    else
+        video.pause();
+}
+        </script>
+        <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>
+    </body>
+</html>
