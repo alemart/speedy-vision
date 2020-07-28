@@ -244,6 +244,7 @@ Detects feature points in a `SpeedyMedia`.
   * `sensitivity: number`. A number between `0.0` and `1.0`. The higher the number, the more features you get.
   * `expected: number | object`. Speedy will automatically adjust the sensitivity value to get you *approximately* the number of features you ask. For more information, read the section on [automatic sensitivity](#automatic-sensitivity).
   * `denoise: boolean`. Whether or not to denoise the image before finding the features. Defaults to `true`.
+  * `sort: boolean`. Whether or not to sort the resulting keypoints by descending cornerness score. Defaults to `false`.
 
 The configuration object accepts more keys depending on which method is specified. Currently, the following methods for feature detection are available:
 
@@ -373,6 +374,12 @@ The scale of the image feature. Only a subset of the feature detection methods s
 `SpeedyFeature.rotation: number, read-only`
 
 The orientation angle of the image feature, in radians. Only a subset of the feature detection methods support oriented features. Defaults to `0.0`.
+
+##### SpeedyFeature.score
+
+`SpeedyFeature.score: number, read-only`
+
+A cornerness measure of the image feature. Although different detection methods employ different measurement strategies, the larger the score, the more "corner-like" the feature is.
 
 ### Feature matching
 

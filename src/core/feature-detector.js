@@ -26,6 +26,7 @@ import { Utils } from '../utils/utils';
 
 // constants
 const OPTIMIZER_GROWTH_WEIGHT = 0.02; // in [0,1]
+const scoreCmp = (a, b) => (+(b.score)) - (+(a.score));
 
 /**
  * FeatureDetector encapsulates
@@ -61,6 +62,7 @@ export class FeatureDetector
         // default settings
         settings = {
             denoise: true,
+            sort: false,
             ...settings
         };
 
@@ -83,7 +85,7 @@ export class FeatureDetector
 
         // extract features
         const keypoints = FAST.run(gpu, greyscale, n, settings);
-        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage);
+        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.sort);
     }
 
     /**
@@ -100,6 +102,7 @@ export class FeatureDetector
         // default settings
         settings = {
             denoise: true,
+            sort: false,
             ...settings
         };
 
@@ -122,7 +125,7 @@ export class FeatureDetector
 
         // extract features
         const keypoints = FASTPlus.run(gpu, greyscale, n, settings);
-        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage);
+        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.sort);
     }
 
     /**
@@ -139,6 +142,7 @@ export class FeatureDetector
         settings = {
             threshold: 10,
             denoise: true,
+            sort: false,
             depth: 4,
             ...settings
         };
@@ -160,12 +164,12 @@ export class FeatureDetector
 
         // extract features
         const keypoints = BRISK.run(gpu, greyscale, settings);
-        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage);
+        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.sort);
     }
 
     // given a corner-encoded texture, return a Promise
     // that resolves to an Array of keypoints
-    _extractKeypoints(corners, useAsyncTransfer = true, gpu = this._gpu)
+    _extractKeypoints(corners, useAsyncTransfer = true, sort = false, gpu = this._gpu)
     {
         return gpu.encoders.encodeKeypoints(corners, useAsyncTransfer).then(encodedKeypoints => {
             // when processing a video, we expect that the number of keypoints
@@ -181,8 +185,12 @@ export class FeatureDetector
                 gpu.encoders.optimizeKeypointEncoder(newCount);
             //document.querySelector('mark').innerHTML = gpu.encoders._keypointEncoderLength;
 
+            // need to sort the data?
+            if(sort)
+                keypoints.sort(scoreCmp);
+
             // let's cap it if keypoints.length explodes (noise)
-            if(useAsyncTransfer && keypoints.length > newCount)
+            if(useAsyncTransfer)
                 return keypoints.slice(0, newCount);
             else
                 return keypoints;

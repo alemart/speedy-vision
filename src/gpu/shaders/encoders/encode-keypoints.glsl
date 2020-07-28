@@ -36,12 +36,13 @@
  * each keypoint takes (2 + N/4) pixels of 32 bits
  *
  *    1 pixel        1 pixel         N/4 pixels
- * [  X  |  Y  ][ S | R | - | - ][  ...  D  ...  ]
+ * [  X  |  Y  ][ S | R | C | - ][  ...  D  ...  ]
  *
  * X: keypoint_xpos (2 bytes)
  * Y: keypoint_ypos (2 bytes)
  * S: keypoint_scale (1 byte)
  * R: keypoint_rotation (1 byte)
+ * C: keypoint_cornerness_score (1 byte)
  * -: unused
  * D: descriptor binary string (N bytes)
  */
@@ -95,10 +96,11 @@ void main()
             }
 
             case 1: {
-                // write scale & rotation
+                // write scale, rotation & score
+                float score = pixel.r;
                 float scale = pixel.a;
                 float rotation = pixel.b;
-                color = vec4(scale, rotation, 0.0f, 0.0f);
+                color = vec4(scale, rotation, score, 0.0f);
                 break;
             }
 

@@ -31,14 +31,16 @@ export class SpeedyFeature
      * @param {number} y Y position
      * @param {number} [scale] Scale
      * @param {number} [rotation] Rotation in radians
+     * @param {number} [score] Cornerness measure
      * @param {FeatureDescriptor} [descriptor] Feature descriptor
      */
-    constructor(x, y, scale = 1.0, rotation = 0.0, descriptor = null)
+    constructor(x, y, scale = 1.0, rotation = 0.0, score = 0.0, descriptor = null)
     {
         this._x = +x;
         this._y = +y;
         this._scale = +scale;
         this._rotation = +rotation;
+        this._score = +score;
         this._descriptor = descriptor;
     }
 
@@ -85,6 +87,15 @@ export class SpeedyFeature
     get rotation()
     {
         return this._rotation;
+    }
+
+    /**
+     * Score: a cornerness measure
+     * @returns {number} Score
+     */
+    get score()
+    {
+        return this._score;
     }
 
     /**

@@ -169,7 +169,7 @@ export class GPUEncoders extends GPUProgramGroup
         const lgM = Math.log2(this._gpu.pyramidMaxScale);
         const pyrHeight = this._gpu.pyramidHeight;
         const keypoints = [];
-        let x, y, scale, rotation;
+        let x, y, scale, rotation, score;
 
         for(let i = 0; i < pixels.length; i += 4 * pixelsPerKeypoint) {
             x = (pixels[i+1] << 8) | pixels[i];
@@ -183,7 +183,9 @@ export class GPUEncoders extends GPUProgramGroup
             rotation = !hasRotation ? 0.0 :
                 (pixels[i+5] * TWO_PI - PI) / 255.0;
 
-            keypoints.push(new SpeedyFeature(x, y, scale, rotation));
+            score = pixels[i+6] / 255.0;
+
+            keypoints.push(new SpeedyFeature(x, y, scale, rotation, score));
         }
 
         // developer's secret ;)
