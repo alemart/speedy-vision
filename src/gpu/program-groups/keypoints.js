@@ -23,7 +23,7 @@ import { GPUProgramGroup } from '../gpu-program-group';
 import {
     fast5, fast7, fast9, fast9pyr,
     fastScore8, fastScore12, fastScore16,
-    fastSuppression, multiscaleSuppression, samescaleSuppression,
+    nonmaxSuppression, multiscaleSuppression, samescaleSuppression,
     orientationViaCentroid, multiscaleOrientationViaCentroid,
     brisk
 } from './programs/keypoints';
@@ -45,18 +45,17 @@ export class GPUKeypoints extends GPUProgramGroup
         super(gpu, width, height);
         this
             // FAST-9,16
-            .compose('fast9', '_fast9', '_fastScore16', '_fastSuppression')
+            .compose('fast9', '_fast9', '_fastScore16', 'nonmaxSuppression')
             .declare('_fast9', fast9) // find corners
             .declare('_fastScore16', fastScore16) // compute scores
-            .declare('_fastSuppression', fastSuppression) // non-maximum suppression
 
             // FAST-7,12
-            .compose('fast7', '_fast7', '_fastScore12', '_fastSuppression')
+            .compose('fast7', '_fast7', '_fastScore12', 'nonmaxSuppression')
             .declare('_fast7', fast7)
             .declare('_fastScore12', fastScore12)
 
             // FAST-5,8
-            .compose('fast5', '_fast5', '_fastScore8', '_fastSuppression')
+            .compose('fast5', '_fast5', '_fastScore8', 'nonmaxSuppression')
             .declare('_fast5', fast5)
             .declare('_fastScore8', fastScore8)
 
@@ -66,13 +65,14 @@ export class GPUKeypoints extends GPUProgramGroup
             // BRISK Scale-Space Non-Maximum Suppression & Interpolation
             .declare('brisk', brisk)
 
-            // Generic multi-scale non-maximum suppression
-            .declare('multiscaleSuppression', multiscaleSuppression)
-            .declare('samescaleSuppression', samescaleSuppression)
+            // Generic non-maximum suppression
+            .declare('nonmaxSuppression', nonmaxSuppression)
+            .declare('multiscaleSuppression', multiscaleSuppression) // scale-space
+            .declare('samescaleSuppression', samescaleSuppression) // scale-space
 
             // Generic orientation finder
             .declare('orientationViaCentroid', orientationViaCentroid)
-            .declare('multiscaleOrientationViaCentroid', multiscaleOrientationViaCentroid)
+            .declare('multiscaleOrientationViaCentroid', multiscaleOrientationViaCentroid) // scale-space
         ;
     }
 }

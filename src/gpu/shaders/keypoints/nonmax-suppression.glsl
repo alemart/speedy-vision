@@ -15,8 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * fast-suppression.glsl
- * FAST corner detector: non-maximum suppression
+ * nonmax-suppression.glsl
+ * Corner detection: non-maximum suppression
  */
 
 uniform sampler2D image;
