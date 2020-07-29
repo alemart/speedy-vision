@@ -66,6 +66,12 @@ export const fastScore8 = (image, threshold) => require('../../shaders/keypoints
 
 
 //
+// Harris-Shi-Tomasi corner detector
+//
+export const multiscaleHarris = (pyramid, windowRadius, threshold, minLod, maxLod, log2PyrMaxScale, pyrMaxLevels, usePyrSubLevels, sobelDerivatives) => require('../../shaders/keypoints/multiscale-harris.glsl');
+
+
+//
 // BRISK feature detection
 //
 export const brisk = (image, layerA, layerB, scaleA, scaleB, lgM, h) => require('../../shaders/keypoints/brisk.glsl');

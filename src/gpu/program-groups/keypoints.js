@@ -26,7 +26,7 @@ import {
     nonmaxSuppression, multiscaleSuppression, samescaleSuppression,
     orientationViaCentroid, multiscaleOrientationViaCentroid,
     brisk,
-    multiscaleSobel
+    multiscaleSobel, multiscaleHarris
 } from './programs/keypoints';
 
 /**
@@ -65,6 +65,9 @@ export class GPUKeypoints extends GPUProgramGroup
 
             // BRISK Scale-Space Non-Maximum Suppression & Interpolation
             .declare('brisk', brisk)
+
+            // Harris-Shi-Tomasi corner detector
+            .declare('multiscaleHarris', multiscaleHarris) // scale-space
 
             // Generic non-maximum suppression
             .declare('nonmaxSuppression', nonmaxSuppression)
