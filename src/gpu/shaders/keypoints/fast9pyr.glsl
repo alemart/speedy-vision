@@ -130,7 +130,7 @@ void main()
         float scale = encodeLod(lod, log2PyrMaxScale, pyrMaxLevels);
 
         // is it the best corner so far?
-        best = (score > color.r) ? vec2(score, scale) : best;
+        best = (score > best.x) ? vec2(score, scale) : best;
     }
 
     // done
