@@ -84,3 +84,6 @@ export const samescaleSuppression = (image, log2PyrMaxScale, pyrMaxLevels) => re
 // find keypoint orientation
 export const orientationViaCentroid = (corners, patchRadius) => require('../../shaders/keypoints/orientation-via-centroid.glsl');
 export const multiscaleOrientationViaCentroid = (corners, patchRadius, pyramid, log2PyrMaxScale, pyrMaxLevels) => require('../../shaders/keypoints/multiscale-orientation-via-centroid.glsl');
+
+// Sobel derivatives
+export const multiscaleSobel = (pyramid, lod) => require('../../shaders/keypoints/multiscale-sobel.glsl');

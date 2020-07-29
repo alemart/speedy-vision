@@ -25,7 +25,8 @@ import {
     fastScore8, fastScore12, fastScore16,
     nonmaxSuppression, multiscaleSuppression, samescaleSuppression,
     orientationViaCentroid, multiscaleOrientationViaCentroid,
-    brisk
+    brisk,
+    multiscaleSobel
 } from './programs/keypoints';
 
 /**
@@ -73,6 +74,9 @@ export class GPUKeypoints extends GPUProgramGroup
             // Generic orientation finder
             .declare('orientationViaCentroid', orientationViaCentroid)
             .declare('multiscaleOrientationViaCentroid', multiscaleOrientationViaCentroid) // scale-space
+
+            // Sobel derivatives
+            .declare('multiscaleSobel', multiscaleSobel) // scale-space
         ;
     }
 }
