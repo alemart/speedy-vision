@@ -47,6 +47,13 @@ export class FAST
         if(!settings.hasOwnProperty('threshold'))
             settings.threshold = 10;
 
+        // convert a sensitivity value in [0,1],
+        // if it's defined, to a FAST threshold
+        if(settings.hasOwnProperty('sensitivity'))
+            settings.threshold = this._sensitivity2threshold(settings.sensitivity);
+        else
+            settings.threshold = this._normalizedThreshold(settings.threshold);
+
         // virtual table
         const vtable = this.run._vtable || (this.run._vtable = {
             5: gpu => gpu.keypoints.fast5,
@@ -66,7 +73,7 @@ export class FAST
      * @param {number} sensitivity
      * @returns {number} pixel intensity
      */
-    static sensitivity2threshold(sensitivity)
+    static _sensitivity2threshold(sensitivity)
     {
         // the number of keypoints ideally increases linearly
         // as the sensitivity is increased
@@ -79,7 +86,7 @@ export class FAST
      * pixel threshold in [0,255] -> normalized threshold in [0,1]
      * @returns {number} clamped & normalized threshold
      */
-    static normalizedThreshold(threshold)
+    static _normalizedThreshold(threshold)
     {
         threshold = Math.max(0, Math.min(threshold, 255));
         return threshold / 255;
@@ -112,6 +119,13 @@ export class FASTPlus extends FAST
             settings.threshold = 10;
         if(!settings.hasOwnProperty('depth'))
             settings.depth = 3; // how many pyramid levels to check
+
+        // convert a sensitivity value in [0,1],
+        // if it's defined, to a FAST threshold
+        if(settings.hasOwnProperty('sensitivity'))
+            settings.threshold = this._sensitivity2threshold(settings.sensitivity);
+        else
+            settings.threshold = this._normalizedThreshold(settings.threshold);
 
         // prepare data
         const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidHeight;

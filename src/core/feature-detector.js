@@ -71,13 +71,6 @@ export class FeatureDetector
         if(settings.hasOwnProperty('expected'))
             settings.sensitivity = this._findSensitivity(settings.expected);
 
-        // convert a sensitivity value in [0,1],
-        // if it's defined, to a FAST threshold
-        if(settings.hasOwnProperty('sensitivity'))
-            settings.threshold = FAST.sensitivity2threshold(settings.sensitivity);
-        else
-            settings.threshold = FAST.normalizedThreshold(settings.threshold);
-
         // pre-processing the image...
         const source = media._gpu.upload(media.source);
         const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
@@ -110,13 +103,6 @@ export class FeatureDetector
         // if defined, into a sensitivity value
         if(settings.hasOwnProperty('expected'))
             settings.sensitivity = this._findSensitivity(settings.expected);
-
-        // convert a sensitivity value in [0,1],
-        // if it's defined, to a FAST threshold
-        if(settings.hasOwnProperty('sensitivity'))
-            settings.threshold = FASTPlus.sensitivity2threshold(settings.sensitivity);
-        else
-            settings.threshold = FASTPlus.normalizedThreshold(settings.threshold);
 
         // pre-processing the image...
         const source = media._gpu.upload(media.source);
