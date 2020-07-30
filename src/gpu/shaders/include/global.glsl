@@ -30,7 +30,7 @@
 #define outputSize() ivec2(texSize)
 
 // Debug macro
-#define DEBUG(val) do { color = vec4(float(val), vec3(1.0f)); return; } while(0)
+#define DEBUG(scalar) do { color = vec4(float(scalar), 0.0f, 0.0f, 1.0f); return; } while(false)
 
 
 //

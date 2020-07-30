@@ -34,5 +34,8 @@ export const fillComponents = (image, pixelComponents, value) => require('../../
 // Copy the src component of src to zero or more color components of a copy of dest
 export const copyComponents = (dest, src, destComponents, srcComponentId) => require('../../shaders/utils/copy-components.glsl');
 
+// Scan the entire image and find the minimum & maximum pixel intensity for each row and column
+export const scanMinMax1D = (image, iterationNumber) => require('../../shaders/utils/scan-minmax1d.glsl');
+
 // Scan the entire image and find the minimum & maximum pixel intensity
-export const scanMinMax = (image, iterationNumber) => require('../../shaders/utils/scan-minmax.glsl');
+export const scanMinMax2D = (image, iterationNumber) => require('../../shaders/utils/scan-minmax2d.glsl');

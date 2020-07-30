@@ -25,7 +25,7 @@ import { GPUProgramGroup } from '../gpu-program-group';
 import {
     identity, flipY,
     fill, fillComponents, copyComponents,
-    scanMinMax,
+    scanMinMax2D,
 } from './programs/utils';
 
 /**
@@ -69,8 +69,13 @@ export class GPUUtils extends GPUProgramGroup
             // Copy the src component of src to zero or more color components of a copy of dest
             .declare('copyComponents', copyComponents)
 
+            // find minimum & maximum pixel intensity for each row and column
+            /*.declare('_scanMinMax1D', scanMinMax1D, {
+                //...this.program.alternatesTextures()
+            })*/
+
             // find minimum & maximum pixel intensity
-            .declare('_scanMinMax', scanMinMax, {
+            .declare('_scanMinMax2D', scanMinMax2D, {
                 //...this.program.alternatesTextures()
             })
         ;
@@ -95,7 +100,7 @@ export class GPUUtils extends GPUProgramGroup
      */
     scanMax(image, pixelComponent)
     {
-        return this.scanMinMax(image, pixelComponent, true);
+        return this._scanMinMax(image, pixelComponent, true);
     }
 
     /**
@@ -107,45 +112,31 @@ export class GPUUtils extends GPUProgramGroup
      */
     scanMin(image, pixelComponent)
     {
-        return this.scanMinMax(image, pixelComponent, false);
+        return this._scanMinMax(image, pixelComponent, false);
     }
 
     /**
      * Scan a single component in all pixels of the image and find the min or max intensity
      * @param {WebGLTexture} image 
      * @param {number} pixelComponent a single PixelComponent flag
-     * @param {boolean} max finds the maximum if true, or the minimum if false
+     * @param {boolean} max returns the maximum if true, or the minimum if false
      * @returns {WebGLTexture}
      */
-    scanMinMax(image, pixelComponent, max = true)
+    _scanMinMax(image, pixelComponent, max = true)
     {
         //
         // FIXME: combinations of PixelComponent (e.g., PixelComponent.ALL)
         //        are currently unsupported. Make separate calls.
         //
         const componentId = Math.max(0, Math.min(Math.log2(pixelComponent), 3)) | 0;
-        const numIterations1 = Math.ceil(Math.log2(this._width)) | 0;
-        const numIterations2 = Math.ceil(Math.log2(this._height)) | 0;
+        const numIterations = Math.ceil(Math.log2(Math.max(this._width, this._height))) | 0;
         let texture = this.copyComponents(image, image, PixelComponent.ALL, componentId);
 
-        // find max of each row
-        for(let i = 0; i < numIterations1; i++) {
+        for(let i = 0; i < numIterations; i++) {
             texture = this.identity(texture);
-            texture = this._scanMinMax(texture, i);
+            texture = this._scanMinMax2D(texture, i);
         }
-        texture = this.copyComponents(texture, texture, PixelComponent.ALL, max ? 0 : 2);
-        //return texture; // testing
 
-        // find max of max
-        for(let j = 0; j < numIterations2; j++) {
-            texture = this.identity(texture);
-            texture = this._scanMinMax(texture, j);
-        }
-        texture = this.copyComponents(texture, texture, PixelComponent.ALL, max ? 1 : 3);
-        //return texture; // testing
-        
-        // done!
-        texture = this.identity(texture);
-        return this.copyComponents(image, texture, (1 << componentId), 0);       
+        return this.copyComponents(image, texture, (1 << componentId), max ? 0 : 1);
     }
 }
