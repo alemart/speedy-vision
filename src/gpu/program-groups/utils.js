@@ -24,7 +24,7 @@ import { PixelComponent } from '../../utils/types';
 import { GPUProgramGroup } from '../gpu-program-group';
 import {
     identity, flipY,
-    fill, fillComponent, copyComponent,
+    fill, fillComponents, copyComponents,
     scanMinMax,
 } from './programs/utils';
 
@@ -64,10 +64,10 @@ export class GPUUtils extends GPUProgramGroup
             .declare('fill', fill)
 
             // Fill zero or more color components of the input image with a constant value
-            .declare('fillComponent', fillComponent)
+            .declare('fillComponents', fillComponents)
 
             // Copy the src component of src to zero or more color components of a copy of dest
-            .declare('copyComponent', copyComponent)
+            .declare('copyComponents', copyComponents)
 
             // find minimum & maximum pixel intensity
             .declare('_scanMinMax', scanMinMax, {
@@ -126,14 +126,14 @@ export class GPUUtils extends GPUProgramGroup
         const componentId = Math.max(0, Math.min(Math.log2(pixelComponent), 3)) | 0;
         const numIterations1 = Math.ceil(Math.log2(this._width)) | 0;
         const numIterations2 = Math.ceil(Math.log2(this._height)) | 0;
-        let texture = this.copyComponent(image, image, PixelComponent.ALL, componentId);
+        let texture = this.copyComponents(image, image, PixelComponent.ALL, componentId);
 
         // find max of each row
         for(let i = 0; i < numIterations1; i++) {
             texture = this.identity(texture);
             texture = this._scanMinMax(texture, i);
         }
-        texture = this.copyComponent(texture, texture, PixelComponent.ALL, max ? 0 : 2);
+        texture = this.copyComponents(texture, texture, PixelComponent.ALL, max ? 0 : 2);
         //return texture; // testing
 
         // find max of max
@@ -141,11 +141,11 @@ export class GPUUtils extends GPUProgramGroup
             texture = this.identity(texture);
             texture = this._scanMinMax(texture, j);
         }
-        texture = this.copyComponent(texture, texture, PixelComponent.ALL, max ? 1 : 3);
+        texture = this.copyComponents(texture, texture, PixelComponent.ALL, max ? 1 : 3);
         //return texture; // testing
         
         // done!
         texture = this.identity(texture);
-        return this.copyComponent(image, texture, (1 << componentId), 0);       
+        return this.copyComponents(image, texture, (1 << componentId), 0);       
     }
 }

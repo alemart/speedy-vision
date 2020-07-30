@@ -29,10 +29,10 @@ export const flipY = (image) => require('../../shaders/utils/flip-y.glsl');
 export const fill = (value) => require('../../shaders/utils/fill.glsl');
 
 // Fill zero or more color components of the input image with a constant value
-export const fillComponent = (image, pixelComponents, value) => require('../../shaders/utils/fill-component.glsl');
+export const fillComponents = (image, pixelComponents, value) => require('../../shaders/utils/fill-components.glsl');
 
 // Copy the src component of src to zero or more color components of a copy of dest
-export const copyComponent = (dest, src, destComponents, srcComponentId) => require('../../shaders/utils/copy-component.glsl');
+export const copyComponents = (dest, src, destComponents, srcComponentId) => require('../../shaders/utils/copy-components.glsl');
 
 // Scan the entire image and find the minimum & maximum pixel intensity
 export const scanMinMax = (image, iterationNumber) => require('../../shaders/utils/scan-minmax.glsl');
