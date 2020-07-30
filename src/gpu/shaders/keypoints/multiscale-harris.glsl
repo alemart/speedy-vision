@@ -28,27 +28,26 @@ uniform float threshold; // pick corners with response >= threshold
 uniform float minLod, maxLod;
 uniform float log2PyrMaxScale, pyrMaxLevels;
 uniform bool usePyrSubLevels; // scaling factor of sqrt(2) if true, or 2 if false
-uniform sampler2D sobelDerivatives[9]; // for each LOD sub-level (0, 0.5, 1, 1.5, 2...)
+uniform sampler2D sobelDerivatives[7]; // for each LOD sub-level (0, 0.5, 1, 1.5, 2...)
 
 vec4 pickSobelDerivatives(int index, ivec2 offset)
 {
     // no dynamic indexing for samplers
     switch(index) {
-        case 0:  return texture(sobelDerivatives[0], texCoord + vec2(offset) / texSize); // LOD = 0
-        case 1:  return texture(sobelDerivatives[1], texCoord + vec2(offset) / texSize); // LOD = 0.5 if using sub-levels or LOD = 1 if not
-        case 2:  return texture(sobelDerivatives[2], texCoord + vec2(offset) / texSize); // LOD = 1 if using sub-levels or LOD = 2 if not
-        case 3:  return texture(sobelDerivatives[3], texCoord + vec2(offset) / texSize);
-        case 4:  return texture(sobelDerivatives[4], texCoord + vec2(offset) / texSize);
-        case 5:  return texture(sobelDerivatives[5], texCoord + vec2(offset) / texSize);
-        case 6:  return texture(sobelDerivatives[6], texCoord + vec2(offset) / texSize);
-        case 7:  return texture(sobelDerivatives[7], texCoord + vec2(offset) / texSize);
-        case 8:  return texture(sobelDerivatives[8], texCoord + vec2(offset) / texSize); // LOD = 4 if using sub-levels
-        default: return texture(sobelDerivatives[0], texCoord + vec2(offset) / texSize);
+        case 0:  return textureLod(sobelDerivatives[0], texCoord + vec2(offset) / texSize, 0.0f); // LOD = 0
+        case 1:  return textureLod(sobelDerivatives[1], texCoord + vec2(offset) / texSize, 0.0f); // LOD = 0.5 if using sub-levels or LOD = 1 if not
+        case 2:  return textureLod(sobelDerivatives[2], texCoord + vec2(offset) / texSize, 0.0f); // LOD = 1 if using sub-levels or LOD = 2 if not
+        case 3:  return textureLod(sobelDerivatives[3], texCoord + vec2(offset) / texSize, 0.0f);
+        case 4:  return textureLod(sobelDerivatives[4], texCoord + vec2(offset) / texSize, 0.0f);
+        case 5:  return textureLod(sobelDerivatives[5], texCoord + vec2(offset) / texSize, 0.0f);
+        case 6:  return textureLod(sobelDerivatives[6], texCoord + vec2(offset) / texSize, 0.0f); // LOD = 3 if using sub-levels
+        default: return textureLod(sobelDerivatives[0], texCoord + vec2(offset) / texSize, 0.0f);
     }
 }
 
 void main()
 {
+    ivec2 thread = threadLocation();
     vec4 pixel = threadPixel(pyramid);
     vec2 best = vec2(0.0f, pixel.a);
     highp float lodJump = 1.0f - float(usePyrSubLevels) * 0.5f;

@@ -21,7 +21,7 @@
 
 import { FAST, FASTPlus } from './algorithms/fast.js';
 import { BRISK } from './algorithms/brisk.js';
-import { Harris } from './algorithms/harris.js';
+import { Harris, MultiscaleHarris } from './algorithms/harris.js';
 import { SensitivityTuner, TestTuner } from '../utils/tuner';
 import { Utils } from '../utils/utils';
 
@@ -144,6 +144,38 @@ export class FeatureDetector
 
         // extract features
         const keypoints = Harris.run(gpu, greyscale, settings);
+        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.sort);
+    }
+
+    /**
+     * Harris Corner Detector augmented with scale & orientation
+     * @param {SpeedyMedia} media 
+     * @param {object} [settings]
+     * @returns {Promise<Array<SpeedyFeature>>} keypoints
+     */
+    multiscaleHarris(media, settings = {})
+    {
+        const gpu = this._gpu;
+
+        // default settings
+        settings = {
+            denoise: true,
+            sort: false,
+            ...settings
+        };
+
+        // convert the expected number of keypoints,
+        // if defined, into a sensitivity value
+        if(settings.hasOwnProperty('expected'))
+            settings.sensitivity = this._findSensitivity(settings.expected);
+
+        // pre-processing the image...
+        const source = media._gpu.upload(media.source);
+        const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
+        const greyscale = gpu.colors.rgb2grey(texture);
+
+        // extract features
+        const keypoints = MultiscaleHarris.run(gpu, greyscale, settings);
         return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.sort);
     }
 

@@ -83,7 +83,7 @@ export const brisk = (image, layerA, layerB, scaleA, scaleB, lgM, h) => require(
 //
 
 // non-maximum suppression
-export const nonmaxSuppression = (image, threshold) => require('../../shaders/keypoints/nonmax-suppression.glsl');
+export const nonmaxSuppression = (image) => require('../../shaders/keypoints/nonmax-suppression.glsl');
 export const multiscaleSuppression = (image, log2PyrMaxScale, pyrMaxLevels, usePyrSubLevels) => require('../../shaders/keypoints/multiscale-suppression.glsl');
 export const samescaleSuppression = (image, log2PyrMaxScale, pyrMaxLevels) => require('../../shaders/keypoints/samescale-suppression.glsl');
 

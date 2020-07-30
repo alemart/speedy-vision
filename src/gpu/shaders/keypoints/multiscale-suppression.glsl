@@ -38,7 +38,7 @@ void main()
 {
     vec4 pixel = threadPixel(image);
     float lod = decodeLod(pixel.a, log2PyrMaxScale, pyrMaxLevels);
-    //float lodJump = 1.0f - float(usePyrSubLevels) * 0.5f; // doesn't work as well?
+    //float lodJump = 1.0f - float(usePyrSubLevels) * 0.5f; // doesn't work nicely?
     float lodJump = 1.0f;
 
     // not a corner?

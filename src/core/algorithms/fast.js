@@ -63,7 +63,8 @@ export class FAST
 
         // keypoint detection
         const fast = (vtable[n])(gpu);
-        return fast(greyscale, settings.threshold);
+        const corners = fast(greyscale, settings.threshold);
+        return gpu.keypoints.nonmaxSuppression(corners);
     }
 
     /**
@@ -142,10 +143,10 @@ export class FASTPlus extends FAST
         GLUtils.generateMipmap(gpu.gl, pyramid);
 
         // keypoint detection
-        const multiScaleCorners = multiscaleFast(pyramid, settings.threshold, 0, maxLod, log2PyrMaxScale, pyrMaxLevels, true);
+        const multiscaleCorners = multiscaleFast(pyramid, settings.threshold, 0, maxLod, log2PyrMaxScale, pyrMaxLevels, true);
 
         // non-maximum suppression
-        const suppressed1 = gpu.keypoints.samescaleSuppression(multiScaleCorners, log2PyrMaxScale, pyrMaxLevels);
+        const suppressed1 = gpu.keypoints.samescaleSuppression(multiscaleCorners, log2PyrMaxScale, pyrMaxLevels);
         const suppressed2 = gpu.keypoints.multiscaleSuppression(suppressed1, log2PyrMaxScale, pyrMaxLevels, true);
 
         // compute orientation

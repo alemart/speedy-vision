@@ -20,7 +20,6 @@
  */
 
 uniform sampler2D image;
-uniform float threshold; // ignored
 
 // non-maximum suppression on 8-neighborhood based
 // on the corner score stored in the red channel

@@ -319,6 +319,7 @@ export class SpeedyMedia
             'fast9plus': (media, settings) => this._featureDetector.fastPlus(media, 9, settings), // FAST-9,16 augmented with scale & orientation
             'brisk':     (media, settings) => this._featureDetector.brisk(media, settings),     // BRISK
             'harris':    (media, settings) => this._featureDetector.harris(media, settings),    // Harris
+            'multiscale-harris': (media, settings) => this._featureDetector.multiscaleHarris(media, settings), // Harris
         });
 
         // Validate method
