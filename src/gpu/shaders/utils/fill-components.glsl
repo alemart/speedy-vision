@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * fill-component.glsl
+ * fill-components.glsl
  * Fill zero or more color components of the input image with a constant value
  */
 
