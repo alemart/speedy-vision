@@ -15,29 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * types.js
- * Types & formats
+ * fill.glsl
+ * Fill the texture with a constant value
  */
 
-import { Utils } from './utils';
+uniform float value; // in [0, 1]
 
-export const MediaType = Utils.enum(
-    'Image',
-    'Video',
-    'Canvas',
-    'Texture'
-);
-
-export const ColorFormat = Utils.enum(
-    'RGB',
-    'Greyscale',
-    'Binary'
-);
-
-export const PixelComponent = Object.freeze({
-    RED:   1,
-    GREEN: 2,
-    BLUE:  4,
-    ALPHA: 8,
-    ALL:   15
-});
+void main()
+{
+    color = vec4(value);
+}

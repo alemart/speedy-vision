@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  * gpu-colors.js
- * Color conversion algorithms
+ * Color routines & conversion algorithms
  */
 
 import { GPUProgramGroup } from '../gpu-program-group';
@@ -24,7 +24,7 @@ import { rgb2grey } from './programs/colors';
 
 /**
  * GPUColors
- * Color conversions
+ * Color routines
  */
 export class GPUColors extends GPUProgramGroup
 {

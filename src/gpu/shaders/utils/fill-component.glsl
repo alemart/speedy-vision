@@ -15,29 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * types.js
- * Types & formats
+ * fill-component.glsl
+ * Fill zero or more color components of the input image with a constant value
  */
 
-import { Utils } from './utils';
+#define PIXELCOMPONENT_RED   1
+#define PIXELCOMPONENT_GREEN 2
+#define PIXELCOMPONENT_BLUE  4
+#define PIXELCOMPONENT_ALPHA 8
 
-export const MediaType = Utils.enum(
-    'Image',
-    'Video',
-    'Canvas',
-    'Texture'
-);
+uniform sampler2D image;
+uniform int pixelComponents; // PixelComponent flags
+uniform float value; // in [0, 1]
 
-export const ColorFormat = Utils.enum(
-    'RGB',
-    'Greyscale',
-    'Binary'
-);
-
-export const PixelComponent = Object.freeze({
-    RED:   1,
-    GREEN: 2,
-    BLUE:  4,
-    ALPHA: 8,
-    ALL:   15
-});
+void main()
+{
+    vec4 pixel = threadPixel(image);
+    bvec4 flags = bvec4(
+        (pixelComponents & PIXELCOMPONENT_RED) != 0,
+        (pixelComponents & PIXELCOMPONENT_GREEN) != 0,
+        (pixelComponents & PIXELCOMPONENT_BLUE) != 0,
+        (pixelComponents & PIXELCOMPONENT_ALPHA) != 0
+    );
+    
+    color = mix(pixel, vec4(value), flags);
+}
