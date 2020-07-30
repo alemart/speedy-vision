@@ -134,6 +134,7 @@ export class FASTPlus extends FAST
         const maxLod = depth - 1;
         const log2PyrMaxScale = Math.log2(gpu.pyramidMaxScale);
         const pyrMaxLevels = gpu.pyramidHeight;
+        const orientationPatchRadius = 3;
 
         // select algorithm
         const multiscaleFast = gpu.keypoints.fast9pyr;
@@ -150,7 +151,7 @@ export class FASTPlus extends FAST
         const suppressed2 = gpu.keypoints.multiscaleSuppression(suppressed1, log2PyrMaxScale, pyrMaxLevels, true);
 
         // compute orientation
-        const orientedCorners = gpu.keypoints.multiscaleOrientationViaCentroid(suppressed2, 3, pyramid, log2PyrMaxScale, pyrMaxLevels);
+        const orientedCorners = gpu.keypoints.multiscaleOrientationViaCentroid(suppressed2, orientationPatchRadius, pyramid, log2PyrMaxScale, pyrMaxLevels);
         return orientedCorners;
     }
 }

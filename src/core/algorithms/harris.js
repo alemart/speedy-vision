@@ -41,7 +41,7 @@ export class Harris
     {
         // default settings
         if(!settings.hasOwnProperty('threshold'))
-            settings.threshold = 2; // pick corners with response >= threshold
+            settings.threshold = 0.5; // pick corners with response >= threshold
         if(!settings.hasOwnProperty('windowSize'))
             settings.windowSize = DEFAULT_WINDOW_SIZE; // 3x3 window
 
@@ -60,7 +60,7 @@ export class Harris
 
         // compute derivatives
         const df = gpu.keypoints.multiscaleSobel(greyscale, 0);
-        const sobelDerivatives = Array(9).fill(df);
+        const sobelDerivatives = Array(7).fill(df);
 
         // corner detection
         const pyramid = greyscale;
@@ -94,7 +94,7 @@ export class MultiscaleHarris
         if(!settings.hasOwnProperty('windowSize'))
             settings.windowSize = DEFAULT_WINDOW_SIZE; // 3x3 window
         if(!settings.hasOwnProperty('depth'))
-            settings.depth = 3;
+            settings.depth = DEFAULT_DEPTH;
 
         /*
         // TODO: sensitivity in [0,1]
@@ -110,6 +110,7 @@ export class MultiscaleHarris
         const windowRadius = Math.max(0, Math.min((settings.windowSize | 0) >> 1, 3));
         const log2PyrMaxScale = Math.log2(gpu.pyramidMaxScale);
         const pyrMaxLevels = gpu.pyramidHeight;
+        const orientationPatchRadius = 3;
 
         // generate pyramid
         const pyramid = greyscale;
@@ -117,14 +118,10 @@ export class MultiscaleHarris
 
         // compute derivatives
         const df = gpu.keypoints.multiscaleSobel(pyramid, minLod);
-        const sobelDerivatives = Array(9).fill(df);
+        const sobelDerivatives = Array(7).fill(df);
         for(let lod = minLod + 0.5; lod <= maxLod; lod += 0.5)
             sobelDerivatives[(2*lod)|0] = gpu.keypoints.multiscaleSobel(pyramid, lod);
-        /*
-        const sobelDerivatives = Array(9);
-        for(let i = 0; i < sobelDerivatives.length; i++)
-            sobelDerivatives[i] = gpu.keypoints.multiscaleSobel(pyramid, i * 0.5);
-        */
+        Utils.assert(sobelDerivatives.length == 2 * pyrMaxLevels - 1, 'Incorrect sobelDerivatives.length');
 
         // corner detection
         const multiscaleCorners = gpu.keypoints.multiscaleHarris(pyramid, windowRadius, threshold, minLod, maxLod, log2PyrMaxScale, pyrMaxLevels, true, sobelDerivatives);
@@ -137,7 +134,7 @@ export class MultiscaleHarris
         const suppressed2 = gpu.keypoints.multiscaleSuppression(suppressed1, log2PyrMaxScale, pyrMaxLevels, true);
 
         // compute orientation
-        const orientedCorners = gpu.keypoints.multiscaleOrientationViaCentroid(suppressed2, 3, pyramid, log2PyrMaxScale, pyrMaxLevels);
+        const orientedCorners = gpu.keypoints.multiscaleOrientationViaCentroid(suppressed2, orientationPatchRadius, pyramid, log2PyrMaxScale, pyrMaxLevels);
         return orientedCorners;
     }
 }
