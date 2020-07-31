@@ -59,6 +59,6 @@ void main()
 
     vec4 pmax = max(max(p0, p1), max(p2, p3));
     vec4 pmin = min(min(p0, p1), min(p2, p3));
-    
+
     color = vec4(pmax.r, pmin.g, pmax.r - pmin.g, p0.a);
 }

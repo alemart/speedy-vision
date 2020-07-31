@@ -71,12 +71,12 @@ export class GPUUtils extends GPUProgramGroup
 
             // find minimum & maximum pixel intensity for each row and column
             /*.declare('_scanMinMax1D', scanMinMax1D, {
-                //...this.program.alternatesTextures()
+                ...this.program.usesPingpongRendering()
             })*/
 
             // find minimum & maximum pixel intensity
             .declare('_scanMinMax2D', scanMinMax2D, {
-                //...this.program.alternatesTextures()
+                ...this.program.usesPingpongRendering()
             })
         ;
     }
@@ -132,10 +132,8 @@ export class GPUUtils extends GPUProgramGroup
         const numIterations = Math.ceil(Math.log2(Math.max(this._width, this._height))) | 0;
         let texture = this.copyComponents(image, image, PixelComponent.ALL, componentId);
 
-        for(let i = 0; i < numIterations; i++) {
-            texture = this.identity(texture);
+        for(let i = 0; i < numIterations; i++)
             texture = this._scanMinMax2D(texture, i);
-        }
 
         return this.copyComponents(image, texture, (1 << componentId), max ? 0 : 1);
     }

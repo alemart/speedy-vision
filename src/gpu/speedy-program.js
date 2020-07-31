@@ -120,13 +120,13 @@ export class SpeedyProgram extends Function
 
         // resize stdprog
         //if(options.renderToTexture)
-        //    this._stdprog = detachFBO(this._stdprog);
+        //    this._stdprog.detachFBO();
 
         this._stdprog.width = width;
         this._stdprog.height = height;
 
         //if(options.renderToTexture)
-        //    this._stdprog = attachFBO(this._stdprog);
+        //    this._stdprog.attachFBO(options.pingpong);
 
         // update texSize uniform
         const uniform = this._stdprog.uniform.texSize;
@@ -171,7 +171,7 @@ export class SpeedyProgram extends Function
             this._reallocatePixelBuffers(this._stdprog.width, this._stdprog.height);
 
         // read pixels
-        if(this._stdprog.hasOwnProperty('fbo')) {
+        if(this._stdprog.fbo != null) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._stdprog.fbo);
             gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, this._pixelBuffer[0]);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -265,8 +265,13 @@ export class SpeedyProgram extends Function
             uniforms: { }, // user-defined constants (as uniforms)
             renderToTexture: true, // render results to a texture?
             recycleTexture: true, // recycle output texture? If false, you must manually destroy the output texture
+            pingpong: false, // alternate output texture between calls
             ...options // user-defined options
         };
+
+        // validate options
+        if(options.pingpong && !options.renderToTexture)
+            Utils.fatal(`Pingpong rendering can only be used when rendering to textures`);
 
         // get size
         let width = Math.max(1, options.output[0] | 0);
@@ -284,9 +289,9 @@ export class SpeedyProgram extends Function
 
         // create shader
         const source = shaderdecl();
-        let stdprog = createStandardProgram(gl, width, height, source, options.uniforms);
+        const stdprog = new StandardProgram(gl, width, height, source, options.uniforms);
         if(options.renderToTexture)
-            stdprog = attachFBO(stdprog);
+            stdprog.attachFBO(options.pingpong);
 
         // validate arguments
         const params = functionArguments(shaderdecl);
@@ -300,7 +305,7 @@ export class SpeedyProgram extends Function
         // store context
         this._gl = gl;
         this._source = source;
-        this._options = options;
+        this._options = Object.freeze(options);
         this._stdprog = stdprog;
         this._params = params;
         this._initPixelBuffers(gl);
@@ -316,7 +321,7 @@ export class SpeedyProgram extends Function
 
         // skip things
         if(gl.isContextLost())
-            return stdprog.texture || null;
+            return stdprog.texture;
         
         // matching arguments?
         if(args.length != params.length)
@@ -361,8 +366,9 @@ export class SpeedyProgram extends Function
         let outputTexture = null;
         if(options.renderToTexture) {
             outputTexture = stdprog.texture;
+
+            // clone outputTexture using the current framebuffer
             if(!options.recycleTexture) {
-                // clone outputTexture using the current framebuffer
                 const cloneTexture = GLUtils.createTexture(gl, stdprog.width, stdprog.height);
                 gl.activeTexture(gl.TEXTURE0);
                 gl.bindTexture(gl.TEXTURE_2D, cloneTexture);
@@ -377,6 +383,10 @@ export class SpeedyProgram extends Function
                 gl.bindTexture(gl.TEXTURE_2D, null);
                 outputTexture = cloneTexture;
             }
+
+            // ping-pong rendering
+            if(options.pingpong)
+                stdprog.pingpong();
         }
 
         // return texture (if available)
@@ -536,6 +546,115 @@ function waitForQueueNotEmpty(queue)
 
 
 //
+// Standard Program
+//
+
+// a standard program runs a shader on an "image"
+// uniforms: { 'name': <default_value>, ... }
+function StandardProgram(gl, width, height, fragmentShaderSource, uniforms = { })
+{
+    // compile shaders
+    const source = ShaderPreprocessor.run(gl, DEFAULT_FRAGMENT_SHADER_PREFIX + fragmentShaderSource);
+    const program = GLUtils.createProgram(gl, DEFAULT_VERTEX_SHADER, source);
+
+    // setup geometry
+    gl.bindAttribLocation(program, LOCATION_ATTRIB_POSITION, 'a_position');
+    gl.bindAttribLocation(program, LOCATION_ATTRIB_TEXCOORD, 'a_texCoord');
+    const vertexObjects = createStandardGeometry(gl);
+
+    // define texSize
+    width = Math.max(width | 0, 1);
+    height = Math.max(height | 0, 1);
+    uniforms.texSize = [ width, height ];
+
+    // autodetect uniforms, get their locations,
+    // define their setters and set their default values
+    const uniform = autodetectUniforms(source);
+    gl.useProgram(program);
+    for(const u in uniform) {
+        // get location
+        uniform[u].location = gl.getUniformLocation(program, u);
+
+        // validate type
+        if(!UNIFORM_TYPES.hasOwnProperty(uniform[u].type))
+            throw GLUtils.Error(`Unknown uniform type: ${uniform[u].type}`);
+
+        // must set a default value?
+        if(uniforms.hasOwnProperty(u)) {
+            const value = uniforms[u];
+            if(typeof value == 'number' || typeof value == 'boolean')
+                (gl[UNIFORM_TYPES[uniform[u].type]])(uniform[u].location, value);
+            else if(typeof value == 'object')
+                (gl[UNIFORM_TYPES[uniform[u].type]])(uniform[u].location, ...Array.from(value));
+            else
+                throw GLUtils.Error(`Unrecognized uniform value: "${value}"`);
+        }
+
+        // note: to set the default value of array arr, pass
+        // { 'arr[0]': val0, 'arr[1]': val1, ... } to uniforms
+    }
+
+    // done!
+    this.gl = gl;
+    this.program = program;
+    this.uniform = uniform;
+    this.width = width;
+    this.height = height;
+    this.vertexObjects = vertexObjects;
+    this._fbo = this._texture = null; this._texIndex = 0;
+    Object.defineProperty(this, 'fbo', {
+        get: () => this._fbo ? this._fbo[this._texIndex] : null
+    });
+    Object.defineProperty(this, 'texture', {
+        get: () => this._texture ? this._texture[this._texIndex] : null
+    });
+}
+
+// Attach a framebuffer object to a standard program
+StandardProgram.prototype.attachFBO = function(pingpong = false)
+{
+    const gl = this.gl;
+    const width = this.width;
+    const height = this.height;
+    const numTextures = pingpong ? 2 : 1;
+
+    this._texIndex = 0;
+    this._texture = Array(numTextures).fill(null).map(() => GLUtils.createTexture(gl, width, height));
+    this._fbo = Array(numTextures).fill(null).map((_, i) => GLUtils.createFramebuffer(gl, this._texture[i]));
+}
+
+// Detach a framebuffer object from a standard program
+StandardProgram.prototype.detachFBO = function()
+{
+    const gl = this.gl;
+
+    if(this._fbo != null) {
+        for(let fbo of this._fbo)
+            GLUtils.destroyFramebuffer(gl, fbo);
+        this._fbo = null;
+    }
+
+    if(this._texture != null) {
+        for(let texture of this._texture)
+            GLUtils.destroyTexture(gl, texture);
+        this._texture = null;
+    }
+
+    this._texIndex = 0;
+}
+
+// Ping-pong rendering
+StandardProgram.prototype.pingpong = function()
+{
+    if(this._fbo != null && this._fbo.length > 1)
+        this._texIndex = 1 - this._texIndex;
+}
+
+
+
+
+
+//
 // WebGL
 //
 
@@ -596,94 +715,6 @@ function createStandardGeometry(gl)
     const result = { vao, vbo };
     cache.set(gl, result);
     return result;
-}
-
-// a standard program runs a shader on an "image"
-// uniforms: { 'name': <default_value>, ... }
-function createStandardProgram(gl, width, height, fragmentShaderSource, uniforms = { })
-{
-    // compile shaders
-    const source = ShaderPreprocessor.run(gl, DEFAULT_FRAGMENT_SHADER_PREFIX + fragmentShaderSource);
-    const program = GLUtils.createProgram(gl, DEFAULT_VERTEX_SHADER, source);
-
-    // setup geometry
-    gl.bindAttribLocation(program, LOCATION_ATTRIB_POSITION, 'a_position');
-    gl.bindAttribLocation(program, LOCATION_ATTRIB_TEXCOORD, 'a_texCoord');
-    const vertexObjects = createStandardGeometry(gl);
-
-    // define texSize
-    width = Math.max(width | 0, 1);
-    height = Math.max(height | 0, 1);
-    uniforms.texSize = [ width, height ];
-
-    // autodetect uniforms, get their locations,
-    // define their setters and set their default values
-    const uniform = autodetectUniforms(source);
-    gl.useProgram(program);
-    for(const u in uniform) {
-        // get location
-        uniform[u].location = gl.getUniformLocation(program, u);
-
-        // validate type
-        if(!UNIFORM_TYPES.hasOwnProperty(uniform[u].type))
-            throw GLUtils.Error(`Unknown uniform type: ${uniform[u].type}`);
-
-        // must set a default value?
-        if(uniforms.hasOwnProperty(u)) {
-            const value = uniforms[u];
-            if(typeof value == 'number' || typeof value == 'boolean')
-                (gl[UNIFORM_TYPES[uniform[u].type]])(uniform[u].location, value);
-            else if(typeof value == 'object')
-                (gl[UNIFORM_TYPES[uniform[u].type]])(uniform[u].location, ...Array.from(value));
-            else
-                throw GLUtils.Error(`Unrecognized uniform value: "${value}"`);
-        }
-
-        // note: to set the default value of array arr, pass
-        // { 'arr[0]': val0, 'arr[1]': val1, ... } to uniforms
-    }
-
-    // done!
-    return {
-        program,
-        gl,
-        uniform,
-        width,
-        height,
-        ...vertexObjects,
-    };
-}
-
-// Attach a framebuffer object to a standard program
-function attachFBO(stdprog)
-{
-    const gl = stdprog.gl;
-    const width = stdprog.width;
-    const height = stdprog.height;
-
-    const texture = GLUtils.createTexture(gl, width, height);
-    const fbo = GLUtils.createFramebuffer(gl, texture);
-
-    return Object.assign(stdprog, {
-        texture,
-        fbo
-    });
-}
-
-// Detach a framebuffer object from a standard program
-function detachFBO(stdprog)
-{
-    if(stdprog.hasOwnProperty('fbo')) {
-        GLUtils.destroyFramebuffer(stdprog.gl, stdprog.fbo);
-        delete stdprog.fbo;
-    }
-
-    if(stdprog.hasOwnProperty('texture')) {
-        GLUtils.destroyTexture(stdprog.gl, stdprog.texture);
-        delete stdprog.texture;
-    }
-
-    return stdprog;
 }
 
 // create a width x height buffer for RGBA data

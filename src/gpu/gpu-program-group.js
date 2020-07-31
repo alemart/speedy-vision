@@ -128,11 +128,19 @@ export /* abstract */ class GPUProgramGroup
                 };
             },
 
-            // Use this when we want to keep the kernel
+            // Use this when we want to keep the program
             // texture (they are recycled by default)
             doesNotRecycleTextures() {
                 return {
                     recycleTexture: false
+                };
+            },
+
+            // Pingpong Rendering: program output texture
+            // cannot be used as an input to itself
+            usesPingpongRendering() {
+                return {
+                    pingpong: true
                 };
             },
 
