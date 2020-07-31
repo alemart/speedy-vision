@@ -271,7 +271,7 @@ export class SpeedyProgram extends Function
 
         // validate options
         if(options.pingpong && !options.renderToTexture)
-            Utils.fatal(`Pingpong rendering can only be used when rendering to textures`);
+            throw GLUtils.Error(`Pingpong rendering can only be used when rendering to textures`);
 
         // get size
         let width = Math.max(1, options.output[0] | 0);
