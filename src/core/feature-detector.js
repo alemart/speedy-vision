@@ -63,7 +63,7 @@ export class FeatureDetector
         // default settings
         settings = {
             denoise: true,
-            sort: false,
+            max: -1,
             ...settings
         };
 
@@ -79,7 +79,7 @@ export class FeatureDetector
 
         // extract features
         const keypoints = FAST.run(gpu, greyscale, n, settings);
-        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.sort);
+        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.max);
     }
 
     /**
@@ -96,7 +96,7 @@ export class FeatureDetector
         // default settings
         settings = {
             denoise: true,
-            sort: false,
+            max: -1,
             ...settings
         };
 
@@ -112,7 +112,7 @@ export class FeatureDetector
 
         // extract features
         const keypoints = FASTPlus.run(gpu, greyscale, n, settings);
-        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.sort);
+        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.max);
     }
 
     /**
@@ -128,7 +128,7 @@ export class FeatureDetector
         // default settings
         settings = {
             denoise: true,
-            sort: false,
+            max: -1,
             ...settings
         };
 
@@ -144,7 +144,7 @@ export class FeatureDetector
 
         // extract features
         const keypoints = Harris.run(gpu, greyscale, settings);
-        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.sort);
+        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.max);
     }
 
     /**
@@ -160,7 +160,7 @@ export class FeatureDetector
         // default settings
         settings = {
             denoise: true,
-            sort: false,
+            max: -1,
             ...settings
         };
 
@@ -176,7 +176,7 @@ export class FeatureDetector
 
         // extract features
         const keypoints = MultiscaleHarris.run(gpu, greyscale, settings);
-        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.sort);
+        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.max);
     }
 
     /**
@@ -193,7 +193,7 @@ export class FeatureDetector
         settings = {
             threshold: 10,
             denoise: true,
-            sort: false,
+            max: -1,
             depth: 4,
             ...settings
         };
@@ -215,12 +215,12 @@ export class FeatureDetector
 
         // extract features
         const keypoints = BRISK.run(gpu, greyscale, settings);
-        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.sort);
+        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.max);
     }
 
     // given a corner-encoded texture, return a Promise
     // that resolves to an Array of keypoints
-    _extractKeypoints(corners, useAsyncTransfer = true, sort = false, gpu = this._gpu)
+    _extractKeypoints(corners, useAsyncTransfer = true, max = -1, gpu = this._gpu)
     {
         return gpu.encoders.encodeKeypoints(corners, useAsyncTransfer).then(encodedKeypoints => {
             // when processing a video, we expect that the number of keypoints
@@ -236,15 +236,19 @@ export class FeatureDetector
                 gpu.encoders.optimizeKeypointEncoder(newCount);
             //document.querySelector('mark').innerHTML = gpu.encoders._keypointEncoderLength;
 
-            // need to sort the data?
-            if(sort)
-                keypoints.sort(scoreCmp);
+            // sort the data according to cornerness score
+            keypoints.sort(scoreCmp);
+
+            // cap the number of keypoints if requested to do so
+            if(Number.isFinite(max) && max >= 0)
+                keypoints.splice(max, keypoints.length - max);
 
             // let's cap it if keypoints.length explodes (noise)
-            if(useAsyncTransfer)
-                return keypoints.slice(0, newCount);
-            else
-                return keypoints;
+            if(useAsyncTransfer && newCount < keypoints.length)
+                keypoints.splice(newCount, keypoints.length - newCount);
+
+            // done!
+            return keypoints;
         }).catch(err => {
             throw err;
         });

@@ -64,7 +64,7 @@ window.onload = async function()
     const featureLimit = document.getElementById('feature-limit');
 
     // update features
-    const FPS = 60;
+    const FPS = 30;
     let features = [];
     function updateFeatures()
     {
@@ -75,9 +75,9 @@ window.onload = async function()
         media.findFeatures({
             method: multiscale.checked ? 'multiscale-harris' : 'harris',
             sensitivity: sensitivity,
-            sort: true, // sort by descending cornerness score
+            max: featureLimit.value, // cap the number of features
         }).then(f => {
-            features = f.slice(0, featureLimit.value); // cap the number of features
+            features = f;
             featureCount.innerText = features.length;
             setTimeout(updateFeatures, 1000.0 / FPS);
         });
