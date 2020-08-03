@@ -19,6 +19,8 @@
  * Image pyramids & scale-space utilities
  */
 
+import { PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE } from '../../../utils/globals';
+
 // pyramid generation
 export const upsample2 = image => require('../../shaders/pyramids/upsample2.glsl');
 export const downsample2 = image => require('../../shaders/pyramids/downsample2.glsl');
@@ -47,12 +49,12 @@ export const crop = image => require('../../shaders/pyramids/crop.glsl');
  *            (note that lod = -log2(x))
  *
  *       h := height (depth) of the pyramid, an integer
- *            (this is gpu.pyramidHeight)
+ *            (i.e., PYRAMID_MAX_LEVELS)
  *
  *       M := scale upper bound: the maximum supported
  *            scale x for a pyramid layer, a constant
  *            that is preferably a power of two
- *            (this is gpu.pyramidMaxScale)
+ *            (i.e., PYRAMID_MAX_SCALE)
  *
  *
  *
@@ -81,12 +83,12 @@ export const crop = image => require('../../shaders/pyramids/crop.glsl');
  * and so on...
  */
 
-export function setScale(scale, pyramidHeight, pyramidMaxScale)
+export function setScale(scale)
 {
-    const lgM = Math.log2(pyramidMaxScale), eps = 1e-5;
-    const pyramidMinScale = Math.pow(2, -pyramidHeight) + eps;
-    const x = Math.max(pyramidMinScale, Math.min(scale, pyramidMaxScale));
-    const alpha = (lgM - Math.log2(x)) / (lgM + pyramidHeight);
+    const lgM = Math.log2(PYRAMID_MAX_SCALE), eps = 1e-5;
+    const pyramidMinScale = Math.pow(2, -PYRAMID_MAX_LEVELS) + eps;
+    const x = Math.max(pyramidMinScale, Math.min(scale, PYRAMID_MAX_SCALE));
+    const alpha = (lgM - Math.log2(x)) / (lgM + PYRAMID_MAX_LEVELS);
 
     return (image) => `
     uniform sampler2D image;
@@ -98,11 +100,11 @@ export function setScale(scale, pyramidHeight, pyramidMaxScale)
     `;
 }
 
-export function scale(scaleFactor, pyramidHeight, pyramidMaxScale)
+export function scale(scaleFactor)
 {
-    const lgM = Math.log2(pyramidMaxScale);
-    const s = Math.max(1e-5, scaleFactor);
-    const delta = -Math.log2(s) / (lgM + pyramidHeight);
+    const lgM = Math.log2(PYRAMID_MAX_SCALE), eps = 1e-5;
+    const s = Math.max(eps, scaleFactor);
+    const delta = -Math.log2(s) / (lgM + PYRAMID_MAX_LEVELS);
 
     return (image) => `
     uniform sampler2D image;

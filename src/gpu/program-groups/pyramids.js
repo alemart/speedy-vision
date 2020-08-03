@@ -43,7 +43,7 @@ export class GPUPyramids extends GPUProgramGroup
         super(gpu, width, height);
         this
             // initialize pyramid
-            .declare('setBase', setScale(1.0, gpu.pyramidHeight, gpu.pyramidMaxScale))
+            .declare('setBase', setScale(1.0))
  
             // pyramid operations
             .compose('reduce', '_smoothX', '_smoothY', '_downsample2', '_scale1/2')
@@ -129,16 +129,16 @@ export class GPUPyramids extends GPUProgramGroup
                 this.program.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
 
             // adjust the scale coefficients
-            .declare('_scale2', scale(2.0, gpu.pyramidHeight, gpu.pyramidMaxScale),
+            .declare('_scale2', scale(2.0),
                 this.program.hasTextureSize(2 * this._width, 2 * this._height))
 
-            .declare('_scale1/2', scale(0.5, gpu.pyramidHeight, gpu.pyramidMaxScale),
+            .declare('_scale1/2', scale(0.5),
                 this.program.hasTextureSize((1 + this._width) / 2, (1 + this._height) / 2))
 
-            .declare('_scale3/2', scale(1.5, gpu.pyramidHeight, gpu.pyramidMaxScale),
+            .declare('_scale3/2', scale(1.5),
                 this.program.hasTextureSize(3 * this._width / 2, 3 * this._height / 2))
 
-            .declare('_scale2/3', scale(2.0 / 3.0, gpu.pyramidHeight, gpu.pyramidMaxScale),
+            .declare('_scale2/3', scale(2.0 / 3.0),
                 this.program.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
         ;
     }
