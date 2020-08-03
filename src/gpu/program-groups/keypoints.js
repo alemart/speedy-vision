@@ -26,7 +26,7 @@ import {
     nonmaxSuppression, multiscaleSuppression, samescaleSuppression,
     orientationViaCentroid, multiscaleOrientationViaCentroid,
     brisk,
-    multiscaleSobel, multiscaleHarris
+    multiscaleSobel, multiscaleHarris, harrisCutoff
 } from './programs/keypoints';
 
 /**
@@ -68,6 +68,7 @@ export class GPUKeypoints extends GPUProgramGroup
 
             // Harris-Shi-Tomasi corner detector
             .declare('multiscaleHarris', multiscaleHarris) // scale-space
+            .declare('harrisCutoff', harrisCutoff)
 
             // Generic non-maximum suppression
             .declare('nonmaxSuppression', nonmaxSuppression)

@@ -282,6 +282,9 @@ export class FeatureDetector
         this._sensitivityTuner.feedObservation(this._lastKeypointEncoderOutput, Math.max(expected.number, 0));
         const sensitivity = this._sensitivityTuner.currentValue() * normalizer;
 
+        // debug
+        //console.log(JSON.stringify(this._sensitivityTuner.info()));
+
         // return the new sensitivity
         return Math.max(0, Math.min(sensitivity, 1));
     }

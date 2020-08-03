@@ -17,8 +17,8 @@
                 <select id="feature-limit">
                     <option value="50">50</option>
                     <option value="100">100</option>
-                    <option value="200" selected>200</option>
-                    <option value="300">300</option>
+                    <option value="200">200</option>
+                    <option value="300" selected>300</option>
                     <option value="500">500</option>
                     <option value="800">800</option>
                 </select>
@@ -28,7 +28,7 @@
         <form>
             <div>
                 <label for="sensitivity">Sensitivity</label>
-                <input type="range" min="0" max="90" value="45" id="sensitivity">
+                <input type="range" min="0" max="90" value="20" id="sensitivity">
                 <label for="multiscale">Multi-scale</label>
                 <input type="checkbox" id="multiscale">
                 <span style="margin-left:2em">FPS: <span id="fps">60</span></span>
@@ -73,7 +73,7 @@ window.onload = async function()
 
         // find & render features
         media.findFeatures({
-            method: multiscale.checked ? 'fast9plus' : 'fast',
+            method: multiscale.checked ? 'multiscale-harris' : 'harris',
             sensitivity: sensitivity,
             sort: true, // sort by descending cornerness score
         }).then(f => {

@@ -68,7 +68,13 @@ export const fastScore8 = (image, threshold) => require('../../shaders/keypoints
 //
 // Harris-Shi-Tomasi corner detector
 //
-export const multiscaleHarris = (pyramid, windowRadius, threshold, minLod, maxLod, usePyrSubLevels, sobelDerivatives) => require('../../shaders/keypoints/multiscale-harris.glsl');
+
+// compute corner responses
+// (score map)
+export const multiscaleHarris = (pyramid, windowRadius, minLod, maxLod, usePyrSubLevels, sobelDerivatives) => require('../../shaders/keypoints/multiscale-harris.glsl');
+
+// discard corners below a specified quality level
+export const harrisCutoff = (corners, maxScore, quality) => require('../../shaders/keypoints/harris-cutoff.glsl');
 
 
 //

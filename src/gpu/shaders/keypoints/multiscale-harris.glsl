@@ -24,7 +24,6 @@
 
 uniform sampler2D pyramid;
 uniform int windowRadius; // 0, 1, 2 ... for 1x1, 3x3 or 5x5 windows. Can't be larger than 7.
-uniform float threshold; // pick corners with response >= threshold
 uniform float minLod, maxLod;
 uniform bool usePyrSubLevels; // scaling factor of sqrt(2) if true, or 2 if false
 uniform sampler2D sobelDerivatives[7]; // for each LOD sub-level (0, 0.5, 1, 1.5, 2...)
@@ -69,8 +68,8 @@ void main()
         // compute corner response according to Shi-Tomasi
         float response = 0.5f * (m.x + m.z - sqrt((m.x - m.z) * (m.x - m.z) + 4.0f * m.y * m.y));
 
-        // compute corner score
-        float score = response * step(threshold, response);
+        // compute corner score in [0,1]
+        float score = max(0.0f, response / 4.0f);
 
         // compute corner scale
         float scale = encodeLod(lod);
