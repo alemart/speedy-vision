@@ -128,16 +128,18 @@ export /* abstract */ class GPUProgramGroup
                 };
             },
 
-            // Use this when we want to keep the program
-            // texture (they are recycled by default)
+            // Calling the program will return a new
+            // instance of the output texture every time
+            // The returned texture must be released manually
             doesNotRecycleTextures() {
                 return {
                     recycleTexture: false
                 };
             },
 
-            // Pingpong Rendering: program output texture
-            // cannot be used as an input to itself
+            // Pingpong Rendering: the output texture of a
+            // program cannot be used as an input to itself.
+            // This is a convenient helper in these situations
             usesPingpongRendering() {
                 return {
                     pingpong: true

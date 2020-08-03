@@ -22,7 +22,6 @@
 @include "pyramids.glsl"
 
 uniform sampler2D image;
-uniform float log2PyrMaxScale, pyrMaxLevels;
 uniform bool usePyrSubLevels; // scaling factor of sqrt(2) if true, or 2 if false
 
 const float scaleEps = 1e-5;
@@ -37,7 +36,7 @@ const float scaleEps = 1e-5;
 void main()
 {
     vec4 pixel = threadPixel(image);
-    float lod = decodeLod(pixel.a, log2PyrMaxScale, pyrMaxLevels);
+    float lod = decodeLod(pixel.a);
     //float lodJump = 1.0f - float(usePyrSubLevels) * 0.5f; // doesn't work nicely?
     float lodJump = 1.0f;
 
@@ -110,10 +109,10 @@ void main()
 #endif
 
     // get scores in (lodPlus, lodMinus)-scaled neighborhood
-    float lodPlus = min(lod + lodJump, pyrMaxLevels - 1.0f);
+    float lodPlus = min(lod + lodJump, PYRAMID_MAX_LEVELS - 1.0f);
     float lodMinus = max(lod - lodJump, 0.0f);
-    float alphaPlus = encodeLod(lodPlus, log2PyrMaxScale, pyrMaxLevels);
-    float alphaMinus = encodeLod(lodMinus, log2PyrMaxScale, pyrMaxLevels);
+    float alphaPlus = encodeLod(lodPlus);
+    float alphaMinus = encodeLod(lodMinus);
     mat3 innerScore = mat3(
         p0.r * float(abs(p0.a - alphaPlus) < scaleEps || abs(p0.a - alphaMinus) < scaleEps),
         p1.r * float(abs(p1.a - alphaPlus) < scaleEps || abs(p1.a - alphaMinus) < scaleEps),

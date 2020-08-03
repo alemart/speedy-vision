@@ -39,5 +39,5 @@ export const PixelComponent = Object.freeze({
     GREEN: 2,
     BLUE:  4,
     ALPHA: 8,
-    ALL:   15
+    ALL:   15 // = RED | GREEN | BLUE | ALPHA
 });

@@ -82,27 +82,25 @@
  * scale = 0.5 means half the size (1/4 the area)
  * and so on...
  */
+#define PYRAMID_MAX_LEVELS      float(@PYRAMID_MAX_LEVELS@)
+#define LOG2_PYRAMID_MAX_SCALE  float(@LOG2_PYRAMID_MAX_SCALE@)
 
 /**
  * Encode a pyramid level-of-detail to a float in [0,1]
- * @param {float} lod a value in [0, pyrMaxLevels]
- * @param {float} log2PyrMaxScale log2(gpu.pyramidMaxScale)
- * @param {float} pyrMaxLevels gpu.pyramidHeight
+ * @param {float} lod a value up to PYRAMID_MAX_LEVELS
  * @returns {float} encoded LOD in [0,1]
  */
-float encodeLod(float lod, float log2PyrMaxScale, float pyrMaxLevels)
+float encodeLod(float lod)
 {
-    return (log2PyrMaxScale + lod) / (log2PyrMaxScale + pyrMaxLevels);
+    return (LOG2_PYRAMID_MAX_SCALE + lod) / (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS);
 }
 
 /**
  * Decode a pyramid level-of-detail from a float in [0,1]
  * @param {float} encodedLod alpha channel
- * @param {float} log2PyrMaxScale log2(gpu.pyramidMaxScale)
- * @param {float} pyrMaxLevels gpu.pyramidMaxLevels
  * @returns {float} LOD
  */
-float decodeLod(float encodedLod, float log2PyrMaxScale, float pyrMaxLevels)
+float decodeLod(float encodedLod)
 {
-    return encodedLod * (log2PyrMaxScale + pyrMaxLevels) - log2PyrMaxScale;
+    return encodedLod * (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS) - LOG2_PYRAMID_MAX_SCALE;
 }

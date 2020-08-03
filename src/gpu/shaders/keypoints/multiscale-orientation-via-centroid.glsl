@@ -31,7 +31,6 @@ uniform int patchRadius;
 
 // pyramid data
 uniform sampler2D pyramid;
-uniform float log2PyrMaxScale, pyrMaxLevels;
 
 // Keypoint orientation will be stored in the blue channel
 void main()
@@ -45,7 +44,7 @@ void main()
         return;
 
     // multiscale data
-    float lod = decodeLod(pixel.a, log2PyrMaxScale, pyrMaxLevels);
+    float lod = decodeLod(pixel.a);
     float pot = exp2(lod);
 
     // Compute image moments

@@ -26,7 +26,6 @@ uniform sampler2D pyramid;
 uniform int windowRadius; // 0, 1, 2 ... for 1x1, 3x3 or 5x5 windows. Can't be larger than 7.
 uniform float threshold; // pick corners with response >= threshold
 uniform float minLod, maxLod;
-uniform float log2PyrMaxScale, pyrMaxLevels;
 uniform bool usePyrSubLevels; // scaling factor of sqrt(2) if true, or 2 if false
 uniform sampler2D sobelDerivatives[7]; // for each LOD sub-level (0, 0.5, 1, 1.5, 2...)
 
@@ -74,7 +73,7 @@ void main()
         float score = response * step(threshold, response);
 
         // compute corner scale
-        float scale = encodeLod(lod, log2PyrMaxScale, pyrMaxLevels);
+        float scale = encodeLod(lod);
 
         // pick the best score
         best = (score > best.x) ? vec2(score, scale) : best;

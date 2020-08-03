@@ -24,7 +24,6 @@
 uniform sampler2D pyramid;
 uniform float threshold;
 uniform float minLod, maxLod;
-uniform float log2PyrMaxScale, pyrMaxLevels;
 uniform bool usePyrSubLevels; // scaling factor of sqrt(2) if true, or 2 if false
 
 const ivec4 margin = ivec4(3, 3, 4, 4);
@@ -127,7 +126,7 @@ void main()
         score *= float(remainder.x + remainder.y == 0);
 
         // compute corner scale
-        float scale = encodeLod(lod, log2PyrMaxScale, pyrMaxLevels);
+        float scale = encodeLod(lod);
 
         // is it the best corner so far?
         best = (score > best.x) ? vec2(score, scale) : best;

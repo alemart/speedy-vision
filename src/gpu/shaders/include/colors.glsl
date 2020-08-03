@@ -15,25 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * fill-components.glsl
- * Fill zero or more color components of the input image with a constant value
+ * colors.glsl
+ * Color constants
  */
 
-@include "colors.glsl"
-
-uniform sampler2D image;
-uniform int pixelComponents; // PixelComponent flags
-uniform float value; // in [0, 1]
-
-void main()
-{
-    vec4 pixel = threadPixel(image);
-    bvec4 flags = bvec4(
-        (pixelComponents & PIXELCOMPONENT_RED) != 0,
-        (pixelComponents & PIXELCOMPONENT_GREEN) != 0,
-        (pixelComponents & PIXELCOMPONENT_BLUE) != 0,
-        (pixelComponents & PIXELCOMPONENT_ALPHA) != 0
-    );
-    
-    color = mix(pixel, vec4(value), flags);
-}
+#define PIXELCOMPONENT_RED   @PIXELCOMPONENT_RED@
+#define PIXELCOMPONENT_GREEN @PIXELCOMPONENT_GREEN@
+#define PIXELCOMPONENT_BLUE  @PIXELCOMPONENT_BLUE@
+#define PIXELCOMPONENT_ALPHA @PIXELCOMPONENT_ALPHA@

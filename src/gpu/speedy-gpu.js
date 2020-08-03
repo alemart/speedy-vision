@@ -28,11 +28,10 @@ import { GPUFilters } from './program-groups/filters';
 import { GPUKeypoints } from './program-groups/keypoints';
 import { GPUEncoders } from './program-groups/encoders';
 import { GPUPyramids } from './program-groups/pyramids';
+import { PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE} from '../utils/globals';
 
 // Limits
 const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
-const PYRAMID_MAX_LEVELS = 4; // max depth in scale-space
-const PYRAMID_MAX_SCALE = 2; // preferably a power of 2 (image scale can go up to this)
 
 // Available program groups
 // (maps group name to class name)

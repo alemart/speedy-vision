@@ -41,7 +41,7 @@ export const fast9 = (image, threshold) => require('../../shaders/keypoints/fast
 
 // FAST-9_16 on scale-space
 // Requires image mipmap
-export const fast9pyr = (pyramid, threshold, minLod, maxLod, log2PyrMaxScale, pyrMaxLevels, usePyrSubLevels) => require('../../shaders/keypoints/fast9pyr.glsl');
+export const fast9pyr = (pyramid, threshold, minLod, maxLod, usePyrSubLevels) => require('../../shaders/keypoints/fast9pyr.glsl');
 
 // FAST-7_12: requires 7 contiguous pixels
 // on a circumference of 12 pixels
@@ -68,7 +68,7 @@ export const fastScore8 = (image, threshold) => require('../../shaders/keypoints
 //
 // Harris-Shi-Tomasi corner detector
 //
-export const multiscaleHarris = (pyramid, windowRadius, threshold, minLod, maxLod, log2PyrMaxScale, pyrMaxLevels, usePyrSubLevels, sobelDerivatives) => require('../../shaders/keypoints/multiscale-harris.glsl');
+export const multiscaleHarris = (pyramid, windowRadius, threshold, minLod, maxLod, usePyrSubLevels, sobelDerivatives) => require('../../shaders/keypoints/multiscale-harris.glsl');
 
 
 //
@@ -84,12 +84,12 @@ export const brisk = (image, layerA, layerB, scaleA, scaleB, lgM, h) => require(
 
 // non-maximum suppression
 export const nonmaxSuppression = (image) => require('../../shaders/keypoints/nonmax-suppression.glsl');
-export const multiscaleSuppression = (image, log2PyrMaxScale, pyrMaxLevels, usePyrSubLevels) => require('../../shaders/keypoints/multiscale-suppression.glsl');
-export const samescaleSuppression = (image, log2PyrMaxScale, pyrMaxLevels) => require('../../shaders/keypoints/samescale-suppression.glsl');
+export const multiscaleSuppression = (image, usePyrSubLevels) => require('../../shaders/keypoints/multiscale-suppression.glsl');
+export const samescaleSuppression = (image) => require('../../shaders/keypoints/samescale-suppression.glsl');
 
 // find keypoint orientation
 export const orientationViaCentroid = (corners, patchRadius) => require('../../shaders/keypoints/orientation-via-centroid.glsl');
-export const multiscaleOrientationViaCentroid = (corners, patchRadius, pyramid, log2PyrMaxScale, pyrMaxLevels) => require('../../shaders/keypoints/multiscale-orientation-via-centroid.glsl');
+export const multiscaleOrientationViaCentroid = (corners, patchRadius, pyramid) => require('../../shaders/keypoints/multiscale-orientation-via-centroid.glsl');
 
 // Sobel derivatives
 export const multiscaleSobel = (pyramid, lod) => require('../../shaders/keypoints/multiscale-sobel.glsl');

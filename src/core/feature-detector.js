@@ -204,9 +204,9 @@ export class FeatureDetector
 
         // convert settings.sensitivity to settings.threshold
         if(settings.hasOwnProperty('sensitivity'))
-            settings.threshold = FAST.sensitivity2threshold(settings.sensitivity);
+            settings.threshold = FAST._sensitivity2threshold(settings.sensitivity);
         else
-            settings.threshold = FAST.normalizedThreshold(settings.threshold);
+            settings.threshold = FAST._normalizedThreshold(settings.threshold);
 
         // pre-processing the image...
         const source = media._gpu.upload(media.source);

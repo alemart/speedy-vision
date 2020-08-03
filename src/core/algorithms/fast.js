@@ -132,8 +132,6 @@ export class FASTPlus extends FAST
         const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidHeight;
         const depth = Math.max(MIN_DEPTH, Math.min(+(settings.depth), MAX_DEPTH));
         const maxLod = depth - 1;
-        const log2PyrMaxScale = Math.log2(gpu.pyramidMaxScale);
-        const pyrMaxLevels = gpu.pyramidHeight;
         const orientationPatchRadius = 3;
 
         // select algorithm
@@ -144,14 +142,14 @@ export class FASTPlus extends FAST
         GLUtils.generateMipmap(gpu.gl, pyramid);
 
         // keypoint detection
-        const multiscaleCorners = multiscaleFast(pyramid, settings.threshold, 0, maxLod, log2PyrMaxScale, pyrMaxLevels, true);
+        const multiscaleCorners = multiscaleFast(pyramid, settings.threshold, 0, maxLod, true);
 
         // non-maximum suppression
-        const suppressed1 = gpu.keypoints.samescaleSuppression(multiscaleCorners, log2PyrMaxScale, pyrMaxLevels);
-        const suppressed2 = gpu.keypoints.multiscaleSuppression(suppressed1, log2PyrMaxScale, pyrMaxLevels, true);
+        const suppressed1 = gpu.keypoints.samescaleSuppression(multiscaleCorners);
+        const suppressed2 = gpu.keypoints.multiscaleSuppression(suppressed1, true);
 
         // compute orientation
-        const orientedCorners = gpu.keypoints.multiscaleOrientationViaCentroid(suppressed2, orientationPatchRadius, pyramid, log2PyrMaxScale, pyrMaxLevels);
+        const orientedCorners = gpu.keypoints.multiscaleOrientationViaCentroid(suppressed2, orientationPatchRadius, pyramid);
         return orientedCorners;
     }
 }

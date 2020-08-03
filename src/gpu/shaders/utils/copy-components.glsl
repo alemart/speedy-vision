@@ -19,10 +19,7 @@
  * Copy the src component of src to zero or more color components of a copy of dest
  */
 
-#define PIXELCOMPONENT_RED   1
-#define PIXELCOMPONENT_GREEN 2
-#define PIXELCOMPONENT_BLUE  4
-#define PIXELCOMPONENT_ALPHA 8
+@include "colors.glsl"
 
 uniform sampler2D dest, src;
 uniform int destComponents; // PixelComponent flags

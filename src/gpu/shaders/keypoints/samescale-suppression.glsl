@@ -22,9 +22,8 @@
 @include "pyramids.glsl"
 
 uniform sampler2D image;
-uniform float log2PyrMaxScale, pyrMaxLevels;
 
-// scaleEps must be < 0.5 / (log2PyrMaxScale + pyrMaxLevels),
+// scaleEps must be < 0.5 / (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS),
 // because min(|lod_i - lod_j|) >= 0.5 for any i, j
 const float scaleEps = 1e-5;
 
@@ -34,7 +33,7 @@ void main()
 {
     vec4 pixel = threadPixel(image);
     ivec2 thread = threadLocation();
-    float lod = decodeLod(pixel.a, log2PyrMaxScale, pyrMaxLevels);
+    float lod = decodeLod(pixel.a);
     float pot = exp2(lod);
 
     // not a corner?

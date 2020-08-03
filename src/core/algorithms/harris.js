@@ -55,8 +55,6 @@ export class Harris
         const threshold = Math.max(0, +(settings.threshold));
         const windowRadius = Math.max(0, Math.min((settings.windowSize | 0) >> 1, 3));
         const minLod = 0, maxLod = 0;
-        const log2PyrMaxScale = Math.log2(gpu.pyramidMaxScale);
-        const pyrMaxLevels = gpu.pyramidHeight;
 
         // compute derivatives
         const df = gpu.keypoints.multiscaleSobel(greyscale, 0);
@@ -64,7 +62,7 @@ export class Harris
 
         // corner detection
         const pyramid = greyscale;
-        const corners = gpu.keypoints.multiscaleHarris(pyramid, windowRadius, threshold, minLod, maxLod, log2PyrMaxScale, pyrMaxLevels, true, sobelDerivatives);
+        const corners = gpu.keypoints.multiscaleHarris(pyramid, windowRadius, threshold, minLod, maxLod, true, sobelDerivatives);
 
         // release derivatives
         GLUtils.destroyTexture(gpu.gl, df);
@@ -108,8 +106,6 @@ export class MultiscaleHarris
         const minLod = 0, maxLod = depth - 1;
         const threshold = Math.max(0, +(settings.threshold));
         const windowRadius = Math.max(0, Math.min((settings.windowSize | 0) >> 1, 3));
-        const log2PyrMaxScale = Math.log2(gpu.pyramidMaxScale);
-        const pyrMaxLevels = gpu.pyramidHeight;
         const orientationPatchRadius = 3;
 
         // generate pyramid
@@ -121,20 +117,20 @@ export class MultiscaleHarris
         const sobelDerivatives = Array(7).fill(df);
         for(let lod = minLod + 0.5; lod <= maxLod; lod += 0.5)
             sobelDerivatives[(2*lod)|0] = gpu.keypoints.multiscaleSobel(pyramid, lod);
-        Utils.assert(sobelDerivatives.length == 2 * pyrMaxLevels - 1, 'Incorrect sobelDerivatives.length');
+        Utils.assert(sobelDerivatives.length == 2 * gpu.pyramidHeight - 1, 'Incorrect sobelDerivatives.length');
 
         // corner detection
-        const multiscaleCorners = gpu.keypoints.multiscaleHarris(pyramid, windowRadius, threshold, minLod, maxLod, log2PyrMaxScale, pyrMaxLevels, true, sobelDerivatives);
+        const multiscaleCorners = gpu.keypoints.multiscaleHarris(pyramid, windowRadius, threshold, minLod, maxLod, true, sobelDerivatives);
 
         // release derivatives
         sobelDerivatives.map(tex => GLUtils.destroyTexture(gpu.gl, tex));
 
         // non-maximum suppression
-        const suppressed1 = gpu.keypoints.samescaleSuppression(multiscaleCorners, log2PyrMaxScale, pyrMaxLevels);
-        const suppressed2 = gpu.keypoints.multiscaleSuppression(suppressed1, log2PyrMaxScale, pyrMaxLevels, true);
+        const suppressed1 = gpu.keypoints.samescaleSuppression(multiscaleCorners);
+        const suppressed2 = gpu.keypoints.multiscaleSuppression(suppressed1, true);
 
         // compute orientation
-        const orientedCorners = gpu.keypoints.multiscaleOrientationViaCentroid(suppressed2, orientationPatchRadius, pyramid, log2PyrMaxScale, pyrMaxLevels);
+        const orientedCorners = gpu.keypoints.multiscaleOrientationViaCentroid(suppressed2, orientationPatchRadius, pyramid);
         return orientedCorners;
     }
 }
