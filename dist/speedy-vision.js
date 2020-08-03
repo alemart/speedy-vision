@@ -6,7 +6,7 @@
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-07-27T23:21:44.723Z
+ * Date: 2020-08-03T22:54:32.610Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -410,6 +410,13 @@ class FAST
         if(!settings.hasOwnProperty('threshold'))
             settings.threshold = 10;
 
+        // convert a sensitivity value in [0,1],
+        // if it's defined, to a FAST threshold
+        if(settings.hasOwnProperty('sensitivity'))
+            settings.threshold = this._sensitivity2threshold(settings.sensitivity);
+        else
+            settings.threshold = this._normalizedThreshold(settings.threshold);
+
         // virtual table
         const vtable = this.run._vtable || (this.run._vtable = {
             5: gpu => gpu.keypoints.fast5,
@@ -419,7 +426,8 @@ class FAST
 
         // keypoint detection
         const fast = (vtable[n])(gpu);
-        return fast(greyscale, settings.threshold);
+        const corners = fast(greyscale, settings.threshold);
+        return gpu.keypoints.nonmaxSuppression(corners);
     }
 
     /**
@@ -429,7 +437,7 @@ class FAST
      * @param {number} sensitivity
      * @returns {number} pixel intensity
      */
-    static sensitivity2threshold(sensitivity)
+    static _sensitivity2threshold(sensitivity)
     {
         // the number of keypoints ideally increases linearly
         // as the sensitivity is increased
@@ -442,7 +450,7 @@ class FAST
      * pixel threshold in [0,255] -> normalized threshold in [0,1]
      * @returns {number} clamped & normalized threshold
      */
-    static normalizedThreshold(threshold)
+    static _normalizedThreshold(threshold)
     {
         threshold = Math.max(0, Math.min(threshold, 255));
         return threshold / 255;
@@ -476,12 +484,18 @@ class FASTPlus extends FAST
         if(!settings.hasOwnProperty('depth'))
             settings.depth = 3; // how many pyramid levels to check
 
+        // convert a sensitivity value in [0,1],
+        // if it's defined, to a FAST threshold
+        if(settings.hasOwnProperty('sensitivity'))
+            settings.threshold = this._sensitivity2threshold(settings.sensitivity);
+        else
+            settings.threshold = this._normalizedThreshold(settings.threshold);
+
         // prepare data
         const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidHeight;
         const depth = Math.max(MIN_DEPTH, Math.min(+(settings.depth), MAX_DEPTH));
         const maxLod = depth - 1;
-        const log2PyrMaxScale = Math.log2(gpu.pyramidMaxScale);
-        const pyrMaxLevels = gpu.pyramidHeight;
+        const orientationPatchRadius = 3;
 
         // select algorithm
         const multiscaleFast = gpu.keypoints.fast9pyr;
@@ -491,15 +505,215 @@ class FASTPlus extends FAST
         _gpu_gl_utils__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].generateMipmap(gpu.gl, pyramid);
 
         // keypoint detection
-        const multiScaleCorners = multiscaleFast(pyramid, settings.threshold, 0, maxLod, log2PyrMaxScale, pyrMaxLevels, true);
+        const multiscaleCorners = multiscaleFast(pyramid, settings.threshold, 0, maxLod, true);
 
         // non-maximum suppression
-        const suppressed1 = gpu.keypoints.samescaleSuppression(multiScaleCorners, log2PyrMaxScale, pyrMaxLevels);
-        const suppressed2 = gpu.keypoints.multiscaleSuppression(suppressed1, log2PyrMaxScale, pyrMaxLevels, true);
+        const suppressed1 = gpu.keypoints.samescaleSuppression(multiscaleCorners);
+        const suppressed2 = gpu.keypoints.multiscaleSuppression(suppressed1, true);
 
         // compute orientation
-        const orientedCorners = gpu.keypoints.multiscaleOrientationViaCentroid(suppressed2, 3, pyramid, log2PyrMaxScale, pyrMaxLevels);
+        const orientedCorners = gpu.keypoints.multiscaleOrientationViaCentroid(suppressed2, orientationPatchRadius, pyramid);
         return orientedCorners;
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/algorithms/harris.js":
+/*!***************************************!*\
+  !*** ./src/core/algorithms/harris.js ***!
+  \***************************************/
+/*! exports provided: Harris, MultiscaleHarris */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "Harris", function() { return Harris; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MultiscaleHarris", function() { return MultiscaleHarris; });
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _gpu_gl_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../gpu/gl-utils */ "./src/gpu/gl-utils.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/globals */ "./src/utils/globals.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * harris.js
+ * Harris Corner Detector
+ */
+
+
+
+
+
+
+// constants
+const DEFAULT_DEPTH = 3; // for multiscale: will check 3 pyramid levels (LODs: 0, 0.5, 1, 1.5, 2)
+const MIN_DEPTH = 1; // minimum depth level
+const MAX_DEPTH = _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_LEVELS"]; // maximum depth level
+const DEFAULT_WINDOW_SIZE = 3; // compute Harris autocorrelation matrix within a 3x3 window
+const MAX_WINDOW_SIZE = 3; // maximum window size when computing the autocorrelation matrix
+const ORIENTATION_PATCH_RADIUS = 3; // patch radius used when computing the orientation of the corners
+const DEFAULT_QUALITY = 0.1; // in [0,1]: pick corners having score >= quality * max(score)
+
+/**
+ * Harris Corner Detector
+ */
+class Harris
+{
+    /**
+     * Run the Harris Corner Detector
+     * @param {SpeedyGPU} gpu
+     * @param {WebGLTexture} greyscale Greyscale image
+     * @param {object} settings
+     * @returns {WebGLTexture} corners
+     */
+    static run(gpu, greyscale, settings)
+    {
+        // default settings
+        if(!settings.hasOwnProperty('windowSize'))
+            settings.windowSize = DEFAULT_WINDOW_SIZE; // 3x3 window
+
+        // sensitivity in [0,1]
+        if(settings.hasOwnProperty('sensitivity'))
+            settings.quality = this._sensitivity2quality(settings.sensitivity);
+
+        // quality level in [0,1]
+        if(!settings.hasOwnProperty('quality'))
+            settings.quality = DEFAULT_QUALITY;
+
+        // adjust parameters
+        const windowRadius = Math.max(0, Math.min((settings.windowSize | 0) >> 1, 3));
+        const minLod = 0, maxLod = 0;
+
+        // compute derivatives
+        const df = gpu.keypoints.multiscaleSobel(greyscale, 0);
+        const sobelDerivatives = Array(7).fill(df);
+
+        // corner detection
+        const pyramid = greyscale;
+        const corners = gpu.keypoints.multiscaleHarris(pyramid, windowRadius, minLod, maxLod, true, sobelDerivatives);
+
+        // find the maximum corner response
+        const maxScore = gpu.utils.scanMax(corners, _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].RED);
+
+        // discard corners according to quality level
+        const filteredCorners = gpu.keypoints.harrisCutoff(corners, maxScore, settings.quality);
+
+        // release derivatives
+        gpu.utils.release(df);
+
+        // non-maximum suppression
+        return gpu.keypoints.nonmaxSuppression(filteredCorners);
+    }
+
+    /**
+     * Sensitivity to quality non-linear conversion
+     * sensitivity in [0,1] -> quality value in [0,1]
+     * @param {number} sensitivity
+     * @returns {number} quality parameter
+     */
+    static _sensitivity2quality(sensitivity)
+    {
+        // the number of keypoints ideally increases linearly
+        // as the sensitivity is increased
+        sensitivity = Math.max(0, Math.min(sensitivity, 1));
+        return 1 - Math.tanh(2.3 * sensitivity);
+    }
+}
+
+/**
+ * Harris Corner Detector in a pyramid
+ */
+class MultiscaleHarris
+{
+    /**
+     * Detect Harris corners in a pyramid
+     * @param {SpeedyGPU} gpu
+     * @param {WebGLTexture} greyscale Greyscale image
+     * @param {object} settings
+     * @returns {WebGLTexture} corners
+     */
+    static run(gpu, greyscale, settings)
+    {
+        // default settings
+        if(!settings.hasOwnProperty('windowSize'))
+            settings.windowSize = DEFAULT_WINDOW_SIZE; // 3x3 window
+        if(!settings.hasOwnProperty('depth'))
+            settings.depth = DEFAULT_DEPTH;
+
+        // sensitivity in [0,1]
+        if(settings.hasOwnProperty('sensitivity'))
+            settings.quality = this._sensitivity2quality(settings.sensitivity);
+
+        // quality level in [0,1]
+        if(!settings.hasOwnProperty('quality'))
+            settings.quality = DEFAULT_QUALITY;
+
+        // adjust parameters
+        const depth = Math.max(MIN_DEPTH, Math.min(+(settings.depth), MAX_DEPTH));
+        const minLod = 0, maxLod = depth - 1;
+        const windowRadius = Math.max(0, Math.min((settings.windowSize | 0) >> 1, MAX_WINDOW_SIZE));
+        const orientationPatchRadius = ORIENTATION_PATCH_RADIUS;
+
+        // generate pyramid
+        const pyramid = greyscale;
+        _gpu_gl_utils__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].generateMipmap(gpu.gl, pyramid);
+
+        // compute derivatives
+        const df = gpu.keypoints.multiscaleSobel(pyramid, minLod);
+        const sobelDerivatives = Array(7).fill(df);
+        for(let lod = minLod + 0.5; lod <= maxLod; lod += 0.5)
+            sobelDerivatives[(2*lod)|0] = gpu.keypoints.multiscaleSobel(pyramid, lod);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(sobelDerivatives.length == 2 * gpu.pyramidHeight - 1, 'Incorrect sobelDerivatives.length');
+
+        // corner detection
+        const corners = gpu.keypoints.multiscaleHarris(pyramid, windowRadius, minLod, maxLod, true, sobelDerivatives);
+
+        // release derivatives
+        for(let i = 0; i < sobelDerivatives.length; i++)
+            sobelDerivatives[i] = gpu.utils.release(sobelDerivatives[i]);
+
+        // find the maximum corner response
+        const maxScore = gpu.utils.scanMax(corners, _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].RED);
+
+        // discard corners according to quality level
+        const filteredCorners = gpu.keypoints.harrisCutoff(corners, maxScore, settings.quality);
+
+        // non-maximum suppression
+        const suppressed1 = gpu.keypoints.samescaleSuppression(filteredCorners);
+        const suppressed2 = gpu.keypoints.multiscaleSuppression(suppressed1, true);
+
+        // compute orientation
+        const orientedCorners = gpu.keypoints.multiscaleOrientationViaCentroid(suppressed2, orientationPatchRadius, pyramid);
+        return orientedCorners;
+    }
+
+    /**
+     * Sensitivity to quality non-linear conversion
+     * sensitivity in [0,1] -> quality value in [0,1]
+     * @param {number} sensitivity
+     * @returns {number} quality parameter
+     */
+    static _sensitivity2quality(sensitivity)
+    {
+        // the number of keypoints ideally increases linearly
+        // as the sensitivity is increased
+        sensitivity = Math.max(0, Math.min(sensitivity, 1));
+        return 1 - Math.tanh(2.3 * sensitivity);
     }
 }
 
@@ -517,8 +731,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FeatureDetector", function() { return FeatureDetector; });
 /* harmony import */ var _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./algorithms/fast.js */ "./src/core/algorithms/fast.js");
 /* harmony import */ var _algorithms_brisk_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./algorithms/brisk.js */ "./src/core/algorithms/brisk.js");
-/* harmony import */ var _utils_tuner__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/tuner */ "./src/utils/tuner.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _algorithms_harris_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./algorithms/harris.js */ "./src/core/algorithms/harris.js");
+/* harmony import */ var _utils_tuner__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/tuner */ "./src/utils/tuner.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -545,8 +760,10 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 // constants
 const OPTIMIZER_GROWTH_WEIGHT = 0.02; // in [0,1]
+const scoreCmp = (a, b) => (+(b.score)) - (+(a.score));
 
 /**
  * FeatureDetector encapsulates
@@ -582,6 +799,7 @@ class FeatureDetector
         // default settings
         settings = {
             denoise: true,
+            max: -1,
             ...settings
         };
 
@@ -590,13 +808,6 @@ class FeatureDetector
         if(settings.hasOwnProperty('expected'))
             settings.sensitivity = this._findSensitivity(settings.expected);
 
-        // convert a sensitivity value in [0,1],
-        // if it's defined, to a FAST threshold
-        if(settings.hasOwnProperty('sensitivity'))
-            settings.threshold = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FAST"].sensitivity2threshold(settings.sensitivity);
-        else
-            settings.threshold = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FAST"].normalizedThreshold(settings.threshold);
-
         // pre-processing the image...
         const source = media._gpu.upload(media.source);
         const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
@@ -604,7 +815,7 @@ class FeatureDetector
 
         // extract features
         const keypoints = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FAST"].run(gpu, greyscale, n, settings);
-        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage);
+        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.max);
     }
 
     /**
@@ -621,6 +832,7 @@ class FeatureDetector
         // default settings
         settings = {
             denoise: true,
+            max: -1,
             ...settings
         };
 
@@ -629,13 +841,6 @@ class FeatureDetector
         if(settings.hasOwnProperty('expected'))
             settings.sensitivity = this._findSensitivity(settings.expected);
 
-        // convert a sensitivity value in [0,1],
-        // if it's defined, to a FAST threshold
-        if(settings.hasOwnProperty('sensitivity'))
-            settings.threshold = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FASTPlus"].sensitivity2threshold(settings.sensitivity);
-        else
-            settings.threshold = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FASTPlus"].normalizedThreshold(settings.threshold);
-
         // pre-processing the image...
         const source = media._gpu.upload(media.source);
         const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
@@ -643,7 +848,71 @@ class FeatureDetector
 
         // extract features
         const keypoints = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FASTPlus"].run(gpu, greyscale, n, settings);
-        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage);
+        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.max);
+    }
+
+    /**
+     * Harris Corner Detector
+     * @param {SpeedyMedia} media 
+     * @param {object} [settings]
+     * @returns {Promise<Array<SpeedyFeature>>} keypoints
+     */
+    harris(media, settings = {})
+    {
+        const gpu = this._gpu;
+
+        // default settings
+        settings = {
+            denoise: true,
+            max: -1,
+            ...settings
+        };
+
+        // convert the expected number of keypoints,
+        // if defined, into a sensitivity value
+        if(settings.hasOwnProperty('expected'))
+            settings.sensitivity = this._findSensitivity(settings.expected);
+
+        // pre-processing the image...
+        const source = media._gpu.upload(media.source);
+        const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
+        const greyscale = gpu.colors.rgb2grey(texture);
+
+        // extract features
+        const keypoints = _algorithms_harris_js__WEBPACK_IMPORTED_MODULE_2__["Harris"].run(gpu, greyscale, settings);
+        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.max);
+    }
+
+    /**
+     * Harris Corner Detector augmented with scale & orientation
+     * @param {SpeedyMedia} media 
+     * @param {object} [settings]
+     * @returns {Promise<Array<SpeedyFeature>>} keypoints
+     */
+    multiscaleHarris(media, settings = {})
+    {
+        const gpu = this._gpu;
+
+        // default settings
+        settings = {
+            denoise: true,
+            max: -1,
+            ...settings
+        };
+
+        // convert the expected number of keypoints,
+        // if defined, into a sensitivity value
+        if(settings.hasOwnProperty('expected'))
+            settings.sensitivity = this._findSensitivity(settings.expected);
+
+        // pre-processing the image...
+        const source = media._gpu.upload(media.source);
+        const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
+        const greyscale = gpu.colors.rgb2grey(texture);
+
+        // extract features
+        const keypoints = _algorithms_harris_js__WEBPACK_IMPORTED_MODULE_2__["MultiscaleHarris"].run(gpu, greyscale, settings);
+        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.max);
     }
 
     /**
@@ -660,6 +929,7 @@ class FeatureDetector
         settings = {
             threshold: 10,
             denoise: true,
+            max: -1,
             depth: 4,
             ...settings
         };
@@ -670,9 +940,9 @@ class FeatureDetector
 
         // convert settings.sensitivity to settings.threshold
         if(settings.hasOwnProperty('sensitivity'))
-            settings.threshold = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FAST"].sensitivity2threshold(settings.sensitivity);
+            settings.threshold = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FAST"]._sensitivity2threshold(settings.sensitivity);
         else
-            settings.threshold = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FAST"].normalizedThreshold(settings.threshold);
+            settings.threshold = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FAST"]._normalizedThreshold(settings.threshold);
 
         // pre-processing the image...
         const source = media._gpu.upload(media.source);
@@ -681,12 +951,12 @@ class FeatureDetector
 
         // extract features
         const keypoints = _algorithms_brisk_js__WEBPACK_IMPORTED_MODULE_1__["BRISK"].run(gpu, greyscale, settings);
-        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage);
+        return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.max);
     }
 
     // given a corner-encoded texture, return a Promise
     // that resolves to an Array of keypoints
-    _extractKeypoints(corners, useAsyncTransfer = true, gpu = this._gpu)
+    _extractKeypoints(corners, useAsyncTransfer = true, max = -1, gpu = this._gpu)
     {
         return gpu.encoders.encodeKeypoints(corners, useAsyncTransfer).then(encodedKeypoints => {
             // when processing a video, we expect that the number of keypoints
@@ -702,11 +972,19 @@ class FeatureDetector
                 gpu.encoders.optimizeKeypointEncoder(newCount);
             //document.querySelector('mark').innerHTML = gpu.encoders._keypointEncoderLength;
 
+            // sort the data according to cornerness score
+            keypoints.sort(scoreCmp);
+
+            // cap the number of keypoints if requested to do so
+            if(Number.isFinite(max) && max >= 0)
+                keypoints.splice(max, keypoints.length - max);
+
             // let's cap it if keypoints.length explodes (noise)
-            if(useAsyncTransfer && keypoints.length > newCount)
-                return keypoints.slice(0, newCount);
-            else
-                return keypoints;
+            if(useAsyncTransfer && newCount < keypoints.length)
+                keypoints.splice(newCount, keypoints.length - newCount);
+
+            // done!
+            return keypoints;
         }).catch(err => {
             throw err;
         });
@@ -729,13 +1007,13 @@ class FeatureDetector
 
         // show warning if static usage
         if(!this._optimizeForDynamicUsage && !this._findSensitivity._warning) {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].warning(`Finding an expected number of features in a media configured for static usage`);
+            _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].warning(`Finding an expected number of features in a media configured for static usage`);
             this._findSensitivity._warning = true;
         }
 
         // spawn the tuner
         this._sensitivityTuner = this._sensitivityTuner ||
-            new _utils_tuner__WEBPACK_IMPORTED_MODULE_2__["SensitivityTuner"](0, 1200); // use a slightly wider interval for better stability
+            new _utils_tuner__WEBPACK_IMPORTED_MODULE_3__["SensitivityTuner"](0, 1200); // use a slightly wider interval for better stability
             //new TestTuner(0, 1000);
         const normalizer = 0.001;
 
@@ -743,6 +1021,9 @@ class FeatureDetector
         this._sensitivityTuner.tolerance = Math.max(expected.tolerance, 0);
         this._sensitivityTuner.feedObservation(this._lastKeypointEncoderOutput, Math.max(expected.number, 0));
         const sensitivity = this._sensitivityTuner.currentValue() * normalizer;
+
+        // debug
+        //console.log(JSON.stringify(this._sensitivityTuner.info()));
 
         // return the new sensitivity
         return Math.max(0, Math.min(sensitivity, 1));
@@ -1017,14 +1298,16 @@ class SpeedyFeature
      * @param {number} y Y position
      * @param {number} [scale] Scale
      * @param {number} [rotation] Rotation in radians
+     * @param {number} [score] Cornerness measure
      * @param {FeatureDescriptor} [descriptor] Feature descriptor
      */
-    constructor(x, y, scale = 1.0, rotation = 0.0, descriptor = null)
+    constructor(x, y, scale = 1.0, rotation = 0.0, score = 0.0, descriptor = null)
     {
         this._x = +x;
         this._y = +y;
         this._scale = +scale;
         this._rotation = +rotation;
+        this._score = +score;
         this._descriptor = descriptor;
     }
 
@@ -1071,6 +1354,15 @@ class SpeedyFeature
     get rotation()
     {
         return this._rotation;
+    }
+
+    /**
+     * Score: a cornerness measure
+     * @returns {number} Score
+     */
+    get score()
+    {
+        return this._score;
     }
 
     /**
@@ -1421,6 +1713,8 @@ class SpeedyMedia
             'fast5':     (media, settings) => this._featureDetector.fast(media, 5, settings),   // FAST-5,8
             'fast9plus': (media, settings) => this._featureDetector.fastPlus(media, 9, settings), // FAST-9,16 augmented with scale & orientation
             'brisk':     (media, settings) => this._featureDetector.brisk(media, settings),     // BRISK
+            'harris':    (media, settings) => this._featureDetector.harris(media, settings),    // Harris
+            'multiscale-harris': (media, settings) => this._featureDetector.multiscaleHarris(media, settings), // Harris
         });
 
         // Validate method
@@ -2289,11 +2583,21 @@ class GPUProgramGroup
                 };
             },
 
-            // Use this when we want to keep the kernel
-            // texture (they are recycled by default)
+            // Calling the program will return a new
+            // instance of the output texture every time
+            // The returned texture must be released manually
             doesNotRecycleTextures() {
                 return {
                     recycleTexture: false
+                };
+            },
+
+            // Pingpong Rendering: the output texture of a
+            // program cannot be used as an input to itself.
+            // This is a convenient helper in these situations
+            usesPingpongRendering() {
+                return {
+                    pingpong: true
                 };
             },
 
@@ -2342,7 +2646,7 @@ __webpack_require__.r(__webpack_exports__);
  * limitations under the License.
  *
  * gpu-colors.js
- * Color conversion algorithms
+ * Color routines & conversion algorithms
  */
 
 
@@ -2350,7 +2654,7 @@ __webpack_require__.r(__webpack_exports__);
 
 /**
  * GPUColors
- * Color conversions
+ * Color routines
  */
 class GPUColors extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUProgramGroup"]
 {
@@ -2558,7 +2862,7 @@ class GPUEncoders extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPr
         const lgM = Math.log2(this._gpu.pyramidMaxScale);
         const pyrHeight = this._gpu.pyramidHeight;
         const keypoints = [];
-        let x, y, scale, rotation;
+        let x, y, scale, rotation, score;
 
         for(let i = 0; i < pixels.length; i += 4 * pixelsPerKeypoint) {
             x = (pixels[i+1] << 8) | pixels[i];
@@ -2572,7 +2876,9 @@ class GPUEncoders extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPr
             rotation = !hasRotation ? 0.0 :
                 (pixels[i+5] * TWO_PI - PI) / 255.0;
 
-            keypoints.push(new _core_speedy_feature__WEBPACK_IMPORTED_MODULE_2__["SpeedyFeature"](x, y, scale, rotation));
+            score = pixels[i+6] / 255.0;
+
+            keypoints.push(new _core_speedy_feature__WEBPACK_IMPORTED_MODULE_2__["SpeedyFeature"](x, y, scale, rotation, score));
         }
 
         // developer's secret ;)
@@ -2852,18 +3158,17 @@ class GPUKeypoints extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUP
         super(gpu, width, height);
         this
             // FAST-9,16
-            .compose('fast9', '_fast9', '_fastScore16', '_fastSuppression')
+            .compose('fast9', '_fast9', '_fastScore16')
             .declare('_fast9', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["fast9"]) // find corners
             .declare('_fastScore16', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["fastScore16"]) // compute scores
-            .declare('_fastSuppression', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["fastSuppression"]) // non-maximum suppression
 
             // FAST-7,12
-            .compose('fast7', '_fast7', '_fastScore12', '_fastSuppression')
+            .compose('fast7', '_fast7', '_fastScore12')
             .declare('_fast7', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["fast7"])
             .declare('_fastScore12', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["fastScore12"])
 
             // FAST-5,8
-            .compose('fast5', '_fast5', '_fastScore8', '_fastSuppression')
+            .compose('fast5', '_fast5', '_fastScore8')
             .declare('_fast5', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["fast5"])
             .declare('_fastScore8', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["fastScore8"])
 
@@ -2873,13 +3178,23 @@ class GPUKeypoints extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUP
             // BRISK Scale-Space Non-Maximum Suppression & Interpolation
             .declare('brisk', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["brisk"])
 
-            // Generic multi-scale non-maximum suppression
-            .declare('multiscaleSuppression', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["multiscaleSuppression"])
-            .declare('samescaleSuppression', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["samescaleSuppression"])
+            // Harris-Shi-Tomasi corner detector
+            .declare('multiscaleHarris', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["multiscaleHarris"]) // scale-space
+            .declare('harrisCutoff', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["harrisCutoff"])
+
+            // Generic non-maximum suppression
+            .declare('nonmaxSuppression', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["nonmaxSuppression"])
+            .declare('multiscaleSuppression', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["multiscaleSuppression"]) // scale-space
+            .declare('samescaleSuppression', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["samescaleSuppression"]) // scale-space
 
             // Generic orientation finder
             .declare('orientationViaCentroid', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["orientationViaCentroid"])
-            .declare('multiscaleOrientationViaCentroid', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["multiscaleOrientationViaCentroid"])
+            .declare('multiscaleOrientationViaCentroid', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["multiscaleOrientationViaCentroid"]) // scale-space
+
+            // Sobel derivatives
+            .declare('multiscaleSobel', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["multiscaleSobel"], {
+                ...this.program.doesNotRecycleTextures()
+            }) // scale-space
         ;
     }
 }
@@ -3336,7 +3651,7 @@ const encodeKeypoints = (image, imageSize, encoderLength, descriptorSize) => __w
 /*!******************************************************!*\
   !*** ./src/gpu/program-groups/programs/keypoints.js ***!
   \******************************************************/
-/*! exports provided: fast9, fast9pyr, fast7, fast5, fastScore16, fastScore12, fastScore8, fastSuppression, brisk, multiscaleSuppression, samescaleSuppression, orientationViaCentroid, multiscaleOrientationViaCentroid */
+/*! exports provided: fast9, fast9pyr, fast7, fast5, fastScore16, fastScore12, fastScore8, multiscaleHarris, harrisCutoff, brisk, nonmaxSuppression, multiscaleSuppression, samescaleSuppression, orientationViaCentroid, multiscaleOrientationViaCentroid, multiscaleSobel */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -3348,12 +3663,15 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fastScore16", function() { return fastScore16; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fastScore12", function() { return fastScore12; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fastScore8", function() { return fastScore8; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fastSuppression", function() { return fastSuppression; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "multiscaleHarris", function() { return multiscaleHarris; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "harrisCutoff", function() { return harrisCutoff; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "brisk", function() { return brisk; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "nonmaxSuppression", function() { return nonmaxSuppression; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "multiscaleSuppression", function() { return multiscaleSuppression; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "samescaleSuppression", function() { return samescaleSuppression; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "orientationViaCentroid", function() { return orientationViaCentroid; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "multiscaleOrientationViaCentroid", function() { return multiscaleOrientationViaCentroid; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "multiscaleSobel", function() { return multiscaleSobel; });
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -3397,7 +3715,7 @@ const fast9 = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoi
 
 // FAST-9_16 on scale-space
 // Requires image mipmap
-const fast9pyr = (pyramid, threshold, minLod, maxLod, log2PyrMaxScale, pyrMaxLevels, usePyrSubLevels) => __webpack_require__(/*! ../../shaders/keypoints/fast9pyr.glsl */ "./src/gpu/shaders/keypoints/fast9pyr.glsl");
+const fast9pyr = (pyramid, threshold, minLod, maxLod, usePyrSubLevels) => __webpack_require__(/*! ../../shaders/keypoints/fast9pyr.glsl */ "./src/gpu/shaders/keypoints/fast9pyr.glsl");
 
 // FAST-7_12: requires 7 contiguous pixels
 // on a circumference of 12 pixels
@@ -3419,10 +3737,18 @@ const fastScore12 = (image, threshold) => __webpack_require__(/*! ../../shaders/
 // neighboring circumference of 8 pixels
 const fastScore8 = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoints/fast-score8.glsl */ "./src/gpu/shaders/keypoints/fast-score8.glsl");
 
-// non-maximum suppression on 8-neighborhood based
-// on the corner score stored on the red channel
-const fastSuppression = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoints/fast-suppression.glsl */ "./src/gpu/shaders/keypoints/fast-suppression.glsl");
 
+
+//
+// Harris-Shi-Tomasi corner detector
+//
+
+// compute corner responses
+// (score map)
+const multiscaleHarris = (pyramid, windowRadius, minLod, maxLod, usePyrSubLevels, sobelDerivatives) => __webpack_require__(/*! ../../shaders/keypoints/multiscale-harris.glsl */ "./src/gpu/shaders/keypoints/multiscale-harris.glsl");
+
+// discard corners below a specified quality level
+const harrisCutoff = (corners, maxScore, quality) => __webpack_require__(/*! ../../shaders/keypoints/harris-cutoff.glsl */ "./src/gpu/shaders/keypoints/harris-cutoff.glsl");
 
 
 //
@@ -3436,13 +3762,17 @@ const brisk = (image, layerA, layerB, scaleA, scaleB, lgM, h) => __webpack_requi
 // Generic keypoint routines
 //
 
-// scale-space non-maximum suppression
-const multiscaleSuppression = (image, log2PyrMaxScale, pyrMaxLevels, usePyrSubLevels) => __webpack_require__(/*! ../../shaders/keypoints/multiscale-suppression.glsl */ "./src/gpu/shaders/keypoints/multiscale-suppression.glsl");
-const samescaleSuppression = (image, log2PyrMaxScale, pyrMaxLevels) => __webpack_require__(/*! ../../shaders/keypoints/samescale-suppression.glsl */ "./src/gpu/shaders/keypoints/samescale-suppression.glsl");
+// non-maximum suppression
+const nonmaxSuppression = (image) => __webpack_require__(/*! ../../shaders/keypoints/nonmax-suppression.glsl */ "./src/gpu/shaders/keypoints/nonmax-suppression.glsl");
+const multiscaleSuppression = (image, usePyrSubLevels) => __webpack_require__(/*! ../../shaders/keypoints/multiscale-suppression.glsl */ "./src/gpu/shaders/keypoints/multiscale-suppression.glsl");
+const samescaleSuppression = (image) => __webpack_require__(/*! ../../shaders/keypoints/samescale-suppression.glsl */ "./src/gpu/shaders/keypoints/samescale-suppression.glsl");
 
 // find keypoint orientation
 const orientationViaCentroid = (corners, patchRadius) => __webpack_require__(/*! ../../shaders/keypoints/orientation-via-centroid.glsl */ "./src/gpu/shaders/keypoints/orientation-via-centroid.glsl");
-const multiscaleOrientationViaCentroid = (corners, patchRadius, pyramid, log2PyrMaxScale, pyrMaxLevels) => __webpack_require__(/*! ../../shaders/keypoints/multiscale-orientation-via-centroid.glsl */ "./src/gpu/shaders/keypoints/multiscale-orientation-via-centroid.glsl");
+const multiscaleOrientationViaCentroid = (corners, patchRadius, pyramid) => __webpack_require__(/*! ../../shaders/keypoints/multiscale-orientation-via-centroid.glsl */ "./src/gpu/shaders/keypoints/multiscale-orientation-via-centroid.glsl");
+
+// Sobel derivatives
+const multiscaleSobel = (pyramid, lod) => __webpack_require__(/*! ../../shaders/keypoints/multiscale-sobel.glsl */ "./src/gpu/shaders/keypoints/multiscale-sobel.glsl");
 
 /***/ }),
 
@@ -3465,6 +3795,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "crop", function() { return crop; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "setScale", function() { return setScale; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "scale", function() { return scale; });
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -3485,6 +3816,8 @@ __webpack_require__.r(__webpack_exports__);
  * pyramids.js
  * Image pyramids & scale-space utilities
  */
+
+
 
 // pyramid generation
 const upsample2 = image => __webpack_require__(/*! ../../shaders/pyramids/upsample2.glsl */ "./src/gpu/shaders/pyramids/upsample2.glsl");
@@ -3514,12 +3847,12 @@ const crop = image => __webpack_require__(/*! ../../shaders/pyramids/crop.glsl *
  *            (note that lod = -log2(x))
  *
  *       h := height (depth) of the pyramid, an integer
- *            (this is gpu.pyramidHeight)
+ *            (i.e., PYRAMID_MAX_LEVELS)
  *
  *       M := scale upper bound: the maximum supported
  *            scale x for a pyramid layer, a constant
  *            that is preferably a power of two
- *            (this is gpu.pyramidMaxScale)
+ *            (i.e., PYRAMID_MAX_SCALE)
  *
  *
  *
@@ -3548,12 +3881,12 @@ const crop = image => __webpack_require__(/*! ../../shaders/pyramids/crop.glsl *
  * and so on...
  */
 
-function setScale(scale, pyramidHeight, pyramidMaxScale)
+function setScale(scale)
 {
-    const lgM = Math.log2(pyramidMaxScale), eps = 1e-5;
-    const pyramidMinScale = Math.pow(2, -pyramidHeight) + eps;
-    const x = Math.max(pyramidMinScale, Math.min(scale, pyramidMaxScale));
-    const alpha = (lgM - Math.log2(x)) / (lgM + pyramidHeight);
+    const lgM = Math.log2(_utils_globals__WEBPACK_IMPORTED_MODULE_0__["PYRAMID_MAX_SCALE"]), eps = 1e-5;
+    const pyramidMinScale = Math.pow(2, -_utils_globals__WEBPACK_IMPORTED_MODULE_0__["PYRAMID_MAX_LEVELS"]) + eps;
+    const x = Math.max(pyramidMinScale, Math.min(scale, _utils_globals__WEBPACK_IMPORTED_MODULE_0__["PYRAMID_MAX_SCALE"]));
+    const alpha = (lgM - Math.log2(x)) / (lgM + _utils_globals__WEBPACK_IMPORTED_MODULE_0__["PYRAMID_MAX_LEVELS"]);
 
     return (image) => `
     uniform sampler2D image;
@@ -3565,11 +3898,11 @@ function setScale(scale, pyramidHeight, pyramidMaxScale)
     `;
 }
 
-function scale(scaleFactor, pyramidHeight, pyramidMaxScale)
+function scale(scaleFactor)
 {
-    const lgM = Math.log2(pyramidMaxScale);
-    const s = Math.max(1e-5, scaleFactor);
-    const delta = -Math.log2(s) / (lgM + pyramidHeight);
+    const lgM = Math.log2(_utils_globals__WEBPACK_IMPORTED_MODULE_0__["PYRAMID_MAX_SCALE"]), eps = 1e-5;
+    const s = Math.max(eps, scaleFactor);
+    const delta = -Math.log2(s) / (lgM + _utils_globals__WEBPACK_IMPORTED_MODULE_0__["PYRAMID_MAX_LEVELS"]);
 
     return (image) => `
     uniform sampler2D image;
@@ -3590,13 +3923,18 @@ function scale(scaleFactor, pyramidHeight, pyramidMaxScale)
 /*!**************************************************!*\
   !*** ./src/gpu/program-groups/programs/utils.js ***!
   \**************************************************/
-/*! exports provided: identity, flipY */
+/*! exports provided: identity, flipY, fill, fillComponents, copyComponents, scanMinMax1D, scanMinMax2D */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "identity", function() { return identity; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "flipY", function() { return flipY; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fill", function() { return fill; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fillComponents", function() { return fillComponents; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copyComponents", function() { return copyComponents; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "scanMinMax1D", function() { return scanMinMax1D; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "scanMinMax2D", function() { return scanMinMax2D; });
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -3623,6 +3961,21 @@ const identity = (image) => __webpack_require__(/*! ../../shaders/utils/identity
 
 // Flip y-axis for output
 const flipY = (image) => __webpack_require__(/*! ../../shaders/utils/flip-y.glsl */ "./src/gpu/shaders/utils/flip-y.glsl");
+
+// Fill image with a constant
+const fill = (value) => __webpack_require__(/*! ../../shaders/utils/fill.glsl */ "./src/gpu/shaders/utils/fill.glsl");
+
+// Fill zero or more color components of the input image with a constant value
+const fillComponents = (image, pixelComponents, value) => __webpack_require__(/*! ../../shaders/utils/fill-components.glsl */ "./src/gpu/shaders/utils/fill-components.glsl");
+
+// Copy the src component of src to zero or more color components of a copy of dest
+const copyComponents = (dest, src, destComponents, srcComponentId) => __webpack_require__(/*! ../../shaders/utils/copy-components.glsl */ "./src/gpu/shaders/utils/copy-components.glsl");
+
+// Scan the entire image and find the minimum & maximum pixel intensity for each row and column
+const scanMinMax1D = (image, iterationNumber) => __webpack_require__(/*! ../../shaders/utils/scan-minmax1d.glsl */ "./src/gpu/shaders/utils/scan-minmax1d.glsl");
+
+// Scan the entire image and find the minimum & maximum pixel intensity
+const scanMinMax2D = (image, iterationNumber) => __webpack_require__(/*! ../../shaders/utils/scan-minmax2d.glsl */ "./src/gpu/shaders/utils/scan-minmax2d.glsl");
 
 /***/ }),
 
@@ -3685,7 +4038,7 @@ class GPUPyramids extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPr
         super(gpu, width, height);
         this
             // initialize pyramid
-            .declare('setBase', Object(_programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["setScale"])(1.0, gpu.pyramidHeight, gpu.pyramidMaxScale))
+            .declare('setBase', Object(_programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["setScale"])(1.0))
  
             // pyramid operations
             .compose('reduce', '_smoothX', '_smoothY', '_downsample2', '_scale1/2')
@@ -3771,16 +4124,16 @@ class GPUPyramids extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPr
                 this.program.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
 
             // adjust the scale coefficients
-            .declare('_scale2', Object(_programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(2.0, gpu.pyramidHeight, gpu.pyramidMaxScale),
+            .declare('_scale2', Object(_programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(2.0),
                 this.program.hasTextureSize(2 * this._width, 2 * this._height))
 
-            .declare('_scale1/2', Object(_programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(0.5, gpu.pyramidHeight, gpu.pyramidMaxScale),
+            .declare('_scale1/2', Object(_programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(0.5),
                 this.program.hasTextureSize((1 + this._width) / 2, (1 + this._height) / 2))
 
-            .declare('_scale3/2', Object(_programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(1.5, gpu.pyramidHeight, gpu.pyramidMaxScale),
+            .declare('_scale3/2', Object(_programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(1.5),
                 this.program.hasTextureSize(3 * this._width / 2, 3 * this._height / 2))
 
-            .declare('_scale2/3', Object(_programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(2.0 / 3.0, gpu.pyramidHeight, gpu.pyramidMaxScale),
+            .declare('_scale2/3', Object(_programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(2.0 / 3.0),
                 this.program.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
         ;
     }
@@ -3798,8 +4151,10 @@ class GPUPyramids extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPr
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUUtils", function() { return GPUUtils; });
-/* harmony import */ var _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-program-group */ "./src/gpu/gpu-program-group.js");
-/* harmony import */ var _programs_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./programs/utils */ "./src/gpu/program-groups/programs/utils.js");
+/* harmony import */ var _gl_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gl-utils */ "./src/gpu/gl-utils.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _gpu_program_group__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../gpu-program-group */ "./src/gpu/gpu-program-group.js");
+/* harmony import */ var _programs_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./programs/utils */ "./src/gpu/program-groups/programs/utils.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -3824,11 +4179,13 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
 /**
  * GPUUtils
  * Utility operations
  */
-class GPUUtils extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUProgramGroup"]
+class GPUUtils extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_2__["GPUProgramGroup"]
 {
     /**
      * Class constructor
@@ -3841,15 +4198,97 @@ class GPUUtils extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUProgr
         super(gpu, width, height);
         this
             // no-operation
-            .declare('identity', _programs_utils__WEBPACK_IMPORTED_MODULE_1__["identity"])
+            .declare('identity', _programs_utils__WEBPACK_IMPORTED_MODULE_3__["identity"])
 
             // flip y-axis
-            .declare('flipY', _programs_utils__WEBPACK_IMPORTED_MODULE_1__["flipY"])
+            .declare('flipY', _programs_utils__WEBPACK_IMPORTED_MODULE_3__["flipY"])
 
             // output a texture from a pipeline
-            .declare('output', _programs_utils__WEBPACK_IMPORTED_MODULE_1__["flipY"],
-                this.program.displaysGraphics())
+            .declare('output', _programs_utils__WEBPACK_IMPORTED_MODULE_3__["flipY"], {
+                ...this.program.displaysGraphics()
+            })
+                
+            // clone a texture (release it afterwards)
+            .declare('clone', _programs_utils__WEBPACK_IMPORTED_MODULE_3__["identity"], {
+                ...this.program.doesNotRecycleTextures()
+            })
+
+            // Fill image with a constant
+            .declare('fill', _programs_utils__WEBPACK_IMPORTED_MODULE_3__["fill"])
+
+            // Fill zero or more color components of the input image with a constant value
+            .declare('fillComponents', _programs_utils__WEBPACK_IMPORTED_MODULE_3__["fillComponents"])
+
+            // Copy the src component of src to zero or more color components of a copy of dest
+            .declare('copyComponents', _programs_utils__WEBPACK_IMPORTED_MODULE_3__["copyComponents"])
+
+            // find minimum & maximum pixel intensity for each row and column
+            /*.declare('_scanMinMax1D', scanMinMax1D, {
+                ...this.program.usesPingpongRendering()
+            })*/
+
+            // find minimum & maximum pixel intensity
+            .declare('_scanMinMax2D', _programs_utils__WEBPACK_IMPORTED_MODULE_3__["scanMinMax2D"], {
+                ...this.program.usesPingpongRendering()
+            })
         ;
+    }
+
+    /**
+     * Release a texture
+     * @param {WebGLTexture} texture 
+     * @returns {null}
+     */
+    release(texture)
+    {
+        return _gl_utils__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].destroyTexture(this._gpu.gl, texture);
+    }
+
+    /**
+     * Scan a single component in all pixels of the image and find the maximum intensity
+     * @param {WebGLTexture} image 
+     * @param {number} pixelComponent a single PixelComponent flag
+     * @returns {WebGLTexture} such that pixel[component] = max(image_pixel[component])
+     *                                                           for all image_pixels
+     */
+    scanMax(image, pixelComponent)
+    {
+        return this._scanMinMax(image, pixelComponent, true);
+    }
+
+    /**
+     * Scan a single component in all pixels of the image and find the minimum intensity
+     * @param {WebGLTexture} image 
+     * @param {number} pixelComponent a single PixelComponent flag
+     * @returns {WebGLTexture} such that pixel[component] = min(image_pixel[component])
+     *                                                           for all image_pixels
+     */
+    scanMin(image, pixelComponent)
+    {
+        return this._scanMinMax(image, pixelComponent, false);
+    }
+
+    /**
+     * Scan a single component in all pixels of the image and find the min or max intensity
+     * @param {WebGLTexture} image 
+     * @param {number} pixelComponent a single PixelComponent flag
+     * @param {boolean} max returns the maximum if true, or the minimum if false
+     * @returns {WebGLTexture}
+     */
+    _scanMinMax(image, pixelComponent, max = true)
+    {
+        //
+        // FIXME: combinations of PixelComponent (e.g., PixelComponent.ALL)
+        //        are currently unsupported. Make separate calls.
+        //
+        const componentId = Math.max(0, Math.min(Math.log2(pixelComponent), 3)) | 0;
+        const numIterations = Math.ceil(Math.log2(Math.max(this._width, this._height))) | 0;
+        let texture = this.copyComponents(image, image, _utils_types__WEBPACK_IMPORTED_MODULE_1__["PixelComponent"].ALL, componentId);
+
+        for(let i = 0; i < numIterations; i++)
+            texture = this._scanMinMax2D(texture, i);
+
+        return this.copyComponents(image, texture, (1 << componentId), max ? 0 : 1);
     }
 }
 
@@ -3866,6 +4305,8 @@ class GPUUtils extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUProgr
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ShaderPreprocessor", function() { return ShaderPreprocessor; });
 /* harmony import */ var _gl_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gl-utils */ "./src/gpu/gl-utils.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/types */ "./src/utils/types.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -3889,6 +4330,26 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
+// Regular Expressions
+const commentsRegex = [ /\/\*(.|\s)*?\*\//g , /\/\/.*$/gm ];
+const includeRegex = /^\s*@\s*include\s+"(.*?)"/gm;
+const constantRegex = /@(\w+)@/g;
+
+// Constant values accessible inside the shaders
+const constants = {
+    // pyramids
+    'PYRAMID_MAX_LEVELS': _utils_globals__WEBPACK_IMPORTED_MODULE_1__["PYRAMID_MAX_LEVELS"],
+    'LOG2_PYRAMID_MAX_SCALE': Math.log2(_utils_globals__WEBPACK_IMPORTED_MODULE_1__["PYRAMID_MAX_SCALE"]),
+
+    // colors
+    'PIXELCOMPONENT_RED': _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].RED,
+    'PIXELCOMPONENT_GREEN': _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].GREEN,
+    'PIXELCOMPONENT_BLUE': _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].BLUE,
+    'PIXELCOMPONENT_ALPHA': _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].ALPHA,
+};
+
 /**
  * Custom preprocessor for shaders
  */
@@ -3902,28 +4363,25 @@ class ShaderPreprocessor
      */
     static run(gl, code)
     {
-        ShaderPreprocessor._includeRegex = ShaderPreprocessor._includeRegex ||
-            (ShaderPreprocessor._includeRegex = /^\s*@\s*include\s+"(.*?)"/gm);
-
-        ShaderPreprocessor._commentsRegex = ShaderPreprocessor._commentsRegex ||
-            (ShaderPreprocessor._commentsRegex = [ /\/\*(.|\s)*?\*\//g , /\/\/.*$/gm ]);
-
         // remove comments and run the preprocessor
-        return String(code).replace(ShaderPreprocessor._commentsRegex[0], '')
-                           .replace(ShaderPreprocessor._commentsRegex[1], '')
-                           .replace(ShaderPreprocessor._includeRegex,
-                                (_, filename) => readfileSync(gl, filename)
+        return String(code).replace(commentsRegex[0], '')
+                           .replace(commentsRegex[1], '')
+                           .replace(includeRegex, (_, filename) =>
+                                // FIXME: no cycle detection for @include
+                                ShaderPreprocessor.run(gl, readfileSync(filename))
+                            )
+                            .replace(constantRegex, (_, name) =>
+                                String(constants[name] || 'UNDEFINED_CONSTANT')
                             );
     }
 }
 
  /**
  * Reads a shader from the shaders/include/ folder
- * @param {WebGL2RenderingContext} gl
  * @param {string} filename
  * @returns {string}
  */
-function readfileSync(gl, filename)
+function readfileSync(filename)
 {
     if(String(filename).match(/^[a-zA-Z0-9_\-]+\.glsl$/))
         return __webpack_require__("./src/gpu/shaders/include sync recursive ^\\.\\/.*$")("./" + filename);
@@ -3962,7 +4420,7 @@ module.exports = "uniform sampler2D image;\nuniform ivec2 imageSize;\nuniform in
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nuniform ivec2 imageSize;\nuniform int encoderLength;\nuniform int descriptorSize;\nbool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)\n{\nint i = 0, p = 0;\nfor(position = ivec2(0, 0); position.y < imageSize.y; ) {\npixel = pixelAt(image, position);\nif(pixel.r > 0.0f) {\nif(p++ == q)\nreturn true;\n}\ni += 1 + int(pixel.g * 255.0f);\nposition = ivec2(i % imageSize.x, i / imageSize.x);\n}\nreturn false;\n}\nvoid main()\n{\nvec4 pixel;\nivec2 position;\nivec2 thread = threadLocation();\nint p = encoderLength * thread.y + thread.x;\nint d = 2 + descriptorSize / 4;\nint q = p / d;\ncolor = vec4(1.0f, 1.0f, 1.0f, 1.0f);\nif(findQthKeypoint(q, position, pixel)) {\nint r = p % d;\nswitch(r) {\ncase 0: {\nivec2 lo = position & 255;\nivec2 hi = position >> 8;\ncolor = vec4(float(lo.x), float(hi.x), float(lo.y), float(hi.y)) / 255.0f;\nbreak;\n}\ncase 1: {\nfloat scale = pixel.a;\nfloat rotation = pixel.b;\ncolor = vec4(scale, rotation, 0.0f, 0.0f);\nbreak;\n}\ndefault: {\nint i = r - 2;\nbreak;\n}\n}\n}\n}"
+module.exports = "uniform sampler2D image;\nuniform ivec2 imageSize;\nuniform int encoderLength;\nuniform int descriptorSize;\nbool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)\n{\nint i = 0, p = 0;\nfor(position = ivec2(0, 0); position.y < imageSize.y; ) {\npixel = pixelAt(image, position);\nif(pixel.r > 0.0f) {\nif(p++ == q)\nreturn true;\n}\ni += 1 + int(pixel.g * 255.0f);\nposition = ivec2(i % imageSize.x, i / imageSize.x);\n}\nreturn false;\n}\nvoid main()\n{\nvec4 pixel;\nivec2 position;\nivec2 thread = threadLocation();\nint p = encoderLength * thread.y + thread.x;\nint d = 2 + descriptorSize / 4;\nint q = p / d;\ncolor = vec4(1.0f, 1.0f, 1.0f, 1.0f);\nif(findQthKeypoint(q, position, pixel)) {\nint r = p % d;\nswitch(r) {\ncase 0: {\nivec2 lo = position & 255;\nivec2 hi = position >> 8;\ncolor = vec4(float(lo.x), float(hi.x), float(lo.y), float(hi.y)) / 255.0f;\nbreak;\n}\ncase 1: {\nfloat score = pixel.r;\nfloat scale = pixel.a;\nfloat rotation = pixel.b;\ncolor = vec4(scale, rotation, score, 0.0f);\nbreak;\n}\ndefault: {\nint i = r - 2;\nbreak;\n}\n}\n}\n}"
 
 /***/ }),
 
@@ -3974,9 +4432,11 @@ module.exports = "uniform sampler2D image;\nuniform ivec2 imageSize;\nuniform in
 /***/ (function(module, exports, __webpack_require__) {
 
 var map = {
+	"./colors.glsl": "./src/gpu/shaders/include/colors.glsl",
 	"./global.glsl": "./src/gpu/shaders/include/global.glsl",
 	"./math.glsl": "./src/gpu/shaders/include/math.glsl",
-	"./pyramids.glsl": "./src/gpu/shaders/include/pyramids.glsl"
+	"./pyramids.glsl": "./src/gpu/shaders/include/pyramids.glsl",
+	"./sobel.glsl": "./src/gpu/shaders/include/sobel.glsl"
 };
 
 
@@ -4001,6 +4461,17 @@ webpackContext.id = "./src/gpu/shaders/include sync recursive ^\\.\\/.*$";
 
 /***/ }),
 
+/***/ "./src/gpu/shaders/include/colors.glsl":
+/*!*********************************************!*\
+  !*** ./src/gpu/shaders/include/colors.glsl ***!
+  \*********************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "#define PIXELCOMPONENT_RED   @PIXELCOMPONENT_RED@\n#define PIXELCOMPONENT_GREEN @PIXELCOMPONENT_GREEN@\n#define PIXELCOMPONENT_BLUE  @PIXELCOMPONENT_BLUE@\n#define PIXELCOMPONENT_ALPHA @PIXELCOMPONENT_ALPHA@"
+
+/***/ }),
+
 /***/ "./src/gpu/shaders/include/global.glsl":
 /*!*********************************************!*\
   !*** ./src/gpu/shaders/include/global.glsl ***!
@@ -4008,7 +4479,7 @@ webpackContext.id = "./src/gpu/shaders/include sync recursive ^\\.\\/.*$";
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "#define threadLocation() ivec2(texCoord * texSize)\n#define outputSize() ivec2(texSize)\n#define threadPixel(img) textureLod((img), texCoord, 0.0f)\n#define pixelAt(img, pos) texelFetch((img), (pos), 0)\n#define pixelAtOffset(img, offset) textureLodOffset((img), texCoord, 0.0f, (offset))"
+module.exports = "#define threadLocation() ivec2(texCoord * texSize)\n#define outputSize() ivec2(texSize)\n#define DEBUG(scalar) do { color = vec4(float(scalar), 0.0f, 0.0f, 1.0f); return; } while(false)\n#define threadPixel(img) textureLod((img), texCoord, 0.0f)\n#define pixelAt(img, pos) texelFetch((img), (pos), 0)\n#define pixelAtOffset(img, offset) textureLodOffset((img), texCoord, 0.0f, (offset))"
 
 /***/ }),
 
@@ -4030,7 +4501,18 @@ module.exports = "#ifndef _MATH_GLSL\n#define _MATH_GLSL\n#define TWO_PI        
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "#define pyrPixel(pyr, lod) textureLod((pyr), texCoord, (lod))\n#define pyrPixelAtOffset(pyr, lod, pot, offset) textureLod((pyr), texCoord + ((pot) * vec2(offset)) / texSize, (lod))\nfloat encodeLod(float lod, float log2PyrMaxScale, float pyrMaxLevels)\n{\nreturn (log2PyrMaxScale + lod) / (log2PyrMaxScale + pyrMaxLevels);\n}\nfloat decodeLod(float encodedLod, float log2PyrMaxScale, float pyrMaxLevels)\n{\nreturn encodedLod * (log2PyrMaxScale + pyrMaxLevels) - log2PyrMaxScale;\n}"
+module.exports = "#define pyrPixel(pyr, lod) textureLod((pyr), texCoord, (lod))\n#define pyrPixelAtOffset(pyr, lod, pot, offset) textureLod((pyr), texCoord + ((pot) * vec2(offset)) / texSize, (lod))\n#define PYRAMID_MAX_LEVELS      float(@PYRAMID_MAX_LEVELS@)\n#define LOG2_PYRAMID_MAX_SCALE  float(@LOG2_PYRAMID_MAX_SCALE@)\nfloat encodeLod(float lod)\n{\nreturn (LOG2_PYRAMID_MAX_SCALE + lod) / (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS);\n}\nfloat decodeLod(float encodedLod)\n{\nreturn encodedLod * (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS) - LOG2_PYRAMID_MAX_SCALE;\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/include/sobel.glsl":
+/*!********************************************!*\
+  !*** ./src/gpu/shaders/include/sobel.glsl ***!
+  \********************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "vec4 encodeSobel(vec2 df)\n{\nvec2 zeroes = vec2(0.0f, 0.0f);\nvec2 dmax = -max(df, zeroes);\nvec2 dmin = min(df, zeroes);\nreturn exp2(vec4(dmax, dmin));\n}\nvec2 decodeSobel(vec4 encodedSobel)\n{\nvec4 lg = log2(encodedSobel);\nreturn vec2(lg.b - lg.r, lg.a - lg.g);\n}"
 
 /***/ }),
 
@@ -4078,17 +4560,6 @@ module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main(
 
 /***/ }),
 
-/***/ "./src/gpu/shaders/keypoints/fast-suppression.glsl":
-/*!*********************************************************!*\
-  !*** ./src/gpu/shaders/keypoints/fast-suppression.glsl ***!
-  \*********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nfloat p0 = pixelAtOffset(image, ivec2(0, 1)).r;\nfloat p1 = pixelAtOffset(image, ivec2(1, 1)).r;\nfloat p2 = pixelAtOffset(image, ivec2(1, 0)).r;\nfloat p3 = pixelAtOffset(image, ivec2(1, -1)).r;\nfloat p4 = pixelAtOffset(image, ivec2(0, -1)).r;\nfloat p5 = pixelAtOffset(image, ivec2(-1, -1)).r;\nfloat p6 = pixelAtOffset(image, ivec2(-1, 0)).r;\nfloat p7 = pixelAtOffset(image, ivec2(-1, 1)).r;\nfloat m = max(\nmax(max(p0, p1), max(p2, p3)),\nmax(max(p4, p5), max(p6, p7))\n);\nvec4 pixel = threadPixel(image);\nfloat score = step(m, pixel.r) * pixel.r;\ncolor = vec4(score, pixel.gba);\n}"
-
-/***/ }),
-
 /***/ "./src/gpu/shaders/keypoints/fast5.glsl":
 /*!**********************************************!*\
   !*** ./src/gpu/shaders/keypoints/fast5.glsl ***!
@@ -4129,7 +4600,29 @@ module.exports = "uniform sampler2D image;\nuniform float threshold;\nconst ivec
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D pyramid;\nuniform float threshold;\nuniform float minLod, maxLod;\nuniform float log2PyrMaxScale, pyrMaxLevels;\nuniform bool usePyrSubLevels;\nconst ivec4 margin = ivec4(3, 3, 4, 4);\nconst vec4 zeroes = vec4(0.0f, 0.0f, 0.0f, 0.0f);\nconst vec4 ones = vec4(1.0f, 1.0f, 1.0f, 1.0f);\nvoid main()\n{\nvec4 pixel = threadPixel(pyramid);\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat pot = pow(2.0f, minLod);\nfloat lodJump = 1.0f - float(usePyrSubLevels) * 0.5f;\nvec2 best = vec2(0.0f, pixel.a);\ncolor = vec4(0.0f, pixel.g, 0.0f, pixel.a);\nfor(float lod = minLod; lod <= maxLod; pot = pow(2.0f, (lod += lodJump))) {\npixel = pyrPixel(pyramid, lod);\nct = pixel.g + t;\nc_t = pixel.g - t;\nvec4 p4k = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, 3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, 0)).g\n);\nmat4 mp = mat4(\np4k.x,\np4k.y,\np4k.z,\np4k.w,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, 2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, -2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, -2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, 2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 3)).g\n);\nbool A=(mp[0][0]>ct),B=(mp[1][0]>ct),C=(mp[2][0]>ct),D=(mp[3][0]>ct),E=(mp[0][1]>ct),F=(mp[1][1]>ct),G=(mp[2][1]>ct),H=(mp[3][1]>ct),I=(mp[0][2]>ct),J=(mp[1][2]>ct),K=(mp[2][2]>ct),L=(mp[3][2]>ct),M=(mp[0][3]>ct),N=(mp[1][3]>ct),O=(mp[2][3]>ct),P=(mp[3][3]>ct),a=(mp[0][0]<c_t),b=(mp[1][0]<c_t),c=(mp[2][0]<c_t),d=(mp[3][0]<c_t),e=(mp[0][1]<c_t),f=(mp[1][1]<c_t),g=(mp[2][1]<c_t),h=(mp[3][1]<c_t),i=(mp[0][2]<c_t),j=(mp[1][2]<c_t),k=(mp[2][2]<c_t),l=(mp[3][2]<c_t),m=(mp[0][3]<c_t),n=(mp[1][3]<c_t),o=(mp[2][3]<c_t),p=(mp[3][3]<c_t);\nbool isCorner=A&&(B&&(K&&L&&J&&(M&&N&&O&&P||G&&H&&I&&(M&&N&&O||F&&(M&&N||E&&(M||D))))||C&&(K&&L&&M&&(N&&O&&P||G&&H&&I&&J&&(N&&O||F&&(N||E)))||D&&(N&&(L&&M&&(K&&G&&H&&I&&J&&(O||F)||O&&P)||k&&l&&m&&e&&f&&g&&h&&i&&j)||E&&(O&&(M&&N&&(K&&L&&G&&H&&I&&J||P)||k&&l&&m&&n&&f&&g&&h&&i&&j)||F&&(P&&(N&&O||k&&l&&m&&n&&o&&g&&h&&i&&j)||G&&(O&&P||H&&(P||I)||k&&l&&m&&n&&o&&p&&h&&i&&j)||k&&l&&m&&n&&o&&h&&i&&j&&(p||g))||k&&l&&m&&n&&h&&i&&j&&(o&&(p||g)||f&&(o&&p||g)))||k&&l&&m&&h&&i&&j&&(n&&(o&&p||g&&(o||f))||e&&(n&&o&&p||g&&(n&&o||f))))||k&&l&&h&&i&&j&&(m&&(n&&o&&p||g&&(n&&o||f&&(n||e)))||d&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e)))))||k&&h&&i&&j&&(l&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d))))))||K&&I&&J&&(L&&M&&N&&O&&P||G&&H&&(L&&M&&N&&O||F&&(L&&M&&N||E&&(L&&M||D&&(L||C)))))||h&&i&&j&&(b&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c)))))||k&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c)))))))||B&&(H&&I&&J&&(K&&L&&M&&N&&O&&P&&a||G&&(K&&L&&M&&N&&O&&a||F&&(K&&L&&M&&N&&a||E&&(K&&L&&M&&a||D&&(K&&L&&a||C)))))||a&&k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||C&&(K&&H&&I&&J&&(L&&M&&N&&O&&P&&a&&b||G&&(L&&M&&N&&O&&a&&b||F&&(L&&M&&N&&a&&b||E&&(L&&M&&a&&b||D))))||a&&b&&k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d)))))||D&&(K&&L&&H&&I&&J&&(M&&N&&O&&P&&a&&b&&c||G&&(M&&N&&O&&a&&b&&c||F&&(M&&N&&a&&b&&c||E)))||a&&b&&k&&l&&m&&c&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e))))||E&&(K&&L&&M&&H&&I&&J&&(N&&O&&P&&a&&b&&c&&d||G&&(N&&O&&a&&b&&c&&d||F))||a&&b&&l&&m&&n&&c&&d&&(k&&g&&h&&i&&j&&(o||f)||o&&p))||F&&(K&&L&&M&&N&&H&&I&&J&&(O&&P&&a&&b&&c&&d&&e||G)||a&&b&&m&&n&&o&&c&&d&&e&&(k&&l&&g&&h&&i&&j||p))||G&&(K&&L&&M&&N&&O&&H&&I&&J||a&&b&&n&&o&&p&&c&&d&&e&&f)||H&&(K&&L&&M&&N&&O&&P&&I&&J||a&&b&&o&&p&&c&&d&&e&&f&&g)||a&&(b&&(k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(k&&l&&m&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e)))||d&&(l&&m&&n&&(k&&g&&h&&i&&j&&(o||f)||o&&p)||e&&(m&&n&&o&&(k&&l&&g&&h&&i&&j||p)||f&&(n&&o&&p||g&&(o&&p||h&&(p||i)))))))||k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||h&&i&&j&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c&&(b||k))))));\nmat4 mct = mp - mat4(\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct\n), mc_t = mat4(\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t\n) - mp;\nvec4 bs = max(mc_t[0], zeroes), ds = max(mct[0], zeroes);\nbs += max(mc_t[1], zeroes); ds += max(mct[1], zeroes);\nbs += max(mc_t[2], zeroes); ds += max(mct[2], zeroes);\nbs += max(mc_t[3], zeroes); ds += max(mct[3], zeroes);\nfloat score = max(dot(bs, ones), dot(ds, ones)) / 16.0f;\nscore *= float(isCorner);\nivec2 remainder = thread % int(pot);\nscore *= float(remainder.x + remainder.y == 0);\nfloat scale = encodeLod(lod, log2PyrMaxScale, pyrMaxLevels);\nbest = (score > color.r) ? vec2(score, scale) : best;\n}\ncolor.rba = best.xxy;\n}"
+module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D pyramid;\nuniform float threshold;\nuniform float minLod, maxLod;\nuniform bool usePyrSubLevels;\nconst ivec4 margin = ivec4(3, 3, 4, 4);\nconst vec4 zeroes = vec4(0.0f, 0.0f, 0.0f, 0.0f);\nconst vec4 ones = vec4(1.0f, 1.0f, 1.0f, 1.0f);\nvoid main()\n{\nvec4 pixel = threadPixel(pyramid);\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat pot = exp2(minLod);\nfloat lodJump = 1.0f - float(usePyrSubLevels) * 0.5f;\nvec2 best = vec2(0.0f, pixel.a);\ncolor = vec4(0.0f, pixel.g, 0.0f, pixel.a);\nfor(float lod = minLod; lod <= maxLod; pot = exp2(lod += lodJump)) {\npixel = pyrPixel(pyramid, lod);\nct = pixel.g + t;\nc_t = pixel.g - t;\nvec4 p4k = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, 3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, 0)).g\n);\nmat4 mp = mat4(\np4k.x,\np4k.y,\np4k.z,\np4k.w,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, 2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, -2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, -2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, 2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 3)).g\n);\nbool A=(mp[0][0]>ct),B=(mp[1][0]>ct),C=(mp[2][0]>ct),D=(mp[3][0]>ct),E=(mp[0][1]>ct),F=(mp[1][1]>ct),G=(mp[2][1]>ct),H=(mp[3][1]>ct),I=(mp[0][2]>ct),J=(mp[1][2]>ct),K=(mp[2][2]>ct),L=(mp[3][2]>ct),M=(mp[0][3]>ct),N=(mp[1][3]>ct),O=(mp[2][3]>ct),P=(mp[3][3]>ct),a=(mp[0][0]<c_t),b=(mp[1][0]<c_t),c=(mp[2][0]<c_t),d=(mp[3][0]<c_t),e=(mp[0][1]<c_t),f=(mp[1][1]<c_t),g=(mp[2][1]<c_t),h=(mp[3][1]<c_t),i=(mp[0][2]<c_t),j=(mp[1][2]<c_t),k=(mp[2][2]<c_t),l=(mp[3][2]<c_t),m=(mp[0][3]<c_t),n=(mp[1][3]<c_t),o=(mp[2][3]<c_t),p=(mp[3][3]<c_t);\nbool isCorner=A&&(B&&(K&&L&&J&&(M&&N&&O&&P||G&&H&&I&&(M&&N&&O||F&&(M&&N||E&&(M||D))))||C&&(K&&L&&M&&(N&&O&&P||G&&H&&I&&J&&(N&&O||F&&(N||E)))||D&&(N&&(L&&M&&(K&&G&&H&&I&&J&&(O||F)||O&&P)||k&&l&&m&&e&&f&&g&&h&&i&&j)||E&&(O&&(M&&N&&(K&&L&&G&&H&&I&&J||P)||k&&l&&m&&n&&f&&g&&h&&i&&j)||F&&(P&&(N&&O||k&&l&&m&&n&&o&&g&&h&&i&&j)||G&&(O&&P||H&&(P||I)||k&&l&&m&&n&&o&&p&&h&&i&&j)||k&&l&&m&&n&&o&&h&&i&&j&&(p||g))||k&&l&&m&&n&&h&&i&&j&&(o&&(p||g)||f&&(o&&p||g)))||k&&l&&m&&h&&i&&j&&(n&&(o&&p||g&&(o||f))||e&&(n&&o&&p||g&&(n&&o||f))))||k&&l&&h&&i&&j&&(m&&(n&&o&&p||g&&(n&&o||f&&(n||e)))||d&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e)))))||k&&h&&i&&j&&(l&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d))))))||K&&I&&J&&(L&&M&&N&&O&&P||G&&H&&(L&&M&&N&&O||F&&(L&&M&&N||E&&(L&&M||D&&(L||C)))))||h&&i&&j&&(b&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c)))))||k&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c)))))))||B&&(H&&I&&J&&(K&&L&&M&&N&&O&&P&&a||G&&(K&&L&&M&&N&&O&&a||F&&(K&&L&&M&&N&&a||E&&(K&&L&&M&&a||D&&(K&&L&&a||C)))))||a&&k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||C&&(K&&H&&I&&J&&(L&&M&&N&&O&&P&&a&&b||G&&(L&&M&&N&&O&&a&&b||F&&(L&&M&&N&&a&&b||E&&(L&&M&&a&&b||D))))||a&&b&&k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d)))))||D&&(K&&L&&H&&I&&J&&(M&&N&&O&&P&&a&&b&&c||G&&(M&&N&&O&&a&&b&&c||F&&(M&&N&&a&&b&&c||E)))||a&&b&&k&&l&&m&&c&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e))))||E&&(K&&L&&M&&H&&I&&J&&(N&&O&&P&&a&&b&&c&&d||G&&(N&&O&&a&&b&&c&&d||F))||a&&b&&l&&m&&n&&c&&d&&(k&&g&&h&&i&&j&&(o||f)||o&&p))||F&&(K&&L&&M&&N&&H&&I&&J&&(O&&P&&a&&b&&c&&d&&e||G)||a&&b&&m&&n&&o&&c&&d&&e&&(k&&l&&g&&h&&i&&j||p))||G&&(K&&L&&M&&N&&O&&H&&I&&J||a&&b&&n&&o&&p&&c&&d&&e&&f)||H&&(K&&L&&M&&N&&O&&P&&I&&J||a&&b&&o&&p&&c&&d&&e&&f&&g)||a&&(b&&(k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(k&&l&&m&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e)))||d&&(l&&m&&n&&(k&&g&&h&&i&&j&&(o||f)||o&&p)||e&&(m&&n&&o&&(k&&l&&g&&h&&i&&j||p)||f&&(n&&o&&p||g&&(o&&p||h&&(p||i)))))))||k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||h&&i&&j&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c&&(b||k))))));\nmat4 mct = mp - mat4(\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct\n), mc_t = mat4(\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t\n) - mp;\nvec4 bs = max(mc_t[0], zeroes), ds = max(mct[0], zeroes);\nbs += max(mc_t[1], zeroes); ds += max(mct[1], zeroes);\nbs += max(mc_t[2], zeroes); ds += max(mct[2], zeroes);\nbs += max(mc_t[3], zeroes); ds += max(mct[3], zeroes);\nfloat score = max(dot(bs, ones), dot(ds, ones)) / 16.0f;\nscore *= float(isCorner);\nivec2 remainder = thread % int(pot);\nscore *= float(remainder.x + remainder.y == 0);\nfloat scale = encodeLod(lod);\nbest = (score > best.x) ? vec2(score, scale) : best;\n}\ncolor.rba = best.xxy;\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/harris-cutoff.glsl":
+/*!******************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/harris-cutoff.glsl ***!
+  \******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D corners;\nuniform sampler2D maxScore;\nuniform float quality;\nvoid main()\n{\nvec4 pixel = threadPixel(corners);\nfloat threshold = threadPixel(maxScore).r * clamp(quality, 0.0f, 1.0f);\nfloat score = step(threshold, pixel.r) * pixel.r;\ncolor = vec4(score, pixel.gba);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/multiscale-harris.glsl":
+/*!**********************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/multiscale-harris.glsl ***!
+  \**********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"sobel.glsl\"\n@include \"pyramids.glsl\"\nuniform sampler2D pyramid;\nuniform int windowRadius;\nuniform float minLod, maxLod;\nuniform bool usePyrSubLevels;\nuniform sampler2D sobelDerivatives[7];\nvec4 pickSobelDerivatives(int index, ivec2 offset)\n{\nswitch(index) {\ncase 0:  return textureLod(sobelDerivatives[0], texCoord + vec2(offset) / texSize, 0.0f);\ncase 1:  return textureLod(sobelDerivatives[1], texCoord + vec2(offset) / texSize, 0.0f);\ncase 2:  return textureLod(sobelDerivatives[2], texCoord + vec2(offset) / texSize, 0.0f);\ncase 3:  return textureLod(sobelDerivatives[3], texCoord + vec2(offset) / texSize, 0.0f);\ncase 4:  return textureLod(sobelDerivatives[4], texCoord + vec2(offset) / texSize, 0.0f);\ncase 5:  return textureLod(sobelDerivatives[5], texCoord + vec2(offset) / texSize, 0.0f);\ncase 6:  return textureLod(sobelDerivatives[6], texCoord + vec2(offset) / texSize, 0.0f);\ndefault: return textureLod(sobelDerivatives[0], texCoord + vec2(offset) / texSize, 0.0f);\n}\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(pyramid);\nvec2 best = vec2(0.0f, pixel.a);\nhighp float lodJump = 1.0f - float(usePyrSubLevels) * 0.5f;\nfor(highp float lod = maxLod; lod >= minLod; lod -= lodJump) {\nint sobelIndex = int(lod / lodJump);\nvec3 m = vec3(0.0f, 0.0f, 0.0f);\nfor(int j = -windowRadius; j <= windowRadius; j++) {\nfor(int i = -windowRadius; i <= windowRadius; i++) {\nvec2 df = decodeSobel(pickSobelDerivatives(sobelIndex, ivec2(i, j)));\nm += vec3(df.x * df.x, df.x * df.y, df.y * df.y);\n}\n}\nfloat response = 0.5f * (m.x + m.z - sqrt((m.x - m.z) * (m.x - m.z) + 4.0f * m.y * m.y));\nfloat score = max(0.0f, response / 4.0f);\nfloat scale = encodeLod(lod);\nbest = (score > best.x) ? vec2(score, scale) : best;\n}\ncolor.rba = best.xxy;\n}"
 
 /***/ }),
 
@@ -4140,7 +4633,18 @@ module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D pyramid;\nunifor
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"math.glsl\"\n@include \"pyramids.glsl\"\nuniform sampler2D corners;\nuniform int patchRadius;\nuniform sampler2D pyramid;\nuniform float log2PyrMaxScale, pyrMaxLevels;\nvoid main()\n{\nvec4 pixel = threadPixel(corners);\nfloat angle = 0.5f;\ncolor = vec4(pixel.rg, angle, pixel.a);\nif(pixel.r == 0.0f)\nreturn;\nfloat lod = decodeLod(pixel.a, log2PyrMaxScale, pyrMaxLevels);\nfloat pot = pow(2.0f, lod);\nvec2 m = vec2(0.0f, 0.0f);\nif(patchRadius >= 1) {\nmat4 p;\np[0] = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 1)).g\n);\np[1] = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, -1)).g\n);\nm += vec2(0.0f, -p[0][0]);\nm += vec2(p[0][1], -p[0][1]);\nm += vec2(p[0][2], 0.0f);\nm += vec2(p[0][3], p[0][3]);\nm += vec2(0.0f, p[1][0]);\nm += vec2(-p[1][1], p[1][1]);\nm += vec2(-p[1][2], 0.0f);\nm += vec2(-p[1][3], -p[1][3]);\nif(patchRadius >= 2) {\np[0] = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, -2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, -2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, 0)).g\n);\np[1] = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, 2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 2)).g\n);\np[2] = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, -2)).g\n);\nm += vec2(0.0f, -2.0f * p[0][0]);\nm += vec2(p[0][1], -2.0f * p[0][1]);\nm += vec2(2.0f * p[0][2], -p[0][2]);\nm += vec2(2.0f * p[0][3], 0.0f);\nm += vec2(2.0f * p[1][0], p[1][0]);\nm += vec2(p[1][1], 2.0f * p[1][1]);\nm += vec2(0.0f, 2.0f * p[1][2]);\nm += vec2(-p[1][3], 2.0f * p[1][3]);\nm += vec2(-2.0f * p[2][0], p[2][0]);\nm += vec2(-2.0f * p[2][1], 0.0f);\nm += vec2(-2.0f * p[2][2], -p[2][2]);\nm += vec2(-p[2][3], -2.0f * p[2][3]);\nif(patchRadius >= 3) {\np[0] = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, -2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, -1)).g\n);\np[1] = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, 2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 3)).g\n);\np[2] = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, 3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, 2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, 1)).g\n);\np[3] = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, -2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, -3)).g\n);\nm += vec2(0.0f, -3.0f * p[0][0]);\nm += vec2(p[0][1], -3.0f * p[0][1]);\nm += vec2(2.0f * p[0][2], -2.0f * p[0][2]);\nm += vec2(3.0f * p[0][3], -p[0][3]);\nm += vec2(3.0f * p[1][0], 0.0f);\nm += vec2(3.0f * p[1][1], p[1][1]);\nm += vec2(2.0f * p[1][2], 2.0f * p[1][2]);\nm += vec2(p[1][3], 3.0f * p[1][3]);\nm += vec2(0.0f, 3.0f * p[2][0]);\nm += vec2(-p[2][1], 3.0f * p[2][1]);\nm += vec2(-2.0f * p[2][2], 2.0f * p[2][2]);\nm += vec2(-3.0f * p[2][3], p[2][3]);\nm += vec2(-3.0f * p[3][0], 0.0f);\nm += vec2(-3.0f * p[3][1], -p[3][1]);\nm += vec2(-2.0f * p[3][2], -2.0f * p[3][2]);\nm += vec2(-p[3][3], -3.0f * p[3][3]);\n}\n}\nangle = (fastAtan2(m.y, m.x) + PI) / TWO_PI;\n}\ncolor.b = angle;\n}"
+module.exports = "@include \"math.glsl\"\n@include \"pyramids.glsl\"\nuniform sampler2D corners;\nuniform int patchRadius;\nuniform sampler2D pyramid;\nvoid main()\n{\nvec4 pixel = threadPixel(corners);\nfloat angle = 0.5f;\ncolor = vec4(pixel.rg, angle, pixel.a);\nif(pixel.r == 0.0f)\nreturn;\nfloat lod = decodeLod(pixel.a);\nfloat pot = exp2(lod);\nvec2 m = vec2(0.0f, 0.0f);\nif(patchRadius >= 1) {\nmat4 p;\np[0] = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 1)).g\n);\np[1] = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, -1)).g\n);\nm += vec2(0.0f, -p[0][0]);\nm += vec2(p[0][1], -p[0][1]);\nm += vec2(p[0][2], 0.0f);\nm += vec2(p[0][3], p[0][3]);\nm += vec2(0.0f, p[1][0]);\nm += vec2(-p[1][1], p[1][1]);\nm += vec2(-p[1][2], 0.0f);\nm += vec2(-p[1][3], -p[1][3]);\nif(patchRadius >= 2) {\np[0] = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, -2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, -2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, 0)).g\n);\np[1] = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, 2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 2)).g\n);\np[2] = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, -2)).g\n);\nm += vec2(0.0f, -2.0f * p[0][0]);\nm += vec2(p[0][1], -2.0f * p[0][1]);\nm += vec2(2.0f * p[0][2], -p[0][2]);\nm += vec2(2.0f * p[0][3], 0.0f);\nm += vec2(2.0f * p[1][0], p[1][0]);\nm += vec2(p[1][1], 2.0f * p[1][1]);\nm += vec2(0.0f, 2.0f * p[1][2]);\nm += vec2(-p[1][3], 2.0f * p[1][3]);\nm += vec2(-2.0f * p[2][0], p[2][0]);\nm += vec2(-2.0f * p[2][1], 0.0f);\nm += vec2(-2.0f * p[2][2], -p[2][2]);\nm += vec2(-p[2][3], -2.0f * p[2][3]);\nif(patchRadius >= 3) {\np[0] = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, -2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, -1)).g\n);\np[1] = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, 2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 3)).g\n);\np[2] = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, 3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, 2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, 1)).g\n);\np[3] = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, -2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, -3)).g\n);\nm += vec2(0.0f, -3.0f * p[0][0]);\nm += vec2(p[0][1], -3.0f * p[0][1]);\nm += vec2(2.0f * p[0][2], -2.0f * p[0][2]);\nm += vec2(3.0f * p[0][3], -p[0][3]);\nm += vec2(3.0f * p[1][0], 0.0f);\nm += vec2(3.0f * p[1][1], p[1][1]);\nm += vec2(2.0f * p[1][2], 2.0f * p[1][2]);\nm += vec2(p[1][3], 3.0f * p[1][3]);\nm += vec2(0.0f, 3.0f * p[2][0]);\nm += vec2(-p[2][1], 3.0f * p[2][1]);\nm += vec2(-2.0f * p[2][2], 2.0f * p[2][2]);\nm += vec2(-3.0f * p[2][3], p[2][3]);\nm += vec2(-3.0f * p[3][0], 0.0f);\nm += vec2(-3.0f * p[3][1], -p[3][1]);\nm += vec2(-2.0f * p[3][2], -2.0f * p[3][2]);\nm += vec2(-p[3][3], -3.0f * p[3][3]);\n}\n}\nangle = (fastAtan2(m.y, m.x) + PI) / TWO_PI;\n}\ncolor.b = angle;\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/multiscale-sobel.glsl":
+/*!*********************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/multiscale-sobel.glsl ***!
+  \*********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"sobel.glsl\"\n@include \"pyramids.glsl\"\nuniform sampler2D pyramid;\nuniform float lod;\nconst mat3 horizontalKernel = mat3(\n-1.0f, 0.0f, 1.0f,\n-2.0f, 0.0f, 2.0f,\n-1.0f, 0.0f, 1.0f\n);\nconst mat3 verticalKernel = mat3(\n1.0f, 2.0f, 1.0f,\n0.0f, 0.0f, 0.0f,\n-1.0f,-2.0f,-1.0f\n);\nconst vec3 ones = vec3(1.0f, 1.0f, 1.0f);\nvoid main()\n{\nfloat pot = exp2(lod);\nmat3 neighbors = mat3(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 1)).g\n);\nmat3 sobelX = matrixCompMult(horizontalKernel, neighbors);\nmat3 sobelY = matrixCompMult(verticalKernel, neighbors);\nvec2 df = vec2(\ndot(sobelX[0] + sobelX[1] + sobelX[2], ones),\ndot(sobelY[0] + sobelY[1] + sobelY[2], ones)\n);\ncolor = encodeSobel(df);\n}"
 
 /***/ }),
 
@@ -4151,7 +4655,18 @@ module.exports = "@include \"math.glsl\"\n@include \"pyramids.glsl\"\nuniform sa
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\nuniform float log2PyrMaxScale, pyrMaxLevels;\nuniform bool usePyrSubLevels;\nconst float scaleEps = 1e-5;\n#define ENABLE_INNER_RING\n#define ENABLE_MIDDLE_RING\n#define ENABLE_OUTER_RING\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat lod = decodeLod(pixel.a, log2PyrMaxScale, pyrMaxLevels);\nfloat lodJump = 1.0f;\ncolor = pixel;\nif(pixel.r == 0.0f)\nreturn;\n#ifdef ENABLE_INNER_RING\nvec4 p0 = pixelAtOffset(image, ivec2(0, 1));\nvec4 p1 = pixelAtOffset(image, ivec2(1, 1));\nvec4 p2 = pixelAtOffset(image, ivec2(1, 0));\nvec4 p3 = pixelAtOffset(image, ivec2(1, -1));\nvec4 p4 = pixelAtOffset(image, ivec2(0, -1));\nvec4 p5 = pixelAtOffset(image, ivec2(-1, -1));\nvec4 p6 = pixelAtOffset(image, ivec2(-1, 0));\nvec4 p7 = pixelAtOffset(image, ivec2(-1, 1));\n#else\nvec4 p0, p1, p2, p3, p4, p5, p6, p7;\np0 = p1 = p2 = p3 = p4 = p5 = p6 = p7 = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n#endif\n#ifdef ENABLE_MIDDLE_RING\nvec4 q0 = pixelAtOffset(image, ivec2(0, 2));\nvec4 q1 = pixelAtOffset(image, ivec2(1, 2));\nvec4 q2 = pixelAtOffset(image, ivec2(2, 2));\nvec4 q3 = pixelAtOffset(image, ivec2(2, 1));\nvec4 q4 = pixelAtOffset(image, ivec2(2, 0));\nvec4 q5 = pixelAtOffset(image, ivec2(2, -1));\nvec4 q6 = pixelAtOffset(image, ivec2(2, -2));\nvec4 q7 = pixelAtOffset(image, ivec2(1, -2));\nvec4 q8 = pixelAtOffset(image, ivec2(0, -2));\nvec4 q9 = pixelAtOffset(image, ivec2(-1, -2));\nvec4 q10 = pixelAtOffset(image, ivec2(-2, -2));\nvec4 q11 = pixelAtOffset(image, ivec2(-2, -1));\nvec4 q12 = pixelAtOffset(image, ivec2(-2, 0));\nvec4 q13 = pixelAtOffset(image, ivec2(-2, 1));\nvec4 q14 = pixelAtOffset(image, ivec2(-2, 2));\nvec4 q15 = pixelAtOffset(image, ivec2(-1, 2));\n#else\nvec4 q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15;\nq0 = q1 = q2 = q3 = q4 = q5 = q6 = q7 = q8 = q9 = q10 =\nq11 = q12 = q13 = q14 = q15= vec4(0.0f, 0.0f, 0.0f, 1.0f);\n#endif\n#ifdef ENABLE_OUTER_RING\nvec4 r0 = pixelAtOffset(image, ivec2(0, 3));\nvec4 r1 = pixelAtOffset(image, ivec2(1, 3));\nvec4 r2 = pixelAtOffset(image, ivec2(3, 1));\nvec4 r3 = pixelAtOffset(image, ivec2(3, 0));\nvec4 r4 = pixelAtOffset(image, ivec2(3, -1));\nvec4 r5 = pixelAtOffset(image, ivec2(1, -3));\nvec4 r6 = pixelAtOffset(image, ivec2(0, -3));\nvec4 r7 = pixelAtOffset(image, ivec2(-1, -3));\nvec4 r8 = pixelAtOffset(image, ivec2(-3, -1));\nvec4 r9 = pixelAtOffset(image, ivec2(-3, 0));\nvec4 r10 = pixelAtOffset(image, ivec2(-3, 1));\nvec4 r11 = pixelAtOffset(image, ivec2(-1, 3));\nvec4 r12 = pixelAtOffset(image, ivec2(0, 4));\nvec4 r13 = pixelAtOffset(image, ivec2(4, 0));\nvec4 r14 = pixelAtOffset(image, ivec2(0, -4));\nvec4 r15 = pixelAtOffset(image, ivec2(-4, 0));\n#else\nvec4 r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15;\nr0 = r1 = r2 = r3 = r4 = r5 = r6 = r7 = r8 = r9 = r10 =\nr11 = r12 = r13 = r14 = r15 = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n#endif\nfloat lodPlus = min(lod + lodJump, pyrMaxLevels - 1.0f);\nfloat lodMinus = max(lod - lodJump, 0.0f);\nfloat alphaPlus = encodeLod(lodPlus, log2PyrMaxScale, pyrMaxLevels);\nfloat alphaMinus = encodeLod(lodMinus, log2PyrMaxScale, pyrMaxLevels);\nmat3 innerScore = mat3(\np0.r * float(abs(p0.a - alphaPlus) < scaleEps || abs(p0.a - alphaMinus) < scaleEps),\np1.r * float(abs(p1.a - alphaPlus) < scaleEps || abs(p1.a - alphaMinus) < scaleEps),\np2.r * float(abs(p2.a - alphaPlus) < scaleEps || abs(p2.a - alphaMinus) < scaleEps),\np3.r * float(abs(p3.a - alphaPlus) < scaleEps || abs(p3.a - alphaMinus) < scaleEps),\np4.r * float(abs(p4.a - alphaPlus) < scaleEps || abs(p4.a - alphaMinus) < scaleEps),\np5.r * float(abs(p5.a - alphaPlus) < scaleEps || abs(p5.a - alphaMinus) < scaleEps),\np6.r * float(abs(p6.a - alphaPlus) < scaleEps || abs(p6.a - alphaMinus) < scaleEps),\np7.r * float(abs(p7.a - alphaPlus) < scaleEps || abs(p7.a - alphaMinus) < scaleEps),\n0.0f\n);\nmat4 middleScore = mat4(\nq0.r * float(abs(q0.a - alphaPlus) < scaleEps || abs(q0.a - alphaMinus) < scaleEps),\nq1.r * float(abs(q1.a - alphaPlus) < scaleEps || abs(q1.a - alphaMinus) < scaleEps),\nq2.r * float(abs(q2.a - alphaPlus) < scaleEps || abs(q2.a - alphaMinus) < scaleEps),\nq3.r * float(abs(q3.a - alphaPlus) < scaleEps || abs(q3.a - alphaMinus) < scaleEps),\nq4.r * float(abs(q4.a - alphaPlus) < scaleEps || abs(q4.a - alphaMinus) < scaleEps),\nq5.r * float(abs(q5.a - alphaPlus) < scaleEps || abs(q5.a - alphaMinus) < scaleEps),\nq6.r * float(abs(q6.a - alphaPlus) < scaleEps || abs(q6.a - alphaMinus) < scaleEps),\nq7.r * float(abs(q7.a - alphaPlus) < scaleEps || abs(q7.a - alphaMinus) < scaleEps),\nq8.r * float(abs(q8.a - alphaPlus) < scaleEps || abs(q8.a - alphaMinus) < scaleEps),\nq9.r * float(abs(q9.a - alphaPlus) < scaleEps || abs(q9.a - alphaMinus) < scaleEps),\nq10.r * float(abs(q10.a - alphaPlus) < scaleEps || abs(q10.a - alphaMinus) < scaleEps),\nq11.r * float(abs(q11.a - alphaPlus) < scaleEps || abs(q11.a - alphaMinus) < scaleEps),\nq12.r * float(abs(q12.a - alphaPlus) < scaleEps || abs(q12.a - alphaMinus) < scaleEps),\nq13.r * float(abs(q13.a - alphaPlus) < scaleEps || abs(q13.a - alphaMinus) < scaleEps),\nq14.r * float(abs(q14.a - alphaPlus) < scaleEps || abs(q14.a - alphaMinus) < scaleEps),\nq15.r * float(abs(q15.a - alphaPlus) < scaleEps || abs(q15.a - alphaMinus) < scaleEps)\n);\nmat4 outerScore = mat4(\nr0.r * float(abs(r0.a - alphaPlus) < scaleEps || abs(r0.a - alphaMinus) < scaleEps),\nr1.r * float(abs(r1.a - alphaPlus) < scaleEps || abs(r1.a - alphaMinus) < scaleEps),\nr2.r * float(abs(r2.a - alphaPlus) < scaleEps || abs(r2.a - alphaMinus) < scaleEps),\nr3.r * float(abs(r3.a - alphaPlus) < scaleEps || abs(r3.a - alphaMinus) < scaleEps),\nr4.r * float(abs(r4.a - alphaPlus) < scaleEps || abs(r4.a - alphaMinus) < scaleEps),\nr5.r * float(abs(r5.a - alphaPlus) < scaleEps || abs(r5.a - alphaMinus) < scaleEps),\nr6.r * float(abs(r6.a - alphaPlus) < scaleEps || abs(r6.a - alphaMinus) < scaleEps),\nr7.r * float(abs(r7.a - alphaPlus) < scaleEps || abs(r7.a - alphaMinus) < scaleEps),\nr8.r * float(abs(r8.a - alphaPlus) < scaleEps || abs(r8.a - alphaMinus) < scaleEps),\nr9.r * float(abs(r9.a - alphaPlus) < scaleEps || abs(r9.a - alphaMinus) < scaleEps),\nr10.r * float(abs(r10.a - alphaPlus) < scaleEps || abs(r10.a - alphaMinus) < scaleEps),\nr11.r * float(abs(r11.a - alphaPlus) < scaleEps || abs(r11.a - alphaMinus) < scaleEps),\nr12.r * float(abs(r12.a - alphaPlus) < scaleEps || abs(r12.a - alphaMinus) < scaleEps),\nr13.r * float(abs(r13.a - alphaPlus) < scaleEps || abs(r13.a - alphaMinus) < scaleEps),\nr14.r * float(abs(r14.a - alphaPlus) < scaleEps || abs(r14.a - alphaMinus) < scaleEps),\nr15.r * float(abs(r15.a - alphaPlus) < scaleEps || abs(r15.a - alphaMinus) < scaleEps)\n);\nvec3 maxInnerScore3 = max(innerScore[0], max(innerScore[1], innerScore[2]));\nvec4 maxMiddleScore4 = max(max(middleScore[0], middleScore[1]), max(middleScore[2], middleScore[3]));\nvec4 maxOuterScore4 = max(max(outerScore[0], outerScore[1]), max(outerScore[2], outerScore[3]));\nfloat maxInnerScore = max(maxInnerScore3.x, max(maxInnerScore3.y, maxInnerScore3.z));\nfloat maxMiddleScore = max(max(maxMiddleScore4.x, maxMiddleScore4.y), max(maxMiddleScore4.z, maxMiddleScore4.w));\nfloat maxOuterScore = max(max(maxOuterScore4.x, maxOuterScore4.y), max(maxOuterScore4.z, maxOuterScore4.w));\nfloat maxScore = max(maxInnerScore, max(maxMiddleScore, maxOuterScore));\nfloat myScore = step(maxScore, pixel.r) * pixel.r;\ncolor = vec4(myScore, pixel.gba);\n}"
+module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\nuniform bool usePyrSubLevels;\nconst float scaleEps = 1e-5;\n#define ENABLE_INNER_RING\n#define ENABLE_MIDDLE_RING\n#define ENABLE_OUTER_RING\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat lod = decodeLod(pixel.a);\nfloat lodJump = 1.0f;\ncolor = pixel;\nif(pixel.r == 0.0f)\nreturn;\n#ifdef ENABLE_INNER_RING\nvec4 p0 = pixelAtOffset(image, ivec2(0, 1));\nvec4 p1 = pixelAtOffset(image, ivec2(1, 1));\nvec4 p2 = pixelAtOffset(image, ivec2(1, 0));\nvec4 p3 = pixelAtOffset(image, ivec2(1, -1));\nvec4 p4 = pixelAtOffset(image, ivec2(0, -1));\nvec4 p5 = pixelAtOffset(image, ivec2(-1, -1));\nvec4 p6 = pixelAtOffset(image, ivec2(-1, 0));\nvec4 p7 = pixelAtOffset(image, ivec2(-1, 1));\n#else\nvec4 p0, p1, p2, p3, p4, p5, p6, p7;\np0 = p1 = p2 = p3 = p4 = p5 = p6 = p7 = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n#endif\n#ifdef ENABLE_MIDDLE_RING\nvec4 q0 = pixelAtOffset(image, ivec2(0, 2));\nvec4 q1 = pixelAtOffset(image, ivec2(1, 2));\nvec4 q2 = pixelAtOffset(image, ivec2(2, 2));\nvec4 q3 = pixelAtOffset(image, ivec2(2, 1));\nvec4 q4 = pixelAtOffset(image, ivec2(2, 0));\nvec4 q5 = pixelAtOffset(image, ivec2(2, -1));\nvec4 q6 = pixelAtOffset(image, ivec2(2, -2));\nvec4 q7 = pixelAtOffset(image, ivec2(1, -2));\nvec4 q8 = pixelAtOffset(image, ivec2(0, -2));\nvec4 q9 = pixelAtOffset(image, ivec2(-1, -2));\nvec4 q10 = pixelAtOffset(image, ivec2(-2, -2));\nvec4 q11 = pixelAtOffset(image, ivec2(-2, -1));\nvec4 q12 = pixelAtOffset(image, ivec2(-2, 0));\nvec4 q13 = pixelAtOffset(image, ivec2(-2, 1));\nvec4 q14 = pixelAtOffset(image, ivec2(-2, 2));\nvec4 q15 = pixelAtOffset(image, ivec2(-1, 2));\n#else\nvec4 q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15;\nq0 = q1 = q2 = q3 = q4 = q5 = q6 = q7 = q8 = q9 = q10 =\nq11 = q12 = q13 = q14 = q15= vec4(0.0f, 0.0f, 0.0f, 1.0f);\n#endif\n#ifdef ENABLE_OUTER_RING\nvec4 r0 = pixelAtOffset(image, ivec2(0, 3));\nvec4 r1 = pixelAtOffset(image, ivec2(1, 3));\nvec4 r2 = pixelAtOffset(image, ivec2(3, 1));\nvec4 r3 = pixelAtOffset(image, ivec2(3, 0));\nvec4 r4 = pixelAtOffset(image, ivec2(3, -1));\nvec4 r5 = pixelAtOffset(image, ivec2(1, -3));\nvec4 r6 = pixelAtOffset(image, ivec2(0, -3));\nvec4 r7 = pixelAtOffset(image, ivec2(-1, -3));\nvec4 r8 = pixelAtOffset(image, ivec2(-3, -1));\nvec4 r9 = pixelAtOffset(image, ivec2(-3, 0));\nvec4 r10 = pixelAtOffset(image, ivec2(-3, 1));\nvec4 r11 = pixelAtOffset(image, ivec2(-1, 3));\nvec4 r12 = pixelAtOffset(image, ivec2(0, 4));\nvec4 r13 = pixelAtOffset(image, ivec2(4, 0));\nvec4 r14 = pixelAtOffset(image, ivec2(0, -4));\nvec4 r15 = pixelAtOffset(image, ivec2(-4, 0));\n#else\nvec4 r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15;\nr0 = r1 = r2 = r3 = r4 = r5 = r6 = r7 = r8 = r9 = r10 =\nr11 = r12 = r13 = r14 = r15 = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n#endif\nfloat lodPlus = min(lod + lodJump, PYRAMID_MAX_LEVELS - 1.0f);\nfloat lodMinus = max(lod - lodJump, 0.0f);\nfloat alphaPlus = encodeLod(lodPlus);\nfloat alphaMinus = encodeLod(lodMinus);\nmat3 innerScore = mat3(\np0.r * float(abs(p0.a - alphaPlus) < scaleEps || abs(p0.a - alphaMinus) < scaleEps),\np1.r * float(abs(p1.a - alphaPlus) < scaleEps || abs(p1.a - alphaMinus) < scaleEps),\np2.r * float(abs(p2.a - alphaPlus) < scaleEps || abs(p2.a - alphaMinus) < scaleEps),\np3.r * float(abs(p3.a - alphaPlus) < scaleEps || abs(p3.a - alphaMinus) < scaleEps),\np4.r * float(abs(p4.a - alphaPlus) < scaleEps || abs(p4.a - alphaMinus) < scaleEps),\np5.r * float(abs(p5.a - alphaPlus) < scaleEps || abs(p5.a - alphaMinus) < scaleEps),\np6.r * float(abs(p6.a - alphaPlus) < scaleEps || abs(p6.a - alphaMinus) < scaleEps),\np7.r * float(abs(p7.a - alphaPlus) < scaleEps || abs(p7.a - alphaMinus) < scaleEps),\n0.0f\n);\nmat4 middleScore = mat4(\nq0.r * float(abs(q0.a - alphaPlus) < scaleEps || abs(q0.a - alphaMinus) < scaleEps),\nq1.r * float(abs(q1.a - alphaPlus) < scaleEps || abs(q1.a - alphaMinus) < scaleEps),\nq2.r * float(abs(q2.a - alphaPlus) < scaleEps || abs(q2.a - alphaMinus) < scaleEps),\nq3.r * float(abs(q3.a - alphaPlus) < scaleEps || abs(q3.a - alphaMinus) < scaleEps),\nq4.r * float(abs(q4.a - alphaPlus) < scaleEps || abs(q4.a - alphaMinus) < scaleEps),\nq5.r * float(abs(q5.a - alphaPlus) < scaleEps || abs(q5.a - alphaMinus) < scaleEps),\nq6.r * float(abs(q6.a - alphaPlus) < scaleEps || abs(q6.a - alphaMinus) < scaleEps),\nq7.r * float(abs(q7.a - alphaPlus) < scaleEps || abs(q7.a - alphaMinus) < scaleEps),\nq8.r * float(abs(q8.a - alphaPlus) < scaleEps || abs(q8.a - alphaMinus) < scaleEps),\nq9.r * float(abs(q9.a - alphaPlus) < scaleEps || abs(q9.a - alphaMinus) < scaleEps),\nq10.r * float(abs(q10.a - alphaPlus) < scaleEps || abs(q10.a - alphaMinus) < scaleEps),\nq11.r * float(abs(q11.a - alphaPlus) < scaleEps || abs(q11.a - alphaMinus) < scaleEps),\nq12.r * float(abs(q12.a - alphaPlus) < scaleEps || abs(q12.a - alphaMinus) < scaleEps),\nq13.r * float(abs(q13.a - alphaPlus) < scaleEps || abs(q13.a - alphaMinus) < scaleEps),\nq14.r * float(abs(q14.a - alphaPlus) < scaleEps || abs(q14.a - alphaMinus) < scaleEps),\nq15.r * float(abs(q15.a - alphaPlus) < scaleEps || abs(q15.a - alphaMinus) < scaleEps)\n);\nmat4 outerScore = mat4(\nr0.r * float(abs(r0.a - alphaPlus) < scaleEps || abs(r0.a - alphaMinus) < scaleEps),\nr1.r * float(abs(r1.a - alphaPlus) < scaleEps || abs(r1.a - alphaMinus) < scaleEps),\nr2.r * float(abs(r2.a - alphaPlus) < scaleEps || abs(r2.a - alphaMinus) < scaleEps),\nr3.r * float(abs(r3.a - alphaPlus) < scaleEps || abs(r3.a - alphaMinus) < scaleEps),\nr4.r * float(abs(r4.a - alphaPlus) < scaleEps || abs(r4.a - alphaMinus) < scaleEps),\nr5.r * float(abs(r5.a - alphaPlus) < scaleEps || abs(r5.a - alphaMinus) < scaleEps),\nr6.r * float(abs(r6.a - alphaPlus) < scaleEps || abs(r6.a - alphaMinus) < scaleEps),\nr7.r * float(abs(r7.a - alphaPlus) < scaleEps || abs(r7.a - alphaMinus) < scaleEps),\nr8.r * float(abs(r8.a - alphaPlus) < scaleEps || abs(r8.a - alphaMinus) < scaleEps),\nr9.r * float(abs(r9.a - alphaPlus) < scaleEps || abs(r9.a - alphaMinus) < scaleEps),\nr10.r * float(abs(r10.a - alphaPlus) < scaleEps || abs(r10.a - alphaMinus) < scaleEps),\nr11.r * float(abs(r11.a - alphaPlus) < scaleEps || abs(r11.a - alphaMinus) < scaleEps),\nr12.r * float(abs(r12.a - alphaPlus) < scaleEps || abs(r12.a - alphaMinus) < scaleEps),\nr13.r * float(abs(r13.a - alphaPlus) < scaleEps || abs(r13.a - alphaMinus) < scaleEps),\nr14.r * float(abs(r14.a - alphaPlus) < scaleEps || abs(r14.a - alphaMinus) < scaleEps),\nr15.r * float(abs(r15.a - alphaPlus) < scaleEps || abs(r15.a - alphaMinus) < scaleEps)\n);\nvec3 maxInnerScore3 = max(innerScore[0], max(innerScore[1], innerScore[2]));\nvec4 maxMiddleScore4 = max(max(middleScore[0], middleScore[1]), max(middleScore[2], middleScore[3]));\nvec4 maxOuterScore4 = max(max(outerScore[0], outerScore[1]), max(outerScore[2], outerScore[3]));\nfloat maxInnerScore = max(maxInnerScore3.x, max(maxInnerScore3.y, maxInnerScore3.z));\nfloat maxMiddleScore = max(max(maxMiddleScore4.x, maxMiddleScore4.y), max(maxMiddleScore4.z, maxMiddleScore4.w));\nfloat maxOuterScore = max(max(maxOuterScore4.x, maxOuterScore4.y), max(maxOuterScore4.z, maxOuterScore4.w));\nfloat maxScore = max(maxInnerScore, max(maxMiddleScore, maxOuterScore));\nfloat myScore = step(maxScore, pixel.r) * pixel.r;\ncolor = vec4(myScore, pixel.gba);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/nonmax-suppression.glsl":
+/*!***********************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/nonmax-suppression.glsl ***!
+  \***********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nvoid main()\n{\nfloat p0 = pixelAtOffset(image, ivec2(0, 1)).r;\nfloat p1 = pixelAtOffset(image, ivec2(1, 1)).r;\nfloat p2 = pixelAtOffset(image, ivec2(1, 0)).r;\nfloat p3 = pixelAtOffset(image, ivec2(1, -1)).r;\nfloat p4 = pixelAtOffset(image, ivec2(0, -1)).r;\nfloat p5 = pixelAtOffset(image, ivec2(-1, -1)).r;\nfloat p6 = pixelAtOffset(image, ivec2(-1, 0)).r;\nfloat p7 = pixelAtOffset(image, ivec2(-1, 1)).r;\nfloat m = max(\nmax(max(p0, p1), max(p2, p3)),\nmax(max(p4, p5), max(p6, p7))\n);\nvec4 pixel = threadPixel(image);\nfloat score = step(m, pixel.r) * pixel.r;\ncolor = vec4(score, pixel.gba);\n}"
 
 /***/ }),
 
@@ -4173,7 +4688,7 @@ module.exports = "@include \"math.glsl\"\nuniform sampler2D corners;\nuniform in
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\nuniform float log2PyrMaxScale, pyrMaxLevels;\nconst float scaleEps = 1e-5;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 thread = threadLocation();\nfloat lod = decodeLod(pixel.a, log2PyrMaxScale, pyrMaxLevels);\nfloat pot = pow(2.0f, lod);\ncolor = pixel;\nif(pixel.r == 0.0f)\nreturn;\nvec4 p0 = pixelAtOffset(image, ivec2(0, 1));\nvec4 p1 = pixelAtOffset(image, ivec2(1, 1));\nvec4 p2 = pixelAtOffset(image, ivec2(1, 0));\nvec4 p3 = pixelAtOffset(image, ivec2(1, -1));\nvec4 p4 = pixelAtOffset(image, ivec2(0, -1));\nvec4 p5 = pixelAtOffset(image, ivec2(-1, -1));\nvec4 p6 = pixelAtOffset(image, ivec2(-1, 0));\nvec4 p7 = pixelAtOffset(image, ivec2(-1, 1));\nmat3 score = mat3(\np0.r * float(abs(p0.a - pixel.a) < scaleEps),\np1.r * float(abs(p1.a - pixel.a) < scaleEps),\np2.r * float(abs(p2.a - pixel.a) < scaleEps),\np3.r * float(abs(p3.a - pixel.a) < scaleEps),\np4.r * float(abs(p4.a - pixel.a) < scaleEps),\np5.r * float(abs(p5.a - pixel.a) < scaleEps),\np6.r * float(abs(p6.a - pixel.a) < scaleEps),\np7.r * float(abs(p7.a - pixel.a) < scaleEps),\n0.0f\n);\nvec3 maxScore3 = max(score[0], max(score[1], score[2]));\nfloat maxScore = max(maxScore3.x, max(maxScore3.y, maxScore3.z));\nfloat myScore = step(maxScore, pixel.r) * pixel.r;\ncolor = vec4(myScore, pixel.gba);\n}"
+module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\nconst float scaleEps = 1e-5;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 thread = threadLocation();\nfloat lod = decodeLod(pixel.a);\nfloat pot = exp2(lod);\ncolor = pixel;\nif(pixel.r == 0.0f)\nreturn;\nvec4 p0 = pixelAtOffset(image, ivec2(0, 1));\nvec4 p1 = pixelAtOffset(image, ivec2(1, 1));\nvec4 p2 = pixelAtOffset(image, ivec2(1, 0));\nvec4 p3 = pixelAtOffset(image, ivec2(1, -1));\nvec4 p4 = pixelAtOffset(image, ivec2(0, -1));\nvec4 p5 = pixelAtOffset(image, ivec2(-1, -1));\nvec4 p6 = pixelAtOffset(image, ivec2(-1, 0));\nvec4 p7 = pixelAtOffset(image, ivec2(-1, 1));\nmat3 score = mat3(\np0.r * float(abs(p0.a - pixel.a) < scaleEps),\np1.r * float(abs(p1.a - pixel.a) < scaleEps),\np2.r * float(abs(p2.a - pixel.a) < scaleEps),\np3.r * float(abs(p3.a - pixel.a) < scaleEps),\np4.r * float(abs(p4.a - pixel.a) < scaleEps),\np5.r * float(abs(p5.a - pixel.a) < scaleEps),\np6.r * float(abs(p6.a - pixel.a) < scaleEps),\np7.r * float(abs(p7.a - pixel.a) < scaleEps),\n0.0f\n);\nvec3 maxScore3 = max(score[0], max(score[1], score[2]));\nfloat maxScore = max(maxScore3.x, max(maxScore3.y, maxScore3.z));\nfloat myScore = step(maxScore, pixel.r) * pixel.r;\ncolor = vec4(myScore, pixel.gba);\n}"
 
 /***/ }),
 
@@ -4265,6 +4780,39 @@ module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threa
 
 /***/ }),
 
+/***/ "./src/gpu/shaders/utils/copy-components.glsl":
+/*!****************************************************!*\
+  !*** ./src/gpu/shaders/utils/copy-components.glsl ***!
+  \****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"colors.glsl\"\nuniform sampler2D dest, src;\nuniform int destComponents;\nuniform int srcComponentId;\nvoid main()\n{\nvec4 destPixel = threadPixel(dest);\nvec4 srcPixel = threadPixel(src);\nbvec4 flags = bvec4(\n(destComponents & PIXELCOMPONENT_RED) != 0,\n(destComponents & PIXELCOMPONENT_GREEN) != 0,\n(destComponents & PIXELCOMPONENT_BLUE) != 0,\n(destComponents & PIXELCOMPONENT_ALPHA) != 0\n);\ncolor = mix(destPixel, vec4(srcPixel[srcComponentId]), flags);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/utils/fill-components.glsl":
+/*!****************************************************!*\
+  !*** ./src/gpu/shaders/utils/fill-components.glsl ***!
+  \****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"colors.glsl\"\nuniform sampler2D image;\nuniform int pixelComponents;\nuniform float value;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nbvec4 flags = bvec4(\n(pixelComponents & PIXELCOMPONENT_RED) != 0,\n(pixelComponents & PIXELCOMPONENT_GREEN) != 0,\n(pixelComponents & PIXELCOMPONENT_BLUE) != 0,\n(pixelComponents & PIXELCOMPONENT_ALPHA) != 0\n);\ncolor = mix(pixel, vec4(value), flags);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/utils/fill.glsl":
+/*!*****************************************!*\
+  !*** ./src/gpu/shaders/utils/fill.glsl ***!
+  \*****************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform float value;\nvoid main()\n{\ncolor = vec4(value);\n}"
+
+/***/ }),
+
 /***/ "./src/gpu/shaders/utils/flip-y.glsl":
 /*!*******************************************!*\
   !*** ./src/gpu/shaders/utils/flip-y.glsl ***!
@@ -4287,6 +4835,28 @@ module.exports = "uniform sampler2D image;\nvoid main()\n{\ncolor = threadPixel(
 
 /***/ }),
 
+/***/ "./src/gpu/shaders/utils/scan-minmax1d.glsl":
+/*!**************************************************!*\
+  !*** ./src/gpu/shaders/utils/scan-minmax1d.glsl ***!
+  \**************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nuniform int iterationNumber;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 last = outputSize() - ivec2(1);\nivec2 jump = ivec2(1 << iterationNumber);\nivec2 groupSize = jump << 1;\nivec2 groupMask = groupSize - ivec2(1);\nivec2 groupId = thread >> (1 + iterationNumber);\nivec2 groupStart = groupId << (1 + iterationNumber);\nivec2 next = groupStart + ((thread - groupStart + jump) & groupMask);\nivec2 safeNext = min(next, last);\nivec2 nextSameRow = ivec2(safeNext.x, thread.y);\nivec2 nextSameCol = ivec2(thread.x, safeNext.y);\nvec4 pixel = texelFetch(image, thread, 0);\nvec4 nextSameRowPixel = texelFetch(image, nextSameRow, 0);\nvec4 nextSameColPixel = texelFetch(image, nextSameCol, 0);\ncolor = vec4(\nmax(pixel.r, nextSameRowPixel.r),\nmax(pixel.g, nextSameColPixel.g),\nmin(pixel.b, nextSameRowPixel.b),\nmin(pixel.a, nextSameColPixel.a)\n);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/utils/scan-minmax2d.glsl":
+/*!**************************************************!*\
+  !*** ./src/gpu/shaders/utils/scan-minmax2d.glsl ***!
+  \**************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nuniform int iterationNumber;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 last = outputSize() - ivec2(1);\nint jump = (1 << iterationNumber);\nint clusterLength = jump << 1;\nint clusterMask = clusterLength - 1;\nivec2 clusterPos = ivec2(thread >> (1 + iterationNumber)) << (1 + iterationNumber);\nivec2 next1 = clusterPos + ((thread - clusterPos + ivec2(jump, 0)) & clusterMask);\nivec2 next2 = clusterPos + ((thread - clusterPos + ivec2(0, jump)) & clusterMask);\nivec2 next3 = clusterPos + ((thread - clusterPos + ivec2(jump, jump)) & clusterMask);\nvec4 p0 = texelFetch(image, thread, 0);\nvec4 p1 = texelFetch(image, min(next1, last), 0);\nvec4 p2 = texelFetch(image, min(next2, last), 0);\nvec4 p3 = texelFetch(image, min(next3, last), 0);\nvec4 pmax = max(max(p0, p1), max(p2, p3));\nvec4 pmin = min(min(p0, p1), min(p2, p3));\ncolor = vec4(pmax.r, pmin.g, pmax.r - pmin.g, p0.a);\n}"
+
+/***/ }),
+
 /***/ "./src/gpu/speedy-gpu.js":
 /*!*******************************!*\
   !*** ./src/gpu/speedy-gpu.js ***!
@@ -4306,6 +4876,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _program_groups_keypoints__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./program-groups/keypoints */ "./src/gpu/program-groups/keypoints.js");
 /* harmony import */ var _program_groups_encoders__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./program-groups/encoders */ "./src/gpu/program-groups/encoders.js");
 /* harmony import */ var _program_groups_pyramids__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./program-groups/pyramids */ "./src/gpu/program-groups/pyramids.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -4337,10 +4908,9 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 // Limits
 const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
-const PYRAMID_MAX_LEVELS = 4; // max depth in scale-space
-const PYRAMID_MAX_SCALE = 2; // preferably a power of 2 (image scale can go up to this)
 
 // Available program groups
 // (maps group name to class name)
@@ -4410,7 +4980,7 @@ class SpeedyGPU
     {
         const lv = level | 0;
 
-        if(lv < 0 || lv >= PYRAMID_MAX_LEVELS)
+        if(lv < 0 || lv >= _utils_globals__WEBPACK_IMPORTED_MODULE_9__["PYRAMID_MAX_LEVELS"])
             _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].fatal(`Invalid pyramid level: ${lv}`);
 
         return this._pyramid[lv];
@@ -4428,7 +4998,7 @@ class SpeedyGPU
     {
         const lv = level | 0;
 
-        if(lv < 0 || lv >= PYRAMID_MAX_LEVELS + 1)
+        if(lv < 0 || lv >= _utils_globals__WEBPACK_IMPORTED_MODULE_9__["PYRAMID_MAX_LEVELS"] + 1)
             _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].fatal(`Invalid intra-pyramid level: ${lv}`);
 
         return this._intraPyramid[lv];
@@ -4440,7 +5010,7 @@ class SpeedyGPU
      */
     get pyramidHeight()
     {
-        return PYRAMID_MAX_LEVELS;
+        return _utils_globals__WEBPACK_IMPORTED_MODULE_9__["PYRAMID_MAX_LEVELS"];
     }
 
     /**
@@ -4449,7 +5019,7 @@ class SpeedyGPU
      */
     get pyramidMaxScale()
     {
-        return PYRAMID_MAX_SCALE;
+        return _utils_globals__WEBPACK_IMPORTED_MODULE_9__["PYRAMID_MAX_SCALE"];
     }
 
     /**
@@ -4629,8 +5199,8 @@ class SpeedyGPU
         spawnProgramGroups.call(this, this, width, height);
 
         // spawn pyramids of program groups
-        this._pyramid = this._buildPyramid(width, height, 1.0, PYRAMID_MAX_LEVELS);
-        this._intraPyramid = this._buildPyramid(width, height, 1.5, PYRAMID_MAX_LEVELS + 1);
+        this._pyramid = this._buildPyramid(width, height, 1.0, _utils_globals__WEBPACK_IMPORTED_MODULE_9__["PYRAMID_MAX_LEVELS"]);
+        this._intraPyramid = this._buildPyramid(width, height, 1.5, _utils_globals__WEBPACK_IMPORTED_MODULE_9__["PYRAMID_MAX_LEVELS"] + 1);
     }
 
     // build a pyramid, where each level stores the program groups
@@ -4864,13 +5434,13 @@ class SpeedyProgram extends Function
 
         // resize stdprog
         //if(options.renderToTexture)
-        //    this._stdprog = detachFBO(this._stdprog);
+        //    this._stdprog.detachFBO();
 
         this._stdprog.width = width;
         this._stdprog.height = height;
 
         //if(options.renderToTexture)
-        //    this._stdprog = attachFBO(this._stdprog);
+        //    this._stdprog.attachFBO(options.pingpong);
 
         // update texSize uniform
         const uniform = this._stdprog.uniform.texSize;
@@ -4915,7 +5485,7 @@ class SpeedyProgram extends Function
             this._reallocatePixelBuffers(this._stdprog.width, this._stdprog.height);
 
         // read pixels
-        if(this._stdprog.hasOwnProperty('fbo')) {
+        if(this._stdprog.fbo != null) {
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._stdprog.fbo);
             gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, this._pixelBuffer[0]);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -5009,8 +5579,13 @@ class SpeedyProgram extends Function
             uniforms: { }, // user-defined constants (as uniforms)
             renderToTexture: true, // render results to a texture?
             recycleTexture: true, // recycle output texture? If false, you must manually destroy the output texture
+            pingpong: false, // alternate output texture between calls
             ...options // user-defined options
         };
+
+        // validate options
+        if(options.pingpong && !options.renderToTexture)
+            throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error(`Pingpong rendering can only be used when rendering to textures`);
 
         // get size
         let width = Math.max(1, options.output[0] | 0);
@@ -5028,9 +5603,9 @@ class SpeedyProgram extends Function
 
         // create shader
         const source = shaderdecl();
-        let stdprog = createStandardProgram(gl, width, height, source, options.uniforms);
+        const stdprog = new StandardProgram(gl, width, height, source, options.uniforms);
         if(options.renderToTexture)
-            stdprog = attachFBO(stdprog);
+            stdprog.attachFBO(options.pingpong);
 
         // validate arguments
         const params = functionArguments(shaderdecl);
@@ -5044,7 +5619,7 @@ class SpeedyProgram extends Function
         // store context
         this._gl = gl;
         this._source = source;
-        this._options = options;
+        this._options = Object.freeze(options);
         this._stdprog = stdprog;
         this._params = params;
         this._initPixelBuffers(gl);
@@ -5060,7 +5635,7 @@ class SpeedyProgram extends Function
 
         // skip things
         if(gl.isContextLost())
-            return stdprog.texture || null;
+            return stdprog.texture;
         
         // matching arguments?
         if(args.length != params.length)
@@ -5105,8 +5680,9 @@ class SpeedyProgram extends Function
         let outputTexture = null;
         if(options.renderToTexture) {
             outputTexture = stdprog.texture;
+
+            // clone outputTexture using the current framebuffer
             if(!options.recycleTexture) {
-                // clone outputTexture using the current framebuffer
                 const cloneTexture = _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].createTexture(gl, stdprog.width, stdprog.height);
                 gl.activeTexture(gl.TEXTURE0);
                 gl.bindTexture(gl.TEXTURE_2D, cloneTexture);
@@ -5121,6 +5697,10 @@ class SpeedyProgram extends Function
                 gl.bindTexture(gl.TEXTURE_2D, null);
                 outputTexture = cloneTexture;
             }
+
+            // ping-pong rendering
+            if(options.pingpong)
+                stdprog.pingpong();
         }
 
         // return texture (if available)
@@ -5280,6 +5860,115 @@ function waitForQueueNotEmpty(queue)
 
 
 //
+// Standard Program
+//
+
+// a standard program runs a shader on an "image"
+// uniforms: { 'name': <default_value>, ... }
+function StandardProgram(gl, width, height, fragmentShaderSource, uniforms = { })
+{
+    // compile shaders
+    const source = _shader_preprocessor_js__WEBPACK_IMPORTED_MODULE_0__["ShaderPreprocessor"].run(gl, DEFAULT_FRAGMENT_SHADER_PREFIX + fragmentShaderSource);
+    const program = _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].createProgram(gl, DEFAULT_VERTEX_SHADER, source);
+
+    // setup geometry
+    gl.bindAttribLocation(program, LOCATION_ATTRIB_POSITION, 'a_position');
+    gl.bindAttribLocation(program, LOCATION_ATTRIB_TEXCOORD, 'a_texCoord');
+    const vertexObjects = createStandardGeometry(gl);
+
+    // define texSize
+    width = Math.max(width | 0, 1);
+    height = Math.max(height | 0, 1);
+    uniforms.texSize = [ width, height ];
+
+    // autodetect uniforms, get their locations,
+    // define their setters and set their default values
+    const uniform = autodetectUniforms(source);
+    gl.useProgram(program);
+    for(const u in uniform) {
+        // get location
+        uniform[u].location = gl.getUniformLocation(program, u);
+
+        // validate type
+        if(!UNIFORM_TYPES.hasOwnProperty(uniform[u].type))
+            throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error(`Unknown uniform type: ${uniform[u].type}`);
+
+        // must set a default value?
+        if(uniforms.hasOwnProperty(u)) {
+            const value = uniforms[u];
+            if(typeof value == 'number' || typeof value == 'boolean')
+                (gl[UNIFORM_TYPES[uniform[u].type]])(uniform[u].location, value);
+            else if(typeof value == 'object')
+                (gl[UNIFORM_TYPES[uniform[u].type]])(uniform[u].location, ...Array.from(value));
+            else
+                throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error(`Unrecognized uniform value: "${value}"`);
+        }
+
+        // note: to set the default value of array arr, pass
+        // { 'arr[0]': val0, 'arr[1]': val1, ... } to uniforms
+    }
+
+    // done!
+    this.gl = gl;
+    this.program = program;
+    this.uniform = uniform;
+    this.width = width;
+    this.height = height;
+    this.vertexObjects = vertexObjects;
+    this._fbo = this._texture = null; this._texIndex = 0;
+    Object.defineProperty(this, 'fbo', {
+        get: () => this._fbo ? this._fbo[this._texIndex] : null
+    });
+    Object.defineProperty(this, 'texture', {
+        get: () => this._texture ? this._texture[this._texIndex] : null
+    });
+}
+
+// Attach a framebuffer object to a standard program
+StandardProgram.prototype.attachFBO = function(pingpong = false)
+{
+    const gl = this.gl;
+    const width = this.width;
+    const height = this.height;
+    const numTextures = pingpong ? 2 : 1;
+
+    this._texIndex = 0;
+    this._texture = Array(numTextures).fill(null).map(() => _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].createTexture(gl, width, height));
+    this._fbo = Array(numTextures).fill(null).map((_, i) => _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].createFramebuffer(gl, this._texture[i]));
+}
+
+// Detach a framebuffer object from a standard program
+StandardProgram.prototype.detachFBO = function()
+{
+    const gl = this.gl;
+
+    if(this._fbo != null) {
+        for(let fbo of this._fbo)
+            _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].destroyFramebuffer(gl, fbo);
+        this._fbo = null;
+    }
+
+    if(this._texture != null) {
+        for(let texture of this._texture)
+            _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].destroyTexture(gl, texture);
+        this._texture = null;
+    }
+
+    this._texIndex = 0;
+}
+
+// Ping-pong rendering
+StandardProgram.prototype.pingpong = function()
+{
+    if(this._fbo != null && this._fbo.length > 1)
+        this._texIndex = 1 - this._texIndex;
+}
+
+
+
+
+
+//
 // WebGL
 //
 
@@ -5340,94 +6029,6 @@ function createStandardGeometry(gl)
     const result = { vao, vbo };
     cache.set(gl, result);
     return result;
-}
-
-// a standard program runs a shader on an "image"
-// uniforms: { 'name': <default_value>, ... }
-function createStandardProgram(gl, width, height, fragmentShaderSource, uniforms = { })
-{
-    // compile shaders
-    const source = _shader_preprocessor_js__WEBPACK_IMPORTED_MODULE_0__["ShaderPreprocessor"].run(gl, DEFAULT_FRAGMENT_SHADER_PREFIX + fragmentShaderSource);
-    const program = _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].createProgram(gl, DEFAULT_VERTEX_SHADER, source);
-
-    // setup geometry
-    gl.bindAttribLocation(program, LOCATION_ATTRIB_POSITION, 'a_position');
-    gl.bindAttribLocation(program, LOCATION_ATTRIB_TEXCOORD, 'a_texCoord');
-    const vertexObjects = createStandardGeometry(gl);
-
-    // define texSize
-    width = Math.max(width | 0, 1);
-    height = Math.max(height | 0, 1);
-    uniforms.texSize = [ width, height ];
-
-    // autodetect uniforms, get their locations,
-    // define their setters and set their default values
-    const uniform = autodetectUniforms(source);
-    gl.useProgram(program);
-    for(const u in uniform) {
-        // get location
-        uniform[u].location = gl.getUniformLocation(program, u);
-
-        // validate type
-        if(!UNIFORM_TYPES.hasOwnProperty(uniform[u].type))
-            throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error(`Unknown uniform type: ${uniform[u].type}`);
-
-        // must set a default value?
-        if(uniforms.hasOwnProperty(u)) {
-            const value = uniforms[u];
-            if(typeof value == 'number' || typeof value == 'boolean')
-                (gl[UNIFORM_TYPES[uniform[u].type]])(uniform[u].location, value);
-            else if(typeof value == 'object')
-                (gl[UNIFORM_TYPES[uniform[u].type]])(uniform[u].location, ...Array.from(value));
-            else
-                throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error(`Unrecognized uniform value: "${value}"`);
-        }
-
-        // note: to set the default value of array arr, pass
-        // { 'arr[0]': val0, 'arr[1]': val1, ... } to uniforms
-    }
-
-    // done!
-    return {
-        program,
-        gl,
-        uniform,
-        width,
-        height,
-        ...vertexObjects,
-    };
-}
-
-// Attach a framebuffer object to a standard program
-function attachFBO(stdprog)
-{
-    const gl = stdprog.gl;
-    const width = stdprog.width;
-    const height = stdprog.height;
-
-    const texture = _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].createTexture(gl, width, height);
-    const fbo = _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].createFramebuffer(gl, texture);
-
-    return Object.assign(stdprog, {
-        texture,
-        fbo
-    });
-}
-
-// Detach a framebuffer object from a standard program
-function detachFBO(stdprog)
-{
-    if(stdprog.hasOwnProperty('fbo')) {
-        _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].destroyFramebuffer(stdprog.gl, stdprog.fbo);
-        delete stdprog.fbo;
-    }
-
-    if(stdprog.hasOwnProperty('texture')) {
-        _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].destroyTexture(stdprog.gl, stdprog.texture);
-        delete stdprog.texture;
-    }
-
-    return stdprog;
 }
 
 // create a width x height buffer for RGBA data
@@ -5742,6 +6343,52 @@ class FPSCounter
         requestAnimationFrame(this._update.bind(this));
     }
 }
+
+/***/ }),
+
+/***/ "./src/utils/globals.js":
+/*!******************************!*\
+  !*** ./src/utils/globals.js ***!
+  \******************************/
+/*! exports provided: PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "PYRAMID_MAX_LEVELS", function() { return PYRAMID_MAX_LEVELS; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "PYRAMID_MAX_SCALE", function() { return PYRAMID_MAX_SCALE; });
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * globals.js
+ * Global constants
+ */
+
+
+
+// -----------------------------------------------------------------
+// IMAGE PYRAMIDS & SCALE-SPACE
+// -----------------------------------------------------------------
+
+// The number of layers of the pyramid
+const PYRAMID_MAX_LEVELS = 4; // max depth in scale-space
+
+// The maximum supported scale for a pyramid layer
+const PYRAMID_MAX_SCALE = 2; // preferably a power of 2 (image scale can go up to this value)
 
 /***/ }),
 
@@ -6549,13 +7196,14 @@ class SensitivityTuner extends Tuner
 /*!****************************!*\
   !*** ./src/utils/types.js ***!
   \****************************/
-/*! exports provided: MediaType, ColorFormat */
+/*! exports provided: MediaType, ColorFormat, PixelComponent */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MediaType", function() { return MediaType; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ColorFormat", function() { return ColorFormat; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "PixelComponent", function() { return PixelComponent; });
 /* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
@@ -6592,6 +7240,14 @@ const ColorFormat = _utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].enum(
     'Greyscale',
     'Binary'
 );
+
+const PixelComponent = Object.freeze({
+    RED:   1,
+    GREEN: 2,
+    BLUE:  4,
+    ALPHA: 8,
+    ALL:   15 // = RED | GREEN | BLUE | ALPHA
+});
 
 /***/ }),
 
