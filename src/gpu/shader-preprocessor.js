@@ -19,9 +19,9 @@
  * Custom preprocessor for shaders
  */
 
-import { GLUtils } from './gl-utils';
 import { PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE } from '../utils/globals';
 import { PixelComponent } from '../utils/types';
+import { Utils } from '../utils/utils';
 
 // Regular Expressions
 const commentsRegex = [ /\/\*(.|\s)*?\*\//g , /\/\/.*$/gm ];
@@ -76,5 +76,6 @@ function readfileSync(filename)
     if(String(filename).match(/^[a-zA-Z0-9_\-]+\.glsl$/))
         return require('./shaders/include/' + filename);
 
-    throw GLUtils.Error(`Shader preprocessor: can't read file \"${filename}\"`);
+    Utils.fatal(`Shader preprocessor: can't read file \"${filename}\"`);
+    return '';
 }

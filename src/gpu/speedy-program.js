@@ -197,13 +197,13 @@ export class SpeedyProgram extends Function
         // GPU needs to produce data
         if(this._pboProducerQueue.length > 0) {
             const nextPBO = this._pboProducerQueue.shift();
-            downloadDMA(gl, this._pbo[nextPBO], this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
+            GLUtils.readPixelsViaPBO(gl, this._pbo[nextPBO], this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
                 this._pboConsumerQueue.push(nextPBO);
             });
         }
         else waitForQueueNotEmpty(this._pboProducerQueue).then(waitTime => {
             const nextPBO = this._pboProducerQueue.shift();
-            downloadDMA(gl, this._pbo[nextPBO], this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
+            GLUtils.readPixelsViaPBO(gl, this._pbo[nextPBO], this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
                 this._pboConsumerQueue.push(nextPBO);
             });
         });
@@ -249,7 +249,7 @@ export class SpeedyProgram extends Function
 
         // validate options
         if(options.pingpong && !options.renderToTexture)
-            throw GLUtils.Error(`Pingpong rendering can only be used when rendering to textures`);
+            Utils.fatal(`Pingpong rendering can only be used when rendering to textures`);
 
         // get size
         let width = Math.max(1, options.output[0] | 0);
@@ -275,7 +275,7 @@ export class SpeedyProgram extends Function
         for(let j = 0; j < params.length; j++) {
             if(!stdprog.uniform.hasOwnProperty(params[j])) {
                 if(!stdprog.uniform.hasOwnProperty(params[j] + '[0]'))
-                    throw GLUtils.Error(`Can't run shader: expected uniform "${params[j]}"`);
+                    Utils.fatal(`Can't run shader: expected uniform "${params[j]}"`);
             }
         }
 
@@ -302,7 +302,7 @@ export class SpeedyProgram extends Function
         
         // matching arguments?
         if(args.length != params.length)
-            throw GLUtils.Error(`Can't run shader: incorrect number of arguments`);
+            Utils.fatal(`Can't run shader: incorrect number of arguments`);
 
         // use program
         gl.useProgram(stdprog.program);
@@ -320,12 +320,12 @@ export class SpeedyProgram extends Function
                 // uniform array matches parameter name
                 const array = args[i];
                 if(stdprog.uniform.hasOwnProperty(`${argname}[${array.length}]`))
-                    throw GLUtils.Error(`Can't run shader: too few elements in array "${argname}"`);
+                    Utils.fatal(`Can't run shader: too few elements in array "${argname}"`);
                 for(let j = 0; (uniform = stdprog.uniform[`${argname}[${j}]`]); j++)
                     texNo = this._setUniform(uniform, array[j], texNo);
             }
             else
-                throw GLUtils.Error(`Can't run shader: unknown parameter "${argname}": ${args[i]}`);
+                Utils.fatal(`Can't run shader: unknown parameter "${argname}": ${args[i]}`);
         }
 
         // render
@@ -380,9 +380,9 @@ export class SpeedyProgram extends Function
         if(uniform.type == 'sampler2D') {
             // set texture
             if(texNo > gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
-                throw GLUtils.Error(`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
+                Utils.fatal(`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
             else if(value === this._stdprog.texture)
-                throw GLUtils.Error(`Can't run shader: cannot use its output texture as an input to itself`);
+                Utils.fatal(`Can't run shader: cannot use its output texture as an input to itself`);
 
             gl.activeTexture(gl.TEXTURE0 + texNo);
             gl.bindTexture(gl.TEXTURE_2D, value);
@@ -396,7 +396,7 @@ export class SpeedyProgram extends Function
             else if(Array.isArray(value))
                 (gl[UNIFORM_TYPES[uniform.type]])(uniform.location, ...value);
             else
-                throw GLUtils.Error(`Can't run shader: unrecognized argument "${value}"`);
+                Utils.fatal(`Can't run shader: unrecognized argument "${value}"`);
         }
 
         return texNo;
@@ -426,7 +426,7 @@ export class SpeedyProgram extends Function
         // reallocate pixels array
         for(let i = 0; i < PBO_COUNT; i++) {
             const oldBuffer = this._pixelBuffer[i];
-            this._pixelBuffer[i] = createPixelBuffer(width, height);
+            this._pixelBuffer[i] = this._createPixelBuffer(width, height);
 
             if(oldBuffer) {
                 if(oldBuffer.length > this._pixelBuffer[i].length)
@@ -436,29 +436,15 @@ export class SpeedyProgram extends Function
             }
         }
     }
+
+    // create a width x height buffer for RGBA data
+    _createPixelBuffer(width, height)
+    {
+        const pixels = new Uint8Array(width * height * 4);
+        pixels.fill(255, 0, 4); // will be recognized as empty
+        return pixels;
+    }
 }
-
-
-
-//
-// Consumer-producer
-//
-
-// wait for a queue to be not empty
-function waitForQueueNotEmpty(queue)
-{
-    return new Promise(resolve => {
-        const start = performance.now();
-        function wait() {
-            if(queue.length > 0)
-                resolve(performance.now() - start);
-            else
-                setTimeout(wait, 0); // Utils.setZeroTimeout may hinder performance (GLUtils already calls it)
-        }
-        wait();
-    });
-}
-
 
 
 
@@ -497,7 +483,7 @@ function StandardProgram(gl, width, height, shaderdecl, uniforms = { })
 
         // validate type
         if(!UNIFORM_TYPES.hasOwnProperty(uniform[u].type))
-            throw GLUtils.Error(`Unknown uniform type: ${uniform[u].type}`);
+            Utils.fatal(`Unknown uniform type: ${uniform[u].type}`);
 
         // must set a default value?
         if(uniforms.hasOwnProperty(u)) {
@@ -507,7 +493,7 @@ function StandardProgram(gl, width, height, shaderdecl, uniforms = { })
             else if(typeof value == 'object')
                 (gl[UNIFORM_TYPES[uniform[u].type]])(uniform[u].location, ...Array.from(value));
             else
-                throw GLUtils.Error(`Unrecognized uniform value: "${value}"`);
+                Utils.fatal(`Unrecognized uniform value: "${value}"`);
         }
 
         // note: to set the default value of array arr, pass
@@ -573,55 +559,20 @@ StandardProgram.prototype.pingpong = function()
 
 
 //
-// WebGL
+// Consumer-producer
 //
 
-// create a width x height buffer for RGBA data
-function createPixelBuffer(width, height)
+// wait for a queue to be not empty
+function waitForQueueNotEmpty(queue)
 {
-    const pixels = new Uint8Array(width * height * 4);
-    pixels.fill(255, 0, 4); // will be recognized as empty
-    return pixels;
-}
-
-// download data to an Uint8Array using a Pixel Buffer Object (PBO)
-// you may optionally specify a FBO to read pixels from a texture
-function downloadDMA(gl, pbo, arrayBuffer, x, y, width, height, fbo = null)
-{
-    // create a PBO
-    const ownPBO = (pbo == null);
-    if(ownPBO)
-        pbo = gl.createBuffer();
-
-    // bind the PBO
-    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
-    gl.bufferData(gl.PIXEL_PACK_BUFFER, arrayBuffer.byteLength, gl.STREAM_READ);
-
-    // read pixels into PBO
-    if(fbo) {
-        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-        gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    }
-    else {
-        gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
-    }
-
-    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-
-    // wait for DMA transfer
-    return GLUtils.getBufferSubDataAsync(gl, pbo,
-        gl.PIXEL_PACK_BUFFER,
-        0,
-        arrayBuffer,
-        0,
-        0
-    ).then(timeInMs => {
-        return timeInMs;
-    }).catch(err => {
-        throw err;
-    }).finally(() => {
-        if(ownPBO)
-            gl.deleteBuffer(pbo);
+    return new Promise(resolve => {
+        const start = performance.now();
+        function wait() {
+            if(queue.length > 0)
+                resolve(performance.now() - start);
+            else
+                setTimeout(wait, 0); // Utils.setZeroTimeout may hinder performance (GLUtils already calls it)
+        }
+        wait();
     });
 }

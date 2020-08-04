@@ -115,18 +115,19 @@ export class GLUtils
                 gl.getProgramInfoLog(program),
             ];
 
+            gl.deleteProgram(program);
+            gl.deleteShader(fragmentShader);
+            gl.deleteShader(vertexShader);
+
+            // display error
             const spaces = i => Math.max(0, 2 - Math.floor(Math.log10(i)));
             const col = k => Array(spaces(k)).fill(' ').join('') + k + '. ';
             const formattedSource = fragmentShaderSource.split('\n')
                 .map((line, no) => col(1+no) + line)
                 .join('\n');
 
-            gl.deleteProgram(program);
-            gl.deleteShader(fragmentShader);
-            gl.deleteShader(vertexShader);
-
             throw GLUtils.Error(
-                `Can't create shader program.\n\n` +
+                `Can't create shader.\n\n` +
                 `---------- ERROR ----------\n` +
                 errors.join('\n') + '\n\n' +
                 `---------- SOURCE CODE ----------\n` +
@@ -412,7 +413,7 @@ export class GLUtils
      * @param {ArrayBufferView} destBuffer
      * @param {GLuint} [destOffset]
      * @param {GLuint} [length]
-     * @returns {Promise<Number>} a promise that resolves to the time it took to read the data (in ms)
+     * @returns {Promise<number>} a promise that resolves to the time it took to read the data (in ms)
      */
     static getBufferSubDataAsync(gl, glBuffer, target, srcByteOffset, destBuffer, destOffset = 0, length = 0)
     {
@@ -432,6 +433,56 @@ export class GLUtils
             throw GLUtils.Error(`Can't getBufferSubDataAsync(): got ${err.message} in clientWaitAsync()`);
         }).finally(() => {
             gl.deleteSync(sync);
+        });
+    }
+
+    /**
+     * Read pixels to a Uint8Array using a Pixel Buffer Object (PBO)
+     * You may optionally specify a FBO to read pixels from a texture
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLBuffer} pbo
+     * @param {Uint8Array} arrayBuffer with size >= width * height * 4
+     * @param {GLint} x
+     * @param {GLint} y
+     * @param {GLsizei} width
+     * @param {GLsizei} height
+     * @param {WebGLFramebuffer} [fbo]
+     * @returns {Promise<number>} a promise that resolves to the time it took to read the data (in ms)
+     */
+    static readPixelsViaPBO(gl, pbo, arrayBuffer, x, y, width, height, fbo = null)
+    {
+        // validate arrayBuffer
+        if(!(arrayBuffer.byteLength >= width * height * 4))
+            throw GLUtils.Error(`Can't read pixels: invalid buffer size`);
+
+        // bind the PBO
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
+        gl.bufferData(gl.PIXEL_PACK_BUFFER, arrayBuffer.byteLength, gl.STREAM_READ);
+
+        // read pixels into the PBO
+        if(fbo) {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+            gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        }
+        else {
+            gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+        }
+
+        // unbind the PBO
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+
+        // wait for DMA transfer
+        return GLUtils.getBufferSubDataAsync(gl, pbo,
+            gl.PIXEL_PACK_BUFFER,
+            0,
+            arrayBuffer,
+            0,
+            0
+        ).then(timeInMs => {
+            return timeInMs;
+        }).catch(err => {
+            throw err;
         });
     }
 }

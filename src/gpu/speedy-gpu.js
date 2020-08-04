@@ -187,7 +187,7 @@ export class SpeedyGPU
 
         // invalid dimensions?
         if(width == 0 || height == 0)
-            throw GLUtils.Error(`Can't upload an image of area 0`);
+            Utils.fatal(`Can't upload an image of area 0`);
 
         // create or recreate & size texture
         if(this._inputTexture === null) {
@@ -272,7 +272,7 @@ export class SpeedyGPU
             });
         }
         else
-            throw GLUtils.Error('WEBGL_lose_context is unavailable');
+            Utils.fatal('WEBGL_lose_context is unavailable');
     }
 
     /**
@@ -350,7 +350,7 @@ function createCanvas(width, height)
 
     if(inWorker) {
         if(typeof OffscreenCanvas !== 'function')
-            throw GLUtils.Error('OffscreenCanvas is not available in your browser. Please upgrade.');
+            Utils.fatal('OffscreenCanvas is not available in your browser. Please upgrade.');
 
         return new OffscreenCanvas(width, height);
     }
@@ -366,7 +366,7 @@ function createCanvas(width, height)
 function checkWebGL2Availability()
 {
     if(typeof WebGL2RenderingContext === 'undefined')
-        throw GLUtils.Error('WebGL2 is required by this application, but it\'s not available in your browser. Please use a different browser.');
+        Utils.fatal('WebGL2 is required by this application, but it\'s not available in your browser. Please use a different browser.');
 }
 
 // Create a WebGL2 context
@@ -383,7 +383,7 @@ function createWebGLContext(canvas)
     });
 
     if(!gl)
-        throw GLUtils.Error('Can\'t create WebGL2 context. Try in a different browser.');
+        Utils.fatal('Can\'t create WebGL2 context. Try in a different browser.');
 
     return gl;
 }
