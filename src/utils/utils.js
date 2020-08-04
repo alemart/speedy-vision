@@ -114,6 +114,32 @@ export class Utils
     }
 
     /**
+     * Gets the names of the arguments of the specified function
+     * @param {Function} fun 
+     * @returns {Array<string>}
+     */
+    static functionArguments(fun)
+    {
+        const code = fun.toString();
+        const regex = code.startsWith('function') ? 'function\\s.*\\(([^)]*)\\)' :
+                     (code.startsWith('(') ? '\\(([^)]*)\\).*=>' : '([^=]+).*=>');
+        const match = new RegExp(regex).exec(code);
+
+        if(match !== null) {
+            const args = match[1].replace(/\/\*.*?\*\//g, ''); // remove comments
+            return args.split(',').map(argname =>
+                argname.replace(/=.*$/, '').trim() // remove default params & trim
+            ).filter(argname =>
+                argname // handle trailing commas
+            );
+        }
+        else
+            Utils.fatal(`Can't detect function arguments of ${code}`);
+
+        return [];
+    }
+
+    /**
      * Generates a random number with
      * Gaussian distribution (mu, sigma)
      * @param {number} mu mean

@@ -19,21 +19,22 @@
  * Image pyramids & scale-space utilities
  */
 
+import { importShader, createShader } from '../../shader-declaration';
 import { PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE } from '../../../utils/globals';
 
 // pyramid generation
-export const upsample2 = image => require('../../shaders/pyramids/upsample2.glsl');
-export const downsample2 = image => require('../../shaders/pyramids/downsample2.glsl');
-export const upsample3 = image => require('../../shaders/pyramids/upsample3.glsl');
-export const downsample3 = image => require('../../shaders/pyramids/downsample3.glsl');
+export const upsample2 = importShader('pyramids/upsample2.glsl').withArguments('image');
+export const downsample2 = importShader('pyramids/downsample2.glsl').withArguments('image');
+export const upsample3 = importShader('pyramids/upsample3.glsl').withArguments('image');
+export const downsample3 = importShader('pyramids/downsample3.glsl').withArguments('image');
 
 // utilities for merging keypoints across multiple scales
-export const mergeKeypoints = (target, source) => require('../../shaders/pyramids/merge-keypoints.glsl');
-export const mergeKeypointsAtConsecutiveLevels = (largerImage, smallerImage) => require('../../shaders/pyramids/merge-keypoints-at-consecutive-levels.glsl');
-export const normalizeKeypoints = (image, imageScale) => require('../../shaders/pyramids/normalize-keypoints.glsl');
+export const mergeKeypoints = importShader('pyramids/merge-keypoints.glsl').withArguments('target', 'source');
+export const mergeKeypointsAtConsecutiveLevels = importShader('pyramids/merge-keypoints-at-consecutive-levels.glsl').withArguments('largerImage', 'smallerImage');
+export const normalizeKeypoints = importShader('pyramids/normalize-keypoints.glsl').withArguments('image', 'imageScale');
 
 // misc
-export const crop = image => require('../../shaders/pyramids/crop.glsl');
+export const crop = importShader('pyramids/crop.glsl').withArguments('image');
 
 // image scale
 
@@ -89,8 +90,8 @@ export function setScale(scale)
     const pyramidMinScale = Math.pow(2, -PYRAMID_MAX_LEVELS) + eps;
     const x = Math.max(pyramidMinScale, Math.min(scale, PYRAMID_MAX_SCALE));
     const alpha = (lgM - Math.log2(x)) / (lgM + PYRAMID_MAX_LEVELS);
-
-    return (image) => `
+    
+    const source = `
     uniform sampler2D image;
 
     void main()
@@ -98,6 +99,8 @@ export function setScale(scale)
         color = vec4(threadPixel(image).rgb, float(${alpha}));
     }
     `;
+
+    return createShader(source).withArguments('image');
 }
 
 export function scale(scaleFactor)
@@ -106,7 +109,7 @@ export function scale(scaleFactor)
     const s = Math.max(eps, scaleFactor);
     const delta = -Math.log2(s) / (lgM + PYRAMID_MAX_LEVELS);
 
-    return (image) => `
+    const source = `
     uniform sampler2D image;
 
     void main()
@@ -117,4 +120,6 @@ export function scale(scaleFactor)
         color = vec4(pixel.rgb, alpha);
     }
     `;
+
+    return createShader(source).withArguments('image');
 }

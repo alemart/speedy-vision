@@ -43,7 +43,7 @@ export /* abstract */ class GPUProgramGroup
     /**
      * Declare a program
      * @param {string} name Program name
-     * @param {Function} shaderdecl Program params => code
+     * @param {ShaderDeclaration} shaderdecl Shader declaration
      * @param {object} settings Program settings
      * @returns {GPUProgramGroup} This object
      */

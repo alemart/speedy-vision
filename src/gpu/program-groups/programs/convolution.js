@@ -19,7 +19,10 @@
  * Convolution function generator
  */
 
+import { createShader } from '../../shader-declaration';
 import { Utils } from "../../../utils/utils";
+
+// Utilities
 const cartesian = (a, b) => [].concat(...a.map(a => b.map(b => [a,b]))); // [a] x [b]
 const symmetricRange = n => [...Array(2*n + 1).keys()].map(x => x-n);    // [-n, ..., n]
 
@@ -49,7 +52,7 @@ export function conv2D(kernel, normalizationConstant = 1.0)
     `;
 
     // shader
-    const shader = `
+    const source = `
     uniform sampler2D image;
 
     void main()
@@ -64,7 +67,7 @@ export function conv2D(kernel, normalizationConstant = 1.0)
     `;
 
     // done!
-    return (image) => shader;
+    return createShader(source).withArguments('image');
 }
 
 // Generate a 1D convolution function on the x-axis
@@ -103,7 +106,7 @@ function conv1D(axis, kernel, normalizationConstant)
     `);
 
     // shader
-    const shader = `
+    const source = `
     uniform sampler2D image;
 
     void main()
@@ -118,7 +121,7 @@ function conv1D(axis, kernel, normalizationConstant)
     `;
 
     // done!
-    return (image) => shader;
+    return createShader(source).withArguments('image');
 }
 
 /*
@@ -190,8 +193,7 @@ export function createKernel2D(kernelSize)
     // IMPORTANT: all entries of the input kernel
     // are assumed to be in the [0, 1] range AND
     // kernel.length >= kernelSize * kernelSize
-    //return new Function('arr', body);
-    return (kernel) => shader;
+    return createShader(shader).withArguments('kernel');
 }
 
 // Generate a texture-based 1D convolution kernel
@@ -225,8 +227,7 @@ export function createKernel1D(kernelSize)
     // IMPORTANT: all entries of the input kernel
     // are assumed to be in the [0, 1] range AND
     // kernel.length >= kernelSize
-    //return new Function('arr', body);
-    return (kernel) => shader;
+    return createShader(shader).withArguments('kernel');
 }
 
 // 2D convolution with a texture-based kernel of size
@@ -273,13 +274,14 @@ export function texConv2D(kernelSize)
     }
     `;
 
-    return (image, texKernel, scale, offset) => shader;
+    // done!
+    return createShader(shader).withArguments('image', 'texKernel', 'scale', 'offset');
 }
 
 // identity operation with the same parameters as texConv2D()
 export function idConv2D(kernelSize)
 {
-    return (image, texKernel, scale, offset) => `
+    const shader = `
     uniform sampler2D image, texKernel;
     uniform float scale, offset;
 
@@ -288,6 +290,8 @@ export function idConv2D(kernelSize)
         color = threadPixel(image);
     }
     `;
+
+    return createShader(shader).withArguments('image', 'texKernel', 'scale', 'offset');
 }
 
 // Texture-based 1D convolution on the x-axis
@@ -342,5 +346,6 @@ function texConv1D(kernelSize, axis)
     }
     `;
 
-    return (image, texKernel, scale, offset) => shader;
+    // done!
+    return createShader(shader).withArguments('image', 'texKernel', 'scale', 'offset');
 }

@@ -48,18 +48,17 @@ export class ShaderPreprocessor
 {
     /**
      * Runs the preprocessor
-     * @param {WebGL2RenderingContext} gl
      * @param {string} code 
      * @returns {string} preprocessed code
      */
-    static run(gl, code)
+    static run(code)
     {
         // remove comments and run the preprocessor
         return String(code).replace(commentsRegex[0], '')
                            .replace(commentsRegex[1], '')
                            .replace(includeRegex, (_, filename) =>
                                 // FIXME: no cycle detection for @include
-                                ShaderPreprocessor.run(gl, readfileSync(filename))
+                                ShaderPreprocessor.run(readfileSync(filename))
                             )
                             .replace(constantRegex, (_, name) =>
                                 String(constants[name] || 'UNDEFINED_CONSTANT')

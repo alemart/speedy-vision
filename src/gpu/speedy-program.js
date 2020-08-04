@@ -19,33 +19,11 @@
  * SpeedyProgram class
  */
 
-import { ShaderPreprocessor } from './shader-preprocessor.js';
 import { GLUtils } from './gl-utils.js';
 import { Utils } from '../utils/utils';
 
 const LOCATION_ATTRIB_POSITION = 0;
 const LOCATION_ATTRIB_TEXCOORD = 1;
-
-const DEFAULT_VERTEX_SHADER = `#version 300 es
-in vec2 a_position;
-in vec2 a_texCoord;
-out vec2 texCoord;
- 
-void main() {
-    gl_Position = vec4(a_position, 0, 1);
-    texCoord = a_texCoord;
-}`;
-
-const DEFAULT_FRAGMENT_SHADER_PREFIX = `#version 300 es
-precision highp float;
-precision highp int;
-precision mediump sampler2D;
- 
-out vec4 color;
-in vec2 texCoord;
-uniform vec2 texSize;
-
-@include "global.glsl"\n`;
 
 const UNIFORM_TYPES = {
     'sampler2D':'uniform1i',
@@ -81,7 +59,7 @@ export class SpeedyProgram extends Function
     /**
      * Creates a new SpeedyProgram
      * @param {WebGL2RenderingContext} gl WebGL context
-     * @param {Function} shaderdecl shader declaration
+     * @param {ShaderDeclaration} shaderdecl Shader declaration
      * @param {object} [options] user options
      */
     constructor(gl, shaderdecl, options = { })
@@ -288,13 +266,12 @@ export class SpeedyProgram extends Function
         // if(gl.isContextLost()) ...
 
         // create shader
-        const source = shaderdecl();
-        const stdprog = new StandardProgram(gl, width, height, source, options.uniforms);
+        const stdprog = new StandardProgram(gl, width, height, shaderdecl, options.uniforms);
         if(options.renderToTexture)
             stdprog.attachFBO(options.pingpong);
 
         // validate arguments
-        const params = functionArguments(shaderdecl);
+        const params = shaderdecl.arguments;
         for(let j = 0; j < params.length; j++) {
             if(!stdprog.uniform.hasOwnProperty(params[j])) {
                 if(!stdprog.uniform.hasOwnProperty(params[j] + '[0]'))
@@ -304,7 +281,7 @@ export class SpeedyProgram extends Function
 
         // store context
         this._gl = gl;
-        this._source = source;
+        this._source = shaderdecl.fragmentSource;
         this._options = Object.freeze(options);
         this._stdprog = stdprog;
         this._params = params;
@@ -461,66 +438,6 @@ export class SpeedyProgram extends Function
     }
 }
 
-// =============================================================
-
-//
-// Parsing
-//
-
-// a dictionary specifying the types of all uniforms in the code
-function autodetectUniforms(shaderSource)
-{
-    const sourceWithoutComments = shaderSource; // assume we've preprocessed the source already
-    const regex = /uniform\s+(\w+)\s+([^;]+)/g;
-    const uniforms = { };
-
-    let match;
-    while((match = regex.exec(sourceWithoutComments)) !== null) {
-        const type = match[1];
-        const names = match[2].split(',').map(name => name.trim()).filter(name => name); // trim & remove empty names
-        for(const name of names) {
-            if(name.endsWith(']')) {
-                // is it an array?
-                if(!(match = name.match(/(\w+)\s*\[\s*(\d+)\s*\]$/)))
-                    throw GLUtils.Error(`Unspecified array length for uniform "${name}" in the shader`);
-                const [ array, length ] = [ match[1], Number(match[2]) ];
-                for(let i = 0; i < length; i++)
-                    uniforms[`${array}[${i}]`] = { type };
-            }
-            else {
-                // regular uniform
-                uniforms[name] = { type };
-            }
-        }
-    }
-
-    return Object.freeze(uniforms);
-}
-
-// names of function arguments
-function functionArguments(fun)
-{
-    const code = fun.toString();
-    const regex = code.startsWith('function') ? 'function\\s.*\\(([^)]*)\\)' :
-                 (code.startsWith('(') ? '\\(([^)]*)\\).*=>' : '([^=]+).*=>');
-    const match = new RegExp(regex).exec(code);
-
-    if(match !== null) {
-        const args = match[1].replace(/\/\*.*?\*\//g, ''); // remove comments
-        return args.split(',').map(argname =>
-            argname.replace(/=.*$/, '').trim() // remove default params & trim
-        ).filter(argname =>
-            argname // handle trailing commas
-        );
-    }
-    else
-        throw GLUtils.Error(`Can't detect function arguments of ${code}`);
-
-    return [];
-}
-
-
-
 
 
 //
@@ -551,25 +468,28 @@ function waitForQueueNotEmpty(queue)
 
 // a standard program runs a shader on an "image"
 // uniforms: { 'name': <default_value>, ... }
-function StandardProgram(gl, width, height, fragmentShaderSource, uniforms = { })
+function StandardProgram(gl, width, height, shaderdecl, uniforms = { })
 {
     // compile shaders
-    const source = ShaderPreprocessor.run(gl, DEFAULT_FRAGMENT_SHADER_PREFIX + fragmentShaderSource);
-    const program = GLUtils.createProgram(gl, DEFAULT_VERTEX_SHADER, source);
+    const program = GLUtils.createProgram(gl, shaderdecl.vertexSource, shaderdecl.fragmentSource);
 
     // setup geometry
-    gl.bindAttribLocation(program, LOCATION_ATTRIB_POSITION, 'a_position');
-    gl.bindAttribLocation(program, LOCATION_ATTRIB_TEXCOORD, 'a_texCoord');
-    const vertexObjects = createStandardGeometry(gl);
+    gl.bindAttribLocation(program, LOCATION_ATTRIB_POSITION, shaderdecl.attributes.position);
+    gl.bindAttribLocation(program, LOCATION_ATTRIB_TEXCOORD, shaderdecl.attributes.texCoord);
+    const vertexObjects = GLUtils.createStandardGeometry(gl, LOCATION_ATTRIB_POSITION, LOCATION_ATTRIB_TEXCOORD);
 
     // define texSize
     width = Math.max(width | 0, 1);
     height = Math.max(height | 0, 1);
     uniforms.texSize = [ width, height ];
 
-    // autodetect uniforms, get their locations,
+    // autodetect uniforms
+    const uniform = { };
+    for(const u of shaderdecl.uniforms)
+        uniform[u] = { type: shaderdecl.uniformType(u) };
+
+    // given the declared uniforms, get their locations,
     // define their setters and set their default values
-    const uniform = autodetectUniforms(source);
     gl.useProgram(program);
     for(const u in uniform) {
         // get location
@@ -652,70 +572,9 @@ StandardProgram.prototype.pingpong = function()
 
 
 
-
-
 //
 // WebGL
 //
-
-// create VAO & VBO
-function createStandardGeometry(gl)
-{
-    // got cached values for this WebGL context?
-    const f = createStandardGeometry;
-    const cache = f._cache || (f._cache = new WeakMap());
-    if(cache.has(gl))
-        return cache.get(gl);
-
-    // configure the attributes of the vertex shader
-    const vao = gl.createVertexArray(); // vertex array object
-    const vbo = [ gl.createBuffer(), gl.createBuffer() ]; // vertex buffer objects
-    gl.bindVertexArray(vao);
-
-    // set the a_position attribute
-    // using the current vbo
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo[0]);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-        // clip coordinates
-        -1, -1,
-        1, -1,
-        -1, 1,
-        1, 1,
-    ]), gl.STATIC_DRAW);
-    gl.vertexAttribPointer(LOCATION_ATTRIB_POSITION, // attribute location
-                           2,          // 2 components per vertex (x,y)
-                           gl.FLOAT,   // type
-                           false,      // don't normalize
-                           0,          // default stride (tightly packed)
-                           0);         // offset
-    gl.enableVertexAttribArray(LOCATION_ATTRIB_POSITION);
-
-    // set the a_texCoord attribute
-    // using the current vbo
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo[1]);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-        // texture coordinates
-        0, 0,
-        1, 0,
-        0, 1,
-        1, 1,
-    ]), gl.STATIC_DRAW);
-    gl.vertexAttribPointer(LOCATION_ATTRIB_TEXCOORD, // attribute location
-                           2,          // 2 components per vertex (x,y)
-                           gl.FLOAT,   // type
-                           false,      // don't normalize
-                           0,          // default stride (tightly packed)
-                           0);         // offset
-    gl.enableVertexAttribArray(LOCATION_ATTRIB_TEXCOORD);
-
-    // unbind
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
-
-    // cache & return
-    const result = { vao, vbo };
-    cache.set(gl, result);
-    return result;
-}
 
 // create a width x height buffer for RGBA data
 function createPixelBuffer(width, height)

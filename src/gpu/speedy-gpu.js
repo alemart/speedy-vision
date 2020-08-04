@@ -216,7 +216,7 @@ export class SpeedyGPU
 
     /**
      * Create a SpeedyProgram that runs on the GPU
-     * @param {Function} shaderdecl A function that returns GLSL code
+     * @param {ShaderDeclaration} shaderdecl Shader declaration
      * @param {object} [options] SpeedyProgram options
      * @returns {SpeedyProgram} new instance
      */

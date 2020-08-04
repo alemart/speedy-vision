@@ -19,5 +19,7 @@
  * Color conversions
  */
 
+import { importShader } from '../../shader-declaration';
+
 // Convert to greyscale
-export const rgb2grey = (image) => require('../../shaders/colors/rgb2grey.glsl');
+export const rgb2grey = importShader('colors/rgb2grey.glsl').withArguments('image');

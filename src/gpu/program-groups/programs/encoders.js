@@ -19,8 +19,10 @@
  * Speedy image encoding algorithms
  */
 
+import { importShader } from '../../shader-declaration';
+
 // encode keypoint offsets: maxIterations is an integer in [1,255], determined experimentally
-export const encodeKeypointOffsets = (image, imageSize, maxIterations) => require('../../shaders/encoders/encode-keypoint-offsets.glsl');
+export const encodeKeypointOffsets = importShader('encoders/encode-keypoint-offsets.glsl').withArguments('image', 'imageSize', 'maxIterations');
 
 // encode keypoints
-export const encodeKeypoints = (image, imageSize, encoderLength, descriptorSize) => require('../../shaders/encoders/encode-keypoints.glsl');
+export const encodeKeypoints = importShader('encoders/encode-keypoints.glsl').withArguments('image', 'imageSize', 'encoderLength', 'descriptorSize');

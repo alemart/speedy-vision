@@ -138,6 +138,72 @@ export class GLUtils
     }
 
     /**
+     * Create the standard geometry for the vertex shader
+     * (i.e., vertices of a rectangle crafted for image processing)
+     * @param {WebGL2RenderingContext} gl
+     * @param {GLint} locationOfPositionAttribute
+     * @param {GLint} locationOfTexcoordAttribute
+     * @returns {object} with keys vao & vbo
+     */
+    static createStandardGeometry(gl, locationOfPositionAttribute, locationOfTexcoordAttribute)
+    {
+        // got cached values for this WebGL context?
+        const f = GLUtils.createStandardGeometry;
+        const cache = f._cache || (f._cache = new WeakMap());
+        if(cache.has(gl))
+            return cache.get(gl);
+
+        // configure the attributes of the vertex shader
+        const vao = gl.createVertexArray(); // vertex array object
+        const vbo = [ gl.createBuffer(), gl.createBuffer() ]; // vertex buffer objects
+        gl.bindVertexArray(vao);
+
+        // set the a_position attribute
+        // using the current vbo
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbo[0]);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+            // clip coordinates
+            -1, -1,
+            1, -1,
+            -1, 1,
+            1, 1,
+        ]), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(locationOfPositionAttribute, // attribute location
+                               2,          // 2 components per vertex (x,y)
+                               gl.FLOAT,   // type
+                               false,      // don't normalize
+                               0,          // default stride (tightly packed)
+                               0);         // offset
+        gl.enableVertexAttribArray(locationOfPositionAttribute);
+
+        // set the a_texCoord attribute
+        // using the current vbo
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbo[1]);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+            // texture coordinates
+            0, 0,
+            1, 0,
+            0, 1,
+            1, 1,
+        ]), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(locationOfTexcoordAttribute, // attribute location
+                               2,          // 2 components per vertex (x,y)
+                               gl.FLOAT,   // type
+                               false,      // don't normalize
+                               0,          // default stride (tightly packed)
+                               0);         // offset
+        gl.enableVertexAttribArray(locationOfTexcoordAttribute);
+
+        // unbind
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+        // cache & return
+        const result = { vao, vbo };
+        cache.set(gl, result);
+        return result;
+    }
+
+    /**
      * Create a WebGL texture
      * @param {WebGL2RenderingContext} gl 
      * @param {number} width in pixels

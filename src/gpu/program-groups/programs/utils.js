@@ -19,23 +19,25 @@
  * Utility shaders
  */
 
+import { importShader } from '../../shader-declaration';
+
 // Identity shader: no-operation
-export const identity = (image) => require('../../shaders/utils/identity.glsl');
+export const identity = importShader('utils/identity.glsl').withArguments('image');
 
 // Flip y-axis for output
-export const flipY = (image) => require('../../shaders/utils/flip-y.glsl');
+export const flipY = importShader('utils/flip-y.glsl').withArguments('image');
 
 // Fill image with a constant
-export const fill = (value) => require('../../shaders/utils/fill.glsl');
+export const fill = importShader('utils/fill.glsl').withArguments('value');
 
 // Fill zero or more color components of the input image with a constant value
-export const fillComponents = (image, pixelComponents, value) => require('../../shaders/utils/fill-components.glsl');
+export const fillComponents = importShader('utils/fill-components.glsl').withArguments('image', 'pixelComponents', 'value');
 
 // Copy the src component of src to zero or more color components of a copy of dest
-export const copyComponents = (dest, src, destComponents, srcComponentId) => require('../../shaders/utils/copy-components.glsl');
+export const copyComponents = importShader('utils/copy-components.glsl').withArguments('dest', 'src', 'destComponents', 'srcComponentId');
 
 // Scan the entire image and find the minimum & maximum pixel intensity for each row and column
-export const scanMinMax1D = (image, iterationNumber) => require('../../shaders/utils/scan-minmax1d.glsl');
+export const scanMinMax1D = importShader('utils/scan-minmax1d.glsl').withArguments('image', 'iterationNumber');
 
 // Scan the entire image and find the minimum & maximum pixel intensity
-export const scanMinMax2D = (image, iterationNumber) => require('../../shaders/utils/scan-minmax2d.glsl');
+export const scanMinMax2D = importShader('utils/scan-minmax2d.glsl').withArguments('image', 'iterationNumber');

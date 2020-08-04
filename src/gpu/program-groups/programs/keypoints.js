@@ -19,6 +19,8 @@
  * Keypoint detection
  */
 
+import { importShader } from '../../shader-declaration';
+
 /*
  * Pixels are encoded as follows:
  *
@@ -37,31 +39,31 @@
 
 // FAST-9_16: requires 9 contiguous pixels
 // on a circumference of 16 pixels
-export const fast9 = (image, threshold) => require('../../shaders/keypoints/fast9lg.glsl');
+export const fast9 = importShader('keypoints/fast9lg.glsl').withArguments('image', 'threshold');
 
 // FAST-9_16 on scale-space
 // Requires image mipmap
-export const fast9pyr = (pyramid, threshold, minLod, maxLod, usePyrSubLevels) => require('../../shaders/keypoints/fast9pyr.glsl');
+export const fast9pyr = importShader('keypoints/fast9pyr.glsl').withArguments('pyramid', 'threshold', 'minLod', 'maxLod', 'usePyrSubLevels');
 
 // FAST-7_12: requires 7 contiguous pixels
 // on a circumference of 12 pixels
-export const fast7 = (image, threshold) => require('../../shaders/keypoints/fast7.glsl');
+export const fast7 = importShader('keypoints/fast7.glsl').withArguments('image', 'threshold');
 
 // FAST-5_8: requires 5 contiguous pixels
 // on a circumference of 8 pixels
-export const fast5 = (image, threshold) => require('../../shaders/keypoints/fast5.glsl');
+export const fast5 = importShader('keypoints/fast5.glsl').withArguments('image', 'threshold');
 
 // compute corner score considering a
 // neighboring circumference of 16 pixels
-export const fastScore16 = (image, threshold) => require('../../shaders/keypoints/fast-score16.glsl');
+export const fastScore16 = importShader('keypoints/fast-score16.glsl').withArguments('image', 'threshold');
 
 // compute corner score considering a
 // neighboring circumference of 12 pixels
-export const fastScore12 = (image, threshold) => require('../../shaders/keypoints/fast-score12.glsl');
+export const fastScore12 = importShader('keypoints/fast-score12.glsl').withArguments('image', 'threshold');
 
 // compute corner score considering a
 // neighboring circumference of 8 pixels
-export const fastScore8 = (image, threshold) => require('../../shaders/keypoints/fast-score8.glsl');
+export const fastScore8 = importShader('keypoints/fast-score8.glsl').withArguments('image', 'threshold');
 
 
 
@@ -71,16 +73,16 @@ export const fastScore8 = (image, threshold) => require('../../shaders/keypoints
 
 // compute corner responses
 // (score map)
-export const multiscaleHarris = (pyramid, windowRadius, minLod, maxLod, usePyrSubLevels, sobelDerivatives) => require('../../shaders/keypoints/multiscale-harris.glsl');
+export const multiscaleHarris = importShader('keypoints/multiscale-harris.glsl').withArguments('pyramid', 'windowRadius', 'minLod', 'maxLod', 'usePyrSubLevels', 'sobelDerivatives');
 
 // discard corners below a specified quality level
-export const harrisCutoff = (corners, maxScore, quality) => require('../../shaders/keypoints/harris-cutoff.glsl');
+export const harrisCutoff = importShader('keypoints/harris-cutoff.glsl').withArguments('corners', 'maxScore', 'quality');
 
 
 //
 // BRISK feature detection
 //
-export const brisk = (image, layerA, layerB, scaleA, scaleB, lgM, h) => require('../../shaders/keypoints/brisk.glsl');
+export const brisk = importShader('keypoints/brisk.glsl').withArguments('image', 'layerA', 'layerB', 'scaleA', 'scaleB', 'lgM', 'h');
 
 
 
@@ -89,13 +91,13 @@ export const brisk = (image, layerA, layerB, scaleA, scaleB, lgM, h) => require(
 //
 
 // non-maximum suppression
-export const nonmaxSuppression = (image) => require('../../shaders/keypoints/nonmax-suppression.glsl');
-export const multiscaleSuppression = (image, usePyrSubLevels) => require('../../shaders/keypoints/multiscale-suppression.glsl');
-export const samescaleSuppression = (image) => require('../../shaders/keypoints/samescale-suppression.glsl');
+export const nonmaxSuppression = importShader('keypoints/nonmax-suppression.glsl').withArguments('image');
+export const multiscaleSuppression = importShader('keypoints/multiscale-suppression.glsl').withArguments('image', 'usePyrSubLevels');
+export const samescaleSuppression = importShader('keypoints/samescale-suppression.glsl').withArguments('image');
 
 // find keypoint orientation
-export const orientationViaCentroid = (corners, patchRadius) => require('../../shaders/keypoints/orientation-via-centroid.glsl');
-export const multiscaleOrientationViaCentroid = (corners, patchRadius, pyramid) => require('../../shaders/keypoints/multiscale-orientation-via-centroid.glsl');
+export const orientationViaCentroid = importShader('keypoints/orientation-via-centroid.glsl').withArguments('corners', 'patchRadius');
+export const multiscaleOrientationViaCentroid = importShader('keypoints/multiscale-orientation-via-centroid.glsl').withArguments('corners', 'patchRadius', 'pyramid');
 
 // Sobel derivatives
-export const multiscaleSobel = (pyramid, lod) => require('../../shaders/keypoints/multiscale-sobel.glsl');
+export const multiscaleSobel = importShader('keypoints/multiscale-sobel.glsl').withArguments('pyramid', 'lod');
