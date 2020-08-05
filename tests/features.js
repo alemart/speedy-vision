@@ -40,61 +40,38 @@ describe('Feature detection', function() {
 
     describe('FAST-9,16', function() {
         runGenericTests('fast9');
+        runFastTests('fast9');
     });
 
     describe('FAST-7,12', function() {
         runGenericTests('fast7');
+        runFastTests('fast7');
     });
 
     describe('FAST-5,8', function() {
         runGenericTests('fast5');
+        runFastTests('fast5');
+    });
+
+    describe('Multiscale FAST', function() {
+        runGenericTests('multiscale-fast');
+        runGenericMultiscaleTests('multiscale-fast');
+        runFastTests('multiscale-fast');
     });
 
     describe('BRISK', function() {
         runGenericTests('brisk');
-
-        it('gets you more features the deeper you go, given a fixed sensitivity', async function() {
-            const depths = [1, 2, 3, 4];
-            let lastNumFeatures = 0;
-
-            for(const depth of depths) {
-                const features = await repeat(5, () => media.findFeatures({
-                    method: 'brisk',
-                    sensitivity: 0.5,
-                    depth: depth,
-                }));
-                const numFeatures = features.length;
-
-                print(`With depth = ${depth}, we get ${numFeatures} features.`);
-                displayFeatures(media, features);
-
-                expect(numFeatures).toBeGreaterThanOrEqual(lastNumFeatures);
-                lastNumFeatures = numFeatures;
-            }
-            
-            expect(lastNumFeatures).toBeGreaterThan(0);
-        });
+        runGenericMultiscaleTests('brisk');
     });
 
-    describe('Automatic sensitivity', function() {
-        const tests = [100, 200, 300];
-        const tolerance = 0.10;
-        const numRepetitions = 100;
+    describe('Harris', function() {
+        runGenericTests('harris');
+    });
 
-        for(const expected of tests) {
-            it(`finds ${expected} features within a ${(100 * tolerance).toFixed(2)}% tolerance margin`, async function() {
-                const features = await repeat(numRepetitions, () => media.findFeatures({ expected, tolerance }));
-                const actual = features.length;
-                const percentage = 100 * actual / expected;
-
-                print(`With ${numRepetitions} repetitions of the algorithm, we get ${actual} features (${percentage.toFixed(2)}%).`)
-                displayFeatures(media, features);
-
-                expect(actual).toBeLessThanOrEqual(expected * (1 + tolerance));
-                expect(actual).toBeGreaterThanOrEqual(expected * (1 - tolerance));
-            });
-        }
-    })
+    describe('Multiscale Harris', function () {
+        runGenericTests('multiscale-harris');
+        runGenericMultiscaleTests('multiscale-harris');
+    });
 
     describe('Context loss', function() {
         it('recovers from WebGL context loss', async function() {
@@ -132,17 +109,7 @@ describe('Feature detection', function() {
             expect(numFeatures).toBeGreaterThanOrEqual(4);
         });
 
-        it('finds no features when the sensitivity is zero', async function() {
-            const features = await square.findFeatures({ method, sensitivity: 0 });
-            const numFeatures = features.length;
-
-            print(`Found ${numFeatures} features with method "${method}".`);
-            displayFeatures(square, features);
-
-            expect(numFeatures).toBe(0);
-        });
-
-        it('gives you more features the more you increase the sensitivity', async function() {
+        it('gets you more features if you increase the sensitivity', async function() {
             const v = linspace(0, 0.8, 5);
             let lastNumFeatures = 0;
 
@@ -158,6 +125,97 @@ describe('Feature detection', function() {
             }
             
             expect(lastNumFeatures).toBeGreaterThan(0);
+        });
+
+        describe('Maximum number of features', function() {
+            const tests = [0, 100, 300];
+
+            for(const max of tests) {
+                it(`finds up to ${max} features`, async function() {
+                    const v = [0.5, 1.0];
+                    for(const sensitivity of v) {
+                        const features = await repeat(5, () => media.findFeatures({ sensitivity, max }));
+                        const numFeatures = features.length;
+
+                        print(`With sensitivity = ${sensitivity.toFixed(2)} and max = ${max}, we find ${numFeatures} features when using "${method}"`);
+                        displayFeatures(media, features);
+
+                        expect(numFeatures).toBeLessThanOrEqual(max);
+                    }
+                });
+            }
+        });
+
+        describe('Automatic sensitivity', function() {
+            const tests = [100, 200, 300];
+            const tolerance = 0.10;
+            const numRepetitions = 100;
+
+            for(const expected of tests) {
+                it(`finds ${expected} features within a ${(100 * tolerance).toFixed(2)}% tolerance margin`, async function() {
+                    const features = await repeat(numRepetitions, () => media.findFeatures({ method, expected: {
+                        number: expected,
+                        tolerance: tolerance
+                    }}));
+                    const actual = features.length;
+                    const percentage = 100 * actual / expected;
+
+                    print(`With ${numRepetitions} repetitions of the algorithm ("${method}"), we get ${actual} features (${percentage.toFixed(2)}%) with automatic sensitivity.`)
+                    displayFeatures(media, features);
+
+                    expect(actual).toBeLessThanOrEqual(expected * (1 + tolerance));
+                    expect(actual).toBeGreaterThanOrEqual(expected * (1 - tolerance));
+                });
+            }
+        });
+    }
+
+
+
+    //
+    // Tests that apply to all multi-scale methods
+    //
+
+    function runGenericMultiscaleTests(method)
+    {
+        it('gets you more features the deeper you go, given a fixed sensitivity', async function() {
+            const depths = [1, 2, 3, 4];
+            let lastNumFeatures = 0;
+
+            for(const depth of depths) {
+                const features = await repeat(5, () => media.findFeatures({
+                    method: method,
+                    sensitivity: 0.5,
+                    depth: depth,
+                }));
+                const numFeatures = features.length;
+
+                print(`With depth = ${depth} and method "${method}", we get ${numFeatures} features.`);
+                displayFeatures(media, features);
+
+                expect(numFeatures).toBeGreaterThanOrEqual(lastNumFeatures);
+                lastNumFeatures = numFeatures;
+            }
+            
+            expect(lastNumFeatures).toBeGreaterThan(0);
+        });
+    }
+
+
+    //
+    // Tests that apply to all FAST detectors
+    //
+
+    function runFastTests(method)
+    {
+        it('finds no features when the sensitivity is zero', async function() {
+            const features = await square.findFeatures({ method, sensitivity: 0 });
+            const numFeatures = features.length;
+
+            print(`Found ${numFeatures} features with method "${method}".`);
+            displayFeatures(square, features);
+
+            expect(numFeatures).toBe(0);
         });
     }
 });
