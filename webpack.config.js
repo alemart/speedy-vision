@@ -10,9 +10,9 @@ module.exports = (env, argv) => ({
     new webpack.BannerPlugin({
         banner: (({ name, version, homepage, description, year, author, license, date }) => [
             `${name} v${version}`,
+            `${description}`,
             `${homepage}`,
             ``,
-            `${description}`,
             `Copyright ${year} ${author}`,
             `@license ${license}`,
             ``,
@@ -25,6 +25,9 @@ module.exports = (env, argv) => ({
     }),
     new webpack.DefinePlugin({
       '__SPEEDY_VERSION__': JSON.stringify(package.version),
+    }),
+    new webpack.IgnorePlugin({
+      resourceRegExp: /\.ignore\./i,
     }),
   ],
   output: {
@@ -45,6 +48,7 @@ module.exports = (env, argv) => ({
       },
     ],
   },
+  mode: argv.mode == 'development' ? 'development' : 'production',
   devtool: argv.mode == 'development' ? 'source-map' : undefined,
   devServer: {
       host: process.env.HOST || 'localhost',
@@ -55,13 +59,13 @@ module.exports = (env, argv) => ({
   optimization: argv.mode == 'development' ? { minimize: false } : {
       minimizer: [new TerserPlugin({
           terserOptions: {
-              mangle: false,
-              /*compress: {
-                  defaults: false,
-              },*/
-              output: {
+              /*output: {
                   comments: /^!/,
+              },*/
+              compress: {
+                  defaults: true,
               },
+              mangle: true,
           },
           extractComments: false,
       })],
