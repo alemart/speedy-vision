@@ -97,7 +97,7 @@ export class FAST
 /**
  * FAST corner detector augmented with scale & orientation
  */
-export class FASTPlus extends FAST
+export class MultiscaleFAST extends FAST
 {
      /**
      * Run the FAST corner detection algorithm

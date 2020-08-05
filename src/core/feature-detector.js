@@ -19,7 +19,7 @@
  * Feature detection facade
  */
 
-import { FAST, FASTPlus } from './algorithms/fast.js';
+import { FAST, MultiscaleFAST } from './algorithms/fast.js';
 import { BRISK } from './algorithms/brisk.js';
 import { Harris, MultiscaleHarris } from './algorithms/harris.js';
 import { SensitivityTuner, TestTuner } from '../utils/tuner';
@@ -111,7 +111,7 @@ export class FeatureDetector
         const greyscale = gpu.programs.colors.rgb2grey(texture);
 
         // extract features
-        const keypoints = FASTPlus.run(gpu, greyscale, n, settings);
+        const keypoints = MultiscaleFAST.run(gpu, greyscale, n, settings);
         return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.max);
     }
 
