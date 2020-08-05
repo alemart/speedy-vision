@@ -19,12 +19,12 @@
  * An access point to all programs that run in the GPU
  */
 
-import { GPUUtils } from './program-groups/utils';
-import { GPUColors } from './program-groups/colors';
-import { GPUFilters } from './program-groups/filters';
-import { GPUKeypoints } from './program-groups/keypoints';
-import { GPUEncoders } from './program-groups/encoders';
-import { GPUPyramids } from './program-groups/pyramids';
+import { GPUUtils } from './programs/utils';
+import { GPUColors } from './programs/colors';
+import { GPUFilters } from './programs/filters';
+import { GPUKeypoints } from './programs/keypoints';
+import { GPUEncoders } from './programs/encoders';
+import { GPUPyramids } from './programs/pyramids';
 
 /**
  * An access point to all programs that run in the CPU

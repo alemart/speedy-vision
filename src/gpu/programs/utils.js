@@ -19,14 +19,40 @@
  * GPU utilities
  */
 
-import { GLUtils } from '../gl-utils';
-import { PixelComponent } from '../../utils/types';
 import { GPUProgramGroup } from '../gpu-program-group';
-import {
-    identity, flipY,
-    fill, fillComponents, copyComponents,
-    scanMinMax2D,
-} from './programs/utils';
+import { importShader } from '../shader-declaration';
+import { PixelComponent } from '../../utils/types';
+import { GLUtils } from '../gl-utils';
+
+
+
+//
+// Shaders
+//
+
+// Identity shader: no-operation
+const identity = importShader('utils/identity.glsl').withArguments('image');
+
+// Flip y-axis for output
+const flipY = importShader('utils/flip-y.glsl').withArguments('image');
+
+// Fill image with a constant
+const fill = importShader('utils/fill.glsl').withArguments('value');
+
+// Fill zero or more color components of the input image with a constant value
+const fillComponents = importShader('utils/fill-components.glsl').withArguments('image', 'pixelComponents', 'value');
+
+// Copy the src component of src to zero or more color components of a copy of dest
+const copyComponents = importShader('utils/copy-components.glsl').withArguments('dest', 'src', 'destComponents', 'srcComponentId');
+
+// Scan the entire image and find the minimum & maximum pixel intensity for each row and column
+//const scanMinMax1D = importShader('utils/scan-minmax1d.glsl').withArguments('image', 'iterationNumber');
+
+// Scan the entire image and find the minimum & maximum pixel intensity
+const scanMinMax2D = importShader('utils/scan-minmax2d.glsl').withArguments('image', 'iterationNumber');
+
+
+
 
 /**
  * GPUUtils

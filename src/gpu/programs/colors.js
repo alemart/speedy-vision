@@ -15,11 +15,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * colors.js
- * Color conversions
+ * gpu-colors.js
+ * Color routines & conversion algorithms
  */
 
-import { importShader } from '../../shader-declaration';
+import { GPUProgramGroup } from '../gpu-program-group';
+import { importShader } from '../shader-declaration';
+
+
+
+//
+// Shaders
+//
 
 // Convert to greyscale
-export const rgb2grey = importShader('colors/rgb2grey.glsl').withArguments('image');
+const rgb2grey = importShader('colors/rgb2grey.glsl').withArguments('image');
+
+
+
+
+/**
+ * GPUColors
+ * Color routines
+ */
+export class GPUColors extends GPUProgramGroup
+{
+    /**
+     * Class constructor
+     * @param {SpeedyGPU} gpu
+     * @param {number} width
+     * @param {number} height
+     */
+    constructor(gpu, width, height)
+    {
+        super(gpu, width, height);
+        this
+            // convert to greyscale
+            .declare('rgb2grey', rgb2grey)
+        ;
+    }
+}

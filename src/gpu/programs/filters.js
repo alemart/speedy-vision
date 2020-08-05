@@ -20,7 +20,7 @@
  */
 
 import { GPUProgramGroup } from '../gpu-program-group';
-import { conv2D, convX, convY, texConvX, texConvY, texConv2D, idConv2D, createKernel2D, createKernel1D } from './programs/convolution';
+import { convX, convY, texConvX, texConvY, texConv2D, createKernel2D, createKernel1D } from './convolution';
 
 /**
  * GPUFilters
@@ -51,16 +51,15 @@ export class GPUFilters extends GPUProgramGroup
             .compose('box11', '_box11x', '_box11y') // size: 11x11
 
             // texture-based convolutions
-            .compose('texConv2D3', '_idConv2D3', '_texConv2D3') // 2D texture-based 3x3 convolution
-            .compose('texConv2D5', '_idConv2D5', '_texConv2D5') // 2D texture-based 5x5 convolution
-            .compose('texConv2D7', '_idConv2D7', '_texConv2D7') // 2D texture-based 7x7 convolution
-
-            .declare('_texConv2D3', texConv2D(3)) // 3x3 convolution with a texture (not chainable)
-            .declare('_idConv2D3', idConv2D(3)) // identity operation (enables chaining)
-            .declare('_texConv2D5', texConv2D(5)) // 5x5 convolution with a texture (not chainable)
-            .declare('_idConv2D5', idConv2D(5)) // identity operation (enables chaining)
-            .declare('_texConv2D7', texConv2D(7)) // 7x7 convolution with a texture (not chainable)
-            .declare('_idConv2D7', idConv2D(7)) // identity operation (enables chaining)
+            .declare('texConv2D3', texConv2D(3), { // 2D convolution with a 3x3 texture-based kernel
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('texConv2D5', texConv2D(5), { // 2D convolution with a 5x5 texture-based kernel
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('texConv2D7', texConv2D(7), { // 2D convolution with a 7x7 texture-based kernel
+                ...this.program.usesPingpongRendering()
+            })
 
             // texture-based separable convolutions
             .compose('texConvXY3', 'texConvX3', 'texConvY3') // 2D convolution with same 1D separable kernel in both axes

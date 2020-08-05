@@ -16,17 +16,23 @@
  * limitations under the License.
  *
  * convolution.js
- * Convolution function generator
+ * Convolution shader generators
  */
 
-import { createShader } from '../../shader-declaration';
-import { Utils } from "../../../utils/utils";
+import { Utils } from "../../utils/utils";
+import { createShader } from '../shader-declaration';
 
 // Utilities
 const cartesian = (a, b) => [].concat(...a.map(a => b.map(b => [a,b]))); // [a] x [b]
 const symmetricRange = n => [...Array(2*n + 1).keys()].map(x => x-n);    // [-n, ..., n]
 
-// Generate a 2D convolution with a square kernel
+
+
+/**
+ * Generate a 2D convolution with a square kernel
+ * @param {Array<number>} kernel convolution kernel
+ * @param {number} [normalizationConstant] will be multiplied by all kernel entries
+ */
 export function conv2D(kernel, normalizationConstant = 1.0)
 {
     const kernel32 = new Float32Array(kernel.map(x => (+x) * (+normalizationConstant)));
@@ -70,20 +76,42 @@ export function conv2D(kernel, normalizationConstant = 1.0)
     return createShader(source).withArguments('image');
 }
 
-// Generate a 1D convolution function on the x-axis
+
+
+
+/**
+ * Generate a 1D convolution function on the x-axis
+ * @param {Array<number>} kernel convolution kernel
+ * @param {number} [normalizationConstant] will be multiplied by all kernel entries
+ */
 export function convX(kernel, normalizationConstant = 1.0)
 {
     return conv1D('x', kernel, normalizationConstant);
 }
 
-// Generate a 1D convolution function on the y-axis
+
+
+
+/**
+ * Generate a 1D convolution function on the y-axis
+ * @param {Array<number>} kernel convolution kernel
+ * @param {number} [normalizationConstant] will be multiplied by all kernel entries
+ */
 export function convY(kernel, normalizationConstant = 1.0)
 {
     return conv1D('y', kernel, normalizationConstant);
 }
 
-// 1D convolution function generator
-function conv1D(axis, kernel, normalizationConstant)
+
+
+
+/**
+ * 1D convolution function generator
+ * @param {string} axis either "x" or "y"
+ * @param {Array<number>} kernel convolution kernel
+ * @param {number} [normalizationConstant] will be multiplied by all kernel entries
+ */
+function conv1D(axis, kernel, normalizationConstant = 1.0)
 {
     const kernel32 = new Float32Array(kernel.map(x => (+x) * (+normalizationConstant)));
     const kSize = kernel32.length;
@@ -124,6 +152,10 @@ function conv1D(axis, kernel, normalizationConstant)
     return createShader(source).withArguments('image');
 }
 
+
+
+
+
 /*
  * ------------------------------------------------------------------
  * Texture Encoding
@@ -162,9 +194,15 @@ function conv1D(axis, kernel, normalizationConstant)
  * where x_i = floor(e_i).
  */
 
-// Generate a texture-based 2D convolution kernel
-// of size (kernelSize x kernelSize), where all
-// entries belong to the [0, 1] range
+
+
+
+/**
+ * Generate a texture-based 2D convolution kernel of size
+ * (kernelSize x kernelSize), where all entries belong to
+ * the [0, 1] range
+ * @param {number} kernelSize odd number, e.g., 3 to create a 3x3 kernel, and so on
+ */
 export function createKernel2D(kernelSize)
 {
     // validate input
@@ -196,9 +234,14 @@ export function createKernel2D(kernelSize)
     return createShader(shader).withArguments('kernel');
 }
 
-// Generate a texture-based 1D convolution kernel
-// of size (kernelSize x 1), where all entries
-// belong to the [0, 1] range
+
+
+
+/**
+ * Generate a texture-based 1D convolution kernel of size
+ * (kernelSize x 1), where all entries belong to the [0,1] range
+ * @param {number} kernelSize odd number
+ */
 export function createKernel1D(kernelSize)
 {
     // validate input
@@ -230,9 +273,15 @@ export function createKernel1D(kernelSize)
     return createShader(shader).withArguments('kernel');
 }
 
-// 2D convolution with a texture-based kernel of size
-// kernelSize x kernelSize, with optional scale & offset
-// By default, scale and offset are 1 and 0, respectively
+
+
+
+/**
+ * 2D convolution with a texture-based kernel of size
+ * kernelSize x kernelSize, with optional scale & offset
+ * By default, scale and offset are 1 and 0, respectively
+ * @param {number} kernelSize odd number, e.g., 3 to create a 3x3 kernel, and so on
+ */
 export function texConv2D(kernelSize)
 {
     // validate input
@@ -278,30 +327,32 @@ export function texConv2D(kernelSize)
     return createShader(shader).withArguments('image', 'texKernel', 'scale', 'offset');
 }
 
-// identity operation with the same parameters as texConv2D()
-export function idConv2D(kernelSize)
-{
-    const shader = `
-    uniform sampler2D image, texKernel;
-    uniform float scale, offset;
 
-    void main()
-    {
-        color = threadPixel(image);
-    }
-    `;
 
-    return createShader(shader).withArguments('image', 'texKernel', 'scale', 'offset');
-}
 
-// Texture-based 1D convolution on the x-axis
+/**
+ * Texture-based 1D convolution on the x-axis
+ * @param {number} kernelSize odd number
+ */
 export const texConvX = kernelSize => texConv1D(kernelSize, 'x');
 
-// Texture-based 1D convolution on the x-axis
+
+
+/**
+ * Texture-based 1D convolution on the x-axis
+ * @param {number} kernelSize odd number
+ */
 export const texConvY = kernelSize => texConv1D(kernelSize, 'y');
 
-// texture-based 1D convolution function generator
-// (the convolution kernel is stored in a texture)
+
+
+
+/**
+ * Texture-based 1D convolution function generator
+ * (the convolution kernel is stored in a texture)
+ * @param {number} kernelSize odd number
+ * @param {string} axis either "x" or "y"
+ */
 function texConv1D(kernelSize, axis)
 {
     // validate input

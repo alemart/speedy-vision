@@ -20,7 +20,7 @@
  */
 
 import { GPUProgramGroup } from '../gpu-program-group';
-import { encodeKeypointOffsets, encodeKeypoints } from './programs/encoders';
+import { importShader } from '../shader-declaration';
 import { SpeedyFeature } from '../../core/speedy-feature';
 import { StochasticTuner } from '../../utils/tuner';
 import { Utils } from '../../utils/utils'
@@ -35,6 +35,20 @@ const MAX_KEYPOINTS = ((MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH) / MAX_PIXELS_PE
 const INITIAL_ENCODER_LENGTH = 128; // pick a large value <= MAX (useful on static images when no encoder optimization is performed beforehand)
 const TWO_PI = 2.0 * Math.PI;
 const PI = Math.PI;
+
+
+
+//
+// Shaders
+//
+
+// encode keypoint offsets: maxIterations is an integer in [1,255], determined experimentally
+const encodeKeypointOffsets = importShader('encoders/encode-keypoint-offsets.glsl').withArguments('image', 'imageSize', 'maxIterations');
+
+// encode keypoints
+const encodeKeypoints = importShader('encoders/encode-keypoints.glsl').withArguments('image', 'imageSize', 'encoderLength', 'descriptorSize');
+
+
 
 
 /**
