@@ -1,5 +1,15 @@
 # Release notes
 
+## 0.3.2 - August 5th, 2020
+
+* New feature detectors: harris, multiscale-harris, multiscale-fast
+* Added new code to generate image pyramids and to compute keypoint orientation
+* Performance optimizations
+* Implemented ping-pong rendering for internal shaders
+* Added max setting to limit the number of returned keypoints
+* Added demo: find the best keypoints
+* Improved the code
+
 ## 0.3.1 - July 17th, 2020
 
 * Improved performance when downloading data from the GPU
