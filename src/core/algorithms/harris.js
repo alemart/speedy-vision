@@ -58,6 +58,8 @@ export class Harris
         // quality level in [0,1]
         if(!settings.hasOwnProperty('quality'))
             settings.quality = DEFAULT_QUALITY;
+        else
+            settings.quality = Math.max(0, Math.min(settings.quality, 1));
 
         // adjust parameters
         const windowRadius = Math.max(0, Math.min((settings.windowSize | 0) >> 1, 3));
