@@ -74,8 +74,8 @@ export class FeatureDetector
 
         // pre-processing the image...
         const source = media._gpu.upload(media.source);
-        const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
-        const greyscale = gpu.colors.rgb2grey(texture);
+        const texture = settings.denoise ? gpu.programs.filters.gauss5(source) : source;
+        const greyscale = gpu.programs.colors.rgb2grey(texture);
 
         // extract features
         const keypoints = FAST.run(gpu, greyscale, n, settings);
@@ -107,8 +107,8 @@ export class FeatureDetector
 
         // pre-processing the image...
         const source = media._gpu.upload(media.source);
-        const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
-        const greyscale = gpu.colors.rgb2grey(texture);
+        const texture = settings.denoise ? gpu.programs.filters.gauss5(source) : source;
+        const greyscale = gpu.programs.colors.rgb2grey(texture);
 
         // extract features
         const keypoints = FASTPlus.run(gpu, greyscale, n, settings);
@@ -139,8 +139,8 @@ export class FeatureDetector
 
         // pre-processing the image...
         const source = media._gpu.upload(media.source);
-        const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
-        const greyscale = gpu.colors.rgb2grey(texture);
+        const texture = settings.denoise ? gpu.programs.filters.gauss5(source) : source;
+        const greyscale = gpu.programs.colors.rgb2grey(texture);
 
         // extract features
         const keypoints = Harris.run(gpu, greyscale, settings);
@@ -171,8 +171,8 @@ export class FeatureDetector
 
         // pre-processing the image...
         const source = media._gpu.upload(media.source);
-        const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
-        const greyscale = gpu.colors.rgb2grey(texture);
+        const texture = settings.denoise ? gpu.programs.filters.gauss5(source) : source;
+        const greyscale = gpu.programs.colors.rgb2grey(texture);
 
         // extract features
         const keypoints = MultiscaleHarris.run(gpu, greyscale, settings);
@@ -210,8 +210,8 @@ export class FeatureDetector
 
         // pre-processing the image...
         const source = media._gpu.upload(media.source);
-        const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
-        const greyscale = gpu.colors.rgb2grey(texture);
+        const texture = settings.denoise ? gpu.programs.filters.gauss5(source) : source;
+        const greyscale = gpu.programs.colors.rgb2grey(texture);
 
         // extract features
         const keypoints = BRISK.run(gpu, greyscale, settings);
@@ -222,10 +222,10 @@ export class FeatureDetector
     // that resolves to an Array of keypoints
     _extractKeypoints(corners, useAsyncTransfer = true, max = -1, gpu = this._gpu)
     {
-        return gpu.encoders.encodeKeypoints(corners, useAsyncTransfer).then(encodedKeypoints => {
+        return gpu.programs.encoders.encodeKeypoints(corners, useAsyncTransfer).then(encodedKeypoints => {
             // when processing a video, we expect that the number of keypoints
             // in time is a relatively smooth curve
-            const keypoints = gpu.encoders.decodeKeypoints(encodedKeypoints);
+            const keypoints = gpu.programs.encoders.decodeKeypoints(encodedKeypoints);
             const currCount = Math.max(keypoints.length, 64); // may explode if abrupt video changes
             const prevCount = Math.max(this._lastKeypointCount, 64);
             const newCount = Math.ceil(OPTIMIZER_GROWTH_WEIGHT * currCount + (1.0 - OPTIMIZER_GROWTH_WEIGHT) * prevCount);
@@ -233,8 +233,8 @@ export class FeatureDetector
             this._lastKeypointCount = newCount;
             this._lastKeypointEncoderOutput = keypoints.length;
             if(useAsyncTransfer) // FIXME: use some other flag?
-                gpu.encoders.optimizeKeypointEncoder(newCount);
-            //document.querySelector('mark').innerHTML = gpu.encoders._keypointEncoderLength;
+                gpu.programs.encoders.optimizeKeypointEncoder(newCount);
+            //document.querySelector('mark').innerHTML = gpu.programs.encoders._keypointEncoderLength;
 
             // sort the data according to cornerness score
             keypoints.sort(scoreCmp);

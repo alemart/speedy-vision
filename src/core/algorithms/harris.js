@@ -64,24 +64,24 @@ export class Harris
         const minLod = 0, maxLod = 0;
 
         // compute derivatives
-        const df = gpu.keypoints.multiscaleSobel(greyscale, 0);
+        const df = gpu.programs.keypoints.multiscaleSobel(greyscale, 0);
         const sobelDerivatives = Array(7).fill(df);
 
         // corner detection
         const pyramid = greyscale;
-        const corners = gpu.keypoints.multiscaleHarris(pyramid, windowRadius, minLod, maxLod, true, sobelDerivatives);
+        const corners = gpu.programs.keypoints.multiscaleHarris(pyramid, windowRadius, minLod, maxLod, true, sobelDerivatives);
 
         // find the maximum corner response
-        const maxScore = gpu.utils.scanMax(corners, PixelComponent.RED);
+        const maxScore = gpu.programs.utils.scanMax(corners, PixelComponent.RED);
 
         // discard corners according to quality level
-        const filteredCorners = gpu.keypoints.harrisCutoff(corners, maxScore, settings.quality);
+        const filteredCorners = gpu.programs.keypoints.harrisCutoff(corners, maxScore, settings.quality);
 
         // release derivatives
-        gpu.utils.release(df);
+        gpu.programs.utils.release(df);
 
         // non-maximum suppression
-        return gpu.keypoints.nonmaxSuppression(filteredCorners);
+        return gpu.programs.keypoints.nonmaxSuppression(filteredCorners);
     }
 
     /**
@@ -138,31 +138,31 @@ export class MultiscaleHarris
         GLUtils.generateMipmap(gpu.gl, pyramid);
 
         // compute derivatives
-        const df = gpu.keypoints.multiscaleSobel(pyramid, minLod);
+        const df = gpu.programs.keypoints.multiscaleSobel(pyramid, minLod);
         const sobelDerivatives = Array(7).fill(df);
         for(let lod = minLod + 0.5; lod <= maxLod; lod += 0.5)
-            sobelDerivatives[(2*lod)|0] = gpu.keypoints.multiscaleSobel(pyramid, lod);
+            sobelDerivatives[(2*lod)|0] = gpu.programs.keypoints.multiscaleSobel(pyramid, lod);
         Utils.assert(sobelDerivatives.length == 2 * gpu.pyramidHeight - 1, 'Incorrect sobelDerivatives.length');
 
         // corner detection
-        const corners = gpu.keypoints.multiscaleHarris(pyramid, windowRadius, minLod, maxLod, true, sobelDerivatives);
+        const corners = gpu.programs.keypoints.multiscaleHarris(pyramid, windowRadius, minLod, maxLod, true, sobelDerivatives);
 
         // release derivatives
         for(let i = 0; i < sobelDerivatives.length; i++)
-            sobelDerivatives[i] = gpu.utils.release(sobelDerivatives[i]);
+            sobelDerivatives[i] = gpu.programs.utils.release(sobelDerivatives[i]);
 
         // find the maximum corner response
-        const maxScore = gpu.utils.scanMax(corners, PixelComponent.RED);
+        const maxScore = gpu.programs.utils.scanMax(corners, PixelComponent.RED);
 
         // discard corners according to quality level
-        const filteredCorners = gpu.keypoints.harrisCutoff(corners, maxScore, settings.quality);
+        const filteredCorners = gpu.programs.keypoints.harrisCutoff(corners, maxScore, settings.quality);
 
         // non-maximum suppression
-        const suppressed1 = gpu.keypoints.samescaleSuppression(filteredCorners);
-        const suppressed2 = gpu.keypoints.multiscaleSuppression(suppressed1, true);
+        const suppressed1 = gpu.programs.keypoints.samescaleSuppression(filteredCorners);
+        const suppressed2 = gpu.programs.keypoints.multiscaleSuppression(suppressed1, true);
 
         // compute orientation
-        const orientedCorners = gpu.keypoints.multiscaleOrientationViaCentroid(suppressed2, orientationPatchRadius, pyramid);
+        const orientedCorners = gpu.programs.keypoints.multiscaleOrientationViaCentroid(suppressed2, orientationPatchRadius, pyramid);
         return orientedCorners;
     }
 

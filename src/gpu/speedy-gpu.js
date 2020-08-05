@@ -19,30 +19,10 @@
  * GPU routines for accelerated computer vision
  */
 
-import { SpeedyProgram } from './speedy-program.js';
 import { GLUtils } from './gl-utils.js';
 import { Utils } from '../utils/utils';
-import { GPUUtils } from './program-groups/utils';
-import { GPUColors } from './program-groups/colors';
-import { GPUFilters } from './program-groups/filters';
-import { GPUKeypoints } from './program-groups/keypoints';
-import { GPUEncoders } from './program-groups/encoders';
-import { GPUPyramids } from './program-groups/pyramids';
-import { PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE} from '../utils/globals';
-
-// Limits
-const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
-
-// Available program groups
-// (maps group name to class name)
-const PROGRAM_GROUPS = {
-    'utils': GPUUtils,
-    'colors': GPUColors,
-    'filters': GPUFilters,
-    'keypoints': GPUKeypoints,
-    'encoders': GPUEncoders,
-    'pyramids': GPUPyramids,
-};
+import { GPUPrograms } from './gpu-programs';
+import { PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE, MAX_TEXTURE_LENGTH } from '../utils/globals';
 
 /**
  * GPU routines for
@@ -57,6 +37,18 @@ export class SpeedyGPU
      */
     constructor(width, height)
     {
+        // initialize properties
+        this._gl = null;
+        this._canvas = null;
+        this._width = 0;
+        this._height = 0;
+        this._programs = null;
+        this._pyramid = null;
+        this._intraPyramid = null;
+        this._inputTexture = null;
+        this._inputTextureIndex = 0;
+        this._omitGLContextWarning = false;
+
         // does the browser support WebGL2?
         checkWebGL2Availability();
 
@@ -74,21 +66,31 @@ export class SpeedyGPU
     }
 
     /**
-     * Texture width
-     * @returns {number}
+     * WebGL context
+     * Be careful when caching this, as the context may be lost!
+     * @returns {WebGL2RenderingContext}
      */
-    get width()
+    get gl()
     {
-        return this._width;
+        return this._gl;
     }
 
     /**
-     * Texture height
-     * @returns {number}
+     * Internal canvas
+     * @returns {HTMLCanvasElement|OffscreenCanvas}
      */
-    get height()
+    get canvas()
     {
-        return this._height;
+        return this._canvas;
+    }
+
+    /**
+     * Access point to all GPU programs
+     * @returns {GPUPrograms}
+     */
+    get programs()
+    {
+        return this._programs;
     }
 
     /**
@@ -144,25 +146,6 @@ export class SpeedyGPU
     }
 
     /**
-     * WebGL context
-     * Be careful when caching this, as the context may be lost!
-     * @returns {WebGL2RenderingContext}
-     */
-    get gl()
-    {
-        return this._gl;
-    }
-
-    /**
-     * Internal canvas
-     * @returns {HTMLCanvasElement|OffscreenCanvas}
-     */
-    get canvas()
-    {
-        return this._canvas;
-    }
-
-    /**
      * Upload data to the GPU
      * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} data 
      * @param {number} [width]
@@ -212,22 +195,6 @@ export class SpeedyGPU
         // output, so that (0,0) becomes the top-left corner
         GLUtils.uploadToTexture(gl, this._inputTexture[this._inputTextureIndex], width, height, data);
         return this._inputTexture[this._inputTextureIndex];
-    }
-
-    /**
-     * Create a SpeedyProgram that runs on the GPU
-     * @param {ShaderDeclaration} shaderdecl Shader declaration
-     * @param {object} [options] SpeedyProgram options
-     * @returns {SpeedyProgram} new instance
-     */
-    createProgram(shaderdecl, options = { })
-    {
-        const gl = this._gl;
-
-        return new SpeedyProgram(gl, shaderdecl, {
-            output: [ gl.canvas.width, gl.canvas.height ],
-            ...options
-        });
     }
 
     /**
@@ -292,6 +259,7 @@ export class SpeedyGPU
         const height = this._height;
 
         // initializing
+        this._programs = null;
         this._pyramid = null;
         this._intraPyramid = null;
         this._inputTexture = null;
@@ -317,7 +285,7 @@ export class SpeedyGPU
         this._gl = createWebGLContext(this._canvas);
 
         // spawn program groups
-        spawnProgramGroups.call(this, this, width, height);
+        this._programs = new GPUPrograms(this, width, height);
 
         // spawn pyramids of program groups
         this._pyramid = this._buildPyramid(width, height, 1.0, PYRAMID_MAX_LEVELS);
@@ -332,8 +300,7 @@ export class SpeedyGPU
         let pyramid = new Array(numLevels);
 
         for(let i = 0; i < pyramid.length; i++) {
-            pyramid[i] = { width, height, scale };
-            spawnProgramGroups.call(pyramid[i], this, width, height);
+            pyramid[i] = new GPUPrograms(this, width, height);
             width = ((1 + width) / 2) | 0;
             height = ((1 + height) / 2) | 0;
             scale /= 2;
@@ -386,34 +353,4 @@ function createWebGLContext(canvas)
         Utils.fatal('Can\'t create WebGL2 context. Try in a different browser.');
 
     return gl;
-}
-
-// Spawn program groups
-function spawnProgramGroups(gpu, width, height)
-{
-    // counter for handling lost WebGL context
-    if(spawnProgramGroups._cnt === undefined)
-        spawnProgramGroups._cnt = 0;
-    if(gpu == this) // false on pyramids
-        ++spawnProgramGroups._cnt;
-    const cnt = spawnProgramGroups._cnt;
-
-    // all program groups are available via getters
-    for(let g in PROGRAM_GROUPS) {
-        Object.defineProperty(this, g, {
-            get: (() => {
-                const grp = ('_' + g) + cnt, prevGrp = ('_' + g) + (cnt - 1);
-
-                // remove old groups (GL context lost)
-                if(this.hasOwnProperty(prevGrp))
-                    delete this[prevGrp];
-
-                // lazy instantiation
-                return (function() {
-                    return this[grp] || (this[grp] = new (PROGRAM_GROUPS[g])(gpu, width, height));
-                }).bind(this);
-            })(),
-            configurable: true // WebGL context may be lost
-        });
-    }
 }

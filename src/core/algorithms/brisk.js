@@ -100,7 +100,7 @@ export class BRISK
 
             // create gaussian kernels
             const kernels = scaledPatterns.map(layers => // 2D array
-                //layers.map(layer => gpu.filters.createGaussianKernel11x1(layer.r))
+                //layers.map(layer => gpu.programs.filters.createGaussianKernel11x1(layer.r))
                 layers.map(layer => 0) // FIXME
             );
             const sigmas = scaledPatterns.map(layers =>

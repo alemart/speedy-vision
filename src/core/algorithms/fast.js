@@ -56,15 +56,15 @@ export class FAST
 
         // virtual table
         const vtable = this.run._vtable || (this.run._vtable = {
-            5: gpu => gpu.keypoints.fast5,
-            7: gpu => gpu.keypoints.fast7,
-            9: gpu => gpu.keypoints.fast9,
+            5: gpu => gpu.programs.keypoints.fast5,
+            7: gpu => gpu.programs.keypoints.fast7,
+            9: gpu => gpu.programs.keypoints.fast9,
         });
 
         // keypoint detection
         const fast = (vtable[n])(gpu);
         const corners = fast(greyscale, settings.threshold);
-        return gpu.keypoints.nonmaxSuppression(corners);
+        return gpu.programs.keypoints.nonmaxSuppression(corners);
     }
 
     /**
@@ -135,7 +135,7 @@ export class FASTPlus extends FAST
         const orientationPatchRadius = 3;
 
         // select algorithm
-        const multiscaleFast = gpu.keypoints.fast9pyr;
+        const multiscaleFast = gpu.programs.keypoints.fast9pyr;
 
         // generate pyramid
         const pyramid = greyscale;
@@ -145,11 +145,11 @@ export class FASTPlus extends FAST
         const multiscaleCorners = multiscaleFast(pyramid, settings.threshold, 0, maxLod, true);
 
         // non-maximum suppression
-        const suppressed1 = gpu.keypoints.samescaleSuppression(multiscaleCorners);
-        const suppressed2 = gpu.keypoints.multiscaleSuppression(suppressed1, true);
+        const suppressed1 = gpu.programs.keypoints.samescaleSuppression(multiscaleCorners);
+        const suppressed2 = gpu.programs.keypoints.multiscaleSuppression(suppressed1, true);
 
         // compute orientation
-        const orientedCorners = gpu.keypoints.multiscaleOrientationViaCentroid(suppressed2, orientationPatchRadius, pyramid);
+        const orientedCorners = gpu.programs.keypoints.multiscaleOrientationViaCentroid(suppressed2, orientationPatchRadius, pyramid);
         return orientedCorners;
     }
 }

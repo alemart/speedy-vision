@@ -63,7 +63,7 @@ PipelineOperation.ConvertToGreyscale = class extends SpeedyPipelineOperation
     run(texture, gpu, media)
     {
         if(media._colorFormat == ColorFormat.RGB)
-            texture = gpu.colors.rgb2grey(texture);
+            texture = gpu.programs.colors.rgb2grey(texture);
         else if(media._colorFormat != ColorFormat.Greyscale)
             Utils.fatal(`Can't convert image to greyscale: unknown color format`);
 
@@ -111,7 +111,7 @@ PipelineOperation.Blur = class extends SpeedyPipelineOperation
 
     run(texture, gpu, media)
     {
-        return gpu.filters[this._filter](texture);
+        return gpu.programs.filters[this._filter](texture);
     }
 }
 
@@ -183,12 +183,12 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
                 GLUtils.destroyTexture(this._gl, this._texKernel);
             }
 
-            this._texKernel = gpu.filters[this._method[0]](this._kernel);
+            this._texKernel = gpu.programs.filters[this._method[0]](this._kernel);
             this._gl = gpu.gl;
         }
 
         // convolve
-        return gpu.filters[this._method[1]](
+        return gpu.programs.filters[this._method[1]](
             texture,
             this._texKernel,
             this._scale,

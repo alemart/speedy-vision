@@ -19,6 +19,8 @@
  * An abstract group of programs that run on the GPU
  */
 
+import { SpeedyProgram } from './speedy-program';
+
 /**
  * GPUProgramGroup
  * A semantically correlated group
@@ -151,7 +153,7 @@ export /* abstract */ class GPUProgramGroup
 
     /* private */ _createProgram(shaderdecl, settings = { })
     {
-        return this._gpu.createProgram(shaderdecl, {
+        return new SpeedyProgram(this._gpu.gl, shaderdecl, {
             // default settings
             output: [ this._width, this._height ],
             ...settings

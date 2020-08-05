@@ -94,7 +94,7 @@ export class SpeedyPipeline
                     texture = this._operations[i].run(texture, media._gpu, media);
 
                 // end of the pipeline
-                media._gpu.utils.output(texture);
+                media._gpu.programs.utils.output(texture);
                 media._source = media._gpu.canvas;
 
                 // done!

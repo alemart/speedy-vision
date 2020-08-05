@@ -19,13 +19,20 @@
  * Global constants
  */
 
+// -----------------------------------------------------------------
+// GENERAL
+// -----------------------------------------------------------------
+
+// Maximum texture length
+export const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
+
 
 
 // -----------------------------------------------------------------
 // IMAGE PYRAMIDS & SCALE-SPACE
 // -----------------------------------------------------------------
 
-// The number of layers of the pyramid
+// The number of layers of the pyramid (not counting intra-layers)
 export const PYRAMID_MAX_LEVELS = 4; // max depth in scale-space
 
 // The maximum supported scale for a pyramid layer
