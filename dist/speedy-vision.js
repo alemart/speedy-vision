@@ -1,12 +1,12 @@
 /*!
  * speedy-vision.js v0.3.2
+ * GPU-accelerated Computer Vision for the web
  * https://github.com/alemart/speedy-vision-js
  * 
- * GPU-accelerated Computer Vision for the web
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-08-03T22:54:32.610Z
+ * Date: 2020-08-05T22:05:28.179Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -352,13 +352,13 @@ function briskLongDistancePairs(threshold = 13.67, scale = 1.0)
 /*!*************************************!*\
   !*** ./src/core/algorithms/fast.js ***!
   \*************************************/
-/*! exports provided: FAST, FASTPlus */
+/*! exports provided: FAST, MultiscaleFAST */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FAST", function() { return FAST; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FASTPlus", function() { return FASTPlus; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MultiscaleFAST", function() { return MultiscaleFAST; });
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _gpu_gl_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../gpu/gl-utils */ "./src/gpu/gl-utils.js");
 /*
@@ -419,15 +419,15 @@ class FAST
 
         // virtual table
         const vtable = this.run._vtable || (this.run._vtable = {
-            5: gpu => gpu.keypoints.fast5,
-            7: gpu => gpu.keypoints.fast7,
-            9: gpu => gpu.keypoints.fast9,
+            5: gpu => gpu.programs.keypoints.fast5,
+            7: gpu => gpu.programs.keypoints.fast7,
+            9: gpu => gpu.programs.keypoints.fast9,
         });
 
         // keypoint detection
         const fast = (vtable[n])(gpu);
         const corners = fast(greyscale, settings.threshold);
-        return gpu.keypoints.nonmaxSuppression(corners);
+        return gpu.programs.keypoints.nonmaxSuppression(corners);
     }
 
     /**
@@ -460,7 +460,7 @@ class FAST
 /**
  * FAST corner detector augmented with scale & orientation
  */
-class FASTPlus extends FAST
+class MultiscaleFAST extends FAST
 {
      /**
      * Run the FAST corner detection algorithm
@@ -498,7 +498,7 @@ class FASTPlus extends FAST
         const orientationPatchRadius = 3;
 
         // select algorithm
-        const multiscaleFast = gpu.keypoints.fast9pyr;
+        const multiscaleFast = gpu.programs.keypoints.fast9pyr;
 
         // generate pyramid
         const pyramid = greyscale;
@@ -508,11 +508,11 @@ class FASTPlus extends FAST
         const multiscaleCorners = multiscaleFast(pyramid, settings.threshold, 0, maxLod, true);
 
         // non-maximum suppression
-        const suppressed1 = gpu.keypoints.samescaleSuppression(multiscaleCorners);
-        const suppressed2 = gpu.keypoints.multiscaleSuppression(suppressed1, true);
+        const suppressed1 = gpu.programs.keypoints.samescaleSuppression(multiscaleCorners);
+        const suppressed2 = gpu.programs.keypoints.multiscaleSuppression(suppressed1, true);
 
         // compute orientation
-        const orientedCorners = gpu.keypoints.multiscaleOrientationViaCentroid(suppressed2, orientationPatchRadius, pyramid);
+        const orientedCorners = gpu.programs.keypoints.multiscaleOrientationViaCentroid(suppressed2, orientationPatchRadius, pyramid);
         return orientedCorners;
     }
 }
@@ -594,30 +594,32 @@ class Harris
         // quality level in [0,1]
         if(!settings.hasOwnProperty('quality'))
             settings.quality = DEFAULT_QUALITY;
+        else
+            settings.quality = Math.max(0, Math.min(settings.quality, 1));
 
         // adjust parameters
         const windowRadius = Math.max(0, Math.min((settings.windowSize | 0) >> 1, 3));
         const minLod = 0, maxLod = 0;
 
         // compute derivatives
-        const df = gpu.keypoints.multiscaleSobel(greyscale, 0);
+        const df = gpu.programs.keypoints.multiscaleSobel(greyscale, 0);
         const sobelDerivatives = Array(7).fill(df);
 
         // corner detection
         const pyramid = greyscale;
-        const corners = gpu.keypoints.multiscaleHarris(pyramid, windowRadius, minLod, maxLod, true, sobelDerivatives);
+        const corners = gpu.programs.keypoints.multiscaleHarris(pyramid, windowRadius, minLod, maxLod, true, sobelDerivatives);
 
         // find the maximum corner response
-        const maxScore = gpu.utils.scanMax(corners, _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].RED);
+        const maxScore = gpu.programs.utils.scanMax(corners, _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].RED);
 
         // discard corners according to quality level
-        const filteredCorners = gpu.keypoints.harrisCutoff(corners, maxScore, settings.quality);
+        const filteredCorners = gpu.programs.keypoints.harrisCutoff(corners, maxScore, settings.quality);
 
         // release derivatives
-        gpu.utils.release(df);
+        gpu.programs.utils.release(df);
 
         // non-maximum suppression
-        return gpu.keypoints.nonmaxSuppression(filteredCorners);
+        return gpu.programs.keypoints.nonmaxSuppression(filteredCorners);
     }
 
     /**
@@ -674,31 +676,31 @@ class MultiscaleHarris
         _gpu_gl_utils__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].generateMipmap(gpu.gl, pyramid);
 
         // compute derivatives
-        const df = gpu.keypoints.multiscaleSobel(pyramid, minLod);
+        const df = gpu.programs.keypoints.multiscaleSobel(pyramid, minLod);
         const sobelDerivatives = Array(7).fill(df);
         for(let lod = minLod + 0.5; lod <= maxLod; lod += 0.5)
-            sobelDerivatives[(2*lod)|0] = gpu.keypoints.multiscaleSobel(pyramid, lod);
+            sobelDerivatives[(2*lod)|0] = gpu.programs.keypoints.multiscaleSobel(pyramid, lod);
         _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(sobelDerivatives.length == 2 * gpu.pyramidHeight - 1, 'Incorrect sobelDerivatives.length');
 
         // corner detection
-        const corners = gpu.keypoints.multiscaleHarris(pyramid, windowRadius, minLod, maxLod, true, sobelDerivatives);
+        const corners = gpu.programs.keypoints.multiscaleHarris(pyramid, windowRadius, minLod, maxLod, true, sobelDerivatives);
 
         // release derivatives
         for(let i = 0; i < sobelDerivatives.length; i++)
-            sobelDerivatives[i] = gpu.utils.release(sobelDerivatives[i]);
+            sobelDerivatives[i] = gpu.programs.utils.release(sobelDerivatives[i]);
 
         // find the maximum corner response
-        const maxScore = gpu.utils.scanMax(corners, _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].RED);
+        const maxScore = gpu.programs.utils.scanMax(corners, _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].RED);
 
         // discard corners according to quality level
-        const filteredCorners = gpu.keypoints.harrisCutoff(corners, maxScore, settings.quality);
+        const filteredCorners = gpu.programs.keypoints.harrisCutoff(corners, maxScore, settings.quality);
 
         // non-maximum suppression
-        const suppressed1 = gpu.keypoints.samescaleSuppression(filteredCorners);
-        const suppressed2 = gpu.keypoints.multiscaleSuppression(suppressed1, true);
+        const suppressed1 = gpu.programs.keypoints.samescaleSuppression(filteredCorners);
+        const suppressed2 = gpu.programs.keypoints.multiscaleSuppression(suppressed1, true);
 
         // compute orientation
-        const orientedCorners = gpu.keypoints.multiscaleOrientationViaCentroid(suppressed2, orientationPatchRadius, pyramid);
+        const orientedCorners = gpu.programs.keypoints.multiscaleOrientationViaCentroid(suppressed2, orientationPatchRadius, pyramid);
         return orientedCorners;
     }
 
@@ -810,8 +812,8 @@ class FeatureDetector
 
         // pre-processing the image...
         const source = media._gpu.upload(media.source);
-        const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
-        const greyscale = gpu.colors.rgb2grey(texture);
+        const texture = settings.denoise ? gpu.programs.filters.gauss5(source) : source;
+        const greyscale = gpu.programs.colors.rgb2grey(texture);
 
         // extract features
         const keypoints = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FAST"].run(gpu, greyscale, n, settings);
@@ -843,11 +845,11 @@ class FeatureDetector
 
         // pre-processing the image...
         const source = media._gpu.upload(media.source);
-        const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
-        const greyscale = gpu.colors.rgb2grey(texture);
+        const texture = settings.denoise ? gpu.programs.filters.gauss5(source) : source;
+        const greyscale = gpu.programs.colors.rgb2grey(texture);
 
         // extract features
-        const keypoints = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["FASTPlus"].run(gpu, greyscale, n, settings);
+        const keypoints = _algorithms_fast_js__WEBPACK_IMPORTED_MODULE_0__["MultiscaleFAST"].run(gpu, greyscale, n, settings);
         return this._extractKeypoints(keypoints, this._optimizeForDynamicUsage, settings.max);
     }
 
@@ -875,8 +877,8 @@ class FeatureDetector
 
         // pre-processing the image...
         const source = media._gpu.upload(media.source);
-        const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
-        const greyscale = gpu.colors.rgb2grey(texture);
+        const texture = settings.denoise ? gpu.programs.filters.gauss5(source) : source;
+        const greyscale = gpu.programs.colors.rgb2grey(texture);
 
         // extract features
         const keypoints = _algorithms_harris_js__WEBPACK_IMPORTED_MODULE_2__["Harris"].run(gpu, greyscale, settings);
@@ -907,8 +909,8 @@ class FeatureDetector
 
         // pre-processing the image...
         const source = media._gpu.upload(media.source);
-        const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
-        const greyscale = gpu.colors.rgb2grey(texture);
+        const texture = settings.denoise ? gpu.programs.filters.gauss5(source) : source;
+        const greyscale = gpu.programs.colors.rgb2grey(texture);
 
         // extract features
         const keypoints = _algorithms_harris_js__WEBPACK_IMPORTED_MODULE_2__["MultiscaleHarris"].run(gpu, greyscale, settings);
@@ -946,8 +948,8 @@ class FeatureDetector
 
         // pre-processing the image...
         const source = media._gpu.upload(media.source);
-        const texture = settings.denoise ? gpu.filters.gauss5(source) : source;
-        const greyscale = gpu.colors.rgb2grey(texture);
+        const texture = settings.denoise ? gpu.programs.filters.gauss5(source) : source;
+        const greyscale = gpu.programs.colors.rgb2grey(texture);
 
         // extract features
         const keypoints = _algorithms_brisk_js__WEBPACK_IMPORTED_MODULE_1__["BRISK"].run(gpu, greyscale, settings);
@@ -958,10 +960,10 @@ class FeatureDetector
     // that resolves to an Array of keypoints
     _extractKeypoints(corners, useAsyncTransfer = true, max = -1, gpu = this._gpu)
     {
-        return gpu.encoders.encodeKeypoints(corners, useAsyncTransfer).then(encodedKeypoints => {
+        return gpu.programs.encoders.encodeKeypoints(corners, useAsyncTransfer).then(encodedKeypoints => {
             // when processing a video, we expect that the number of keypoints
             // in time is a relatively smooth curve
-            const keypoints = gpu.encoders.decodeKeypoints(encodedKeypoints);
+            const keypoints = gpu.programs.encoders.decodeKeypoints(encodedKeypoints);
             const currCount = Math.max(keypoints.length, 64); // may explode if abrupt video changes
             const prevCount = Math.max(this._lastKeypointCount, 64);
             const newCount = Math.ceil(OPTIMIZER_GROWTH_WEIGHT * currCount + (1.0 - OPTIMIZER_GROWTH_WEIGHT) * prevCount);
@@ -969,8 +971,8 @@ class FeatureDetector
             this._lastKeypointCount = newCount;
             this._lastKeypointEncoderOutput = keypoints.length;
             if(useAsyncTransfer) // FIXME: use some other flag?
-                gpu.encoders.optimizeKeypointEncoder(newCount);
-            //document.querySelector('mark').innerHTML = gpu.encoders._keypointEncoderLength;
+                gpu.programs.encoders.optimizeKeypointEncoder(newCount);
+            //document.querySelector('mark').innerHTML = gpu.programs.encoders._keypointEncoderLength;
 
             // sort the data according to cornerness score
             keypoints.sort(scoreCmp);
@@ -1110,7 +1112,7 @@ PipelineOperation.ConvertToGreyscale = class extends SpeedyPipelineOperation
     run(texture, gpu, media)
     {
         if(media._colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].RGB)
-            texture = gpu.colors.rgb2grey(texture);
+            texture = gpu.programs.colors.rgb2grey(texture);
         else if(media._colorFormat != _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
             _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Can't convert image to greyscale: unknown color format`);
 
@@ -1158,7 +1160,7 @@ PipelineOperation.Blur = class extends SpeedyPipelineOperation
 
     run(texture, gpu, media)
     {
-        return gpu.filters[this._filter](texture);
+        return gpu.programs.filters[this._filter](texture);
     }
 }
 
@@ -1230,12 +1232,12 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
                 _gpu_gl_utils__WEBPACK_IMPORTED_MODULE_2__["GLUtils"].destroyTexture(this._gl, this._texKernel);
             }
 
-            this._texKernel = gpu.filters[this._method[0]](this._kernel);
+            this._texKernel = gpu.programs.filters[this._method[0]](this._kernel);
             this._gl = gpu.gl;
         }
 
         // convolve
-        return gpu.filters[this._method[1]](
+        return gpu.programs.filters[this._method[1]](
             texture,
             this._texKernel,
             this._scale,
@@ -1707,13 +1709,13 @@ class SpeedyMedia
 
         // Algorithm table
         const fn = this._featureDetector._table || (this._featureDetector._table = {
-            'fast' :     (media, settings) => this._featureDetector.fast(media, 9, settings),   // alias for fast9
-            'fast9':     (media, settings) => this._featureDetector.fast(media, 9, settings),   // FAST-9,16 (default)
-            'fast7':     (media, settings) => this._featureDetector.fast(media, 7, settings),   // FAST-7,12
-            'fast5':     (media, settings) => this._featureDetector.fast(media, 5, settings),   // FAST-5,8
-            'fast9plus': (media, settings) => this._featureDetector.fastPlus(media, 9, settings), // FAST-9,16 augmented with scale & orientation
-            'brisk':     (media, settings) => this._featureDetector.brisk(media, settings),     // BRISK
-            'harris':    (media, settings) => this._featureDetector.harris(media, settings),    // Harris
+            'fast': (media, settings) => this._featureDetector.fast(media, 9, settings), // alias for fast9
+            'fast9': (media, settings) => this._featureDetector.fast(media, 9, settings), // FAST-9,16 (default)
+            'fast7': (media, settings) => this._featureDetector.fast(media, 7, settings), // FAST-7,12
+            'fast5': (media, settings) => this._featureDetector.fast(media, 5, settings), // FAST-5,8
+            'multiscale-fast': (media, settings) => this._featureDetector.fastPlus(media, 9, settings), // FAST-9,16 augmented with scale & orientation
+            'brisk': (media, settings) => this._featureDetector.brisk(media, settings), // BRISK
+            'harris': (media, settings) => this._featureDetector.harris(media, settings), // Harris
             'multiscale-harris': (media, settings) => this._featureDetector.multiscaleHarris(media, settings), // Harris
         });
 
@@ -1969,7 +1971,7 @@ class SpeedyPipeline
                     texture = this._operations[i].run(texture, media._gpu, media);
 
                 // end of the pipeline
-                media._gpu.utils.output(texture);
+                media._gpu.programs.utils.output(texture);
                 media._source = media._gpu.canvas;
 
                 // done!
@@ -2186,18 +2188,19 @@ class GLUtils
                 gl.getProgramInfoLog(program),
             ];
 
+            gl.deleteProgram(program);
+            gl.deleteShader(fragmentShader);
+            gl.deleteShader(vertexShader);
+
+            // display error
             const spaces = i => Math.max(0, 2 - Math.floor(Math.log10(i)));
             const col = k => Array(spaces(k)).fill(' ').join('') + k + '. ';
             const formattedSource = fragmentShaderSource.split('\n')
                 .map((line, no) => col(1+no) + line)
                 .join('\n');
 
-            gl.deleteProgram(program);
-            gl.deleteShader(fragmentShader);
-            gl.deleteShader(vertexShader);
-
             throw GLUtils.Error(
-                `Can't create shader program.\n\n` +
+                `Can't create shader.\n\n` +
                 `---------- ERROR ----------\n` +
                 errors.join('\n') + '\n\n' +
                 `---------- SOURCE CODE ----------\n` +
@@ -2206,6 +2209,72 @@ class GLUtils
         }
 
         return program;
+    }
+
+    /**
+     * Create the standard geometry for the vertex shader
+     * (i.e., vertices of a rectangle crafted for image processing)
+     * @param {WebGL2RenderingContext} gl
+     * @param {GLint} locationOfPositionAttribute
+     * @param {GLint} locationOfTexcoordAttribute
+     * @returns {object} with keys vao & vbo
+     */
+    static createStandardGeometry(gl, locationOfPositionAttribute, locationOfTexcoordAttribute)
+    {
+        // got cached values for this WebGL context?
+        const f = GLUtils.createStandardGeometry;
+        const cache = f._cache || (f._cache = new WeakMap());
+        if(cache.has(gl))
+            return cache.get(gl);
+
+        // configure the attributes of the vertex shader
+        const vao = gl.createVertexArray(); // vertex array object
+        const vbo = [ gl.createBuffer(), gl.createBuffer() ]; // vertex buffer objects
+        gl.bindVertexArray(vao);
+
+        // set the a_position attribute
+        // using the current vbo
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbo[0]);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+            // clip coordinates
+            -1, -1,
+            1, -1,
+            -1, 1,
+            1, 1,
+        ]), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(locationOfPositionAttribute, // attribute location
+                               2,          // 2 components per vertex (x,y)
+                               gl.FLOAT,   // type
+                               false,      // don't normalize
+                               0,          // default stride (tightly packed)
+                               0);         // offset
+        gl.enableVertexAttribArray(locationOfPositionAttribute);
+
+        // set the a_texCoord attribute
+        // using the current vbo
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbo[1]);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+            // texture coordinates
+            0, 0,
+            1, 0,
+            0, 1,
+            1, 1,
+        ]), gl.STATIC_DRAW);
+        gl.vertexAttribPointer(locationOfTexcoordAttribute, // attribute location
+                               2,          // 2 components per vertex (x,y)
+                               gl.FLOAT,   // type
+                               false,      // don't normalize
+                               0,          // default stride (tightly packed)
+                               0);         // offset
+        gl.enableVertexAttribArray(locationOfTexcoordAttribute);
+
+        // unbind
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+        // cache & return
+        const result = { vao, vbo };
+        cache.set(gl, result);
+        return result;
     }
 
     /**
@@ -2417,7 +2486,7 @@ class GLUtils
      * @param {ArrayBufferView} destBuffer
      * @param {GLuint} [destOffset]
      * @param {GLuint} [length]
-     * @returns {Promise<Number>} a promise that resolves to the time it took to read the data (in ms)
+     * @returns {Promise<number>} a promise that resolves to the time it took to read the data (in ms)
      */
     static getBufferSubDataAsync(gl, glBuffer, target, srcByteOffset, destBuffer, destOffset = 0, length = 0)
     {
@@ -2439,195 +2508,72 @@ class GLUtils
             gl.deleteSync(sync);
         });
     }
-}
-
-/***/ }),
-
-/***/ "./src/gpu/gpu-program-group.js":
-/*!**************************************!*\
-  !*** ./src/gpu/gpu-program-group.js ***!
-  \**************************************/
-/*! exports provided: GPUProgramGroup */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUProgramGroup", function() { return GPUProgramGroup; });
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for the web
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * gpu-program-group.js
- * An abstract group of programs that run on the GPU
- */
-
-/**
- * GPUProgramGroup
- * A semantically correlated group
- * of programs that run on the GPU
- */
-
-class GPUProgramGroup
-{
-    /**
-     * Class constructor
-     * @param {SpeedyGPU} gpu
-     * @param {number} width Texture width (depends on the pyramid layer)
-     * @param {number} height Texture height (depends on the pyramid layer)
-     */
-    /* protected */ constructor(gpu, width, height)
-    {
-        this._gpu = gpu;
-        this._width = width;
-        this._height = height;
-    }
 
     /**
-     * Declare a program
-     * @param {string} name Program name
-     * @param {Function} shaderdecl Program params => code
-     * @param {object} settings Program settings
-     * @returns {GPUProgramGroup} This object
+     * Read pixels to a Uint8Array using a Pixel Buffer Object (PBO)
+     * You may optionally specify a FBO to read pixels from a texture
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLBuffer} pbo
+     * @param {Uint8Array} arrayBuffer with size >= width * height * 4
+     * @param {GLint} x
+     * @param {GLint} y
+     * @param {GLsizei} width
+     * @param {GLsizei} height
+     * @param {WebGLFramebuffer} [fbo]
+     * @returns {Promise<number>} a promise that resolves to the time it took to read the data (in ms)
      */
-    /* protected */ declare(name, shaderdecl, settings = { })
+    static readPixelsViaPBO(gl, pbo, arrayBuffer, x, y, width, height, fbo = null)
     {
-        // lazy instantiation of kernels
-        Object.defineProperty(this, name, {
-            get: (() => {
-                const key = '__k_' + name;
-                return (function() {
-                    return this[key] || (this[key] = this._createProgram(shaderdecl, settings));
-                }).bind(this);
-            })()
-        });
+        // validate arrayBuffer
+        if(!(arrayBuffer.byteLength >= width * height * 4))
+            throw GLUtils.Error(`Can't read pixels: invalid buffer size`);
 
-        return this;
-    }
+        // bind the PBO
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
+        gl.bufferData(gl.PIXEL_PACK_BUFFER, arrayBuffer.byteLength, gl.STREAM_READ);
 
-    /**
-     * Multi-pass composition
-     * @param {string} name Program name
-     * @param {string} fn Other programs
-     * @returns {GPUProgramGroup} This object
-     */
-    /* protected */ compose(name, ...fn)
-    {
-        // function composition: functions are called in the order they are specified
-        // e.g., compose('h', 'f', 'g') means h(x) = g(f(x))
-        Object.defineProperty(this, name, {
-            get: (() => {
-                const key = '__c_' + name;
-                return (function() {
-                    return this[key] || (this[key] = (fn.length == 2) ? (() => {
-                        fn = fn.map(fi => this[fi]);
-                        return function compose(image, ...args) {
-                            return (fn[1])((fn[0])(image, ...args), ...args);
-                        };
-                    })() : ((fn.length == 3) ? (() => {
-                        fn = fn.map(fi => this[fi]);
-                        return function compose(image, ...args) {
-                            return (fn[2])((fn[1])((fn[0])(image, ...args), ...args), ...args);
-                        };
-                    })() : ((fn.length == 4) ? (() => {
-                        fn = fn.map(fi => this[fi]);
-                        return function compose(image, ...args) {
-                            return (fn[3])((fn[2])((fn[1])((fn[0])(image, ...args), ...args), ...args), ...args);
-                        };
-                    })() : (() => {
-                        fn = fn.map(fi => this[fi]);
-                        return function compose(image, ...args) {
-                            return fn.reduce((img, fi) => fi(img, ...args), image);
-                        };
-                    })())));
-                }).bind(this);
-            })()
-        });
+        // read pixels into the PBO
+        if(fbo) {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+            gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        }
+        else {
+            gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+        }
 
-        return this;
-    }
+        // unbind the PBO
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
 
-    /**
-     * Neat helpers to be used
-     * when defining programs
-     */
-    get program()
-    {
-        return this._helpers || (this.helpers = {
-
-            // Set texture input/output size
-            // Dimensions are converted to integers
-            hasTextureSize(width, height) {
-                return {
-                    output: [ width|0, height|0 ]
-                };
-            },
-
-            // Render to canvas
-            // Use it when we're supposed to see the texture
-            displaysGraphics() {
-                return {
-                    renderToTexture: false
-                };
-            },
-
-            // Calling the program will return a new
-            // instance of the output texture every time
-            // The returned texture must be released manually
-            doesNotRecycleTextures() {
-                return {
-                    recycleTexture: false
-                };
-            },
-
-            // Pingpong Rendering: the output texture of a
-            // program cannot be used as an input to itself.
-            // This is a convenient helper in these situations
-            usesPingpongRendering() {
-                return {
-                    pingpong: true
-                };
-            },
-
-        });
-    }
-
-    /* private */ _createProgram(shaderdecl, settings = { })
-    {
-        return this._gpu.createProgram(shaderdecl, {
-            // default settings
-            output: [ this._width, this._height ],
-            ...settings
+        // wait for DMA transfer
+        return GLUtils.getBufferSubDataAsync(gl, pbo,
+            gl.PIXEL_PACK_BUFFER,
+            0,
+            arrayBuffer,
+            0,
+            0
+        ).then(timeInMs => {
+            return timeInMs;
+        }).catch(err => {
+            throw err;
         });
     }
 }
 
 /***/ }),
 
-/***/ "./src/gpu/program-groups/colors.js":
-/*!******************************************!*\
-  !*** ./src/gpu/program-groups/colors.js ***!
-  \******************************************/
+/***/ "./src/gpu/programs/colors.js":
+/*!************************************!*\
+  !*** ./src/gpu/programs/colors.js ***!
+  \************************************/
 /*! exports provided: GPUColors */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUColors", function() { return GPUColors; });
-/* harmony import */ var _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-program-group */ "./src/gpu/gpu-program-group.js");
-/* harmony import */ var _programs_colors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./programs/colors */ "./src/gpu/program-groups/programs/colors.js");
+/* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-program-group */ "./src/gpu/speedy-program-group.js");
+/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -2652,11 +2598,23 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
+//
+// Shaders
+//
+
+// Convert to greyscale
+const rgb2grey = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('colors/rgb2grey.glsl').withArguments('image');
+
+
+
+
 /**
  * GPUColors
- * Color routines
+ * Color routines & conversion algorithms
  */
-class GPUColors extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUProgramGroup"]
+class GPUColors extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["SpeedyProgramGroup"]
 {
     /**
      * Class constructor
@@ -2669,25 +2627,25 @@ class GPUColors extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUProg
         super(gpu, width, height);
         this
             // convert to greyscale
-            .declare('rgb2grey', _programs_colors__WEBPACK_IMPORTED_MODULE_1__["rgb2grey"])
+            .declare('rgb2grey', rgb2grey)
         ;
     }
 }
 
 /***/ }),
 
-/***/ "./src/gpu/program-groups/encoders.js":
-/*!********************************************!*\
-  !*** ./src/gpu/program-groups/encoders.js ***!
-  \********************************************/
+/***/ "./src/gpu/programs/encoders.js":
+/*!**************************************!*\
+  !*** ./src/gpu/programs/encoders.js ***!
+  \**************************************/
 /*! exports provided: GPUEncoders */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUEncoders", function() { return GPUEncoders; });
-/* harmony import */ var _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-program-group */ "./src/gpu/gpu-program-group.js");
-/* harmony import */ var _programs_encoders__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./programs/encoders */ "./src/gpu/program-groups/programs/encoders.js");
+/* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-program-group */ "./src/gpu/speedy-program-group.js");
+/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
 /* harmony import */ var _core_speedy_feature__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../core/speedy-feature */ "./src/core/speedy-feature.js");
 /* harmony import */ var _utils_tuner__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/tuner */ "./src/utils/tuner.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
@@ -2730,11 +2688,25 @@ const TWO_PI = 2.0 * Math.PI;
 const PI = Math.PI;
 
 
+
+//
+// Shaders
+//
+
+// encode keypoint offsets: maxIterations is an integer in [1,255], determined experimentally
+const encodeKeypointOffsets = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('encoders/encode-keypoint-offsets.glsl').withArguments('image', 'imageSize', 'maxIterations');
+
+// encode keypoints
+const encodeKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('encoders/encode-keypoints.glsl').withArguments('image', 'imageSize', 'encoderLength', 'descriptorSize');
+
+
+
+
 /**
  * GPUEncoders
  * Texture encoding
  */
-class GPUEncoders extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUProgramGroup"]
+class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["SpeedyProgramGroup"]
 {
     /**
      * Class constructor
@@ -2747,8 +2719,8 @@ class GPUEncoders extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPr
         super(gpu, width, height);
         this
             // Keypoint encoding
-            .declare('_encodeKeypointOffsets', _programs_encoders__WEBPACK_IMPORTED_MODULE_1__["encodeKeypointOffsets"])
-            .declare('_encodeKeypoints', _programs_encoders__WEBPACK_IMPORTED_MODULE_1__["encodeKeypoints"], {
+            .declare('_encodeKeypointOffsets', encodeKeypointOffsets)
+            .declare('_encodeKeypoints', encodeKeypoints, {
                 output: [INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH],
                 renderToTexture: false
             })
@@ -2895,18 +2867,18 @@ class GPUEncoders extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPr
 
 /***/ }),
 
-/***/ "./src/gpu/program-groups/filters.js":
-/*!*******************************************!*\
-  !*** ./src/gpu/program-groups/filters.js ***!
-  \*******************************************/
+/***/ "./src/gpu/programs/filters.js":
+/*!*************************************!*\
+  !*** ./src/gpu/programs/filters.js ***!
+  \*************************************/
 /*! exports provided: GPUFilters */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUFilters", function() { return GPUFilters; });
-/* harmony import */ var _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-program-group */ "./src/gpu/gpu-program-group.js");
-/* harmony import */ var _programs_convolution__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./programs/convolution */ "./src/gpu/program-groups/programs/convolution.js");
+/* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-program-group */ "./src/gpu/speedy-program-group.js");
+/* harmony import */ var _shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../shaders/filters/convolution */ "./src/gpu/shaders/filters/convolution.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -2935,7 +2907,7 @@ __webpack_require__.r(__webpack_exports__);
  * GPUFilters
  * Image filtering
  */
-class GPUFilters extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUProgramGroup"]
+class GPUFilters extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["SpeedyProgramGroup"]
 {
     /**
      * Class constructor
@@ -2960,64 +2932,63 @@ class GPUFilters extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPro
             .compose('box11', '_box11x', '_box11y') // size: 11x11
 
             // texture-based convolutions
-            .compose('texConv2D3', '_idConv2D3', '_texConv2D3') // 2D texture-based 3x3 convolution
-            .compose('texConv2D5', '_idConv2D5', '_texConv2D5') // 2D texture-based 5x5 convolution
-            .compose('texConv2D7', '_idConv2D7', '_texConv2D7') // 2D texture-based 7x7 convolution
-
-            .declare('_texConv2D3', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConv2D"])(3)) // 3x3 convolution with a texture (not chainable)
-            .declare('_idConv2D3', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["idConv2D"])(3)) // identity operation (enables chaining)
-            .declare('_texConv2D5', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConv2D"])(5)) // 5x5 convolution with a texture (not chainable)
-            .declare('_idConv2D5', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["idConv2D"])(5)) // identity operation (enables chaining)
-            .declare('_texConv2D7', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConv2D"])(7)) // 7x7 convolution with a texture (not chainable)
-            .declare('_idConv2D7', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["idConv2D"])(7)) // identity operation (enables chaining)
+            .declare('texConv2D3', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["texConv2D"])(3), { // 2D convolution with a 3x3 texture-based kernel
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('texConv2D5', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["texConv2D"])(5), { // 2D convolution with a 5x5 texture-based kernel
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('texConv2D7', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["texConv2D"])(7), { // 2D convolution with a 7x7 texture-based kernel
+                ...this.program.usesPingpongRendering()
+            })
 
             // texture-based separable convolutions
             .compose('texConvXY3', 'texConvX3', 'texConvY3') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX3', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(3)) // 3x1 convolution, x-axis
-            .declare('texConvY3', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(3)) // 1x3 convolution, y-axis
+            .declare('texConvX3', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(3)) // 3x1 convolution, x-axis
+            .declare('texConvY3', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(3)) // 1x3 convolution, y-axis
             .compose('texConvXY5', 'texConvX5', 'texConvY5') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX5', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(5)) // 5x1 convolution, x-axis
-            .declare('texConvY5', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(5)) // 1x5 convolution, y-axis
+            .declare('texConvX5', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(5)) // 5x1 convolution, x-axis
+            .declare('texConvY5', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(5)) // 1x5 convolution, y-axis
             .compose('texConvXY7', 'texConvX7', 'texConvY7') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX7', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(7)) // 7x1 convolution, x-axis
-            .declare('texConvY7', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(7)) // 1x7 convolution, y-axis
+            .declare('texConvX7', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(7)) // 7x1 convolution, x-axis
+            .declare('texConvY7', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(7)) // 1x7 convolution, y-axis
             .compose('texConvXY9', 'texConvX9', 'texConvY9') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX9', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(9)) // 9x1 convolution, x-axis
-            .declare('texConvY9', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(9)) // 1x9 convolution, y-axis
+            .declare('texConvX9', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(9)) // 9x1 convolution, x-axis
+            .declare('texConvY9', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(9)) // 1x9 convolution, y-axis
             .compose('texConvXY11', 'texConvX11', 'texConvY11') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX11', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(11)) // 11x1 convolution, x-axis
-            .declare('texConvY11', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(11)) // 1x11 convolution, y-axis
+            .declare('texConvX11', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvX"])(11)) // 11x1 convolution, x-axis
+            .declare('texConvY11', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["texConvY"])(11)) // 1x11 convolution, y-axis
 
             // create custom convolution kernels
-            .declare('createKernel3x3', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(3), { // 3x3 texture kernel
+            .declare('createKernel3x3', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(3), { // 3x3 texture kernel
                 ...(this.program.hasTextureSize(3, 3)),
                 ...(this.program.doesNotRecycleTextures())
             })
-            .declare('createKernel5x5', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(5), { // 5x5 texture kernel
+            .declare('createKernel5x5', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(5), { // 5x5 texture kernel
                 ...(this.program.hasTextureSize(5, 5)),
                 ...(this.program.doesNotRecycleTextures())
             })
-            .declare('createKernel7x7', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(7), { // 7x7 texture kernel
+            .declare('createKernel7x7', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel2D"])(7), { // 7x7 texture kernel
                 ...(this.program.hasTextureSize(7, 7)),
                 ...(this.program.doesNotRecycleTextures())
             })
-            .declare('createKernel3x1', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(3), { // 3x1 texture kernel
+            .declare('createKernel3x1', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(3), { // 3x1 texture kernel
                 ...(this.program.hasTextureSize(3, 1)),
                 ...(this.program.doesNotRecycleTextures())
             })
-            .declare('createKernel5x1', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(5), { // 5x1 texture kernel
+            .declare('createKernel5x1', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(5), { // 5x1 texture kernel
                 ...(this.program.hasTextureSize(5, 1)),
                 ...(this.program.doesNotRecycleTextures())
             })
-            .declare('createKernel7x1', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(7), { // 7x1 texture kernel
+            .declare('createKernel7x1', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(7), { // 7x1 texture kernel
                 ...(this.program.hasTextureSize(7, 1)),
                 ...(this.program.doesNotRecycleTextures())
             })
-            .declare('createKernel9x1', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(9), { // 9x1 texture kernel
+            .declare('createKernel9x1', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(9), { // 9x1 texture kernel
                 ...(this.program.hasTextureSize(9, 1)),
                 ...(this.program.doesNotRecycleTextures())
             })
-            .declare('createKernel11x1', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(11), { // 11x1 texture kernel
+            .declare('createKernel11x1', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["createKernel1D"])(11), { // 11x1 texture kernel
                 ...(this.program.hasTextureSize(11, 1)),
                 ...(this.program.doesNotRecycleTextures())
             })
@@ -3035,26 +3006,26 @@ class GPUFilters extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPro
 
             // separable kernels (Gaussian)
             // see also: http://dev.theomader.com/gaussian-kernel-calculator/
-            .declare('_gauss5x', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
+            .declare('_gauss5x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
                 0.05, 0.25, 0.4, 0.25, 0.05
                 //0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
             ]))
-            .declare('_gauss5y', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
+            .declare('_gauss5y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
                 0.05, 0.25, 0.4, 0.25, 0.05
                 //0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
             ]))
-            .declare('_gauss3x', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
+            .declare('_gauss3x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
                 0.25, 0.5, 0.25
                 //0.27901, 0.44198, 0.27901
             ]))
-            .declare('_gauss3y', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
+            .declare('_gauss3y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
                 0.25, 0.5, 0.25
                 //0.27901, 0.44198, 0.27901
             ]))
-            .declare('_gauss7x', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
+            .declare('_gauss7x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
                 0.00598, 0.060626, 0.241843, 0.383103, 0.241843, 0.060626, 0.00598
             ]))
-            .declare('_gauss7y', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
+            .declare('_gauss7y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
                 0.00598, 0.060626, 0.241843, 0.383103, 0.241843, 0.060626, 0.00598
             ]))
             /*.declare('_gauss5', conv2D([ // for testing
@@ -3068,34 +3039,34 @@ class GPUFilters extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPro
 
 
             // separable kernels (Box filter)
-            .declare('_box3x', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
+            .declare('_box3x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
                 1, 1, 1
             ], 1 / 3))
-            .declare('_box3y', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
+            .declare('_box3y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
                 1, 1, 1
             ], 1 / 3))
-            .declare('_box5x', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
+            .declare('_box5x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
                 1, 1, 1, 1, 1
             ], 1 / 5))
-            .declare('_box5y', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
+            .declare('_box5y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
                 1, 1, 1, 1, 1
             ], 1 / 5))
-            .declare('_box7x', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
+            .declare('_box7x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
                 1, 1, 1, 1, 1, 1, 1
             ], 1 / 7))
-            .declare('_box7y', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
+            .declare('_box7y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
                 1, 1, 1, 1, 1, 1, 1
             ], 1 / 7))
-            .declare('_box9x', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
+            .declare('_box9x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
                 1, 1, 1, 1, 1, 1, 1, 1, 1
             ], 1 / 9))
-            .declare('_box9y', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
+            .declare('_box9y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
                 1, 1, 1, 1, 1, 1, 1, 1, 1
             ], 1 / 9))
-            .declare('_box11x', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
+            .declare('_box11x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
                 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
             ], 1 / 11))
-            .declare('_box11y', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
+            .declare('_box11y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
                 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
             ], 1 / 11))
         ;
@@ -3105,18 +3076,18 @@ class GPUFilters extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUPro
 
 /***/ }),
 
-/***/ "./src/gpu/program-groups/keypoints.js":
-/*!*********************************************!*\
-  !*** ./src/gpu/program-groups/keypoints.js ***!
-  \*********************************************/
+/***/ "./src/gpu/programs/keypoints.js":
+/*!***************************************!*\
+  !*** ./src/gpu/programs/keypoints.js ***!
+  \***************************************/
 /*! exports provided: GPUKeypoints */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUKeypoints", function() { return GPUKeypoints; });
-/* harmony import */ var _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-program-group */ "./src/gpu/gpu-program-group.js");
-/* harmony import */ var _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./programs/keypoints */ "./src/gpu/program-groups/programs/keypoints.js");
+/* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-program-group */ "./src/gpu/speedy-program-group.js");
+/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -3141,11 +3112,84 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
+//
+// FAST corner detector
+//
+
+// FAST-9_16: requires 9 contiguous pixels
+// on a circumference of 16 pixels
+const fast9 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast9lg.glsl').withArguments('image', 'threshold');
+
+// FAST-9_16 on scale-space
+// Requires image mipmap
+const fast9pyr = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast9pyr.glsl').withArguments('pyramid', 'threshold', 'minLod', 'maxLod', 'usePyrSubLevels');
+
+// FAST-7_12: requires 7 contiguous pixels
+// on a circumference of 12 pixels
+const fast7 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast7.glsl').withArguments('image', 'threshold');
+
+// FAST-5_8: requires 5 contiguous pixels
+// on a circumference of 8 pixels
+const fast5 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast5.glsl').withArguments('image', 'threshold');
+
+// compute corner score considering a
+// neighboring circumference of 16 pixels
+const fastScore16 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast-score16.glsl').withArguments('image', 'threshold');
+
+// compute corner score considering a
+// neighboring circumference of 12 pixels
+const fastScore12 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast-score12.glsl').withArguments('image', 'threshold');
+
+// compute corner score considering a
+// neighboring circumference of 8 pixels
+const fastScore8 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast-score8.glsl').withArguments('image', 'threshold');
+
+
+
+//
+// Harris-Shi-Tomasi corner detector
+//
+
+// compute corner responses (score map)
+const multiscaleHarris = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/multiscale-harris.glsl').withArguments('pyramid', 'windowRadius', 'minLod', 'maxLod', 'usePyrSubLevels', 'sobelDerivatives');
+
+// discard corners below a specified quality level
+const harrisCutoff = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/harris-cutoff.glsl').withArguments('corners', 'maxScore', 'quality');
+
+
+//
+// BRISK feature detection
+//
+const brisk = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/brisk.glsl').withArguments('image', 'layerA', 'layerB', 'scaleA', 'scaleB', 'lgM', 'h');
+
+
+
+//
+// Generic keypoint routines
+//
+
+// non-maximum suppression
+const nonmaxSuppression = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/nonmax-suppression.glsl').withArguments('image');
+const multiscaleSuppression = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/multiscale-suppression.glsl').withArguments('image', 'usePyrSubLevels');
+const samescaleSuppression = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/samescale-suppression.glsl').withArguments('image');
+
+// find keypoint orientation
+const orientationViaCentroid = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/orientation-via-centroid.glsl').withArguments('corners', 'patchRadius');
+const multiscaleOrientationViaCentroid = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/multiscale-orientation-via-centroid.glsl').withArguments('corners', 'patchRadius', 'pyramid');
+
+// Sobel derivatives
+const multiscaleSobel = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/multiscale-sobel.glsl').withArguments('pyramid', 'lod');
+
+
+
+
 /**
  * GPUKeypoints
  * Keypoint detection
  */
-class GPUKeypoints extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUProgramGroup"]
+class GPUKeypoints extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["SpeedyProgramGroup"]
 {
     /**
      * Class constructor
@@ -3159,40 +3203,40 @@ class GPUKeypoints extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUP
         this
             // FAST-9,16
             .compose('fast9', '_fast9', '_fastScore16')
-            .declare('_fast9', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["fast9"]) // find corners
-            .declare('_fastScore16', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["fastScore16"]) // compute scores
+            .declare('_fast9', fast9) // find corners
+            .declare('_fastScore16', fastScore16) // compute scores
 
             // FAST-7,12
             .compose('fast7', '_fast7', '_fastScore12')
-            .declare('_fast7', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["fast7"])
-            .declare('_fastScore12', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["fastScore12"])
+            .declare('_fast7', fast7)
+            .declare('_fastScore12', fastScore12)
 
             // FAST-5,8
             .compose('fast5', '_fast5', '_fastScore8')
-            .declare('_fast5', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["fast5"])
-            .declare('_fastScore8', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["fastScore8"])
+            .declare('_fast5', fast5)
+            .declare('_fastScore8', fastScore8)
 
             // FAST-9,16 plus
-            .declare('fast9pyr', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["fast9pyr"])
+            .declare('fast9pyr', fast9pyr)
 
             // BRISK Scale-Space Non-Maximum Suppression & Interpolation
-            .declare('brisk', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["brisk"])
+            .declare('brisk', brisk)
 
             // Harris-Shi-Tomasi corner detector
-            .declare('multiscaleHarris', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["multiscaleHarris"]) // scale-space
-            .declare('harrisCutoff', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["harrisCutoff"])
+            .declare('multiscaleHarris', multiscaleHarris) // scale-space
+            .declare('harrisCutoff', harrisCutoff)
 
             // Generic non-maximum suppression
-            .declare('nonmaxSuppression', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["nonmaxSuppression"])
-            .declare('multiscaleSuppression', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["multiscaleSuppression"]) // scale-space
-            .declare('samescaleSuppression', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["samescaleSuppression"]) // scale-space
+            .declare('nonmaxSuppression', nonmaxSuppression)
+            .declare('multiscaleSuppression', multiscaleSuppression) // scale-space
+            .declare('samescaleSuppression', samescaleSuppression) // scale-space
 
             // Generic orientation finder
-            .declare('orientationViaCentroid', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["orientationViaCentroid"])
-            .declare('multiscaleOrientationViaCentroid', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["multiscaleOrientationViaCentroid"]) // scale-space
+            .declare('orientationViaCentroid', orientationViaCentroid)
+            .declare('multiscaleOrientationViaCentroid', multiscaleOrientationViaCentroid) // scale-space
 
             // Sobel derivatives
-            .declare('multiscaleSobel', _programs_keypoints__WEBPACK_IMPORTED_MODULE_1__["multiscaleSobel"], {
+            .declare('multiscaleSobel', multiscaleSobel, {
                 ...this.program.doesNotRecycleTextures()
             }) // scale-space
         ;
@@ -3203,16 +3247,20 @@ class GPUKeypoints extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUP
 
 /***/ }),
 
-/***/ "./src/gpu/program-groups/programs/colors.js":
-/*!***************************************************!*\
-  !*** ./src/gpu/program-groups/programs/colors.js ***!
-  \***************************************************/
-/*! exports provided: rgb2grey */
+/***/ "./src/gpu/programs/pyramids.js":
+/*!**************************************!*\
+  !*** ./src/gpu/programs/pyramids.js ***!
+  \**************************************/
+/*! exports provided: GPUPyramids */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "rgb2grey", function() { return rgb2grey; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUPyramids", function() { return GPUPyramids; });
+/* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-program-group */ "./src/gpu/speedy-program-group.js");
+/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../shaders/filters/convolution */ "./src/gpu/shaders/filters/convolution.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -3230,610 +3278,158 @@ __webpack_require__.r(__webpack_exports__);
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * colors.js
- * Color conversions
- */
-
-// Convert to greyscale
-const rgb2grey = (image) => __webpack_require__(/*! ../../shaders/colors/rgb2grey.glsl */ "./src/gpu/shaders/colors/rgb2grey.glsl");
-
-/***/ }),
-
-/***/ "./src/gpu/program-groups/programs/convolution.js":
-/*!********************************************************!*\
-  !*** ./src/gpu/program-groups/programs/convolution.js ***!
-  \********************************************************/
-/*! exports provided: conv2D, convX, convY, createKernel2D, createKernel1D, texConv2D, idConv2D, texConvX, texConvY */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "conv2D", function() { return conv2D; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "convX", function() { return convX; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "convY", function() { return convY; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createKernel2D", function() { return createKernel2D; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createKernel1D", function() { return createKernel1D; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConv2D", function() { return texConv2D; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "idConv2D", function() { return idConv2D; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConvX", function() { return texConvX; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConvY", function() { return texConvY; });
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../utils/utils */ "./src/utils/utils.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for the web
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * convolution.js
- * Convolution function generator
- */
-
-
-const cartesian = (a, b) => [].concat(...a.map(a => b.map(b => [a,b]))); // [a] x [b]
-const symmetricRange = n => [...Array(2*n + 1).keys()].map(x => x-n);    // [-n, ..., n]
-
-// Generate a 2D convolution with a square kernel
-function conv2D(kernel, normalizationConstant = 1.0)
-{
-    const kernel32 = new Float32Array(kernel.map(x => (+x) * (+normalizationConstant)));
-    const kSize = Math.sqrt(kernel32.length) | 0;
-    const N = (kSize / 2) | 0;
-
-    // validate input
-    if(kSize < 1 || kSize % 2 == 0)
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't perform a 2D convolution with an invalid kSize of ${kSize}`);
-    else if(kSize * kSize != kernel32.length)
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Invalid 2D convolution kernel of ${kernel32.length} elements (expected: square)`);
-
-    // code generator
-    const foreachKernelElement = fn => cartesian(symmetricRange(N), symmetricRange(N)).map(
-        cur => fn(
-            kernel32[(cur[0] + N) * kSize + (cur[1] + N)],
-            cur[0], cur[1]
-        )
-    ).join('\n');
-
-    const generateCode = (k, dy, dx) => `
-        result += pixelAtOffset(image, ivec2(${dx | 0}, ${dy | 0})) * float(${+k});
-    `;
-
-    // shader
-    const shader = `
-    uniform sampler2D image;
-
-    void main()
-    {
-        float alpha = threadPixel(image).a;
-        vec4 result = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-
-        ${foreachKernelElement(generateCode)}
-
-        color = vec4(result.rgb, alpha);
-    }
-    `;
-
-    // done!
-    return (image) => shader;
-}
-
-// Generate a 1D convolution function on the x-axis
-function convX(kernel, normalizationConstant = 1.0)
-{
-    return conv1D('x', kernel, normalizationConstant);
-}
-
-// Generate a 1D convolution function on the y-axis
-function convY(kernel, normalizationConstant = 1.0)
-{
-    return conv1D('y', kernel, normalizationConstant);
-}
-
-// 1D convolution function generator
-function conv1D(axis, kernel, normalizationConstant)
-{
-    const kernel32 = new Float32Array(kernel.map(x => (+x) * (+normalizationConstant)));
-    const kSize = kernel32.length;
-    const N = (kSize / 2) | 0;
-
-    // validate input
-    if(kSize < 1 || kSize % 2 == 0)
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't perform a 1D convolution with an invalid kSize of ${kSize}`);
-    else if(axis != 'x' && axis != 'y')
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't perform 1D convolution: invalid axis "${axis}"`); // this should never happen
-
-    // code generator
-    const foreachKernelElement = fn => symmetricRange(N).reduce(
-        (acc, cur) => acc + fn(kernel32[cur + N], cur),
-    '');
-    const generateCode = (k, i) => ((axis == 'x') ? `
-        pixel += pixelAtOffset(image, ivec2(${i | 0}, 0)) * float(${+k});
-    ` : `
-        pixel += pixelAtOffset(image, ivec2(0, ${i | 0})) * float(${+k});
-    `);
-
-    // shader
-    const shader = `
-    uniform sampler2D image;
-
-    void main()
-    {
-        float alpha = threadPixel(image).a;
-        vec4 pixel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-
-        ${foreachKernelElement(generateCode)}
-
-        color = vec4(pixel.rgb, alpha);
-    }
-    `;
-
-    // done!
-    return (image) => shader;
-}
-
-/*
- * ------------------------------------------------------------------
- * Texture Encoding
- * Encoding a float in [0,1] into RGB[A]
- * ------------------------------------------------------------------
- * Define frac(x) := x - floor(x)
- * Of course, 0 <= frac(x) < 1.
- * 
- * Given: x in [0,1]
- * 
- * Define e0 := floor(x),
- *        e1 := 256 frac(x)
- *        e2 := 256 frac(e1) = 256 frac(256 frac(x))
- *        e3 := 256 frac(e2) = 256 frac(256 frac(e1)) = 256 frac(256 frac(256 frac(x))),
- *        ...
- *        more generally,
- *        ej := 256 frac(e_{j-1}), j >= 2
- * 
- * Since x = frac(x) + floor(x), it follows that
- * x = floor(x) + 256 frac(x) / 256 = e0 + e1 / 256 = e0 + (frac(e1) + floor(e1)) / 256 =
- * e0 + (256 frac(e1) + 256 floor(e1)) / (256^2) = e0 + (e2 + 256 floor(e1)) / (256^2) =
- * e0 + ((256 frac(e2) + 256 floor(e2)) + 256^2 floor(e1)) / (256^3) =
- * e0 + (e3 + 256 floor(e2) + 256^2 floor(e1)) / (256^3) = 
- * floor(e0) + floor(e1) / 256 + floor(e2) / (256^2) + e3 / (256^3) = ... =
- * floor(e0) + floor(e1) / 256 + floor(e2) / (256^2) + floor(e3) / (256^3) + e4 / (256^4) = ... ~
- * \sum_{i >= 0} floor(e_i) / 256^i
- * 
- * Observe that e0 in {0, 1} and, for j >= 1, 0 <= e_j < 256, meaning that
- * e0 and (e_j / 256) can be stored in a 8-bit color channel.
- * 
- * We now have approximations for x:
- * x ~ x0 <-- first order
- * x ~ x0 + x1 / 256 <-- second order
- * x ~ x0 + x1 / 256 + x2 / (256^2) <-- third order (RGB)
- * x ~ x0 + x1 / 256 + x2 / (256^2) + x3 / (256^3) <-- fourth order (RGBA)
- * where x_i = floor(e_i).
- */
-
-// Generate a texture-based 2D convolution kernel
-// of size (kernelSize x kernelSize), where all
-// entries belong to the [0, 1] range
-function createKernel2D(kernelSize)
-{
-    // validate input
-    kernelSize |= 0;
-    if(kernelSize < 1 || kernelSize % 2 == 0)
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't create a 2D texture kernel of size ${kernelSize}`);
-
-    // encode float in the [0,1] range to RGBA
-    const shader = `
-    uniform float kernel[${kernelSize * kernelSize}];
-
-    void main()
-    {
-        ivec2 thread = threadLocation();
-        float val = kernel[(${kernelSize}) * thread.y + thread.x];
-
-        float e0 = floor(val);
-        float e1 = 256.0f * fract(val);
-        float e2 = 256.0f * fract(e1);
-        float e3 = 256.0f * fract(e2);
-
-        color = vec4(e0, floor(e1) / 256.0f, floor(e2) / 256.0f, floor(e3) / 256.0f);
-    }
-    `;
-
-    // IMPORTANT: all entries of the input kernel
-    // are assumed to be in the [0, 1] range AND
-    // kernel.length >= kernelSize * kernelSize
-    //return new Function('arr', body);
-    return (kernel) => shader;
-}
-
-// Generate a texture-based 1D convolution kernel
-// of size (kernelSize x 1), where all entries
-// belong to the [0, 1] range
-function createKernel1D(kernelSize)
-{
-    // validate input
-    kernelSize |= 0;
-    if(kernelSize < 1 || kernelSize % 2 == 0)
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't create a 1D texture kernel of size ${kernelSize}`);
-
-    // encode float in the [0,1] range to RGBA
-    const shader = `
-    uniform float kernel[${kernelSize}];
-
-    void main()
-    {
-        ivec2 thread = threadLocation();
-        float val = kernel[thread.x];
-
-        float e0 = floor(val);
-        float e1 = 256.0f * fract(val);
-        float e2 = 256.0f * fract(e1);
-        float e3 = 256.0f * fract(e2);
-
-        color = vec4(e0, floor(e1) / 256.0f, floor(e2) / 256.0f, floor(e3) / 256.0f);
-    }
-    `;
-
-    // IMPORTANT: all entries of the input kernel
-    // are assumed to be in the [0, 1] range AND
-    // kernel.length >= kernelSize
-    //return new Function('arr', body);
-    return (kernel) => shader;
-}
-
-// 2D convolution with a texture-based kernel of size
-// kernelSize x kernelSize, with optional scale & offset
-// By default, scale and offset are 1 and 0, respectively
-function texConv2D(kernelSize)
-{
-    // validate input
-    const N = kernelSize >> 1; // idiv 2
-    if(kernelSize < 1 || kernelSize % 2 == 0)
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't perform a texture-based 2D convolution with an invalid kernel size of ${kernelSize}`);
-
-    // utilities
-    const foreachKernelElement = fn => cartesian(symmetricRange(N), symmetricRange(N)).map(
-        ij => fn(ij[0], ij[1])
-    ).join('\n');
-
-    const generateCode = (i, j) => `
-        kernel = pixelAt(texKernel, ivec2(${i + N}, ${j + N}));
-        value = dot(kernel, magic) * scale + offset;
-        result += pixelAtOffset(image, ivec2(${i}, ${j})) * value;
-    `;
-
-    // image: target image
-    // texKernel: convolution kernel (all entries in [0,1])
-    // scale: multiply the kernel entries by a number (like 1.0)
-    // offset: add a number to all kernel entries (like 0.0)
-    const shader = `
-    const vec4 magic = vec4(1.0f, 1.0f, 1.0f / 256.0f, 1.0f / 65536.0f);
-    uniform sampler2D image, texKernel;
-    uniform float scale, offset;
-
-    void main()
-    {
-        vec4 kernel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-        vec4 result = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-        float alpha = threadPixel(image).a;
-        float value = 0.0f;
-
-        ${foreachKernelElement(generateCode)}
-
-        result = clamp(result, 0.0f, 1.0f);
-        color = vec4(result.rgb, alpha);
-    }
-    `;
-
-    return (image, texKernel, scale, offset) => shader;
-}
-
-// identity operation with the same parameters as texConv2D()
-function idConv2D(kernelSize)
-{
-    return (image, texKernel, scale, offset) => `
-    uniform sampler2D image, texKernel;
-    uniform float scale, offset;
-
-    void main()
-    {
-        color = threadPixel(image);
-    }
-    `;
-}
-
-// Texture-based 1D convolution on the x-axis
-const texConvX = kernelSize => texConv1D(kernelSize, 'x');
-
-// Texture-based 1D convolution on the x-axis
-const texConvY = kernelSize => texConv1D(kernelSize, 'y');
-
-// texture-based 1D convolution function generator
-// (the convolution kernel is stored in a texture)
-function texConv1D(kernelSize, axis)
-{
-    // validate input
-    const N = kernelSize >> 1; // idiv 2
-    if(kernelSize < 1 || kernelSize % 2 == 0)
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't perform a texture-based 2D convolution with an invalid kernel size of ${kernelSize}`);
-    else if(axis != 'x' && axis != 'y')
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't perform a texture-based 1D convolution: invalid axis "${axis}"`); // this should never happen
-
-    // utilities
-    const foreachKernelElement = fn => symmetricRange(N).map(fn).join('\n');
-    const generateCode = i => ((axis == 'x') ? `
-        kernel = pixelAt(texKernel, ivec2(${i + N}, 0));
-        value = dot(kernel, magic) * scale + offset;
-        result += pixelAtOffset(image, ivec2(${i}, 0)) * value;
-    ` : `
-        kernel = pixelAt(texKernel, ivec2(${i + N}, 0));
-        value = dot(kernel, magic) * scale + offset;
-        result += pixelAtOffset(image, ivec2(0, ${i})) * value;
-    `);
-
-    // image: target image
-    // texKernel: convolution kernel (all entries in [0,1])
-    // scale: multiply the kernel entries by a number (like 1.0)
-    // offset: add a number to all kernel entries (like 0.0)
-    const shader = `
-    const vec4 magic = vec4(1.0f, 1.0f, 1.0f / 256.0f, 1.0f / 65536.0f);
-    uniform sampler2D image, texKernel;
-    uniform float scale, offset;
-
-    void main()
-    {
-        vec4 kernel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-        vec4 result = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-        float alpha = threadPixel(image).a;
-        float value = 0.0f;
-
-        ${foreachKernelElement(generateCode)}
-
-        result = clamp(result, 0.0f, 1.0f);
-        color = vec4(result.rgb, alpha);
-    }
-    `;
-
-    return (image, texKernel, scale, offset) => shader;
-}
-
-/***/ }),
-
-/***/ "./src/gpu/program-groups/programs/encoders.js":
-/*!*****************************************************!*\
-  !*** ./src/gpu/program-groups/programs/encoders.js ***!
-  \*****************************************************/
-/*! exports provided: encodeKeypointOffsets, encodeKeypoints */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "encodeKeypointOffsets", function() { return encodeKeypointOffsets; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "encodeKeypoints", function() { return encodeKeypoints; });
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for the web
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * encoders.js
- * Speedy image encoding algorithms
- */
-
-// encode keypoint offsets: maxIterations is an integer in [1,255], determined experimentally
-const encodeKeypointOffsets = (image, imageSize, maxIterations) => __webpack_require__(/*! ../../shaders/encoders/encode-keypoint-offsets.glsl */ "./src/gpu/shaders/encoders/encode-keypoint-offsets.glsl");
-
-// encode keypoints
-const encodeKeypoints = (image, imageSize, encoderLength, descriptorSize) => __webpack_require__(/*! ../../shaders/encoders/encode-keypoints.glsl */ "./src/gpu/shaders/encoders/encode-keypoints.glsl");
-
-/***/ }),
-
-/***/ "./src/gpu/program-groups/programs/keypoints.js":
-/*!******************************************************!*\
-  !*** ./src/gpu/program-groups/programs/keypoints.js ***!
-  \******************************************************/
-/*! exports provided: fast9, fast9pyr, fast7, fast5, fastScore16, fastScore12, fastScore8, multiscaleHarris, harrisCutoff, brisk, nonmaxSuppression, multiscaleSuppression, samescaleSuppression, orientationViaCentroid, multiscaleOrientationViaCentroid, multiscaleSobel */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fast9", function() { return fast9; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fast9pyr", function() { return fast9pyr; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fast7", function() { return fast7; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fast5", function() { return fast5; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fastScore16", function() { return fastScore16; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fastScore12", function() { return fastScore12; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fastScore8", function() { return fastScore8; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "multiscaleHarris", function() { return multiscaleHarris; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "harrisCutoff", function() { return harrisCutoff; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "brisk", function() { return brisk; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "nonmaxSuppression", function() { return nonmaxSuppression; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "multiscaleSuppression", function() { return multiscaleSuppression; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "samescaleSuppression", function() { return samescaleSuppression; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "orientationViaCentroid", function() { return orientationViaCentroid; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "multiscaleOrientationViaCentroid", function() { return multiscaleOrientationViaCentroid; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "multiscaleSobel", function() { return multiscaleSobel; });
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for the web
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * keypoints.js
- * Keypoint detection
- */
-
-/*
- * Pixels are encoded as follows:
- *
- * R: "cornerness" score IF the pixel is a corner, 0 otherwise
- * G: pixel intensity (left untouched)
- * B: "cornerness" score regardless if the pixel is a corner or not
- *    (useful for other algorithms)
- * A: left untouched
+ * gpu-pyramids.js
+ * Image pyramids
  */
 
 
 
-//
-// FAST corner detector
-//
 
-// FAST-9_16: requires 9 contiguous pixels
-// on a circumference of 16 pixels
-const fast9 = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoints/fast9lg.glsl */ "./src/gpu/shaders/keypoints/fast9lg.glsl");
 
-// FAST-9_16 on scale-space
-// Requires image mipmap
-const fast9pyr = (pyramid, threshold, minLod, maxLod, usePyrSubLevels) => __webpack_require__(/*! ../../shaders/keypoints/fast9pyr.glsl */ "./src/gpu/shaders/keypoints/fast9pyr.glsl");
-
-// FAST-7_12: requires 7 contiguous pixels
-// on a circumference of 12 pixels
-const fast7 = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoints/fast7.glsl */ "./src/gpu/shaders/keypoints/fast7.glsl");
-
-// FAST-5_8: requires 5 contiguous pixels
-// on a circumference of 8 pixels
-const fast5 = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoints/fast5.glsl */ "./src/gpu/shaders/keypoints/fast5.glsl");
-
-// compute corner score considering a
-// neighboring circumference of 16 pixels
-const fastScore16 = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoints/fast-score16.glsl */ "./src/gpu/shaders/keypoints/fast-score16.glsl");
-
-// compute corner score considering a
-// neighboring circumference of 12 pixels
-const fastScore12 = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoints/fast-score12.glsl */ "./src/gpu/shaders/keypoints/fast-score12.glsl");
-
-// compute corner score considering a
-// neighboring circumference of 8 pixels
-const fastScore8 = (image, threshold) => __webpack_require__(/*! ../../shaders/keypoints/fast-score8.glsl */ "./src/gpu/shaders/keypoints/fast-score8.glsl");
 
 
 
 //
-// Harris-Shi-Tomasi corner detector
+// Shaders
 //
-
-// compute corner responses
-// (score map)
-const multiscaleHarris = (pyramid, windowRadius, minLod, maxLod, usePyrSubLevels, sobelDerivatives) => __webpack_require__(/*! ../../shaders/keypoints/multiscale-harris.glsl */ "./src/gpu/shaders/keypoints/multiscale-harris.glsl");
-
-// discard corners below a specified quality level
-const harrisCutoff = (corners, maxScore, quality) => __webpack_require__(/*! ../../shaders/keypoints/harris-cutoff.glsl */ "./src/gpu/shaders/keypoints/harris-cutoff.glsl");
-
-
-//
-// BRISK feature detection
-//
-const brisk = (image, layerA, layerB, scaleA, scaleB, lgM, h) => __webpack_require__(/*! ../../shaders/keypoints/brisk.glsl */ "./src/gpu/shaders/keypoints/brisk.glsl");
-
-
-
-//
-// Generic keypoint routines
-//
-
-// non-maximum suppression
-const nonmaxSuppression = (image) => __webpack_require__(/*! ../../shaders/keypoints/nonmax-suppression.glsl */ "./src/gpu/shaders/keypoints/nonmax-suppression.glsl");
-const multiscaleSuppression = (image, usePyrSubLevels) => __webpack_require__(/*! ../../shaders/keypoints/multiscale-suppression.glsl */ "./src/gpu/shaders/keypoints/multiscale-suppression.glsl");
-const samescaleSuppression = (image) => __webpack_require__(/*! ../../shaders/keypoints/samescale-suppression.glsl */ "./src/gpu/shaders/keypoints/samescale-suppression.glsl");
-
-// find keypoint orientation
-const orientationViaCentroid = (corners, patchRadius) => __webpack_require__(/*! ../../shaders/keypoints/orientation-via-centroid.glsl */ "./src/gpu/shaders/keypoints/orientation-via-centroid.glsl");
-const multiscaleOrientationViaCentroid = (corners, patchRadius, pyramid) => __webpack_require__(/*! ../../shaders/keypoints/multiscale-orientation-via-centroid.glsl */ "./src/gpu/shaders/keypoints/multiscale-orientation-via-centroid.glsl");
-
-// Sobel derivatives
-const multiscaleSobel = (pyramid, lod) => __webpack_require__(/*! ../../shaders/keypoints/multiscale-sobel.glsl */ "./src/gpu/shaders/keypoints/multiscale-sobel.glsl");
-
-/***/ }),
-
-/***/ "./src/gpu/program-groups/programs/pyramids.js":
-/*!*****************************************************!*\
-  !*** ./src/gpu/program-groups/programs/pyramids.js ***!
-  \*****************************************************/
-/*! exports provided: upsample2, downsample2, upsample3, downsample3, mergeKeypoints, mergeKeypointsAtConsecutiveLevels, normalizeKeypoints, crop, setScale, scale */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "upsample2", function() { return upsample2; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "downsample2", function() { return downsample2; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "upsample3", function() { return upsample3; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "downsample3", function() { return downsample3; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "mergeKeypoints", function() { return mergeKeypoints; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "mergeKeypointsAtConsecutiveLevels", function() { return mergeKeypointsAtConsecutiveLevels; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "normalizeKeypoints", function() { return normalizeKeypoints; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "crop", function() { return crop; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "setScale", function() { return setScale; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "scale", function() { return scale; });
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../utils/globals */ "./src/utils/globals.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for the web
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * pyramids.js
- * Image pyramids & scale-space utilities
- */
-
-
 
 // pyramid generation
-const upsample2 = image => __webpack_require__(/*! ../../shaders/pyramids/upsample2.glsl */ "./src/gpu/shaders/pyramids/upsample2.glsl");
-const downsample2 = image => __webpack_require__(/*! ../../shaders/pyramids/downsample2.glsl */ "./src/gpu/shaders/pyramids/downsample2.glsl");
-const upsample3 = image => __webpack_require__(/*! ../../shaders/pyramids/upsample3.glsl */ "./src/gpu/shaders/pyramids/upsample3.glsl");
-const downsample3 = image => __webpack_require__(/*! ../../shaders/pyramids/downsample3.glsl */ "./src/gpu/shaders/pyramids/downsample3.glsl");
+const upsample2 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('pyramids/upsample2.glsl').withArguments('image');
+const downsample2 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('pyramids/downsample2.glsl').withArguments('image');
+const upsample3 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('pyramids/upsample3.glsl').withArguments('image');
+const downsample3 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('pyramids/downsample3.glsl').withArguments('image');
 
 // utilities for merging keypoints across multiple scales
-const mergeKeypoints = (target, source) => __webpack_require__(/*! ../../shaders/pyramids/merge-keypoints.glsl */ "./src/gpu/shaders/pyramids/merge-keypoints.glsl");
-const mergeKeypointsAtConsecutiveLevels = (largerImage, smallerImage) => __webpack_require__(/*! ../../shaders/pyramids/merge-keypoints-at-consecutive-levels.glsl */ "./src/gpu/shaders/pyramids/merge-keypoints-at-consecutive-levels.glsl");
-const normalizeKeypoints = (image, imageScale) => __webpack_require__(/*! ../../shaders/pyramids/normalize-keypoints.glsl */ "./src/gpu/shaders/pyramids/normalize-keypoints.glsl");
+const mergeKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('pyramids/merge-keypoints.glsl').withArguments('target', 'source');
+const mergeKeypointsAtConsecutiveLevels = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('pyramids/merge-keypoints-at-consecutive-levels.glsl').withArguments('largerImage', 'smallerImage');
+const normalizeKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('pyramids/normalize-keypoints.glsl').withArguments('image', 'imageScale');
 
 // misc
-const crop = image => __webpack_require__(/*! ../../shaders/pyramids/crop.glsl */ "./src/gpu/shaders/pyramids/crop.glsl");
+const crop = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('pyramids/crop.glsl').withArguments('image');
+const flipY = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('utils/flip-y.glsl').withArguments('image');
 
-// image scale
+
+
+/**
+ * GPUPyramids
+ * Image pyramids
+ */
+class GPUPyramids extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["SpeedyProgramGroup"]
+{
+    /**
+     * Class constructor
+     * @param {SpeedyGPU} gpu
+     * @param {number} width
+     * @param {number} height
+     */
+    constructor(gpu, width, height)
+    {
+        super(gpu, width, height);
+        this
+            // initialize pyramid
+            .declare('setBase', setScale(1.0))
+ 
+            // pyramid operations
+            .compose('reduce', '_smoothX', '_smoothY', '_downsample2', '_scale1/2')
+            .compose('expand', '_upsample2', '_smoothX2', '_smoothY2', '_scale2')
+           
+            // intra-pyramid operations (between two pyramid levels)
+            .compose('intraReduce', '_upsample2', '_smoothX2', '_smoothY2', '_downsample3/2', '_scale2/3')
+            .compose('intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3', '_scale3/2')
+
+            // Merge keypoints across multiple scales
+            .declare('mergeKeypoints', mergeKeypoints)
+            .declare('mergeKeypointsAtConsecutiveLevels', mergeKeypointsAtConsecutiveLevels)
+            .declare('normalizeKeypoints', normalizeKeypoints)
+
+            // Crop texture to width x height of the current pyramid level
+            .declare('crop', crop)
+
+            // kernels for debugging
+            .declare('output', flipY, {
+                ...this.program.hasTextureSize(this._width, this._height),
+                ...this.program.displaysGraphics()
+            })
+
+            .declare('output2', flipY, {
+                ...this.program.hasTextureSize(2 * this._width, 2 * this._height),
+                ...this.program.displaysGraphics()
+            })
+
+            .declare('output3', flipY, {
+                ...this.program.hasTextureSize(3 * this._width, 3 * this._height),
+                ...this.program.displaysGraphics()
+            })
+
+
+            
+            // separable kernels for gaussian smoothing
+            // use [c, b, a, b, c] where a+2c = 2b and a+2b+2c = 1
+            // pick a = 0.4 for gaussian approximation
+            .declare('_smoothX', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_3__["convX"])([
+                0.05, 0.25, 0.4, 0.25, 0.05
+            ]))
+            .declare('_smoothY', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_3__["convY"])([
+                0.05, 0.25, 0.4, 0.25, 0.05
+            ]))
+
+            // smoothing for 2x image
+            // same rules as above with sum(k) = 2
+            .declare('_smoothX2', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_3__["convX"])([
+                0.1, 0.5, 0.8, 0.5, 0.1
+            ]), this.program.hasTextureSize(2 * this._width, 2 * this._height))
+
+            .declare('_smoothY2', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_3__["convY"])([
+                0.1, 0.5, 0.8, 0.5, 0.1
+            ], 1.0 / 2.0), this.program.hasTextureSize(2 * this._width, 2 * this._height))
+
+            // smoothing for 3x image
+            // use [1-b, b, 1, b, 1-b], where 0 < b < 1
+            .declare('_smoothX3', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_3__["convX"])([
+                0.2, 0.8, 1.0, 0.8, 0.2
+            ]), this.program.hasTextureSize(3 * this._width, 3 * this._height))
+
+            .declare('_smoothY3', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_3__["convY"])([
+                0.2, 0.8, 1.0, 0.8, 0.2
+            ], 1.0 / 3.0), this.program.hasTextureSize(3 * this._width, 3 * this._height))
+
+            // upsampling & downsampling
+            .declare('_upsample2', upsample2,
+                this.program.hasTextureSize(2 * this._width, 2 * this._height))
+
+            .declare('_downsample2', downsample2,
+                this.program.hasTextureSize((1 + this._width) / 2, (1 + this._height) / 2))
+
+            .declare('_upsample3', upsample3,
+                this.program.hasTextureSize(3 * this._width, 3 * this._height))
+
+            .declare('_downsample3', downsample3,
+                this.program.hasTextureSize((2 + this._width) / 3, (2 + this._height) / 3))
+
+            .declare('_downsample2/3', downsample2,
+                this.program.hasTextureSize(3 * this._width / 2, 3 * this._height / 2))
+
+            .declare('_downsample3/2', downsample3,
+                this.program.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
+
+            // adjust the scale coefficients
+            .declare('_scale2', scale(2.0),
+                this.program.hasTextureSize(2 * this._width, 2 * this._height))
+
+            .declare('_scale1/2', scale(0.5),
+                this.program.hasTextureSize((1 + this._width) / 2, (1 + this._height) / 2))
+
+            .declare('_scale3/2', scale(1.5),
+                this.program.hasTextureSize(3 * this._width / 2, 3 * this._height / 2))
+
+            .declare('_scale2/3', scale(2.0 / 3.0),
+                this.program.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
+        ;
+    }
+}
+
+
+
 
 /*
  * Image scale is encoded in the alpha channel (a)
@@ -3881,14 +3477,15 @@ const crop = image => __webpack_require__(/*! ../../shaders/pyramids/crop.glsl *
  * and so on...
  */
 
+// Set image scale
 function setScale(scale)
 {
-    const lgM = Math.log2(_utils_globals__WEBPACK_IMPORTED_MODULE_0__["PYRAMID_MAX_SCALE"]), eps = 1e-5;
-    const pyramidMinScale = Math.pow(2, -_utils_globals__WEBPACK_IMPORTED_MODULE_0__["PYRAMID_MAX_LEVELS"]) + eps;
-    const x = Math.max(pyramidMinScale, Math.min(scale, _utils_globals__WEBPACK_IMPORTED_MODULE_0__["PYRAMID_MAX_SCALE"]));
-    const alpha = (lgM - Math.log2(x)) / (lgM + _utils_globals__WEBPACK_IMPORTED_MODULE_0__["PYRAMID_MAX_LEVELS"]);
-
-    return (image) => `
+    const lgM = Math.log2(_utils_globals__WEBPACK_IMPORTED_MODULE_2__["PYRAMID_MAX_SCALE"]), eps = 1e-5;
+    const pyramidMinScale = Math.pow(2, -_utils_globals__WEBPACK_IMPORTED_MODULE_2__["PYRAMID_MAX_LEVELS"]) + eps;
+    const x = Math.max(pyramidMinScale, Math.min(scale, _utils_globals__WEBPACK_IMPORTED_MODULE_2__["PYRAMID_MAX_SCALE"]));
+    const alpha = (lgM - Math.log2(x)) / (lgM + _utils_globals__WEBPACK_IMPORTED_MODULE_2__["PYRAMID_MAX_LEVELS"]);
+    
+    const source = `
     uniform sampler2D image;
 
     void main()
@@ -3896,15 +3493,18 @@ function setScale(scale)
         color = vec4(threadPixel(image).rgb, float(${alpha}));
     }
     `;
+
+    return Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["createShader"])(source).withArguments('image');
 }
 
+// Scale image by a factor
 function scale(scaleFactor)
 {
-    const lgM = Math.log2(_utils_globals__WEBPACK_IMPORTED_MODULE_0__["PYRAMID_MAX_SCALE"]), eps = 1e-5;
+    const lgM = Math.log2(_utils_globals__WEBPACK_IMPORTED_MODULE_2__["PYRAMID_MAX_SCALE"]), eps = 1e-5;
     const s = Math.max(eps, scaleFactor);
-    const delta = -Math.log2(s) / (lgM + _utils_globals__WEBPACK_IMPORTED_MODULE_0__["PYRAMID_MAX_LEVELS"]);
+    const delta = -Math.log2(s) / (lgM + _utils_globals__WEBPACK_IMPORTED_MODULE_2__["PYRAMID_MAX_LEVELS"]);
 
-    return (image) => `
+    const source = `
     uniform sampler2D image;
 
     void main()
@@ -3915,246 +3515,26 @@ function scale(scaleFactor)
         color = vec4(pixel.rgb, alpha);
     }
     `;
+
+    return Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["createShader"])(source).withArguments('image');
 }
 
 /***/ }),
 
-/***/ "./src/gpu/program-groups/programs/utils.js":
-/*!**************************************************!*\
-  !*** ./src/gpu/program-groups/programs/utils.js ***!
-  \**************************************************/
-/*! exports provided: identity, flipY, fill, fillComponents, copyComponents, scanMinMax1D, scanMinMax2D */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "identity", function() { return identity; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "flipY", function() { return flipY; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fill", function() { return fill; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fillComponents", function() { return fillComponents; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copyComponents", function() { return copyComponents; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "scanMinMax1D", function() { return scanMinMax1D; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "scanMinMax2D", function() { return scanMinMax2D; });
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for the web
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * utils.js
- * Utility shaders
- */
-
-// Identity shader: no-operation
-const identity = (image) => __webpack_require__(/*! ../../shaders/utils/identity.glsl */ "./src/gpu/shaders/utils/identity.glsl");
-
-// Flip y-axis for output
-const flipY = (image) => __webpack_require__(/*! ../../shaders/utils/flip-y.glsl */ "./src/gpu/shaders/utils/flip-y.glsl");
-
-// Fill image with a constant
-const fill = (value) => __webpack_require__(/*! ../../shaders/utils/fill.glsl */ "./src/gpu/shaders/utils/fill.glsl");
-
-// Fill zero or more color components of the input image with a constant value
-const fillComponents = (image, pixelComponents, value) => __webpack_require__(/*! ../../shaders/utils/fill-components.glsl */ "./src/gpu/shaders/utils/fill-components.glsl");
-
-// Copy the src component of src to zero or more color components of a copy of dest
-const copyComponents = (dest, src, destComponents, srcComponentId) => __webpack_require__(/*! ../../shaders/utils/copy-components.glsl */ "./src/gpu/shaders/utils/copy-components.glsl");
-
-// Scan the entire image and find the minimum & maximum pixel intensity for each row and column
-const scanMinMax1D = (image, iterationNumber) => __webpack_require__(/*! ../../shaders/utils/scan-minmax1d.glsl */ "./src/gpu/shaders/utils/scan-minmax1d.glsl");
-
-// Scan the entire image and find the minimum & maximum pixel intensity
-const scanMinMax2D = (image, iterationNumber) => __webpack_require__(/*! ../../shaders/utils/scan-minmax2d.glsl */ "./src/gpu/shaders/utils/scan-minmax2d.glsl");
-
-/***/ }),
-
-/***/ "./src/gpu/program-groups/pyramids.js":
-/*!********************************************!*\
-  !*** ./src/gpu/program-groups/pyramids.js ***!
-  \********************************************/
-/*! exports provided: GPUPyramids */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUPyramids", function() { return GPUPyramids; });
-/* harmony import */ var _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu-program-group */ "./src/gpu/gpu-program-group.js");
-/* harmony import */ var _programs_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./programs/utils */ "./src/gpu/program-groups/programs/utils.js");
-/* harmony import */ var _programs_convolution__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./programs/convolution */ "./src/gpu/program-groups/programs/convolution.js");
-/* harmony import */ var _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./programs/pyramids */ "./src/gpu/program-groups/programs/pyramids.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for the web
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * gpu-pyramids.js
- * Image pyramids
- */
-
-
-
-
-
-
-
-
-/**
- * GPUPyramids
- * Image pyramids
- */
-class GPUPyramids extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_0__["GPUProgramGroup"]
-{
-    /**
-     * Class constructor
-     * @param {SpeedyGPU} gpu
-     * @param {number} width
-     * @param {number} height
-     */
-    constructor(gpu, width, height)
-    {
-        super(gpu, width, height);
-        this
-            // initialize pyramid
-            .declare('setBase', Object(_programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["setScale"])(1.0))
- 
-            // pyramid operations
-            .compose('reduce', '_smoothX', '_smoothY', '_downsample2', '_scale1/2')
-            .compose('expand', '_upsample2', '_smoothX2', '_smoothY2', '_scale2')
-           
-            // intra-pyramid operations (between two pyramid levels)
-            .compose('intraReduce', '_upsample2', '_smoothX2', '_smoothY2', '_downsample3/2', '_scale2/3')
-            .compose('intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3', '_scale3/2')
-
-            // Merge keypoints across multiple scales
-            .declare('mergeKeypoints', _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["mergeKeypoints"])
-            .declare('mergeKeypointsAtConsecutiveLevels', _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["mergeKeypointsAtConsecutiveLevels"])
-            .declare('normalizeKeypoints', _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["normalizeKeypoints"])
-
-            // Crop texture to width x height of the current pyramid level
-            .declare('crop', _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["crop"])
-
-            // kernels for debugging
-            .declare('output', _programs_utils__WEBPACK_IMPORTED_MODULE_1__["flipY"], {
-                ...this.program.hasTextureSize(this._width, this._height),
-                ...this.program.displaysGraphics()
-            })
-
-            .declare('output2', _programs_utils__WEBPACK_IMPORTED_MODULE_1__["flipY"], {
-                ...this.program.hasTextureSize(2 * this._width, 2 * this._height),
-                ...this.program.displaysGraphics()
-            })
-
-            .declare('output3', _programs_utils__WEBPACK_IMPORTED_MODULE_1__["flipY"], {
-                ...this.program.hasTextureSize(3 * this._width, 3 * this._height),
-                ...this.program.displaysGraphics()
-            })
-
-
-            
-            // separable kernels for gaussian smoothing
-            // use [c, b, a, b, c] where a+2c = 2b and a+2b+2c = 1
-            // pick a = 0.4 for gaussian approximation
-            .declare('_smoothX', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
-                0.05, 0.25, 0.4, 0.25, 0.05
-            ]))
-            .declare('_smoothY', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
-                0.05, 0.25, 0.4, 0.25, 0.05
-            ]))
-
-            // smoothing for 2x image
-            // same rules as above with sum(k) = 2
-            .declare('_smoothX2', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
-                0.1, 0.5, 0.8, 0.5, 0.1
-            ]), this.program.hasTextureSize(2 * this._width, 2 * this._height))
-
-            .declare('_smoothY2', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
-                0.1, 0.5, 0.8, 0.5, 0.1
-            ], 1.0 / 2.0), this.program.hasTextureSize(2 * this._width, 2 * this._height))
-
-            // smoothing for 3x image
-            // use [1-b, b, 1, b, 1-b], where 0 < b < 1
-            .declare('_smoothX3', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
-                0.2, 0.8, 1.0, 0.8, 0.2
-            ]), this.program.hasTextureSize(3 * this._width, 3 * this._height))
-
-            .declare('_smoothY3', Object(_programs_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
-                0.2, 0.8, 1.0, 0.8, 0.2
-            ], 1.0 / 3.0), this.program.hasTextureSize(3 * this._width, 3 * this._height))
-
-            // upsampling & downsampling
-            .declare('_upsample2', _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["upsample2"],
-                this.program.hasTextureSize(2 * this._width, 2 * this._height))
-
-            .declare('_downsample2', _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["downsample2"],
-                this.program.hasTextureSize((1 + this._width) / 2, (1 + this._height) / 2))
-
-            .declare('_upsample3', _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["upsample3"],
-                this.program.hasTextureSize(3 * this._width, 3 * this._height))
-
-            .declare('_downsample3', _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["downsample3"],
-                this.program.hasTextureSize((2 + this._width) / 3, (2 + this._height) / 3))
-
-            .declare('_downsample2/3', _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["downsample2"],
-                this.program.hasTextureSize(3 * this._width / 2, 3 * this._height / 2))
-
-            .declare('_downsample3/2', _programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["downsample3"],
-                this.program.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
-
-            // adjust the scale coefficients
-            .declare('_scale2', Object(_programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(2.0),
-                this.program.hasTextureSize(2 * this._width, 2 * this._height))
-
-            .declare('_scale1/2', Object(_programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(0.5),
-                this.program.hasTextureSize((1 + this._width) / 2, (1 + this._height) / 2))
-
-            .declare('_scale3/2', Object(_programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(1.5),
-                this.program.hasTextureSize(3 * this._width / 2, 3 * this._height / 2))
-
-            .declare('_scale2/3', Object(_programs_pyramids__WEBPACK_IMPORTED_MODULE_3__["scale"])(2.0 / 3.0),
-                this.program.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
-        ;
-    }
-}
-
-/***/ }),
-
-/***/ "./src/gpu/program-groups/utils.js":
-/*!*****************************************!*\
-  !*** ./src/gpu/program-groups/utils.js ***!
-  \*****************************************/
+/***/ "./src/gpu/programs/utils.js":
+/*!***********************************!*\
+  !*** ./src/gpu/programs/utils.js ***!
+  \***********************************/
 /*! exports provided: GPUUtils */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUUtils", function() { return GPUUtils; });
-/* harmony import */ var _gl_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gl-utils */ "./src/gpu/gl-utils.js");
-/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _gpu_program_group__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../gpu-program-group */ "./src/gpu/gpu-program-group.js");
-/* harmony import */ var _programs_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./programs/utils */ "./src/gpu/program-groups/programs/utils.js");
+/* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-program-group */ "./src/gpu/speedy-program-group.js");
+/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _gl_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../gl-utils */ "./src/gpu/gl-utils.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -4181,11 +3561,41 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
+//
+// Shaders
+//
+
+// Identity shader: no-operation
+const identity = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('utils/identity.glsl').withArguments('image');
+
+// Flip y-axis for output
+const flipY = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('utils/flip-y.glsl').withArguments('image');
+
+// Fill image with a constant
+const fill = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('utils/fill.glsl').withArguments('value');
+
+// Fill zero or more color components of the input image with a constant value
+const fillComponents = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('utils/fill-components.glsl').withArguments('image', 'pixelComponents', 'value');
+
+// Copy the src component of src to zero or more color components of a copy of dest
+const copyComponents = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('utils/copy-components.glsl').withArguments('dest', 'src', 'destComponents', 'srcComponentId');
+
+// Scan the entire image and find the minimum & maximum pixel intensity for each row and column
+//const scanMinMax1D = importShader('utils/scan-minmax1d.glsl').withArguments('image', 'iterationNumber');
+
+// Scan the entire image and find the minimum & maximum pixel intensity
+const scanMinMax2D = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('utils/scan-minmax2d.glsl').withArguments('image', 'iterationNumber');
+
+
+
+
 /**
  * GPUUtils
  * Utility operations
  */
-class GPUUtils extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_2__["GPUProgramGroup"]
+class GPUUtils extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["SpeedyProgramGroup"]
 {
     /**
      * Class constructor
@@ -4198,29 +3608,29 @@ class GPUUtils extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_2__["GPUProgr
         super(gpu, width, height);
         this
             // no-operation
-            .declare('identity', _programs_utils__WEBPACK_IMPORTED_MODULE_3__["identity"])
+            .declare('identity', identity)
 
             // flip y-axis
-            .declare('flipY', _programs_utils__WEBPACK_IMPORTED_MODULE_3__["flipY"])
+            .declare('flipY', flipY)
 
             // output a texture from a pipeline
-            .declare('output', _programs_utils__WEBPACK_IMPORTED_MODULE_3__["flipY"], {
+            .declare('output', flipY, {
                 ...this.program.displaysGraphics()
             })
                 
             // clone a texture (release it afterwards)
-            .declare('clone', _programs_utils__WEBPACK_IMPORTED_MODULE_3__["identity"], {
+            .declare('clone', identity, {
                 ...this.program.doesNotRecycleTextures()
             })
 
             // Fill image with a constant
-            .declare('fill', _programs_utils__WEBPACK_IMPORTED_MODULE_3__["fill"])
+            .declare('fill', fill)
 
             // Fill zero or more color components of the input image with a constant value
-            .declare('fillComponents', _programs_utils__WEBPACK_IMPORTED_MODULE_3__["fillComponents"])
+            .declare('fillComponents', fillComponents)
 
             // Copy the src component of src to zero or more color components of a copy of dest
-            .declare('copyComponents', _programs_utils__WEBPACK_IMPORTED_MODULE_3__["copyComponents"])
+            .declare('copyComponents', copyComponents)
 
             // find minimum & maximum pixel intensity for each row and column
             /*.declare('_scanMinMax1D', scanMinMax1D, {
@@ -4228,7 +3638,7 @@ class GPUUtils extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_2__["GPUProgr
             })*/
 
             // find minimum & maximum pixel intensity
-            .declare('_scanMinMax2D', _programs_utils__WEBPACK_IMPORTED_MODULE_3__["scanMinMax2D"], {
+            .declare('_scanMinMax2D', scanMinMax2D, {
                 ...this.program.usesPingpongRendering()
             })
         ;
@@ -4241,7 +3651,7 @@ class GPUUtils extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_2__["GPUProgr
      */
     release(texture)
     {
-        return _gl_utils__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].destroyTexture(this._gpu.gl, texture);
+        return _gl_utils__WEBPACK_IMPORTED_MODULE_3__["GLUtils"].destroyTexture(this._gpu.gl, texture);
     }
 
     /**
@@ -4283,13 +3693,258 @@ class GPUUtils extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_2__["GPUProgr
         //
         const componentId = Math.max(0, Math.min(Math.log2(pixelComponent), 3)) | 0;
         const numIterations = Math.ceil(Math.log2(Math.max(this._width, this._height))) | 0;
-        let texture = this.copyComponents(image, image, _utils_types__WEBPACK_IMPORTED_MODULE_1__["PixelComponent"].ALL, componentId);
+        let texture = this.copyComponents(image, image, _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].ALL, componentId);
 
         for(let i = 0; i < numIterations; i++)
             texture = this._scanMinMax2D(texture, i);
 
         return this.copyComponents(image, texture, (1 << componentId), max ? 0 : 1);
     }
+}
+
+/***/ }),
+
+/***/ "./src/gpu/shader-declaration.js":
+/*!***************************************!*\
+  !*** ./src/gpu/shader-declaration.js ***!
+  \***************************************/
+/*! exports provided: importShader, createShader */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "importShader", function() { return importShader; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createShader", function() { return createShader; });
+/* harmony import */ var _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./shader-preprocessor */ "./src/gpu/shader-preprocessor.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * shader-declaration.js
+ * Encapsulates a shader declaration
+ */
+
+
+
+
+const ATTRIB_POSITION = 'a_position';
+const ATTRIB_TEXCOORD = 'a_texCoord';
+
+const DEFAULT_VERTEX_SHADER = `#version 300 es
+in vec2 ${ATTRIB_POSITION};
+in vec2 ${ATTRIB_TEXCOORD};
+out vec2 texCoord;
+ 
+void main() {
+    gl_Position = vec4(a_position, 0.0, 1.0);
+    texCoord = a_texCoord;
+}`;
+
+const DEFAULT_FRAGMENT_SHADER_PREFIX = `#version 300 es
+precision highp float;
+precision highp int;
+precision mediump sampler2D;
+ 
+out vec4 color;
+in vec2 texCoord;
+uniform vec2 texSize;
+
+@include "global.glsl"\n`;
+
+/**
+ * Shader Declaration
+ */
+class ShaderDeclaration
+{
+    /* private */ constructor(options)
+    {
+        const filepath = options.filepath || null;
+        const source = filepath ? __webpack_require__("./src/gpu/shaders sync recursive ^\\.\\/.*$")("./" + filepath) : (options.source || '');
+
+        this._fragmentSource = _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__["ShaderPreprocessor"].run(DEFAULT_FRAGMENT_SHADER_PREFIX + source);
+        this._vertexSource = _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__["ShaderPreprocessor"].run(DEFAULT_VERTEX_SHADER);
+        this._filepath = filepath || '<in-memory>';
+        this._uniform = this._autodetectUniforms(this._fragmentSource);
+        this._arguments = [];
+    }
+
+    /**
+     * Creates a new Shader directly from a GLSL source
+     * @param {string} source
+     * @returns {Shader}
+     */
+    static create(source)
+    {
+        return new ShaderDeclaration({ source });
+    }
+
+    /**
+     * Import a Shader from a file containing a GLSL source
+     * @param {string} filepath path to .glsl file relative to the shaders/ folder
+     * @returns {Shader}
+     */
+    static import(filepath)
+    {
+        if(!String(filepath).match(/^[a-zA-Z0-9_\-\/]+\.glsl$/))
+            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Can't import shader: "${filepath}"`);
+
+        return new ShaderDeclaration({ filepath });
+    }
+
+    /**
+     * Specify the list & order of arguments to be
+     * passed to the shader
+     * @param  {...string} args argument names
+     * @returns {Shader} this
+     */
+    withArguments(...args)
+    {
+        // get arguments
+        this._arguments = args.map(arg => String(arg));
+
+        // validate
+        for(const argname of this._arguments) {
+            if(!this._uniform.hasOwnProperty(argname)) {
+                if(!this._uniform.hasOwnProperty(argname + '[0]'))
+                    _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Argument "${argname}" has not been declared in the shader`);
+            }
+        }
+
+        // done!
+        return this;
+    }
+
+    /**
+     * Return the GLSL source of the fragment shader
+     * @returns {string}
+     */
+    get fragmentSource()
+    {
+        return this._fragmentSource;
+    }
+
+    /**
+     * Return the GLSL source of the vertex shader
+     * @returns {string}
+     */
+    get vertexSource()
+    {
+        return this._vertexSource;
+    }
+
+    /**
+     * Get the names of the vertex shader attributes
+     * @returns {object}
+     */
+    get attributes()
+    {
+        return ShaderDeclaration._attr || (ShaderDeclaration._attr = Object.freeze({
+            position: ATTRIB_POSITION,
+            texCoord: ATTRIB_TEXCOORD,
+        }));
+    }
+
+    /**
+     * Names of the arguments that will be passed to the Shader,
+     * corresponding to GLSL uniforms, in the order they will be passed
+     * @returns {Array<string>}
+     */
+    get arguments()
+    {
+        return this._arguments;
+    }
+
+    /**
+     * Names of the uniforms declared in the shader
+     * @returns {Array<string>}
+     */
+    get uniforms()
+    {
+        return Object.keys(this._uniform);
+    }
+
+    /**
+     * The GLSL type of an uniform variable declared in the shader
+     * @param {string} name
+     * @returns {string}
+     */
+    uniformType(name)
+    {
+        if(!this._uniform.hasOwnProperty(name))
+            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Unrecognized uniform variable: "${name}"`);
+
+        return this._uniform[name];
+    }
+
+    /**
+     * Parses a GLSL source and detects the uniform variables,
+     * as well as their types
+     * @param {string} preprocessedSource 
+     * @returns {object} specifies the types of all uniforms
+     */
+    _autodetectUniforms(preprocessedSource)
+    {
+        const sourceWithoutComments = preprocessedSource; // assume we've preprocessed the source already
+        const regex = /uniform\s+(\w+)\s+([^;]+)/g;
+        const uniforms = { };
+
+        let match;
+        while((match = regex.exec(sourceWithoutComments)) !== null) {
+            const type = match[1];
+            const names = match[2].split(',').map(name => name.trim()).filter(name => name); // trim & remove empty names
+
+            for(const name of names) {
+                if(name.endsWith(']')) {
+                    // is it an array?
+                    if(!(match = name.match(/(\w+)\s*\[\s*(\d+)\s*\]$/)))
+                        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Unspecified array length for uniform "${name}" in the shader`);
+                    const [ array, length ] = [ match[1], Number(match[2]) ];
+                    for(let i = 0; i < length; i++)
+                        uniforms[`${array}[${i}]`] = type;
+                }
+                else {
+                    // regular uniform
+                    uniforms[name] = type;
+                }
+            }
+        }
+
+        return Object.freeze(uniforms);
+    }
+}
+
+/**
+ * Import a ShaderDeclaration from a GLSL file
+ * @param {string} filepath relative to the shaders/ folder
+ * @returns {ShaderDeclaration}
+ */
+function importShader(filepath)
+{
+    return ShaderDeclaration.import(filepath);
+}
+
+/**
+ * Create a ShaderDeclaration from a GLSL source
+ * @param {string} source
+ * @returns {ShaderDeclaration}
+ */
+function createShader(source)
+{
+    return ShaderDeclaration.create(source);
 }
 
 /***/ }),
@@ -4304,9 +3959,9 @@ class GPUUtils extends _gpu_program_group__WEBPACK_IMPORTED_MODULE_2__["GPUProgr
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ShaderPreprocessor", function() { return ShaderPreprocessor; });
-/* harmony import */ var _gl_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gl-utils */ "./src/gpu/gl-utils.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
-/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -4340,14 +3995,14 @@ const constantRegex = /@(\w+)@/g;
 // Constant values accessible inside the shaders
 const constants = {
     // pyramids
-    'PYRAMID_MAX_LEVELS': _utils_globals__WEBPACK_IMPORTED_MODULE_1__["PYRAMID_MAX_LEVELS"],
-    'LOG2_PYRAMID_MAX_SCALE': Math.log2(_utils_globals__WEBPACK_IMPORTED_MODULE_1__["PYRAMID_MAX_SCALE"]),
+    'PYRAMID_MAX_LEVELS': _utils_globals__WEBPACK_IMPORTED_MODULE_0__["PYRAMID_MAX_LEVELS"],
+    'LOG2_PYRAMID_MAX_SCALE': Math.log2(_utils_globals__WEBPACK_IMPORTED_MODULE_0__["PYRAMID_MAX_SCALE"]),
 
     // colors
-    'PIXELCOMPONENT_RED': _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].RED,
-    'PIXELCOMPONENT_GREEN': _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].GREEN,
-    'PIXELCOMPONENT_BLUE': _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].BLUE,
-    'PIXELCOMPONENT_ALPHA': _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].ALPHA,
+    'PIXELCOMPONENT_RED': _utils_types__WEBPACK_IMPORTED_MODULE_1__["PixelComponent"].RED,
+    'PIXELCOMPONENT_GREEN': _utils_types__WEBPACK_IMPORTED_MODULE_1__["PixelComponent"].GREEN,
+    'PIXELCOMPONENT_BLUE': _utils_types__WEBPACK_IMPORTED_MODULE_1__["PixelComponent"].BLUE,
+    'PIXELCOMPONENT_ALPHA': _utils_types__WEBPACK_IMPORTED_MODULE_1__["PixelComponent"].ALPHA,
 };
 
 /**
@@ -4357,18 +4012,17 @@ class ShaderPreprocessor
 {
     /**
      * Runs the preprocessor
-     * @param {WebGL2RenderingContext} gl
      * @param {string} code 
      * @returns {string} preprocessed code
      */
-    static run(gl, code)
+    static run(code)
     {
         // remove comments and run the preprocessor
         return String(code).replace(commentsRegex[0], '')
                            .replace(commentsRegex[1], '')
                            .replace(includeRegex, (_, filename) =>
                                 // FIXME: no cycle detection for @include
-                                ShaderPreprocessor.run(gl, readfileSync(filename))
+                                ShaderPreprocessor.run(readfileSync(filename))
                             )
                             .replace(constantRegex, (_, name) =>
                                 String(constants[name] || 'UNDEFINED_CONSTANT')
@@ -4386,8 +4040,81 @@ function readfileSync(filename)
     if(String(filename).match(/^[a-zA-Z0-9_\-]+\.glsl$/))
         return __webpack_require__("./src/gpu/shaders/include sync recursive ^\\.\\/.*$")("./" + filename);
 
-    throw _gl_utils__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].Error(`Shader preprocessor: can't read file \"${filename}\"`);
+    _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].fatal(`Shader preprocessor: can't read file \"${filename}\"`);
+    return '';
 }
+
+/***/ }),
+
+/***/ "./src/gpu/shaders sync recursive ^\\.\\/.*$":
+/*!***************************************!*\
+  !*** ./src/gpu/shaders sync ^\.\/.*$ ***!
+  \***************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+var map = {
+	"./colors/rgb2grey.glsl": "./src/gpu/shaders/colors/rgb2grey.glsl",
+	"./encoders/encode-keypoint-offsets.glsl": "./src/gpu/shaders/encoders/encode-keypoint-offsets.glsl",
+	"./encoders/encode-keypoints.glsl": "./src/gpu/shaders/encoders/encode-keypoints.glsl",
+	"./filters/convolution": "./src/gpu/shaders/filters/convolution.js",
+	"./filters/convolution.js": "./src/gpu/shaders/filters/convolution.js",
+	"./include/colors.glsl": "./src/gpu/shaders/include/colors.glsl",
+	"./include/global.glsl": "./src/gpu/shaders/include/global.glsl",
+	"./include/math.glsl": "./src/gpu/shaders/include/math.glsl",
+	"./include/pyramids.glsl": "./src/gpu/shaders/include/pyramids.glsl",
+	"./include/sobel.glsl": "./src/gpu/shaders/include/sobel.glsl",
+	"./keypoints/brisk.glsl": "./src/gpu/shaders/keypoints/brisk.glsl",
+	"./keypoints/fast-score12.glsl": "./src/gpu/shaders/keypoints/fast-score12.glsl",
+	"./keypoints/fast-score16.glsl": "./src/gpu/shaders/keypoints/fast-score16.glsl",
+	"./keypoints/fast-score8.glsl": "./src/gpu/shaders/keypoints/fast-score8.glsl",
+	"./keypoints/fast5.glsl": "./src/gpu/shaders/keypoints/fast5.glsl",
+	"./keypoints/fast7.glsl": "./src/gpu/shaders/keypoints/fast7.glsl",
+	"./keypoints/fast9lg.glsl": "./src/gpu/shaders/keypoints/fast9lg.glsl",
+	"./keypoints/fast9pyr.glsl": "./src/gpu/shaders/keypoints/fast9pyr.glsl",
+	"./keypoints/harris-cutoff.glsl": "./src/gpu/shaders/keypoints/harris-cutoff.glsl",
+	"./keypoints/multiscale-harris.glsl": "./src/gpu/shaders/keypoints/multiscale-harris.glsl",
+	"./keypoints/multiscale-orientation-via-centroid.glsl": "./src/gpu/shaders/keypoints/multiscale-orientation-via-centroid.glsl",
+	"./keypoints/multiscale-sobel.glsl": "./src/gpu/shaders/keypoints/multiscale-sobel.glsl",
+	"./keypoints/multiscale-suppression.glsl": "./src/gpu/shaders/keypoints/multiscale-suppression.glsl",
+	"./keypoints/nonmax-suppression.glsl": "./src/gpu/shaders/keypoints/nonmax-suppression.glsl",
+	"./keypoints/orientation-via-centroid.glsl": "./src/gpu/shaders/keypoints/orientation-via-centroid.glsl",
+	"./keypoints/samescale-suppression.glsl": "./src/gpu/shaders/keypoints/samescale-suppression.glsl",
+	"./pyramids/crop.glsl": "./src/gpu/shaders/pyramids/crop.glsl",
+	"./pyramids/downsample2.glsl": "./src/gpu/shaders/pyramids/downsample2.glsl",
+	"./pyramids/downsample3.glsl": "./src/gpu/shaders/pyramids/downsample3.glsl",
+	"./pyramids/merge-keypoints-at-consecutive-levels.glsl": "./src/gpu/shaders/pyramids/merge-keypoints-at-consecutive-levels.glsl",
+	"./pyramids/merge-keypoints.glsl": "./src/gpu/shaders/pyramids/merge-keypoints.glsl",
+	"./pyramids/normalize-keypoints.glsl": "./src/gpu/shaders/pyramids/normalize-keypoints.glsl",
+	"./pyramids/upsample2.glsl": "./src/gpu/shaders/pyramids/upsample2.glsl",
+	"./pyramids/upsample3.glsl": "./src/gpu/shaders/pyramids/upsample3.glsl",
+	"./utils/copy-components.glsl": "./src/gpu/shaders/utils/copy-components.glsl",
+	"./utils/fill-components.glsl": "./src/gpu/shaders/utils/fill-components.glsl",
+	"./utils/fill.glsl": "./src/gpu/shaders/utils/fill.glsl",
+	"./utils/flip-y.glsl": "./src/gpu/shaders/utils/flip-y.glsl",
+	"./utils/identity.glsl": "./src/gpu/shaders/utils/identity.glsl",
+	"./utils/scan-minmax2d.glsl": "./src/gpu/shaders/utils/scan-minmax2d.glsl"
+};
+
+
+function webpackContext(req) {
+	var id = webpackContextResolve(req);
+	return __webpack_require__(id);
+}
+function webpackContextResolve(req) {
+	if(!__webpack_require__.o(map, req)) {
+		var e = new Error("Cannot find module '" + req + "'");
+		e.code = 'MODULE_NOT_FOUND';
+		throw e;
+	}
+	return map[req];
+}
+webpackContext.keys = function webpackContextKeys() {
+	return Object.keys(map);
+};
+webpackContext.resolve = webpackContextResolve;
+module.exports = webpackContext;
+webpackContext.id = "./src/gpu/shaders sync recursive ^\\.\\/.*$";
 
 /***/ }),
 
@@ -4421,6 +4148,430 @@ module.exports = "uniform sampler2D image;\nuniform ivec2 imageSize;\nuniform in
 /***/ (function(module, exports) {
 
 module.exports = "uniform sampler2D image;\nuniform ivec2 imageSize;\nuniform int encoderLength;\nuniform int descriptorSize;\nbool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)\n{\nint i = 0, p = 0;\nfor(position = ivec2(0, 0); position.y < imageSize.y; ) {\npixel = pixelAt(image, position);\nif(pixel.r > 0.0f) {\nif(p++ == q)\nreturn true;\n}\ni += 1 + int(pixel.g * 255.0f);\nposition = ivec2(i % imageSize.x, i / imageSize.x);\n}\nreturn false;\n}\nvoid main()\n{\nvec4 pixel;\nivec2 position;\nivec2 thread = threadLocation();\nint p = encoderLength * thread.y + thread.x;\nint d = 2 + descriptorSize / 4;\nint q = p / d;\ncolor = vec4(1.0f, 1.0f, 1.0f, 1.0f);\nif(findQthKeypoint(q, position, pixel)) {\nint r = p % d;\nswitch(r) {\ncase 0: {\nivec2 lo = position & 255;\nivec2 hi = position >> 8;\ncolor = vec4(float(lo.x), float(hi.x), float(lo.y), float(hi.y)) / 255.0f;\nbreak;\n}\ncase 1: {\nfloat score = pixel.r;\nfloat scale = pixel.a;\nfloat rotation = pixel.b;\ncolor = vec4(scale, rotation, score, 0.0f);\nbreak;\n}\ndefault: {\nint i = r - 2;\nbreak;\n}\n}\n}\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/filters/convolution.js":
+/*!************************************************!*\
+  !*** ./src/gpu/shaders/filters/convolution.js ***!
+  \************************************************/
+/*! exports provided: conv2D, convX, convY, createKernel2D, createKernel1D, texConv2D, texConvX, texConvY */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "conv2D", function() { return conv2D; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "convX", function() { return convX; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "convY", function() { return convY; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createKernel2D", function() { return createKernel2D; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createKernel1D", function() { return createKernel1D; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConv2D", function() { return texConv2D; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConvX", function() { return texConvX; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConvY", function() { return texConvY; });
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../shader-declaration */ "./src/gpu/shader-declaration.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * convolution.js
+ * Convolution shader generators
+ */
+
+
+
+
+// Utilities
+const cartesian = (a, b) => [].concat(...a.map(a => b.map(b => [a,b]))); // [a] x [b]
+const symmetricRange = n => [...Array(2*n + 1).keys()].map(x => x-n);    // [-n, ..., n]
+
+
+
+/**
+ * Generate a 2D convolution with a square kernel
+ * @param {Array<number>} kernel convolution kernel
+ * @param {number} [normalizationConstant] will be multiplied by all kernel entries
+ */
+function conv2D(kernel, normalizationConstant = 1.0)
+{
+    const kernel32 = new Float32Array(kernel.map(x => (+x) * (+normalizationConstant)));
+    const kSize = Math.sqrt(kernel32.length) | 0;
+    const N = (kSize / 2) | 0;
+
+    // validate input
+    if(kSize < 1 || kSize % 2 == 0)
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't perform a 2D convolution with an invalid kSize of ${kSize}`);
+    else if(kSize * kSize != kernel32.length)
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Invalid 2D convolution kernel of ${kernel32.length} elements (expected: square)`);
+
+    // code generator
+    const foreachKernelElement = fn => cartesian(symmetricRange(N), symmetricRange(N)).map(
+        cur => fn(
+            kernel32[(cur[0] + N) * kSize + (cur[1] + N)],
+            cur[0], cur[1]
+        )
+    ).join('\n');
+
+    const generateCode = (k, dy, dx) => `
+        result += pixelAtOffset(image, ivec2(${dx | 0}, ${dy | 0})) * float(${+k});
+    `;
+
+    // shader
+    const source = `
+    uniform sampler2D image;
+
+    void main()
+    {
+        float alpha = threadPixel(image).a;
+        vec4 result = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+
+        ${foreachKernelElement(generateCode)}
+
+        color = vec4(result.rgb, alpha);
+    }
+    `;
+
+    // done!
+    return Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["createShader"])(source).withArguments('image');
+}
+
+
+
+
+/**
+ * Generate a 1D convolution function on the x-axis
+ * @param {Array<number>} kernel convolution kernel
+ * @param {number} [normalizationConstant] will be multiplied by all kernel entries
+ */
+function convX(kernel, normalizationConstant = 1.0)
+{
+    return conv1D('x', kernel, normalizationConstant);
+}
+
+
+
+
+/**
+ * Generate a 1D convolution function on the y-axis
+ * @param {Array<number>} kernel convolution kernel
+ * @param {number} [normalizationConstant] will be multiplied by all kernel entries
+ */
+function convY(kernel, normalizationConstant = 1.0)
+{
+    return conv1D('y', kernel, normalizationConstant);
+}
+
+
+
+
+/**
+ * 1D convolution function generator
+ * @param {string} axis either "x" or "y"
+ * @param {Array<number>} kernel convolution kernel
+ * @param {number} [normalizationConstant] will be multiplied by all kernel entries
+ */
+function conv1D(axis, kernel, normalizationConstant = 1.0)
+{
+    const kernel32 = new Float32Array(kernel.map(x => (+x) * (+normalizationConstant)));
+    const kSize = kernel32.length;
+    const N = (kSize / 2) | 0;
+
+    // validate input
+    if(kSize < 1 || kSize % 2 == 0)
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't perform a 1D convolution with an invalid kSize of ${kSize}`);
+    else if(axis != 'x' && axis != 'y')
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't perform 1D convolution: invalid axis "${axis}"`); // this should never happen
+
+    // code generator
+    const foreachKernelElement = fn => symmetricRange(N).reduce(
+        (acc, cur) => acc + fn(kernel32[cur + N], cur),
+    '');
+    const generateCode = (k, i) => ((axis == 'x') ? `
+        pixel += pixelAtOffset(image, ivec2(${i | 0}, 0)) * float(${+k});
+    ` : `
+        pixel += pixelAtOffset(image, ivec2(0, ${i | 0})) * float(${+k});
+    `);
+
+    // shader
+    const source = `
+    uniform sampler2D image;
+
+    void main()
+    {
+        float alpha = threadPixel(image).a;
+        vec4 pixel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+
+        ${foreachKernelElement(generateCode)}
+
+        color = vec4(pixel.rgb, alpha);
+    }
+    `;
+
+    // done!
+    return Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["createShader"])(source).withArguments('image');
+}
+
+
+
+
+
+/*
+ * ------------------------------------------------------------------
+ * Texture Encoding
+ * Encoding a float in [0,1] into RGB[A]
+ * ------------------------------------------------------------------
+ * Define frac(x) := x - floor(x)
+ * Of course, 0 <= frac(x) < 1.
+ * 
+ * Given: x in [0,1]
+ * 
+ * Define e0 := floor(x),
+ *        e1 := 256 frac(x)
+ *        e2 := 256 frac(e1) = 256 frac(256 frac(x))
+ *        e3 := 256 frac(e2) = 256 frac(256 frac(e1)) = 256 frac(256 frac(256 frac(x))),
+ *        ...
+ *        more generally,
+ *        ej := 256 frac(e_{j-1}), j >= 2
+ * 
+ * Since x = frac(x) + floor(x), it follows that
+ * x = floor(x) + 256 frac(x) / 256 = e0 + e1 / 256 = e0 + (frac(e1) + floor(e1)) / 256 =
+ * e0 + (256 frac(e1) + 256 floor(e1)) / (256^2) = e0 + (e2 + 256 floor(e1)) / (256^2) =
+ * e0 + ((256 frac(e2) + 256 floor(e2)) + 256^2 floor(e1)) / (256^3) =
+ * e0 + (e3 + 256 floor(e2) + 256^2 floor(e1)) / (256^3) = 
+ * floor(e0) + floor(e1) / 256 + floor(e2) / (256^2) + e3 / (256^3) = ... =
+ * floor(e0) + floor(e1) / 256 + floor(e2) / (256^2) + floor(e3) / (256^3) + e4 / (256^4) = ... ~
+ * \sum_{i >= 0} floor(e_i) / 256^i
+ * 
+ * Observe that e0 in {0, 1} and, for j >= 1, 0 <= e_j < 256, meaning that
+ * e0 and (e_j / 256) can be stored in a 8-bit color channel.
+ * 
+ * We now have approximations for x:
+ * x ~ x0 <-- first order
+ * x ~ x0 + x1 / 256 <-- second order
+ * x ~ x0 + x1 / 256 + x2 / (256^2) <-- third order (RGB)
+ * x ~ x0 + x1 / 256 + x2 / (256^2) + x3 / (256^3) <-- fourth order (RGBA)
+ * where x_i = floor(e_i).
+ */
+
+
+
+
+/**
+ * Generate a texture-based 2D convolution kernel of size
+ * (kernelSize x kernelSize), where all entries belong to
+ * the [0, 1] range
+ * @param {number} kernelSize odd number, e.g., 3 to create a 3x3 kernel, and so on
+ */
+function createKernel2D(kernelSize)
+{
+    // validate input
+    kernelSize |= 0;
+    if(kernelSize < 1 || kernelSize % 2 == 0)
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't create a 2D texture kernel of size ${kernelSize}`);
+
+    // encode float in the [0,1] range to RGBA
+    const shader = `
+    uniform float kernel[${kernelSize * kernelSize}];
+
+    void main()
+    {
+        ivec2 thread = threadLocation();
+        float val = kernel[(${kernelSize}) * thread.y + thread.x];
+
+        float e0 = floor(val);
+        float e1 = 256.0f * fract(val);
+        float e2 = 256.0f * fract(e1);
+        float e3 = 256.0f * fract(e2);
+
+        color = vec4(e0, floor(e1) / 256.0f, floor(e2) / 256.0f, floor(e3) / 256.0f);
+    }
+    `;
+
+    // IMPORTANT: all entries of the input kernel
+    // are assumed to be in the [0, 1] range AND
+    // kernel.length >= kernelSize * kernelSize
+    return Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["createShader"])(shader).withArguments('kernel');
+}
+
+
+
+
+/**
+ * Generate a texture-based 1D convolution kernel of size
+ * (kernelSize x 1), where all entries belong to the [0,1] range
+ * @param {number} kernelSize odd number
+ */
+function createKernel1D(kernelSize)
+{
+    // validate input
+    kernelSize |= 0;
+    if(kernelSize < 1 || kernelSize % 2 == 0)
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't create a 1D texture kernel of size ${kernelSize}`);
+
+    // encode float in the [0,1] range to RGBA
+    const shader = `
+    uniform float kernel[${kernelSize}];
+
+    void main()
+    {
+        ivec2 thread = threadLocation();
+        float val = kernel[thread.x];
+
+        float e0 = floor(val);
+        float e1 = 256.0f * fract(val);
+        float e2 = 256.0f * fract(e1);
+        float e3 = 256.0f * fract(e2);
+
+        color = vec4(e0, floor(e1) / 256.0f, floor(e2) / 256.0f, floor(e3) / 256.0f);
+    }
+    `;
+
+    // IMPORTANT: all entries of the input kernel
+    // are assumed to be in the [0, 1] range AND
+    // kernel.length >= kernelSize
+    return Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["createShader"])(shader).withArguments('kernel');
+}
+
+
+
+
+/**
+ * 2D convolution with a texture-based kernel of size
+ * kernelSize x kernelSize, with optional scale & offset
+ * By default, scale and offset are 1 and 0, respectively
+ * @param {number} kernelSize odd number, e.g., 3 to create a 3x3 kernel, and so on
+ */
+function texConv2D(kernelSize)
+{
+    // validate input
+    const N = kernelSize >> 1; // idiv 2
+    if(kernelSize < 1 || kernelSize % 2 == 0)
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't perform a texture-based 2D convolution with an invalid kernel size of ${kernelSize}`);
+
+    // utilities
+    const foreachKernelElement = fn => cartesian(symmetricRange(N), symmetricRange(N)).map(
+        ij => fn(ij[0], ij[1])
+    ).join('\n');
+
+    const generateCode = (i, j) => `
+        kernel = pixelAt(texKernel, ivec2(${i + N}, ${j + N}));
+        value = dot(kernel, magic) * scale + offset;
+        result += pixelAtOffset(image, ivec2(${i}, ${j})) * value;
+    `;
+
+    // image: target image
+    // texKernel: convolution kernel (all entries in [0,1])
+    // scale: multiply the kernel entries by a number (like 1.0)
+    // offset: add a number to all kernel entries (like 0.0)
+    const shader = `
+    const vec4 magic = vec4(1.0f, 1.0f, 1.0f / 256.0f, 1.0f / 65536.0f);
+    uniform sampler2D image, texKernel;
+    uniform float scale, offset;
+
+    void main()
+    {
+        vec4 kernel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        vec4 result = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        float alpha = threadPixel(image).a;
+        float value = 0.0f;
+
+        ${foreachKernelElement(generateCode)}
+
+        result = clamp(result, 0.0f, 1.0f);
+        color = vec4(result.rgb, alpha);
+    }
+    `;
+
+    // done!
+    return Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["createShader"])(shader).withArguments('image', 'texKernel', 'scale', 'offset');
+}
+
+
+
+
+/**
+ * Texture-based 1D convolution on the x-axis
+ * @param {number} kernelSize odd number
+ */
+const texConvX = kernelSize => texConv1D(kernelSize, 'x');
+
+
+
+/**
+ * Texture-based 1D convolution on the x-axis
+ * @param {number} kernelSize odd number
+ */
+const texConvY = kernelSize => texConv1D(kernelSize, 'y');
+
+
+
+
+/**
+ * Texture-based 1D convolution function generator
+ * (the convolution kernel is stored in a texture)
+ * @param {number} kernelSize odd number
+ * @param {string} axis either "x" or "y"
+ */
+function texConv1D(kernelSize, axis)
+{
+    // validate input
+    const N = kernelSize >> 1; // idiv 2
+    if(kernelSize < 1 || kernelSize % 2 == 0)
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't perform a texture-based 2D convolution with an invalid kernel size of ${kernelSize}`);
+    else if(axis != 'x' && axis != 'y')
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].fatal(`Can't perform a texture-based 1D convolution: invalid axis "${axis}"`); // this should never happen
+
+    // utilities
+    const foreachKernelElement = fn => symmetricRange(N).map(fn).join('\n');
+    const generateCode = i => ((axis == 'x') ? `
+        kernel = pixelAt(texKernel, ivec2(${i + N}, 0));
+        value = dot(kernel, magic) * scale + offset;
+        result += pixelAtOffset(image, ivec2(${i}, 0)) * value;
+    ` : `
+        kernel = pixelAt(texKernel, ivec2(${i + N}, 0));
+        value = dot(kernel, magic) * scale + offset;
+        result += pixelAtOffset(image, ivec2(0, ${i})) * value;
+    `);
+
+    // image: target image
+    // texKernel: convolution kernel (all entries in [0,1])
+    // scale: multiply the kernel entries by a number (like 1.0)
+    // offset: add a number to all kernel entries (like 0.0)
+    const shader = `
+    const vec4 magic = vec4(1.0f, 1.0f, 1.0f / 256.0f, 1.0f / 65536.0f);
+    uniform sampler2D image, texKernel;
+    uniform float scale, offset;
+
+    void main()
+    {
+        vec4 kernel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        vec4 result = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        float alpha = threadPixel(image).a;
+        float value = 0.0f;
+
+        ${foreachKernelElement(generateCode)}
+
+        result = clamp(result, 0.0f, 1.0f);
+        color = vec4(result.rgb, alpha);
+    }
+    `;
+
+    // done!
+    return Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["createShader"])(shader).withArguments('image', 'texKernel', 'scale', 'offset');
+}
 
 /***/ }),
 
@@ -4622,7 +4773,7 @@ module.exports = "uniform sampler2D corners;\nuniform sampler2D maxScore;\nunifo
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"sobel.glsl\"\n@include \"pyramids.glsl\"\nuniform sampler2D pyramid;\nuniform int windowRadius;\nuniform float minLod, maxLod;\nuniform bool usePyrSubLevels;\nuniform sampler2D sobelDerivatives[7];\nvec4 pickSobelDerivatives(int index, ivec2 offset)\n{\nswitch(index) {\ncase 0:  return textureLod(sobelDerivatives[0], texCoord + vec2(offset) / texSize, 0.0f);\ncase 1:  return textureLod(sobelDerivatives[1], texCoord + vec2(offset) / texSize, 0.0f);\ncase 2:  return textureLod(sobelDerivatives[2], texCoord + vec2(offset) / texSize, 0.0f);\ncase 3:  return textureLod(sobelDerivatives[3], texCoord + vec2(offset) / texSize, 0.0f);\ncase 4:  return textureLod(sobelDerivatives[4], texCoord + vec2(offset) / texSize, 0.0f);\ncase 5:  return textureLod(sobelDerivatives[5], texCoord + vec2(offset) / texSize, 0.0f);\ncase 6:  return textureLod(sobelDerivatives[6], texCoord + vec2(offset) / texSize, 0.0f);\ndefault: return textureLod(sobelDerivatives[0], texCoord + vec2(offset) / texSize, 0.0f);\n}\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(pyramid);\nvec2 best = vec2(0.0f, pixel.a);\nhighp float lodJump = 1.0f - float(usePyrSubLevels) * 0.5f;\nfor(highp float lod = maxLod; lod >= minLod; lod -= lodJump) {\nint sobelIndex = int(lod / lodJump);\nvec3 m = vec3(0.0f, 0.0f, 0.0f);\nfor(int j = -windowRadius; j <= windowRadius; j++) {\nfor(int i = -windowRadius; i <= windowRadius; i++) {\nvec2 df = decodeSobel(pickSobelDerivatives(sobelIndex, ivec2(i, j)));\nm += vec3(df.x * df.x, df.x * df.y, df.y * df.y);\n}\n}\nfloat response = 0.5f * (m.x + m.z - sqrt((m.x - m.z) * (m.x - m.z) + 4.0f * m.y * m.y));\nfloat score = max(0.0f, response / 4.0f);\nfloat scale = encodeLod(lod);\nbest = (score > best.x) ? vec2(score, scale) : best;\n}\ncolor.rba = best.xxy;\n}"
+module.exports = "@include \"sobel.glsl\"\n@include \"pyramids.glsl\"\nuniform sampler2D pyramid;\nuniform int windowRadius;\nuniform float minLod, maxLod;\nuniform bool usePyrSubLevels;\nuniform sampler2D sobelDerivatives[7];\nvec4 pickSobelDerivatives(int index, ivec2 offset)\n{\nswitch(index) {\ncase 0:  return textureLod(sobelDerivatives[0], texCoord + vec2(offset) / texSize, 0.0f);\ncase 1:  return textureLod(sobelDerivatives[1], texCoord + vec2(offset) / texSize, 0.0f);\ncase 2:  return textureLod(sobelDerivatives[2], texCoord + vec2(offset) / texSize, 0.0f);\ncase 3:  return textureLod(sobelDerivatives[3], texCoord + vec2(offset) / texSize, 0.0f);\ncase 4:  return textureLod(sobelDerivatives[4], texCoord + vec2(offset) / texSize, 0.0f);\ncase 5:  return textureLod(sobelDerivatives[5], texCoord + vec2(offset) / texSize, 0.0f);\ncase 6:  return textureLod(sobelDerivatives[6], texCoord + vec2(offset) / texSize, 0.0f);\ndefault: return textureLod(sobelDerivatives[0], texCoord + vec2(offset) / texSize, 0.0f);\n}\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(pyramid);\nvec2 best = vec2(0.0f, pixel.a);\nhighp float lodJump = 1.0f - float(usePyrSubLevels) * 0.5f;\nfor(highp float lod = maxLod; lod >= minLod; lod -= lodJump) {\nint sobelIndex = int(lod / lodJump);\nvec3 m = vec3(0.0f, 0.0f, 0.0f);\nfor(int j = -windowRadius; j <= windowRadius; j++) {\nfor(int i = -windowRadius; i <= windowRadius; i++) {\nvec2 df = decodeSobel(pickSobelDerivatives(sobelIndex, ivec2(i, j)));\nm += vec3(df.x * df.x, df.x * df.y, df.y * df.y);\n}\n}\nfloat response = 0.5f * (m.x + m.z - sqrt((m.x - m.z) * (m.x - m.z) + 4.0f * m.y * m.y));\nfloat score = max(0.0f, response / 4.0f);\nfloat scale = encodeLod(lod);\nbest = (score > best.x) ? vec2(score, scale) : best;\n}\ncolor = vec4(best.x, pixel.g, best.xy);\n}"
 
 /***/ }),
 
@@ -4835,17 +4986,6 @@ module.exports = "uniform sampler2D image;\nvoid main()\n{\ncolor = threadPixel(
 
 /***/ }),
 
-/***/ "./src/gpu/shaders/utils/scan-minmax1d.glsl":
-/*!**************************************************!*\
-  !*** ./src/gpu/shaders/utils/scan-minmax1d.glsl ***!
-  \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nuniform int iterationNumber;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 last = outputSize() - ivec2(1);\nivec2 jump = ivec2(1 << iterationNumber);\nivec2 groupSize = jump << 1;\nivec2 groupMask = groupSize - ivec2(1);\nivec2 groupId = thread >> (1 + iterationNumber);\nivec2 groupStart = groupId << (1 + iterationNumber);\nivec2 next = groupStart + ((thread - groupStart + jump) & groupMask);\nivec2 safeNext = min(next, last);\nivec2 nextSameRow = ivec2(safeNext.x, thread.y);\nivec2 nextSameCol = ivec2(thread.x, safeNext.y);\nvec4 pixel = texelFetch(image, thread, 0);\nvec4 nextSameRowPixel = texelFetch(image, nextSameRow, 0);\nvec4 nextSameColPixel = texelFetch(image, nextSameCol, 0);\ncolor = vec4(\nmax(pixel.r, nextSameRowPixel.r),\nmax(pixel.g, nextSameColPixel.g),\nmin(pixel.b, nextSameRowPixel.b),\nmin(pixel.a, nextSameColPixel.a)\n);\n}"
-
-/***/ }),
-
 /***/ "./src/gpu/shaders/utils/scan-minmax2d.glsl":
 /*!**************************************************!*\
   !*** ./src/gpu/shaders/utils/scan-minmax2d.glsl ***!
@@ -4867,16 +5007,10 @@ module.exports = "uniform sampler2D image;\nuniform int iterationNumber;\nvoid m
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyGPU", function() { return SpeedyGPU; });
-/* harmony import */ var _speedy_program_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-program.js */ "./src/gpu/speedy-program.js");
-/* harmony import */ var _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./gl-utils.js */ "./src/gpu/gl-utils.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _program_groups_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./program-groups/utils */ "./src/gpu/program-groups/utils.js");
-/* harmony import */ var _program_groups_colors__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./program-groups/colors */ "./src/gpu/program-groups/colors.js");
-/* harmony import */ var _program_groups_filters__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./program-groups/filters */ "./src/gpu/program-groups/filters.js");
-/* harmony import */ var _program_groups_keypoints__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./program-groups/keypoints */ "./src/gpu/program-groups/keypoints.js");
-/* harmony import */ var _program_groups_encoders__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./program-groups/encoders */ "./src/gpu/program-groups/encoders.js");
-/* harmony import */ var _program_groups_pyramids__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./program-groups/pyramids */ "./src/gpu/program-groups/pyramids.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gl-utils.js */ "./src/gpu/gl-utils.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _speedy_program_center__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-program-center */ "./src/gpu/speedy-program-center.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -4903,26 +5037,6 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-
-
-
-
-
-
-// Limits
-const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
-
-// Available program groups
-// (maps group name to class name)
-const PROGRAM_GROUPS = {
-    'utils': _program_groups_utils__WEBPACK_IMPORTED_MODULE_3__["GPUUtils"],
-    'colors': _program_groups_colors__WEBPACK_IMPORTED_MODULE_4__["GPUColors"],
-    'filters': _program_groups_filters__WEBPACK_IMPORTED_MODULE_5__["GPUFilters"],
-    'keypoints': _program_groups_keypoints__WEBPACK_IMPORTED_MODULE_6__["GPUKeypoints"],
-    'encoders': _program_groups_encoders__WEBPACK_IMPORTED_MODULE_7__["GPUEncoders"],
-    'pyramids': _program_groups_pyramids__WEBPACK_IMPORTED_MODULE_8__["GPUPyramids"],
-};
-
 /**
  * GPU routines for
  * accelerated computer vision
@@ -4936,90 +5050,32 @@ class SpeedyGPU
      */
     constructor(width, height)
     {
+        // initialize properties
+        this._gl = null;
+        this._canvas = null;
+        this._width = 0;
+        this._height = 0;
+        this._programs = null;
+        this._pyramid = null;
+        this._intraPyramid = null;
+        this._inputTexture = null;
+        this._inputTextureIndex = 0;
+        this._omitGLContextWarning = false;
+
         // does the browser support WebGL2?
         checkWebGL2Availability();
 
         // read & validate texture size
         this._width = Math.max(1, width | 0);
         this._height = Math.max(1, height | 0);
-        if(this._width > MAX_TEXTURE_LENGTH || this._height > MAX_TEXTURE_LENGTH) {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning(`Maximum texture size exceeded (using ${this._width} x ${this._height}).`);
-            this._width = Math.min(this._width, MAX_TEXTURE_LENGTH);
-            this._height = Math.min(this._height, MAX_TEXTURE_LENGTH);
+        if(this._width > _utils_globals__WEBPACK_IMPORTED_MODULE_3__["MAX_TEXTURE_LENGTH"] || this._height > _utils_globals__WEBPACK_IMPORTED_MODULE_3__["MAX_TEXTURE_LENGTH"]) {
+            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].warning(`Maximum texture size exceeded (using ${this._width} x ${this._height}).`);
+            this._width = Math.min(this._width, _utils_globals__WEBPACK_IMPORTED_MODULE_3__["MAX_TEXTURE_LENGTH"]);
+            this._height = Math.min(this._height, _utils_globals__WEBPACK_IMPORTED_MODULE_3__["MAX_TEXTURE_LENGTH"]);
         }
 
         // setup WebGL
         this._setupWebGL();
-    }
-
-    /**
-     * Texture width
-     * @returns {number}
-     */
-    get width()
-    {
-        return this._width;
-    }
-
-    /**
-     * Texture height
-     * @returns {number}
-     */
-    get height()
-    {
-        return this._height;
-    }
-
-    /**
-     * Access the program groups of a pyramid level
-     * sizeof(pyramid(i)) = sizeof(pyramid(0)) / 2^i
-     * @param {number} level a number in 0, 1, ..., PYRAMID_MAX_LEVELS - 1
-     * @returns {Array}
-     */
-    pyramid(level)
-    {
-        const lv = level | 0;
-
-        if(lv < 0 || lv >= _utils_globals__WEBPACK_IMPORTED_MODULE_9__["PYRAMID_MAX_LEVELS"])
-            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].fatal(`Invalid pyramid level: ${lv}`);
-
-        return this._pyramid[lv];
-    }
-
-    /**
-     * Access the program groups of an intra-pyramid level
-     * The intra-pyramid encodes layers between pyramid layers
-     * sizeof(intraPyramid(0)) = 1.5 * sizeof(pyramid(0))
-     * sizeof(intraPyramid(1)) = 1.5 * sizeof(pyramid(1))
-     * @param {number} level a number in 0, 1, ..., PYRAMID_MAX_LEVELS
-     * @returns {Array}
-     */
-    intraPyramid(level)
-    {
-        const lv = level | 0;
-
-        if(lv < 0 || lv >= _utils_globals__WEBPACK_IMPORTED_MODULE_9__["PYRAMID_MAX_LEVELS"] + 1)
-            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].fatal(`Invalid intra-pyramid level: ${lv}`);
-
-        return this._intraPyramid[lv];
-    }
-
-    /**
-     * The number of layers of the pyramid
-     * @returns {number}
-     */
-    get pyramidHeight()
-    {
-        return _utils_globals__WEBPACK_IMPORTED_MODULE_9__["PYRAMID_MAX_LEVELS"];
-    }
-
-    /**
-     * The maximum supported scale for a pyramid layer
-     * @returns {number}
-     */
-    get pyramidMaxScale()
-    {
-        return _utils_globals__WEBPACK_IMPORTED_MODULE_9__["PYRAMID_MAX_SCALE"];
     }
 
     /**
@@ -5042,6 +5098,67 @@ class SpeedyGPU
     }
 
     /**
+     * Access point to all GPU programs
+     * @returns {SpeedyProgramCenter}
+     */
+    get programs()
+    {
+        return this._programs;
+    }
+
+    /**
+     * Access the program groups of a pyramid level
+     * sizeof(pyramid(i)) = sizeof(pyramid(0)) / 2^i
+     * @param {number} level a number in 0, 1, ..., PYRAMID_MAX_LEVELS - 1
+     * @returns {Array}
+     */
+    pyramid(level)
+    {
+        const lv = level | 0;
+
+        if(lv < 0 || lv >= _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_LEVELS"])
+            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Invalid pyramid level: ${lv}`);
+
+        return this._pyramid[lv];
+    }
+
+    /**
+     * Access the program groups of an intra-pyramid level
+     * The intra-pyramid encodes layers between pyramid layers
+     * sizeof(intraPyramid(0)) = 1.5 * sizeof(pyramid(0))
+     * sizeof(intraPyramid(1)) = 1.5 * sizeof(pyramid(1))
+     * @param {number} level a number in 0, 1, ..., PYRAMID_MAX_LEVELS
+     * @returns {Array}
+     */
+    intraPyramid(level)
+    {
+        const lv = level | 0;
+
+        if(lv < 0 || lv >= _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_LEVELS"] + 1)
+            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Invalid intra-pyramid level: ${lv}`);
+
+        return this._intraPyramid[lv];
+    }
+
+    /**
+     * The number of layers of the pyramid
+     * @returns {number}
+     */
+    get pyramidHeight()
+    {
+        return _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_LEVELS"];
+    }
+
+    /**
+     * The maximum supported scale for a pyramid layer
+     * @returns {number}
+     */
+    get pyramidMaxScale()
+    {
+        return _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_SCALE"];
+    }
+
+    /**
      * Upload data to the GPU
      * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} data 
      * @param {number} [width]
@@ -5054,7 +5171,7 @@ class SpeedyGPU
 
         // lost GL context?
         if(gl.isContextLost()) {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning(`Can't upload texture without a WebGL context`);
+            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].warning(`Can't upload texture without a WebGL context`);
             return (this._inputTexture = null);
         }
 
@@ -5066,19 +5183,19 @@ class SpeedyGPU
 
         // invalid dimensions?
         if(width == 0 || height == 0)
-            throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error(`Can't upload an image of area 0`);
+            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Can't upload an image of area 0`);
 
         // create or recreate & size texture
         if(this._inputTexture === null) {
             gl.canvas.width = Math.max(gl.canvas.width, width);
             gl.canvas.height = Math.max(gl.canvas.height, height);
             this._inputTexture = Array(2).fill(null).map(_ =>
-                _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].createTexture(gl, gl.canvas.width, gl.canvas.height));
+                _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].createTexture(gl, gl.canvas.width, gl.canvas.height));
         }
         else if(width > gl.canvas.width || height > gl.canvas.height) {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning(`Resizing input texture to ${width} x ${height}`)
+            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].warning(`Resizing input texture to ${width} x ${height}`)
             this._inputTexture.forEach(inputTexture =>
-                _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].destroyTexture(gl, inputTexture));
+                _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].destroyTexture(gl, inputTexture));
             return this.upload(data, width, height);
         }
 
@@ -5089,24 +5206,8 @@ class SpeedyGPU
         // done! note: the input texture is upside-down, i.e.,
         // flipped on the y-axis. We need to unflip it on the
         // output, so that (0,0) becomes the top-left corner
-        _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].uploadToTexture(gl, this._inputTexture[this._inputTextureIndex], width, height, data);
+        _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].uploadToTexture(gl, this._inputTexture[this._inputTextureIndex], width, height, data);
         return this._inputTexture[this._inputTextureIndex];
-    }
-
-    /**
-     * Create a SpeedyProgram that runs on the GPU
-     * @param {Function} shaderdecl A function that returns GLSL code
-     * @param {object} [options] SpeedyProgram options
-     * @returns {SpeedyProgram} new instance
-     */
-    createProgram(shaderdecl, options = { })
-    {
-        const gl = this._gl;
-
-        return new _speedy_program_js__WEBPACK_IMPORTED_MODULE_0__["SpeedyProgram"](gl, shaderdecl, {
-            output: [ gl.canvas.width, gl.canvas.height ],
-            ...options
-        });
     }
 
     /**
@@ -5151,7 +5252,7 @@ class SpeedyGPU
             });
         }
         else
-            throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error('WEBGL_lose_context is unavailable');
+            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal('WEBGL_lose_context is unavailable');
     }
 
     /**
@@ -5171,6 +5272,7 @@ class SpeedyGPU
         const height = this._height;
 
         // initializing
+        this._programs = null;
         this._pyramid = null;
         this._intraPyramid = null;
         this._inputTexture = null;
@@ -5183,12 +5285,12 @@ class SpeedyGPU
         this._canvas = createCanvas(width, height);
         this._canvas.addEventListener('webglcontextlost', ev => {
             if(!this._omitGLContextWarning)
-                _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning('Lost WebGL context');
+                _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].warning('Lost WebGL context');
             ev.preventDefault();
         }, false);
         this._canvas.addEventListener('webglcontextrestored', ev => {
             if(!this._omitGLContextWarning)
-                _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning('Restoring WebGL context...');
+                _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].warning('Restoring WebGL context...');
             this._setupWebGL();
         }, false);
 
@@ -5196,11 +5298,11 @@ class SpeedyGPU
         this._gl = createWebGLContext(this._canvas);
 
         // spawn program groups
-        spawnProgramGroups.call(this, this, width, height);
+        this._programs = new _speedy_program_center__WEBPACK_IMPORTED_MODULE_2__["SpeedyProgramCenter"](this, width, height);
 
         // spawn pyramids of program groups
-        this._pyramid = this._buildPyramid(width, height, 1.0, _utils_globals__WEBPACK_IMPORTED_MODULE_9__["PYRAMID_MAX_LEVELS"]);
-        this._intraPyramid = this._buildPyramid(width, height, 1.5, _utils_globals__WEBPACK_IMPORTED_MODULE_9__["PYRAMID_MAX_LEVELS"] + 1);
+        this._pyramid = this._buildPyramid(width, height, 1.0, _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_LEVELS"]);
+        this._intraPyramid = this._buildPyramid(width, height, 1.5, _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_LEVELS"] + 1);
     }
 
     // build a pyramid, where each level stores the program groups
@@ -5211,8 +5313,7 @@ class SpeedyGPU
         let pyramid = new Array(numLevels);
 
         for(let i = 0; i < pyramid.length; i++) {
-            pyramid[i] = { width, height, scale };
-            spawnProgramGroups.call(pyramid[i], this, width, height);
+            pyramid[i] = new _speedy_program_center__WEBPACK_IMPORTED_MODULE_2__["SpeedyProgramCenter"](this, width, height);
             width = ((1 + width) / 2) | 0;
             height = ((1 + height) / 2) | 0;
             scale /= 2;
@@ -5229,7 +5330,7 @@ function createCanvas(width, height)
 
     if(inWorker) {
         if(typeof OffscreenCanvas !== 'function')
-            throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error('OffscreenCanvas is not available in your browser. Please upgrade.');
+            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal('OffscreenCanvas is not available in your browser. Please upgrade.');
 
         return new OffscreenCanvas(width, height);
     }
@@ -5245,7 +5346,7 @@ function createCanvas(width, height)
 function checkWebGL2Availability()
 {
     if(typeof WebGL2RenderingContext === 'undefined')
-        throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error('WebGL2 is required by this application, but it\'s not available in your browser. Please use a different browser.');
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal('WebGL2 is required by this application, but it\'s not available in your browser. Please use a different browser.');
 }
 
 // Create a WebGL2 context
@@ -5262,37 +5363,331 @@ function createWebGLContext(canvas)
     });
 
     if(!gl)
-        throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error('Can\'t create WebGL2 context. Try in a different browser.');
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal('Can\'t create WebGL2 context. Try in a different browser.');
 
     return gl;
 }
 
-// Spawn program groups
-function spawnProgramGroups(gpu, width, height)
+/***/ }),
+
+/***/ "./src/gpu/speedy-program-center.js":
+/*!******************************************!*\
+  !*** ./src/gpu/speedy-program-center.js ***!
+  \******************************************/
+/*! exports provided: SpeedyProgramCenter */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyProgramCenter", function() { return SpeedyProgramCenter; });
+/* harmony import */ var _programs_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./programs/utils */ "./src/gpu/programs/utils.js");
+/* harmony import */ var _programs_colors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./programs/colors */ "./src/gpu/programs/colors.js");
+/* harmony import */ var _programs_filters__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./programs/filters */ "./src/gpu/programs/filters.js");
+/* harmony import */ var _programs_keypoints__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./programs/keypoints */ "./src/gpu/programs/keypoints.js");
+/* harmony import */ var _programs_encoders__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./programs/encoders */ "./src/gpu/programs/encoders.js");
+/* harmony import */ var _programs_pyramids__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./programs/pyramids */ "./src/gpu/programs/pyramids.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-program-center.js
+ * An access point to all programs that run on the GPU
+ */
+
+
+
+
+
+
+
+
+/**
+ * An access point to all programs that run on the CPU
+ * All program groups can be accessed via this class
+ */
+class SpeedyProgramCenter
 {
-    // counter for handling lost WebGL context
-    if(spawnProgramGroups._cnt === undefined)
-        spawnProgramGroups._cnt = 0;
-    if(gpu == this) // false on pyramids
-        ++spawnProgramGroups._cnt;
-    const cnt = spawnProgramGroups._cnt;
+    /**
+     * Class constructor
+     * @param {SpeedyGPU} gpu 
+     * @param {number} width default width for output textures
+     * @param {number} height default height for output textures
+     */
+    constructor(gpu, width, height)
+    {
+        // properties
+        this._gpu = gpu;
+        this._width = width;
+        this._height = height;
 
-    // all program groups are available via getters
-    for(let g in PROGRAM_GROUPS) {
-        Object.defineProperty(this, g, {
+        // program groups
+        // (lazy instantiation)
+        this._utils = null;
+        this._colors = null;
+        this._filters = null;
+        this._keypoints = null;
+        this._encoders = null;
+        this._pyramids = null;
+    }
+
+    /**
+     * Default width of the output texture of the programs
+     * @returns {number}
+     */
+    get width()
+    {
+        return this._width;
+    }
+
+    /**
+     * Default height of the output texture of the programs
+     * @returns {number}
+     */
+    get height()
+    {
+        return this._height;
+    }
+
+    /**
+     * Utility programs
+     * @returns {GPUUtils}
+     */
+    get utils()
+    {
+        return this._utils || (this._utils = new _programs_utils__WEBPACK_IMPORTED_MODULE_0__["GPUUtils"](this._gpu, this._width, this._height));
+    }
+
+    /**
+     * Programs related to color conversions
+     * @returns {GPUColors}
+     */
+    get colors()
+    {
+        return this._colors || (this._colors = new _programs_colors__WEBPACK_IMPORTED_MODULE_1__["GPUColors"](this._gpu, this._width, this._height));
+    }
+
+    /**
+     * Image filters & convolutions
+     * @returns {GPUFilters}
+     */
+    get filters()
+    {
+        return this._filters || (this._filters = new _programs_filters__WEBPACK_IMPORTED_MODULE_2__["GPUFilters"](this._gpu, this._width, this._height));
+    }
+
+    /**
+     * Keypoint detectors
+     * @returns {GPUKeypoints}
+     */
+    get keypoints()
+    {
+        return this._keypoints || (this._keypoints = new _programs_keypoints__WEBPACK_IMPORTED_MODULE_3__["GPUKeypoints"](this._gpu, this._width, this._height));
+    }
+
+    /**
+     * Keypoint encoders
+     * @returns {GPUEncoders}
+     */
+    get encoders()
+    {
+        return this._encoders || (this._encoders = new _programs_encoders__WEBPACK_IMPORTED_MODULE_4__["GPUEncoders"](this._gpu, this._width, this._height));
+    }
+
+    /**
+     * Image pyramids & scale-space
+     * @returns {GPUPyramids}
+     */
+    get pyramids()
+    {
+        return this._pyramids || (this._pyramids = new _programs_pyramids__WEBPACK_IMPORTED_MODULE_5__["GPUPyramids"](this._gpu, this._width, this._height));
+    }
+}
+
+/***/ }),
+
+/***/ "./src/gpu/speedy-program-group.js":
+/*!*****************************************!*\
+  !*** ./src/gpu/speedy-program-group.js ***!
+  \*****************************************/
+/*! exports provided: SpeedyProgramGroup */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyProgramGroup", function() { return SpeedyProgramGroup; });
+/* harmony import */ var _speedy_program__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-program */ "./src/gpu/speedy-program.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-program-group.js
+ * An abstract group of programs that run on the GPU
+ */
+
+
+
+/**
+ * SpeedyProgramGroup
+ * A semantically correlated group
+ * of programs that run on the GPU
+ */
+
+class SpeedyProgramGroup
+{
+    /**
+     * Class constructor
+     * @param {SpeedyGPU} gpu
+     * @param {number} width Texture width (depends on the pyramid layer)
+     * @param {number} height Texture height (depends on the pyramid layer)
+     */
+    /* protected */ constructor(gpu, width, height)
+    {
+        this._gpu = gpu;
+        this._width = width;
+        this._height = height;
+    }
+
+    /**
+     * Declare a program
+     * @param {string} name Program name
+     * @param {ShaderDeclaration} shaderdecl Shader declaration
+     * @param {object} settings Program settings
+     * @returns {SpeedyProgramGroup} This object
+     */
+    /* protected */ declare(name, shaderdecl, settings = { })
+    {
+        // lazy instantiation of kernels
+        Object.defineProperty(this, name, {
             get: (() => {
-                const grp = ('_' + g) + cnt, prevGrp = ('_' + g) + (cnt - 1);
-
-                // remove old groups (GL context lost)
-                if(this.hasOwnProperty(prevGrp))
-                    delete this[prevGrp];
-
-                // lazy instantiation
+                const key = '__k_' + name;
                 return (function() {
-                    return this[grp] || (this[grp] = new (PROGRAM_GROUPS[g])(gpu, width, height));
+                    return this[key] || (this[key] = this._createProgram(shaderdecl, settings));
                 }).bind(this);
-            })(),
-            configurable: true // WebGL context may be lost
+            })()
+        });
+
+        return this;
+    }
+
+    /**
+     * Multi-pass composition
+     * @param {string} name Program name
+     * @param {string} fn Other programs
+     * @returns {SpeedyProgramGroup} This object
+     */
+    /* protected */ compose(name, ...fn)
+    {
+        // function composition: functions are called in the order they are specified
+        // e.g., compose('h', 'f', 'g') means h(x) = g(f(x))
+        Object.defineProperty(this, name, {
+            get: (() => {
+                const key = '__c_' + name;
+                return (function() {
+                    return this[key] || (this[key] = (fn.length == 2) ? (() => {
+                        fn = fn.map(fi => this[fi]);
+                        return function compose(image, ...args) {
+                            return (fn[1])((fn[0])(image, ...args), ...args);
+                        };
+                    })() : ((fn.length == 3) ? (() => {
+                        fn = fn.map(fi => this[fi]);
+                        return function compose(image, ...args) {
+                            return (fn[2])((fn[1])((fn[0])(image, ...args), ...args), ...args);
+                        };
+                    })() : ((fn.length == 4) ? (() => {
+                        fn = fn.map(fi => this[fi]);
+                        return function compose(image, ...args) {
+                            return (fn[3])((fn[2])((fn[1])((fn[0])(image, ...args), ...args), ...args), ...args);
+                        };
+                    })() : (() => {
+                        fn = fn.map(fi => this[fi]);
+                        return function compose(image, ...args) {
+                            return fn.reduce((img, fi) => fi(img, ...args), image);
+                        };
+                    })())));
+                }).bind(this);
+            })()
+        });
+
+        return this;
+    }
+
+    /**
+     * Neat helpers to be used
+     * when defining programs
+     */
+    get program()
+    {
+        return this._helpers || (this.helpers = {
+
+            // Set texture input/output size
+            // Dimensions are converted to integers
+            hasTextureSize(width, height) {
+                return {
+                    output: [ width|0, height|0 ]
+                };
+            },
+
+            // Render to canvas
+            // Use it when we're supposed to see the texture
+            displaysGraphics() {
+                return {
+                    renderToTexture: false
+                };
+            },
+
+            // Calling the program will return a new
+            // instance of the output texture every time
+            // The returned texture must be released manually
+            doesNotRecycleTextures() {
+                return {
+                    recycleTexture: false
+                };
+            },
+
+            // Pingpong Rendering: the output texture of a
+            // program cannot be used as an input to itself.
+            // This is a convenient helper in these situations
+            usesPingpongRendering() {
+                return {
+                    pingpong: true
+                };
+            },
+
+        });
+    }
+
+    /* private */ _createProgram(shaderdecl, settings = { })
+    {
+        return new _speedy_program__WEBPACK_IMPORTED_MODULE_0__["SpeedyProgram"](this._gpu.gl, shaderdecl, {
+            // default settings
+            output: [ this._width, this._height ],
+            ...settings
         });
     }
 }
@@ -5309,9 +5704,8 @@ function spawnProgramGroups(gpu, width, height)
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyProgram", function() { return SpeedyProgram; });
-/* harmony import */ var _shader_preprocessor_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./shader-preprocessor.js */ "./src/gpu/shader-preprocessor.js");
-/* harmony import */ var _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./gl-utils.js */ "./src/gpu/gl-utils.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gl-utils.js */ "./src/gpu/gl-utils.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -5336,30 +5730,8 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-
 const LOCATION_ATTRIB_POSITION = 0;
 const LOCATION_ATTRIB_TEXCOORD = 1;
-
-const DEFAULT_VERTEX_SHADER = `#version 300 es
-in vec2 a_position;
-in vec2 a_texCoord;
-out vec2 texCoord;
- 
-void main() {
-    gl_Position = vec4(a_position, 0, 1);
-    texCoord = a_texCoord;
-}`;
-
-const DEFAULT_FRAGMENT_SHADER_PREFIX = `#version 300 es
-precision highp float;
-precision highp int;
-precision mediump sampler2D;
- 
-out vec4 color;
-in vec2 texCoord;
-uniform vec2 texSize;
-
-@include "global.glsl"\n`;
 
 const UNIFORM_TYPES = {
     'sampler2D':'uniform1i',
@@ -5395,7 +5767,7 @@ class SpeedyProgram extends Function
     /**
      * Creates a new SpeedyProgram
      * @param {WebGL2RenderingContext} gl WebGL context
-     * @param {Function} shaderdecl shader declaration
+     * @param {ShaderDeclaration} shaderdecl Shader declaration
      * @param {object} [options] user options
      */
     constructor(gl, shaderdecl, options = { })
@@ -5533,13 +5905,13 @@ class SpeedyProgram extends Function
         // GPU needs to produce data
         if(this._pboProducerQueue.length > 0) {
             const nextPBO = this._pboProducerQueue.shift();
-            downloadDMA(gl, this._pbo[nextPBO], this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
+            _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].readPixelsViaPBO(gl, this._pbo[nextPBO], this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
                 this._pboConsumerQueue.push(nextPBO);
             });
         }
         else waitForQueueNotEmpty(this._pboProducerQueue).then(waitTime => {
             const nextPBO = this._pboProducerQueue.shift();
-            downloadDMA(gl, this._pbo[nextPBO], this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
+            _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].readPixelsViaPBO(gl, this._pbo[nextPBO], this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
                 this._pboConsumerQueue.push(nextPBO);
             });
         });
@@ -5585,7 +5957,7 @@ class SpeedyProgram extends Function
 
         // validate options
         if(options.pingpong && !options.renderToTexture)
-            throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error(`Pingpong rendering can only be used when rendering to textures`);
+            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Pingpong rendering can only be used when rendering to textures`);
 
         // get size
         let width = Math.max(1, options.output[0] | 0);
@@ -5602,23 +5974,22 @@ class SpeedyProgram extends Function
         // if(gl.isContextLost()) ...
 
         // create shader
-        const source = shaderdecl();
-        const stdprog = new StandardProgram(gl, width, height, source, options.uniforms);
+        const stdprog = new StandardProgram(gl, width, height, shaderdecl, options.uniforms);
         if(options.renderToTexture)
             stdprog.attachFBO(options.pingpong);
 
         // validate arguments
-        const params = functionArguments(shaderdecl);
+        const params = shaderdecl.arguments;
         for(let j = 0; j < params.length; j++) {
             if(!stdprog.uniform.hasOwnProperty(params[j])) {
                 if(!stdprog.uniform.hasOwnProperty(params[j] + '[0]'))
-                    throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error(`Can't run shader: expected uniform "${params[j]}"`);
+                    _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Can't run shader: expected uniform "${params[j]}"`);
             }
         }
 
         // store context
         this._gl = gl;
-        this._source = source;
+        this._source = shaderdecl.fragmentSource;
         this._options = Object.freeze(options);
         this._stdprog = stdprog;
         this._params = params;
@@ -5639,7 +6010,7 @@ class SpeedyProgram extends Function
         
         // matching arguments?
         if(args.length != params.length)
-            throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error(`Can't run shader: incorrect number of arguments`);
+            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Can't run shader: incorrect number of arguments`);
 
         // use program
         gl.useProgram(stdprog.program);
@@ -5657,12 +6028,12 @@ class SpeedyProgram extends Function
                 // uniform array matches parameter name
                 const array = args[i];
                 if(stdprog.uniform.hasOwnProperty(`${argname}[${array.length}]`))
-                    throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error(`Can't run shader: too few elements in array "${argname}"`);
+                    _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Can't run shader: too few elements in array "${argname}"`);
                 for(let j = 0; (uniform = stdprog.uniform[`${argname}[${j}]`]); j++)
                     texNo = this._setUniform(uniform, array[j], texNo);
             }
             else
-                throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error(`Can't run shader: unknown parameter "${argname}": ${args[i]}`);
+                _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Can't run shader: unknown parameter "${argname}": ${args[i]}`);
         }
 
         // render
@@ -5683,7 +6054,7 @@ class SpeedyProgram extends Function
 
             // clone outputTexture using the current framebuffer
             if(!options.recycleTexture) {
-                const cloneTexture = _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].createTexture(gl, stdprog.width, stdprog.height);
+                const cloneTexture = _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].createTexture(gl, stdprog.width, stdprog.height);
                 gl.activeTexture(gl.TEXTURE0);
                 gl.bindTexture(gl.TEXTURE_2D, cloneTexture);
                 gl.copyTexSubImage2D(gl.TEXTURE_2D,     // target
@@ -5717,9 +6088,9 @@ class SpeedyProgram extends Function
         if(uniform.type == 'sampler2D') {
             // set texture
             if(texNo > gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
-                throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error(`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
+                _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
             else if(value === this._stdprog.texture)
-                throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error(`Can't run shader: cannot use its output texture as an input to itself`);
+                _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Can't run shader: cannot use its output texture as an input to itself`);
 
             gl.activeTexture(gl.TEXTURE0 + texNo);
             gl.bindTexture(gl.TEXTURE_2D, value);
@@ -5733,7 +6104,7 @@ class SpeedyProgram extends Function
             else if(Array.isArray(value))
                 (gl[UNIFORM_TYPES[uniform.type]])(uniform.location, ...value);
             else
-                throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error(`Can't run shader: unrecognized argument "${value}"`);
+                _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Can't run shader: unrecognized argument "${value}"`);
         }
 
         return texNo;
@@ -5763,7 +6134,7 @@ class SpeedyProgram extends Function
         // reallocate pixels array
         for(let i = 0; i < PBO_COUNT; i++) {
             const oldBuffer = this._pixelBuffer[i];
-            this._pixelBuffer[i] = createPixelBuffer(width, height);
+            this._pixelBuffer[i] = this._createPixelBuffer(width, height);
 
             if(oldBuffer) {
                 if(oldBuffer.length > this._pixelBuffer[i].length)
@@ -5773,89 +6144,15 @@ class SpeedyProgram extends Function
             }
         }
     }
-}
 
-// =============================================================
-
-//
-// Parsing
-//
-
-// a dictionary specifying the types of all uniforms in the code
-function autodetectUniforms(shaderSource)
-{
-    const sourceWithoutComments = shaderSource; // assume we've preprocessed the source already
-    const regex = /uniform\s+(\w+)\s+([^;]+)/g;
-    const uniforms = { };
-
-    let match;
-    while((match = regex.exec(sourceWithoutComments)) !== null) {
-        const type = match[1];
-        const names = match[2].split(',').map(name => name.trim()).filter(name => name); // trim & remove empty names
-        for(const name of names) {
-            if(name.endsWith(']')) {
-                // is it an array?
-                if(!(match = name.match(/(\w+)\s*\[\s*(\d+)\s*\]$/)))
-                    throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error(`Unspecified array length for uniform "${name}" in the shader`);
-                const [ array, length ] = [ match[1], Number(match[2]) ];
-                for(let i = 0; i < length; i++)
-                    uniforms[`${array}[${i}]`] = { type };
-            }
-            else {
-                // regular uniform
-                uniforms[name] = { type };
-            }
-        }
+    // create a width x height buffer for RGBA data
+    _createPixelBuffer(width, height)
+    {
+        const pixels = new Uint8Array(width * height * 4);
+        pixels.fill(255, 0, 4); // will be recognized as empty
+        return pixels;
     }
-
-    return Object.freeze(uniforms);
 }
-
-// names of function arguments
-function functionArguments(fun)
-{
-    const code = fun.toString();
-    const regex = code.startsWith('function') ? 'function\\s.*\\(([^)]*)\\)' :
-                 (code.startsWith('(') ? '\\(([^)]*)\\).*=>' : '([^=]+).*=>');
-    const match = new RegExp(regex).exec(code);
-
-    if(match !== null) {
-        const args = match[1].replace(/\/\*.*?\*\//g, ''); // remove comments
-        return args.split(',').map(argname =>
-            argname.replace(/=.*$/, '').trim() // remove default params & trim
-        ).filter(argname =>
-            argname // handle trailing commas
-        );
-    }
-    else
-        throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error(`Can't detect function arguments of ${code}`);
-
-    return [];
-}
-
-
-
-
-
-//
-// Consumer-producer
-//
-
-// wait for a queue to be not empty
-function waitForQueueNotEmpty(queue)
-{
-    return new Promise(resolve => {
-        const start = performance.now();
-        function wait() {
-            if(queue.length > 0)
-                resolve(performance.now() - start);
-            else
-                setTimeout(wait, 0); // Utils.setZeroTimeout may hinder performance (GLUtils already calls it)
-        }
-        wait();
-    });
-}
-
 
 
 
@@ -5865,25 +6162,28 @@ function waitForQueueNotEmpty(queue)
 
 // a standard program runs a shader on an "image"
 // uniforms: { 'name': <default_value>, ... }
-function StandardProgram(gl, width, height, fragmentShaderSource, uniforms = { })
+function StandardProgram(gl, width, height, shaderdecl, uniforms = { })
 {
     // compile shaders
-    const source = _shader_preprocessor_js__WEBPACK_IMPORTED_MODULE_0__["ShaderPreprocessor"].run(gl, DEFAULT_FRAGMENT_SHADER_PREFIX + fragmentShaderSource);
-    const program = _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].createProgram(gl, DEFAULT_VERTEX_SHADER, source);
+    const program = _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].createProgram(gl, shaderdecl.vertexSource, shaderdecl.fragmentSource);
 
     // setup geometry
-    gl.bindAttribLocation(program, LOCATION_ATTRIB_POSITION, 'a_position');
-    gl.bindAttribLocation(program, LOCATION_ATTRIB_TEXCOORD, 'a_texCoord');
-    const vertexObjects = createStandardGeometry(gl);
+    gl.bindAttribLocation(program, LOCATION_ATTRIB_POSITION, shaderdecl.attributes.position);
+    gl.bindAttribLocation(program, LOCATION_ATTRIB_TEXCOORD, shaderdecl.attributes.texCoord);
+    const vertexObjects = _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].createStandardGeometry(gl, LOCATION_ATTRIB_POSITION, LOCATION_ATTRIB_TEXCOORD);
 
     // define texSize
     width = Math.max(width | 0, 1);
     height = Math.max(height | 0, 1);
     uniforms.texSize = [ width, height ];
 
-    // autodetect uniforms, get their locations,
+    // autodetect uniforms
+    const uniform = { };
+    for(const u of shaderdecl.uniforms)
+        uniform[u] = { type: shaderdecl.uniformType(u) };
+
+    // given the declared uniforms, get their locations,
     // define their setters and set their default values
-    const uniform = autodetectUniforms(source);
     gl.useProgram(program);
     for(const u in uniform) {
         // get location
@@ -5891,7 +6191,7 @@ function StandardProgram(gl, width, height, fragmentShaderSource, uniforms = { }
 
         // validate type
         if(!UNIFORM_TYPES.hasOwnProperty(uniform[u].type))
-            throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error(`Unknown uniform type: ${uniform[u].type}`);
+            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Unknown uniform type: ${uniform[u].type}`);
 
         // must set a default value?
         if(uniforms.hasOwnProperty(u)) {
@@ -5901,7 +6201,7 @@ function StandardProgram(gl, width, height, fragmentShaderSource, uniforms = { }
             else if(typeof value == 'object')
                 (gl[UNIFORM_TYPES[uniform[u].type]])(uniform[u].location, ...Array.from(value));
             else
-                throw _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].Error(`Unrecognized uniform value: "${value}"`);
+                _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].fatal(`Unrecognized uniform value: "${value}"`);
         }
 
         // note: to set the default value of array arr, pass
@@ -5933,8 +6233,8 @@ StandardProgram.prototype.attachFBO = function(pingpong = false)
     const numTextures = pingpong ? 2 : 1;
 
     this._texIndex = 0;
-    this._texture = Array(numTextures).fill(null).map(() => _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].createTexture(gl, width, height));
-    this._fbo = Array(numTextures).fill(null).map((_, i) => _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].createFramebuffer(gl, this._texture[i]));
+    this._texture = Array(numTextures).fill(null).map(() => _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].createTexture(gl, width, height));
+    this._fbo = Array(numTextures).fill(null).map((_, i) => _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].createFramebuffer(gl, this._texture[i]));
 }
 
 // Detach a framebuffer object from a standard program
@@ -5944,13 +6244,13 @@ StandardProgram.prototype.detachFBO = function()
 
     if(this._fbo != null) {
         for(let fbo of this._fbo)
-            _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].destroyFramebuffer(gl, fbo);
+            _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].destroyFramebuffer(gl, fbo);
         this._fbo = null;
     }
 
     if(this._texture != null) {
         for(let texture of this._texture)
-            _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].destroyTexture(gl, texture);
+            _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].destroyTexture(gl, texture);
         this._texture = null;
     }
 
@@ -5966,118 +6266,22 @@ StandardProgram.prototype.pingpong = function()
 
 
 
-
-
 //
-// WebGL
+// Consumer-producer
 //
 
-// create VAO & VBO
-function createStandardGeometry(gl)
+// wait for a queue to be not empty
+function waitForQueueNotEmpty(queue)
 {
-    // got cached values for this WebGL context?
-    const f = createStandardGeometry;
-    const cache = f._cache || (f._cache = new WeakMap());
-    if(cache.has(gl))
-        return cache.get(gl);
-
-    // configure the attributes of the vertex shader
-    const vao = gl.createVertexArray(); // vertex array object
-    const vbo = [ gl.createBuffer(), gl.createBuffer() ]; // vertex buffer objects
-    gl.bindVertexArray(vao);
-
-    // set the a_position attribute
-    // using the current vbo
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo[0]);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-        // clip coordinates
-        -1, -1,
-        1, -1,
-        -1, 1,
-        1, 1,
-    ]), gl.STATIC_DRAW);
-    gl.vertexAttribPointer(LOCATION_ATTRIB_POSITION, // attribute location
-                           2,          // 2 components per vertex (x,y)
-                           gl.FLOAT,   // type
-                           false,      // don't normalize
-                           0,          // default stride (tightly packed)
-                           0);         // offset
-    gl.enableVertexAttribArray(LOCATION_ATTRIB_POSITION);
-
-    // set the a_texCoord attribute
-    // using the current vbo
-    gl.bindBuffer(gl.ARRAY_BUFFER, vbo[1]);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-        // texture coordinates
-        0, 0,
-        1, 0,
-        0, 1,
-        1, 1,
-    ]), gl.STATIC_DRAW);
-    gl.vertexAttribPointer(LOCATION_ATTRIB_TEXCOORD, // attribute location
-                           2,          // 2 components per vertex (x,y)
-                           gl.FLOAT,   // type
-                           false,      // don't normalize
-                           0,          // default stride (tightly packed)
-                           0);         // offset
-    gl.enableVertexAttribArray(LOCATION_ATTRIB_TEXCOORD);
-
-    // unbind
-    gl.bindBuffer(gl.ARRAY_BUFFER, null);
-
-    // cache & return
-    const result = { vao, vbo };
-    cache.set(gl, result);
-    return result;
-}
-
-// create a width x height buffer for RGBA data
-function createPixelBuffer(width, height)
-{
-    const pixels = new Uint8Array(width * height * 4);
-    pixels.fill(255, 0, 4); // will be recognized as empty
-    return pixels;
-}
-
-// download data to an Uint8Array using a Pixel Buffer Object (PBO)
-// you may optionally specify a FBO to read pixels from a texture
-function downloadDMA(gl, pbo, arrayBuffer, x, y, width, height, fbo = null)
-{
-    // create a PBO
-    const ownPBO = (pbo == null);
-    if(ownPBO)
-        pbo = gl.createBuffer();
-
-    // bind the PBO
-    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
-    gl.bufferData(gl.PIXEL_PACK_BUFFER, arrayBuffer.byteLength, gl.STREAM_READ);
-
-    // read pixels into PBO
-    if(fbo) {
-        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-        gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    }
-    else {
-        gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
-    }
-
-    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-
-    // wait for DMA transfer
-    return _gl_utils_js__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].getBufferSubDataAsync(gl, pbo,
-        gl.PIXEL_PACK_BUFFER,
-        0,
-        arrayBuffer,
-        0,
-        0
-    ).then(timeInMs => {
-        return timeInMs;
-    }).catch(err => {
-        throw err;
-    }).finally(() => {
-        if(ownPBO)
-            gl.deleteBuffer(pbo);
+    return new Promise(resolve => {
+        const start = performance.now();
+        function wait() {
+            if(queue.length > 0)
+                resolve(performance.now() - start);
+            else
+                setTimeout(wait, 0); // Utils.setZeroTimeout may hinder performance (GLUtils already calls it)
+        }
+        wait();
     });
 }
 
@@ -6350,11 +6554,12 @@ class FPSCounter
 /*!******************************!*\
   !*** ./src/utils/globals.js ***!
   \******************************/
-/*! exports provided: PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE */
+/*! exports provided: MAX_TEXTURE_LENGTH, PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MAX_TEXTURE_LENGTH", function() { return MAX_TEXTURE_LENGTH; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "PYRAMID_MAX_LEVELS", function() { return PYRAMID_MAX_LEVELS; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "PYRAMID_MAX_SCALE", function() { return PYRAMID_MAX_SCALE; });
 /*
@@ -6378,13 +6583,20 @@ __webpack_require__.r(__webpack_exports__);
  * Global constants
  */
 
+// -----------------------------------------------------------------
+// GENERAL
+// -----------------------------------------------------------------
+
+// Maximum texture length
+const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
+
 
 
 // -----------------------------------------------------------------
 // IMAGE PYRAMIDS & SCALE-SPACE
 // -----------------------------------------------------------------
 
-// The number of layers of the pyramid
+// The number of layers of the pyramid (not counting intra-layers)
 const PYRAMID_MAX_LEVELS = 4; // max depth in scale-space
 
 // The maximum supported scale for a pyramid layer
@@ -7375,6 +7587,32 @@ class Utils
                 window.postMessage(msgId, '*');
             }
         })());
+    }
+
+    /**
+     * Gets the names of the arguments of the specified function
+     * @param {Function} fun 
+     * @returns {Array<string>}
+     */
+    static functionArguments(fun)
+    {
+        const code = fun.toString();
+        const regex = code.startsWith('function') ? 'function\\s.*\\(([^)]*)\\)' :
+                     (code.startsWith('(') ? '\\(([^)]*)\\).*=>' : '([^=]+).*=>');
+        const match = new RegExp(regex).exec(code);
+
+        if(match !== null) {
+            const args = match[1].replace(/\/\*.*?\*\//g, ''); // remove comments
+            return args.split(',').map(argname =>
+                argname.replace(/=.*$/, '').trim() // remove default params & trim
+            ).filter(argname =>
+                argname // handle trailing commas
+            );
+        }
+        else
+            Utils.fatal(`Can't detect function arguments of ${code}`);
+
+        return [];
     }
 
     /**
