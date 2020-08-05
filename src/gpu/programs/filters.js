@@ -20,7 +20,7 @@
  */
 
 import { GPUProgramGroup } from '../gpu-program-group';
-import { convX, convY, texConvX, texConvY, texConv2D, createKernel2D, createKernel1D } from './convolution';
+import { convX, convY, texConvX, texConvY, texConv2D, createKernel2D, createKernel1D } from '../shaders/filters/convolution';
 
 /**
  * GPUFilters

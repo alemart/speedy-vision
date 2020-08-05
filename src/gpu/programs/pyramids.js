@@ -22,7 +22,7 @@
 import { GPUProgramGroup } from '../gpu-program-group';
 import { importShader, createShader } from '../shader-declaration';
 import { PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE } from '../../utils/globals';
-import { convX, convY } from './convolution';
+import { convX, convY } from '../shaders/filters/convolution';
 
 
 

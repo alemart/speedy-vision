@@ -19,8 +19,8 @@
  * Convolution shader generators
  */
 
-import { Utils } from "../../utils/utils";
-import { createShader } from '../shader-declaration';
+import { Utils } from "../../../utils/utils";
+import { createShader } from '../../shader-declaration';
 
 // Utilities
 const cartesian = (a, b) => [].concat(...a.map(a => b.map(b => [a,b]))); // [a] x [b]
