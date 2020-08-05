@@ -19,7 +19,7 @@
  * GPU utilities
  */
 
-import { GPUProgramGroup } from '../gpu-program-group';
+import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
 import { PixelComponent } from '../../utils/types';
 import { GLUtils } from '../gl-utils';
@@ -58,7 +58,7 @@ const scanMinMax2D = importShader('utils/scan-minmax2d.glsl').withArguments('ima
  * GPUUtils
  * Utility operations
  */
-export class GPUUtils extends GPUProgramGroup
+export class GPUUtils extends SpeedyProgramGroup
 {
     /**
      * Class constructor

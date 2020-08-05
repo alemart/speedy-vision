@@ -19,7 +19,7 @@
  * Image pyramids
  */
 
-import { GPUProgramGroup } from '../gpu-program-group';
+import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader, createShader } from '../shader-declaration';
 import { PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE } from '../../utils/globals';
 import { convX, convY } from '../shaders/filters/convolution';
@@ -51,7 +51,7 @@ const flipY = importShader('utils/flip-y.glsl').withArguments('image');
  * GPUPyramids
  * Image pyramids
  */
-export class GPUPyramids extends GPUProgramGroup
+export class GPUPyramids extends SpeedyProgramGroup
 {
     /**
      * Class constructor

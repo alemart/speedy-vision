@@ -15,8 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * gpu-programs.js
- * An access point to all programs that run in the GPU
+ * speedy-program-center.js
+ * An access point to all programs that run on the GPU
  */
 
 import { GPUUtils } from './programs/utils';
@@ -27,10 +27,10 @@ import { GPUEncoders } from './programs/encoders';
 import { GPUPyramids } from './programs/pyramids';
 
 /**
- * An access point to all programs that run in the CPU
+ * An access point to all programs that run on the CPU
  * All program groups can be accessed via this class
  */
-export class GPUPrograms
+export class SpeedyProgramCenter
 {
     /**
      * Class constructor

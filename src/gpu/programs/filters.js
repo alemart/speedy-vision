@@ -19,14 +19,14 @@
  * Image filtering on the GPU
  */
 
-import { GPUProgramGroup } from '../gpu-program-group';
+import { SpeedyProgramGroup } from '../speedy-program-group';
 import { convX, convY, texConvX, texConvY, texConv2D, createKernel2D, createKernel1D } from '../shaders/filters/convolution';
 
 /**
  * GPUFilters
  * Image filtering
  */
-export class GPUFilters extends GPUProgramGroup
+export class GPUFilters extends SpeedyProgramGroup
 {
     /**
      * Class constructor

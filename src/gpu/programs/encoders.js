@@ -19,7 +19,7 @@
  * Texture encoders
  */
 
-import { GPUProgramGroup } from '../gpu-program-group';
+import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
 import { SpeedyFeature } from '../../core/speedy-feature';
 import { StochasticTuner } from '../../utils/tuner';
@@ -55,7 +55,7 @@ const encodeKeypoints = importShader('encoders/encode-keypoints.glsl').withArgum
  * GPUEncoders
  * Texture encoding
  */
-export class GPUEncoders extends GPUProgramGroup
+export class GPUEncoders extends SpeedyProgramGroup
 {
     /**
      * Class constructor

@@ -15,19 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * gpu-program-group.js
+ * speedy-program-group.js
  * An abstract group of programs that run on the GPU
  */
 
 import { SpeedyProgram } from './speedy-program';
 
 /**
- * GPUProgramGroup
+ * SpeedyProgramGroup
  * A semantically correlated group
  * of programs that run on the GPU
  */
 
-export /* abstract */ class GPUProgramGroup
+export /* abstract */ class SpeedyProgramGroup
 {
     /**
      * Class constructor
@@ -47,7 +47,7 @@ export /* abstract */ class GPUProgramGroup
      * @param {string} name Program name
      * @param {ShaderDeclaration} shaderdecl Shader declaration
      * @param {object} settings Program settings
-     * @returns {GPUProgramGroup} This object
+     * @returns {SpeedyProgramGroup} This object
      */
     /* protected */ declare(name, shaderdecl, settings = { })
     {
@@ -68,7 +68,7 @@ export /* abstract */ class GPUProgramGroup
      * Multi-pass composition
      * @param {string} name Program name
      * @param {string} fn Other programs
-     * @returns {GPUProgramGroup} This object
+     * @returns {SpeedyProgramGroup} This object
      */
     /* protected */ compose(name, ...fn)
     {

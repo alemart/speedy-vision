@@ -19,7 +19,7 @@
  * Facade for various keypoint detection algorithms
  */
 
-import { GPUProgramGroup } from '../gpu-program-group';
+import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
 
 
@@ -99,7 +99,7 @@ const multiscaleSobel = importShader('keypoints/multiscale-sobel.glsl').withArgu
  * GPUKeypoints
  * Keypoint detection
  */
-export class GPUKeypoints extends GPUProgramGroup
+export class GPUKeypoints extends SpeedyProgramGroup
 {
     /**
      * Class constructor

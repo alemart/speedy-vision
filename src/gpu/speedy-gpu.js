@@ -21,7 +21,7 @@
 
 import { GLUtils } from './gl-utils.js';
 import { Utils } from '../utils/utils';
-import { GPUPrograms } from './gpu-programs';
+import { SpeedyProgramCenter } from './speedy-program-center';
 import { PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE, MAX_TEXTURE_LENGTH } from '../utils/globals';
 
 /**
@@ -86,7 +86,7 @@ export class SpeedyGPU
 
     /**
      * Access point to all GPU programs
-     * @returns {GPUPrograms}
+     * @returns {SpeedyProgramCenter}
      */
     get programs()
     {
@@ -285,7 +285,7 @@ export class SpeedyGPU
         this._gl = createWebGLContext(this._canvas);
 
         // spawn program groups
-        this._programs = new GPUPrograms(this, width, height);
+        this._programs = new SpeedyProgramCenter(this, width, height);
 
         // spawn pyramids of program groups
         this._pyramid = this._buildPyramid(width, height, 1.0, PYRAMID_MAX_LEVELS);
@@ -300,7 +300,7 @@ export class SpeedyGPU
         let pyramid = new Array(numLevels);
 
         for(let i = 0; i < pyramid.length; i++) {
-            pyramid[i] = new GPUPrograms(this, width, height);
+            pyramid[i] = new SpeedyProgramCenter(this, width, height);
             width = ((1 + width) / 2) | 0;
             height = ((1 + height) / 2) | 0;
             scale /= 2;

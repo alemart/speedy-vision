@@ -19,7 +19,7 @@
  * Color routines & conversion algorithms
  */
 
-import { GPUProgramGroup } from '../gpu-program-group';
+import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
 
 
@@ -36,9 +36,9 @@ const rgb2grey = importShader('colors/rgb2grey.glsl').withArguments('image');
 
 /**
  * GPUColors
- * Color routines
+ * Color routines & conversion algorithms
  */
-export class GPUColors extends GPUProgramGroup
+export class GPUColors extends SpeedyProgramGroup
 {
     /**
      * Class constructor
