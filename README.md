@@ -1,6 +1,6 @@
 # speedy-vision.js
 
-A **lightning fast** GPU-accelerated Computer Vision library for JavaScript, with a focus on feature detection and matching.
+A **lightning fast** GPU-accelerated Computer Vision library for JavaScript, with a focus on real-time feature detection and matching.
 
 [![Speedy feature detection](assets/demo-video.gif)](https://alemart.github.io/speedy-vision-js/demos/video-features.html)
 
@@ -39,7 +39,7 @@ Try the demos and take a look at their source code:
 Download the latest release of speedy-vision.js and include it in the `<head>` section of your HTML page:
 
 ```html
-<script src="dist/speedy-vision.min.js"></script>
+<script src="dist/speedy-vision.js"></script>
 ```
 
 Once you import the library, the `Speedy` object will be exposed.
@@ -61,9 +61,9 @@ Check out the [Hello World demo](demos/hello-world.html) for a working example.
 
 Detecting features in an image is an important step of many computer vision algorithms. Traditionally, the computationally expensive nature of this process made it difficult to bring interactive Computer Vision applications to the web browser. The framerates were unsatisfactory for a compelling user experience. Speedy, a short name for speedy-vision.js, is a JavaScript library created to address this issue.
 
-Speedy's incredible performance in the web browser is possible thanks to its efficient WebGL2 backend for general purpose computing on the GPU and fast computer vision algorithms. With an easy-to-use API, Speedy is an excellent choice for real-time computer vision projects involving tasks such as: object detection in videos, pose estimation, Simultaneous Location and Mapping (SLAM), and many others.
+Speedy's real-time performance in the web browser is possible thanks to its efficient WebGL2 backend and to its efficient implementations of fast computer vision algorithms. With an easy-to-use API, Speedy is an excellent choice for real-time computer vision projects involving tasks such as: object detection in videos, pose estimation, Simultaneous Location and Mapping (SLAM), and others.
 
-Speedy is developed by [Alexandre Martins](https://github.com/alemart), a computer scientist from Brazil. It is released under the [Apache-2.0 license](LICENSE).
+Speedy is developed by [Alexandre Martins](https://github.com/alemart), a computer scientist from Brazil. It is released under the [Apache-2.0 license](LICENSE). Currently in development.
 
 ![Feature detection](assets/demo-features.jpg)
 
@@ -241,23 +241,13 @@ Detects feature points in a `SpeedyMedia`.
 ###### Arguments
 
 * `config: object, optional`. A configuration object that accepts the following keys (all are optional):
-  * `method: string`. The name of the method to be used to detect the features (see the table below).
+  * `method: string`. The name of the method to be used to detect the features (see the table on [detection methods](#detection-methods)).
   * `sensitivity: number`. A number between `0.0` and `1.0`. The higher the number, the more features you get.
   * `expected: number | object`. Speedy will automatically adjust the sensitivity value to get you *approximately* the number of features you ask. For more information, read the section on [automatic sensitivity](#automatic-sensitivity).
   * `denoise: boolean`. Whether or not to denoise the image before finding the features. Defaults to `true`.
-  * `sort: boolean`. Whether or not to sort the resulting keypoints by descending cornerness score. Defaults to `false`.
+  * `max: number`. If specified, Speedy will return the best keypoints (according to their scores) up to this number.
 
-The configuration object accepts more keys depending on which method is specified. Currently, the following methods for feature detection are available:
-
-| Method   | Description                      |
-|----------|----------------------------------|
-|`"fast"`  | An alias for `"fast9"` (default) |
-|`"fast9"` | Runs the FAST-9,16 algorithm     |
-|`"fast7"` | Runs the FAST-7,12 algorithm     |
-|`"fast5"` | Runs the FAST-5,8 algorithm      |
-|`"brisk"` | Runs the BRISK feature detector  |
-
-Different methods yield different results. Read the section on [detection methods](#detection-methods) to know more.
+The configuration object accepts additional keys depending on which method is specified. Read the section on [detection methods](#detection-methods) to know more.
 
 ###### Returns
 
@@ -284,15 +274,38 @@ window.onload = async function() {
 
 ##### Detection methods
 
-Speedy can use different methods for detecting feature points. Depending on the method you choose, additional settings may be provided when calling `SpeedyMedia.findFeatures()`.
+Speedy can use different methods for detecting feature points. Currently, the following methods are available:
 
-###### FAST algorithm
+| Method   | Description                      | Multi-scale | Oriented | Includes descriptor |
+|----------|----------------------------------|-------------|----------|---------------------|
+|`"fast"`  | An alias for `"fast9"` (default) | -           | -        | -                   |
+|`"fast9"` | FAST-9,16 detector               | -           | -        | -                   |
+|`"fast7"` | FAST-7,12 detector               | -           | -        | -                   |
+|`"fast5"` | FAST-5,8 detector                | -           | -        | -                   |
+|`"multiscale-fast"` | FAST augmented with scale & orientation | Yes | Yes | -               |
+|`"harris"`| Runs the Harris corner detector  | -           | -        | -                   |
+|`"multiscale-harris"` | Harris detector augmented with scale & orientation | Yes | Yes | -  |
+|`"brisk"` | BRISK feature detector           | Yes         | Soon     | Soon                |
 
-For any variation of the FAST algorithm[1], the `config` object accepts the following additional, optional key:
+Different methods yield different results. Some work in scale-space and return oriented keypoints, others do not.
+
+Depending on which method you choose, additional settings may be provided to the `config` parameter when calling `SpeedyMedia.findFeatures()`.
+
+###### FAST corner detector
+
+For any variation of the FAST detector[1], the `config` object accepts the following additional, optional key:
 
 * `threshold: number`. An alternative to `sensitivity` representing the threshold paramter of FAST: an integer between `0` and `255`, inclusive. Lower thresholds get you more features.
 
 Note: `config.sensitivity` is an easy-to-use parameter and does *not* map linearly to `config.threshold`.
+
+###### Harris corner detector
+
+Speedy includes an implementation of the Harris corner detector[3] with the Shi-Tomasi corner response[4]. The following settings may be specified in the `config` object:
+
+* `quality: number`. A value between `0` and `1` representing the minimum "quality" of the returned keypoints. Speedy will discard any keypoint whose score is lower than the specified fraction of the maximum keypoint score. A typical value for `quality` is `0.10` (10%).
+
+Note: `config.quality` is an alternative to `config.sensitivity`.
 
 ###### BRISK feature detector
 
@@ -305,7 +318,11 @@ Speedy implements a modified version of the BRISK feature detector[2]. It is abl
 
 [1] Rosten, Edward; Drummond, Tom. "Machine learning for high-speed corner detection". European Conference on Computer Vision (ECCV-2006).
 
-[2] Leutenegger, Stefan; Chli, Margarita; Siegwart, Roland Y. "BRISK: Binary robust invariant scalable keypoints". International Conference on Computer Vision (ICCV-2011)
+[2] Leutenegger, Stefan; Chli, Margarita; Siegwart, Roland Y. "BRISK: Binary robust invariant scalable keypoints". 2011 International Conference on Computer Vision (ICCV-2011).
+
+[3] Harris, Christopher G.; Mike Stephens. "A combined corner and edge detector". Alvey Vision Conference. Vol. 15. No. 50. 1988.
+
+[4] Shi, J.; Tomasi, C. "Good features to track". 1994 Proceedings of IEEE Conference on Computer Vision and Pattern Recognition.
 
 ##### Automatic sensitivity
 
@@ -313,7 +330,7 @@ Sensitivity alone does not give you control of how many feature points you will 
 
 Automatic sensitivity is meant to be used with media configured for [dynamic usage](#speedymediaoptions). It takes multiple calls to the feature detector for Speedy to adjust the sensitivity. Multiple calls is what you will be doing anyway if you need to detect features in a video (see the example below).
 
-Speedy finds the feature points on the GPU. Although this is an efficient process, downloading data from the GPU is expensive. The more features you get, the more data has to be downloaded. **Setting an expected number of feature points may thus help you with stability and performance**.
+Speedy finds the feature points on the GPU. Although this is an efficient process, downloading data from the GPU is expensive. The more features you get, the more data has to be downloaded. Setting an expected number of feature points may thus help you keep the number of returned points in a controlled interval.
 
 The `config.expected` option can either be a number or an object with the following keys:
 
@@ -356,31 +373,31 @@ A `SpeedyFeature` object represents an image feature.
 
 `SpeedyFeature.x: number, read-only`
 
-The x position of the image feature.
+The x position of the feature in the image.
 
 ##### SpeedyFeature.y
 
 `SpeedyFeature.y: number, read-only`
 
-The y position of the image feature.
+The y position of the feature in the image.
 
 ##### SpeedyFeature.scale
 
 `SpeedyFeature.scale: number, read-only`
 
-The scale of the image feature. Only a subset of the feature detection methods support scaled features. Defaults to `1.0`.
+The scale of the image feature. Only a subset of the feature [detection methods](#detection-methods) support scaled features. Defaults to `1.0`.
 
 ##### SpeedyFeature.rotation
 
 `SpeedyFeature.rotation: number, read-only`
 
-The orientation angle of the image feature, in radians. Only a subset of the feature detection methods support oriented features. Defaults to `0.0`.
+The orientation angle of the image feature, in radians. Only a subset of the feature [detection methods](#detection-methods) support oriented features. Defaults to `0.0`.
 
 ##### SpeedyFeature.score
 
 `SpeedyFeature.score: number, read-only`
 
-A cornerness measure of the image feature. Although different detection methods employ different measurement strategies, the larger the score, the more "corner-like" the feature is.
+A score measure of the image feature. Although different detection methods employ different measurement strategies, the larger the score, the "better" the feature is.
 
 ### Feature matching
 

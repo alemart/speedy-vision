@@ -29,6 +29,7 @@
     "corner detection",
     "keypoint",
     "descriptors",
+    "real-time",
     "webgl",
     "webgl2",
     "opengl",
@@ -38,7 +39,11 @@
     "gpgpu",
     "slam",
     "fast",
+    "harris",
     "brisk",
+    "brief",
+    "sift",
+    "surf",
     "orb"
   ],
   "devDependencies": {

@@ -15,8 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * multiscale-sobel.glsl
- * Compute Sobel derivatives for a level-of-detail in scale-space
+ * multiscale-harris.glsl
+ * Harris corner detector in scale-space
+ */
+
+/*
+ * This is a GPU implementation of the Harris corner detector[1] with the
+ * Shi-Tomasi corner response[2], adapted for working on multiple scales.
+ *
+ * References:
+ *
+ * [1] Harris, Christopher G.; Mike Stephens. "A combined corner and edge
+ *     detector". Alvey Vision Conference. Vol. 15. No. 50. 1988.
+ *
+ * [2] Shi, J.; Tomasi, C. "Good features to track". 1994 Proceedings of
+ *     IEEE Conference on Computer Vision and Pattern Recognition.
  */
 
 @include "sobel.glsl"
@@ -65,11 +78,11 @@ void main()
             }
         }
 
-        // compute corner response according to Shi-Tomasi
+        // compute corner response (Shi-Tomasi)
         float response = 0.5f * (m.x + m.z - sqrt((m.x - m.z) * (m.x - m.z) + 4.0f * m.y * m.y));
 
         // compute corner score in [0,1]
-        float score = max(0.0f, response / 4.0f);
+        float score = max(0.0f, response / 4.0f); // hmmmmmm....
 
         // compute corner scale
         float scale = encodeLod(lod);
@@ -79,5 +92,5 @@ void main()
     }
 
     // done
-    color.rba = best.xxy;
+    color = vec4(best.x, pixel.g, best.xy);
 }
