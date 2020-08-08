@@ -42,7 +42,7 @@ precision mediump sampler2D;
  
 out vec4 color;
 in vec2 texCoord;
-uniform vec2 texSize;
+uniform highp vec2 texSize;
 
 @include "global.glsl"\n`;
 
@@ -180,13 +180,13 @@ class ShaderDeclaration
     _autodetectUniforms(preprocessedSource)
     {
         const sourceWithoutComments = preprocessedSource; // assume we've preprocessed the source already
-        const regex = /uniform\s+(\w+)\s+([^;]+)/g;
+        const regex = /uniform\s+(highp\s+|mediump\s+|lowp\s+)?(\w+)\s+([^;]+)/g;
         const uniforms = { };
 
         let match;
         while((match = regex.exec(sourceWithoutComments)) !== null) {
-            const type = match[1];
-            const names = match[2].split(',').map(name => name.trim()).filter(name => name); // trim & remove empty names
+            const type = match[2];
+            const names = match[3].split(',').map(name => name.trim()).filter(name => name); // trim & remove empty names
 
             for(const name of names) {
                 if(name.endsWith(']')) {
