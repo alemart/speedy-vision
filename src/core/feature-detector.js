@@ -240,6 +240,7 @@ export class FeatureDetector
             keypoints.sort(scoreCmp);
 
             // cap the number of keypoints if requested to do so
+            max = Number(max);
             if(Number.isFinite(max) && max >= 0)
                 keypoints.splice(max, keypoints.length - max);
 
