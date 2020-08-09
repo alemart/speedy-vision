@@ -36,7 +36,7 @@
  * Fast arctangent - use an approximation
  * How fast is atan() in actual hardware?
  * @param {float} x
- * @returns {float}
+ * @returns {float} a value between PI/2 and -PI/2
  */
 #ifdef USE_FAST_ATAN
 float fastAtan(float x)
@@ -54,7 +54,7 @@ float fastAtan(float x)
  * Fast atan2 - use an approximation
  * @param {float} y
  * @param {float} x
- * @returns {float}
+ * @returns {float} a value between PI and -PI
  */
 #ifdef USE_FAST_ATAN
 float fastAtan2(float y, float x)

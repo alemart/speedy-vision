@@ -31,8 +31,8 @@ in vec2 ${ATTRIB_TEXCOORD};
 out vec2 texCoord;
  
 void main() {
-    gl_Position = vec4(a_position, 0.0, 1.0);
-    texCoord = a_texCoord;
+    gl_Position = vec4(${ATTRIB_POSITION}, 0.0, 1.0);
+    texCoord = ${ATTRIB_TEXCOORD};
 }`;
 
 const DEFAULT_FRAGMENT_SHADER_PREFIX = `#version 300 es
@@ -42,7 +42,7 @@ precision mediump sampler2D;
  
 out vec4 color;
 in vec2 texCoord;
-uniform highp vec2 texSize;
+uniform vec2 texSize;
 
 @include "global.glsl"\n`;
 

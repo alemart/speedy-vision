@@ -145,7 +145,8 @@ void main()
 
         // Compute angle = atan2(m01, m10)
         // and normalize to [0,1]
-        angle = (fastAtan2(m.y, m.x) + PI) / TWO_PI;
+        //angle = (fastAtan2(m.y, m.x) + PI) / TWO_PI;
+        angle = (fastAtan2(m.y, m.x) / PI + 1.0f) * 0.5f;
     }
 
     // done!
