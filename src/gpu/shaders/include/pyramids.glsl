@@ -19,6 +19,9 @@
  * Pyramid & scale-space utilities
  */
 
+#ifndef _PYRAMIDS_GLSL
+#define _PYRAMIDS_GLSL
+
 /**
  * Get current pixel at a specific level-of-detail
  * @param {sampler2D} pyr pyramid
@@ -36,6 +39,16 @@
  * @returns {vec4} pixel data
  */
 #define pyrPixelAtOffset(pyr, lod, pot, offset) textureLod((pyr), texCoord + ((pot) * vec2(offset)) / texSize, (lod))
+
+/**
+ * Get a specific pixel at a specific level-of-detail
+ * This assumes textureSize(pyr, 0) == ivec2(texSize), i.e., input size == output size
+ * @param {sampler2D} pyr pyramid
+ * @param {ivec2} pos pixel position considering lod = 0
+ * @param {float} lod level-of-detail
+ * @returns {vec4} pixel data
+ */
+#define pyrPixelAt(pyr, pos, lod) textureLod((pyr), (vec2(pos) + vec2(0.5f)) / texSize, (lod))
 
 /*
  * Image scale is encoded in the alpha channel (a)
@@ -104,3 +117,5 @@ float decodeLod(float encodedLod)
 {
     return encodedLod * (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS) - LOG2_PYRAMID_MAX_SCALE;
 }
+
+#endif

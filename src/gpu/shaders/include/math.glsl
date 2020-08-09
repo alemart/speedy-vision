@@ -27,6 +27,7 @@
 #define PI              3.14159265359f
 #define PI_OVER_2       1.57079632679f
 #define PI_OVER_4       0.78539816339f
+#define INV_PI          0.3183098861837907f // 1.0 / PI
 
 // settings
 #define USE_FAST_ATAN

@@ -19,6 +19,9 @@
  * Global utilities automatically included in all shaders
  */
 
+#ifndef _GLOBAL_GLSL
+#define _GLOBAL_GLSL
+
 //
 // GENERAL
 //
@@ -50,3 +53,5 @@
 // Get the pixel at a constant (dx,dy) offset from the thread pixel (use |dx|,|dy| <= 7)
 // This assumes textureSize(img, 0) == ivec2(texSize), i.e., input size == output size
 #define pixelAtOffset(img, offset) textureLodOffset((img), texCoord, 0.0f, (offset))
+
+#endif

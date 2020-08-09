@@ -19,6 +19,9 @@
  * Utilities for Sobel derivatives
  */
 
+#ifndef _SOBEL_GLSL
+#define _SOBEL_GLSL
+
 /**
  * Encode (df.x, df.y) derivatives into a RGBA tuple
  * It is assumed -4 <= df.x,df.y <= 4
@@ -43,3 +46,5 @@ vec2 decodeSobel(vec4 encodedSobel)
     vec4 lg = log2(encodedSobel);
     return vec2(lg.b - lg.r, lg.a - lg.g);
 }
+
+#endif
