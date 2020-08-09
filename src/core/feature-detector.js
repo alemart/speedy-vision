@@ -60,21 +60,11 @@ export class FeatureDetector
     {
         const gpu = this._gpu;
 
-        // default settings
-        settings = {
-            denoise: true,
-            max: -1,
-            ...settings
-        };
-
-        // convert the expected number of keypoints,
-        // if defined, into a sensitivity value
-        if(settings.hasOwnProperty('expected'))
-            settings.sensitivity = this._findSensitivity(settings.expected);
+        // setup settings
+        settings = this._setupSettings(settings);
 
         // pre-processing the image...
-        const source = media._gpu.upload(media.source);
-        const texture = settings.denoise ? gpu.programs.filters.gauss5(source) : source;
+        const texture = this._uploadToTexture(media, settings.denoise);
         const greyscale = gpu.programs.colors.rgb2grey(texture);
 
         // extract features
@@ -93,21 +83,11 @@ export class FeatureDetector
     {
         const gpu = this._gpu;
 
-        // default settings
-        settings = {
-            denoise: true,
-            max: -1,
-            ...settings
-        };
-
-        // convert the expected number of keypoints,
-        // if defined, into a sensitivity value
-        if(settings.hasOwnProperty('expected'))
-            settings.sensitivity = this._findSensitivity(settings.expected);
+        // setup settings
+        settings = this._setupSettings(settings);
 
         // pre-processing the image...
-        const source = media._gpu.upload(media.source);
-        const texture = settings.denoise ? gpu.programs.filters.gauss5(source) : source;
+        const texture = this._uploadToTexture(media, settings.denoise);
         const greyscale = gpu.programs.colors.rgb2grey(texture);
 
         // extract features
@@ -125,21 +105,11 @@ export class FeatureDetector
     {
         const gpu = this._gpu;
 
-        // default settings
-        settings = {
-            denoise: true,
-            max: -1,
-            ...settings
-        };
-
-        // convert the expected number of keypoints,
-        // if defined, into a sensitivity value
-        if(settings.hasOwnProperty('expected'))
-            settings.sensitivity = this._findSensitivity(settings.expected);
+        // setup settings
+        settings = this._setupSettings(settings);
 
         // pre-processing the image...
-        const source = media._gpu.upload(media.source);
-        const texture = settings.denoise ? gpu.programs.filters.gauss5(source) : source;
+        const texture = this._uploadToTexture(media, settings.denoise);
         const greyscale = gpu.programs.colors.rgb2grey(texture);
 
         // extract features
@@ -157,21 +127,11 @@ export class FeatureDetector
     {
         const gpu = this._gpu;
 
-        // default settings
-        settings = {
-            denoise: true,
-            max: -1,
-            ...settings
-        };
-
-        // convert the expected number of keypoints,
-        // if defined, into a sensitivity value
-        if(settings.hasOwnProperty('expected'))
-            settings.sensitivity = this._findSensitivity(settings.expected);
+        // setup settings
+        settings = this._setupSettings(settings);
 
         // pre-processing the image...
-        const source = media._gpu.upload(media.source);
-        const texture = settings.denoise ? gpu.programs.filters.gauss5(source) : source;
+        const texture = this._uploadToTexture(media, settings.denoise);
         const greyscale = gpu.programs.colors.rgb2grey(texture);
 
         // extract features
@@ -189,28 +149,11 @@ export class FeatureDetector
     {
         const gpu = this._gpu;
 
-        // default settings
-        settings = {
-            threshold: 10,
-            denoise: true,
-            max: -1,
-            depth: 4,
-            ...settings
-        };
-
-        // convert settings.expected to settings.sensitivity
-        if(settings.hasOwnProperty('expected'))
-            settings.sensitivity = this._findSensitivity(settings.expected);
-
-        // convert settings.sensitivity to settings.threshold
-        if(settings.hasOwnProperty('sensitivity'))
-            settings.threshold = FAST._sensitivity2threshold(settings.sensitivity);
-        else
-            settings.threshold = FAST._normalizedThreshold(settings.threshold);
+        // setup settings
+        settings = this._setupSettings(settings);
 
         // pre-processing the image...
-        const source = media._gpu.upload(media.source);
-        const texture = settings.denoise ? gpu.programs.filters.gauss5(source) : source;
+        const texture = this._uploadToTexture(media, settings.denoise);
         const greyscale = gpu.programs.colors.rgb2grey(texture);
 
         // extract features
@@ -292,5 +235,34 @@ export class FeatureDetector
 
         // return the new sensitivity
         return Math.max(0, Math.min(sensitivity, 1));
+    }
+
+    // Upload a SpeedyMedia to a GPU texture and optionally run a smoothing filter
+    _uploadToTexture(media, denoise = true)
+    {
+        const gpu = this._gpu;
+        const source = gpu.upload(media.source);
+        const texture = denoise ? gpu.programs.filters.gauss5(source) : source;
+
+        return texture;
+    }
+
+    // Create a settings object for usage with different feature detectors
+    _setupSettings(userSettings = {})
+    {
+        // create object
+        const settings = {
+            denoise: true,
+            max: -1,
+            ...userSettings
+        };
+
+        // convert the expected number of keypoints,
+        // if defined, into a sensitivity value
+        if(settings.hasOwnProperty('expected'))
+            settings.sensitivity = this._findSensitivity(settings.expected);
+
+        // done!
+        return settings;
     }
 }

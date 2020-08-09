@@ -20,6 +20,7 @@
  */
 
 import { Utils } from '../../utils/utils';
+import { FAST } from './fast';
 
 let gaussians = null;
 let shortPairs = null, longPairs = null;
@@ -39,6 +40,19 @@ export class BRISK
     static run(gpu, greyscale, settings)
     {
         const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidHeight;
+
+        // default settings
+        if(!settings.hasOwnProperty('threshold'))
+            settings.threshold = 10;
+        if(!settings.hasOwnProperty('depth'))
+            settings.depth = 4; // how many pyramid levels to check
+
+        // convert a sensitivity value in [0,1],
+        // if it's defined, to a FAST threshold
+        if(settings.hasOwnProperty('sensitivity'))
+            settings.threshold = FAST._sensitivity2threshold(settings.sensitivity);
+        else
+            settings.threshold = FAST._normalizedThreshold(settings.threshold);
 
         // clamp settings.depth (height of the image pyramid)
         settings.depth = Math.max(MIN_DEPTH, Math.min(settings.depth, MAX_DEPTH)) | 0;
