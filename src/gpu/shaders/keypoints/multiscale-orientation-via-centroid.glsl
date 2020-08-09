@@ -21,6 +21,7 @@
 
 @include "math.glsl"
 @include "pyramids.glsl"
+@include "orientation.glsl"
 
 // corners without orientation
 uniform sampler2D corners;
@@ -36,10 +37,10 @@ uniform sampler2D pyramid;
 void main()
 {
     vec4 pixel = threadPixel(corners);
-    float angle = 0.5f; // keypoint orientation in [0,1]
+    float angle = 0.0f; // keypoint orientation
 
     // skip if not a corner
-    color = vec4(pixel.rg, angle, pixel.a);
+    color = vec4(pixel.rg, encodeOrientation(angle), pixel.a);
     if(pixel.r == 0.0f)
         return;
 
@@ -153,11 +154,10 @@ void main()
         }
 
         // Compute angle = atan2(m01, m10)
-        // and normalize to [0,1]
-        angle = (fastAtan2(m.y, m.x) + PI) / TWO_PI;
+        angle = fastAtan2(m.y, m.x);
     }
 
     // done!
-    color.b = angle;
+    color.b = encodeOrientation(angle);
 }
 
