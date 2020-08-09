@@ -104,7 +104,7 @@ export class Harris
 /**
  * Harris Corner Detector in a pyramid
  */
-export class MultiscaleHarris
+export class MultiscaleHarris extends Harris
 {
     /**
      * Detect Harris corners in a pyramid
@@ -166,19 +166,5 @@ export class MultiscaleHarris
         // compute orientation
         const orientedCorners = gpu.programs.keypoints.multiscaleOrientationViaCentroid(suppressed2, orientationPatchRadius, pyramid);
         return orientedCorners;
-    }
-
-    /**
-     * Sensitivity to quality non-linear conversion
-     * sensitivity in [0,1] -> quality value in [0,1]
-     * @param {number} sensitivity
-     * @returns {number} quality parameter
-     */
-    static _sensitivity2quality(sensitivity)
-    {
-        // the number of keypoints ideally increases linearly
-        // as the sensitivity is increased
-        sensitivity = Math.max(0, Math.min(sensitivity, 1));
-        return 1 - Math.tanh(2.3 * sensitivity);
     }
 }
