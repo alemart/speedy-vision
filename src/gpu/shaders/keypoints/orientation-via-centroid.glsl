@@ -20,6 +20,7 @@
  */
 
 @include "math.glsl"
+@include "orientation.glsl"
 
 uniform sampler2D corners;
 
@@ -32,10 +33,10 @@ void main()
 {
     vec4 pixel = threadPixel(corners);
     vec2 m = vec2(0.0f, 0.0f); // (m10, m01) image moments
-    float angle = 0.5f; // keypoint orientation in [0,1]
+    float angle = 0.0f; // keypoint orientation
 
-    // skip if not a corner
-    color = vec4(pixel.rg, angle, pixel.a);
+    // skip if it's not a corner
+    color = vec4(pixel.rg, encodeOrientation(angle), pixel.a);
     if(pixel.r == 0.0f)
         return;
 
@@ -144,12 +145,10 @@ void main()
         }
 
         // Compute angle = atan2(m01, m10)
-        // and normalize to [0,1]
-        //angle = (fastAtan2(m.y, m.x) + PI) / TWO_PI;
-        angle = (fastAtan2(m.y, m.x) / PI + 1.0f) * 0.5f;
+        angle = fastAtan2(m.y, m.x);
     }
 
     // done!
-    color.b = angle;
+    color.b = encodeOrientation(angle);
 }
 
