@@ -78,7 +78,6 @@ export class GPUEncoders extends SpeedyProgramGroup
         let neighborFn = (s) => Math.round(Utils.gaussianNoise(s, 64)) % 256;
         this._tuner = new StochasticTuner(48, 32, 48/*255*/, 0.2, 8, 60, neighborFn);
         this._keypointEncoderLength = INITIAL_ENCODER_LENGTH;
-        this._descriptorSize = 0;
         this._spawnedAt = performance.now();
     }
 
@@ -92,12 +91,13 @@ export class GPUEncoders extends SpeedyProgramGroup
     /**
      * Optimizes the keypoint encoder for an expected number of keypoints
      * @param {number} keypointCount expected number of keypoints
+     * @param {number} [descriptorSize] in bytes
      * @returns {number} nonzero if the encoder has been optimized
      */
-    optimizeKeypointEncoder(keypointCount)
+    optimizeKeypointEncoder(keypointCount, descriptorSize = 0)
     {
         const clampedKeypointCount = Math.max(0, Math.min(Math.ceil(keypointCount), MAX_KEYPOINTS));
-        const pixelsPerKeypoint = Math.ceil(2 + this._descriptorSize / 4);
+        const pixelsPerKeypoint = Math.ceil(2 + descriptorSize / 4);
         const len = Math.ceil(Math.sqrt((4 + clampedKeypointCount * 1.05) * pixelsPerKeypoint)); // add some slack
         const newEncoderLength = Math.max(1, Math.min(len, MAX_ENCODER_LENGTH));
         const oldEncoderLength = this._keypointEncoderLength;
@@ -113,14 +113,14 @@ export class GPUEncoders extends SpeedyProgramGroup
     /**
      * Encodes the keypoints of an image - this is a bottleneck!
      * @param {WebGLTexture} corners texture with encoded corners
+     * @param {number} [descriptorSize] in bytes
      * @param {bool} [useAsyncTransfer] transfer data from the GPU without blocking the CPU
      * @returns {Promise<Array<Uint8Array>>} pixels in the [r,g,b,a, ...] format
      */
-    async encodeKeypoints(corners, useAsyncTransfer = true)
+    async encodeKeypoints(corners, descriptorSize = 0, useAsyncTransfer = true)
     {
         // parameters
         const encoderLength = this._keypointEncoderLength;
-        const descriptorSize = this._descriptorSize;
         const imageSize = [ this._width, this._height ];
         const maxIterations = this._tuner.currentValue();
 
@@ -172,17 +172,18 @@ export class GPUEncoders extends SpeedyProgramGroup
     /**
      * Decodes the keypoints, given a flattened image of encoded pixels
      * @param {Array<number>} pixels pixels in the [r,g,b,a,...] format
-     * @param {boolean} hasRotation do encoded pixels include rotation?
+     * @param {number} [descriptorSize] in bytes
      * @returns {Array<SpeedyFeature>} keypoints
      */
-    decodeKeypoints(pixels, hasRotation = true)
+    decodeKeypoints(pixels, descriptorSize = 0)
     {
         const [ w, h ] = [ this._width, this._height ];
-        const pixelsPerKeypoint = 2 + this._descriptorSize / 4;
+        const pixelsPerKeypoint = 2 + descriptorSize / 4;
         const lgM = Math.log2(this._gpu.pyramidMaxScale);
         const pyrHeight = this._gpu.pyramidHeight;
         const keypoints = [];
         let x, y, scale, rotation, score;
+        let hasScale, hasRotation;
 
         for(let i = 0; i < pixels.length; i += 4 * pixelsPerKeypoint) {
             x = (pixels[i+1] << 8) | pixels[i];
@@ -190,9 +191,11 @@ export class GPUEncoders extends SpeedyProgramGroup
             if(x >= w || y >= h)
                 break;
 
-            scale = pixels[i+4] == 255 ? 1.0 :
+            hasScale = (pixels[i+4] != 255);
+            scale = !hasScale ? 1.0 :
                 Math.pow(2.0, -lgM + (lgM + pyrHeight) * pixels[i+4] / 255.0);
 
+            hasRotation = hasScale; // FIXME get from parameter list?
             rotation = !hasRotation ? 0.0 :
                 (2 * pixels[i+5] - 1) * PI / 255.0;
 
