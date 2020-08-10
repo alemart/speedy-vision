@@ -106,9 +106,8 @@ export class SpeedyProgram extends Function
         //if(options.renderToTexture)
         //    this._stdprog.attachFBO(options.pingpong);
 
-        // update texSize uniform
-        const uniform = this._stdprog.uniform.texSize;
-        (gl[UNIFORM_TYPES[uniform.type]])(uniform.location, width, height);
+        // set dirty flag to update texSize uniform later
+        this._stdprog.dirtySize = true;
         //console.log(`Resized program to ${width} x ${height}`);
 
         // reallocate pixel buffers
@@ -307,6 +306,12 @@ export class SpeedyProgram extends Function
         // use program
         gl.useProgram(stdprog.program);
 
+        // update texSize uniform
+        if(stdprog.dirtySize) { // if got resized
+            gl.uniform2f(stdprog.uniform.texSize.location, stdprog.width, stdprog.height);
+            stdprog.dirtySize = false;
+        }
+
         // set uniforms[i] to args[i]
         for(let i = 0, texNo = 0; i < args.length; i++) {
             const argname = params[i];
@@ -474,8 +479,8 @@ function StandardProgram(gl, width, height, shaderdecl, uniforms = { })
     for(const u of shaderdecl.uniforms)
         uniform[u] = { type: shaderdecl.uniformType(u) };
 
-    // given the declared uniforms, get their locations,
-    // define their setters and set their default values
+    // given the declared uniforms, get their
+    // locations and set their default values
     gl.useProgram(program);
     for(const u in uniform) {
         // get location
@@ -506,6 +511,7 @@ function StandardProgram(gl, width, height, shaderdecl, uniforms = { })
     this.uniform = uniform;
     this.width = width;
     this.height = height;
+    this.dirtySize = false;
     this.vertexObjects = vertexObjects;
     this._fbo = this._texture = null; this._texIndex = 0;
     Object.defineProperty(this, 'fbo', {

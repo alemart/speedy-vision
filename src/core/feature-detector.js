@@ -165,10 +165,11 @@ export class FeatureDetector
     // that resolves to an Array of keypoints
     _extractKeypoints(corners, descriptorSize = 0, useAsyncTransfer = true, max = -1, gpu = this._gpu)
     {
-        return gpu.programs.encoders.encodeKeypoints(corners, descriptorSize, useAsyncTransfer).then(encodedKeypoints => {
+        const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(corners, descriptorSize);
+        return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer).then(data => {
             // when processing a video, we expect that the number of keypoints
             // in time is a relatively smooth curve
-            const keypoints = gpu.programs.encoders.decodeKeypoints(encodedKeypoints, descriptorSize);
+            const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize);
             const currCount = Math.max(keypoints.length, 64); // may explode if abrupt video changes
             const prevCount = Math.max(this._lastKeypointCount, 64);
             const newCount = Math.ceil(OPTIMIZER_GROWTH_WEIGHT * currCount + (1.0 - OPTIMIZER_GROWTH_WEIGHT) * prevCount);

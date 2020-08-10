@@ -28,6 +28,7 @@
 
 // Integer position of the current texel
 #define threadLocation() ivec2(texCoord * texSize)
+//#define threadLocation() ivec2(roundEven(texCoord * texSize - vec2(0.5f)))
 
 // Output size
 #define outputSize() ivec2(texSize)

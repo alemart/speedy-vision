@@ -47,12 +47,15 @@ const encodeKeypointOffsets = importShader('encoders/encode-keypoint-offsets.gls
 // encode keypoints
 const encodeKeypoints = importShader('encoders/encode-keypoints.glsl').withArguments('image', 'imageSize', 'encoderLength', 'descriptorSize');
 
+// helper for downloading the keypoints
+const downloadKeypoints = importShader('utils/identity.glsl').withArguments('image');
+
 
 
 
 /**
  * GPUEncoders
- * Texture encoding
+ * Keypoint encoding
  */
 export class GPUEncoders extends SpeedyProgramGroup
 {
@@ -66,9 +69,11 @@ export class GPUEncoders extends SpeedyProgramGroup
     {
         super(gpu, width, height);
         this
-            // Keypoint encoding
             .declare('_encodeKeypointOffsets', encodeKeypointOffsets)
             .declare('_encodeKeypoints', encodeKeypoints, {
+                output: [INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH],
+            })
+            .declare('_downloadKeypoints', downloadKeypoints, {
                 output: [INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH],
                 renderToTexture: false
             })
@@ -81,12 +86,14 @@ export class GPUEncoders extends SpeedyProgramGroup
         this._spawnedAt = performance.now();
     }
 
-
-
-    // -------------------------------------------------------------------------
-    //                       KEYPOINT ENCODING
-    // -------------------------------------------------------------------------
-
+    /**
+     * Keypoint encoder length
+     * @returns {number}
+     */
+    get keypointEncoderLength()
+    {
+        return this._keypointEncoderLength;
+    }
 
     /**
      * Optimizes the keypoint encoder for an expected number of keypoints
@@ -105,19 +112,19 @@ export class GPUEncoders extends SpeedyProgramGroup
         if(newEncoderLength != oldEncoderLength) {
             this._keypointEncoderLength = newEncoderLength;
             this._encodeKeypoints.resize(newEncoderLength, newEncoderLength);
+            this._downloadKeypoints.resize(newEncoderLength, newEncoderLength);
         }
 
         return newEncoderLength - oldEncoderLength;
     }
 
     /**
-     * Encodes the keypoints of an image - this is a bottleneck!
-     * @param {WebGLTexture} corners texture with encoded corners
+     * Encodes the keypoints of an image into a compressed texture
+     * @param {WebGLTexture} corners texture with corners
      * @param {number} [descriptorSize] in bytes
-     * @param {bool} [useAsyncTransfer] transfer data from the GPU without blocking the CPU
-     * @returns {Promise<Array<Uint8Array>>} pixels in the [r,g,b,a, ...] format
+     * @returns {WebGLTexture} texture with encoded keypoints
      */
-    async encodeKeypoints(corners, descriptorSize = 0, useAsyncTransfer = true)
+    encodeKeypoints(corners, descriptorSize = 0)
     {
         // parameters
         const encoderLength = this._keypointEncoderLength;
@@ -125,48 +132,8 @@ export class GPUEncoders extends SpeedyProgramGroup
         const maxIterations = this._tuner.currentValue();
 
         // encode keypoints
-        try {
-            // encode offsets
-            let encodingTime = performance.now();
-            const offsets = this._encodeKeypointOffsets(corners, imageSize, maxIterations);
-            this._encodeKeypoints(offsets, imageSize, encoderLength, descriptorSize);
-            encodingTime = performance.now() - encodingTime;
-
-            // read data from the GPU
-            let pixels, transferTime;
-            if(useAsyncTransfer) {
-                transferTime = performance.now();
-                pixels = await this._encodeKeypoints.readPixelsAsync(0, 0, -1, -1);
-                transferTime = performance.now() - transferTime;
-            }
-            else {
-                transferTime = performance.now();
-                pixels = this._encodeKeypoints.readPixelsSync(); // bottleneck
-                transferTime = performance.now() - transferTime;
-            }
-
-            // tuner: drop noisy feedback when the page loads
-            if(performance.now() >= this._spawnedAt + 2000) {
-                const time = encodingTime + transferTime;
-                this._tuner.feedObservation(time);
-            }
-
-            // debug
-            /*
-            window._p = window._p || 0;
-            window._m = window._m || 0;
-            window._m = 0.9 * window._m + 0.1 * (encodingTime + transferTime);
-            if(window._p++ % 50 == 0)
-                console.log(window._m, ' | ', maxIterations);
-            //console.log(JSON.stringify(this._tuner.info()));
-            */
-
-            // done!
-            return pixels;
-        }
-        catch(err) {
-            Utils.fatal(err);
-        }
+        const offsets = this._encodeKeypointOffsets(corners, imageSize, maxIterations);
+        return this._encodeKeypoints(offsets, imageSize, encoderLength, descriptorSize);
     }
 
     /**
@@ -213,5 +180,47 @@ export class GPUEncoders extends SpeedyProgramGroup
 
         // done!
         return keypoints;
+    }
+
+    /**
+     * Download RAW encoded keypoint data from the GPU - this is a bottleneck!
+     * @param {WebGLTexture} encodedKeypoints texture with keypoints that have already been encoded
+     * @param {bool} [useAsyncTransfer] transfer data from the GPU without blocking the CPU
+     * @returns {Promise<Array<Uint8Array>>} pixels in the [r,g,b,a, ...] format
+     */
+    async downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer = true)
+    {
+        try {
+            // helper shader for reading the data
+            //this._downloadKeypoints(encodedKeypoints);
+
+            // read data from the GPU
+            let downloadTime = performance.now(), pixels;
+            if(useAsyncTransfer)
+                pixels = await this._encodeKeypoints.readPixelsAsync(0, 0, -1, -1);
+            else
+                pixels = this._encodeKeypoints.readPixelsSync(); // bottleneck!
+            downloadTime = performance.now() - downloadTime;
+
+            // tuner: drop noisy feedback when the page loads
+            if(performance.now() >= this._spawnedAt + 2000)
+                this._tuner.feedObservation(downloadTime);
+
+            // debug
+            /*
+            window._p = window._p || 0;
+            window._m = window._m || 0;
+            window._m = 0.9 * window._m + 0.1 * downloadTime;
+            if(window._p++ % 50 == 0)
+                console.log(window._m, ' | ', maxIterations);
+            //console.log(JSON.stringify(this._tuner.info()));
+            */
+
+            // done!
+            return pixels;
+        }
+        catch(err) {
+            Utils.fatal(err);
+        }
     }
 }
