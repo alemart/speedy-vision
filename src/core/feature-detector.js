@@ -68,9 +68,12 @@ export class FeatureDetector
         const texture = this._uploadToTexture(media, settings.denoise);
         const greyscale = gpu.programs.colors.rgb2grey(texture);
 
-        // extract features
+        // find & encode features
         const keypoints = FAST.run(gpu, greyscale, n, settings);
-        return this._extractKeypoints(keypoints, 0, this._optimizeForDynamicUsage, settings.max);
+        const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(keypoints, 0);
+
+        // download features
+        return this._downloadKeypoints(encodedKeypoints, 0, this._optimizeForDynamicUsage, settings.max);
     }
 
     /**
@@ -91,9 +94,12 @@ export class FeatureDetector
         const texture = this._uploadToTexture(media, settings.denoise);
         const greyscale = gpu.programs.colors.rgb2grey(texture);
 
-        // extract features
+        // find & encode features
         const keypoints = MultiscaleFAST.run(gpu, greyscale, n, settings);
-        return this._extractKeypoints(keypoints, 0, this._optimizeForDynamicUsage, settings.max);
+        const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(keypoints, 0);
+
+        // download features
+        return this._downloadKeypoints(encodedKeypoints, 0, this._optimizeForDynamicUsage, settings.max);
     }
 
     /**
@@ -113,9 +119,12 @@ export class FeatureDetector
         const texture = this._uploadToTexture(media, settings.denoise);
         const greyscale = gpu.programs.colors.rgb2grey(texture);
 
-        // extract features
+        // find & encode features
         const keypoints = Harris.run(gpu, greyscale, settings);
-        return this._extractKeypoints(keypoints, 0, this._optimizeForDynamicUsage, settings.max);
+        const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(keypoints, 0);
+
+        // download features
+        return this._downloadKeypoints(encodedKeypoints, 0, this._optimizeForDynamicUsage, settings.max);
     }
 
     /**
@@ -135,9 +144,12 @@ export class FeatureDetector
         const texture = this._uploadToTexture(media, settings.denoise);
         const greyscale = gpu.programs.colors.rgb2grey(texture);
 
-        // extract features
+        // find & encode features
         const keypoints = MultiscaleHarris.run(gpu, greyscale, settings);
-        return this._extractKeypoints(keypoints, 0, this._optimizeForDynamicUsage, settings.max);
+        const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(keypoints, 0);
+
+        // download features
+        return this._downloadKeypoints(encodedKeypoints, 0, this._optimizeForDynamicUsage, settings.max);
     }
 
     /**
@@ -157,16 +169,18 @@ export class FeatureDetector
         const texture = this._uploadToTexture(media, settings.denoise);
         const greyscale = gpu.programs.colors.rgb2grey(texture);
 
-        // extract features
+        // find & encode features
         const keypoints = BRISK.run(gpu, greyscale, settings);
-        return this._extractKeypoints(keypoints, 0, this._optimizeForDynamicUsage, settings.max);
+        const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(keypoints, 0);
+
+        // download features
+        return this._downloadKeypoints(encodedKeypoints, 0, this._optimizeForDynamicUsage, settings.max);
     }
 
-    // given a corner-encoded texture, return a Promise
-    // that resolves to an Array of keypoints
-    _extractKeypoints(corners, descriptorSize = 0, useAsyncTransfer = true, max = -1, gpu = this._gpu)
+    // given a texture of encoded keypoints, this function will download data
+    // from the GPU and return a Promise that resolves to an Array of keypoints
+    _downloadKeypoints(encodedKeypoints, descriptorSize = 0, useAsyncTransfer = true, max = -1, gpu = this._gpu)
     {
-        const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(corners, descriptorSize);
         return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer).then(data => {
             // when processing a video, we expect that the number of keypoints
             // in time is a relatively smooth curve
