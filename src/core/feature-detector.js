@@ -179,7 +179,7 @@ export class FeatureDetector
             this._lastKeypointCount = newCount;
             this._lastKeypointEncoderOutput = keypoints.length;
             gpu.programs.encoders.optimizeKeypointEncoder(newCount, descriptorSize);
-            document.querySelector('mark').innerHTML = gpu.programs.encoders._keypointEncoderLength;
+            //document.querySelector('mark').innerHTML = gpu.programs.encoders._keypointEncoderLength;
 
             // sort the data according to cornerness score
             keypoints.sort(scoreCmp);

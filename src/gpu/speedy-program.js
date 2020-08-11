@@ -97,18 +97,7 @@ export class SpeedyProgram extends Function
         options.output[1] = height;
 
         // resize stdprog
-        //if(options.renderToTexture)
-        //    this._stdprog.detachFBO();
-
-        this._stdprog.width = width;
-        this._stdprog.height = height;
-
-        //if(options.renderToTexture)
-        //    this._stdprog.attachFBO(options.pingpong);
-
-        // set dirty flag to update texSize uniform later
-        this._stdprog.dirtySize = true;
-        //console.log(`Resized program to ${width} x ${height}`);
+        this._stdprog.resize(width, height);
 
         // reallocate pixel buffers
         this._reallocatePixelBuffers(width, height);
@@ -567,6 +556,66 @@ StandardProgram.prototype.pingpong = function()
 {
     if(this._fbo != null && this._fbo.length > 1)
         this._texIndex = 1 - this._texIndex;
+}
+
+// Resize
+StandardProgram.prototype.resize = function(width, height)
+{
+    const gl = this.gl;
+    const oldWidth = this.width;
+    const oldHeight = this.height;
+
+    // validate size
+    width = Math.max(1, width | 0);
+    height = Math.max(1, height | 0);
+
+    // update size
+    this.width = width;
+    this.height = height;
+
+    // set dirty flag to update texSize uniform later
+    this.dirtySize = true;
+
+    // resize textures
+    if(this._fbo != null) {
+        const numTextures = this._fbo.length;
+        const newTexture = Array(numTextures).fill(null);
+        const newFBO = Array(numTextures).fill(null);
+
+        // create textures with new size & old content
+        for(let i = 0; i < numTextures; i++) {
+            newTexture[i] = GLUtils.createTexture(gl, width, height);
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo[i]);
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, newTexture[i]);
+            gl.copyTexSubImage2D(gl.TEXTURE_2D,     // target
+                                 0,                 // mipmap level
+                                 0,                 // xoffset
+                                 0,                 // yoffset
+                                 0,                 // x
+                                 0,                 // y
+                                 Math.min(width, oldWidth),    // width
+                                 Math.min(height, oldHeight)); // height
+            gl.bindTexture(gl.TEXTURE_2D, null);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+            newFBO[i] = GLUtils.createFramebuffer(gl, newTexture[i]);
+        }
+
+        // release old textures
+        for(let fbo of this._fbo)
+            GLUtils.destroyFramebuffer(gl, fbo);
+
+        for(let texture of this._texture)
+            GLUtils.destroyTexture(gl, texture);
+
+        // update references
+        this._texture = newTexture;
+        this._fbo = newFBO;
+    }
+
+    console.log(`Resized program to ${width} x ${height}`);
 }
 
 

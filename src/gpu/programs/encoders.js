@@ -72,7 +72,7 @@ export class GPUEncoders extends SpeedyProgramGroup
             .declare('_encodeKeypointOffsets', encodeKeypointOffsets)
             .declare('_encodeKeypoints', encodeKeypoints, {
                 output: [INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH],
-                renderToTexture: false
+                //renderToTexture: false
             })
             .declare('_downloadKeypoints', downloadKeypoints, {
                 output: [INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH],
@@ -85,7 +85,6 @@ export class GPUEncoders extends SpeedyProgramGroup
         this._tuner = new StochasticTuner(48, 32, 48/*255*/, 0.2, 8, 60, neighborFn);
         this._keypointEncoderLength = INITIAL_ENCODER_LENGTH;
         this._spawnedAt = performance.now();
-        //document.body.appendChild(gpu.canvas);
     }
 
     /**
@@ -194,14 +193,14 @@ export class GPUEncoders extends SpeedyProgramGroup
     {
         try {
             // helper shader for reading the data
-            //this._downloadKeypoints(encodedKeypoints);
+            this._downloadKeypoints(encodedKeypoints);
 
             // read data from the GPU
             let downloadTime = performance.now(), pixels;
             if(useAsyncTransfer)
-                pixels = await this._encodeKeypoints.readPixelsAsync(0, 0, -1, -1);
+                pixels = await this._downloadKeypoints.readPixelsAsync();
             else
-                pixels = this._encodeKeypoints.readPixelsSync(); // bottleneck!
+                pixels = this._downloadKeypoints.readPixelsSync(); // bottleneck!
             downloadTime = performance.now() - downloadTime;
 
             // tuner: drop noisy feedback when the page loads
