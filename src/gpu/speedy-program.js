@@ -527,8 +527,13 @@ StandardProgram.prototype.attachFBO = function(pingpong = false)
     const numTextures = pingpong ? 2 : 1;
 
     this._texIndex = 0;
-    this._texture = Array(numTextures).fill(null).map(() => GLUtils.createTexture(gl, width, height));
-    this._fbo = Array(numTextures).fill(null).map((_, i) => GLUtils.createFramebuffer(gl, this._texture[i]));
+    this._texture = Array(numTextures);
+    this._fbo = Array(numTextures);
+
+    for(let i = 0; i < numTextures; i++) {
+        this._texture[i] = GLUtils.createTexture(gl, width, height);
+        this._fbo[i] = GLUtils.createFramebuffer(gl, this._texture[i]);
+    }
 }
 
 // Detach a framebuffer object from a standard program
@@ -579,8 +584,8 @@ StandardProgram.prototype.resize = function(width, height)
     // resize textures
     if(this._fbo != null) {
         const numTextures = this._fbo.length;
-        const newTexture = Array(numTextures).fill(null);
-        const newFBO = Array(numTextures).fill(null);
+        const newTexture = Array(numTextures);
+        const newFBO = Array(numTextures);
 
         // create textures with new size & old content
         for(let i = 0; i < numTextures; i++) {
@@ -615,7 +620,7 @@ StandardProgram.prototype.resize = function(width, height)
         this._fbo = newFBO;
     }
 
-    console.log(`Resized program to ${width} x ${height}`);
+    //console.log(`Resized program to ${width} x ${height}`);
 }
 
 
