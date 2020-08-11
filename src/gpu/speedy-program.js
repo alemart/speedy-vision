@@ -163,6 +163,8 @@ export class SpeedyProgram extends Function
     /**
      * Read pixels from the output texture asynchronously with PBOs.
      * You may optionally specify a (x,y,width,height) sub-rectangle.
+     * (this won't work very well if options.renderToTexture == false
+     * and you display the canvas)
      * @param {number} [x]
      * @param {number} [y] 
      * @param {number} [width]
@@ -307,7 +309,7 @@ export class SpeedyProgram extends Function
         gl.useProgram(stdprog.program);
 
         // update texSize uniform
-        if(stdprog.dirtySize) { // if got resized
+        if(stdprog.dirtySize) { // if the program was resized
             gl.uniform2f(stdprog.uniform.texSize.location, stdprog.width, stdprog.height);
             stdprog.dirtySize = false;
         }
@@ -333,12 +335,13 @@ export class SpeedyProgram extends Function
                 Utils.fatal(`Can't run shader: unknown parameter "${argname}": ${args[i]}`);
         }
 
-        // render
+        // bind fbo
         if(options.renderToTexture)
             gl.bindFramebuffer(gl.FRAMEBUFFER, stdprog.fbo);
         else
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
+        // render
         gl.viewport(0, 0, stdprog.width, stdprog.height);
         gl.drawArrays(gl.TRIANGLE_STRIP,
                       0,        // offset
@@ -371,8 +374,10 @@ export class SpeedyProgram extends Function
                 stdprog.pingpong();
         }
 
-        // return texture (if available)
+        // unbind fbo
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        // return texture (if available)
         return outputTexture;
     }
 
@@ -388,6 +393,8 @@ export class SpeedyProgram extends Function
                 Utils.fatal(`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
             else if(value === this._stdprog.texture)
                 Utils.fatal(`Can't run shader: cannot use its output texture as an input to itself`);
+            else if(value == null)
+                Utils.fatal(`Can't run shader: cannot use null as an input texture`);
 
             gl.activeTexture(gl.TEXTURE0 + texNo);
             gl.bindTexture(gl.TEXTURE_2D, value);

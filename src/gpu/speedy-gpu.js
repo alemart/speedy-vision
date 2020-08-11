@@ -342,7 +342,7 @@ function createWebGLContext(canvas)
     const gl = canvas.getContext('webgl2', {
         premultipliedAlpha: false,
         preserveDrawingBuffer: false,
-        //preferLowPowerToHighPerformance: false,
+        //preferLowPowerToHighPerformance: false, // TODO user option?
         alpha: true,
         antialias: false,
         depth: false,

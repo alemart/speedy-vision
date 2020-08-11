@@ -72,10 +72,11 @@ export class GPUEncoders extends SpeedyProgramGroup
             .declare('_encodeKeypointOffsets', encodeKeypointOffsets)
             .declare('_encodeKeypoints', encodeKeypoints, {
                 output: [INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH],
+                renderToTexture: false
             })
             .declare('_downloadKeypoints', downloadKeypoints, {
                 output: [INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH],
-                renderToTexture: false
+                //renderToTexture: false
             })
         ;
 
@@ -84,6 +85,7 @@ export class GPUEncoders extends SpeedyProgramGroup
         this._tuner = new StochasticTuner(48, 32, 48/*255*/, 0.2, 8, 60, neighborFn);
         this._keypointEncoderLength = INITIAL_ENCODER_LENGTH;
         this._spawnedAt = performance.now();
+        //document.body.appendChild(gpu.canvas);
     }
 
     /**

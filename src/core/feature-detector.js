@@ -26,7 +26,8 @@ import { SensitivityTuner, TestTuner } from '../utils/tuner';
 import { Utils } from '../utils/utils';
 
 // constants
-const OPTIMIZER_GROWTH_WEIGHT = 0.02; // in [0,1]
+const OPTIMIZER_GROWTH_WEIGHT_ASYNC = 0.02; // used when using async downloads
+const OPTIMIZER_GROWTH_WEIGHT_SYNC = 2.0; // used when using sync downloads
 const scoreCmp = (a, b) => (+(b.score)) - (+(a.score));
 
 /**
@@ -172,13 +173,13 @@ export class FeatureDetector
             const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize);
             const currCount = Math.max(keypoints.length, 64); // may explode if abrupt video changes
             const prevCount = Math.max(this._lastKeypointCount, 64);
-            const newCount = Math.ceil(OPTIMIZER_GROWTH_WEIGHT * currCount + (1.0 - OPTIMIZER_GROWTH_WEIGHT) * prevCount);
+            const weight = useAsyncTransfer ? OPTIMIZER_GROWTH_WEIGHT_ASYNC : OPTIMIZER_GROWTH_WEIGHT_SYNC;
+            const newCount = Math.ceil(weight * currCount + (1.0 - weight) * prevCount);
 
             this._lastKeypointCount = newCount;
             this._lastKeypointEncoderOutput = keypoints.length;
-            if(useAsyncTransfer) // FIXME: use some other flag?
-                gpu.programs.encoders.optimizeKeypointEncoder(newCount, descriptorSize);
-            //document.querySelector('mark').innerHTML = gpu.programs.encoders._keypointEncoderLength;
+            gpu.programs.encoders.optimizeKeypointEncoder(newCount, descriptorSize);
+            document.querySelector('mark').innerHTML = gpu.programs.encoders._keypointEncoderLength;
 
             // sort the data according to cornerness score
             keypoints.sort(scoreCmp);
