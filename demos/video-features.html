@@ -58,7 +58,7 @@ window.onload = async function()
 
         // find & render features
         media.findFeatures({
-            method: multiscale.checked ? 'multiscale-fast' : 'fast',
+            method: multiscale.checked ? 'multiscale-harris' : 'fast',
             sensitivity: sensitivity,
         }).then(f => {
             features = f;
