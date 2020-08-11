@@ -83,7 +83,7 @@ export class FeatureDetector
      * @param {object} [settings] Additional settings
      * @returns {Promise<Array<SpeedyFeature>>} keypoints
      */
-    fastPlus(media, n = 9, settings = {})
+    multiscaleFast(media, n = 9, settings = {})
     {
         const gpu = this._gpu;
 
@@ -179,8 +179,10 @@ export class FeatureDetector
 
     // given a texture of encoded keypoints, this function will download data
     // from the GPU and return a Promise that resolves to an Array of keypoints
-    _downloadKeypoints(encodedKeypoints, descriptorSize = 0, useAsyncTransfer = true, max = -1, gpu = this._gpu)
+    _downloadKeypoints(encodedKeypoints, descriptorSize = 0, useAsyncTransfer = true, max = -1)
     {
+        const gpu = this._gpu;
+
         return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer).then(data => {
             // when processing a video, we expect that the number of keypoints
             // in time is a relatively smooth curve
