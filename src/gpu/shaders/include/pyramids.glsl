@@ -50,6 +50,17 @@
  */
 #define pyrPixelAt(pyr, pos, lod) textureLod((pyr), (vec2(pos) + vec2(0.5f)) / texSize, (lod))
 
+/**
+ * Get a specific pixel at a specific level-of-detail
+ * Similar to pyrPixelAt(), expect that this accepts a texture size different than texSize
+ * @param {sampler2D} pyr pyramid
+ * @param {ivec2} pos pixel position considering lod = 0
+ * @param {float} lod level-of-detail
+ * @param {ivec2} pyrBaseSize this is textureSize(pyr, 0)
+ * @returns {vec4} pixel data
+ */
+#define pyrPixelAtEx(pyr, pos, lod, pyrBaseSize) textureLod((pyr), (vec2(pos) + vec2(0.5f)) / vec2(pyrBaseSize), (lod))
+
 /*
  * Image scale is encoded in the alpha channel (a)
  * according to the following model:

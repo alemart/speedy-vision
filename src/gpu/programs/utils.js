@@ -21,8 +21,9 @@
 
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
-import { PixelComponent } from '../../utils/types';
 import { GLUtils } from '../gl-utils';
+import { PixelComponent, ColorComponentId } from '../../utils/types';
+import { Utils } from '../../utils/utils';
 
 
 
@@ -50,7 +51,6 @@ const copyComponents = importShader('utils/copy-components.glsl').withArguments(
 
 // Scan the entire image and find the minimum & maximum pixel intensity
 const scanMinMax2D = importShader('utils/scan-minmax2d.glsl').withArguments('image', 'iterationNumber');
-
 
 
 
@@ -93,7 +93,7 @@ export class GPUUtils extends SpeedyProgramGroup
             .declare('fillComponents', fillComponents)
 
             // Copy the src component of src to zero or more color components of a copy of dest
-            .declare('copyComponents', copyComponents)
+            .declare('_copyComponents', copyComponents)
 
             // find minimum & maximum pixel intensity for each row and column
             /*.declare('_scanMinMax1D', scanMinMax1D, {
@@ -142,6 +142,23 @@ export class GPUUtils extends SpeedyProgramGroup
     }
 
     /**
+     * Copy color component
+     * @param {WebGLTexture} dest
+     * @param {WebGLTexture} src 
+     * @param {number} destComponents one or more PixelComponent flags
+     * @param {number} srcComponent a single PixelComponent flag
+     * @returns {WebGLTexture} a copy of dest with its destComponents replaced by the srcComponent of src
+     */
+    copyComponents(dest, src, destComponents, srcComponent)
+    {
+        if(!ColorComponentId.hasOwnProperty(srcComponent))
+            Utils.fatal(`Invalid srcComponent: ${srcComponent}`)
+
+        const srcComponentId = ColorComponentId[srcComponent];
+        return this._copyComponents(dest, src, destComponents, srcComponentId);
+    }
+
+    /**
      * Scan a single component in all pixels of the image and find the min or max intensity
      * @param {WebGLTexture} image 
      * @param {number} pixelComponent a single PixelComponent flag
@@ -154,13 +171,12 @@ export class GPUUtils extends SpeedyProgramGroup
         // FIXME: combinations of PixelComponent (e.g., PixelComponent.ALL)
         //        are currently unsupported. Make separate calls.
         //
-        const componentId = Math.max(0, Math.min(Math.log2(pixelComponent), 3)) | 0;
         const numIterations = Math.ceil(Math.log2(Math.max(this._width, this._height))) | 0;
-        let texture = this.copyComponents(image, image, PixelComponent.ALL, componentId);
+        let texture = this.copyComponents(image, image, PixelComponent.ALL, pixelComponent);
 
         for(let i = 0; i < numIterations; i++)
             texture = this._scanMinMax2D(texture, i);
 
-        return this.copyComponents(image, texture, (1 << componentId), max ? 0 : 1);
+        return this.copyComponents(image, texture, pixelComponent, max ? PixelComponent.RED : PixelComponent.GREEN);
     }
 }

@@ -106,7 +106,7 @@ void main()
 
             default: {
                 // write descriptor
-                int i = r - 2; // take the i-th descriptor pixel of the q-th keypoint (i = 0, 1...)
+                color = vec4(0.0f);
                 break;
             }
         }

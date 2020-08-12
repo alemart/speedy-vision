@@ -41,3 +41,10 @@ export const PixelComponent = Object.freeze({
     ALPHA: 8,
     ALL:   15 // = RED | GREEN | BLUE | ALPHA
 });
+
+export const ColorComponentId = Object.freeze({
+    [PixelComponent.RED]:   0,
+    [PixelComponent.GREEN]: 1,
+    [PixelComponent.BLUE]:  2,
+    [PixelComponent.ALPHA]: 3
+});

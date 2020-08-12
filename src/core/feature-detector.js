@@ -24,6 +24,7 @@ import { BRISK } from './algorithms/brisk.js';
 import { Harris, MultiscaleHarris } from './algorithms/harris.js';
 import { SensitivityTuner, TestTuner } from '../utils/tuner';
 import { Utils } from '../utils/utils';
+import { PixelComponent } from '../utils/types';
 
 // constants
 const OPTIMIZER_GROWTH_WEIGHT_ASYNC = 0.02; // used when using async downloads
@@ -169,6 +170,7 @@ export class FeatureDetector
 
         // setup settings
         settings = this._setupSettings(settings);
+        settings.depth = 3;
 
         // pre-processing the image...
         const texture = this._uploadToTexture(media, settings.denoise);
@@ -178,9 +180,13 @@ export class FeatureDetector
         const keypoints = MultiscaleHarris.run(gpu, greyscale, settings); // nicer corners
         const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(keypoints, descriptorSize);
 
+        // smooth the image before computing the descriptors
+        const smoothImage = gpu.programs.filters.gauss7(greyscale);
+        const smoothKeypoints = gpu.programs.utils.copyComponents(keypoints, smoothImage, PixelComponent.GREEN, PixelComponent.GREEN);
+
         // compute descriptors
         const encoderLength = gpu.programs.encoders.encoderLength;
-        const encodedKeypointsWithDescriptors = gpu.programs.descriptors.orb(encodedKeypoints, encoderLength, keypoints);
+        const encodedKeypointsWithDescriptors = gpu.programs.descriptors.orb(encodedKeypoints, encoderLength, smoothKeypoints);
 
         // download features
         return this._downloadKeypoints(encodedKeypointsWithDescriptors, descriptorSize, this._optimizeForDynamicUsage, settings.max);

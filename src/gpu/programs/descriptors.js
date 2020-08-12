@@ -57,9 +57,9 @@ export class GPUDescriptors extends SpeedyProgramGroup
 
     /**
      * Compute ORB descriptor (256 bits)
-     * @param {WebGLTexture} encodedCorners
+     * @param {WebGLTexture} encodedCorners tiny texture
      * @param {number} encoderLength
-     * @param {WebGLTexture} orientedCorners
+     * @param {WebGLTexture} orientedCorners pre-smoothed on the intensity channel
      * @return {WebGLTexture}
      */
     orb(encodedCorners, encoderLength, orientedCorners)

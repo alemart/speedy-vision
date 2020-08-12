@@ -25,7 +25,7 @@
 
 uniform sampler2D encodedCorners;
 uniform int encoderLength;
-uniform sampler2D orientedCorners; // applied Gaussian on the intensity channel
+uniform sampler2D orientedCorners; // previously smoothed with a Gaussian
 
 // ORB constants
 const int descriptorSize = 32; // 32 bytes = 256 bits = 8 pixels
@@ -33,8 +33,10 @@ const int pixelsPerKeypoint = 10; // 2 + descriptorSize / 4
 
 // ORB pattern adapted from
 // OpenCV's BSD-licensed code
-/*
-const ivec4 pattern[256] = ivec4[256](
+// => pattern to be used with
+//    a patch of size 31
+//    centered on the keypoint
+const ivec4 pat31[256] = ivec4[256](
     ivec4(8,-3,9,5),
     ivec4(4,2,7,-12),
     ivec4(-11,9,-8,2),
@@ -292,20 +294,30 @@ const ivec4 pattern[256] = ivec4[256](
     ivec4(7,0,12,-2),
     ivec4(-1,-6,0,-11)
 );
-*/
 
-struct Keypoint
+// grab & rotate rotate a pair of pattern points given a pattern index in [0,255]
+void getPair(int index, float kcos, float ksin, out ivec2 p, out ivec2 q)
+{
+    ivec4 data = pat31[index];
+    vec2 op = vec2(data.xy);
+    vec2 oq = vec2(data.zw);
+
+    p = ivec2(round(op.x * kcos - op.y * ksin), round(op.x * ksin + op.y * kcos));
+    q = ivec2(round(oq.x * kcos - oq.y * ksin), round(oq.x * ksin + oq.y * kcos));
+}
+
+// feature struct
+struct ORBFeature
 {
     ivec2 position;
     float orientation;
     float lod; // level-of-detail / scale
-    float score;
 };
 
 // ORB
 void main()
 {
-    Keypoint keypoint;
+    ORBFeature keypoint;
     vec4 pixel = threadPixel(encodedCorners);
     ivec2 thread = threadLocation();
     int threadRaster = thread.y * encoderLength + thread.x;
@@ -332,16 +344,34 @@ void main()
     vec4 encodedProperties = texelFetch(encodedCorners, propertiesCellPos, 0);
     keypoint.orientation = decodeOrientation(encodedProperties.g); // in radians
     keypoint.lod = decodeLod(encodedProperties.r); // level-of-detail
-    //keypoint.score = encodedProperties.b;
 
-    // need to run 32 intensity tests
-    /*
-    uint test[4] = uint[](0, 0, 0, 0);
-    for(int i = 0; i < descriptorSize; i += 8) {
-        int t = i >> 3;
+    // preprocessing...
+    float pot = exp2(keypoint.lod);
+    vec2 kpos = vec2(keypoint.position);
+    float kcos = cos(keypoint.orientation);
+    float ksin = sin(keypoint.orientation);
+
+    // compute binary descriptor
+    // need to run 32 intensity tests for each pixel (32 bits)
+    vec2 imageSize = vec2(textureSize(orientedCorners, 0));
+    int patternStart = 32 * descriptorCell;
+    uint test[4] = uint[4](0u, 0u, 0u, 0u);
+    for(int t = 0; t < 4; t++) {
+        uint bits = 0u;
+        ivec2 p, q;
+        vec4 a, b;
+        int i = t * 8;
+
+        for(int j = 0; j < 8; j++) {
+            getPair(patternStart + i + j, kcos, ksin, p, q);
+            a = pyrPixelAtEx(orientedCorners, round(kpos + pot * vec2(p)), keypoint.lod, imageSize);
+            b = pyrPixelAtEx(orientedCorners, round(kpos + pot * vec2(q)), keypoint.lod, imageSize);
+            bits |= uint(a.g < b.g) << j;
+        }
+
+        test[t] = bits;
     }
-    */
 
-    // test
-    color = vec4(1,0,0,1);
+    // done!
+    color = vec4(float(test[0]) / 255.0f, float(test[1]) / 255.0f, float(test[2]) / 255.0f, float(test[3]) / 255.0f);
 }
