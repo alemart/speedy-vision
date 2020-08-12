@@ -77,29 +77,28 @@ export class SpeedyProgram extends Function
      */
     resize(width, height)
     {
-        const gl = this._gl;
-        const options = this._options;
-
         // lost context?
+        const gl = this._gl;
         if(gl.isContextLost())
-            return;
-
-        // no need to resize?
-        if(width === this._stdprog.width && height === this._stdprog.height)
             return;
 
         // get size
         width = Math.max(1, width | 0);
         height = Math.max(1, height | 0);
 
+        // no need to resize?
+        if(width === this._stdprog.width && height === this._stdprog.height)
+            return;
+
         // update options.output
+        const options = this._options;
         options.output[0] = width;
         options.output[1] = height;
 
         // resize stdprog
         this._stdprog.resize(width, height);
 
-        // reallocate pixel buffers
+        // reallocate buffers for reading pixels
         this._reallocatePixelBuffers(width, height);
     }
 

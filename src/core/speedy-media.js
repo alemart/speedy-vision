@@ -320,6 +320,7 @@ export class SpeedyMedia
             'brisk': (media, settings) => this._featureDetector.brisk(media, settings), // BRISK
             'harris': (media, settings) => this._featureDetector.harris(media, settings), // Harris
             'multiscale-harris': (media, settings) => this._featureDetector.multiscaleHarris(media, settings), // Harris
+            'orb': (media, settings) => this._featureDetector.orb(media, settings), // ORB detector & descriptor
         });
 
         // Validate method

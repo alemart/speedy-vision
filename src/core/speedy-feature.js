@@ -16,8 +16,10 @@
  * limitations under the License.
  *
  * speedy-feature.js
- * SpeedyFeature implementation
+ * Feature Point class
  */
+
+import { NullDescriptor } from './speedy-descriptor';
 
 /**
  * A SpeedyFeature is a keypoint in an image,
@@ -32,7 +34,7 @@ export class SpeedyFeature
      * @param {number} [scale] Scale
      * @param {number} [rotation] Rotation in radians
      * @param {number} [score] Cornerness measure
-     * @param {FeatureDescriptor} [descriptor] Feature descriptor
+     * @param {SpeedyDescriptor} [descriptor] Feature descriptor
      */
     constructor(x, y, scale = 1.0, rotation = 0.0, score = 0.0, descriptor = null)
     {
@@ -41,7 +43,7 @@ export class SpeedyFeature
         this._scale = +scale;
         this._rotation = +rotation;
         this._score = +score;
-        this._descriptor = descriptor;
+        this._descriptor = descriptor === null ? new NullDescriptor() : descriptor;
     }
 
     /**
@@ -99,9 +101,8 @@ export class SpeedyFeature
     }
 
     /**
-     * The descriptor of the feature point, or null
-     * if there isn't any
-     * @return {FeatureDescriptor|null} feature descriptor
+     * The descriptor of the feature point
+     * @return {SpeedyDescriptor} feature descriptor
      */
     get descriptor()
     {

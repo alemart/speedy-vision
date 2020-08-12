@@ -15,8 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * colors.js
- * Color routines & conversion algorithms
+ * descriptors.js
+ * Feature descriptors
  */
 
 import { SpeedyProgramGroup } from '../speedy-program-group';
@@ -28,17 +28,17 @@ import { importShader } from '../shader-declaration';
 // Shaders
 //
 
-// Convert to greyscale
-const rgb2grey = importShader('colors/rgb2grey.glsl').withArguments('image');
+// ORB
+const orb = importShader('descriptors/orb.glsl').withArguments('encodedCorners', 'encoderLength', 'orientedCorners');
 
 
 
 
 /**
- * GPUColors
- * Color routines & conversion algorithms
+ * GPUDescriptors
+ * Feature descriptors
  */
-export class GPUColors extends SpeedyProgramGroup
+export class GPUDescriptors extends SpeedyProgramGroup
 {
     /**
      * Class constructor
@@ -50,8 +50,21 @@ export class GPUColors extends SpeedyProgramGroup
     {
         super(gpu, width, height);
         this
-            // convert to greyscale
-            .declare('rgb2grey', rgb2grey)
+            // ORB
+            .declare('_orb', orb)
         ;
+    }
+
+    /**
+     * Compute ORB descriptor (256 bits)
+     * @param {WebGLTexture} encodedCorners
+     * @param {number} encoderLength
+     * @param {WebGLTexture} orientedCorners
+     * @return {WebGLTexture}
+     */
+    orb(encodedCorners, encoderLength, orientedCorners)
+    {
+        this._orb.resize(encoderLength, encoderLength);
+        return this._orb(encodedCorners, encoderLength, orientedCorners);
     }
 }

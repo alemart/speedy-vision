@@ -15,13 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * gpu-encoders.js
+ * encoders.js
  * Texture encoders
  */
 
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
 import { SpeedyFeature } from '../../core/speedy-feature';
+import { BinaryDescriptor } from '../../core/speedy-descriptor';
 import { StochasticTuner } from '../../utils/tuner';
 import { Utils } from '../../utils/utils'
 
@@ -89,7 +90,7 @@ export class GPUEncoders extends SpeedyProgramGroup
      * Keypoint encoder length
      * @returns {number}
      */
-    get keypointEncoderLength()
+    get encoderLength()
     {
         return this._keypointEncoderLength;
     }
@@ -151,7 +152,7 @@ export class GPUEncoders extends SpeedyProgramGroup
         let x, y, scale, rotation, score;
         let hasScale, hasRotation;
 
-        for(let i = 0; i < pixels.length; i += 4 * pixelsPerKeypoint) {
+        for(let i = 0; i < pixels.length; i += 4 /* RGBA */ * pixelsPerKeypoint) {
             x = (pixels[i+1] << 8) | pixels[i];
             y = (pixels[i+3] << 8) | pixels[i+2];
             if(x >= w || y >= h)
@@ -167,7 +168,13 @@ export class GPUEncoders extends SpeedyProgramGroup
 
             score = pixels[i+6] / 255.0;
 
-            keypoints.push(new SpeedyFeature(x, y, scale, rotation, score));
+            if(descriptorSize > 0) {
+                const bytes = new Uint8Array(pixels.slice(i+8, i+8 + descriptorSize));
+                const descriptor = new BinaryDescriptor(bytes);
+                keypoints.push(new SpeedyFeature(x, y, scale, rotation, score, descriptor));
+            }
+            else
+                keypoints.push(new SpeedyFeature(x, y, scale, rotation, score));
         }
 
         // developer's secret ;)

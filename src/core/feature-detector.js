@@ -59,6 +59,7 @@ export class FeatureDetector
      */
     fast(media, n = 9, settings = {})
     {
+        const descriptorSize = 0; // no descriptor
         const gpu = this._gpu;
 
         // setup settings
@@ -70,10 +71,10 @@ export class FeatureDetector
 
         // find & encode features
         const keypoints = FAST.run(gpu, greyscale, n, settings);
-        const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(keypoints, 0);
+        const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(keypoints, descriptorSize);
 
         // download features
-        return this._downloadKeypoints(encodedKeypoints, 0, this._optimizeForDynamicUsage, settings.max);
+        return this._downloadKeypoints(encodedKeypoints, descriptorSize, this._optimizeForDynamicUsage, settings.max);
     }
 
     /**
@@ -85,6 +86,7 @@ export class FeatureDetector
      */
     multiscaleFast(media, n = 9, settings = {})
     {
+        const descriptorSize = 0; // no descriptor
         const gpu = this._gpu;
 
         // setup settings
@@ -96,10 +98,10 @@ export class FeatureDetector
 
         // find & encode features
         const keypoints = MultiscaleFAST.run(gpu, greyscale, n, settings);
-        const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(keypoints, 0);
+        const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(keypoints, descriptorSize);
 
         // download features
-        return this._downloadKeypoints(encodedKeypoints, 0, this._optimizeForDynamicUsage, settings.max);
+        return this._downloadKeypoints(encodedKeypoints, descriptorSize, this._optimizeForDynamicUsage, settings.max);
     }
 
     /**
@@ -110,6 +112,7 @@ export class FeatureDetector
      */
     harris(media, settings = {})
     {
+        const descriptorSize = 0; // no descriptor
         const gpu = this._gpu;
 
         // setup settings
@@ -121,10 +124,10 @@ export class FeatureDetector
 
         // find & encode features
         const keypoints = Harris.run(gpu, greyscale, settings);
-        const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(keypoints, 0);
+        const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(keypoints, descriptorSize);
 
         // download features
-        return this._downloadKeypoints(encodedKeypoints, 0, this._optimizeForDynamicUsage, settings.max);
+        return this._downloadKeypoints(encodedKeypoints, descriptorSize, this._optimizeForDynamicUsage, settings.max);
     }
 
     /**
@@ -135,6 +138,7 @@ export class FeatureDetector
      */
     multiscaleHarris(media, settings = {})
     {
+        const descriptorSize = 0; // no descriptor
         const gpu = this._gpu;
 
         // setup settings
@@ -146,10 +150,40 @@ export class FeatureDetector
 
         // find & encode features
         const keypoints = MultiscaleHarris.run(gpu, greyscale, settings);
-        const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(keypoints, 0);
+        const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(keypoints, descriptorSize);
 
         // download features
-        return this._downloadKeypoints(encodedKeypoints, 0, this._optimizeForDynamicUsage, settings.max);
+        return this._downloadKeypoints(encodedKeypoints, descriptorSize, this._optimizeForDynamicUsage, settings.max);
+    }
+
+    /**
+     * ORB detector & descriptor
+     * @param {SpeedyMedia} media
+     * @param {object} [settings]
+     * @returns {Promise<Array<SpeedyFeature>>} keypoints
+     */
+    orb(media, settings = {})
+    {
+        const descriptorSize = 32; // 256 bits
+        const gpu = this._gpu;
+
+        // setup settings
+        settings = this._setupSettings(settings);
+
+        // pre-processing the image...
+        const texture = this._uploadToTexture(media, settings.denoise);
+        const greyscale = gpu.programs.colors.rgb2grey(texture);
+
+        // find & encode features
+        const keypoints = MultiscaleHarris.run(gpu, greyscale, settings); // nicer corners
+        const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(keypoints, descriptorSize);
+
+        // compute descriptors
+        const encoderLength = gpu.programs.encoders.encoderLength;
+        const encodedKeypointsWithDescriptors = gpu.programs.descriptors.orb(encodedKeypoints, encoderLength, keypoints);
+
+        // download features
+        return this._downloadKeypoints(encodedKeypointsWithDescriptors, descriptorSize, this._optimizeForDynamicUsage, settings.max);
     }
 
     /**
@@ -266,14 +300,13 @@ export class FeatureDetector
     }
 
     // Create a settings object for usage with different feature detectors
-    _setupSettings(userSettings = {})
+    _setupSettings(settings = {})
     {
-        // create object
-        const settings = {
-            denoise: true,
-            max: -1,
-            ...userSettings
-        };
+        // setup object
+        if(!settings.hasOwnProperty('denoise'))
+            settings.denoise = true;
+        if(!settings.hasOwnProperty('max'))
+            settings.max = -1;
 
         // convert the expected number of keypoints,
         // if defined, into a sensitivity value
