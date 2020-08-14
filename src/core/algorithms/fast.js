@@ -20,7 +20,6 @@
  */
 
 import { Utils } from '../../utils/utils';
-import { GLUtils } from '../../gpu/gl-utils';
 
 /**
  * FAST corner detection
@@ -102,12 +101,12 @@ export class MultiscaleFAST extends FAST
      /**
      * Run the FAST corner detection algorithm
      * @param {SpeedyGPU} gpu
-     * @param {WebGLTexture} greyscale Greyscale image
+     * @param {WebGLTexture} pyramid
      * @param {number} n must be 9
      * @param {object} settings
      * @returns {WebGLTexture} corners
      */
-    static run(gpu, greyscale, n, settings)
+    static run(gpu, pyramid, n, settings)
     {
         // validate input
         Utils.assert(
@@ -132,14 +131,9 @@ export class MultiscaleFAST extends FAST
         const MIN_DEPTH = 1, MAX_DEPTH = gpu.pyramidHeight;
         const depth = Math.max(MIN_DEPTH, Math.min(+(settings.depth), MAX_DEPTH));
         const maxLod = depth - 1;
-        const orientationPatchRadius = 3;
 
         // select algorithm
         const multiscaleFast = gpu.programs.keypoints.fast9pyr;
-
-        // generate pyramid
-        const pyramid = greyscale;
-        GLUtils.generateMipmap(gpu.gl, pyramid);
 
         // keypoint detection
         const multiscaleCorners = multiscaleFast(pyramid, settings.threshold, 0, maxLod, true);
@@ -148,8 +142,7 @@ export class MultiscaleFAST extends FAST
         const suppressed1 = gpu.programs.keypoints.samescaleSuppression(multiscaleCorners);
         const suppressed2 = gpu.programs.keypoints.multiscaleSuppression(suppressed1, true);
 
-        // compute orientation
-        const orientedCorners = gpu.programs.keypoints.multiscaleOrientationViaCentroid(suppressed2, orientationPatchRadius, pyramid);
-        return orientedCorners;
+        // done!
+        return suppressed2;
     }
 }

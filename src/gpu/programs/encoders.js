@@ -48,6 +48,9 @@ const encodeKeypointOffsets = importShader('encoders/encode-keypoint-offsets.gls
 // encode keypoints
 const encodeKeypoints = importShader('encoders/encode-keypoints.glsl').withArguments('image', 'imageSize', 'encoderLength', 'descriptorSize');
 
+// find orientation of encoded keypoints
+const orientEncodedKeypoints = importShader('encoders/orient-encoded-keypoints.glsl').withArguments('pyramid', 'patchRadius', 'encodedKeypoints', 'encoderLength', 'descriptorSize')
+
 // helper for downloading the keypoints
 const downloadKeypoints = importShader('utils/identity.glsl').withArguments('image');
 
@@ -76,6 +79,9 @@ export class GPUEncoders extends SpeedyProgramGroup
             })
             .declare('_downloadKeypoints', downloadKeypoints, {
                 output: [INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH],
+            })
+            .declare('_orientEncodedKeypoints', orientEncodedKeypoints, {
+                output: [INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH]
             })
         ;
 
@@ -113,9 +119,23 @@ export class GPUEncoders extends SpeedyProgramGroup
             this._keypointEncoderLength = newEncoderLength;
             this._encodeKeypoints.resize(newEncoderLength, newEncoderLength);
             this._downloadKeypoints.resize(newEncoderLength, newEncoderLength);
+            this._orientEncodedKeypoints.resize(newEncoderLength, newEncoderLength);
         }
 
         return newEncoderLength - oldEncoderLength;
+    }
+
+    /**
+     * Finds the orientation of all keypoints given a texture with encoded keypoints
+     * @param {WebGLTexture} pyramid image pyramid
+     * @param {number} patchRadius radius of a circular patch used to compute the radius when lod = 0 (e.g., 7)
+     * @param {WebGLTexture} encodedKeypoints the result of encodeKeypoints()
+     * @param {number} [descriptorSize] in bytes
+     */
+    orientEncodedKeypoints(pyramid, patchRadius, encodedKeypoints, descriptorSize = 0)
+    {
+        const encoderLength = this._keypointEncoderLength;
+        return this._orientEncodedKeypoints(pyramid, patchRadius, encodedKeypoints, encoderLength, descriptorSize);
     }
 
     /**
@@ -158,13 +178,13 @@ export class GPUEncoders extends SpeedyProgramGroup
             if(x >= w || y >= h)
                 break;
 
-            hasScale = (pixels[i+4] != 255);
+            hasScale = (pixels[i+4] < 255);
             scale = !hasScale ? 1.0 :
                 Math.pow(2.0, -lgM + (lgM + pyrHeight) * pixels[i+4] / 255.0);
 
             hasRotation = hasScale; // FIXME get from parameter list?
             rotation = !hasRotation ? 0.0 :
-                (2 * pixels[i+5] - 1) * PI / 255.0;
+                ((2 * pixels[i+5]) / 255.0 - 1.0) * PI;
 
             score = pixels[i+6] / 255.0;
 

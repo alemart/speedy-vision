@@ -126,7 +126,10 @@ float encodeLod(float lod)
  */
 float decodeLod(float encodedLod)
 {
-    return encodedLod * (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS) - LOG2_PYRAMID_MAX_SCALE;
+    return mix(0.0f,
+        encodedLod * (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS) - LOG2_PYRAMID_MAX_SCALE,
+        encodedLod < 1.0f
+    );
 }
 
 #endif

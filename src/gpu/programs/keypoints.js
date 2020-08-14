@@ -85,10 +85,6 @@ const nonmaxSuppression = importShader('keypoints/nonmax-suppression.glsl').with
 const multiscaleSuppression = importShader('keypoints/multiscale-suppression.glsl').withArguments('image', 'usePyrSubLevels');
 const samescaleSuppression = importShader('keypoints/samescale-suppression.glsl').withArguments('image');
 
-// find keypoint orientation
-const orientationViaCentroid = importShader('keypoints/orientation-via-centroid.glsl').withArguments('corners', 'patchRadius');
-const multiscaleOrientationViaCentroid = importShader('keypoints/multiscale-orientation-via-centroid.glsl').withArguments('corners', 'patchRadius', 'pyramid');
-
 // Sobel derivatives
 const multiscaleSobel = importShader('keypoints/multiscale-sobel.glsl').withArguments('pyramid', 'lod');
 
@@ -140,10 +136,6 @@ export class GPUKeypoints extends SpeedyProgramGroup
             .declare('nonmaxSuppression', nonmaxSuppression)
             .declare('multiscaleSuppression', multiscaleSuppression) // scale-space
             .declare('samescaleSuppression', samescaleSuppression) // scale-space
-
-            // Generic orientation finder
-            .declare('orientationViaCentroid', orientationViaCentroid)
-            .declare('multiscaleOrientationViaCentroid', multiscaleOrientationViaCentroid) // scale-space
 
             // Sobel derivatives
             .declare('multiscaleSobel', multiscaleSobel, {

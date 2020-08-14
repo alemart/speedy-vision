@@ -30,7 +30,6 @@ const MIN_DEPTH = 1; // minimum depth level
 const MAX_DEPTH = PYRAMID_MAX_LEVELS; // maximum depth level
 const DEFAULT_WINDOW_SIZE = 3; // compute Harris autocorrelation matrix within a 3x3 window
 const MAX_WINDOW_SIZE = 3; // maximum window size when computing the autocorrelation matrix
-const ORIENTATION_PATCH_RADIUS = 3; // patch radius used when computing the orientation of the corners
 const DEFAULT_QUALITY = 0.1; // in [0,1]: pick corners having score >= quality * max(score)
 
 /**
@@ -109,11 +108,11 @@ export class MultiscaleHarris extends Harris
     /**
      * Detect Harris corners in a pyramid
      * @param {SpeedyGPU} gpu
-     * @param {WebGLTexture} greyscale Greyscale image
+     * @param {WebGLTexture} pyramid
      * @param {object} settings
      * @returns {WebGLTexture} corners
      */
-    static run(gpu, greyscale, settings)
+    static run(gpu, pyramid, settings)
     {
         // default settings
         if(!settings.hasOwnProperty('windowSize'))
@@ -133,11 +132,6 @@ export class MultiscaleHarris extends Harris
         const depth = Math.max(MIN_DEPTH, Math.min(+(settings.depth), MAX_DEPTH));
         const minLod = 0, maxLod = depth - 1;
         const windowRadius = Math.max(0, Math.min((settings.windowSize | 0) >> 1, MAX_WINDOW_SIZE));
-        const orientationPatchRadius = ORIENTATION_PATCH_RADIUS;
-
-        // generate pyramid
-        const pyramid = greyscale;
-        GLUtils.generateMipmap(gpu.gl, pyramid);
 
         // compute derivatives
         const df = gpu.programs.keypoints.multiscaleSobel(pyramid, minLod);
@@ -164,7 +158,6 @@ export class MultiscaleHarris extends Harris
         const suppressed2 = gpu.programs.keypoints.multiscaleSuppression(suppressed1, true);
 
         // compute orientation
-        const orientedCorners = gpu.programs.keypoints.multiscaleOrientationViaCentroid(suppressed2, orientationPatchRadius, pyramid);
-        return orientedCorners;
+        return suppressed2;
     }
 }

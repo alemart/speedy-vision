@@ -47,6 +47,8 @@
  * D: descriptor binary string (N bytes)
  */
 
+@include "orientation.glsl"
+
 uniform sampler2D image;
 uniform ivec2 imageSize;
 uniform int encoderLength;
@@ -99,7 +101,7 @@ void main()
                 // write scale, rotation & score
                 float score = pixel.r;
                 float scale = pixel.a;
-                float rotation = pixel.b;
+                float rotation = encodeOrientation(0.0f);
                 color = vec4(scale, rotation, score, 0.0f);
                 break;
             }

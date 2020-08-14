@@ -26,7 +26,7 @@
 
 /**
  * Convert an angle in radians to a normalized value in [0,1]
- * @param {number} angle in radians
+ * @param {number} angle in radians between -PI and PI
  * @returns {number}
  */
 #define encodeOrientation(angle) ((angle) * INV_PI + 1.0f) * 0.5f

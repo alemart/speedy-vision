@@ -25,7 +25,7 @@
 
 uniform sampler2D encodedCorners;
 uniform int encoderLength;
-uniform sampler2D orientedCorners; // previously smoothed with a Gaussian
+uniform sampler2D pyramid; // previously smoothed with a Gaussian
 
 // ORB constants
 const int descriptorSize = 32; // 32 bytes = 256 bits = 8 pixels
@@ -353,7 +353,7 @@ void main()
 
     // compute binary descriptor
     // need to run 32 intensity tests for each pixel (32 bits)
-    vec2 imageSize = vec2(textureSize(orientedCorners, 0));
+    vec2 imageSize = vec2(textureSize(pyramid, 0));
     int patternStart = 32 * descriptorCell;
     uint test[4] = uint[4](0u, 0u, 0u, 0u);
     for(int t = 0; t < 4; t++) {
@@ -364,8 +364,8 @@ void main()
 
         for(int j = 0; j < 8; j++) {
             getPair(patternStart + i + j, kcos, ksin, p, q);
-            a = pyrPixelAtEx(orientedCorners, round(kpos + pot * vec2(p)), keypoint.lod, imageSize);
-            b = pyrPixelAtEx(orientedCorners, round(kpos + pot * vec2(q)), keypoint.lod, imageSize);
+            a = pyrPixelAtEx(pyramid, round(kpos + pot * vec2(p)), keypoint.lod, imageSize);
+            b = pyrPixelAtEx(pyramid, round(kpos + pot * vec2(q)), keypoint.lod, imageSize);
             bits |= uint(a.g < b.g) << j;
         }
 

@@ -29,7 +29,7 @@ import { importShader } from '../shader-declaration';
 //
 
 // ORB
-const orb = importShader('descriptors/orb.glsl').withArguments('encodedCorners', 'encoderLength', 'orientedCorners');
+const orb = importShader('descriptors/orb.glsl').withArguments('pyramid', 'encodedCorners', 'encoderLength');
 
 
 
@@ -57,14 +57,14 @@ export class GPUDescriptors extends SpeedyProgramGroup
 
     /**
      * Compute ORB descriptor (256 bits)
+     * @param {WebGLTexture} pyramid pre-smoothed on the intensity channel
      * @param {WebGLTexture} encodedCorners tiny texture
      * @param {number} encoderLength
-     * @param {WebGLTexture} orientedCorners pre-smoothed on the intensity channel
      * @return {WebGLTexture}
      */
-    orb(encodedCorners, encoderLength, orientedCorners)
+    orb(pyramid, encodedCorners, encoderLength)
     {
         this._orb.resize(encoderLength, encoderLength);
-        return this._orb(encodedCorners, encoderLength, orientedCorners);
+        return this._orb(pyramid, encodedCorners, encoderLength);
     }
 }

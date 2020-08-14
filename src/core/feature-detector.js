@@ -25,6 +25,7 @@ import { Harris, MultiscaleHarris } from './algorithms/harris.js';
 import { SensitivityTuner, TestTuner } from '../utils/tuner';
 import { Utils } from '../utils/utils';
 import { PixelComponent } from '../utils/types';
+import { GLUtils } from '../gpu/gl-utils';
 
 // constants
 const OPTIMIZER_GROWTH_WEIGHT_ASYNC = 0.02; // used when using async downloads
@@ -97,12 +98,17 @@ export class FeatureDetector
         const texture = this._uploadToTexture(media, settings.denoise);
         const greyscale = gpu.programs.colors.rgb2grey(texture);
 
+        // generate pyramid
+        const pyramid = greyscale;
+        GLUtils.generateMipmap(gpu.gl, pyramid);
+
         // find & encode features
-        const keypoints = MultiscaleFAST.run(gpu, greyscale, n, settings);
+        const keypoints = MultiscaleFAST.run(gpu, pyramid, n, settings);
         const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(keypoints, descriptorSize);
+        const encodedOrientedKeypoints = gpu.programs.encoders.orientEncodedKeypoints(pyramid, 7, encodedKeypoints, descriptorSize);
 
         // download features
-        return this._downloadKeypoints(encodedKeypoints, descriptorSize, this._optimizeForDynamicUsage, settings.max);
+        return this._downloadKeypoints(encodedOrientedKeypoints, descriptorSize, this._optimizeForDynamicUsage, settings.max);
     }
 
     /**
@@ -149,12 +155,17 @@ export class FeatureDetector
         const texture = this._uploadToTexture(media, settings.denoise);
         const greyscale = gpu.programs.colors.rgb2grey(texture);
 
+        // generate pyramid
+        const pyramid = greyscale;
+        GLUtils.generateMipmap(gpu.gl, pyramid);
+
         // find & encode features
-        const keypoints = MultiscaleHarris.run(gpu, greyscale, settings);
+        const keypoints = MultiscaleHarris.run(gpu, pyramid, settings);
         const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(keypoints, descriptorSize);
+        const encodedOrientedKeypoints = gpu.programs.encoders.orientEncodedKeypoints(pyramid, 7, encodedKeypoints, descriptorSize);
 
         // download features
-        return this._downloadKeypoints(encodedKeypoints, descriptorSize, this._optimizeForDynamicUsage, settings.max);
+        return this._downloadKeypoints(encodedOrientedKeypoints, descriptorSize, this._optimizeForDynamicUsage, settings.max);
     }
 
     /**
@@ -176,17 +187,22 @@ export class FeatureDetector
         const texture = this._uploadToTexture(media, settings.denoise);
         const greyscale = gpu.programs.colors.rgb2grey(texture);
 
+        // generate pyramid
+        const pyramid = greyscale;
+        GLUtils.generateMipmap(gpu.gl, pyramid);
+
         // find & encode features
-        const keypoints = MultiscaleHarris.run(gpu, greyscale, settings); // nicer corners
+        const keypoints = MultiscaleHarris.run(gpu, pyramid, settings); // nice corners
         const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(keypoints, descriptorSize);
+        const encodedOrientedKeypoints = gpu.programs.encoders.orientEncodedKeypoints(pyramid, 7, encodedKeypoints, descriptorSize);
 
         // smooth the image before computing the descriptors
-        const smoothImage = gpu.programs.filters.gauss7(greyscale);
-        const smoothKeypoints = gpu.programs.utils.copyComponents(keypoints, smoothImage, PixelComponent.GREEN, PixelComponent.GREEN);
+        const smoothPyramid = gpu.programs.filters.gauss7(greyscale);
+        GLUtils.generateMipmap(gpu.gl, smoothPyramid);
 
         // compute descriptors
         const encoderLength = gpu.programs.encoders.encoderLength;
-        const encodedKeypointsWithDescriptors = gpu.programs.descriptors.orb(encodedKeypoints, encoderLength, smoothKeypoints);
+        const encodedKeypointsWithDescriptors = gpu.programs.descriptors.orb(smoothPyramid, encodedOrientedKeypoints, encoderLength);
 
         // download features
         return this._downloadKeypoints(encodedKeypointsWithDescriptors, descriptorSize, this._optimizeForDynamicUsage, settings.max);
