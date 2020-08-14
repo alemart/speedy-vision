@@ -75,13 +75,13 @@ export class GPUEncoders extends SpeedyProgramGroup
         this
             .declare('_encodeKeypointOffsets', encodeKeypointOffsets)
             .declare('_encodeKeypoints', encodeKeypoints, {
-                output: [INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH],
+                ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
             })
             .declare('_downloadKeypoints', downloadKeypoints, {
-                output: [INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH],
+                ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
             })
             .declare('_orientEncodedKeypoints', orientEncodedKeypoints, {
-                output: [INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH]
+                ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
             })
         ;
 

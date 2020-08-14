@@ -92,7 +92,7 @@ const ivec2 patchData[524] = ivec2[524](
 );
 
 // Bounds
-const int MIN_PATCH_RADIUS = 2; // tiny radii generate unstable angles
+const int MIN_PATCH_RADIUS = 3; // tiny radii generate unstable angles
 const int MAX_PATCH_RADIUS = 7; // we go up to this radius
 
 void main()
