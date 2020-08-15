@@ -1,6 +1,6 @@
 # speedy-vision.js
 
-A **lightning fast** GPU-accelerated Computer Vision library for JavaScript, with a focus on real-time feature detection and matching. ORB, FAST, BRISK, Harris and more - for the web!
+A **lightning fast** GPU-accelerated Computer Vision library for the web, with a focus on real-time feature detection and matching. ORB, FAST, BRISK, Harris and more!
 
 [<img src="assets/demo-orb.gif" width="640" alt="Speedy feature detection">](https://alemart.github.io/speedy-vision-js/demos/orb-features.html)
 
