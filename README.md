@@ -1,8 +1,9 @@
 # speedy-vision.js
 
-A **lightning fast** GPU-accelerated Computer Vision library for JavaScript, with a focus on real-time feature detection and matching.
+A **lightning fast** GPU-accelerated Computer Vision library for JavaScript, with a focus on real-time feature detection and matching. ORB, FAST, BRISK, Harris and more - for the web!
 
-[![Speedy feature detection](assets/demo-video.gif)](https://alemart.github.io/speedy-vision-js/demos/video-features.html)
+[<img src="assets/demo-orb.gif" width="640">](https://alemart.github.io/speedy-vision-js/demos/orb-features.html)
+*Click to open a demo*
 
 ## Table of contents
 
@@ -26,8 +27,9 @@ Try the demos and take a look at their source code:
   * [Feature detection in an image](https://alemart.github.io/speedy-vision-js/demos/image-features.html)
   * [Feature detection in a video](https://alemart.github.io/speedy-vision-js/demos/video-features.html)
   * [Feature detection in a webcam](https://alemart.github.io/speedy-vision-js/demos/webcam-features.html)
-  * [Find the best keypoints](https://alemart.github.io/speedy-vision-js/demos/best-features.html)
+  * [Find the best Harris corners](https://alemart.github.io/speedy-vision-js/demos/best-features.html)
   * [Automatic sensitivity](https://alemart.github.io/speedy-vision-js/demos/automatic-sensitivity.html)
+  * [ORB features](https://alemart.github.io/speedy-vision-js/demos/orb-features.html)
 * Image processing
   * [Cool effects with image convolutions](https://alemart.github.io/speedy-vision-js/demos/convolution.html)
   * [Convert image to greyscale](https://alemart.github.io/speedy-vision-js/demos/greyscale-image.html)
@@ -243,9 +245,9 @@ Detects feature points in a `SpeedyMedia`.
 * `config: object, optional`. A configuration object that accepts the following keys (all are optional):
   * `method: string`. The name of the method to be used to detect the features (see the table on [detection methods](#detection-methods)).
   * `sensitivity: number`. A number between `0.0` and `1.0`. The higher the number, the more features you get.
+  * `max: number`. If specified, Speedy will return the best keypoints (according to their scores) up to this number.
   * `expected: number | object`. Speedy will automatically adjust the sensitivity value to get you *approximately* the number of features you ask. For more information, read the section on [automatic sensitivity](#automatic-sensitivity).
   * `denoise: boolean`. Whether or not to denoise the image before finding the features. Defaults to `true`.
-  * `max: number`. If specified, Speedy will return the best keypoints (according to their scores) up to this number.
 
 The configuration object accepts additional keys depending on which method is specified. Read the section on [detection methods](#detection-methods) to know more.
 
@@ -283,15 +285,16 @@ Speedy can use different methods for detecting feature points. Currently, the fo
 |`"fast7"` | FAST-7,12 detector               | -           | -        | -                   |
 |`"fast5"` | FAST-5,8 detector                | -           | -        | -                   |
 |`"multiscale-fast"` | FAST augmented with scale & orientation | Yes | Yes | -               |
-|`"harris"`| Runs the Harris corner detector  | -           | -        | -                   |
-|`"multiscale-harris"` | Harris detector augmented with scale & orientation | Yes | Yes | -  |
-|`"brisk"` | BRISK feature detector           | Yes         | Soon     | Soon                |
+|`"harris"`| Harris corner detector           | -           | -        | -                   |
+|`"multiscale-harris"` | Harris augmented with scale & orientation | Yes | Yes | -           |
+|`"orb"`   | ORB features                     | Yes         | Yes      | Yes                 |
+|`"brisk"` | BRISK features                   | Yes         | Soon     | Soon                |
 
 Different methods yield different results. Some work in scale-space and return oriented keypoints, others do not.
 
 Depending on which method you choose, additional settings may be provided to the `config` parameter when calling `SpeedyMedia.findFeatures()`.
 
-###### FAST corner detector
+###### FAST features
 
 For any variation of the FAST detector[1], the `config` object accepts the following additional, optional key:
 
@@ -299,7 +302,7 @@ For any variation of the FAST detector[1], the `config` object accepts the follo
 
 Note: `config.sensitivity` is an easy-to-use parameter and does *not* map linearly to `config.threshold`.
 
-###### Harris corner detector
+###### Harris corners
 
 Speedy includes an implementation of the Harris corner detector[3] with the Shi-Tomasi corner response[4]. The following settings may be specified in the `config` object:
 
@@ -307,9 +310,16 @@ Speedy includes an implementation of the Harris corner detector[3] with the Shi-
 
 Note: `config.quality` is an alternative to `config.sensitivity`.
 
-###### BRISK feature detector
+###### ORB features
 
-Speedy implements a modified version of the BRISK feature detector[2]. It is able to give you feature points at multiple scales, as it finds them in scale-space. The `config` object accepts the following additional keys (all are optional):
+Speedy includes an implementation of the ORB feature descriptor[5]. It is an efficient solution that first finds keypoints in scale-space and then compute the descriptors for feature matching. The following are optional settings:
+
+* `depth: number`. An integer between `1` and `4` that tells Speedy how "deep" it should go when searching for keypoints in scale-space. Defaults to `3`.
+* `quality: number`. A value between `0` and `1`, as in the Harris detector. This is an alternative to `config.sensitivity`.
+
+###### BRISK features
+
+**Currently work-in-progress.** Speedy implements a modified version of the BRISK feature detector[2]. It is able to give you feature points at multiple scales, as it finds them in scale-space. The `config` object accepts the following additional keys (all are optional):
 
 * `depth: number`. An integer between `1` and `4` telling how "deep" the algorithm should go when searching for keypoints in scale-space. The higher the value, the more robust it is against scale transformations (at a slighly higher computational cost). Defaults to `4`.
 * `threshold: number`. An integer between `0` and `255`, just like in FAST.
@@ -323,6 +333,8 @@ Speedy implements a modified version of the BRISK feature detector[2]. It is abl
 [3] Harris, Christopher G.; Mike Stephens. "A combined corner and edge detector". Alvey Vision Conference. Vol. 15. No. 50. 1988.
 
 [4] Shi, J.; Tomasi, C. "Good features to track". 1994 Proceedings of IEEE Conference on Computer Vision and Pattern Recognition.
+
+[5] Rublee, E.; Rabaud, V.; Konolige, K.; Bradski, G. "ORB: An efficient alternative to SIFT or SURF". 2011 International Conference on Computer Vision (ICCV-2011).
 
 ##### Automatic sensitivity
 
