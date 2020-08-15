@@ -19,6 +19,17 @@
  * Compute ORB descriptors
  */
 
+/*
+ * This is a brand new GPU implementation ORB [1],
+ * for fast keypoint description.
+ * 
+ * Reference:
+ *
+ * [1] Rublee, E.; Rabaud, V.; Konolige, K.; Bradski, G.
+ * "ORB: An efficient alternative to SIFT or SURF".
+ * 2011 International Conference on Computer Vision (ICCV-2011)
+ */
+
 @include "math.glsl"
 @include "pyramids.glsl"
 @include "orientation.glsl"
