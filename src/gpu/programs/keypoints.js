@@ -32,10 +32,6 @@ import { importShader } from '../shader-declaration';
 // on a circumference of 16 pixels
 const fast9 = importShader('keypoints/fast9lg.glsl').withArguments('image', 'threshold');
 
-// FAST-9_16 on scale-space
-// Requires image mipmap
-const fast9pyr = importShader('keypoints/fast9pyr.glsl').withArguments('pyramid', 'threshold', 'minLod', 'maxLod', 'usePyrSubLevels');
-
 // FAST-7_12: requires 7 contiguous pixels
 // on a circumference of 12 pixels
 const fast7 = importShader('keypoints/fast7.glsl').withArguments('image', 'threshold');
@@ -56,6 +52,19 @@ const fastScore12 = importShader('keypoints/fast-score12.glsl').withArguments('i
 // neighboring circumference of 8 pixels
 const fastScore8 = importShader('keypoints/fast-score8.glsl').withArguments('image', 'threshold');
 
+// FAST-9_16 on scale-space
+// Requires image mipmap
+const multiscaleFast = importShader('keypoints/multiscale-fast.glsl')
+                      .withArguments('pyramid', 'threshold', 'minLod', 'maxLod', 'usePyrSubLevels');
+
+// FAST-9_16 on scale-space
+// with Harris scoring
+const multiscaleFastWithHarris = importShader('keypoints/multiscale-fast.glsl')
+                                .withArguments('pyramid', 'threshold', 'minLod', 'maxLod', 'usePyrSubLevels')
+                                .withDefines({
+                                    'USE_HARRIS_SCORE': 1
+                                });
+
 
 
 //
@@ -63,7 +72,8 @@ const fastScore8 = importShader('keypoints/fast-score8.glsl').withArguments('ima
 //
 
 // compute corner responses (score map)
-const multiscaleHarris = importShader('keypoints/multiscale-harris.glsl').withArguments('pyramid', 'windowRadius', 'minLod', 'maxLod', 'usePyrSubLevels', 'sobelDerivatives');
+const multiscaleHarris = importShader('keypoints/multiscale-harris.glsl')
+                        .withArguments('pyramid', 'windowRadius', 'minLod', 'maxLod', 'usePyrSubLevels', 'sobelDerivatives');
 
 // discard corners below a specified quality level
 const harrisCutoff = importShader('keypoints/harris-cutoff.glsl').withArguments('corners', 'maxScore', 'quality');
@@ -72,7 +82,8 @@ const harrisCutoff = importShader('keypoints/harris-cutoff.glsl').withArguments(
 //
 // BRISK feature detection
 //
-const brisk = importShader('keypoints/brisk.glsl').withArguments('image', 'layerA', 'layerB', 'scaleA', 'scaleB', 'lgM', 'h');
+const brisk = importShader('keypoints/brisk.glsl')
+             .withArguments('image', 'layerA', 'layerB', 'scaleA', 'scaleB', 'lgM', 'h');
 
 
 
@@ -122,8 +133,9 @@ export class GPUKeypoints extends SpeedyProgramGroup
             .declare('_fast5', fast5)
             .declare('_fastScore8', fastScore8)
 
-            // FAST-9,16 plus
-            .declare('fast9pyr', fast9pyr)
+            // FAST-9,16 (multi-scale)
+            .declare('multiscaleFast', multiscaleFast)
+            .declare('multiscaleFastWithHarris', multiscaleFastWithHarris)
 
             // BRISK Scale-Space Non-Maximum Suppression & Interpolation
             .declare('brisk', brisk)

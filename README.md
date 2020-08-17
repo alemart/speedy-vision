@@ -301,6 +301,10 @@ For any variation of the FAST detector[1], the `config` object accepts the follo
 
 * `threshold: number`. An alternative to `sensitivity` representing the threshold paramter of FAST: an integer between `0` and `255`, inclusive. Lower thresholds get you more features.
 
+When using the `"multiscale-fast"` method, you may also specify:
+
+* `useHarrisScore: boolean`. Adopt a better scoring function (cornerness measure). It will give you slightly better features. Defaults to `false` (using method `"multiscale-harris"` is preferred).
+
 Note: `config.sensitivity` is an easy-to-use parameter and does *not* map linearly to `config.threshold`.
 
 ###### Harris corners

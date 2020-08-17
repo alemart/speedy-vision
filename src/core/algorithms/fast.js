@@ -119,6 +119,8 @@ export class MultiscaleFAST extends FAST
             settings.threshold = 10;
         if(!settings.hasOwnProperty('depth'))
             settings.depth = 3; // how many pyramid levels to check
+        if(!settings.hasOwnProperty('useHarrisScore'))
+            settings.useHarrisScore = false;
 
         // convert a sensitivity value in [0,1],
         // if it's defined, to a FAST threshold
@@ -133,7 +135,9 @@ export class MultiscaleFAST extends FAST
         const maxLod = depth - 1;
 
         // select algorithm
-        const multiscaleFast = gpu.programs.keypoints.fast9pyr;
+        const multiscaleFast = !settings.useHarrisScore ?
+                               gpu.programs.keypoints.multiscaleFast :
+                               gpu.programs.keypoints.multiscaleFastWithHarris;
 
         // keypoint detection
         const multiscaleCorners = multiscaleFast(pyramid, settings.threshold, 0, maxLod, true);
