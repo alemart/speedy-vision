@@ -56,6 +56,7 @@ class ShaderDeclaration
         const filepath = options.filepath || null;
         const source = filepath ? require('./shaders/' + filepath) : (options.source || '');
 
+        this._userSource = source;
         this._fragmentSource = ShaderPreprocessor.run(DEFAULT_FRAGMENT_SHADER_PREFIX + source);
         this._vertexSource = ShaderPreprocessor.run(DEFAULT_VERTEX_SHADER);
         this._filepath = filepath || '<in-memory>';
@@ -90,7 +91,7 @@ class ShaderDeclaration
      * Specify the list & order of arguments to be
      * passed to the shader
      * @param  {...string} args argument names
-     * @returns {Shader} this
+     * @returns {ShaderDeclaration} this
      */
     withArguments(...args)
     {
@@ -104,6 +105,27 @@ class ShaderDeclaration
                     Utils.fatal(`Argument "${argname}" has not been declared in the shader`);
             }
         }
+
+        // done!
+        return this;
+    }
+
+    /**
+     * Specify a set of #defines to be prepended to
+     * the fragment shader
+     * @param {object} defines key-value pairs (define-name: define-value)
+     * @returns {ShaderDeclaration} this
+     */
+    withDefines(defines)
+    {
+        // write the #defines
+        const defs = [];
+        for(const key of Object.keys(defines))
+            defs.push(`#define ${key} ${defines[key]}\n`);
+
+        // change the fragment shader
+        const source = DEFAULT_FRAGMENT_SHADER_PREFIX + defs.join('') + this._userSource;
+        this._fragmentSource = ShaderPreprocessor.run(source);
 
         // done!
         return this;
