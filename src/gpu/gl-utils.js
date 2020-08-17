@@ -106,6 +106,7 @@ export class GLUtils
         gl.attachShader(program, vertexShader);
         gl.attachShader(program, fragmentShader);
         gl.linkProgram(program);
+        gl.validateProgram(program);
 
         // error?
         if(!gl.getProgramParameter(program, gl.LINK_STATUS) && !gl.isContextLost()) {

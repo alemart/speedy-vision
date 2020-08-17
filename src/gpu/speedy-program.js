@@ -638,6 +638,7 @@ function waitForQueueNotEmpty(queue)
                 resolve(performance.now() - start);
             else
                 setTimeout(wait, 0); // Utils.setZeroTimeout may hinder performance (GLUtils already calls it)
+                //Utils.setZeroTimeout(wait);
         }
         wait();
     });
