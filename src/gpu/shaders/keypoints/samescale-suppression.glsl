@@ -23,10 +23,6 @@
 
 uniform sampler2D image;
 
-// scaleEps must be < 0.5 / (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS),
-// because min(|lod_i - lod_j|) >= 0.5 for any i, j
-const float scaleEps = 1e-5;
-
 // non-maximum suppression on 8-neighborhood with scale filter:
 // consider only neighbors having the same scale as the current corner
 void main()
@@ -54,14 +50,14 @@ void main()
 
     // get scores of same-scale neighborhood
     mat3 score = mat3(
-        p0.r * float(abs(p0.a - pixel.a) < scaleEps),
-        p1.r * float(abs(p1.a - pixel.a) < scaleEps),
-        p2.r * float(abs(p2.a - pixel.a) < scaleEps),
-        p3.r * float(abs(p3.a - pixel.a) < scaleEps),
-        p4.r * float(abs(p4.a - pixel.a) < scaleEps),
-        p5.r * float(abs(p5.a - pixel.a) < scaleEps),
-        p6.r * float(abs(p6.a - pixel.a) < scaleEps),
-        p7.r * float(abs(p7.a - pixel.a) < scaleEps),
+        p0.r * float(isSameEncodedLod(p0.a, pixel.a)),
+        p1.r * float(isSameEncodedLod(p1.a, pixel.a)),
+        p2.r * float(isSameEncodedLod(p2.a, pixel.a)),
+        p3.r * float(isSameEncodedLod(p3.a, pixel.a)),
+        p4.r * float(isSameEncodedLod(p4.a, pixel.a)),
+        p5.r * float(isSameEncodedLod(p5.a, pixel.a)),
+        p6.r * float(isSameEncodedLod(p6.a, pixel.a)),
+        p7.r * float(isSameEncodedLod(p7.a, pixel.a)),
         0.0f
     );
 

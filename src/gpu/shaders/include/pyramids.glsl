@@ -132,4 +132,19 @@ float decodeLod(float encodedLod)
     );
 }
 
+/**
+ * Decide whether two encoded LODs are really the same
+ * @param {float} alpha1 encoded LOD
+ * @param {float} alpha2 encoded LOD
+ * @returns {bool}
+ */
+#define isSameEncodedLod(alpha1, alpha2) (abs((alpha1) - (alpha2)) < encodedLodEps)
+
+/**
+ * encodedLodEps is used to point out different encoded LODs
+ * encodedLodEps must be < 0.5 / (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS),
+ * because min(|lod_i - lod_j|) >= 0.5 for any i, j
+ */
+const float encodedLodEps = 0.2 / (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS);
+
 #endif
