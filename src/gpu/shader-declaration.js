@@ -29,17 +29,17 @@ const DEFAULT_VERTEX_SHADER = `#version 300 es
 in vec2 ${ATTRIB_POSITION};
 in vec2 ${ATTRIB_TEXCOORD};
 out vec2 texCoord;
- 
+
 void main() {
     gl_Position = vec4(${ATTRIB_POSITION}, 0.0, 1.0);
     texCoord = ${ATTRIB_TEXCOORD};
 }`;
 
 const DEFAULT_FRAGMENT_SHADER_PREFIX = `#version 300 es
-precision highp float;
 precision highp int;
+precision mediump float;
 precision mediump sampler2D;
- 
+
 out vec4 color;
 in vec2 texCoord;
 uniform vec2 texSize;
