@@ -197,6 +197,7 @@ export class GPUUtils extends SpeedyProgramGroup
      */
     normalizeColoredImage(image, minValue = 0, maxValue = 255)
     {
+        // TODO: normalize on a luminance channel instead (e.g., use HSL color space)
         const minmax2d = new Array(3);
         minmax2d[0] = this.clone(this._scanMinMax(image, PixelComponent.RED));
         minmax2d[1] = this.clone(this._scanMinMax(image, PixelComponent.GREEN));
