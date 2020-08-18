@@ -52,6 +52,17 @@ const copyComponents = importShader('utils/copy-components.glsl').withArguments(
 // Scan the entire image and find the minimum & maximum pixel intensity
 const scanMinMax2D = importShader('utils/scan-minmax2d.glsl').withArguments('image', 'iterationNumber');
 
+// Normalize a greyscale image
+const normalizeGreyscaleImage = importShader('utils/normalize-image.glsl')
+                               .withArguments('minmax2d', 'minValue', 'maxValue')
+                               .withDefines({
+                                   'GREYSCALE': 1
+                               });
+
+// Normalize a colored image
+const normalizeColoredImage = importShader('utils/normalize-image.glsl')
+                             .withArguments('minmax2dRGB', 'minValue', 'maxValue');
+
 
 
 /**
@@ -104,6 +115,12 @@ export class GPUUtils extends SpeedyProgramGroup
             .declare('_scanMinMax2D', scanMinMax2D, {
                 ...this.program.usesPingpongRendering()
             })
+
+            // normalize a greyscale image
+            .declare('_normalizeGreyscaleImage', normalizeGreyscaleImage)
+
+            // normalize a colored image
+            .declare('_normalizeColoredImage', normalizeColoredImage)
         ;
     }
 
@@ -126,7 +143,8 @@ export class GPUUtils extends SpeedyProgramGroup
      */
     scanMax(image, pixelComponent)
     {
-        return this._scanMinMax(image, pixelComponent, true);
+        const minmax2d = this._scanMinMax(image, pixelComponent);
+        return this.copyComponents(image, minmax2d, pixelComponent, PixelComponent.RED);
     }
 
     /**
@@ -138,7 +156,8 @@ export class GPUUtils extends SpeedyProgramGroup
      */
     scanMin(image, pixelComponent)
     {
-        return this._scanMinMax(image, pixelComponent, false);
+        const minmax2d = this._scanMinMax(image, pixelComponent);
+        return this.copyComponents(image, minmax2d, pixelComponent, PixelComponent.GREEN);
     }
 
     /**
@@ -159,13 +178,45 @@ export class GPUUtils extends SpeedyProgramGroup
     }
 
     /**
-     * Scan a single component in all pixels of the image and find the min or max intensity
+     * Normalize a greyscale image
+     * @param {WebGLTexture} image greyscale image (RGB components are the same)
+     * @param {number} [minValue] minimum desired pixel intensity (from 0 to 255, inclusive)
+     * @param {number} [maxValue] maximum desired pixel intensity (from 0 to 255, inclusive)
+     */
+    normalizeGreyscaleImage(image, minValue = 0, maxValue = 255)
+    {
+        const minmax2d = this._scanMinMax(image, PixelComponent.GREEN);
+        return this._normalizeGreyscaleImage(minmax2d, Math.min(minValue, maxValue), Math.max(minValue, maxValue));
+    }
+
+    /**
+     * Normalize a RGB image
+     * @param {WebGLTexture} image
+     * @param {number} [minValue] minimum desired pixel intensity (from 0 to 255, inclusive)
+     * @param {number} [maxValue] maximum desired pixel intensity (from 0 to 255, inclusive)
+     */
+    normalizeColoredImage(image, minValue = 0, maxValue = 255)
+    {
+        const minmax2d = new Array(3);
+        minmax2d[0] = this.clone(this._scanMinMax(image, PixelComponent.RED));
+        minmax2d[1] = this.clone(this._scanMinMax(image, PixelComponent.GREEN));
+        minmax2d[2] = this._scanMinMax(image, PixelComponent.BLUE);
+
+        const normalized = this._normalizeColoredImage(minmax2d, Math.min(minValue, maxValue), Math.max(minValue, maxValue));
+
+        this.release(minmax2d[1]);
+        this.release(minmax2d[0]);
+
+        return normalized;
+    }
+
+    /**
+     * Scan a single component in all pixels of the image and find the min & max intensities
      * @param {WebGLTexture} image 
      * @param {number} pixelComponent a single PixelComponent flag
-     * @param {boolean} max returns the maximum if true, or the minimum if false
-     * @returns {WebGLTexture}
+     * @returns {WebGLTexture} RGBA = (max, min, max - min, original_pixel)
      */
-    _scanMinMax(image, pixelComponent, max = true)
+    _scanMinMax(image, pixelComponent)
     {
         //
         // FIXME: combinations of PixelComponent (e.g., PixelComponent.ALL)
@@ -177,6 +228,6 @@ export class GPUUtils extends SpeedyProgramGroup
         for(let i = 0; i < numIterations; i++)
             texture = this._scanMinMax2D(texture, i);
 
-        return this.copyComponents(image, texture, pixelComponent, max ? PixelComponent.RED : PixelComponent.GREEN);
+        return texture;
     }
 }
