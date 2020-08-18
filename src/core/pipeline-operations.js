@@ -205,3 +205,35 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
         super.release();
     }
 }
+
+/**
+ * Normalize image
+ */
+PipelineOperation.Normalize = class extends SpeedyPipelineOperation
+{
+    /**
+     * Normalize operation
+     * @param {object} [options]
+     */
+    constructor(options = {})
+    {
+        const { min, max } = (options = {
+            min: 0,     // min. desired pixel intensity: a value in [0,255]
+            max: 255,   // max. desired pixel intensity: a value in [0,255]
+            ...options
+        });
+        super();
+
+        // save data
+        this._min = Math.max(0, Math.min(Math.min(min, max), 255));
+        this._max = Math.max(0, Math.min(Math.max(min, max), 255));
+    }
+
+    run(texture, gpu, media)
+    {
+        if(media._colorFormat == ColorFormat.RGB)
+            return gpu.programs.utils.normalizeColoredImage(texture, this._min, this._max);
+        else
+            return gpu.programs.utils.normalizeGreyscaleImage(texture, this._min, this._max);
+    }
+}

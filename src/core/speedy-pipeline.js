@@ -178,4 +178,16 @@ export class SpeedyPipeline
             new PipelineOperation.Convolve(kernel, divisor)
         );
     }
+
+    /**
+     * Image normalization
+     * @param {object} [options]
+     * @returns {SpeedyPipeline}
+     */
+    normalize(options = {})
+    {
+        return this._spawn(
+            new PipelineOperation.Normalize(options)
+        );
+    }
 }

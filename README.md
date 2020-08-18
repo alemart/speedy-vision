@@ -555,6 +555,15 @@ const canvas = document.getElementById('my-canvas');
 transformedMedia.draw(canvas);
 ```
 
+###### .normalize
+
+`SpeedyPipeline.normalize(options?: object): SpeedyPipeline`
+
+Normalizes the media. The optional `options` object accepts the following keys:
+
+* `min: number`. The minimum desired pixel intensity. Defaults to `0`.
+* `max: number`. The maximum desired pixel intensity. Defaults to `255`.
+
 ### Extras
 
 #### Frames per second (FPS)
