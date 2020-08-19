@@ -19,7 +19,7 @@
  * Generic utilities
  */
 
-import { SpeedyError, IllegalArgumentError, ParseError } from './errors'
+import { IllegalArgumentError, ParseError, AssertionError } from './errors'
 
 export class Utils
 {
@@ -58,7 +58,7 @@ export class Utils
     static assert(expr, text = '')
     {
         if(!expr)
-            throw new SpeedyError('Assertion failed.', text);
+            throw new AssertionError(text);
     }
 
     /**

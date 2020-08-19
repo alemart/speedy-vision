@@ -19,6 +19,8 @@
  * Pseudo-random number generator (PRNG)
  */
 
+import { IllegalArgumentError } from './errors';
+
 const TWO_PI = 2.0 * Math.PI;
 
 export class Random
@@ -55,7 +57,7 @@ export class Random
     nextInt(n)
     {
         if(n <= 0)
-            throw new RangeError(`n must be positive`);
+            throw new IllegalArgumentError(`n must be positive`);
 
         return (this.nextDouble() * n) | 0;
     }

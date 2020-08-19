@@ -86,6 +86,22 @@ export class NotImplementedError extends SpeedyError
 }
 
 /**
+ * AbstractMethodError
+ * Thrown when one tries to call an abstract method
+ */
+export class AbstractMethodError extends SpeedyError
+{
+    /**
+     * Class constructor
+     * @param {string} [message] additional text
+     */
+    constructor(message = '')
+    {
+        super(`Can't call abstract method. ${message}`);
+    }
+}
+
+/**
  * Illegal argument error
  * A method has received one or more illegal arguments
  */
@@ -160,5 +176,20 @@ export class ParseError extends SpeedyError
     constructor(message = '')
     {
         super(`Parse error. ${message}`);
+    }
+}
+
+/**
+ * Assertion error
+ */
+export class AssertionError extends SpeedyError
+{
+    /**
+     * Class constructor
+     * @param {string} [message] additional text
+     */
+    constructor(message = '')
+    {
+        super(`Assertion failed. ${message}`);
     }
 }

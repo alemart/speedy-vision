@@ -19,7 +19,7 @@
  * Feature descriptor
  */
 
-import { Utils } from '../utils/utils';
+import { AbstractMethodError } from '../utils/errors';
 
 /**
  * Abstract feature descriptor
@@ -32,7 +32,7 @@ class SpeedyDescriptor
     constructor()
     {
         /*if(this.constructor === SpeedyDescriptor)
-            throw new TypeError(`Subclass responsibility`);*/
+            throw new AbstractMethodError();*/
     }
     
     /**

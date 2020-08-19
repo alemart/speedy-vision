@@ -20,7 +20,7 @@
  */
 
 import { Utils } from './utils';
-import { IllegalArgumentError } from './errors';
+import { IllegalArgumentError, AbstractMethodError } from './errors';
 
 /**
  * A Bucket of observations is used to give
@@ -322,8 +322,7 @@ class Bucket
     // this is magic
     /* abstract */ _nextState()
     {
-        // Subclass responsibility
-        return this._state;
+        throw new AbstractMethodError();
     }
 
     /**
