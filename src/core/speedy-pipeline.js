@@ -22,7 +22,8 @@
 import { PipelineOperation } from './pipeline-operations';
 import { MediaType } from '../utils/types';
 import { SpeedyError } from '../utils/errors';
-import { Utils } from '../utils/utils';
+import { IllegalArgumentError } from '../utils/errors';
+
 
 /**
  * A SpeedyPipeline holds a sequence of operations that
@@ -122,8 +123,7 @@ export class SpeedyPipeline
             return this;
         }
 
-        Utils.fatal(`Invalid argument "${pipeline}" given to SpeedyPipeline.concatenate()`);
-        return this;
+        throw new IllegalArgumentError(`Invalid argument "${pipeline}" given to SpeedyPipeline.concatenate()`);
     }
 
 
@@ -144,8 +144,7 @@ export class SpeedyPipeline
             );
         }
 
-        Utils.fatal(`Can't convert to unknown color space: "${colorSpace}"`);
-        return this;
+        throw new IllegalArgumentError(`Can't convert to unknown color space: "${colorSpace}"`);
     }
 
 

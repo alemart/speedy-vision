@@ -23,6 +23,7 @@ import { GLUtils } from './gl-utils.js';
 import { Utils } from '../utils/utils';
 import { SpeedyProgramCenter } from './speedy-program-center';
 import { PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE, MAX_TEXTURE_LENGTH } from '../utils/globals';
+import { NotSupportedError, IllegalArgumentError } from '../utils/errors';
 
 /**
  * GPU routines for
@@ -104,7 +105,7 @@ export class SpeedyGPU
         const lv = level | 0;
 
         if(lv < 0 || lv >= PYRAMID_MAX_LEVELS)
-            Utils.fatal(`Invalid pyramid level: ${lv}`);
+            throw new IllegalArgumentError(`Invalid pyramid level: ${lv}`);
 
         return this._pyramid[lv];
     }
@@ -122,7 +123,7 @@ export class SpeedyGPU
         const lv = level | 0;
 
         if(lv < 0 || lv >= PYRAMID_MAX_LEVELS + 1)
-            Utils.fatal(`Invalid intra-pyramid level: ${lv}`);
+            throw new IllegalArgumentError(`Invalid intra-pyramid level: ${lv}`);
 
         return this._intraPyramid[lv];
     }
@@ -170,7 +171,7 @@ export class SpeedyGPU
 
         // invalid dimensions?
         if(width == 0 || height == 0)
-            Utils.fatal(`Can't upload an image of area 0`);
+            throw new IllegalArgumentError(`Can't upload an image of area 0`);
 
         // create or recreate & size texture
         if(this._inputTexture === null) {
@@ -239,7 +240,7 @@ export class SpeedyGPU
             });
         }
         else
-            Utils.fatal('WEBGL_lose_context is unavailable');
+            throw new NotSupportedError('WEBGL_lose_context is unavailable');
     }
 
     /**
@@ -317,7 +318,7 @@ function createCanvas(width, height)
 
     if(inWorker) {
         if(typeof OffscreenCanvas !== 'function')
-            Utils.fatal('OffscreenCanvas is not available in your browser. Please upgrade.');
+            throw new NotSupportedError('OffscreenCanvas is not available in your browser. Please upgrade.');
 
         return new OffscreenCanvas(width, height);
     }
@@ -333,7 +334,7 @@ function createCanvas(width, height)
 function checkWebGL2Availability()
 {
     if(typeof WebGL2RenderingContext === 'undefined')
-        Utils.fatal('WebGL2 is required by this application, but it\'s not available in your browser. Please use a different browser.');
+        throw new NotSupportedError('WebGL2 is required by this application, but it\'s not available in your browser. Please use a different browser.');
 }
 
 // Create a WebGL2 context
@@ -350,7 +351,7 @@ function createWebGLContext(canvas)
     });
 
     if(!gl)
-        Utils.fatal('Can\'t create WebGL2 context. Try in a different browser.');
+        throw new NotSupportedError('Can\'t create WebGL2 context. Try in a different browser.');
 
     return gl;
 }

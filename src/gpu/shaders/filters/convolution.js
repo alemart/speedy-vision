@@ -19,8 +19,8 @@
  * Convolution shader generators
  */
 
-import { Utils } from "../../../utils/utils";
 import { createShader } from '../../shader-declaration';
+import { IllegalArgumentError } from '../../../utils/errors';
 
 // Utilities
 const cartesian = (a, b) => [].concat(...a.map(a => b.map(b => [a,b]))); // [a] x [b]
@@ -41,9 +41,9 @@ export function conv2D(kernel, normalizationConstant = 1.0)
 
     // validate input
     if(kSize < 1 || kSize % 2 == 0)
-        Utils.fatal(`Can't perform a 2D convolution with an invalid kSize of ${kSize}`);
+        throw new IllegalArgumentError(`Can't perform a 2D convolution with an invalid kSize of ${kSize}`);
     else if(kSize * kSize != kernel32.length)
-        Utils.fatal(`Invalid 2D convolution kernel of ${kernel32.length} elements (expected: square)`);
+        throw new IllegalArgumentError(`Invalid 2D convolution kernel of ${kernel32.length} elements (expected: square)`);
 
     // code generator
     const foreachKernelElement = fn => cartesian(symmetricRange(N), symmetricRange(N)).map(
@@ -119,9 +119,9 @@ function conv1D(axis, kernel, normalizationConstant = 1.0)
 
     // validate input
     if(kSize < 1 || kSize % 2 == 0)
-        Utils.fatal(`Can't perform a 1D convolution with an invalid kSize of ${kSize}`);
+        throw new IllegalArgumentError(`Can't perform a 1D convolution with an invalid kSize of ${kSize}`);
     else if(axis != 'x' && axis != 'y')
-        Utils.fatal(`Can't perform 1D convolution: invalid axis "${axis}"`); // this should never happen
+        throw new IllegalArgumentError(`Can't perform 1D convolution: invalid axis "${axis}"`); // this should never happen
 
     // code generator
     const foreachKernelElement = fn => symmetricRange(N).reduce(
@@ -208,7 +208,7 @@ export function createKernel2D(kernelSize)
     // validate input
     kernelSize |= 0;
     if(kernelSize < 1 || kernelSize % 2 == 0)
-        Utils.fatal(`Can't create a 2D texture kernel of size ${kernelSize}`);
+        throw new IllegalArgumentError(`Can't create a 2D texture kernel of size ${kernelSize}`);
 
     // encode float in the [0,1] range to RGBA
     const shader = `
@@ -247,7 +247,7 @@ export function createKernel1D(kernelSize)
     // validate input
     kernelSize |= 0;
     if(kernelSize < 1 || kernelSize % 2 == 0)
-        Utils.fatal(`Can't create a 1D texture kernel of size ${kernelSize}`);
+        throw new IllegalArgumentError(`Can't create a 1D texture kernel of size ${kernelSize}`);
 
     // encode float in the [0,1] range to RGBA
     const shader = `
@@ -287,7 +287,7 @@ export function texConv2D(kernelSize)
     // validate input
     const N = kernelSize >> 1; // idiv 2
     if(kernelSize < 1 || kernelSize % 2 == 0)
-        Utils.fatal(`Can't perform a texture-based 2D convolution with an invalid kernel size of ${kernelSize}`);
+        throw new IllegalArgumentError(`Can't perform a texture-based 2D convolution with an invalid kernel size of ${kernelSize}`);
 
     // utilities
     const foreachKernelElement = fn => cartesian(symmetricRange(N), symmetricRange(N)).map(
@@ -358,9 +358,9 @@ function texConv1D(kernelSize, axis)
     // validate input
     const N = kernelSize >> 1; // idiv 2
     if(kernelSize < 1 || kernelSize % 2 == 0)
-        Utils.fatal(`Can't perform a texture-based 2D convolution with an invalid kernel size of ${kernelSize}`);
+        throw new IllegalArgumentError(`Can't perform a texture-based 2D convolution with an invalid kernel size of ${kernelSize}`);
     else if(axis != 'x' && axis != 'y')
-        Utils.fatal(`Can't perform a texture-based 1D convolution: invalid axis "${axis}"`); // this should never happen
+        throw new IllegalArgumentError(`Can't perform a texture-based 1D convolution: invalid axis "${axis}"`); // this should never happen
 
     // utilities
     const foreachKernelElement = fn => symmetricRange(N).map(fn).join('\n');

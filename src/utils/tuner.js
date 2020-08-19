@@ -20,6 +20,7 @@
  */
 
 import { Utils } from './utils';
+import { IllegalArgumentError } from './errors';
 
 /**
  * A Bucket of observations is used to give
@@ -40,7 +41,7 @@ class Bucket
 
         // bucketSize should be a power of 2
         if(bucketSize < this._windowSize)
-            Utils.fatal(`Invalid bucketSize of ${bucketSize}`);
+            throw new IllegalArgumentError(`Invalid bucketSize of ${bucketSize}`);
 
         // Bucket is implemented as a circular vector
         this._head = this._bucketSize - 1;
@@ -221,7 +222,7 @@ class Bucket
     {
         // validate parameters
         if(minState >= maxState)
-            Utils.fatal(`Invalid boundaries [${minState},${maxState}] given to the Tuner`);
+            throw new IllegalArgumentError(`Invalid boundaries [${minState},${maxState}] given to the Tuner`);
         initialState = Math.max(minState, Math.min(initialState, maxState));
 
         // setup object

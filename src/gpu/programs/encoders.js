@@ -246,7 +246,7 @@ export class GPUEncoders extends SpeedyProgramGroup
             return pixels;
         }
         catch(err) {
-            Utils.fatal(err);
+            throw err; // d'oh
         }
     }
 }

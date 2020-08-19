@@ -22,6 +22,7 @@
 import { ColorFormat } from '../utils/types';
 import { Utils } from '../utils/utils';
 import { GLUtils } from '../gpu/gl-utils';
+import { NotSupportedError, IllegalArgumentError } from '../utils/errors';
 
 export const PipelineOperation = { };
 
@@ -65,7 +66,7 @@ PipelineOperation.ConvertToGreyscale = class extends SpeedyPipelineOperation
         if(media._colorFormat == ColorFormat.RGB)
             texture = gpu.programs.colors.rgb2grey(texture);
         else if(media._colorFormat != ColorFormat.Greyscale)
-            Utils.fatal(`Can't convert image to greyscale: unknown color format`);
+            throw new NotSupportedError(`Can't convert image to greyscale: unknown color format`);
 
         media._colorFormat = ColorFormat.Greyscale;
         return texture;
@@ -98,7 +99,7 @@ PipelineOperation.Blur = class extends SpeedyPipelineOperation
 
         // validate kernel size
         if(size != 3 && size != 5 && size != 7)
-            Utils.fatal(`Invalid kernel size: ${size}`);
+            throw new IllegalArgumentError(`Invalid kernel size: ${size}`);
 
         // select the appropriate filter
         if(filter == 'gaussian')
@@ -106,7 +107,7 @@ PipelineOperation.Blur = class extends SpeedyPipelineOperation
         else if(filter == 'box')
             this._filter = 'box' + size;
         else
-            Utils.fatal(`Invalid filter: "${filter}"`);
+            throw new IllegalArgumentError(`Invalid filter: "${filter}"`);
     }
 
     run(texture, gpu, media)
@@ -140,9 +141,9 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
 
         // validate kernel
         if(len == 1)
-            Utils.fatal(`Cannot convolve with a kernel containing a single element`);
+            throw new IllegalArgumentError(`Cannot convolve with a kernel containing a single element`);
         else if(size * size != len || !method)
-            Utils.fatal(`Cannot convolve with a non-square kernel of ${len} elements`);
+            throw new IllegalArgumentError(`Cannot convolve with a non-square kernel of ${len} elements`);
 
         // normalize kernel entries to [0,1]
         const min = Math.min(...kern), max = Math.max(...kern);

@@ -23,7 +23,7 @@ import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
 import { GLUtils } from '../gl-utils';
 import { PixelComponent, ColorComponentId } from '../../utils/types';
-import { Utils } from '../../utils/utils';
+import { IllegalArgumentError } from '../../utils/errors';
 
 
 
@@ -171,7 +171,7 @@ export class GPUUtils extends SpeedyProgramGroup
     copyComponents(dest, src, destComponents, srcComponent)
     {
         if(!ColorComponentId.hasOwnProperty(srcComponent))
-            Utils.fatal(`Invalid srcComponent: ${srcComponent}`)
+            throw new IllegalArgumentError(`Invalid srcComponent: ${srcComponent}`)
 
         const srcComponentId = ColorComponentId[srcComponent];
         return this._copyComponents(dest, src, destComponents, srcComponentId);

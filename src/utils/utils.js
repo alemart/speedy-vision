@@ -19,21 +19,10 @@
  * Generic utilities
  */
 
-import { SpeedyError } from './errors'
+import { SpeedyError, IllegalArgumentError, ParseError } from './errors'
 
 export class Utils
 {
-    /**
-     * Displays a fatal error
-     * @param {string} text message text
-     * @param  {...string} [args] optional text
-     * @throws {SpeedyError} an error object containing the message text
-     */
-    static fatal(text, ...args)
-    {
-        throw new SpeedyError(text, ...args);
-    }
-
     /**
      * Generates a warning
      * @param {string} text message text
@@ -134,7 +123,7 @@ export class Utils
             );
         }
         else
-            Utils.fatal(`Can't detect function arguments of ${code}`);
+            throw new ParseError(`Can't detect function arguments of ${code}`);
 
         return [];
     }
@@ -191,9 +180,9 @@ export class Utils
         // validate input
         kernelSize |= 0;
         if(kernelSize < 1 || kernelSize % 2 == 0)
-            Utils.fatal(`Invalid kernel size given to gaussianKernel: ${kernelSize} x 1`);
+            throw new IllegalArgumentError(`Invalid kernel size given to gaussianKernel: ${kernelSize} x 1`);
         else if(sigma <= 0.0)
-            Utils.fatal(`Invalid sigma given to gaussianKernel: ${sigma}`);
+            throw new IllegalArgumentError(`Invalid sigma given to gaussianKernel: ${sigma}`);
 
         // function erf(x) = -erf(-x) can be approximated numerically. See:
         // https://en.wikipedia.org/wiki/Error_function#Numerical_approximations

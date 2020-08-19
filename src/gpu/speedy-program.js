@@ -20,7 +20,7 @@
  */
 
 import { GLUtils } from './gl-utils.js';
-import { Utils } from '../utils/utils';
+import { NotSupportedError, IllegalArgumentError, IllegalOperationError } from '../utils/errors';
 
 const LOCATION_ATTRIB_POSITION = 0;
 const LOCATION_ATTRIB_TEXCOORD = 1;
@@ -238,7 +238,7 @@ export class SpeedyProgram extends Function
 
         // validate options
         if(options.pingpong && !options.renderToTexture)
-            Utils.fatal(`Pingpong rendering can only be used when rendering to textures`);
+            throw new IllegalOperationError(`Pingpong rendering can only be used when rendering to textures`);
 
         // get size
         let width = Math.max(1, options.output[0] | 0);
@@ -264,7 +264,7 @@ export class SpeedyProgram extends Function
         for(let j = 0; j < params.length; j++) {
             if(!stdprog.uniform.hasOwnProperty(params[j])) {
                 if(!stdprog.uniform.hasOwnProperty(params[j] + '[0]'))
-                    Utils.fatal(`Can't run shader: expected uniform "${params[j]}"`);
+                    throw new IllegalOperationError(`Can't run shader: expected uniform "${params[j]}"`);
             }
         }
 
@@ -291,7 +291,7 @@ export class SpeedyProgram extends Function
         
         // matching arguments?
         if(args.length != params.length)
-            Utils.fatal(`Can't run shader: incorrect number of arguments`);
+            throw new IllegalArgumentError(`Can't run shader: incorrect number of arguments`);
 
         // use program
         gl.useProgram(stdprog.program);
@@ -315,12 +315,12 @@ export class SpeedyProgram extends Function
                 // uniform array matches parameter name
                 const array = args[i];
                 if(stdprog.uniform.hasOwnProperty(`${argname}[${array.length}]`))
-                    Utils.fatal(`Can't run shader: too few elements in array "${argname}"`);
+                    throw new IllegalArgumentError(`Can't run shader: too few elements in array "${argname}"`);
                 for(let j = 0; (uniform = stdprog.uniform[`${argname}[${j}]`]); j++)
                     texNo = this._setUniform(uniform, array[j], texNo);
             }
             else
-                Utils.fatal(`Can't run shader: unknown parameter "${argname}": ${args[i]}`);
+                throw new IllegalArgumentError(`Can't run shader: unknown parameter "${argname}": ${args[i]}`);
         }
 
         // bind fbo
@@ -378,11 +378,11 @@ export class SpeedyProgram extends Function
         if(uniform.type == 'sampler2D') {
             // set texture
             if(texNo > gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
-                Utils.fatal(`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
+                throw new NotSupportedError(`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
             else if(value === this._stdprog.texture)
-                Utils.fatal(`Can't run shader: cannot use its output texture as an input to itself`);
+                throw new NotSupportedError(`Can't run shader: cannot use its output texture as an input to itself`);
             else if(value == null)
-                Utils.fatal(`Can't run shader: cannot use null as an input texture`);
+                throw new IllegalArgumentError(`Can't run shader: cannot use null as an input texture`);
 
             gl.activeTexture(gl.TEXTURE0 + texNo);
             gl.bindTexture(gl.TEXTURE_2D, value);
@@ -396,7 +396,7 @@ export class SpeedyProgram extends Function
             else if(Array.isArray(value))
                 (gl[UNIFORM_TYPES[uniform.type]])(uniform.location, ...value);
             else
-                Utils.fatal(`Can't run shader: unrecognized argument "${value}"`);
+                throw new IllegalArgumentError(`Can't run shader: unrecognized argument "${value}"`);
         }
 
         return texNo;
@@ -483,7 +483,7 @@ function StandardProgram(gl, width, height, shaderdecl, uniforms = { })
 
         // validate type
         if(!UNIFORM_TYPES.hasOwnProperty(uniform[u].type))
-            Utils.fatal(`Unknown uniform type: ${uniform[u].type}`);
+            throw new NotSupportedError(`Unknown uniform type: ${uniform[u].type}`);
 
         // must set a default value?
         if(uniforms.hasOwnProperty(u)) {
@@ -493,7 +493,7 @@ function StandardProgram(gl, width, height, shaderdecl, uniforms = { })
             else if(typeof value == 'object')
                 (gl[UNIFORM_TYPES[uniform[u].type]])(uniform[u].location, ...Array.from(value));
             else
-                Utils.fatal(`Unrecognized uniform value: "${value}"`);
+                throw new IllegalArgumentError(`Unrecognized uniform value: "${value}"`);
         }
 
         // note: to set the default value of array arr, pass

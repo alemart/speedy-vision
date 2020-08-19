@@ -21,7 +21,7 @@
 
 import { PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE } from '../utils/globals';
 import { PixelComponent } from '../utils/types';
-import { Utils } from '../utils/utils';
+import { FileNotFoundError } from '../utils/errors';
 
 // Regular Expressions
 const commentsRegex = [ /\/\*(.|\s)*?\*\//g , /\/\/.*$/gm ];
@@ -76,6 +76,5 @@ function readfileSync(filename)
     if(String(filename).match(/^[a-zA-Z0-9_\-]+\.glsl$/))
         return require('./shaders/include/' + filename);
 
-    Utils.fatal(`Shader preprocessor: can't read file \"${filename}\"`);
-    return '';
+    throw new FileNotFoundError(`Shader preprocessor: can't read file \"${filename}\"`);
 }

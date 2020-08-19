@@ -24,6 +24,7 @@ import { MediaType, ColorFormat } from '../utils/types'
 import { FeatureDetector } from './feature-detector';
 import { SpeedyError } from '../utils/errors';
 import { Utils } from '../utils/utils';
+import { IllegalArgumentError, IllegalOperationError } from '../utils/errors';
 
 /**
  * SpeedyMedia encapsulates a media element
@@ -72,7 +73,7 @@ export class SpeedyMedia
             this._featureDetector = media._featureDetector;
         }
         else
-            Utils.fatal(`Invalid instantiation of SpeedyMedia`);
+            throw new IllegalArgumentError(`Invalid instantiation of SpeedyMedia`);
     }
 
     /**
@@ -224,7 +225,7 @@ export class SpeedyMedia
 
         // has the media been released?
         if(this.isReleased())
-            Utils.fatal('Can\'t clone a SpeedyMedia that has been released');
+            throw new IllegalOperationError('Can\'t clone a SpeedyMedia that has been released');
 
         // clone the object
         if(options.lightweight) {
@@ -249,7 +250,7 @@ export class SpeedyMedia
     {
         // has the media been released?
         if(this.isReleased())
-            Utils.fatal('Can\'t run pipeline: SpeedyMedia has been released');
+            throw new IllegalOperationError('Can\'t run pipeline: SpeedyMedia has been released');
 
         // run the pipeline
         const media = this.clone({ lightweight: true });
@@ -305,7 +306,7 @@ export class SpeedyMedia
 
         // has the media been released?
         if(this.isReleased())
-            Utils.fatal('Can\'t find features: SpeedyMedia has been released');
+            throw new IllegalOperationError('Can\'t find features: SpeedyMedia has been released');
 
         // Lazy instantiation
         this._featureDetector = this._featureDetector || new FeatureDetector(this._gpu, this.options.usage == 'dynamic');
@@ -326,7 +327,7 @@ export class SpeedyMedia
         // Validate method
         const method = String(settings.method).toLowerCase();
         if(!fn.hasOwnProperty(method))
-            Utils.fatal(`Invalid method "${method}" for keypoint detection.`);
+            throw new IllegalArgumentError(`Invalid method "${method}" for keypoint detection.`);
 
         // Run the algorithm
         return (fn[method])(this, settings);
@@ -373,8 +374,7 @@ function getMediaType(mediaSource)
         }
     }
 
-    Utils.fatal(`Can't get media type: invalid media source. ${mediaSource}`);
-    return null;
+    throw new IllegalArgumentError(`Can't get media type: invalid media source. ${mediaSource}`);
 }
 
 // build & validate options object

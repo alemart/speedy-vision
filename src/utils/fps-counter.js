@@ -20,6 +20,8 @@
  */
 
 import { Utils } from './utils';
+import { IllegalOperationError } from './errors';
+
 let instance = null;
 const UPDATE_INTERVAL = 500; // in ms
 
@@ -37,7 +39,7 @@ export class FPSCounter
 
         // this should never happen...
         if(instance !== null)
-            Utils.fatal(`Can't have multiple instances of FPSCounter`);
+            throw new IllegalOperationError(`Can't have multiple instances of FPSCounter`);
 
         // start FPS counter
         requestAnimationFrame(this._update.bind(this));

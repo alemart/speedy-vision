@@ -20,7 +20,7 @@
  */
 
 import { ShaderPreprocessor } from './shader-preprocessor';
-import { Utils } from '../utils/utils';
+import { FileNotFoundError, IllegalArgumentError, ParseError } from '../utils/errors';
 
 const ATTRIB_POSITION = 'a_position';
 const ATTRIB_TEXCOORD = 'a_texCoord';
@@ -82,7 +82,7 @@ class ShaderDeclaration
     static import(filepath)
     {
         if(!String(filepath).match(/^[a-zA-Z0-9_\-\/]+\.glsl$/))
-            Utils.fatal(`Can't import shader: "${filepath}"`);
+            throw new FileNotFoundError(`Can't import shader: "${filepath}"`);
 
         return new ShaderDeclaration({ filepath });
     }
@@ -102,7 +102,7 @@ class ShaderDeclaration
         for(const argname of this._arguments) {
             if(!this._uniform.hasOwnProperty(argname)) {
                 if(!this._uniform.hasOwnProperty(argname + '[0]'))
-                    Utils.fatal(`Argument "${argname}" has not been declared in the shader`);
+                    throw new IllegalArgumentError(`Argument "${argname}" has not been declared in the shader`);
             }
         }
 
@@ -188,7 +188,7 @@ class ShaderDeclaration
     uniformType(name)
     {
         if(!this._uniform.hasOwnProperty(name))
-            Utils.fatal(`Unrecognized uniform variable: "${name}"`);
+            throw new IllegalArgumentError(`Unrecognized uniform variable: "${name}"`);
 
         return this._uniform[name];
     }
@@ -214,7 +214,7 @@ class ShaderDeclaration
                 if(name.endsWith(']')) {
                     // is it an array?
                     if(!(match = name.match(/(\w+)\s*\[\s*(\d+)\s*\]$/)))
-                        Utils.fatal(`Unspecified array length for uniform "${name}" in the shader`);
+                        throw new ParseError(`Unspecified array length for uniform "${name}" in the shader`);
                     const [ array, length ] = [ match[1], Number(match[2]) ];
                     for(let i = 0; i < length; i++)
                         uniforms[`${array}[${i}]`] = type;
