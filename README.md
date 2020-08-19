@@ -25,9 +25,9 @@ Try the demos and take a look at their source code:
 
 * [Hello, world!](https://alemart.github.io/speedy-vision-js/demos/hello-world.html)
 * Feature detection
+  * [Feature detection in a webcam](https://alemart.github.io/speedy-vision-js/demos/webcam-demo.html)
   * [Feature detection in an image](https://alemart.github.io/speedy-vision-js/demos/image-features.html)
   * [Feature detection in a video](https://alemart.github.io/speedy-vision-js/demos/video-features.html)
-  * [Feature detection in a webcam](https://alemart.github.io/speedy-vision-js/demos/webcam-features.html)
   * [Find the best Harris corners](https://alemart.github.io/speedy-vision-js/demos/best-features.html)
   * [Automatic sensitivity](https://alemart.github.io/speedy-vision-js/demos/automatic-sensitivity.html)
   * [ORB features](https://alemart.github.io/speedy-vision-js/demos/orb-features.html)
@@ -473,7 +473,7 @@ The number of operations of the pipeline.
 
 Runs the provided `pipeline`, outputting a [lightweight clone](#speedymediaclone) of the media containing the result.
 
-**Note:** while faster to generate, lightweight clones are linked to each other. Clone your media if you intend to run two or more pipelines with the same `SpeedyMedia` instance, e.g., write `await media.clone().run(pipeline)`.
+**Note:** while faster to generate, lightweight clones are linked to each other. If you intend to run two or more pipelines with the same content, either use a duplicate `SpeedyMedia` or [clone your media](#speedymediaclone).
 
 ###### Arguments
 

@@ -70,9 +70,10 @@ export class FeatureDetector
         // pre-processing the image...
         const texture = this._uploadToTexture(media, settings.denoise);
         const greyscale = gpu.programs.colors.rgb2grey(texture);
+        const inputTexture = greyscale;
 
         // find & encode features
-        const keypoints = FAST.run(gpu, greyscale, n, settings);
+        const keypoints = FAST.run(gpu, inputTexture, n, settings);
         const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(keypoints, descriptorSize);
 
         // download features
@@ -97,9 +98,10 @@ export class FeatureDetector
         // pre-processing the image...
         const texture = this._uploadToTexture(media, settings.denoise);
         const greyscale = gpu.programs.colors.rgb2grey(texture);
+        const inputTexture = greyscale;
 
         // generate pyramid
-        const pyramid = greyscale;
+        const pyramid = inputTexture;
         GLUtils.generateMipmap(gpu.gl, pyramid);
 
         // find & encode features
@@ -128,9 +130,10 @@ export class FeatureDetector
         // pre-processing the image...
         const texture = this._uploadToTexture(media, settings.denoise);
         const greyscale = gpu.programs.colors.rgb2grey(texture);
+        const inputTexture = greyscale;
 
         // find & encode features
-        const keypoints = Harris.run(gpu, greyscale, settings);
+        const keypoints = Harris.run(gpu, inputTexture, settings);
         const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(keypoints, descriptorSize);
 
         // download features
@@ -154,9 +157,10 @@ export class FeatureDetector
         // pre-processing the image...
         const texture = this._uploadToTexture(media, settings.denoise);
         const greyscale = gpu.programs.colors.rgb2grey(texture);
+        const inputTexture = greyscale;
 
         // generate pyramid
-        const pyramid = greyscale;
+        const pyramid = inputTexture;
         GLUtils.generateMipmap(gpu.gl, pyramid);
 
         // find & encode features
@@ -186,9 +190,10 @@ export class FeatureDetector
         // pre-processing the image...
         const texture = this._uploadToTexture(media, settings.denoise);
         const greyscale = gpu.programs.colors.rgb2grey(texture);
+        const inputTexture = greyscale;
 
         // generate pyramid
-        const pyramid = greyscale;
+        const pyramid = inputTexture;
         GLUtils.generateMipmap(gpu.gl, pyramid);
 
         // find & encode features
@@ -197,7 +202,7 @@ export class FeatureDetector
         const encodedOrientedKeypoints = gpu.programs.encoders.orientEncodedKeypoints(pyramid, 7, encodedKeypoints, descriptorSize);
 
         // smooth the image before computing the descriptors
-        const smoothPyramid = gpu.programs.filters.gauss7(greyscale);
+        const smoothPyramid = gpu.programs.filters.gauss7(inputTexture);
         GLUtils.generateMipmap(gpu.gl, smoothPyramid);
 
         // compute descriptors
@@ -224,9 +229,10 @@ export class FeatureDetector
         // pre-processing the image...
         const texture = this._uploadToTexture(media, settings.denoise);
         const greyscale = gpu.programs.colors.rgb2grey(texture);
+        const inputTexture = greyscale;
 
         // find & encode features
-        const keypoints = BRISK.run(gpu, greyscale, settings);
+        const keypoints = BRISK.run(gpu, inputTexture, settings);
         const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(keypoints, 0);
 
         // download features
