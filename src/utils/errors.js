@@ -65,7 +65,7 @@ export class NotSupportedError extends SpeedyError
      */
     constructor(message = '')
     {
-        super(`Unsupported operation. ${message || ''}`);
+        super(`Unsupported operation. ${message}`);
     }
 }
 
@@ -81,7 +81,7 @@ export class NotImplementedError extends SpeedyError
      */
     constructor(message = '')
     {
-        super(`Method not implemented. ${message || ''}`);
+        super(`Method not implemented. ${message}`);
     }
 }
 
@@ -97,7 +97,7 @@ export class IllegalArgumentError extends SpeedyError
      */
     constructor(message = '')
     {
-        super(`Illegal argument. ${message || ''}`);
+        super(`Illegal argument. ${message}`);
     }
 }
 
@@ -114,7 +114,7 @@ export class IllegalOperationError extends SpeedyError
      */
     constructor(message = '')
     {
-        super(`Illegal operation. ${message || ''}`);
+        super(`Illegal operation. ${message}`);
     }
 }
 
@@ -129,7 +129,7 @@ export class FileNotFoundError extends SpeedyError
      */
     constructor(message = '')
     {
-        super(`Illegal argument. ${message || ''}`);
+        super(`File not found. ${message}`);
     }
 }
 
@@ -144,7 +144,7 @@ export class TimeoutError extends SpeedyError
      */
     constructor(message = '')
     {
-        super(`Timeout error. ${message || ''}`);
+        super(`Timeout error. ${message}`);
     }
 }
 
@@ -159,6 +159,6 @@ export class ParseError extends SpeedyError
      */
     constructor(message = '')
     {
-        super(`Parse error. ${message || ''}`);
+        super(`Parse error. ${message}`);
     }
 }
