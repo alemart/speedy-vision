@@ -23,8 +23,9 @@ import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
 import { SpeedyFeature } from '../../core/speedy-feature';
 import { BinaryDescriptor } from '../../core/speedy-descriptor';
-import { StochasticTuner } from '../../utils/tuner';
+import { StochasticTuner } from '../../core/tuners/stochastic-tuner';
 import { Utils } from '../../utils/utils'
+import { IllegalOperationError } from '../../utils/errors';
 
 // We won't admit more than MAX_KEYPOINTS per media.
 // The larger this value is, the more data we need to transfer from the GPU.
@@ -158,9 +159,9 @@ export class GPUEncoders extends SpeedyProgramGroup
 
     /**
      * Decodes the keypoints, given a flattened image of encoded pixels
-     * @param {Array<number>} pixels pixels in the [r,g,b,a,...] format
+     * @param {number[]} pixels pixels in the [r,g,b,a,...] format
      * @param {number} [descriptorSize] in bytes
-     * @returns {Array<SpeedyFeature>} keypoints
+     * @returns {SpeedyFeature[]} keypoints
      */
     decodeKeypoints(pixels, descriptorSize = 0)
     {
@@ -212,7 +213,7 @@ export class GPUEncoders extends SpeedyProgramGroup
      * Download RAW encoded keypoint data from the GPU - this is a bottleneck!
      * @param {WebGLTexture} encodedKeypoints texture with keypoints that have already been encoded
      * @param {bool} [useAsyncTransfer] transfer data from the GPU without blocking the CPU
-     * @returns {Promise<Array<Uint8Array>>} pixels in the [r,g,b,a, ...] format
+     * @returns {Promise<Uint8Array[]>} pixels in the [r,g,b,a, ...] format
      */
     async downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer = true)
     {
@@ -246,7 +247,7 @@ export class GPUEncoders extends SpeedyProgramGroup
             return pixels;
         }
         catch(err) {
-            throw err; // d'oh
+            throw new IllegalOperationError(`Can't download encoded keypoints`, err);
         }
     }
 }

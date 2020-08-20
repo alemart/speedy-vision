@@ -27,11 +27,12 @@ export class SpeedyError extends Error
     /**
      * Class constructor
      * @param {string} message message text
+     * @param {SpeedyError} [cause] cause of the error
      */
-    constructor(message)
+    constructor(message, cause = null)
     {
-        console.error('[speedy-vision.js]', message);
         super(message);
+        this._cause = cause;
     }
 
     /**
@@ -51,6 +52,28 @@ export class SpeedyError extends Error
     {
         ;
     }
+
+    /**
+     * Get the cause of the error. Available if
+     * it has been specified in the constructor
+     * @returns {SpeedyError|null}
+     */
+    get cause()
+    {
+        return this._cause;
+    }
+
+    /**
+     * Get a string describing the error
+     * @returns {string}
+     */
+    toString()
+    {
+        if(this._cause === null)
+            return `${this.name}: ${this.message} @ [speedy-vision.js]`;
+        else
+            return `${this.name}: ${this.message} -> Cause: ${this._cause.toString()}`;
+    }
 }
 
 /**
@@ -62,10 +85,11 @@ export class NotSupportedError extends SpeedyError
     /**
      * Class constructor
      * @param {string} [message] additional text
+     * @param {SpeedyError} [cause] cause of the error
      */
-    constructor(message = '')
+    constructor(message = '', cause = null)
     {
-        super(`Unsupported operation. ${message}`);
+        super(`Unsupported operation. ${message}`, cause);
     }
 }
 
@@ -82,6 +106,21 @@ export class NotImplementedError extends SpeedyError
     constructor(message = '')
     {
         super(`Method not implemented. ${message}`);
+    }
+}
+
+/**
+ * WebGL error
+ */
+export class GLError extends SpeedyError
+{
+    /**
+     * Class constructor
+     * @param {string} [message] additional text
+     */
+    constructor(message = '')
+    {
+        super(`WebGL error. ${message}`);
     }
 }
 
@@ -110,10 +149,11 @@ export class IllegalArgumentError extends SpeedyError
     /**
      * Class constructor
      * @param {string} [message] additional text
+     * @param {SpeedyError} [cause] cause of the error
      */
-    constructor(message = '')
+    constructor(message = '', cause = null)
     {
-        super(`Illegal argument. ${message}`);
+        super(`Illegal argument. ${message}`, cause);
     }
 }
 
@@ -127,10 +167,11 @@ export class IllegalOperationError extends SpeedyError
     /**
      * Class constructor
      * @param {string} [message] additional text
+     * @param {SpeedyError} [cause] cause of the error
      */
-    constructor(message = '')
+    constructor(message = '', cause = null)
     {
-        super(`Illegal operation. ${message}`);
+        super(`Illegal operation. ${message}`, cause);
     }
 }
 
@@ -157,10 +198,11 @@ export class TimeoutError extends SpeedyError
     /**
      * Class constructor
      * @param {string} [message] additional text
+     * @param {SpeedyError} [cause] cause of the error
      */
-    constructor(message = '')
+    constructor(message = '', cause = null)
     {
-        super(`Timeout error. ${message}`);
+        super(`Timeout error. ${message}`, cause);
     }
 }
 
@@ -172,10 +214,11 @@ export class ParseError extends SpeedyError
     /**
      * Class constructor
      * @param {string} [message] additional text
+     * @param {SpeedyError} [cause] cause of the error
      */
-    constructor(message = '')
+    constructor(message = '', cause = null)
     {
-        super(`Parse error. ${message}`);
+        super(`Parse error. ${message}`, cause);
     }
 }
 

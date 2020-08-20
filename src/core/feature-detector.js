@@ -22,10 +22,12 @@
 import { FAST, MultiscaleFAST } from './algorithms/fast.js';
 import { BRISK } from './algorithms/brisk.js';
 import { Harris, MultiscaleHarris } from './algorithms/harris.js';
-import { SensitivityTuner, TestTuner } from '../utils/tuner';
+import { SensitivityTuner } from './tuners/sensitivity-tuner';
+import { TestTuner } from './tuners/test-tuner';
 import { Utils } from '../utils/utils';
 import { PixelComponent } from '../utils/types';
 import { GLUtils } from '../gpu/gl-utils';
+import { IllegalOperationError } from '../utils/errors';
 
 // constants
 const OPTIMIZER_GROWTH_WEIGHT_ASYNC = 0.02; // used when using async downloads
@@ -274,7 +276,7 @@ export class FeatureDetector
             // done!
             return keypoints;
         }).catch(err => {
-            throw err;
+            throw new IllegalOperationError(`Can't download keypoints`, err);
         });
     }
 

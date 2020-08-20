@@ -20,22 +20,7 @@
  */
 
 import { Utils } from '../utils/utils';
-
-/**
- * WebGL-related error
- */
-export class GLError extends Error
-{
-    /**
-     * Class constructor
-     * @param {string} message 
-     */
-    constructor(message)
-    {
-        super(`[GLError] ${message}`);
-        this.name = this.constructor.name;
-    }
-}
+import { GLError, IllegalArgumentError, IllegalOperationError } from '../utils/errors';
 
 /**
  * WebGL Utilities
@@ -43,18 +28,9 @@ export class GLError extends Error
 export class GLUtils
 {
     /**
-     * Create a new GLError object
-     * @param {string} message 
-     */
-    static Error(message)
-    {
-        return new GLError(message);
-    }
-
-    /**
-     * Get a GLError error object describing the latest WebGL error
+     * Get an error object describing the latest WebGL error
      * @param {WebGL2RenderingContext} gl 
-     * @returns {string}
+     * @returns {GLError}
      */
     static getError(gl)
     {
@@ -127,7 +103,7 @@ export class GLUtils
                 .map((line, no) => col(1+no) + line)
                 .join('\n');
 
-            throw GLUtils.Error(
+            throw new GLError(
                 `Can't create shader.\n\n` +
                 `---------- ERROR ----------\n` +
                 errors.join('\n') + '\n\n' +
@@ -216,7 +192,7 @@ export class GLUtils
     {
         // validate dimensions
         if(width <= 0 || height <= 0)
-            throw GLUtils.Error(`Invalid dimensions given to createTexture()`);
+            throw new IllegalArgumentError(`Invalid dimensions given to createTexture()`);
 
         // create texture
         const texture = gl.createTexture();
@@ -311,7 +287,7 @@ export class GLUtils
             return;
 
         if(names.length > gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
-            throw GLUtils.Error(`Can't bind ${names.length} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
+            throw new GLError(`Can't bind ${names.length} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
 
         for(let i = 0; i < names.length; i++) {
             gl.activeTexture(gl.TEXTURE0 + i);
@@ -348,7 +324,7 @@ export class GLUtils
                 'FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT',
                 'FRAMEBUFFER_INCOMPLETE_MULTISAMPLE'
             ].filter(err => gl[err] === status))[0] || 'unknown error'))();
-            throw GLUtils.Error(`Can't create framebuffer: ${error} (${status})`);
+            throw new GLError(`Can't create framebuffer: ${error} (${status})`);
         }
 
         // unbind & return
@@ -431,7 +407,7 @@ export class GLUtils
             gl.bindBuffer(target, null);
             return performance.now() - start;
         }).catch(err => {
-            throw GLUtils.Error(`Can't getBufferSubDataAsync(): got ${err.message} in clientWaitAsync()`);
+            throw new IllegalOperationError(`Can't getBufferSubDataAsync(): error in clientWaitAsync()`, err);
         }).finally(() => {
             gl.deleteSync(sync);
         });
@@ -454,7 +430,7 @@ export class GLUtils
     {
         // validate arrayBuffer
         if(!(arrayBuffer.byteLength >= width * height * 4))
-            throw GLUtils.Error(`Can't read pixels: invalid buffer size`);
+            throw new IllegalArgumentError(`Can't read pixels: invalid buffer size`);
 
         // bind the PBO
         gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
@@ -483,7 +459,7 @@ export class GLUtils
         ).then(timeInMs => {
             return timeInMs;
         }).catch(err => {
-            throw err;
+            throw new IllegalOperationError(`Can't read pixels`, err);
         });
     }
 }
