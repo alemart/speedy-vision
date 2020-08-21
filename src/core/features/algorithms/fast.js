@@ -68,7 +68,7 @@ export class FASTFeatures extends FeaturesAlgorithm
         if(!(n == 9 || n == 7 || n == 5))
             throw new NotSupportedError(`Can't run FAST with n = ${n}`);
 
-        this._n = n;
+        this._n = n | 0;
     }
 
     /**
@@ -191,7 +191,7 @@ export class MultiscaleFASTFeatures extends FASTFeatures
      */
     set useHarrisScore(useHarris)
     {
-        this._useHarrisScore = useHarris;
+        this._useHarrisScore = Boolean(useHarris);
     }
 
     /**
@@ -204,7 +204,7 @@ export class MultiscaleFASTFeatures extends FASTFeatures
         if(n != 9)
             throw new NotSupportedError();
 
-        this._n = n;
+        this._n = n | 0;
     }
 
     /**

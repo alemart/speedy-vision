@@ -282,10 +282,7 @@ Speedy can use different methods for detecting feature points. Currently, the fo
 
 | Method   | Description                      | Multi-scale | Oriented | Includes descriptor |
 |----------|----------------------------------|-------------|----------|---------------------|
-|`"fast"`  | An alias for `"fast9"` (default) | -           | -        | -                   |
-|`"fast9"` | FAST-9,16 detector               | -           | -        | -                   |
-|`"fast7"` | FAST-7,12 detector               | -           | -        | -                   |
-|`"fast5"` | FAST-5,8 detector                | -           | -        | -                   |
+|`"fast"`  | FAST corner detector             | -           | -        | -                   |
 |`"multiscale-fast"` | FAST augmented with scale & orientation | Yes | Yes | -               |
 |`"harris"`| Harris corner detector           | -           | -        | -                   |
 |`"multiscale-harris"` | Harris augmented with scale & orientation | Yes | Yes | -           |
@@ -301,6 +298,7 @@ Depending on which method you choose, additional settings may be provided to the
 For any variation of the FAST detector[1], the `config` object accepts the following additional, optional key:
 
 * `threshold: number`. An alternative to `sensitivity` representing the threshold paramter of FAST: an integer between `0` and `255`, inclusive. Lower thresholds get you more features.
+* `n: number`. The FAST variant you want: use `9` for FAST-9,16 (default), `7` for FAST-7,12 or `5` for FAST-5,8. Option not available for multiscale.
 
 When using the `"multiscale-fast"` method, you may also specify:
 
@@ -325,7 +323,7 @@ Speedy includes an implementation of the ORB feature descriptor[5]. It is an eff
 
 ###### BRISK features
 
-**Currently work-in-progress.** Speedy implements a modified version of the BRISK feature detector[2]. It is able to give you feature points at multiple scales, as it finds them in scale-space. The `config` object accepts the following additional keys (all are optional):
+**Currently work-in-progress.** Speedy implements a modified version of the BRISK feature detector[2]. It is able to give you feature points at multiple scales. The `config` object accepts the following additional keys (all are optional):
 
 * `depth: number`. An integer between `1` and `4` telling how "deep" the algorithm should go when searching for keypoints in scale-space. The higher the value, the more robust it is against scale transformations (at a slighly higher computational cost). Defaults to `4`.
 * `threshold: number`. An integer between `0` and `255`, just like in FAST.
