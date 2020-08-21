@@ -22,6 +22,7 @@
 import { Observable } from '../utils/observable';
 import { SpeedyFeature } from '../core/speedy-feature';
 import { SpeedyGPU } from './speedy-gpu';
+import { IllegalOperationError } from '../utils/errors';
 
 // constants
 const OPTIMIZER_GROWTH_WEIGHT_ASYNC = 0.02; // used when using async downloads
