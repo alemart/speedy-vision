@@ -39,27 +39,25 @@ describe('Feature detection', function() {
     });
 
     describe('FAST-9,16', function() {
-        runGenericTests('fast9');
-        runFastTests('fast9');
+        runGenericTests('fast');
+        runFastTests('fast', 9);
     });
 
     describe('FAST-7,12', function() {
-        runGenericTests('fast7');
-        runFastTests('fast7');
+        runFastTests('fast', 7);
     });
 
     describe('FAST-5,8', function() {
-        runGenericTests('fast5');
-        runFastTests('fast5');
+        runFastTests('fast', 5);
     });
 
     describe('Multiscale FAST', function() {
         runGenericTests('multiscale-fast');
         runGenericMultiscaleTests('multiscale-fast');
-        runFastTests('multiscale-fast');
+        runFastTests('multiscale-fast', 9);
     });
 
-    describe('BRISK', function() {
+    xdescribe('BRISK', function() {
         runGenericTests('brisk');
         runGenericMultiscaleTests('brisk');
     });
@@ -206,10 +204,10 @@ describe('Feature detection', function() {
     // Tests that apply to all FAST detectors
     //
 
-    function runFastTests(method)
+    function runFastTests(method, n = 9)
     {
         it('finds no features when the sensitivity is zero', async function() {
-            const features = await square.findFeatures({ method, sensitivity: 0 });
+            const features = await square.findFeatures({ method, n, sensitivity: 0 });
             const numFeatures = features.length;
 
             print(`Found ${numFeatures} features with method "${method}".`);
