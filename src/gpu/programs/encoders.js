@@ -247,7 +247,7 @@ export class GPUEncoders extends SpeedyProgramGroup
             return pixels;
         }
         catch(err) {
-            throw new IllegalOperationError(`Can't download encoded keypoints`, err);
+            throw new IllegalOperationError(`Can't download encoded keypoint texture`, err);
         }
     }
 }

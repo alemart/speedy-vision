@@ -135,6 +135,17 @@ export class GPUUtils extends SpeedyProgramGroup
     }
 
     /**
+     * Generate a pyramid for a texture
+     * @param {WebGLTexture} texture
+     * @returns {WebGLTexture} the input texture
+     */
+    generatePyramid(texture)
+    {
+        GLUtils.generateMipmap(this._gpu.gl, texture);
+        return texture;
+    }
+
+    /**
      * Scan a single component in all pixels of the image and find the maximum intensity
      * @param {WebGLTexture} image 
      * @param {number} pixelComponent a single PixelComponent flag
