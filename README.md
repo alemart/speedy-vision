@@ -287,7 +287,7 @@ Speedy can use different methods for detecting feature points. Currently, the fo
 |`"harris"`| Harris corner detector           | -           | -        | -                   |
 |`"multiscale-harris"` | Harris augmented with scale & orientation | Yes | Yes | -           |
 |`"orb"`   | ORB features                     | Yes         | Yes      | Yes                 |
-|`"brisk"` | BRISK features                   | Yes         | Soon     | Soon                |
+|`"brisk"` | BRISK features                   | Soon        | Soon     | Soon                |
 
 Different methods yield different results. Some work in scale-space and return oriented keypoints, others do not.
 
