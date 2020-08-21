@@ -69,7 +69,7 @@ export class SpeedyMedia
 
             // spawn relevant components
             this._gpu = new SpeedyGPU(this._width, this._height);
-            this._featuresAlgorithm = null; // lazy instantiation 
+            this._featuresAlgorithm = null; // lazy instantiation
         }
         else if(arguments.length == 1) {
             // copy constructor (shallow copy)
