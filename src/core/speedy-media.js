@@ -22,9 +22,8 @@
 import { SpeedyGPU } from '../gpu/speedy-gpu';
 import { MediaType, ColorFormat } from '../utils/types'
 import { FeatureDetector } from './feature-detector';
-import { SpeedyError } from '../utils/errors';
 import { Utils } from '../utils/utils';
-import { IllegalArgumentError, IllegalOperationError } from '../utils/errors';
+import { TimeoutError, IllegalArgumentError, NotSupportedError, AccessDeniedError } from '../utils/errors';
 
 /**
  * SpeedyMedia encapsulates a media element
@@ -98,12 +97,12 @@ export class SpeedyMedia
                     else if(k > 0)
                         setTimeout(() => loadMedia(getMediaDimensions(mediaSource), k-1), 10);
                     else
-                        reject(new SpeedyError(`Can't load SpeedyMedia with a ${mediaSource}: timeout.`));
+                        reject(new TimeoutError(`Can't load SpeedyMedia with a ${mediaSource}: timeout.`));
                 })(dimensions);
             }
             else {
                 // invalid media source
-                reject(new SpeedyError(`Can't load SpeedyMedia with a ${mediaSource}: invalid media source.`));
+                reject(new IllegalArgumentError(`Can't load SpeedyMedia with a ${mediaSource}: invalid media source.`));
             }
         });
     }
@@ -403,7 +402,7 @@ function requestCameraStream(width, height, options = {})
         Utils.log('Accessing the webcam...');
 
         if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
-            return reject(new SpeedyError('Unsupported browser: no mediaDevices.getUserMedia()'));
+            return reject(new NotSupportedError('Unsupported browser: no mediaDevices.getUserMedia()'));
 
         navigator.mediaDevices.getUserMedia({
             audio: false,
@@ -425,9 +424,9 @@ function requestCameraStream(width, height, options = {})
             };
         })
         .catch(err => {
-            reject(new SpeedyError(
-                `Please give access to the camera and reload the page.\n` +
-                `${err.name}. ${err.message}.`
+            reject(new AccessDeniedError(
+                `Please give access to the camera and reload the page`,
+                err
             ));
         });
     });

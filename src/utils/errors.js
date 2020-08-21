@@ -102,10 +102,11 @@ export class NotImplementedError extends SpeedyError
     /**
      * Class constructor
      * @param {string} [message] additional text
+     * @param {SpeedyError} [cause] cause of the error
      */
-    constructor(message = '')
+    constructor(message = '', cause = null)
     {
-        super(`Method not implemented. ${message}`);
+        super(`Method not implemented. ${message}`, cause);
     }
 }
 
@@ -117,10 +118,11 @@ export class GLError extends SpeedyError
     /**
      * Class constructor
      * @param {string} [message] additional text
+     * @param {SpeedyError} [cause] cause of the error
      */
-    constructor(message = '')
+    constructor(message = '', cause = null)
     {
-        super(`WebGL error. ${message}`);
+        super(`WebGL error. ${message}`, cause);
     }
 }
 
@@ -133,10 +135,11 @@ export class AbstractMethodError extends SpeedyError
     /**
      * Class constructor
      * @param {string} [message] additional text
+     * @param {SpeedyError} [cause] cause of the error
      */
-    constructor(message = '')
+    constructor(message = '', cause = null)
     {
-        super(`Can't call abstract method. ${message}`);
+        super(`Can't call abstract method. ${message}`, cause);
     }
 }
 
@@ -183,10 +186,11 @@ export class FileNotFoundError extends SpeedyError
     /**
      * Class constructor
      * @param {string} [message] additional text
+     * @param {SpeedyError} [cause] cause of the error
      */
-    constructor(message = '')
+    constructor(message = '', cause = null)
     {
-        super(`File not found. ${message}`);
+        super(`File not found. ${message}`, cause);
     }
 }
 
@@ -230,9 +234,26 @@ export class AssertionError extends SpeedyError
     /**
      * Class constructor
      * @param {string} [message] additional text
+     * @param {SpeedyError} [cause] cause of the error
      */
-    constructor(message = '')
+    constructor(message = '', cause = null)
     {
-        super(`Assertion failed. ${message}`);
+        super(`Assertion failed. ${message}`, cause);
+    }
+}
+
+/**
+ * Access denied
+ */
+export class AccessDeniedError extends SpeedyError
+{
+    /**
+     * Class constructor
+     * @param {string} [message] additional text
+     * @param {SpeedyError} [cause] cause of the error
+     */
+    constructor(message = '', cause = null)
+    {
+        super(`Access denied. ${message}`, cause);
     }
 }

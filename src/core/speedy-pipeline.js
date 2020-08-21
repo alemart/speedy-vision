@@ -21,7 +21,7 @@
 
 import { PipelineOperation } from './pipeline-operations';
 import { MediaType } from '../utils/types';
-import { SpeedyError } from '../utils/errors';
+import { IllegalOperationError } from '../utils/errors';
 import { IllegalArgumentError } from '../utils/errors';
 
 
@@ -102,7 +102,7 @@ export class SpeedyPipeline
                 resolve(media);
             }
             else
-                reject(new SpeedyError(`Can't run a pipeline on a media that is not a texture`));
+                reject(new IllegalOperationError(`Can't run a pipeline on a media that is not a texture`));
         });
     }
 

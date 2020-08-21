@@ -53,7 +53,7 @@ export class Utils
      * Assertion
      * @param {boolean} expr expression
      * @param {string} [text] error message
-     * @throws {SpeedyError}
+     * @throws {AssertionError}
      */
     static assert(expr, text = '')
     {
