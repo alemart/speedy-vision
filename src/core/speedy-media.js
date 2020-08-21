@@ -21,9 +21,22 @@
 
 import { SpeedyGPU } from '../gpu/speedy-gpu';
 import { MediaType, ColorFormat } from '../utils/types'
-import { FeatureDetector } from './feature-detector';
 import { Utils } from '../utils/utils';
 import { TimeoutError, IllegalArgumentError, NotSupportedError, AccessDeniedError } from '../utils/errors';
+import { FASTFeatures, MultiscaleFASTFeatures } from './features/algorithms/fast';
+import { HarrisFeatures, MultiscaleHarrisFeatures } from './features/algorithms/harris';
+import { ORBFeatures } from './features/algorithms/orb';
+import { BRISKFeatures } from './features/algorithms/brisk';
+
+// map: method string -> feature detector & descriptor class
+const featuresAlgorithm = {
+    'fast': FASTFeatures,
+    'multiscale-fast': MultiscaleFASTFeatures,
+    'harris': HarrisFeatures,
+    'multiscale-harris': MultiscaleHarrisFeatures,
+    'orb': ORBFeatures,
+    'brisk': BRISKFeatures,
+};
 
 /**
  * SpeedyMedia encapsulates a media element
@@ -56,7 +69,7 @@ export class SpeedyMedia
 
             // spawn relevant components
             this._gpu = new SpeedyGPU(this._width, this._height);
-            this._featureDetector = null; // lazy instantiation 
+            this._featuresAlgorithm = null; // lazy instantiation 
         }
         else if(arguments.length == 1) {
             // copy constructor (shallow copy)
@@ -69,7 +82,7 @@ export class SpeedyMedia
             this._colorFormat = media._colorFormat;
 
             this._gpu = media._gpu;
-            this._featureDetector = media._featureDetector;
+            this._featuresAlgorithm = media._featuresAlgorithm;
         }
         else
             throw new IllegalArgumentError(`Invalid instantiation of SpeedyMedia`);
@@ -191,7 +204,7 @@ export class SpeedyMedia
     release()
     {
         if(!this.isReleased()) {
-            this._featureDetector = null;
+            this._featuresAlgorithm = null;
             this._gpu.loseWebGLContext();
             this._gpu = null;
             this._source = null;
@@ -294,42 +307,54 @@ export class SpeedyMedia
     /**
      * Finds image features
      * @param {object} [settings] Configuration object
-     * @returns {Promise<Array<SpeedyFeature>>} A Promise returning an Array of SpeedyFeature objects
+     * @returns {Promise<SpeedyFeature[]>} A Promise returning an Array of SpeedyFeature objects
      */
     findFeatures(settings = {})
     {
         // Default settings
-        settings = Object.assign({
-            method: 'fast',
-        }, settings);
+        if(!settings.hasOwnProperty('method'))
+            settings.method = 'fast';
+        if(!settings.hasOwnProperty('denoise'))
+            settings.denoise = true;
+        if(!settings.hasOwnProperty('max'))
+            settings.max = undefined;
 
-        // has the media been released?
+        // Has the media been released?
         if(this.isReleased())
-            throw new IllegalOperationError('Can\'t find features: SpeedyMedia has been released');
-
-        // Lazy instantiation
-        this._featureDetector = this._featureDetector || new FeatureDetector(this._gpu, this.options.usage == 'dynamic');
-
-        // Algorithm table
-        const fn = this._featureDetector._table || (this._featureDetector._table = {
-            'fast': (media, settings) => this._featureDetector.fast(media, 9, settings), // alias for fast9
-            'fast9': (media, settings) => this._featureDetector.fast(media, 9, settings), // FAST-9,16 (default)
-            'fast7': (media, settings) => this._featureDetector.fast(media, 7, settings), // FAST-7,12
-            'fast5': (media, settings) => this._featureDetector.fast(media, 5, settings), // FAST-5,8
-            'multiscale-fast': (media, settings) => this._featureDetector.multiscaleFast(media, 9, settings), // FAST-9,16 augmented with scale & orientation
-            'brisk': (media, settings) => this._featureDetector.brisk(media, settings), // BRISK
-            'harris': (media, settings) => this._featureDetector.harris(media, settings), // Harris
-            'multiscale-harris': (media, settings) => this._featureDetector.multiscaleHarris(media, settings), // Harris
-            'orb': (media, settings) => this._featureDetector.orb(media, settings), // ORB detector & descriptor
-        });
+            throw new IllegalOperationError(`Can't find features: SpeedyMedia has been released`);
 
         // Validate method
-        const method = String(settings.method).toLowerCase();
-        if(!fn.hasOwnProperty(method))
-            throw new IllegalArgumentError(`Invalid method "${method}" for keypoint detection.`);
+        const method = String(settings.method);
+        if(!featuresAlgorithm.hasOwnProperty(method))
+            throw new IllegalArgumentError(`Invalid method "${method}" for feature detection`);
 
-        // Run the algorithm
-        return (fn[method])(this, settings);
+        // Setup feature detector & descriptor
+        if(this._featuresAlgorithm == null || this._featuresAlgorithm.constructor !== featuresAlgorithm[method])
+            this._featuresAlgorithm = new (featuresAlgorithm[method])(this._gpu);
+
+        // Set custom settings for the selected feature detector & descriptor
+        for(const key in settings) {
+            if(settings.hasOwnProperty(key) && (key in this._featuresAlgorithm))
+                this._featuresAlgorithm[key] = settings[key];
+        }
+
+        // Upload & preprocess media
+        let texture = this._gpu.upload(this._source);
+        texture = this._featuresAlgorithm.preprocess(
+            texture,
+            settings.denoise,
+            this._colorFormat != ColorFormat.Greyscale
+        );
+
+        // Feature detection & description
+        let encodedKeypoints = this._featuresAlgorithm.detectAndDescribe(texture);
+
+        // Download from the GPU
+        return this._featuresAlgorithm.download(
+            encodedKeypoints,
+            this.options.usage == 'dynamic',
+            settings.max
+        );
     }
 }
 

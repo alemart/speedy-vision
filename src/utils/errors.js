@@ -31,7 +31,10 @@ export class SpeedyError extends Error
      */
     constructor(message, cause = null)
     {
-        super(message);
+        super([
+            message,
+            cause ? cause.toString() : '@ [speedy-vision.js]'
+        ].join('\n-> '));
         this._cause = cause;
     }
 
@@ -61,18 +64,6 @@ export class SpeedyError extends Error
     get cause()
     {
         return this._cause;
-    }
-
-    /**
-     * Get a string describing the error
-     * @returns {string}
-     */
-    toString()
-    {
-        if(this._cause === null)
-            return `${this.name}: ${this.message} @ [speedy-vision.js]`;
-        else
-            return `${this.name}: ${this.message} -> Cause: ${this._cause.toString()}`;
     }
 }
 

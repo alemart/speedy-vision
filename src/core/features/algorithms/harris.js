@@ -19,11 +19,11 @@
  * Harris corner detector
  */
 
-import { SpeedyGPU } from '../../speedy-gpu';
-import { FeatureAlgorithm } from '../feature-algorithm';
-import { PixelComponent } from '../../utils/types';
-import { IllegalArgumentError } from '../../utils/errors';
-import { PYRAMID_MAX_LEVELS } from '../../utils/globals';
+import { SpeedyGPU } from '../../../gpu/speedy-gpu';
+import { FeaturesAlgorithm } from '../features-algorithm';
+import { PixelComponent } from '../../../utils/types';
+import { IllegalArgumentError } from '../../../utils/errors';
+import { PYRAMID_MAX_LEVELS } from '../../../utils/globals';
 
 // constants
 const DEFAULT_QUALITY = 0.1; // in [0,1]: pick corners having score >= quality * max(score)
@@ -39,7 +39,7 @@ const SOBEL_OCTAVE_COUNT = 2 * PYRAMID_MAX_LEVELS - 1; // Sobel derivatives for 
 /**
  * Harris corner detector
  */
-export class HarrisFeatures extends FeatureAlgorithm
+export class HarrisFeatures extends FeaturesAlgorithm
 {
     /**
      * Class constructor

@@ -15,20 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * orb.js
- * ORB features
+ * brisk.js
+ * BRISK feature detector & descriptor
  */
 
-import { SpeedyGPU } from '../../gpu/speedy-gpu';
-import { MultiscaleHarrisFeatures } from './harris';
+import { FeaturesAlgorithm } from '../features-algorithm';
+import { IllegalArgumentError, NotImplementedError } from '../../../utils/errors';
+import { SpeedyGPU } from '../../../gpu/speedy-gpu';
+import { PYRAMID_MAX_LEVELS } from '../../../utils/globals';
 
 // constants
-const DESCRIPTOR_SIZE = 32; // 256 bits
+const DESCRIPTOR_SIZE = 64; // 512 bits
+const DEFAULT_DEPTH = 4; // will check 4 pyramid layers (7 octaves)
+const MIN_DEPTH = 1; // minimum depth level
+const MAX_DEPTH = PYRAMID_MAX_LEVELS; // maximum depth level
 
 /**
- * ORB features
+ * BRISK feature detector & descriptor
  */
-export class ORBFeatures extends MultiscaleHarrisFeatures
+export class BRISKFeatures extends FeaturesAlgorithm
 {
     /**
      * Class constructor
@@ -37,10 +42,13 @@ export class ORBFeatures extends MultiscaleHarrisFeatures
     constructor(gpu)
     {
         super(gpu);
+
+        // default settings
+        this._depth = DEFAULT_DEPTH;
     }
 
     /**
-     * Descriptor size for ORB
+     * Descriptor size for BRISK
      * @returns {number} in bytes
      */
     get descriptorSize()
@@ -49,32 +57,46 @@ export class ORBFeatures extends MultiscaleHarrisFeatures
     }
 
     /**
-     * Detect feature points for ORB
+     * Get the depth of the algorithm: how many pyramid layers will be scanned
+     * @returns {number}
+     */
+    get depth()
+    {
+        return this._depth;
+    }
+
+    /**
+     * Set the depth of the algorithm: how many pyramid layers will be scanned
+     * @param {number} depth
+     */
+    set depth(depth)
+    {
+        if(depth < MIN_DEPTH || depth > MAX_DEPTH)
+            throw new IllegalArgumentError(`Invalid depth: ${depth}`);
+
+        this._depth = depth | 0;
+    }
+
+    /**
+     * Detect BRISK features
      * @param {WebGLTexture} inputTexture pre-processed greyscale image
      * @returns {WebGLTexture} encoded keypoints
      */
     detect(inputTexture)
     {
-        // Multiscale Harris gives us nice corners in scale-space
-        return super.detect(inputTexture);
+        // TODO
+        throw new NotImplementedError();
     }
 
     /**
-     * Compute ORB feature descriptors
+     * Compute BRISK descriptors
      * @param {WebGLTexture} inputTexture pre-processed greyscale image
      * @param {WebGLTexture} encodedKeypoints encoded, oriented and multi-scale
      * @returns {WebGLTexture} encoded keypoints with descriptors
      */
     describe(inputTexture, encodedKeypoints)
     {
-        const gpu = this._gpu;
-
-        // smooth the image before computing the descriptors
-        const smoothTexture = gpu.programs.filters.gauss7(inputTexture);
-        const smoothPyramid = gpu.programs.utils.generatePyramid(smoothTexture);
-
-        // compute ORB feature descriptors
-        const encoderLength = gpu.programs.encoders.encoderLength;
-        return gpu.programs.descriptors.orb(smoothPyramid, encodedKeypoints, encoderLength);
+        // TODO
+        return encodedKeypoints;
     }
 }

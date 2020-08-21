@@ -19,10 +19,10 @@
  * FAST corner detector
  */
 
-import { SpeedyGPU } from '../../speedy-gpu';
-import { FeatureAlgorithm } from '../feature-algorithm';
-import { NotSupportedError, IllegalArgumentError } from '../../utils/errors';
-import { PYRAMID_MAX_LEVELS } from '../../utils/globals';
+import { SpeedyGPU } from '../../../gpu/speedy-gpu';
+import { FeaturesAlgorithm } from '../features-algorithm';
+import { NotSupportedError, IllegalArgumentError } from '../../../utils/errors';
+import { PYRAMID_MAX_LEVELS } from '../../../utils/globals';
 
 // constants
 const DEFAULT_N = 9; // use FAST-9,16 by default
@@ -35,7 +35,7 @@ const DEFAULT_ORIENTATION_PATCH_RADIUS = 7; // for computing keypoint orientatio
 /**
  * FAST corner detector
  */
-export class FASTFeatures extends FeatureAlgorithm
+export class FASTFeatures extends FeaturesAlgorithm
 {
     /**
      * Class constructor

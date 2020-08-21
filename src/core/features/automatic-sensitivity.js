@@ -20,10 +20,10 @@
  */
 
 import { Observable } from '../../utils/observable';
-import { SpeedyFeature } from '../core/speedy-feature';
-import { FeatureDownloader } from './feature-downloader';
-import { SensitivityTuner } from '../core/tuners/sensitivity-tuner';
-import { TestTuner } from '../core/tuners/test-tuner';
+import { SpeedyFeature } from '../speedy-feature';
+import { FeaturesDownloader } from './features-downloader';
+import { SensitivityTuner } from '../tuners/sensitivity-tuner';
+import { TestTuner } from '../tuners/test-tuner';
 
 // constants
 const DEFAULT_TOLERANCE = 0.10; // 10% on the expected number of keypoints
@@ -49,15 +49,17 @@ export class AutomaticSensitivity extends Observable
 {
     /**
      * Class constructor
-     * @param {FeatureDownloader} featureDownloader 
+     * @param {FeaturesDownloader} downloader
      */
-    constructor(featureDownloader)
+    constructor(downloader)
     {
+        super();
         this._sensitivity = 0;
         this._expected = 0;
         this._tolerance = DEFAULT_TOLERANCE;
         this._tuner = null;
-        this._downloader = featureDownloader;
+        this._downloader = downloader;
+        this._onDownloadKeypoints = this._onDownloadKeypoints.bind(this); // subscriber
 
         // enable the AI
         this.enable();
@@ -136,7 +138,7 @@ export class AutomaticSensitivity extends Observable
         const normalizer = 0.001; // convert from discrete state space
 
         // tuner: lazy spawn
-        if(this._tuner === null) {
+        if(this._tuner == null) {
             //this._tuner = new TestTuner(0, 1000); // debug
             this._tuner = new SensitivityTuner(0, 1200); // use a slightly wider interval for better stability
         }
