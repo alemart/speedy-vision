@@ -106,7 +106,8 @@
  * scale = 0.5 means half the size (1/4 the area)
  * and so on...
  */
-#define PYRAMID_MAX_LEVELS      float(@PYRAMID_MAX_LEVELS@)
+#define PYRAMID_MAX_LEVELS      float(@PYRAMID_MAX_LEVELS@) /* scaling factor: 1 */
+#define PYRAMID_MAX_OCTAVES     int(@PYRAMID_MAX_OCTAVES@)  /* scaling factor: sqrt(2) */
 #define LOG2_PYRAMID_MAX_SCALE  float(@LOG2_PYRAMID_MAX_SCALE@)
 
 /**

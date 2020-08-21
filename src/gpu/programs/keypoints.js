@@ -55,12 +55,12 @@ const fastScore8 = importShader('keypoints/fast-score8.glsl').withArguments('ima
 // FAST-9_16 on scale-space
 // Requires image mipmap
 const multiscaleFast = importShader('keypoints/multiscale-fast.glsl')
-                      .withArguments('pyramid', 'threshold', 'minLod', 'maxLod', 'usePyrSubLevels');
+                      .withArguments('pyramid', 'threshold', 'numberOfOctaves');
 
 // FAST-9_16 on scale-space
 // with Harris scoring
 const multiscaleFastWithHarris = importShader('keypoints/multiscale-fast.glsl')
-                                .withArguments('pyramid', 'threshold', 'minLod', 'maxLod', 'usePyrSubLevels')
+                                .withArguments('pyramid', 'threshold', 'numberOfOctaves')
                                 .withDefines({
                                     'USE_HARRIS_SCORE': 1
                                 });
@@ -73,7 +73,7 @@ const multiscaleFastWithHarris = importShader('keypoints/multiscale-fast.glsl')
 
 // compute corner responses (score map)
 const multiscaleHarris = importShader('keypoints/multiscale-harris.glsl')
-                        .withArguments('pyramid', 'windowRadius', 'minLod', 'maxLod', 'usePyrSubLevels', 'sobelDerivatives');
+                        .withArguments('pyramid', 'windowRadius', 'numberOfOctaves', 'sobelDerivatives');
 
 // discard corners below a specified quality level
 const harrisCutoff = importShader('keypoints/harris-cutoff.glsl').withArguments('corners', 'maxScore', 'quality');
@@ -93,7 +93,7 @@ const brisk = importShader('keypoints/brisk.glsl')
 
 // non-maximum suppression
 const nonmaxSuppression = importShader('keypoints/nonmax-suppression.glsl').withArguments('image');
-const multiscaleSuppression = importShader('keypoints/multiscale-suppression.glsl').withArguments('image', 'usePyrSubLevels');
+const multiscaleSuppression = importShader('keypoints/multiscale-suppression.glsl').withArguments('image');
 const samescaleSuppression = importShader('keypoints/samescale-suppression.glsl').withArguments('image');
 
 // Sobel derivatives

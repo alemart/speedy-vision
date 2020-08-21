@@ -23,8 +23,7 @@
 
 uniform sampler2D pyramid;
 uniform float threshold;
-uniform float minLod, maxLod;
-uniform bool usePyrSubLevels; // scaling factor of sqrt(2) if true, or 2 if false
+uniform int numberOfOctaves;
 
 const ivec4 margin = ivec4(3, 3, 4, 4);
 const vec4 zeroes = vec4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -33,10 +32,6 @@ const vec4 ones = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 // Use a better score function
 //#define USE_HARRIS_SCORE // if enabled, will not use FAST scores. May not compile on mobile (drivers?)
 
-#ifdef USE_HARRIS_SCORE
-const int OCTAVE_COUNT = 2 * (@PYRAMID_MAX_LEVELS@);
-#endif
-
 void main()
 {
     vec4 pixel = threadPixel(pyramid);
@@ -44,17 +39,15 @@ void main()
     ivec2 size = outputSize();
     float t = clamp(threshold, 0.0f, 1.0f);
     float ct = pixel.g + t, c_t = pixel.g - t;
-    float pot = exp2(minLod);
-    float lodJump = 1.0f - float(usePyrSubLevels) * 0.5f;
     vec2 best = vec2(0.0f, pixel.a);
 
 #ifdef USE_HARRIS_SCORE
     // Compute df arrays in uniform control flow
-    vec2 dfmm[OCTAVE_COUNT], dfm0[OCTAVE_COUNT], dfm1[OCTAVE_COUNT],
-         df0m[OCTAVE_COUNT], df00[OCTAVE_COUNT], df01[OCTAVE_COUNT],
-         df1m[OCTAVE_COUNT], df10[OCTAVE_COUNT], df11[OCTAVE_COUNT];
+    vec2 dfmm[PYRAMID_MAX_OCTAVES], dfm0[PYRAMID_MAX_OCTAVES], dfm1[PYRAMID_MAX_OCTAVES],
+         df0m[PYRAMID_MAX_OCTAVES], df00[PYRAMID_MAX_OCTAVES], df01[PYRAMID_MAX_OCTAVES],
+         df1m[PYRAMID_MAX_OCTAVES], df10[PYRAMID_MAX_OCTAVES], df11[PYRAMID_MAX_OCTAVES];
     float pyrpix = 0.0f;
-    for(int l = 0; l < OCTAVE_COUNT; l++) {
+    for(int l = 0; l < PYRAMID_MAX_OCTAVES; l++) {
         float lod = float(l) * 0.5f;
         float pot = exp2(lod);
         pyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(-1,-1)).g;
@@ -88,7 +81,8 @@ void main()
     //*/
 
     // for each level of the pyramid
-    for(float lod = minLod; lod <= maxLod; pot = exp2(lod += lodJump)) {
+    float lod = 0.0f, pot = 1.0f;
+    for(int octave = 0; octave < numberOfOctaves; octave++, pot = exp2(lod += 0.5f)) {
 
         // update current pixel
         pixel = pyrPixel(pyramid, lod);

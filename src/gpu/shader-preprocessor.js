@@ -19,7 +19,7 @@
  * Custom preprocessor for shaders
  */
 
-import { PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE } from '../utils/globals';
+import { PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE, PYRAMID_MAX_OCTAVES } from '../utils/globals';
 import { PixelComponent } from '../utils/types';
 import { FileNotFoundError } from '../utils/errors';
 
@@ -33,6 +33,7 @@ const constants = {
     // pyramids
     'PYRAMID_MAX_LEVELS': PYRAMID_MAX_LEVELS,
     'LOG2_PYRAMID_MAX_SCALE': Math.log2(PYRAMID_MAX_SCALE),
+    'PYRAMID_MAX_OCTAVES': PYRAMID_MAX_OCTAVES,
 
     // colors
     'PIXELCOMPONENT_RED': PixelComponent.RED,

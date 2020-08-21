@@ -22,7 +22,6 @@
 @include "pyramids.glsl"
 
 uniform sampler2D image;
-uniform bool usePyrSubLevels; // scaling factor of sqrt(2) if true, or 2 if false
 
 // settings (better suppression = more texture reads)
 #define ENABLE_INNER_RING
@@ -35,8 +34,8 @@ void main()
 {
     vec4 pixel = threadPixel(image);
     float lod = decodeLod(pixel.a);
-    //float lodJump = 1.0f - float(usePyrSubLevels) * 0.5f; // doesn't work nicely?
-    float lodJump = 1.0f;
+    float lodJump = 0.5f; // 1.0f;
+    //float lodJump = 1.0f;
 
     // not a corner?
     color = pixel;

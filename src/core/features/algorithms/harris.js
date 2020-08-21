@@ -99,15 +99,14 @@ export class HarrisFeatures extends FeaturesAlgorithm
         const quality = this._quality;
         const descriptorSize = this.descriptorSize;
         const windowRadius = DEFAULT_WINDOW_SIZE >> 1;
-        const usePyrSubLevels = true;
-        const lod = 0;
+        const lod = 0, numberOfOctaves = 1;
 
         // compute derivatives
         const df = gpu.programs.keypoints.multiscaleSobel(inputTexture, lod);
         const sobelDerivatives = Array(SOBEL_OCTAVE_COUNT).fill(df);
 
         // corner detection
-        const corners = gpu.programs.keypoints.multiscaleHarris(inputTexture, windowRadius, lod, lod, usePyrSubLevels, sobelDerivatives);
+        const corners = gpu.programs.keypoints.multiscaleHarris(inputTexture, windowRadius, numberOfOctaves, sobelDerivatives);
 
         // release derivatives
         gpu.programs.utils.release(df);
@@ -176,20 +175,19 @@ export class MultiscaleHarrisFeatures extends HarrisFeatures
         const descriptorSize = this.descriptorSize;
         const orientationPatchRadius = DEFAULT_ORIENTATION_PATCH_RADIUS;
         const windowRadius = DEFAULT_WINDOW_SIZE >> 1;
-        const minLod = 0, maxLod = this._depth - 1;
-        const usePyrSubLevels = true;
+        const numberOfOctaves = 2 * this._depth - 1;
 
         // generate pyramid
         const pyramid = gpu.programs.utils.generatePyramid(inputTexture);
 
         // compute derivatives
-        const df = gpu.programs.keypoints.multiscaleSobel(pyramid, minLod);
+        const df = gpu.programs.keypoints.multiscaleSobel(pyramid, 0.0);
         const sobelDerivatives = Array(SOBEL_OCTAVE_COUNT).fill(df);
-        for(let lod = minLod + 0.5; lod <= maxLod; lod += 0.5)
-            sobelDerivatives[(2*lod)|0] = gpu.programs.keypoints.multiscaleSobel(pyramid, lod);
+        for(let j = 1; j < numberOfOctaves; j++)
+            sobelDerivatives[j] = gpu.programs.keypoints.multiscaleSobel(pyramid, j * 0.5);
 
         // corner detection
-        const corners = gpu.programs.keypoints.multiscaleHarris(pyramid, windowRadius, minLod, maxLod, usePyrSubLevels, sobelDerivatives);
+        const corners = gpu.programs.keypoints.multiscaleHarris(pyramid, windowRadius, numberOfOctaves, sobelDerivatives);
 
         // release derivatives
         for(let i = 0; i < sobelDerivatives.length; i++)
@@ -203,7 +201,7 @@ export class MultiscaleHarrisFeatures extends HarrisFeatures
 
         // non-maximum suppression
         const suppressed1 = gpu.programs.keypoints.samescaleSuppression(filteredCorners);
-        const suppressed2 = gpu.programs.keypoints.multiscaleSuppression(suppressed1, usePyrSubLevels);
+        const suppressed2 = gpu.programs.keypoints.multiscaleSuppression(suppressed1);
 
         // encode & orient corners
         const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(suppressed2, descriptorSize);

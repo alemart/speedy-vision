@@ -37,9 +37,8 @@
 
 uniform sampler2D pyramid;
 uniform int windowRadius; // 0, 1, 2 ... for 1x1, 3x3 or 5x5 windows. Can't be larger than 7.
-uniform float minLod, maxLod;
-uniform bool usePyrSubLevels; // scaling factor of sqrt(2) if true, or 2 if false
-uniform sampler2D sobelDerivatives[7]; // for each LOD sub-level (0, 0.5, 1, 1.5, 2...)
+uniform int numberOfOctaves; // each pyramid octave uses a scaling factor of sqrt(2)
+uniform sampler2D sobelDerivatives[@PYRAMID_MAX_OCTAVES@]; // for each LOD sub-level (0, 0.5, 1, 1.5, 2...)
 
 vec4 pickSobelDerivatives(int index, ivec2 offset)
 {
@@ -61,19 +60,17 @@ void main()
     ivec2 thread = threadLocation();
     vec4 pixel = threadPixel(pyramid);
     vec2 best = vec2(0.0f, pixel.a);
-    highp float lodJump = 1.0f - float(usePyrSubLevels) * 0.5f;
 
-    // for each level of the pyramid
-    for(highp float lod = maxLod; lod >= minLod; lod -= lodJump) {
+    // for each octave
+    for(int octave = 0; octave < numberOfOctaves; octave++) {
 
         // compute Harris' autocorrelation matrix
         // M = [ a  b ]   <=>   m = (a, b, c)
         //     [ b  c ]
-        int sobelIndex = int(lod / lodJump);
         vec3 m = vec3(0.0f, 0.0f, 0.0f);
         for(int j = -windowRadius; j <= windowRadius; j++) {
             for(int i = -windowRadius; i <= windowRadius; i++) {
-                vec2 df = decodeSobel(pickSobelDerivatives(sobelIndex, ivec2(i, j)));
+                vec2 df = decodeSobel(pickSobelDerivatives(octave, ivec2(i, j)));
                 m += vec3(df.x * df.x, df.x * df.y, df.y * df.y);
             }
         }
@@ -85,6 +82,7 @@ void main()
         float score = max(0.0f, response / 4.0f); // hmmmmmm....
 
         // compute corner scale
+        float lod = 0.5f * float(octave);
         float scale = encodeLod(lod);
 
         // pick the best score

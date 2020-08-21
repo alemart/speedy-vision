@@ -217,10 +217,9 @@ export class MultiscaleFASTFeatures extends FASTFeatures
         const gpu = this._gpu;
         const normalizedThreshold = this._threshold / 255.0;
         const useHarrisScore = this._useHarrisScore;
-        const minLod = 0, maxLod = this._depth - 1;
         const descriptorSize = this.descriptorSize;
         const orientationPatchRadius = DEFAULT_ORIENTATION_PATCH_RADIUS;
-        const usePyrSubLevels = true;
+        const numberOfOctaves = 2 * this._depth - 1;
 
         // generate pyramid
         const pyramid = gpu.programs.utils.generatePyramid(inputTexture);
@@ -228,13 +227,13 @@ export class MultiscaleFASTFeatures extends FASTFeatures
         // find corners
         let corners = null;
         if(!useHarrisScore)
-            corners = gpu.programs.keypoints.multiscaleFast(pyramid, normalizedThreshold, minLod, maxLod, usePyrSubLevels);
+            corners = gpu.programs.keypoints.multiscaleFast(pyramid, normalizedThreshold, numberOfOctaves);
         else
-            corners = gpu.programs.keypoints.multiscaleFastWithHarris(pyramid, normalizedThreshold, minLod, maxLod, usePyrSubLevels);
+            corners = gpu.programs.keypoints.multiscaleFastWithHarris(pyramid, normalizedThreshold, numberOfOctaves);
 
         // non-maximum suppression
         corners = gpu.programs.keypoints.samescaleSuppression(corners);
-        corners = gpu.programs.keypoints.multiscaleSuppression(corners, usePyrSubLevels);
+        corners = gpu.programs.keypoints.multiscaleSuppression(corners);
 
         // encode & orient corners
         const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(corners, descriptorSize);
