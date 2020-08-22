@@ -50,6 +50,9 @@ export class GPUFilters extends SpeedyProgramGroup
             .compose('box9', '_box9x', '_box9y') // size: 9x9
             .compose('box11', '_box11x', '_box11y') // size: 11x11
 
+            // difference of gaussians
+            .compose('dog16_1', '_dog16_1x', '_dog16_1y') // sigma_2 / sigma_1 = 1.6 (approx. laplacian with sigma = 1)
+
             // texture-based convolutions
             .declare('texConv2D3', texConv2D(3), { // 2D convolution with a 3x3 texture-based kernel
                 ...this.program.usesPingpongRendering()
@@ -188,6 +191,16 @@ export class GPUFilters extends SpeedyProgramGroup
             .declare('_box11y', convY([
                 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
             ], 1 / 11))
+
+
+            // difference of gaussians (DoG)
+            // sigma_2 (1.6) - sigma_1 (1.0) => approximates laplacian of gaussian (LoG)
+            .declare('_dog16_1x', convX([
+                0.011725, 0.038976, 0.055137, -0.037649, -0.136377, -0.037649, 0.055137, 0.038976, 0.011725
+            ]))
+            .declare('_dog16_1y', convY([
+                0.011725, 0.038976, 0.055137, -0.037649, -0.136377, -0.037649, 0.055137, 0.038976, 0.011725
+            ]))
         ;
     }
 }
