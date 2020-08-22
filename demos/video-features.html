@@ -6,6 +6,7 @@
         <script src="../dist/speedy-vision.js"></script>
         <style>
             form { display: flex; flex-wrap: wrap; align-items: baseline; margin-bottom: 1em; }
+            form label { margin-right: 0.5em; }
             mark { position: absolute; top: 16px; right: 16px; background: none; }
         </style>
     </head>
@@ -15,9 +16,14 @@
             <div>
                 <label for="sensitivity">Sensitivity</label>
                 <input type="range" min="20" max="80" value="50" id="sensitivity">
-                <label for="multiscale">Multi-scale</label>
-                <input type="checkbox" id="multiscale">
-                <span style="margin-left:2em">FPS: <span id="fps">60</span></span>
+                <label for="method">Method</label>
+                <select id="method">
+                    <option value="fast" selected>FAST</option>
+                    <option value="harris">Harris</option>
+                    <option value="multiscale-fast">Multiscale FAST</option>
+                    <option value="multiscale-harris">Multiscale Harris</option>
+                </select>
+                <span style="margin-left:1em">FPS: <span id="fps">60</span></span>
             </div>
         </form>
         <div>
@@ -44,8 +50,8 @@ window.onload = async function()
     const canvas = createCanvas(media.width, media.height, video.title);
 
     // elements
+    const method = document.getElementById('method');
     const slider = document.getElementById('sensitivity');
-    const multiscale = document.getElementById('multiscale');
     const featureCount = document.getElementById('feature-count');
 
     // update features
@@ -58,7 +64,7 @@ window.onload = async function()
 
         // find & render features
         media.findFeatures({
-            method: multiscale.checked ? 'multiscale-harris' : 'fast',
+            method: method.value,
             sensitivity: sensitivity,
         }).then(f => {
             features = f;
