@@ -233,8 +233,8 @@ PipelineOperation.Normalize = class extends SpeedyPipelineOperation
     run(texture, gpu, media)
     {
         if(media._colorFormat == ColorFormat.RGB)
-            return gpu.programs.utils.normalizeColoredImage(texture, this._min, this._max);
+            return gpu.programs.enhancements.normalizeColoredImage(texture, this._min, this._max);
         else
-            return gpu.programs.utils.normalizeGreyscaleImage(texture, this._min, this._max);
+            return gpu.programs.enhancements.normalizeGreyscaleImage(texture, this._min, this._max);
     }
 }

@@ -26,6 +26,7 @@ import { GPUKeypoints } from './programs/keypoints';
 import { GPUEncoders } from './programs/encoders';
 import { GPUDescriptors } from './programs/descriptors';
 import { GPUPyramids } from './programs/pyramids';
+import { GPUEnhancements } from './programs/enhancements';
 
 /**
  * An access point to all programs that run on the CPU
@@ -55,6 +56,7 @@ export class SpeedyProgramCenter
         this._encoders = null;
         this._descriptors = null;
         this._pyramids = null;
+        this._enhancements = null;
     }
 
     /**
@@ -136,5 +138,14 @@ export class SpeedyProgramCenter
     get pyramids()
     {
         return this._pyramids || (this._pyramids = new GPUPyramids(this._gpu, this._width, this._height));
+    }
+
+    /**
+     * Image enhancement algorithms
+     * @returns {GPUEnhancements}
+     */
+    get enhancements()
+    {
+        return this._enhancements || (this._enhancements = new GPUEnhancements(this._gpu, this._width, this._height));
     }
 }
