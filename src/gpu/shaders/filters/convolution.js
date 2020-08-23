@@ -37,7 +37,7 @@ export function conv2D(kernel, normalizationConstant = 1.0)
 {
     const kernel32 = new Float32Array(kernel.map(x => (+x) * (+normalizationConstant)));
     const kSize = Math.sqrt(kernel32.length) | 0;
-    const N = (kSize / 2) | 0;
+    const N = kSize >> 1; // idiv 2
 
     // validate input
     if(kSize < 1 || kSize % 2 == 0)
@@ -46,7 +46,7 @@ export function conv2D(kernel, normalizationConstant = 1.0)
         throw new IllegalArgumentError(`Invalid 2D convolution kernel of ${kernel32.length} elements (expected: square)`);
 
     // select the appropriate pixel function
-    const pixelAtOffset = (kSize <= 7) ? `pixelAtOffset` : `pixelAtLongOffset`;
+    const pixelAtOffset = (N <= 7) ? 'pixelAtShortOffset' : 'pixelAtLongOffset';
 
     // code generator
     const foreachKernelElement = fn => cartesian(symmetricRange(N), symmetricRange(N)).map(
@@ -118,7 +118,7 @@ function conv1D(axis, kernel, normalizationConstant = 1.0)
 {
     const kernel32 = new Float32Array(kernel.map(x => (+x) * (+normalizationConstant)));
     const kSize = kernel32.length;
-    const N = (kSize / 2) | 0;
+    const N = kSize >> 1; // idiv 2
 
     // validate input
     if(kSize < 1 || kSize % 2 == 0)
@@ -127,7 +127,7 @@ function conv1D(axis, kernel, normalizationConstant = 1.0)
         throw new IllegalArgumentError(`Can't perform 1D convolution: invalid axis "${axis}"`); // this should never happen
 
     // select the appropriate pixel function
-    const pixelAtOffset = (kSize <= 7) ? `pixelAtOffset` : `pixelAtLongOffset`;
+    const pixelAtOffset = (N <= 7) ? 'pixelAtShortOffset' : 'pixelAtLongOffset';
 
     // code generator
     const foreachKernelElement = fn => symmetricRange(N).reduce(
@@ -296,7 +296,7 @@ export function texConv2D(kernelSize)
         throw new IllegalArgumentError(`Can't perform a texture-based 2D convolution with an invalid kernel size of ${kernelSize}`);
 
     // select the appropriate pixel function
-    const pixelAtOffset = (kSize <= 7) ? `pixelAtOffset` : `pixelAtLongOffset`;
+    const pixelAtOffset = (N <= 7) ? 'pixelAtShortOffset' : 'pixelAtLongOffset';
 
     // utilities
     const foreachKernelElement = fn => cartesian(symmetricRange(N), symmetricRange(N)).map(
@@ -372,7 +372,7 @@ function texConv1D(kernelSize, axis)
         throw new IllegalArgumentError(`Can't perform a texture-based 1D convolution: invalid axis "${axis}"`); // this should never happen
 
     // select the appropriate pixel function
-    const pixelAtOffset = (kSize <= 7) ? `pixelAtOffset` : `pixelAtLongOffset`;
+    const pixelAtOffset = (N <= 7) ? 'pixelAtShortOffset' : 'pixelAtLongOffset';
 
     // utilities
     const foreachKernelElement = fn => symmetricRange(N).map(fn).join('\n');
