@@ -295,6 +295,9 @@ export function texConv2D(kernelSize)
     if(kernelSize < 1 || kernelSize % 2 == 0)
         throw new IllegalArgumentError(`Can't perform a texture-based 2D convolution with an invalid kernel size of ${kernelSize}`);
 
+    // select the appropriate pixel function
+    const pixelAtOffset = (kSize <= 7) ? `pixelAtOffset` : `pixelAtLongOffset`;
+
     // utilities
     const foreachKernelElement = fn => cartesian(symmetricRange(N), symmetricRange(N)).map(
         ij => fn(ij[0], ij[1])
@@ -303,7 +306,7 @@ export function texConv2D(kernelSize)
     const generateCode = (i, j) => `
         kernel = pixelAt(texKernel, ivec2(${i + N}, ${j + N}));
         value = dot(kernel, magic) * scale + offset;
-        result += pixelAtOffset(image, ivec2(${i}, ${j})) * value;
+        result += ${pixelAtOffset}(image, ivec2(${i}, ${j})) * value;
     `;
 
     // image: target image
@@ -368,16 +371,19 @@ function texConv1D(kernelSize, axis)
     else if(axis != 'x' && axis != 'y')
         throw new IllegalArgumentError(`Can't perform a texture-based 1D convolution: invalid axis "${axis}"`); // this should never happen
 
+    // select the appropriate pixel function
+    const pixelAtOffset = (kSize <= 7) ? `pixelAtOffset` : `pixelAtLongOffset`;
+
     // utilities
     const foreachKernelElement = fn => symmetricRange(N).map(fn).join('\n');
     const generateCode = i => ((axis == 'x') ? `
         kernel = pixelAt(texKernel, ivec2(${i + N}, 0));
         value = dot(kernel, magic) * scale + offset;
-        result += pixelAtOffset(image, ivec2(${i}, 0)) * value;
+        result += ${pixelAtOffset}(image, ivec2(${i}, 0)) * value;
     ` : `
         kernel = pixelAt(texKernel, ivec2(${i + N}, 0));
         value = dot(kernel, magic) * scale + offset;
-        result += pixelAtOffset(image, ivec2(0, ${i})) * value;
+        result += ${pixelAtOffset}(image, ivec2(0, ${i})) * value;
     `);
 
     // image: target image
