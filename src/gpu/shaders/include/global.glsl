@@ -48,11 +48,12 @@
 // Get pixel at (x,y) in texel space
 #define pixelAt(img, pos) texelFetch((img), (pos), 0)
 
-
-
-
-// Get the pixel at a constant (dx,dy) offset from the thread pixel (use |dx|,|dy| <= 7)
+// Get pixel at a constant (dx,dy) offset from the thread pixel (use |dx|,|dy| <= 7)
 // This assumes textureSize(img, 0) == ivec2(texSize), i.e., input size == output size
 #define pixelAtOffset(img, offset) textureLodOffset((img), texCoord, 0.0f, (offset))
+
+// Get pixel at a long (dx,dy) offset (max(|dx|,|dy|) > 7)
+// This assumes textureSize(img, 0) == ivec2(texSize), i.e., input size == output size
+#define pixelAtLongOffset(img, offset) textureLod((img), texCoord + vec2(offset) / texSize, 0.0f)
 
 #endif

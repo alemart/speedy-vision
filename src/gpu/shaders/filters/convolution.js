@@ -45,6 +45,9 @@ export function conv2D(kernel, normalizationConstant = 1.0)
     else if(kSize * kSize != kernel32.length)
         throw new IllegalArgumentError(`Invalid 2D convolution kernel of ${kernel32.length} elements (expected: square)`);
 
+    // select the appropriate pixel function
+    const pixelAtOffset = (kSize <= 7) ? `pixelAtOffset` : `pixelAtLongOffset`;
+
     // code generator
     const foreachKernelElement = fn => cartesian(symmetricRange(N), symmetricRange(N)).map(
         cur => fn(
@@ -54,7 +57,7 @@ export function conv2D(kernel, normalizationConstant = 1.0)
     ).join('\n');
 
     const generateCode = (k, dy, dx) => `
-        result += pixelAtOffset(image, ivec2(${dx | 0}, ${dy | 0})) * float(${+k});
+        result += ${pixelAtOffset}(image, ivec2(${dx | 0}, ${dy | 0})) * float(${+k});
     `;
 
     // shader
@@ -123,14 +126,17 @@ function conv1D(axis, kernel, normalizationConstant = 1.0)
     else if(axis != 'x' && axis != 'y')
         throw new IllegalArgumentError(`Can't perform 1D convolution: invalid axis "${axis}"`); // this should never happen
 
+    // select the appropriate pixel function
+    const pixelAtOffset = (kSize <= 7) ? `pixelAtOffset` : `pixelAtLongOffset`;
+
     // code generator
     const foreachKernelElement = fn => symmetricRange(N).reduce(
         (acc, cur) => acc + fn(kernel32[cur + N], cur),
     '');
     const generateCode = (k, i) => ((axis == 'x') ? `
-        pixel += pixelAtOffset(image, ivec2(${i | 0}, 0)) * float(${+k});
+        pixel += ${pixelAtOffset}(image, ivec2(${i | 0}, 0)) * float(${+k});
     ` : `
-        pixel += pixelAtOffset(image, ivec2(0, ${i | 0})) * float(${+k});
+        pixel += ${pixelAtOffset}(image, ivec2(0, ${i | 0})) * float(${+k});
     `);
 
     // shader
