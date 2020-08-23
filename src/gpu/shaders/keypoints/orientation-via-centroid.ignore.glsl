@@ -45,16 +45,16 @@ void main()
         mat4 p; // pixel intensities
 
         p[0] = vec4(
-            pixelAtOffset(corners, ivec2(0, -1)).g,
-            pixelAtOffset(corners, ivec2(1, -1)).g,
-            pixelAtOffset(corners, ivec2(1, 0)).g,
-            pixelAtOffset(corners, ivec2(1, 1)).g
+            pixelAtShortOffset(corners, ivec2(0, -1)).g,
+            pixelAtShortOffset(corners, ivec2(1, -1)).g,
+            pixelAtShortOffset(corners, ivec2(1, 0)).g,
+            pixelAtShortOffset(corners, ivec2(1, 1)).g
         );
         p[1] = vec4(
-            pixelAtOffset(corners, ivec2(0, 1)).g,
-            pixelAtOffset(corners, ivec2(-1, 1)).g,
-            pixelAtOffset(corners, ivec2(-1, 0)).g,
-            pixelAtOffset(corners, ivec2(-1, -1)).g
+            pixelAtShortOffset(corners, ivec2(0, 1)).g,
+            pixelAtShortOffset(corners, ivec2(-1, 1)).g,
+            pixelAtShortOffset(corners, ivec2(-1, 0)).g,
+            pixelAtShortOffset(corners, ivec2(-1, -1)).g
         );
 
         m += vec2(0.0f, -p[0][0]);
@@ -68,22 +68,22 @@ void main()
 
         if(patchRadius >= 2) {
             p[0] = vec4(
-                pixelAtOffset(corners, ivec2(0, -2)).g,
-                pixelAtOffset(corners, ivec2(1, -2)).g,
-                pixelAtOffset(corners, ivec2(2, -1)).g,
-                pixelAtOffset(corners, ivec2(2, 0)).g
+                pixelAtShortOffset(corners, ivec2(0, -2)).g,
+                pixelAtShortOffset(corners, ivec2(1, -2)).g,
+                pixelAtShortOffset(corners, ivec2(2, -1)).g,
+                pixelAtShortOffset(corners, ivec2(2, 0)).g
             );
             p[1] = vec4(
-                pixelAtOffset(corners, ivec2(2, 1)).g,
-                pixelAtOffset(corners, ivec2(1, 2)).g,
-                pixelAtOffset(corners, ivec2(0, 2)).g,
-                pixelAtOffset(corners, ivec2(-1, 2)).g
+                pixelAtShortOffset(corners, ivec2(2, 1)).g,
+                pixelAtShortOffset(corners, ivec2(1, 2)).g,
+                pixelAtShortOffset(corners, ivec2(0, 2)).g,
+                pixelAtShortOffset(corners, ivec2(-1, 2)).g
             );
             p[2] = vec4(
-                pixelAtOffset(corners, ivec2(-2, 1)).g,
-                pixelAtOffset(corners, ivec2(-2, 0)).g,
-                pixelAtOffset(corners, ivec2(-2, -1)).g,
-                pixelAtOffset(corners, ivec2(-1, -2)).g
+                pixelAtShortOffset(corners, ivec2(-2, 1)).g,
+                pixelAtShortOffset(corners, ivec2(-2, 0)).g,
+                pixelAtShortOffset(corners, ivec2(-2, -1)).g,
+                pixelAtShortOffset(corners, ivec2(-1, -2)).g
             );
 
             m += vec2(0.0f, -2.0f * p[0][0]);
@@ -101,28 +101,28 @@ void main()
 
             if(patchRadius >= 3) {
                 p[0] = vec4(
-                    pixelAtOffset(corners, ivec2(0, -3)).g,
-                    pixelAtOffset(corners, ivec2(1, -3)).g,
-                    pixelAtOffset(corners, ivec2(2, -2)).g,
-                    pixelAtOffset(corners, ivec2(3, -1)).g
+                    pixelAtShortOffset(corners, ivec2(0, -3)).g,
+                    pixelAtShortOffset(corners, ivec2(1, -3)).g,
+                    pixelAtShortOffset(corners, ivec2(2, -2)).g,
+                    pixelAtShortOffset(corners, ivec2(3, -1)).g
                 );
                 p[1] = vec4(
-                    pixelAtOffset(corners, ivec2(3, 0)).g,
-                    pixelAtOffset(corners, ivec2(3, 1)).g,
-                    pixelAtOffset(corners, ivec2(2, 2)).g,
-                    pixelAtOffset(corners, ivec2(1, 3)).g
+                    pixelAtShortOffset(corners, ivec2(3, 0)).g,
+                    pixelAtShortOffset(corners, ivec2(3, 1)).g,
+                    pixelAtShortOffset(corners, ivec2(2, 2)).g,
+                    pixelAtShortOffset(corners, ivec2(1, 3)).g
                 );
                 p[2] = vec4(
-                    pixelAtOffset(corners, ivec2(0, 3)).g,
-                    pixelAtOffset(corners, ivec2(-1, 3)).g,
-                    pixelAtOffset(corners, ivec2(-2, 2)).g,
-                    pixelAtOffset(corners, ivec2(-3, 1)).g
+                    pixelAtShortOffset(corners, ivec2(0, 3)).g,
+                    pixelAtShortOffset(corners, ivec2(-1, 3)).g,
+                    pixelAtShortOffset(corners, ivec2(-2, 2)).g,
+                    pixelAtShortOffset(corners, ivec2(-3, 1)).g
                 );
                 p[3] = vec4(
-                    pixelAtOffset(corners, ivec2(-3, 0)).g,
-                    pixelAtOffset(corners, ivec2(-3, -1)).g,
-                    pixelAtOffset(corners, ivec2(-2, -2)).g,
-                    pixelAtOffset(corners, ivec2(-1, -3)).g
+                    pixelAtShortOffset(corners, ivec2(-3, 0)).g,
+                    pixelAtShortOffset(corners, ivec2(-3, -1)).g,
+                    pixelAtShortOffset(corners, ivec2(-2, -2)).g,
+                    pixelAtShortOffset(corners, ivec2(-1, -3)).g
                 );
 
                 m += vec2(0.0f, -3.0f * p[0][0]);

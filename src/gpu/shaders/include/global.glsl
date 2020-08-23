@@ -50,7 +50,7 @@
 
 // Get pixel at a constant (dx,dy) offset from the thread pixel (use |dx|,|dy| <= 7)
 // This assumes textureSize(img, 0) == ivec2(texSize), i.e., input size == output size
-#define pixelAtOffset(img, offset) textureLodOffset((img), texCoord, 0.0f, (offset))
+#define pixelAtShortOffset(img, offset) textureLodOffset((img), texCoord, 0.0f, (offset))
 
 // Get pixel at a long (dx,dy) offset (max(|dx|,|dy|) > 7)
 // This assumes textureSize(img, 0) == ivec2(texSize), i.e., input size == output size

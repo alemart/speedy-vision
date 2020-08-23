@@ -31,14 +31,14 @@ void main()
     float ct = pixel.g + t, c_t = pixel.g - t;
 
     // read neighbors
-    float p0 = pixelAtOffset(image, ivec2(0, 1)).g;
-    float p1 = pixelAtOffset(image, ivec2(1, 1)).g;
-    float p2 = pixelAtOffset(image, ivec2(1, 0)).g;
-    float p3 = pixelAtOffset(image, ivec2(1, -1)).g;
-    float p4 = pixelAtOffset(image, ivec2(0, -1)).g;
-    float p5 = pixelAtOffset(image, ivec2(-1, -1)).g;
-    float p6 = pixelAtOffset(image, ivec2(-1, 0)).g;
-    float p7 = pixelAtOffset(image, ivec2(-1, 1)).g;
+    float p0 = pixelAtShortOffset(image, ivec2(0, 1)).g;
+    float p1 = pixelAtShortOffset(image, ivec2(1, 1)).g;
+    float p2 = pixelAtShortOffset(image, ivec2(1, 0)).g;
+    float p3 = pixelAtShortOffset(image, ivec2(1, -1)).g;
+    float p4 = pixelAtShortOffset(image, ivec2(0, -1)).g;
+    float p5 = pixelAtShortOffset(image, ivec2(-1, -1)).g;
+    float p6 = pixelAtShortOffset(image, ivec2(-1, 0)).g;
+    float p7 = pixelAtShortOffset(image, ivec2(-1, 1)).g;
 
     // read bright and dark pixels
     vec2 scores = vec2(0.0f, 0.0f);

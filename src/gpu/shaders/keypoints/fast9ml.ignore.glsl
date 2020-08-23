@@ -56,10 +56,10 @@ void main()
     float t = clamp(threshold, 0.0f, 1.0f);
     float c = pixel.g;
     float ct = c + t, c_t = c - t;
-    float p0 = pixelAtOffset(image, ivec2(0, 3)).g;
-    float p4 = pixelAtOffset(image, ivec2(3, 0)).g;
-    float p8 = pixelAtOffset(image, ivec2(0, -3)).g;
-    float p12 = pixelAtOffset(image, ivec2(-3, 0)).g;
+    float p0 = pixelAtShortOffset(image, ivec2(0, 3)).g;
+    float p4 = pixelAtShortOffset(image, ivec2(3, 0)).g;
+    float p8 = pixelAtShortOffset(image, ivec2(0, -3)).g;
+    float p12 = pixelAtShortOffset(image, ivec2(-3, 0)).g;
 
     // quick test: not a corner
     if(!(
@@ -69,18 +69,18 @@ void main()
         return;
 
     // corner test
-    float p1 = pixelAtOffset(image, ivec2(1, 3)).g;
-    float p2 = pixelAtOffset(image, ivec2(2, 2)).g;
-    float p3 = pixelAtOffset(image, ivec2(3, 1)).g;
-    float p5 = pixelAtOffset(image, ivec2(3, -1)).g;
-    float p6 = pixelAtOffset(image, ivec2(2, -2)).g;
-    float p7 = pixelAtOffset(image, ivec2(1, -3)).g;
-    float p9 = pixelAtOffset(image, ivec2(-1, -3)).g;
-    float p10 = pixelAtOffset(image, ivec2(-2, -2)).g;
-    float p11 = pixelAtOffset(image, ivec2(-3, -1)).g;
-    float p13 = pixelAtOffset(image, ivec2(-3, 1)).g;
-    float p14 = pixelAtOffset(image, ivec2(-2, 2)).g;
-    float p15 = pixelAtOffset(image, ivec2(-1, 3)).g;
+    float p1 = pixelAtShortOffset(image, ivec2(1, 3)).g;
+    float p2 = pixelAtShortOffset(image, ivec2(2, 2)).g;
+    float p3 = pixelAtShortOffset(image, ivec2(3, 1)).g;
+    float p5 = pixelAtShortOffset(image, ivec2(3, -1)).g;
+    float p6 = pixelAtShortOffset(image, ivec2(2, -2)).g;
+    float p7 = pixelAtShortOffset(image, ivec2(1, -3)).g;
+    float p9 = pixelAtShortOffset(image, ivec2(-1, -3)).g;
+    float p10 = pixelAtShortOffset(image, ivec2(-2, -2)).g;
+    float p11 = pixelAtShortOffset(image, ivec2(-3, -1)).g;
+    float p13 = pixelAtShortOffset(image, ivec2(-3, 1)).g;
+    float p14 = pixelAtShortOffset(image, ivec2(-2, 2)).g;
+    float p15 = pixelAtShortOffset(image, ivec2(-1, 3)).g;
 
     if(p0 > ct)
      if(p1 > ct)

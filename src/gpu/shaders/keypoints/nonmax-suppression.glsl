@@ -26,14 +26,14 @@ uniform sampler2D image;
 void main()
 {
     // 8-neighborhood
-    float p0 = pixelAtOffset(image, ivec2(0, 1)).r;
-    float p1 = pixelAtOffset(image, ivec2(1, 1)).r;
-    float p2 = pixelAtOffset(image, ivec2(1, 0)).r;
-    float p3 = pixelAtOffset(image, ivec2(1, -1)).r;
-    float p4 = pixelAtOffset(image, ivec2(0, -1)).r;
-    float p5 = pixelAtOffset(image, ivec2(-1, -1)).r;
-    float p6 = pixelAtOffset(image, ivec2(-1, 0)).r;
-    float p7 = pixelAtOffset(image, ivec2(-1, 1)).r;
+    float p0 = pixelAtShortOffset(image, ivec2(0, 1)).r;
+    float p1 = pixelAtShortOffset(image, ivec2(1, 1)).r;
+    float p2 = pixelAtShortOffset(image, ivec2(1, 0)).r;
+    float p3 = pixelAtShortOffset(image, ivec2(1, -1)).r;
+    float p4 = pixelAtShortOffset(image, ivec2(0, -1)).r;
+    float p5 = pixelAtShortOffset(image, ivec2(-1, -1)).r;
+    float p6 = pixelAtShortOffset(image, ivec2(-1, 0)).r;
+    float p7 = pixelAtShortOffset(image, ivec2(-1, 1)).r;
 
     // maximum score
     float m = max(

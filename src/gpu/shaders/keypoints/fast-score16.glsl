@@ -35,22 +35,22 @@ void main()
 
     // read neighbors
     mat4 mp = mat4(
-        pixelAtOffset(image, ivec2(0, 3)).g,
-        pixelAtOffset(image, ivec2(1, 3)).g,
-        pixelAtOffset(image, ivec2(2, 2)).g,
-        pixelAtOffset(image, ivec2(3, 1)).g,
-        pixelAtOffset(image, ivec2(3, 0)).g,
-        pixelAtOffset(image, ivec2(3, -1)).g,
-        pixelAtOffset(image, ivec2(2, -2)).g,
-        pixelAtOffset(image, ivec2(1, -3)).g,
-        pixelAtOffset(image, ivec2(0, -3)).g,
-        pixelAtOffset(image, ivec2(-1, -3)).g,
-        pixelAtOffset(image, ivec2(-2, -2)).g,
-        pixelAtOffset(image, ivec2(-3, -1)).g,
-        pixelAtOffset(image, ivec2(-3, 0)).g,
-        pixelAtOffset(image, ivec2(-3, 1)).g,
-        pixelAtOffset(image, ivec2(-2, 2)).g,
-        pixelAtOffset(image, ivec2(-1, 3)).g
+        pixelAtShortOffset(image, ivec2(0, 3)).g,
+        pixelAtShortOffset(image, ivec2(1, 3)).g,
+        pixelAtShortOffset(image, ivec2(2, 2)).g,
+        pixelAtShortOffset(image, ivec2(3, 1)).g,
+        pixelAtShortOffset(image, ivec2(3, 0)).g,
+        pixelAtShortOffset(image, ivec2(3, -1)).g,
+        pixelAtShortOffset(image, ivec2(2, -2)).g,
+        pixelAtShortOffset(image, ivec2(1, -3)).g,
+        pixelAtShortOffset(image, ivec2(0, -3)).g,
+        pixelAtShortOffset(image, ivec2(-1, -3)).g,
+        pixelAtShortOffset(image, ivec2(-2, -2)).g,
+        pixelAtShortOffset(image, ivec2(-3, -1)).g,
+        pixelAtShortOffset(image, ivec2(-3, 0)).g,
+        pixelAtShortOffset(image, ivec2(-3, 1)).g,
+        pixelAtShortOffset(image, ivec2(-2, 2)).g,
+        pixelAtShortOffset(image, ivec2(-1, 3)).g
     );
 
     // build auxiliary matrices

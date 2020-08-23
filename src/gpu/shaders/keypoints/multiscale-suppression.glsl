@@ -44,14 +44,14 @@ void main()
 
     // read inner ring: 8-neighborhood
 #ifdef ENABLE_INNER_RING
-    vec4 p0 = pixelAtOffset(image, ivec2(0, 1));
-    vec4 p1 = pixelAtOffset(image, ivec2(1, 1));
-    vec4 p2 = pixelAtOffset(image, ivec2(1, 0));
-    vec4 p3 = pixelAtOffset(image, ivec2(1, -1));
-    vec4 p4 = pixelAtOffset(image, ivec2(0, -1));
-    vec4 p5 = pixelAtOffset(image, ivec2(-1, -1));
-    vec4 p6 = pixelAtOffset(image, ivec2(-1, 0));
-    vec4 p7 = pixelAtOffset(image, ivec2(-1, 1));
+    vec4 p0 = pixelAtShortOffset(image, ivec2(0, 1));
+    vec4 p1 = pixelAtShortOffset(image, ivec2(1, 1));
+    vec4 p2 = pixelAtShortOffset(image, ivec2(1, 0));
+    vec4 p3 = pixelAtShortOffset(image, ivec2(1, -1));
+    vec4 p4 = pixelAtShortOffset(image, ivec2(0, -1));
+    vec4 p5 = pixelAtShortOffset(image, ivec2(-1, -1));
+    vec4 p6 = pixelAtShortOffset(image, ivec2(-1, 0));
+    vec4 p7 = pixelAtShortOffset(image, ivec2(-1, 1));
 #else
     vec4 p0, p1, p2, p3, p4, p5, p6, p7;
     p0 = p1 = p2 = p3 = p4 = p5 = p6 = p7 = vec4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -59,22 +59,22 @@ void main()
 
     // read middle ring
 #ifdef ENABLE_MIDDLE_RING
-    vec4 q0 = pixelAtOffset(image, ivec2(0, 2));
-    vec4 q1 = pixelAtOffset(image, ivec2(1, 2));
-    vec4 q2 = pixelAtOffset(image, ivec2(2, 2));
-    vec4 q3 = pixelAtOffset(image, ivec2(2, 1));
-    vec4 q4 = pixelAtOffset(image, ivec2(2, 0));
-    vec4 q5 = pixelAtOffset(image, ivec2(2, -1));
-    vec4 q6 = pixelAtOffset(image, ivec2(2, -2));
-    vec4 q7 = pixelAtOffset(image, ivec2(1, -2));
-    vec4 q8 = pixelAtOffset(image, ivec2(0, -2));
-    vec4 q9 = pixelAtOffset(image, ivec2(-1, -2));
-    vec4 q10 = pixelAtOffset(image, ivec2(-2, -2));
-    vec4 q11 = pixelAtOffset(image, ivec2(-2, -1));
-    vec4 q12 = pixelAtOffset(image, ivec2(-2, 0));
-    vec4 q13 = pixelAtOffset(image, ivec2(-2, 1));
-    vec4 q14 = pixelAtOffset(image, ivec2(-2, 2));
-    vec4 q15 = pixelAtOffset(image, ivec2(-1, 2));
+    vec4 q0 = pixelAtShortOffset(image, ivec2(0, 2));
+    vec4 q1 = pixelAtShortOffset(image, ivec2(1, 2));
+    vec4 q2 = pixelAtShortOffset(image, ivec2(2, 2));
+    vec4 q3 = pixelAtShortOffset(image, ivec2(2, 1));
+    vec4 q4 = pixelAtShortOffset(image, ivec2(2, 0));
+    vec4 q5 = pixelAtShortOffset(image, ivec2(2, -1));
+    vec4 q6 = pixelAtShortOffset(image, ivec2(2, -2));
+    vec4 q7 = pixelAtShortOffset(image, ivec2(1, -2));
+    vec4 q8 = pixelAtShortOffset(image, ivec2(0, -2));
+    vec4 q9 = pixelAtShortOffset(image, ivec2(-1, -2));
+    vec4 q10 = pixelAtShortOffset(image, ivec2(-2, -2));
+    vec4 q11 = pixelAtShortOffset(image, ivec2(-2, -1));
+    vec4 q12 = pixelAtShortOffset(image, ivec2(-2, 0));
+    vec4 q13 = pixelAtShortOffset(image, ivec2(-2, 1));
+    vec4 q14 = pixelAtShortOffset(image, ivec2(-2, 2));
+    vec4 q15 = pixelAtShortOffset(image, ivec2(-1, 2));
 #else
     vec4 q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15;
     q0 = q1 = q2 = q3 = q4 = q5 = q6 = q7 = q8 = q9 = q10 =
@@ -83,22 +83,22 @@ void main()
 
     // read outer ring
 #ifdef ENABLE_OUTER_RING
-    vec4 r0 = pixelAtOffset(image, ivec2(0, 3));
-    vec4 r1 = pixelAtOffset(image, ivec2(1, 3));
-    vec4 r2 = pixelAtOffset(image, ivec2(3, 1));
-    vec4 r3 = pixelAtOffset(image, ivec2(3, 0));
-    vec4 r4 = pixelAtOffset(image, ivec2(3, -1));
-    vec4 r5 = pixelAtOffset(image, ivec2(1, -3));
-    vec4 r6 = pixelAtOffset(image, ivec2(0, -3));
-    vec4 r7 = pixelAtOffset(image, ivec2(-1, -3));
-    vec4 r8 = pixelAtOffset(image, ivec2(-3, -1));
-    vec4 r9 = pixelAtOffset(image, ivec2(-3, 0));
-    vec4 r10 = pixelAtOffset(image, ivec2(-3, 1));
-    vec4 r11 = pixelAtOffset(image, ivec2(-1, 3));
-    vec4 r12 = pixelAtOffset(image, ivec2(0, 4));
-    vec4 r13 = pixelAtOffset(image, ivec2(4, 0));
-    vec4 r14 = pixelAtOffset(image, ivec2(0, -4));
-    vec4 r15 = pixelAtOffset(image, ivec2(-4, 0));
+    vec4 r0 = pixelAtShortOffset(image, ivec2(0, 3));
+    vec4 r1 = pixelAtShortOffset(image, ivec2(1, 3));
+    vec4 r2 = pixelAtShortOffset(image, ivec2(3, 1));
+    vec4 r3 = pixelAtShortOffset(image, ivec2(3, 0));
+    vec4 r4 = pixelAtShortOffset(image, ivec2(3, -1));
+    vec4 r5 = pixelAtShortOffset(image, ivec2(1, -3));
+    vec4 r6 = pixelAtShortOffset(image, ivec2(0, -3));
+    vec4 r7 = pixelAtShortOffset(image, ivec2(-1, -3));
+    vec4 r8 = pixelAtShortOffset(image, ivec2(-3, -1));
+    vec4 r9 = pixelAtShortOffset(image, ivec2(-3, 0));
+    vec4 r10 = pixelAtShortOffset(image, ivec2(-3, 1));
+    vec4 r11 = pixelAtShortOffset(image, ivec2(-1, 3));
+    vec4 r12 = pixelAtShortOffset(image, ivec2(0, 4));
+    vec4 r13 = pixelAtShortOffset(image, ivec2(4, 0));
+    vec4 r14 = pixelAtShortOffset(image, ivec2(0, -4));
+    vec4 r15 = pixelAtShortOffset(image, ivec2(-4, 0));
 #else
     vec4 r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15;
     r0 = r1 = r2 = r3 = r4 = r5 = r6 = r7 = r8 = r9 = r10 =

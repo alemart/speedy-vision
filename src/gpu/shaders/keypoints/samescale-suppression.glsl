@@ -38,14 +38,14 @@ void main()
         return;
 
     // read 8-neighborhood
-    vec4 p0 = pixelAtOffset(image, ivec2(0, 1));
-    vec4 p1 = pixelAtOffset(image, ivec2(1, 1));
-    vec4 p2 = pixelAtOffset(image, ivec2(1, 0));
-    vec4 p3 = pixelAtOffset(image, ivec2(1, -1));
-    vec4 p4 = pixelAtOffset(image, ivec2(0, -1));
-    vec4 p5 = pixelAtOffset(image, ivec2(-1, -1));
-    vec4 p6 = pixelAtOffset(image, ivec2(-1, 0));
-    vec4 p7 = pixelAtOffset(image, ivec2(-1, 1));
+    vec4 p0 = pixelAtShortOffset(image, ivec2(0, 1));
+    vec4 p1 = pixelAtShortOffset(image, ivec2(1, 1));
+    vec4 p2 = pixelAtShortOffset(image, ivec2(1, 0));
+    vec4 p3 = pixelAtShortOffset(image, ivec2(1, -1));
+    vec4 p4 = pixelAtShortOffset(image, ivec2(0, -1));
+    vec4 p5 = pixelAtShortOffset(image, ivec2(-1, -1));
+    vec4 p6 = pixelAtShortOffset(image, ivec2(-1, 0));
+    vec4 p7 = pixelAtShortOffset(image, ivec2(-1, 1));
     //p0.a=p1.a=p2.a=p3.a=p4.a=p5.a=p6.a=p7.a=pixel.a; // test
 
     // get scores of same-scale neighborhood
