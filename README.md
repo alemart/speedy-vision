@@ -1,6 +1,6 @@
 # speedy-vision.js
 
-A **lightning fast** GPU-accelerated Computer Vision library for the web, with a focus on real-time feature detection and matching. ORB, FAST, BRISK, Harris and more!
+A **lightning fast** GPU-accelerated Computer Vision library for the web, with a focus on real-time feature detection and matching. ORB, FAST, BRISK, Harris, image processing and more!
 
 [<img src="assets/demo-orb.gif" width="640" alt="Speedy feature detection">](https://alemart.github.io/speedy-vision-js/demos/orb-features.html)
 
@@ -32,6 +32,7 @@ Try the demos and take a look at their source code:
   * [Automatic sensitivity](https://alemart.github.io/speedy-vision-js/demos/automatic-sensitivity.html)
   * [ORB features](https://alemart.github.io/speedy-vision-js/demos/orb-features.html)
 * Image processing
+  * [Nightvision camera](https://alemart.github.io/speedy-vision-js/demos/nightvision-camera.html)
   * [Cool effects with image convolutions](https://alemart.github.io/speedy-vision-js/demos/convolution.html)
   * [Convert image to greyscale](https://alemart.github.io/speedy-vision-js/demos/greyscale-image.html)
   * [Convert video to greyscale](https://alemart.github.io/speedy-vision-js/demos/greyscale-video.html)
@@ -238,7 +239,7 @@ A `Promise` that resolves as soon as the resources are released.
 
 ##### SpeedyMedia.findFeatures()
 
-`SpeedyMedia.findFeatures(config?: object): Promise< Array<SpeedyFeature> >`
+`SpeedyMedia.findFeatures(config?: object): Promise<SpeedyFeature[]>`
 
 Detects feature points in a `SpeedyMedia`.
 
@@ -250,6 +251,7 @@ Detects feature points in a `SpeedyMedia`.
   * `max: number`. If specified, Speedy will return the best keypoints (according to their scores) up to this number.
   * `expected: number | object`. Speedy will automatically adjust the sensitivity value to get you *approximately* the number of features you ask. For more information, read the section on [automatic sensitivity](#automatic-sensitivity).
   * `denoise: boolean`. Whether or not to denoise the image before finding the features. Defaults to `true`.
+  * `enhancements: object`. If specified, Speedy will enhance the image in different ways before extracting the features. This is meant to make your features more robust. Read more on [enhancing your features](#enhancing-your-features).
 
 The configuration object accepts additional keys depending on which method is specified. Read the section on [detection methods](#detection-methods) to know more.
 
@@ -339,6 +341,21 @@ Speedy includes an implementation of the ORB feature descriptor[5]. It is an eff
 [4] Shi, J.; Tomasi, C. "Good features to track". 1994 Proceedings of IEEE Conference on Computer Vision and Pattern Recognition.
 
 [5] Rublee, E.; Rabaud, V.; Konolige, K.; Bradski, G. "ORB: An efficient alternative to SIFT or SURF". 2011 International Conference on Computer Vision (ICCV-2011).
+
+##### Enhancing your features
+
+Speedy can enhance your images in different ways before detecting the interest points. These enhancements are intended to make the feature detection more robust, at a slighly higher computational cost. The desired enhancements are specified in the `config.enhancements` object:
+
+* `illumination: boolean`. If set to `true`, the feature detection will be more robust in relation to lighting changes and shadows. It will use the [Nightvision](#nightvision) filter behind the scenes. Example:
+
+```js
+let features = await media.findFeatures({
+    method: 'orb',
+    enhancements: {
+        illumination: true
+    }
+})
+```
 
 ##### Automatic sensitivity
 
@@ -496,6 +513,8 @@ const blurred = await media.run(pipeline);
 
 The methods below can be chained together to create your own image processing pipelines. They all return the `SpeedyPipeline` instance they operate upon.
 
+Many pipeline operations accept an `option` parameter of type `PipelineOperationOptions`. This should be either an object or a function with no arguments that returns an object, that is, `object | () => object`. In the first case, all data related to the operation is set when the pipeline is instantiated. In the latter, the data may change in time, allowing you to regulate the parameters.
+
 ##### Generic
 
 ###### .concat
@@ -521,9 +540,9 @@ When applying the filters, pixels at the borders are replicated.
 
 ###### .blur
 
-`SpeedyPipeline.blur(options?: object): SpeedyPipeline`
+`SpeedyPipeline.blur(options?: PipelineOperationOptions): SpeedyPipeline`
 
-Blurs the media. The optional `options` object accepts the following keys:
+Blurs the media. Available options:
 
 * `filter: string`. Name of the smoothing filter. One of the following: `"gaussian"`, `"box"`. Defaults to `"gaussian"`.
 * `size: number`. Kernel size. One of the following: `3`, `5` or `7`. Defaults to `5`.
@@ -556,12 +575,21 @@ transformedMedia.draw(canvas);
 
 ###### .normalize
 
-`SpeedyPipeline.normalize(options?: object): SpeedyPipeline`
+`SpeedyPipeline.normalize(options?: PipelineOperationOptions): SpeedyPipeline`
 
-Normalizes the media (histogram stretching). The optional `options` object accepts the following keys:
+Normalizes the media (histogram stretching). Available options:
 
 * `min: number`. The minimum desired pixel intensity. Defaults to `0`.
 * `max: number`. The maximum desired pixel intensity. Defaults to `255`.
+
+###### .nightvision
+
+`SpeedyPipeline.nightvision(options?: PipelineOperationOptions): SpeedyPipeline`
+
+Nightvision enhances the illumination of the scene. It improves local contrast and brightness, enabling you to "see in the dark" - [see the demo](#demos). Available options:
+
+* `gain: number`. A value used to adjust the contrast. Defaults to `0.45`.
+* `offset: number`. A value related to the resulting brightness. Defaults to `0.45`.
 
 ### Extras
 

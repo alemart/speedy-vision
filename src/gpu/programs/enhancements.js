@@ -73,8 +73,8 @@ export class GPUEnhancements extends SpeedyProgramGroup
             .declare('_nightvision', nightvision)
             .declare('_nightvisionGreyscale', nightvisionGreyscale)
             .compose('_illuminationMap80', '_illuminationMap80x', '_illuminationMap80y')
-            .declare('_illuminationMap80x', convX(Utils.gaussianKernel(180, 255, true)))
-            .declare('_illuminationMap80y', convY(Utils.gaussianKernel(180, 255, true)))
+            .declare('_illuminationMap80x', convX(Utils.gaussianKernel(80, 63, true)))
+            .declare('_illuminationMap80y', convY(Utils.gaussianKernel(80, 63, true)))
         ;
     }
 
@@ -125,7 +125,7 @@ export class GPUEnhancements extends SpeedyProgramGroup
      * @param {boolean} [greyscale] use greyscale variant of the algorithm
      * @returns {WebGLTexture}
      */
-    nightvision(image, gain = 0.3, offset = 0.45, greyscale = false)
+    nightvision(image, gain = 0.45, offset = 0.45, greyscale = false)
     {
         const strategy = greyscale ? this._nightvisionGreyscale : this._nightvision;
         const illuminationMap = this._illuminationMap80(image);
