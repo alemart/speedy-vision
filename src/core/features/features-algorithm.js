@@ -124,9 +124,10 @@ export /* abstract */ class FeaturesAlgorithm
      * @param {WebGLTexture} inputTexture a RGB or greyscale image
      * @param {boolean} [denoise] should we smooth the media a bit?
      * @param {boolean} [convertToGreyscale] set to true if the texture is not greyscale
+     * @param {boolean} [enhanceIllumination] fix uneven lighting in the scene?
      * @returns {WebGLTexture} pre-processed greyscale image
      */
-    preprocess(inputTexture, denoise = true, convertToGreyscale = true)
+    preprocess(inputTexture, denoise = true, convertToGreyscale = true, enhanceIllumination = false)
     {
         const gpu = this._gpu;
         let texture = inputTexture;
@@ -136,6 +137,9 @@ export /* abstract */ class FeaturesAlgorithm
 
         if(convertToGreyscale)
             texture = gpu.programs.colors.rgb2grey(texture);
+
+        if(enhanceIllumination)
+            texture = gpu.programs.enhancements.nightvision(texture, undefined, undefined, true);
             
         return texture;
     }

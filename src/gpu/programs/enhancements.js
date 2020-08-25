@@ -21,24 +21,28 @@
 
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
+import { convX, convY } from '../shaders/filters/convolution';
 import { PixelComponent } from '../../utils/types';
-
+import { Utils } from '../../utils/utils';
 
 
 //
 // Shaders
 //
 
-// Normalize a greyscale image
+// Normalize image
 const normalizeGreyscaleImage = importShader('enhancements/normalize-image.glsl')
                                .withArguments('minmax2d', 'minValue', 'maxValue')
-                               .withDefines({
-                                   'GREYSCALE': 1
-                               });
-
-// Normalize a colored image
+                               .withDefines({ 'GREYSCALE': 1 });
 const normalizeColoredImage = importShader('enhancements/normalize-image.glsl')
                              .withArguments('minmax2dRGB', 'minValue', 'maxValue');
+
+// Nightvision
+const nightvision = importShader('enhancements/nightvision.glsl')
+                   .withArguments('image', 'illuminationMap', 'gain', 'offset');
+const nightvisionGreyscale = importShader('enhancements/nightvision.glsl')
+                            .withArguments('image', 'illuminationMap', 'gain', 'offset')
+                            .withDefines({ 'GREYSCALE': 1 });
 
 
 
@@ -64,6 +68,13 @@ export class GPUEnhancements extends SpeedyProgramGroup
 
             // normalize a colored image
             .declare('_normalizeColoredImage', normalizeColoredImage)
+
+            // nightvision
+            .declare('_nightvision', nightvision)
+            .declare('_nightvisionGreyscale', nightvisionGreyscale)
+            .compose('_illuminationMap80', '_illuminationMap80x', '_illuminationMap80y')
+            .declare('_illuminationMap80x', convX(Utils.gaussianKernel(180, 255, true)))
+            .declare('_illuminationMap80y', convY(Utils.gaussianKernel(180, 255, true)))
         ;
     }
 
@@ -72,6 +83,7 @@ export class GPUEnhancements extends SpeedyProgramGroup
      * @param {WebGLTexture} image greyscale image (RGB components are the same)
      * @param {number} [minValue] minimum desired pixel intensity (from 0 to 255, inclusive)
      * @param {number} [maxValue] maximum desired pixel intensity (from 0 to 255, inclusive)
+     * @returns {WebGLTexture}
      */
     normalizeGreyscaleImage(image, minValue = 0, maxValue = 255)
     {
@@ -85,6 +97,7 @@ export class GPUEnhancements extends SpeedyProgramGroup
      * @param {WebGLTexture} image
      * @param {number} [minValue] minimum desired pixel intensity (from 0 to 255, inclusive)
      * @param {number} [maxValue] maximum desired pixel intensity (from 0 to 255, inclusive)
+     * @returns {WebGLTexture}
      */
     normalizeColoredImage(image, minValue = 0, maxValue = 255)
     {
@@ -102,5 +115,22 @@ export class GPUEnhancements extends SpeedyProgramGroup
         gpu.programs.utils.release(minmax2d[0]);
 
         return normalized;
+    }
+
+    /**
+     * Nightvision filter: "see in the dark"
+     * @param {WebGLTexture} image
+     * @param {number} [gain] higher values => higher contrast
+     * @param {number} [offset] brightness
+     * @param {boolean} [greyscale] use greyscale variant of the algorithm
+     * @returns {WebGLTexture}
+     */
+    nightvision(image, gain = 0.3, offset = 0.45, greyscale = false)
+    {
+        const strategy = greyscale ? this._nightvisionGreyscale : this._nightvision;
+        const illuminationMap = this._illuminationMap80(image);
+        const enhancedImage = strategy(image, illuminationMap, gain, offset);
+
+        return enhancedImage;
     }
 }

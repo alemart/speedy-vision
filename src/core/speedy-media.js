@@ -318,19 +318,28 @@ export class SpeedyMedia
             settings.denoise = true;
         if(!settings.hasOwnProperty('max'))
             settings.max = undefined;
+        if(!settings.hasOwnProperty('enhancements'))
+            settings.enhancements = {};
+        
+        // Validate settings
+        settings.method = String(settings.method);
+        settings.denoise = Boolean(settings.denoise);
+        if(settings.max !== undefined)
+            settings.max = Number(settings.max);
+        if(typeof settings.enhancements !== 'object')
+            throw new IllegalArgumentError('settings.enhancements must be an object');
+
+        // Validate method
+        if(!featuresAlgorithm.hasOwnProperty(settings.method))
+            throw new IllegalArgumentError(`Invalid method "${settings.method}" for feature detection`);
 
         // Has the media been released?
         if(this.isReleased())
             throw new IllegalOperationError(`Can't find features: SpeedyMedia has been released`);
 
-        // Validate method
-        const method = String(settings.method);
-        if(!featuresAlgorithm.hasOwnProperty(method))
-            throw new IllegalArgumentError(`Invalid method "${method}" for feature detection`);
-
         // Setup feature detector & descriptor
-        if(this._featuresAlgorithm == null || this._featuresAlgorithm.constructor !== featuresAlgorithm[method])
-            this._featuresAlgorithm = new (featuresAlgorithm[method])(this._gpu);
+        if(this._featuresAlgorithm == null || this._featuresAlgorithm.constructor !== featuresAlgorithm[settings.method])
+            this._featuresAlgorithm = new (featuresAlgorithm[settings.method])(this._gpu);
 
         // Set custom settings for the selected feature detector & descriptor
         for(const key in settings) {
@@ -343,7 +352,8 @@ export class SpeedyMedia
         texture = this._featuresAlgorithm.preprocess(
             texture,
             settings.denoise,
-            this._colorFormat != ColorFormat.Greyscale
+            this._colorFormat != ColorFormat.Greyscale,
+            settings.enhancements.illumination == true
         );
 
         // Feature detection & description

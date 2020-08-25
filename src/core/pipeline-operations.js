@@ -49,6 +49,20 @@ export const PipelineOperation = { };
     release()
     {
     }
+
+    /**
+     * Sets up a function that returns an options object
+     * @param {object|()=>object} options 
+     * @param {object} defaultOptions 
+     * @returns {()=>object}
+     */
+    _saveOptions(options, defaultOptions)
+    {
+        if(typeof options == 'function')
+            return () => Object.assign(defaultOptions, options());
+        else
+            return () => Object.assign(defaultOptions, options);
+    }
 }
 
 
@@ -86,33 +100,32 @@ PipelineOperation.Blur = class extends SpeedyPipelineOperation
 {
     /**
      * Blur operation
-     * @param {object} [options]
+     * @param {object|()=>object} [options]
      */
     constructor(options = {})
     {
-        const { filter, size } = (options = {
-            filter: 'gaussian',     // "gassuian" | "box"
-            size: 5,                // 3 | 5 | 7
-            ...options
-        });
         super();
 
-        // validate kernel size
-        if(size != 3 && size != 5 && size != 7)
-            throw new IllegalArgumentError(`Invalid kernel size: ${size}`);
-
-        // select the appropriate filter
-        if(filter == 'gaussian')
-            this._filter = 'gauss' + size;
-        else if(filter == 'box')
-            this._filter = 'box' + size;
-        else
-            throw new IllegalArgumentError(`Invalid filter: "${filter}"`);
+        // save options
+        this._getOptions = this._saveOptions(options, {
+            filter: 'gaussian', // "gassuian" | "box"
+            size: 5             // 3 | 5 | 7
+        });
     }
 
     run(texture, gpu, media)
     {
-        return gpu.programs.filters[this._filter](texture);
+        const { filter, size } = this._getOptions();
+
+        // validate options
+        if(filter != 'gaussian' && filter != 'box')
+            throw new IllegalArgumentError(`Invalid filter: "${filter}"`);
+        else if(size != 3 && size != 5 && size != 7)
+            throw new IllegalArgumentError(`Invalid kernel size: ${size}`);
+        
+        // run filter
+        let fname = filter == 'gaussian' ? 'gauss' : 'box';
+        return gpu.programs.filters[fname + size](texture);
     }
 }
 
@@ -214,27 +227,61 @@ PipelineOperation.Normalize = class extends SpeedyPipelineOperation
 {
     /**
      * Normalize operation
-     * @param {object} [options]
+     * @param {object|()=>object} [options]
      */
     constructor(options = {})
     {
-        const { min, max } = (options = {
-            min: 0,     // min. desired pixel intensity: a value in [0,255]
-            max: 255,   // max. desired pixel intensity: a value in [0,255]
-            ...options
-        });
         super();
 
-        // save data
-        this._min = Math.max(0, Math.min(Math.min(min, max), 255));
-        this._max = Math.max(0, Math.min(Math.max(min, max), 255));
+        // save options
+        this._getOptions = this._saveOptions(options, {
+            min: undefined, // min. desired pixel intensity, a value in [0,255]
+            max: undefined  // max. desired pixel intensity, a value in [0,255]
+        });
     }
 
     run(texture, gpu, media)
     {
+        const { min, max } = this._getOptions();
+
         if(media._colorFormat == ColorFormat.RGB)
-            return gpu.programs.enhancements.normalizeColoredImage(texture, this._min, this._max);
+            return gpu.programs.enhancements.normalizeColoredImage(texture, min, max);
+        else if(media._colorFormat == ColorFormat.Greyscale)
+            return gpu.programs.enhancements.normalizeGreyscaleImage(texture, min, max);
         else
-            return gpu.programs.enhancements.normalizeGreyscaleImage(texture, this._min, this._max);
+            throw new NotSupportedError('Invalid color format');
+    }
+}
+
+/**
+ * Nightvision: "see in the dark"
+ */
+PipelineOperation.Nightvision = class extends SpeedyPipelineOperation
+{
+    /**
+     * Class constructor
+     * @param {object|()=>object} [options]
+     */
+    constructor(options = {})
+    {
+        super();
+
+        // save options
+        this._getOptions = this._saveOptions(options, {
+            gain: undefined,  // controls the contrast
+            offset: undefined // controls the brightness
+        });
+    }
+
+    run(texture, gpu, media)
+    {
+        const { gain, offset } = this._getOptions();
+
+        if(media._colorFormat == ColorFormat.RGB)
+            return gpu.programs.enhancements.nightvision(texture, gain, offset, false);
+        else if(media._colorFormat == ColorFormat.Greyscale)
+            return gpu.programs.enhancements.nightvision(texture, gain, offset, true);
+        else
+            throw new NotSupportedError('Invalid color format');
     }
 }

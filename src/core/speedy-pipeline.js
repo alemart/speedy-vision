@@ -189,4 +189,16 @@ export class SpeedyPipeline
             new PipelineOperation.Normalize(options)
         );
     }
+
+    /**
+     * Nightvision
+     * @param {object|Function<object>} [options]
+     * @returns {SpeedyPipeline}
+     */
+    nightvision(options = {})
+    {
+        return this._spawn(
+            new PipelineOperation.Nightvision(options)
+        );
+    }
 }

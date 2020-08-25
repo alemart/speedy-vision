@@ -154,7 +154,7 @@ export class Utils
      * @param {number} [kernelSize] kernel size, odd number
      * @param {bool} [normalized] normalize entries so that their sum is 1
      */
-    static gaussianKernel(sigma, kernelSize = -1, normalized = true)
+    static gaussianKernel(sigma, kernelSize = -1, normalized = false)
     {
         /*
          * Let G(x) be a Gaussian function centered at 0 with fixed sigma:
