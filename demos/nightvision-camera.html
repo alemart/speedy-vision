@@ -1,0 +1,133 @@
+<!--
+  speedy-vision.js
+  GPU-accelerated Computer Vision for the web
+  Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  nightvision-camera.html
+  Nightvision: "see in the dark"
+-->
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Nightvision camera</title>
+        <script src="../dist/speedy-vision.js"></script>
+        <style>
+            form { display: flex; flex-wrap: wrap; align-items: baseline; }
+            form > * { margin: 0 1.5em 1em 0; }
+            mark { position: absolute; top: 16px; right: 16px; background: none; }
+        </style>
+    </head>
+    <body>
+        <h1 style="display:inline-block">Nightvision camera</h1>
+        <span style="margin-left:1em">try in the dark!</span>
+        <form autocomplete="off">
+            <div>
+                <label for="gain-slider">Gain</label>
+                <input type="range" min="0" max="200" value="45" id="gain-slider">
+                <span id="gain-viewer"></span>
+            </div>
+            <div>
+                <label for="offset-slider">Offset</label>
+                <input type="range" min="0" max="100" value="45" id="offset-slider">
+                <span id="offset-viewer"></span>
+            </div>
+            <div>
+                <label for="greyscale-checkbox">Greyscale</label>
+                <input type="checkbox" id="greyscale-checkbox" checked>
+            </div>
+            <div>
+                <button type="button" id="reset-button">Reset</button>
+            </div>
+            <div>
+                FPS: <span id="fps">60</span>
+            </div>
+        </form>
+        <script>
+window.onload = async function()
+{
+    // form controls
+    const gainSlider = document.getElementById('gain-slider');
+    const gainViewer = document.getElementById('gain-viewer');
+    const offsetSlider = document.getElementById('offset-slider');
+    const offsetViewer = document.getElementById('offset-viewer');
+    const greyscaleCheckbox = document.getElementById('greyscale-checkbox');
+
+    // create a colored and a greyscale pipeline
+    const pipeline = [
+        Speedy.pipeline()
+              .nightvision(() => ({
+                  gain: gainSlider.value * 0.01,
+                  offset: offsetSlider.value * 0.01
+              })),
+
+        Speedy.pipeline()
+              .convertTo('greyscale')
+              .nightvision(() => ({
+                  gain: gainSlider.value * 0.01,
+                  offset: offsetSlider.value * 0.01
+              })),
+    ];
+
+    // tell Speedy to load the media
+    const media = await Speedy.camera();
+
+    // create a canvas for rendering
+    const canvas = createCanvas(media.width, media.height, 'Nightvision');
+
+    // render the media
+    async function render()
+    {
+        const i = greyscaleCheckbox.checked ? 1 : 0;
+        const transformedMedia = await media.run(pipeline[i]);
+
+        transformedMedia.draw(canvas);
+        media.draw(canvas, 0, 0, media.width / 3, media.height / 3);
+
+        requestAnimationFrame(render);
+    }
+    render();
+
+    // display fps
+    const fps = document.getElementById('fps');
+    setInterval(() => fps.innerText = Speedy.fps.value, 500);
+
+    // update form controls
+    setInterval(() => {
+        gainViewer.innerText = (gainSlider.value * 0.01).toFixed(2);
+        offsetViewer.innerText = (offsetSlider.value * 0.01).toFixed(2);
+    }, 100);
+
+    // reset button
+    const resetButton = document.getElementById('reset-button');
+    resetButton.onclick = () => document.querySelector('form').reset();
+
+    // details
+    canvas.style.width = (media.width * 2) + 'px';
+}
+
+function createCanvas(width, height, title)
+{
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    canvas.title = title;
+    document.body.appendChild(canvas);
+    return canvas;
+}
+        </script>
+        <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>
+    </body>
+</html>
