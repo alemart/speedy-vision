@@ -6,7 +6,7 @@
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-08-22T00:03:10.258Z
+ * Date: 2020-08-25T01:14:31.346Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -1262,9 +1262,10 @@ class FeaturesAlgorithm
      * @param {WebGLTexture} inputTexture a RGB or greyscale image
      * @param {boolean} [denoise] should we smooth the media a bit?
      * @param {boolean} [convertToGreyscale] set to true if the texture is not greyscale
+     * @param {boolean} [enhanceIllumination] fix uneven lighting in the scene?
      * @returns {WebGLTexture} pre-processed greyscale image
      */
-    preprocess(inputTexture, denoise = true, convertToGreyscale = true)
+    preprocess(inputTexture, denoise = true, convertToGreyscale = true, enhanceIllumination = false)
     {
         const gpu = this._gpu;
         let texture = inputTexture;
@@ -1274,6 +1275,9 @@ class FeaturesAlgorithm
 
         if(convertToGreyscale)
             texture = gpu.programs.colors.rgb2grey(texture);
+
+        if(enhanceIllumination)
+            texture = gpu.programs.enhancements.nightvision(texture, undefined, undefined, true);
             
         return texture;
     }
@@ -1547,6 +1551,20 @@ const PipelineOperation = { };
     release()
     {
     }
+
+    /**
+     * Sets up a function that returns an options object
+     * @param {object|()=>object} options 
+     * @param {object} defaultOptions 
+     * @returns {()=>object}
+     */
+    _saveOptions(options, defaultOptions)
+    {
+        if(typeof options == 'function')
+            return () => Object.assign(defaultOptions, options());
+        else
+            return () => Object.assign(defaultOptions, options);
+    }
 }
 
 
@@ -1584,33 +1602,32 @@ PipelineOperation.Blur = class extends SpeedyPipelineOperation
 {
     /**
      * Blur operation
-     * @param {object} [options]
+     * @param {object|()=>object} [options]
      */
     constructor(options = {})
     {
-        const { filter, size } = (options = {
-            filter: 'gaussian',     // "gassuian" | "box"
-            size: 5,                // 3 | 5 | 7
-            ...options
-        });
         super();
 
-        // validate kernel size
-        if(size != 3 && size != 5 && size != 7)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Invalid kernel size: ${size}`);
-
-        // select the appropriate filter
-        if(filter == 'gaussian')
-            this._filter = 'gauss' + size;
-        else if(filter == 'box')
-            this._filter = 'box' + size;
-        else
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Invalid filter: "${filter}"`);
+        // save options
+        this._getOptions = this._saveOptions(options, {
+            filter: 'gaussian', // "gassuian" | "box"
+            size: 5             // 3 | 5 | 7
+        });
     }
 
     run(texture, gpu, media)
     {
-        return gpu.programs.filters[this._filter](texture);
+        const { filter, size } = this._getOptions();
+
+        // validate options
+        if(filter != 'gaussian' && filter != 'box')
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Invalid filter: "${filter}"`);
+        else if(size != 3 && size != 5 && size != 7)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Invalid kernel size: ${size}`);
+        
+        // run filter
+        let fname = filter == 'gaussian' ? 'gauss' : 'box';
+        return gpu.programs.filters[fname + size](texture);
     }
 }
 
@@ -1712,28 +1729,62 @@ PipelineOperation.Normalize = class extends SpeedyPipelineOperation
 {
     /**
      * Normalize operation
-     * @param {object} [options]
+     * @param {object|()=>object} [options]
      */
     constructor(options = {})
     {
-        const { min, max } = (options = {
-            min: 0,     // min. desired pixel intensity: a value in [0,255]
-            max: 255,   // max. desired pixel intensity: a value in [0,255]
-            ...options
-        });
         super();
 
-        // save data
-        this._min = Math.max(0, Math.min(Math.min(min, max), 255));
-        this._max = Math.max(0, Math.min(Math.max(min, max), 255));
+        // save options
+        this._getOptions = this._saveOptions(options, {
+            min: undefined, // min. desired pixel intensity, a value in [0,255]
+            max: undefined  // max. desired pixel intensity, a value in [0,255]
+        });
     }
 
     run(texture, gpu, media)
     {
+        const { min, max } = this._getOptions();
+
         if(media._colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].RGB)
-            return gpu.programs.utils.normalizeColoredImage(texture, this._min, this._max);
+            return gpu.programs.enhancements.normalizeColoredImage(texture, min, max);
+        else if(media._colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
+            return gpu.programs.enhancements.normalizeGreyscaleImage(texture, min, max);
         else
-            return gpu.programs.utils.normalizeGreyscaleImage(texture, this._min, this._max);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["NotSupportedError"]('Invalid color format');
+    }
+}
+
+/**
+ * Nightvision: "see in the dark"
+ */
+PipelineOperation.Nightvision = class extends SpeedyPipelineOperation
+{
+    /**
+     * Class constructor
+     * @param {object|()=>object} [options]
+     */
+    constructor(options = {})
+    {
+        super();
+
+        // save options
+        this._getOptions = this._saveOptions(options, {
+            gain: undefined,  // controls the contrast
+            offset: undefined // controls the brightness
+        });
+    }
+
+    run(texture, gpu, media)
+    {
+        const { gain, offset } = this._getOptions();
+
+        if(media._colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].RGB)
+            return gpu.programs.enhancements.nightvision(texture, gain, offset, false);
+        else if(media._colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
+            return gpu.programs.enhancements.nightvision(texture, gain, offset, true);
+        else
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["NotSupportedError"]('Invalid color format');
     }
 }
 
@@ -2311,19 +2362,28 @@ class SpeedyMedia
             settings.denoise = true;
         if(!settings.hasOwnProperty('max'))
             settings.max = undefined;
+        if(!settings.hasOwnProperty('enhancements'))
+            settings.enhancements = {};
+        
+        // Validate settings
+        settings.method = String(settings.method);
+        settings.denoise = Boolean(settings.denoise);
+        if(settings.max !== undefined)
+            settings.max = Number(settings.max);
+        if(typeof settings.enhancements !== 'object')
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"]('settings.enhancements must be an object');
+
+        // Validate method
+        if(!featuresAlgorithm.hasOwnProperty(settings.method))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Invalid method "${settings.method}" for feature detection`);
 
         // Has the media been released?
         if(this.isReleased())
             throw new IllegalOperationError(`Can't find features: SpeedyMedia has been released`);
 
-        // Validate method
-        const method = String(settings.method);
-        if(!featuresAlgorithm.hasOwnProperty(method))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Invalid method "${method}" for feature detection`);
-
         // Setup feature detector & descriptor
-        if(this._featuresAlgorithm == null || this._featuresAlgorithm.constructor !== featuresAlgorithm[method])
-            this._featuresAlgorithm = new (featuresAlgorithm[method])(this._gpu);
+        if(this._featuresAlgorithm == null || this._featuresAlgorithm.constructor !== featuresAlgorithm[settings.method])
+            this._featuresAlgorithm = new (featuresAlgorithm[settings.method])(this._gpu);
 
         // Set custom settings for the selected feature detector & descriptor
         for(const key in settings) {
@@ -2336,7 +2396,8 @@ class SpeedyMedia
         texture = this._featuresAlgorithm.preprocess(
             texture,
             settings.denoise,
-            this._colorFormat != _utils_types__WEBPACK_IMPORTED_MODULE_1__["ColorFormat"].Greyscale
+            this._colorFormat != _utils_types__WEBPACK_IMPORTED_MODULE_1__["ColorFormat"].Greyscale,
+            settings.enhancements.illumination == true
         );
 
         // Feature detection & description
@@ -2684,6 +2745,18 @@ class SpeedyPipeline
     {
         return this._spawn(
             new _pipeline_operations__WEBPACK_IMPORTED_MODULE_0__["PipelineOperation"].Normalize(options)
+        );
+    }
+
+    /**
+     * Nightvision
+     * @param {object|Function<object>} [options]
+     * @returns {SpeedyPipeline}
+     */
+    nightvision(options = {})
+    {
+        return this._spawn(
+            new _pipeline_operations__WEBPACK_IMPORTED_MODULE_0__["PipelineOperation"].Nightvision(options)
         );
     }
 }
@@ -4427,6 +4500,160 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
 
 /***/ }),
 
+/***/ "./src/gpu/programs/enhancements.js":
+/*!******************************************!*\
+  !*** ./src/gpu/programs/enhancements.js ***!
+  \******************************************/
+/*! exports provided: GPUEnhancements */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUEnhancements", function() { return GPUEnhancements; });
+/* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-program-group */ "./src/gpu/speedy-program-group.js");
+/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
+/* harmony import */ var _shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../shaders/filters/convolution */ "./src/gpu/shaders/filters/convolution.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * enhancements.js
+ * Image enhancement methods
+ */
+
+
+
+
+
+
+
+
+//
+// Shaders
+//
+
+// Normalize image
+const normalizeGreyscaleImage = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('enhancements/normalize-image.glsl')
+                               .withArguments('minmax2d', 'minValue', 'maxValue')
+                               .withDefines({ 'GREYSCALE': 1 });
+const normalizeColoredImage = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('enhancements/normalize-image.glsl')
+                             .withArguments('minmax2dRGB', 'minValue', 'maxValue');
+
+// Nightvision
+const nightvision = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('enhancements/nightvision.glsl')
+                   .withArguments('image', 'illuminationMap', 'gain', 'offset');
+const nightvisionGreyscale = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('enhancements/nightvision.glsl')
+                            .withArguments('image', 'illuminationMap', 'gain', 'offset')
+                            .withDefines({ 'GREYSCALE': 1 });
+
+
+
+
+/**
+ * GPUEnhancements
+ * Image enhancement algorithms
+ */
+class GPUEnhancements extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["SpeedyProgramGroup"]
+{
+    /**
+     * Class constructor
+     * @param {SpeedyGPU} gpu
+     * @param {number} width
+     * @param {number} height
+     */
+    constructor(gpu, width, height)
+    {
+        super(gpu, width, height);
+        this
+            // normalize a greyscale image
+            .declare('_normalizeGreyscaleImage', normalizeGreyscaleImage)
+
+            // normalize a colored image
+            .declare('_normalizeColoredImage', normalizeColoredImage)
+
+            // nightvision
+            .declare('_nightvision', nightvision)
+            .declare('_nightvisionGreyscale', nightvisionGreyscale)
+            .compose('_illuminationMap80', '_illuminationMap80x', '_illuminationMap80y')
+            .declare('_illuminationMap80x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])(_utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].gaussianKernel(80, 63, true)))
+            .declare('_illuminationMap80y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])(_utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].gaussianKernel(80, 63, true)))
+        ;
+    }
+
+    /**
+     * Normalize a greyscale image
+     * @param {WebGLTexture} image greyscale image (RGB components are the same)
+     * @param {number} [minValue] minimum desired pixel intensity (from 0 to 255, inclusive)
+     * @param {number} [maxValue] maximum desired pixel intensity (from 0 to 255, inclusive)
+     * @returns {WebGLTexture}
+     */
+    normalizeGreyscaleImage(image, minValue = 0, maxValue = 255)
+    {
+        const gpu = this._gpu;
+        const minmax2d = gpu.programs.utils._scanMinMax(image, _utils_types__WEBPACK_IMPORTED_MODULE_3__["PixelComponent"].GREEN);
+        return this._normalizeGreyscaleImage(minmax2d, Math.min(minValue, maxValue), Math.max(minValue, maxValue));
+    }
+
+    /**
+     * Normalize a RGB image
+     * @param {WebGLTexture} image
+     * @param {number} [minValue] minimum desired pixel intensity (from 0 to 255, inclusive)
+     * @param {number} [maxValue] maximum desired pixel intensity (from 0 to 255, inclusive)
+     * @returns {WebGLTexture}
+     */
+    normalizeColoredImage(image, minValue = 0, maxValue = 255)
+    {
+        const gpu = this._gpu;
+        
+        // TODO: normalize on a luminance channel instead (e.g., use HSL color space)
+        const minmax2d = new Array(3);
+        minmax2d[0] = this.clone(gpu.programs.utils._scanMinMax(image, _utils_types__WEBPACK_IMPORTED_MODULE_3__["PixelComponent"].RED));
+        minmax2d[1] = this.clone(gpu.programs.utils._scanMinMax(image, _utils_types__WEBPACK_IMPORTED_MODULE_3__["PixelComponent"].GREEN));
+        minmax2d[2] = gpu.programs.utils._scanMinMax(image, _utils_types__WEBPACK_IMPORTED_MODULE_3__["PixelComponent"].BLUE);
+
+        const normalized = this._normalizeColoredImage(minmax2d, Math.min(minValue, maxValue), Math.max(minValue, maxValue));
+
+        gpu.programs.utils.release(minmax2d[1]);
+        gpu.programs.utils.release(minmax2d[0]);
+
+        return normalized;
+    }
+
+    /**
+     * Nightvision filter: "see in the dark"
+     * @param {WebGLTexture} image
+     * @param {number} [gain] higher values => higher contrast
+     * @param {number} [offset] brightness
+     * @param {boolean} [greyscale] use greyscale variant of the algorithm
+     * @returns {WebGLTexture}
+     */
+    nightvision(image, gain = 0.45, offset = 0.45, greyscale = false)
+    {
+        const strategy = greyscale ? this._nightvisionGreyscale : this._nightvision;
+        const illuminationMap = this._illuminationMap80(image);
+        const enhancedImage = strategy(image, illuminationMap, gain, offset);
+
+        return enhancedImage;
+    }
+}
+
+/***/ }),
+
 /***/ "./src/gpu/programs/filters.js":
 /*!*************************************!*\
   !*** ./src/gpu/programs/filters.js ***!
@@ -4490,6 +4717,9 @@ class GPUFilters extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Spe
             .compose('box7', '_box7x', '_box7y') // size: 7x7
             .compose('box9', '_box9x', '_box9y') // size: 9x9
             .compose('box11', '_box11x', '_box11y') // size: 11x11
+
+            // difference of gaussians
+            .compose('dog16_1', '_dog16_1x', '_dog16_1y') // sigma_2 / sigma_1 = 1.6 (approx. laplacian with sigma = 1)
 
             // texture-based convolutions
             .declare('texConv2D3', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["texConv2D"])(3), { // 2D convolution with a 3x3 texture-based kernel
@@ -4629,6 +4859,16 @@ class GPUFilters extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Spe
             .declare('_box11y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
                 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
             ], 1 / 11))
+
+
+            // difference of gaussians (DoG)
+            // sigma_2 (1.6) - sigma_1 (1.0) => approximates laplacian of gaussian (LoG)
+            .declare('_dog16_1x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["convX"])([
+                0.011725, 0.038976, 0.055137, -0.037649, -0.136377, -0.037649, 0.055137, 0.038976, 0.011725
+            ]))
+            .declare('_dog16_1y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_1__["convY"])([
+                0.011725, 0.038976, 0.055137, -0.037649, -0.136377, -0.037649, 0.055137, 0.038976, 0.011725
+            ]))
         ;
     }
 }
@@ -5154,17 +5394,6 @@ const copyComponents = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["
 // Scan the entire image and find the minimum & maximum pixel intensity
 const scanMinMax2D = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('utils/scan-minmax2d.glsl').withArguments('image', 'iterationNumber');
 
-// Normalize a greyscale image
-const normalizeGreyscaleImage = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('utils/normalize-image.glsl')
-                               .withArguments('minmax2d', 'minValue', 'maxValue')
-                               .withDefines({
-                                   'GREYSCALE': 1
-                               });
-
-// Normalize a colored image
-const normalizeColoredImage = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('utils/normalize-image.glsl')
-                             .withArguments('minmax2dRGB', 'minValue', 'maxValue');
-
 
 
 /**
@@ -5217,12 +5446,6 @@ class GPUUtils extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Speed
             .declare('_scanMinMax2D', scanMinMax2D, {
                 ...this.program.usesPingpongRendering()
             })
-
-            // normalize a greyscale image
-            .declare('_normalizeGreyscaleImage', normalizeGreyscaleImage)
-
-            // normalize a colored image
-            .declare('_normalizeColoredImage', normalizeColoredImage)
         ;
     }
 
@@ -5243,6 +5466,7 @@ class GPUUtils extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Speed
      */
     generatePyramid(texture)
     {
+        // TODO: generate octaves via gaussians
         _gl_utils__WEBPACK_IMPORTED_MODULE_2__["GLUtils"].generateMipmap(this._gpu.gl, texture);
         return texture;
     }
@@ -5288,40 +5512,6 @@ class GPUUtils extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Speed
 
         const srcComponentId = _utils_types__WEBPACK_IMPORTED_MODULE_3__["ColorComponentId"][srcComponent];
         return this._copyComponents(dest, src, destComponents, srcComponentId);
-    }
-
-    /**
-     * Normalize a greyscale image
-     * @param {WebGLTexture} image greyscale image (RGB components are the same)
-     * @param {number} [minValue] minimum desired pixel intensity (from 0 to 255, inclusive)
-     * @param {number} [maxValue] maximum desired pixel intensity (from 0 to 255, inclusive)
-     */
-    normalizeGreyscaleImage(image, minValue = 0, maxValue = 255)
-    {
-        const minmax2d = this._scanMinMax(image, _utils_types__WEBPACK_IMPORTED_MODULE_3__["PixelComponent"].GREEN);
-        return this._normalizeGreyscaleImage(minmax2d, Math.min(minValue, maxValue), Math.max(minValue, maxValue));
-    }
-
-    /**
-     * Normalize a RGB image
-     * @param {WebGLTexture} image
-     * @param {number} [minValue] minimum desired pixel intensity (from 0 to 255, inclusive)
-     * @param {number} [maxValue] maximum desired pixel intensity (from 0 to 255, inclusive)
-     */
-    normalizeColoredImage(image, minValue = 0, maxValue = 255)
-    {
-        // TODO: normalize on a luminance channel instead (e.g., use HSL color space)
-        const minmax2d = new Array(3);
-        minmax2d[0] = this.clone(this._scanMinMax(image, _utils_types__WEBPACK_IMPORTED_MODULE_3__["PixelComponent"].RED));
-        minmax2d[1] = this.clone(this._scanMinMax(image, _utils_types__WEBPACK_IMPORTED_MODULE_3__["PixelComponent"].GREEN));
-        minmax2d[2] = this._scanMinMax(image, _utils_types__WEBPACK_IMPORTED_MODULE_3__["PixelComponent"].BLUE);
-
-        const normalized = this._normalizeColoredImage(minmax2d, Math.min(minValue, maxValue), Math.max(minValue, maxValue));
-
-        this.release(minmax2d[1]);
-        this.release(minmax2d[0]);
-
-        return normalized;
     }
 
     /**
@@ -5725,6 +5915,8 @@ var map = {
 	"./encoders/encode-keypoint-offsets.glsl": "./src/gpu/shaders/encoders/encode-keypoint-offsets.glsl",
 	"./encoders/encode-keypoints.glsl": "./src/gpu/shaders/encoders/encode-keypoints.glsl",
 	"./encoders/orient-encoded-keypoints.glsl": "./src/gpu/shaders/encoders/orient-encoded-keypoints.glsl",
+	"./enhancements/nightvision.glsl": "./src/gpu/shaders/enhancements/nightvision.glsl",
+	"./enhancements/normalize-image.glsl": "./src/gpu/shaders/enhancements/normalize-image.glsl",
 	"./filters/convolution": "./src/gpu/shaders/filters/convolution.js",
 	"./filters/convolution.js": "./src/gpu/shaders/filters/convolution.js",
 	"./include/colors.glsl": "./src/gpu/shaders/include/colors.glsl",
@@ -5760,7 +5952,6 @@ var map = {
 	"./utils/fill.glsl": "./src/gpu/shaders/utils/fill.glsl",
 	"./utils/flip-y.glsl": "./src/gpu/shaders/utils/flip-y.glsl",
 	"./utils/identity.glsl": "./src/gpu/shaders/utils/identity.glsl",
-	"./utils/normalize-image.glsl": "./src/gpu/shaders/utils/normalize-image.glsl",
 	"./utils/scan-minmax2d.glsl": "./src/gpu/shaders/utils/scan-minmax2d.glsl"
 };
 
@@ -5841,6 +6032,28 @@ module.exports = "@include \"math.glsl\"\n@include \"pyramids.glsl\"\n@include \
 
 /***/ }),
 
+/***/ "./src/gpu/shaders/enhancements/nightvision.glsl":
+/*!*******************************************************!*\
+  !*** ./src/gpu/shaders/enhancements/nightvision.glsl ***!
+  \*******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nuniform sampler2D illuminationMap;\nuniform float gain;\nuniform float offset;\nconst mat3 rgb2yuv = mat3(\n0.299f, -0.14713f, 0.615f,\n0.587f, -0.28886f, -0.51499f,\n0.114f, 0.436f, -0.10001f\n);\nconst mat3 yuv2rgb = mat3(\n1.0f, 1.0f, 1.0f,\n0.0f, -0.39465f, 2.03211f,\n1.13983f, -0.58060f, 0.0f\n);\nconst float eps = 0.0001f;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nvec4 imapPixel = threadPixel(illuminationMap);\n#ifdef GREYSCALE\nfloat luma = log(pixel.g + eps) - log(imapPixel.g + eps);\nluma = luma * gain + offset;\nluma = clamp(luma, 0.0f, 1.0f);\ncolor = vec4(luma, luma, luma, 1.0f);\n#else\nvec3 yuvPixel = rgb2yuv * pixel.rgb;\nvec3 yuvImapPixel = rgb2yuv * imapPixel.rgb;\nfloat luma = log(yuvPixel.r + eps) - log(yuvImapPixel.r + eps);\nluma = luma * gain + offset;\nvec3 rgbCorrectedPixel = yuv2rgb * vec3(luma, yuvPixel.gb);\nrgbCorrectedPixel = clamp(rgbCorrectedPixel, 0.0f, 1.0f);\ncolor = vec4(rgbCorrectedPixel, 1.0f);\n#endif\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/enhancements/normalize-image.glsl":
+/*!***********************************************************!*\
+  !*** ./src/gpu/shaders/enhancements/normalize-image.glsl ***!
+  \***********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "#ifdef GREYSCALE\nuniform sampler2D minmax2d;\n#else\nuniform sampler2D minmax2dRGB[3];\n#endif\nuniform float minValue;\nuniform float maxValue;\nconst float eps = 1.0f / 255.0f;\nvoid main()\n{\nvec2 minmax = clamp(vec2(minValue, maxValue), 0.0f, 255.0f) / 255.0f;\nvec4 newMin = vec4(minmax.x);\nvec4 newRange = vec4(minmax.y - minmax.x);\nvec4 alpha = vec4(1.0f, newMin.x, newRange.x, 1.0f);\n#ifdef GREYSCALE\nvec4 pixel = threadPixel(minmax2d);\nmat4 channel = mat4(pixel, pixel, pixel, alpha);\n#else\nmat4 channel = mat4(\nthreadPixel(minmax2dRGB[0]),\nthreadPixel(minmax2dRGB[1]),\nthreadPixel(minmax2dRGB[2]),\nalpha\n);\n#endif\nvec4 oldMin = vec4(channel[0].g, channel[1].g, channel[2].g, channel[3].g);\nvec4 oldRange = max(vec4(channel[0].b, channel[1].b, channel[2].b, channel[3].b), eps);\nvec4 oldIntensity = vec4(channel[0].a, channel[1].a, channel[2].a, channel[3].a);\nvec4 newIntensity = (oldIntensity - oldMin) * newRange / oldRange + newMin;\ncolor = newIntensity;\n}"
+
+/***/ }),
+
 /***/ "./src/gpu/shaders/filters/convolution.js":
 /*!************************************************!*\
   !*** ./src/gpu/shaders/filters/convolution.js ***!
@@ -5899,13 +6112,16 @@ function conv2D(kernel, normalizationConstant = 1.0)
 {
     const kernel32 = new Float32Array(kernel.map(x => (+x) * (+normalizationConstant)));
     const kSize = Math.sqrt(kernel32.length) | 0;
-    const N = (kSize / 2) | 0;
+    const N = kSize >> 1; // idiv 2
 
     // validate input
     if(kSize < 1 || kSize % 2 == 0)
         throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Can't perform a 2D convolution with an invalid kSize of ${kSize}`);
     else if(kSize * kSize != kernel32.length)
         throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Invalid 2D convolution kernel of ${kernel32.length} elements (expected: square)`);
+
+    // select the appropriate pixel function
+    const pixelAtOffset = (N <= 7) ? 'pixelAtShortOffset' : 'pixelAtLongOffset';
 
     // code generator
     const foreachKernelElement = fn => cartesian(symmetricRange(N), symmetricRange(N)).map(
@@ -5916,7 +6132,7 @@ function conv2D(kernel, normalizationConstant = 1.0)
     ).join('\n');
 
     const generateCode = (k, dy, dx) => `
-        result += pixelAtOffset(image, ivec2(${dx | 0}, ${dy | 0})) * float(${+k});
+        result += ${pixelAtOffset}(image, ivec2(${dx | 0}, ${dy | 0})) * float(${+k});
     `;
 
     // shader
@@ -5977,7 +6193,7 @@ function conv1D(axis, kernel, normalizationConstant = 1.0)
 {
     const kernel32 = new Float32Array(kernel.map(x => (+x) * (+normalizationConstant)));
     const kSize = kernel32.length;
-    const N = (kSize / 2) | 0;
+    const N = kSize >> 1; // idiv 2
 
     // validate input
     if(kSize < 1 || kSize % 2 == 0)
@@ -5985,14 +6201,17 @@ function conv1D(axis, kernel, normalizationConstant = 1.0)
     else if(axis != 'x' && axis != 'y')
         throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Can't perform 1D convolution: invalid axis "${axis}"`); // this should never happen
 
+    // select the appropriate pixel function
+    const pixelAtOffset = (N <= 7) ? 'pixelAtShortOffset' : 'pixelAtLongOffset';
+
     // code generator
     const foreachKernelElement = fn => symmetricRange(N).reduce(
         (acc, cur) => acc + fn(kernel32[cur + N], cur),
     '');
     const generateCode = (k, i) => ((axis == 'x') ? `
-        pixel += pixelAtOffset(image, ivec2(${i | 0}, 0)) * float(${+k});
+        pixel += ${pixelAtOffset}(image, ivec2(${i | 0}, 0)) * float(${+k});
     ` : `
-        pixel += pixelAtOffset(image, ivec2(0, ${i | 0})) * float(${+k});
+        pixel += ${pixelAtOffset}(image, ivec2(0, ${i | 0})) * float(${+k});
     `);
 
     // shader
@@ -6151,6 +6370,9 @@ function texConv2D(kernelSize)
     if(kernelSize < 1 || kernelSize % 2 == 0)
         throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Can't perform a texture-based 2D convolution with an invalid kernel size of ${kernelSize}`);
 
+    // select the appropriate pixel function
+    const pixelAtOffset = (N <= 7) ? 'pixelAtShortOffset' : 'pixelAtLongOffset';
+
     // utilities
     const foreachKernelElement = fn => cartesian(symmetricRange(N), symmetricRange(N)).map(
         ij => fn(ij[0], ij[1])
@@ -6159,7 +6381,7 @@ function texConv2D(kernelSize)
     const generateCode = (i, j) => `
         kernel = pixelAt(texKernel, ivec2(${i + N}, ${j + N}));
         value = dot(kernel, magic) * scale + offset;
-        result += pixelAtOffset(image, ivec2(${i}, ${j})) * value;
+        result += ${pixelAtOffset}(image, ivec2(${i}, ${j})) * value;
     `;
 
     // image: target image
@@ -6224,16 +6446,19 @@ function texConv1D(kernelSize, axis)
     else if(axis != 'x' && axis != 'y')
         throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Can't perform a texture-based 1D convolution: invalid axis "${axis}"`); // this should never happen
 
+    // select the appropriate pixel function
+    const pixelAtOffset = (N <= 7) ? 'pixelAtShortOffset' : 'pixelAtLongOffset';
+
     // utilities
     const foreachKernelElement = fn => symmetricRange(N).map(fn).join('\n');
     const generateCode = i => ((axis == 'x') ? `
         kernel = pixelAt(texKernel, ivec2(${i + N}, 0));
         value = dot(kernel, magic) * scale + offset;
-        result += pixelAtOffset(image, ivec2(${i}, 0)) * value;
+        result += ${pixelAtOffset}(image, ivec2(${i}, 0)) * value;
     ` : `
         kernel = pixelAt(texKernel, ivec2(${i + N}, 0));
         value = dot(kernel, magic) * scale + offset;
-        result += pixelAtOffset(image, ivec2(0, ${i})) * value;
+        result += ${pixelAtOffset}(image, ivec2(0, ${i})) * value;
     `);
 
     // image: target image
@@ -6321,7 +6546,7 @@ module.exports = "#ifndef _COLORS_GLSL\n#define _COLORS_GLSL\n#define PIXELCOMPO
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "#ifndef _GLOBAL_GLSL\n#define _GLOBAL_GLSL\n#define threadLocation() ivec2(texCoord * texSize)\n#define outputSize() ivec2(texSize)\n#define DEBUG(scalar) do { color = vec4(float(scalar), 0.0f, 0.0f, 1.0f); return; } while(false)\n#define threadPixel(img) textureLod((img), texCoord, 0.0f)\n#define pixelAt(img, pos) texelFetch((img), (pos), 0)\n#define pixelAtOffset(img, offset) textureLodOffset((img), texCoord, 0.0f, (offset))\n#endif"
+module.exports = "#ifndef _GLOBAL_GLSL\n#define _GLOBAL_GLSL\n#define threadLocation() ivec2(texCoord * texSize)\n#define outputSize() ivec2(texSize)\n#define DEBUG(scalar) do { color = vec4(float(scalar), 0.0f, 0.0f, 1.0f); return; } while(false)\n#define threadPixel(img) textureLod((img), texCoord, 0.0f)\n#define pixelAt(img, pos) texelFetch((img), (pos), 0)\n#define pixelAtShortOffset(img, offset) textureLodOffset((img), texCoord, 0.0f, (offset))\n#define pixelAtLongOffset(img, offset) textureLod((img), texCoord + vec2(offset) / texSize, 0.0f)\n#endif"
 
 /***/ }),
 
@@ -6387,7 +6612,7 @@ module.exports = "uniform sampler2D image, layerA, layerB;\nuniform float scaleA
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 2)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 2)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 1)).g;\nfloat p3 = pixelAtOffset(image, ivec2(2, 0)).g;\nfloat p4 = pixelAtOffset(image, ivec2(2, -1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(1, -2)).g;\nfloat p6 = pixelAtOffset(image, ivec2(0, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(-1, -2)).g;\nfloat p8 = pixelAtOffset(image, ivec2(-2, -1)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-2, 0)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, 1)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-1, 2)).g;\nvec2 scores = vec2(0.0f, 0.0f);\nscores += vec2(max(c_t - p0, 0.0f), max(p0 - ct, 0.0f));\nscores += vec2(max(c_t - p1, 0.0f), max(p1 - ct, 0.0f));\nscores += vec2(max(c_t - p2, 0.0f), max(p2 - ct, 0.0f));\nscores += vec2(max(c_t - p3, 0.0f), max(p3 - ct, 0.0f));\nscores += vec2(max(c_t - p4, 0.0f), max(p4 - ct, 0.0f));\nscores += vec2(max(c_t - p5, 0.0f), max(p5 - ct, 0.0f));\nscores += vec2(max(c_t - p6, 0.0f), max(p6 - ct, 0.0f));\nscores += vec2(max(c_t - p7, 0.0f), max(p7 - ct, 0.0f));\nscores += vec2(max(c_t - p8, 0.0f), max(p8 - ct, 0.0f));\nscores += vec2(max(c_t - p9, 0.0f), max(p9 - ct, 0.0f));\nscores += vec2(max(c_t - p10, 0.0f), max(p10 - ct, 0.0f));\nscores += vec2(max(c_t - p11, 0.0f), max(p11 - ct, 0.0f));\nfloat score = max(scores.x, scores.y) / 12.0f;\ncolor = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);\n}"
+module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtShortOffset(image, ivec2(0, 2)).g;\nfloat p1 = pixelAtShortOffset(image, ivec2(1, 2)).g;\nfloat p2 = pixelAtShortOffset(image, ivec2(2, 1)).g;\nfloat p3 = pixelAtShortOffset(image, ivec2(2, 0)).g;\nfloat p4 = pixelAtShortOffset(image, ivec2(2, -1)).g;\nfloat p5 = pixelAtShortOffset(image, ivec2(1, -2)).g;\nfloat p6 = pixelAtShortOffset(image, ivec2(0, -2)).g;\nfloat p7 = pixelAtShortOffset(image, ivec2(-1, -2)).g;\nfloat p8 = pixelAtShortOffset(image, ivec2(-2, -1)).g;\nfloat p9 = pixelAtShortOffset(image, ivec2(-2, 0)).g;\nfloat p10 = pixelAtShortOffset(image, ivec2(-2, 1)).g;\nfloat p11 = pixelAtShortOffset(image, ivec2(-1, 2)).g;\nvec2 scores = vec2(0.0f, 0.0f);\nscores += vec2(max(c_t - p0, 0.0f), max(p0 - ct, 0.0f));\nscores += vec2(max(c_t - p1, 0.0f), max(p1 - ct, 0.0f));\nscores += vec2(max(c_t - p2, 0.0f), max(p2 - ct, 0.0f));\nscores += vec2(max(c_t - p3, 0.0f), max(p3 - ct, 0.0f));\nscores += vec2(max(c_t - p4, 0.0f), max(p4 - ct, 0.0f));\nscores += vec2(max(c_t - p5, 0.0f), max(p5 - ct, 0.0f));\nscores += vec2(max(c_t - p6, 0.0f), max(p6 - ct, 0.0f));\nscores += vec2(max(c_t - p7, 0.0f), max(p7 - ct, 0.0f));\nscores += vec2(max(c_t - p8, 0.0f), max(p8 - ct, 0.0f));\nscores += vec2(max(c_t - p9, 0.0f), max(p9 - ct, 0.0f));\nscores += vec2(max(c_t - p10, 0.0f), max(p10 - ct, 0.0f));\nscores += vec2(max(c_t - p11, 0.0f), max(p11 - ct, 0.0f));\nfloat score = max(scores.x, scores.y) / 12.0f;\ncolor = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);\n}"
 
 /***/ }),
 
@@ -6398,7 +6623,7 @@ module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main(
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nconst vec4 zeroes = vec4(0.0f, 0.0f, 0.0f, 0.0f);\nconst vec4 ones = vec4(1.0f, 1.0f, 1.0f, 1.0f);\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nmat4 mp = mat4(\npixelAtOffset(image, ivec2(0, 3)).g,\npixelAtOffset(image, ivec2(1, 3)).g,\npixelAtOffset(image, ivec2(2, 2)).g,\npixelAtOffset(image, ivec2(3, 1)).g,\npixelAtOffset(image, ivec2(3, 0)).g,\npixelAtOffset(image, ivec2(3, -1)).g,\npixelAtOffset(image, ivec2(2, -2)).g,\npixelAtOffset(image, ivec2(1, -3)).g,\npixelAtOffset(image, ivec2(0, -3)).g,\npixelAtOffset(image, ivec2(-1, -3)).g,\npixelAtOffset(image, ivec2(-2, -2)).g,\npixelAtOffset(image, ivec2(-3, -1)).g,\npixelAtOffset(image, ivec2(-3, 0)).g,\npixelAtOffset(image, ivec2(-3, 1)).g,\npixelAtOffset(image, ivec2(-2, 2)).g,\npixelAtOffset(image, ivec2(-1, 3)).g\n);\nmat4 mct = mp - mat4(\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct\n), mc_t = mat4(\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t\n) - mp;\nvec4 bs = max(mc_t[0], zeroes), ds = max(mct[0], zeroes);\nbs += max(mc_t[1], zeroes); ds += max(mct[1], zeroes);\nbs += max(mc_t[2], zeroes); ds += max(mct[2], zeroes);\nbs += max(mc_t[3], zeroes); ds += max(mct[3], zeroes);\nfloat score = max(dot(bs, ones), dot(ds, ones)) / 16.0f;\ncolor = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);\n}"
+module.exports = "uniform sampler2D image;\nuniform float threshold;\nconst vec4 zeroes = vec4(0.0f, 0.0f, 0.0f, 0.0f);\nconst vec4 ones = vec4(1.0f, 1.0f, 1.0f, 1.0f);\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nmat4 mp = mat4(\npixelAtShortOffset(image, ivec2(0, 3)).g,\npixelAtShortOffset(image, ivec2(1, 3)).g,\npixelAtShortOffset(image, ivec2(2, 2)).g,\npixelAtShortOffset(image, ivec2(3, 1)).g,\npixelAtShortOffset(image, ivec2(3, 0)).g,\npixelAtShortOffset(image, ivec2(3, -1)).g,\npixelAtShortOffset(image, ivec2(2, -2)).g,\npixelAtShortOffset(image, ivec2(1, -3)).g,\npixelAtShortOffset(image, ivec2(0, -3)).g,\npixelAtShortOffset(image, ivec2(-1, -3)).g,\npixelAtShortOffset(image, ivec2(-2, -2)).g,\npixelAtShortOffset(image, ivec2(-3, -1)).g,\npixelAtShortOffset(image, ivec2(-3, 0)).g,\npixelAtShortOffset(image, ivec2(-3, 1)).g,\npixelAtShortOffset(image, ivec2(-2, 2)).g,\npixelAtShortOffset(image, ivec2(-1, 3)).g\n);\nmat4 mct = mp - mat4(\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct\n), mc_t = mat4(\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t\n) - mp;\nvec4 bs = max(mc_t[0], zeroes), ds = max(mct[0], zeroes);\nbs += max(mc_t[1], zeroes); ds += max(mct[1], zeroes);\nbs += max(mc_t[2], zeroes); ds += max(mct[2], zeroes);\nbs += max(mc_t[3], zeroes); ds += max(mct[3], zeroes);\nfloat score = max(dot(bs, ones), dot(ds, ones)) / 16.0f;\ncolor = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);\n}"
 
 /***/ }),
 
@@ -6409,7 +6634,7 @@ module.exports = "uniform sampler2D image;\nuniform float threshold;\nconst vec4
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 1)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 1)).g;\nfloat p2 = pixelAtOffset(image, ivec2(1, 0)).g;\nfloat p3 = pixelAtOffset(image, ivec2(1, -1)).g;\nfloat p4 = pixelAtOffset(image, ivec2(0, -1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(-1, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(-1, 0)).g;\nfloat p7 = pixelAtOffset(image, ivec2(-1, 1)).g;\nvec2 scores = vec2(0.0f, 0.0f);\nscores += vec2(max(c_t - p0, 0.0f), max(p0 - ct, 0.0f));\nscores += vec2(max(c_t - p1, 0.0f), max(p1 - ct, 0.0f));\nscores += vec2(max(c_t - p2, 0.0f), max(p2 - ct, 0.0f));\nscores += vec2(max(c_t - p3, 0.0f), max(p3 - ct, 0.0f));\nscores += vec2(max(c_t - p4, 0.0f), max(p4 - ct, 0.0f));\nscores += vec2(max(c_t - p5, 0.0f), max(p5 - ct, 0.0f));\nscores += vec2(max(c_t - p6, 0.0f), max(p6 - ct, 0.0f));\nscores += vec2(max(c_t - p7, 0.0f), max(p7 - ct, 0.0f));\nfloat score = max(scores.x, scores.y) / 8.0f;\ncolor = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);\n}"
+module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtShortOffset(image, ivec2(0, 1)).g;\nfloat p1 = pixelAtShortOffset(image, ivec2(1, 1)).g;\nfloat p2 = pixelAtShortOffset(image, ivec2(1, 0)).g;\nfloat p3 = pixelAtShortOffset(image, ivec2(1, -1)).g;\nfloat p4 = pixelAtShortOffset(image, ivec2(0, -1)).g;\nfloat p5 = pixelAtShortOffset(image, ivec2(-1, -1)).g;\nfloat p6 = pixelAtShortOffset(image, ivec2(-1, 0)).g;\nfloat p7 = pixelAtShortOffset(image, ivec2(-1, 1)).g;\nvec2 scores = vec2(0.0f, 0.0f);\nscores += vec2(max(c_t - p0, 0.0f), max(p0 - ct, 0.0f));\nscores += vec2(max(c_t - p1, 0.0f), max(p1 - ct, 0.0f));\nscores += vec2(max(c_t - p2, 0.0f), max(p2 - ct, 0.0f));\nscores += vec2(max(c_t - p3, 0.0f), max(p3 - ct, 0.0f));\nscores += vec2(max(c_t - p4, 0.0f), max(p4 - ct, 0.0f));\nscores += vec2(max(c_t - p5, 0.0f), max(p5 - ct, 0.0f));\nscores += vec2(max(c_t - p6, 0.0f), max(p6 - ct, 0.0f));\nscores += vec2(max(c_t - p7, 0.0f), max(p7 - ct, 0.0f));\nfloat score = max(scores.x, scores.y) / 8.0f;\ncolor = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);\n}"
 
 /***/ }),
 
@@ -6420,7 +6645,7 @@ module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main(
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nvec4 pixel = threadPixel(image);\ncolor = vec4(0.0f, pixel.gba);\nif(\nthread.x >= 3 && thread.x < size.x - 3 &&\nthread.y >= 3 && thread.y < size.y - 3\n) {\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 1)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 1)).g;\nfloat p2 = pixelAtOffset(image, ivec2(1, 0)).g;\nfloat p3 = pixelAtOffset(image, ivec2(1, -1)).g;\nfloat p4 = pixelAtOffset(image, ivec2(0, -1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(-1, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(-1, 0)).g;\nfloat p7 = pixelAtOffset(image, ivec2(-1, 1)).g;\nbool possibleCorner =\n((c_t > p1 || c_t > p5) && (c_t > p3 || c_t > p7)) ||\n((ct < p1  || ct < p5)  && (ct < p3  || ct < p7))  ;\nif(possibleCorner) {\nint bright = 0, dark = 0, bc = 0, dc = 0;\nif(c_t > p0) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p0) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p1) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p1) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p2) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p2) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p3) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p3) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p4) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p4) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p5) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p5) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p6) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p6) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p7) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p7) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(bright < 5 && dark < 5) {\nif(bc > 0 && bc < 5) do {\nif(c_t > p0)           bc += 1; else break;\nif(c_t > p1 && bc < 5) bc += 1; else break;\nif(c_t > p2 && bc < 5) bc += 1; else break;\nif(c_t > p3 && bc < 5) bc += 1; else break;\n} while(false);\nif(dc > 0 && dc < 5) do {\nif(ct < p0)           dc += 1; else break;\nif(ct < p1 && dc < 5) dc += 1; else break;\nif(ct < p2 && dc < 5) dc += 1; else break;\nif(ct < p3 && dc < 5) dc += 1; else break;\n} while(false);\nif(bc >= 5 || dc >= 5)\ncolor = vec4(1.0f, pixel.gba);\n}\nelse {\ncolor = vec4(1.0f, pixel.gba);\n}\n}\n}\n}"
+module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nvec4 pixel = threadPixel(image);\ncolor = vec4(0.0f, pixel.gba);\nif(\nthread.x >= 3 && thread.x < size.x - 3 &&\nthread.y >= 3 && thread.y < size.y - 3\n) {\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtShortOffset(image, ivec2(0, 1)).g;\nfloat p1 = pixelAtShortOffset(image, ivec2(1, 1)).g;\nfloat p2 = pixelAtShortOffset(image, ivec2(1, 0)).g;\nfloat p3 = pixelAtShortOffset(image, ivec2(1, -1)).g;\nfloat p4 = pixelAtShortOffset(image, ivec2(0, -1)).g;\nfloat p5 = pixelAtShortOffset(image, ivec2(-1, -1)).g;\nfloat p6 = pixelAtShortOffset(image, ivec2(-1, 0)).g;\nfloat p7 = pixelAtShortOffset(image, ivec2(-1, 1)).g;\nbool possibleCorner =\n((c_t > p1 || c_t > p5) && (c_t > p3 || c_t > p7)) ||\n((ct < p1  || ct < p5)  && (ct < p3  || ct < p7))  ;\nif(possibleCorner) {\nint bright = 0, dark = 0, bc = 0, dc = 0;\nif(c_t > p0) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p0) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p1) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p1) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p2) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p2) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p3) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p3) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p4) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p4) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p5) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p5) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p6) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p6) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p7) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p7) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(bright < 5 && dark < 5) {\nif(bc > 0 && bc < 5) do {\nif(c_t > p0)           bc += 1; else break;\nif(c_t > p1 && bc < 5) bc += 1; else break;\nif(c_t > p2 && bc < 5) bc += 1; else break;\nif(c_t > p3 && bc < 5) bc += 1; else break;\n} while(false);\nif(dc > 0 && dc < 5) do {\nif(ct < p0)           dc += 1; else break;\nif(ct < p1 && dc < 5) dc += 1; else break;\nif(ct < p2 && dc < 5) dc += 1; else break;\nif(ct < p3 && dc < 5) dc += 1; else break;\n} while(false);\nif(bc >= 5 || dc >= 5)\ncolor = vec4(1.0f, pixel.gba);\n}\nelse {\ncolor = vec4(1.0f, pixel.gba);\n}\n}\n}\n}"
 
 /***/ }),
 
@@ -6431,7 +6656,7 @@ module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main(
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nvec4 pixel = threadPixel(image);\ncolor = vec4(0.0f, pixel.gba);\nif(\nthread.x >= 3 && thread.x < size.x - 3 &&\nthread.y >= 3 && thread.y < size.y - 3\n) {\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 2)).g;\nfloat p1 = pixelAtOffset(image, ivec2(1, 2)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 1)).g;\nfloat p3 = pixelAtOffset(image, ivec2(2, 0)).g;\nfloat p4 = pixelAtOffset(image, ivec2(2, -1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(1, -2)).g;\nfloat p6 = pixelAtOffset(image, ivec2(0, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(-1, -2)).g;\nfloat p8 = pixelAtOffset(image, ivec2(-2, -1)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-2, 0)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, 1)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-1, 2)).g;\nbool possibleCorner =\n((c_t > p0 || c_t > p6) && (c_t > p3 || c_t > p9)) ||\n((ct < p0  || ct < p6)  && (ct < p3  || ct < p9))  ;\nif(possibleCorner) {\nint bright = 0, dark = 0, bc = 0, dc = 0;\nif(c_t > p0) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p0) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p1) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p1) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p2) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p2) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p3) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p3) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p4) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p4) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p5) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p5) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p6) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p6) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p7) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p7) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p8) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p8) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p9) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p9) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p10) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p10) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p11) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p11) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(bright < 7 && dark < 7) {\nif(bc > 0 && bc < 7) do {\nif(c_t > p0)           bc += 1; else break;\nif(c_t > p1 && bc < 7) bc += 1; else break;\nif(c_t > p2 && bc < 7) bc += 1; else break;\nif(c_t > p3 && bc < 7) bc += 1; else break;\nif(c_t > p4 && bc < 7) bc += 1; else break;\nif(c_t > p5 && bc < 7) bc += 1; else break;\n} while(false);\nif(dc > 0 && dc < 7) do {\nif(ct < p0)           dc += 1; else break;\nif(ct < p1 && dc < 7) dc += 1; else break;\nif(ct < p2 && dc < 7) dc += 1; else break;\nif(ct < p3 && dc < 7) dc += 1; else break;\nif(ct < p4 && dc < 7) dc += 1; else break;\nif(ct < p5 && dc < 7) dc += 1; else break;\n} while(false);\nif(bc >= 7 || dc >= 7)\ncolor = vec4(1.0f, pixel.gba);\n}\nelse {\ncolor = vec4(1.0f, pixel.gba);\n}\n}\n}\n}"
+module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nvec4 pixel = threadPixel(image);\ncolor = vec4(0.0f, pixel.gba);\nif(\nthread.x >= 3 && thread.x < size.x - 3 &&\nthread.y >= 3 && thread.y < size.y - 3\n) {\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtShortOffset(image, ivec2(0, 2)).g;\nfloat p1 = pixelAtShortOffset(image, ivec2(1, 2)).g;\nfloat p2 = pixelAtShortOffset(image, ivec2(2, 1)).g;\nfloat p3 = pixelAtShortOffset(image, ivec2(2, 0)).g;\nfloat p4 = pixelAtShortOffset(image, ivec2(2, -1)).g;\nfloat p5 = pixelAtShortOffset(image, ivec2(1, -2)).g;\nfloat p6 = pixelAtShortOffset(image, ivec2(0, -2)).g;\nfloat p7 = pixelAtShortOffset(image, ivec2(-1, -2)).g;\nfloat p8 = pixelAtShortOffset(image, ivec2(-2, -1)).g;\nfloat p9 = pixelAtShortOffset(image, ivec2(-2, 0)).g;\nfloat p10 = pixelAtShortOffset(image, ivec2(-2, 1)).g;\nfloat p11 = pixelAtShortOffset(image, ivec2(-1, 2)).g;\nbool possibleCorner =\n((c_t > p0 || c_t > p6) && (c_t > p3 || c_t > p9)) ||\n((ct < p0  || ct < p6)  && (ct < p3  || ct < p9))  ;\nif(possibleCorner) {\nint bright = 0, dark = 0, bc = 0, dc = 0;\nif(c_t > p0) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p0) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p1) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p1) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p2) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p2) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p3) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p3) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p4) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p4) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p5) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p5) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p6) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p6) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p7) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p7) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p8) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p8) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p9) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p9) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p10) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p10) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p11) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p11) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(bright < 7 && dark < 7) {\nif(bc > 0 && bc < 7) do {\nif(c_t > p0)           bc += 1; else break;\nif(c_t > p1 && bc < 7) bc += 1; else break;\nif(c_t > p2 && bc < 7) bc += 1; else break;\nif(c_t > p3 && bc < 7) bc += 1; else break;\nif(c_t > p4 && bc < 7) bc += 1; else break;\nif(c_t > p5 && bc < 7) bc += 1; else break;\n} while(false);\nif(dc > 0 && dc < 7) do {\nif(ct < p0)           dc += 1; else break;\nif(ct < p1 && dc < 7) dc += 1; else break;\nif(ct < p2 && dc < 7) dc += 1; else break;\nif(ct < p3 && dc < 7) dc += 1; else break;\nif(ct < p4 && dc < 7) dc += 1; else break;\nif(ct < p5 && dc < 7) dc += 1; else break;\n} while(false);\nif(bc >= 7 || dc >= 7)\ncolor = vec4(1.0f, pixel.gba);\n}\nelse {\ncolor = vec4(1.0f, pixel.gba);\n}\n}\n}\n}"
 
 /***/ }),
 
@@ -6442,7 +6667,7 @@ module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main(
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nconst ivec4 margin = ivec4(3, 3, 4, 4);\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 thread = threadLocation();\nivec2 size = outputSize();\ncolor = vec4(0.0f, pixel.gba);\nif(any(lessThan(ivec4(thread, size - thread), margin)))\nreturn;\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtOffset(image, ivec2(0, 3)).g;\nfloat p4 = pixelAtOffset(image, ivec2(3, 0)).g;\nfloat p8 = pixelAtOffset(image, ivec2(0, -3)).g;\nfloat p12 = pixelAtOffset(image, ivec2(-3, 0)).g;\nif(!(\n((c_t > p0 || c_t > p8) && (c_t > p4 || c_t > p12)) ||\n((ct < p0  || ct < p8)  && (ct < p4  || ct < p12))\n))\nreturn;\nfloat p1 = pixelAtOffset(image, ivec2(1, 3)).g;\nfloat p2 = pixelAtOffset(image, ivec2(2, 2)).g;\nfloat p3 = pixelAtOffset(image, ivec2(3, 1)).g;\nfloat p5 = pixelAtOffset(image, ivec2(3, -1)).g;\nfloat p6 = pixelAtOffset(image, ivec2(2, -2)).g;\nfloat p7 = pixelAtOffset(image, ivec2(1, -3)).g;\nfloat p9 = pixelAtOffset(image, ivec2(-1, -3)).g;\nfloat p10 = pixelAtOffset(image, ivec2(-2, -2)).g;\nfloat p11 = pixelAtOffset(image, ivec2(-3, -1)).g;\nfloat p13 = pixelAtOffset(image, ivec2(-3, 1)).g;\nfloat p14 = pixelAtOffset(image, ivec2(-2, 2)).g;\nfloat p15 = pixelAtOffset(image, ivec2(-1, 3)).g;\nbool A=(p0>ct),B=(p1>ct),C=(p2>ct),D=(p3>ct),E=(p4>ct),F=(p5>ct),G=(p6>ct),H=(p7>ct),I=(p8>ct),J=(p9>ct),K=(p10>ct),L=(p11>ct),M=(p12>ct),N=(p13>ct),O=(p14>ct),P=(p15>ct),a=(p0<c_t),b=(p1<c_t),c=(p2<c_t),d=(p3<c_t),e=(p4<c_t),f=(p5<c_t),g=(p6<c_t),h=(p7<c_t),i=(p8<c_t),j=(p9<c_t),k=(p10<c_t),l=(p11<c_t),m=(p12<c_t),n=(p13<c_t),o=(p14<c_t),p=(p15<c_t);\nbool isCorner=A&&(B&&(K&&L&&J&&(M&&N&&O&&P||G&&H&&I&&(M&&N&&O||F&&(M&&N||E&&(M||D))))||C&&(K&&L&&M&&(N&&O&&P||G&&H&&I&&J&&(N&&O||F&&(N||E)))||D&&(N&&(L&&M&&(K&&G&&H&&I&&J&&(O||F)||O&&P)||k&&l&&m&&e&&f&&g&&h&&i&&j)||E&&(O&&(M&&N&&(K&&L&&G&&H&&I&&J||P)||k&&l&&m&&n&&f&&g&&h&&i&&j)||F&&(P&&(N&&O||k&&l&&m&&n&&o&&g&&h&&i&&j)||G&&(O&&P||H&&(P||I)||k&&l&&m&&n&&o&&p&&h&&i&&j)||k&&l&&m&&n&&o&&h&&i&&j&&(p||g))||k&&l&&m&&n&&h&&i&&j&&(o&&(p||g)||f&&(o&&p||g)))||k&&l&&m&&h&&i&&j&&(n&&(o&&p||g&&(o||f))||e&&(n&&o&&p||g&&(n&&o||f))))||k&&l&&h&&i&&j&&(m&&(n&&o&&p||g&&(n&&o||f&&(n||e)))||d&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e)))))||k&&h&&i&&j&&(l&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d))))))||K&&I&&J&&(L&&M&&N&&O&&P||G&&H&&(L&&M&&N&&O||F&&(L&&M&&N||E&&(L&&M||D&&(L||C)))))||h&&i&&j&&(b&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c)))))||k&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c)))))))||B&&(H&&I&&J&&(K&&L&&M&&N&&O&&P&&a||G&&(K&&L&&M&&N&&O&&a||F&&(K&&L&&M&&N&&a||E&&(K&&L&&M&&a||D&&(K&&L&&a||C)))))||a&&k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||C&&(K&&H&&I&&J&&(L&&M&&N&&O&&P&&a&&b||G&&(L&&M&&N&&O&&a&&b||F&&(L&&M&&N&&a&&b||E&&(L&&M&&a&&b||D))))||a&&b&&k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d)))))||D&&(K&&L&&H&&I&&J&&(M&&N&&O&&P&&a&&b&&c||G&&(M&&N&&O&&a&&b&&c||F&&(M&&N&&a&&b&&c||E)))||a&&b&&k&&l&&m&&c&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e))))||E&&(K&&L&&M&&H&&I&&J&&(N&&O&&P&&a&&b&&c&&d||G&&(N&&O&&a&&b&&c&&d||F))||a&&b&&l&&m&&n&&c&&d&&(k&&g&&h&&i&&j&&(o||f)||o&&p))||F&&(K&&L&&M&&N&&H&&I&&J&&(O&&P&&a&&b&&c&&d&&e||G)||a&&b&&m&&n&&o&&c&&d&&e&&(k&&l&&g&&h&&i&&j||p))||G&&(K&&L&&M&&N&&O&&H&&I&&J||a&&b&&n&&o&&p&&c&&d&&e&&f)||H&&(K&&L&&M&&N&&O&&P&&I&&J||a&&b&&o&&p&&c&&d&&e&&f&&g)||a&&(b&&(k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(k&&l&&m&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e)))||d&&(l&&m&&n&&(k&&g&&h&&i&&j&&(o||f)||o&&p)||e&&(m&&n&&o&&(k&&l&&g&&h&&i&&j||p)||f&&(n&&o&&p||g&&(o&&p||h&&(p||i)))))))||k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||h&&i&&j&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c&&(b||k))))));\ncolor = vec4(float(isCorner), pixel.gba);\n}"
+module.exports = "uniform sampler2D image;\nuniform float threshold;\nconst ivec4 margin = ivec4(3, 3, 4, 4);\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 thread = threadLocation();\nivec2 size = outputSize();\ncolor = vec4(0.0f, pixel.gba);\nif(any(lessThan(ivec4(thread, size - thread), margin)))\nreturn;\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtShortOffset(image, ivec2(0, 3)).g;\nfloat p4 = pixelAtShortOffset(image, ivec2(3, 0)).g;\nfloat p8 = pixelAtShortOffset(image, ivec2(0, -3)).g;\nfloat p12 = pixelAtShortOffset(image, ivec2(-3, 0)).g;\nif(!(\n((c_t > p0 || c_t > p8) && (c_t > p4 || c_t > p12)) ||\n((ct < p0  || ct < p8)  && (ct < p4  || ct < p12))\n))\nreturn;\nfloat p1 = pixelAtShortOffset(image, ivec2(1, 3)).g;\nfloat p2 = pixelAtShortOffset(image, ivec2(2, 2)).g;\nfloat p3 = pixelAtShortOffset(image, ivec2(3, 1)).g;\nfloat p5 = pixelAtShortOffset(image, ivec2(3, -1)).g;\nfloat p6 = pixelAtShortOffset(image, ivec2(2, -2)).g;\nfloat p7 = pixelAtShortOffset(image, ivec2(1, -3)).g;\nfloat p9 = pixelAtShortOffset(image, ivec2(-1, -3)).g;\nfloat p10 = pixelAtShortOffset(image, ivec2(-2, -2)).g;\nfloat p11 = pixelAtShortOffset(image, ivec2(-3, -1)).g;\nfloat p13 = pixelAtShortOffset(image, ivec2(-3, 1)).g;\nfloat p14 = pixelAtShortOffset(image, ivec2(-2, 2)).g;\nfloat p15 = pixelAtShortOffset(image, ivec2(-1, 3)).g;\nbool A=(p0>ct),B=(p1>ct),C=(p2>ct),D=(p3>ct),E=(p4>ct),F=(p5>ct),G=(p6>ct),H=(p7>ct),I=(p8>ct),J=(p9>ct),K=(p10>ct),L=(p11>ct),M=(p12>ct),N=(p13>ct),O=(p14>ct),P=(p15>ct),a=(p0<c_t),b=(p1<c_t),c=(p2<c_t),d=(p3<c_t),e=(p4<c_t),f=(p5<c_t),g=(p6<c_t),h=(p7<c_t),i=(p8<c_t),j=(p9<c_t),k=(p10<c_t),l=(p11<c_t),m=(p12<c_t),n=(p13<c_t),o=(p14<c_t),p=(p15<c_t);\nbool isCorner=A&&(B&&(K&&L&&J&&(M&&N&&O&&P||G&&H&&I&&(M&&N&&O||F&&(M&&N||E&&(M||D))))||C&&(K&&L&&M&&(N&&O&&P||G&&H&&I&&J&&(N&&O||F&&(N||E)))||D&&(N&&(L&&M&&(K&&G&&H&&I&&J&&(O||F)||O&&P)||k&&l&&m&&e&&f&&g&&h&&i&&j)||E&&(O&&(M&&N&&(K&&L&&G&&H&&I&&J||P)||k&&l&&m&&n&&f&&g&&h&&i&&j)||F&&(P&&(N&&O||k&&l&&m&&n&&o&&g&&h&&i&&j)||G&&(O&&P||H&&(P||I)||k&&l&&m&&n&&o&&p&&h&&i&&j)||k&&l&&m&&n&&o&&h&&i&&j&&(p||g))||k&&l&&m&&n&&h&&i&&j&&(o&&(p||g)||f&&(o&&p||g)))||k&&l&&m&&h&&i&&j&&(n&&(o&&p||g&&(o||f))||e&&(n&&o&&p||g&&(n&&o||f))))||k&&l&&h&&i&&j&&(m&&(n&&o&&p||g&&(n&&o||f&&(n||e)))||d&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e)))))||k&&h&&i&&j&&(l&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d))))))||K&&I&&J&&(L&&M&&N&&O&&P||G&&H&&(L&&M&&N&&O||F&&(L&&M&&N||E&&(L&&M||D&&(L||C)))))||h&&i&&j&&(b&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c)))))||k&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c)))))))||B&&(H&&I&&J&&(K&&L&&M&&N&&O&&P&&a||G&&(K&&L&&M&&N&&O&&a||F&&(K&&L&&M&&N&&a||E&&(K&&L&&M&&a||D&&(K&&L&&a||C)))))||a&&k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||C&&(K&&H&&I&&J&&(L&&M&&N&&O&&P&&a&&b||G&&(L&&M&&N&&O&&a&&b||F&&(L&&M&&N&&a&&b||E&&(L&&M&&a&&b||D))))||a&&b&&k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d)))))||D&&(K&&L&&H&&I&&J&&(M&&N&&O&&P&&a&&b&&c||G&&(M&&N&&O&&a&&b&&c||F&&(M&&N&&a&&b&&c||E)))||a&&b&&k&&l&&m&&c&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e))))||E&&(K&&L&&M&&H&&I&&J&&(N&&O&&P&&a&&b&&c&&d||G&&(N&&O&&a&&b&&c&&d||F))||a&&b&&l&&m&&n&&c&&d&&(k&&g&&h&&i&&j&&(o||f)||o&&p))||F&&(K&&L&&M&&N&&H&&I&&J&&(O&&P&&a&&b&&c&&d&&e||G)||a&&b&&m&&n&&o&&c&&d&&e&&(k&&l&&g&&h&&i&&j||p))||G&&(K&&L&&M&&N&&O&&H&&I&&J||a&&b&&n&&o&&p&&c&&d&&e&&f)||H&&(K&&L&&M&&N&&O&&P&&I&&J||a&&b&&o&&p&&c&&d&&e&&f&&g)||a&&(b&&(k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(k&&l&&m&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e)))||d&&(l&&m&&n&&(k&&g&&h&&i&&j&&(o||f)||o&&p)||e&&(m&&n&&o&&(k&&l&&g&&h&&i&&j||p)||f&&(n&&o&&p||g&&(o&&p||h&&(p||i)))))))||k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||h&&i&&j&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c&&(b||k))))));\ncolor = vec4(float(isCorner), pixel.gba);\n}"
 
 /***/ }),
 
@@ -6497,7 +6722,7 @@ module.exports = "@include \"sobel.glsl\"\n@include \"pyramids.glsl\"\nuniform s
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\n#define ENABLE_INNER_RING\n#define ENABLE_MIDDLE_RING\n#define ENABLE_OUTER_RING\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat lod = decodeLod(pixel.a);\nfloat lodJump = 0.5f;\ncolor = pixel;\nif(pixel.r == 0.0f)\nreturn;\n#ifdef ENABLE_INNER_RING\nvec4 p0 = pixelAtOffset(image, ivec2(0, 1));\nvec4 p1 = pixelAtOffset(image, ivec2(1, 1));\nvec4 p2 = pixelAtOffset(image, ivec2(1, 0));\nvec4 p3 = pixelAtOffset(image, ivec2(1, -1));\nvec4 p4 = pixelAtOffset(image, ivec2(0, -1));\nvec4 p5 = pixelAtOffset(image, ivec2(-1, -1));\nvec4 p6 = pixelAtOffset(image, ivec2(-1, 0));\nvec4 p7 = pixelAtOffset(image, ivec2(-1, 1));\n#else\nvec4 p0, p1, p2, p3, p4, p5, p6, p7;\np0 = p1 = p2 = p3 = p4 = p5 = p6 = p7 = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n#endif\n#ifdef ENABLE_MIDDLE_RING\nvec4 q0 = pixelAtOffset(image, ivec2(0, 2));\nvec4 q1 = pixelAtOffset(image, ivec2(1, 2));\nvec4 q2 = pixelAtOffset(image, ivec2(2, 2));\nvec4 q3 = pixelAtOffset(image, ivec2(2, 1));\nvec4 q4 = pixelAtOffset(image, ivec2(2, 0));\nvec4 q5 = pixelAtOffset(image, ivec2(2, -1));\nvec4 q6 = pixelAtOffset(image, ivec2(2, -2));\nvec4 q7 = pixelAtOffset(image, ivec2(1, -2));\nvec4 q8 = pixelAtOffset(image, ivec2(0, -2));\nvec4 q9 = pixelAtOffset(image, ivec2(-1, -2));\nvec4 q10 = pixelAtOffset(image, ivec2(-2, -2));\nvec4 q11 = pixelAtOffset(image, ivec2(-2, -1));\nvec4 q12 = pixelAtOffset(image, ivec2(-2, 0));\nvec4 q13 = pixelAtOffset(image, ivec2(-2, 1));\nvec4 q14 = pixelAtOffset(image, ivec2(-2, 2));\nvec4 q15 = pixelAtOffset(image, ivec2(-1, 2));\n#else\nvec4 q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15;\nq0 = q1 = q2 = q3 = q4 = q5 = q6 = q7 = q8 = q9 = q10 =\nq11 = q12 = q13 = q14 = q15= vec4(0.0f, 0.0f, 0.0f, 1.0f);\n#endif\n#ifdef ENABLE_OUTER_RING\nvec4 r0 = pixelAtOffset(image, ivec2(0, 3));\nvec4 r1 = pixelAtOffset(image, ivec2(1, 3));\nvec4 r2 = pixelAtOffset(image, ivec2(3, 1));\nvec4 r3 = pixelAtOffset(image, ivec2(3, 0));\nvec4 r4 = pixelAtOffset(image, ivec2(3, -1));\nvec4 r5 = pixelAtOffset(image, ivec2(1, -3));\nvec4 r6 = pixelAtOffset(image, ivec2(0, -3));\nvec4 r7 = pixelAtOffset(image, ivec2(-1, -3));\nvec4 r8 = pixelAtOffset(image, ivec2(-3, -1));\nvec4 r9 = pixelAtOffset(image, ivec2(-3, 0));\nvec4 r10 = pixelAtOffset(image, ivec2(-3, 1));\nvec4 r11 = pixelAtOffset(image, ivec2(-1, 3));\nvec4 r12 = pixelAtOffset(image, ivec2(0, 4));\nvec4 r13 = pixelAtOffset(image, ivec2(4, 0));\nvec4 r14 = pixelAtOffset(image, ivec2(0, -4));\nvec4 r15 = pixelAtOffset(image, ivec2(-4, 0));\n#else\nvec4 r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15;\nr0 = r1 = r2 = r3 = r4 = r5 = r6 = r7 = r8 = r9 = r10 =\nr11 = r12 = r13 = r14 = r15 = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n#endif\nfloat lodPlus = min(lod + lodJump, PYRAMID_MAX_LEVELS - 1.0f);\nfloat lodMinus = max(lod - lodJump, 0.0f);\nfloat alphaPlus = encodeLod(lodPlus);\nfloat alphaMinus = encodeLod(lodMinus);\nmat3 innerScore = mat3(\np0.r * float(isSameEncodedLod(p0.a, alphaPlus) || isSameEncodedLod(p0.a, alphaMinus)),\np1.r * float(isSameEncodedLod(p1.a, alphaPlus) || isSameEncodedLod(p1.a, alphaMinus)),\np2.r * float(isSameEncodedLod(p2.a, alphaPlus) || isSameEncodedLod(p2.a, alphaMinus)),\np3.r * float(isSameEncodedLod(p3.a, alphaPlus) || isSameEncodedLod(p3.a, alphaMinus)),\np4.r * float(isSameEncodedLod(p4.a, alphaPlus) || isSameEncodedLod(p4.a, alphaMinus)),\np5.r * float(isSameEncodedLod(p5.a, alphaPlus) || isSameEncodedLod(p5.a, alphaMinus)),\np6.r * float(isSameEncodedLod(p6.a, alphaPlus) || isSameEncodedLod(p6.a, alphaMinus)),\np7.r * float(isSameEncodedLod(p7.a, alphaPlus) || isSameEncodedLod(p7.a, alphaMinus)),\n0.0f\n);\nmat4 middleScore = mat4(\nq0.r * float(isSameEncodedLod(q0.a, alphaPlus) || isSameEncodedLod(q0.a, alphaMinus)),\nq1.r * float(isSameEncodedLod(q1.a, alphaPlus) || isSameEncodedLod(q1.a, alphaMinus)),\nq2.r * float(isSameEncodedLod(q2.a, alphaPlus) || isSameEncodedLod(q2.a, alphaMinus)),\nq3.r * float(isSameEncodedLod(q3.a, alphaPlus) || isSameEncodedLod(q3.a, alphaMinus)),\nq4.r * float(isSameEncodedLod(q4.a, alphaPlus) || isSameEncodedLod(q4.a, alphaMinus)),\nq5.r * float(isSameEncodedLod(q5.a, alphaPlus) || isSameEncodedLod(q5.a, alphaMinus)),\nq6.r * float(isSameEncodedLod(q6.a, alphaPlus) || isSameEncodedLod(q6.a, alphaMinus)),\nq7.r * float(isSameEncodedLod(q7.a, alphaPlus) || isSameEncodedLod(q7.a, alphaMinus)),\nq8.r * float(isSameEncodedLod(q8.a, alphaPlus) || isSameEncodedLod(q8.a, alphaMinus)),\nq9.r * float(isSameEncodedLod(q9.a, alphaPlus) || isSameEncodedLod(q9.a, alphaMinus)),\nq10.r * float(isSameEncodedLod(q10.a, alphaPlus) || isSameEncodedLod(q10.a, alphaMinus)),\nq11.r * float(isSameEncodedLod(q11.a, alphaPlus) || isSameEncodedLod(q11.a, alphaMinus)),\nq12.r * float(isSameEncodedLod(q12.a, alphaPlus) || isSameEncodedLod(q12.a, alphaMinus)),\nq13.r * float(isSameEncodedLod(q13.a, alphaPlus) || isSameEncodedLod(q13.a, alphaMinus)),\nq14.r * float(isSameEncodedLod(q14.a, alphaPlus) || isSameEncodedLod(q14.a, alphaMinus)),\nq15.r * float(isSameEncodedLod(q15.a, alphaPlus) || isSameEncodedLod(q15.a, alphaMinus))\n);\nmat4 outerScore = mat4(\nr0.r * float(isSameEncodedLod(r0.a, alphaPlus) || isSameEncodedLod(r0.a, alphaMinus)),\nr1.r * float(isSameEncodedLod(r1.a, alphaPlus) || isSameEncodedLod(r1.a, alphaMinus)),\nr2.r * float(isSameEncodedLod(r2.a, alphaPlus) || isSameEncodedLod(r2.a, alphaMinus)),\nr3.r * float(isSameEncodedLod(r3.a, alphaPlus) || isSameEncodedLod(r3.a, alphaMinus)),\nr4.r * float(isSameEncodedLod(r4.a, alphaPlus) || isSameEncodedLod(r4.a, alphaMinus)),\nr5.r * float(isSameEncodedLod(r5.a, alphaPlus) || isSameEncodedLod(r5.a, alphaMinus)),\nr6.r * float(isSameEncodedLod(r6.a, alphaPlus) || isSameEncodedLod(r6.a, alphaMinus)),\nr7.r * float(isSameEncodedLod(r7.a, alphaPlus) || isSameEncodedLod(r7.a, alphaMinus)),\nr8.r * float(isSameEncodedLod(r8.a, alphaPlus) || isSameEncodedLod(r8.a, alphaMinus)),\nr9.r * float(isSameEncodedLod(r9.a, alphaPlus) || isSameEncodedLod(r9.a, alphaMinus)),\nr10.r * float(isSameEncodedLod(r10.a, alphaPlus) || isSameEncodedLod(r10.a, alphaMinus)),\nr11.r * float(isSameEncodedLod(r11.a, alphaPlus) || isSameEncodedLod(r11.a, alphaMinus)),\nr12.r * float(isSameEncodedLod(r12.a, alphaPlus) || isSameEncodedLod(r12.a, alphaMinus)),\nr13.r * float(isSameEncodedLod(r13.a, alphaPlus) || isSameEncodedLod(r13.a, alphaMinus)),\nr14.r * float(isSameEncodedLod(r14.a, alphaPlus) || isSameEncodedLod(r14.a, alphaMinus)),\nr15.r * float(isSameEncodedLod(r15.a, alphaPlus) || isSameEncodedLod(r15.a, alphaMinus))\n);\nvec3 maxInnerScore3 = max(innerScore[0], max(innerScore[1], innerScore[2]));\nvec4 maxMiddleScore4 = max(max(middleScore[0], middleScore[1]), max(middleScore[2], middleScore[3]));\nvec4 maxOuterScore4 = max(max(outerScore[0], outerScore[1]), max(outerScore[2], outerScore[3]));\nfloat maxInnerScore = max(maxInnerScore3.x, max(maxInnerScore3.y, maxInnerScore3.z));\nfloat maxMiddleScore = max(max(maxMiddleScore4.x, maxMiddleScore4.y), max(maxMiddleScore4.z, maxMiddleScore4.w));\nfloat maxOuterScore = max(max(maxOuterScore4.x, maxOuterScore4.y), max(maxOuterScore4.z, maxOuterScore4.w));\nfloat maxScore = max(maxInnerScore, max(maxMiddleScore, maxOuterScore));\nfloat myScore = step(maxScore, pixel.r) * pixel.r;\ncolor = vec4(myScore, pixel.gba);\n}"
+module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\n#define ENABLE_INNER_RING\n#define ENABLE_MIDDLE_RING\n#define ENABLE_OUTER_RING\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat lod = decodeLod(pixel.a);\nfloat lodJump = 0.5f;\ncolor = pixel;\nif(pixel.r == 0.0f)\nreturn;\n#ifdef ENABLE_INNER_RING\nvec4 p0 = pixelAtShortOffset(image, ivec2(0, 1));\nvec4 p1 = pixelAtShortOffset(image, ivec2(1, 1));\nvec4 p2 = pixelAtShortOffset(image, ivec2(1, 0));\nvec4 p3 = pixelAtShortOffset(image, ivec2(1, -1));\nvec4 p4 = pixelAtShortOffset(image, ivec2(0, -1));\nvec4 p5 = pixelAtShortOffset(image, ivec2(-1, -1));\nvec4 p6 = pixelAtShortOffset(image, ivec2(-1, 0));\nvec4 p7 = pixelAtShortOffset(image, ivec2(-1, 1));\n#else\nvec4 p0, p1, p2, p3, p4, p5, p6, p7;\np0 = p1 = p2 = p3 = p4 = p5 = p6 = p7 = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n#endif\n#ifdef ENABLE_MIDDLE_RING\nvec4 q0 = pixelAtShortOffset(image, ivec2(0, 2));\nvec4 q1 = pixelAtShortOffset(image, ivec2(1, 2));\nvec4 q2 = pixelAtShortOffset(image, ivec2(2, 2));\nvec4 q3 = pixelAtShortOffset(image, ivec2(2, 1));\nvec4 q4 = pixelAtShortOffset(image, ivec2(2, 0));\nvec4 q5 = pixelAtShortOffset(image, ivec2(2, -1));\nvec4 q6 = pixelAtShortOffset(image, ivec2(2, -2));\nvec4 q7 = pixelAtShortOffset(image, ivec2(1, -2));\nvec4 q8 = pixelAtShortOffset(image, ivec2(0, -2));\nvec4 q9 = pixelAtShortOffset(image, ivec2(-1, -2));\nvec4 q10 = pixelAtShortOffset(image, ivec2(-2, -2));\nvec4 q11 = pixelAtShortOffset(image, ivec2(-2, -1));\nvec4 q12 = pixelAtShortOffset(image, ivec2(-2, 0));\nvec4 q13 = pixelAtShortOffset(image, ivec2(-2, 1));\nvec4 q14 = pixelAtShortOffset(image, ivec2(-2, 2));\nvec4 q15 = pixelAtShortOffset(image, ivec2(-1, 2));\n#else\nvec4 q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15;\nq0 = q1 = q2 = q3 = q4 = q5 = q6 = q7 = q8 = q9 = q10 =\nq11 = q12 = q13 = q14 = q15= vec4(0.0f, 0.0f, 0.0f, 1.0f);\n#endif\n#ifdef ENABLE_OUTER_RING\nvec4 r0 = pixelAtShortOffset(image, ivec2(0, 3));\nvec4 r1 = pixelAtShortOffset(image, ivec2(1, 3));\nvec4 r2 = pixelAtShortOffset(image, ivec2(3, 1));\nvec4 r3 = pixelAtShortOffset(image, ivec2(3, 0));\nvec4 r4 = pixelAtShortOffset(image, ivec2(3, -1));\nvec4 r5 = pixelAtShortOffset(image, ivec2(1, -3));\nvec4 r6 = pixelAtShortOffset(image, ivec2(0, -3));\nvec4 r7 = pixelAtShortOffset(image, ivec2(-1, -3));\nvec4 r8 = pixelAtShortOffset(image, ivec2(-3, -1));\nvec4 r9 = pixelAtShortOffset(image, ivec2(-3, 0));\nvec4 r10 = pixelAtShortOffset(image, ivec2(-3, 1));\nvec4 r11 = pixelAtShortOffset(image, ivec2(-1, 3));\nvec4 r12 = pixelAtShortOffset(image, ivec2(0, 4));\nvec4 r13 = pixelAtShortOffset(image, ivec2(4, 0));\nvec4 r14 = pixelAtShortOffset(image, ivec2(0, -4));\nvec4 r15 = pixelAtShortOffset(image, ivec2(-4, 0));\n#else\nvec4 r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15;\nr0 = r1 = r2 = r3 = r4 = r5 = r6 = r7 = r8 = r9 = r10 =\nr11 = r12 = r13 = r14 = r15 = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n#endif\nfloat lodPlus = min(lod + lodJump, PYRAMID_MAX_LEVELS - 1.0f);\nfloat lodMinus = max(lod - lodJump, 0.0f);\nfloat alphaPlus = encodeLod(lodPlus);\nfloat alphaMinus = encodeLod(lodMinus);\nmat3 innerScore = mat3(\np0.r * float(isSameEncodedLod(p0.a, alphaPlus) || isSameEncodedLod(p0.a, alphaMinus)),\np1.r * float(isSameEncodedLod(p1.a, alphaPlus) || isSameEncodedLod(p1.a, alphaMinus)),\np2.r * float(isSameEncodedLod(p2.a, alphaPlus) || isSameEncodedLod(p2.a, alphaMinus)),\np3.r * float(isSameEncodedLod(p3.a, alphaPlus) || isSameEncodedLod(p3.a, alphaMinus)),\np4.r * float(isSameEncodedLod(p4.a, alphaPlus) || isSameEncodedLod(p4.a, alphaMinus)),\np5.r * float(isSameEncodedLod(p5.a, alphaPlus) || isSameEncodedLod(p5.a, alphaMinus)),\np6.r * float(isSameEncodedLod(p6.a, alphaPlus) || isSameEncodedLod(p6.a, alphaMinus)),\np7.r * float(isSameEncodedLod(p7.a, alphaPlus) || isSameEncodedLod(p7.a, alphaMinus)),\n0.0f\n);\nmat4 middleScore = mat4(\nq0.r * float(isSameEncodedLod(q0.a, alphaPlus) || isSameEncodedLod(q0.a, alphaMinus)),\nq1.r * float(isSameEncodedLod(q1.a, alphaPlus) || isSameEncodedLod(q1.a, alphaMinus)),\nq2.r * float(isSameEncodedLod(q2.a, alphaPlus) || isSameEncodedLod(q2.a, alphaMinus)),\nq3.r * float(isSameEncodedLod(q3.a, alphaPlus) || isSameEncodedLod(q3.a, alphaMinus)),\nq4.r * float(isSameEncodedLod(q4.a, alphaPlus) || isSameEncodedLod(q4.a, alphaMinus)),\nq5.r * float(isSameEncodedLod(q5.a, alphaPlus) || isSameEncodedLod(q5.a, alphaMinus)),\nq6.r * float(isSameEncodedLod(q6.a, alphaPlus) || isSameEncodedLod(q6.a, alphaMinus)),\nq7.r * float(isSameEncodedLod(q7.a, alphaPlus) || isSameEncodedLod(q7.a, alphaMinus)),\nq8.r * float(isSameEncodedLod(q8.a, alphaPlus) || isSameEncodedLod(q8.a, alphaMinus)),\nq9.r * float(isSameEncodedLod(q9.a, alphaPlus) || isSameEncodedLod(q9.a, alphaMinus)),\nq10.r * float(isSameEncodedLod(q10.a, alphaPlus) || isSameEncodedLod(q10.a, alphaMinus)),\nq11.r * float(isSameEncodedLod(q11.a, alphaPlus) || isSameEncodedLod(q11.a, alphaMinus)),\nq12.r * float(isSameEncodedLod(q12.a, alphaPlus) || isSameEncodedLod(q12.a, alphaMinus)),\nq13.r * float(isSameEncodedLod(q13.a, alphaPlus) || isSameEncodedLod(q13.a, alphaMinus)),\nq14.r * float(isSameEncodedLod(q14.a, alphaPlus) || isSameEncodedLod(q14.a, alphaMinus)),\nq15.r * float(isSameEncodedLod(q15.a, alphaPlus) || isSameEncodedLod(q15.a, alphaMinus))\n);\nmat4 outerScore = mat4(\nr0.r * float(isSameEncodedLod(r0.a, alphaPlus) || isSameEncodedLod(r0.a, alphaMinus)),\nr1.r * float(isSameEncodedLod(r1.a, alphaPlus) || isSameEncodedLod(r1.a, alphaMinus)),\nr2.r * float(isSameEncodedLod(r2.a, alphaPlus) || isSameEncodedLod(r2.a, alphaMinus)),\nr3.r * float(isSameEncodedLod(r3.a, alphaPlus) || isSameEncodedLod(r3.a, alphaMinus)),\nr4.r * float(isSameEncodedLod(r4.a, alphaPlus) || isSameEncodedLod(r4.a, alphaMinus)),\nr5.r * float(isSameEncodedLod(r5.a, alphaPlus) || isSameEncodedLod(r5.a, alphaMinus)),\nr6.r * float(isSameEncodedLod(r6.a, alphaPlus) || isSameEncodedLod(r6.a, alphaMinus)),\nr7.r * float(isSameEncodedLod(r7.a, alphaPlus) || isSameEncodedLod(r7.a, alphaMinus)),\nr8.r * float(isSameEncodedLod(r8.a, alphaPlus) || isSameEncodedLod(r8.a, alphaMinus)),\nr9.r * float(isSameEncodedLod(r9.a, alphaPlus) || isSameEncodedLod(r9.a, alphaMinus)),\nr10.r * float(isSameEncodedLod(r10.a, alphaPlus) || isSameEncodedLod(r10.a, alphaMinus)),\nr11.r * float(isSameEncodedLod(r11.a, alphaPlus) || isSameEncodedLod(r11.a, alphaMinus)),\nr12.r * float(isSameEncodedLod(r12.a, alphaPlus) || isSameEncodedLod(r12.a, alphaMinus)),\nr13.r * float(isSameEncodedLod(r13.a, alphaPlus) || isSameEncodedLod(r13.a, alphaMinus)),\nr14.r * float(isSameEncodedLod(r14.a, alphaPlus) || isSameEncodedLod(r14.a, alphaMinus)),\nr15.r * float(isSameEncodedLod(r15.a, alphaPlus) || isSameEncodedLod(r15.a, alphaMinus))\n);\nvec3 maxInnerScore3 = max(innerScore[0], max(innerScore[1], innerScore[2]));\nvec4 maxMiddleScore4 = max(max(middleScore[0], middleScore[1]), max(middleScore[2], middleScore[3]));\nvec4 maxOuterScore4 = max(max(outerScore[0], outerScore[1]), max(outerScore[2], outerScore[3]));\nfloat maxInnerScore = max(maxInnerScore3.x, max(maxInnerScore3.y, maxInnerScore3.z));\nfloat maxMiddleScore = max(max(maxMiddleScore4.x, maxMiddleScore4.y), max(maxMiddleScore4.z, maxMiddleScore4.w));\nfloat maxOuterScore = max(max(maxOuterScore4.x, maxOuterScore4.y), max(maxOuterScore4.z, maxOuterScore4.w));\nfloat maxScore = max(maxInnerScore, max(maxMiddleScore, maxOuterScore));\nfloat myScore = step(maxScore, pixel.r) * pixel.r;\ncolor = vec4(myScore, pixel.gba);\n}"
 
 /***/ }),
 
@@ -6508,7 +6733,7 @@ module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\n#define 
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nvoid main()\n{\nfloat p0 = pixelAtOffset(image, ivec2(0, 1)).r;\nfloat p1 = pixelAtOffset(image, ivec2(1, 1)).r;\nfloat p2 = pixelAtOffset(image, ivec2(1, 0)).r;\nfloat p3 = pixelAtOffset(image, ivec2(1, -1)).r;\nfloat p4 = pixelAtOffset(image, ivec2(0, -1)).r;\nfloat p5 = pixelAtOffset(image, ivec2(-1, -1)).r;\nfloat p6 = pixelAtOffset(image, ivec2(-1, 0)).r;\nfloat p7 = pixelAtOffset(image, ivec2(-1, 1)).r;\nfloat m = max(\nmax(max(p0, p1), max(p2, p3)),\nmax(max(p4, p5), max(p6, p7))\n);\nvec4 pixel = threadPixel(image);\nfloat score = step(m, pixel.r) * pixel.r;\ncolor = vec4(score, pixel.gba);\n}"
+module.exports = "uniform sampler2D image;\nvoid main()\n{\nfloat p0 = pixelAtShortOffset(image, ivec2(0, 1)).r;\nfloat p1 = pixelAtShortOffset(image, ivec2(1, 1)).r;\nfloat p2 = pixelAtShortOffset(image, ivec2(1, 0)).r;\nfloat p3 = pixelAtShortOffset(image, ivec2(1, -1)).r;\nfloat p4 = pixelAtShortOffset(image, ivec2(0, -1)).r;\nfloat p5 = pixelAtShortOffset(image, ivec2(-1, -1)).r;\nfloat p6 = pixelAtShortOffset(image, ivec2(-1, 0)).r;\nfloat p7 = pixelAtShortOffset(image, ivec2(-1, 1)).r;\nfloat m = max(\nmax(max(p0, p1), max(p2, p3)),\nmax(max(p4, p5), max(p6, p7))\n);\nvec4 pixel = threadPixel(image);\nfloat score = step(m, pixel.r) * pixel.r;\ncolor = vec4(score, pixel.gba);\n}"
 
 /***/ }),
 
@@ -6519,7 +6744,7 @@ module.exports = "uniform sampler2D image;\nvoid main()\n{\nfloat p0 = pixelAtOf
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 thread = threadLocation();\nfloat lod = decodeLod(pixel.a);\nfloat pot = exp2(lod);\ncolor = pixel;\nif(pixel.r == 0.0f)\nreturn;\nvec4 p0 = pixelAtOffset(image, ivec2(0, 1));\nvec4 p1 = pixelAtOffset(image, ivec2(1, 1));\nvec4 p2 = pixelAtOffset(image, ivec2(1, 0));\nvec4 p3 = pixelAtOffset(image, ivec2(1, -1));\nvec4 p4 = pixelAtOffset(image, ivec2(0, -1));\nvec4 p5 = pixelAtOffset(image, ivec2(-1, -1));\nvec4 p6 = pixelAtOffset(image, ivec2(-1, 0));\nvec4 p7 = pixelAtOffset(image, ivec2(-1, 1));\nmat3 score = mat3(\np0.r * float(isSameEncodedLod(p0.a, pixel.a)),\np1.r * float(isSameEncodedLod(p1.a, pixel.a)),\np2.r * float(isSameEncodedLod(p2.a, pixel.a)),\np3.r * float(isSameEncodedLod(p3.a, pixel.a)),\np4.r * float(isSameEncodedLod(p4.a, pixel.a)),\np5.r * float(isSameEncodedLod(p5.a, pixel.a)),\np6.r * float(isSameEncodedLod(p6.a, pixel.a)),\np7.r * float(isSameEncodedLod(p7.a, pixel.a)),\n0.0f\n);\nvec3 maxScore3 = max(score[0], max(score[1], score[2]));\nfloat maxScore = max(maxScore3.x, max(maxScore3.y, maxScore3.z));\nfloat myScore = step(maxScore, pixel.r) * pixel.r;\ncolor = vec4(myScore, pixel.gba);\n}"
+module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 thread = threadLocation();\nfloat lod = decodeLod(pixel.a);\nfloat pot = exp2(lod);\ncolor = pixel;\nif(pixel.r == 0.0f)\nreturn;\nvec4 p0 = pixelAtShortOffset(image, ivec2(0, 1));\nvec4 p1 = pixelAtShortOffset(image, ivec2(1, 1));\nvec4 p2 = pixelAtShortOffset(image, ivec2(1, 0));\nvec4 p3 = pixelAtShortOffset(image, ivec2(1, -1));\nvec4 p4 = pixelAtShortOffset(image, ivec2(0, -1));\nvec4 p5 = pixelAtShortOffset(image, ivec2(-1, -1));\nvec4 p6 = pixelAtShortOffset(image, ivec2(-1, 0));\nvec4 p7 = pixelAtShortOffset(image, ivec2(-1, 1));\nmat3 score = mat3(\np0.r * float(isSameEncodedLod(p0.a, pixel.a)),\np1.r * float(isSameEncodedLod(p1.a, pixel.a)),\np2.r * float(isSameEncodedLod(p2.a, pixel.a)),\np3.r * float(isSameEncodedLod(p3.a, pixel.a)),\np4.r * float(isSameEncodedLod(p4.a, pixel.a)),\np5.r * float(isSameEncodedLod(p5.a, pixel.a)),\np6.r * float(isSameEncodedLod(p6.a, pixel.a)),\np7.r * float(isSameEncodedLod(p7.a, pixel.a)),\n0.0f\n);\nvec3 maxScore3 = max(score[0], max(score[1], score[2]));\nfloat maxScore = max(maxScore3.x, max(maxScore3.y, maxScore3.z));\nfloat myScore = step(maxScore, pixel.r) * pixel.r;\ncolor = vec4(myScore, pixel.gba);\n}"
 
 /***/ }),
 
@@ -6663,17 +6888,6 @@ module.exports = "uniform sampler2D image;\nvoid main() {\nivec2 pos = threadLoc
 /***/ (function(module, exports) {
 
 module.exports = "uniform sampler2D image;\nvoid main()\n{\ncolor = threadPixel(image);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/utils/normalize-image.glsl":
-/*!****************************************************!*\
-  !*** ./src/gpu/shaders/utils/normalize-image.glsl ***!
-  \****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "#ifdef GREYSCALE\nuniform sampler2D minmax2d;\n#else\nuniform sampler2D minmax2dRGB[3];\n#endif\nuniform float minValue;\nuniform float maxValue;\nconst float eps = 1.0f / 255.0f;\nvoid main()\n{\nvec2 minmax = clamp(vec2(minValue, maxValue), 0.0f, 255.0f) / 255.0f;\nvec4 newMin = vec4(minmax.x);\nvec4 newRange = vec4(minmax.y - minmax.x);\nvec4 alpha = vec4(1.0f, newMin.x, newRange.x, 1.0f);\n#ifdef GREYSCALE\nvec4 pixel = threadPixel(minmax2d);\nmat4 channel = mat4(pixel, pixel, pixel, alpha);\n#else\nmat4 channel = mat4(\nthreadPixel(minmax2dRGB[0]),\nthreadPixel(minmax2dRGB[1]),\nthreadPixel(minmax2dRGB[2]),\nalpha\n);\n#endif\nvec4 oldMin = vec4(channel[0].g, channel[1].g, channel[2].g, channel[3].g);\nvec4 oldRange = max(vec4(channel[0].b, channel[1].b, channel[2].b, channel[3].b), eps);\nvec4 oldIntensity = vec4(channel[0].a, channel[1].a, channel[2].a, channel[3].a);\nvec4 newIntensity = (oldIntensity - oldMin) * newRange / oldRange + newMin;\ncolor = newIntensity;\n}"
 
 /***/ }),
 
@@ -7080,6 +7294,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _programs_encoders__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./programs/encoders */ "./src/gpu/programs/encoders.js");
 /* harmony import */ var _programs_descriptors__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./programs/descriptors */ "./src/gpu/programs/descriptors.js");
 /* harmony import */ var _programs_pyramids__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./programs/pyramids */ "./src/gpu/programs/pyramids.js");
+/* harmony import */ var _programs_enhancements__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./programs/enhancements */ "./src/gpu/programs/enhancements.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -7100,6 +7315,7 @@ __webpack_require__.r(__webpack_exports__);
  * speedy-program-center.js
  * An access point to all programs that run on the GPU
  */
+
 
 
 
@@ -7137,6 +7353,7 @@ class SpeedyProgramCenter
         this._encoders = null;
         this._descriptors = null;
         this._pyramids = null;
+        this._enhancements = null;
     }
 
     /**
@@ -7218,6 +7435,15 @@ class SpeedyProgramCenter
     get pyramids()
     {
         return this._pyramids || (this._pyramids = new _programs_pyramids__WEBPACK_IMPORTED_MODULE_6__["GPUPyramids"](this._gpu, this._width, this._height));
+    }
+
+    /**
+     * Image enhancement algorithms
+     * @returns {GPUEnhancements}
+     */
+    get enhancements()
+    {
+        return this._enhancements || (this._enhancements = new _programs_enhancements__WEBPACK_IMPORTED_MODULE_7__["GPUEnhancements"](this._gpu, this._width, this._height));
     }
 }
 
@@ -8907,7 +9133,7 @@ class Utils
      * @param {number} [kernelSize] kernel size, odd number
      * @param {bool} [normalized] normalize entries so that their sum is 1
      */
-    static gaussianKernel(sigma, kernelSize = -1, normalized = true)
+    static gaussianKernel(sigma, kernelSize = -1, normalized = false)
     {
         /*
          * Let G(x) be a Gaussian function centered at 0 with fixed sigma:
