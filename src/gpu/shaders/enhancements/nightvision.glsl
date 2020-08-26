@@ -16,13 +16,13 @@
  * limitations under the License.
  *
  * nightvision.glsl
- * Nightvision filter: reduce illumination differences
+ * Nightvision enhancement: reduce illumination differences
  */
 
 // is the input image greyscale?
 //#define GREYSCALE
 
-// image & illumination map
+// input image & illumination map
 uniform sampler2D image;
 uniform sampler2D illuminationMap;
 
@@ -43,6 +43,7 @@ const mat3 yuv2rgb = mat3(
 );
 const float eps = 0.0001f;
 
+// Algorithm
 void main()
 {
     vec4 pixel = threadPixel(image);
@@ -50,20 +51,22 @@ void main()
 
 #ifdef GREYSCALE
     float luma = log(pixel.g + eps) - log(imapPixel.g + eps);
-    luma = luma * gain + offset;
-    luma = clamp(luma, 0.0f, 1.0f);
-
+    luma = clamp(luma * gain + offset, 0.0f, 1.0f);
     color = vec4(luma, luma, luma, 1.0f);
 #else
+    // extract color
     vec3 yuvPixel = rgb2yuv * pixel.rgb;
     vec3 yuvImapPixel = rgb2yuv * imapPixel.rgb;
 
+    // dynamic range compression (log), gain & offset
     float luma = log(yuvPixel.r + eps) - log(yuvImapPixel.r + eps);
     luma = luma * gain + offset;
 
+    // restore color
     vec3 rgbCorrectedPixel = yuv2rgb * vec3(luma, yuvPixel.gb);
     rgbCorrectedPixel = clamp(rgbCorrectedPixel, 0.0f, 1.0f);
 
+    // done!
     color = vec4(rgbCorrectedPixel, 1.0f);
 #endif
 }

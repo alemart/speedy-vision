@@ -24,6 +24,7 @@ import { importShader } from '../shader-declaration';
 import { convX, convY } from '../shaders/filters/convolution';
 import { PixelComponent } from '../../utils/types';
 import { Utils } from '../../utils/utils';
+import { IllegalArgumentError } from '../../utils/errors';
 
 
 //
@@ -72,9 +73,15 @@ export class GPUEnhancements extends SpeedyProgramGroup
             // nightvision
             .declare('_nightvision', nightvision)
             .declare('_nightvisionGreyscale', nightvisionGreyscale)
-            .compose('_illuminationMap80', '_illuminationMap80x', '_illuminationMap80y')
-            .declare('_illuminationMap80x', convX(Utils.gaussianKernel(80, 63, true)))
-            .declare('_illuminationMap80y', convY(Utils.gaussianKernel(80, 63, true)))
+            .compose('_illuminationMapLo', '_illuminationMapLoX', '_illuminationMapLoY')
+            .declare('_illuminationMapLoX', convX(Utils.gaussianKernel(80, 63, true)))
+            .declare('_illuminationMapLoY', convY(Utils.gaussianKernel(80, 63, true)))
+            .compose('_illuminationMap', '_illuminationMapX', '_illuminationMapY')
+            .declare('_illuminationMapX', convX(Utils.gaussianKernel(81, 127, true)))
+            .declare('_illuminationMapY', convY(Utils.gaussianKernel(81, 127, true)))
+            .compose('_illuminationMapHi', '_illuminationMapHiX', '_illuminationMapHiY')
+            .declare('_illuminationMapHiX', convX(Utils.gaussianKernel(80, 255, true)))
+            .declare('_illuminationMapHiY', convY(Utils.gaussianKernel(80, 255, true)))
         ;
     }
 
@@ -122,15 +129,26 @@ export class GPUEnhancements extends SpeedyProgramGroup
      * @param {WebGLTexture} image
      * @param {number} [gain] higher values => higher contrast
      * @param {number} [offset] brightness
-     * @param {boolean} [greyscale] use greyscale variant of the algorithm
+     * @param {string} [quality] "high" | "medium" | "low" (more quality -> more expensive)
+     * @param {boolean} [greyscale] use the greyscale variant of the algorithm
      * @returns {WebGLTexture}
      */
-    nightvision(image, gain = 0.45, offset = 0.45, greyscale = false)
+    nightvision(image, gain = 0.3, offset = 0.35, quality = 'medium', greyscale = false)
     {
-        const strategy = greyscale ? this._nightvisionGreyscale : this._nightvision;
-        const illuminationMap = this._illuminationMap80(image);
-        const enhancedImage = strategy(image, illuminationMap, gain, offset);
+        // compute illumination map
+        let illuminationMap = null;
+        if(quality == 'medium')
+            illuminationMap = this._illuminationMap(image);
+        else if(quality == 'high')
+            illuminationMap = this._illuminationMapHi(image);
+        else if(quality == 'low')
+            illuminationMap = this._illuminationMapLo(image);
+        else
+            throw new IllegalArgumentError(`Invalid quality level for nightvision: "${quality}"`);
 
+        // run nightvision
+        const strategy = greyscale ? this._nightvisionGreyscale : this._nightvision;
+        const enhancedImage = strategy(image, illuminationMap, gain, offset);
         return enhancedImage;
     }
 }

@@ -36,20 +36,28 @@
         <form autocomplete="off">
             <div>
                 <label for="gain-slider">Gain</label>
-                <input type="range" min="0" max="200" value="45" id="gain-slider">
+                <input type="range" min="0" max="200" value="30" id="gain-slider">
                 <span id="gain-viewer"></span>
             </div>
             <div>
                 <label for="offset-slider">Offset</label>
-                <input type="range" min="0" max="100" value="45" id="offset-slider">
+                <input type="range" min="0" max="100" value="35" id="offset-slider">
                 <span id="offset-viewer"></span>
+            </div>
+            <div>
+                <label for="quality-select">Quality</label>
+                <select id="quality-select">
+                    <option value="high">high (best)</option>
+                    <option value="medium" selected>medium</option>
+                    <option value="low">low (fastest)</option>
+                </select>
             </div>
             <div>
                 <label for="greyscale-checkbox">Greyscale</label>
                 <input type="checkbox" id="greyscale-checkbox" checked>
             </div>
             <div>
-                <button type="button" id="reset-button">Reset</button>
+                <input type="reset" value="Reset">
             </div>
             <div>
                 FPS: <span id="fps">60</span>
@@ -63,6 +71,7 @@ window.onload = async function()
     const gainViewer = document.getElementById('gain-viewer');
     const offsetSlider = document.getElementById('offset-slider');
     const offsetViewer = document.getElementById('offset-viewer');
+    const qualitySelect = document.getElementById('quality-select');
     const greyscaleCheckbox = document.getElementById('greyscale-checkbox');
 
     // create a colored and a greyscale pipeline
@@ -70,14 +79,16 @@ window.onload = async function()
         Speedy.pipeline()
               .nightvision(() => ({
                   gain: gainSlider.value * 0.01,
-                  offset: offsetSlider.value * 0.01
+                  offset: offsetSlider.value * 0.01,
+                  quality: qualitySelect.value
               })),
 
         Speedy.pipeline()
               .convertTo('greyscale')
               .nightvision(() => ({
                   gain: gainSlider.value * 0.01,
-                  offset: offsetSlider.value * 0.01
+                  offset: offsetSlider.value * 0.01,
+                  quality: qualitySelect.value
               })),
     ];
 
@@ -96,7 +107,7 @@ window.onload = async function()
         transformedMedia.draw(canvas);
         media.draw(canvas, 0, 0, media.width / 3, media.height / 3);
 
-        requestAnimationFrame(render);
+        setTimeout(render, 1000 / 30);
     }
     render();
 
@@ -109,10 +120,6 @@ window.onload = async function()
         gainViewer.innerText = (gainSlider.value * 0.01).toFixed(2);
         offsetViewer.innerText = (offsetSlider.value * 0.01).toFixed(2);
     }, 100);
-
-    // reset button
-    const resetButton = document.getElementById('reset-button');
-    resetButton.onclick = () => document.querySelector('form').reset();
 
     // details
     canvas.style.width = (media.width * 2) + 'px';
