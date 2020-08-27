@@ -21,6 +21,7 @@
 
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { convX, convY, texConvX, texConvY, texConv2D, createKernel2D, createKernel1D } from '../shaders/filters/convolution';
+import { median } from '../shaders/filters/median';
 
 /**
  * GPUFilters
@@ -49,6 +50,12 @@ export class GPUFilters extends SpeedyProgramGroup
             .compose('box7', '_box7x', '_box7y') // size: 7x7
             .compose('box9', '_box9x', '_box9y') // size: 9x9
             .compose('box11', '_box11x', '_box11y') // size: 11x11
+
+            // median filter
+            .declare('median3', median(3)) // 3x3 window
+            .declare('median5', median(5)) // 5x5 window
+            .declare('median7', median(7)) // 7x7 window
+            .declare('median9', median(9)) // 9x9 window
 
             // difference of gaussians
             .compose('dog16_1', '_dog16_1x', '_dog16_1y') // sigma_2 / sigma_1 = 1.6 (approx. laplacian with sigma = 1)
