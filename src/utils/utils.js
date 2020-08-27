@@ -21,6 +21,9 @@
 
 import { IllegalArgumentError, ParseError, AssertionError } from './errors'
 
+/**
+ * Generic utilities
+ */
 export class Utils
 {
     /**
@@ -225,5 +228,42 @@ export class Utils
 
         // done!
         return normalized ? kernel.map(k => k / sum) : kernel;
+    }
+
+    /**
+     * Cartesian product a x b: [ [ai, bj] for all i, j ]
+     * @param {Array<number>} a
+     * @param {Array<number>} b
+     * @returns {Array<number[2]>}
+     */
+    static cartesian(a, b)
+    {
+        return [].concat(...a.map(a => b.map(b => [a, b])));
+    }
+
+    /**
+     * Symmetric range
+     * @param {number} n non-negative integer
+     * @returns {Array<number>} [ -n, ..., n ]
+     */
+    static symmetricRange(n)
+    {
+        if((n |= 0) < 0)
+            throw new IllegalArgumentError(`Expected a non-negative integer as input`);
+
+        return [...(Array(2*n + 1).keys())].map(x => x - n);
+    }
+
+    /**
+     * Compute the [0, n) range of integers
+     * @param {number} n positive integer
+     * @returns {Array<number>} [ 0, 1, ..., n-1 ]
+     */
+    static range(n)
+    {
+        if((n |= 0) <= 0)
+            throw new IllegalArgumentError(`Expected a positive integer as input`);
+
+        return [...(Array(n).keys())];
     }
 }

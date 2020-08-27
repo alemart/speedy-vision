@@ -20,11 +20,8 @@
  */
 
 import { createShader } from '../../shader-declaration';
+import { Utils } from '../../../utils/utils';
 import { IllegalArgumentError } from '../../../utils/errors';
-
-// Utilities
-const cartesian = (a, b) => [].concat(...a.map(a => b.map(b => [a,b]))); // [a] x [b]
-const symmetricRange = n => [...Array(2*n + 1).keys()].map(x => x-n);    // [-n, ..., n]
 
 
 
@@ -49,7 +46,7 @@ export function conv2D(kernel, normalizationConstant = 1.0)
     const pixelAtOffset = (N <= 7) ? 'pixelAtShortOffset' : 'pixelAtLongOffset';
 
     // code generator
-    const foreachKernelElement = fn => cartesian(symmetricRange(N), symmetricRange(N)).map(
+    const foreachKernelElement = fn => Utils.cartesian(Utils.symmetricRange(N), Utils.symmetricRange(N)).map(
         cur => fn(
             kernel32[(cur[0] + N) * kSize + (cur[1] + N)],
             cur[0], cur[1]
@@ -130,7 +127,7 @@ function conv1D(axis, kernel, normalizationConstant = 1.0)
     const pixelAtOffset = (N <= 7) ? 'pixelAtShortOffset' : 'pixelAtLongOffset';
 
     // code generator
-    const foreachKernelElement = fn => symmetricRange(N).reduce(
+    const foreachKernelElement = fn => Utils.symmetricRange(N).reduce(
         (acc, cur) => acc + fn(kernel32[cur + N], cur),
     '');
     const generateCode = (k, i) => ((axis == 'x') ? `
@@ -299,7 +296,7 @@ export function texConv2D(kernelSize)
     const pixelAtOffset = (N <= 7) ? 'pixelAtShortOffset' : 'pixelAtLongOffset';
 
     // utilities
-    const foreachKernelElement = fn => cartesian(symmetricRange(N), symmetricRange(N)).map(
+    const foreachKernelElement = fn => Utils.cartesian(Utils.symmetricRange(N), Utils.symmetricRange(N)).map(
         ij => fn(ij[0], ij[1])
     ).join('\n');
 
@@ -375,7 +372,7 @@ function texConv1D(kernelSize, axis)
     const pixelAtOffset = (N <= 7) ? 'pixelAtShortOffset' : 'pixelAtLongOffset';
 
     // utilities
-    const foreachKernelElement = fn => symmetricRange(N).map(fn).join('\n');
+    const foreachKernelElement = fn => Utils.symmetricRange(N).map(fn).join('\n');
     const generateCode = i => ((axis == 'x') ? `
         kernel = pixelAt(texKernel, ivec2(${i + N}, 0));
         value = dot(kernel, magic) * scale + offset;
