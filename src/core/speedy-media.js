@@ -80,6 +80,7 @@ export class SpeedyMedia
             this._height = media._height;
             this._type = media._type;
             this._colorFormat = media._colorFormat;
+            this._options = media._options;
 
             this._gpu = media._gpu;
             this._featuresAlgorithm = media._featuresAlgorithm;
@@ -446,6 +447,7 @@ function requestCameraStream(width, height, options = {})
                 height: { ideal: height },
                 aspectRatio: { ideal: width / height },
                 facingMode: 'environment',
+                frameRate: 30,
             },
             ...(options)
         })
