@@ -30,7 +30,7 @@ const vec4 zeroes = vec4(0.0f, 0.0f, 0.0f, 0.0f);
 const vec4 ones = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
 // Use a better score function
-//#define USE_HARRIS_SCORE // if enabled, will not use FAST scores. May not compile on mobile (drivers?)
+//#define USE_HARRIS_SCORE // if enabled, will not use FAST scores. Slower (requires more pixel accesses), may not compile on mobile (drivers?)
 
 void main()
 {
@@ -47,7 +47,7 @@ void main()
          df0m[PYRAMID_MAX_OCTAVES], df00[PYRAMID_MAX_OCTAVES], df01[PYRAMID_MAX_OCTAVES],
          df1m[PYRAMID_MAX_OCTAVES], df10[PYRAMID_MAX_OCTAVES], df11[PYRAMID_MAX_OCTAVES];
     float pyrpix = 0.0f;
-    for(int l = 0; l < PYRAMID_MAX_OCTAVES; l++) {
+    for(int l = 0; l < numberOfOctaves; l++) {
         float lod = float(l) * 0.5f;
         float pot = exp2(lod);
         pyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(-1,-1)).g;
@@ -138,10 +138,9 @@ void main()
 
 #ifdef USE_HARRIS_SCORE
         // Fast approximation of Harris-Shi-Tomasi corner response
-        int lodIndex = int(lod * 2.0f);
-        vec2 df0 = dfmm[lodIndex], df1 = dfm0[lodIndex], df2 = dfm1[lodIndex],
-             df3 = df0m[lodIndex], df4 = df00[lodIndex], df5 = df01[lodIndex],
-             df6 = df1m[lodIndex], df7 = df10[lodIndex], df8 = df11[lodIndex];
+        vec2 df0 = dfmm[octave], df1 = dfm0[octave], df2 = dfm1[octave],
+             df3 = df0m[octave], df4 = df00[octave], df5 = df01[octave],
+             df6 = df1m[octave], df7 = df10[octave], df8 = df11[octave];
 
         vec3 hm = vec3(0.0f);
         hm += vec3(df0.x * df0.x, df0.x * df0.y, df0.y * df0.y);
@@ -155,7 +154,7 @@ void main()
         hm += vec3(df8.x * df8.x, df8.x * df8.y, df8.y * df8.y);
 
         float response = 0.5f * (hm.x + hm.z - sqrt((hm.x - hm.z) * (hm.x - hm.z) + 4.0f * hm.y * hm.y));
-        score = response;
+        score = response * 0.125f;
 #else
         // Compute FAST score
         mat4 mct = mp - mat4(

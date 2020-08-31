@@ -152,12 +152,12 @@ export class Utils
 
     /**
      * Generate a 1D gaussian kernel with custom sigma
-     * Tip: use kernelSize = (5 * sigma), kernelSize odd
+     * Tip: use kernelSize >= (5 * sigma), kernelSize odd
      * @param {number} sigma gaussian sigma
      * @param {number} [kernelSize] kernel size, odd number
      * @param {bool} [normalized] normalize entries so that their sum is 1
      */
-    static gaussianKernel(sigma, kernelSize = -1, normalized = false)
+    static gaussianKernel(sigma, kernelSize = -1, normalized = true)
     {
         /*
          * Let G(x) be a Gaussian function centered at 0 with fixed sigma:
@@ -193,7 +193,7 @@ export class Utils
 
         // set constants
         const N  =  kernelSize >> 1; // integer (floor, div 2)
-        const c  =  (+sigma) * Math.sqrt(2);
+        const c  =  (+sigma) * 1.4142135623730951; // sigma * sqrt(2)
         const m  =  0.3275911;
         const a1 =  0.254829592;
         const a2 = -0.284496736;

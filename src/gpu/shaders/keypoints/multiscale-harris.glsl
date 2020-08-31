@@ -36,7 +36,7 @@
 @include "pyramids.glsl"
 
 uniform sampler2D pyramid;
-uniform int windowRadius; // 0, 1, 2 ... for 1x1, 3x3 or 5x5 windows. Can't be larger than 7.
+uniform int windowRadius; // 0, 1, 2 ... for 1x1, 3x3 or 5x5 windows. Shouldn't be larger than 7.
 uniform int numberOfOctaves; // each pyramid octave uses a scaling factor of sqrt(2)
 uniform sampler2D sobelDerivatives[@PYRAMID_MAX_OCTAVES@]; // for each LOD sub-level (0, 0.5, 1, 1.5, 2...)
 
@@ -79,7 +79,7 @@ void main()
         float response = 0.5f * (m.x + m.z - sqrt((m.x - m.z) * (m.x - m.z) + 4.0f * m.y * m.y));
 
         // compute corner score in [0,1]
-        float score = max(0.0f, response / 4.0f); // hmmmmmm....
+        float score = max(0.0f, response / 8.0f); // hmmmmmm....
 
         // compute corner scale
         float lod = 0.5f * float(octave);
