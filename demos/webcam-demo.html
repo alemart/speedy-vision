@@ -25,19 +25,18 @@
                 </select>
             </div>
             <div>
-                Sensitivity:
+                Sensitivity
                 <input type="range" min="20" max="80" value="50" id="slider">
             </div>
             <div>
-                Zoom:
-                <input type="radio" id="zoom-1" name="zoom" value="1"> <label for="zoom-1">1x</label>
-                <input type="radio" id="zoom-2" name="zoom" value="2"> <label for="zoom-2">2x</label>
-                <input type="radio" id="zoom-3" name="zoom" value="3"> <label for="zoom-3">3x</label>
-            </div>
-            <div>
-                FPS: <span id="fps">60</span>
+                <label for="enhance-illumination">Fix uneven illumination</label>
+                <input type="checkbox" id="enhance-illumination">
             </div>
         </form>
+        <div>
+            <span id="feature-count">0</span> features |
+            FPS: <span id="fps">60</span>
+        </div>
         <script>
 window.onload = async function()
 {
@@ -51,39 +50,38 @@ window.onload = async function()
         // user controls
         const slider = document.getElementById('slider');
         const method = document.getElementById('method');
+        const enhanceIllumination = document.getElementById('enhance-illumination');
 
-        // update features
-        const FPS = 60;
+        // main loop
         let features = [];
-        function updateFeatures()
+        async function loop()
         {
-            media.findFeatures({
+            // update features
+            features = await media.findFeatures({
                 method: method.value,
                 sensitivity: slider.value / 100.0,
-            }).then(f => {
-                features = f;
-                setTimeout(updateFeatures, 1000.0 / FPS);
+                enhancements: {
+                    illumination: enhanceIllumination.checked
+                }
             });
-        }
-        updateFeatures();
 
-        // render video & features
-        function render()
-        {
+            // render video & features
             media.draw(canvas);
             renderFeatures(canvas, features, 4);
-            requestAnimationFrame(render);
+            setTimeout(loop, 1000 / 30);
         }
-        render();
+        loop();
 
         // display fps
         const fps = document.getElementById('fps');
         setInterval(() => fps.innerText = Speedy.fps.value, 500);
 
-        // adjust zoom
-        const zoom = document.getElementsByName('zoom');
-        zoom.forEach(z => (z.oninput = () => { if(z.checked) canvas.style.width = (media.width * z.value) + 'px'; }));
-        document.getElementById('zoom-2').click();
+        // feature count
+        const featureCount = document.getElementById('feature-count');
+        setInterval(() => featureCount.innerText = features.length, 500);
+
+        // zoom
+        canvas.style.width = (2 * media.width) + 'px';
     }
     catch(err) {
         alert(err.message);

@@ -71,7 +71,6 @@ export class FeaturesDownloader extends Observable
             this._filteredKeypointCount = newCount;
             this._rawKeypointCount = keypoints.length;
             gpu.programs.encoders.optimizeKeypointEncoder(newCount, this._descriptorSize);
-            //document.querySelector('mark').innerHTML = gpu.programs.encoders._keypointEncoderLength;
 
             // sort the data according to cornerness score
             keypoints.sort(this._compareKeypoints);

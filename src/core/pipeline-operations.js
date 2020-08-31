@@ -286,18 +286,19 @@ PipelineOperation.Nightvision = class extends SpeedyPipelineOperation
         this._saveOptions(options, {
             gain: undefined,    // controls the contrast
             offset: undefined,  // controls the brightness
+            decay: undefined,   // gain decay from the center
             quality: undefined, // "high" | "medium" | "low"
         });
     }
 
     run(texture, gpu, media)
     {
-        const { gain, offset, quality } = this._loadOptions();
+        const { gain, offset, decay, quality } = this._loadOptions();
 
         if(media._colorFormat == ColorFormat.RGB)
-            return gpu.programs.enhancements.nightvision(texture, gain, offset, quality, false);
+            return gpu.programs.enhancements.nightvision(texture, gain, offset, decay, quality, false);
         else if(media._colorFormat == ColorFormat.Greyscale)
-            return gpu.programs.enhancements.nightvision(texture, gain, offset, quality, true);
+            return gpu.programs.enhancements.nightvision(texture, gain, offset, decay, quality, true);
         else
             throw new NotSupportedError('Invalid color format');
     }

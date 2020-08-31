@@ -66,7 +66,6 @@ export function median(windowSize)
 
     // shader
     const source = `
-
     uniform sampler2D image;
 
     void main()
@@ -84,8 +83,6 @@ export function median(windowSize)
         color = vec4(v[${med}].rgb, 1.0f);
     }
     `;
-    console.log(source);
-    console.warn('---');
 
     // done!
     return createShader(source).withArguments('image');

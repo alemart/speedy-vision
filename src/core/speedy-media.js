@@ -353,16 +353,20 @@ export class SpeedyMedia
         texture = this._featuresAlgorithm.preprocess(
             texture,
             settings.denoise,
-            this._colorFormat != ColorFormat.Greyscale,
+            this._colorFormat != ColorFormat.Greyscale
+        );
+        const enhancedTexture = this._featuresAlgorithm.enhance(
+            texture,
             settings.enhancements.illumination == true
         );
 
         // Feature detection & description
-        let encodedKeypoints = this._featuresAlgorithm.detectAndDescribe(texture);
+        const detectedKeypoints = this._featuresAlgorithm.detect(enhancedTexture);
+        const describedKeypoints = this._featuresAlgorithm.describe(texture, detectedKeypoints);
 
-        // Download from the GPU
+        // Download keypoints from the GPU
         return this._featuresAlgorithm.download(
-            encodedKeypoints,
+            describedKeypoints,
             this.options.usage == 'dynamic',
             settings.max
         );

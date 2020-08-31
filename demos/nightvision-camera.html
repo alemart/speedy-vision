@@ -36,13 +36,18 @@
         <form autocomplete="off">
             <div>
                 <label for="gain-slider">Gain</label>
-                <input type="range" min="0" max="200" value="30" id="gain-slider">
+                <input type="range" min="0" max="100" value="50" id="gain-slider">
                 <span id="gain-viewer"></span>
             </div>
             <div>
                 <label for="offset-slider">Offset</label>
-                <input type="range" min="0" max="100" value="35" id="offset-slider">
+                <input type="range" min="0" max="100" value="50" id="offset-slider">
                 <span id="offset-viewer"></span>
+            </div>
+            <div>
+                <label for="decay-slider">Decay</label>
+                <input type="range" min="0" max="100" value="0" id="decay-slider">
+                <span id="decay-viewer"></span>
             </div>
             <div>
                 <label for="quality-select">Quality</label>
@@ -71,6 +76,8 @@ window.onload = async function()
     const gainViewer = document.getElementById('gain-viewer');
     const offsetSlider = document.getElementById('offset-slider');
     const offsetViewer = document.getElementById('offset-viewer');
+    const decaySlider = document.getElementById('decay-slider');
+    const decayViewer = document.getElementById('decay-viewer');
     const qualitySelect = document.getElementById('quality-select');
     const greyscaleCheckbox = document.getElementById('greyscale-checkbox');
 
@@ -80,6 +87,7 @@ window.onload = async function()
               .nightvision(() => ({
                   gain: gainSlider.value * 0.01,
                   offset: offsetSlider.value * 0.01,
+                  decay: decaySlider.value * 0.01,
                   quality: qualitySelect.value
               })),
 
@@ -88,6 +96,7 @@ window.onload = async function()
               .nightvision(() => ({
                   gain: gainSlider.value * 0.01,
                   offset: offsetSlider.value * 0.01,
+                  decay: decaySlider.value * 0.01,
                   quality: qualitySelect.value
               })),
     ];
@@ -119,6 +128,7 @@ window.onload = async function()
     setInterval(() => {
         gainViewer.innerText = (gainSlider.value * 0.01).toFixed(2);
         offsetViewer.innerText = (offsetSlider.value * 0.01).toFixed(2);
+        decayViewer.innerText = (decaySlider.value * 0.01).toFixed(2);
     }, 100);
 
     // details

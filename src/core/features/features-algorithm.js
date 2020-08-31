@@ -77,7 +77,7 @@ export /* abstract */ class FeaturesAlgorithm
     /**
      * Detect feature points
      * @param {WebGLTexture} inputTexture pre-processed greyscale image
-     * @returns {WebGLTexture} encoded keypoints
+     * @returns {WebGLTexture} tiny texture with encoded keypoints
      */
     detect(inputTexture)
     {
@@ -88,23 +88,13 @@ export /* abstract */ class FeaturesAlgorithm
     /**
      * Describe feature points
      * @param {WebGLTexture} inputTexture pre-processed greyscale image
-     * @param {WebGLTexture} encodedKeypoints tiny texture with appropriate size for the descriptors
-     * @returns {WebGLTexture} encoded keypoints with descriptors
+     * @param {WebGLTexture} detectedKeypoints tiny texture with appropriate size for the descriptors
+     * @returns {WebGLTexture} tiny texture with encoded keypoints & descriptors
      */
-    describe(inputTexture, encodedKeypoints)
+    describe(inputTexture, detectedKeypoints)
     {
         // No descriptor is computed by default
-        return encodedKeypoints;
-    }
-
-    /**
-     * Detect feature points and compute their descriptors
-     * @param {WebGLTexture} inputTexture pre-processed greyscale image
-     * @returns {WebGLTexture} encoded keypoints with descriptors
-     */
-    detectAndDescribe(inputTexture)
-    {
-        return this.describe(inputTexture, this.detect(inputTexture));
+        return detectedKeypoints;
     }
 
     /**
@@ -120,14 +110,13 @@ export /* abstract */ class FeaturesAlgorithm
     }
 
     /**
-     * Preprocess a texture for feature detection
+     * Preprocess a texture for feature detection & description
      * @param {WebGLTexture} inputTexture a RGB or greyscale image
      * @param {boolean} [denoise] should we smooth the media a bit?
      * @param {boolean} [convertToGreyscale] set to true if the texture is not greyscale
-     * @param {boolean} [enhanceIllumination] fix uneven lighting in the scene?
      * @returns {WebGLTexture} pre-processed greyscale image
      */
-    preprocess(inputTexture, denoise = true, convertToGreyscale = true, enhanceIllumination = false)
+    preprocess(inputTexture, denoise = true, convertToGreyscale = true)
     {
         const gpu = this._gpu;
         let texture = inputTexture;
@@ -137,10 +126,26 @@ export /* abstract */ class FeaturesAlgorithm
 
         if(convertToGreyscale)
             texture = gpu.programs.colors.rgb2grey(texture);
-
-        if(enhanceIllumination)
-            texture = gpu.programs.enhancements.nightvision(texture, undefined, undefined, true);
             
+        return texture;
+    }
+
+    /**
+     * Enhances texture for feature DETECTION (not description)
+     * @param {WebGLTexture} inputTexture
+     * @param {boolean} [enhanceIllumination] fix uneven lighting in the scene?
+     * @returns {WebGLTexture}
+     */
+    enhance(inputTexture, enhanceIllumination = false)
+    {
+        const gpu = this._gpu;
+        let texture = inputTexture;
+
+        if(enhanceIllumination) {
+            texture = gpu.programs.enhancements.nightvision(texture, 0.9, 0.5, 0.85, 'low', true);
+            texture = gpu.programs.filters.gauss3(texture); // blur a bit more
+        }
+
         return texture;
     }
 

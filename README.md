@@ -588,8 +588,9 @@ Normalizes the media (histogram stretching). Available options:
 
 Nightvision enhances the illumination of the scene. It improves local contrast and brightness, enabling you to "see in the dark" - [see the demo](#demos). Available options:
 
-* `gain: number`. A value used to adjust the contrast. Defaults to `0.3`.
-* `offset: number`. A value related to the resulting brightness. Defaults to `0.35`.
+* `gain: number`. A value used to stretch the contrast, typically between `0` and `1`.
+* `offset: number`. A value used to adjust the brightness, typically between `0` and `1`.
+* `decay: number`. A value between `0` (no decay, default) and `1` (full decay) that modifies the gain from the center of the image to its corners. Used to get high contrast at the center and low contrast at the corners.
 
 ### Extras
 

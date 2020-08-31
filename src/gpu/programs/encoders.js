@@ -35,7 +35,6 @@ const MAX_PIXELS_PER_KEYPOINT = (MAX_KEYPOINT_SIZE / 4) | 0; // in pixels
 const MAX_ENCODER_LENGTH = 300; // in pixels (if too large, WebGL may lose context - so be careful!)
 const MAX_KEYPOINTS = ((MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH) / MAX_PIXELS_PER_KEYPOINT) | 0;
 const INITIAL_ENCODER_LENGTH = 128; // pick a large value <= MAX (useful on static images when no encoder optimization is performed beforehand)
-const PI = Math.PI;
 
 
 
@@ -185,7 +184,7 @@ export class GPUEncoders extends SpeedyProgramGroup
 
             hasRotation = hasScale; // FIXME get from parameter list?
             rotation = !hasRotation ? 0.0 :
-                ((2 * pixels[i+5]) / 255.0 - 1.0) * PI;
+                ((2 * pixels[i+5]) / 255.0 - 1.0) * Math.PI;
 
             score = pixels[i+6] / 255.0;
 

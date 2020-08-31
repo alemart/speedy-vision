@@ -26,9 +26,12 @@
 uniform sampler2D image;
 uniform sampler2D illuminationMap;
 
-// retinex-based params
-uniform float gain; // contrast stretch
-uniform float offset; // base brightness
+// user params
+uniform float gain;   // contrast stretching, typically in [0,1] (default: 0.5)
+uniform float offset; // base brightness, in [0,1] (default: 0.5)
+uniform float decay;  // gain decay from the center, in [0,1] (default: 0.0)
+                      // - the gain at the center will be gain
+                      // - the gain at the corners will be (1 - decay) * gain
 
 // RGB to YUV conversion
 const mat3 rgb2yuv = mat3(
@@ -42,25 +45,45 @@ const mat3 yuv2rgb = mat3(
     1.13983f, -0.58060f, 0.0f
 );
 const float eps = 0.0001f;
+const float sqrt2 = 1.4142135623730951f;
+const float magic = 20.0f; // multiplier for default gain
+const vec2 center = vec2(0.5f);
 
 // Algorithm
 void main()
 {
+    // read pixels
     vec4 pixel = threadPixel(image);
     vec4 imapPixel = threadPixel(illuminationMap);
 
+    // exponential decay (gain)
+    float lambda = -sqrt2 * log(max(1.0f - decay, eps));
+    float dist = length(texCoord - center);
+    float vgain = gain * exp(-lambda * dist);
+
+    // gain & offset
+    float normalizedGain = 2.0f * vgain; // default gain of 0.5 becomes 1.0
+    float normalizedOffset = 2.0f * offset - 1.0f; // use offset in [0,1]
+
 #ifdef GREYSCALE
-    float luma = log(pixel.g + eps) - log(imapPixel.g + eps);
-    luma = clamp(luma * gain + offset, 0.0f, 1.0f);
+    // contrast stretching
+    float luma = 1.0 / (1.0 + exp(-normalizedGain * magic * (pixel.g - imapPixel.g)));
+    luma = clamp(luma + normalizedOffset, 0.0f, 1.0f); // adjust brightness
+
+    // done!
     color = vec4(luma, luma, luma, 1.0f);
 #else
     // extract color
     vec3 yuvPixel = rgb2yuv * pixel.rgb;
     vec3 yuvImapPixel = rgb2yuv * imapPixel.rgb;
 
-    // dynamic range compression (log), gain & offset
-    float luma = log(yuvPixel.r + eps) - log(yuvImapPixel.r + eps);
-    luma = luma * gain + offset;
+    // dynamic range compression (log)
+    //float luma = log(yuvPixel.r + eps) - log(yuvImapPixel.r + eps);
+    //luma = luma * vgain + offset;
+
+    // contrast stretching
+    float luma = 1.0 / (1.0 + exp(-normalizedGain * magic * (yuvPixel.r - yuvImapPixel.r)));
+    luma += normalizedOffset; // adjust brightness
 
     // restore color
     vec3 rgbCorrectedPixel = yuv2rgb * vec3(luma, yuvPixel.gb);

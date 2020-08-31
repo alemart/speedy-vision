@@ -40,9 +40,9 @@ const normalizeColoredImage = importShader('enhancements/normalize-image.glsl')
 
 // Nightvision
 const nightvision = importShader('enhancements/nightvision.glsl')
-                   .withArguments('image', 'illuminationMap', 'gain', 'offset');
+                   .withArguments('image', 'illuminationMap', 'gain', 'offset', 'decay');
 const nightvisionGreyscale = importShader('enhancements/nightvision.glsl')
-                            .withArguments('image', 'illuminationMap', 'gain', 'offset')
+                            .withArguments('image', 'illuminationMap', 'gain', 'offset', 'decay')
                             .withDefines({ 'GREYSCALE': 1 });
 
 
@@ -74,14 +74,14 @@ export class GPUEnhancements extends SpeedyProgramGroup
             .declare('_nightvision', nightvision)
             .declare('_nightvisionGreyscale', nightvisionGreyscale)
             .compose('_illuminationMapLo', '_illuminationMapLoX', '_illuminationMapLoY')
-            .declare('_illuminationMapLoX', convX(Utils.gaussianKernel(80, 63, true)))
-            .declare('_illuminationMapLoY', convY(Utils.gaussianKernel(80, 63, true)))
+            .declare('_illuminationMapLoX', convX(Utils.gaussianKernel(80, 31)))
+            .declare('_illuminationMapLoY', convY(Utils.gaussianKernel(80, 31)))
             .compose('_illuminationMap', '_illuminationMapX', '_illuminationMapY')
-            .declare('_illuminationMapX', convX(Utils.gaussianKernel(81, 127, true)))
-            .declare('_illuminationMapY', convY(Utils.gaussianKernel(81, 127, true)))
+            .declare('_illuminationMapX', convX(Utils.gaussianKernel(80, 63)))
+            .declare('_illuminationMapY', convY(Utils.gaussianKernel(80, 63)))
             .compose('_illuminationMapHi', '_illuminationMapHiX', '_illuminationMapHiY')
-            .declare('_illuminationMapHiX', convX(Utils.gaussianKernel(80, 255, true)))
-            .declare('_illuminationMapHiY', convY(Utils.gaussianKernel(80, 255, true)))
+            .declare('_illuminationMapHiX', convX(Utils.gaussianKernel(80, 255)))
+            .declare('_illuminationMapHiY', convY(Utils.gaussianKernel(80, 255)))
         ;
     }
 
@@ -127,13 +127,14 @@ export class GPUEnhancements extends SpeedyProgramGroup
     /**
      * Nightvision filter: "see in the dark"
      * @param {WebGLTexture} image
-     * @param {number} [gain] higher values => higher contrast
-     * @param {number} [offset] brightness
+     * @param {number} [gain] typically in [0,1]; higher values => higher contrast
+     * @param {number} [offset] brightness, typically in [0,1]
+     * @param {number} [decay] gain decay, in the [0,1] range
      * @param {string} [quality] "high" | "medium" | "low" (more quality -> more expensive)
      * @param {boolean} [greyscale] use the greyscale variant of the algorithm
      * @returns {WebGLTexture}
      */
-    nightvision(image, gain = 0.3, offset = 0.35, quality = 'medium', greyscale = false)
+    nightvision(image, gain = 0.5, offset = 0.5, decay = 0.0, quality = 'medium', greyscale = false)
     {
         // compute illumination map
         let illuminationMap = null;
@@ -148,7 +149,7 @@ export class GPUEnhancements extends SpeedyProgramGroup
 
         // run nightvision
         const strategy = greyscale ? this._nightvisionGreyscale : this._nightvision;
-        const enhancedImage = strategy(image, illuminationMap, gain, offset);
+        const enhancedImage = strategy(image, illuminationMap, gain, offset, decay);
         return enhancedImage;
     }
 }
