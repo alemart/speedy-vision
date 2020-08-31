@@ -22,6 +22,10 @@
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { convX, convY, texConvX, texConvY, texConv2D, createKernel2D, createKernel1D } from '../shaders/filters/convolution';
 import { median } from '../shaders/filters/median';
+import { Utils } from '../../utils/utils';
+
+// Handy conversion
+const ksize2sigma = ksize => Math.max(1.0, ksize / 6.0);
 
 /**
  * GPUFilters
@@ -39,19 +43,21 @@ export class GPUFilters extends SpeedyProgramGroup
     {
         super(gpu, width, height);
         this
-            // gaussian approximation (sigma approx. 1.0)
-            .compose('gauss5', '_gauss5x', '_gauss5y') // size: 5x5
-            .compose('gauss3', '_gauss3x', '_gauss3y') // size: 3x3
+            // gaussian filters
+            .compose('gauss3', '_gauss3x', '_gauss3y') // size: 3x3 (sigma ~ 1.0)
+            .compose('gauss5', '_gauss5x', '_gauss5y') // size: 5x5 (sigma ~ 1.0)
             .compose('gauss7', '_gauss7x', '_gauss7y') // size: 7x7
+            .compose('gauss9', '_gauss9x', '_gauss9y') // size: 9x9
+            .compose('gauss11', '_gauss11x', '_gauss11y') // size: 11x11
 
             // box filters
-            .compose('box5', '_box5x', '_box5y') // size: 5x5
             .compose('box3', '_box3x', '_box3y') // size: 3x3
+            .compose('box5', '_box5x', '_box5y') // size: 5x5
             .compose('box7', '_box7x', '_box7y') // size: 7x7
             .compose('box9', '_box9x', '_box9y') // size: 9x9
             .compose('box11', '_box11x', '_box11y') // size: 11x11
 
-            // median filter
+            // median filters
             .declare('median3', median(3)) // 3x3 window
             .declare('median5', median(5)) // 5x5 window
             .declare('median7', median(7)) // 7x7 window
@@ -135,15 +141,7 @@ export class GPUFilters extends SpeedyProgramGroup
 
             // separable kernels (Gaussian)
             // see also: http://dev.theomader.com/gaussian-kernel-calculator/
-            .declare('_gauss5x', convX([
-                0.05, 0.25, 0.4, 0.25, 0.05
-                //0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
-            ]))
-            .declare('_gauss5y', convY([
-                0.05, 0.25, 0.4, 0.25, 0.05
-                //0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
-            ]))
-            .declare('_gauss3x', convX([
+            .declare('_gauss3x', convX([ // sigma ~ 1.0
                 0.25, 0.5, 0.25
                 //0.27901, 0.44198, 0.27901
             ]))
@@ -151,11 +149,13 @@ export class GPUFilters extends SpeedyProgramGroup
                 0.25, 0.5, 0.25
                 //0.27901, 0.44198, 0.27901
             ]))
-            .declare('_gauss7x', convX([
-                0.00598, 0.060626, 0.241843, 0.383103, 0.241843, 0.060626, 0.00598
+            .declare('_gauss5x', convX([ // sigma ~ 1.0
+                0.05, 0.25, 0.4, 0.25, 0.05
+                //0.06136, 0.24477, 0.38774, 0.24477, 0.06136
             ]))
-            .declare('_gauss7y', convY([
-                0.00598, 0.060626, 0.241843, 0.383103, 0.241843, 0.060626, 0.00598
+            .declare('_gauss5y', convY([
+                0.05, 0.25, 0.4, 0.25, 0.05
+                //0.06136, 0.24477, 0.38774, 0.24477, 0.06136
             ]))
             /*.declare('_gauss5', conv2D([ // for testing
                 1, 4, 7, 4, 1,
@@ -164,6 +164,13 @@ export class GPUFilters extends SpeedyProgramGroup
                 4, 16, 26, 16, 4,
                 1, 4, 7, 4, 1,
             ], 1 / 237))*/
+            .declare('_gauss7x', convX(Utils.gaussianKernel(ksize2sigma(7), 7)))
+            .declare('_gauss7y', convY(Utils.gaussianKernel(ksize2sigma(7), 7)))
+            .declare('_gauss9x', convX(Utils.gaussianKernel(ksize2sigma(9), 9)))
+            .declare('_gauss9y', convY(Utils.gaussianKernel(ksize2sigma(9), 9)))
+            .declare('_gauss11x', convX(Utils.gaussianKernel(ksize2sigma(11), 11)))
+            .declare('_gauss11y', convY(Utils.gaussianKernel(ksize2sigma(11), 11)))
+
 
 
 
