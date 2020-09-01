@@ -26,6 +26,7 @@ import { IllegalArgumentError } from '../../../utils/errors';
 /**
  * Generate a median filter with a
  * (windowSize x windowSize) window
+ * (for greyscale images only)
  * @param {number} windowSize 3, 5, 7, ...
  */
 export function median(windowSize)
@@ -48,13 +49,13 @@ export function median(windowSize)
         (pair, idx) => fn(idx, pair[0], pair[1])
     ).join('\n');
     const readPixel = (k, j, i) => `
-        v[${k}] = ${pixelAtOffset}(image, ivec2(${i}, ${j}));
+        v[${k}] = ${pixelAtOffset}(image, ivec2(${i}, ${j})).g;
     `;
 
     // selection sort: unrolled & branchless
     const foreachVectorElement = fn => Utils.range(med + 1).map(fn).join('\n');
     const findMinimum = j => Utils.range(n - (j + 1)).map(x => x + j + 1).map(i => `
-        m += int(v[${i}].g >= v[m].g) * (${i} - m);
+        m += int(v[${i}] >= v[m]) * (${i} - m);
     `).join('\n');
     const selectMinimum = j => `
         m = ${j};
@@ -70,7 +71,7 @@ export function median(windowSize)
 
     void main()
     {
-        vec4 v[${n}], swpv;
+        float v[${n}], swpv;
         int m;
 
         // read pixels
@@ -80,7 +81,7 @@ export function median(windowSize)
         ${foreachVectorElement(selectMinimum)}
 
         // return the median
-        color = vec4(v[${med}].rgb, 1.0f);
+        color = vec4(v[${med}], v[${med}], v[${med}], 1.0f);
     }
     `;
 
