@@ -22,6 +22,15 @@
 import { Utils } from '../utils/utils';
 import { GLError, IllegalArgumentError, IllegalOperationError } from '../utils/errors';
 
+
+
+//
+// Constants
+//
+const isFirefox = navigator.userAgent.includes('Firefox');
+
+
+
 /**
  * WebGL Utilities
  */
@@ -358,8 +367,6 @@ export class GLUtils
     static clientWaitAsync(gl, sync, flags = 0)
     {
         return new Promise((resolve, reject) => {
-            const isFirefox = navigator.userAgent.includes('Firefox');
-
             function checkStatus() {
                 const status = gl.clientWaitSync(sync, flags, 0);
                 if(status == gl.TIMEOUT_EXPIRED) {
