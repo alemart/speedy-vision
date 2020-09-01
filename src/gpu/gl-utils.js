@@ -230,18 +230,20 @@ export class GLUtils
      * @param {GLsizei} width texture width
      * @param {GLsizei} height texture height
      * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} pixels 
+     * @param {GLint} [lod] mipmap level-of-detail
      * @returns {WebGLTexture} texture
      */
-    static uploadToTexture(gl, texture, width, height, pixels)
+    static uploadToTexture(gl, texture, width, height, pixels, lod = 0)
     {
         // Prefer calling uploadToTexture() before gl.useProgram() to avoid the
         // needless switching of GL programs internally. See also:
         // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices
         gl.bindTexture(gl.TEXTURE_2D, texture);
+
         /*
         // slower than texImage2D, unlike the spec?
         gl.texSubImage2D(gl.TEXTURE_2D,     // target
-                         0,                 // mip level
+                         lod,               // mip level
                          0,                 // x-offset
                          0,                 // y-offset
                          width,             // texture width
@@ -250,15 +252,17 @@ export class GLUtils
                          gl.UNSIGNED_BYTE,  // source type
                          pixels);           // source data
         */
+
         gl.texImage2D(gl.TEXTURE_2D,        // target
-                      0,                    // mip level
+                      lod,                  // mip level
                       gl.RGBA8,             // internal format
-                      //width,                // texture width
-                      //height,               // texture height
-                      //0,                    // border
+                      //width,              // texture width
+                      //height,             // texture height
+                      //0,                  // border
                       gl.RGBA,              // source format
                       gl.UNSIGNED_BYTE,     // source type
                       pixels);              // source data
+
         gl.bindTexture(gl.TEXTURE_2D, null);
         return texture;
     }
