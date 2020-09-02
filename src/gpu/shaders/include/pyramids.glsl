@@ -61,6 +61,17 @@
  */
 #define pyrPixelAtEx(pyr, pos, lod, pyrBaseSize) textureLod((pyr), (vec2(pos) + vec2(0.5f)) / vec2(pyrBaseSize), (lod))
 
+/**
+ * Get a specific subpixel at a specific level-of-detail
+ * Similar to pyrPixelAtEx(), expect that this works with subpixel accuracy
+ * @param {sampler2D} pyr pyramid
+ * @param {vec2} pos pixel position considering lod = 0
+ * @param {float} lod level-of-detail
+ * @param {ivec2} pyrBaseSize this is textureSize(pyr, 0)
+ * @returns {vec4} pixel data
+ */
+#define pyrPixelAtEx(pyr, pos, lod, pyrBaseSize) textureLod((pyr), ((pos) + vec2(0.5f)) / vec2(pyrBaseSize), (lod))
+
 /*
  * Image scale is encoded in the alpha channel (a)
  * according to the following model:

@@ -53,7 +53,7 @@
 /**
  * Get current pixel (independent texture lookup)
  * @param {sampler2D} img
- * @returns {vec4}
+ * @returns {vec4} pixel data
  */
 #define threadPixel(img) textureLod((img), texCoord, 0.0f)
 
@@ -61,7 +61,7 @@
  * Get pixel at (x,y) in texel space
  * @param {sampler2D} img
  * @param {ivec2} pos
- * @returns {vec4}
+ * @returns {vec4} pixel data
  */
 #define pixelAt(img, pos) texelFetch((img), (pos), 0)
 
@@ -69,19 +69,26 @@
  * Get pixel at a constant (dx,dy) offset from the thread pixel (use |dx|,|dy| <= 7)
  * This assumes textureSize(img, 0) == ivec2(texSize), i.e., input size == output size
  * @param {sampler2D} img
- * @param {ivec2} offset
- * @returns {vec4}
+ * @param {ivec2} offset such that |x| <= 7 and |y| <= 7
+ * @returns {vec4} pixel data
  */
 #define pixelAtShortOffset(img, offset) textureLodOffset((img), texCoord, 0.0f, (offset))
-
 
 /**
  * Get pixel at a long (dx,dy) offset (max(|dx|,|dy|) > 7)
  * This assumes textureSize(img, 0) == ivec2(texSize), i.e., input size == output size
  * @param {sampler2D} img
  * @param {ivec2} offset
- * @returns {vec4}
+ * @returns {vec4} pixel data
  */
 #define pixelAtLongOffset(img, offset) textureLod((img), texCoord + vec2(offset) / texSize, 0.0f)
+
+/**
+ * Subpixel access in texel space
+ * @param {sampler2D} img
+ * @param {vec2} pos
+ * @returns {vec4} pixel data
+ */
+#define subpixelAt(img, pos) textureLod((img), ((pos) + vec2(0.5f)) / texSize, 0.0f)
 
 #endif
