@@ -53,6 +53,7 @@ export function median(windowSize)
     `;
 
     // selection sort: unrolled & branchless
+    // TODO implement a faster selection algorithm
     const foreachVectorElement = fn => Utils.range(med + 1).map(fn).join('\n');
     const findMinimum = j => Utils.range(n - (j + 1)).map(x => x + j + 1).map(i => `
         m += int(v[${i}] >= v[m]) * (${i} - m);
