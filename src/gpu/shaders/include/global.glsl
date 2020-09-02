@@ -26,14 +26,22 @@
 // GENERAL
 //
 
-// Integer position of the current texel
+/**
+ * Integer position of the current texel
+ * @returns {ivec2}
+ */
 #define threadLocation() ivec2(texCoord * texSize)
-//#define threadLocation() ivec2(roundEven(texCoord * texSize - vec2(0.5f)))
 
-// Output size
+/**
+ * Output size
+ * @returns {ivec2}
+ */
 #define outputSize() ivec2(texSize)
 
-// Debug macro
+/**
+ * Debug macro
+ * @param {float} scalar in [0,1]
+ */
 #define DEBUG(scalar) do { color = vec4(float(scalar), 0.0f, 0.0f, 1.0f); return; } while(false)
 
 
@@ -42,18 +50,38 @@
 // PIXEL ACCESS
 //
 
-// Get current pixel (independent texture lookup)
+/**
+ * Get current pixel (independent texture lookup)
+ * @param {sampler2D} img
+ * @returns {vec4}
+ */
 #define threadPixel(img) textureLod((img), texCoord, 0.0f)
 
-// Get pixel at (x,y) in texel space
+/**
+ * Get pixel at (x,y) in texel space
+ * @param {sampler2D} img
+ * @param {ivec2} pos
+ * @returns {vec4}
+ */
 #define pixelAt(img, pos) texelFetch((img), (pos), 0)
 
-// Get pixel at a constant (dx,dy) offset from the thread pixel (use |dx|,|dy| <= 7)
-// This assumes textureSize(img, 0) == ivec2(texSize), i.e., input size == output size
+/**
+ * Get pixel at a constant (dx,dy) offset from the thread pixel (use |dx|,|dy| <= 7)
+ * This assumes textureSize(img, 0) == ivec2(texSize), i.e., input size == output size
+ * @param {sampler2D} img
+ * @param {ivec2} offset
+ * @returns {vec4}
+ */
 #define pixelAtShortOffset(img, offset) textureLodOffset((img), texCoord, 0.0f, (offset))
 
-// Get pixel at a long (dx,dy) offset (max(|dx|,|dy|) > 7)
-// This assumes textureSize(img, 0) == ivec2(texSize), i.e., input size == output size
+
+/**
+ * Get pixel at a long (dx,dy) offset (max(|dx|,|dy|) > 7)
+ * This assumes textureSize(img, 0) == ivec2(texSize), i.e., input size == output size
+ * @param {sampler2D} img
+ * @param {ivec2} offset
+ * @returns {vec4}
+ */
 #define pixelAtLongOffset(img, offset) textureLod((img), texCoord + vec2(offset) / texSize, 0.0f)
 
 #endif
