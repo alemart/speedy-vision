@@ -24,7 +24,8 @@
 // -----------------------------------------------------------------
 
 // Maximum texture length
-export const MAX_TEXTURE_LENGTH = 65534; // 2^n - 2 due to encoding
+export const MAX_TEXTURE_LENGTH = 8190; // 2^n - 2 due to encoding
+                                        // 16 bits (3 for subpixel encoding)
 
 
 
