@@ -20,16 +20,6 @@
  */
 
 // -----------------------------------------------------------------
-// GENERAL
-// -----------------------------------------------------------------
-
-// Maximum texture length
-export const MAX_TEXTURE_LENGTH = 8190; // 2^n - 2 due to encoding
-                                        // n = 16 bits - FIX_BITS
-
-
-
-// -----------------------------------------------------------------
 // IMAGE PYRAMIDS & SCALE-SPACE
 // -----------------------------------------------------------------
 
@@ -44,7 +34,6 @@ export const PYRAMID_MAX_SCALE = 2; // preferably a power of 2 (image scale can 
 
 
 
-
 // -----------------------------------------------------------------
 // FIXED-POINT MATH
 // -----------------------------------------------------------------
@@ -54,3 +43,12 @@ export const FIX_BITS = 3; // MAX_TEXTURE_LENGTH depends on this
 
 // Fixed-point resolution
 export const FIX_RESOLUTION = 1.0 * (1 << FIX_BITS); // float(2^(FIX_BITS))
+
+
+
+// -----------------------------------------------------------------
+// TEXTURE LIMITS
+// -----------------------------------------------------------------
+
+// Maximum texture length
+export const MAX_TEXTURE_LENGTH = (1 << (16 - FIX_BITS)) - 2; // 2^n - 2 due to keypoint encoding
