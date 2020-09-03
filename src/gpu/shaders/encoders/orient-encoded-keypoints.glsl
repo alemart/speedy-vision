@@ -19,10 +19,7 @@
  * Given an encoded keypoint texture, find the orientation of all keypoints
  */
 
-@include "math.glsl"
-@include "pyramids.glsl"
-@include "orientation.glsl"
-@include "fixed-point.glsl"
+@include "keypoints.glsl"
 
 uniform sampler2D pyramid; // image pyramid (patch size depends on keypoint scale)
 uniform int patchRadius; // use a circular patch of radius <= 7 (for lod = 0)
@@ -100,28 +97,17 @@ void main()
 {
     vec4 pixel = threadPixel(encodedKeypoints);
     ivec2 thread = threadLocation();
-    int threadRaster = thread.y * encoderLength + thread.x;
-    int pixelsPerKeypoint = 2 + descriptorSize / 4;
-    int keypointId = int(threadRaster / pixelsPerKeypoint);
-    int keypointCell = threadRaster % pixelsPerKeypoint;
+    int keypointAddressOffset;
+    int keypointAddress = findKeypointAddress(thread, encoderLength, descriptorSize, keypointAddressOffset);
 
-    // not the keypoint properties cell?
+    // this is not the keypoint properties cell?
     color = pixel;
-    if(keypointCell != 1)
+    if(keypointAddressOffset != 1)
         return;
 
-    // get keypoint position
-    int positionCell = keypointId * pixelsPerKeypoint;
-    ivec2 positionCellPos = ivec2(positionCell % encoderLength, positionCell / encoderLength);
-    ivec4 encodedPosition = ivec4(texelFetch(encodedKeypoints, positionCellPos, 0) * 255.0f);
-    vec2 keypointPosition = fixtovec2(fixed2_t(
-        encodedPosition.r | (encodedPosition.g << 8),
-        encodedPosition.b | (encodedPosition.a << 8)
-    ));
-
-    // get keypoint scale
-    float lod = decodeLod(pixel.r);
-    float pot = exp2(lod);
+    // get keypoint data
+    Keypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, keypointAddress);
+    float pot = exp2(keypoint.lod);
 
     // read circular patch
     vec2 m = vec2(0.0f); // (m10, m01) image moments
@@ -132,8 +118,8 @@ void main()
     int count = patchPointCount[radius];
     for(int j = 0; j < count; j++) {
         vec2 offset = vec2(patchData[start + j]);
-        vec2 position = keypointPosition + round(pot * offset);
-        vec4 patchPixel = pyrPixelAtEx(pyramid, position, lod, pyrBaseSize);
+        vec2 position = keypoint.position + round(pot * offset);
+        vec4 patchPixel = pyrPixelAtEx(pyramid, position, keypoint.lod, pyrBaseSize);
         m += offset * patchPixel.g;
     }
 

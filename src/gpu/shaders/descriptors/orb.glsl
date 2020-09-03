@@ -30,10 +30,7 @@
  * 2011 International Conference on Computer Vision (ICCV-2011)
  */
 
-@include "math.glsl"
-@include "pyramids.glsl"
-@include "orientation.glsl"
-@include "fixed-point.glsl"
+@include "keypoints.glsl"
 
 uniform sampler2D encodedCorners;
 uniform int encoderLength;
@@ -41,7 +38,6 @@ uniform sampler2D pyramid; // previously smoothed with a Gaussian
 
 // ORB constants
 const int descriptorSize = 32; // 32 bytes = 256 bits = 8 pixels
-const int pixelsPerKeypoint = 10; // 2 + descriptorSize / 4
 
 // ORB pattern adapted from
 // OpenCV's BSD-licensed code
@@ -318,48 +314,23 @@ void getPair(int index, float kcos, float ksin, out ivec2 p, out ivec2 q)
     q = ivec2(round(oq.x * kcos - oq.y * ksin), round(oq.x * ksin + oq.y * kcos));
 }
 
-// feature struct
-struct ORBFeature
-{
-    vec2 position;
-    float orientation;
-    float lod; // level-of-detail / scale
-};
-
 // ORB
 void main()
 {
-    ORBFeature keypoint;
     vec4 pixel = threadPixel(encodedCorners);
     ivec2 thread = threadLocation();
-    int threadRaster = thread.y * encoderLength + thread.x;
-    int keypointId = int(threadRaster / pixelsPerKeypoint);
-    int descriptorCell = threadRaster % pixelsPerKeypoint - 2;
+    int keypointAddressOffset;
+    int keypointAddress = findKeypointAddress(thread, encoderLength, descriptorSize, keypointAddressOffset);
+    int descriptorCell = keypointAddressOffset - 2;
 
-    // not a descriptor cell?
+    // this is not a descriptor cell?
     color = pixel;
     if(descriptorCell < 0)
         return;
 
-    // get keypoint position
-    int positionCell = keypointId * pixelsPerKeypoint;
-    ivec2 positionCellPos = ivec2(positionCell % encoderLength, positionCell / encoderLength);
-    ivec4 encodedPosition = ivec4(texelFetch(encodedCorners, positionCellPos, 0) * 255.0f);
-    keypoint.position = fixtovec2(fixed2_t(
-        encodedPosition.r | (encodedPosition.g << 8),
-        encodedPosition.b | (encodedPosition.a << 8)
-    ));
-
-    // get keypoint scale & rotation
-    int propertiesCell = keypointId * pixelsPerKeypoint + 1;
-    ivec2 propertiesCellPos = ivec2(propertiesCell % encoderLength, propertiesCell / encoderLength);
-    vec4 encodedProperties = texelFetch(encodedCorners, propertiesCellPos, 0);
-    keypoint.orientation = decodeOrientation(encodedProperties.g); // in radians
-    keypoint.lod = decodeLod(encodedProperties.r); // level-of-detail
-
-    // preprocessing...
+    // get keypoint data
+    Keypoint keypoint = decodeKeypoint(encodedCorners, encoderLength, keypointAddress);
     float pot = exp2(keypoint.lod);
-    vec2 kpos = keypoint.position;
     float kcos = cos(keypoint.orientation);
     float ksin = sin(keypoint.orientation);
 
@@ -367,7 +338,7 @@ void main()
     // need to run 32 intensity tests for each pixel (32 bits)
     vec2 imageSize = vec2(textureSize(pyramid, 0));
     int patternStart = 32 * descriptorCell;
-    uint test[4] = uint[4](0u, 0u, 0u, 0u);
+    uint test[4] = uint[4](0u, 0u, 0u, 0u); // 8 bits each
     for(int t = 0; t < 4; t++) {
         uint bits = 0u;
         ivec2 p, q;
@@ -376,8 +347,8 @@ void main()
 
         for(int j = 0; j < 8; j++) {
             getPair(patternStart + i + j, kcos, ksin, p, q);
-            a = pyrPixelAtEx(pyramid, round(kpos + pot * vec2(p)), keypoint.lod, imageSize);
-            b = pyrPixelAtEx(pyramid, round(kpos + pot * vec2(q)), keypoint.lod, imageSize);
+            a = pyrPixelAtEx(pyramid, round(keypoint.position + pot * vec2(p)), keypoint.lod, imageSize);
+            b = pyrPixelAtEx(pyramid, round(keypoint.position + pot * vec2(q)), keypoint.lod, imageSize);
             bits |= uint(a.g < b.g) << j;
         }
 
@@ -385,5 +356,5 @@ void main()
     }
 
     // done!
-    color = vec4(float(test[0]) / 255.0f, float(test[1]) / 255.0f, float(test[2]) / 255.0f, float(test[3]) / 255.0f);
+    color = vec4(float(test[0]), float(test[1]), float(test[2]), float(test[3])) / 255.0f;
 }
