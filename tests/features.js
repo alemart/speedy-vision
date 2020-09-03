@@ -210,7 +210,7 @@ describe('Feature detection', function() {
             const features = await square.findFeatures({ method, n, sensitivity: 0 });
             const numFeatures = features.length;
 
-            print(`Found ${numFeatures} features with method "${method}".`);
+            print(`Found ${numFeatures} features with method "${method}-${n}".`);
             displayFeatures(square, features);
 
             expect(numFeatures).toBe(0);
