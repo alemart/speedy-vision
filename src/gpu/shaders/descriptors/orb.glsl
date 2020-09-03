@@ -33,6 +33,7 @@
 @include "math.glsl"
 @include "pyramids.glsl"
 @include "orientation.glsl"
+@include "fixed-point.glsl"
 
 uniform sampler2D encodedCorners;
 uniform int encoderLength;
@@ -320,7 +321,7 @@ void getPair(int index, float kcos, float ksin, out ivec2 p, out ivec2 q)
 // feature struct
 struct ORBFeature
 {
-    ivec2 position;
+    vec2 position;
     float orientation;
     float lod; // level-of-detail / scale
 };
@@ -344,10 +345,10 @@ void main()
     int positionCell = keypointId * pixelsPerKeypoint;
     ivec2 positionCellPos = ivec2(positionCell % encoderLength, positionCell / encoderLength);
     ivec4 encodedPosition = ivec4(texelFetch(encodedCorners, positionCellPos, 0) * 255.0f);
-    keypoint.position = ivec2(
+    keypoint.position = fixtovec2(fixed2_t(
         encodedPosition.r | (encodedPosition.g << 8),
         encodedPosition.b | (encodedPosition.a << 8)
-    );
+    ));
 
     // get keypoint scale & rotation
     int propertiesCell = keypointId * pixelsPerKeypoint + 1;
@@ -358,7 +359,7 @@ void main()
 
     // preprocessing...
     float pot = exp2(keypoint.lod);
-    vec2 kpos = vec2(keypoint.position);
+    vec2 kpos = keypoint.position;
     float kcos = cos(keypoint.orientation);
     float ksin = sin(keypoint.orientation);
 

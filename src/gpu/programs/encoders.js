@@ -26,6 +26,7 @@ import { BinaryDescriptor } from '../../core/speedy-descriptor';
 import { StochasticTuner } from '../../core/tuners/stochastic-tuner';
 import { Utils } from '../../utils/utils'
 import { IllegalOperationError } from '../../utils/errors';
+import { FIX_RESOLUTION } from '../../utils/globals';
 
 // We won't admit more than MAX_KEYPOINTS per media.
 // The larger this value is, the more data we need to transfer from the GPU.
@@ -164,7 +165,6 @@ export class GPUEncoders extends SpeedyProgramGroup
      */
     decodeKeypoints(pixels, descriptorSize = 0)
     {
-        const [ w, h ] = [ this._width, this._height ];
         const pixelsPerKeypoint = 2 + descriptorSize / 4;
         const lgM = Math.log2(this._gpu.pyramidMaxScale);
         const pyrHeight = this._gpu.pyramidHeight;
@@ -173,21 +173,30 @@ export class GPUEncoders extends SpeedyProgramGroup
         let hasScale, hasRotation;
 
         for(let i = 0; i < pixels.length; i += 4 /* RGBA */ * pixelsPerKeypoint) {
+            // extract fixed-point coordinates
             x = (pixels[i+1] << 8) | pixels[i];
             y = (pixels[i+3] << 8) | pixels[i+2];
-            if(x >= w || y >= h)
+            if(x >= 0xFFFF || y >= 0xFFFF)
                 break;
 
+            // convert from fixed-point
+            x /= FIX_RESOLUTION;
+            y /= FIX_RESOLUTION;
+
+            // extract scale
             hasScale = (pixels[i+4] < 255);
             scale = !hasScale ? 1.0 :
                 Math.pow(2.0, -lgM + (lgM + pyrHeight) * pixels[i+4] / 255.0);
 
+            // extract orientation
             hasRotation = hasScale; // FIXME get from parameter list?
             rotation = !hasRotation ? 0.0 :
                 ((2 * pixels[i+5]) / 255.0 - 1.0) * Math.PI;
 
+            // extract score
             score = pixels[i+6] / 255.0;
 
+            // register keypoint, possibly with a descriptor
             if(descriptorSize > 0) {
                 const bytes = new Uint8Array(pixels.slice(i+8, i+8 + descriptorSize));
                 const descriptor = new BinaryDescriptor(bytes);

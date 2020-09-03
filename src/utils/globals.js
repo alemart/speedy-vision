@@ -25,7 +25,7 @@
 
 // Maximum texture length
 export const MAX_TEXTURE_LENGTH = 8190; // 2^n - 2 due to encoding
-                                        // 16 bits (3 for subpixel encoding)
+                                        // n = 16 bits - FIX_BITS
 
 
 
@@ -41,3 +41,16 @@ export const PYRAMID_MAX_OCTAVES = 2 * PYRAMID_MAX_LEVELS - 1; // scaling factor
 
 // The maximum supported scale for a pyramid layer
 export const PYRAMID_MAX_SCALE = 2; // preferably a power of 2 (image scale can go up to this value)
+
+
+
+
+// -----------------------------------------------------------------
+// FIXED-POINT MATH
+// -----------------------------------------------------------------
+
+// How many bits do we use for storing the fractional data
+export const FIX_BITS = 3; // MAX_TEXTURE_LENGTH depends on this
+
+// Fixed-point resolution
+export const FIX_RESOLUTION = 1.0 * (1 << FIX_BITS); // float(2^(FIX_BITS))

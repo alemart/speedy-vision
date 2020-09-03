@@ -22,6 +22,7 @@
 @include "math.glsl"
 @include "pyramids.glsl"
 @include "orientation.glsl"
+@include "fixed-point.glsl"
 
 uniform sampler2D pyramid; // image pyramid (patch size depends on keypoint scale)
 uniform int patchRadius; // use a circular patch of radius <= 7 (for lod = 0)
@@ -113,10 +114,10 @@ void main()
     int positionCell = keypointId * pixelsPerKeypoint;
     ivec2 positionCellPos = ivec2(positionCell % encoderLength, positionCell / encoderLength);
     ivec4 encodedPosition = ivec4(texelFetch(encodedKeypoints, positionCellPos, 0) * 255.0f);
-    ivec2 keypointPosition = ivec2(
+    vec2 keypointPosition = fixtovec2(fixed2_t(
         encodedPosition.r | (encodedPosition.g << 8),
         encodedPosition.b | (encodedPosition.a << 8)
-    );
+    ));
 
     // get keypoint scale
     float lod = decodeLod(pixel.r);
@@ -131,7 +132,7 @@ void main()
     int count = patchPointCount[radius];
     for(int j = 0; j < count; j++) {
         vec2 offset = vec2(patchData[start + j]);
-        ivec2 position = keypointPosition + ivec2(round(pot * offset));
+        vec2 position = keypointPosition + round(pot * offset);
         vec4 patchPixel = pyrPixelAtEx(pyramid, position, lod, pyrBaseSize);
         m += offset * patchPixel.g;
     }

@@ -20,6 +20,7 @@
  */
 
 import { PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE, PYRAMID_MAX_OCTAVES } from '../utils/globals';
+import { FIX_BITS, FIX_RESOLUTION } from '../utils/globals';
 import { PixelComponent } from '../utils/types';
 import { FileNotFoundError } from '../utils/errors';
 
@@ -40,6 +41,10 @@ const constants = {
     'PIXELCOMPONENT_GREEN': PixelComponent.GREEN,
     'PIXELCOMPONENT_BLUE': PixelComponent.BLUE,
     'PIXELCOMPONENT_ALPHA': PixelComponent.ALPHA,
+
+    // fixed-point math
+    'FIX_BITS': FIX_BITS,
+    'FIX_RESOLUTION': FIX_RESOLUTION,
 };
 
 /**

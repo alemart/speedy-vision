@@ -31,6 +31,7 @@
  * for a constant c in [1,255]
  *
  *
+ *
  * Keypoints are encoded as follows:
  *
  * each keypoint takes (2 + N/4) pixels of 32 bits
@@ -45,9 +46,23 @@
  * C: keypoint_cornerness_score (1 byte)
  * -: unused
  * D: descriptor binary string (N bytes)
+ *
+ *
+ *
+ * The position of keypoints are encoded as follows:
+ *
+ * |------- 1 pixel = 32 bits -------|
+ * |--- 16 bits ----|---- 16 bits ---|
+ * [   X position   |   Y position   ]
+ *
+ * The (X,Y) position is encoded as a fixed-point number
+ * for subpixel representation
+ *
+ * Pixel value 0xFFFFFFFF is reserved (not available)
  */
 
 @include "orientation.glsl"
+@include "fixed-point.glsl"
 
 uniform sampler2D image;
 uniform ivec2 imageSize;
@@ -91,8 +106,9 @@ void main()
         switch(r) {
             case 0: {
                 // write position
-                ivec2 lo = position & 255;
-                ivec2 hi = position >> 8;
+                fixed2_t pos = ivec2tofix(position);
+                fixed2_t lo = pos & 255;
+                fixed2_t hi = pos >> 8;
                 color = vec4(float(lo.x), float(hi.x), float(lo.y), float(hi.y)) / 255.0f;
                 break;
             }
