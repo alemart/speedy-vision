@@ -28,7 +28,7 @@
         <form>
             <div>
                 <label for="sensitivity">Sensitivity</label>
-                <input type="range" min="0" max="90" value="20" id="sensitivity">
+                <input type="range" min="0" max="90" value="45" id="sensitivity">
                 <label for="multiscale">Multi-scale</label>
                 <input type="checkbox" id="multiscale">
                 <span style="margin-left:2em">FPS: <span id="fps">60</span></span>
@@ -64,34 +64,27 @@ window.onload = async function()
     const featureLimit = document.getElementById('feature-limit');
 
     // update features
-    const FPS = 30;
-    let features = [];
-    function updateFeatures()
+    async function loop()
     {
         // sensitivity is a value between 0.0 and 1.0
         const sensitivity = slider.value / 100.0;
 
-        // find & render features
-        media.findFeatures({
+        // find features
+        const features = await media.findFeatures({
             method: multiscale.checked ? 'multiscale-harris' : 'harris',
             sensitivity: sensitivity,
             max: featureLimit.value, // cap the number of features
-        }).then(f => {
-            features = f;
-            featureCount.innerText = features.length;
-            setTimeout(updateFeatures, 1000.0 / FPS);
         });
-    }
-    updateFeatures();
 
-    // render video & features
-    function render()
-    {
+        // render features
         media.draw(canvas);
         renderFeatures(canvas, features, 4);
-        requestAnimationFrame(render);
+        featureCount.innerText = features.length;
+
+        // next frame
+        setTimeout(loop, 1000 / 30);
     }
-    render();
+    loop();
 
     // display fps
     const fps = document.getElementById('fps');

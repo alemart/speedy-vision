@@ -154,7 +154,7 @@ void main()
         hm += vec3(df8.x * df8.x, df8.x * df8.y, df8.y * df8.y);
 
         float response = 0.5f * (hm.x + hm.z - sqrt((hm.x - hm.z) * (hm.x - hm.z) + 4.0f * hm.y * hm.y));
-        score = response * 0.125f;
+        score = max(0.0f, response / 5.0f);
 #else
         // Compute FAST score
         mat4 mct = mp - mat4(
