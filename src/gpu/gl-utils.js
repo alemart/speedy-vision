@@ -155,13 +155,13 @@ export class GLUtils
             -1, 1,
             1, 1,
         ]), gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(locationOfPositionAttribute);
         gl.vertexAttribPointer(locationOfPositionAttribute, // attribute location
                                2,          // 2 components per vertex (x,y)
                                gl.FLOAT,   // type
                                false,      // don't normalize
                                0,          // default stride (tightly packed)
                                0);         // offset
-        gl.enableVertexAttribArray(locationOfPositionAttribute);
 
         // set the a_texCoord attribute
         // using the current vbo
@@ -173,13 +173,13 @@ export class GLUtils
             0, 1,
             1, 1,
         ]), gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(locationOfTexcoordAttribute);
         gl.vertexAttribPointer(locationOfTexcoordAttribute, // attribute location
                                2,          // 2 components per vertex (x,y)
                                gl.FLOAT,   // type
                                false,      // don't normalize
                                0,          // default stride (tightly packed)
                                0);         // offset
-        gl.enableVertexAttribArray(locationOfTexcoordAttribute);
 
         // unbind
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
