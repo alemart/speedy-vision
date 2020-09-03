@@ -70,7 +70,7 @@
  * @param {ivec2} pyrBaseSize this is textureSize(pyr, 0)
  * @returns {vec4} pixel data
  */
-#define pyrPixelAtEx(pyr, pos, lod, pyrBaseSize) textureLod((pyr), ((pos) + vec2(0.5f)) / vec2(pyrBaseSize), (lod))
+#define pyrSubpixelAtEx(pyr, pos, lod, pyrBaseSize) textureLod((pyr), ((pos) + vec2(0.5f)) / vec2(pyrBaseSize), (lod))
 
 /*
  * Image scale is encoded in the alpha channel (a)
