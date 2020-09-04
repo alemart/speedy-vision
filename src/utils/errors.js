@@ -33,7 +33,7 @@ export class SpeedyError extends Error
     {
         super([
             message,
-            cause ? cause.toString() : '@ [speedy-vision.js]'
+            cause ? cause.toString() : '[speedy-vision.js]'
         ].join('\n-> '));
         this._cause = cause;
     }
