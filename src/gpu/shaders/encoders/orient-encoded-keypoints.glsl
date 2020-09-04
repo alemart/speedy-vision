@@ -97,16 +97,15 @@ void main()
 {
     vec4 pixel = threadPixel(encodedKeypoints);
     ivec2 thread = threadLocation();
-    int keypointAddressOffset;
-    int keypointAddress = findKeypointAddress(thread, encoderLength, descriptorSize, keypointAddressOffset);
+    KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);
 
     // this is not the keypoint properties cell?
     color = pixel;
-    if(keypointAddressOffset != 1)
+    if(address.offset != 1)
         return;
 
     // get keypoint data
-    Keypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, keypointAddress);
+    Keypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);
     float pot = exp2(keypoint.lod);
 
     // read circular patch

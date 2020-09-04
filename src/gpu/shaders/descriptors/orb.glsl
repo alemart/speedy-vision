@@ -319,9 +319,8 @@ void main()
 {
     vec4 pixel = threadPixel(encodedCorners);
     ivec2 thread = threadLocation();
-    int keypointAddressOffset;
-    int keypointAddress = findKeypointAddress(thread, encoderLength, descriptorSize, keypointAddressOffset);
-    int descriptorCell = keypointAddressOffset - 2;
+    KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);
+    int descriptorCell = address.offset - 2;
 
     // this is not a descriptor cell?
     color = pixel;
@@ -329,7 +328,7 @@ void main()
         return;
 
     // get keypoint data
-    Keypoint keypoint = decodeKeypoint(encodedCorners, encoderLength, keypointAddress);
+    Keypoint keypoint = decodeKeypoint(encodedCorners, encoderLength, address);
     float pot = exp2(keypoint.lod);
     float kcos = cos(keypoint.orientation);
     float ksin = sin(keypoint.orientation);

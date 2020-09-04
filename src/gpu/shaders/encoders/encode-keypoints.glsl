@@ -29,47 +29,16 @@
  *
  * skip offset := min(c, -1 + offset to the next feature) / 255,
  * for a constant c in [1,255]
- *
- *
- *
- * Keypoints are encoded as follows:
- *
- * each keypoint takes (2 + N/4) pixels of 32 bits
- *
- *    1 pixel        1 pixel         N/4 pixels
- * [  X  |  Y  ][ S | R | C | - ][  ...  D  ...  ]
- *
- * X: keypoint_xpos (2 bytes)
- * Y: keypoint_ypos (2 bytes)
- * S: keypoint_scale (1 byte)
- * R: keypoint_rotation (1 byte)
- * C: keypoint_cornerness_score (1 byte)
- * -: unused
- * D: descriptor binary string (N bytes)
- *
- *
- *
- * The position of keypoints are encoded as follows:
- *
- * |------- 1 pixel = 32 bits -------|
- * |--- 16 bits ----|---- 16 bits ---|
- * [   X position   |   Y position   ]
- *
- * The (X,Y) position is encoded as a fixed-point number
- * for subpixel representation
- *
- * Pixel value 0xFFFFFFFF is reserved (not available)
  */
 
-@include "orientation.glsl"
-@include "fixed-point.glsl"
+@include "keypoints.glsl"
 
 uniform sampler2D image;
 uniform ivec2 imageSize;
 uniform int encoderLength;
 uniform int descriptorSize;
 
-// q = 0, 1, 2...
+// q = 0, 1, 2... keypoint index
 bool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)
 {
     int i = 0, p = 0;
@@ -90,20 +59,17 @@ bool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)
 
 void main()
 {
-    vec4 pixel;
-    ivec2 position;
     ivec2 thread = threadLocation();
-    int p = encoderLength * thread.y + thread.x;
-    int d = 2 + descriptorSize / 4; // pixels per keypoint
-    int q = p / d; // q-th feature point
+    KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);
+    int q = findKeypointIndex(address, descriptorSize);
 
     // q-th keypoint doesn't exist
     color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
     // find the q-th keypoint, if it exists
+    ivec2 position; vec4 pixel;
     if(findQthKeypoint(q, position, pixel)) {
-        int r = p % d;
-        switch(r) {
+        switch(address.offset) {
             case 0: {
                 // write position
                 fixed2_t pos = ivec2tofix(position);
