@@ -223,6 +223,18 @@ export class SpeedyProgram extends Function
         return this._stdprog.uniform;
     }
 
+    /**
+     * Use when dealing with Uniform Buffer Objects
+     * @returns {UBOHandler}
+     */
+    get ubo()
+    {
+        if(this._ubo === null)
+            this._ubo = new UBOHandler(this._gl, this._stdprog.program);
+
+        return this._ubo;
+    }
+
     // Prepare the shader
     _init(gl, shaderdecl, options)
     {
@@ -274,6 +286,7 @@ export class SpeedyProgram extends Function
         this._options = Object.freeze(options);
         this._stdprog = stdprog;
         this._params = params;
+        this._ubo = null; // lazy spawn
         this._initPixelBuffers(gl);
     }
 
@@ -322,6 +335,10 @@ export class SpeedyProgram extends Function
             else
                 throw new IllegalArgumentError(`Can't run shader: unknown parameter "${argname}": ${args[i]}`);
         }
+
+        // set Uniform Buffer Objects (if any)
+        if(this._ubo !== null)
+            this._ubo.update();
 
         // bind fbo
         if(options.renderToTexture)
@@ -642,4 +659,74 @@ function waitForQueueNotEmpty(queue)
         }
         wait();
     });
+}
+
+
+
+
+//
+// Uniform Buffer Objects
+//
+
+/**
+ * UBO Handler
+ * @param {WebGL2RenderingContext} gl 
+ * @param {WebGLProgram} program 
+ */
+function UBOHandler(gl, program)
+{
+    this._gl = gl;
+    this._program = program;
+    this._nextIndex = 0;
+    this._ubo = {};
+}
+
+/**
+ * Set Uniform Buffer Object data
+ * (the buffer will only be uploaded when the program runs)
+ * @param {string} name 
+ * @param {ArrayBufferView} data 
+ */
+UBOHandler.prototype.set = function(name, data)
+{
+    const gl = this._gl;
+    const program = this._program;
+
+    // create UBO entry
+    if(!this._ubo.hasOwnProperty(name)) {
+        this._ubo[name] = {
+            buffer: gl.createBuffer(),
+            blockBindingIndex: this._nextIndex++, // "global" binding index
+        };
+    }
+
+    // get UBO entry for the given name
+    const ubo = this._ubo[name];
+
+    // read block index & assign binding point
+    if(!ubo.hasOwnProperty('blockIndex')) {
+        const blockIndex = gl.getUniformBlockIndex(program, name); // UBO "location" in the program
+        gl.uniformBlockBinding(program, blockIndex, ubo.blockBindingIndex);
+    }
+
+    // store data - will upload it later
+    ubo.data = data;
+}
+
+/**
+ * Update UBO data
+ * Called when we're using the appropriate WebGLProgram
+ */
+UBOHandler.prototype.update = function()
+{
+    const gl = this._gl;
+
+    for(const name in this._ubo) {
+        const ubo = this._ubo[name];
+
+        gl.bindBuffer(gl.UNIFORM_BUFFER, ubo.buffer);
+        gl.bufferData(gl.UNIFORM_BUFFER, ubo.data, gl.DYNAMIC_DRAW);
+        gl.bindBufferBase(gl.UNIFORM_BUFFER, ubo.blockBindingIndex, ubo.buffer);
+        gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+    }
 }

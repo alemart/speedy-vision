@@ -126,6 +126,7 @@ class ShaderDeclaration
         // change the fragment shader
         const source = DEFAULT_FRAGMENT_SHADER_PREFIX + defs.join('') + this._userSource;
         this._fragmentSource = ShaderPreprocessor.run(source);
+        // is it necessary to rescan the code for uniforms? hmm....
 
         // done!
         return this;
@@ -202,7 +203,7 @@ class ShaderDeclaration
     _autodetectUniforms(preprocessedSource)
     {
         const sourceWithoutComments = preprocessedSource; // assume we've preprocessed the source already
-        const regex = /uniform\s+(highp\s+|mediump\s+|lowp\s+)?(\w+)\s+([^;]+)/g;
+        const regex = /^\s*uniform\s+(highp\s+|mediump\s+|lowp\s+)?(\w+)\s+([^;]+)/gm;
         const uniforms = { };
 
         let match;
