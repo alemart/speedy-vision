@@ -47,7 +47,7 @@ export class SpeedyMedia
     /**
      * Class constructor
      * It assumes A VALID (!) media source that is already loaded
-     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|Texture} mediaSource An image, video or canvas
+     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap|Texture} mediaSource Image or video
      * @param {number} width media width
      * @param {number} height media height
      * @param {object} [options] options object
@@ -109,7 +109,7 @@ export class SpeedyMedia
                         resolve(media);
                     }
                     else if(k > 0)
-                        setTimeout(() => loadMedia(getMediaDimensions(mediaSource), k-1), 10);
+                        setTimeout(() => loadMedia(getMediaDimensions(mediaSource), k-1), 0);
                     else
                         reject(new TimeoutError(`Can't load SpeedyMedia with a ${mediaSource}: timeout.`));
                 })(dimensions);
@@ -138,7 +138,7 @@ export class SpeedyMedia
 
     /**
      * The media element (image, video, canvas) encapsulated by this SpeedyMedia object
-     * @returns {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} the media element
+     * @returns {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} the media element
      */
     get source()
     {
@@ -178,6 +178,9 @@ export class SpeedyMedia
 
             case MediaType.Canvas:
                 return 'canvas';
+
+            case MediaType.Bitmap:
+                return 'bitmap';
 
             case MediaType.Texture: // the result of pipelining
                 return 'internal';
@@ -248,8 +251,12 @@ export class SpeedyMedia
         else {
             // deep copy
             let source = this._source;
-            if(this._type == MediaType.Texture || this._type == MediaType.Canvas)
-                source = createCanvasFromStaticMedia(this); // won't share WebGL context
+            if(this._type == MediaType.Texture || this._type == MediaType.Canvas) {
+                //source = createImageBitmap(this._gpu.canvas, 0, 0, this._width, this._height);
+                const tmpCanvas = Utils.createCanvas(this._width, this._height);
+                this.draw(tmpCanvas);
+                source = tmpCanvas; // won't share WebGL context
+            }
             return new SpeedyMedia(source, this._width, this._height);
         }
     }
@@ -296,6 +303,7 @@ export class SpeedyMedia
             case MediaType.Image:
             case MediaType.Video:
             case MediaType.Canvas:
+            case MediaType.Bitmap:
                 ctx.drawImage(this._source, x, y, width, height);
                 break;
 
@@ -381,6 +389,7 @@ function getMediaDimensions(mediaSource)
             HTMLImageElement: { width: 'naturalWidth', height: 'naturalHeight' },
             HTMLVideoElement: { width: 'videoWidth', height: 'videoHeight' },
             HTMLCanvasElement: { width: 'width', height: 'height' },
+            ImageBitmap: { width: 'width', height: 'height' },
         };
 
         if(key.hasOwnProperty(element)) {
@@ -408,6 +417,9 @@ function getMediaType(mediaSource)
             case 'HTMLCanvasElement':
                 return MediaType.Canvas;
 
+            case 'ImageBitmap':
+                return MediaType.Bitmap;
+
             default:
                 return MediaType.Texture;
         }
@@ -419,15 +431,12 @@ function getMediaType(mediaSource)
 // build & validate options object
 function buildOptions(options, defaultOptions)
 {
-    const warn = buildOptions._err || (buildOptions._err = 
-        (...args) => Utils.warning(`Invalid option when loading media.`, ...args));
-
     // build options object
     options = Object.assign(defaultOptions, options);
 
     // validate
     if(options.usage != 'dynamic' && options.usage != 'static') {
-        warn(`Unrecognized usage: "${options.usage}"`);
+        Utils.warning(`Can't load media. Unrecognized usage option: "${options.usage}"`);
         options.usage = defaultOptions.usage;
     }
 
@@ -439,7 +448,7 @@ function buildOptions(options, defaultOptions)
 function requestCameraStream(width, height, options = {})
 {
     return new Promise((resolve, reject) => {
-        Utils.log('Accessing the webcam...');
+        //Utils.log('Accessing the webcam...');
 
         if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
             return reject(new NotSupportedError('Unsupported browser: no mediaDevices.getUserMedia()'));
@@ -460,7 +469,7 @@ function requestCameraStream(width, height, options = {})
             video.srcObject = stream;
             video.onloadedmetadata = e => {
                 video.play();
-                Utils.log('The camera device is turned on!');
+                //Utils.log('The camera device is turned on!');
                 resolve(video, stream);
             };
         })
@@ -487,18 +496,6 @@ function createCanvasFromVideo(video)
         requestAnimationFrame(render);
     }
     render();
-
-    return canvas;
-}
-
-// create a (static) HTMLCanvasElement using a SpeedyMedia as source
-function createCanvasFromStaticMedia(media)
-{
-    const canvas = document.createElement('canvas');
-
-    canvas.width = media.width;
-    canvas.height = media.height;
-    media.draw(canvas);
 
     return canvas;
 }

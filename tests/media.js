@@ -46,6 +46,18 @@ describe('SpeedyMedia', function() {
        }))).toBeResolved();
     });
 
+    it('can load a bitmap', function() {
+        return expectAsync(
+            loadImage('speedy-wall.jpg').then(image =>
+                createImageBitmap(image).then(bitmap =>
+                    Speedy.load(bitmap).then(media =>
+                        (display(media, 'Bitmap'), Promise.resolve(media))
+                    )
+                )
+            )
+        ).toBeResolved();
+    });
+
     it('has a valid source', async function() {
         const image = await loadImage('speedy.jpg');
         const media = await Speedy.load(image);
@@ -64,6 +76,10 @@ describe('SpeedyMedia', function() {
             'jelly.mp4': {
                 type: 'video',
                 data: await loadVideo('jelly.mp4'),
+            },
+            'bitmap': {
+                type: 'bitmap',
+                data: await createImageBitmap(await loadImage('speedy.jpg')),
             },
         };
 
@@ -112,7 +128,7 @@ describe('SpeedyMedia', function() {
         await media.release();
     });
 
-    it('draws itself to a canvas', async function() {
+    it('draws an image', async function() {
         const image = await loadImage('speedy-wall.jpg');
         const media = await Speedy.load(image);
         const canvas = createCanvas(image.naturalWidth, image.naturalHeight);
@@ -129,4 +145,21 @@ describe('SpeedyMedia', function() {
         await media.release();
     });
 
+    it('draws a bitmap', async function() {
+        const image = await loadImage('speedy.jpg');
+        const bitmap = await createImageBitmap(image);
+        const media = await Speedy.load(bitmap);
+        const canvas = createCanvas(bitmap.width, bitmap.height);
+
+        media.draw(canvas);
+        const error = imerr(bitmap, canvas);
+
+        display(bitmap, 'Original bitmap');
+        display(canvas, 'Drawn by Speedy');
+        display(imdiff(bitmap, canvas), `Error: ${error}`);
+
+        expect(error).toBeAnAcceptableImageError();
+
+        await media.release();
+    });
 });

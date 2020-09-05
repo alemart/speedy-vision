@@ -25,6 +25,7 @@ export const MediaType = Utils.enum(
     'Image',
     'Video',
     'Canvas',
+    'Bitmap',
     'Texture'
 );
 

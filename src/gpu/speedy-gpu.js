@@ -322,12 +322,8 @@ function createCanvas(width, height)
 
         return new OffscreenCanvas(width, height);
     }
-    else {
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        return canvas;
-    }
+
+    return Utils.createCanvas(width, height);
 }
 
 // Checks if the browser supports WebGL2

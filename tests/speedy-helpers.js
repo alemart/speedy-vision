@@ -35,7 +35,8 @@ function pixels(source)
     const toCanvas = ({
         'SpeedyMedia': createCanvasFromSpeedyMedia,
         'HTMLImageElement': createCanvasFromImage,
-        'HTMLCanvasElement': x => x,
+        'HTMLCanvasElement': canvas => canvas,
+        'ImageBitmap': createCanvasFromBitmap,
     })[source.constructor.name];
 
     const canvas = toCanvas(source);
@@ -106,6 +107,7 @@ function display(source, title = '')
         'SpeedyMedia': createCanvasFromSpeedyMedia,
         'HTMLImageElement': createCanvasFromImage,
         'HTMLCanvasElement': createCanvasFromCanvas,
+        'ImageBitmap': createCanvasFromBitmap,
     })[source.constructor.name];
 
     const canvas = toCanvas(source, title);
@@ -304,6 +306,14 @@ function createCanvasFromCanvas(origCanvas, title = '')
     const canvas = createCanvas(origCanvas.width, origCanvas.height, title);
     const ctx = canvas.getContext('2d');
     ctx.drawImage(origCanvas, 0, 0);
+    return canvas;
+}
+
+function createCanvasFromBitmap(bitmap, title = '')
+{
+    const canvas = createCanvas(bitmap.width, bitmap.height, title);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0);
     return canvas;
 }
 
