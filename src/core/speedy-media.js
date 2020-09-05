@@ -334,6 +334,15 @@ export class SpeedyMedia
     }
 
     /**
+     * Converts the media to an ImageBitmap
+     * @returns {Promise<ImageBitmap>}
+     */
+    toBitmap()
+    {
+        return createImageBitmap(this._source);
+    }
+
+    /**
      * Finds image features
      * @param {object} [settings] Configuration object
      * @returns {Promise<SpeedyFeature[]>} A Promise returning an Array of SpeedyFeature objects

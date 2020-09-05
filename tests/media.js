@@ -169,4 +169,20 @@ describe('SpeedyMedia', function() {
 
         await media.release();
     });
+
+    it('creates a bitmap', async function() {
+        const image = await loadImage('speedy.jpg');
+        const media = await Speedy.load(image);
+        const bitmap = await media.toBitmap();
+
+        const error = imerr(media, bitmap);
+
+        display(media, 'Original media');
+        display(bitmap, 'Media converted to bitmap');
+        display(imdiff(media, bitmap), `Error: ${error}`);
+
+        expect(error).toBeAnAcceptableImageError();
+
+        await media.release();
+    });
 });

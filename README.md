@@ -223,6 +223,16 @@ A Promise that resolves to a clone of the `SpeedyMedia` object.
 const clone = await media.clone();
 ```
 
+##### SpeedyMedia.toBitmap()
+
+`SpeedyMedia.toBitmap(): Promise<ImageBitmap>`
+
+Converts the media to an `ImageBitmap`.
+
+###### Returns
+
+A Promise that resolves to an `ImageBitmap`.
+
 ##### SpeedyMedia.release()
 
 `SpeedyMedia.release(): Promise`
