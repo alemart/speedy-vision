@@ -6,7 +6,7 @@
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-09-05T23:34:03.596Z
+ * Date: 2020-09-05T23:38:21.551Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -1979,7 +1979,7 @@ class SpeedyFeature
         this._lod = +lod;
         this._rotation = +rotation;
         this._score = +score;
-        this._scale = Math.pow(2, -lod);
+        this._scale = Math.pow(2, lod);
         this._descriptor = descriptor === null ? new _speedy_descriptor__WEBPACK_IMPORTED_MODULE_0__["NullDescriptor"]() : descriptor;
     }
 
