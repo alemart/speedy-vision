@@ -132,6 +132,20 @@ export class Utils
     }
 
     /**
+     * Creates a <canvas> element with the given dimensions
+     * @param {number} width in pixels
+     * @param {number} height in pixels
+     * @returns {HTMLCanvasElement}
+     */
+    static createCanvas(width, height)
+    {
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        return canvas;
+    }
+
+    /**
      * Generates a random number with
      * Gaussian distribution (mu, sigma)
      * @param {number} mu mean
