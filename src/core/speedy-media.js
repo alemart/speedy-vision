@@ -221,6 +221,7 @@ export class SpeedyMedia
     release()
     {
         if(!this.isReleased()) {
+            Utils.log('Releasing SpeedyMedia object...');
             this._featuresAlgorithm = null;
             this._gpu.loseWebGLContext();
             this._gpu = null;
