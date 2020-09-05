@@ -25,6 +25,7 @@ module.exports = (env, argv) => ({
     }),
     new webpack.DefinePlugin({
       '__SPEEDY_VERSION__': JSON.stringify(package.version),
+      '__SPEEDY_DEVELOPMENT_MODE__': argv.mode == 'development',
     }),
     new webpack.IgnorePlugin({
       resourceRegExp: /\.ignore\./i,

@@ -48,7 +48,8 @@ export class Utils
     static log(text, ...args)
     {
         const message = [ text, ...args ].join(' ');
-        console.log('[speedy-vision.js]', message);
+        if(__SPEEDY_DEVELOPMENT_MODE__)
+            console.log('[speedy-vision.js]', message);
         return message;
     }
 
