@@ -116,13 +116,20 @@ describe('SpeedyMedia', function() {
         const image = await loadImage('speedy.jpg');
         const media = await Speedy.load(image);
 
+        display(media, 'Original');
         for(const lightweight of [true, false]) {
-            const clone = media.clone({ lightweight });
+            const clone = await media.clone({ lightweight });
 
-            expect(clone.source).toBe(media.source);
             expect(clone.type).toBe(media.type);
             expect(clone.width).toBe(media.width);
             expect(clone.height).toBe(media.height);
+
+            display(clone, lightweight ? 'Lightweight clone' : 'Deep clone');
+
+            const error = imerr(media.source, clone.source);
+            expect(error).toBeAnAcceptableImageError();
+
+            await clone.release();
         }
         
         await media.release();

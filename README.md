@@ -204,7 +204,7 @@ Draws the media to a canvas.
 
 ##### SpeedyMedia.clone()
 
-`SpeedyMedia.clone(options?: object): SpeedyMedia`
+`SpeedyMedia.clone(options?: object): Promise<SpeedyMedia>`
 
 Clones the `SpeedyMedia` object.
 
@@ -215,12 +215,12 @@ Clones the `SpeedyMedia` object.
 
 ###### Returns
 
-A clone of the `SpeedyMedia` object.
+A Promise that resolves to a clone of the `SpeedyMedia` object.
 
 ###### Example
 
 ```js
-const clone = media.clone();
+const clone = await media.clone();
 ```
 
 ##### SpeedyMedia.release()

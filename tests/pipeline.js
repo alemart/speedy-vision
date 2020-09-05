@@ -110,7 +110,8 @@ describe('SpeedyPipeline', function() {
 
             for(const size of sizes) {
                 const pipeline = Speedy.pipeline().blur({ filter , size });
-                const blurred = await media.clone().run(pipeline);
+                const clone = await media.clone();
+                const blurred = await clone.run(pipeline);
 
                 const error = imerr(blurred, media);
                 display(blurred, `Used ${filter} filter with kernel size = ${size}. Error: ${error}`);
@@ -122,6 +123,7 @@ describe('SpeedyPipeline', function() {
                 lastError = error;
                 
                 await pipeline.release();
+                await clone.release();
             }
         }
 
@@ -144,13 +146,16 @@ describe('SpeedyPipeline', function() {
         });
 
         it('convolves with identity kernels', async function() {
+            const clone1 = await square.clone();
+            const clone2 = await square.clone();
+
             const convolved3x3 = await square.run(convolution([
                 0, 0, 0,
                 0, 1, 0,
                 0, 0, 0,
             ]));
 
-            const convolved5x5 = await square.clone().run(convolution([
+            const convolved5x5 = await clone1.run(convolution([
                 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0,
                 0, 0, 1, 0, 0,
@@ -158,7 +163,7 @@ describe('SpeedyPipeline', function() {
                 0, 0, 0, 0, 0,
             ]));
 
-            const convolved7x7 = await square.clone().run(convolution([
+            const convolved7x7 = await clone2.run(convolution([
                 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0,
                 0, 0, 0, 0, 0, 0, 0,
@@ -188,6 +193,9 @@ describe('SpeedyPipeline', function() {
 
             expect(pixels(convolved7x7))
             .toBeElementwiseNearlyEqual(pixels(square));
+
+            clone1.release();
+            clone2.release();
         });
 
         it('doesn\'t accept kernels with invalid sizes', function() {
@@ -337,6 +345,7 @@ describe('SpeedyPipeline', function() {
         });
 
         it('convolves with a Sobel filter', async function() {
+            const clone = await square.clone();
             const sobelX = await Speedy.load(await loadImage('square-sobel-x.png'));
             const sobelY = await Speedy.load(await loadImage('square-sobel-y.png'));
 
@@ -346,7 +355,7 @@ describe('SpeedyPipeline', function() {
                 -1, 0, 1,
             ]));
 
-            const mySobelY = await square.clone().run(convolution([
+            const mySobelY = await clone.run(convolution([
                 1, 2, 1,
                 0, 0, 0,
                -1,-2,-1,
@@ -370,6 +379,7 @@ describe('SpeedyPipeline', function() {
 
             await sobelX.release();
             await sobelY.release();
+            await clone.release();
         });
 
         it('captures outlines', async function() {
@@ -401,9 +411,9 @@ describe('SpeedyPipeline', function() {
             -1, 0, 2
         ]);
 
-        const img1 = (await media.run(pipeline)).clone();
+        const img1 = await (await media.run(pipeline)).clone();
         await media._gpu.loseAndRestoreWebGLContext();
-        const img2 = (await media.run(pipeline)).clone();
+        const img2 = await (await media.run(pipeline)).clone();
 
         print('Lose WebGL context, repeat the algorithm');
         display(img1, 'Before losing context');

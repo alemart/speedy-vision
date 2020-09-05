@@ -229,7 +229,7 @@ export class SpeedyMedia
     /**
      * Clones the SpeedyMedia object
      * @param {object} options options object
-     * @returns {SpeedyMedia} a clone object
+     * @returns {Promise<SpeedyMedia>} a clone object
      */
     clone(options = {})
     {
@@ -246,18 +246,29 @@ export class SpeedyMedia
         // clone the object
         if(options.lightweight) {
             // shallow copy
-            return new SpeedyMedia(this);
+            return Promise.resolve(new SpeedyMedia(this));
         }
         else {
             // deep copy
-            let source = this._source;
-            if(this._type == MediaType.Texture || this._type == MediaType.Canvas) {
-                //source = createImageBitmap(this._gpu.canvas, 0, 0, this._width, this._height);
-                const tmpCanvas = Utils.createCanvas(this._width, this._height);
-                this.draw(tmpCanvas);
-                source = tmpCanvas; // won't share WebGL context
+            if(this._type == MediaType.Texture) {
+                return createImageBitmap(this._gpu.canvas, 0, 0, this._width, this._height).then(
+                    bitmap => new SpeedyMedia(bitmap, this._width, this._height)
+                );
             }
-            return new SpeedyMedia(source, this._width, this._height);
+            else if(this._type == MediaType.Bitmap) {
+                return createImageBitmap(this._source, 0, 0, this._width, this._height).then(
+                    bitmap => new SpeedyMedia(bitmap, this._width, this._height)
+                );               
+            }
+            else if(this._type == MediaType.Canvas) {
+                const clonedCanvas = Utils.createCanvas(this._width, this._height);
+                this.draw(clonedCanvas);
+                return Promise.resolve(new SpeedyMedia(clonedCanvas, this._width, this._height));
+            }
+            else {
+                const clonedSource = this._source.cloneNode(true);
+                return Promise.resolve(new SpeedyMedia(clonedSource, this._width, this._height));
+            }
         }
     }
 
@@ -273,9 +284,10 @@ export class SpeedyMedia
             throw new IllegalOperationError('Can\'t run pipeline: SpeedyMedia has been released');
 
         // run the pipeline
-        const media = this.clone({ lightweight: true });
-        media._type = MediaType.Texture;
-        return pipeline._run(media);
+        return this.clone({ lightweight: true }).then(media => {
+            media._type = MediaType.Texture;
+            return pipeline._run(media);
+        });
     }
 
     /**
