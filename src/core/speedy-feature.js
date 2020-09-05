@@ -45,7 +45,7 @@ export class SpeedyFeature
         this._lod = +lod;
         this._rotation = +rotation;
         this._score = +score;
-        this._scale = Math.pow(2, lod);
+        this._scale = Math.pow(2, +lod);
         this._descriptor = descriptor === null ? new NullDescriptor() : descriptor;
     }
 
