@@ -26,7 +26,7 @@ import { BinaryDescriptor } from '../../core/speedy-descriptor';
 import { StochasticTuner } from '../../core/tuners/stochastic-tuner';
 import { Utils } from '../../utils/utils'
 import { IllegalOperationError } from '../../utils/errors';
-import { FIX_RESOLUTION } from '../../utils/globals';
+import { FIX_RESOLUTION, PYRAMID_MAX_LEVELS, LOG2_PYRAMID_MAX_SCALE } from '../../utils/globals';
 
 // We won't admit more than MAX_KEYPOINTS per media.
 // The larger this value is, the more data we need to transfer from the GPU.
@@ -36,6 +36,7 @@ const MAX_PIXELS_PER_KEYPOINT = (MAX_KEYPOINT_SIZE / 4) | 0; // in pixels
 const MAX_ENCODER_LENGTH = 300; // in pixels (if too large, WebGL may lose context - so be careful!)
 const MAX_KEYPOINTS = ((MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH) / MAX_PIXELS_PER_KEYPOINT) | 0;
 const INITIAL_ENCODER_LENGTH = 128; // pick a large value <= MAX (useful on static images when no encoder optimization is performed beforehand)
+const KEYPOINT_BUFFER_LENGTH = 1024; // maximum number of keypoints that can be uploaded to the GPU via UBOs
 
 
 
@@ -54,6 +55,13 @@ const orientEncodedKeypoints = importShader('encoders/orient-encoded-keypoints.g
 
 // helper for downloading the keypoints
 const downloadKeypoints = importShader('utils/identity.glsl').withArguments('image');
+
+// upload keypoints via UBO
+const uploadKeypoints = importShader('encoders/upload-keypoints.glsl')
+                       .withArguments('keypointCount', 'encoderLength', 'descriptorSize')
+                       .withDefines({
+                           'KEYPOINT_BUFFER_LENGTH': KEYPOINT_BUFFER_LENGTH
+                       });
 
 
 
@@ -84,6 +92,9 @@ export class GPUEncoders extends SpeedyProgramGroup
             .declare('_orientEncodedKeypoints', orientEncodedKeypoints, {
                 ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
             })
+            .declare('_uploadKeypoints', uploadKeypoints, {
+                ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
+            })
         ;
 
         // setup internal data
@@ -91,6 +102,7 @@ export class GPUEncoders extends SpeedyProgramGroup
         this._tuner = new StochasticTuner(48, 32, 48/*255*/, 0.2, 8, 60, neighborFn);
         this._keypointEncoderLength = INITIAL_ENCODER_LENGTH;
         this._spawnedAt = performance.now();
+        this._uploadBuffer = null; // lazy spawn
     }
 
     /**
@@ -121,6 +133,7 @@ export class GPUEncoders extends SpeedyProgramGroup
             this._encodeKeypoints.resize(newEncoderLength, newEncoderLength);
             this._downloadKeypoints.resize(newEncoderLength, newEncoderLength);
             this._orientEncodedKeypoints.resize(newEncoderLength, newEncoderLength);
+            this._uploadKeypoints.resize(newEncoderLength, newEncoderLength);
         }
 
         return newEncoderLength - oldEncoderLength;
@@ -159,18 +172,16 @@ export class GPUEncoders extends SpeedyProgramGroup
 
     /**
      * Decodes the keypoints, given a flattened image of encoded pixels
-     * @param {number[]} pixels pixels in the [r,g,b,a,...] format
+     * @param {Uint8Array[]} pixels pixels in the [r,g,b,a,...] format
      * @param {number} [descriptorSize] in bytes
      * @returns {SpeedyFeature[]} keypoints
      */
     decodeKeypoints(pixels, descriptorSize = 0)
     {
         const pixelsPerKeypoint = 2 + descriptorSize / 4;
-        const lgM = Math.log2(this._gpu.pyramidMaxScale);
-        const pyrHeight = this._gpu.pyramidHeight;
-        const keypoints = [];
-        let x, y, scale, rotation, score;
-        let hasScale, hasRotation;
+        let x, y, lod, rotation, score;
+        let hasLod, hasRotation;
+        let keypoints = [];
 
         for(let i = 0; i < pixels.length; i += 4 /* RGBA */ * pixelsPerKeypoint) {
             // extract fixed-point coordinates
@@ -183,13 +194,13 @@ export class GPUEncoders extends SpeedyProgramGroup
             x /= FIX_RESOLUTION;
             y /= FIX_RESOLUTION;
 
-            // extract scale
-            hasScale = (pixels[i+4] < 255);
-            scale = !hasScale ? 1.0 :
-                Math.pow(2.0, -lgM + (lgM + pyrHeight) * pixels[i+4] / 255.0);
+            // extract LOD
+            hasLod = (pixels[i+4] < 255);
+            lod = !hasLod ? 0.0 :
+                -LOG2_PYRAMID_MAX_SCALE + (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS) * pixels[i+4] / 255;
 
             // extract orientation
-            hasRotation = hasScale; // FIXME get from parameter list?
+            hasRotation = hasLod; // FIXME get from parameter list?
             rotation = !hasRotation ? 0.0 :
                 ((2 * pixels[i+5]) / 255.0 - 1.0) * Math.PI;
 
@@ -200,10 +211,10 @@ export class GPUEncoders extends SpeedyProgramGroup
             if(descriptorSize > 0) {
                 const bytes = new Uint8Array(pixels.slice(i+8, i+8 + descriptorSize));
                 const descriptor = new BinaryDescriptor(bytes);
-                keypoints.push(new SpeedyFeature(x, y, scale, rotation, score, descriptor));
+                keypoints.push(new SpeedyFeature(x, y, lod, rotation, score, descriptor));
             }
             else
-                keypoints.push(new SpeedyFeature(x, y, scale, rotation, score));
+                keypoints.push(new SpeedyFeature(x, y, lod, rotation, score));
         }
 
         // developer's secret ;)
@@ -257,5 +268,40 @@ export class GPUEncoders extends SpeedyProgramGroup
         catch(err) {
             throw new IllegalOperationError(`Can't download encoded keypoint texture`, err);
         }
+    }
+
+    /**
+     * Upload keypoints to the GPU
+     * The descriptor & orientation of the keypoints will be lost
+     * (need to recalculate)
+     * @param {SpeedyFeature[]} keypoints
+     * @param {number} descriptorSize in bytes
+     * @returns {WebGLTexture} encodedKeypoints
+     */
+    uploadKeypoints(keypoints, descriptorSize = 0)
+    {
+        // Create a buffer for uploading the data
+        if(this._uploadBuffer === null) {
+            const sizeofVec4 = Float32Array.BYTES_PER_ELEMENT * 4; // 16
+            const internalBuffer = new ArrayBuffer(sizeofVec4 * KEYPOINT_BUFFER_LENGTH);
+            this._uploadBuffer = new Float32Array(internalBuffer);
+        }
+
+        // Format data as follows: (xpos, ypos, lod, score)
+        const keypointCount = keypoints.length;
+        for(let i = 0; i < keypointCount; i++) {
+            const keypoint = keypoints[i];
+            const j = i * 4;
+
+            // this will be uploaded into a vec4
+            this._uploadBuffer[j]   = keypoint.x;
+            this._uploadBuffer[j+1] = keypoint.y;
+            this._uploadBuffer[j+2] = keypoint.lod;
+            this._uploadBuffer[j+3] = keypoint.score;
+        }
+
+        // Upload data
+        this._uploadKeypoints.setUBO('KeypointBuffer', this._uploadBuffer);
+        return this._uploadKeypoints(keypointCount, this._keypointEncoderLength, descriptorSize);
     }
 }
