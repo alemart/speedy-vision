@@ -339,6 +339,9 @@ export class SpeedyMedia
      */
     toBitmap()
     {
+        if(this.isReleased())
+            throw new IllegalOperationError('Can\'t convert to SpeedyMedia to ImageBitmap: the media has been released');
+
         return createImageBitmap(this._source);
     }
 
@@ -474,7 +477,7 @@ function buildOptions(options, defaultOptions)
 function requestCameraStream(width, height, options = {})
 {
     return new Promise((resolve, reject) => {
-        //Utils.log('Accessing the webcam...');
+        Utils.log('Accessing the webcam...');
 
         if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
             return reject(new NotSupportedError('Unsupported browser: no mediaDevices.getUserMedia()'));
@@ -495,7 +498,7 @@ function requestCameraStream(width, height, options = {})
             video.srcObject = stream;
             video.onloadedmetadata = e => {
                 video.play();
-                //Utils.log('The camera device is turned on!');
+                Utils.log('The camera device is turned on!');
                 resolve(video, stream);
             };
         })
