@@ -79,31 +79,17 @@ export class SpeedyPipeline
     }
 
     /**
-     * Runs the pipeline on a target media (it will be modified!)
-     * @param {SpeedyMedia} media media to be modified
-     * @returns {Promise<SpeedyMedia>} a promise that resolves to the provided media
+     * Runs the pipeline
+     * @param {WebGLTexture} texture input texture
+     * @param {SpeedyMedia} media media object
+     * @returns {WebGLTexture} output texutre
      */
-    _run(media)
+    _run(texture, media)
     {
-        return new Promise((resolve, reject) => {
-            if(media._type == MediaType.Texture) {
-                // upload the media to the GPU
-                let texture = media._gpu.upload(media._source);
+        for(let i = 0; i < this._operations.length; i++)
+            texture = this._operations[i].run(texture, media._gpu, media);
 
-                // run the pipeline
-                for(let i = 0; i < this._operations.length; i++)
-                    texture = this._operations[i].run(texture, media._gpu, media);
-
-                // end of the pipeline
-                media._gpu.programs.utils.output(texture);
-                media._source = media._gpu.canvas;
-
-                // done!
-                resolve(media);
-            }
-            else
-                reject(new IllegalOperationError(`Can't run a pipeline on a media that is not a texture`));
-        });
+        return texture;
     }
 
 

@@ -47,7 +47,7 @@ export class SpeedyMedia
     /**
      * Class constructor
      * It assumes A VALID (!) media source that is already loaded
-     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap|Texture} mediaSource Image or video
+     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} mediaSource Image or video
      * @param {number} width media width
      * @param {number} height media height
      * @param {object} [options] options object
@@ -92,7 +92,7 @@ export class SpeedyMedia
     /**
      * Load a media source
      * Will wait until the HTML media source is loaded
-     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} mediaSource An image, video or canvas
+     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} mediaSource An image, video or canvas
      * @param {object} [options] options object
      * @returns {Promise<SpeedyMedia>}
      */
@@ -132,7 +132,21 @@ export class SpeedyMedia
     static loadCameraStream(width = 426, height = 240, cameraOptions = {}, mediaOptions = {})
     {
         return requestCameraStream(width, height, cameraOptions).then(
-            video => SpeedyMedia.load(createCanvasFromVideo(video), mediaOptions)
+            //video => SpeedyMedia.load(video, mediaOptions) // is this slower? profile it - TODO
+            video => createImageBitmap(video).then(
+                bitmap => SpeedyMedia.load(bitmap, mediaOptions).then(media => {
+                    (function update() {
+                        if(!media.isReleased()) {
+                            createImageBitmap(video).then(bitmap => {
+                                media._source.close();
+                                media._source = bitmap;
+                                setTimeout(update, 10);
+                            });
+                        }
+                    })();
+                    return media;
+                })
+            )
         );
     }
 
@@ -181,9 +195,6 @@ export class SpeedyMedia
 
             case MediaType.Bitmap:
                 return 'bitmap';
-
-            case MediaType.Texture: // the result of pipelining
-                return 'internal';
 
             default: // this shouldn't happen
                 return 'unknown';
@@ -250,13 +261,8 @@ export class SpeedyMedia
         }
         else {
             // deep copy
-            if(this._type == MediaType.Texture) {
-                return createImageBitmap(this._gpu.canvas, 0, 0, this._width, this._height).then(
-                    bitmap => new SpeedyMedia(bitmap, this._width, this._height)
-                );
-            }
-            else if(this._type == MediaType.Bitmap) {
-                return createImageBitmap(this._source, 0, 0, this._width, this._height).then(
+            if(this._type == MediaType.Bitmap) {
+                return createImageBitmap(this._source).then(
                     bitmap => new SpeedyMedia(bitmap, this._width, this._height)
                 );               
             }
@@ -283,10 +289,21 @@ export class SpeedyMedia
         if(this.isReleased())
             throw new IllegalOperationError('Can\'t run pipeline: SpeedyMedia has been released');
 
-        // run the pipeline
+        // run the pipeline on a cloned SpeedyMedia
         return this.clone({ lightweight: true }).then(media => {
-            media._type = MediaType.Texture;
-            return pipeline._run(media);
+            // upload media to the GPU
+            let texture = media._gpu.upload(media._source);
+
+            // run the pipeline
+            texture = pipeline._run(texture, media);
+
+            // convert to bitmap
+            media._gpu.programs.utils.output(texture);
+            return createImageBitmap(media._gpu.canvas, 0, 0, media.width, media.height).then(bitmap => {
+                media._type = MediaType.Bitmap;
+                media._source = bitmap;
+                return media;
+            });
         });
     }
 
@@ -304,25 +321,14 @@ export class SpeedyMedia
         if(this.isReleased())
             return;
 
+        // validate parameters
+        x = Math.max(+x, 0); y = Math.max(+y, 0);
+        width = Math.max(+width, 0);
+        height = Math.max(+height, 0);
+
         // draw
         const ctx = canvas.getContext('2d');
-
-        x = +x; y = +y;
-        width = Math.max(width, 0);
-        height = Math.max(height, 0);
-
-        switch(this._type) {
-            case MediaType.Image:
-            case MediaType.Video:
-            case MediaType.Canvas:
-            case MediaType.Bitmap:
-                ctx.drawImage(this._source, x, y, width, height);
-                break;
-
-            case MediaType.Texture:
-                ctx.drawImage(this._gpu.canvas, x, y, width, height);
-                break;
-        }
+        ctx.drawImage(this._source, x, y, width, height);
     }
 
     /**
@@ -431,9 +437,6 @@ function getMediaType(mediaSource)
 
             case 'ImageBitmap':
                 return MediaType.Bitmap;
-
-            default:
-                return MediaType.Texture;
         }
     }
 
@@ -492,22 +495,4 @@ function requestCameraStream(width, height, options = {})
             ));
         });
     });
-}
-
-// create a HTMLCanvasElement using a HTMLVideoElement
-function createCanvasFromVideo(video)
-{
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    function render() {
-        ctx.drawImage(video, 0, 0);
-        requestAnimationFrame(render);
-    }
-    render();
-
-    return canvas;
 }
