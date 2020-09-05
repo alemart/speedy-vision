@@ -6,7 +6,7 @@
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-09-03T01:07:35.767Z
+ * Date: 2020-09-05T23:16:01.834Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -1955,6 +1955,8 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
 /**
  * A SpeedyFeature is a keypoint in an image,
  * with optional scale, rotation and descriptor
@@ -1965,18 +1967,19 @@ class SpeedyFeature
      * Creates a new SpeedyFeature
      * @param {number} x X position
      * @param {number} y Y position
-     * @param {number} [scale] Scale
+     * @param {number} [lod] Level-of-detail
      * @param {number} [rotation] Rotation in radians
      * @param {number} [score] Cornerness measure
      * @param {SpeedyDescriptor} [descriptor] Feature descriptor
      */
-    constructor(x, y, scale = 1.0, rotation = 0.0, score = 0.0, descriptor = null)
+    constructor(x, y, lod = 0.0, rotation = 0.0, score = 0.0, descriptor = null)
     {
         this._x = +x;
         this._y = +y;
-        this._scale = +scale;
+        this._lod = +lod;
         this._rotation = +rotation;
         this._score = +score;
+        this._scale = Math.pow(2, -lod);
         this._descriptor = descriptor === null ? new _speedy_descriptor__WEBPACK_IMPORTED_MODULE_0__["NullDescriptor"]() : descriptor;
     }
 
@@ -2005,6 +2008,15 @@ class SpeedyFeature
     get y()
     {
         return this._y;
+    }
+
+    /**
+     * The pyramid level-of-detail from which
+     * this feature point was extracted
+     */
+    get lod()
+    {
+        return this._lod;
     }
 
     /**
@@ -2113,7 +2125,7 @@ class SpeedyMedia
     /**
      * Class constructor
      * It assumes A VALID (!) media source that is already loaded
-     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|Texture} mediaSource An image, video or canvas
+     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} mediaSource Image or video
      * @param {number} width media width
      * @param {number} height media height
      * @param {object} [options] options object
@@ -2158,7 +2170,7 @@ class SpeedyMedia
     /**
      * Load a media source
      * Will wait until the HTML media source is loaded
-     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} mediaSource An image, video or canvas
+     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} mediaSource An image, video or canvas
      * @param {object} [options] options object
      * @returns {Promise<SpeedyMedia>}
      */
@@ -2175,7 +2187,7 @@ class SpeedyMedia
                         resolve(media);
                     }
                     else if(k > 0)
-                        setTimeout(() => loadMedia(getMediaDimensions(mediaSource), k-1), 10);
+                        setTimeout(() => loadMedia(getMediaDimensions(mediaSource), k-1), 0);
                     else
                         reject(new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["TimeoutError"](`Can't load SpeedyMedia with a ${mediaSource}: timeout.`));
                 })(dimensions);
@@ -2198,13 +2210,29 @@ class SpeedyMedia
     static loadCameraStream(width = 426, height = 240, cameraOptions = {}, mediaOptions = {})
     {
         return requestCameraStream(width, height, cameraOptions).then(
-            video => SpeedyMedia.load(createCanvasFromVideo(video), mediaOptions)
+            video => SpeedyMedia.load(video, mediaOptions)
+            /*
+            video => createImageBitmap(video).then(
+                bitmap => SpeedyMedia.load(bitmap, mediaOptions).then(media => {
+                    (function update() {
+                        if(!media.isReleased()) {
+                            createImageBitmap(video).then(bitmap => {
+                                media._source.close();
+                                media._source = bitmap;
+                                setTimeout(update, 10);
+                            });
+                        }
+                    })();
+                    return media;
+                })
+            )
+            */
         );
     }
 
     /**
      * The media element (image, video, canvas) encapsulated by this SpeedyMedia object
-     * @returns {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} the media element
+     * @returns {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} the media element
      */
     get source()
     {
@@ -2245,8 +2273,8 @@ class SpeedyMedia
             case _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Canvas:
                 return 'canvas';
 
-            case _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Texture: // the result of pipelining
-                return 'internal';
+            case _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Bitmap:
+                return 'bitmap';
 
             default: // this shouldn't happen
                 return 'unknown';
@@ -2292,7 +2320,7 @@ class SpeedyMedia
     /**
      * Clones the SpeedyMedia object
      * @param {object} options options object
-     * @returns {SpeedyMedia} a clone object
+     * @returns {Promise<SpeedyMedia>} a clone object
      */
     clone(options = {})
     {
@@ -2309,14 +2337,24 @@ class SpeedyMedia
         // clone the object
         if(options.lightweight) {
             // shallow copy
-            return new SpeedyMedia(this);
+            return Promise.resolve(new SpeedyMedia(this));
         }
         else {
             // deep copy
-            let source = this._source;
-            if(this._type == _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Texture || this._type == _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Canvas)
-                source = createCanvasFromStaticMedia(this); // won't share WebGL context
-            return new SpeedyMedia(source, this._width, this._height);
+            if(this._type == _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Bitmap) {
+                return createImageBitmap(this._source).then(
+                    bitmap => new SpeedyMedia(bitmap, this._width, this._height)
+                );               
+            }
+            else if(this._type == _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Canvas) {
+                const clonedCanvas = _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].createCanvas(this._width, this._height);
+                this.draw(clonedCanvas);
+                return Promise.resolve(new SpeedyMedia(clonedCanvas, this._width, this._height));
+            }
+            else {
+                const clonedSource = this._source.cloneNode(true);
+                return Promise.resolve(new SpeedyMedia(clonedSource, this._width, this._height));
+            }
         }
     }
 
@@ -2331,10 +2369,22 @@ class SpeedyMedia
         if(this.isReleased())
             throw new IllegalOperationError('Can\'t run pipeline: SpeedyMedia has been released');
 
-        // run the pipeline
-        const media = this.clone({ lightweight: true });
-        media._type = _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Texture;
-        return pipeline._run(media);
+        // run the pipeline on a cloned SpeedyMedia
+        return this.clone({ lightweight: true }).then(media => {
+            // upload media to the GPU
+            let texture = media._gpu.upload(media._source);
+
+            // run the pipeline
+            texture = pipeline._run(texture, media);
+
+            // convert to bitmap
+            media._gpu.programs.utils.output(texture);
+            return createImageBitmap(media._gpu.canvas, 0, 0, media.width, media.height).then(bitmap => {
+                media._type = _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Bitmap;
+                media._source = bitmap;
+                return media;
+            });
+        });
     }
 
     /**
@@ -2351,24 +2401,23 @@ class SpeedyMedia
         if(this.isReleased())
             return;
 
+        // validate parameters
+        x = Math.max(+x, 0); y = Math.max(+y, 0);
+        width = Math.max(+width, 0);
+        height = Math.max(+height, 0);
+
         // draw
         const ctx = canvas.getContext('2d');
+        ctx.drawImage(this._source, x, y, width, height);
+    }
 
-        x = +x; y = +y;
-        width = Math.max(width, 0);
-        height = Math.max(height, 0);
-
-        switch(this._type) {
-            case _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Image:
-            case _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Video:
-            case _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Canvas:
-                ctx.drawImage(this._source, x, y, width, height);
-                break;
-
-            case _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Texture:
-                ctx.drawImage(this._gpu.canvas, x, y, width, height);
-                break;
-        }
+    /**
+     * Converts the media to an ImageBitmap
+     * @returns {Promise<ImageBitmap>}
+     */
+    toBitmap()
+    {
+        return createImageBitmap(this._source);
     }
 
     /**
@@ -2447,6 +2496,7 @@ function getMediaDimensions(mediaSource)
             HTMLImageElement: { width: 'naturalWidth', height: 'naturalHeight' },
             HTMLVideoElement: { width: 'videoWidth', height: 'videoHeight' },
             HTMLCanvasElement: { width: 'width', height: 'height' },
+            ImageBitmap: { width: 'width', height: 'height' },
         };
 
         if(key.hasOwnProperty(element)) {
@@ -2474,8 +2524,8 @@ function getMediaType(mediaSource)
             case 'HTMLCanvasElement':
                 return _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Canvas;
 
-            default:
-                return _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Texture;
+            case 'ImageBitmap':
+                return _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Bitmap;
         }
     }
 
@@ -2485,15 +2535,12 @@ function getMediaType(mediaSource)
 // build & validate options object
 function buildOptions(options, defaultOptions)
 {
-    const warn = buildOptions._err || (buildOptions._err = 
-        (...args) => _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning(`Invalid option when loading media.`, ...args));
-
     // build options object
     options = Object.assign(defaultOptions, options);
 
     // validate
     if(options.usage != 'dynamic' && options.usage != 'static') {
-        warn(`Unrecognized usage: "${options.usage}"`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning(`Can't load media. Unrecognized usage option: "${options.usage}"`);
         options.usage = defaultOptions.usage;
     }
 
@@ -2505,7 +2552,7 @@ function buildOptions(options, defaultOptions)
 function requestCameraStream(width, height, options = {})
 {
     return new Promise((resolve, reject) => {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].log('Accessing the webcam...');
+        //Utils.log('Accessing the webcam...');
 
         if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
             return reject(new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["NotSupportedError"]('Unsupported browser: no mediaDevices.getUserMedia()'));
@@ -2526,7 +2573,7 @@ function requestCameraStream(width, height, options = {})
             video.srcObject = stream;
             video.onloadedmetadata = e => {
                 video.play();
-                _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].log('The camera device is turned on!');
+                //Utils.log('The camera device is turned on!');
                 resolve(video, stream);
             };
         })
@@ -2537,36 +2584,6 @@ function requestCameraStream(width, height, options = {})
             ));
         });
     });
-}
-
-// create a HTMLCanvasElement using a HTMLVideoElement
-function createCanvasFromVideo(video)
-{
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    function render() {
-        ctx.drawImage(video, 0, 0);
-        requestAnimationFrame(render);
-    }
-    render();
-
-    return canvas;
-}
-
-// create a (static) HTMLCanvasElement using a SpeedyMedia as source
-function createCanvasFromStaticMedia(media)
-{
-    const canvas = document.createElement('canvas');
-
-    canvas.width = media.width;
-    canvas.height = media.height;
-    media.draw(canvas);
-
-    return canvas;
 }
 
 /***/ }),
@@ -2665,31 +2682,17 @@ class SpeedyPipeline
     }
 
     /**
-     * Runs the pipeline on a target media (it will be modified!)
-     * @param {SpeedyMedia} media media to be modified
-     * @returns {Promise<SpeedyMedia>} a promise that resolves to the provided media
+     * Runs the pipeline
+     * @param {WebGLTexture} texture input texture
+     * @param {SpeedyMedia} media media object
+     * @returns {WebGLTexture} output texutre
      */
-    _run(media)
+    _run(texture, media)
     {
-        return new Promise((resolve, reject) => {
-            if(media._type == _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Texture) {
-                // upload the media to the GPU
-                let texture = media._gpu.upload(media._source);
+        for(let i = 0; i < this._operations.length; i++)
+            texture = this._operations[i].run(texture, media._gpu, media);
 
-                // run the pipeline
-                for(let i = 0; i < this._operations.length; i++)
-                    texture = this._operations[i].run(texture, media._gpu, media);
-
-                // end of the pipeline
-                media._gpu.programs.utils.output(texture);
-                media._source = media._gpu.canvas;
-
-                // done!
-                resolve(media);
-            }
-            else
-                reject(new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`Can't run a pipeline on a media that is not a texture`));
-        });
+        return texture;
     }
 
 
@@ -3787,13 +3790,13 @@ class GLUtils
             -1, 1,
             1, 1,
         ]), gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(locationOfPositionAttribute);
         gl.vertexAttribPointer(locationOfPositionAttribute, // attribute location
                                2,          // 2 components per vertex (x,y)
                                gl.FLOAT,   // type
                                false,      // don't normalize
                                0,          // default stride (tightly packed)
                                0);         // offset
-        gl.enableVertexAttribArray(locationOfPositionAttribute);
 
         // set the a_texCoord attribute
         // using the current vbo
@@ -3805,13 +3808,13 @@ class GLUtils
             0, 1,
             1, 1,
         ]), gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(locationOfTexcoordAttribute);
         gl.vertexAttribPointer(locationOfTexcoordAttribute, // attribute location
                                2,          // 2 components per vertex (x,y)
                                gl.FLOAT,   // type
                                false,      // don't normalize
                                0,          // default stride (tightly packed)
                                0);         // offset
-        gl.enableVertexAttribArray(locationOfTexcoordAttribute);
 
         // unbind
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
@@ -4322,6 +4325,7 @@ const MAX_PIXELS_PER_KEYPOINT = (MAX_KEYPOINT_SIZE / 4) | 0; // in pixels
 const MAX_ENCODER_LENGTH = 300; // in pixels (if too large, WebGL may lose context - so be careful!)
 const MAX_KEYPOINTS = ((MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH) / MAX_PIXELS_PER_KEYPOINT) | 0;
 const INITIAL_ENCODER_LENGTH = 128; // pick a large value <= MAX (useful on static images when no encoder optimization is performed beforehand)
+const KEYPOINT_BUFFER_LENGTH = 1024; // maximum number of keypoints that can be uploaded to the GPU via UBOs
 
 
 
@@ -4340,6 +4344,13 @@ const orientEncodedKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODU
 
 // helper for downloading the keypoints
 const downloadKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('utils/identity.glsl').withArguments('image');
+
+// upload keypoints via UBO
+const uploadKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('encoders/upload-keypoints.glsl')
+                       .withArguments('keypointCount', 'encoderLength', 'descriptorSize')
+                       .withDefines({
+                           'KEYPOINT_BUFFER_LENGTH': KEYPOINT_BUFFER_LENGTH
+                       });
 
 
 
@@ -4370,6 +4381,9 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
             .declare('_orientEncodedKeypoints', orientEncodedKeypoints, {
                 ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
             })
+            .declare('_uploadKeypoints', uploadKeypoints, {
+                ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
+            })
         ;
 
         // setup internal data
@@ -4377,6 +4391,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
         this._tuner = new _core_tuners_stochastic_tuner__WEBPACK_IMPORTED_MODULE_4__["StochasticTuner"](48, 32, 48/*255*/, 0.2, 8, 60, neighborFn);
         this._keypointEncoderLength = INITIAL_ENCODER_LENGTH;
         this._spawnedAt = performance.now();
+        this._uploadBuffer = null; // lazy spawn
     }
 
     /**
@@ -4407,6 +4422,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
             this._encodeKeypoints.resize(newEncoderLength, newEncoderLength);
             this._downloadKeypoints.resize(newEncoderLength, newEncoderLength);
             this._orientEncodedKeypoints.resize(newEncoderLength, newEncoderLength);
+            this._uploadKeypoints.resize(newEncoderLength, newEncoderLength);
         }
 
         return newEncoderLength - oldEncoderLength;
@@ -4445,18 +4461,16 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
 
     /**
      * Decodes the keypoints, given a flattened image of encoded pixels
-     * @param {number[]} pixels pixels in the [r,g,b,a,...] format
+     * @param {Uint8Array[]} pixels pixels in the [r,g,b,a,...] format
      * @param {number} [descriptorSize] in bytes
      * @returns {SpeedyFeature[]} keypoints
      */
     decodeKeypoints(pixels, descriptorSize = 0)
     {
         const pixelsPerKeypoint = 2 + descriptorSize / 4;
-        const lgM = Math.log2(this._gpu.pyramidMaxScale);
-        const pyrHeight = this._gpu.pyramidHeight;
-        const keypoints = [];
-        let x, y, scale, rotation, score;
-        let hasScale, hasRotation;
+        let x, y, lod, rotation, score;
+        let hasLod, hasRotation;
+        let keypoints = [];
 
         for(let i = 0; i < pixels.length; i += 4 /* RGBA */ * pixelsPerKeypoint) {
             // extract fixed-point coordinates
@@ -4469,13 +4483,13 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
             x /= _utils_globals__WEBPACK_IMPORTED_MODULE_7__["FIX_RESOLUTION"];
             y /= _utils_globals__WEBPACK_IMPORTED_MODULE_7__["FIX_RESOLUTION"];
 
-            // extract scale
-            hasScale = (pixels[i+4] < 255);
-            scale = !hasScale ? 1.0 :
-                Math.pow(2.0, -lgM + (lgM + pyrHeight) * pixels[i+4] / 255.0);
+            // extract LOD
+            hasLod = (pixels[i+4] < 255);
+            lod = !hasLod ? 0.0 :
+                -_utils_globals__WEBPACK_IMPORTED_MODULE_7__["LOG2_PYRAMID_MAX_SCALE"] + (_utils_globals__WEBPACK_IMPORTED_MODULE_7__["LOG2_PYRAMID_MAX_SCALE"] + _utils_globals__WEBPACK_IMPORTED_MODULE_7__["PYRAMID_MAX_LEVELS"]) * pixels[i+4] / 255;
 
             // extract orientation
-            hasRotation = hasScale; // FIXME get from parameter list?
+            hasRotation = hasLod; // FIXME get from parameter list?
             rotation = !hasRotation ? 0.0 :
                 ((2 * pixels[i+5]) / 255.0 - 1.0) * Math.PI;
 
@@ -4486,10 +4500,10 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
             if(descriptorSize > 0) {
                 const bytes = new Uint8Array(pixels.slice(i+8, i+8 + descriptorSize));
                 const descriptor = new _core_speedy_descriptor__WEBPACK_IMPORTED_MODULE_3__["BinaryDescriptor"](bytes);
-                keypoints.push(new _core_speedy_feature__WEBPACK_IMPORTED_MODULE_2__["SpeedyFeature"](x, y, scale, rotation, score, descriptor));
+                keypoints.push(new _core_speedy_feature__WEBPACK_IMPORTED_MODULE_2__["SpeedyFeature"](x, y, lod, rotation, score, descriptor));
             }
             else
-                keypoints.push(new _core_speedy_feature__WEBPACK_IMPORTED_MODULE_2__["SpeedyFeature"](x, y, scale, rotation, score));
+                keypoints.push(new _core_speedy_feature__WEBPACK_IMPORTED_MODULE_2__["SpeedyFeature"](x, y, lod, rotation, score));
         }
 
         // developer's secret ;)
@@ -4543,6 +4557,41 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
         catch(err) {
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_6__["IllegalOperationError"](`Can't download encoded keypoint texture`, err);
         }
+    }
+
+    /**
+     * Upload keypoints to the GPU
+     * The descriptor & orientation of the keypoints will be lost
+     * (need to recalculate)
+     * @param {SpeedyFeature[]} keypoints
+     * @param {number} descriptorSize in bytes
+     * @returns {WebGLTexture} encodedKeypoints
+     */
+    uploadKeypoints(keypoints, descriptorSize = 0)
+    {
+        // Create a buffer for uploading the data
+        if(this._uploadBuffer === null) {
+            const sizeofVec4 = Float32Array.BYTES_PER_ELEMENT * 4; // 16
+            const internalBuffer = new ArrayBuffer(sizeofVec4 * KEYPOINT_BUFFER_LENGTH);
+            this._uploadBuffer = new Float32Array(internalBuffer);
+        }
+
+        // Format data as follows: (xpos, ypos, lod, score)
+        const keypointCount = keypoints.length;
+        for(let i = 0; i < keypointCount; i++) {
+            const keypoint = keypoints[i];
+            const j = i * 4;
+
+            // this will be uploaded into a vec4
+            this._uploadBuffer[j]   = keypoint.x;
+            this._uploadBuffer[j+1] = keypoint.y;
+            this._uploadBuffer[j+2] = keypoint.lod;
+            this._uploadBuffer[j+3] = keypoint.score;
+        }
+
+        // Upload data
+        this._uploadKeypoints.setUBO('KeypointBuffer', this._uploadBuffer);
+        return this._uploadKeypoints(keypointCount, this._keypointEncoderLength, descriptorSize);
     }
 }
 
@@ -5170,8 +5219,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUPyramids", function() { return GPUPyramids; });
 /* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-program-group */ "./src/gpu/speedy-program-group.js");
 /* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/globals */ "./src/utils/globals.js");
-/* harmony import */ var _shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../shaders/filters/convolution */ "./src/gpu/shaders/filters/convolution.js");
+/* harmony import */ var _shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../shaders/filters/convolution */ "./src/gpu/shaders/filters/convolution.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -5199,7 +5247,6 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-
 //
 // Shaders
 //
@@ -5210,13 +5257,7 @@ const downsample2 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["imp
 const upsample3 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('pyramids/upsample3.glsl').withArguments('image');
 const downsample3 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('pyramids/downsample3.glsl').withArguments('image');
 
-// utilities for merging keypoints across multiple scales
-const mergeKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('pyramids/merge-keypoints.glsl').withArguments('target', 'source');
-const mergeKeypointsAtConsecutiveLevels = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('pyramids/merge-keypoints-at-consecutive-levels.glsl').withArguments('largerImage', 'smallerImage');
-const normalizeKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('pyramids/normalize-keypoints.glsl').withArguments('image', 'imageScale');
-
-// misc
-const crop = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('pyramids/crop.glsl').withArguments('image');
+// debug
 const flipY = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('utils/flip-y.glsl').withArguments('image');
 
 
@@ -5237,27 +5278,16 @@ class GPUPyramids extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
     {
         super(gpu, width, height);
         this
-            // initialize pyramid
-            .declare('setBase', setScale(1.0))
- 
-            // pyramid operations
-            .compose('reduce', '_smoothX', '_smoothY', '_downsample2', '_scale1/2')
-            .compose('expand', '_upsample2', '_smoothX2', '_smoothY2', '_scale2')
+            // pyramid operations (scale = 2)
+            .compose('reduce', '_smoothX', '_smoothY', '_downsample2')
+            .compose('expand', '_upsample2', '_smoothX2', '_smoothY2')
            
-            // intra-pyramid operations (between two pyramid levels)
-            .compose('intraReduce', '_upsample2', '_smoothX2', '_smoothY2', '_downsample3/2', '_scale2/3')
-            .compose('intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3', '_scale3/2')
-
-            // Merge keypoints across multiple scales
-            .declare('mergeKeypoints', mergeKeypoints)
-            .declare('mergeKeypointsAtConsecutiveLevels', mergeKeypointsAtConsecutiveLevels)
-            .declare('normalizeKeypoints', normalizeKeypoints)
-
-            // Crop texture to width x height of the current pyramid level
-            .declare('crop', crop)
+            // intra-pyramid operations (scale = 1.5)
+            .compose('intraReduce', '_upsample2', '_smoothX2', '_smoothY2', '_downsample3/2')
+            .compose('intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3')
 
             // kernels for debugging
-            .declare('output', flipY, {
+            .declare('output1', flipY, {
                 ...this.program.hasTextureSize(this._width, this._height),
                 ...this.program.displaysGraphics()
             })
@@ -5277,30 +5307,30 @@ class GPUPyramids extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
             // separable kernels for gaussian smoothing
             // use [c, b, a, b, c] where a+2c = 2b and a+2b+2c = 1
             // pick a = 0.4 for gaussian approximation
-            .declare('_smoothX', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_3__["convX"])([
+            .declare('_smoothX', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
                 0.05, 0.25, 0.4, 0.25, 0.05
             ]))
-            .declare('_smoothY', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_3__["convY"])([
+            .declare('_smoothY', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
                 0.05, 0.25, 0.4, 0.25, 0.05
             ]))
 
             // smoothing for 2x image
             // same rules as above with sum(k) = 2
-            .declare('_smoothX2', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_3__["convX"])([
+            .declare('_smoothX2', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
                 0.1, 0.5, 0.8, 0.5, 0.1
             ]), this.program.hasTextureSize(2 * this._width, 2 * this._height))
 
-            .declare('_smoothY2', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_3__["convY"])([
+            .declare('_smoothY2', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
                 0.1, 0.5, 0.8, 0.5, 0.1
             ], 1.0 / 2.0), this.program.hasTextureSize(2 * this._width, 2 * this._height))
 
             // smoothing for 3x image
             // use [1-b, b, 1, b, 1-b], where 0 < b < 1
-            .declare('_smoothX3', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_3__["convX"])([
+            .declare('_smoothX3', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
                 0.2, 0.8, 1.0, 0.8, 0.2
             ]), this.program.hasTextureSize(3 * this._width, 3 * this._height))
 
-            .declare('_smoothY3', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_3__["convY"])([
+            .declare('_smoothY3', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
                 0.2, 0.8, 1.0, 0.8, 0.2
             ], 1.0 / 3.0), this.program.hasTextureSize(3 * this._width, 3 * this._height))
 
@@ -5322,112 +5352,8 @@ class GPUPyramids extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
 
             .declare('_downsample3/2', downsample3,
                 this.program.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
-
-            // adjust the scale coefficients
-            .declare('_scale2', scale(2.0),
-                this.program.hasTextureSize(2 * this._width, 2 * this._height))
-
-            .declare('_scale1/2', scale(0.5),
-                this.program.hasTextureSize((1 + this._width) / 2, (1 + this._height) / 2))
-
-            .declare('_scale3/2', scale(1.5),
-                this.program.hasTextureSize(3 * this._width / 2, 3 * this._height / 2))
-
-            .declare('_scale2/3', scale(2.0 / 3.0),
-                this.program.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
         ;
     }
-}
-
-
-
-
-/*
- * Image scale is encoded in the alpha channel (a)
- * according to the following model:
- *
- * a(x) = (log2(M) - log2(x)) / (log2(M) + h)
- *
- * where x := scale of the image in the pyramid
- *            it may be 1, 0.5, 0.25, 0.125...
- *            also sqrt(2)/2, sqrt(2)/4... (intra-layers)
- *            (note that lod = -log2(x))
- *
- *       h := height (depth) of the pyramid, an integer
- *            (i.e., PYRAMID_MAX_LEVELS)
- *
- *       M := scale upper bound: the maximum supported
- *            scale x for a pyramid layer, a constant
- *            that is preferably a power of two
- *            (i.e., PYRAMID_MAX_SCALE)
- *
- *
- *
- * This model has neat properties:
- *
- * Scale image by factor s:
- * a(s*x) = a(x) - log2(s) / (log2(M) + h)
- *
- * Log of scale (scale-axis):
- * log2(x) = log2(M) - (log2(M) + h) * a(x)
- *
- * Bounded output:
- * 0 <= a(x) < 1
- *
- * Since x <= M, it follows that a(x) >= 0 for all x
- * Since x > 1/2^h, it follows that a(x) < 1 for all x
- * Thus, if alpha channel = 1.0, we have no scale data
- *
- *
- *
- * A note on image scale:
- *
- * scale = 1 means an image with its original size
- * scale = 2 means double the size (4x the area)
- * scale = 0.5 means half the size (1/4 the area)
- * and so on...
- */
-
-// Set image scale
-function setScale(scale)
-{
-    const lgM = Math.log2(_utils_globals__WEBPACK_IMPORTED_MODULE_2__["PYRAMID_MAX_SCALE"]), eps = 1e-5;
-    const pyramidMinScale = Math.pow(2, -_utils_globals__WEBPACK_IMPORTED_MODULE_2__["PYRAMID_MAX_LEVELS"]) + eps;
-    const x = Math.max(pyramidMinScale, Math.min(scale, _utils_globals__WEBPACK_IMPORTED_MODULE_2__["PYRAMID_MAX_SCALE"]));
-    const alpha = (lgM - Math.log2(x)) / (lgM + _utils_globals__WEBPACK_IMPORTED_MODULE_2__["PYRAMID_MAX_LEVELS"]);
-    
-    const source = `
-    uniform sampler2D image;
-
-    void main()
-    {
-        color = vec4(threadPixel(image).rgb, float(${alpha}));
-    }
-    `;
-
-    return Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["createShader"])(source).withArguments('image');
-}
-
-// Scale image by a factor
-function scale(scaleFactor)
-{
-    const lgM = Math.log2(_utils_globals__WEBPACK_IMPORTED_MODULE_2__["PYRAMID_MAX_SCALE"]), eps = 1e-5;
-    const s = Math.max(eps, scaleFactor);
-    const delta = -Math.log2(s) / (lgM + _utils_globals__WEBPACK_IMPORTED_MODULE_2__["PYRAMID_MAX_LEVELS"]);
-
-    const source = `
-    uniform sampler2D image;
-
-    void main()
-    {
-        vec4 pixel = threadPixel(image);
-        float alpha = clamp(pixel.a + float(${delta}), 0.0f, 1.0f);
-
-        color = vec4(pixel.rgb, alpha);
-    }
-    `;
-
-    return Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["createShader"])(source).withArguments('image');
 }
 
 /***/ }),
@@ -5522,9 +5448,6 @@ class GPUUtils extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Speed
             // no-operation
             .declare('identity', identity)
 
-            // flip y-axis
-            .declare('flipY', flipY)
-
             // output a texture from a pipeline
             .declare('output', flipY, {
                 ...this.program.displaysGraphics()
@@ -5534,6 +5457,9 @@ class GPUUtils extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Speed
             .declare('clone', identity, {
                 ...this.program.doesNotRecycleTextures()
             })
+
+            // flip y-axis
+            .declare('flipY', flipY)
 
             // Fill image with a constant
             .declare('fill', fill)
@@ -5786,6 +5712,7 @@ class ShaderDeclaration
         // change the fragment shader
         const source = DEFAULT_FRAGMENT_SHADER_PREFIX + defs.join('') + this._userSource;
         this._fragmentSource = _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__["ShaderPreprocessor"].run(source);
+        // is it necessary to rescan the code for uniforms? hmm....
 
         // done!
         return this;
@@ -5862,7 +5789,7 @@ class ShaderDeclaration
     _autodetectUniforms(preprocessedSource)
     {
         const sourceWithoutComments = preprocessedSource; // assume we've preprocessed the source already
-        const regex = /uniform\s+(highp\s+|mediump\s+|lowp\s+)?(\w+)\s+([^;]+)/g;
+        const regex = /^\s*uniform\s+(highp\s+|mediump\s+|lowp\s+)?(\w+)\s+([^;]+)/gm;
         const uniforms = { };
 
         let match;
@@ -5956,11 +5883,11 @@ const commentsRegex = [ /\/\*(.|\s)*?\*\//g , /\/\/.*$/gm ];
 const includeRegex = /^\s*@\s*include\s+"(.*?)"/gm;
 const constantRegex = /@(\w+)@/g;
 
-// Constant values accessible inside the shaders
+// Constants accessible by all shaders
 const constants = {
     // pyramids
     'PYRAMID_MAX_LEVELS': _utils_globals__WEBPACK_IMPORTED_MODULE_0__["PYRAMID_MAX_LEVELS"],
-    'LOG2_PYRAMID_MAX_SCALE': Math.log2(_utils_globals__WEBPACK_IMPORTED_MODULE_0__["PYRAMID_MAX_SCALE"]),
+    'LOG2_PYRAMID_MAX_SCALE': _utils_globals__WEBPACK_IMPORTED_MODULE_0__["LOG2_PYRAMID_MAX_SCALE"],
     'PYRAMID_MAX_OCTAVES': _utils_globals__WEBPACK_IMPORTED_MODULE_0__["PYRAMID_MAX_OCTAVES"],
 
     // colors
@@ -6027,6 +5954,7 @@ var map = {
 	"./encoders/encode-keypoint-offsets.glsl": "./src/gpu/shaders/encoders/encode-keypoint-offsets.glsl",
 	"./encoders/encode-keypoints.glsl": "./src/gpu/shaders/encoders/encode-keypoints.glsl",
 	"./encoders/orient-encoded-keypoints.glsl": "./src/gpu/shaders/encoders/orient-encoded-keypoints.glsl",
+	"./encoders/upload-keypoints.glsl": "./src/gpu/shaders/encoders/upload-keypoints.glsl",
 	"./enhancements/nightvision.glsl": "./src/gpu/shaders/enhancements/nightvision.glsl",
 	"./enhancements/normalize-image.glsl": "./src/gpu/shaders/enhancements/normalize-image.glsl",
 	"./filters/convolution": "./src/gpu/shaders/filters/convolution.js",
@@ -6037,6 +5965,7 @@ var map = {
 	"./include/colors.glsl": "./src/gpu/shaders/include/colors.glsl",
 	"./include/fixed-point.glsl": "./src/gpu/shaders/include/fixed-point.glsl",
 	"./include/global.glsl": "./src/gpu/shaders/include/global.glsl",
+	"./include/keypoints.glsl": "./src/gpu/shaders/include/keypoints.glsl",
 	"./include/math.glsl": "./src/gpu/shaders/include/math.glsl",
 	"./include/orientation.glsl": "./src/gpu/shaders/include/orientation.glsl",
 	"./include/pyramids.glsl": "./src/gpu/shaders/include/pyramids.glsl",
@@ -6055,12 +5984,8 @@ var map = {
 	"./keypoints/multiscale-suppression.glsl": "./src/gpu/shaders/keypoints/multiscale-suppression.glsl",
 	"./keypoints/nonmax-suppression.glsl": "./src/gpu/shaders/keypoints/nonmax-suppression.glsl",
 	"./keypoints/samescale-suppression.glsl": "./src/gpu/shaders/keypoints/samescale-suppression.glsl",
-	"./pyramids/crop.glsl": "./src/gpu/shaders/pyramids/crop.glsl",
 	"./pyramids/downsample2.glsl": "./src/gpu/shaders/pyramids/downsample2.glsl",
 	"./pyramids/downsample3.glsl": "./src/gpu/shaders/pyramids/downsample3.glsl",
-	"./pyramids/merge-keypoints-at-consecutive-levels.glsl": "./src/gpu/shaders/pyramids/merge-keypoints-at-consecutive-levels.glsl",
-	"./pyramids/merge-keypoints.glsl": "./src/gpu/shaders/pyramids/merge-keypoints.glsl",
-	"./pyramids/normalize-keypoints.glsl": "./src/gpu/shaders/pyramids/normalize-keypoints.glsl",
 	"./pyramids/upsample2.glsl": "./src/gpu/shaders/pyramids/upsample2.glsl",
 	"./pyramids/upsample3.glsl": "./src/gpu/shaders/pyramids/upsample3.glsl",
 	"./utils/copy-components.glsl": "./src/gpu/shaders/utils/copy-components.glsl",
@@ -6111,7 +6036,7 @@ module.exports = "const vec4 grey = vec4(0.299f, 0.587f, 0.114f, 0.0f);\nuniform
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"math.glsl\"\n@include \"pyramids.glsl\"\n@include \"orientation.glsl\"\n@include \"fixed-point.glsl\"\nuniform sampler2D encodedCorners;\nuniform int encoderLength;\nuniform sampler2D pyramid;\nconst int descriptorSize = 32;\nconst int pixelsPerKeypoint = 10;\nconst ivec4 pat31[256] = ivec4[256](\nivec4(8,-3,9,5),\nivec4(4,2,7,-12),\nivec4(-11,9,-8,2),\nivec4(7,-12,12,-13),\nivec4(2,-13,2,12),\nivec4(1,-7,1,6),\nivec4(-2,-10,-2,-4),\nivec4(-13,-13,-11,-8),\nivec4(-13,-3,-12,-9),\nivec4(10,4,11,9),\nivec4(-13,-8,-8,-9),\nivec4(-11,7,-9,12),\nivec4(7,7,12,6),\nivec4(-4,-5,-3,0),\nivec4(-13,2,-12,-3),\nivec4(-9,0,-7,5),\nivec4(12,-6,12,-1),\nivec4(-3,6,-2,12),\nivec4(-6,-13,-4,-8),\nivec4(11,-13,12,-8),\nivec4(4,7,5,1),\nivec4(5,-3,10,-3),\nivec4(3,-7,6,12),\nivec4(-8,-7,-6,-2),\nivec4(-2,11,-1,-10),\nivec4(-13,12,-8,10),\nivec4(-7,3,-5,-3),\nivec4(-4,2,-3,7),\nivec4(-10,-12,-6,11),\nivec4(5,-12,6,-7),\nivec4(5,-6,7,-1),\nivec4(1,0,4,-5),\nivec4(9,11,11,-13),\nivec4(4,7,4,12),\nivec4(2,-1,4,4),\nivec4(-4,-12,-2,7),\nivec4(-8,-5,-7,-10),\nivec4(4,11,9,12),\nivec4(0,-8,1,-13),\nivec4(-13,-2,-8,2),\nivec4(-3,-2,-2,3),\nivec4(-6,9,-4,-9),\nivec4(8,12,10,7),\nivec4(0,9,1,3),\nivec4(7,-5,11,-10),\nivec4(-13,-6,-11,0),\nivec4(10,7,12,1),\nivec4(-6,-3,-6,12),\nivec4(10,-9,12,-4),\nivec4(-13,8,-8,-12),\nivec4(-13,0,-8,-4),\nivec4(3,3,7,8),\nivec4(5,7,10,-7),\nivec4(-1,7,1,-12),\nivec4(3,-10,5,6),\nivec4(2,-4,3,-10),\nivec4(-13,0,-13,5),\nivec4(-13,-7,-12,12),\nivec4(-13,3,-11,8),\nivec4(-7,12,-4,7),\nivec4(6,-10,12,8),\nivec4(-9,-1,-7,-6),\nivec4(-2,-5,0,12),\nivec4(-12,5,-7,5),\nivec4(3,-10,8,-13),\nivec4(-7,-7,-4,5),\nivec4(-3,-2,-1,-7),\nivec4(2,9,5,-11),\nivec4(-11,-13,-5,-13),\nivec4(-1,6,0,-1),\nivec4(5,-3,5,2),\nivec4(-4,-13,-4,12),\nivec4(-9,-6,-9,6),\nivec4(-12,-10,-8,-4),\nivec4(10,2,12,-3),\nivec4(7,12,12,12),\nivec4(-7,-13,-6,5),\nivec4(-4,9,-3,4),\nivec4(7,-1,12,2),\nivec4(-7,6,-5,1),\nivec4(-13,11,-12,5),\nivec4(-3,7,-2,-6),\nivec4(7,-8,12,-7),\nivec4(-13,-7,-11,-12),\nivec4(1,-3,12,12),\nivec4(2,-6,3,0),\nivec4(-4,3,-2,-13),\nivec4(-1,-13,1,9),\nivec4(7,1,8,-6),\nivec4(1,-1,3,12),\nivec4(9,1,12,6),\nivec4(-1,-9,-1,3),\nivec4(-13,-13,-10,5),\nivec4(7,7,10,12),\nivec4(12,-5,12,9),\nivec4(6,3,7,11),\nivec4(5,-13,6,10),\nivec4(2,-12,2,3),\nivec4(3,8,4,-6),\nivec4(2,6,12,-13),\nivec4(9,-12,10,3),\nivec4(-8,4,-7,9),\nivec4(-11,12,-4,-6),\nivec4(1,12,2,-8),\nivec4(6,-9,7,-4),\nivec4(2,3,3,-2),\nivec4(6,3,11,0),\nivec4(3,-3,8,-8),\nivec4(7,8,9,3),\nivec4(-11,-5,-6,-4),\nivec4(-10,11,-5,10),\nivec4(-5,-8,-3,12),\nivec4(-10,5,-9,0),\nivec4(8,-1,12,-6),\nivec4(4,-6,6,-11),\nivec4(-10,12,-8,7),\nivec4(4,-2,6,7),\nivec4(-2,0,-2,12),\nivec4(-5,-8,-5,2),\nivec4(7,-6,10,12),\nivec4(-9,-13,-8,-8),\nivec4(-5,-13,-5,-2),\nivec4(8,-8,9,-13),\nivec4(-9,-11,-9,0),\nivec4(1,-8,1,-2),\nivec4(7,-4,9,1),\nivec4(-2,1,-1,-4),\nivec4(11,-6,12,-11),\nivec4(-12,-9,-6,4),\nivec4(3,7,7,12),\nivec4(5,5,10,8),\nivec4(0,-4,2,8),\nivec4(-9,12,-5,-13),\nivec4(0,7,2,12),\nivec4(-1,2,1,7),\nivec4(5,11,7,-9),\nivec4(3,5,6,-8),\nivec4(-13,-4,-8,9),\nivec4(-5,9,-3,-3),\nivec4(-4,-7,-3,-12),\nivec4(6,5,8,0),\nivec4(-7,6,-6,12),\nivec4(-13,6,-5,-2),\nivec4(1,-10,3,10),\nivec4(4,1,8,-4),\nivec4(-2,-2,2,-13),\nivec4(2,-12,12,12),\nivec4(-2,-13,0,-6),\nivec4(4,1,9,3),\nivec4(-6,-10,-3,-5),\nivec4(-3,-13,-1,1),\nivec4(7,5,12,-11),\nivec4(4,-2,5,-7),\nivec4(-13,9,-9,-5),\nivec4(7,1,8,6),\nivec4(7,-8,7,6),\nivec4(-7,-4,-7,1),\nivec4(-8,11,-7,-8),\nivec4(-13,6,-12,-8),\nivec4(2,4,3,9),\nivec4(10,-5,12,3),\nivec4(-6,-5,-6,7),\nivec4(8,-3,9,-8),\nivec4(2,-12,2,8),\nivec4(-11,-2,-10,3),\nivec4(-12,-13,-7,-9),\nivec4(-11,0,-10,-5),\nivec4(5,-3,11,8),\nivec4(-2,-13,-1,12),\nivec4(-1,-8,0,9),\nivec4(-13,-11,-12,-5),\nivec4(-10,-2,-10,11),\nivec4(-3,9,-2,-13),\nivec4(2,-3,3,2),\nivec4(-9,-13,-4,0),\nivec4(-4,6,-3,-10),\nivec4(-4,12,-2,-7),\nivec4(-6,-11,-4,9),\nivec4(6,-3,6,11),\nivec4(-13,11,-5,5),\nivec4(11,11,12,6),\nivec4(7,-5,12,-2),\nivec4(-1,12,0,7),\nivec4(-4,-8,-3,-2),\nivec4(-7,1,-6,7),\nivec4(-13,-12,-8,-13),\nivec4(-7,-2,-6,-8),\nivec4(-8,5,-6,-9),\nivec4(-5,-1,-4,5),\nivec4(-13,7,-8,10),\nivec4(1,5,5,-13),\nivec4(1,0,10,-13),\nivec4(9,12,10,-1),\nivec4(5,-8,10,-9),\nivec4(-1,11,1,-13),\nivec4(-9,-3,-6,2),\nivec4(-1,-10,1,12),\nivec4(-13,1,-8,-10),\nivec4(8,-11,10,-6),\nivec4(2,-13,3,-6),\nivec4(7,-13,12,-9),\nivec4(-10,-10,-5,-7),\nivec4(-10,-8,-8,-13),\nivec4(4,-6,8,5),\nivec4(3,12,8,-13),\nivec4(-4,2,-3,-3),\nivec4(5,-13,10,-12),\nivec4(4,-13,5,-1),\nivec4(-9,9,-4,3),\nivec4(0,3,3,-9),\nivec4(-12,1,-6,1),\nivec4(3,2,4,-8),\nivec4(-10,-10,-10,9),\nivec4(8,-13,12,12),\nivec4(-8,-12,-6,-5),\nivec4(2,2,3,7),\nivec4(10,6,11,-8),\nivec4(6,8,8,-12),\nivec4(-7,10,-6,5),\nivec4(-3,-9,-3,9),\nivec4(-1,-13,-1,5),\nivec4(-3,-7,-3,4),\nivec4(-8,-2,-8,3),\nivec4(4,2,12,12),\nivec4(2,-5,3,11),\nivec4(6,-9,11,-13),\nivec4(3,-1,7,12),\nivec4(11,-1,12,4),\nivec4(-3,0,-3,6),\nivec4(4,-11,4,12),\nivec4(2,-4,2,1),\nivec4(-10,-6,-8,1),\nivec4(-13,7,-11,1),\nivec4(-13,12,-11,-13),\nivec4(6,0,11,-13),\nivec4(0,-1,1,4),\nivec4(-13,3,-9,-2),\nivec4(-9,8,-6,-3),\nivec4(-13,-6,-8,-2),\nivec4(5,-9,8,10),\nivec4(2,7,3,-9),\nivec4(-1,-6,-1,-1),\nivec4(9,5,11,-2),\nivec4(11,-3,12,-8),\nivec4(3,0,3,5),\nivec4(-1,4,0,10),\nivec4(3,-6,4,5),\nivec4(-13,0,-10,5),\nivec4(5,8,12,11),\nivec4(8,9,9,-6),\nivec4(7,-4,8,-12),\nivec4(-10,4,-10,9),\nivec4(7,3,12,4),\nivec4(9,-7,10,-2),\nivec4(7,0,12,-2),\nivec4(-1,-6,0,-11)\n);\nvoid getPair(int index, float kcos, float ksin, out ivec2 p, out ivec2 q)\n{\nivec4 data = pat31[index];\nvec2 op = vec2(data.xy);\nvec2 oq = vec2(data.zw);\np = ivec2(round(op.x * kcos - op.y * ksin), round(op.x * ksin + op.y * kcos));\nq = ivec2(round(oq.x * kcos - oq.y * ksin), round(oq.x * ksin + oq.y * kcos));\n}\nstruct ORBFeature\n{\nvec2 position;\nfloat orientation;\nfloat lod;\n};\nvoid main()\n{\nORBFeature keypoint;\nvec4 pixel = threadPixel(encodedCorners);\nivec2 thread = threadLocation();\nint threadRaster = thread.y * encoderLength + thread.x;\nint keypointId = int(threadRaster / pixelsPerKeypoint);\nint descriptorCell = threadRaster % pixelsPerKeypoint - 2;\ncolor = pixel;\nif(descriptorCell < 0)\nreturn;\nint positionCell = keypointId * pixelsPerKeypoint;\nivec2 positionCellPos = ivec2(positionCell % encoderLength, positionCell / encoderLength);\nivec4 encodedPosition = ivec4(texelFetch(encodedCorners, positionCellPos, 0) * 255.0f);\nkeypoint.position = fixtovec2(fixed2_t(\nencodedPosition.r | (encodedPosition.g << 8),\nencodedPosition.b | (encodedPosition.a << 8)\n));\nint propertiesCell = keypointId * pixelsPerKeypoint + 1;\nivec2 propertiesCellPos = ivec2(propertiesCell % encoderLength, propertiesCell / encoderLength);\nvec4 encodedProperties = texelFetch(encodedCorners, propertiesCellPos, 0);\nkeypoint.orientation = decodeOrientation(encodedProperties.g);\nkeypoint.lod = decodeLod(encodedProperties.r);\nfloat pot = exp2(keypoint.lod);\nvec2 kpos = keypoint.position;\nfloat kcos = cos(keypoint.orientation);\nfloat ksin = sin(keypoint.orientation);\nvec2 imageSize = vec2(textureSize(pyramid, 0));\nint patternStart = 32 * descriptorCell;\nuint test[4] = uint[4](0u, 0u, 0u, 0u);\nfor(int t = 0; t < 4; t++) {\nuint bits = 0u;\nivec2 p, q;\nvec4 a, b;\nint i = t * 8;\nfor(int j = 0; j < 8; j++) {\ngetPair(patternStart + i + j, kcos, ksin, p, q);\na = pyrPixelAtEx(pyramid, round(kpos + pot * vec2(p)), keypoint.lod, imageSize);\nb = pyrPixelAtEx(pyramid, round(kpos + pot * vec2(q)), keypoint.lod, imageSize);\nbits |= uint(a.g < b.g) << j;\n}\ntest[t] = bits;\n}\ncolor = vec4(float(test[0]) / 255.0f, float(test[1]) / 255.0f, float(test[2]) / 255.0f, float(test[3]) / 255.0f);\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedCorners;\nuniform int encoderLength;\nuniform sampler2D pyramid;\nconst int descriptorSize = 32;\nconst ivec4 pat31[256] = ivec4[256](\nivec4(8,-3,9,5),\nivec4(4,2,7,-12),\nivec4(-11,9,-8,2),\nivec4(7,-12,12,-13),\nivec4(2,-13,2,12),\nivec4(1,-7,1,6),\nivec4(-2,-10,-2,-4),\nivec4(-13,-13,-11,-8),\nivec4(-13,-3,-12,-9),\nivec4(10,4,11,9),\nivec4(-13,-8,-8,-9),\nivec4(-11,7,-9,12),\nivec4(7,7,12,6),\nivec4(-4,-5,-3,0),\nivec4(-13,2,-12,-3),\nivec4(-9,0,-7,5),\nivec4(12,-6,12,-1),\nivec4(-3,6,-2,12),\nivec4(-6,-13,-4,-8),\nivec4(11,-13,12,-8),\nivec4(4,7,5,1),\nivec4(5,-3,10,-3),\nivec4(3,-7,6,12),\nivec4(-8,-7,-6,-2),\nivec4(-2,11,-1,-10),\nivec4(-13,12,-8,10),\nivec4(-7,3,-5,-3),\nivec4(-4,2,-3,7),\nivec4(-10,-12,-6,11),\nivec4(5,-12,6,-7),\nivec4(5,-6,7,-1),\nivec4(1,0,4,-5),\nivec4(9,11,11,-13),\nivec4(4,7,4,12),\nivec4(2,-1,4,4),\nivec4(-4,-12,-2,7),\nivec4(-8,-5,-7,-10),\nivec4(4,11,9,12),\nivec4(0,-8,1,-13),\nivec4(-13,-2,-8,2),\nivec4(-3,-2,-2,3),\nivec4(-6,9,-4,-9),\nivec4(8,12,10,7),\nivec4(0,9,1,3),\nivec4(7,-5,11,-10),\nivec4(-13,-6,-11,0),\nivec4(10,7,12,1),\nivec4(-6,-3,-6,12),\nivec4(10,-9,12,-4),\nivec4(-13,8,-8,-12),\nivec4(-13,0,-8,-4),\nivec4(3,3,7,8),\nivec4(5,7,10,-7),\nivec4(-1,7,1,-12),\nivec4(3,-10,5,6),\nivec4(2,-4,3,-10),\nivec4(-13,0,-13,5),\nivec4(-13,-7,-12,12),\nivec4(-13,3,-11,8),\nivec4(-7,12,-4,7),\nivec4(6,-10,12,8),\nivec4(-9,-1,-7,-6),\nivec4(-2,-5,0,12),\nivec4(-12,5,-7,5),\nivec4(3,-10,8,-13),\nivec4(-7,-7,-4,5),\nivec4(-3,-2,-1,-7),\nivec4(2,9,5,-11),\nivec4(-11,-13,-5,-13),\nivec4(-1,6,0,-1),\nivec4(5,-3,5,2),\nivec4(-4,-13,-4,12),\nivec4(-9,-6,-9,6),\nivec4(-12,-10,-8,-4),\nivec4(10,2,12,-3),\nivec4(7,12,12,12),\nivec4(-7,-13,-6,5),\nivec4(-4,9,-3,4),\nivec4(7,-1,12,2),\nivec4(-7,6,-5,1),\nivec4(-13,11,-12,5),\nivec4(-3,7,-2,-6),\nivec4(7,-8,12,-7),\nivec4(-13,-7,-11,-12),\nivec4(1,-3,12,12),\nivec4(2,-6,3,0),\nivec4(-4,3,-2,-13),\nivec4(-1,-13,1,9),\nivec4(7,1,8,-6),\nivec4(1,-1,3,12),\nivec4(9,1,12,6),\nivec4(-1,-9,-1,3),\nivec4(-13,-13,-10,5),\nivec4(7,7,10,12),\nivec4(12,-5,12,9),\nivec4(6,3,7,11),\nivec4(5,-13,6,10),\nivec4(2,-12,2,3),\nivec4(3,8,4,-6),\nivec4(2,6,12,-13),\nivec4(9,-12,10,3),\nivec4(-8,4,-7,9),\nivec4(-11,12,-4,-6),\nivec4(1,12,2,-8),\nivec4(6,-9,7,-4),\nivec4(2,3,3,-2),\nivec4(6,3,11,0),\nivec4(3,-3,8,-8),\nivec4(7,8,9,3),\nivec4(-11,-5,-6,-4),\nivec4(-10,11,-5,10),\nivec4(-5,-8,-3,12),\nivec4(-10,5,-9,0),\nivec4(8,-1,12,-6),\nivec4(4,-6,6,-11),\nivec4(-10,12,-8,7),\nivec4(4,-2,6,7),\nivec4(-2,0,-2,12),\nivec4(-5,-8,-5,2),\nivec4(7,-6,10,12),\nivec4(-9,-13,-8,-8),\nivec4(-5,-13,-5,-2),\nivec4(8,-8,9,-13),\nivec4(-9,-11,-9,0),\nivec4(1,-8,1,-2),\nivec4(7,-4,9,1),\nivec4(-2,1,-1,-4),\nivec4(11,-6,12,-11),\nivec4(-12,-9,-6,4),\nivec4(3,7,7,12),\nivec4(5,5,10,8),\nivec4(0,-4,2,8),\nivec4(-9,12,-5,-13),\nivec4(0,7,2,12),\nivec4(-1,2,1,7),\nivec4(5,11,7,-9),\nivec4(3,5,6,-8),\nivec4(-13,-4,-8,9),\nivec4(-5,9,-3,-3),\nivec4(-4,-7,-3,-12),\nivec4(6,5,8,0),\nivec4(-7,6,-6,12),\nivec4(-13,6,-5,-2),\nivec4(1,-10,3,10),\nivec4(4,1,8,-4),\nivec4(-2,-2,2,-13),\nivec4(2,-12,12,12),\nivec4(-2,-13,0,-6),\nivec4(4,1,9,3),\nivec4(-6,-10,-3,-5),\nivec4(-3,-13,-1,1),\nivec4(7,5,12,-11),\nivec4(4,-2,5,-7),\nivec4(-13,9,-9,-5),\nivec4(7,1,8,6),\nivec4(7,-8,7,6),\nivec4(-7,-4,-7,1),\nivec4(-8,11,-7,-8),\nivec4(-13,6,-12,-8),\nivec4(2,4,3,9),\nivec4(10,-5,12,3),\nivec4(-6,-5,-6,7),\nivec4(8,-3,9,-8),\nivec4(2,-12,2,8),\nivec4(-11,-2,-10,3),\nivec4(-12,-13,-7,-9),\nivec4(-11,0,-10,-5),\nivec4(5,-3,11,8),\nivec4(-2,-13,-1,12),\nivec4(-1,-8,0,9),\nivec4(-13,-11,-12,-5),\nivec4(-10,-2,-10,11),\nivec4(-3,9,-2,-13),\nivec4(2,-3,3,2),\nivec4(-9,-13,-4,0),\nivec4(-4,6,-3,-10),\nivec4(-4,12,-2,-7),\nivec4(-6,-11,-4,9),\nivec4(6,-3,6,11),\nivec4(-13,11,-5,5),\nivec4(11,11,12,6),\nivec4(7,-5,12,-2),\nivec4(-1,12,0,7),\nivec4(-4,-8,-3,-2),\nivec4(-7,1,-6,7),\nivec4(-13,-12,-8,-13),\nivec4(-7,-2,-6,-8),\nivec4(-8,5,-6,-9),\nivec4(-5,-1,-4,5),\nivec4(-13,7,-8,10),\nivec4(1,5,5,-13),\nivec4(1,0,10,-13),\nivec4(9,12,10,-1),\nivec4(5,-8,10,-9),\nivec4(-1,11,1,-13),\nivec4(-9,-3,-6,2),\nivec4(-1,-10,1,12),\nivec4(-13,1,-8,-10),\nivec4(8,-11,10,-6),\nivec4(2,-13,3,-6),\nivec4(7,-13,12,-9),\nivec4(-10,-10,-5,-7),\nivec4(-10,-8,-8,-13),\nivec4(4,-6,8,5),\nivec4(3,12,8,-13),\nivec4(-4,2,-3,-3),\nivec4(5,-13,10,-12),\nivec4(4,-13,5,-1),\nivec4(-9,9,-4,3),\nivec4(0,3,3,-9),\nivec4(-12,1,-6,1),\nivec4(3,2,4,-8),\nivec4(-10,-10,-10,9),\nivec4(8,-13,12,12),\nivec4(-8,-12,-6,-5),\nivec4(2,2,3,7),\nivec4(10,6,11,-8),\nivec4(6,8,8,-12),\nivec4(-7,10,-6,5),\nivec4(-3,-9,-3,9),\nivec4(-1,-13,-1,5),\nivec4(-3,-7,-3,4),\nivec4(-8,-2,-8,3),\nivec4(4,2,12,12),\nivec4(2,-5,3,11),\nivec4(6,-9,11,-13),\nivec4(3,-1,7,12),\nivec4(11,-1,12,4),\nivec4(-3,0,-3,6),\nivec4(4,-11,4,12),\nivec4(2,-4,2,1),\nivec4(-10,-6,-8,1),\nivec4(-13,7,-11,1),\nivec4(-13,12,-11,-13),\nivec4(6,0,11,-13),\nivec4(0,-1,1,4),\nivec4(-13,3,-9,-2),\nivec4(-9,8,-6,-3),\nivec4(-13,-6,-8,-2),\nivec4(5,-9,8,10),\nivec4(2,7,3,-9),\nivec4(-1,-6,-1,-1),\nivec4(9,5,11,-2),\nivec4(11,-3,12,-8),\nivec4(3,0,3,5),\nivec4(-1,4,0,10),\nivec4(3,-6,4,5),\nivec4(-13,0,-10,5),\nivec4(5,8,12,11),\nivec4(8,9,9,-6),\nivec4(7,-4,8,-12),\nivec4(-10,4,-10,9),\nivec4(7,3,12,4),\nivec4(9,-7,10,-2),\nivec4(7,0,12,-2),\nivec4(-1,-6,0,-11)\n);\nvoid getPair(int index, float kcos, float ksin, out ivec2 p, out ivec2 q)\n{\nivec4 data = pat31[index];\nvec2 op = vec2(data.xy);\nvec2 oq = vec2(data.zw);\np = ivec2(round(op.x * kcos - op.y * ksin), round(op.x * ksin + op.y * kcos));\nq = ivec2(round(oq.x * kcos - oq.y * ksin), round(oq.x * ksin + oq.y * kcos));\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedCorners);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);\nint descriptorCell = address.offset - 2;\ncolor = pixel;\nif(descriptorCell < 0)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedCorners, encoderLength, address);\nfloat pot = exp2(keypoint.lod);\nfloat kcos = cos(keypoint.orientation);\nfloat ksin = sin(keypoint.orientation);\nvec2 imageSize = vec2(textureSize(pyramid, 0));\nint patternStart = 32 * descriptorCell;\nuint test[4] = uint[4](0u, 0u, 0u, 0u);\nfor(int t = 0; t < 4; t++) {\nuint bits = 0u;\nivec2 p, q;\nvec4 a, b;\nint i = t * 8;\nfor(int j = 0; j < 8; j++) {\ngetPair(patternStart + i + j, kcos, ksin, p, q);\na = pyrPixelAtEx(pyramid, round(keypoint.position + pot * vec2(p)), keypoint.lod, imageSize);\nb = pyrPixelAtEx(pyramid, round(keypoint.position + pot * vec2(q)), keypoint.lod, imageSize);\nbits |= uint(a.g < b.g) << j;\n}\ntest[t] = bits;\n}\ncolor = vec4(float(test[0]), float(test[1]), float(test[2]), float(test[3])) / 255.0f;\n}"
 
 /***/ }),
 
@@ -6133,7 +6058,7 @@ module.exports = "uniform sampler2D image;\nuniform ivec2 imageSize;\nuniform in
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"orientation.glsl\"\n@include \"fixed-point.glsl\"\nuniform sampler2D image;\nuniform ivec2 imageSize;\nuniform int encoderLength;\nuniform int descriptorSize;\nbool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)\n{\nint i = 0, p = 0;\nfor(position = ivec2(0, 0); position.y < imageSize.y; ) {\npixel = texelFetch(image, position, 0);\nif(pixel.r > 0.0f) {\nif(p++ == q)\nreturn true;\n}\ni += 1 + int(pixel.g * 255.0f);\nposition = ivec2(i % imageSize.x, i / imageSize.x);\n}\nreturn false;\n}\nvoid main()\n{\nvec4 pixel;\nivec2 position;\nivec2 thread = threadLocation();\nint p = encoderLength * thread.y + thread.x;\nint d = 2 + descriptorSize / 4;\nint q = p / d;\ncolor = vec4(1.0f, 1.0f, 1.0f, 1.0f);\nif(findQthKeypoint(q, position, pixel)) {\nint r = p % d;\nswitch(r) {\ncase 0: {\nfixed2_t pos = ivec2tofix(position);\nfixed2_t lo = pos & 255;\nfixed2_t hi = pos >> 8;\ncolor = vec4(float(lo.x), float(hi.x), float(lo.y), float(hi.y)) / 255.0f;\nbreak;\n}\ncase 1: {\nfloat score = pixel.r;\nfloat scale = pixel.a;\nfloat rotation = encodeOrientation(0.0f);\ncolor = vec4(scale, rotation, score, 0.0f);\nbreak;\n}\ndefault: {\ncolor = vec4(0.0f);\nbreak;\n}\n}\n}\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D image;\nuniform ivec2 imageSize;\nuniform int encoderLength;\nuniform int descriptorSize;\nbool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)\n{\nint i = 0, p = 0;\nfor(position = ivec2(0, 0); position.y < imageSize.y; ) {\npixel = texelFetch(image, position, 0);\nif(pixel.r > 0.0f) {\nif(p++ == q)\nreturn true;\n}\ni += 1 + int(pixel.g * 255.0f);\nposition = ivec2(i % imageSize.x, i / imageSize.x);\n}\nreturn false;\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);\nint q = findKeypointIndex(address, descriptorSize);\nivec2 position; vec4 pixel;\ncolor = vec4(1.0f, 1.0f, 1.0f, 1.0f);\nif(findQthKeypoint(q, position, pixel)) {\nswitch(address.offset) {\ncase 0: {\nfixed2_t pos = ivec2tofix(position);\nfixed2_t lo = pos & 255;\nfixed2_t hi = pos >> 8;\ncolor = vec4(float(lo.x), float(hi.x), float(lo.y), float(hi.y)) / 255.0f;\nbreak;\n}\ncase 1: {\nfloat score = pixel.r;\nfloat scale = pixel.a;\nfloat rotation = encodeOrientation(0.0f);\ncolor = vec4(scale, rotation, score, 0.0f);\nbreak;\n}\ndefault: {\ncolor = vec4(0.0f);\nbreak;\n}\n}\n}\n}"
 
 /***/ }),
 
@@ -6144,7 +6069,18 @@ module.exports = "@include \"orientation.glsl\"\n@include \"fixed-point.glsl\"\n
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"math.glsl\"\n@include \"pyramids.glsl\"\n@include \"orientation.glsl\"\n@include \"fixed-point.glsl\"\nuniform sampler2D pyramid;\nuniform int patchRadius;\nuniform sampler2D encodedKeypoints;\nuniform int encoderLength;\nuniform int descriptorSize;\nconst int patchStart[8] = int[8](0, 0, 8, 28, 64, 132, 228, 356);\nconst int patchPointCount[8] = int[8](0, 8, 20, 36, 68, 96, 128, 168);\nconst ivec2 patchData[524] = ivec2[524](\nivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(-1,0),ivec2(1,0),ivec2(-1,1),ivec2(0,1),ivec2(1,1),\nivec2(-1,-2),ivec2(0,-2),ivec2(1,-2),ivec2(-2,-1),ivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(2,-1),ivec2(-2,0),ivec2(-1,0),ivec2(1,0),ivec2(2,0),ivec2(-2,1),ivec2(-1,1),ivec2(0,1),ivec2(1,1),ivec2(2,1),ivec2(-1,2),ivec2(0,2),ivec2(1,2),\nivec2(-1,-3),ivec2(0,-3),ivec2(1,-3),ivec2(-2,-2),ivec2(-1,-2),ivec2(0,-2),ivec2(1,-2),ivec2(2,-2),ivec2(-3,-1),ivec2(-2,-1),ivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(2,-1),ivec2(3,-1),ivec2(-3,0),ivec2(-2,0),ivec2(-1,0),ivec2(1,0),ivec2(2,0),ivec2(3,0),ivec2(-3,1),ivec2(-2,1),ivec2(-1,1),ivec2(0,1),ivec2(1,1),ivec2(2,1),ivec2(3,1),ivec2(-2,2),ivec2(-1,2),ivec2(0,2),ivec2(1,2),ivec2(2,2),ivec2(-1,3),ivec2(0,3),ivec2(1,3),\nivec2(-2,-4),ivec2(-1,-4),ivec2(0,-4),ivec2(1,-4),ivec2(2,-4),ivec2(-3,-3),ivec2(-2,-3),ivec2(-1,-3),ivec2(0,-3),ivec2(1,-3),ivec2(2,-3),ivec2(3,-3),ivec2(-4,-2),ivec2(-3,-2),ivec2(-2,-2),ivec2(-1,-2),ivec2(0,-2),ivec2(1,-2),ivec2(2,-2),ivec2(3,-2),ivec2(4,-2),ivec2(-4,-1),ivec2(-3,-1),ivec2(-2,-1),ivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(2,-1),ivec2(3,-1),ivec2(4,-1),ivec2(-4,0),ivec2(-3,0),ivec2(-2,0),ivec2(-1,0),ivec2(1,0),ivec2(2,0),ivec2(3,0),ivec2(4,0),ivec2(-4,1),ivec2(-3,1),ivec2(-2,1),ivec2(-1,1),ivec2(0,1),ivec2(1,1),ivec2(2,1),ivec2(3,1),ivec2(4,1),ivec2(-4,2),ivec2(-3,2),ivec2(-2,2),ivec2(-1,2),ivec2(0,2),ivec2(1,2),ivec2(2,2),ivec2(3,2),ivec2(4,2),ivec2(-3,3),ivec2(-2,3),ivec2(-1,3),ivec2(0,3),ivec2(1,3),ivec2(2,3),ivec2(3,3),ivec2(-2,4),ivec2(-1,4),ivec2(0,4),ivec2(1,4),ivec2(2,4),\nivec2(-2,-5),ivec2(-1,-5),ivec2(0,-5),ivec2(1,-5),ivec2(2,-5),ivec2(-3,-4),ivec2(-2,-4),ivec2(-1,-4),ivec2(0,-4),ivec2(1,-4),ivec2(2,-4),ivec2(3,-4),ivec2(-4,-3),ivec2(-3,-3),ivec2(-2,-3),ivec2(-1,-3),ivec2(0,-3),ivec2(1,-3),ivec2(2,-3),ivec2(3,-3),ivec2(4,-3),ivec2(-5,-2),ivec2(-4,-2),ivec2(-3,-2),ivec2(-2,-2),ivec2(-1,-2),ivec2(0,-2),ivec2(1,-2),ivec2(2,-2),ivec2(3,-2),ivec2(4,-2),ivec2(5,-2),ivec2(-5,-1),ivec2(-4,-1),ivec2(-3,-1),ivec2(-2,-1),ivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(2,-1),ivec2(3,-1),ivec2(4,-1),ivec2(5,-1),ivec2(-5,0),ivec2(-4,0),ivec2(-3,0),ivec2(-2,0),ivec2(-1,0),ivec2(1,0),ivec2(2,0),ivec2(3,0),ivec2(4,0),ivec2(5,0),ivec2(-5,1),ivec2(-4,1),ivec2(-3,1),ivec2(-2,1),ivec2(-1,1),ivec2(0,1),ivec2(1,1),ivec2(2,1),ivec2(3,1),ivec2(4,1),ivec2(5,1),ivec2(-5,2),ivec2(-4,2),ivec2(-3,2),ivec2(-2,2),ivec2(-1,2),ivec2(0,2),ivec2(1,2),ivec2(2,2),ivec2(3,2),ivec2(4,2),ivec2(5,2),ivec2(-4,3),ivec2(-3,3),ivec2(-2,3),ivec2(-1,3),ivec2(0,3),ivec2(1,3),ivec2(2,3),ivec2(3,3),ivec2(4,3),ivec2(-3,4),ivec2(-2,4),ivec2(-1,4),ivec2(0,4),ivec2(1,4),ivec2(2,4),ivec2(3,4),ivec2(-2,5),ivec2(-1,5),ivec2(0,5),ivec2(1,5),ivec2(2,5),\nivec2(-2,-6),ivec2(-1,-6),ivec2(0,-6),ivec2(1,-6),ivec2(2,-6),ivec2(-3,-5),ivec2(-2,-5),ivec2(-1,-5),ivec2(0,-5),ivec2(1,-5),ivec2(2,-5),ivec2(3,-5),ivec2(-4,-4),ivec2(-3,-4),ivec2(-2,-4),ivec2(-1,-4),ivec2(0,-4),ivec2(1,-4),ivec2(2,-4),ivec2(3,-4),ivec2(4,-4),ivec2(-5,-3),ivec2(-4,-3),ivec2(-3,-3),ivec2(-2,-3),ivec2(-1,-3),ivec2(0,-3),ivec2(1,-3),ivec2(2,-3),ivec2(3,-3),ivec2(4,-3),ivec2(5,-3),ivec2(-6,-2),ivec2(-5,-2),ivec2(-4,-2),ivec2(-3,-2),ivec2(-2,-2),ivec2(-1,-2),ivec2(0,-2),ivec2(1,-2),ivec2(2,-2),ivec2(3,-2),ivec2(4,-2),ivec2(5,-2),ivec2(6,-2),ivec2(-6,-1),ivec2(-5,-1),ivec2(-4,-1),ivec2(-3,-1),ivec2(-2,-1),ivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(2,-1),ivec2(3,-1),ivec2(4,-1),ivec2(5,-1),ivec2(6,-1),ivec2(-6,0),ivec2(-5,0),ivec2(-4,0),ivec2(-3,0),ivec2(-2,0),ivec2(-1,0),ivec2(1,0),ivec2(2,0),ivec2(3,0),ivec2(4,0),ivec2(5,0),ivec2(6,0),ivec2(-6,1),ivec2(-5,1),ivec2(-4,1),ivec2(-3,1),ivec2(-2,1),ivec2(-1,1),ivec2(0,1),ivec2(1,1),ivec2(2,1),ivec2(3,1),ivec2(4,1),ivec2(5,1),ivec2(6,1),ivec2(-6,2),ivec2(-5,2),ivec2(-4,2),ivec2(-3,2),ivec2(-2,2),ivec2(-1,2),ivec2(0,2),ivec2(1,2),ivec2(2,2),ivec2(3,2),ivec2(4,2),ivec2(5,2),ivec2(6,2),ivec2(-5,3),ivec2(-4,3),ivec2(-3,3),ivec2(-2,3),ivec2(-1,3),ivec2(0,3),ivec2(1,3),ivec2(2,3),ivec2(3,3),ivec2(4,3),ivec2(5,3),ivec2(-4,4),ivec2(-3,4),ivec2(-2,4),ivec2(-1,4),ivec2(0,4),ivec2(1,4),ivec2(2,4),ivec2(3,4),ivec2(4,4),ivec2(-3,5),ivec2(-2,5),ivec2(-1,5),ivec2(0,5),ivec2(1,5),ivec2(2,5),ivec2(3,5),ivec2(-2,6),ivec2(-1,6),ivec2(0,6),ivec2(1,6),ivec2(2,6),\nivec2(-2,-7),ivec2(-1,-7),ivec2(0,-7),ivec2(1,-7),ivec2(2,-7),ivec2(-4,-6),ivec2(-3,-6),ivec2(-2,-6),ivec2(-1,-6),ivec2(0,-6),ivec2(1,-6),ivec2(2,-6),ivec2(3,-6),ivec2(4,-6),ivec2(-5,-5),ivec2(-3,-5),ivec2(-2,-5),ivec2(-1,-5),ivec2(0,-5),ivec2(1,-5),ivec2(2,-5),ivec2(3,-5),ivec2(5,-5),ivec2(-6,-4),ivec2(-4,-4),ivec2(-3,-4),ivec2(-2,-4),ivec2(-1,-4),ivec2(0,-4),ivec2(1,-4),ivec2(2,-4),ivec2(3,-4),ivec2(4,-4),ivec2(6,-4),ivec2(-6,-3),ivec2(-5,-3),ivec2(-4,-3),ivec2(-3,-3),ivec2(-2,-3),ivec2(-1,-3),ivec2(0,-3),ivec2(1,-3),ivec2(2,-3),ivec2(3,-3),ivec2(4,-3),ivec2(5,-3),ivec2(6,-3),ivec2(-7,-2),ivec2(-6,-2),ivec2(-5,-2),ivec2(-4,-2),ivec2(-3,-2),ivec2(-2,-2),ivec2(-1,-2),ivec2(0,-2),ivec2(1,-2),ivec2(2,-2),ivec2(3,-2),ivec2(4,-2),ivec2(5,-2),ivec2(6,-2),ivec2(7,-2),ivec2(-7,-1),ivec2(-6,-1),ivec2(-5,-1),ivec2(-4,-1),ivec2(-3,-1),ivec2(-2,-1),ivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(2,-1),ivec2(3,-1),ivec2(4,-1),ivec2(5,-1),ivec2(6,-1),ivec2(7,-1),ivec2(-7,0),ivec2(-6,0),ivec2(-5,0),ivec2(-4,0),ivec2(-3,0),ivec2(-2,0),ivec2(-1,0),ivec2(1,0),ivec2(2,0),ivec2(3,0),ivec2(4,0),ivec2(5,0),ivec2(6,0),ivec2(7,0),ivec2(-7,1),ivec2(-6,1),ivec2(-5,1),ivec2(-4,1),ivec2(-3,1),ivec2(-2,1),ivec2(-1,1),ivec2(0,1),ivec2(1,1),ivec2(2,1),ivec2(3,1),ivec2(4,1),ivec2(5,1),ivec2(6,1),ivec2(7,1),ivec2(-7,2),ivec2(-6,2),ivec2(-5,2),ivec2(-4,2),ivec2(-3,2),ivec2(-2,2),ivec2(-1,2),ivec2(0,2),ivec2(1,2),ivec2(2,2),ivec2(3,2),ivec2(4,2),ivec2(5,2),ivec2(6,2),ivec2(7,2),ivec2(-6,3),ivec2(-5,3),ivec2(-4,3),ivec2(-3,3),ivec2(-2,3),ivec2(-1,3),ivec2(0,3),ivec2(1,3),ivec2(2,3),ivec2(3,3),ivec2(4,3),ivec2(5,3),ivec2(6,3),ivec2(-6,4),ivec2(-4,4),ivec2(-3,4),ivec2(-2,4),ivec2(-1,4),ivec2(0,4),ivec2(1,4),ivec2(2,4),ivec2(3,4),ivec2(4,4),ivec2(6,4),ivec2(-5,5),ivec2(-3,5),ivec2(-2,5),ivec2(-1,5),ivec2(0,5),ivec2(1,5),ivec2(2,5),ivec2(3,5),ivec2(5,5),ivec2(-4,6),ivec2(-3,6),ivec2(-2,6),ivec2(-1,6),ivec2(0,6),ivec2(1,6),ivec2(2,6),ivec2(3,6),ivec2(4,6),ivec2(-2,7),ivec2(-1,7),ivec2(0,7),ivec2(1,7),ivec2(2,7)\n);\nconst int MIN_PATCH_RADIUS = 3;\nconst int MAX_PATCH_RADIUS = 7;\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nint threadRaster = thread.y * encoderLength + thread.x;\nint pixelsPerKeypoint = 2 + descriptorSize / 4;\nint keypointId = int(threadRaster / pixelsPerKeypoint);\nint keypointCell = threadRaster % pixelsPerKeypoint;\ncolor = pixel;\nif(keypointCell != 1)\nreturn;\nint positionCell = keypointId * pixelsPerKeypoint;\nivec2 positionCellPos = ivec2(positionCell % encoderLength, positionCell / encoderLength);\nivec4 encodedPosition = ivec4(texelFetch(encodedKeypoints, positionCellPos, 0) * 255.0f);\nvec2 keypointPosition = fixtovec2(fixed2_t(\nencodedPosition.r | (encodedPosition.g << 8),\nencodedPosition.b | (encodedPosition.a << 8)\n));\nfloat lod = decodeLod(pixel.r);\nfloat pot = exp2(lod);\nvec2 m = vec2(0.0f);\nivec2 pyrBaseSize = textureSize(pyramid, 0);\nint scaledRadius = int(ceil(float(patchRadius) / pot));\nint radius = clamp(scaledRadius, MIN_PATCH_RADIUS, MAX_PATCH_RADIUS);\nint start = patchStart[radius];\nint count = patchPointCount[radius];\nfor(int j = 0; j < count; j++) {\nvec2 offset = vec2(patchData[start + j]);\nvec2 position = keypointPosition + round(pot * offset);\nvec4 patchPixel = pyrPixelAtEx(pyramid, position, lod, pyrBaseSize);\nm += offset * patchPixel.g;\n}\nfloat angle = fastAtan2(m.y, m.x);\ncolor.g = encodeOrientation(angle);\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D pyramid;\nuniform int patchRadius;\nuniform sampler2D encodedKeypoints;\nuniform int encoderLength;\nuniform int descriptorSize;\nconst int patchStart[8] = int[8](0, 0, 8, 28, 64, 132, 228, 356);\nconst int patchPointCount[8] = int[8](0, 8, 20, 36, 68, 96, 128, 168);\nconst ivec2 patchData[524] = ivec2[524](\nivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(-1,0),ivec2(1,0),ivec2(-1,1),ivec2(0,1),ivec2(1,1),\nivec2(-1,-2),ivec2(0,-2),ivec2(1,-2),ivec2(-2,-1),ivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(2,-1),ivec2(-2,0),ivec2(-1,0),ivec2(1,0),ivec2(2,0),ivec2(-2,1),ivec2(-1,1),ivec2(0,1),ivec2(1,1),ivec2(2,1),ivec2(-1,2),ivec2(0,2),ivec2(1,2),\nivec2(-1,-3),ivec2(0,-3),ivec2(1,-3),ivec2(-2,-2),ivec2(-1,-2),ivec2(0,-2),ivec2(1,-2),ivec2(2,-2),ivec2(-3,-1),ivec2(-2,-1),ivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(2,-1),ivec2(3,-1),ivec2(-3,0),ivec2(-2,0),ivec2(-1,0),ivec2(1,0),ivec2(2,0),ivec2(3,0),ivec2(-3,1),ivec2(-2,1),ivec2(-1,1),ivec2(0,1),ivec2(1,1),ivec2(2,1),ivec2(3,1),ivec2(-2,2),ivec2(-1,2),ivec2(0,2),ivec2(1,2),ivec2(2,2),ivec2(-1,3),ivec2(0,3),ivec2(1,3),\nivec2(-2,-4),ivec2(-1,-4),ivec2(0,-4),ivec2(1,-4),ivec2(2,-4),ivec2(-3,-3),ivec2(-2,-3),ivec2(-1,-3),ivec2(0,-3),ivec2(1,-3),ivec2(2,-3),ivec2(3,-3),ivec2(-4,-2),ivec2(-3,-2),ivec2(-2,-2),ivec2(-1,-2),ivec2(0,-2),ivec2(1,-2),ivec2(2,-2),ivec2(3,-2),ivec2(4,-2),ivec2(-4,-1),ivec2(-3,-1),ivec2(-2,-1),ivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(2,-1),ivec2(3,-1),ivec2(4,-1),ivec2(-4,0),ivec2(-3,0),ivec2(-2,0),ivec2(-1,0),ivec2(1,0),ivec2(2,0),ivec2(3,0),ivec2(4,0),ivec2(-4,1),ivec2(-3,1),ivec2(-2,1),ivec2(-1,1),ivec2(0,1),ivec2(1,1),ivec2(2,1),ivec2(3,1),ivec2(4,1),ivec2(-4,2),ivec2(-3,2),ivec2(-2,2),ivec2(-1,2),ivec2(0,2),ivec2(1,2),ivec2(2,2),ivec2(3,2),ivec2(4,2),ivec2(-3,3),ivec2(-2,3),ivec2(-1,3),ivec2(0,3),ivec2(1,3),ivec2(2,3),ivec2(3,3),ivec2(-2,4),ivec2(-1,4),ivec2(0,4),ivec2(1,4),ivec2(2,4),\nivec2(-2,-5),ivec2(-1,-5),ivec2(0,-5),ivec2(1,-5),ivec2(2,-5),ivec2(-3,-4),ivec2(-2,-4),ivec2(-1,-4),ivec2(0,-4),ivec2(1,-4),ivec2(2,-4),ivec2(3,-4),ivec2(-4,-3),ivec2(-3,-3),ivec2(-2,-3),ivec2(-1,-3),ivec2(0,-3),ivec2(1,-3),ivec2(2,-3),ivec2(3,-3),ivec2(4,-3),ivec2(-5,-2),ivec2(-4,-2),ivec2(-3,-2),ivec2(-2,-2),ivec2(-1,-2),ivec2(0,-2),ivec2(1,-2),ivec2(2,-2),ivec2(3,-2),ivec2(4,-2),ivec2(5,-2),ivec2(-5,-1),ivec2(-4,-1),ivec2(-3,-1),ivec2(-2,-1),ivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(2,-1),ivec2(3,-1),ivec2(4,-1),ivec2(5,-1),ivec2(-5,0),ivec2(-4,0),ivec2(-3,0),ivec2(-2,0),ivec2(-1,0),ivec2(1,0),ivec2(2,0),ivec2(3,0),ivec2(4,0),ivec2(5,0),ivec2(-5,1),ivec2(-4,1),ivec2(-3,1),ivec2(-2,1),ivec2(-1,1),ivec2(0,1),ivec2(1,1),ivec2(2,1),ivec2(3,1),ivec2(4,1),ivec2(5,1),ivec2(-5,2),ivec2(-4,2),ivec2(-3,2),ivec2(-2,2),ivec2(-1,2),ivec2(0,2),ivec2(1,2),ivec2(2,2),ivec2(3,2),ivec2(4,2),ivec2(5,2),ivec2(-4,3),ivec2(-3,3),ivec2(-2,3),ivec2(-1,3),ivec2(0,3),ivec2(1,3),ivec2(2,3),ivec2(3,3),ivec2(4,3),ivec2(-3,4),ivec2(-2,4),ivec2(-1,4),ivec2(0,4),ivec2(1,4),ivec2(2,4),ivec2(3,4),ivec2(-2,5),ivec2(-1,5),ivec2(0,5),ivec2(1,5),ivec2(2,5),\nivec2(-2,-6),ivec2(-1,-6),ivec2(0,-6),ivec2(1,-6),ivec2(2,-6),ivec2(-3,-5),ivec2(-2,-5),ivec2(-1,-5),ivec2(0,-5),ivec2(1,-5),ivec2(2,-5),ivec2(3,-5),ivec2(-4,-4),ivec2(-3,-4),ivec2(-2,-4),ivec2(-1,-4),ivec2(0,-4),ivec2(1,-4),ivec2(2,-4),ivec2(3,-4),ivec2(4,-4),ivec2(-5,-3),ivec2(-4,-3),ivec2(-3,-3),ivec2(-2,-3),ivec2(-1,-3),ivec2(0,-3),ivec2(1,-3),ivec2(2,-3),ivec2(3,-3),ivec2(4,-3),ivec2(5,-3),ivec2(-6,-2),ivec2(-5,-2),ivec2(-4,-2),ivec2(-3,-2),ivec2(-2,-2),ivec2(-1,-2),ivec2(0,-2),ivec2(1,-2),ivec2(2,-2),ivec2(3,-2),ivec2(4,-2),ivec2(5,-2),ivec2(6,-2),ivec2(-6,-1),ivec2(-5,-1),ivec2(-4,-1),ivec2(-3,-1),ivec2(-2,-1),ivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(2,-1),ivec2(3,-1),ivec2(4,-1),ivec2(5,-1),ivec2(6,-1),ivec2(-6,0),ivec2(-5,0),ivec2(-4,0),ivec2(-3,0),ivec2(-2,0),ivec2(-1,0),ivec2(1,0),ivec2(2,0),ivec2(3,0),ivec2(4,0),ivec2(5,0),ivec2(6,0),ivec2(-6,1),ivec2(-5,1),ivec2(-4,1),ivec2(-3,1),ivec2(-2,1),ivec2(-1,1),ivec2(0,1),ivec2(1,1),ivec2(2,1),ivec2(3,1),ivec2(4,1),ivec2(5,1),ivec2(6,1),ivec2(-6,2),ivec2(-5,2),ivec2(-4,2),ivec2(-3,2),ivec2(-2,2),ivec2(-1,2),ivec2(0,2),ivec2(1,2),ivec2(2,2),ivec2(3,2),ivec2(4,2),ivec2(5,2),ivec2(6,2),ivec2(-5,3),ivec2(-4,3),ivec2(-3,3),ivec2(-2,3),ivec2(-1,3),ivec2(0,3),ivec2(1,3),ivec2(2,3),ivec2(3,3),ivec2(4,3),ivec2(5,3),ivec2(-4,4),ivec2(-3,4),ivec2(-2,4),ivec2(-1,4),ivec2(0,4),ivec2(1,4),ivec2(2,4),ivec2(3,4),ivec2(4,4),ivec2(-3,5),ivec2(-2,5),ivec2(-1,5),ivec2(0,5),ivec2(1,5),ivec2(2,5),ivec2(3,5),ivec2(-2,6),ivec2(-1,6),ivec2(0,6),ivec2(1,6),ivec2(2,6),\nivec2(-2,-7),ivec2(-1,-7),ivec2(0,-7),ivec2(1,-7),ivec2(2,-7),ivec2(-4,-6),ivec2(-3,-6),ivec2(-2,-6),ivec2(-1,-6),ivec2(0,-6),ivec2(1,-6),ivec2(2,-6),ivec2(3,-6),ivec2(4,-6),ivec2(-5,-5),ivec2(-3,-5),ivec2(-2,-5),ivec2(-1,-5),ivec2(0,-5),ivec2(1,-5),ivec2(2,-5),ivec2(3,-5),ivec2(5,-5),ivec2(-6,-4),ivec2(-4,-4),ivec2(-3,-4),ivec2(-2,-4),ivec2(-1,-4),ivec2(0,-4),ivec2(1,-4),ivec2(2,-4),ivec2(3,-4),ivec2(4,-4),ivec2(6,-4),ivec2(-6,-3),ivec2(-5,-3),ivec2(-4,-3),ivec2(-3,-3),ivec2(-2,-3),ivec2(-1,-3),ivec2(0,-3),ivec2(1,-3),ivec2(2,-3),ivec2(3,-3),ivec2(4,-3),ivec2(5,-3),ivec2(6,-3),ivec2(-7,-2),ivec2(-6,-2),ivec2(-5,-2),ivec2(-4,-2),ivec2(-3,-2),ivec2(-2,-2),ivec2(-1,-2),ivec2(0,-2),ivec2(1,-2),ivec2(2,-2),ivec2(3,-2),ivec2(4,-2),ivec2(5,-2),ivec2(6,-2),ivec2(7,-2),ivec2(-7,-1),ivec2(-6,-1),ivec2(-5,-1),ivec2(-4,-1),ivec2(-3,-1),ivec2(-2,-1),ivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(2,-1),ivec2(3,-1),ivec2(4,-1),ivec2(5,-1),ivec2(6,-1),ivec2(7,-1),ivec2(-7,0),ivec2(-6,0),ivec2(-5,0),ivec2(-4,0),ivec2(-3,0),ivec2(-2,0),ivec2(-1,0),ivec2(1,0),ivec2(2,0),ivec2(3,0),ivec2(4,0),ivec2(5,0),ivec2(6,0),ivec2(7,0),ivec2(-7,1),ivec2(-6,1),ivec2(-5,1),ivec2(-4,1),ivec2(-3,1),ivec2(-2,1),ivec2(-1,1),ivec2(0,1),ivec2(1,1),ivec2(2,1),ivec2(3,1),ivec2(4,1),ivec2(5,1),ivec2(6,1),ivec2(7,1),ivec2(-7,2),ivec2(-6,2),ivec2(-5,2),ivec2(-4,2),ivec2(-3,2),ivec2(-2,2),ivec2(-1,2),ivec2(0,2),ivec2(1,2),ivec2(2,2),ivec2(3,2),ivec2(4,2),ivec2(5,2),ivec2(6,2),ivec2(7,2),ivec2(-6,3),ivec2(-5,3),ivec2(-4,3),ivec2(-3,3),ivec2(-2,3),ivec2(-1,3),ivec2(0,3),ivec2(1,3),ivec2(2,3),ivec2(3,3),ivec2(4,3),ivec2(5,3),ivec2(6,3),ivec2(-6,4),ivec2(-4,4),ivec2(-3,4),ivec2(-2,4),ivec2(-1,4),ivec2(0,4),ivec2(1,4),ivec2(2,4),ivec2(3,4),ivec2(4,4),ivec2(6,4),ivec2(-5,5),ivec2(-3,5),ivec2(-2,5),ivec2(-1,5),ivec2(0,5),ivec2(1,5),ivec2(2,5),ivec2(3,5),ivec2(5,5),ivec2(-4,6),ivec2(-3,6),ivec2(-2,6),ivec2(-1,6),ivec2(0,6),ivec2(1,6),ivec2(2,6),ivec2(3,6),ivec2(4,6),ivec2(-2,7),ivec2(-1,7),ivec2(0,7),ivec2(1,7),ivec2(2,7)\n);\nconst int MIN_PATCH_RADIUS = 3;\nconst int MAX_PATCH_RADIUS = 7;\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);\ncolor = pixel;\nif(address.offset != 1)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nfloat pot = exp2(keypoint.lod);\nvec2 m = vec2(0.0f);\nivec2 pyrBaseSize = textureSize(pyramid, 0);\nint scaledRadius = int(ceil(float(patchRadius) / pot));\nint radius = clamp(scaledRadius, MIN_PATCH_RADIUS, MAX_PATCH_RADIUS);\nint start = patchStart[radius];\nint count = patchPointCount[radius];\nfor(int j = 0; j < count; j++) {\nvec2 offset = vec2(patchData[start + j]);\nvec2 position = keypoint.position + round(pot * offset);\nvec4 patchPixel = pyrPixelAtEx(pyramid, position, keypoint.lod, pyrBaseSize);\nm += offset * patchPixel.g;\n}\nfloat angle = fastAtan2(m.y, m.x);\ncolor.g = encodeOrientation(angle);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/encoders/upload-keypoints.glsl":
+/*!********************************************************!*\
+  !*** ./src/gpu/shaders/encoders/upload-keypoints.glsl ***!
+  \********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"keypoints.glsl\"\nuniform int keypointCount;\nuniform int encoderLength;\nuniform int descriptorSize;\n#ifndef KEYPOINT_BUFFER_LENGTH\n#error Must specify KEYPOINT_BUFFER_LENGTH\n#endif\nlayout(std140) uniform KeypointBuffer\n{\nvec4 keypointBuffer[KEYPOINT_BUFFER_LENGTH];\n};\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);\nint q = findKeypointIndex(address, descriptorSize);\ncolor = vec4(1.0f);\nif(q >= keypointCount)\nreturn;\nvec4 data = keypointBuffer[q];\nswitch(address.offset) {\ncase 0: {\nfixed2_t pos = vec2tofix(data.xy);\nfixed2_t lo = pos & 255;\nfixed2_t hi = pos >> 8;\ncolor = vec4(float(lo.x), float(hi.x), float(lo.y), float(hi.y)) / 255.0f;\nbreak;\n}\ncase 1: {\nfloat score = data.w;\nfloat scale = encodeLod(data.z);\nfloat rotation = encodeOrientation(0.0f);\ncolor = vec4(scale, rotation, score, 0.0f);\nbreak;\n}\ndefault: {\ncolor = vec4(0.0f);\nbreak;\n}\n}\n}"
 
 /***/ }),
 
@@ -6733,6 +6669,7 @@ var map = {
 	"./colors.glsl": "./src/gpu/shaders/include/colors.glsl",
 	"./fixed-point.glsl": "./src/gpu/shaders/include/fixed-point.glsl",
 	"./global.glsl": "./src/gpu/shaders/include/global.glsl",
+	"./keypoints.glsl": "./src/gpu/shaders/include/keypoints.glsl",
 	"./math.glsl": "./src/gpu/shaders/include/math.glsl",
 	"./orientation.glsl": "./src/gpu/shaders/include/orientation.glsl",
 	"./pyramids.glsl": "./src/gpu/shaders/include/pyramids.glsl",
@@ -6791,6 +6728,17 @@ module.exports = "#ifndef _FIXEDPOINT_GLSL\n#define _FIXEDPOINT_GLSL\n#define fi
 /***/ (function(module, exports) {
 
 module.exports = "#ifndef _GLOBAL_GLSL\n#define _GLOBAL_GLSL\n#define threadLocation() ivec2(texCoord * texSize)\n#define outputSize() ivec2(texSize)\n#define DEBUG(scalar) do { color = vec4(float(scalar), 0.0f, 0.0f, 1.0f); return; } while(false)\n#define threadPixel(img) textureLod((img), texCoord, 0.0f)\n#define pixelAt(img, pos) texelFetch((img), (pos), 0)\n#define pixelAtShortOffset(img, offset) textureLodOffset((img), texCoord, 0.0f, (offset))\n#define pixelAtLongOffset(img, offset) textureLod((img), texCoord + vec2(offset) / texSize, 0.0f)\n#define subpixelAt(img, pos) textureLod((img), ((pos) + vec2(0.5f)) / texSize, 0.0f)\n#endif"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/include/keypoints.glsl":
+/*!************************************************!*\
+  !*** ./src/gpu/shaders/include/keypoints.glsl ***!
+  \************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "#ifndef _KEYPOINTS_GLSL\n#define _KEYPOINTS_GLSL\n@include \"pyramids.glsl\"\n@include \"orientation.glsl\"\n@include \"fixed-point.glsl\"\nstruct Keypoint\n{\nvec2 position;\nfloat orientation;\nfloat lod;\nfloat score;\n};\nstruct KeypointAddress\n{\nint base;\nint offset;\n};\n#define readKeypointData(encodedKeypoints, encoderLength, keypointAddress) texelFetch((encodedKeypoints), ivec2((keypointAddress) % (encoderLength), (keypointAddress) / (encoderLength)), 0)\n#define sizeofEncodedKeypoint(descriptorSize) (8 + (descriptorSize))\n#define findKeypointIndex(address, descriptorSize) ((address).base / ((sizeofEncodedKeypoint(descriptorSize)) / 4))\nKeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descriptorSize)\n{\nint threadRaster = thread.y * encoderLength + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize) / 4;\nKeypointAddress address;\nint keypointIndex = int(threadRaster / pixelsPerKeypoint);\naddress.base = keypointIndex * pixelsPerKeypoint;\naddress.offset = threadRaster % pixelsPerKeypoint;\nreturn address;\n}\nKeypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nKeypoint keypoint;\nint positionAddress = address.base;\nint propertiesAddress = address.base + 1;\nvec4 rawEncodedPosition = readKeypointData(encodedKeypoints, encoderLength, positionAddress);\nivec4 encodedPosition = ivec4(rawEncodedPosition * 255.0f);\nkeypoint.position = fixtovec2(fixed2_t(\nencodedPosition.r | (encodedPosition.g << 8),\nencodedPosition.b | (encodedPosition.a << 8)\n));\nvec4 encodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);\nkeypoint.orientation = decodeOrientation(encodedProperties.g);\nkeypoint.lod = decodeLod(encodedProperties.r);\nkeypoint.score = encodedProperties.b;\nreturn keypoint;\n}\n#endif"
 
 /***/ }),
 
@@ -6992,17 +6940,6 @@ module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\nvoid mai
 
 /***/ }),
 
-/***/ "./src/gpu/shaders/pyramids/crop.glsl":
-/*!********************************************!*\
-  !*** ./src/gpu/shaders/pyramids/crop.glsl ***!
-  \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nivec2 zero = ivec2(0, 0);\ncolor = pixelAt(image, clamp(thread, zero, size - 1));\n}"
-
-/***/ }),
-
 /***/ "./src/gpu/shaders/pyramids/downsample2.glsl":
 /*!***************************************************!*\
   !*** ./src/gpu/shaders/pyramids/downsample2.glsl ***!
@@ -7022,39 +6959,6 @@ module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threa
 /***/ (function(module, exports) {
 
 module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 pos = min(thread * 3, textureSize(image, 0) - 1);\ncolor = pixelAt(image, pos);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/pyramids/merge-keypoints-at-consecutive-levels.glsl":
-/*!*****************************************************************************!*\
-  !*** ./src/gpu/shaders/pyramids/merge-keypoints-at-consecutive-levels.glsl ***!
-  \*****************************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D largerImage;\nuniform sampler2D smallerImage;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 lg = pixelAt(largerImage, min(thread, textureSize(largerImage, 0) - 1));\nvec4 sm = pixelAt(smallerImage, min(thread / 2, textureSize(smallerImage, 0) - 1));\ncolor = ((((thread.x & 1) + (thread.y & 1)) == 0) && (sm.r > lg.r)) ? vec4(sm.r, lg.gb, sm.a) : lg;\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/pyramids/merge-keypoints.glsl":
-/*!*******************************************************!*\
-  !*** ./src/gpu/shaders/pyramids/merge-keypoints.glsl ***!
-  \*******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D target;\nuniform sampler2D source;\nvoid main()\n{\nvec4 a = threadPixel(target);\nvec4 b = threadPixel(source);\ncolor = (b.r > a.r) ? b : a;\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/pyramids/normalize-keypoints.glsl":
-/*!***********************************************************!*\
-  !*** ./src/gpu/shaders/pyramids/normalize-keypoints.glsl ***!
-  \***********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nuniform float imageScale;\nconst ivec2 one = ivec2(1, 1);\n#define B2(expr) bvec2((expr),(expr))\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nivec2 scaled = ivec2((texCoord * texSize) * imageScale);\nivec2 imageSize = textureSize(image, 0);\nvec4 pixel = threadPixel(image);\nvec4 p0 = pixelAt(image, min(scaled, imageSize-1));\nvec4 p1 = pixelAt(image, min(scaled + ivec2(0, 1), imageSize-1));\nvec4 p2 = pixelAt(image, min(scaled + ivec2(1, 0), imageSize-1));\nvec4 p3 = pixelAt(image, min(scaled + ivec2(1, 1), imageSize-1));\nbool gotCorner = ((thread.x & 1) + (thread.y & 1) == 0) &&\n(all(lessThan(scaled + one, size))) &&\n(p0.r + p1.r + p2.r + p3.r > 0.0f);\nvec2 best = mix(\nvec2(0.0f, pixel.a),\nmix(\nmix(\np1.r > p3.r ? p1.ra : p3.ra,\np1.r > p2.r ? p1.ra : p2.ra,\nB2(p2.r > p3.r)\n),\nmix(\np0.r > p3.r ? p0.ra : p3.ra,\np0.r > p2.r ? p0.ra : p2.ra,\nB2(p2.r > p3.r)\n),\nB2(p0.r > p1.r)\n),\nB2(gotCorner)\n);\ncolor = vec4(best.x, pixel.gb, best.y);\n}"
 
 /***/ }),
 
@@ -7207,8 +7111,6 @@ class SpeedyGPU
         this._width = 0;
         this._height = 0;
         this._programs = null;
-        this._pyramid = null;
-        this._intraPyramid = null;
         this._inputTexture = null;
         this._inputTextureIndex = 0;
         this._omitGLContextWarning = false;
@@ -7255,58 +7157,6 @@ class SpeedyGPU
     get programs()
     {
         return this._programs;
-    }
-
-    /**
-     * Access the program groups of a pyramid level
-     * sizeof(pyramid(i)) = sizeof(pyramid(0)) / 2^i
-     * @param {number} level a number in 0, 1, ..., PYRAMID_MAX_LEVELS - 1
-     * @returns {Array}
-     */
-    pyramid(level)
-    {
-        const lv = level | 0;
-
-        if(lv < 0 || lv >= _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_LEVELS"])
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Invalid pyramid level: ${lv}`);
-
-        return this._pyramid[lv];
-    }
-
-    /**
-     * Access the program groups of an intra-pyramid level
-     * The intra-pyramid encodes layers between pyramid layers
-     * sizeof(intraPyramid(0)) = 1.5 * sizeof(pyramid(0))
-     * sizeof(intraPyramid(1)) = 1.5 * sizeof(pyramid(1))
-     * @param {number} level a number in 0, 1, ..., PYRAMID_MAX_LEVELS
-     * @returns {Array}
-     */
-    intraPyramid(level)
-    {
-        const lv = level | 0;
-
-        if(lv < 0 || lv >= _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_LEVELS"] + 1)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Invalid intra-pyramid level: ${lv}`);
-
-        return this._intraPyramid[lv];
-    }
-
-    /**
-     * The number of layers of the pyramid
-     * @returns {number}
-     */
-    get pyramidHeight()
-    {
-        return _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_LEVELS"];
-    }
-
-    /**
-     * The maximum supported scale for a pyramid layer
-     * @returns {number}
-     */
-    get pyramidMaxScale()
-    {
-        return _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_SCALE"];
     }
 
     /**
@@ -7424,8 +7274,6 @@ class SpeedyGPU
 
         // initializing
         this._programs = null;
-        this._pyramid = null;
-        this._intraPyramid = null;
         this._inputTexture = null;
         this._inputTextureIndex = 0;
         this._omitGLContextWarning = false;
@@ -7450,27 +7298,6 @@ class SpeedyGPU
 
         // spawn program groups
         this._programs = new _speedy_program_center__WEBPACK_IMPORTED_MODULE_2__["SpeedyProgramCenter"](this, width, height);
-
-        // spawn pyramids of program groups
-        this._pyramid = this._buildPyramid(width, height, 1.0, _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_LEVELS"]);
-        this._intraPyramid = this._buildPyramid(width, height, 1.5, _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_LEVELS"] + 1);
-    }
-
-    // build a pyramid, where each level stores the program groups
-    _buildPyramid(imageWidth, imageHeight, baseScale, numLevels)
-    {
-        let scale = +baseScale;
-        let width = (imageWidth * scale) | 0, height = (imageHeight * scale) | 0;
-        let pyramid = new Array(numLevels);
-
-        for(let i = 0; i < pyramid.length; i++) {
-            pyramid[i] = new _speedy_program_center__WEBPACK_IMPORTED_MODULE_2__["SpeedyProgramCenter"](this, width, height);
-            width = ((1 + width) / 2) | 0;
-            height = ((1 + height) / 2) | 0;
-            scale /= 2;
-        }
-
-        return pyramid;
     }
 }
 
@@ -7485,12 +7312,8 @@ function createCanvas(width, height)
 
         return new OffscreenCanvas(width, height);
     }
-    else {
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        return canvas;
-    }
+
+    return _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].createCanvas(width, height);
 }
 
 // Checks if the browser supports WebGL2
@@ -8098,6 +7921,19 @@ class SpeedyProgram extends Function
     }
 
     /**
+     * Set data using a Uniform Buffer Object
+     * @param {string} blockName uniform block name
+     * @param {ArrayBufferView} data
+     */
+    setUBO(blockName, data)
+    {
+        if(this._ubo === null)
+            this._ubo = new UBOHandler(this._gl, this._stdprog.program);
+
+        this._ubo.set(blockName, data);
+    }
+
+    /**
      * Read uniforms of the program (metadata)
      * @returns {object}
      */
@@ -8157,6 +7993,7 @@ class SpeedyProgram extends Function
         this._options = Object.freeze(options);
         this._stdprog = stdprog;
         this._params = params;
+        this._ubo = null; // lazy spawn
         this._initPixelBuffers(gl);
     }
 
@@ -8205,6 +8042,10 @@ class SpeedyProgram extends Function
             else
                 throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Can't run shader: unknown parameter "${argname}": ${args[i]}`);
         }
+
+        // set Uniform Buffer Objects (if any)
+        if(this._ubo !== null)
+            this._ubo.update();
 
         // bind fbo
         if(options.renderToTexture)
@@ -8527,6 +8368,76 @@ function waitForQueueNotEmpty(queue)
     });
 }
 
+
+
+
+//
+// Uniform Buffer Objects
+//
+
+/**
+ * UBO Handler
+ * @param {WebGL2RenderingContext} gl
+ * @param {WebGLProgram} program
+ */
+function UBOHandler(gl, program)
+{
+    this._gl = gl;
+    this._program = program;
+    this._nextIndex = 0;
+    this._ubo = {};
+}
+
+/**
+ * Set Uniform Buffer Object data
+ * (the buffer will only be uploaded when the program runs)
+ * @param {string} name uniform block name
+ * @param {ArrayBufferView} data
+ */
+UBOHandler.prototype.set = function(name, data)
+{
+    const gl = this._gl;
+    const program = this._program;
+
+    // create UBO entry
+    if(!this._ubo.hasOwnProperty(name)) {
+        this._ubo[name] = {
+            buffer: gl.createBuffer(),
+            blockBindingIndex: this._nextIndex++, // "global" binding index
+        };
+    }
+
+    // get UBO entry for the given block name
+    const ubo = this._ubo[name];
+
+    // read block index & assign binding point
+    if(!ubo.hasOwnProperty('blockIndex')) {
+        const blockIndex = gl.getUniformBlockIndex(program, name); // UBO "location" in the program
+        gl.uniformBlockBinding(program, blockIndex, ubo.blockBindingIndex);
+    }
+
+    // store data - will upload it later
+    ubo.data = data;
+}
+
+/**
+ * Update UBO data
+ * Called when we're using the appropriate WebGLProgram
+ */
+UBOHandler.prototype.update = function()
+{
+    const gl = this._gl;
+
+    for(const name in this._ubo) {
+        const ubo = this._ubo[name];
+
+        gl.bindBuffer(gl.UNIFORM_BUFFER, ubo.buffer);
+        gl.bufferData(gl.UNIFORM_BUFFER, ubo.data, gl.DYNAMIC_DRAW);
+        gl.bindBufferBase(gl.UNIFORM_BUFFER, ubo.blockBindingIndex, ubo.buffer);
+        gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+    }
+}
+
 /***/ }),
 
 /***/ "./src/speedy.js":
@@ -8691,7 +8602,7 @@ class SpeedyError extends Error
     {
         super([
             message,
-            cause ? cause.toString() : '@ [speedy-vision.js]'
+            cause ? cause.toString() : '[speedy-vision.js]'
         ].join('\n-> '));
         this._cause = cause;
     }
@@ -9013,17 +8924,18 @@ class FPSCounter
 /*!******************************!*\
   !*** ./src/utils/globals.js ***!
   \******************************/
-/*! exports provided: MAX_TEXTURE_LENGTH, PYRAMID_MAX_LEVELS, PYRAMID_MAX_OCTAVES, PYRAMID_MAX_SCALE, FIX_BITS, FIX_RESOLUTION */
+/*! exports provided: PYRAMID_MAX_LEVELS, PYRAMID_MAX_OCTAVES, PYRAMID_MAX_SCALE, LOG2_PYRAMID_MAX_SCALE, FIX_BITS, FIX_RESOLUTION, MAX_TEXTURE_LENGTH */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MAX_TEXTURE_LENGTH", function() { return MAX_TEXTURE_LENGTH; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "PYRAMID_MAX_LEVELS", function() { return PYRAMID_MAX_LEVELS; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "PYRAMID_MAX_OCTAVES", function() { return PYRAMID_MAX_OCTAVES; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "PYRAMID_MAX_SCALE", function() { return PYRAMID_MAX_SCALE; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "LOG2_PYRAMID_MAX_SCALE", function() { return LOG2_PYRAMID_MAX_SCALE; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FIX_BITS", function() { return FIX_BITS; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FIX_RESOLUTION", function() { return FIX_RESOLUTION; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MAX_TEXTURE_LENGTH", function() { return MAX_TEXTURE_LENGTH; });
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -9046,16 +8958,6 @@ __webpack_require__.r(__webpack_exports__);
  */
 
 // -----------------------------------------------------------------
-// GENERAL
-// -----------------------------------------------------------------
-
-// Maximum texture length
-const MAX_TEXTURE_LENGTH = 8190; // 2^n - 2 due to encoding
-                                        // n = 16 bits - FIX_BITS
-
-
-
-// -----------------------------------------------------------------
 // IMAGE PYRAMIDS & SCALE-SPACE
 // -----------------------------------------------------------------
 
@@ -9068,6 +8970,8 @@ const PYRAMID_MAX_OCTAVES = 2 * PYRAMID_MAX_LEVELS - 1; // scaling factor = sqrt
 // The maximum supported scale for a pyramid layer
 const PYRAMID_MAX_SCALE = 2; // preferably a power of 2 (image scale can go up to this value)
 
+// The base-2 logarithm of PYRAMID_MAX_SCALE
+const LOG2_PYRAMID_MAX_SCALE = Math.log2(PYRAMID_MAX_SCALE);
 
 
 
@@ -9080,6 +8984,15 @@ const FIX_BITS = 3; // MAX_TEXTURE_LENGTH depends on this
 
 // Fixed-point resolution
 const FIX_RESOLUTION = 1.0 * (1 << FIX_BITS); // float(2^(FIX_BITS))
+
+
+
+// -----------------------------------------------------------------
+// TEXTURE LIMITS
+// -----------------------------------------------------------------
+
+// Maximum texture length
+const MAX_TEXTURE_LENGTH = (1 << (16 - FIX_BITS)) - 2; // 2^n - 2 due to keypoint encoding
 
 /***/ }),
 
@@ -9200,7 +9113,7 @@ const MediaType = _utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].enum(
     'Image',
     'Video',
     'Canvas',
-    'Texture'
+    'Bitmap'
 );
 
 const ColorFormat = _utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].enum(
@@ -9368,6 +9281,20 @@ class Utils
             throw new _errors__WEBPACK_IMPORTED_MODULE_0__["ParseError"](`Can't detect function arguments of ${code}`);
 
         return [];
+    }
+
+    /**
+     * Creates a <canvas> element with the given dimensions
+     * @param {number} width in pixels
+     * @param {number} height in pixels
+     * @returns {HTMLCanvasElement}
+     */
+    static createCanvas(width, height)
+    {
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        return canvas;
     }
 
     /**
