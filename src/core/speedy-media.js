@@ -132,7 +132,8 @@ export class SpeedyMedia
     static loadCameraStream(width = 426, height = 240, cameraOptions = {}, mediaOptions = {})
     {
         return requestCameraStream(width, height, cameraOptions).then(
-            //video => SpeedyMedia.load(video, mediaOptions) // is this slower? profile it - TODO
+            video => SpeedyMedia.load(video, mediaOptions)
+            /*
             video => createImageBitmap(video).then(
                 bitmap => SpeedyMedia.load(bitmap, mediaOptions).then(media => {
                     (function update() {
@@ -147,6 +148,7 @@ export class SpeedyMedia
                     return media;
                 })
             )
+            */
         );
     }
 
