@@ -20,8 +20,7 @@
  */
 
 import { SpeedyProgramGroup } from '../speedy-program-group';
-import { importShader, createShader } from '../shader-declaration';
-import { PYRAMID_MAX_LEVELS, LOG2_PYRAMID_MAX_SCALE } from '../../utils/globals';
+import { importShader } from '../shader-declaration';
 import { convX, convY } from '../shaders/filters/convolution';
 
 
@@ -36,13 +35,7 @@ const downsample2 = importShader('pyramids/downsample2.glsl').withArguments('ima
 const upsample3 = importShader('pyramids/upsample3.glsl').withArguments('image');
 const downsample3 = importShader('pyramids/downsample3.glsl').withArguments('image');
 
-// utilities for merging keypoints across multiple scales
-const mergeKeypoints = importShader('pyramids/merge-keypoints.glsl').withArguments('target', 'source');
-const mergeKeypointsAtConsecutiveLevels = importShader('pyramids/merge-keypoints-at-consecutive-levels.glsl').withArguments('largerImage', 'smallerImage');
-const normalizeKeypoints = importShader('pyramids/normalize-keypoints.glsl').withArguments('image', 'imageScale');
-
-// misc
-const crop = importShader('pyramids/crop.glsl').withArguments('image');
+// debug
 const flipY = importShader('utils/flip-y.glsl').withArguments('image');
 
 
@@ -63,27 +56,16 @@ export class GPUPyramids extends SpeedyProgramGroup
     {
         super(gpu, width, height);
         this
-            // initialize pyramid
-            .declare('setBase', setScale(1.0))
- 
-            // pyramid operations
-            .compose('reduce', '_smoothX', '_smoothY', '_downsample2', '_scale1/2')
-            .compose('expand', '_upsample2', '_smoothX2', '_smoothY2', '_scale2')
+            // pyramid operations (scale = 2)
+            .compose('reduce', '_smoothX', '_smoothY', '_downsample2')
+            .compose('expand', '_upsample2', '_smoothX2', '_smoothY2')
            
-            // intra-pyramid operations (between two pyramid levels)
-            .compose('intraReduce', '_upsample2', '_smoothX2', '_smoothY2', '_downsample3/2', '_scale2/3')
-            .compose('intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3', '_scale3/2')
-
-            // Merge keypoints across multiple scales
-            .declare('mergeKeypoints', mergeKeypoints)
-            .declare('mergeKeypointsAtConsecutiveLevels', mergeKeypointsAtConsecutiveLevels)
-            .declare('normalizeKeypoints', normalizeKeypoints)
-
-            // Crop texture to width x height of the current pyramid level
-            .declare('crop', crop)
+            // intra-pyramid operations (scale = 1.5)
+            .compose('intraReduce', '_upsample2', '_smoothX2', '_smoothY2', '_downsample3/2')
+            .compose('intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3')
 
             // kernels for debugging
-            .declare('output', flipY, {
+            .declare('output1', flipY, {
                 ...this.program.hasTextureSize(this._width, this._height),
                 ...this.program.displaysGraphics()
             })
@@ -148,110 +130,6 @@ export class GPUPyramids extends SpeedyProgramGroup
 
             .declare('_downsample3/2', downsample3,
                 this.program.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
-
-            // adjust the scale coefficients
-            .declare('_scale2', scale(2.0),
-                this.program.hasTextureSize(2 * this._width, 2 * this._height))
-
-            .declare('_scale1/2', scale(0.5),
-                this.program.hasTextureSize((1 + this._width) / 2, (1 + this._height) / 2))
-
-            .declare('_scale3/2', scale(1.5),
-                this.program.hasTextureSize(3 * this._width / 2, 3 * this._height / 2))
-
-            .declare('_scale2/3', scale(2.0 / 3.0),
-                this.program.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
         ;
     }
-}
-
-
-
-
-/*
- * Image scale is encoded in the alpha channel (a)
- * according to the following model:
- *
- * a(x) = (log2(M) - log2(x)) / (log2(M) + h)
- *
- * where x := scale of the image in the pyramid
- *            it may be 1, 0.5, 0.25, 0.125...
- *            also sqrt(2)/2, sqrt(2)/4... (intra-layers)
- *            (note that lod = -log2(x))
- *
- *       h := height (depth) of the pyramid, an integer
- *            (i.e., PYRAMID_MAX_LEVELS)
- *
- *       M := scale upper bound: the maximum supported
- *            scale x for a pyramid layer, a constant
- *            that is preferably a power of two
- *            (i.e., PYRAMID_MAX_SCALE)
- *
- *
- *
- * This model has neat properties:
- *
- * Scale image by factor s:
- * a(s*x) = a(x) - log2(s) / (log2(M) + h)
- *
- * Log of scale (scale-axis):
- * log2(x) = log2(M) - (log2(M) + h) * a(x)
- *
- * Bounded output:
- * 0 <= a(x) < 1
- *
- * Since x <= M, it follows that a(x) >= 0 for all x
- * Since x > 1/2^h, it follows that a(x) < 1 for all x
- * Thus, if alpha channel = 1.0, we have no scale data
- *
- *
- *
- * A note on image scale:
- *
- * scale = 1 means an image with its original size
- * scale = 2 means double the size (4x the area)
- * scale = 0.5 means half the size (1/4 the area)
- * and so on...
- */
-
-// Set image scale
-function setScale(scale)
-{
-    const eps = 1e-5;
-    const pyramidMinScale = Math.pow(2, -PYRAMID_MAX_LEVELS) + eps;
-    const x = Math.max(pyramidMinScale, Math.min(scale, PYRAMID_MAX_SCALE));
-    const alpha = (LOG2_PYRAMID_MAX_SCALE - Math.log2(x)) / (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS);
-    
-    const source = `
-    uniform sampler2D image;
-
-    void main()
-    {
-        color = vec4(threadPixel(image).rgb, float(${alpha}));
-    }
-    `;
-
-    return createShader(source).withArguments('image');
-}
-
-// Scale image by a factor
-function scale(scaleFactor)
-{
-    const eps = 1e-5;
-    const s = Math.max(eps, scaleFactor);
-    const delta = -Math.log2(s) / (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS);
-
-    const source = `
-    uniform sampler2D image;
-
-    void main()
-    {
-        vec4 pixel = threadPixel(image);
-        float alpha = clamp(pixel.a + float(${delta}), 0.0f, 1.0f);
-
-        color = vec4(pixel.rgb, alpha);
-    }
-    `;
-
-    return createShader(source).withArguments('image');
 }

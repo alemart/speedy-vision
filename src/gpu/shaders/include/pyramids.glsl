@@ -84,12 +84,12 @@
  *            (note that lod = -log2(x))
  *
  *       h := height (depth) of the pyramid, an integer
- *            (this is gpu.pyramidHeight)
+ *            (this is PYRAMID_MAX_LEVELS)
  *
  *       M := scale upper bound: the maximum supported
  *            scale x for a pyramid layer, a constant
  *            that is preferably a power of two
- *            (this is gpu.pyramidMaxScale)
+ *            (this is PYRAMID_MAX_SCALE)
  *
  *
  *

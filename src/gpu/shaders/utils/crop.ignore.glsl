@@ -15,20 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * merge-keypoints.glsl
- * Merge keypoints of two images having the same scale
+ * crop.glsl
+ * Crop the input image to outputSize()
  */
 
-uniform sampler2D target;
-uniform sampler2D source;
+uniform sampler2D image;
 
-// merge keypoints having the same scale, i.e.,
-// size(target) = size(source) = size(output)
 void main()
 {
-    vec4 a = threadPixel(target);
-    vec4 b = threadPixel(source);
+    ivec2 thread = threadLocation();
+    ivec2 size = outputSize();
+    ivec2 zero = ivec2(0, 0);
 
-    // copy corner score & scale
-    color = (b.r > a.r) ? b : a;
+    // Note: textureSize(image, 0) != texSize
+    color = pixelAt(image, clamp(thread, zero, size - 1));
 }

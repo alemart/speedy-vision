@@ -73,9 +73,6 @@ export class GPUUtils extends SpeedyProgramGroup
             // no-operation
             .declare('identity', identity)
 
-            // flip y-axis
-            .declare('flipY', flipY)
-
             // output a texture from a pipeline
             .declare('output', flipY, {
                 ...this.program.displaysGraphics()
@@ -85,6 +82,9 @@ export class GPUUtils extends SpeedyProgramGroup
             .declare('clone', identity, {
                 ...this.program.doesNotRecycleTextures()
             })
+
+            // flip y-axis
+            .declare('flipY', flipY)
 
             // Fill image with a constant
             .declare('fill', fill)

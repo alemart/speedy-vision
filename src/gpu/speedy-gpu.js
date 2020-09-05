@@ -22,7 +22,7 @@
 import { GLUtils } from './gl-utils.js';
 import { Utils } from '../utils/utils';
 import { SpeedyProgramCenter } from './speedy-program-center';
-import { PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE, MAX_TEXTURE_LENGTH } from '../utils/globals';
+import { MAX_TEXTURE_LENGTH } from '../utils/globals';
 import { NotSupportedError, IllegalArgumentError } from '../utils/errors';
 
 /**
@@ -44,8 +44,6 @@ export class SpeedyGPU
         this._width = 0;
         this._height = 0;
         this._programs = null;
-        this._pyramid = null;
-        this._intraPyramid = null;
         this._inputTexture = null;
         this._inputTextureIndex = 0;
         this._omitGLContextWarning = false;
@@ -92,58 +90,6 @@ export class SpeedyGPU
     get programs()
     {
         return this._programs;
-    }
-
-    /**
-     * Access the program groups of a pyramid level
-     * sizeof(pyramid(i)) = sizeof(pyramid(0)) / 2^i
-     * @param {number} level a number in 0, 1, ..., PYRAMID_MAX_LEVELS - 1
-     * @returns {Array}
-     */
-    pyramid(level)
-    {
-        const lv = level | 0;
-
-        if(lv < 0 || lv >= PYRAMID_MAX_LEVELS)
-            throw new IllegalArgumentError(`Invalid pyramid level: ${lv}`);
-
-        return this._pyramid[lv];
-    }
-
-    /**
-     * Access the program groups of an intra-pyramid level
-     * The intra-pyramid encodes layers between pyramid layers
-     * sizeof(intraPyramid(0)) = 1.5 * sizeof(pyramid(0))
-     * sizeof(intraPyramid(1)) = 1.5 * sizeof(pyramid(1))
-     * @param {number} level a number in 0, 1, ..., PYRAMID_MAX_LEVELS
-     * @returns {Array}
-     */
-    intraPyramid(level)
-    {
-        const lv = level | 0;
-
-        if(lv < 0 || lv >= PYRAMID_MAX_LEVELS + 1)
-            throw new IllegalArgumentError(`Invalid intra-pyramid level: ${lv}`);
-
-        return this._intraPyramid[lv];
-    }
-
-    /**
-     * The number of layers of the pyramid
-     * @returns {number}
-     */
-    get pyramidHeight()
-    {
-        return PYRAMID_MAX_LEVELS;
-    }
-
-    /**
-     * The maximum supported scale for a pyramid layer
-     * @returns {number}
-     */
-    get pyramidMaxScale()
-    {
-        return PYRAMID_MAX_SCALE;
     }
 
     /**
@@ -261,8 +207,6 @@ export class SpeedyGPU
 
         // initializing
         this._programs = null;
-        this._pyramid = null;
-        this._intraPyramid = null;
         this._inputTexture = null;
         this._inputTextureIndex = 0;
         this._omitGLContextWarning = false;
@@ -287,27 +231,6 @@ export class SpeedyGPU
 
         // spawn program groups
         this._programs = new SpeedyProgramCenter(this, width, height);
-
-        // spawn pyramids of program groups
-        this._pyramid = this._buildPyramid(width, height, 1.0, PYRAMID_MAX_LEVELS);
-        this._intraPyramid = this._buildPyramid(width, height, 1.5, PYRAMID_MAX_LEVELS + 1);
-    }
-
-    // build a pyramid, where each level stores the program groups
-    _buildPyramid(imageWidth, imageHeight, baseScale, numLevels)
-    {
-        let scale = +baseScale;
-        let width = (imageWidth * scale) | 0, height = (imageHeight * scale) | 0;
-        let pyramid = new Array(numLevels);
-
-        for(let i = 0; i < pyramid.length; i++) {
-            pyramid[i] = new SpeedyProgramCenter(this, width, height);
-            width = ((1 + width) / 2) | 0;
-            height = ((1 + height) / 2) | 0;
-            scale /= 2;
-        }
-
-        return pyramid;
     }
 }
 
