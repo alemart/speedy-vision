@@ -6,7 +6,7 @@
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-09-05T23:16:01.834Z
+ * Date: 2020-09-05T23:34:03.596Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -2299,6 +2299,7 @@ class SpeedyMedia
     release()
     {
         if(!this.isReleased()) {
+            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].log('Releasing SpeedyMedia object...');
             this._featuresAlgorithm = null;
             this._gpu.loseWebGLContext();
             this._gpu = null;
@@ -2417,6 +2418,9 @@ class SpeedyMedia
      */
     toBitmap()
     {
+        if(this.isReleased())
+            throw new IllegalOperationError('Can\'t convert to SpeedyMedia to ImageBitmap: the media has been released');
+
         return createImageBitmap(this._source);
     }
 
@@ -2552,7 +2556,7 @@ function buildOptions(options, defaultOptions)
 function requestCameraStream(width, height, options = {})
 {
     return new Promise((resolve, reject) => {
-        //Utils.log('Accessing the webcam...');
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].log('Accessing the webcam...');
 
         if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
             return reject(new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["NotSupportedError"]('Unsupported browser: no mediaDevices.getUserMedia()'));
@@ -2573,7 +2577,7 @@ function requestCameraStream(width, height, options = {})
             video.srcObject = stream;
             video.onloadedmetadata = e => {
                 video.play();
-                //Utils.log('The camera device is turned on!');
+                _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].log('The camera device is turned on!');
                 resolve(video, stream);
             };
         })
@@ -9200,7 +9204,8 @@ class Utils
     static log(text, ...args)
     {
         const message = [ text, ...args ].join(' ');
-        console.log('[speedy-vision.js]', message);
+        if(true)
+            console.log('[speedy-vision.js]', message);
         return message;
     }
 
