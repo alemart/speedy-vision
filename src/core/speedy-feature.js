@@ -21,6 +21,8 @@
 
 import { NullDescriptor } from './speedy-descriptor';
 
+
+
 /**
  * A SpeedyFeature is a keypoint in an image,
  * with optional scale, rotation and descriptor
@@ -31,18 +33,19 @@ export class SpeedyFeature
      * Creates a new SpeedyFeature
      * @param {number} x X position
      * @param {number} y Y position
-     * @param {number} [scale] Scale
+     * @param {number} [lod] Level-of-detail
      * @param {number} [rotation] Rotation in radians
      * @param {number} [score] Cornerness measure
      * @param {SpeedyDescriptor} [descriptor] Feature descriptor
      */
-    constructor(x, y, scale = 1.0, rotation = 0.0, score = 0.0, descriptor = null)
+    constructor(x, y, lod = 0.0, rotation = 0.0, score = 0.0, descriptor = null)
     {
         this._x = +x;
         this._y = +y;
-        this._scale = +scale;
+        this._lod = +lod;
         this._rotation = +rotation;
         this._score = +score;
+        this._scale = Math.pow(2, -lod);
         this._descriptor = descriptor === null ? new NullDescriptor() : descriptor;
     }
 
@@ -71,6 +74,15 @@ export class SpeedyFeature
     get y()
     {
         return this._y;
+    }
+
+    /**
+     * The pyramid level-of-detail from which
+     * this feature point was extracted
+     */
+    get lod()
+    {
+        return this._lod;
     }
 
     /**

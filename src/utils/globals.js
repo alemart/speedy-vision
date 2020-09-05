@@ -32,6 +32,9 @@ export const PYRAMID_MAX_OCTAVES = 2 * PYRAMID_MAX_LEVELS - 1; // scaling factor
 // The maximum supported scale for a pyramid layer
 export const PYRAMID_MAX_SCALE = 2; // preferably a power of 2 (image scale can go up to this value)
 
+// The base-2 logarithm of PYRAMID_MAX_SCALE
+export const LOG2_PYRAMID_MAX_SCALE = Math.log2(PYRAMID_MAX_SCALE);
+
 
 
 // -----------------------------------------------------------------

@@ -21,7 +21,7 @@
 
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader, createShader } from '../shader-declaration';
-import { PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE } from '../../utils/globals';
+import { PYRAMID_MAX_LEVELS, LOG2_PYRAMID_MAX_SCALE } from '../../utils/globals';
 import { convX, convY } from '../shaders/filters/convolution';
 
 
@@ -217,10 +217,10 @@ export class GPUPyramids extends SpeedyProgramGroup
 // Set image scale
 function setScale(scale)
 {
-    const lgM = Math.log2(PYRAMID_MAX_SCALE), eps = 1e-5;
+    const eps = 1e-5;
     const pyramidMinScale = Math.pow(2, -PYRAMID_MAX_LEVELS) + eps;
     const x = Math.max(pyramidMinScale, Math.min(scale, PYRAMID_MAX_SCALE));
-    const alpha = (lgM - Math.log2(x)) / (lgM + PYRAMID_MAX_LEVELS);
+    const alpha = (LOG2_PYRAMID_MAX_SCALE - Math.log2(x)) / (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS);
     
     const source = `
     uniform sampler2D image;
@@ -237,9 +237,9 @@ function setScale(scale)
 // Scale image by a factor
 function scale(scaleFactor)
 {
-    const lgM = Math.log2(PYRAMID_MAX_SCALE), eps = 1e-5;
+    const eps = 1e-5;
     const s = Math.max(eps, scaleFactor);
-    const delta = -Math.log2(s) / (lgM + PYRAMID_MAX_LEVELS);
+    const delta = -Math.log2(s) / (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS);
 
     const source = `
     uniform sampler2D image;

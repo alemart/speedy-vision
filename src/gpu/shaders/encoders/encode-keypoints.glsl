@@ -62,12 +62,12 @@ void main()
     ivec2 thread = threadLocation();
     KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);
     int q = findKeypointIndex(address, descriptorSize);
+    ivec2 position; vec4 pixel;
 
     // q-th keypoint doesn't exist
     color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
     // find the q-th keypoint, if it exists
-    ivec2 position; vec4 pixel;
     if(findQthKeypoint(q, position, pixel)) {
         switch(address.offset) {
             case 0: {

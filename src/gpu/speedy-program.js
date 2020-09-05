@@ -215,24 +215,25 @@ export class SpeedyProgram extends Function
     }
 
     /**
+     * Set data using a Uniform Buffer Object
+     * @param {string} blockName uniform block name
+     * @param {ArrayBufferView} data
+     */
+    setUBO(blockName, data)
+    {
+        if(this._ubo === null)
+            this._ubo = new UBOHandler(this._gl, this._stdprog.program);
+
+        this._ubo.set(blockName, data);
+    }
+
+    /**
      * Read uniforms of the program (metadata)
      * @returns {object}
      */
     get uniforms()
     {
         return this._stdprog.uniform;
-    }
-
-    /**
-     * Use when dealing with Uniform Buffer Objects
-     * @returns {UBOHandler}
-     */
-    get ubo()
-    {
-        if(this._ubo === null)
-            this._ubo = new UBOHandler(this._gl, this._stdprog.program);
-
-        return this._ubo;
     }
 
     // Prepare the shader
@@ -670,8 +671,8 @@ function waitForQueueNotEmpty(queue)
 
 /**
  * UBO Handler
- * @param {WebGL2RenderingContext} gl 
- * @param {WebGLProgram} program 
+ * @param {WebGL2RenderingContext} gl
+ * @param {WebGLProgram} program
  */
 function UBOHandler(gl, program)
 {
@@ -684,8 +685,8 @@ function UBOHandler(gl, program)
 /**
  * Set Uniform Buffer Object data
  * (the buffer will only be uploaded when the program runs)
- * @param {string} name 
- * @param {ArrayBufferView} data 
+ * @param {string} name uniform block name
+ * @param {ArrayBufferView} data
  */
 UBOHandler.prototype.set = function(name, data)
 {
@@ -700,7 +701,7 @@ UBOHandler.prototype.set = function(name, data)
         };
     }
 
-    // get UBO entry for the given name
+    // get UBO entry for the given block name
     const ubo = this._ubo[name];
 
     // read block index & assign binding point
