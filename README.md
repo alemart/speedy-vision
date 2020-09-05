@@ -86,7 +86,7 @@ A `SpeedyMedia` object encapsulates a media object: an image, a video, or a canv
 
 `Speedy.load(source: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | ImageBitmap, options?: object): Promise<SpeedyMedia>`
 
-Tells Speedy to load `source`. The `source` parameter may be an image, a video or a canvas.
+Tells Speedy to load `source`. The `source` parameter may be an image, a video, a canvas or a bitmap.
 
 ###### Arguments
 
@@ -101,7 +101,7 @@ A `Promise<SpeedyMedia>` that resolves as soon as the media source is loaded.
 
 ```js
 window.onload = async function() {
-    let image = document.getElementById('my-image');
+    let image = document.getElementById('my-image'); // <img id="my-image" src="...">
     let media = await Speedy.load(image);
 }
 ```
