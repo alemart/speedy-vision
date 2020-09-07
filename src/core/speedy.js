@@ -16,14 +16,14 @@
  * limitations under the License.
  *
  * speedy.js
- * Speedy's entry point
+ * Speedy's main class
  */
 
-import { SpeedyMedia } from './core/speedy-media';
-import { SpeedyPipeline } from './core/speedy-pipeline';
-import { FPSCounter } from './utils/fps-counter';
+import { SpeedyMedia } from './speedy-media';
+import { SpeedyPipeline } from './speedy-pipeline';
+import { FPSCounter } from '../utils/fps-counter';
 
-class Speedy
+export class Speedy
 {
     /**
      * Loads a SpeedyMedia object based on the provided source element
@@ -78,9 +78,3 @@ class Speedy
         };
     }
 }
-
-export const load = Speedy.load;
-export const camera = Speedy.camera;
-export const pipeline = Speedy.pipeline;
-export const version = Speedy.version;
-export const fps = Speedy.fps;

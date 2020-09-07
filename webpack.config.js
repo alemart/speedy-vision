@@ -5,7 +5,6 @@ const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const package = require("./package.json");
 
 module.exports = (env, argv) => ({
-  entry: './src/speedy.js',
   plugins: [
     new webpack.BannerPlugin({
         banner: (({ name, version, homepage, description, year, author, license, date }) => [
@@ -31,6 +30,7 @@ module.exports = (env, argv) => ({
       resourceRegExp: /\.ignore\./i,
     }),
   ],
+  entry: './src/index.js',
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: argv.mode == 'development' ? 'speedy-vision.js' : 'speedy-vision.min.js',
