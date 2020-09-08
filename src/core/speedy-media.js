@@ -181,7 +181,7 @@ export class SpeedyMedia
 
     /**
      * The type of the media attached to this SpeedyMedia object
-     * @returns {string} "image" | "video" | "canvas" | "internal"
+     * @returns {string} "image" | "video" | "canvas" | "bitmap"
      */
     get type()
     {
