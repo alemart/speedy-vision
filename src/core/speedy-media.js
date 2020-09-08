@@ -298,7 +298,7 @@ export class SpeedyMedia
             let texture = media._gpu.upload(media._source);
 
             // run the pipeline
-            texture = pipeline._run(texture, media);
+            texture = pipeline._run(texture, media._gpu, media);
 
             // convert to bitmap
             media._gpu.programs.utils.output(texture);
@@ -381,7 +381,7 @@ export class SpeedyMedia
 
         // Setup feature detector & descriptor
         if(this._featuresAlgorithm == null || this._featuresAlgorithm.constructor !== featuresAlgorithm[settings.method])
-            this._featuresAlgorithm = new (featuresAlgorithm[settings.method])(this._gpu);
+            this._featuresAlgorithm = new (featuresAlgorithm[settings.method])();
 
         // Set custom settings for the selected feature detector & descriptor
         for(const key in settings) {
@@ -392,21 +392,31 @@ export class SpeedyMedia
         // Upload & preprocess media
         let texture = this._gpu.upload(this._source);
         texture = this._featuresAlgorithm.preprocess(
+            this._gpu,
             texture,
             settings.denoise,
             this._colorFormat != ColorFormat.Greyscale
         );
         const enhancedTexture = this._featuresAlgorithm.enhance(
+            this._gpu,
             texture,
             settings.enhancements.illumination == true
         );
 
         // Feature detection & description
-        const detectedKeypoints = this._featuresAlgorithm.detect(enhancedTexture);
-        const describedKeypoints = this._featuresAlgorithm.describe(texture, detectedKeypoints);
+        const detectedKeypoints = this._featuresAlgorithm.detect(
+            this._gpu,
+            enhancedTexture
+        );
+        const describedKeypoints = this._featuresAlgorithm.describe(
+            this._gpu,
+            texture,
+            detectedKeypoints
+        );
 
         // Download keypoints from the GPU
         return this._featuresAlgorithm.download(
+            this._gpu,
             describedKeypoints,
             this.options.usage == 'dynamic',
             settings.max

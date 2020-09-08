@@ -41,11 +41,10 @@ export class BRISKFeatures extends FeaturesAlgorithm
 {
     /**
      * Class constructor
-     * @param {SpeedyGPU} gpu 
      */
-    constructor(gpu)
+    constructor()
     {
-        super(gpu);
+        super();
 
         // default settings
         this._depth = DEFAULT_DEPTH;
@@ -83,10 +82,11 @@ export class BRISKFeatures extends FeaturesAlgorithm
 
     /**
      * Detect BRISK features
+     * @param {SpeedyGPU} gpu
      * @param {WebGLTexture} inputTexture pre-processed greyscale image
      * @returns {WebGLTexture} encoded keypoints
      */
-    detect(inputTexture)
+    detect(gpu, inputTexture)
     {
         // TODO
         throw new NotImplementedError();
@@ -94,11 +94,12 @@ export class BRISKFeatures extends FeaturesAlgorithm
 
     /**
      * Compute BRISK descriptors
+     * @param {SpeedyGPU} gpu
      * @param {WebGLTexture} inputTexture pre-processed greyscale image
      * @param {WebGLTexture} encodedKeypoints encoded, oriented and multi-scale
      * @returns {WebGLTexture} encoded keypoints with descriptors
      */
-    describe(inputTexture, encodedKeypoints)
+    describe(gpu, inputTexture, encodedKeypoints)
     {
         // TODO
         return encodedKeypoints;

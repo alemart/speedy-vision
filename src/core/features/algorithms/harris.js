@@ -43,11 +43,10 @@ export class HarrisFeatures extends FeaturesAlgorithm
 {
     /**
      * Class constructor
-     * @param {SpeedyGPU} gpu 
      */
-    constructor(gpu)
+    constructor()
     {
-        super(gpu);
+        super();
 
         // default settings
         this._quality = DEFAULT_QUALITY;
@@ -90,12 +89,12 @@ export class HarrisFeatures extends FeaturesAlgorithm
 
     /**
      * Detect feature points
+     * @param {SpeedyGPU} gpu
      * @param {WebGLTexture} inputTexture pre-processed greyscale image
      * @returns {WebGLTexture} encoded keypoints
      */
-    detect(inputTexture)
+    detect(gpu, inputTexture)
     {
-        const gpu = this._gpu;
         const quality = this._quality;
         const descriptorSize = this.descriptorSize;
         const windowRadius = DEFAULT_WINDOW_SIZE >> 1;
@@ -132,11 +131,10 @@ export class MultiscaleHarrisFeatures extends HarrisFeatures
 {
     /**
      * Class constructor
-     * @param {SpeedyGPU} gpu 
      */
-    constructor(gpu)
+    constructor()
     {
-        super(gpu);
+        super();
 
         // default settings
         this._depth = DEFAULT_DEPTH;
@@ -165,12 +163,12 @@ export class MultiscaleHarrisFeatures extends HarrisFeatures
 
     /**
      * Detect feature points
+     * @param {SpeedyGPU} gpu
      * @param {WebGLTexture} inputTexture pre-processed greyscale image
      * @returns {WebGLTexture} encoded keypoints
      */
-    detect(inputTexture)
+    detect(gpu, inputTexture)
     {
-        const gpu = this._gpu;
         const quality = this._quality;
         const descriptorSize = this.descriptorSize;
         const orientationPatchRadius = DEFAULT_ORIENTATION_PATCH_RADIUS;

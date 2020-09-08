@@ -36,13 +36,11 @@ export class FeaturesDownloader extends Observable
 {
     /**
      * Class constructor
-     * @param {SpeedyGPU} gpu 
      * @param {number} descriptorSize in bytes (set to zero if there is not descriptor)
      */
-    constructor(gpu, descriptorSize = 0)
+    constructor(descriptorSize = 0)
     {
         super();
-        this._gpu = gpu;
         this._descriptorSize = Math.max(0, descriptorSize | 0);
         this._rawKeypointCount = 0;
         this._filteredKeypointCount = 0;
@@ -50,15 +48,14 @@ export class FeaturesDownloader extends Observable
 
     /**
      * Download feature points from the GPU
+     * @param {SpeedyGPU} gpu
      * @param {WebGLTexture} encodedKeypoints tiny texture with encoded keypoints
      * @param {boolean} [useAsyncTransfer] use DMA
      * @param {number} [max] cap the number of keypoints to this value
      * @returns {Promise<SpeedyFeature[]>}
      */
-    download(encodedKeypoints, useAsyncTransfer = true, max = -1)
+    download(gpu, encodedKeypoints, useAsyncTransfer = true, max = -1)
     {
-        const gpu = this._gpu;
-
         return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer).then(data => {
             // when processing a video, we expect that the number of keypoints
             // in time is a relatively smooth curve

@@ -34,8 +34,6 @@ import { IllegalArgumentError } from '../utils/errors';
  */
 export class SpeedyPipeline
 {
-    /* friend class SpeedyMedia */
-
     /**
      * Class constructor
      */
@@ -81,13 +79,14 @@ export class SpeedyPipeline
     /**
      * Runs the pipeline
      * @param {WebGLTexture} texture input texture
+     * @param {SpeedyGPU} gpu gpu attached to the media
      * @param {SpeedyMedia} media media object
      * @returns {WebGLTexture} output texutre
      */
-    _run(texture, media)
+    _run(texture, gpu, media)
     {
         for(let i = 0; i < this._operations.length; i++)
-            texture = this._operations[i].run(texture, media._gpu, media);
+            texture = this._operations[i].run(texture, gpu, media);
 
         return texture;
     }

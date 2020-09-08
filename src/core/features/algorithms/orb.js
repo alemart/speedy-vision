@@ -32,11 +32,10 @@ export class ORBFeatures extends MultiscaleHarrisFeatures
 {
     /**
      * Class constructor
-     * @param {SpeedyGPU} gpu 
      */
-    constructor(gpu)
+    constructor()
     {
-        super(gpu);
+        super();
     }
 
     /**
@@ -50,25 +49,25 @@ export class ORBFeatures extends MultiscaleHarrisFeatures
 
     /**
      * Detect feature points for ORB
+     * @param {SpeedyGPU} gpu
      * @param {WebGLTexture} inputTexture pre-processed greyscale image
      * @returns {WebGLTexture} encoded keypoints
      */
-    detect(inputTexture)
+    detect(gpu, inputTexture)
     {
         // Multiscale Harris gives us nice corners in scale-space
-        return super.detect(inputTexture);
+        return super.detect(gpu, inputTexture);
     }
 
     /**
      * Compute ORB feature descriptors
+     * @param {SpeedyGPU} gpu
      * @param {WebGLTexture} inputTexture pre-processed greyscale image
      * @param {WebGLTexture} encodedKeypoints encoded, oriented and multi-scale
      * @returns {WebGLTexture} encoded keypoints with descriptors
      */
-    describe(inputTexture, encodedKeypoints)
+    describe(gpu, inputTexture, encodedKeypoints)
     {
-        const gpu = this._gpu;
-
         // smooth the image before computing the descriptors
         const smoothTexture = gpu.programs.filters.gauss7(inputTexture);
         const smoothPyramid = gpu.programs.utils.generatePyramid(smoothTexture);

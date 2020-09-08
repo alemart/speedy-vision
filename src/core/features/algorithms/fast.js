@@ -39,11 +39,10 @@ export class FASTFeatures extends FeaturesAlgorithm
 {
     /**
      * Class constructor
-     * @param {SpeedyGPU} gpu 
      */
-    constructor(gpu)
+    constructor()
     {
-        super(gpu);
+        super();
 
         // default settings
         this._n = DEFAULT_N;
@@ -108,13 +107,13 @@ export class FASTFeatures extends FeaturesAlgorithm
 
     /**
      * Detect feature points
+     * @param {SpeedyGPU} gpu
      * @param {WebGLTexture} inputTexture pre-processed greyscale image
      * @returns {WebGLTexture} encoded keypoints
      */
-    detect(inputTexture)
+    detect(gpu, inputTexture)
     {
         const n = this._n;
-        const gpu = this._gpu;
         const normalizedThreshold = this._threshold / 255.0;
         const descriptorSize = this.descriptorSize;
 
@@ -142,11 +141,10 @@ export class MultiscaleFASTFeatures extends FASTFeatures
 {
     /**
      * Class constructor
-     * @param {SpeedyGPU} gpu 
      */
-    constructor(gpu)
+    constructor()
     {
-        super(gpu);
+        super();
 
         // default settings
         this._depth = DEFAULT_DEPTH;
@@ -209,12 +207,12 @@ export class MultiscaleFASTFeatures extends FASTFeatures
 
     /**
      * Detect feature points
+     * @param {SpeedyGPU} gpu
      * @param {WebGLTexture} inputTexture pre-processed greyscale image
      * @returns {WebGLTexture} encoded keypoints
      */
-    detect(inputTexture)
+    detect(gpu, inputTexture)
     {
-        const gpu = this._gpu;
         const normalizedThreshold = this._threshold / 255.0;
         const useHarrisScore = this._useHarrisScore;
         const descriptorSize = this.descriptorSize;

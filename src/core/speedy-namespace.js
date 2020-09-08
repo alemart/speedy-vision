@@ -20,6 +20,7 @@
  */
 
 import { AbstractMethodError } from '../utils/errors'
+
 /**
  * An abstract namespace
  * @abstract

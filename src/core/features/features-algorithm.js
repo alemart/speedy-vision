@@ -34,12 +34,10 @@ export class FeaturesAlgorithm
 {
     /**
      * Class constructor
-     * @param {SpeedyGPU} gpu
      */
-    constructor(gpu)
+    constructor()
     {
-        this._gpu = gpu;
-        this._downloader = new FeaturesDownloader(this._gpu, this.descriptorSize);
+        this._downloader = new FeaturesDownloader(this.descriptorSize);
         this._sensitivity = 0;
         this._automaticSensitivity = null;
     }
@@ -81,10 +79,11 @@ export class FeaturesAlgorithm
     /**
      * Detect feature points
      * @abstract
+     * @param {SpeedyGPU} gpu
      * @param {WebGLTexture} inputTexture pre-processed greyscale image
      * @returns {WebGLTexture} tiny texture with encoded keypoints
      */
-    detect(inputTexture)
+    detect(gpu, inputTexture)
     {
         // This must be implemented in subclasses
         throw new AbstractMethodError();
@@ -92,11 +91,12 @@ export class FeaturesAlgorithm
 
     /**
      * Describe feature points
+     * @param {SpeedyGPU} gpu
      * @param {WebGLTexture} inputTexture pre-processed greyscale image
      * @param {WebGLTexture} detectedKeypoints tiny texture with appropriate size for the descriptors
      * @returns {WebGLTexture} tiny texture with encoded keypoints & descriptors
      */
-    describe(inputTexture, detectedKeypoints)
+    describe(gpu, inputTexture, detectedKeypoints)
     {
         // No descriptor is computed by default
         return detectedKeypoints;
@@ -104,26 +104,27 @@ export class FeaturesAlgorithm
 
     /**
      * Download feature points from the GPU
+     * @param {SpeedyGPU} gpu
      * @param {WebGLTexture} encodedKeypoints tiny texture with encoded keypoints
      * @param {boolean} [useAsyncTransfer] use DMA
      * @param {number} [max] cap the number of keypoints to this value
      * @returns {Promise<SpeedyFeature[]>}
      */
-    download(encodedKeypoints, useAsyncTransfer = true, max = -1)
+    download(gpu, encodedKeypoints, useAsyncTransfer = true, max = -1)
     {
-        return this._downloader.download(encodedKeypoints, useAsyncTransfer, max);
+        return this._downloader.download(gpu, encodedKeypoints, useAsyncTransfer, max);
     }
 
     /**
      * Preprocess a texture for feature detection & description
+     * @param {SpeedyGPU} gpu
      * @param {WebGLTexture} inputTexture a RGB or greyscale image
      * @param {boolean} [denoise] should we smooth the media a bit?
      * @param {boolean} [convertToGreyscale] set to true if the texture is not greyscale
      * @returns {WebGLTexture} pre-processed greyscale image
      */
-    preprocess(inputTexture, denoise = true, convertToGreyscale = true)
+    preprocess(gpu, inputTexture, denoise = true, convertToGreyscale = true)
     {
-        const gpu = this._gpu;
         let texture = inputTexture;
 
         if(denoise)
@@ -137,13 +138,13 @@ export class FeaturesAlgorithm
 
     /**
      * Enhances texture for feature DETECTION (not description)
+     * @param {SpeedyGPU} gpu
      * @param {WebGLTexture} inputTexture
      * @param {boolean} [enhanceIllumination] fix irregular lighting in the scene?
      * @returns {WebGLTexture}
      */
-    enhance(inputTexture, enhanceIllumination = false)
+    enhance(gpu, inputTexture, enhanceIllumination = false)
     {
-        const gpu = this._gpu;
         let texture = inputTexture;
 
         if(enhanceIllumination) {
@@ -219,14 +220,5 @@ export class FeaturesAlgorithm
                 this._automaticSensitivity.disable();
             this._automaticSensitivity = null;
         }
-    }
-
-    /**
-     * Get SpeedyGPU instance
-     * @returns {SpeedyGPU}
-     */
-    get gpu()
-    {
-        return this._gpu;
     }
 }

@@ -25,12 +25,8 @@ describe('Speedy', function() {
         jasmine.addMatchers(speedyMatchers);
     });
 
-    it('exists', function() {
+    it('is defined', function() {
         expect(Speedy).toBeDefined();
-    });
-
-    it('is an object', function() {
-        expect(typeof Speedy).toBe('object');
     });
 
     it('has a version', function() {
