@@ -21,15 +21,16 @@
 
 import { AbstractMethodError, IllegalArgumentError } from '../../utils/errors';
 import { AutomaticSensitivity } from './automatic-sensitivity';
-import { FeaturesDownloader } from './features-downloader';
+import { FeaturesDownloader } from './feature-downloader';
 import { SpeedyFeature } from '../speedy-feature';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
 
 /**
  * An abstract class for feature
  * detection & description
+ * @abstract
  */
-export /* abstract */ class FeaturesAlgorithm
+export class FeaturesAlgorithm
 {
     /**
      * Class constructor
@@ -49,7 +50,8 @@ export /* abstract */ class FeaturesAlgorithm
      * 
      * It must return 0 if the algorithm has no
      * descriptor attached to it
-     * 
+     *
+     * @abstract
      * @returns {number} descriptor size in bytes
      */
     get descriptorSize()
@@ -66,6 +68,8 @@ export /* abstract */ class FeaturesAlgorithm
      * mapped to different feature detectors. The
      * higher the sensitivity, the more features
      * you should get
+     *
+     * @abstract
      * @param {number} sensitivity a value in [0,1]
      */
     _onSensitivityChange(sensitivity)
@@ -76,6 +80,7 @@ export /* abstract */ class FeaturesAlgorithm
 
     /**
      * Detect feature points
+     * @abstract
      * @param {WebGLTexture} inputTexture pre-processed greyscale image
      * @returns {WebGLTexture} tiny texture with encoded keypoints
      */
@@ -133,7 +138,7 @@ export /* abstract */ class FeaturesAlgorithm
     /**
      * Enhances texture for feature DETECTION (not description)
      * @param {WebGLTexture} inputTexture
-     * @param {boolean} [enhanceIllumination] fix uneven lighting in the scene?
+     * @param {boolean} [enhanceIllumination] fix irregular lighting in the scene?
      * @returns {WebGLTexture}
      */
     enhance(inputTexture, enhanceIllumination = false)

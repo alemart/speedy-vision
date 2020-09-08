@@ -21,7 +21,7 @@
 
 import { Observable } from '../../utils/observable';
 import { SpeedyFeature } from '../speedy-feature';
-import { FeaturesDownloader } from './features-downloader';
+import { FeaturesDownloader } from './feature-downloader';
 import { SensitivityTuner } from '../tuners/sensitivity-tuner';
 import { TestTuner } from '../tuners/test-tuner';
 
