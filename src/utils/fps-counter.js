@@ -19,7 +19,6 @@
  * A FPS counter
  */
 
-import { Utils } from './utils';
 import { IllegalOperationError } from './errors';
 
 let instance = null;
@@ -36,18 +35,19 @@ export class FPSCounter
         this._frames = 0;
         this._updateInterval = UPDATE_INTERVAL;
         this._lastUpdate = performance.now();
+        this._boundUpdate = this._update.bind(this);
 
         // this should never happen...
         if(instance !== null)
             throw new IllegalOperationError(`Can't have multiple instances of FPSCounter`);
 
         // start FPS counter
-        requestAnimationFrame(this._update.bind(this));
+        this._boundUpdate();
     }
 
     /**
      * Gets an instance of the FPS counter.
-     * Using lazy loading, i.e., we will not
+     * We use lazy loading, i.e., we will not
      * create a FPS counter unless we need to!
      */
     static get instance()
@@ -80,6 +80,6 @@ export class FPSCounter
         }
 
         this._frames++;
-        requestAnimationFrame(this._update.bind(this));
+        requestAnimationFrame(this._boundUpdate);
     }
 }

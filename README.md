@@ -606,18 +606,18 @@ Nightvision enhances the illumination of the scene. It improves local contrast a
 
 #### Frames per second (FPS)
 
-Speedy includes a FPS counter for testing purposes. It will be created only if you access it.
+Speedy includes a FPS counter for testing purposes. It will be created as soon as you access it.
 
-##### Speedy.fps.value
+##### Speedy.fps
 
-`Speedy.fps.value: number, read-only`
+`Speedy.fps: number, read-only`
 
 Gets the FPS rate.
 
 ###### Example
 
 ```js
-console.log(Speedy.fps.value);
+console.log(Speedy.fps);
 ```
 
 #### Misc

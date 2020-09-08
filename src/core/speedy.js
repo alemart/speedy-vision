@@ -68,13 +68,11 @@ export class Speedy
     }
 
     /**
-     * The FPS rate. Get it as Speedy.fps.value
+     * The FPS rate
      * @returns {number} Frames per second (FPS)
      */
     static get fps()
     {
-        return {
-            get value() { return FPSCounter.instance.fps; }
-        };
+        return FPSCounter.instance.fps;
     }
 }
