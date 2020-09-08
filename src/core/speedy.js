@@ -23,6 +23,9 @@ import { SpeedyMedia } from './speedy-media';
 import { SpeedyPipeline } from './speedy-pipeline';
 import { FPSCounter } from '../utils/fps-counter';
 
+/**
+ * Speedy's main class
+ */
 export class Speedy
 {
     /**

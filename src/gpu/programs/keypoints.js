@@ -97,7 +97,7 @@ const multiscaleSuppression = importShader('keypoints/multiscale-suppression.gls
 const samescaleSuppression = importShader('keypoints/samescale-suppression.glsl').withArguments('image');
 
 // Sobel derivatives
-const multiscaleSobel = importShader('keypoints/multiscale-sobel.glsl').withArguments('pyramid', 'lod');
+const multiscaleSobel = importShader('filters/multiscale-sobel.glsl').withArguments('pyramid', 'lod');
 
 
 

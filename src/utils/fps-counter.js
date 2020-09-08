@@ -49,6 +49,7 @@ export class FPSCounter
      * Gets an instance of the FPS counter.
      * We use lazy loading, i.e., we will not
      * create a FPS counter unless we need to!
+     * @returns {FPSCounter}
      */
     static get instance()
     {
@@ -67,7 +68,9 @@ export class FPSCounter
         return this._fps;
     }
 
-    // Updates the FPS counter
+    /**
+     * Updates the FPS counter
+     */
     _update()
     {
         const now = performance.now();
