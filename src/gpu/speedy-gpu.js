@@ -25,6 +25,9 @@ import { SpeedyProgramCenter } from './speedy-program-center';
 import { MAX_TEXTURE_LENGTH } from '../utils/globals';
 import { NotSupportedError, IllegalArgumentError } from '../utils/errors';
 
+// Constants
+const UPLOAD_BUFFER_SIZE = 4; // how many textures we allocate for uploading data
+
 /**
  * GPU routines for
  * accelerated computer vision
@@ -94,6 +97,7 @@ export class SpeedyGPU
 
     /**
      * Upload data to the GPU
+     * We reuse textures within an internal buffer of size UPLOAD_BUFFER_SIZE
      * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} data 
      * @param {number} [width]
      * @param {number} [height] 
@@ -119,15 +123,15 @@ export class SpeedyGPU
         if(width == 0 || height == 0)
             throw new IllegalArgumentError(`Can't upload an image of area 0`);
 
-        // create or recreate & size texture
+        // create (or recreate) internal textures
         if(this._inputTexture === null) {
             gl.canvas.width = Math.max(gl.canvas.width, width);
             gl.canvas.height = Math.max(gl.canvas.height, height);
-            this._inputTexture = Array(2).fill(null).map(_ =>
+            this._inputTexture = Array(UPLOAD_BUFFER_SIZE).fill(null).map(_ =>
                 GLUtils.createTexture(gl, gl.canvas.width, gl.canvas.height));
         }
         else if(width > gl.canvas.width || height > gl.canvas.height) {
-            Utils.warning(`Resizing input texture to ${width} x ${height}`)
+            Utils.log(`Resizing input texture to ${width} x ${height}`)
             this._inputTexture.forEach(inputTexture =>
                 GLUtils.destroyTexture(gl, inputTexture));
             return this.upload(data, width, height);
@@ -135,7 +139,7 @@ export class SpeedyGPU
 
         // use round-robin to mitigate WebGL's implicit synchronization
         // and maybe minimize texture upload times
-        this._inputTextureIndex = 1 - this._inputTextureIndex;
+        this._inputTextureIndex = (1 + this._inputTextureIndex) % UPLOAD_BUFFER_SIZE;
 
         // done! note: the input texture is upside-down, i.e.,
         // flipped on the y-axis. We need to unflip it on the
