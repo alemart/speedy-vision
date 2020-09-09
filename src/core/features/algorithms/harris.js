@@ -194,7 +194,7 @@ export class MultiscaleHarrisFeatures extends HarrisFeatures
         // find the maximum corner response
         const maxScore = gpu.programs.utils.scanMax(corners, PixelComponent.RED);
 
-        // discard corners according to quality level
+        // discard corners according to the quality level
         const filteredCorners = gpu.programs.keypoints.harrisCutoff(corners, maxScore, quality);
 
         // non-maximum suppression

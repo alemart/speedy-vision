@@ -300,8 +300,11 @@ export class GPUEncoders extends SpeedyProgramGroup
             this._uploadBuffer[j+3] = keypoint.score;
         }
 
+        // WARNING: you shouldn't work with a different set of keypoints
+        // while you're working with the ones you have just uploaded
+        this.optimizeKeypointEncoder(keypointCount, descriptorSize); // make sure we get the right texture size
+
         // Upload data
-        this.optimizeKeypointEncoder(keypointCount, descriptorSize); // WARNING: you shouldn't work with a different set of keypoints while you're working with the ones you have just uploaded
         this._uploadKeypoints.setUBO('KeypointBuffer', this._uploadBuffer);
         return this._uploadKeypoints(keypointCount, this._keypointEncoderLength, descriptorSize);
     }
