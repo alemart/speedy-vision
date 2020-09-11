@@ -726,6 +726,7 @@ UBOHandler.prototype.update = function()
         const ubo = this._ubo[name];
 
         gl.bindBuffer(gl.UNIFORM_BUFFER, ubo.buffer);
+        gl.bufferData(gl.UNIFORM_BUFFER, ubo.data.byteLength, gl.DYNAMIC_DRAW); // buffer orphaning - needed?
         gl.bufferData(gl.UNIFORM_BUFFER, ubo.data, gl.DYNAMIC_DRAW);
         gl.bindBufferBase(gl.UNIFORM_BUFFER, ubo.blockBindingIndex, ubo.buffer);
         gl.bindBuffer(gl.UNIFORM_BUFFER, null);
