@@ -108,19 +108,6 @@ export class GPUUtils extends SpeedyProgramGroup
     }
 
     /**
-     * Generate a pyramid for a texture
-     * @param {SpeedyTexture} texture
-     * @returns {SpeedyTexture} the input texture
-     */
-    generatePyramid(texture)
-    {
-        // TODO: generate octaves via gaussians
-        // TODO: check if the mipmap already exists
-        GLUtils.generateMipmap(this._gpu.gl, texture.glTexture);
-        return texture;
-    }
-
-    /**
      * Scan a single component in all pixels of the image and find the maximum intensity
      * @param {SpeedyTexture} image 
      * @param {number} pixelComponent a single PixelComponent flag

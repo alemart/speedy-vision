@@ -39,6 +39,7 @@ export class SpeedyTexture
         this._width = width;
         this._height = height;
         this._glTexture = GLUtils.createTexture(this._gl, this._width, this._height);
+        this._hasMipmaps = false;
     }
 
     /**
@@ -66,6 +67,30 @@ export class SpeedyTexture
     upload(pixels, lod = 0)
     {
         GLUtils.uploadToTexture(this._gl, this._glTexture, this._width, this._height, pixels, lod | 0);
+    }
+
+    /**
+     * Generates mipmaps for this texture
+     * This computes the image pyramid via hardware
+     * @returns {SpeedyTexture} this
+     */
+    generateMipmap()
+    {
+        if(!this._hasMipmaps) {
+            // TODO: generate octaves via gaussians
+            GLUtils.generateMipmap(this._gl, this._glTexture);
+            this._hasMipmaps = true;
+        }
+
+        return this;
+    }
+
+    /**
+     * Invalidates previously generated mipmaps
+     */
+    discardMipmap()
+    {
+        this._hasMipmaps = false;
     }
 
     /**

@@ -73,7 +73,7 @@ export class ORBFeatures extends MultiscaleHarrisFeatures
 
         // smooth the image before computing the descriptors
         const smoothTexture = gpu.programs.filters.gauss7(inputTexture);
-        const smoothPyramid = gpu.programs.utils.generatePyramid(smoothTexture);
+        const smoothPyramid = smoothTexture.generateMipmap();
 
         // compute ORB feature descriptors
         const encoderLength = gpu.programs.encoders.encoderLength;

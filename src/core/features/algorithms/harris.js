@@ -175,7 +175,7 @@ export class MultiscaleHarrisFeatures extends HarrisFeatures
         const numberOfOctaves = 2 * this._depth - 1;
 
         // generate pyramid
-        const pyramid = gpu.programs.utils.generatePyramid(inputTexture);
+        const pyramid = inputTexture.generateMipmap();
 
         // compute derivatives
         const sobelDerivatives = Array(SOBEL_OCTAVE_COUNT);
@@ -219,7 +219,7 @@ export class MultiscaleHarrisFeatures extends HarrisFeatures
         const orientationPatchRadius = DEFAULT_ORIENTATION_PATCH_RADIUS;
 
         // generate pyramid
-        const pyramid = gpu.programs.utils.generatePyramid(inputTexture);
+        const pyramid = inputTexture.generateMipmap();
 
         // compute orientation
         return gpu.programs.encoders.orientEncodedKeypoints(pyramid, orientationPatchRadius, detectedKeypoints, descriptorSize);

@@ -384,6 +384,9 @@ export class SpeedyProgram extends Function
         // unbind fbo
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
+        // invalidate mipmaps
+        outputTexture.discardMipmap();
+
         // return texture (if available)
         return outputTexture;
     }
