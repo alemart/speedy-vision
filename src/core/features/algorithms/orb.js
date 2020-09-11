@@ -50,8 +50,8 @@ export class ORBFeatures extends MultiscaleHarrisFeatures
     /**
      * Detect feature points for ORB
      * @param {SpeedyGPU} gpu
-     * @param {WebGLTexture} inputTexture pre-processed greyscale image
-     * @returns {WebGLTexture} encoded keypoints
+     * @param {SpeedyTexture} inputTexture pre-processed greyscale image
+     * @returns {SpeedyTexture} encoded keypoints
      */
     detect(gpu, inputTexture)
     {
@@ -62,9 +62,9 @@ export class ORBFeatures extends MultiscaleHarrisFeatures
     /**
      * Compute ORB feature descriptors
      * @param {SpeedyGPU} gpu
-     * @param {WebGLTexture} inputTexture pre-processed greyscale image
-     * @param {WebGLTexture} detectedKeypoints tiny texture with appropriate size for the descriptors
-     * @returns {WebGLTexture} tiny texture with encoded keypoints & descriptors
+     * @param {SpeedyTexture} inputTexture pre-processed greyscale image
+     * @param {SpeedyTexture} detectedKeypoints tiny texture with appropriate size for the descriptors
+     * @returns {SpeedyTexture} tiny texture with encoded keypoints & descriptors
      */
     describe(gpu, inputTexture, detectedKeypoints)
     {

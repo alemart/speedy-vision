@@ -210,7 +210,7 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
                 Utils.warning(warn);
 
                 // release old texture
-                GLUtils.destroyTexture(this._gl, this._texKernel);
+                this._texKernel.release();
             }
 
             this._texKernel = gpu.programs.filters[this._method[0]](this._kernel);
@@ -229,9 +229,10 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
     release()
     {
         if(this._texKernel != null) {
-            GLUtils.destroyTexture(this._gl, this._texKernel);
+            this._texKernel.release();
             this._texKernel = this._gl = null;
         }
+
         super.release();
     }
 }

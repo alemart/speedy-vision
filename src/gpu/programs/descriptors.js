@@ -57,10 +57,10 @@ export class GPUDescriptors extends SpeedyProgramGroup
 
     /**
      * Compute ORB descriptor (256 bits)
-     * @param {WebGLTexture} pyramid pre-smoothed on the intensity channel
-     * @param {WebGLTexture} encodedCorners tiny texture
+     * @param {SpeedyTexture} pyramid pre-smoothed on the intensity channel
+     * @param {SpeedyTexture} encodedCorners tiny texture
      * @param {number} encoderLength
-     * @return {WebGLTexture}
+     * @return {SpeedyTexture}
      */
     orb(pyramid, encodedCorners, encoderLength)
     {

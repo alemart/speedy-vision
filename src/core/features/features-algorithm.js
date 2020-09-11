@@ -80,8 +80,8 @@ export class FeaturesAlgorithm
      * Detect feature points
      * @abstract
      * @param {SpeedyGPU} gpu
-     * @param {WebGLTexture} inputTexture pre-processed greyscale image
-     * @returns {WebGLTexture} tiny texture with encoded keypoints
+     * @param {SpeedyTexture} inputTexture pre-processed greyscale image
+     * @returns {SpeedyTexture} tiny texture with encoded keypoints
      */
     detect(gpu, inputTexture)
     {
@@ -92,9 +92,9 @@ export class FeaturesAlgorithm
     /**
      * Describe feature points
      * @param {SpeedyGPU} gpu
-     * @param {WebGLTexture} inputTexture pre-processed greyscale image
-     * @param {WebGLTexture} detectedKeypoints tiny texture with appropriate size for the descriptors
-     * @returns {WebGLTexture} tiny texture with encoded keypoints & descriptors
+     * @param {SpeedyTexture} inputTexture pre-processed greyscale image
+     * @param {SpeedyTexture} detectedKeypoints tiny texture with appropriate size for the descriptors
+     * @returns {SpeedyTexture} tiny texture with encoded keypoints & descriptors
      */
     describe(gpu, inputTexture, detectedKeypoints)
     {
@@ -105,7 +105,7 @@ export class FeaturesAlgorithm
     /**
      * Download feature points from the GPU
      * @param {SpeedyGPU} gpu
-     * @param {WebGLTexture} encodedKeypoints tiny texture with encoded keypoints
+     * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
      * @param {boolean} [useAsyncTransfer] use DMA
      * @param {number} [max] cap the number of keypoints to this value
      * @returns {Promise<SpeedyFeature[]>}
@@ -118,10 +118,10 @@ export class FeaturesAlgorithm
     /**
      * Preprocess a texture for feature detection & description
      * @param {SpeedyGPU} gpu
-     * @param {WebGLTexture} inputTexture a RGB or greyscale image
+     * @param {SpeedyTexture} inputTexture a RGB or greyscale image
      * @param {boolean} [denoise] should we smooth the media a bit?
      * @param {boolean} [convertToGreyscale] set to true if the texture is not greyscale
-     * @returns {WebGLTexture} pre-processed greyscale image
+     * @returns {SpeedyTexture} pre-processed greyscale image
      */
     preprocess(gpu, inputTexture, denoise = true, convertToGreyscale = true)
     {
@@ -139,9 +139,9 @@ export class FeaturesAlgorithm
     /**
      * Enhances texture for feature DETECTION (not description)
      * @param {SpeedyGPU} gpu
-     * @param {WebGLTexture} inputTexture
+     * @param {SpeedyTexture} inputTexture
      * @param {boolean} [enhanceIllumination] fix irregular lighting in the scene?
-     * @returns {WebGLTexture}
+     * @returns {SpeedyTexture}
      */
     enhance(gpu, inputTexture, enhanceIllumination = false)
     {

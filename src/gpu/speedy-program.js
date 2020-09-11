@@ -20,6 +20,7 @@
  */
 
 import { GLUtils } from './gl-utils.js';
+import { SpeedyTexture } from './speedy-texture';
 import { NotSupportedError, IllegalArgumentError, IllegalOperationError } from '../utils/errors';
 
 const LOCATION_ATTRIB_POSITION = 0;
@@ -360,9 +361,9 @@ export class SpeedyProgram extends Function
 
             // clone outputTexture using the current framebuffer
             if(!options.recycleTexture) {
-                const cloneTexture = GLUtils.createTexture(gl, stdprog.width, stdprog.height);
+                const cloneTexture = new SpeedyTexture(gl, stdprog.width, stdprog.height);
                 gl.activeTexture(gl.TEXTURE0);
-                gl.bindTexture(gl.TEXTURE_2D, cloneTexture);
+                gl.bindTexture(gl.TEXTURE_2D, cloneTexture.glTexture);
                 gl.copyTexSubImage2D(gl.TEXTURE_2D,     // target
                                      0,                 // mipmap level
                                      0,                 // xoffset
@@ -403,7 +404,7 @@ export class SpeedyProgram extends Function
                 throw new IllegalArgumentError(`Can't run shader: cannot use null as an input texture`);
 
             gl.activeTexture(gl.TEXTURE0 + texNo);
-            gl.bindTexture(gl.TEXTURE_2D, value);
+            gl.bindTexture(gl.TEXTURE_2D, value.glTexture);
             gl.uniform1i(uniform.location, texNo);
             texNo++;
         }
@@ -548,8 +549,8 @@ StandardProgram.prototype.attachFBO = function(pingpong = false)
     this._fbo = Array(numTextures);
 
     for(let i = 0; i < numTextures; i++) {
-        this._texture[i] = GLUtils.createTexture(gl, width, height);
-        this._fbo[i] = GLUtils.createFramebuffer(gl, this._texture[i]);
+        this._texture[i] = new SpeedyTexture(gl, width, height);
+        this._fbo[i] = GLUtils.createFramebuffer(gl, this._texture[i].glTexture);
     }
 }
 
@@ -566,7 +567,7 @@ StandardProgram.prototype.detachFBO = function()
 
     if(this._texture != null) {
         for(let texture of this._texture)
-            GLUtils.destroyTexture(gl, texture);
+            texture.release();
         this._texture = null;
     }
 
@@ -606,11 +607,11 @@ StandardProgram.prototype.resize = function(width, height)
 
         // create textures with new size & old content
         for(let i = 0; i < numTextures; i++) {
-            newTexture[i] = GLUtils.createTexture(gl, width, height);
+            newTexture[i] = new SpeedyTexture(gl, width, height);
 
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo[i]);
             gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, newTexture[i]);
+            gl.bindTexture(gl.TEXTURE_2D, newTexture[i].glTexture);
             gl.copyTexSubImage2D(gl.TEXTURE_2D,     // target
                                  0,                 // mipmap level
                                  0,                 // xoffset
@@ -622,7 +623,7 @@ StandardProgram.prototype.resize = function(width, height)
             gl.bindTexture(gl.TEXTURE_2D, null);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-            newFBO[i] = GLUtils.createFramebuffer(gl, newTexture[i]);
+            newFBO[i] = GLUtils.createFramebuffer(gl, newTexture[i].glTexture);
         }
 
         // release old textures
@@ -630,7 +631,7 @@ StandardProgram.prototype.resize = function(width, height)
             GLUtils.destroyFramebuffer(gl, fbo);
 
         for(let texture of this._texture)
-            GLUtils.destroyTexture(gl, texture);
+            texture.release();
 
         // update references
         this._texture = newTexture;

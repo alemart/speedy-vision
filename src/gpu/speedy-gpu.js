@@ -20,6 +20,7 @@
  */
 
 import { GLUtils } from './gl-utils.js';
+import { SpeedyTexture } from './speedy-texture';
 import { Utils } from '../utils/utils';
 import { SpeedyProgramCenter } from './speedy-program-center';
 import { MAX_TEXTURE_LENGTH } from '../utils/globals';
@@ -101,7 +102,7 @@ export class SpeedyGPU
      * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} data 
      * @param {number} [width]
      * @param {number} [height] 
-     * @returns {WebGLTexture}
+     * @returns {SpeedyTexture}
      */
     upload(data, width = -1, height = -1)
     {
@@ -128,12 +129,13 @@ export class SpeedyGPU
             gl.canvas.width = Math.max(gl.canvas.width, width);
             gl.canvas.height = Math.max(gl.canvas.height, height);
             this._inputTexture = Array(UPLOAD_BUFFER_SIZE).fill(null).map(_ =>
-                GLUtils.createTexture(gl, gl.canvas.width, gl.canvas.height));
+                new SpeedyTexture(gl, gl.canvas.width, gl.canvas.height));
         }
         else if(width > gl.canvas.width || height > gl.canvas.height) {
-            Utils.log(`Resizing input texture to ${width} x ${height}`)
+            Utils.log(`Resizing input texture to ${width} x ${height}`);
             this._inputTexture.forEach(inputTexture =>
-                GLUtils.destroyTexture(gl, inputTexture));
+                inputTexture.release());
+            this._inputTexture = null;
             return this.upload(data, width, height);
         }
 
@@ -144,7 +146,7 @@ export class SpeedyGPU
         // done! note: the input texture is upside-down, i.e.,
         // flipped on the y-axis. We need to unflip it on the
         // output, so that (0,0) becomes the top-left corner
-        GLUtils.uploadToTexture(gl, this._inputTexture[this._inputTextureIndex], width, height, data);
+        this._inputTexture[this._inputTextureIndex].upload(data);
         return this._inputTexture[this._inputTextureIndex];
     }
 

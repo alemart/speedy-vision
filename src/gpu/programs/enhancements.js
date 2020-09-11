@@ -87,10 +87,10 @@ export class GPUEnhancements extends SpeedyProgramGroup
 
     /**
      * Normalize a greyscale image
-     * @param {WebGLTexture} image greyscale image (RGB components are the same)
+     * @param {SpeedyTexture} image greyscale image (RGB components are the same)
      * @param {number} [minValue] minimum desired pixel intensity (from 0 to 255, inclusive)
      * @param {number} [maxValue] maximum desired pixel intensity (from 0 to 255, inclusive)
-     * @returns {WebGLTexture}
+     * @returns {SpeedyTexture}
      */
     normalizeGreyscaleImage(image, minValue = 0, maxValue = 255)
     {
@@ -101,10 +101,10 @@ export class GPUEnhancements extends SpeedyProgramGroup
 
     /**
      * Normalize a RGB image
-     * @param {WebGLTexture} image
+     * @param {SpeedyTexture} image
      * @param {number} [minValue] minimum desired pixel intensity (from 0 to 255, inclusive)
      * @param {number} [maxValue] maximum desired pixel intensity (from 0 to 255, inclusive)
-     * @returns {WebGLTexture}
+     * @returns {SpeedyTexture}
      */
     normalizeColoredImage(image, minValue = 0, maxValue = 255)
     {
@@ -118,21 +118,21 @@ export class GPUEnhancements extends SpeedyProgramGroup
 
         const normalized = this._normalizeColoredImage(minmax2d, Math.min(minValue, maxValue), Math.max(minValue, maxValue));
 
-        gpu.programs.utils.release(minmax2d[1]);
-        gpu.programs.utils.release(minmax2d[0]);
+        minmax2d[1].release();
+        minmax2d[0].release();
 
         return normalized;
     }
 
     /**
      * Nightvision filter: "see in the dark"
-     * @param {WebGLTexture} image
+     * @param {SpeedyTexture} image
      * @param {number} [gain] typically in [0,1]; higher values => higher contrast
      * @param {number} [offset] brightness, typically in [0,1]
      * @param {number} [decay] gain decay, in the [0,1] range
      * @param {string} [quality] "high" | "medium" | "low" (more quality -> more expensive)
      * @param {boolean} [greyscale] use the greyscale variant of the algorithm
-     * @returns {WebGLTexture}
+     * @returns {SpeedyTexture}
      */
     nightvision(image, gain = 0.5, offset = 0.5, decay = 0.0, quality = 'medium', greyscale = false)
     {

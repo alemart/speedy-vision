@@ -141,9 +141,9 @@ export class GPUEncoders extends SpeedyProgramGroup
 
     /**
      * Finds the orientation of all keypoints given a texture with encoded keypoints
-     * @param {WebGLTexture} pyramid image pyramid
+     * @param {SpeedyTexture} pyramid image pyramid
      * @param {number} patchRadius radius of a circular patch used to compute the radius when lod = 0 (e.g., 7)
-     * @param {WebGLTexture} encodedKeypoints the result of encodeKeypoints()
+     * @param {SpeedyTexture} encodedKeypoints the result of encodeKeypoints()
      * @param {number} [descriptorSize] in bytes
      */
     orientEncodedKeypoints(pyramid, patchRadius, encodedKeypoints, descriptorSize = 0)
@@ -154,9 +154,9 @@ export class GPUEncoders extends SpeedyProgramGroup
 
     /**
      * Encodes the keypoints of an image into a compressed texture
-     * @param {WebGLTexture} corners texture with corners
+     * @param {SpeedyTexture} corners texture with corners
      * @param {number} [descriptorSize] in bytes
-     * @returns {WebGLTexture} texture with encoded keypoints
+     * @returns {SpeedyTexture} texture with encoded keypoints
      */
     encodeKeypoints(corners, descriptorSize = 0)
     {
@@ -230,7 +230,7 @@ export class GPUEncoders extends SpeedyProgramGroup
 
     /**
      * Download RAW encoded keypoint data from the GPU - this is a bottleneck!
-     * @param {WebGLTexture} encodedKeypoints texture with keypoints that have already been encoded
+     * @param {SpeedyTexture} encodedKeypoints texture with keypoints that have already been encoded
      * @param {bool} [useAsyncTransfer] transfer data from the GPU without blocking the CPU
      * @returns {Promise<Uint8Array[]>} pixels in the [r,g,b,a, ...] format
      */
@@ -276,7 +276,7 @@ export class GPUEncoders extends SpeedyProgramGroup
      * (need to recalculate)
      * @param {SpeedyFeature[]} keypoints
      * @param {number} descriptorSize in bytes
-     * @returns {WebGLTexture} encodedKeypoints
+     * @returns {SpeedyTexture} encodedKeypoints
      */
     uploadKeypoints(keypoints, descriptorSize = 0)
     {

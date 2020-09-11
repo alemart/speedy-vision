@@ -49,7 +49,7 @@ export class FeaturesDownloader extends Observable
     /**
      * Download feature points from the GPU
      * @param {SpeedyGPU} gpu
-     * @param {WebGLTexture} encodedKeypoints tiny texture with encoded keypoints
+     * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
      * @param {boolean} [useAsyncTransfer] use DMA
      * @param {number} [max] cap the number of keypoints to this value
      * @returns {Promise<SpeedyFeature[]>}

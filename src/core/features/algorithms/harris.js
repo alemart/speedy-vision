@@ -90,8 +90,8 @@ export class HarrisFeatures extends FeaturesAlgorithm
     /**
      * Detect feature points
      * @param {SpeedyGPU} gpu
-     * @param {WebGLTexture} inputTexture pre-processed greyscale image
-     * @returns {WebGLTexture} encoded keypoints
+     * @param {SpeedyTexture} inputTexture pre-processed greyscale image
+     * @returns {SpeedyTexture} encoded keypoints
      */
     detect(gpu, inputTexture)
     {
@@ -108,7 +108,7 @@ export class HarrisFeatures extends FeaturesAlgorithm
         const corners = gpu.programs.keypoints.multiscaleHarris(inputTexture, windowRadius, numberOfOctaves, sobelDerivatives);
 
         // release derivatives
-        gpu.programs.utils.release(df);
+        df.release();
 
         // find the maximum corner response
         const maxScore = gpu.programs.utils.scanMax(corners, PixelComponent.RED);
@@ -164,8 +164,8 @@ export class MultiscaleHarrisFeatures extends HarrisFeatures
     /**
      * Detect feature points
      * @param {SpeedyGPU} gpu
-     * @param {WebGLTexture} inputTexture pre-processed greyscale image
-     * @returns {WebGLTexture} encoded keypoints
+     * @param {SpeedyTexture} inputTexture pre-processed greyscale image
+     * @returns {SpeedyTexture} encoded keypoints
      */
     detect(gpu, inputTexture)
     {
@@ -178,17 +178,18 @@ export class MultiscaleHarrisFeatures extends HarrisFeatures
         const pyramid = gpu.programs.utils.generatePyramid(inputTexture);
 
         // compute derivatives
-        const df = gpu.programs.keypoints.multiscaleSobel(pyramid, 0.0);
-        const sobelDerivatives = Array(SOBEL_OCTAVE_COUNT).fill(df);
-        for(let j = 1; j < numberOfOctaves; j++)
+        const sobelDerivatives = Array(SOBEL_OCTAVE_COUNT);
+        for(let j = 0; j < numberOfOctaves; j++)
             sobelDerivatives[j] = gpu.programs.keypoints.multiscaleSobel(pyramid, j * 0.5);
+        for(let k = numberOfOctaves; k < sobelDerivatives.length; k++)
+            sobelDerivatives[k] = sobelDerivatives[k-1]; // can't call shaders with null pointers
 
         // corner detection
         const corners = gpu.programs.keypoints.multiscaleHarris(pyramid, windowRadius, numberOfOctaves, sobelDerivatives);
 
         // release derivatives
-        for(let i = 0; i < sobelDerivatives.length; i++)
-            sobelDerivatives[i] = gpu.programs.utils.release(sobelDerivatives[i]);
+        for(let i = 0; i < numberOfOctaves; i++)
+            sobelDerivatives[i].release();
 
         // find the maximum corner response
         const maxScore = gpu.programs.utils.scanMax(corners, PixelComponent.RED);
@@ -208,9 +209,9 @@ export class MultiscaleHarrisFeatures extends HarrisFeatures
      * Describe feature points
      * (actually, this just orients the keypoints, since this algorithm has no built-in descriptor)
      * @param {SpeedyGPU} gpu
-     * @param {WebGLTexture} inputTexture pre-processed greyscale image
-     * @param {WebGLTexture} detectedKeypoints tiny texture with appropriate size for the descriptors
-     * @returns {WebGLTexture} tiny texture with encoded keypoints & descriptors
+     * @param {SpeedyTexture} inputTexture pre-processed greyscale image
+     * @param {SpeedyTexture} detectedKeypoints tiny texture with appropriate size for the descriptors
+     * @returns {SpeedyTexture} tiny texture with encoded keypoints & descriptors
      */
     describe(gpu, inputTexture, detectedKeypoints)
     {

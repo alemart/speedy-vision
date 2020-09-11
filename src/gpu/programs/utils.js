@@ -108,33 +108,23 @@ export class GPUUtils extends SpeedyProgramGroup
     }
 
     /**
-     * Release a texture
-     * @param {WebGLTexture} texture 
-     * @returns {null}
-     */
-    release(texture)
-    {
-        return GLUtils.destroyTexture(this._gpu.gl, texture);
-    }
-
-    /**
      * Generate a pyramid for a texture
-     * @param {WebGLTexture} texture
-     * @returns {WebGLTexture} the input texture
+     * @param {SpeedyTexture} texture
+     * @returns {SpeedyTexture} the input texture
      */
     generatePyramid(texture)
     {
         // TODO: generate octaves via gaussians
         // TODO: check if the mipmap already exists
-        GLUtils.generateMipmap(this._gpu.gl, texture);
+        GLUtils.generateMipmap(this._gpu.gl, texture.glTexture);
         return texture;
     }
 
     /**
      * Scan a single component in all pixels of the image and find the maximum intensity
-     * @param {WebGLTexture} image 
+     * @param {SpeedyTexture} image 
      * @param {number} pixelComponent a single PixelComponent flag
-     * @returns {WebGLTexture} such that pixel[component] = max(image_pixel[component])
+     * @returns {SpeedyTexture} such that pixel[component] = max(image_pixel[component])
      *                                                           for all image_pixels
      */
     scanMax(image, pixelComponent)
@@ -145,9 +135,9 @@ export class GPUUtils extends SpeedyProgramGroup
 
     /**
      * Scan a single component in all pixels of the image and find the minimum intensity
-     * @param {WebGLTexture} image 
+     * @param {SpeedyTexture} image 
      * @param {number} pixelComponent a single PixelComponent flag
-     * @returns {WebGLTexture} such that pixel[component] = min(image_pixel[component])
+     * @returns {SpeedyTexture} such that pixel[component] = min(image_pixel[component])
      *                                                           for all image_pixels
      */
     scanMin(image, pixelComponent)
@@ -158,11 +148,11 @@ export class GPUUtils extends SpeedyProgramGroup
 
     /**
      * Copy color component
-     * @param {WebGLTexture} dest
-     * @param {WebGLTexture} src 
+     * @param {SpeedyTexture} dest
+     * @param {SpeedyTexture} src 
      * @param {number} destComponents one or more PixelComponent flags
      * @param {number} srcComponent a single PixelComponent flag
-     * @returns {WebGLTexture} a copy of dest with its destComponents replaced by the srcComponent of src
+     * @returns {SpeedyTexture} a copy of dest with its destComponents replaced by the srcComponent of src
      */
     copyComponents(dest, src, destComponents, srcComponent)
     {
@@ -175,9 +165,9 @@ export class GPUUtils extends SpeedyProgramGroup
 
     /**
      * Scan a single component in all pixels of the image and find the min & max intensities
-     * @param {WebGLTexture} image 
+     * @param {SpeedyTexture} image 
      * @param {number} pixelComponent a single PixelComponent flag
-     * @returns {WebGLTexture} RGBA = (max, min, max - min, original_pixel)
+     * @returns {SpeedyTexture} RGBA = (max, min, max - min, original_pixel)
      */
     _scanMinMax(image, pixelComponent)
     {

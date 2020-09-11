@@ -78,10 +78,10 @@ export class SpeedyPipeline
 
     /**
      * Runs the pipeline
-     * @param {WebGLTexture} texture input texture
+     * @param {SpeedyTexture} texture input texture
      * @param {SpeedyGPU} gpu gpu attached to the media
      * @param {SpeedyMedia} media media object
-     * @returns {WebGLTexture} output texutre
+     * @returns {SpeedyTexture} output texutre
      */
     _run(texture, gpu, media)
     {
