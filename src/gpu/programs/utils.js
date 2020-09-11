@@ -125,6 +125,7 @@ export class GPUUtils extends SpeedyProgramGroup
     generatePyramid(texture)
     {
         // TODO: generate octaves via gaussians
+        // TODO: check if the mipmap already exists
         GLUtils.generateMipmap(this._gpu.gl, texture);
         return texture;
     }

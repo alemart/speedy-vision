@@ -216,7 +216,6 @@ export class MultiscaleFASTFeatures extends FASTFeatures
         const normalizedThreshold = this._threshold / 255.0;
         const useHarrisScore = this._useHarrisScore;
         const descriptorSize = this.descriptorSize;
-        const orientationPatchRadius = DEFAULT_ORIENTATION_PATCH_RADIUS;
         const numberOfOctaves = 2 * this._depth - 1;
 
         // generate pyramid
@@ -233,8 +232,27 @@ export class MultiscaleFASTFeatures extends FASTFeatures
         corners = gpu.programs.keypoints.samescaleSuppression(corners);
         corners = gpu.programs.keypoints.multiscaleSuppression(corners);
 
-        // encode & orient corners
-        const encodedKeypoints = gpu.programs.encoders.encodeKeypoints(corners, descriptorSize);
-        return gpu.programs.encoders.orientEncodedKeypoints(pyramid, orientationPatchRadius, encodedKeypoints, descriptorSize);
+        // encode keypoints
+        return gpu.programs.encoders.encodeKeypoints(corners, descriptorSize);
+    }
+
+    /**
+     * Describe feature points
+     * (actually, this just orients the keypoints, since this algorithm has no built-in descriptor)
+     * @param {SpeedyGPU} gpu
+     * @param {WebGLTexture} inputTexture pre-processed greyscale image
+     * @param {WebGLTexture} detectedKeypoints tiny texture with appropriate size for the descriptors
+     * @returns {WebGLTexture} tiny texture with encoded keypoints & descriptors
+     */
+    describe(gpu, inputTexture, detectedKeypoints)
+    {
+        const descriptorSize = this.descriptorSize;
+        const orientationPatchRadius = DEFAULT_ORIENTATION_PATCH_RADIUS;
+
+        // generate pyramid
+        const pyramid = gpu.programs.utils.generatePyramid(inputTexture);
+
+        // compute orientation
+        return gpu.programs.encoders.orientEncodedKeypoints(pyramid, orientationPatchRadius, detectedKeypoints, descriptorSize);
     }
 }

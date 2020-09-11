@@ -96,13 +96,13 @@ export class BRISKFeatures extends FeaturesAlgorithm
      * Compute BRISK descriptors
      * @param {SpeedyGPU} gpu
      * @param {WebGLTexture} inputTexture pre-processed greyscale image
-     * @param {WebGLTexture} encodedKeypoints encoded, oriented and multi-scale
-     * @returns {WebGLTexture} encoded keypoints with descriptors
+     * @param {WebGLTexture} detectedKeypoints tiny texture with appropriate size for the descriptors
+     * @returns {WebGLTexture} tiny texture with encoded keypoints & descriptors
      */
-    describe(gpu, inputTexture, encodedKeypoints)
+    describe(gpu, inputTexture, detectedKeypoints)
     {
         // TODO
-        return encodedKeypoints;
+        throw new NotImplementedError();
     }
 
     /**
