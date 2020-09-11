@@ -379,13 +379,13 @@ export class SpeedyProgram extends Function
             // ping-pong rendering
             if(options.pingpong)
                 stdprog.pingpong();
+
+            // invalidate mipmaps
+            outputTexture.discardMipmap();
         }
 
         // unbind fbo
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-        // invalidate mipmaps
-        outputTexture.discardMipmap();
 
         // return texture (if available)
         return outputTexture;

@@ -66,6 +66,7 @@ export class SpeedyTexture
      */
     upload(pixels, lod = 0)
     {
+        this._hasMipmaps = false;
         GLUtils.uploadToTexture(this._gl, this._glTexture, this._width, this._height, pixels, lod | 0);
     }
 
