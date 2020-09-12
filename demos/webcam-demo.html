@@ -1,14 +1,30 @@
+<!--
+  speedy-vision.js
+  GPU-accelerated Computer Vision for the web
+  Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  webcam-demo.html
+  Feature detection using a webcam
+-->
 <!doctype html>
 <html>
     <head>
         <meta charset="utf-8">
         <title>Webcam feature detection</title>
         <script src="../dist/speedy-vision.js"></script>
-        <style>
-            form { display: flex; flex-wrap: wrap; align-items: baseline; }
-            form > * { margin: 0 1.5em 1em 0; }
-            mark { position: absolute; top: 16px; right: 16px; background: none; }
-        </style>
+        <script src="../dist/speedy-vision.js"></script>
     </head>
     <body>
         <h1>Webcam demo</h1>
@@ -26,7 +42,7 @@
             </div>
             <div>
                 Sensitivity
-                <input type="range" min="20" max="80" value="50" id="slider">
+                <input type="range" min="0.20" max="0.80" value="0.50" step="0.01" id="sensitivity">
             </div>
             <div>
                 <label for="enhance-illumination">Fix uneven illumination</label>
@@ -34,8 +50,7 @@
             </div>
         </form>
         <div>
-            <span id="feature-count">0</span> features |
-            FPS: <span id="fps">60</span>
+            <canvas id="canvas-demo"></canvas><br>
         </div>
         <script>
 window.onload = async function()
@@ -48,18 +63,17 @@ window.onload = async function()
         const canvas = createCanvas(media.width, media.height);
 
         // user controls
-        const slider = document.getElementById('slider');
         const method = document.getElementById('method');
+        const sensitivity = document.getElementById('sensitivity');
         const enhanceIllumination = document.getElementById('enhance-illumination');
 
         // main loop
-        let features = [];
         async function loop()
         {
             // update features
-            features = await media.findFeatures({
+            const features = await media.findFeatures({
                 method: method.value,
-                sensitivity: slider.value / 100.0,
+                sensitivity: sensitivity.value,
                 enhancements: {
                     illumination: enhanceIllumination.checked
                 }
@@ -67,18 +81,13 @@ window.onload = async function()
 
             // render video & features
             media.draw(canvas);
-            renderFeatures(canvas, features, 4);
-            setTimeout(loop, 1000 / 30);
+            renderFeatures(canvas, features);
+            renderStatus(canvas, features, 'white', 10);
+
+            // loop
+            setTimeout(loop, 1000 / 60);
         }
         loop();
-
-        // display fps
-        const fps = document.getElementById('fps');
-        setInterval(() => fps.innerText = Speedy.fps, 500);
-
-        // feature count
-        const featureCount = document.getElementById('feature-count');
-        setInterval(() => featureCount.innerText = features.length, 500);
 
         // zoom
         canvas.style.width = (2 * media.width) + 'px';
@@ -88,18 +97,24 @@ window.onload = async function()
     }
 }
 
-function createCanvas(width, height)
+function createCanvas(width, height, title)
 {
-    const canvas = document.createElement('canvas');
+    const canvas = document.getElementById('canvas-demo') || document.createElement('canvas');
+
     canvas.width = width;
     canvas.height = height;
-    document.body.appendChild(canvas);
+    canvas.title = title;
+
+    if(!document.body.contains(canvas))
+        document.body.appendChild(canvas);
+
     return canvas;
 }
 
 function renderFeatures(canvas, features, size = 2, color = 'yellow')
 {
     const context = canvas.getContext('2d');
+
     context.beginPath();
     for(let feature of features) {
         let radius = size * feature.scale;
@@ -112,10 +127,28 @@ function renderFeatures(canvas, features, size = 2, color = 'yellow')
         const sin = Math.sin(feature.rotation);
         const cos = Math.cos(feature.rotation);
         context.moveTo(feature.x, feature.y);
-        context.lineTo(feature.x + radius * cos, feature.y - radius * sin);
+        context.lineTo(feature.x + radius * cos, feature.y + radius * sin);
     }
     context.strokeStyle = color;
     context.stroke();
+}
+
+function renderStatus(canvas, features, color = 'white', size = 18)
+{
+    const context = canvas.getContext('2d');
+
+    context.font = `bold ${size}px sans-serif`;
+    context.fillStyle = color;
+    context.textBaseline = 'top';
+
+    context.shadowOffsetX = 2;
+    context.shadowOffsetY = 2;
+    context.shadowBlur = 2;
+    context.shadowColor = 'rgba(0, 0, 0, 0.5)';
+
+    context.fillText(`FPS: ${Speedy.fps} | Keypoints: ${features.length}`, 8, 8);
+
+    context.shadowColor = 'rgba(0, 0, 0, 0)';
 }
         </script>
         <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>
