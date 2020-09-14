@@ -30,14 +30,6 @@
         <h1>Gotta go FAST!!!</h1>
         <form autocomplete="off">
             <div>
-                <label for="sensitivity">Sensitivity</label>
-                <input type="range" min="0.20" max="0.80" value="0.50" step="0.01" id="sensitivity">
-            </div>
-            <div>
-                <label for="speed-slider">Video speed</label>
-                <input type="range" id="speed-slider" min="0.10" max="2" value="1" step="0.01">
-            </div>
-            <div>
                 <label for="method">Method</label>
                 <select id="method">
                     <option value="fast" selected>FAST</option>
@@ -45,6 +37,15 @@
                     <option value="multiscale-fast">Multiscale FAST</option>
                     <option value="multiscale-harris">Multiscale Harris</option>
                 </select>
+            </div>
+            <div class="separator"></div>
+            <div>
+                <label for="sensitivity">Sensitivity</label>
+                <input type="range" min="0.20" max="0.80" value="0.50" step="0.01" id="sensitivity">
+            </div>
+            <div>
+                <label for="speed-slider">Video speed</label>
+                <input type="range" id="speed-slider" min="0.10" max="2" value="1" step="0.01">
             </div>
         </form>
         <div>

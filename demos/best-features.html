@@ -28,7 +28,7 @@
     </head>
     <body>
         <h1>Find the best keypoints</h1>
-        <form autocomplete="off" style="width:640px; height:80px;">
+        <form autocomplete="off">
             <div>
                 Give me the
                 <select id="feature-limit">
@@ -41,6 +41,7 @@
                 </select>
                 best keypoints (according to cornerness score)
             </div>
+            <div class="separator"></div>
             <div>
                 <label for="sensitivity">Sensitivity</label>
                 <input type="range" min="0" max="0.90" value="0.45" step="0.01" id="sensitivity">

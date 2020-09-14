@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  * style.css
- * Stylesheet for demos
+ * Stylesheet for the demos
  */
 
 /* Base style */
@@ -82,7 +82,6 @@ button:active {
 
 select {
   padding: 4px;
-  background: white;
   border: 0;
   background: whitesmoke;
   cursor: pointer;
@@ -98,6 +97,25 @@ select option:hover {
   color: white;
 }
 
+input[type=text] {
+  background: whitesmoke;
+  border: 0;
+  padding: 4px;
+  margin: 0px;
+}
+
+.separator::before {
+    content: '-';
+    visibility: hidden;
+    height: 1px;
+}
+
+.separator {
+    display: block;
+    width: 100%;
+}
+
+/* Checkboxes */
 input[type=checkbox] {
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -125,34 +143,6 @@ input[type=checkbox]:checked::after {
   content: '\2714';
   padding: 0;
   margin: 0;
-}
-
-
-/*
-  content: "✓";
-*/
-
-
-/* Watermark */
-mark {
-  position: absolute;
-  top: 2em;
-  right: 1em;
-  background: none;
-}
-
-mark {
-    position: absolute;
-    top: 0;
-    right: 0;
-    background: lightslategrey;
-    color: white;
-    padding: 0.5em;
-}
-
-mark a:any-link {
-    color: white;
-    font-weight: bold;
 }
 
 /* range sliders */
@@ -206,3 +196,26 @@ input[type=range]::-ms-track {
   background: whitesmoke;
   box-shadow: 1px 1px 2px lightslategrey;
 }
+
+/* Watermark */
+mark {
+  position: absolute;
+  top: 2em;
+  right: 1em;
+  background: none;
+}
+
+mark {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: lightslategrey;
+    color: white;
+    padding: 0.5em;
+}
+
+mark a:any-link {
+    color: white;
+    font-weight: bold;
+}
+

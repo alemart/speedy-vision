@@ -24,20 +24,15 @@
         <meta charset="utf-8">
         <title>Normalize camera stream</title>
         <script src="../dist/speedy-vision.js"></script>
-        <style>
-            form { display: flex; flex-wrap: wrap; align-items: baseline; margin-bottom: 1em; }
-            form > div { margin-right: 3em; }
-            mark { position: absolute; top: 16px; right: 16px; background: none; }
-        </style>
+        <link href="style.css" rel="stylesheet">
     </head>
     <body>
         <h1>Normalize camera stream</h1>
         <form autocomplete="off">
             <div>
-                <input type="checkbox" id="greyscale" checked>
                 <label for="greyscale">Greyscale</label>
+                <input type="checkbox" id="greyscale" checked>
             </div>
-            <div>FPS: <span id="fps">60</span></div>
         </form>
         <script>
 window.onload = async function()
@@ -79,24 +74,43 @@ window.onload = async function()
             original.draw(canvas[0]);
             normalized.draw(canvas[1]);
 
+            renderStatus(canvas[1]);
             requestAnimationFrame(render);
         });
     }
     render();
-
-    // display fps
-    const fps = document.getElementById('fps');
-    setInterval(() => fps.innerText = Speedy.fps, 500);
 }
 
 function createCanvas(width, height, title)
 {
-    const canvas = document.createElement('canvas');
+    const canvas = document.getElementById('canvas-demo') || document.createElement('canvas');
+
     canvas.width = width;
     canvas.height = height;
     canvas.title = title;
-    document.body.appendChild(canvas);
+
+    if(!document.body.contains(canvas))
+        document.body.appendChild(canvas);
+
     return canvas;
+}
+
+function renderStatus(canvas, color = 'white', size = 18)
+{
+    const context = canvas.getContext('2d');
+
+    context.font = `bold ${size}px sans-serif`;
+    context.fillStyle = color;
+    context.textBaseline = 'top';
+
+    context.shadowOffsetX = 2;
+    context.shadowOffsetY = 2;
+    context.shadowBlur = 2;
+    context.shadowColor = 'rgba(0, 0, 0, 0.5)';
+
+    context.fillText(`FPS: ${Speedy.fps}`, 8, 8);
+
+    context.shadowColor = 'rgba(0, 0, 0, 0)';
 }
         </script>
         <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>

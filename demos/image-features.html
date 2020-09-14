@@ -1,23 +1,41 @@
+<!--
+  speedy-vision.js
+  GPU-accelerated Computer Vision for the web
+  Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  image-features.html
+  Feature detection in an image
+-->
 <!doctype html>
 <html>
     <head>
         <meta charset="utf-8">
         <title>Speedy feature detection in an image</title>
         <script src="../dist/speedy-vision.js"></script>
-        <style>
-            form { display: flex; flex-wrap: wrap; align-items: baseline; margin-bottom: 1em; }
-            mark { position: absolute; top: 16px; right: 16px; background: none; }
-        </style>
+        <link href="style.css" rel="stylesheet">
     </head>
     <body>
         <h1>Finding features in an image</h1>
-        <form>
+        <form autocomplete="off">
             <div>
                 <label for="sensitivity">Sensitivity</label>
-                <input type="range" min="20" max="70" value="45" id="sensitivity">
+                <input type="range" min="0.20" max="0.70" value="0.45" step="0.01" id="sensitivity">
+            </div>
+            <div>
                 <label for="multiscale">Multi-scale</label>
                 <input type="checkbox" id="multiscale">
-                <span style="margin-left:2em">Found <span id="feature-count">0</span> features</span>
             </div>
         </form>
         <img src="../assets/speedy-large.jpg" title="Image by JD Hancock (CC-BY)" hidden>
@@ -34,53 +52,47 @@ window.onload = async function()
     const canvas = createCanvas(media.width, media.height, image.title);
 
     // components
-    const slider = document.getElementById('sensitivity');
+    const sensitivity = document.getElementById('sensitivity');
     const multiscale = document.getElementById('multiscale');
-    const featureCount = document.getElementById('feature-count');
 
-    // update features
-    const FPS = 60;
-    let features = [];
-    function updateFeatures()
+    // main loop
+    async function loop()
     {
-        // sensitivity is a value between 0.0 and 1.0
-        const sensitivity = slider.value / 100.0;
-
-        // find & render features
-        media.findFeatures({
+        // find features
+        const features = await media.findFeatures({
             method: multiscale.checked ? 'multiscale-fast' : 'fast',
-            sensitivity: sensitivity,
-        }).then(f => {
-            features = f;
-            featureCount.innerText = features.length;
-            setTimeout(updateFeatures, 1000.0 / FPS);
+            sensitivity: sensitivity.value,
         });
-    }
-    updateFeatures();
 
-    // render features
-    function render()
-    {
+        // render features
         media.draw(canvas);
-        renderFeatures(canvas, features, 4, 'white');
-        requestAnimationFrame(render);
+        renderFeatures(canvas, features, 2, 'white');
+        renderStatus(canvas, features);
+
+        // loop
+        setTimeout(loop, 1000 / 30);
     }
-    render();
+    loop();
 }
 
 function createCanvas(width, height, title)
 {
-    const canvas = document.createElement('canvas');
+    const canvas = document.getElementById('canvas-demo') || document.createElement('canvas');
+
     canvas.width = width;
     canvas.height = height;
     canvas.title = title;
-    document.body.appendChild(canvas);
+
+    if(!document.body.contains(canvas))
+        document.body.appendChild(canvas);
+
     return canvas;
 }
 
 function renderFeatures(canvas, features, size = 2, color = 'yellow')
 {
     const context = canvas.getContext('2d');
+
     context.beginPath();
     for(let feature of features) {
         let radius = size * feature.scale;
@@ -93,10 +105,28 @@ function renderFeatures(canvas, features, size = 2, color = 'yellow')
         const sin = Math.sin(feature.rotation);
         const cos = Math.cos(feature.rotation);
         context.moveTo(feature.x, feature.y);
-        context.lineTo(feature.x + radius * cos, feature.y - radius * sin);
+        context.lineTo(feature.x + radius * cos, feature.y + radius * sin);
     }
     context.strokeStyle = color;
     context.stroke();
+}
+
+function renderStatus(canvas, features, color = 'white', size = 18)
+{
+    const context = canvas.getContext('2d');
+
+    context.font = `bold ${size}px sans-serif`;
+    context.fillStyle = color;
+    context.textBaseline = 'top';
+
+    context.shadowOffsetX = 2;
+    context.shadowOffsetY = 2;
+    context.shadowBlur = 2;
+    context.shadowColor = 'rgba(0, 0, 0, 0.5)';
+
+    context.fillText(`FPS: ${Speedy.fps} | Keypoints: ${features.length}`, 8, 8);
+
+    context.shadowColor = 'rgba(0, 0, 0, 0)';
 }
         </script>
         <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>

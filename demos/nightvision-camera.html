@@ -16,7 +16,7 @@
   limitations under the License.
 
   nightvision-camera.html
-  Nightvision: "see in the dark"
+  Nightvision demo: "see in the dark"
 -->
 <!doctype html>
 <html>
@@ -24,31 +24,31 @@
         <meta charset="utf-8">
         <title>Nightvision camera</title>
         <script src="../dist/speedy-vision.js"></script>
-        <style>
-            form { display: flex; flex-wrap: wrap; align-items: baseline; }
-            form > * { margin: 0 1.5em 1em 0; }
-            mark { position: absolute; top: 16px; right: 16px; background: none; }
-        </style>
+        <link href="style.css" rel="stylesheet">
     </head>
     <body>
-        <h1 style="display:inline-block">Nightvision camera</h1>
-        <span style="margin-left:1em">try in the dark!</span>
+        <h1>Nightvision camera</h1>
         <form autocomplete="off">
             <div>
+                try in the dark!
+            </div>
+            <div class="separator"></div>
+            <div>
                 <label for="gain-slider">Gain</label>
-                <input type="range" min="0" max="100" value="50" id="gain-slider">
-                <span id="gain-viewer"></span>
+                <input type="range" min="0" max="1" value="0.5" step="0.01" id="gain-slider">
+                <label id="gain-viewer"></label>
             </div>
             <div>
                 <label for="offset-slider">Offset</label>
-                <input type="range" min="0" max="100" value="50" id="offset-slider">
-                <span id="offset-viewer"></span>
+                <input type="range" min="0" max="1" value="0.5" step="0.01" id="offset-slider">
+                <label id="offset-viewer"></label>
             </div>
             <div>
                 <label for="decay-slider">Decay</label>
-                <input type="range" min="0" max="100" value="0" id="decay-slider">
-                <span id="decay-viewer"></span>
+                <input type="range" min="0" max="1" value="0" step="0.01" id="decay-slider">
+                <label id="decay-viewer"></label>
             </div>
+            <div class="separator"></div>
             <div>
                 <label for="quality-select">Quality</label>
                 <select id="quality-select">
@@ -62,10 +62,7 @@
                 <input type="checkbox" id="greyscale-checkbox" checked>
             </div>
             <div>
-                <input type="reset" value="Reset">
-            </div>
-            <div>
-                FPS: <span id="fps">60</span>
+                <button type="reset">Reset</button>
             </div>
         </form>
         <script>
@@ -85,18 +82,18 @@ window.onload = async function()
     const pipeline = [
         Speedy.pipeline()
               .nightvision(() => ({
-                  gain: gainSlider.value * 0.01,
-                  offset: offsetSlider.value * 0.01,
-                  decay: decaySlider.value * 0.01,
+                  gain: Number(gainSlider.value),
+                  offset: Number(offsetSlider.value),
+                  decay: Number(decaySlider.value),
                   quality: qualitySelect.value
               })),
 
         Speedy.pipeline()
               .convertTo('greyscale')
               .nightvision(() => ({
-                  gain: gainSlider.value * 0.01,
-                  offset: offsetSlider.value * 0.01,
-                  decay: decaySlider.value * 0.01,
+                  gain: Number(gainSlider.value),
+                  offset: Number(offsetSlider.value),
+                  decay: Number(decaySlider.value),
                   quality: qualitySelect.value
               })),
     ];
@@ -115,20 +112,17 @@ window.onload = async function()
 
         transformedMedia.draw(canvas);
         media.draw(canvas, 0, 0, media.width / 3, media.height / 3);
+        renderStatus(canvas, 'white', 10);
 
-        setTimeout(render, 1000 / 30);
+        requestAnimationFrame(render);
     }
     render();
 
-    // display fps
-    const fps = document.getElementById('fps');
-    setInterval(() => fps.innerText = Speedy.fps, 500);
-
     // update form controls
     setInterval(() => {
-        gainViewer.innerText = (gainSlider.value * 0.01).toFixed(2);
-        offsetViewer.innerText = (offsetSlider.value * 0.01).toFixed(2);
-        decayViewer.innerText = (decaySlider.value * 0.01).toFixed(2);
+        gainViewer.innerText = Number(gainSlider.value).toFixed(2);
+        offsetViewer.innerText = Number(offsetSlider.value).toFixed(2);
+        decayViewer.innerText = Number(decaySlider.value).toFixed(2);
     }, 100);
 
     // details
@@ -137,12 +131,34 @@ window.onload = async function()
 
 function createCanvas(width, height, title)
 {
-    const canvas = document.createElement('canvas');
+    const canvas = document.getElementById('canvas-demo') || document.createElement('canvas');
+
     canvas.width = width;
     canvas.height = height;
     canvas.title = title;
-    document.body.appendChild(canvas);
+
+    if(!document.body.contains(canvas))
+        document.body.appendChild(canvas);
+
     return canvas;
+}
+
+function renderStatus(canvas, color = 'white', size = 18)
+{
+    const context = canvas.getContext('2d');
+
+    context.font = `bold ${size}px sans-serif`;
+    context.fillStyle = color;
+    context.textBaseline = 'top';
+
+    context.shadowOffsetX = 2;
+    context.shadowOffsetY = 2;
+    context.shadowBlur = 2;
+    context.shadowColor = 'rgba(0, 0, 0, 0.5)';
+
+    context.fillText(`FPS: ${Speedy.fps}`, 8, 8);
+
+    context.shadowColor = 'rgba(0, 0, 0, 0)';
 }
         </script>
         <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>
