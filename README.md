@@ -54,8 +54,11 @@ Once you import the library, the `Speedy` object will be exposed.
 let image = document.querySelector('img');
 let media = await Speedy.load(image);
 
-// Find its features
-let features = await media.findFeatures();
+// Create a feature detector
+let harris = Speedy.FeatureDetector.Harris();
+
+// Find the feature points
+let features = await harris.detectFeatures(media);
 for(let feature of features)
     console.log(feature.x, feature.y);
 ```
@@ -68,7 +71,7 @@ Detecting features in an image is an important step of many computer vision algo
 
 Speedy's real-time performance in the web browser is possible thanks to its efficient WebGL2 backend and to its efficient implementations of fast computer vision algorithms. With an easy-to-use API, Speedy is an excellent choice for real-time computer vision projects involving tasks such as: object detection in videos, pose estimation, Simultaneous Location and Mapping (SLAM), and others.
 
-## Who creates speedy-vision.js?
+## Who develops speedy-vision.js?
 
 Speedy is developed by [Alexandre Martins](https://github.com/alemart), a computer scientist from Brazil. It is released under the [Apache-2.0 license](LICENSE).
 
