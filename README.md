@@ -68,17 +68,16 @@ Detecting features in an image is an important step of many computer vision algo
 
 Speedy's real-time performance in the web browser is possible thanks to its efficient WebGL2 backend and to its efficient implementations of fast computer vision algorithms. With an easy-to-use API, Speedy is an excellent choice for real-time computer vision projects involving tasks such as: object detection in videos, pose estimation, Simultaneous Location and Mapping (SLAM), and others.
 
-Speedy is developed by [Alexandre Martins](https://github.com/alemart), a computer scientist from Brazil. It is released under the [Apache-2.0 license](LICENSE). Currently in development.
+## Who creates speedy-vision.js?
 
-![Feature detection](assets/demo-features.jpg)
+Speedy is developed by [Alexandre Martins](https://github.com/alemart), a computer scientist from Brazil. It is released under the [Apache-2.0 license](LICENSE).
 
-*Speedy feature detection - Photo by JD Hancock (CC-BY)*
 
 ## API Reference
 
 ### Media routines
 
-A `SpeedyMedia` object encapsulates a media object: an image, a video, or a canvas.
+A `SpeedyMedia` object encapsulates a media object: an image, a video, a canvas or a bitmap.
 
 #### Loading your media
 
@@ -127,6 +126,7 @@ A `Promise<SpeedyMedia>` that resolves as soon as the media source is loaded wit
 
 ```js
 // Display the contents of a webcam
+
 window.onload = async function() {
     const media = await Speedy.camera();
     const canvas = createCanvas(media.width, media.height);
@@ -245,25 +245,49 @@ A `Promise` that resolves as soon as the resources are released.
 
 ### Feature detection
 
-#### Finding features
+#### Detection methods
 
-##### SpeedyMedia.findFeatures()
+Speedy can use different methods for detecting feature points. Different methods return different results. Some work in scale-space and return oriented keypoints, others do not. Currently, the following detectors are available:
 
-`SpeedyMedia.findFeatures(config?: object): Promise<SpeedyFeature[]>`
+| Detector | Description                      | Multi-scale | Oriented | Includes descriptor |
+|----------|----------------------------------|-------------|----------|---------------------|
+|`FAST`    | FAST corner detector             | -           | -        | -                   |
+|`MultiscaleFAST` | FAST augmented with scale & orientation | Yes | Yes | -                  |
+|`Harris`  | Harris corner detector           | -           | -        | -                   |
+|`MultiscaleHarris` | Harris augmented with scale & orientation | Yes | Yes | -              |
+|`ORB`     | ORB features                     | Yes         | Yes      | Yes                 |
+|`BRISK`   | BRISK features                   | Soon        | Soon     | Soon                |
+
+Before you're able to detect any features in a media, you must create a `SpeedyFeatureDetector` object. Feature detectors are created using the `Speedy.FeatureDetector` factory (see the example below).
+
+```js
+// 1st. load our media
+const media = await Speedy.load( /* ... */ );
+
+// 2nd. create a SpeedyFeatureDetector
+//      that will give us Harris corners
+const harris = Speedy.FeatureDetector.Harris();
+
+// 3rd. detect features in our media
+const features = await harris.detectFeatures(media);
+
+// Now, features is an array of SpeedyFeature objects
+console.log(features);
+```
+
+##### SpeedyFeatureDetector.detectFeatures()
+
+`SpeedyFeatureDetector.detectFeatures(media: SpeedyMedia, settings?: object): Promise<SpeedyFeature[]>`
 
 Detects feature points in a `SpeedyMedia`.
 
 ###### Arguments
 
-* `config: object, optional`. A configuration object that accepts the following keys (all are optional):
-  * `method: string`. The name of the method to be used to detect the features (see the table on [detection methods](#detection-methods)).
-  * `sensitivity: number`. A number between `0.0` and `1.0`. The higher the number, the more features you get.
+* `media: SpeedyMedia`. The media object (image, video, etc.)
+* `settings: object, optional`. A configuration object that accepts the following keys (all are optional):
   * `max: number`. If specified, Speedy will return the best keypoints (according to their scores) up to this number.
-  * `expected: number | object`. Speedy will automatically adjust the sensitivity value to get you *approximately* the number of features you ask. For more information, read the section on [automatic sensitivity](#automatic-sensitivity).
   * `denoise: boolean`. Whether or not to denoise the image before finding the features. Defaults to `true`.
   * `enhancements: object`. If specified, Speedy will enhance the image in different ways before extracting the features. This is meant to make your features more robust. Read more on [enhancing your features](#enhancing-your-features).
-
-The configuration object accepts additional keys depending on which method is specified. Read the section on [detection methods](#detection-methods) to know more.
 
 ###### Returns
 
@@ -273,139 +297,154 @@ A `Promise` that resolves to an array of `SpeedyFeature` objects.
 
 ```js
 window.onload = async function() {
-    let image = document.querySelector('img');
-    let media = await Speedy.load(image);
-    let features = await media.findFeatures({
-        method: 'fast',
-        sensitivity: 0.5
-    });
+    // load the media
+    const image = document.querySelector('img');
+    const media = await Speedy.load(image);
 
+    // create a feature detector
+    const harris = Speedy.FeatureDetector.Harris();
+
+    // detect the features
+    const features = await harris.detectFeatures(media);
+
+    // display the features
     for(let feature of features) {
-        let x = feature.x;
-        let y = feature.y;
+        const x = feature.x;
+        const y = feature.y;
         console.log(x, y);
     }
 }
 ```
 
-##### Detection methods
+###### Enhancing your features
 
-Speedy can use different methods for detecting feature points. Currently, the following methods are available:
+Speedy can enhance your images in different ways before detecting the interest points. These enhancements are intended to make the feature detection more robust, at a slighly higher computational cost. The desired enhancements are specified in the `settings.enhancements` object:
 
-| Method   | Description                      | Multi-scale | Oriented | Includes descriptor |
-|----------|----------------------------------|-------------|----------|---------------------|
-|`"fast"`  | FAST corner detector             | -           | -        | -                   |
-|`"multiscale-fast"` | FAST augmented with scale & orientation | Yes | Yes | -               |
-|`"harris"`| Harris corner detector           | -           | -        | -                   |
-|`"multiscale-harris"` | Harris augmented with scale & orientation | Yes | Yes | -           |
-|`"orb"`   | ORB features                     | Yes         | Yes      | Yes                 |
-|`"brisk"` | BRISK features                   | Soon        | Soon     | Soon                |
+* `illumination: boolean`. If set to `true`, the feature detection will be more robust in relation to lighting changes and shadows. It will use the [Nightvision](#nightvision) filter behind the scenes.
 
-Different methods yield different results. Some work in scale-space and return oriented keypoints, others do not.
 
-Depending on which method you choose, additional settings may be provided to the `config` parameter when calling `SpeedyMedia.findFeatures()`.
+##### SpeedyFeatureDetector.sensitivity
 
-###### FAST features
+`SpeedyFeatureDetector.sensitivity: number`
 
-For any variation of the FAST detector[1], the `config` object accepts the following additional, optional key:
+A number between `0.0` and `1.0`. The higher the number, the more features you get.
+
+###### Example
+
+```js
+window.onload = () => {
+    // load the media
+    const media = await Speedy.load( /* ... */ );
+
+    // create the feature detector
+    const fast = Speedy.FeatureDetector.FAST();
+    fast.sensitivity = 0.7; // experiment with this number
+
+    // detect features
+    const features = await fast.detectFeatures(media);
+    console.log(features);
+};
+```
+
+#### FAST features
+
+When using any variation of FAST[1], the feature detector includes the following additional properties:
 
 * `threshold: number`. An alternative to `sensitivity` representing the threshold paramter of FAST: an integer between `0` and `255`, inclusive. Lower thresholds get you more features.
+  * Note: `sensitivity` is an easier-to-use property and does *not* map linearly to `threshold`.
 * `n: number`. The FAST variant you want: use `9` for FAST-9,16 (default), `7` for FAST-7,12 or `5` for FAST-5,8. Option not available for multiscale.
 
-When using the `"multiscale-fast"` method, you may also specify:
+When using the `MultiscaleFAST` detector, you may also specify:
 
-* `useHarrisScore: boolean`. Adopt a better scoring function (cornerness measure). It will give you slightly better features. Defaults to `false` (using method `"multiscale-harris"` is preferred).
+* `useHarrisScore: boolean`. Adopt a better scoring function (cornerness measure). It will give you slightly better features. Defaults to `false` (using the `MultiscaleHarris` detector is preferred).
 
-Note: `config.sensitivity` is an easy-to-use parameter and does *not* map linearly to `config.threshold`.
+###### References
 
-###### Harris corners
+[1] Rosten, Edward; Drummond, Tom. "Machine learning for high-speed corner detection". European Conference on Computer Vision (ECCV-2006).
 
-Speedy includes an implementation of the Harris corner detector[3] with the Shi-Tomasi corner response[4]. The following settings may be specified in the `config` object:
+#### Harris corners
+
+Speedy includes an implementation of the Harris corner detector[3] with the Shi-Tomasi corner response[4]. The following additional properties are available:
 
 * `quality: number`. A value between `0` and `1` representing the minimum "quality" of the returned keypoints. Speedy will discard any keypoint whose score is lower than the specified fraction of the maximum keypoint score. A typical value for `quality` is `0.10` (10%).
+  * Note: `quality` is an alternative to `sensitivity`.
 
-Note: `config.quality` is an alternative to `config.sensitivity`.
+###### References
 
-###### ORB features
+[3] Harris, Christopher G.; Mike Stephens. "A combined corner and edge detector". Alvey Vision Conference. Vol. 15. No. 50. 1988.
 
-Speedy includes an implementation of the ORB feature descriptor[5]. It is an efficient solution that first finds keypoints in scale-space and then compute the descriptors for feature matching. The following are optional settings:
+[4] Shi, J.; Tomasi, C. "Good features to track". 1994 Proceedings of IEEE Conference on Computer Vision and Pattern Recognition.
+
+#### ORB features
+
+Speedy includes an implementation of the ORB feature descriptor[5]. It is an efficient solution that first finds keypoints in scale-space and then compute the descriptors for feature matching. The following additional properties are available:
 
 * `depth: number`. An integer between `1` and `4` that tells Speedy how "deep" it should go when searching for keypoints in scale-space. Defaults to `3`.
-* `quality: number`. A value between `0` and `1`, as in the Harris detector. This is an alternative to `config.sensitivity`.
+* `quality: number`. A value between `0` and `1`, as in the Harris detector. This is an alternative to `sensitivity`.
 
-###### BRISK features
+###### References
 
-**Currently work-in-progress.** Speedy implements a modified version of the BRISK feature detector[2]. It is able to give you feature points at multiple scales. The `config` object accepts the following additional keys (all are optional):
+[5] Rublee, E.; Rabaud, V.; Konolige, K.; Bradski, G. "ORB: An efficient alternative to SIFT or SURF". 2011 International Conference on Computer Vision (ICCV-2011).
+
+#### BRISK features
+
+**Currently work-in-progress.** Speedy implements a modified version of the BRISK feature detector[2]. It is able to give you feature points at multiple scales. The following additional properties are available:
 
 * `depth: number`. An integer between `1` and `4` telling how "deep" the algorithm should go when searching for keypoints in scale-space. The higher the value, the more robust it is against scale transformations (at a slighly higher computational cost). Defaults to `4`.
 * `threshold: number`. An integer between `0` and `255`, just like in FAST.
 
 ###### References
 
-[1] Rosten, Edward; Drummond, Tom. "Machine learning for high-speed corner detection". European Conference on Computer Vision (ECCV-2006).
+[2] Leutenegger, Stefan; Chli, Margarita; Siegwart, Roland Y. "BRISK: Binary robust invariant scalable keypoints". 2011 International Conference on Computer Vision (ICCV-2011
 
-[2] Leutenegger, Stefan; Chli, Margarita; Siegwart, Roland Y. "BRISK: Binary robust invariant scalable keypoints". 2011 International Conference on Computer Vision (ICCV-2011).
+#### Automatic sensitivity
 
-[3] Harris, Christopher G.; Mike Stephens. "A combined corner and edge detector". Alvey Vision Conference. Vol. 15. No. 50. 1988.
+**Experimental feature**
 
-[4] Shi, J.; Tomasi, C. "Good features to track". 1994 Proceedings of IEEE Conference on Computer Vision and Pattern Recognition.
-
-[5] Rublee, E.; Rabaud, V.; Konolige, K.; Bradski, G. "ORB: An efficient alternative to SIFT or SURF". 2011 International Conference on Computer Vision (ICCV-2011).
-
-##### Enhancing your features
-
-Speedy can enhance your images in different ways before detecting the interest points. These enhancements are intended to make the feature detection more robust, at a slighly higher computational cost. The desired enhancements are specified in the `config.enhancements` object:
-
-* `illumination: boolean`. If set to `true`, the feature detection will be more robust in relation to lighting changes and shadows. It will use the [Nightvision](#nightvision) filter behind the scenes. Example:
-
-```js
-let features = await media.findFeatures({
-    method: 'orb',
-    enhancements: {
-        illumination: true
-    }
-})
-```
-
-##### Automatic sensitivity
-
-Sensitivity alone does not give you control of how many feature points you will get. When you specify the number of features you expect to get, Speedy will automatically learn a sensitivity value that gives you that amount of features, within a tolerance range.
+[Sensitivity](#speedyfeaturedetectorsensitivity) alone does not give you control of how many feature points you will get. When you specify the number of features you expect to get, Speedy will automatically learn a sensitivity value that gives you that amount of features, within a tolerance range.
 
 Automatic sensitivity is meant to be used with media configured for [dynamic usage](#speedymediaoptions). It takes multiple calls to the feature detector for Speedy to adjust the sensitivity. Multiple calls is what you will be doing anyway if you need to detect features in a video (see the example below).
 
 Speedy finds the feature points on the GPU. Although this is an efficient process, downloading data from the GPU is expensive. The more features you get, the more data has to be downloaded. Setting an expected number of feature points may thus help you keep the number of returned points in a controlled interval.
 
-The `config.expected` option can either be a number or an object with the following keys:
-
-* `number: number`. The number of features you expect to get.
-* `tolerance: number`. A range defined as a percentage relative to the number of features you expect. Defaults to `0.10` (10%).
-
 Expected numbers between 100 and 500 have been found to work well in practice. Your results may vary depending on your media. If you need larger numbers and don't care about the exact amount, it's easier to adjust the sensitivity manually. If you need small numbers, you might want to increase the tolerance.
+
+##### SpeedyFeatureDetector.expect
+
+`SpeedyFeatureDetector.expect(numberOfFeaturePoints: number | undefined, tolerance: number?)`
+
+Speedy can automatically adjust the [sensitivity](#speedyfeaturedetectorsensitivity) of the feature detector to get you *approximately* the number of features you ask.
+
+###### Arguments
+
+* `numberOfFeaturePoints: number | undefined`. The approximate number of feature points you desire, or `undefined` if you wish to disable automatic sensitivity
+* `tolerance: number, optional`. A tolerance margin, defined as a percentage relative to the number of features you expect. Defaults to `0.10` (10%)
 
 ###### Example
 
 ```js
 window.onload = async function() {
-    // setup
+    // load media
     const video = document.getElementById('my-video');
     const media = await Speedy.load(video);
 
+    // give me approximately 100 feature points
+    const harris = Speedy.FeatureDetector.Harris();
+    harris.expect(100);
+
     // find features
-    let features = [];
-    async function updateFeatures()
+    async function loop()
     {
-        const FPS = 60;
-
-        // give me approximately 100 feature points
-        features = await media.findFeatures({
-            expected: 100
-        });
-
+        // detect features
+        const features = await harris.detectFeatures(media);
         console.log(`Found ${features.length} features`);
-        setTimeout(updateFeatures, 1000.0 / FPS);
+
+        // loop
+        const FPS = 60;
+        setTimeout(loop, 1000.0 / FPS);
     }
-    updateFeatures();
-}
+    loop();
+};
 ```
 
 #### Examining your feature points

@@ -23,6 +23,7 @@ import { SpeedyMedia } from './speedy-media';
 import { SpeedyPipeline } from './speedy-pipeline';
 import { FPSCounter } from '../utils/fps-counter';
 import { SpeedyFeatureTrackerFactory } from './features/trackers/api/feature-tracker-factory';
+import { SpeedyFeatureDetectorFactory } from './speedy-feature-detector-factory';
 
 /**
  * Speedy's main class
@@ -78,6 +79,15 @@ export class Speedy
     static get fps()
     {
         return FPSCounter.instance.fps;
+    }
+
+    /**
+     * Feature detectors
+     * @returns {SpeedyFeatureDetectorFactory}
+     */
+    static get FeatureDetector()
+    {
+        return SpeedyFeatureDetectorFactory;
     }
 
     /**

@@ -42,10 +42,10 @@ export const PipelineOperation = { };
 
     /**
      * Runs the pipeline operation
-     * @param {Texture} texture
+     * @param {SpeedyTexture} texture
      * @param {SpeedyGPU} gpu
      * @param {SpeedyMedia} [media]
-     * @returns {Texture}
+     * @returns {SpeedyTexture}
      */
     run(texture, gpu, media)
     {

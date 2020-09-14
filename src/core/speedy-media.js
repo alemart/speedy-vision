@@ -21,21 +21,18 @@
 
 import { SpeedyGPU } from '../gpu/speedy-gpu';
 import { MediaType, ColorFormat } from '../utils/types'
-import { Utils } from '../utils/utils';
 import { TimeoutError, IllegalArgumentError, NotSupportedError, AccessDeniedError } from '../utils/errors';
-import { FASTFeatures, MultiscaleFASTFeatures } from './features/algorithms/fast';
-import { HarrisFeatures, MultiscaleHarrisFeatures } from './features/algorithms/harris';
-import { ORBFeatures } from './features/algorithms/orb';
-import { BRISKFeatures } from './features/algorithms/brisk';
+import { Utils } from '../utils/utils';
+import { SpeedyFeatureDetectorFactory } from './speedy-feature-detector-factory';
 
-// map: method string -> feature detector & descriptor class
-const featuresAlgorithm = {
-    'fast': FASTFeatures,
-    'multiscale-fast': MultiscaleFASTFeatures,
-    'harris': HarrisFeatures,
-    'multiscale-harris': MultiscaleHarrisFeatures,
-    'orb': ORBFeatures,
-    'brisk': BRISKFeatures,
+// map: method string -> feature detector & descriptor
+const createFeatureDetector = {
+    'fast': SpeedyFeatureDetectorFactory.FAST,
+    'multiscale-fast': SpeedyFeatureDetectorFactory.MultiscaleFAST,
+    'harris': SpeedyFeatureDetectorFactory.Harris,
+    'multiscale-harris': SpeedyFeatureDetectorFactory.MultiscaleHarris,
+    'orb': SpeedyFeatureDetectorFactory.ORB,
+    'brisk': SpeedyFeatureDetectorFactory.BRISK,
 };
 
 /**
@@ -69,7 +66,7 @@ export class SpeedyMedia
 
             // spawn relevant components
             this._gpu = new SpeedyGPU(this._width, this._height);
-            this._featuresAlgorithm = null; // lazy instantiation
+            this._featureDetector = null; // lazy instantiation
         }
         else if(arguments.length == 1) {
             // copy constructor (shallow copy)
@@ -83,7 +80,7 @@ export class SpeedyMedia
             this._options = media._options;
 
             this._gpu = media._gpu;
-            this._featuresAlgorithm = media._featuresAlgorithm;
+            this._featureDetector = media._featureDetector;
         }
         else
             throw new IllegalArgumentError(`Invalid instantiation of SpeedyMedia`);
@@ -222,7 +219,7 @@ export class SpeedyMedia
     {
         if(!this.isReleased()) {
             Utils.log('Releasing SpeedyMedia object...');
-            this._featuresAlgorithm = null;
+            this._featureDetector = null;
             this._gpu.loseWebGLContext();
             this._gpu = null;
             this._source = null;
@@ -348,6 +345,7 @@ export class SpeedyMedia
 
     /**
      * Finds image features
+     * @deprecated
      * @param {object} [settings] Configuration object
      * @returns {Promise<SpeedyFeature[]>} A Promise returning an Array of SpeedyFeature objects
      */
@@ -356,71 +354,27 @@ export class SpeedyMedia
         // Default settings
         if(!settings.hasOwnProperty('method'))
             settings.method = 'fast';
-        if(!settings.hasOwnProperty('denoise'))
-            settings.denoise = true;
-        if(!settings.hasOwnProperty('max'))
-            settings.max = undefined;
-        if(!settings.hasOwnProperty('enhancements'))
-            settings.enhancements = {};
-        
-        // Validate settings
         settings.method = String(settings.method);
-        settings.denoise = Boolean(settings.denoise);
-        if(settings.max !== undefined)
-            settings.max = Number(settings.max);
-        if(typeof settings.enhancements !== 'object')
-            throw new IllegalArgumentError('settings.enhancements must be an object');
 
         // Validate method
-        if(!featuresAlgorithm.hasOwnProperty(settings.method))
+        if(!createFeatureDetector.hasOwnProperty(settings.method))
             throw new IllegalArgumentError(`Invalid method "${settings.method}" for feature detection`);
 
-        // Has the media been released?
-        if(this.isReleased())
-            throw new IllegalOperationError(`Can't find features: SpeedyMedia has been released`);
-
         // Setup feature detector & descriptor
-        if(this._featuresAlgorithm == null || this._featuresAlgorithm.constructor !== featuresAlgorithm[settings.method])
-            this._featuresAlgorithm = new (featuresAlgorithm[settings.method])();
-
-        // Set custom settings for the selected feature detector & descriptor
-        for(const key in settings) {
-            if(settings.hasOwnProperty(key) && (key in this._featuresAlgorithm))
-                this._featuresAlgorithm[key] = settings[key];
+        if(this._featureDetector == null || this._currFeatureDetector !== createFeatureDetector[settings.method]) {
+            const featureDetector = createFeatureDetector[settings.method];
+            this._currFeatureDetector = featureDetector;
+            this._featureDetector = featureDetector();
         }
 
-        // Upload & preprocess media
-        let texture = this._gpu.upload(this._source);
-        texture = this._featuresAlgorithm.preprocess(
-            this._gpu,
-            texture,
-            settings.denoise,
-            this._colorFormat != ColorFormat.Greyscale
-        );
-        const enhancedTexture = this._featuresAlgorithm.enhance(
-            this._gpu,
-            texture,
-            settings.enhancements.illumination == true
-        );
+        // Setup sensitivity & expected number of features
+        if(settings.hasOwnProperty('sensitivity'))
+            this._featureDetector.sensitivity = +settings.sensitivity;
+        if(settings.hasOwnProperty('expected'))
+            this._featureDetector.expected = settings.expected;
 
-        // Feature detection & description
-        const detectedKeypoints = this._featuresAlgorithm.detect(
-            this._gpu,
-            enhancedTexture
-        );
-        const describedKeypoints = this._featuresAlgorithm.describe(
-            this._gpu,
-            texture,
-            detectedKeypoints
-        );
-
-        // Download keypoints from the GPU
-        return this._featuresAlgorithm.download(
-            this._gpu,
-            describedKeypoints,
-            this.options.usage == 'dynamic',
-            settings.max
-        );
+        // find features
+        return this._featureDetector.detectFeatures(this, settings);
     }
 }
 

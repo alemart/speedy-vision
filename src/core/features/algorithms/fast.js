@@ -200,7 +200,7 @@ export class MultiscaleFASTFeatures extends FASTFeatures
     {
         // only Multiscale FAST-9 is supported at the moment
         if(n != 9)
-            throw new NotSupportedError();
+            throw new NotSupportedError(`Can't run Multiscale FAST with n = ${n}`);
 
         this._n = n | 0;
     }
