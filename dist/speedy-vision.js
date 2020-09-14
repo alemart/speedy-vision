@@ -6,7 +6,7 @@
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-09-12T04:25:16.128Z
+ * Date: 2020-09-14T03:22:15.385Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -4988,8 +4988,8 @@ class GPUEnhancements extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__
         
         // TODO: normalize on a luminance channel instead (e.g., use HSL color space)
         const minmax2d = new Array(3);
-        minmax2d[0] = this.clone(gpu.programs.utils._scanMinMax(image, _utils_types__WEBPACK_IMPORTED_MODULE_3__["PixelComponent"].RED));
-        minmax2d[1] = this.clone(gpu.programs.utils._scanMinMax(image, _utils_types__WEBPACK_IMPORTED_MODULE_3__["PixelComponent"].GREEN));
+        minmax2d[0] = gpu.programs.utils.clone(gpu.programs.utils._scanMinMax(image, _utils_types__WEBPACK_IMPORTED_MODULE_3__["PixelComponent"].RED));
+        minmax2d[1] = gpu.programs.utils.clone(gpu.programs.utils._scanMinMax(image, _utils_types__WEBPACK_IMPORTED_MODULE_3__["PixelComponent"].GREEN));
         minmax2d[2] = gpu.programs.utils._scanMinMax(image, _utils_types__WEBPACK_IMPORTED_MODULE_3__["PixelComponent"].BLUE);
 
         const normalized = this._normalizeColoredImage(minmax2d, Math.min(minValue, maxValue), Math.max(minValue, maxValue));
