@@ -59,6 +59,10 @@ export class SpeedyMedia
             this._type = getMediaType(this._source);
             this._colorFormat = ColorFormat.RGB;
 
+            // warning: loading canvas without explicit usage option
+            if(this._type == MediaType.Canvas && options.usage === undefined)
+                Utils.warning(`Loading a canvas without an explicit usage flag. Will set it to "dynamic", which is unsuitable for static images`);
+
             // set options
             this._options = buildOptions(options, {
                 usage: (this._type != MediaType.Image) ? 'dynamic' : 'static',
