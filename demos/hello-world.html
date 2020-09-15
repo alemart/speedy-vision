@@ -39,23 +39,23 @@ window.onload = async function()
     // create a canvas to display the features
     const canvas = createCanvas(media.width, media.height, image.title);
 
-    // find & render features
+    // find features
     const features = await media.findFeatures();
+
+    // render features
     media.draw(canvas);
     renderFeatures(canvas, features);
 }
 
 function createCanvas(width, height, title)
 {
-    const canvas = document.getElementById('canvas-demo') || document.createElement('canvas');
+    const canvas = document.createElement('canvas');
 
     canvas.width = width;
     canvas.height = height;
     canvas.title = title;
 
-    if(!document.body.contains(canvas))
-        document.body.appendChild(canvas);
-
+    document.body.appendChild(canvas);
     return canvas;
 }
 
@@ -63,8 +63,10 @@ function renderFeatures(canvas, features, size = 2, color = 'white')
 {
     const context = canvas.getContext('2d');
     context.beginPath();
+
     for(let feature of features)
         context.rect(feature.x - size, feature.y - size, 2 * size, 2 * size);
+
     context.strokeStyle = color;
     context.stroke();
 }
