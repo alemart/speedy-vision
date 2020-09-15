@@ -39,14 +39,17 @@ export class FASTFeatures extends FeaturesAlgorithm
 {
     /**
      * Class constructor
+     * @param {number} [n] Variant of the algorithm. Must be 9, 7 or 5.
      */
-    constructor()
+    constructor(n = DEFAULT_N)
     {
         super();
 
         // default settings
-        this._n = DEFAULT_N;
         this._threshold = DEFAULT_THRESHOLD;
+
+        // set the type of the algorithm
+        this.n = n;
     }   
 
     /**
@@ -141,14 +144,18 @@ export class MultiscaleFASTFeatures extends FASTFeatures
 {
     /**
      * Class constructor
+     * @param {number} [n] Variant of the algorithm. Must be 9.
      */
-    constructor()
+    constructor(n = 9)
     {
         super();
 
         // default settings
         this._depth = DEFAULT_DEPTH;
         this._useHarrisScore = false;
+
+        // set the type of the algorithm
+        this.n = n;
     }
 
     /**

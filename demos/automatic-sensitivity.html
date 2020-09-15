@@ -76,16 +76,25 @@ window.onload = async function()
     const expected = document.getElementById('expected-features');
     const multiscale = document.getElementById('multiscale');
 
+    // create the feature detectors
+    const featureDetectors = [
+        Speedy.FeatureDetector.Harris(),
+        Speedy.FeatureDetector.MultiscaleHarris()
+    ];
+
     // main loop
     async function loop()
     {
-        // find features
-        const features = await media.findFeatures({
-            method: multiscale.checked ? 'multiscale-harris' : 'harris',
-            expected: expected.value, // automatic sensitivity
-        });
+        // pick a feature detector
+        const featureDetector = multiscale.checked ? featureDetectors[1] : featureDetectors[0];
 
-        // render video & features
+        // automatic sensitivity
+        featureDetector.expect(expected.value);
+
+        // find features
+        const features = await featureDetector.detect(media);
+
+        // render features
         media.draw(canvas);
         renderFeatures(canvas, features);
         renderStatus(canvas, features);

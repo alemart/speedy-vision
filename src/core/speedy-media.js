@@ -25,16 +25,6 @@ import { TimeoutError, IllegalArgumentError, NotSupportedError, AccessDeniedErro
 import { Utils } from '../utils/utils';
 import { SpeedyFeatureDetectorFactory } from './speedy-feature-detector-factory';
 
-// map: method string -> feature detector & descriptor
-const createFeatureDetector = {
-    'fast': SpeedyFeatureDetectorFactory.FAST,
-    'multiscale-fast': SpeedyFeatureDetectorFactory.MultiscaleFAST,
-    'harris': SpeedyFeatureDetectorFactory.Harris,
-    'multiscale-harris': SpeedyFeatureDetectorFactory.MultiscaleHarris,
-    'orb': SpeedyFeatureDetectorFactory.ORB,
-    'brisk': SpeedyFeatureDetectorFactory.BRISK,
-};
-
 /**
  * SpeedyMedia encapsulates a media element
  * (e.g., image, video, canvas)
@@ -348,8 +338,9 @@ export class SpeedyMedia
     }
 
     /**
-     * Finds image features
-     * @deprecated
+     * Finds feature points
+     * @deprecated Use the Feature Detection objects instead
+     * 
      * @param {object} [settings] Configuration object
      * @returns {Promise<SpeedyFeature[]>} A Promise returning an Array of SpeedyFeature objects
      */
@@ -359,6 +350,16 @@ export class SpeedyMedia
         if(!settings.hasOwnProperty('method'))
             settings.method = 'fast';
         settings.method = String(settings.method);
+
+        // map: method string -> feature detector & descriptor
+        const createFeatureDetector = {
+            'fast': SpeedyFeatureDetectorFactory.FAST,
+            'multiscale-fast': SpeedyFeatureDetectorFactory.MultiscaleFAST,
+            'harris': SpeedyFeatureDetectorFactory.Harris,
+            'multiscale-harris': SpeedyFeatureDetectorFactory.MultiscaleHarris,
+            'orb': SpeedyFeatureDetectorFactory.ORB,
+            'brisk': SpeedyFeatureDetectorFactory.BRISK,
+        };
 
         // Validate method
         if(!createFeatureDetector.hasOwnProperty(settings.method))
@@ -378,7 +379,7 @@ export class SpeedyMedia
             this._featureDetector.expected = settings.expected;
 
         // find features
-        return this._featureDetector.detectFeatures(this, settings);
+        return this._featureDetector.detect(this, settings);
     }
 }
 

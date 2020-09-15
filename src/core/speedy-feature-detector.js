@@ -69,7 +69,7 @@ export class SpeedyFeatureDetector
      * @param {object} [settings]
      * @returns {Promise<SpeedyFeature[]>}
      */
-    detectFeatures(media, settings = {})
+    detect(media, settings = {})
     {
         const gpu = media._gpu;
 

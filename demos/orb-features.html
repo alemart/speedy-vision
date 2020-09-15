@@ -62,16 +62,19 @@ window.onload = async function()
     // elements
     const sensitivity = document.getElementById('sensitivity');
 
+    // create the ORB feature detector
+    const featureDetector = Speedy.FeatureDetector.ORB();
+
     // main loop
     async function loop()
     {
-        // find features
-        const features = await media.findFeatures({
-            method: 'orb',
-            sensitivity: sensitivity.value,
-        });
+        // set the sensitivity of the feature detector
+        featureDetector.sensitivity = sensitivity.value;
 
-        // render
+        // find features
+        const features = await featureDetector.detect(media);
+
+        // render features
         media.draw(canvas);
         renderFeatures(canvas, features, 2, '#afa', 2);
         renderStatus(canvas, features);

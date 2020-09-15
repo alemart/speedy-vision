@@ -33,18 +33,20 @@ export class SpeedyFeatureDetectorFactory extends SpeedyNamespace
 {
     /**
      * FAST feature detector
+     * @param {number} [n] Variant of the algorithm. Must be 9, 7 or 5.
      */
-    static FAST()
+    static FAST(n = 9)
     {
-        return new SpeedyFeatureDetector(new FASTFeatures());
+        return new SpeedyFeatureDetector(new FASTFeatures(n));
     }
 
     /**
      * FAST feature detector in scale-space
+     * @param {number} [n] Variant of the algorithm. Must be 9.
      */
-    static MultiscaleFAST()
+    static MultiscaleFAST(n = 9)
     {
-        return new SpeedyFeatureDetector(new MultiscaleFASTFeatures());
+        return new SpeedyFeatureDetector(new MultiscaleFASTFeatures(n));
     }
 
     /**

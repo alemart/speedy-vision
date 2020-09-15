@@ -68,19 +68,32 @@ window.onload = async function()
         const sensitivity = document.getElementById('sensitivity');
         const enhanceIllumination = document.getElementById('enhance-illumination');
 
+        // create the feature detectors
+        const featureDetectors = {
+            'fast': Speedy.FeatureDetector.FAST(),
+            'multiscale-fast': Speedy.FeatureDetector.MultiscaleFAST(),
+            'harris': Speedy.FeatureDetector.Harris(),
+            'multiscale-harris': Speedy.FeatureDetector.MultiscaleHarris(),
+            'orb': Speedy.FeatureDetector.ORB(),
+        };
+
         // main loop
         async function loop()
         {
-            // update features
-            const features = await media.findFeatures({
-                method: method.value,
-                sensitivity: sensitivity.value,
+            // pick a feature detector
+            const featureDetector = featureDetectors[method.value];
+
+            // set its sensitivity
+            featureDetector.sensitivity = sensitivity.value;
+
+            // find features
+            const features = await featureDetector.detect(media, {
                 enhancements: {
                     illumination: enhanceIllumination.checked
                 }
             });
 
-            // render video & features
+            // render features
             media.draw(canvas);
             renderFeatures(canvas, features);
             renderStatus(canvas, features, 'white', 10);

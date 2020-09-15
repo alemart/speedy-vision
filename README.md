@@ -58,7 +58,7 @@ let media = await Speedy.load(image);
 let harris = Speedy.FeatureDetector.Harris();
 
 // Find the feature points
-let features = await harris.detectFeatures(media);
+let features = await harris.detect(media);
 for(let feature of features)
     console.log(feature.x, feature.y);
 ```
@@ -268,19 +268,18 @@ Before you're able to detect any features in a media, you must create a `SpeedyF
 const media = await Speedy.load( /* ... */ );
 
 // 2nd. create a SpeedyFeatureDetector
-//      that will give us Harris corners
-const harris = Speedy.FeatureDetector.Harris();
+const featureDetector = Speedy.FeatureDetector.Harris();
 
 // 3rd. detect features in our media
-const features = await harris.detectFeatures(media);
+const features = await featureDetector.detect(media);
 
 // Now, features is an array of SpeedyFeature objects
 console.log(features);
 ```
 
-##### SpeedyFeatureDetector.detectFeatures()
+##### SpeedyFeatureDetector.detect()
 
-`SpeedyFeatureDetector.detectFeatures(media: SpeedyMedia, settings?: object): Promise<SpeedyFeature[]>`
+`SpeedyFeatureDetector.detect(media: SpeedyMedia, settings?: object): Promise<SpeedyFeature[]>`
 
 Detects feature points in a `SpeedyMedia`.
 
@@ -308,7 +307,7 @@ window.onload = async function() {
     const harris = Speedy.FeatureDetector.Harris();
 
     // detect the features
-    const features = await harris.detectFeatures(media);
+    const features = await harris.detect(media);
 
     // display the features
     for(let feature of features) {
@@ -341,17 +340,22 @@ window.onload = () => {
 
     // create the feature detector
     const fast = Speedy.FeatureDetector.FAST();
+
+    // set its sensitivity
     fast.sensitivity = 0.7; // experiment with this number
 
     // detect features
-    const features = await fast.detectFeatures(media);
+    const features = await fast.detect(media);
     console.log(features);
 };
 ```
 
 #### FAST features
 
-When using any variation of FAST[1], the feature detector includes the following additional properties:
+`Speedy.FeatureDetector.FAST(n: number): SpeedyFeatureDetector`
+`Speedy.FeatureDetector.MultiscaleFAST(): SpeedyFeatureDetector`
+
+When using any variation of the FAST feature detector, the following additional properties are available:
 
 * `threshold: number`. An alternative to `sensitivity` representing the threshold paramter of FAST: an integer between `0` and `255`, inclusive. Lower thresholds get you more features.
   * Note: `sensitivity` is an easier-to-use property and does *not* map linearly to `threshold`.
@@ -361,44 +365,33 @@ When using the `MultiscaleFAST` detector, you may also specify:
 
 * `useHarrisScore: boolean`. Adopt a better scoring function (cornerness measure). It will give you slightly better features. Defaults to `false` (using the `MultiscaleHarris` detector is preferred).
 
-###### References
-
-[1] Rosten, Edward; Drummond, Tom. "Machine learning for high-speed corner detection". European Conference on Computer Vision (ECCV-2006).
-
 #### Harris corners
 
-Speedy includes an implementation of the Harris corner detector[3] with the Shi-Tomasi corner response[4]. The following additional properties are available:
+`Speedy.FeatureDetector.Harris(): SpeedyFeatureDetector`
+`Speedy.FeatureDetector.MultiscaleHarris(): SpeedyFeatureDetector`
+
+Speedy includes an implementation of the Harris corner detector with the Shi-Tomasi corner response. The following additional properties are available:
 
 * `quality: number`. A value between `0` and `1` representing the minimum "quality" of the returned keypoints. Speedy will discard any keypoint whose score is lower than the specified fraction of the maximum keypoint score. A typical value for `quality` is `0.10` (10%).
   * Note: `quality` is an alternative to `sensitivity`.
 
-###### References
-
-[3] Harris, Christopher G.; Mike Stephens. "A combined corner and edge detector". Alvey Vision Conference. Vol. 15. No. 50. 1988.
-
-[4] Shi, J.; Tomasi, C. "Good features to track". 1994 Proceedings of IEEE Conference on Computer Vision and Pattern Recognition.
-
 #### ORB features
 
-Speedy includes an implementation of the ORB feature descriptor[5]. It is an efficient solution that first finds keypoints in scale-space and then compute the descriptors for feature matching. The following additional properties are available:
+`Speedy.FeatureDetector.ORB(): SpeedyFeatureDetector`
+
+Speedy includes an implementation of ORB. It is an efficient solution that first finds keypoints in scale-space and then compute the descriptors for feature matching. The following additional properties are available:
 
 * `depth: number`. An integer between `1` and `4` that tells Speedy how "deep" it should go when searching for keypoints in scale-space. Defaults to `3`.
 * `quality: number`. A value between `0` and `1`, as in the Harris detector. This is an alternative to `sensitivity`.
 
-###### References
-
-[5] Rublee, E.; Rabaud, V.; Konolige, K.; Bradski, G. "ORB: An efficient alternative to SIFT or SURF". 2011 International Conference on Computer Vision (ICCV-2011).
-
 #### BRISK features
 
-**Currently work-in-progress.** Speedy implements a modified version of the BRISK feature detector[2]. It is able to give you feature points at multiple scales. The following additional properties are available:
+`Speedy.FeatureDetector.BRISK(): SpeedyFeatureDetector`
+
+**Currently work-in-progress.** Speedy implements a modified version of the BRISK feature detector. It is able to give you feature points at multiple scales. The following additional properties are available:
 
 * `depth: number`. An integer between `1` and `4` telling how "deep" the algorithm should go when searching for keypoints in scale-space. The higher the value, the more robust it is against scale transformations (at a slighly higher computational cost). Defaults to `4`.
 * `threshold: number`. An integer between `0` and `255`, just like in FAST.
-
-###### References
-
-[2] Leutenegger, Stefan; Chli, Margarita; Siegwart, Roland Y. "BRISK: Binary robust invariant scalable keypoints". 2011 International Conference on Computer Vision (ICCV-2011
 
 #### Automatic sensitivity
 
@@ -412,7 +405,7 @@ Speedy finds the feature points on the GPU. Although this is an efficient proces
 
 Expected numbers between 100 and 500 have been found to work well in practice. Your results may vary depending on your media. If you need larger numbers and don't care about the exact amount, it's easier to adjust the sensitivity manually. If you need small numbers, you might want to increase the tolerance.
 
-##### SpeedyFeatureDetector.expect
+##### SpeedyFeatureDetector.expect()
 
 `SpeedyFeatureDetector.expect(numberOfFeaturePoints: number | undefined, tolerance: number?)`
 
@@ -431,15 +424,17 @@ window.onload = async function() {
     const video = document.getElementById('my-video');
     const media = await Speedy.load(video);
 
-    // give me approximately 100 feature points
+    // create a feature detector
     const harris = Speedy.FeatureDetector.Harris();
+
+    // give me approximately 100 feature points
     harris.expect(100);
 
     // find features
     async function loop()
     {
         // detect features
-        const features = await harris.detectFeatures(media);
+        const features = await harris.detect(media);
         console.log(`Found ${features.length} features`);
 
         // loop

@@ -53,15 +53,24 @@ window.onload = async function()
     const sensitivity = document.getElementById('sensitivity');
     const multiscale = document.getElementById('multiscale');
 
+    // create the feature detectors
+    const featureDetectors = [
+        Speedy.FeatureDetector.FAST(),
+        Speedy.FeatureDetector.MultiscaleFAST()
+    ];
+
     // update function
     // find & render features
     async function update()
     {
+        // pick a feature detector
+        const featureDetector = multiscale.checked ? featureDetectors[1] : featureDetectors[0];
+
+        // set its sensitivity
+        featureDetector.sensitivity = sensitivity.value;
+
         // find features
-        const features = await media.findFeatures({
-            method: multiscale.checked ? 'multiscale-fast' : 'fast',
-            sensitivity: sensitivity.value,
-        });
+        const features = await featureDetector.detect(media);
 
         // render features
         media.draw(canvas);

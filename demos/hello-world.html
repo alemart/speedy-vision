@@ -28,6 +28,7 @@
     </head>
     <body>
         <h1>Hello, Speedy!</h1>
+        <p>Feature detection made easy:</p>
         <img src="../assets/speedy.jpg" title="Image by JD Hancock (CC-BY)">
         <script>
 window.onload = async function()
@@ -39,8 +40,11 @@ window.onload = async function()
     // create a canvas to display the features
     const canvas = createCanvas(media.width, media.height, image.title);
 
+    // create a feature detector
+    const featureDetector = Speedy.FeatureDetector.Harris();
+
     // find features
-    const features = await media.findFeatures();
+    const features = await featureDetector.detect(media);
 
     // render features
     media.draw(canvas);
@@ -59,7 +63,7 @@ function createCanvas(width, height, title)
     return canvas;
 }
 
-function renderFeatures(canvas, features, size = 2, color = 'white')
+function renderFeatures(canvas, features, size = 4, color = 'white')
 {
     const context = canvas.getContext('2d');
     context.beginPath();
