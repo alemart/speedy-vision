@@ -25,8 +25,7 @@ import { SpeedyFeature } from '../speedy-feature';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
 
 // constants
-const OPTIMIZER_GROWTH_WEIGHT_ASYNC = 0.02; // used when using async downloads
-const OPTIMIZER_GROWTH_WEIGHT_SYNC = 2.0; // used when using sync downloads
+const OPTIMIZER_GROWTH_WEIGHT = 0.02;
 
 /**
  * The FeaturesDownloader receives a texture of encoded
@@ -62,12 +61,13 @@ export class FeaturesDownloader extends Observable
             const keypoints = gpu.programs.encoders.decodeKeypoints(data, this._descriptorSize);
             const currCount = Math.max(keypoints.length, 64); // may explode with abrupt video changes
             const prevCount = Math.max(this._filteredKeypointCount, 64);
-            const weight = useAsyncTransfer ? OPTIMIZER_GROWTH_WEIGHT_ASYNC : OPTIMIZER_GROWTH_WEIGHT_SYNC;
+            const weight = OPTIMIZER_GROWTH_WEIGHT;
             const newCount = Math.ceil(weight * currCount + (1.0 - weight) * prevCount);
 
             this._filteredKeypointCount = newCount;
             this._rawKeypointCount = keypoints.length;
-            gpu.programs.encoders.optimizeKeypointEncoder(newCount, this._descriptorSize);
+            if(useAsyncTransfer)
+                gpu.programs.encoders.optimizeKeypointEncoder(newCount, this._descriptorSize);
 
             // sort the data according to cornerness score
             keypoints.sort(this._compareKeypoints);

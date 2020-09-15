@@ -274,6 +274,11 @@ export class GPUEncoders extends SpeedyProgramGroup
      * Upload keypoints to the GPU
      * The descriptor & orientation of the keypoints will be lost
      * (need to recalculate)
+     *
+     * Before calling it, make sure that the keypoint encoder has the
+     * minimum required size for storing the keypoints - i.e., via
+     * optimizeKeypointEncoder()
+     *
      * @param {SpeedyFeature[]} keypoints
      * @param {number} descriptorSize in bytes
      * @returns {SpeedyTexture} encodedKeypoints
@@ -302,7 +307,6 @@ export class GPUEncoders extends SpeedyProgramGroup
 
         // WARNING: you shouldn't work with a different set of keypoints
         // while you're working with the ones you have just uploaded
-        this.optimizeKeypointEncoder(keypointCount, descriptorSize); // make sure we get the right texture size
 
         // Upload data
         this._uploadKeypoints.setUBO('KeypointBuffer', this._uploadBuffer);
