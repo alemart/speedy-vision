@@ -44,9 +44,7 @@ window.onload = async function()
 {
     // tell Speedy to load the image
     const image = document.querySelector('img');
-    const media = await Speedy.load(image, {
-        usage: 'dynamic'
-    });
+    const media = await Speedy.load(image);
 
     // create a canvas to display the features
     const canvas = createCanvas(media.width, media.height, image.title);
@@ -55,8 +53,9 @@ window.onload = async function()
     const sensitivity = document.getElementById('sensitivity');
     const multiscale = document.getElementById('multiscale');
 
-    // main loop
-    async function loop()
+    // update function
+    // find & render features
+    async function update()
     {
         // find features
         const features = await media.findFeatures({
@@ -66,13 +65,15 @@ window.onload = async function()
 
         // render features
         media.draw(canvas);
-        renderFeatures(canvas, features, 2, 'white');
+        renderFeatures(canvas, features);
         renderStatus(canvas, features);
-
-        // loop
-        setTimeout(loop, 1000 / 30);
     }
-    loop();
+    update();
+
+    // recalculate feature points
+    // when changing the controls
+    sensitivity.oninput = update;
+    multiscale.oninput = update;
 }
 
 function createCanvas(width, height, title)
@@ -89,7 +90,7 @@ function createCanvas(width, height, title)
     return canvas;
 }
 
-function renderFeatures(canvas, features, size = 2, color = 'yellow')
+function renderFeatures(canvas, features, size = 2, color = 'white')
 {
     const context = canvas.getContext('2d');
 
@@ -124,7 +125,7 @@ function renderStatus(canvas, features, color = 'white', size = 18)
     context.shadowBlur = 2;
     context.shadowColor = 'rgba(0, 0, 0, 0.5)';
 
-    context.fillText(`FPS: ${Speedy.fps} | Keypoints: ${features.length}`, 8, 8);
+    context.fillText(`Keypoints: ${features.length}`, 8, 8);
 
     context.shadowColor = 'rgba(0, 0, 0, 0)';
 }
