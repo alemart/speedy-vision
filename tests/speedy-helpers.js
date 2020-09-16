@@ -70,23 +70,45 @@ function loadVideo(assetName)
     });
 }
 
-// Creates a header for visualization
-function header(title)
-{
-    const hr = document.createElement('hr');
-    document.body.appendChild(hr);
-    print('> ' + title);
-}
-
-// Prints a message to the screen
-function print(message = '')
+// Changed test or suite?
+function printTestHeader()
 {
     if(jasmine.lastTest !== jasmine.currentTest) {
         jasmine.lastTest = jasmine.currentTest;
-        header('It ' + jasmine.currentTest.description);
+        if(jasmine.lastSuite !== jasmine.currentSuite) {
+            // FIXME: suite headers may come out of order
+            jasmine.lastSuite = jasmine.currentSuite;
+            header(
+                '-- Testing: ' + jasmine.currentSuite.description + ' --\n\n' +
+                'In: ' + jasmine.currentSuite.fullName,
+                'color: white; background: royalblue; padding: 1em'
+            );
+        }
+        header('> It ' + jasmine.currentTest.description);
+        return true;
     }
 
+    return false;
+}
+
+// Creates a header for visualization
+function header(title, style)
+{
+    const hr = document.createElement('hr');
+    document.body.appendChild(hr);
+    print(title, style);
+}
+
+// Prints a message to the screen
+function print(message = '', style)
+{
+    if(printTestHeader())
+        return;
+
     const pre = document.createElement('pre');
+    if(style !== undefined)
+        pre.style = style;
+
     const text = document.createTextNode(message);
     pre.appendChild(text);
     document.body.appendChild(pre);
@@ -98,10 +120,7 @@ function print(message = '')
 // Displays a SpeedyMedia, Image or Canvas
 function display(source, title = '')
 {
-    if(jasmine.lastTest !== jasmine.currentTest) {
-        jasmine.lastTest = jasmine.currentTest;
-        header('It ' + jasmine.currentTest.description);
-    }
+    printTestHeader();
 
     const toCanvas = ({
         'SpeedyMedia': createCanvasFromSpeedyMedia,
@@ -478,8 +497,8 @@ var speedyMatchers =
 
 // add jasmine.currentTest
 jasmine.getEnv().addReporter({
+    suiteStarted: x => (jasmine.currentSuite = x),
     specStarted: x => (jasmine.currentTest = x),
-    specDone: x => (jasmine.currentTest = x),
 });
 
 // add disclaimer
