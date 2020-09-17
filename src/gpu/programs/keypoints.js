@@ -79,11 +79,19 @@ const multiscaleHarris = importShader('keypoints/multiscale-harris.glsl')
 const harrisCutoff = importShader('keypoints/harris-cutoff.glsl').withArguments('corners', 'maxScore', 'quality');
 
 
+
 //
 // BRISK feature detection
 //
 const brisk = importShader('keypoints/brisk.glsl')
              .withArguments('image', 'layerA', 'layerB', 'scaleA', 'scaleB', 'lgM', 'h');
+
+
+
+//
+// ORB feature description
+//
+const orb = importShader('keypoints/orb-descriptor.glsl').withArguments('pyramid', 'encodedCorners', 'encoderLength');
 
 
 
@@ -144,6 +152,9 @@ export class GPUKeypoints extends SpeedyProgramGroup
             .declare('multiscaleHarris', multiscaleHarris) // scale-space
             .declare('harrisCutoff', harrisCutoff)
 
+            // ORB
+            .declare('_orb', orb)
+
             // Generic non-maximum suppression
             .declare('nonmaxSuppression', nonmaxSuppression)
             .declare('multiscaleSuppression', multiscaleSuppression) // scale-space
@@ -154,6 +165,19 @@ export class GPUKeypoints extends SpeedyProgramGroup
                 ...this.program.doesNotRecycleTextures()
             }) // scale-space
         ;
+    }
+
+    /**
+     * Compute ORB descriptor (256 bits)
+     * @param {SpeedyTexture} pyramid pre-smoothed on the intensity channel
+     * @param {SpeedyTexture} encodedCorners tiny texture
+     * @param {number} encoderLength
+     * @return {SpeedyTexture}
+     */
+    orb(pyramid, encodedCorners, encoderLength)
+    {
+        this._orb.resize(encoderLength, encoderLength);
+        return this._orb(pyramid, encodedCorners, encoderLength);
     }
 }
 

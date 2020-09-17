@@ -24,7 +24,6 @@ import { GPUColors } from './programs/colors';
 import { GPUFilters } from './programs/filters';
 import { GPUKeypoints } from './programs/keypoints';
 import { GPUEncoders } from './programs/encoders';
-import { GPUDescriptors } from './programs/descriptors';
 import { GPUPyramids } from './programs/pyramids';
 import { GPUEnhancements } from './programs/enhancements';
 import { GPUTrackers } from './programs/trackers';
@@ -107,7 +106,7 @@ export class SpeedyProgramCenter
     }
 
     /**
-     * Keypoint detectors
+     * Keypoint detection & description
      * @returns {GPUKeypoints}
      */
     get keypoints()
@@ -122,15 +121,6 @@ export class SpeedyProgramCenter
     get encoders()
     {
         return this._encoders || (this._encoders = new GPUEncoders(this._gpu, this._width, this._height));
-    }
-
-    /**
-     * Keypoint descriptors
-     * @returns {GPUDescriptors}
-     */
-    get descriptors()
-    {
-        return this._descriptors || (this._descriptors = new GPUDescriptors(this._gpu, this._width, this._height));
     }
 
     /**

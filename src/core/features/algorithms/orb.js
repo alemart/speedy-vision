@@ -77,6 +77,6 @@ export class ORBFeatures extends MultiscaleHarrisFeatures
 
         // compute ORB feature descriptors
         const encoderLength = gpu.programs.encoders.encoderLength;
-        return gpu.programs.descriptors.orb(smoothPyramid, orientedKeypoints, encoderLength);
+        return gpu.programs.keypoints.orb(smoothPyramid, orientedKeypoints, encoderLength);
     }
 }
