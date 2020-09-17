@@ -27,6 +27,7 @@ import { GPUEncoders } from './programs/encoders';
 import { GPUDescriptors } from './programs/descriptors';
 import { GPUPyramids } from './programs/pyramids';
 import { GPUEnhancements } from './programs/enhancements';
+import { GPUTrackers } from './programs/trackers';
 
 /**
  * An access point to all programs that run on the CPU
@@ -57,6 +58,7 @@ export class SpeedyProgramCenter
         this._descriptors = null;
         this._pyramids = null;
         this._enhancements = null;
+        this._trackers = null;
     }
 
     /**
@@ -129,6 +131,15 @@ export class SpeedyProgramCenter
     get descriptors()
     {
         return this._descriptors || (this._descriptors = new GPUDescriptors(this._gpu, this._width, this._height));
+    }
+
+    /**
+     * Feature trackers
+     * @returns {GPUTrackers}
+     */
+    get trackers()
+    {
+        return this._trackers || (this._trackers = new GPUTrackers(this._gpu, this._width, this._height));
     }
 
     /**

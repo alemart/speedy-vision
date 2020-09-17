@@ -49,13 +49,14 @@ export class FeatureDownloader extends Observable
      * Download feature points from the GPU
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
-     * @param {boolean} [useAsyncTransfer] use DMA
      * @param {number} [max] cap the number of keypoints to this value
+     * @param {boolean} [useAsyncTransfer] transfer keypoints asynchronously
+     * @param {boolean} [useBufferQueue] optimize async transfers
      * @returns {Promise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, useAsyncTransfer = true, max = -1)
+    download(gpu, encodedKeypoints, max = -1, useAsyncTransfer = true, useBufferQueue = true)
     {
-        return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer).then(data => {
+        return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer, useBufferQueue).then(data => {
             // when processing a video, we expect that the number of keypoints
             // in time is a relatively smooth curve
             const keypoints = gpu.programs.encoders.decodeKeypoints(data, this._descriptorSize);

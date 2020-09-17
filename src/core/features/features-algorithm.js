@@ -106,13 +106,14 @@ export class FeaturesAlgorithm
      * Download feature points from the GPU
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
-     * @param {boolean} [useAsyncTransfer] use DMA
      * @param {number} [max] cap the number of keypoints to this value
+     * @param {boolean} [useAsyncTransfer] transfer feature points asynchronously
+     * @param {boolean} [useBufferQueue] optimize async transfers
      * @returns {Promise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, useAsyncTransfer = true, max = -1)
+    download(gpu, encodedKeypoints, max = undefined, useAsyncTransfer = true, useBufferQueue = true)
     {
-        return this._downloader.download(gpu, encodedKeypoints, useAsyncTransfer, max);
+        return this._downloader.download(gpu, encodedKeypoints, max, useAsyncTransfer, useBufferQueue);
     }
 
     /**

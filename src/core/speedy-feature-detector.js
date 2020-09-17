@@ -121,8 +121,8 @@ export class SpeedyFeatureDetector
         return this._algorithm.download(
             gpu,
             describedKeypoints,
-            media.options.usage == 'dynamic',
-            settings.max
+            settings.max,
+            media.options.usage == 'dynamic'
         );
     }
 

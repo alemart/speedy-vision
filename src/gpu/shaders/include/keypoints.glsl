@@ -161,4 +161,18 @@ Keypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointA
     return keypoint;
 }
 
+/**
+ * Encode the position of a keypoint
+ * @param {vec2} position
+ * @returns {vec4} RGBA
+ */
+vec4 encodeKeypointPosition(vec2 position)
+{
+    fixed2_t pos = vec2tofix(position);
+    fixed2_t lo = pos & 255;
+    fixed2_t hi = pos >> 8;
+
+    return vec4(float(lo.x), float(hi.x), float(lo.y), float(hi.y)) / 255.0f;
+}
+
 #endif
