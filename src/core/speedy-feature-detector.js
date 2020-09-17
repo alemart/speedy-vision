@@ -94,13 +94,13 @@ export class SpeedyFeatureDetector
 
         // Upload & preprocess media
         let texture = gpu.upload(media.source);
-        texture = this._algorithm.preprocess(
+        texture = preprocessTexture(
             gpu,
             texture,
             settings.denoise,
             media._colorFormat != ColorFormat.Greyscale
         );
-        const enhancedTexture = this._algorithm.enhance(
+        const enhancedTexture = enhanceTexture(
             gpu,
             texture,
             settings.enhancements.illumination == true
@@ -158,4 +158,45 @@ function getAllPropertyDescriptors(obj)
     }
     else
         return Object.create(null);
+}
+
+
+/**
+ * Preprocess a texture for feature detection & description
+ * @param {SpeedyGPU} gpu
+ * @param {SpeedyTexture} inputTexture a RGB or greyscale image
+ * @param {boolean} [denoise] should we smooth the media a bit?
+ * @param {boolean} [convertToGreyscale] set to true if the texture is not greyscale
+ * @returns {SpeedyTexture} pre-processed greyscale image
+ */
+function preprocessTexture(gpu, inputTexture, denoise = true, convertToGreyscale = true)
+{
+    let texture = inputTexture;
+
+    if(denoise)
+        texture = gpu.programs.filters.gauss5(texture);
+
+    if(convertToGreyscale)
+        texture = gpu.programs.colors.rgb2grey(texture);
+
+    return texture;
+}
+
+/**
+ * Enhances a texture for feature DETECTION (not description)
+ * @param {SpeedyGPU} gpu
+ * @param {SpeedyTexture} inputTexture
+ * @param {boolean} [enhanceIllumination] fix irregular lighting in the scene?
+ * @returns {SpeedyTexture}
+ */
+function enhanceTexture(gpu, inputTexture, enhanceIllumination = false)
+{
+    let texture = inputTexture;
+
+    if(enhanceIllumination) {
+        texture = gpu.programs.enhancements.nightvision(texture, 0.9, 0.5, 0.85, 'low', true);
+        texture = gpu.programs.filters.gauss3(texture); // blur a bit more
+    }
+
+    return texture;
 }

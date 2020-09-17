@@ -116,46 +116,6 @@ export class FeaturesAlgorithm
     }
 
     /**
-     * Preprocess a texture for feature detection & description
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} inputTexture a RGB or greyscale image
-     * @param {boolean} [denoise] should we smooth the media a bit?
-     * @param {boolean} [convertToGreyscale] set to true if the texture is not greyscale
-     * @returns {SpeedyTexture} pre-processed greyscale image
-     */
-    preprocess(gpu, inputTexture, denoise = true, convertToGreyscale = true)
-    {
-        let texture = inputTexture;
-
-        if(denoise)
-            texture = gpu.programs.filters.gauss5(texture);
-
-        if(convertToGreyscale)
-            texture = gpu.programs.colors.rgb2grey(texture);
-            
-        return texture;
-    }
-
-    /**
-     * Enhances texture for feature DETECTION (not description)
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} inputTexture
-     * @param {boolean} [enhanceIllumination] fix irregular lighting in the scene?
-     * @returns {SpeedyTexture}
-     */
-    enhance(gpu, inputTexture, enhanceIllumination = false)
-    {
-        let texture = inputTexture;
-
-        if(enhanceIllumination) {
-            texture = gpu.programs.enhancements.nightvision(texture, 0.9, 0.5, 0.85, 'low', true);
-            texture = gpu.programs.filters.gauss3(texture); // blur a bit more
-        }
-
-        return texture;
-    }
-
-    /**
      * Get the current detector sensitivity
      * @returns {number} a value in [0,1]
      */
