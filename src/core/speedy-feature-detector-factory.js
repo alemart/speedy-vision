@@ -34,6 +34,7 @@ export class SpeedyFeatureDetectorFactory extends SpeedyNamespace
     /**
      * FAST feature detector
      * @param {number} [n] Variant of the algorithm. Must be 9, 7 or 5.
+     * @returns {SpeedyFeatureDetector}
      */
     static FAST(n = 9)
     {
@@ -43,6 +44,7 @@ export class SpeedyFeatureDetectorFactory extends SpeedyNamespace
     /**
      * FAST feature detector in scale-space
      * @param {number} [n] Variant of the algorithm. Must be 9.
+     * @returns {SpeedyFeatureDetector}
      */
     static MultiscaleFAST(n = 9)
     {
@@ -51,6 +53,7 @@ export class SpeedyFeatureDetectorFactory extends SpeedyNamespace
 
     /**
      * Harris corner detector
+     * @returns {SpeedyFeatureDetector}
      */
     static Harris()
     {
@@ -59,6 +62,7 @@ export class SpeedyFeatureDetectorFactory extends SpeedyNamespace
 
     /**
      * Harris corner detector in scale-space
+     * @returns {SpeedyFeatureDetector}
      */
     static MultiscaleHarris()
     {
@@ -67,6 +71,7 @@ export class SpeedyFeatureDetectorFactory extends SpeedyNamespace
 
     /**
      * ORB feature detector & descriptor
+     * @returns {SpeedyFeatureDetector}
      */
     static ORB()
     {
@@ -75,6 +80,7 @@ export class SpeedyFeatureDetectorFactory extends SpeedyNamespace
 
     /**
      * BRISK feature detector & descriptor
+     * @returns {SpeedyFeatureDetector}
      */
     static BRISK()
     {

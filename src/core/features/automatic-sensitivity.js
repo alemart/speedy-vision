@@ -21,7 +21,7 @@
 
 import { Observable } from '../../utils/observable';
 import { SpeedyFeature } from '../speedy-feature';
-import { FeaturesDownloader } from './feature-downloader';
+import { FeatureDownloader } from './feature-downloader';
 import { SensitivityTuner } from '../tuners/sensitivity-tuner';
 import { TestTuner } from '../tuners/test-tuner';
 
@@ -49,7 +49,7 @@ export class AutomaticSensitivity extends Observable
 {
     /**
      * Class constructor
-     * @param {FeaturesDownloader} downloader
+     * @param {FeatureDownloader} downloader
      */
     constructor(downloader)
     {

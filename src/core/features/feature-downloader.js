@@ -28,10 +28,10 @@ import { SpeedyGPU } from '../../gpu/speedy-gpu';
 const OPTIMIZER_GROWTH_WEIGHT = 0.02;
 
 /**
- * The FeaturesDownloader receives a texture of encoded
+ * The FeatureDownloader receives a texture of encoded
  * keypoints and returns a corresponding array of keypoints
  */
-export class FeaturesDownloader extends Observable
+export class FeatureDownloader extends Observable
 {
     /**
      * Class constructor

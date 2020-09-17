@@ -21,7 +21,7 @@
 
 import { AbstractMethodError, IllegalArgumentError } from '../../utils/errors';
 import { AutomaticSensitivity } from './automatic-sensitivity';
-import { FeaturesDownloader } from './feature-downloader';
+import { FeatureDownloader } from './feature-downloader';
 import { SpeedyFeature } from '../speedy-feature';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
 
@@ -37,7 +37,7 @@ export class FeaturesAlgorithm
      */
     constructor()
     {
-        this._downloader = new FeaturesDownloader(this.descriptorSize);
+        this._downloader = new FeatureDownloader(this.descriptorSize);
         this._sensitivity = 0;
         this._automaticSensitivity = null;
     }

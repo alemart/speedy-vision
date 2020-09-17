@@ -22,8 +22,8 @@
 import { SpeedyMedia } from './speedy-media';
 import { SpeedyPipeline } from './speedy-pipeline';
 import { FPSCounter } from '../utils/fps-counter';
-import { SpeedyFeatureTrackerFactory } from './features/trackers/api/feature-tracker-factory';
 import { SpeedyFeatureDetectorFactory } from './speedy-feature-detector-factory';
+import { SpeedyFeatureTrackerFactory } from './speedy-feature-tracker-factory';
 
 /**
  * Speedy's main class
