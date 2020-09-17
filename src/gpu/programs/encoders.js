@@ -231,10 +231,11 @@ export class GPUEncoders extends SpeedyProgramGroup
     /**
      * Download RAW encoded keypoint data from the GPU - this is a bottleneck!
      * @param {SpeedyTexture} encodedKeypoints texture with keypoints that have already been encoded
-     * @param {bool} [useAsyncTransfer] transfer data from the GPU without blocking the CPU
+     * @param {boolean} [useAsyncTransfer] transfer data from the GPU without blocking the CPU
+     * @param {boolean} [useBufferQueue] optimize async transfers
      * @returns {Promise<Uint8Array[]>} pixels in the [r,g,b,a, ...] format
      */
-    async downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer = true)
+    async downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer = true, useBufferQueue = true)
     {
         try {
             // helper shader for reading the data
@@ -243,7 +244,7 @@ export class GPUEncoders extends SpeedyProgramGroup
             // read data from the GPU
             let downloadTime = performance.now(), pixels;
             if(useAsyncTransfer)
-                pixels = await this._downloadKeypoints.readPixelsAsync();
+                pixels = await this._downloadKeypoints.readPixelsAsync(0, 0, -1, -1, useBufferQueue);
             else
                 pixels = this._downloadKeypoints.readPixelsSync(); // bottleneck!
             downloadTime = performance.now() - downloadTime;
@@ -274,11 +275,6 @@ export class GPUEncoders extends SpeedyProgramGroup
      * Upload keypoints to the GPU
      * The descriptor & orientation of the keypoints will be lost
      * (need to recalculate)
-     *
-     * Before calling it, make sure that the keypoint encoder has the
-     * minimum required size for storing the keypoints - i.e., via
-     * optimizeKeypointEncoder()
-     *
      * @param {SpeedyFeature[]} keypoints
      * @param {number} descriptorSize in bytes
      * @returns {SpeedyTexture} encodedKeypoints
@@ -307,6 +303,7 @@ export class GPUEncoders extends SpeedyProgramGroup
 
         // WARNING: you shouldn't work with a different set of keypoints
         // while you're working with the ones you have just uploaded
+        this.optimizeKeypointEncoder(keypointCount, descriptorSize);
 
         // Upload data
         this._uploadKeypoints.setUBO('KeypointBuffer', this._uploadBuffer);

@@ -158,9 +158,10 @@ export class SpeedyProgram extends Function
      * @param {number} [y] 
      * @param {number} [width]
      * @param {number} [height]
+     * @param {boolean} [useBufferQueue] optimize downloads
      * @returns {Promise<Uint8Array>} resolves to an array of pixels in the RGBA format
      */
-    readPixelsAsync(x = 0, y = 0, width = -1, height = -1)
+    readPixelsAsync(x = 0, y = 0, width = -1, height = -1, useBufferQueue = true)
     {
         const gl = this._gl;
 
@@ -183,6 +184,13 @@ export class SpeedyProgram extends Function
         // allocate the pixel buffers
         if(this._pixelBuffer[0] == null)
             this._reallocatePixelBuffers(this._stdprog.width, this._stdprog.height);
+
+        // do not optimize?
+        if(!useBufferQueue) {
+            return GLUtils.readPixelsViaPBO(gl, this._pbo[0], this._pixelBuffer[0], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
+                return this._pixelBuffer[0];
+            });
+        }
 
         // GPU needs to produce data
         if(this._pboProducerQueue.length > 0) {
