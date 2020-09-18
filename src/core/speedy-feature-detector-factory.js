@@ -21,10 +21,10 @@
 
 import { SpeedyNamespace } from './speedy-namespace';
 import { SpeedyFeatureDetector } from './speedy-feature-detector';
-import { FASTFeatures, MultiscaleFASTFeatures } from './features/algorithms/fast';
-import { HarrisFeatures, MultiscaleHarrisFeatures } from './features/algorithms/harris';
-import { ORBFeatures } from './features/algorithms/orb';
-import { BRISKFeatures } from './features/algorithms/brisk';
+import { FASTFeatures, MultiscaleFASTFeatures } from './keypoints/detectors/fast';
+import { HarrisFeatures, MultiscaleHarrisFeatures } from './keypoints/detectors/harris';
+import { ORBFeatures } from './keypoints/detectors/orb';
+import { BRISKFeatures } from './keypoints/detectors/brisk';
 
 /**
  * A collection of methods for instantiating SpeedyFeatureDetectors

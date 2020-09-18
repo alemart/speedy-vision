@@ -19,8 +19,8 @@
  * An easy-to-use class for working with feature trackers
  */
 
-import { FeaturesAlgorithm } from './features/features-algorithm';
-import { FeatureTrackingAlgorithm } from './features/feature-tracking-algorithm';
+import { FeaturesAlgorithm } from './keypoints/features-algorithm';
+import { FeatureTrackingAlgorithm } from './keypoints/feature-tracking-algorithm';
 import { SpeedyMedia } from './speedy-media';
 import { SpeedyGPU } from '../gpu/speedy-gpu';
 import { IllegalOperationError } from '../utils/errors';

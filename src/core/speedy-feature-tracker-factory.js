@@ -23,7 +23,7 @@ import { SpeedyNamespace } from './speedy-namespace';
 import { SpeedyMedia } from './speedy-media';
 import { SpeedyFeatureDetector } from './speedy-feature-detector';
 import { SpeedyFeatureTracker } from './speedy-feature-tracker';
-import { LKFeatureTrackingAlgorithm } from './features/tracking/lk';
+import { LKFeatureTrackingAlgorithm } from './keypoints/trackers/lk';
 
 /**
  * A collection of methods for instantiating Feature Trackers

@@ -20,7 +20,7 @@
  */
 
 import { ColorFormat } from '../utils/types'
-import { FeaturesAlgorithm } from './features/features-algorithm';
+import { FeaturesAlgorithm } from './keypoints/features-algorithm';
 import { IllegalArgumentError, IllegalOperationError } from '../utils/errors';
 
 /**
