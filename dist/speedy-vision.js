@@ -6,7 +6,7 @@
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-09-15T18:54:17.070Z
+ * Date: 2020-09-20T05:25:41.880Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -97,9 +97,187 @@ var Speedy =
 /************************************************************************/
 /******/ ({
 
-/***/ "./src/core/features/algorithms/brisk.js":
+/***/ "./src/core/keypoints/automatic-sensitivity.js":
+/*!*****************************************************!*\
+  !*** ./src/core/keypoints/automatic-sensitivity.js ***!
+  \*****************************************************/
+/*! exports provided: AutomaticSensitivity */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "AutomaticSensitivity", function() { return AutomaticSensitivity; });
+/* harmony import */ var _utils_observable__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/observable */ "./src/utils/observable.js");
+/* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../speedy-feature */ "./src/core/speedy-feature.js");
+/* harmony import */ var _feature_downloader__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./feature-downloader */ "./src/core/keypoints/feature-downloader.js");
+/* harmony import */ var _tuners_sensitivity_tuner__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../tuners/sensitivity-tuner */ "./src/core/tuners/sensitivity-tuner.js");
+/* harmony import */ var _tuners_test_tuner__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../tuners/test-tuner */ "./src/core/tuners/test-tuner.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * automatic-sensitivity.js
+ * Automatic sensitivity component
+ */
+
+
+
+
+
+
+
+// constants
+const DEFAULT_TOLERANCE = 0.10; // 10% on the expected number of keypoints
+
+/**
+ * This component adds automatic sensitivity
+ * support to a feature detector.
+ * 
+ * Give it an expected number of keypoints &
+ * an optional tolerance margin. It will
+ * predict a value in [0,1] called sensitivity
+ * that gives you, approximately, the number
+ * of keypoints you have asked for.
+ * 
+ * The feature detector must support reading
+ * sensitivity values for this to work - i.e.,
+ * translating sensitivity to some sort of
+ * detector-specific threshold. It's ideal if
+ * the number of keypoints and the sensitivity
+ * value are (roughly) proportional.
+ */
+class AutomaticSensitivity extends _utils_observable__WEBPACK_IMPORTED_MODULE_0__["Observable"]
+{
+    /**
+     * Class constructor
+     * @param {FeatureDownloader} downloader
+     */
+    constructor(downloader)
+    {
+        super();
+        this._sensitivity = 0;
+        this._expected = 0;
+        this._tolerance = DEFAULT_TOLERANCE;
+        this._tuner = null;
+        this._downloader = downloader;
+        this._onDownloadKeypoints = this._onDownloadKeypoints.bind(this); // subscriber
+
+        // enable the AI
+        this.enable();
+    }
+
+    /**
+     * Get the current predicted sensitivity value
+     * @returns {number} a value in [0,1]
+     */
+    get sensitivity()
+    {
+        return this._sensitivity;
+    }
+
+    /**
+     * Get the expected number of keypoints
+     * @returns {number}
+     */
+    get expected()
+    {
+        return this._expected;
+    }
+
+    /**
+     * Set the expected number of keypoints
+     * @param {number} numberOfKeypoints
+     */
+    set expected(numberOfKeypoints)
+    {
+        this._expected = Math.max(0, numberOfKeypoints | 0);
+    }
+
+    /**
+     * Get the acceptable relative error tolerance used when finding
+     * a sensitivity value for an expected number of keypoints
+     * @returns {number}
+     */
+    get tolerance()
+    {
+        return this._tolerance;
+    }
+
+    /**
+     * Set the acceptable relative error tolerance used when finding
+     * a sensitivity value for an expected number of keypoints
+     * @param {number} percentage a value such as 0.10 (10%)
+     */
+    set tolerance(percentage)
+    {
+        this._tolerance = Math.max(0, +percentage);
+    }
+
+    /**
+     * Enable Automatic Sensitivity
+     */
+    enable()
+    {
+        this._downloader.subscribe(this._onDownloadKeypoints);
+    }
+
+    /**
+     * Disable Automatic Sensitivity
+     */
+    disable()
+    {
+        this._downloader.unsubscribe(this._onDownloadKeypoints);
+    }
+
+    /**
+     * Called whenever the feature detector finds new keypoints
+     * This routine updates the sensitivity value
+     * @param {SpeedyFeature[]} keypoints 
+     */
+    _onDownloadKeypoints(keypoints)
+    {
+        const normalizer = 0.001; // convert from discrete state space
+
+        // tuner: lazy spawn
+        if(this._tuner == null) {
+            //this._tuner = new TestTuner(0, 1000); // debug
+            this._tuner = new _tuners_sensitivity_tuner__WEBPACK_IMPORTED_MODULE_3__["SensitivityTuner"](0, 1200); // use a slightly wider interval for better stability
+        }
+
+        // compute prediction
+        this._tuner.tolerance = this._tolerance;
+        this._tuner.feedObservation(keypoints.length, this._expected);
+        const prediction = this._tuner.currentValue();
+
+        // update sensitivity
+        this._sensitivity = Math.max(0, Math.min(prediction * normalizer, 1));
+
+        // debug
+        //console.log(JSON.stringify(this._tuner.info()));
+
+        // notify observers
+        this._notify(this._sensitivity);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/keypoints/detectors/brisk.js":
 /*!***********************************************!*\
-  !*** ./src/core/features/algorithms/brisk.js ***!
+  !*** ./src/core/keypoints/detectors/brisk.js ***!
   \***********************************************/
 /*! exports provided: BRISKFeatures */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
@@ -107,7 +285,7 @@ var Speedy =
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "BRISKFeatures", function() { return BRISKFeatures; });
-/* harmony import */ var _features_algorithm__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../features-algorithm */ "./src/core/features/features-algorithm.js");
+/* harmony import */ var _features_algorithm__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../features-algorithm */ "./src/core/keypoints/features-algorithm.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../utils/globals */ "./src/utils/globals.js");
@@ -360,9 +538,9 @@ function briskLongDistancePairs(threshold = 13.67, scale = 1.0)
 
 /***/ }),
 
-/***/ "./src/core/features/algorithms/fast.js":
+/***/ "./src/core/keypoints/detectors/fast.js":
 /*!**********************************************!*\
-  !*** ./src/core/features/algorithms/fast.js ***!
+  !*** ./src/core/keypoints/detectors/fast.js ***!
   \**********************************************/
 /*! exports provided: FASTFeatures, MultiscaleFASTFeatures */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
@@ -372,7 +550,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FASTFeatures", function() { return FASTFeatures; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MultiscaleFASTFeatures", function() { return MultiscaleFASTFeatures; });
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
-/* harmony import */ var _features_algorithm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../features-algorithm */ "./src/core/features/features-algorithm.js");
+/* harmony import */ var _features_algorithm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../features-algorithm */ "./src/core/keypoints/features-algorithm.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../utils/globals */ "./src/utils/globals.js");
 /*
@@ -416,14 +594,17 @@ class FASTFeatures extends _features_algorithm__WEBPACK_IMPORTED_MODULE_1__["Fea
 {
     /**
      * Class constructor
+     * @param {number} [n] Variant of the algorithm. Must be 9, 7 or 5.
      */
-    constructor()
+    constructor(n = DEFAULT_N)
     {
         super();
 
         // default settings
-        this._n = DEFAULT_N;
         this._threshold = DEFAULT_THRESHOLD;
+
+        // set the type of the algorithm
+        this.n = n;
     }   
 
     /**
@@ -518,14 +699,18 @@ class MultiscaleFASTFeatures extends FASTFeatures
 {
     /**
      * Class constructor
+     * @param {number} [n] Variant of the algorithm. Must be 9.
      */
-    constructor()
+    constructor(n = 9)
     {
         super();
 
         // default settings
         this._depth = DEFAULT_DEPTH;
         this._useHarrisScore = false;
+
+        // set the type of the algorithm
+        this.n = n;
     }
 
     /**
@@ -636,9 +821,9 @@ class MultiscaleFASTFeatures extends FASTFeatures
 
 /***/ }),
 
-/***/ "./src/core/features/algorithms/harris.js":
+/***/ "./src/core/keypoints/detectors/harris.js":
 /*!************************************************!*\
-  !*** ./src/core/features/algorithms/harris.js ***!
+  !*** ./src/core/keypoints/detectors/harris.js ***!
   \************************************************/
 /*! exports provided: HarrisFeatures, MultiscaleHarrisFeatures */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
@@ -648,7 +833,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "HarrisFeatures", function() { return HarrisFeatures; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MultiscaleHarrisFeatures", function() { return MultiscaleHarrisFeatures; });
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
-/* harmony import */ var _features_algorithm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../features-algorithm */ "./src/core/features/features-algorithm.js");
+/* harmony import */ var _features_algorithm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../features-algorithm */ "./src/core/keypoints/features-algorithm.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../utils/globals */ "./src/utils/globals.js");
@@ -882,9 +1067,9 @@ class MultiscaleHarrisFeatures extends HarrisFeatures
 
 /***/ }),
 
-/***/ "./src/core/features/algorithms/orb.js":
+/***/ "./src/core/keypoints/detectors/orb.js":
 /*!*********************************************!*\
-  !*** ./src/core/features/algorithms/orb.js ***!
+  !*** ./src/core/keypoints/detectors/orb.js ***!
   \*********************************************/
 /*! exports provided: ORBFeatures */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
@@ -893,7 +1078,7 @@ class MultiscaleHarrisFeatures extends HarrisFeatures
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ORBFeatures", function() { return ORBFeatures; });
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
-/* harmony import */ var _harris__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./harris */ "./src/core/features/algorithms/harris.js");
+/* harmony import */ var _harris__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./harris */ "./src/core/keypoints/detectors/harris.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -973,200 +1158,22 @@ class ORBFeatures extends _harris__WEBPACK_IMPORTED_MODULE_1__["MultiscaleHarris
 
         // compute ORB feature descriptors
         const encoderLength = gpu.programs.encoders.encoderLength;
-        return gpu.programs.descriptors.orb(smoothPyramid, orientedKeypoints, encoderLength);
+        return gpu.programs.keypoints.orb(smoothPyramid, orientedKeypoints, encoderLength);
     }
 }
 
 /***/ }),
 
-/***/ "./src/core/features/automatic-sensitivity.js":
-/*!****************************************************!*\
-  !*** ./src/core/features/automatic-sensitivity.js ***!
-  \****************************************************/
-/*! exports provided: AutomaticSensitivity */
+/***/ "./src/core/keypoints/feature-downloader.js":
+/*!**************************************************!*\
+  !*** ./src/core/keypoints/feature-downloader.js ***!
+  \**************************************************/
+/*! exports provided: FeatureDownloader */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "AutomaticSensitivity", function() { return AutomaticSensitivity; });
-/* harmony import */ var _utils_observable__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/observable */ "./src/utils/observable.js");
-/* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../speedy-feature */ "./src/core/speedy-feature.js");
-/* harmony import */ var _feature_downloader__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./feature-downloader */ "./src/core/features/feature-downloader.js");
-/* harmony import */ var _tuners_sensitivity_tuner__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../tuners/sensitivity-tuner */ "./src/core/tuners/sensitivity-tuner.js");
-/* harmony import */ var _tuners_test_tuner__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../tuners/test-tuner */ "./src/core/tuners/test-tuner.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for the web
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * automatic-sensitivity.js
- * Automatic sensitivity component
- */
-
-
-
-
-
-
-
-// constants
-const DEFAULT_TOLERANCE = 0.10; // 10% on the expected number of keypoints
-
-/**
- * This component adds automatic sensitivity
- * support to a feature detector.
- * 
- * Give it an expected number of keypoints &
- * an optional tolerance margin. It will
- * predict a value in [0,1] called sensitivity
- * that gives you, approximately, the number
- * of keypoints you have asked for.
- * 
- * The feature detector must support reading
- * sensitivity values for this to work - i.e.,
- * translating sensitivity to some sort of
- * detector-specific threshold. It's ideal if
- * the number of keypoints and the sensitivity
- * value are (roughly) proportional.
- */
-class AutomaticSensitivity extends _utils_observable__WEBPACK_IMPORTED_MODULE_0__["Observable"]
-{
-    /**
-     * Class constructor
-     * @param {FeaturesDownloader} downloader
-     */
-    constructor(downloader)
-    {
-        super();
-        this._sensitivity = 0;
-        this._expected = 0;
-        this._tolerance = DEFAULT_TOLERANCE;
-        this._tuner = null;
-        this._downloader = downloader;
-        this._onDownloadKeypoints = this._onDownloadKeypoints.bind(this); // subscriber
-
-        // enable the AI
-        this.enable();
-    }
-
-    /**
-     * Get the current predicted sensitivity value
-     * @returns {number} a value in [0,1]
-     */
-    get sensitivity()
-    {
-        return this._sensitivity;
-    }
-
-    /**
-     * Get the expected number of keypoints
-     * @returns {number}
-     */
-    get expected()
-    {
-        return this._expected;
-    }
-
-    /**
-     * Set the expected number of keypoints
-     * @param {number} numberOfKeypoints
-     */
-    set expected(numberOfKeypoints)
-    {
-        this._expected = Math.max(0, numberOfKeypoints | 0);
-    }
-
-    /**
-     * Get the acceptable relative error tolerance used when finding
-     * a sensitivity value for an expected number of keypoints
-     * @returns {number}
-     */
-    get tolerance()
-    {
-        return this._tolerance;
-    }
-
-    /**
-     * Set the acceptable relative error tolerance used when finding
-     * a sensitivity value for an expected number of keypoints
-     * @param {number} percentage a value such as 0.10 (10%)
-     */
-    set tolerance(percentage)
-    {
-        this._tolerance = Math.max(0, +percentage);
-    }
-
-    /**
-     * Enable Automatic Sensitivity
-     */
-    enable()
-    {
-        this._downloader.subscribe(this._onDownloadKeypoints);
-    }
-
-    /**
-     * Disable Automatic Sensitivity
-     */
-    disable()
-    {
-        this._downloader.unsubscribe(this._onDownloadKeypoints);
-    }
-
-    /**
-     * Called whenever the feature detector finds new keypoints
-     * This routine updates the sensitivity value
-     * @param {SpeedyFeature[]} keypoints 
-     */
-    _onDownloadKeypoints(keypoints)
-    {
-        const normalizer = 0.001; // convert from discrete state space
-
-        // tuner: lazy spawn
-        if(this._tuner == null) {
-            //this._tuner = new TestTuner(0, 1000); // debug
-            this._tuner = new _tuners_sensitivity_tuner__WEBPACK_IMPORTED_MODULE_3__["SensitivityTuner"](0, 1200); // use a slightly wider interval for better stability
-        }
-
-        // compute prediction
-        this._tuner.tolerance = this._tolerance;
-        this._tuner.feedObservation(keypoints.length, this._expected);
-        const prediction = this._tuner.currentValue();
-
-        // update sensitivity
-        this._sensitivity = Math.max(0, Math.min(prediction * normalizer, 1));
-
-        // debug
-        //console.log(JSON.stringify(this._tuner.info()));
-
-        // notify observers
-        this._notify(this._sensitivity);
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/features/feature-downloader.js":
-/*!*************************************************!*\
-  !*** ./src/core/features/feature-downloader.js ***!
-  \*************************************************/
-/*! exports provided: FeaturesDownloader */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FeaturesDownloader", function() { return FeaturesDownloader; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FeatureDownloader", function() { return FeatureDownloader; });
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_observable__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/observable */ "./src/utils/observable.js");
 /* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../speedy-feature */ "./src/core/speedy-feature.js");
@@ -1201,10 +1208,10 @@ __webpack_require__.r(__webpack_exports__);
 const OPTIMIZER_GROWTH_WEIGHT = 0.02;
 
 /**
- * The FeaturesDownloader receives a texture of encoded
+ * The FeatureDownloader receives a texture of encoded
  * keypoints and returns a corresponding array of keypoints
  */
-class FeaturesDownloader extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__["Observable"]
+class FeatureDownloader extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__["Observable"]
 {
     /**
      * Class constructor
@@ -1222,13 +1229,14 @@ class FeaturesDownloader extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__[
      * Download feature points from the GPU
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
-     * @param {boolean} [useAsyncTransfer] use DMA
      * @param {number} [max] cap the number of keypoints to this value
+     * @param {boolean} [useAsyncTransfer] transfer keypoints asynchronously
+     * @param {boolean} [useBufferQueue] optimize async transfers
      * @returns {Promise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, useAsyncTransfer = true, max = -1)
+    download(gpu, encodedKeypoints, max = -1, useAsyncTransfer = true, useBufferQueue = true)
     {
-        return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer).then(data => {
+        return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer, useBufferQueue).then(data => {
             // when processing a video, we expect that the number of keypoints
             // in time is a relatively smooth curve
             const keypoints = gpu.programs.encoders.decodeKeypoints(data, this._descriptorSize);
@@ -1278,10 +1286,69 @@ class FeaturesDownloader extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__[
 
 /***/ }),
 
-/***/ "./src/core/features/features-algorithm.js":
-/*!*************************************************!*\
-  !*** ./src/core/features/features-algorithm.js ***!
-  \*************************************************/
+/***/ "./src/core/keypoints/feature-tracking-algorithm.js":
+/*!**********************************************************!*\
+  !*** ./src/core/keypoints/feature-tracking-algorithm.js ***!
+  \**********************************************************/
+/*! exports provided: FeatureTrackingAlgorithm */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FeatureTrackingAlgorithm", function() { return FeatureTrackingAlgorithm; });
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * base.js
+ * Specifies an abstract strategy used to track feature points
+ */
+
+
+
+
+/**
+ * Used to track feature points
+ * @abstract
+ */
+class FeatureTrackingAlgorithm
+{
+    /**
+     * Track a set of feature points
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTexture} nextImage next image (time: t)
+     * @param {SpeedyTexture} prevImage previous image (time: t-1)
+     * @param {SpeedyTexture} prevKeypoints tiny texture with encoded keypoints (time: t-1)
+     * @param {number} descriptorSize in bytes
+     * @returns {SpeedyTexture} nextKeypoints tiny texture with encoded keypoints (time: t)
+     */
+    track(gpu, nextImage, prevImage, prevKeypoints, descriptorSize)
+    {
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["AbstractMethodError"]();
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/keypoints/features-algorithm.js":
+/*!**************************************************!*\
+  !*** ./src/core/keypoints/features-algorithm.js ***!
+  \**************************************************/
 /*! exports provided: FeaturesAlgorithm */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -1289,8 +1356,8 @@ class FeaturesDownloader extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__[
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FeaturesAlgorithm", function() { return FeaturesAlgorithm; });
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _automatic_sensitivity__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./automatic-sensitivity */ "./src/core/features/automatic-sensitivity.js");
-/* harmony import */ var _feature_downloader__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./feature-downloader */ "./src/core/features/feature-downloader.js");
+/* harmony import */ var _automatic_sensitivity__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./automatic-sensitivity */ "./src/core/keypoints/automatic-sensitivity.js");
+/* harmony import */ var _feature_downloader__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./feature-downloader */ "./src/core/keypoints/feature-downloader.js");
 /* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../speedy-feature */ "./src/core/speedy-feature.js");
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /*
@@ -1332,7 +1399,7 @@ class FeaturesAlgorithm
      */
     constructor()
     {
-        this._downloader = new _feature_downloader__WEBPACK_IMPORTED_MODULE_2__["FeaturesDownloader"](this.descriptorSize);
+        this._downloader = new _feature_downloader__WEBPACK_IMPORTED_MODULE_2__["FeatureDownloader"](this.descriptorSize);
         this._sensitivity = 0;
         this._automaticSensitivity = null;
     }
@@ -1401,53 +1468,14 @@ class FeaturesAlgorithm
      * Download feature points from the GPU
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
-     * @param {boolean} [useAsyncTransfer] use DMA
      * @param {number} [max] cap the number of keypoints to this value
+     * @param {boolean} [useAsyncTransfer] transfer feature points asynchronously
+     * @param {boolean} [useBufferQueue] optimize async transfers
      * @returns {Promise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, useAsyncTransfer = true, max = -1)
+    download(gpu, encodedKeypoints, max = undefined, useAsyncTransfer = true, useBufferQueue = true)
     {
-        return this._downloader.download(gpu, encodedKeypoints, useAsyncTransfer, max);
-    }
-
-    /**
-     * Preprocess a texture for feature detection & description
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} inputTexture a RGB or greyscale image
-     * @param {boolean} [denoise] should we smooth the media a bit?
-     * @param {boolean} [convertToGreyscale] set to true if the texture is not greyscale
-     * @returns {SpeedyTexture} pre-processed greyscale image
-     */
-    preprocess(gpu, inputTexture, denoise = true, convertToGreyscale = true)
-    {
-        let texture = inputTexture;
-
-        if(denoise)
-            texture = gpu.programs.filters.gauss5(texture);
-
-        if(convertToGreyscale)
-            texture = gpu.programs.colors.rgb2grey(texture);
-            
-        return texture;
-    }
-
-    /**
-     * Enhances texture for feature DETECTION (not description)
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} inputTexture
-     * @param {boolean} [enhanceIllumination] fix irregular lighting in the scene?
-     * @returns {SpeedyTexture}
-     */
-    enhance(gpu, inputTexture, enhanceIllumination = false)
-    {
-        let texture = inputTexture;
-
-        if(enhanceIllumination) {
-            texture = gpu.programs.enhancements.nightvision(texture, 0.9, 0.5, 0.85, 'low', true);
-            texture = gpu.programs.filters.gauss3(texture); // blur a bit more
-        }
-
-        return texture;
+        return this._downloader.download(gpu, encodedKeypoints, max, useAsyncTransfer, useBufferQueue);
     }
 
     /**
@@ -1520,17 +1548,18 @@ class FeaturesAlgorithm
 
 /***/ }),
 
-/***/ "./src/core/features/trackers/api/feature-tracker-factory.js":
-/*!*******************************************************************!*\
-  !*** ./src/core/features/trackers/api/feature-tracker-factory.js ***!
-  \*******************************************************************/
-/*! exports provided: SpeedyFeatureTrackerFactory */
+/***/ "./src/core/keypoints/trackers/lk.js":
+/*!*******************************************!*\
+  !*** ./src/core/keypoints/trackers/lk.js ***!
+  \*******************************************/
+/*! exports provided: LKFeatureTrackingAlgorithm */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyFeatureTrackerFactory", function() { return SpeedyFeatureTrackerFactory; });
-/* harmony import */ var _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../speedy-namespace */ "./src/core/speedy-namespace.js");
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "LKFeatureTrackingAlgorithm", function() { return LKFeatureTrackingAlgorithm; });
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _feature_tracking_algorithm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../feature-tracking-algorithm */ "./src/core/keypoints/feature-tracking-algorithm.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -1548,24 +1577,37 @@ __webpack_require__.r(__webpack_exports__);
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * speedy-feature-tracker.js
- * A collection of methods for instantiating Feature Trackers
+ * lk-tracker.js
+ * Lucas-Kanade feature tracker in a pyramid
  */
+
 
 
 
 /**
- * A collection of methods for instantiating Feature Trackers
+ * Lucas-Kanade feature tracker in a pyramid
  */
-class SpeedyFeatureTrackerFactory extends _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__["SpeedyNamespace"]
+class LKFeatureTrackingAlgorithm extends _feature_tracking_algorithm__WEBPACK_IMPORTED_MODULE_1__["FeatureTrackingAlgorithm"]
 {
     /**
-     * Spawns a Lucas-Kanade feature tracker
-     * @param {SpeedyMedia} media
+     * Track a set of feature points
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTexture} nextImage next image (time: t)
+     * @param {SpeedyTexture} prevImage previous image (time: t-1)
+     * @param {SpeedyTexture} prevKeypoints tiny texture with encoded keypoints (time: t-1)
+     * @param {number} descriptorSize in bytes
+     * @param {number} [windowSize] neighborhood size, an odd number
+     * @returns {SpeedyTexture} nextKeypoints tiny texture with encoded keypoints (time: t)
      */
-    static LK(media)
+    track(gpu, nextImage, prevImage, prevKeypoints, descriptorSize, windowSize = 11)
     {
-        return null; // TODO
+        // create pyramids
+        const nextPyramid = nextImage.generateMipmap();
+        const prevPyramid = prevImage.generateMipmap();
+
+        // track feature points
+        const encoderLength = gpu.programs.encoders.encoderLength;
+        return gpu.programs.trackers.lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, descriptorSize, encoderLength);
     }
 }
 
@@ -2015,10 +2057,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyFeatureDetectorFactory", function() { return SpeedyFeatureDetectorFactory; });
 /* harmony import */ var _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-namespace */ "./src/core/speedy-namespace.js");
 /* harmony import */ var _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-feature-detector */ "./src/core/speedy-feature-detector.js");
-/* harmony import */ var _features_algorithms_fast__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./features/algorithms/fast */ "./src/core/features/algorithms/fast.js");
-/* harmony import */ var _features_algorithms_harris__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./features/algorithms/harris */ "./src/core/features/algorithms/harris.js");
-/* harmony import */ var _features_algorithms_orb__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./features/algorithms/orb */ "./src/core/features/algorithms/orb.js");
-/* harmony import */ var _features_algorithms_brisk__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./features/algorithms/brisk */ "./src/core/features/algorithms/brisk.js");
+/* harmony import */ var _keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./keypoints/detectors/fast */ "./src/core/keypoints/detectors/fast.js");
+/* harmony import */ var _keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./keypoints/detectors/harris */ "./src/core/keypoints/detectors/harris.js");
+/* harmony import */ var _keypoints_detectors_orb__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./keypoints/detectors/orb */ "./src/core/keypoints/detectors/orb.js");
+/* harmony import */ var _keypoints_detectors_brisk__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./keypoints/detectors/brisk */ "./src/core/keypoints/detectors/brisk.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -2054,50 +2096,58 @@ class SpeedyFeatureDetectorFactory extends _speedy_namespace__WEBPACK_IMPORTED_M
 {
     /**
      * FAST feature detector
+     * @param {number} [n] Variant of the algorithm. Must be 9, 7 or 5.
+     * @returns {SpeedyFeatureDetector}
      */
-    static FAST()
+    static FAST(n = 9)
     {
-        return new _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyFeatureDetector"](new _features_algorithms_fast__WEBPACK_IMPORTED_MODULE_2__["FASTFeatures"]());
+        return new _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyFeatureDetector"](new _keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_2__["FASTFeatures"](n));
     }
 
     /**
      * FAST feature detector in scale-space
+     * @param {number} [n] Variant of the algorithm. Must be 9.
+     * @returns {SpeedyFeatureDetector}
      */
-    static MultiscaleFAST()
+    static MultiscaleFAST(n = 9)
     {
-        return new _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyFeatureDetector"](new _features_algorithms_fast__WEBPACK_IMPORTED_MODULE_2__["MultiscaleFASTFeatures"]());
+        return new _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyFeatureDetector"](new _keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_2__["MultiscaleFASTFeatures"](n));
     }
 
     /**
      * Harris corner detector
+     * @returns {SpeedyFeatureDetector}
      */
     static Harris()
     {
-        return new _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyFeatureDetector"](new _features_algorithms_harris__WEBPACK_IMPORTED_MODULE_3__["HarrisFeatures"]());
+        return new _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyFeatureDetector"](new _keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_3__["HarrisFeatures"]());
     }
 
     /**
      * Harris corner detector in scale-space
+     * @returns {SpeedyFeatureDetector}
      */
     static MultiscaleHarris()
     {
-        return new _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyFeatureDetector"](new _features_algorithms_harris__WEBPACK_IMPORTED_MODULE_3__["MultiscaleHarrisFeatures"]());
+        return new _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyFeatureDetector"](new _keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_3__["MultiscaleHarrisFeatures"]());
     }
 
     /**
      * ORB feature detector & descriptor
+     * @returns {SpeedyFeatureDetector}
      */
     static ORB()
     {
-        return new _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyFeatureDetector"](new _features_algorithms_orb__WEBPACK_IMPORTED_MODULE_4__["ORBFeatures"]());
+        return new _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyFeatureDetector"](new _keypoints_detectors_orb__WEBPACK_IMPORTED_MODULE_4__["ORBFeatures"]());
     }
 
     /**
      * BRISK feature detector & descriptor
+     * @returns {SpeedyFeatureDetector}
      */
     static BRISK()
     {
-        return new _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyFeatureDetector"](new _features_algorithms_brisk__WEBPACK_IMPORTED_MODULE_5__["BRISKFeatures"]());
+        return new _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyFeatureDetector"](new _keypoints_detectors_brisk__WEBPACK_IMPORTED_MODULE_5__["BRISKFeatures"]());
     }
 }
 
@@ -2114,7 +2164,7 @@ class SpeedyFeatureDetectorFactory extends _speedy_namespace__WEBPACK_IMPORTED_M
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyFeatureDetector", function() { return SpeedyFeatureDetector; });
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _features_features_algorithm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./features/features-algorithm */ "./src/core/features/features-algorithm.js");
+/* harmony import */ var _keypoints_features_algorithm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./keypoints/features-algorithm */ "./src/core/keypoints/features-algorithm.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
@@ -2187,7 +2237,7 @@ class SpeedyFeatureDetector
      * @param {object} [settings]
      * @returns {Promise<SpeedyFeature[]>}
      */
-    detectFeatures(media, settings = {})
+    detect(media, settings = {})
     {
         const gpu = media._gpu;
 
@@ -2212,13 +2262,13 @@ class SpeedyFeatureDetector
 
         // Upload & preprocess media
         let texture = gpu.upload(media.source);
-        texture = this._algorithm.preprocess(
+        texture = preprocessTexture(
             gpu,
             texture,
             settings.denoise,
             media._colorFormat != _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale
         );
-        const enhancedTexture = this._algorithm.enhance(
+        const enhancedTexture = enhanceTexture(
             gpu,
             texture,
             settings.enhancements.illumination == true
@@ -2239,8 +2289,8 @@ class SpeedyFeatureDetector
         return this._algorithm.download(
             gpu,
             describedKeypoints,
-            media.options.usage == 'dynamic',
-            settings.max
+            settings.max,
+            media.options.usage == 'dynamic'
         );
     }
 
@@ -2276,6 +2326,296 @@ function getAllPropertyDescriptors(obj)
     }
     else
         return Object.create(null);
+}
+
+
+/**
+ * Preprocess a texture for feature detection & description
+ * @param {SpeedyGPU} gpu
+ * @param {SpeedyTexture} inputTexture a RGB or greyscale image
+ * @param {boolean} [denoise] should we smooth the media a bit?
+ * @param {boolean} [convertToGreyscale] set to true if the texture is not greyscale
+ * @returns {SpeedyTexture} pre-processed greyscale image
+ */
+function preprocessTexture(gpu, inputTexture, denoise = true, convertToGreyscale = true)
+{
+    let texture = inputTexture;
+
+    if(denoise)
+        texture = gpu.programs.filters.gauss5(texture);
+
+    if(convertToGreyscale)
+        texture = gpu.programs.colors.rgb2grey(texture);
+
+    return texture;
+}
+
+/**
+ * Enhances a texture for feature DETECTION (not description)
+ * @param {SpeedyGPU} gpu
+ * @param {SpeedyTexture} inputTexture
+ * @param {boolean} [enhanceIllumination] fix irregular lighting in the scene?
+ * @returns {SpeedyTexture}
+ */
+function enhanceTexture(gpu, inputTexture, enhanceIllumination = false)
+{
+    let texture = inputTexture;
+
+    if(enhanceIllumination) {
+        texture = gpu.programs.enhancements.nightvision(texture, 0.9, 0.5, 0.85, 'low', true);
+        texture = gpu.programs.filters.gauss3(texture); // blur a bit more
+    }
+
+    return texture;
+}
+
+/***/ }),
+
+/***/ "./src/core/speedy-feature-tracker-factory.js":
+/*!****************************************************!*\
+  !*** ./src/core/speedy-feature-tracker-factory.js ***!
+  \****************************************************/
+/*! exports provided: SpeedyFeatureTrackerFactory */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyFeatureTrackerFactory", function() { return SpeedyFeatureTrackerFactory; });
+/* harmony import */ var _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-namespace */ "./src/core/speedy-namespace.js");
+/* harmony import */ var _speedy_media__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-media */ "./src/core/speedy-media.js");
+/* harmony import */ var _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-feature-detector */ "./src/core/speedy-feature-detector.js");
+/* harmony import */ var _speedy_feature_tracker__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-feature-tracker */ "./src/core/speedy-feature-tracker.js");
+/* harmony import */ var _keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./keypoints/trackers/lk */ "./src/core/keypoints/trackers/lk.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-feature-tracker.js
+ * A collection of methods for instantiating Feature Trackers
+ */
+
+
+
+
+
+
+
+/**
+ * A collection of methods for instantiating Feature Trackers
+ */
+class SpeedyFeatureTrackerFactory extends _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__["SpeedyNamespace"]
+{
+    /**
+     * Spawns a LK feature tracker
+     * @param {SpeedyMedia} media
+     * @param {SpeedyFeatureDetector} [featureDetector]
+     * @returns {SpeedyFeatureTracker}
+     */
+    static LK(media, featureDetector = null)
+    {
+        const trackingAlgorithm = new _keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_4__["LKFeatureTrackingAlgorithm"]();
+        const featuresAlgorithm = featureDetector ? featureDetector._algorithm : null;
+
+        return new _speedy_feature_tracker__WEBPACK_IMPORTED_MODULE_3__["SpeedyFeatureTracker"](media, trackingAlgorithm, featuresAlgorithm);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/speedy-feature-tracker.js":
+/*!********************************************!*\
+  !*** ./src/core/speedy-feature-tracker.js ***!
+  \********************************************/
+/*! exports provided: SpeedyFeatureTracker */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyFeatureTracker", function() { return SpeedyFeatureTracker; });
+/* harmony import */ var _keypoints_features_algorithm__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./keypoints/features-algorithm */ "./src/core/keypoints/features-algorithm.js");
+/* harmony import */ var _keypoints_feature_tracking_algorithm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./keypoints/feature-tracking-algorithm */ "./src/core/keypoints/feature-tracking-algorithm.js");
+/* harmony import */ var _speedy_media__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-media */ "./src/core/speedy-media.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * feature-tracker.js
+ * An easy-to-use class for working with feature trackers
+ */
+
+
+
+
+
+
+
+/**
+ * An easy-to-use class for working with feature trackers
+ */
+class SpeedyFeatureTracker
+{
+    /**
+     * Class constructor
+     * @param {SpeedyMedia} media the media that holds the features
+     * @param {FeatureTrackingAlgorithm} trackingAlgorithm used to track the features
+     * @param {FeaturesAlgorithm} [featuresAlgorithm] used to describe the tracked features
+     */
+    constructor(media, trackingAlgorithm, featuresAlgorithm = null)
+    {
+        this._trackingAlgorithm = trackingAlgorithm;
+        this._featuresAlgorithm = featuresAlgorithm;
+        this._media = media;
+        this._inputTexture = null;
+        this._prevInputTexture = null;
+    }
+
+    /**
+     * Track keypoints in the media
+     * @param {SpeedyFeature[]} keypoints the keypoints you want to track
+     * @param {boolean[]} found output parameter: found[i] will be true if the i-th keypoint has been found
+     * @param {number[]} err output: err[i] is an error measure related to the tracking of the i-th keypoint
+     * @returns {Promise<SpeedyFeature[]>}
+     */
+    track(keypoints, found = null, err = null)
+    {
+        const gpu = this._media._gpu; // friend class?!
+
+        // upload media to the GPU
+        this._uploadMedia(this._media, gpu);
+
+        // preliminary data
+        const nextImage = this._inputTexture;
+        const prevImage = this._prevInputTexture;
+        const descriptorSize = this._featuresAlgorithm != null ? this._featuresAlgorithm.descriptorSize : 0;
+        const useAsyncTransfer = (this._media.options.usage != 'static');
+
+        // upload, track, describe & download keypoints
+        const prevKeypoints = this._uploadKeypoints(gpu, keypoints, descriptorSize);
+        const trackedKeypoints = this._trackingAlgorithm.track(gpu, nextImage, prevImage, prevKeypoints, descriptorSize);
+        const trackedKeypointsWithDescriptors = this._featuresAlgorithm == null ? trackedKeypoints :
+            this._featuresAlgorithm.describe(gpu, nextImage, trackedKeypoints);
+        return this._downloadKeypoints(gpu, trackedKeypointsWithDescriptors, descriptorSize, useAsyncTransfer).then(newKeypoints => {
+            // compute additional data
+            const keypointCount = newKeypoints.length;
+
+            if(Array.isArray(found)) {
+                found.length = keypointCount;
+                found.fill(true); // TODO
+            }
+
+            if(Array.isArray(err)) {
+                err.length = keypointCount;
+                err.fill(0.0); // TODO
+            }
+
+            // done!
+            return newKeypoints;
+        })
+    }
+
+    /**
+     * Upload the media to GPU and keep track of the previous frame
+     * @param {SpeedyMedia} media
+     * @param {SpeedyGPU} gpu
+     */
+    _uploadMedia(media, gpu)
+    {
+        // validate the media
+        if(media.isReleased())
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`The media has been released`);
+
+        // upload the media
+        const newInputTexture = gpu.upload(media.source);
+        this._prevInputTexture = this._inputTexture;
+        this._inputTexture = newInputTexture;
+
+        // make sure we have two different textures as returned by gpu.upload()
+        if(this._prevInputTexture === this._inputTexture)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`Can't keep history of uploaded images`);
+
+        // is it the first frame?
+        if(this._prevInputTexture == null)
+            this._prevInputTexture = newInputTexture;
+    }
+
+    /**
+     * Download feature points from the GPU (after tracking)
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
+     * @param {number} descriptorSize in bytes
+     * @param {boolean} [useAsyncTransfer] use DMA
+     * @returns {Promise<SpeedyFeature[]>}
+     */
+    _downloadKeypoints(gpu, encodedKeypoints, descriptorSize, useAsyncTransfer = true)
+    {
+        return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer, false).then(data => {
+
+            // decode the data
+            const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize);
+
+            // sort the data according to cornerness score
+            keypoints.sort(this._compareKeypoints);
+
+            // we're only tracking existing keypoints, so
+            // newKeypoints.length <= oldKeypoints.length
+            gpu.programs.encoders.optimizeKeypointEncoder(keypoints.length, descriptorSize);
+
+            // done!
+            return keypoints;
+
+        });
+    }
+
+    /**
+     * Upload feature points to the GPU (before tracking)
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyFeature[]} keypoints feature points
+     * @param {number} descriptorSize in bytes
+     * @returns {SpeedyTexture}
+     */
+    _uploadKeypoints(gpu, keypoints, descriptorSize)
+    {
+        return gpu.programs.encoders.uploadKeypoints(keypoints, descriptorSize);
+    }
+
+    /**
+     * Compare two keypoints (higher scores come first)
+     * @param {SpeedyFeature} a 
+     * @param {SpeedyFeature} b 
+     * @returns {number}
+     */
+    _compareKeypoints(a, b)
+    {
+        return (+(b.score)) - (+(a.score));
+    }
 }
 
 /***/ }),
@@ -2459,16 +2799,6 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-// map: method string -> feature detector & descriptor
-const createFeatureDetector = {
-    'fast': _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_4__["SpeedyFeatureDetectorFactory"].FAST,
-    'multiscale-fast': _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_4__["SpeedyFeatureDetectorFactory"].MultiscaleFAST,
-    'harris': _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_4__["SpeedyFeatureDetectorFactory"].Harris,
-    'multiscale-harris': _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_4__["SpeedyFeatureDetectorFactory"].MultiscaleHarris,
-    'orb': _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_4__["SpeedyFeatureDetectorFactory"].ORB,
-    'brisk': _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_4__["SpeedyFeatureDetectorFactory"].BRISK,
-};
-
 /**
  * SpeedyMedia encapsulates a media element
  * (e.g., image, video, canvas)
@@ -2504,7 +2834,6 @@ class SpeedyMedia
 
             // spawn relevant components
             this._gpu = new _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_0__["SpeedyGPU"](this._width, this._height);
-            this._featureDetector = null; // lazy instantiation
         }
         else if(arguments.length == 1) {
             // copy constructor (shallow copy)
@@ -2518,7 +2847,6 @@ class SpeedyMedia
             this._options = media._options;
 
             this._gpu = media._gpu;
-            this._featureDetector = media._featureDetector;
         }
         else
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Invalid instantiation of SpeedyMedia`);
@@ -2657,7 +2985,6 @@ class SpeedyMedia
     {
         if(!this.isReleased()) {
             _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].log('Releasing SpeedyMedia object...');
-            this._featureDetector = null;
             this._gpu.loseWebGLContext();
             this._gpu = null;
             this._source = null;
@@ -2782,8 +3109,9 @@ class SpeedyMedia
     }
 
     /**
-     * Finds image features
-     * @deprecated
+     * Finds feature points
+     * @deprecated Use the Feature Detection objects instead
+     * 
      * @param {object} [settings] Configuration object
      * @returns {Promise<SpeedyFeature[]>} A Promise returning an Array of SpeedyFeature objects
      */
@@ -2793,6 +3121,16 @@ class SpeedyMedia
         if(!settings.hasOwnProperty('method'))
             settings.method = 'fast';
         settings.method = String(settings.method);
+
+        // map: method string -> feature detector & descriptor
+        const createFeatureDetector = {
+            'fast': _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_4__["SpeedyFeatureDetectorFactory"].FAST,
+            'multiscale-fast': _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_4__["SpeedyFeatureDetectorFactory"].MultiscaleFAST,
+            'harris': _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_4__["SpeedyFeatureDetectorFactory"].Harris,
+            'multiscale-harris': _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_4__["SpeedyFeatureDetectorFactory"].MultiscaleHarris,
+            'orb': _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_4__["SpeedyFeatureDetectorFactory"].ORB,
+            'brisk': _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_4__["SpeedyFeatureDetectorFactory"].BRISK,
+        };
 
         // Validate method
         if(!createFeatureDetector.hasOwnProperty(settings.method))
@@ -2812,7 +3150,7 @@ class SpeedyMedia
             this._featureDetector.expected = settings.expected;
 
         // find features
-        return this._featureDetector.detectFeatures(this, settings);
+        return this._featureDetector.detect(this, settings);
     }
 }
 
@@ -3188,8 +3526,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_media__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-media */ "./src/core/speedy-media.js");
 /* harmony import */ var _speedy_pipeline__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-pipeline */ "./src/core/speedy-pipeline.js");
 /* harmony import */ var _utils_fps_counter__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/fps-counter */ "./src/utils/fps-counter.js");
-/* harmony import */ var _features_trackers_api_feature_tracker_factory__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./features/trackers/api/feature-tracker-factory */ "./src/core/features/trackers/api/feature-tracker-factory.js");
-/* harmony import */ var _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./speedy-feature-detector-factory */ "./src/core/speedy-feature-detector-factory.js");
+/* harmony import */ var _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-feature-detector-factory */ "./src/core/speedy-feature-detector-factory.js");
+/* harmony import */ var _speedy_feature_tracker_factory__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./speedy-feature-tracker-factory */ "./src/core/speedy-feature-tracker-factory.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -3279,7 +3617,7 @@ class Speedy
      */
     static get FeatureDetector()
     {
-        return _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_4__["SpeedyFeatureDetectorFactory"];
+        return _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_3__["SpeedyFeatureDetectorFactory"];
     }
 
     /**
@@ -3288,7 +3626,7 @@ class Speedy
      */
     static get FeatureTracker()
     {
-        return _features_trackers_api_feature_tracker_factory__WEBPACK_IMPORTED_MODULE_3__["SpeedyFeatureTrackerFactory"];
+        return _speedy_feature_tracker_factory__WEBPACK_IMPORTED_MODULE_4__["SpeedyFeatureTrackerFactory"];
     }
 }
 
@@ -4684,91 +5022,6 @@ class GPUColors extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Spee
 
 /***/ }),
 
-/***/ "./src/gpu/programs/descriptors.js":
-/*!*****************************************!*\
-  !*** ./src/gpu/programs/descriptors.js ***!
-  \*****************************************/
-/*! exports provided: GPUDescriptors */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUDescriptors", function() { return GPUDescriptors; });
-/* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-program-group */ "./src/gpu/speedy-program-group.js");
-/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for the web
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * descriptors.js
- * Feature descriptors
- */
-
-
-
-
-
-
-//
-// Shaders
-//
-
-// ORB
-const orb = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('descriptors/orb.glsl').withArguments('pyramid', 'encodedCorners', 'encoderLength');
-
-
-
-
-/**
- * GPUDescriptors
- * Feature descriptors
- */
-class GPUDescriptors extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["SpeedyProgramGroup"]
-{
-    /**
-     * Class constructor
-     * @param {SpeedyGPU} gpu
-     * @param {number} width
-     * @param {number} height
-     */
-    constructor(gpu, width, height)
-    {
-        super(gpu, width, height);
-        this
-            // ORB
-            .declare('_orb', orb)
-        ;
-    }
-
-    /**
-     * Compute ORB descriptor (256 bits)
-     * @param {SpeedyTexture} pyramid pre-smoothed on the intensity channel
-     * @param {SpeedyTexture} encodedCorners tiny texture
-     * @param {number} encoderLength
-     * @return {SpeedyTexture}
-     */
-    orb(pyramid, encodedCorners, encoderLength)
-    {
-        this._orb.resize(encoderLength, encoderLength);
-        return this._orb(pyramid, encodedCorners, encoderLength);
-    }
-}
-
-/***/ }),
-
 /***/ "./src/gpu/programs/encoders.js":
 /*!**************************************!*\
   !*** ./src/gpu/programs/encoders.js ***!
@@ -4969,19 +5222,26 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
     {
         const pixelsPerKeypoint = 2 + descriptorSize / 4;
         let x, y, lod, rotation, score;
-        let hasLod, hasRotation;
+        let hasLod, hasRotation, isDiscarded;
         let keypoints = [];
 
         for(let i = 0; i < pixels.length; i += 4 /* RGBA */ * pixelsPerKeypoint) {
             // extract fixed-point coordinates
             x = (pixels[i+1] << 8) | pixels[i];
             y = (pixels[i+3] << 8) | pixels[i+2];
-            if(x >= 0xFFFF || y >= 0xFFFF)
+            if(x >= 0xFFFF && y >= 0xFFFF) // if end of list
                 break;
+            isDiscarded = (x >= 0xFFFF || y >= 0xFFFF);
 
             // convert from fixed-point
             x /= _utils_globals__WEBPACK_IMPORTED_MODULE_7__["FIX_RESOLUTION"];
             y /= _utils_globals__WEBPACK_IMPORTED_MODULE_7__["FIX_RESOLUTION"];
+
+            // discard keypoint?
+            if(isDiscarded) {
+                // TODO think of a more elegant solution
+                x = -x; y = -y;
+            }
 
             // extract LOD
             hasLod = (pixels[i+4] < 255);
@@ -4989,7 +5249,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
                 -_utils_globals__WEBPACK_IMPORTED_MODULE_7__["LOG2_PYRAMID_MAX_SCALE"] + (_utils_globals__WEBPACK_IMPORTED_MODULE_7__["LOG2_PYRAMID_MAX_SCALE"] + _utils_globals__WEBPACK_IMPORTED_MODULE_7__["PYRAMID_MAX_LEVELS"]) * pixels[i+4] / 255;
 
             // extract orientation
-            hasRotation = hasLod; // FIXME get from parameter list?
+            hasRotation = hasLod; // FIXME
             rotation = !hasRotation ? 0.0 :
                 ((2 * pixels[i+5]) / 255.0 - 1.0) * Math.PI;
 
@@ -5020,10 +5280,11 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
     /**
      * Download RAW encoded keypoint data from the GPU - this is a bottleneck!
      * @param {SpeedyTexture} encodedKeypoints texture with keypoints that have already been encoded
-     * @param {bool} [useAsyncTransfer] transfer data from the GPU without blocking the CPU
+     * @param {boolean} [useAsyncTransfer] transfer data from the GPU without blocking the CPU
+     * @param {boolean} [useBufferQueue] optimize async transfers
      * @returns {Promise<Uint8Array[]>} pixels in the [r,g,b,a, ...] format
      */
-    async downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer = true)
+    async downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer = true, useBufferQueue = true)
     {
         try {
             // helper shader for reading the data
@@ -5032,7 +5293,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
             // read data from the GPU
             let downloadTime = performance.now(), pixels;
             if(useAsyncTransfer)
-                pixels = await this._downloadKeypoints.readPixelsAsync();
+                pixels = await this._downloadKeypoints.readPixelsAsync(0, 0, -1, -1, useBufferQueue);
             else
                 pixels = this._downloadKeypoints.readPixelsSync(); // bottleneck!
             downloadTime = performance.now() - downloadTime;
@@ -5063,11 +5324,6 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
      * Upload keypoints to the GPU
      * The descriptor & orientation of the keypoints will be lost
      * (need to recalculate)
-     *
-     * Before calling it, make sure that the keypoint encoder has the
-     * minimum required size for storing the keypoints - i.e., via
-     * optimizeKeypointEncoder()
-     *
      * @param {SpeedyFeature[]} keypoints
      * @param {number} descriptorSize in bytes
      * @returns {SpeedyTexture} encodedKeypoints
@@ -5096,6 +5352,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
 
         // WARNING: you shouldn't work with a different set of keypoints
         // while you're working with the ones you have just uploaded
+        this.optimizeKeypointEncoder(keypointCount, descriptorSize);
 
         // Upload data
         this._uploadKeypoints.setUBO('KeypointBuffer', this._uploadBuffer);
@@ -5633,11 +5890,19 @@ const multiscaleHarris = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__
 const harrisCutoff = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/harris-cutoff.glsl').withArguments('corners', 'maxScore', 'quality');
 
 
+
 //
 // BRISK feature detection
 //
 const brisk = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/brisk.glsl')
              .withArguments('image', 'layerA', 'layerB', 'scaleA', 'scaleB', 'lgM', 'h');
+
+
+
+//
+// ORB feature description
+//
+const orb = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/orb-descriptor.glsl').withArguments('pyramid', 'encodedCorners', 'encoderLength');
 
 
 
@@ -5698,6 +5963,9 @@ class GPUKeypoints extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["S
             .declare('multiscaleHarris', multiscaleHarris) // scale-space
             .declare('harrisCutoff', harrisCutoff)
 
+            // ORB
+            .declare('_orb', orb)
+
             // Generic non-maximum suppression
             .declare('nonmaxSuppression', nonmaxSuppression)
             .declare('multiscaleSuppression', multiscaleSuppression) // scale-space
@@ -5708,6 +5976,19 @@ class GPUKeypoints extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["S
                 ...this.program.doesNotRecycleTextures()
             }) // scale-space
         ;
+    }
+
+    /**
+     * Compute ORB descriptor (256 bits)
+     * @param {SpeedyTexture} pyramid pre-smoothed on the intensity channel
+     * @param {SpeedyTexture} encodedCorners tiny texture
+     * @param {number} encoderLength
+     * @return {SpeedyTexture}
+     */
+    orb(pyramid, encodedCorners, encoderLength)
+    {
+        this._orb.resize(encoderLength, encoderLength);
+        return this._orb(pyramid, encodedCorners, encoderLength);
     }
 }
 
@@ -5861,6 +6142,107 @@ class GPUPyramids extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
             .declare('_downsample3/2', downsample3,
                 this.program.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
         ;
+    }
+}
+
+/***/ }),
+
+/***/ "./src/gpu/programs/trackers.js":
+/*!**************************************!*\
+  !*** ./src/gpu/programs/trackers.js ***!
+  \**************************************/
+/*! exports provided: GPUTrackers */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUTrackers", function() { return GPUTrackers; });
+/* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-program-group */ "./src/gpu/speedy-program-group.js");
+/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for the web
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * trackers.js
+ * Feature trackers
+ */
+
+
+
+
+
+
+// constants
+const LK_MAX_WINDOW_RADIUS = 7;
+
+
+
+//
+// Shaders
+//
+
+// LK
+const lk = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('trackers/lk.glsl')
+           .withArguments('nextPyramid', 'prevPyramid', 'prevKeypoints', 'windowRadius', 'descriptorSize', 'encoderLength')
+           .withDefines({
+               'MAX_WINDOW_RADIUS': LK_MAX_WINDOW_RADIUS
+           });
+
+
+
+
+/**
+ * GPUTrackers
+ * Feature trackers
+ */
+class GPUTrackers extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["SpeedyProgramGroup"]
+{
+    /**
+     * Class constructor
+     * @param {SpeedyGPU} gpu
+     * @param {number} width
+     * @param {number} height
+     */
+    constructor(gpu, width, height)
+    {
+        super(gpu, width, height);
+        this
+            // ORB
+            .declare('_lk', lk)
+        ;
+    }
+
+    /**
+     * LK feature tracker
+     * @param {SpeedyTexture} nextPyramid image pyramid at time t
+     * @param {SpeedyTexture} prevPyramid image pyramid at time t-1
+     * @param {SpeedyTexture} prevKeypoints tiny texture of encoded keypoints at time t-1
+     * @param {number} windowSize neighborhood size, an odd number (5, 7, 9, 11...)
+     * @param {number} descriptorSize in bytes
+     * @param {number} encoderLength
+     * @return {SpeedyTexture}
+     */
+    lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, descriptorSize, encoderLength)
+    {
+        // we use a (2r + 1) x (2r + 1) window
+        const windowRadius = Math.max(2, Math.min((windowSize - 1) >> 1, LK_MAX_WINDOW_RADIUS));
+
+        // LK
+        this._lk.resize(encoderLength, encoderLength);
+        return this._lk(nextPyramid, prevPyramid, prevKeypoints, windowRadius, descriptorSize, encoderLength);
     }
 }
 
@@ -6371,6 +6753,9 @@ const constantRegex = /@(\w+)@/g;
 
 // Constants accessible by all shaders
 const constants = {
+    // general
+    'MAX_TEXTURE_LENGTH': _utils_globals__WEBPACK_IMPORTED_MODULE_0__["MAX_TEXTURE_LENGTH"],
+
     // pyramids
     'PYRAMID_MAX_LEVELS': _utils_globals__WEBPACK_IMPORTED_MODULE_0__["PYRAMID_MAX_LEVELS"],
     'LOG2_PYRAMID_MAX_SCALE': _utils_globals__WEBPACK_IMPORTED_MODULE_0__["LOG2_PYRAMID_MAX_SCALE"],
@@ -6436,7 +6821,6 @@ function readfileSync(filename)
 
 var map = {
 	"./colors/rgb2grey.glsl": "./src/gpu/shaders/colors/rgb2grey.glsl",
-	"./descriptors/orb.glsl": "./src/gpu/shaders/descriptors/orb.glsl",
 	"./encoders/encode-keypoint-offsets.glsl": "./src/gpu/shaders/encoders/encode-keypoint-offsets.glsl",
 	"./encoders/encode-keypoints.glsl": "./src/gpu/shaders/encoders/encode-keypoints.glsl",
 	"./encoders/orient-encoded-keypoints.glsl": "./src/gpu/shaders/encoders/orient-encoded-keypoints.glsl",
@@ -6469,11 +6853,13 @@ var map = {
 	"./keypoints/multiscale-harris.glsl": "./src/gpu/shaders/keypoints/multiscale-harris.glsl",
 	"./keypoints/multiscale-suppression.glsl": "./src/gpu/shaders/keypoints/multiscale-suppression.glsl",
 	"./keypoints/nonmax-suppression.glsl": "./src/gpu/shaders/keypoints/nonmax-suppression.glsl",
+	"./keypoints/orb-descriptor.glsl": "./src/gpu/shaders/keypoints/orb-descriptor.glsl",
 	"./keypoints/samescale-suppression.glsl": "./src/gpu/shaders/keypoints/samescale-suppression.glsl",
 	"./pyramids/downsample2.glsl": "./src/gpu/shaders/pyramids/downsample2.glsl",
 	"./pyramids/downsample3.glsl": "./src/gpu/shaders/pyramids/downsample3.glsl",
 	"./pyramids/upsample2.glsl": "./src/gpu/shaders/pyramids/upsample2.glsl",
 	"./pyramids/upsample3.glsl": "./src/gpu/shaders/pyramids/upsample3.glsl",
+	"./trackers/lk.glsl": "./src/gpu/shaders/trackers/lk.glsl",
 	"./utils/copy-components.glsl": "./src/gpu/shaders/utils/copy-components.glsl",
 	"./utils/fill-components.glsl": "./src/gpu/shaders/utils/fill-components.glsl",
 	"./utils/fill.glsl": "./src/gpu/shaders/utils/fill.glsl",
@@ -6515,17 +6901,6 @@ module.exports = "const vec4 grey = vec4(0.299f, 0.587f, 0.114f, 0.0f);\nuniform
 
 /***/ }),
 
-/***/ "./src/gpu/shaders/descriptors/orb.glsl":
-/*!**********************************************!*\
-  !*** ./src/gpu/shaders/descriptors/orb.glsl ***!
-  \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedCorners;\nuniform int encoderLength;\nuniform sampler2D pyramid;\nconst int descriptorSize = 32;\nconst ivec4 pat31[256] = ivec4[256](\nivec4(8,-3,9,5),\nivec4(4,2,7,-12),\nivec4(-11,9,-8,2),\nivec4(7,-12,12,-13),\nivec4(2,-13,2,12),\nivec4(1,-7,1,6),\nivec4(-2,-10,-2,-4),\nivec4(-13,-13,-11,-8),\nivec4(-13,-3,-12,-9),\nivec4(10,4,11,9),\nivec4(-13,-8,-8,-9),\nivec4(-11,7,-9,12),\nivec4(7,7,12,6),\nivec4(-4,-5,-3,0),\nivec4(-13,2,-12,-3),\nivec4(-9,0,-7,5),\nivec4(12,-6,12,-1),\nivec4(-3,6,-2,12),\nivec4(-6,-13,-4,-8),\nivec4(11,-13,12,-8),\nivec4(4,7,5,1),\nivec4(5,-3,10,-3),\nivec4(3,-7,6,12),\nivec4(-8,-7,-6,-2),\nivec4(-2,11,-1,-10),\nivec4(-13,12,-8,10),\nivec4(-7,3,-5,-3),\nivec4(-4,2,-3,7),\nivec4(-10,-12,-6,11),\nivec4(5,-12,6,-7),\nivec4(5,-6,7,-1),\nivec4(1,0,4,-5),\nivec4(9,11,11,-13),\nivec4(4,7,4,12),\nivec4(2,-1,4,4),\nivec4(-4,-12,-2,7),\nivec4(-8,-5,-7,-10),\nivec4(4,11,9,12),\nivec4(0,-8,1,-13),\nivec4(-13,-2,-8,2),\nivec4(-3,-2,-2,3),\nivec4(-6,9,-4,-9),\nivec4(8,12,10,7),\nivec4(0,9,1,3),\nivec4(7,-5,11,-10),\nivec4(-13,-6,-11,0),\nivec4(10,7,12,1),\nivec4(-6,-3,-6,12),\nivec4(10,-9,12,-4),\nivec4(-13,8,-8,-12),\nivec4(-13,0,-8,-4),\nivec4(3,3,7,8),\nivec4(5,7,10,-7),\nivec4(-1,7,1,-12),\nivec4(3,-10,5,6),\nivec4(2,-4,3,-10),\nivec4(-13,0,-13,5),\nivec4(-13,-7,-12,12),\nivec4(-13,3,-11,8),\nivec4(-7,12,-4,7),\nivec4(6,-10,12,8),\nivec4(-9,-1,-7,-6),\nivec4(-2,-5,0,12),\nivec4(-12,5,-7,5),\nivec4(3,-10,8,-13),\nivec4(-7,-7,-4,5),\nivec4(-3,-2,-1,-7),\nivec4(2,9,5,-11),\nivec4(-11,-13,-5,-13),\nivec4(-1,6,0,-1),\nivec4(5,-3,5,2),\nivec4(-4,-13,-4,12),\nivec4(-9,-6,-9,6),\nivec4(-12,-10,-8,-4),\nivec4(10,2,12,-3),\nivec4(7,12,12,12),\nivec4(-7,-13,-6,5),\nivec4(-4,9,-3,4),\nivec4(7,-1,12,2),\nivec4(-7,6,-5,1),\nivec4(-13,11,-12,5),\nivec4(-3,7,-2,-6),\nivec4(7,-8,12,-7),\nivec4(-13,-7,-11,-12),\nivec4(1,-3,12,12),\nivec4(2,-6,3,0),\nivec4(-4,3,-2,-13),\nivec4(-1,-13,1,9),\nivec4(7,1,8,-6),\nivec4(1,-1,3,12),\nivec4(9,1,12,6),\nivec4(-1,-9,-1,3),\nivec4(-13,-13,-10,5),\nivec4(7,7,10,12),\nivec4(12,-5,12,9),\nivec4(6,3,7,11),\nivec4(5,-13,6,10),\nivec4(2,-12,2,3),\nivec4(3,8,4,-6),\nivec4(2,6,12,-13),\nivec4(9,-12,10,3),\nivec4(-8,4,-7,9),\nivec4(-11,12,-4,-6),\nivec4(1,12,2,-8),\nivec4(6,-9,7,-4),\nivec4(2,3,3,-2),\nivec4(6,3,11,0),\nivec4(3,-3,8,-8),\nivec4(7,8,9,3),\nivec4(-11,-5,-6,-4),\nivec4(-10,11,-5,10),\nivec4(-5,-8,-3,12),\nivec4(-10,5,-9,0),\nivec4(8,-1,12,-6),\nivec4(4,-6,6,-11),\nivec4(-10,12,-8,7),\nivec4(4,-2,6,7),\nivec4(-2,0,-2,12),\nivec4(-5,-8,-5,2),\nivec4(7,-6,10,12),\nivec4(-9,-13,-8,-8),\nivec4(-5,-13,-5,-2),\nivec4(8,-8,9,-13),\nivec4(-9,-11,-9,0),\nivec4(1,-8,1,-2),\nivec4(7,-4,9,1),\nivec4(-2,1,-1,-4),\nivec4(11,-6,12,-11),\nivec4(-12,-9,-6,4),\nivec4(3,7,7,12),\nivec4(5,5,10,8),\nivec4(0,-4,2,8),\nivec4(-9,12,-5,-13),\nivec4(0,7,2,12),\nivec4(-1,2,1,7),\nivec4(5,11,7,-9),\nivec4(3,5,6,-8),\nivec4(-13,-4,-8,9),\nivec4(-5,9,-3,-3),\nivec4(-4,-7,-3,-12),\nivec4(6,5,8,0),\nivec4(-7,6,-6,12),\nivec4(-13,6,-5,-2),\nivec4(1,-10,3,10),\nivec4(4,1,8,-4),\nivec4(-2,-2,2,-13),\nivec4(2,-12,12,12),\nivec4(-2,-13,0,-6),\nivec4(4,1,9,3),\nivec4(-6,-10,-3,-5),\nivec4(-3,-13,-1,1),\nivec4(7,5,12,-11),\nivec4(4,-2,5,-7),\nivec4(-13,9,-9,-5),\nivec4(7,1,8,6),\nivec4(7,-8,7,6),\nivec4(-7,-4,-7,1),\nivec4(-8,11,-7,-8),\nivec4(-13,6,-12,-8),\nivec4(2,4,3,9),\nivec4(10,-5,12,3),\nivec4(-6,-5,-6,7),\nivec4(8,-3,9,-8),\nivec4(2,-12,2,8),\nivec4(-11,-2,-10,3),\nivec4(-12,-13,-7,-9),\nivec4(-11,0,-10,-5),\nivec4(5,-3,11,8),\nivec4(-2,-13,-1,12),\nivec4(-1,-8,0,9),\nivec4(-13,-11,-12,-5),\nivec4(-10,-2,-10,11),\nivec4(-3,9,-2,-13),\nivec4(2,-3,3,2),\nivec4(-9,-13,-4,0),\nivec4(-4,6,-3,-10),\nivec4(-4,12,-2,-7),\nivec4(-6,-11,-4,9),\nivec4(6,-3,6,11),\nivec4(-13,11,-5,5),\nivec4(11,11,12,6),\nivec4(7,-5,12,-2),\nivec4(-1,12,0,7),\nivec4(-4,-8,-3,-2),\nivec4(-7,1,-6,7),\nivec4(-13,-12,-8,-13),\nivec4(-7,-2,-6,-8),\nivec4(-8,5,-6,-9),\nivec4(-5,-1,-4,5),\nivec4(-13,7,-8,10),\nivec4(1,5,5,-13),\nivec4(1,0,10,-13),\nivec4(9,12,10,-1),\nivec4(5,-8,10,-9),\nivec4(-1,11,1,-13),\nivec4(-9,-3,-6,2),\nivec4(-1,-10,1,12),\nivec4(-13,1,-8,-10),\nivec4(8,-11,10,-6),\nivec4(2,-13,3,-6),\nivec4(7,-13,12,-9),\nivec4(-10,-10,-5,-7),\nivec4(-10,-8,-8,-13),\nivec4(4,-6,8,5),\nivec4(3,12,8,-13),\nivec4(-4,2,-3,-3),\nivec4(5,-13,10,-12),\nivec4(4,-13,5,-1),\nivec4(-9,9,-4,3),\nivec4(0,3,3,-9),\nivec4(-12,1,-6,1),\nivec4(3,2,4,-8),\nivec4(-10,-10,-10,9),\nivec4(8,-13,12,12),\nivec4(-8,-12,-6,-5),\nivec4(2,2,3,7),\nivec4(10,6,11,-8),\nivec4(6,8,8,-12),\nivec4(-7,10,-6,5),\nivec4(-3,-9,-3,9),\nivec4(-1,-13,-1,5),\nivec4(-3,-7,-3,4),\nivec4(-8,-2,-8,3),\nivec4(4,2,12,12),\nivec4(2,-5,3,11),\nivec4(6,-9,11,-13),\nivec4(3,-1,7,12),\nivec4(11,-1,12,4),\nivec4(-3,0,-3,6),\nivec4(4,-11,4,12),\nivec4(2,-4,2,1),\nivec4(-10,-6,-8,1),\nivec4(-13,7,-11,1),\nivec4(-13,12,-11,-13),\nivec4(6,0,11,-13),\nivec4(0,-1,1,4),\nivec4(-13,3,-9,-2),\nivec4(-9,8,-6,-3),\nivec4(-13,-6,-8,-2),\nivec4(5,-9,8,10),\nivec4(2,7,3,-9),\nivec4(-1,-6,-1,-1),\nivec4(9,5,11,-2),\nivec4(11,-3,12,-8),\nivec4(3,0,3,5),\nivec4(-1,4,0,10),\nivec4(3,-6,4,5),\nivec4(-13,0,-10,5),\nivec4(5,8,12,11),\nivec4(8,9,9,-6),\nivec4(7,-4,8,-12),\nivec4(-10,4,-10,9),\nivec4(7,3,12,4),\nivec4(9,-7,10,-2),\nivec4(7,0,12,-2),\nivec4(-1,-6,0,-11)\n);\nvoid getPair(int index, float kcos, float ksin, out ivec2 p, out ivec2 q)\n{\nivec4 data = pat31[index];\nvec2 op = vec2(data.xy);\nvec2 oq = vec2(data.zw);\np = ivec2(round(op.x * kcos - op.y * ksin), round(op.x * ksin + op.y * kcos));\nq = ivec2(round(oq.x * kcos - oq.y * ksin), round(oq.x * ksin + oq.y * kcos));\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedCorners);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);\nint descriptorCell = address.offset - 2;\ncolor = pixel;\nif(descriptorCell < 0)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedCorners, encoderLength, address);\nfloat pot = exp2(keypoint.lod);\nfloat kcos = cos(keypoint.orientation);\nfloat ksin = sin(keypoint.orientation);\nvec2 imageSize = vec2(textureSize(pyramid, 0));\nint patternStart = 32 * descriptorCell;\nuint test[4] = uint[4](0u, 0u, 0u, 0u);\nfor(int t = 0; t < 4; t++) {\nuint bits = 0u;\nivec2 p, q;\nvec4 a, b;\nint i = t * 8;\nfor(int j = 0; j < 8; j++) {\ngetPair(patternStart + i + j, kcos, ksin, p, q);\na = pyrPixelAtEx(pyramid, round(keypoint.position + pot * vec2(p)), keypoint.lod, imageSize);\nb = pyrPixelAtEx(pyramid, round(keypoint.position + pot * vec2(q)), keypoint.lod, imageSize);\nbits |= uint(a.g < b.g) << j;\n}\ntest[t] = bits;\n}\ncolor = vec4(float(test[0]), float(test[1]), float(test[2]), float(test[3])) / 255.0f;\n}"
-
-/***/ }),
-
 /***/ "./src/gpu/shaders/encoders/encode-keypoint-offsets.glsl":
 /*!***************************************************************!*\
   !*** ./src/gpu/shaders/encoders/encode-keypoint-offsets.glsl ***!
@@ -6544,7 +6919,7 @@ module.exports = "uniform sampler2D image;\nuniform ivec2 imageSize;\nuniform in
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D image;\nuniform ivec2 imageSize;\nuniform int encoderLength;\nuniform int descriptorSize;\nbool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)\n{\nint i = 0, p = 0;\nfor(position = ivec2(0, 0); position.y < imageSize.y; ) {\npixel = texelFetch(image, position, 0);\nif(pixel.r > 0.0f) {\nif(p++ == q)\nreturn true;\n}\ni += 1 + int(pixel.g * 255.0f);\nposition = ivec2(i % imageSize.x, i / imageSize.x);\n}\nreturn false;\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);\nint q = findKeypointIndex(address, descriptorSize);\nivec2 position; vec4 pixel;\ncolor = vec4(1.0f, 1.0f, 1.0f, 1.0f);\nif(findQthKeypoint(q, position, pixel)) {\nswitch(address.offset) {\ncase 0: {\nfixed2_t pos = ivec2tofix(position);\nfixed2_t lo = pos & 255;\nfixed2_t hi = pos >> 8;\ncolor = vec4(float(lo.x), float(hi.x), float(lo.y), float(hi.y)) / 255.0f;\nbreak;\n}\ncase 1: {\nfloat score = pixel.r;\nfloat scale = pixel.a;\nfloat rotation = encodeOrientation(0.0f);\ncolor = vec4(scale, rotation, score, 0.0f);\nbreak;\n}\ndefault: {\ncolor = vec4(0.0f);\nbreak;\n}\n}\n}\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D image;\nuniform ivec2 imageSize;\nuniform int encoderLength;\nuniform int descriptorSize;\nbool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)\n{\nint i = 0, p = 0;\nfor(position = ivec2(0, 0); position.y < imageSize.y; ) {\npixel = texelFetch(image, position, 0);\nif(pixel.r > 0.0f) {\nif(p++ == q)\nreturn true;\n}\ni += 1 + int(pixel.g * 255.0f);\nposition = ivec2(i % imageSize.x, i / imageSize.x);\n}\nreturn false;\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);\nint q = findKeypointIndex(address, descriptorSize);\nivec2 position; vec4 pixel;\ncolor = encodeNullKeypointPosition();\nif(findQthKeypoint(q, position, pixel)) {\nswitch(address.offset) {\ncase 0: {\ncolor = encodeKeypointPosition(vec2(position));\nbreak;\n}\ncase 1: {\nfloat score = pixel.r;\nfloat scale = pixel.a;\nfloat rotation = encodeOrientation(0.0f);\ncolor = vec4(scale, rotation, score, 0.0f);\nbreak;\n}\ndefault: {\ncolor = vec4(0.0f);\nbreak;\n}\n}\n}\n}"
 
 /***/ }),
 
@@ -7235,7 +7610,7 @@ module.exports = "#ifndef _GLOBAL_GLSL\n#define _GLOBAL_GLSL\n#define threadLoca
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "#ifndef _KEYPOINTS_GLSL\n#define _KEYPOINTS_GLSL\n@include \"pyramids.glsl\"\n@include \"orientation.glsl\"\n@include \"fixed-point.glsl\"\nstruct Keypoint\n{\nvec2 position;\nfloat orientation;\nfloat lod;\nfloat score;\n};\nstruct KeypointAddress\n{\nint base;\nint offset;\n};\n#define readKeypointData(encodedKeypoints, encoderLength, keypointAddress) texelFetch((encodedKeypoints), ivec2((keypointAddress) % (encoderLength), (keypointAddress) / (encoderLength)), 0)\n#define sizeofEncodedKeypoint(descriptorSize) (8 + (descriptorSize))\n#define findKeypointIndex(address, descriptorSize) ((address).base / ((sizeofEncodedKeypoint(descriptorSize)) / 4))\nKeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descriptorSize)\n{\nint threadRaster = thread.y * encoderLength + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize) / 4;\nKeypointAddress address;\nint keypointIndex = int(threadRaster / pixelsPerKeypoint);\naddress.base = keypointIndex * pixelsPerKeypoint;\naddress.offset = threadRaster % pixelsPerKeypoint;\nreturn address;\n}\nKeypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nKeypoint keypoint;\nint positionAddress = address.base;\nint propertiesAddress = address.base + 1;\nvec4 rawEncodedPosition = readKeypointData(encodedKeypoints, encoderLength, positionAddress);\nivec4 encodedPosition = ivec4(rawEncodedPosition * 255.0f);\nkeypoint.position = fixtovec2(fixed2_t(\nencodedPosition.r | (encodedPosition.g << 8),\nencodedPosition.b | (encodedPosition.a << 8)\n));\nvec4 encodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);\nkeypoint.orientation = decodeOrientation(encodedProperties.g);\nkeypoint.lod = decodeLod(encodedProperties.r);\nkeypoint.score = encodedProperties.b;\nreturn keypoint;\n}\n#endif"
+module.exports = "#ifndef _KEYPOINTS_GLSL\n#define _KEYPOINTS_GLSL\n@include \"pyramids.glsl\"\n@include \"orientation.glsl\"\n@include \"fixed-point.glsl\"\nstruct Keypoint\n{\nvec2 position;\nfloat orientation;\nfloat lod;\nfloat score;\n};\nstruct KeypointAddress\n{\nint base;\nint offset;\n};\n#define readKeypointData(encodedKeypoints, encoderLength, keypointAddress) texelFetch((encodedKeypoints), ivec2((keypointAddress) % (encoderLength), (keypointAddress) / (encoderLength)), 0)\n#define sizeofEncodedKeypoint(descriptorSize) (8 + (descriptorSize))\n#define findKeypointIndex(address, descriptorSize) ((address).base / ((sizeofEncodedKeypoint(descriptorSize)) / 4))\nKeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descriptorSize)\n{\nint threadRaster = thread.y * encoderLength + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize) / 4;\nKeypointAddress address;\nint keypointIndex = int(threadRaster / pixelsPerKeypoint);\naddress.base = keypointIndex * pixelsPerKeypoint;\naddress.offset = threadRaster % pixelsPerKeypoint;\nreturn address;\n}\nKeypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nKeypoint keypoint;\nint positionAddress = address.base;\nint propertiesAddress = address.base + 1;\nvec4 rawEncodedPosition = readKeypointData(encodedKeypoints, encoderLength, positionAddress);\nivec4 encodedPosition = ivec4(rawEncodedPosition * 255.0f);\nkeypoint.position = fixtovec2(fixed2_t(\nencodedPosition.r | (encodedPosition.g << 8),\nencodedPosition.b | (encodedPosition.a << 8)\n));\nvec4 encodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);\nkeypoint.orientation = decodeOrientation(encodedProperties.g);\nkeypoint.lod = decodeLod(encodedProperties.r);\nkeypoint.score = encodedProperties.b;\nreturn keypoint;\n}\nvec4 encodeKeypointPosition(vec2 position)\n{\nfixed2_t pos = vec2tofix(position);\nfixed2_t lo = pos & 255;\nfixed2_t hi = pos >> 8;\nreturn vec4(float(lo.x), float(hi.x), float(lo.y), float(hi.y)) / 255.0f;\n}\n#define encodeNullKeypointPosition() (vec4(1.0f))\n#define encodeDiscardedKeypointPosition() (vec4(254.0f / 255.0f, vec3(1.0f)))\n#endif"
 
 /***/ }),
 
@@ -7268,7 +7643,7 @@ module.exports = "#ifndef _ORIENTATION_GLSL\n#define _ORIENTATION_GLSL\n@include
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "#ifndef _PYRAMIDS_GLSL\n#define _PYRAMIDS_GLSL\n#define pyrPixel(pyr, lod) textureLod((pyr), texCoord, (lod))\n#define pyrPixelAtOffset(pyr, lod, pot, offset) textureLod((pyr), texCoord + ((pot) * vec2(offset)) / texSize, (lod))\n#define pyrPixelAt(pyr, pos, lod) textureLod((pyr), (vec2(pos) + vec2(0.5f)) / texSize, (lod))\n#define pyrPixelAtEx(pyr, pos, lod, pyrBaseSize) textureLod((pyr), (vec2(pos) + vec2(0.5f)) / vec2(pyrBaseSize), (lod))\n#define pyrSubpixelAtEx(pyr, pos, lod, pyrBaseSize) textureLod((pyr), ((pos) + vec2(0.5f)) / vec2(pyrBaseSize), (lod))\n#define PYRAMID_MAX_LEVELS      float(@PYRAMID_MAX_LEVELS@)\n#define PYRAMID_MAX_OCTAVES     int(@PYRAMID_MAX_OCTAVES@)\n#define LOG2_PYRAMID_MAX_SCALE  float(@LOG2_PYRAMID_MAX_SCALE@)\nfloat encodeLod(float lod)\n{\nreturn (LOG2_PYRAMID_MAX_SCALE + lod) / (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS);\n}\nfloat decodeLod(float encodedLod)\n{\nreturn mix(0.0f,\nencodedLod * (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS) - LOG2_PYRAMID_MAX_SCALE,\nencodedLod < 1.0f\n);\n}\n#define isSameEncodedLod(alpha1, alpha2) (abs((alpha1) - (alpha2)) < encodedLodEps)\nconst float encodedLodEps = 0.2 / (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS);\n#endif"
+module.exports = "#ifndef _PYRAMIDS_GLSL\n#define _PYRAMIDS_GLSL\n#define pyrPixel(pyr, lod) textureLod((pyr), texCoord, (lod))\n#define pyrPixelAtOffset(pyr, lod, pot, offset) textureLod((pyr), texCoord + ((pot) * vec2(offset)) / texSize, (lod))\n#define pyrPixelAt(pyr, pos, lod) textureLod((pyr), (vec2(pos) + vec2(0.5f)) / texSize, (lod))\n#define pyrPixelAtEx(pyr, pos, lod, pyrBaseSize) textureLod((pyr), (vec2(pos) + vec2(0.5f)) / vec2(pyrBaseSize), (lod))\n#define pyrSubpixelAtEx(pyr, pos, lod, pyrBaseSize) textureLod((pyr), ((pos) + vec2(0.5f)) / vec2(pyrBaseSize), (lod))\n#define pyrSubpixelAtExOffset(pyr, pos, lod, pot, offset, pyrBaseSize) textureLod((pyr), (((pos) + vec2(0.5f)) + ((pot) * vec2(offset))) / vec2(pyrBaseSize), (lod))\n#define PYRAMID_MAX_LEVELS      float(@PYRAMID_MAX_LEVELS@)\n#define PYRAMID_MAX_OCTAVES     int(@PYRAMID_MAX_OCTAVES@)\n#define LOG2_PYRAMID_MAX_SCALE  float(@LOG2_PYRAMID_MAX_SCALE@)\nfloat encodeLod(float lod)\n{\nreturn (LOG2_PYRAMID_MAX_SCALE + lod) / (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS);\n}\nfloat decodeLod(float encodedLod)\n{\nreturn mix(0.0f,\nencodedLod * (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS) - LOG2_PYRAMID_MAX_SCALE,\nencodedLod < 1.0f\n);\n}\n#define isSameEncodedLod(alpha1, alpha2) (abs((alpha1) - (alpha2)) < encodedLodEps)\nconst float encodedLodEps = 0.2f / (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS);\n#endif"
 
 /***/ }),
 
@@ -7415,6 +7790,17 @@ module.exports = "uniform sampler2D image;\nvoid main()\n{\nfloat p0 = pixelAtSh
 
 /***/ }),
 
+/***/ "./src/gpu/shaders/keypoints/orb-descriptor.glsl":
+/*!*******************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/orb-descriptor.glsl ***!
+  \*******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedCorners;\nuniform int encoderLength;\nuniform sampler2D pyramid;\nconst int descriptorSize = 32;\nconst ivec4 pat31[256] = ivec4[256](\nivec4(8,-3,9,5),\nivec4(4,2,7,-12),\nivec4(-11,9,-8,2),\nivec4(7,-12,12,-13),\nivec4(2,-13,2,12),\nivec4(1,-7,1,6),\nivec4(-2,-10,-2,-4),\nivec4(-13,-13,-11,-8),\nivec4(-13,-3,-12,-9),\nivec4(10,4,11,9),\nivec4(-13,-8,-8,-9),\nivec4(-11,7,-9,12),\nivec4(7,7,12,6),\nivec4(-4,-5,-3,0),\nivec4(-13,2,-12,-3),\nivec4(-9,0,-7,5),\nivec4(12,-6,12,-1),\nivec4(-3,6,-2,12),\nivec4(-6,-13,-4,-8),\nivec4(11,-13,12,-8),\nivec4(4,7,5,1),\nivec4(5,-3,10,-3),\nivec4(3,-7,6,12),\nivec4(-8,-7,-6,-2),\nivec4(-2,11,-1,-10),\nivec4(-13,12,-8,10),\nivec4(-7,3,-5,-3),\nivec4(-4,2,-3,7),\nivec4(-10,-12,-6,11),\nivec4(5,-12,6,-7),\nivec4(5,-6,7,-1),\nivec4(1,0,4,-5),\nivec4(9,11,11,-13),\nivec4(4,7,4,12),\nivec4(2,-1,4,4),\nivec4(-4,-12,-2,7),\nivec4(-8,-5,-7,-10),\nivec4(4,11,9,12),\nivec4(0,-8,1,-13),\nivec4(-13,-2,-8,2),\nivec4(-3,-2,-2,3),\nivec4(-6,9,-4,-9),\nivec4(8,12,10,7),\nivec4(0,9,1,3),\nivec4(7,-5,11,-10),\nivec4(-13,-6,-11,0),\nivec4(10,7,12,1),\nivec4(-6,-3,-6,12),\nivec4(10,-9,12,-4),\nivec4(-13,8,-8,-12),\nivec4(-13,0,-8,-4),\nivec4(3,3,7,8),\nivec4(5,7,10,-7),\nivec4(-1,7,1,-12),\nivec4(3,-10,5,6),\nivec4(2,-4,3,-10),\nivec4(-13,0,-13,5),\nivec4(-13,-7,-12,12),\nivec4(-13,3,-11,8),\nivec4(-7,12,-4,7),\nivec4(6,-10,12,8),\nivec4(-9,-1,-7,-6),\nivec4(-2,-5,0,12),\nivec4(-12,5,-7,5),\nivec4(3,-10,8,-13),\nivec4(-7,-7,-4,5),\nivec4(-3,-2,-1,-7),\nivec4(2,9,5,-11),\nivec4(-11,-13,-5,-13),\nivec4(-1,6,0,-1),\nivec4(5,-3,5,2),\nivec4(-4,-13,-4,12),\nivec4(-9,-6,-9,6),\nivec4(-12,-10,-8,-4),\nivec4(10,2,12,-3),\nivec4(7,12,12,12),\nivec4(-7,-13,-6,5),\nivec4(-4,9,-3,4),\nivec4(7,-1,12,2),\nivec4(-7,6,-5,1),\nivec4(-13,11,-12,5),\nivec4(-3,7,-2,-6),\nivec4(7,-8,12,-7),\nivec4(-13,-7,-11,-12),\nivec4(1,-3,12,12),\nivec4(2,-6,3,0),\nivec4(-4,3,-2,-13),\nivec4(-1,-13,1,9),\nivec4(7,1,8,-6),\nivec4(1,-1,3,12),\nivec4(9,1,12,6),\nivec4(-1,-9,-1,3),\nivec4(-13,-13,-10,5),\nivec4(7,7,10,12),\nivec4(12,-5,12,9),\nivec4(6,3,7,11),\nivec4(5,-13,6,10),\nivec4(2,-12,2,3),\nivec4(3,8,4,-6),\nivec4(2,6,12,-13),\nivec4(9,-12,10,3),\nivec4(-8,4,-7,9),\nivec4(-11,12,-4,-6),\nivec4(1,12,2,-8),\nivec4(6,-9,7,-4),\nivec4(2,3,3,-2),\nivec4(6,3,11,0),\nivec4(3,-3,8,-8),\nivec4(7,8,9,3),\nivec4(-11,-5,-6,-4),\nivec4(-10,11,-5,10),\nivec4(-5,-8,-3,12),\nivec4(-10,5,-9,0),\nivec4(8,-1,12,-6),\nivec4(4,-6,6,-11),\nivec4(-10,12,-8,7),\nivec4(4,-2,6,7),\nivec4(-2,0,-2,12),\nivec4(-5,-8,-5,2),\nivec4(7,-6,10,12),\nivec4(-9,-13,-8,-8),\nivec4(-5,-13,-5,-2),\nivec4(8,-8,9,-13),\nivec4(-9,-11,-9,0),\nivec4(1,-8,1,-2),\nivec4(7,-4,9,1),\nivec4(-2,1,-1,-4),\nivec4(11,-6,12,-11),\nivec4(-12,-9,-6,4),\nivec4(3,7,7,12),\nivec4(5,5,10,8),\nivec4(0,-4,2,8),\nivec4(-9,12,-5,-13),\nivec4(0,7,2,12),\nivec4(-1,2,1,7),\nivec4(5,11,7,-9),\nivec4(3,5,6,-8),\nivec4(-13,-4,-8,9),\nivec4(-5,9,-3,-3),\nivec4(-4,-7,-3,-12),\nivec4(6,5,8,0),\nivec4(-7,6,-6,12),\nivec4(-13,6,-5,-2),\nivec4(1,-10,3,10),\nivec4(4,1,8,-4),\nivec4(-2,-2,2,-13),\nivec4(2,-12,12,12),\nivec4(-2,-13,0,-6),\nivec4(4,1,9,3),\nivec4(-6,-10,-3,-5),\nivec4(-3,-13,-1,1),\nivec4(7,5,12,-11),\nivec4(4,-2,5,-7),\nivec4(-13,9,-9,-5),\nivec4(7,1,8,6),\nivec4(7,-8,7,6),\nivec4(-7,-4,-7,1),\nivec4(-8,11,-7,-8),\nivec4(-13,6,-12,-8),\nivec4(2,4,3,9),\nivec4(10,-5,12,3),\nivec4(-6,-5,-6,7),\nivec4(8,-3,9,-8),\nivec4(2,-12,2,8),\nivec4(-11,-2,-10,3),\nivec4(-12,-13,-7,-9),\nivec4(-11,0,-10,-5),\nivec4(5,-3,11,8),\nivec4(-2,-13,-1,12),\nivec4(-1,-8,0,9),\nivec4(-13,-11,-12,-5),\nivec4(-10,-2,-10,11),\nivec4(-3,9,-2,-13),\nivec4(2,-3,3,2),\nivec4(-9,-13,-4,0),\nivec4(-4,6,-3,-10),\nivec4(-4,12,-2,-7),\nivec4(-6,-11,-4,9),\nivec4(6,-3,6,11),\nivec4(-13,11,-5,5),\nivec4(11,11,12,6),\nivec4(7,-5,12,-2),\nivec4(-1,12,0,7),\nivec4(-4,-8,-3,-2),\nivec4(-7,1,-6,7),\nivec4(-13,-12,-8,-13),\nivec4(-7,-2,-6,-8),\nivec4(-8,5,-6,-9),\nivec4(-5,-1,-4,5),\nivec4(-13,7,-8,10),\nivec4(1,5,5,-13),\nivec4(1,0,10,-13),\nivec4(9,12,10,-1),\nivec4(5,-8,10,-9),\nivec4(-1,11,1,-13),\nivec4(-9,-3,-6,2),\nivec4(-1,-10,1,12),\nivec4(-13,1,-8,-10),\nivec4(8,-11,10,-6),\nivec4(2,-13,3,-6),\nivec4(7,-13,12,-9),\nivec4(-10,-10,-5,-7),\nivec4(-10,-8,-8,-13),\nivec4(4,-6,8,5),\nivec4(3,12,8,-13),\nivec4(-4,2,-3,-3),\nivec4(5,-13,10,-12),\nivec4(4,-13,5,-1),\nivec4(-9,9,-4,3),\nivec4(0,3,3,-9),\nivec4(-12,1,-6,1),\nivec4(3,2,4,-8),\nivec4(-10,-10,-10,9),\nivec4(8,-13,12,12),\nivec4(-8,-12,-6,-5),\nivec4(2,2,3,7),\nivec4(10,6,11,-8),\nivec4(6,8,8,-12),\nivec4(-7,10,-6,5),\nivec4(-3,-9,-3,9),\nivec4(-1,-13,-1,5),\nivec4(-3,-7,-3,4),\nivec4(-8,-2,-8,3),\nivec4(4,2,12,12),\nivec4(2,-5,3,11),\nivec4(6,-9,11,-13),\nivec4(3,-1,7,12),\nivec4(11,-1,12,4),\nivec4(-3,0,-3,6),\nivec4(4,-11,4,12),\nivec4(2,-4,2,1),\nivec4(-10,-6,-8,1),\nivec4(-13,7,-11,1),\nivec4(-13,12,-11,-13),\nivec4(6,0,11,-13),\nivec4(0,-1,1,4),\nivec4(-13,3,-9,-2),\nivec4(-9,8,-6,-3),\nivec4(-13,-6,-8,-2),\nivec4(5,-9,8,10),\nivec4(2,7,3,-9),\nivec4(-1,-6,-1,-1),\nivec4(9,5,11,-2),\nivec4(11,-3,12,-8),\nivec4(3,0,3,5),\nivec4(-1,4,0,10),\nivec4(3,-6,4,5),\nivec4(-13,0,-10,5),\nivec4(5,8,12,11),\nivec4(8,9,9,-6),\nivec4(7,-4,8,-12),\nivec4(-10,4,-10,9),\nivec4(7,3,12,4),\nivec4(9,-7,10,-2),\nivec4(7,0,12,-2),\nivec4(-1,-6,0,-11)\n);\nvoid getPair(int index, float kcos, float ksin, out ivec2 p, out ivec2 q)\n{\nivec4 data = pat31[index];\nvec2 op = vec2(data.xy);\nvec2 oq = vec2(data.zw);\np = ivec2(round(op.x * kcos - op.y * ksin), round(op.x * ksin + op.y * kcos));\nq = ivec2(round(oq.x * kcos - oq.y * ksin), round(oq.x * ksin + oq.y * kcos));\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedCorners);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);\nint descriptorCell = address.offset - 2;\ncolor = pixel;\nif(descriptorCell < 0)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedCorners, encoderLength, address);\nfloat pot = exp2(keypoint.lod);\nfloat kcos = cos(keypoint.orientation);\nfloat ksin = sin(keypoint.orientation);\nvec2 imageSize = vec2(textureSize(pyramid, 0));\nint patternStart = 32 * descriptorCell;\nuint test[4] = uint[4](0u, 0u, 0u, 0u);\nfor(int t = 0; t < 4; t++) {\nuint bits = 0u;\nivec2 p, q;\nvec4 a, b;\nint i = t * 8;\nfor(int j = 0; j < 8; j++) {\ngetPair(patternStart + i + j, kcos, ksin, p, q);\na = pyrPixelAtEx(pyramid, round(keypoint.position + pot * vec2(p)), keypoint.lod, imageSize);\nb = pyrPixelAtEx(pyramid, round(keypoint.position + pot * vec2(q)), keypoint.lod, imageSize);\nbits |= uint(a.g < b.g) << j;\n}\ntest[t] = bits;\n}\ncolor = vec4(float(test[0]), float(test[1]), float(test[2]), float(test[3])) / 255.0f;\n}"
+
+/***/ }),
+
 /***/ "./src/gpu/shaders/keypoints/samescale-suppression.glsl":
 /*!**************************************************************!*\
   !*** ./src/gpu/shaders/keypoints/samescale-suppression.glsl ***!
@@ -7467,6 +7853,17 @@ module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threa
 /***/ (function(module, exports) {
 
 module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = pixelAt(image, thread / 3);\nbool cond = ((thread.x - (thread.y % 3) + 3) % 3) == 0;\ncolor = (((thread.x - (thread.y % 3) + 3) % 3) == 0) ? pixel : vec4(0.0f, 0.0f, 0.0f, pixel.a);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/trackers/lk.glsl":
+/*!******************************************!*\
+  !*** ./src/gpu/shaders/trackers/lk.glsl ***!
+  \******************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D nextPyramid;\nuniform sampler2D prevPyramid;\nuniform sampler2D prevKeypoints;\nuniform int windowRadius;\nuniform int descriptorSize;\nuniform int encoderLength;\n#ifndef NUM_ITERATIONS\n#define NUM_ITERATIONS 5\n#endif\n#ifndef MAX_WINDOW_RADIUS\n#define MAX_WINDOW_RADIUS 7\n#endif\nconst int MAX_WINDOW_SIZE = 2 * (MAX_WINDOW_RADIUS) + 1;\nconst int MAX_WINDOW_SIZE_PLUS = MAX_WINDOW_SIZE + 2;\nconst int MAX_WINDOW_SIZE_PLUS_SQUARED = MAX_WINDOW_SIZE_PLUS * MAX_WINDOW_SIZE_PLUS;\nconst int PYR_HEIGHT = int(PYRAMID_MAX_LEVELS);\nfloat pixelData[2 * MAX_WINDOW_SIZE_PLUS_SQUARED];\n#define prevPixel(index) pixelData[(index)]\n#define nextPixel(index) pixelData[MAX_WINDOW_SIZE_PLUS_SQUARED + (index)]\n#define windowIndex(i, j) (((j) + (MAX_WINDOW_RADIUS)) * MAX_WINDOW_SIZE_PLUS + ((i) + (MAX_WINDOW_RADIUS)))\nvoid readWindow(vec2 center, float lod)\n{\nivec2 pyrBaseSize = textureSize(nextPyramid, 0);\nfloat pot = exp2(lod);\nivec2 offset;\nfor(int j = -windowRadius; j <= windowRadius; j++) {\nfor(int i = -windowRadius; i <= windowRadius; i++) {\nint idx = windowIndex(i, j);\noffset = ivec2(i, j);\nnextPixel(idx) = pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g;\nprevPixel(idx) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g;\n}\n}\nfor(int k = -windowRadius; k <= windowRadius; k++) {\noffset = ivec2(-(windowRadius + 1), k);\nprevPixel(windowIndex(offset.x, offset.y)) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g;\noffset = ivec2( (windowRadius + 1), k);\nprevPixel(windowIndex(offset.x, offset.y)) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g;\noffset = ivec2(k,-(windowRadius + 1));\nprevPixel(windowIndex(offset.x, offset.y)) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g;\noffset = ivec2(k, (windowRadius + 1));\nprevPixel(windowIndex(offset.x, offset.y)) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g;\n}\noffset = ivec2(-(windowRadius + 1),-(windowRadius + 1));\nprevPixel(windowIndex(offset.x, offset.y)) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g;\noffset = ivec2( (windowRadius + 1),-(windowRadius + 1));\nprevPixel(windowIndex(offset.x, offset.y)) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g;\noffset = ivec2(-(windowRadius + 1), (windowRadius + 1));\nprevPixel(windowIndex(offset.x, offset.y)) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g;\noffset = ivec2( (windowRadius + 1), (windowRadius + 1));\nprevPixel(windowIndex(offset.x, offset.y)) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g;\n}\n#define NEXT_IMAGE 1\n#define PREV_IMAGE 0\nvec2 computeDerivatives(int imageCode)\n{\nint indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;\nfloat pix[9];\npix[0] = pixelData[indexOffset + windowIndex(-1,-1)];\npix[1] = pixelData[indexOffset + windowIndex( 0,-1)];\npix[2] = pixelData[indexOffset + windowIndex( 1,-1)];\npix[3] = pixelData[indexOffset + windowIndex(-1, 0)];\npix[4] = pixelData[indexOffset + windowIndex( 0, 0)];\npix[5] = pixelData[indexOffset + windowIndex( 1, 0)];\npix[6] = pixelData[indexOffset + windowIndex(-1, 1)];\npix[7] = pixelData[indexOffset + windowIndex( 0, 1)];\npix[8] = pixelData[indexOffset + windowIndex( 1, 1)];\nreturn vec2(\n3.0f * pix[0] + (-3.0f) * pix[2] +\n10.0f * pix[3] + (-10.0f) * pix[5] +\n3.0f * pix[6] + (-3.0f) * pix[8]\n,\n3.0f * pix[0] + 10.0f * pix[1] + 3.0f * pix[2] +\n(-3.0f) * pix[6] + (-10.0f) * pix[7] + (-3.0f) * pix[8]\n);\n}\nvoid main()\n{\nvec4 pixel = threadPixel(prevKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);\ncolor = pixel;\nif(address.offset > 0)\nreturn;\nKeypoint keypoint = decodeKeypoint(prevKeypoints, encoderLength, address);\nvec2 prevPosition = keypoint.position;\nfloat pot = exp2(keypoint.lod);\n#if 1\nif(prevPosition.x >= 8000.0f)\nreturn;\n#endif\nvec2 nextPosition = prevPosition;\nreadWindow(prevPosition, 0.0f);\nnextPosition.x += 1.0f;\ncolor = mix(\nencodeDiscardedKeypointPosition(),\nencodeKeypointPosition(nextPosition),\nbvec4(nextPosition.x >= 0.0f && nextPosition.y >= 0.0f)\n);\n}"
 
 /***/ }),
 
@@ -7852,9 +8249,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _programs_filters__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./programs/filters */ "./src/gpu/programs/filters.js");
 /* harmony import */ var _programs_keypoints__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./programs/keypoints */ "./src/gpu/programs/keypoints.js");
 /* harmony import */ var _programs_encoders__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./programs/encoders */ "./src/gpu/programs/encoders.js");
-/* harmony import */ var _programs_descriptors__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./programs/descriptors */ "./src/gpu/programs/descriptors.js");
-/* harmony import */ var _programs_pyramids__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./programs/pyramids */ "./src/gpu/programs/pyramids.js");
-/* harmony import */ var _programs_enhancements__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./programs/enhancements */ "./src/gpu/programs/enhancements.js");
+/* harmony import */ var _programs_pyramids__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./programs/pyramids */ "./src/gpu/programs/pyramids.js");
+/* harmony import */ var _programs_enhancements__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./programs/enhancements */ "./src/gpu/programs/enhancements.js");
+/* harmony import */ var _programs_trackers__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./programs/trackers */ "./src/gpu/programs/trackers.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
@@ -7914,6 +8311,7 @@ class SpeedyProgramCenter
         this._descriptors = null;
         this._pyramids = null;
         this._enhancements = null;
+        this._trackers = null;
     }
 
     /**
@@ -7962,7 +8360,7 @@ class SpeedyProgramCenter
     }
 
     /**
-     * Keypoint detectors
+     * Keypoint detection & description
      * @returns {GPUKeypoints}
      */
     get keypoints()
@@ -7980,12 +8378,12 @@ class SpeedyProgramCenter
     }
 
     /**
-     * Keypoint descriptors
-     * @returns {GPUDescriptors}
+     * Feature trackers
+     * @returns {GPUTrackers}
      */
-    get descriptors()
+    get trackers()
     {
-        return this._descriptors || (this._descriptors = new _programs_descriptors__WEBPACK_IMPORTED_MODULE_5__["GPUDescriptors"](this._gpu, this._width, this._height));
+        return this._trackers || (this._trackers = new _programs_trackers__WEBPACK_IMPORTED_MODULE_7__["GPUTrackers"](this._gpu, this._width, this._height));
     }
 
     /**
@@ -7994,7 +8392,7 @@ class SpeedyProgramCenter
      */
     get pyramids()
     {
-        return this._pyramids || (this._pyramids = new _programs_pyramids__WEBPACK_IMPORTED_MODULE_6__["GPUPyramids"](this._gpu, this._width, this._height));
+        return this._pyramids || (this._pyramids = new _programs_pyramids__WEBPACK_IMPORTED_MODULE_5__["GPUPyramids"](this._gpu, this._width, this._height));
     }
 
     /**
@@ -8003,7 +8401,7 @@ class SpeedyProgramCenter
      */
     get enhancements()
     {
-        return this._enhancements || (this._enhancements = new _programs_enhancements__WEBPACK_IMPORTED_MODULE_7__["GPUEnhancements"](this._gpu, this._width, this._height));
+        return this._enhancements || (this._enhancements = new _programs_enhancements__WEBPACK_IMPORTED_MODULE_6__["GPUEnhancements"](this._gpu, this._width, this._height));
     }
 }
 
@@ -8358,9 +8756,10 @@ class SpeedyProgram extends Function
      * @param {number} [y] 
      * @param {number} [width]
      * @param {number} [height]
+     * @param {boolean} [useBufferQueue] optimize downloads
      * @returns {Promise<Uint8Array>} resolves to an array of pixels in the RGBA format
      */
-    readPixelsAsync(x = 0, y = 0, width = -1, height = -1)
+    readPixelsAsync(x = 0, y = 0, width = -1, height = -1, useBufferQueue = true)
     {
         const gl = this._gl;
 
@@ -8383,6 +8782,13 @@ class SpeedyProgram extends Function
         // allocate the pixel buffers
         if(this._pixelBuffer[0] == null)
             this._reallocatePixelBuffers(this._stdprog.width, this._stdprog.height);
+
+        // do not optimize?
+        if(!useBufferQueue) {
+            return _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].readPixelsViaPBO(gl, this._pbo[0], this._pixelBuffer[0], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
+                return this._pixelBuffer[0];
+            });
+        }
 
         // GPU needs to produce data
         if(this._pboProducerQueue.length > 0) {
