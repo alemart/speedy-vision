@@ -1,6 +1,6 @@
 /*
  * speedy-vision.js
- * GPU-accelerated Computer Vision for the web
+ * GPU-accelerated Computer Vision for JavaScript
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,7 +25,7 @@ import { SpeedyFeature } from '../speedy-feature';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
 
 // constants
-const OPTIMIZER_GAIN = 0.15;
+const OPTIMIZER_GAIN = 0.4;
 
 /**
  * The FeatureDownloader receives a texture of encoded
