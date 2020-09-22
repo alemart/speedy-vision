@@ -72,6 +72,19 @@
  */
 #define pyrSubpixelAtEx(pyr, pos, lod, pyrBaseSize) textureLod((pyr), ((pos) + vec2(0.5f)) / vec2(pyrBaseSize), (lod))
 
+/**
+ * Get a specific subpixel at a specific level-of-detail with a specific offset
+ * Similar to pyrSubpixelAtEx(), expect that this accepts an offset value
+ * @param {sampler2D} pyr pyramid
+ * @param {vec2} pos pixel position considering lod = 0
+ * @param {float} lod level-of-detail
+ * @param {float} pot must be 2^lod
+ * @param {ivec2} offset the pixel offset you would use for lod = 0
+ * @param {ivec2} pyrBaseSize this is textureSize(pyr, 0)
+ * @returns {vec4} pixel data
+ */
+#define pyrSubpixelAtExOffset(pyr, pos, lod, pot, offset, pyrBaseSize) textureLod((pyr), (((pos) + vec2(0.5f)) + ((pot) * vec2(offset))) / vec2(pyrBaseSize), (lod))
+
 /*
  * Image scale is encoded in the alpha channel (a)
  * according to the following model:
@@ -117,9 +130,10 @@
  * scale = 0.5 means half the size (1/4 the area)
  * and so on...
  */
-#define PYRAMID_MAX_LEVELS      float(@PYRAMID_MAX_LEVELS@) /* scaling factor: 1 */
-#define PYRAMID_MAX_OCTAVES     int(@PYRAMID_MAX_OCTAVES@)  /* scaling factor: sqrt(2) */
-#define LOG2_PYRAMID_MAX_SCALE  float(@LOG2_PYRAMID_MAX_SCALE@)
+const int PYRAMID_MAX_OCTAVES = int(@PYRAMID_MAX_OCTAVES@);   /* scaling factor: sqrt(2) */
+const int PYRAMID_MAX_LEVELS = int(@PYRAMID_MAX_LEVELS@);     /* scaling factor: 1 */
+const float F_PYRAMID_MAX_LEVELS = float(@PYRAMID_MAX_LEVELS@);
+const float LOG2_PYRAMID_MAX_SCALE = float(@LOG2_PYRAMID_MAX_SCALE@);
 
 /**
  * Encode a pyramid level-of-detail to a float in [0,1]
@@ -128,7 +142,7 @@
  */
 float encodeLod(float lod)
 {
-    return (LOG2_PYRAMID_MAX_SCALE + lod) / (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS);
+    return (LOG2_PYRAMID_MAX_SCALE + lod) / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS);
 }
 
 /**
@@ -139,7 +153,7 @@ float encodeLod(float lod)
 float decodeLod(float encodedLod)
 {
     return mix(0.0f,
-        encodedLod * (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS) - LOG2_PYRAMID_MAX_SCALE,
+        encodedLod * (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS) - LOG2_PYRAMID_MAX_SCALE,
         encodedLod < 1.0f
     );
 }
@@ -154,9 +168,9 @@ float decodeLod(float encodedLod)
 
 /**
  * encodedLodEps is used to point out different encoded LODs
- * encodedLodEps must be < 0.5 / (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS),
+ * encodedLodEps must be < 0.5 / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS),
  * because min(|lod_i - lod_j|) >= 0.5 for any i, j
  */
-const float encodedLodEps = 0.2 / (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS);
+const float encodedLodEps = 0.2f / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS);
 
 #endif

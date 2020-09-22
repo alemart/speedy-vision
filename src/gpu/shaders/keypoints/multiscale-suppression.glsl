@@ -106,7 +106,7 @@ void main()
 #endif
 
     // get scores in (lodPlus, lodMinus)-scaled neighborhood
-    float lodPlus = min(lod + lodJump, PYRAMID_MAX_LEVELS - 1.0f);
+    float lodPlus = min(lod + lodJump, F_PYRAMID_MAX_LEVELS - 1.0f);
     float lodMinus = max(lod - lodJump, 0.0f);
     float alphaPlus = encodeLod(lodPlus);
     float alphaMinus = encodeLod(lodMinus);

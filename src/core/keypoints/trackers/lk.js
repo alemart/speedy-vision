@@ -34,9 +34,11 @@ export class LKFeatureTrackingAlgorithm extends FeatureTrackingAlgorithm
      * @param {SpeedyTexture} prevImage previous image (time: t-1)
      * @param {SpeedyTexture} prevKeypoints tiny texture with encoded keypoints (time: t-1)
      * @param {number} descriptorSize in bytes
+     * @param {number} [windowSize] neighborhood size, an odd number
+     * @param {number} [depth] how many pyramid layers will be scanned
      * @returns {SpeedyTexture} nextKeypoints tiny texture with encoded keypoints (time: t)
      */
-    track(gpu, nextImage, prevImage, prevKeypoints, descriptorSize)
+    track(gpu, nextImage, prevImage, prevKeypoints, descriptorSize, windowSize = 21, depth = 5)
     {
         // create pyramids
         const nextPyramid = nextImage.generateMipmap();
@@ -44,6 +46,6 @@ export class LKFeatureTrackingAlgorithm extends FeatureTrackingAlgorithm
 
         // track feature points
         const encoderLength = gpu.programs.encoders.encoderLength;
-        return gpu.programs.trackers.lk(nextPyramid, prevPyramid, prevKeypoints, descriptorSize, encoderLength);
+        return gpu.programs.trackers.lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, depth, descriptorSize, encoderLength);
     }
 }

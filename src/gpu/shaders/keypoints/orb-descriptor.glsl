@@ -327,8 +327,12 @@ void main()
     if(descriptorCell < 0)
         return;
 
-    // get keypoint data
+    // decode keypoint
     Keypoint keypoint = decodeKeypoint(encodedCorners, encoderLength, address);
+    if(isDiscardedOrNullKeypoint(keypoint))
+        return;
+
+    // get keypoint data
     float pot = exp2(keypoint.lod);
     float kcos = cos(keypoint.orientation);
     float ksin = sin(keypoint.orientation);

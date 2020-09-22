@@ -23,7 +23,7 @@ import { FeaturesAlgorithm } from './keypoints/features-algorithm';
 import { FeatureTrackingAlgorithm } from './keypoints/feature-tracking-algorithm';
 import { SpeedyMedia } from './speedy-media';
 import { SpeedyGPU } from '../gpu/speedy-gpu';
-import { IllegalOperationError } from '../utils/errors';
+import { IllegalOperationError, IllegalArgumentError } from '../utils/errors';
 
 /**
  * An easy-to-use class for working with feature trackers
@@ -48,13 +48,18 @@ export class SpeedyFeatureTracker
     /**
      * Track keypoints in the media
      * @param {SpeedyFeature[]} keypoints the keypoints you want to track
-     * @param {boolean[]} found output parameter: found[i] will be true if the i-th keypoint has been found
-     * @param {number[]} err output: err[i] is an error measure related to the tracking of the i-th keypoint
+     * @param {boolean[]} [found] output parameter: found[i] will be true if the i-th keypoint has been found
+     * @param {SpeedyVector2[]} [flow] output parameter: flow vector for the i-th keypoint
      * @returns {Promise<SpeedyFeature[]>}
      */
-    track(keypoints, found = null, err = null)
+    track(keypoints, found = null, flow = null)
     {
+        let discarded = [];
         const gpu = this._media._gpu; // friend class?!
+
+        // validate arguments
+        if(!Array.isArray(keypoints) || (found != null && !Array.isArray(found)) || (flow != null && !Array.isArray(flow)))
+            throw new IllegalArgumentError();
 
         // upload media to the GPU
         this._uploadMedia(this._media, gpu);
@@ -70,23 +75,32 @@ export class SpeedyFeatureTracker
         const trackedKeypoints = this._trackingAlgorithm.track(gpu, nextImage, prevImage, prevKeypoints, descriptorSize);
         const trackedKeypointsWithDescriptors = this._featuresAlgorithm == null ? trackedKeypoints :
             this._featuresAlgorithm.describe(gpu, nextImage, trackedKeypoints);
-        return this._downloadKeypoints(gpu, trackedKeypointsWithDescriptors, descriptorSize, useAsyncTransfer).then(newKeypoints => {
-            // compute additional data
-            const keypointCount = newKeypoints.length;
+        return this._downloadKeypoints(gpu, trackedKeypointsWithDescriptors, descriptorSize, useAsyncTransfer, discarded).then(trackedKeypoints => {
+            const filteredKeypoints = [];
 
-            if(Array.isArray(found)) {
-                found.length = keypointCount;
-                found.fill(true); // TODO
-            }
+            // prepare arrays
+            if(found != null)
+                found.length = trackedKeypoints.length;
+            if(flow != null)
+                flow.length = trackedKeypoints.length;
 
-            if(Array.isArray(err)) {
-                err.length = keypointCount;
-                err.fill(0.0); // TODO
+            // compute additional data and
+            // filter out discarded keypoints
+            for(let i = 0; i < trackedKeypoints.length; i++) {
+                const goodFeature = !discarded[i];
+                if(goodFeature)
+                    filteredKeypoints.push(trackedKeypoints[i]);
+                if(found != null)
+                    found[i] = goodFeature;
+                if(flow != null)
+                    flow[i] = goodFeature ? 
+                        new SpeedyVector2(trackedKeypoints[i].x - keypoints[i].x, trackedKeypoints[i].y - keypoints[i].y) :
+                        new SpeedyVector2(0, 0);
             }
 
             // done!
-            return newKeypoints;
-        })
+            return filteredKeypoints;
+        });
     }
 
     /**
@@ -106,8 +120,10 @@ export class SpeedyFeatureTracker
         this._inputTexture = newInputTexture;
 
         // make sure we have two different textures as returned by gpu.upload()
+        /*
         if(this._prevInputTexture === this._inputTexture)
             throw new IllegalOperationError(`Can't keep history of uploaded images`);
+        */
 
         // is it the first frame?
         if(this._prevInputTexture == null)
@@ -120,14 +136,15 @@ export class SpeedyFeatureTracker
      * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
      * @param {number} descriptorSize in bytes
      * @param {boolean} [useAsyncTransfer] use DMA
+     * @param {boolean[]} [discarded] output array: i-th entry will be true if the i-th keypoint has been discarded
      * @returns {Promise<SpeedyFeature[]>}
      */
-    _downloadKeypoints(gpu, encodedKeypoints, descriptorSize, useAsyncTransfer = true)
+    _downloadKeypoints(gpu, encodedKeypoints, descriptorSize, useAsyncTransfer = true, discarded = null)
     {
         return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer, false).then(data => {
 
             // decode the data
-            const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize);
+            const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize, discarded);
 
             // sort the data according to cornerness score
             keypoints.sort(this._compareKeypoints);

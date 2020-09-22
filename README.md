@@ -65,15 +65,16 @@ for(let feature of features)
 
 Check out the [Hello World demo](demos/hello-world.html) for a working example.
 
+## Author
+
+speedy-vision.js is developed by [Alexandre Martins](https://github.com/alemart), a computer scientist from Brazil. It is released under the [Apache-2.0 license](LICENSE).
+
 ## Motivation
 
 Detecting features in an image is an important step of many computer vision algorithms. Traditionally, the computationally expensive nature of this process made it difficult to bring interactive Computer Vision applications to the web browser. The framerates were unsatisfactory for a compelling user experience. Speedy, a short name for speedy-vision.js, is a JavaScript library created to address this issue.
 
-Speedy's real-time performance in the web browser is possible thanks to its efficient WebGL2 backend and to its efficient implementations of fast computer vision algorithms. With an easy-to-use API, Speedy is an excellent choice for real-time computer vision projects involving tasks such as: object detection in videos, pose estimation, Simultaneous Location and Mapping (SLAM), and others.
+Speedy's real-time performance in the web browser is possible thanks to its efficient WebGL2 backend and to its GPU implementations of fast computer vision algorithms. With an easy-to-use API, Speedy is an excellent choice for real-time computer vision projects involving tasks such as: object detection in videos, pose estimation, Simultaneous Location and Mapping (SLAM), and others.
 
-## Who develops speedy-vision.js?
-
-Speedy is developed by [Alexandre Martins](https://github.com/alemart), a computer scientist from Brazil. It is released under the [Apache-2.0 license](LICENSE).
 
 
 ## API Reference
@@ -129,7 +130,6 @@ A `Promise<SpeedyMedia>` that resolves as soon as the media source is loaded wit
 
 ```js
 // Display the contents of a webcam
-
 window.onload = async function() {
     const media = await Speedy.camera();
     const canvas = createCanvas(media.width, media.height);
@@ -353,6 +353,7 @@ window.onload = () => {
 #### FAST features
 
 `Speedy.FeatureDetector.FAST(n: number): SpeedyFeatureDetector`
+
 `Speedy.FeatureDetector.MultiscaleFAST(): SpeedyFeatureDetector`
 
 When using any variation of the FAST feature detector, the following additional properties are available:
@@ -368,6 +369,7 @@ When using the `MultiscaleFAST` detector, you may also specify:
 #### Harris corners
 
 `Speedy.FeatureDetector.Harris(): SpeedyFeatureDetector`
+
 `Speedy.FeatureDetector.MultiscaleHarris(): SpeedyFeatureDetector`
 
 Speedy includes an implementation of the Harris corner detector with the Shi-Tomasi corner response. The following additional properties are available:

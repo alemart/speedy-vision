@@ -445,7 +445,8 @@ export class GLUtils
 
         // bind the PBO
         gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
-        gl.bufferData(gl.PIXEL_PACK_BUFFER, arrayBuffer.byteLength, gl.STREAM_READ);
+        //gl.bufferData(gl.PIXEL_PACK_BUFFER, arrayBuffer.byteLength, gl.STREAM_READ);
+        gl.bufferData(gl.PIXEL_PACK_BUFFER, arrayBuffer.byteLength, gl.DYNAMIC_READ);
 
         // read pixels into the PBO
         if(fbo) {

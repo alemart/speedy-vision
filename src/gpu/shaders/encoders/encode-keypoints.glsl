@@ -65,7 +65,7 @@ void main()
     ivec2 position; vec4 pixel;
 
     // q-th keypoint doesn't exist
-    color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    color = encodeNullKeypointPosition();
 
     // find the q-th keypoint, if it exists
     if(findQthKeypoint(q, position, pixel)) {

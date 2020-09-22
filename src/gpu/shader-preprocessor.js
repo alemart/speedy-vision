@@ -19,7 +19,7 @@
  * Custom preprocessor for shaders
  */
 
-import { PYRAMID_MAX_LEVELS, PYRAMID_MAX_OCTAVES, LOG2_PYRAMID_MAX_SCALE } from '../utils/globals';
+import { PYRAMID_MAX_LEVELS, PYRAMID_MAX_OCTAVES, LOG2_PYRAMID_MAX_SCALE, MAX_TEXTURE_LENGTH } from '../utils/globals';
 import { FIX_BITS, FIX_RESOLUTION } from '../utils/globals';
 import { PixelComponent } from '../utils/types';
 import { FileNotFoundError } from '../utils/errors';
@@ -31,6 +31,9 @@ const constantRegex = /@(\w+)@/g;
 
 // Constants accessible by all shaders
 const constants = {
+    // general
+    'MAX_TEXTURE_LENGTH': MAX_TEXTURE_LENGTH,
+
     // pyramids
     'PYRAMID_MAX_LEVELS': PYRAMID_MAX_LEVELS,
     'LOG2_PYRAMID_MAX_SCALE': LOG2_PYRAMID_MAX_SCALE,

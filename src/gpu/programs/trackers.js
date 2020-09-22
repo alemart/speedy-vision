@@ -21,6 +21,7 @@
 
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
+import { PYRAMID_MAX_LEVELS } from '../../utils/globals';
 
 
 
@@ -29,7 +30,8 @@ import { importShader } from '../shader-declaration';
 //
 
 // LK
-const lk = importShader('trackers/lk.glsl').withArguments('nextPyramid', 'prevPyramid', 'prevKeypoints', 'descriptorSize', 'encoderLength');
+const lk = importShader('trackers/lk.glsl')
+           .withArguments('nextPyramid', 'prevPyramid', 'prevKeypoints', 'windowSize', 'depth', 'descriptorSize', 'encoderLength')
 
 
 
@@ -50,7 +52,7 @@ export class GPUTrackers extends SpeedyProgramGroup
     {
         super(gpu, width, height);
         this
-            // ORB
+            // LK
             .declare('_lk', lk)
         ;
     }
@@ -60,13 +62,23 @@ export class GPUTrackers extends SpeedyProgramGroup
      * @param {SpeedyTexture} nextPyramid image pyramid at time t
      * @param {SpeedyTexture} prevPyramid image pyramid at time t-1
      * @param {SpeedyTexture} prevKeypoints tiny texture of encoded keypoints at time t-1
+     * @param {number} windowSize neighborhood size, an odd number (5, 7, 9, 11...)
+     * @param {number} depth how many pyramid layers will be scanned
      * @param {number} descriptorSize in bytes
      * @param {number} encoderLength
      * @return {SpeedyTexture}
      */
-    lk(nextPyramid, prevPyramid, prevKeypoints, descriptorSize, encoderLength)
+    lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, depth, descriptorSize, encoderLength)
     {
+        // make sure we get a proper depth
+        const MIN_DEPTH = 1, MAX_DEPTH = PYRAMID_MAX_LEVELS;
+        depth = Math.max(MIN_DEPTH, Math.min(depth | 0, MAX_DEPTH));
+
+        // windowSize must be a positive odd number
+        windowSize = Math.max(5, windowSize + ((windowSize+1) % 2));
+
+        // LK
         this._lk.resize(encoderLength, encoderLength);
-        return this._lk(nextPyramid, prevPyramid, prevKeypoints, descriptorSize, encoderLength);
+        return this._lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, depth, descriptorSize, encoderLength);
     }
 }

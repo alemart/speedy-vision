@@ -175,4 +175,29 @@ vec4 encodeKeypointPosition(vec2 position)
     return vec4(float(lo.x), float(hi.x), float(lo.y), float(hi.y)) / 255.0f;
 }
 
+/**
+ * Encode the position of a null keypoint,
+ * that is, the end of a list of keypoints
+ * @returns {vec4} RGBA
+ */
+#define encodeNullKeypointPosition() (vec4(1.0f)) // that's (0xFFFF, 0xFFFF)
+
+/**
+ * Encode the position of a discarded keypoint,
+ * that is, of a keypoint with invalid data
+ * @returns {vec4} RGBA
+ */
+#define encodeDiscardedKeypointPosition() (vec4(254.0f / 255.0f, vec3(1.0f))) // that's (0xFFFE, 0xFFFF)
+
+/**
+ * Checks whether the given keypoint has been
+ * discarded or is null (not a valid keypoint)
+ * @returns {bool}
+ */
+bool isDiscardedOrNullKeypoint(Keypoint keypoint)
+{
+    const float F_MAX_TEXTURE_LENGTH = float(@MAX_TEXTURE_LENGTH@);
+    return keypoint.position.x > F_MAX_TEXTURE_LENGTH || keypoint.position.y > F_MAX_TEXTURE_LENGTH;
+}
+
 #endif

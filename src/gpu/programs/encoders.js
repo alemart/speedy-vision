@@ -116,7 +116,7 @@ export class GPUEncoders extends SpeedyProgramGroup
 
     /**
      * Optimizes the keypoint encoder for an expected number of keypoints
-     * @param {number} keypointCount expected number of keypoints
+     * @param {number} keypointCount expected number of keypoints (< 0 resets the encoder)
      * @param {number} [descriptorSize] in bytes
      * @returns {number} nonzero if the encoder has been optimized
      */
@@ -125,7 +125,7 @@ export class GPUEncoders extends SpeedyProgramGroup
         const clampedKeypointCount = Math.max(0, Math.min(Math.ceil(keypointCount), MAX_KEYPOINTS));
         const pixelsPerKeypoint = Math.ceil(2 + descriptorSize / 4);
         const len = Math.ceil(Math.sqrt((4 + clampedKeypointCount * 1.05) * pixelsPerKeypoint)); // add some slack
-        const newEncoderLength = Math.max(1, Math.min(len, MAX_ENCODER_LENGTH));
+        const newEncoderLength = keypointCount >= 0 ? Math.max(1, Math.min(len, MAX_ENCODER_LENGTH)) : INITIAL_ENCODER_LENGTH;
         const oldEncoderLength = this._keypointEncoderLength;
 
         if(newEncoderLength != oldEncoderLength) {
@@ -137,6 +137,14 @@ export class GPUEncoders extends SpeedyProgramGroup
         }
 
         return newEncoderLength - oldEncoderLength;
+    }
+
+    /**
+     * Resets any optimizations done so far for expected number of keypoints
+     */
+    resetKeypointEncoder()
+    {
+        this.optimizeKeypointEncoder(-1);
     }
 
     /**
@@ -174,21 +182,31 @@ export class GPUEncoders extends SpeedyProgramGroup
      * Decodes the keypoints, given a flattened image of encoded pixels
      * @param {Uint8Array[]} pixels pixels in the [r,g,b,a,...] format
      * @param {number} [descriptorSize] in bytes
+     * @param {boolean[]} [discarded] output array telling whether the i-th keypoint has been discarded
      * @returns {SpeedyFeature[]} keypoints
      */
-    decodeKeypoints(pixels, descriptorSize = 0)
+    decodeKeypoints(pixels, descriptorSize = 0, discarded = null)
     {
         const pixelsPerKeypoint = 2 + descriptorSize / 4;
         let x, y, lod, rotation, score;
         let hasLod, hasRotation;
         let keypoints = [];
 
+        if(discarded != null)
+            discarded.length = 0;
+
         for(let i = 0; i < pixels.length; i += 4 /* RGBA */ * pixelsPerKeypoint) {
             // extract fixed-point coordinates
             x = (pixels[i+1] << 8) | pixels[i];
             y = (pixels[i+3] << 8) | pixels[i+2];
-            if(x >= 0xFFFF || y >= 0xFFFF)
+            if(x >= 0xFFFF && y >= 0xFFFF) // if end of list
                 break;
+
+            // discarded keypoint?
+            if(discarded != null) {
+                const isDiscarded = (x >= 0xFFFF || y >= 0xFFFF);
+                discarded.push(isDiscarded);
+            }
 
             // convert from fixed-point
             x /= FIX_RESOLUTION;
@@ -200,7 +218,7 @@ export class GPUEncoders extends SpeedyProgramGroup
                 -LOG2_PYRAMID_MAX_SCALE + (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS) * pixels[i+4] / 255;
 
             // extract orientation
-            hasRotation = hasLod; // FIXME get from parameter list?
+            hasRotation = hasLod; // FIXME
             rotation = !hasRotation ? 0.0 :
                 ((2 * pixels[i+5]) / 255.0 - 1.0) * Math.PI;
 
@@ -295,10 +313,10 @@ export class GPUEncoders extends SpeedyProgramGroup
             const j = i * 4;
 
             // this will be uploaded into a vec4
-            this._uploadBuffer[j]   = keypoint.x;
-            this._uploadBuffer[j+1] = keypoint.y;
-            this._uploadBuffer[j+2] = keypoint.lod;
-            this._uploadBuffer[j+3] = keypoint.score;
+            this._uploadBuffer[j]   = +(keypoint.x) || 0;
+            this._uploadBuffer[j+1] = +(keypoint.y) || 0;
+            this._uploadBuffer[j+2] = +(keypoint.lod) || 0;
+            this._uploadBuffer[j+3] = +(keypoint.score) || 0;
         }
 
         // WARNING: you shouldn't work with a different set of keypoints
