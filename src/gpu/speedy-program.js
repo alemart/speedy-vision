@@ -96,11 +96,11 @@ export class SpeedyProgram extends Function
         options.output[0] = width;
         options.output[1] = height;
 
-        // resize stdprog
-        this._stdprog.resize(width, height);
-
         // reallocate buffers for reading pixels
         this._reallocatePixelBuffers(width, height);
+
+        // resize stdprog
+        this._stdprog.resize(width, height);
     }
 
     /**
@@ -245,6 +245,30 @@ export class SpeedyProgram extends Function
         return this._stdprog.uniform;
     }
 
+    /**
+     * Clear the internal textures to a color
+     * @param {number} [r] in [0,1]
+     * @param {number} [g] in [0,1]
+     * @param {number} [b] in [0,1]
+     * @param {number} [a] in [0,1]
+     * @returns {SpeedyTexture}
+     */
+    clear(r = 1.0, g = 1.0, b = 1.0, a = 1.0)
+    {
+        const gl = this._gl;
+        const stdprog = this._stdprog;
+
+        // skip things
+        if(gl.isContextLost())
+            return stdprog.texture;
+
+        // clear internal textures
+        stdprog.clear(r, g, b, a);
+
+        // done!
+        return stdprog.texture;
+    }
+
     // Prepare the shader
     _init(gl, shaderdecl, options)
     {
@@ -360,7 +384,7 @@ export class SpeedyProgram extends Function
         gl.viewport(0, 0, stdprog.width, stdprog.height);
         gl.drawArrays(gl.TRIANGLE_STRIP,
                       0,        // offset
-                      4);       // count       
+                      4);       // count
 
         // output texture
         let outputTexture = null;
@@ -650,6 +674,27 @@ StandardProgram.prototype.resize = function(width, height)
     }
 
     //console.log(`Resized program to ${width} x ${height}`);
+}
+
+// Clear inner textures to a color: 0 <= r,g,b,a <= 1
+StandardProgram.prototype.clear = function(r, g, b, a)
+{
+    const gl = this.gl;
+
+    // nothing to do
+    if(this._fbo == null)
+        return;
+
+    // clear all textures
+    for(let i = 0; i < this._fbo.length; i++) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo[i]);
+        gl.viewport(0, 0, this.width, this.height);
+        gl.clearColor(r, g, b, a);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+    }
+
+    // unbind
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
 
