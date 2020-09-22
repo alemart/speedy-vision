@@ -1,10 +1,38 @@
 # speedy-vision.js
 
-A **lightning fast** GPU-accelerated Computer Vision library for the web, with a focus on real-time feature detection and matching. ORB, FAST, BRISK, Harris, image processing and more!
+A **lightning fast** GPU-accelerated Computer Vision library for JavaScript.
 
 [<img src="assets/demo-orb.gif" width="640" alt="Speedy feature detection">](https://alemart.github.io/speedy-vision-js/demos/orb-features.html)
 
-*Click to open a demo*
+## Features
+
+This is a GPU-accelerated Computer Vision JS library for real-time stuff.
+
+* Feature detection
+  * Harris corner detector
+  * FAST feature detector
+  * ORB feature descriptor
+  * BRISK feature detector & descriptor (soon)
+* Feature tracking
+  * LK optical flow
+* Feature matching
+  * Soon
+* Image processing
+  * Greyscale
+  * Gaussian blur & box blur
+  * Custom convolution filters
+  * Image normalization
+  * Nightvision
+
+... and more in development!
+
+There are plenty of [demos](#demos) available!
+
+## Author
+
+speedy-vision.js is developed by [Alexandre Martins](https://github.com/alemart), a computer scientist from Brazil. It is released under the [Apache-2.0 license](LICENSE).
+
+-----
 
 ## Table of contents
 
@@ -18,6 +46,8 @@ A **lightning fast** GPU-accelerated Computer Vision library for the web, with a
   * [Image processing](#image-processing)
   * [Extras](#extras)
 * [Unit tests](https://alemart.github.io/speedy-vision-js/tests/index.html)
+
+-----
 
 ## Demos
 
@@ -65,17 +95,13 @@ for(let feature of features)
 
 Check out the [Hello World demo](demos/hello-world.html) for a working example.
 
-## Author
-
-speedy-vision.js is developed by [Alexandre Martins](https://github.com/alemart), a computer scientist from Brazil. It is released under the [Apache-2.0 license](LICENSE).
-
 ## Motivation
 
 Detecting features in an image is an important step of many computer vision algorithms. Traditionally, the computationally expensive nature of this process made it difficult to bring interactive Computer Vision applications to the web browser. The framerates were unsatisfactory for a compelling user experience. Speedy, a short name for speedy-vision.js, is a JavaScript library created to address this issue.
 
 Speedy's real-time performance in the web browser is possible thanks to its efficient WebGL2 backend and to its GPU implementations of fast computer vision algorithms. With an easy-to-use API, Speedy is an excellent choice for real-time computer vision projects involving tasks such as: object detection in videos, pose estimation, Simultaneous Location and Mapping (SLAM), and others.
 
-
+-----
 
 ## API Reference
 
@@ -200,8 +226,8 @@ Draws the media to a canvas.
 ###### Arguments
 
 * `canvas: HTMLCanvasElement`. The canvas element to which you'll draw.
-* `x: number, optional`. An x-position in the canvas. Defaults to `0`.
-* `y: number, optional`. An y-position in the canvas. Defaults to `0`.
+* `x: number, optional`. X-position in the canvas. Defaults to `0`.
+* `y: number, optional`. Y-position in the canvas. Defaults to `0`.
 * `width: number, optional`. The desired width. Defaults to `SpeedyMedia.width`.
 * `height: number, optional`. The desired height. Defaults to `SpeedyMedia.height`.
 
