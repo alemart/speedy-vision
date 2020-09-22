@@ -30,9 +30,10 @@ import { FIX_RESOLUTION, PYRAMID_MAX_LEVELS, LOG2_PYRAMID_MAX_SCALE } from '../.
 
 // We won't admit more than MAX_KEYPOINTS per media.
 // The larger this value is, the more data we need to transfer from the GPU.
-const MAX_DESCRIPTOR_SIZE = 64; // in bytes, must be divisible by 4
+const MAX_DESCRIPTOR_SIZE = 64; // in bytes, must be divisible by 4 (1 pixel = 4 bytes)
 const MAX_KEYPOINT_SIZE = 8 + MAX_DESCRIPTOR_SIZE; // in bytes, must be divisible by 4
 const MAX_PIXELS_PER_KEYPOINT = (MAX_KEYPOINT_SIZE / 4) | 0; // in pixels
+const MIN_ENCODER_LENGTH = 1;
 const MAX_ENCODER_LENGTH = 300; // in pixels (if too large, WebGL may lose context - so be careful!)
 const MAX_KEYPOINTS = ((MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH) / MAX_PIXELS_PER_KEYPOINT) | 0;
 const INITIAL_ENCODER_LENGTH = 128; // pick a large value <= MAX (useful on static images when no encoder optimization is performed beforehand)
@@ -83,6 +84,8 @@ export class GPUEncoders extends SpeedyProgramGroup
         super(gpu, width, height);
         this
             .declare('_encodeKeypointOffsets', encodeKeypointOffsets)
+
+            // tiny textures
             .declare('_encodeKeypoints', encodeKeypoints, {
                 ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
             })
@@ -100,7 +103,7 @@ export class GPUEncoders extends SpeedyProgramGroup
         // setup internal data
         let neighborFn = (s) => Math.round(Utils.gaussianNoise(s, 64)) % 256;
         this._tuner = new StochasticTuner(48, 32, 48/*255*/, 0.2, 8, 60, neighborFn);
-        this._keypointEncoderLength = INITIAL_ENCODER_LENGTH;
+        this._encoderLength = INITIAL_ENCODER_LENGTH;
         this._spawnedAt = performance.now();
         this._uploadBuffer = null; // lazy spawn
     }
@@ -111,40 +114,52 @@ export class GPUEncoders extends SpeedyProgramGroup
      */
     get encoderLength()
     {
-        return this._keypointEncoderLength;
+        return this._encoderLength;
     }
 
     /**
      * Optimizes the keypoint encoder for an expected number of keypoints
      * @param {number} keypointCount expected number of keypoints (< 0 resets the encoder)
      * @param {number} [descriptorSize] in bytes
-     * @returns {number} nonzero if the encoder has been optimized
+     * @returns {boolean} true if the encoder has been optimized
      */
     optimizeKeypointEncoder(keypointCount, descriptorSize = 0)
     {
-        const clampedKeypointCount = Math.max(0, Math.min(Math.ceil(keypointCount), MAX_KEYPOINTS));
-        const pixelsPerKeypoint = Math.ceil(2 + descriptorSize / 4);
-        const len = Math.ceil(Math.sqrt((4 + clampedKeypointCount * 1.05) * pixelsPerKeypoint)); // add some slack
-        const newEncoderLength = keypointCount >= 0 ? Math.max(1, Math.min(len, MAX_ENCODER_LENGTH)) : INITIAL_ENCODER_LENGTH;
-        const oldEncoderLength = this._keypointEncoderLength;
+        const len = this._minimumEncoderLength(keypointCount, descriptorSize);
+        const newEncoderLength = keypointCount >= 0 ? len : INITIAL_ENCODER_LENGTH;
+        const oldEncoderLength = this._encoderLength;
 
         if(newEncoderLength != oldEncoderLength) {
-            this._keypointEncoderLength = newEncoderLength;
+            this._encoderLength = newEncoderLength;
             this._encodeKeypoints.resize(newEncoderLength, newEncoderLength);
             this._downloadKeypoints.resize(newEncoderLength, newEncoderLength);
             this._orientEncodedKeypoints.resize(newEncoderLength, newEncoderLength);
             this._uploadKeypoints.resize(newEncoderLength, newEncoderLength);
         }
 
-        return newEncoderLength - oldEncoderLength;
+        return (newEncoderLength - oldEncoderLength) != 0;
     }
 
     /**
      * Resets any optimizations done so far for expected number of keypoints
+     * @returns {boolean} true if there was any change to the length of the encoder
      */
     resetKeypointEncoder()
     {
-        this.optimizeKeypointEncoder(-1);
+        return this.optimizeKeypointEncoder(-1);
+    }
+
+    /**
+     * Ensures that the encoder can deliver the specified number of keypoints
+     * @param {number} keypointCount the number of keypoints
+     * @param {number} [descriptorSize] in bytes
+     * @returns {boolean} true if there was any change to the length of the encoder
+     */
+    guaranteeKeypointEncoder(keypointCount, descriptorSize)
+    {
+        // resize if not enough space
+        if(this._minimumEncoderLength(keypointCount, descriptorSize) > this._encoderLength)
+            return this.optimizeKeypointEncoder(keypointCount, descriptorSize);
     }
 
     /**
@@ -156,7 +171,7 @@ export class GPUEncoders extends SpeedyProgramGroup
      */
     orientEncodedKeypoints(pyramid, patchRadius, encodedKeypoints, descriptorSize = 0)
     {
-        const encoderLength = this._keypointEncoderLength;
+        const encoderLength = this._encoderLength;
         return this._orientEncodedKeypoints(pyramid, patchRadius, encodedKeypoints, encoderLength, descriptorSize);
     }
 
@@ -169,7 +184,7 @@ export class GPUEncoders extends SpeedyProgramGroup
     encodeKeypoints(corners, descriptorSize = 0)
     {
         // parameters
-        const encoderLength = this._keypointEncoderLength;
+        const encoderLength = this._encoderLength;
         const imageSize = [ this._width, this._height ];
         const maxIterations = this._tuner.currentValue();
 
@@ -195,7 +210,13 @@ export class GPUEncoders extends SpeedyProgramGroup
         if(discarded != null)
             discarded.length = 0;
 
-        for(let i = 0; i < pixels.length; i += 4 /* RGBA */ * pixelsPerKeypoint) {
+        // how many bytes should we read?
+        const e = this._encoderLength;
+        const e2 = e * e * pixelsPerKeypoint * 4;
+        const size = Math.min(pixels.length, e2);
+
+        // for each encoded keypoint
+        for(let i = 0; i < size; i += 4 /* RGBA */ * pixelsPerKeypoint) {
             // extract fixed-point coordinates
             x = (pixels[i+1] << 8) | pixels[i];
             y = (pixels[i+3] << 8) | pixels[i+2];
@@ -321,10 +342,25 @@ export class GPUEncoders extends SpeedyProgramGroup
 
         // WARNING: you shouldn't work with a different set of keypoints
         // while you're working with the ones you have just uploaded
-        this.optimizeKeypointEncoder(keypointCount, descriptorSize);
+        this.guaranteeKeypointEncoder(keypointCount, descriptorSize);
 
         // Upload data
         this._uploadKeypoints.setUBO('KeypointBuffer', this._uploadBuffer);
-        return this._uploadKeypoints(keypointCount, this._keypointEncoderLength, descriptorSize);
+        return this._uploadKeypoints(keypointCount, this._encoderLength, descriptorSize);
+    }
+
+    /**
+     * The minimum encoder length for a set of keypoints
+     * @param {number} keypointCount
+     * @param {number} descriptorSize
+     * @returns {number} between 1 and MAX_ENCODER_LENGTH
+     */
+    _minimumEncoderLength(keypointCount, descriptorSize)
+    {
+        const clampedKeypointCount = Math.max(0, Math.min(Math.ceil(keypointCount), MAX_KEYPOINTS));
+        const pixelsPerKeypoint = Math.ceil(2 + descriptorSize / 4);
+        const len = Math.ceil(Math.sqrt((4 + clampedKeypointCount * 1.05) * pixelsPerKeypoint)); // add some slack
+
+        return Math.max(MIN_ENCODER_LENGTH, Math.min(len, MAX_ENCODER_LENGTH));
     }
 }

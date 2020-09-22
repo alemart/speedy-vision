@@ -151,7 +151,7 @@ export class SpeedyFeatureTracker
 
             // we're only tracking existing keypoints, so
             // newKeypoints.length <= oldKeypoints.length
-            gpu.programs.encoders.optimizeKeypointEncoder(keypoints.length, descriptorSize);
+            gpu.programs.encoders.guaranteeKeypointEncoder(keypoints.length, descriptorSize);
 
             // done!
             return keypoints;

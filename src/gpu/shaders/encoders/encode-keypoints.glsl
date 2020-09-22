@@ -41,14 +41,14 @@ uniform int descriptorSize;
 // q = 0, 1, 2... keypoint index
 bool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)
 {
-    int i = 0, p = 0;
+    int i = 0, p = -1;
 
-    for(position = ivec2(0, 0); position.y < imageSize.y; ) {
+    position = ivec2(0, 0);
+    while(position.y < imageSize.y) {
         pixel = texelFetch(image, position, 0);
-        if(pixel.r > 0.0f) {
-            if(p++ == q)
-                return true;
-        }
+        p += int(pixel.r > 0.0f);
+        if(p == q)
+            return true;
 
         i += 1 + int(pixel.g * 255.0f);
         position = ivec2(i % imageSize.x, i / imageSize.x);
@@ -64,32 +64,23 @@ void main()
     int q = findKeypointIndex(address, descriptorSize);
     ivec2 position; vec4 pixel;
 
-    // q-th keypoint doesn't exist
-    color = encodeNullKeypointPosition();
+    // is it a descriptor cell?
+    color = vec4(0.0f);
+    if(address.offset > 1)
+        return;
 
     // find the q-th keypoint, if it exists
-    if(findQthKeypoint(q, position, pixel)) {
-        switch(address.offset) {
-            case 0: {
-                // write position
-                color = encodeKeypointPosition(vec2(position));
-                break;
-            }
+    color = encodeNullKeypointPosition(); // end of list
+    if(!findQthKeypoint(q, position, pixel))
+        return;
 
-            case 1: {
-                // write scale, rotation & score
-                float score = pixel.r;
-                float scale = pixel.a;
-                float rotation = encodeOrientation(0.0f);
-                color = vec4(scale, rotation, score, 0.0f);
-                break;
-            }
-
-            default: {
-                // write descriptor
-                color = vec4(0.0f);
-                break;
-            }
-        }
-    }
+    // write keypoint data
+    color = (address.offset == 1) ? vec4(
+        pixel.a, // scale
+        encodeOrientation(0.0f), // rotation
+        pixel.r, // score
+        0.0f
+    ) : encodeKeypointPosition(
+        vec2(position) // position
+    );
 }
