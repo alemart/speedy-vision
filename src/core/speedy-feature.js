@@ -36,9 +36,10 @@ export class SpeedyFeature
      * @param {number} [lod] Level-of-detail
      * @param {number} [rotation] Rotation in radians
      * @param {number} [score] Cornerness measure
+     * @param {number} [data] Generic user-data
      * @param {SpeedyDescriptor} [descriptor] Feature descriptor
      */
-    constructor(x, y, lod = 0.0, rotation = 0.0, score = 0.0, descriptor = null)
+    constructor(x, y, lod = 0.0, rotation = 0.0, score = 0.0, userData = 0.0, descriptor = null)
     {
         this._x = +x;
         this._y = +y;
@@ -46,6 +47,7 @@ export class SpeedyFeature
         this._rotation = +rotation;
         this._score = +score;
         this._scale = Math.pow(2, +lod);
+        this._userData = +userData;
         this._descriptor = descriptor === null ? new NullDescriptor() : descriptor;
     }
 

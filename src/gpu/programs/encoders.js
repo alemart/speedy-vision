@@ -203,7 +203,7 @@ export class GPUEncoders extends SpeedyProgramGroup
     decodeKeypoints(pixels, descriptorSize = 0, discarded = null)
     {
         const pixelsPerKeypoint = 2 + descriptorSize / 4;
-        let x, y, lod, rotation, score;
+        let x, y, lod, rotation, score, userData;
         let hasLod, hasRotation;
         let keypoints = [];
 
@@ -246,14 +246,17 @@ export class GPUEncoders extends SpeedyProgramGroup
             // extract score
             score = pixels[i+6] / 255.0;
 
+            // extract generic user-data
+            userData = pixels[i+7] / 255.0;
+
             // register keypoint, possibly with a descriptor
             if(descriptorSize > 0) {
                 const bytes = new Uint8Array(pixels.slice(i+8, i+8 + descriptorSize));
                 const descriptor = new BinaryDescriptor(bytes);
-                keypoints.push(new SpeedyFeature(x, y, lod, rotation, score, descriptor));
+                keypoints.push(new SpeedyFeature(x, y, lod, rotation, score, userData, descriptor));
             }
             else
-                keypoints.push(new SpeedyFeature(x, y, lod, rotation, score));
+                keypoints.push(new SpeedyFeature(x, y, lod, rotation, score, userData));
         }
 
         // developer's secret ;)
