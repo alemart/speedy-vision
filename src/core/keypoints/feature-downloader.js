@@ -35,12 +35,10 @@ export class FeatureDownloader extends Observable
 {
     /**
      * Class constructor
-     * @param {number} descriptorSize in bytes (set to zero if there is not descriptor)
      */
-    constructor(descriptorSize = 0)
+    constructor()
     {
         super();
-        this._descriptorSize = Math.max(0, descriptorSize | 0);
         this._rawKeypointCount = 0;
         this._filteredKeypointCount = 0;
     }
@@ -49,18 +47,19 @@ export class FeatureDownloader extends Observable
      * Download feature points from the GPU
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
+     * @param {number} descriptorSize in bytes (set it to zero if there is no descriptor)
      * @param {number} [max] cap the number of keypoints to this value
      * @param {boolean} [useAsyncTransfer] transfer keypoints asynchronously
      * @param {boolean} [useBufferQueue] optimize async transfers
+     * @param {boolean[]} [discarded] output array telling whether the i-th keypoint has been discarded
      * @returns {Promise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, max = -1, useAsyncTransfer = true, useBufferQueue = true)
+    download(gpu, encodedKeypoints, descriptorSize, max = -1, useAsyncTransfer = true, useBufferQueue = true, discarded = undefined)
     {
-        const descriptorSize = this._descriptorSize;
         return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer, useBufferQueue).then(data => {
             // when processing a video, we expect that number of keypoints
             // in time to be a relatively smooth curve
-            const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize);
+            const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize, discarded);
             const measuredCount = keypoints.length; // may explode with abrupt video changes
             const oldCount = this._filteredKeypointCount == 0 ? measuredCount : this._filteredKeypointCount;
             const newCount = Math.ceil(oldCount + OPTIMIZER_GAIN * (measuredCount - oldCount));

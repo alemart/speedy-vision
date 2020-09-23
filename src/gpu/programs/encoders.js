@@ -207,6 +207,7 @@ export class GPUEncoders extends SpeedyProgramGroup
         let hasLod, hasRotation;
         let keypoints = [];
 
+        // initialize array
         if(discarded != null)
             discarded.length = 0;
 

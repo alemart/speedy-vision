@@ -37,7 +37,7 @@ export class FeaturesAlgorithm
      */
     constructor()
     {
-        this._downloader = new FeatureDownloader(this.descriptorSize);
+        this._downloader = new FeatureDownloader();
         this._sensitivity = 0;
         this._automaticSensitivity = null;
     }
@@ -108,12 +108,11 @@ export class FeaturesAlgorithm
      * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
      * @param {number} [max] cap the number of keypoints to this value
      * @param {boolean} [useAsyncTransfer] transfer feature points asynchronously
-     * @param {boolean} [useBufferQueue] optimize async transfers
      * @returns {Promise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, max = undefined, useAsyncTransfer = true, useBufferQueue = true)
+    download(gpu, encodedKeypoints, max = undefined, useAsyncTransfer = true)
     {
-        return this._downloader.download(gpu, encodedKeypoints, max, useAsyncTransfer, useBufferQueue);
+        return this._downloader.download(gpu, encodedKeypoints, this.descriptorSize, max, useAsyncTransfer, true);
     }
 
     /**

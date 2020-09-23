@@ -122,7 +122,7 @@ export class SpeedyFeatureDetector
             gpu,
             describedKeypoints,
             settings.max,
-            media.options.usage == 'dynamic'
+            media.options.usage != 'static'
         );
     }
 

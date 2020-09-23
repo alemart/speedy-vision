@@ -54,15 +54,15 @@ export class SpeedyFeatureTracker
      */
     track(keypoints, found = null, flow = null)
     {
-        let discarded = [];
         const gpu = this._media._gpu; // friend class?!
+        let discarded = [];
 
         // validate arguments
         if(!Array.isArray(keypoints) || (found != null && !Array.isArray(found)) || (flow != null && !Array.isArray(flow)))
             throw new IllegalArgumentError();
 
         // upload media to the GPU
-        this._uploadMedia(this._media, gpu);
+        this._updateMedia(this._media, gpu);
 
         // preliminary data
         const nextImage = this._inputTexture;
@@ -70,12 +70,16 @@ export class SpeedyFeatureTracker
         const descriptorSize = this._featuresAlgorithm != null ? this._featuresAlgorithm.descriptorSize : 0;
         const useAsyncTransfer = (this._media.options.usage != 'static');
 
-        // upload, track, describe & download keypoints
-        const prevKeypoints = this._uploadKeypoints(gpu, keypoints, descriptorSize);
+        // upload & track keypoints
+        const prevKeypoints = this._trackingAlgorithm.upload(gpu, keypoints, descriptorSize);
         const trackedKeypoints = this._trackingAlgorithm.track(gpu, nextImage, prevImage, prevKeypoints, descriptorSize);
+
+        // compute feature descriptors (if an algorithm is provided)
         const trackedKeypointsWithDescriptors = this._featuresAlgorithm == null ? trackedKeypoints :
             this._featuresAlgorithm.describe(gpu, nextImage, trackedKeypoints);
-        return this._downloadKeypoints(gpu, trackedKeypointsWithDescriptors, descriptorSize, useAsyncTransfer, discarded).then(trackedKeypoints => {
+
+        // download keypoints
+        return this._trackingAlgorithm.download(gpu, trackedKeypointsWithDescriptors, descriptorSize, undefined, useAsyncTransfer, discarded).then(trackedKeypoints => {
             const filteredKeypoints = [];
 
             // prepare arrays
@@ -108,7 +112,7 @@ export class SpeedyFeatureTracker
      * @param {SpeedyMedia} media
      * @param {SpeedyGPU} gpu
      */
-    _uploadMedia(media, gpu)
+    _updateMedia(media, gpu)
     {
         // validate the media
         if(media.isReleased())
@@ -128,57 +132,5 @@ export class SpeedyFeatureTracker
         // is it the first frame?
         if(this._prevInputTexture == null)
             this._prevInputTexture = newInputTexture;
-    }
-
-    /**
-     * Download feature points from the GPU (after tracking)
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
-     * @param {number} descriptorSize in bytes
-     * @param {boolean} [useAsyncTransfer] use DMA
-     * @param {boolean[]} [discarded] output array: i-th entry will be true if the i-th keypoint has been discarded
-     * @returns {Promise<SpeedyFeature[]>}
-     */
-    _downloadKeypoints(gpu, encodedKeypoints, descriptorSize, useAsyncTransfer = true, discarded = null)
-    {
-        return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer, false).then(data => {
-
-            // decode the data
-            const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize, discarded);
-
-            // sort the data according to cornerness score
-            keypoints.sort(this._compareKeypoints);
-
-            // we're only tracking existing keypoints, so
-            // newKeypoints.length <= oldKeypoints.length
-            gpu.programs.encoders.guaranteeKeypointEncoder(keypoints.length, descriptorSize);
-
-            // done!
-            return keypoints;
-
-        });
-    }
-
-    /**
-     * Upload feature points to the GPU (before tracking)
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyFeature[]} keypoints feature points
-     * @param {number} descriptorSize in bytes
-     * @returns {SpeedyTexture}
-     */
-    _uploadKeypoints(gpu, keypoints, descriptorSize)
-    {
-        return gpu.programs.encoders.uploadKeypoints(keypoints, descriptorSize);
-    }
-
-    /**
-     * Compare two keypoints (higher scores come first)
-     * @param {SpeedyFeature} a 
-     * @param {SpeedyFeature} b 
-     * @returns {number}
-     */
-    _compareKeypoints(a, b)
-    {
-        return (+(b.score)) - (+(a.score));
     }
 }

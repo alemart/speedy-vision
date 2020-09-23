@@ -21,6 +21,8 @@
 
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
 import { AbstractMethodError } from '../../utils/errors';
+import { FeatureDownloader } from './feature-downloader';
+import { SpeedyFeature } from '../speedy-feature';
 
 /**
  * Used to track feature points
@@ -28,6 +30,14 @@ import { AbstractMethodError } from '../../utils/errors';
  */
 export class FeatureTrackingAlgorithm
 {
+    /**
+     * Class constructor
+     */
+    constructor()
+    {
+        this._downloader = new FeatureDownloader();
+    }
+
     /**
      * Track a set of feature points
      * @param {SpeedyGPU} gpu
@@ -40,5 +50,32 @@ export class FeatureTrackingAlgorithm
     track(gpu, nextImage, prevImage, prevKeypoints, descriptorSize)
     {
         throw new AbstractMethodError();
+    }
+
+    /**
+     * Download feature points from the GPU
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
+     * @param {number} descriptorSize in bytes
+     * @param {number} [max] cap the number of keypoints to this value
+     * @param {boolean} [useAsyncTransfer] transfer feature points asynchronously
+     * @param {boolean[]} [discarded] output array telling whether the i-th keypoint has been discarded
+     * @returns {Promise<SpeedyFeature[]>}
+     */
+    download(gpu, encodedKeypoints, descriptorSize, max = undefined, useAsyncTransfer = true, discarded = undefined)
+    {
+        return this._downloader.download(gpu, encodedKeypoints, descriptorSize, max, useAsyncTransfer, false, discarded);
+    }
+
+    /**
+     * Upload feature points to the GPU (before tracking)
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyFeature[]} keypoints feature points
+     * @param {number} descriptorSize in bytes
+     * @returns {SpeedyTexture}
+     */
+    upload(gpu, keypoints, descriptorSize)
+    {
+        return gpu.programs.encoders.uploadKeypoints(keypoints, descriptorSize);
     }
 }
