@@ -187,7 +187,7 @@ export class SpeedyProgram extends Function
 
         // do not optimize?
         if(!useBufferQueue) {
-            return GLUtils.readPixelsViaPBO(gl, this._pbo[0], this._pixelBuffer[0], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
+            return GLUtils.readPixelsViaPBO(gl, this._pixelBuffer[0], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
                 return this._pixelBuffer[0];
             });
         }
@@ -195,13 +195,13 @@ export class SpeedyProgram extends Function
         // GPU needs to produce data
         if(this._pboProducerQueue.length > 0) {
             const nextPBO = this._pboProducerQueue.shift();
-            GLUtils.readPixelsViaPBO(gl, this._pbo[nextPBO], this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
+            GLUtils.readPixelsViaPBO(gl, this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
                 this._pboConsumerQueue.push(nextPBO);
             });
         }
         else waitForQueueNotEmpty(this._pboProducerQueue).then(waitTime => {
             const nextPBO = this._pboProducerQueue.shift();
-            GLUtils.readPixelsViaPBO(gl, this._pbo[nextPBO], this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
+            GLUtils.readPixelsViaPBO(gl, this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
                 this._pboConsumerQueue.push(nextPBO);
             });
         });
@@ -460,10 +460,9 @@ export class SpeedyProgram extends Function
     _initPixelBuffers(gl)
     {
         this._pixelBuffer = Array(PBO_COUNT).fill(null);
-        this._pixelBufferSize = [0, 0];
+        this._pixelBufferSize = [0, 0]; // width, height
         this._pboConsumerQueue = Array(PBO_COUNT).fill(0).map((_, i) => i);
         this._pboProducerQueue = [];
-        this._pbo = Array(PBO_COUNT).fill(null).map(() => gl.createBuffer());
     }
 
     // resize pixel buffers
@@ -691,6 +690,25 @@ StandardProgram.prototype.clear = function(r, g, b, a)
         gl.viewport(0, 0, this.width, this.height);
         gl.clearColor(r, g, b, a);
         gl.clear(gl.COLOR_BUFFER_BIT);
+    }
+
+    // unbind
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+}
+
+// invalidate FBOs
+StandardProgram.prototype.invalidateFramebuffer = function()
+{
+    const gl = this.gl;
+
+    // nothing to do
+    if(this._fbo == null)
+        return;
+
+    // invalidate framebuffers
+    for(let i = 0; i < this._fbo.length; i++) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo[i]);
+        gl.invalidateFramebuffer(gl.FRAMEBUFFER, [gl.COLOR_ATTACHMENT0]);
     }
 
     // unbind

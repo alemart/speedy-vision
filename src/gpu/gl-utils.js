@@ -428,7 +428,6 @@ export class GLUtils
      * Read pixels to a Uint8Array using a Pixel Buffer Object (PBO)
      * You may optionally specify a FBO to read pixels from a texture
      * @param {WebGL2RenderingContext} gl
-     * @param {WebGLBuffer} pbo
      * @param {Uint8Array} arrayBuffer with size >= width * height * 4
      * @param {GLint} x
      * @param {GLint} y
@@ -437,16 +436,18 @@ export class GLUtils
      * @param {WebGLFramebuffer} [fbo]
      * @returns {Promise<number>} a promise that resolves to the time it took to read the data (in ms)
      */
-    static readPixelsViaPBO(gl, pbo, arrayBuffer, x, y, width, height, fbo = null)
+    static readPixelsViaPBO(gl, arrayBuffer, x, y, width, height, fbo = null)
     {
+        // create temp buffer
+        const pbo = gl.createBuffer();
+
         // validate arrayBuffer
         if(!(arrayBuffer.byteLength >= width * height * 4))
             throw new IllegalArgumentError(`Can't read pixels: invalid buffer size`);
 
         // bind the PBO
         gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
-        //gl.bufferData(gl.PIXEL_PACK_BUFFER, arrayBuffer.byteLength, gl.STREAM_READ);
-        gl.bufferData(gl.PIXEL_PACK_BUFFER, arrayBuffer.byteLength, gl.DYNAMIC_READ);
+        gl.bufferData(gl.PIXEL_PACK_BUFFER, arrayBuffer.byteLength, gl.STREAM_READ);
 
         // read pixels into the PBO
         if(fbo) {
@@ -472,6 +473,8 @@ export class GLUtils
             return timeInMs;
         }).catch(err => {
             throw new IllegalOperationError(`Can't read pixels`, err);
+        }).finally(() => {
+            gl.deleteBuffer(pbo);
         });
     }
 }
