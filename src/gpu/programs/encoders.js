@@ -197,19 +197,23 @@ export class GPUEncoders extends SpeedyProgramGroup
      * Decodes the keypoints, given a flattened image of encoded pixels
      * @param {Uint8Array[]} pixels pixels in the [r,g,b,a,...] format
      * @param {number} [descriptorSize] in bytes
-     * @param {boolean[]} [discarded] output array telling whether the i-th keypoint has been discarded
+     * @param {object} [output] optional output object
+     * @param {number[]} [output.userData] generic user-data related to the i-th keypoint
+     * @param {boolean[]} [output.discarded] tells whether the i-th keypoint has been discarded
      * @returns {SpeedyFeature[]} keypoints
      */
-    decodeKeypoints(pixels, descriptorSize = 0, discarded = null)
+    decodeKeypoints(pixels, descriptorSize = 0, output = {})
     {
         const pixelsPerKeypoint = 2 + descriptorSize / 4;
-        let x, y, lod, rotation, score, userData;
+        let x, y, lod, rotation, score;
         let hasLod, hasRotation;
-        let keypoints = [];
+        const keypoints = [];
 
-        // initialize array
-        if(discarded != null)
-            discarded.length = 0;
+        // initialize output arrays
+        if(output.userData != undefined)
+            output.userData.length = 0;
+        if(output.discarded != undefined)
+            output.discarded.length = 0;
 
         // how many bytes should we read?
         const e = this._encoderLength;
@@ -225,9 +229,9 @@ export class GPUEncoders extends SpeedyProgramGroup
                 break;
 
             // discarded keypoint?
-            if(discarded != null) {
+            if(output.discarded != undefined) {
                 const isDiscarded = (x >= 0xFFFF || y >= 0xFFFF);
-                discarded.push(isDiscarded);
+                output.discarded.push(isDiscarded);
             }
 
             // convert from fixed-point
@@ -248,16 +252,17 @@ export class GPUEncoders extends SpeedyProgramGroup
             score = pixels[i+6] / 255.0;
 
             // extract generic user-data
-            userData = pixels[i+7] / 255.0;
+            if(output.userData != undefined)
+                output.userData.push(pixels[i+7] / 255.0);
 
             // register keypoint, possibly with a descriptor
             if(descriptorSize > 0) {
                 const bytes = new Uint8Array(pixels.slice(i+8, i+8 + descriptorSize));
                 const descriptor = new BinaryDescriptor(bytes);
-                keypoints.push(new SpeedyFeature(x, y, lod, rotation, score, userData, descriptor));
+                keypoints.push(new SpeedyFeature(x, y, lod, rotation, score, descriptor));
             }
             else
-                keypoints.push(new SpeedyFeature(x, y, lod, rotation, score, userData));
+                keypoints.push(new SpeedyFeature(x, y, lod, rotation, score));
         }
 
         // developer's secret ;)

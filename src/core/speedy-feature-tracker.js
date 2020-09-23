@@ -50,12 +50,13 @@ export class SpeedyFeatureTracker
      * @param {SpeedyFeature[]} keypoints the keypoints you want to track
      * @param {boolean[]} [found] output parameter: found[i] will be true if the i-th keypoint has been found
      * @param {SpeedyVector2[]} [flow] output parameter: flow vector for the i-th keypoint
+     * @param {number[]} [error] output parameter: error measure related to the i-th keypoint
      * @returns {Promise<SpeedyFeature[]>}
      */
-    track(keypoints, found = null, flow = null)
+    track(keypoints, found = null, flow = null, error = null)
     {
         const gpu = this._media._gpu; // friend class?!
-        let discarded = [];
+        let discarded = [], err = [];
 
         // validate arguments
         if(!Array.isArray(keypoints) || (found != null && !Array.isArray(found)) || (flow != null && !Array.isArray(flow)))
@@ -79,27 +80,36 @@ export class SpeedyFeatureTracker
             this._featuresAlgorithm.describe(gpu, nextImage, trackedKeypoints);
 
         // download keypoints
-        return this._trackingAlgorithm.download(gpu, trackedKeypointsWithDescriptors, descriptorSize, undefined, useAsyncTransfer, discarded).then(trackedKeypoints => {
+        return this._trackingAlgorithm.download(gpu, trackedKeypointsWithDescriptors, descriptorSize, undefined, useAsyncTransfer, discarded, err).then(trackedKeypoints => {
             const filteredKeypoints = [];
 
-            // prepare arrays
+            // initialize output arrays
             if(found != null)
                 found.length = trackedKeypoints.length;
             if(flow != null)
                 flow.length = trackedKeypoints.length;
+            if(error != null)
+                error.length = trackedKeypoints.length;
 
             // compute additional data and
             // filter out discarded keypoints
             for(let i = 0; i < trackedKeypoints.length; i++) {
                 const goodFeature = !discarded[i];
+
                 if(goodFeature)
                     filteredKeypoints.push(trackedKeypoints[i]);
+
                 if(found != null)
                     found[i] = goodFeature;
-                if(flow != null)
+
+                if(flow != null) {
                     flow[i] = goodFeature ? 
                         new SpeedyVector2(trackedKeypoints[i].x - keypoints[i].x, trackedKeypoints[i].y - keypoints[i].y) :
                         new SpeedyVector2(0, 0);
+                }
+
+                if(error != null)
+                    error[i] = err[i];
             }
 
             // done!

@@ -60,11 +60,13 @@ export class FeatureTrackingAlgorithm
      * @param {number} [max] cap the number of keypoints to this value
      * @param {boolean} [useAsyncTransfer] transfer feature points asynchronously
      * @param {boolean[]} [discarded] output array telling whether the i-th keypoint has been discarded
+     * @param {number[]} [error] error measure related to the i-th keypoint
      * @returns {Promise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, descriptorSize, max = undefined, useAsyncTransfer = true, discarded = undefined)
+    download(gpu, encodedKeypoints, descriptorSize, max = undefined, useAsyncTransfer = true, discarded = undefined, error = undefined)
     {
-        return this._downloader.download(gpu, encodedKeypoints, descriptorSize, max, useAsyncTransfer, false, discarded);
+        const options = { discarded, userData: error };
+        return this._downloader.download(gpu, encodedKeypoints, descriptorSize, max, useAsyncTransfer, false, options);
     }
 
     /**

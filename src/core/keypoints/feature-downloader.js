@@ -39,7 +39,6 @@ export class FeatureDownloader extends Observable
     constructor()
     {
         super();
-        this._rawKeypointCount = 0;
         this._filteredKeypointCount = 0;
     }
 
@@ -51,45 +50,39 @@ export class FeatureDownloader extends Observable
      * @param {number} [max] cap the number of keypoints to this value
      * @param {boolean} [useAsyncTransfer] transfer keypoints asynchronously
      * @param {boolean} [useBufferQueue] optimize async transfers
-     * @param {boolean[]} [discarded] output array telling whether the i-th keypoint has been discarded
+     * @param {object} [output] optional output object (see the encoder for details)
      * @returns {Promise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, descriptorSize, max = -1, useAsyncTransfer = true, useBufferQueue = true, discarded = undefined)
+    download(gpu, encodedKeypoints, descriptorSize, max = -1, useAsyncTransfer = true, useBufferQueue = true, output = undefined)
     {
         return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer, useBufferQueue).then(data => {
-            // when processing a video, we expect that number of keypoints
-            // in time to be a relatively smooth curve
-            const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize, discarded);
-            const measuredCount = keypoints.length; // may explode with abrupt video changes
-            const oldCount = this._filteredKeypointCount == 0 ? measuredCount : this._filteredKeypointCount;
-            const newCount = Math.ceil(oldCount + OPTIMIZER_GAIN * (measuredCount - oldCount));
 
-            this._filteredKeypointCount = newCount;
-            this._rawKeypointCount = keypoints.length;
+            // decode the keypoints
+            const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize, output);
+
+            // optimize the keypoint encoder
             if(useAsyncTransfer) {
+                const measuredCount = keypoints.length; // may explode with abrupt video changes
+                const oldCount = this._filteredKeypointCount == 0 ? measuredCount : this._filteredKeypointCount;
+                const newCount = Math.ceil(oldCount + OPTIMIZER_GAIN * (measuredCount - oldCount));
                 const optimizeFor = 1.5 * Math.max(newCount, 64);
                 gpu.programs.encoders.optimizeKeypointEncoder(optimizeFor, descriptorSize);
+                this._filteredKeypointCount = newCount;
             }
-
-            // sort the data according to cornerness score
-            keypoints.sort(this._compareKeypoints);
 
             // cap the number of keypoints if requested to do so
             max = Number(max);
-            if(Number.isFinite(max) && max >= 0)
+            if(Number.isFinite(max) && max >= 0) {
+                keypoints.sort(this._compareKeypoints); // sort by descending cornerness score
                 keypoints.splice(max, keypoints.length - max);
-
-            // let's cap it if keypoints.length explodes (noise)
-            /*
-            if(useAsyncTransfer && newCount < keypoints.length)
-                keypoints.splice(newCount, keypoints.length - newCount);
-            */
+            }
 
             // notify observers
             this._notify(keypoints);
 
             // done!
             return keypoints;
+
         }).catch(err => {
             throw new IllegalOperationError(`Can't download keypoints`, err);
         });
