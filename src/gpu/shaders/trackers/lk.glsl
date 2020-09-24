@@ -36,7 +36,7 @@ uniform int encoderLength;
 
 // maximum window size
 #ifndef MAX_WINDOW_SIZE
-#define MAX_WINDOW_SIZE 21 //15
+#error Must define MAX_WINDOW_SIZE // typically 21 or 15 (odd number)
 #endif
 
 // keypoints inside this margin get discarded
@@ -49,7 +49,7 @@ uniform int encoderLength;
 #define PREV_IMAGE 0
 
 // constants
-const int MAX_WINDOW_SIZE_PLUS = MAX_WINDOW_SIZE + 2; // add some slack for the derivatives
+const int MAX_WINDOW_SIZE_PLUS = MAX_WINDOW_SIZE + 2; // add slack for the derivatives (both sides)
 const int MAX_WINDOW_SIZE_PLUS_SQUARED = MAX_WINDOW_SIZE_PLUS * MAX_WINDOW_SIZE_PLUS;
 const int DBL_MAX_WINDOW_SIZE_PLUS_SQUARED = 2 * MAX_WINDOW_SIZE_PLUS_SQUARED;
 const int MAX_WINDOW_RADIUS_PLUS = (MAX_WINDOW_SIZE_PLUS - 1) / 2;
@@ -63,7 +63,7 @@ float pixelBuffer[DBL_MAX_WINDOW_SIZE_PLUS_SQUARED];
 #define nextPixel(index) pixelBuffer[MAX_WINDOW_SIZE_PLUS_SQUARED + (index)] // next image
 
 // convert offset to index: -MAX_WINDOW_RADIUS_PLUS <= i, j <= MAX_WINDOW_RADIUS_PLUS
-#define windowIndex(i, j) (((j) + (MAX_WINDOW_RADIUS_PLUS)) * MAX_WINDOW_SIZE_PLUS + ((i) + (MAX_WINDOW_RADIUS_PLUS)))
+#define pixelIndex(i, j) (((j) + MAX_WINDOW_RADIUS_PLUS) * MAX_WINDOW_SIZE_PLUS + ((i) + MAX_WINDOW_RADIUS_PLUS))
 
 /**
  * Read neighborhood around center at a specific level-of-detail
@@ -80,12 +80,12 @@ void readWindow(vec2 center, float lod)
 
     // define macro to read pixels from both images
     // (do all compilers support multi-line macros?)
-    #define readPixelsAt(ox, oy) offset = ivec2((ox), (oy)); idx = windowIndex(offset.x, offset.y); nextPixel(idx) = pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g; prevPixel(idx) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g
+    #define readPixelsAt(ox, oy) offset = ivec2((ox), (oy)); idx = pixelIndex(offset.x, offset.y); nextPixel(idx) = pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g; prevPixel(idx) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g
 
     // use only uniform and constant values in the definition of
     // the loops, so that the driver compiler MAY unroll them
 
-    // read pixels from a (2w + 1) x (2w + 1) window
+    // read pixels from a (2r + 1) x (2r + 1) window
     for(int j = 0; j < windowSize; j++) {
         for(int i = 0; i < windowSize; i++) {
             // macro: no do { ... } while(false) wrapping,
@@ -94,24 +94,25 @@ void readWindow(vec2 center, float lod)
         }
     }
 
-    // read additional pixels from a (2w + 3) x (2w + 3) window
+    // read additional pixels from a (2r + 3) x (2r + 3) window
+    int r1 = r+1;
     for(int k = 0; k < windowSize; k++) {
-        readPixelsAt(-(r+1), k-r);
-        readPixelsAt( (r+1), k-r);
-        readPixelsAt(k-r,-(r+1));
-        readPixelsAt(k-r, (r+1));
+        readPixelsAt(-r1, k-r);
+        readPixelsAt( r1, k-r);
+        readPixelsAt(k-r,-r1);
+        readPixelsAt(k-r, r1);
     }
-    readPixelsAt(-(r+1),-(r+1));
-    readPixelsAt( (r+1),-(r+1));
-    readPixelsAt(-(r+1), (r+1));
-    readPixelsAt( (r+1), (r+1));
+    readPixelsAt(-r1,-r1);
+    readPixelsAt( r1,-r1);
+    readPixelsAt(-r1, r1);
+    readPixelsAt( r1, r1);
 }
 
 /**
  * Compute spatial derivatives of NEXT_IMAGE or PREV_IMAGE
  * at an offset from the center specified in readWindow()
  * @param {int} imageCode NEXT_IMAGE or PREV_IMAGE
- * @param {ivec2} offset such that |offset| <= windowRadius
+ * @param {ivec2} offset such that max(|offset.x|, |offset.y|) <= windowRadius
  * @returns {vec2} image derivatives at (center+offset)
  */
 vec2 computeDerivatives(int imageCode, ivec2 offset)
@@ -131,15 +132,15 @@ vec2 computeDerivatives(int imageCode, ivec2 offset)
     // read buffered neighborhood
     int indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;
     mat3 window = mat3(
-        pixelBuffer[indexOffset + windowIndex(offset.x-1, offset.y-1)],
-        pixelBuffer[indexOffset + windowIndex(offset.x+0, offset.y-1)],
-        pixelBuffer[indexOffset + windowIndex(offset.x+1, offset.y-1)],
-        pixelBuffer[indexOffset + windowIndex(offset.x-1, offset.y+0)],
-        0.0f, //pixelBuffer[indexOffset + windowIndex(offset.x+0, offset.y+0)], // unused
-        pixelBuffer[indexOffset + windowIndex(offset.x+1, offset.y+0)],
-        pixelBuffer[indexOffset + windowIndex(offset.x-1, offset.y+1)],
-        pixelBuffer[indexOffset + windowIndex(offset.x+0, offset.y+1)],
-        pixelBuffer[indexOffset + windowIndex(offset.x+1, offset.y+1)]
+        pixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y-1)],
+        pixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y-1)],
+        pixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y-1)],
+        pixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y+0)],
+        0.0f, //pixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y+0)], // unused
+        pixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y+0)],
+        pixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y+1)],
+        pixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y+1)],
+        pixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y+1)]
     );
 
     // apply filter
@@ -158,7 +159,7 @@ vec2 computeDerivatives(int imageCode, ivec2 offset)
  * Read the pixel intensity at (center+offset)
  * using the buffered values
  * @param {int} imageCode NEXT_IMAGE or PREV_IMAGE
- * @param {ivec2} offset such that |offset| <= windowRadius
+ * @param {ivec2} offset such that max(|offset.x|, |offset.y|) <= windowRadius
  * @returns {float} pixel intensity
  */
 float readBufferedPixel(int imageCode, ivec2 offset)
@@ -169,14 +170,14 @@ float readBufferedPixel(int imageCode, ivec2 offset)
 
     // Read pixel intensity
     int indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;
-    return pixelBuffer[indexOffset + windowIndex(offset.x, offset.y)];
+    return pixelBuffer[indexOffset + pixelIndex(offset.x, offset.y)];
 }
 
 /**
  * Read the pixel intensity at (center+offset)
  * with subpixel accuracy using the buffered values
  * @param {int} imageCode NEXT_IMAGE or PREV_IMAGE
- * @param {vec2} offset such that |offset| <= windowRadius
+ * @param {vec2} offset such that max(|offset.x|, |offset.y|) <= windowRadius
  * @returns {float} subpixel intensity
  */
 /*
@@ -194,10 +195,10 @@ float readBufferedSubpixel(int imageCode, vec2 offset)
     // Read a 2x2 window around (center+offset)
     int indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;
     vec4 pix = vec4(
-        pixelBuffer[indexOffset + windowIndex(p.x, p.y)],
-        pixelBuffer[indexOffset + windowIndex(p.x, p.y+1)],
-        pixelBuffer[indexOffset + windowIndex(p.x+1, p.y)],
-        pixelBuffer[indexOffset + windowIndex(p.x+1, p.y+1)]
+        pixelBuffer[indexOffset + pixelIndex(p.x, p.y)],
+        pixelBuffer[indexOffset + pixelIndex(p.x, p.y+1)],
+        pixelBuffer[indexOffset + pixelIndex(p.x+1, p.y)],
+        pixelBuffer[indexOffset + pixelIndex(p.x+1, p.y+1)]
     );
 
     // Perform bilinear interpolation

@@ -57,16 +57,23 @@ export class FeatureTrackingAlgorithm
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
      * @param {number} descriptorSize in bytes
-     * @param {number} [max] cap the number of keypoints to this value
      * @param {boolean} [useAsyncTransfer] transfer feature points asynchronously
-     * @param {boolean[]} [discarded] output array telling whether the i-th keypoint has been discarded
-     * @param {number[]} [error] error measure related to the i-th keypoint
+     * @param {boolean[]} [discard] i-th element will be true if the i-th should be discarded
      * @returns {Promise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, descriptorSize, max = undefined, useAsyncTransfer = true, discarded = undefined, error = undefined)
+    download(gpu, encodedKeypoints, descriptorSize, useAsyncTransfer = true, discard = undefined)
     {
-        const options = { discarded, userData: error };
-        return this._downloader.download(gpu, encodedKeypoints, descriptorSize, max, useAsyncTransfer, false, options);
+        const output = discard ? { discard: discard, userData: [] } : undefined;
+        return this._downloader.download(gpu, encodedKeypoints, descriptorSize, undefined, useAsyncTransfer, false, output).then(keypoints => {
+            // discard keypoints if they are outside
+            // the image or if they are of "bad quality"
+            if(discard) {
+                for(let i = 0; i < discard.length; i++)
+                    discard[i] = discard[i] || (output.userData[i] > 0);
+            }
+
+            return keypoints;
+        });
     }
 
     /**

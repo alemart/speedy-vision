@@ -19,7 +19,7 @@
  * Feature detection & description: abstract class
  */
 
-import { AbstractMethodError, IllegalArgumentError } from '../../utils/errors';
+import { AbstractMethodError } from '../../utils/errors';
 import { AutomaticSensitivity } from './automatic-sensitivity';
 import { FeatureDownloader } from './feature-downloader';
 import { SpeedyFeature } from '../speedy-feature';

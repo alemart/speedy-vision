@@ -36,9 +36,10 @@ export class LKFeatureTrackingAlgorithm extends FeatureTrackingAlgorithm
      * @param {number} descriptorSize in bytes
      * @param {number} [windowSize] neighborhood size, an odd number
      * @param {number} [depth] how many pyramid layers will be scanned
+     * @param {number} [discardThreshold] used to discard "bad" keypoints, typically 10^(-4) - increase to discard more
      * @returns {SpeedyTexture} nextKeypoints tiny texture with encoded keypoints (time: t)
      */
-    track(gpu, nextImage, prevImage, prevKeypoints, descriptorSize, windowSize = 21, depth = 5)
+    track(gpu, nextImage, prevImage, prevKeypoints, descriptorSize, windowSize = 21, depth = 5, discardThreshold = 0.0001)
     {
         // create pyramids
         const nextPyramid = nextImage.generateMipmap();
@@ -46,6 +47,6 @@ export class LKFeatureTrackingAlgorithm extends FeatureTrackingAlgorithm
 
         // track feature points
         const encoderLength = gpu.programs.encoders.encoderLength;
-        return gpu.programs.trackers.lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, depth, descriptorSize, encoderLength);
+        return gpu.programs.trackers.lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, depth, discardThreshold, descriptorSize, encoderLength);
     }
 }

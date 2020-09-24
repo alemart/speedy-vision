@@ -62,10 +62,11 @@ void main()
     ivec2 thread = threadLocation();
     KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);
     int q = findKeypointIndex(address, descriptorSize);
-    ivec2 position; vec4 pixel;
+    ivec2 position;
+    vec4 pixel;
 
     // is it a descriptor cell?
-    color = vec4(0.0f);
+    color = vec4(0.0f); // fill it with zeroes
     if(address.offset > 1)
         return;
 

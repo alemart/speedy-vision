@@ -25,14 +25,14 @@
  * each keypoint takes (2 + N/4) pixels of 32 bits
  *
  *    1 pixel        1 pixel         N/4 pixels
- * [  X  |  Y  ][ S | R | C | - ][  ...  D  ...  ]
+ * [  X  |  Y  ][ S | R | C | * ][  ...  D  ...  ]
  *
  * X: keypoint_xpos (2 bytes)
  * Y: keypoint_ypos (2 bytes)
  * S: keypoint_scale (1 byte)
  * R: keypoint_rotation (1 byte)
  * C: keypoint_cornerness_score (1 byte)
- * -: unused
+ * *: general purpose user_data (1 byte)
  * D: descriptor binary string (N bytes)
  *
  *

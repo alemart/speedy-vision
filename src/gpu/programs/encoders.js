@@ -26,7 +26,7 @@ import { BinaryDescriptor } from '../../core/speedy-descriptor';
 import { StochasticTuner } from '../../core/tuners/stochastic-tuner';
 import { Utils } from '../../utils/utils'
 import { IllegalOperationError } from '../../utils/errors';
-import { FIX_RESOLUTION, PYRAMID_MAX_LEVELS, LOG2_PYRAMID_MAX_SCALE } from '../../utils/globals';
+import { FIX_RESOLUTION, PYRAMID_MAX_LEVELS, LOG2_PYRAMID_MAX_SCALE, MAX_TEXTURE_LENGTH } from '../../utils/globals';
 
 // We won't admit more than MAX_KEYPOINTS per media.
 // The larger this value is, the more data we need to transfer from the GPU.
@@ -102,7 +102,7 @@ export class GPUEncoders extends SpeedyProgramGroup
 
         // setup internal data
         let neighborFn = (s) => Math.round(Utils.gaussianNoise(s, 64)) % 256;
-        this._tuner = new StochasticTuner(48, 32, 48/*255*/, 0.2, 8, 60, neighborFn);
+        this._tuner = new StochasticTuner(48, 32, 48, 0.2, 8, 60, neighborFn);
         this._encoderLength = INITIAL_ENCODER_LENGTH;
         this._spawnedAt = performance.now();
         this._uploadBuffer = null; // lazy spawn
@@ -155,7 +155,7 @@ export class GPUEncoders extends SpeedyProgramGroup
      * @param {number} [descriptorSize] in bytes
      * @returns {boolean} true if there was any change to the length of the encoder
      */
-    guaranteeKeypointEncoder(keypointCount, descriptorSize)
+    expandKeypointEncoder(keypointCount, descriptorSize)
     {
         // resize if not enough space
         if(this._minimumEncoderLength(keypointCount, descriptorSize) > this._encoderLength)
@@ -186,7 +186,7 @@ export class GPUEncoders extends SpeedyProgramGroup
         // parameters
         const encoderLength = this._encoderLength;
         const imageSize = [ this._width, this._height ];
-        const maxIterations = this._tuner.currentValue();
+        const maxIterations = this._tuner.currentValue(); // any value between 32 and 48 should work on PC & mobile
 
         // encode keypoints
         const offsets = this._encodeKeypointOffsets(corners, imageSize, maxIterations);
@@ -199,7 +199,7 @@ export class GPUEncoders extends SpeedyProgramGroup
      * @param {number} [descriptorSize] in bytes
      * @param {object} [output] optional output object
      * @param {number[]} [output.userData] generic user-data related to the i-th keypoint
-     * @param {boolean[]} [output.discarded] tells whether the i-th keypoint has been discarded
+     * @param {boolean[]} [output.discard] signals that the i-th keypoint should be discarded
      * @returns {SpeedyFeature[]} keypoints
      */
     decodeKeypoints(pixels, descriptorSize = 0, output = {})
@@ -212,8 +212,8 @@ export class GPUEncoders extends SpeedyProgramGroup
         // initialize output arrays
         if(output.userData != undefined)
             output.userData.length = 0;
-        if(output.discarded != undefined)
-            output.discarded.length = 0;
+        if(output.discard != undefined)
+            output.discard.length = 0;
 
         // how many bytes should we read?
         const e = this._encoderLength;
@@ -228,23 +228,23 @@ export class GPUEncoders extends SpeedyProgramGroup
             if(x >= 0xFFFF && y >= 0xFFFF) // if end of list
                 break;
 
-            // discarded keypoint?
-            if(output.discarded != undefined) {
-                const isDiscarded = (x >= 0xFFFF || y >= 0xFFFF);
-                output.discarded.push(isDiscarded);
-            }
-
             // convert from fixed-point
             x /= FIX_RESOLUTION;
             y /= FIX_RESOLUTION;
 
+            // emit signal to discard keypoints outside the image
+            if(output.discard != undefined) {
+                const isDiscardedKeypoint = (x > MAX_TEXTURE_LENGTH || y > MAX_TEXTURE_LENGTH || x < 0 || y < 0);
+                output.discard.push(isDiscardedKeypoint);
+            }
+
             // extract LOD
             hasLod = (pixels[i+4] < 255);
             lod = !hasLod ? 0.0 :
-                -LOG2_PYRAMID_MAX_SCALE + (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS) * pixels[i+4] / 255;
+                -LOG2_PYRAMID_MAX_SCALE + (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS) * pixels[i+4] / 255.0;
 
             // extract orientation
-            hasRotation = hasLod; // FIXME
+            hasRotation = hasLod; // think of a better solution
             rotation = !hasRotation ? 0.0 :
                 ((2 * pixels[i+5]) / 255.0 - 1.0) * Math.PI;
 
@@ -252,8 +252,10 @@ export class GPUEncoders extends SpeedyProgramGroup
             score = pixels[i+6] / 255.0;
 
             // extract generic user-data
-            if(output.userData != undefined)
-                output.userData.push(pixels[i+7] / 255.0);
+            if(output.userData != undefined) {
+                const data = pixels[i+7] / 255.0;
+                output.userData.push(data);
+            }
 
             // register keypoint, possibly with a descriptor
             if(descriptorSize > 0) {
@@ -351,7 +353,7 @@ export class GPUEncoders extends SpeedyProgramGroup
 
         // WARNING: you shouldn't work with a different set of keypoints
         // while you're working with the ones you have just uploaded
-        this.guaranteeKeypointEncoder(keypointCount, descriptorSize);
+        this.expandKeypointEncoder(keypointCount, descriptorSize);
 
         // Upload data
         this._uploadKeypoints.setUBO('KeypointBuffer', this._uploadBuffer);
@@ -368,7 +370,7 @@ export class GPUEncoders extends SpeedyProgramGroup
     {
         const clampedKeypointCount = Math.max(0, Math.min(Math.ceil(keypointCount), MAX_KEYPOINTS));
         const pixelsPerKeypoint = Math.ceil(2 + descriptorSize / 4);
-        const len = Math.ceil(Math.sqrt((4 + clampedKeypointCount * 1.05) * pixelsPerKeypoint)); // add some slack
+        const len = Math.ceil(Math.sqrt(clampedKeypointCount * pixelsPerKeypoint));
 
         return Math.max(MIN_ENCODER_LENGTH, Math.min(len, MAX_ENCODER_LENGTH));
     }

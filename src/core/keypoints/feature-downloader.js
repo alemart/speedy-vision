@@ -50,7 +50,7 @@ export class FeatureDownloader extends Observable
      * @param {number} [max] cap the number of keypoints to this value
      * @param {boolean} [useAsyncTransfer] transfer keypoints asynchronously
      * @param {boolean} [useBufferQueue] optimize async transfers
-     * @param {object} [output] optional output object (see the encoder for details)
+     * @param {object} [output] output object with additional info about the keypoints (see the encoder for details)
      * @returns {Promise<SpeedyFeature[]>}
      */
     download(gpu, encodedKeypoints, descriptorSize, max = -1, useAsyncTransfer = true, useBufferQueue = true, output = undefined)
@@ -62,12 +62,14 @@ export class FeatureDownloader extends Observable
 
             // optimize the keypoint encoder
             if(useAsyncTransfer) {
-                const measuredCount = keypoints.length; // may explode with abrupt video changes
+                const measuredCount = keypoints.length;
                 const oldCount = this._filteredKeypointCount == 0 ? measuredCount : this._filteredKeypointCount;
                 const newCount = Math.ceil(oldCount + OPTIMIZER_GAIN * (measuredCount - oldCount));
-                const optimizeFor = 1.5 * Math.max(newCount, 64);
-                gpu.programs.encoders.optimizeKeypointEncoder(optimizeFor, descriptorSize);
                 this._filteredKeypointCount = newCount;
+
+                // add slack to accomodate abrupt changes in the number of keypoints
+                const optimizeFor = 2.0 * Math.max(newCount, 64);
+                gpu.programs.encoders.optimizeKeypointEncoder(optimizeFor, descriptorSize);
             }
 
             // cap the number of keypoints if requested to do so
