@@ -25,7 +25,9 @@ import { SpeedyFeature } from '../speedy-feature';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
 
 // constants
-const OPTIMIZER_GAIN = 0.4;
+const OPTIMIZER_GAIN = 0.4; // between 0 and 1
+const OPTIMIZER_SLACK = 2.0; // how many more keypoints (percentage) can the encoder accomodate in the next frame?
+const OPTIMIZER_MIN_KEYPOINTS = 64; // at any point in time, the encoder will have space for this many keypoints
 
 /**
  * The FeatureDownloader receives a texture of encoded
@@ -68,7 +70,7 @@ export class FeatureDownloader extends Observable
                 this._filteredKeypointCount = newCount;
 
                 // add slack to accomodate abrupt changes in the number of keypoints
-                const optimizeFor = 2.0 * Math.max(newCount, 64);
+                const optimizeFor = OPTIMIZER_SLACK * Math.max(newCount, OPTIMIZER_MIN_KEYPOINTS);
                 gpu.programs.encoders.optimizeKeypointEncoder(optimizeFor, descriptorSize);
             }
 

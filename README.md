@@ -1,6 +1,6 @@
 # speedy-vision.js
 
-Build real-time stuff with this GPU-accelerated Computer Vision library for JavaScript.
+Build real-time stuff with **speedy-vision.js**, a GPU-accelerated Computer Vision library for JavaScript.
 
 [<img src="assets/demo-orb.gif" width="640" alt="Speedy feature detection">](https://alemart.github.io/speedy-vision-js/demos/orb-features.html)
 
@@ -29,6 +29,8 @@ There are plenty of [demos](#demos) available!
 ## Author
 
 speedy-vision.js is developed by [Alexandre Martins](https://github.com/alemart), a computer scientist from Brazil. It is released under the [Apache-2.0 license](LICENSE).
+
+**Contact:** alemartf at gmail.com
 
 -----
 
@@ -344,7 +346,7 @@ window.onload = async function() {
 
 Speedy can enhance your images in different ways before detecting the interest points. These enhancements are intended to make the feature detection more robust, at a slighly higher computational cost. The desired enhancements are specified in the `settings.enhancements` object:
 
-* `illumination: boolean`. If set to `true`, the feature detection will be more robust in relation to lighting changes and shadows. It will use the [Nightvision](#nightvision) filter behind the scenes.
+* `illumination: boolean`. If set to `true`, the feature detection algorithm will be more robust when dealing with lighting changes and shadows. It will use the [Nightvision](#nightvision) filter behind the scenes.
 
 
 ##### SpeedyFeatureDetector.sensitivity
@@ -403,7 +405,7 @@ Speedy includes an implementation of the Harris corner detector with the Shi-Tom
 
 `Speedy.FeatureDetector.ORB(): SpeedyFeatureDetector`
 
-Speedy includes an implementation of ORB. It is an efficient solution that first finds keypoints in scale-space and then compute the descriptors for feature matching. The following additional properties are available:
+Speedy includes an implementation of ORB. It is an efficient solution that first finds keypoints in scale-space and then computes descriptors for feature matching. The following additional properties are available:
 
 * `depth: number`. An integer between `1` and `4` that tells Speedy how "deep" it should go when searching for keypoints in scale-space. Defaults to `3`.
 * `quality: number`. A value between `0` and `1`, as in the Harris detector. This is an alternative to `sensitivity`.
