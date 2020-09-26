@@ -83,7 +83,8 @@ void readWindow(vec2 center, float lod)
     #define readPixelsAt(ox, oy) offset = ivec2((ox), (oy)); idx = pixelIndex(offset.x, offset.y); nextPixel(idx) = pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g; prevPixel(idx) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g
 
     // use only uniform and constant values in the definition of
-    // the loops, so that the driver compiler MAY unroll them
+    // the loops, so that the compiler provided by the driver
+    // MAY unroll them
 
     // read pixels from a (2r + 1) x (2r + 1) window
     for(int j = 0; j < windowSize; j++) {

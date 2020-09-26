@@ -68,7 +68,8 @@ void readWindow(vec2 center, float lod)
     #define readPixelAt(ox, oy) pixelBuffer[pixelIndex((ox), (oy))] = pyrSubpixelAtExOffset(pyramid, center, lod, pot, ivec2((ox), (oy)), pyrBaseSize).g
 
     // use only uniform and constant values in the definition of
-    // the loops, so that the driver compiler MAY unroll them
+    // the loops, so that the compiler provided by the driver
+    // MAY unroll them
 
     // read pixels from a (2r + 1) x (2r + 1) window
     for(int j = 0; j < windowSize; j++) {
