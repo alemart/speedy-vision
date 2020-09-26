@@ -25,9 +25,86 @@ import { SpeedyFeature } from '../speedy-feature';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
 
 // constants
-const OPTIMIZER_GAIN = 0.4; // between 0 and 1
-const OPTIMIZER_SLACK = 2.0; // how many more keypoints (percentage) can the encoder accomodate in the next frame?
-const OPTIMIZER_MIN_KEYPOINTS = 64; // at any point in time, the encoder will have space for this many keypoints
+const DOWNLOADER_MIN_KEYPOINTS = 64; // at any point in time, the encoder will have space for
+                                     // at least this number of keypoints
+
+
+
+/**
+ * A filter used to estimate the future number of
+ * keypoints given past measurements
+ */
+class FeatureCountEstimator
+{
+    /**
+     * Class constructor
+     */
+    constructor()
+    {
+        this._gain = 0.85; // a number in [0,1]
+        this._initialState = 1024; // initial number of keypoints (guess)
+        this._state = this._initialState;
+        this._prevState = this._state;
+    }
+
+    /**
+     * Estimate the number of keypoints on the next time-step
+     * @param {number} measurement
+     * @returns {number}
+     */
+    estimate(measurement)
+    {
+        // estimate new state
+        const gain = this._gain;
+        const prediction = Math.max(0, this._state + (this._state - this._prevState));
+        const newState = prediction + gain * (measurement - prediction);
+
+        // testing
+        /*
+        this._cnt = Math.round(measurement - this._state) >= 1 ? (this._cnt||0) + 1 : 0;
+        const diff = Math.abs(Math.round(measurement - this._state));
+        const ratio = measurement / this._state-1;
+        console.log(JSON.stringify({ prediction: Math.round(prediction), newState: Math.round(newState), measurement, diff, ratio: Math.round(100*ratio)+'%'}).replace(/,/g,',\n'));
+        if(ratio+1 > this.maxGrowth) console.log('----------');
+        */
+
+        // save state
+        this._prevState = this._state;
+        this._state = newState;
+
+        // return
+        return Math.round(this._state);
+    }
+
+    /**
+     * Reset the filter to its initial state
+     * @returns {number}
+     */
+    reset()
+    {
+        // jogar gain --> 0
+        // sinalizo que quero aumentar muito
+        return (this._state = this._prevState = this._initialState);
+    }
+
+    /**
+     * We expect measurement <= maxGrowth * previousState
+     * to be true (almost) all the time, so we can
+     * accomodate the encoder
+     * @returns {number}
+     */
+    get maxGrowth()
+    {
+        // If you increase this number, you'll get
+        // more robust responses to abrupt and significant
+        // increases in the number of keypoints, but you'll
+        // also get higher CPU usage all the time. We would
+        // like to keep this value low.
+        return 1.5;
+    }
+}
+
+
 
 /**
  * The FeatureDownloader receives a texture of encoded
@@ -41,7 +118,8 @@ export class FeatureDownloader extends Observable
     constructor()
     {
         super();
-        this._filteredKeypointCount = 0;
+        this._estimator = new FeatureCountEstimator();
+        this._reset = false;
     }
 
     /**
@@ -64,13 +142,14 @@ export class FeatureDownloader extends Observable
 
             // optimize the keypoint encoder
             if(useAsyncTransfer) {
-                const measuredCount = keypoints.length;
-                const oldCount = this._filteredKeypointCount == 0 ? measuredCount : this._filteredKeypointCount;
-                const newCount = Math.ceil(oldCount + OPTIMIZER_GAIN * (measuredCount - oldCount));
-                this._filteredKeypointCount = newCount;
+                // how many keypoints do we expect in the next frame?
+                const n = this._reset ? this._estimator.reset() : keypoints.length;
+                const nextCount = this._estimator.estimate(n);
+                this._reset = false;
 
                 // add slack to accomodate abrupt changes in the number of keypoints
-                const optimizeFor = OPTIMIZER_SLACK * Math.max(newCount, OPTIMIZER_MIN_KEYPOINTS);
+                const adjustedNextCount = Math.max(nextCount, DOWNLOADER_MIN_KEYPOINTS);
+                const optimizeFor = this._estimator.maxGrowth * adjustedNextCount;
                 gpu.programs.encoders.optimizeKeypointEncoder(optimizeFor, descriptorSize);
             }
 
@@ -90,6 +169,14 @@ export class FeatureDownloader extends Observable
         }).catch(err => {
             throw new IllegalOperationError(`Can't download keypoints`, err);
         });
+    }
+
+    /**
+     * Resets the downloader
+     */
+    reset()
+    {
+        this._reset = true;
     }
 
     /**

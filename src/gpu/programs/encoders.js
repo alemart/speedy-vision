@@ -190,6 +190,7 @@ export class GPUEncoders extends SpeedyProgramGroup
 
         // encode keypoints
         const offsets = this._encodeKeypointOffsets(corners, imageSize, maxIterations);
+        this._encodeKeypoints.clear(0, 0, 0, 0); // clear all pixels to 0
         return this._encodeKeypoints(offsets, imageSize, encoderLength, descriptorSize);
     }
 
@@ -227,6 +228,12 @@ export class GPUEncoders extends SpeedyProgramGroup
             y = (pixels[i+3] << 8) | pixels[i+2];
             if(x >= 0xFFFF && y >= 0xFFFF) // if end of list
                 break;
+
+            // likely to be incorrect black pixels
+            // causing interference with the
+            // encoderLength filter
+            if(x + y == 0)
+                continue;
 
             // convert from fixed-point
             x /= FIX_RESOLUTION;
