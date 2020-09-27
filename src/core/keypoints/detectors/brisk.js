@@ -19,7 +19,7 @@
  * BRISK feature detector & descriptor
  */
 
-import { FeaturesAlgorithm } from '../features-algorithm';
+import { FeatureDetectionAlgorithm } from '../feature-detection-algorithm';
 import { IllegalArgumentError, NotImplementedError } from '../../../utils/errors';
 import { SpeedyGPU } from '../../../gpu/speedy-gpu';
 import { PYRAMID_MAX_LEVELS } from '../../../utils/globals';
@@ -37,7 +37,7 @@ let shortPairs = null, longPairs = null;
 /**
  * BRISK feature detector & descriptor
  */
-export class BRISKFeatures extends FeaturesAlgorithm
+export class BRISKFeatures extends FeatureDetectionAlgorithm
 {
     /**
      * Class constructor

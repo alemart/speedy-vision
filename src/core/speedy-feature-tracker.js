@@ -19,7 +19,7 @@
  * An easy-to-use class for working with feature trackers
  */
 
-import { FeaturesAlgorithm } from './keypoints/features-algorithm';
+import { FeatureDetectionAlgorithm } from './keypoints/feature-detection-algorithm';
 import { FeatureTrackingAlgorithm } from './keypoints/feature-tracking-algorithm';
 import { SpeedyMedia } from './speedy-media';
 import { SpeedyGPU } from '../gpu/speedy-gpu';
@@ -34,12 +34,12 @@ export class SpeedyFeatureTracker
      * Class constructor
      * @param {SpeedyMedia} media the media that holds the features
      * @param {FeatureTrackingAlgorithm} trackingAlgorithm used to track the features
-     * @param {FeaturesAlgorithm} [featuresAlgorithm] used to describe the tracked features
+     * @param {FeatureDetectionAlgorithm} [detectionAlgorithm] used to detect & describe the tracked features
      */
-    constructor(media, trackingAlgorithm, featuresAlgorithm = null)
+    constructor(media, trackingAlgorithm, detectionAlgorithm = null)
     {
         this._trackingAlgorithm = trackingAlgorithm;
-        this._featuresAlgorithm = featuresAlgorithm;
+        this._detectionAlgorithm = detectionAlgorithm;
         this._media = media;
         this._inputTexture = null;
         this._prevInputTexture = null;
@@ -66,16 +66,24 @@ export class SpeedyFeatureTracker
         // preliminary data
         const nextImage = this._inputTexture;
         const prevImage = this._prevInputTexture;
-        const descriptorSize = this._featuresAlgorithm != null ? this._featuresAlgorithm.descriptorSize : 0;
+        const descriptorSize = this._detectionAlgorithm != null ? this._detectionAlgorithm.descriptorSize : 0;
         const useAsyncTransfer = (this._media.options.usage != 'static');
+
+        // reserve space for the encoder
+        gpu.programs.encoders.reserve(keypoints.length, descriptorSize);
+
+        // disable buffer queue on the feature detector,
+        // so we don't get delayed responses
+        if(this._detectionAlgorithm != null)
+            this._detectionAlgorithm.disableBufferQueue();
 
         // upload & track keypoints
         const prevKeypoints = this._trackingAlgorithm.upload(gpu, keypoints, descriptorSize);
         const trackedKeypoints = this._trackingAlgorithm.track(gpu, nextImage, prevImage, prevKeypoints, descriptorSize);
 
         // compute feature descriptors (if an algorithm is provided)
-        const trackedKeypointsWithDescriptors = this._featuresAlgorithm == null ? trackedKeypoints :
-            this._featuresAlgorithm.describe(gpu, nextImage, trackedKeypoints);
+        const trackedKeypointsWithDescriptors = this._detectionAlgorithm == null ? trackedKeypoints :
+            this._detectionAlgorithm.describe(gpu, nextImage, trackedKeypoints);
 
         // download keypoints
         const discard = [];

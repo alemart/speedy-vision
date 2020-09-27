@@ -20,20 +20,20 @@
  */
 
 import { ColorFormat } from '../utils/types'
-import { FeaturesAlgorithm } from './keypoints/features-algorithm';
+import { FeatureDetectionAlgorithm } from './keypoints/feature-detection-algorithm';
 import { IllegalArgumentError, IllegalOperationError } from '../utils/errors';
 
 /**
  * Basic feature detection & description API
  * This is an easy-to-use wrapper around the internal
- * FeaturesAlgorithm class, which deals with encoded
+ * FeatureDetectionAlgorithm class, which deals with encoded
  * textures and is not suitable for end-user usage
  */
 export class SpeedyFeatureDetector
 {
     /**
      * Class constructor
-     * @param {FeaturesAlgorithm} algorithm 
+     * @param {FeatureDetectionAlgorithm} algorithm 
      */
     constructor(algorithm)
     {

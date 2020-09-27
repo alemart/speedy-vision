@@ -39,8 +39,8 @@ export class SpeedyFeatureTrackerFactory extends SpeedyNamespace
     static LK(media, featureDetector = null)
     {
         const trackingAlgorithm = new LKFeatureTrackingAlgorithm();
-        const featuresAlgorithm = featureDetector ? featureDetector._algorithm : null;
+        const detectionAlgorithm = featureDetector ? featureDetector._algorithm : null;
 
-        return new SpeedyFeatureTracker(media, trackingAlgorithm, featuresAlgorithm);
+        return new SpeedyFeatureTracker(media, trackingAlgorithm, detectionAlgorithm);
     }
 }

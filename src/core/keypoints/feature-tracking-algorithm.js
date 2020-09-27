@@ -21,21 +21,21 @@
 
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
 import { AbstractMethodError } from '../../utils/errors';
-import { FeatureDownloader } from './feature-downloader';
+import { FeatureAlgorithm } from './feature-algorithm';
 import { SpeedyFeature } from '../speedy-feature';
 
 /**
  * Used to track feature points
  * @abstract
  */
-export class FeatureTrackingAlgorithm
+export class FeatureTrackingAlgorithm extends FeatureAlgorithm
 {
     /**
      * Class constructor
      */
     constructor()
     {
-        this._downloader = new FeatureDownloader();
+        super();
     }
 
     /**

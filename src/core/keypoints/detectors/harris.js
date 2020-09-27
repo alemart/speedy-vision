@@ -20,7 +20,7 @@
  */
 
 import { SpeedyGPU } from '../../../gpu/speedy-gpu';
-import { FeaturesAlgorithm } from '../features-algorithm';
+import { FeatureDetectionAlgorithm } from '../feature-detection-algorithm';
 import { PixelComponent } from '../../../utils/types';
 import { IllegalArgumentError } from '../../../utils/errors';
 import { PYRAMID_MAX_LEVELS } from '../../../utils/globals';
@@ -39,7 +39,7 @@ const SOBEL_OCTAVE_COUNT = 2 * PYRAMID_MAX_LEVELS - 1; // Sobel derivatives for 
 /**
  * Harris corner detector
  */
-export class HarrisFeatures extends FeaturesAlgorithm
+export class HarrisFeatures extends FeatureDetectionAlgorithm
 {
     /**
      * Class constructor

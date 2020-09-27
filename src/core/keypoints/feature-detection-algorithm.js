@@ -15,13 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * feature-algorithm.js
+ * feature-detection-algorithm.js
  * Feature detection & description: abstract class
  */
 
 import { AbstractMethodError } from '../../utils/errors';
 import { AutomaticSensitivity } from './automatic-sensitivity';
-import { FeatureDownloader } from './feature-downloader';
+import { FeatureAlgorithm } from './feature-algorithm';
 import { SpeedyFeature } from '../speedy-feature';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
 
@@ -30,16 +30,17 @@ import { SpeedyGPU } from '../../gpu/speedy-gpu';
  * detection & description
  * @abstract
  */
-export class FeaturesAlgorithm
+export class FeatureDetectionAlgorithm extends FeatureAlgorithm
 {
     /**
      * Class constructor
      */
     constructor()
     {
-        this._downloader = new FeatureDownloader();
+        super();
         this._sensitivity = 0;
         this._automaticSensitivity = null;
+        this._useBufferQueue = true;
     }
 
     /**
@@ -49,13 +50,34 @@ export class FeaturesAlgorithm
      * It must return 0 if the algorithm has no
      * descriptor attached to it
      *
-     * @abstract
      * @returns {number} descriptor size in bytes
      */
     get descriptorSize()
     {
         // This must be implemented in subclasses
         throw new AbstractMethodError();
+    }
+
+    /**
+     * Enable the buffer queue optimization
+     * It's an optimization technique that implies a 1-frame delay
+     * in the downloads when using async transfers; it may or may
+     * not be acceptable, depending on what you're trying to do
+     */
+    enableBufferQueue()
+    {
+        this._useBufferQueue = true;
+    }
+
+    /**
+     * Disable the buffer queue optimization
+     * It's an optimization technique that implies a 1-frame delay
+     * in the downloads when using async transfers; it may or may
+     * not be acceptable, depending on what you're trying to do
+     */
+    disableBufferQueue()
+    {
+        this._useBufferQueue = false;
     }
 
     /**
@@ -67,7 +89,6 @@ export class FeaturesAlgorithm
      * higher the sensitivity, the more features
      * you should get
      *
-     * @abstract
      * @param {number} sensitivity a value in [0,1]
      */
     _onSensitivityChange(sensitivity)
@@ -78,7 +99,6 @@ export class FeaturesAlgorithm
 
     /**
      * Detect feature points
-     * @abstract
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} inputTexture pre-processed greyscale image
      * @returns {SpeedyTexture} tiny texture with encoded keypoints
@@ -112,7 +132,17 @@ export class FeaturesAlgorithm
      */
     download(gpu, encodedKeypoints, max = undefined, useAsyncTransfer = true)
     {
-        return this._downloader.download(gpu, encodedKeypoints, this.descriptorSize, max, useAsyncTransfer, true);
+        return this._downloader.download(gpu, encodedKeypoints, this.descriptorSize, max, useAsyncTransfer, this._useBufferQueue);
+    }
+
+    /**
+     * Reset the capacity of the keypoint downloader
+     * @param {SpeedyGPU} gpu 
+     */
+    resetDownloader(gpu)
+    {
+        this._downloader.reset(gpu, this.descriptorSize);
+        // maybe you want to disable the buffer queue?
     }
 
     /**
