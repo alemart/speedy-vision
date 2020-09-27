@@ -40,6 +40,14 @@ export class SpeedyFeatureDetector
         // Set the algorithm
         this._algorithm = algorithm;
 
+        // cap the number of keypoints?
+        this._max = undefined;
+
+        // enhance the image in different ways before detecting the features
+        this._enhancements = {
+            denoise: true
+        };
+
         // Copy getters and setters from the algorithm
         // (e.g., sensitivity)
         const nullfun = () => null;
@@ -66,10 +74,9 @@ export class SpeedyFeatureDetector
     /**
      * Detect & describe feature points
      * @param {SpeedyMedia} media
-     * @param {object} [settings]
      * @returns {Promise<SpeedyFeature[]>}
      */
-    detect(media, settings = {})
+    detect(media)
     {
         const gpu = media._gpu;
 
@@ -77,33 +84,18 @@ export class SpeedyFeatureDetector
         if(media.isReleased())
             throw new IllegalOperationError(`Can't detect features: the SpeedyMedia has been released`);
 
-        // default settings
-        if(!settings.hasOwnProperty('denoise'))
-            settings.denoise = true;
-        if(!settings.hasOwnProperty('max'))
-            settings.max = undefined;
-        if(!settings.hasOwnProperty('enhancements'))
-            settings.enhancements = {};
-
-        // validate settings
-        settings.denoise = Boolean(settings.denoise);
-        if(settings.max !== undefined)
-            settings.max = Number(settings.max);
-        if(typeof settings.enhancements !== 'object')
-            throw new IllegalArgumentError('settings.enhancements must be an object');
-
         // Upload & preprocess media
         let texture = gpu.upload(media.source);
         texture = preprocessTexture(
             gpu,
             texture,
-            settings.denoise,
+            this._enhancements.denoise == true,
             media._colorFormat != ColorFormat.Greyscale
         );
         const enhancedTexture = enhanceTexture(
             gpu,
             texture,
-            settings.enhancements.illumination == true
+            this._enhancements.illumination == true
         );
 
         // Feature detection & description
@@ -121,9 +113,49 @@ export class SpeedyFeatureDetector
         return this._algorithm.download(
             gpu,
             describedKeypoints,
-            settings.max,
+            this._max,
             media.options.usage != 'static'
         );
+    }
+
+    /**
+     * The maximum number of keypoints that will be
+     * returned by the feature detector. If it's
+     * undefined, then there is no pre-defined limit
+     * @returns {number | undefined}
+     */
+    get max()
+    {
+        return this._max;
+    }
+
+    /**
+     * The maximum number of keypoints that will be
+     * returned by the feature detector. Set it to
+     * undefined to disable any limits
+     * @param {number | undefined} maxFeaturePoints
+     */
+    set max(maxFeaturePoints)
+    {
+        if(maxFeaturePoints !== undefined)
+            this._max = Number(maxFeaturePoints);
+        else
+            this._max = undefined;
+    }
+
+    /**
+     * Specify different enhancements to applied
+     * to the image before detecting the features
+     * @param {object} enhancements
+     */
+    setEnhancements(enhancements)
+    {
+        // validate parameter
+        if(typeof enhancements !== 'object')
+            throw new IllegalArgumentError('enhancements must be an object');
+
+        // merge enhancements object
+        this._enhancements = Object.assign(this._enhancements, enhancements);
     }
 
     /**

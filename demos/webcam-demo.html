@@ -86,12 +86,13 @@ window.onload = async function()
             // set its sensitivity
             featureDetector.sensitivity = sensitivity.value;
 
-            // find features
-            const features = await featureDetector.detect(media, {
-                enhancements: {
-                    illumination: enhanceIllumination.checked
-                }
+            // set enhancements
+            featureDetector.setEnhancements({
+                illumination: enhanceIllumination.checked
             });
+
+            // find features
+            const features = await featureDetector.detect(media);
 
             // render features
             media.draw(canvas);

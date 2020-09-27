@@ -303,17 +303,13 @@ console.log(features);
 
 ##### SpeedyFeatureDetector.detect()
 
-`SpeedyFeatureDetector.detect(media: SpeedyMedia, settings?: object): Promise<SpeedyFeature[]>`
+`SpeedyFeatureDetector.detect(media: SpeedyMedia): Promise<SpeedyFeature[]>`
 
 Detects feature points in a `SpeedyMedia`.
 
 ###### Arguments
 
 * `media: SpeedyMedia`. The media object (image, video, etc.)
-* `settings: object, optional`. A configuration object that accepts the following keys (all are optional):
-  * `max: number`. If specified, Speedy will return the best keypoints (according to their scores) up to this number.
-  * `denoise: boolean`. Whether or not to denoise the image before finding the features. Defaults to `true`.
-  * `enhancements: object`. If specified, Speedy will enhance the image in different ways before extracting the features. This is meant to make your features more robust. Read more on [enhancing your features](#enhancing-your-features).
 
 ###### Returns
 
@@ -342,13 +338,6 @@ window.onload = async function() {
 }
 ```
 
-###### Enhancing your features
-
-Speedy can enhance your images in different ways before detecting the interest points. These enhancements are intended to make the feature detection more robust, at a slighly higher computational cost. The desired enhancements are specified in the `settings.enhancements` object:
-
-* `illumination: boolean`. If set to `true`, the feature detection algorithm will be more robust when dealing with lighting changes and shadows. It will use the [Nightvision](#nightvision) filter behind the scenes.
-
-
 ##### SpeedyFeatureDetector.sensitivity
 
 `SpeedyFeatureDetector.sensitivity: number`
@@ -374,6 +363,27 @@ window.onload = () => {
 };
 ```
 
+##### SpeedyFeatureDetector.max
+
+`SpeedyFeatureDetector.max: number | undefined`
+
+Used to cap the number of keypoints: Speedy will return the best keypoints (according to their scores) up to this number. If it's `undefined`, no such limit will be applied.
+
+##### SpeedyFeatureDetector.setEnhancements()
+
+`SpeedyFeatureDetector.setEnhancements(enhancements: object)`
+
+Speedy can enhance your images in different ways before detecting the interest points. These enhancements are intended to make the feature detection more robust, at a slighly higher computational cost. The desired enhancements are specified in the `enhancements` parameter. That's an object that accepts the following keys (all are optional):
+
+* `denoise: boolean`. Whether or not to denoise the image before finding the features. A simple Gaussian Blur will be applied. Defaults to `true`.
+* `illumination: boolean`. If set to `true`, the feature detection algorithm will be more robust when dealing with lighting changes and shadows. It will use the [Nightvision](#nightvision) filter behind the scenes. Defaults to `false`.
+
+
+
+
+
+
+
 #### FAST features
 
 `Speedy.FeatureDetector.FAST(n: number): SpeedyFeatureDetector`
@@ -396,7 +406,7 @@ When using the `MultiscaleFAST` detector, you may also specify:
 
 `Speedy.FeatureDetector.MultiscaleHarris(): SpeedyFeatureDetector`
 
-Speedy includes an implementation of the Harris corner detector with the Shi-Tomasi corner response. The following additional properties are available:
+Speedy includes an implementation of the Harris corner detector with the Shi-Tomasi corner response. Harris usually gives better feature points than FAST (e.g., for tracking), but it's more computationally expensive. The following additional properties are available:
 
 * `quality: number`. A value between `0` and `1` representing the minimum "quality" of the returned keypoints. Speedy will discard any keypoint whose score is lower than the specified fraction of the maximum keypoint score. A typical value for `quality` is `0.10` (10%).
   * Note: `quality` is an alternative to `sensitivity`.

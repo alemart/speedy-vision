@@ -59,28 +59,6 @@ export class FeatureDetectionAlgorithm extends FeatureAlgorithm
     }
 
     /**
-     * Enable the buffer queue optimization
-     * It's an optimization technique that implies a 1-frame delay
-     * in the downloads when using async transfers; it may or may
-     * not be acceptable, depending on what you're trying to do
-     */
-    enableBufferQueue()
-    {
-        this._useBufferQueue = true;
-    }
-
-    /**
-     * Disable the buffer queue optimization
-     * It's an optimization technique that implies a 1-frame delay
-     * in the downloads when using async transfers; it may or may
-     * not be acceptable, depending on what you're trying to do
-     */
-    disableBufferQueue()
-    {
-        this._useBufferQueue = false;
-    }
-
-    /**
      * Convert a normalized sensitivity into an
      * algorithm-specific value such as a threshold
      * 
@@ -210,5 +188,36 @@ export class FeatureDetectionAlgorithm extends FeatureAlgorithm
                 this._automaticSensitivity.disable();
             this._automaticSensitivity = null;
         }
+    }
+
+    /**
+     * Enable the buffer queue optimization
+     * It's an optimization technique that implies a 1-frame delay
+     * in the downloads when using async transfers; it may or may
+     * not be acceptable, depending on what you're trying to do
+     */
+    enableBufferQueue()
+    {
+        this._useBufferQueue = true;
+    }
+
+    /**
+     * Disable the buffer queue optimization
+     * It's an optimization technique that implies a 1-frame delay
+     * in the downloads when using async transfers; it may or may
+     * not be acceptable, depending on what you're trying to do
+     */
+    disableBufferQueue()
+    {
+        this._useBufferQueue = false;
+    }
+
+    /**
+     * Whether we're using the buffer queue optimization or not
+     * @returns {boolean}
+     */
+    isBufferQueueEnabled()
+    {
+        return this._useBufferQueue;
     }
 }

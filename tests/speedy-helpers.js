@@ -75,6 +75,7 @@ function printTestHeader()
 {
     if(jasmine.lastTest !== jasmine.currentTest) {
         jasmine.lastTest = jasmine.currentTest;
+        /*
         if(jasmine.lastSuite !== jasmine.currentSuite) {
             // FIXME: suite headers may come out of order
             jasmine.lastSuite = jasmine.currentSuite;
@@ -85,6 +86,12 @@ function printTestHeader()
             );
         }
         header('> It ' + jasmine.currentTest.description);
+        */
+        header(
+            '> It ' + jasmine.currentTest.description + '\n\n' +
+            '(' + jasmine.currentSuite.fullName + ')',
+            'color: white; background: royalblue; padding: 1em'
+        );
         return true;
     }
 
@@ -103,7 +110,7 @@ function header(title, style)
 function print(message = '', style)
 {
     if(printTestHeader())
-        return;
+        ;//return;
 
     const pre = document.createElement('pre');
     if(style !== undefined)

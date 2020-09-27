@@ -96,10 +96,11 @@ window.onload = async function()
         // set its sensitivity
         featureDetector.sensitivity = sensitivity.value;
 
+        // cap the number of features
+        featureDetector.max = featureLimit.value;
+
         // find features
-        const features = await featureDetector.detect(media, {
-            max: featureLimit.value, // cap the number of features
-        });
+        const features = await featureDetector.detect(media);
 
         // render features
         media.draw(canvas);
