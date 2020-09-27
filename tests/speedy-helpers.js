@@ -70,28 +70,17 @@ function loadVideo(assetName)
     });
 }
 
-// Changed test or suite?
+// Changed test?
 function printTestHeader()
 {
     if(jasmine.lastTest !== jasmine.currentTest) {
         jasmine.lastTest = jasmine.currentTest;
-        /*
-        if(jasmine.lastSuite !== jasmine.currentSuite) {
-            // FIXME: suite headers may come out of order
-            jasmine.lastSuite = jasmine.currentSuite;
-            header(
-                '-- Testing: ' + jasmine.currentSuite.description + ' --\n\n' +
-                'In: ' + jasmine.currentSuite.fullName,
-                'color: white; background: royalblue; padding: 1em'
-            );
-        }
-        header('> It ' + jasmine.currentTest.description);
-        */
         header(
             '> It ' + jasmine.currentTest.description + '\n\n' +
             '(' + jasmine.currentSuite.fullName + ')',
             'color: white; background: royalblue; padding: 1em'
         );
+
         return true;
     }
 
@@ -109,8 +98,7 @@ function header(title, style)
 // Prints a message to the screen
 function print(message = '', style)
 {
-    if(printTestHeader())
-        ;//return;
+    printTestHeader();
 
     const pre = document.createElement('pre');
     if(style !== undefined)
