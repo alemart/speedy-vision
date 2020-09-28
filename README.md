@@ -210,8 +210,8 @@ The type of the media source. One of the following: `"image"`, `"video"`, `"canv
 Read-only object defined when [loading the media](#speedyload). The following keys are available:
 
 * `usage: string`. Specifies the intended usage of the media for optimization purposes. Possible values:
-    * `"dynamic"`: This is a hint that you'll be calling Speedy continuously, such as when playing a video or displaying an animated canvas. Speedy may optimize downloads from the GPU (e.g., when obtaining feature points, Speedy will use DMA transfers to give you a performance boost). This is the default setting if your media is a video or a canvas. If you don't intend to be calling Speedy continously on this media, this setting may give you undesirable results.
-    * `"static"`: You are operating on static media and intend to be calling Speedy once or at most a few times. This is the default setting if your media is an image.
+    * `"dynamic"`: This is a hint that you'll be calling Speedy in a loop, such as when processing a video or an animated canvas. Speedy will then optimize the data transfers between the CPU and the GPU in different ways. This is the default setting if your media is a video. If you don't intend to be calling Speedy continously on this media, this setting may give you undesirable results.
+    * `"static"`: You are operating on static media and intend to call Speedy once or at most a few times. This is the default setting if your media is an image, a canvas or a bitmap.
 
 #### Playing with your media
 

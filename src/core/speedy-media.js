@@ -51,11 +51,11 @@ export class SpeedyMedia
 
             // warning: loading canvas without explicit usage option
             if(this._type == MediaType.Canvas && options.usage === undefined)
-                Utils.warning(`Loading a canvas without an explicit usage flag. Will set it to "dynamic", which is unsuitable for static images`);
+                Utils.warning('Loading a canvas without an explicit usage flag. I will set the usage to "static", resulting in suboptimal performance if the canvas is animated');
 
             // set options
             this._options = buildOptions(options, {
-                usage: (this._type != MediaType.Image) ? 'dynamic' : 'static',
+                usage: (this._type == MediaType.Video) ? 'dynamic' : 'static',
             });
 
             // spawn relevant components
@@ -122,22 +122,6 @@ export class SpeedyMedia
     {
         return requestCameraStream(width, height, cameraOptions).then(
             video => SpeedyMedia.load(video, mediaOptions)
-            /*
-            video => createImageBitmap(video).then(
-                bitmap => SpeedyMedia.load(bitmap, mediaOptions).then(media => {
-                    (function update() {
-                        if(!media.isReleased()) {
-                            createImageBitmap(video).then(bitmap => {
-                                media._source.close();
-                                media._source = bitmap;
-                                setTimeout(update, 10);
-                            });
-                        }
-                    })();
-                    return media;
-                })
-            )
-            */
         );
     }
 
