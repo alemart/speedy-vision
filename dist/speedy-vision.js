@@ -6,7 +6,7 @@
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-09-27T21:47:25.554Z
+ * Date: 2020-09-28T02:54:42.283Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -1176,6 +1176,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FeatureAlgorithm", function() { return FeatureAlgorithm; });
 /* harmony import */ var _feature_downloader__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./feature-downloader */ "./src/core/keypoints/feature-downloader.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -1196,6 +1197,7 @@ __webpack_require__.r(__webpack_exports__);
  * feature-algorithm.js
  * An abstract algorithm related to feature points
  */
+
 
 
 
@@ -1237,9 +1239,13 @@ class FeatureAlgorithm
     resetDownloader(gpu, descriptorSize)
     {
         if(descriptorSize === undefined)
-            throw Object(_utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"])();
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"]();
 
         this._downloader.reset(gpu, descriptorSize);
+
+        // note: buffered responses imply a 1-frame delay
+        if(this._downloader.usingBufferedDownloads())
+            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning(`The feature downloader has been reset, but buffered downloads are enabled and cause a 1-frame delay`);
     }
 }
 
@@ -1256,10 +1262,9 @@ class FeatureAlgorithm
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FeatureDetectionAlgorithm", function() { return FeatureDetectionAlgorithm; });
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _automatic_sensitivity__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./automatic-sensitivity */ "./src/core/keypoints/automatic-sensitivity.js");
-/* harmony import */ var _feature_algorithm__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./feature-algorithm */ "./src/core/keypoints/feature-algorithm.js");
-/* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../speedy-feature */ "./src/core/speedy-feature.js");
-/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _feature_algorithm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./feature-algorithm */ "./src/core/keypoints/feature-algorithm.js");
+/* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../speedy-feature */ "./src/core/speedy-feature.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -1286,13 +1291,12 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-
 /**
  * An abstract class for feature
  * detection & description
  * @abstract
  */
-class FeatureDetectionAlgorithm extends _feature_algorithm__WEBPACK_IMPORTED_MODULE_2__["FeatureAlgorithm"]
+class FeatureDetectionAlgorithm extends _feature_algorithm__WEBPACK_IMPORTED_MODULE_1__["FeatureAlgorithm"]
 {
     /**
      * Class constructor
@@ -1301,8 +1305,7 @@ class FeatureDetectionAlgorithm extends _feature_algorithm__WEBPACK_IMPORTED_MOD
     {
         super();
         this._sensitivity = 0;
-        this._automaticSensitivity = null;
-        this._useBufferQueue = true;
+        this._downloader.enableBufferedDownloads();
     }
 
     /**
@@ -1372,7 +1375,15 @@ class FeatureDetectionAlgorithm extends _feature_algorithm__WEBPACK_IMPORTED_MOD
      */
     download(gpu, encodedKeypoints, max = undefined, useAsyncTransfer = true)
     {
-        return this._downloader.download(gpu, encodedKeypoints, this.descriptorSize, max, useAsyncTransfer, this._useBufferQueue);
+        // download feature points
+        const keypoints = this._downloader.download(gpu, encodedKeypoints, this.descriptorSize, max, useAsyncTransfer);
+
+        // restore buffered downloads (if previously disabled) for improved performance
+        if(!this._downloader.usingBufferedDownloads())
+            this._downloader.enableBufferedDownloads();
+
+        // done!
+        return keypoints;
     }
 
     /**
@@ -1381,8 +1392,13 @@ class FeatureDetectionAlgorithm extends _feature_algorithm__WEBPACK_IMPORTED_MOD
      */
     resetDownloader(gpu)
     {
-        this._downloader.reset(gpu, this.descriptorSize);
-        // maybe you want to disable the buffer queue?
+        // temporarily disable buffered downloads,
+        // so we get fresh results in the next
+        // call to download()
+        this._downloader.disableBufferedDownloads();
+
+        // reset the downloader
+        super.resetDownloader(gpu, this.descriptorSize);
     }
 
     /**
@@ -1403,84 +1419,6 @@ class FeatureDetectionAlgorithm extends _feature_algorithm__WEBPACK_IMPORTED_MOD
     {
         this._sensitivity = Math.max(0, Math.min(+sensitivity, 1));
         this._onSensitivityChange(this._sensitivity);
-    }
-
-    /**
-     * Automatic sensitivity: expected number of keypoints
-     * @returns {object|undefined}
-     */
-    get expected()
-    {
-        if(this._automaticSensitivity == null) {
-            return {
-                number: this._automaticSensitivity.expected,
-                tolerance: this._automaticSensitivity.tolerance
-            };
-        }
-        else
-            return undefined;
-    }
-
-    /**
-     * Setup automatic sensitivity
-     * @param {number|object|undefined} expected
-     */
-    set expected(expected)
-    {
-        if(expected !== undefined) {
-            // enable automatic sensitivity
-            if(this._automaticSensitivity == null) {
-                this._automaticSensitivity = new _automatic_sensitivity__WEBPACK_IMPORTED_MODULE_1__["AutomaticSensitivity"](this._downloader);
-                this._automaticSensitivity.subscribe(value => this.sensitivity = value);
-            }
-
-            // set parameters
-            if(typeof expected === 'object') {
-                if(expected.hasOwnProperty('number'))
-                    this._automaticSensitivity.expected = +(expected.number);
-                if(expected.hasOwnProperty('tolerance'))
-                    this._automaticSensitivity.tolerance = +(expected.tolerance);
-            }
-            else
-                this._automaticSensitivity.expected = +expected;
-        }
-        else {
-            // disable automatic sensitivity
-            if(this._automaticSensitivity != null)
-                this._automaticSensitivity.disable();
-            this._automaticSensitivity = null;
-        }
-    }
-
-    /**
-     * Enable the buffer queue optimization
-     * It's an optimization technique that implies a 1-frame delay
-     * in the downloads when using async transfers; it may or may
-     * not be acceptable, depending on what you're trying to do
-     */
-    enableBufferQueue()
-    {
-        this._useBufferQueue = true;
-    }
-
-    /**
-     * Disable the buffer queue optimization
-     * It's an optimization technique that implies a 1-frame delay
-     * in the downloads when using async transfers; it may or may
-     * not be acceptable, depending on what you're trying to do
-     */
-    disableBufferQueue()
-    {
-        this._useBufferQueue = false;
-    }
-
-    /**
-     * Whether we're using the buffer queue optimization or not
-     * @returns {boolean}
-     */
-    isBufferQueueEnabled()
-    {
-        return this._useBufferQueue;
     }
 }
 
@@ -1634,6 +1572,7 @@ class FeatureDownloader extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__["
     constructor()
     {
         super();
+        this._useBufferedDownloads = false;
         this._estimator = new FeatureCountEstimator();
     }
 
@@ -1644,13 +1583,12 @@ class FeatureDownloader extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__["
      * @param {number} descriptorSize in bytes (set it to zero if there is no descriptor)
      * @param {number} [max] cap the number of keypoints to this value
      * @param {boolean} [useAsyncTransfer] transfer keypoints asynchronously
-     * @param {boolean} [useBufferQueue] optimize async transfers with a 1-frame delay
      * @param {object} [output] output object with additional info about the keypoints (see the encoder for details)
      * @returns {Promise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, descriptorSize, max = -1, useAsyncTransfer = true, useBufferQueue = true, output = undefined)
+    download(gpu, encodedKeypoints, descriptorSize, max = -1, useAsyncTransfer = true, output = undefined)
     {
-        return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer, useBufferQueue).then(data => {
+        return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer, this._useBufferedDownloads).then(data => {
 
             // decode the keypoints
             const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize, output);
@@ -1702,6 +1640,37 @@ class FeatureDownloader extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__["
 
         this._estimator.reset();
         gpu.programs.encoders.reserve(capacity, descriptorSize);
+    }
+
+    /**
+     * Enable buffered downloads
+     * It's an optimization technique that implies a 1-frame delay
+     * in the downloads when using async transfers; it may or may
+     * not be acceptable, depending on what you're trying to do
+     */
+    enableBufferedDownloads()
+    {
+        this._useBufferedDownloads = true;
+    }
+
+    /**
+     * Disable buffered downloads
+     * It's an optimization technique that implies a 1-frame delay
+     * in the downloads when using async transfers; it may or may
+     * not be acceptable, depending on what you're trying to do
+     */
+    disableBufferedDownloads()
+    {
+        this._useBufferedDownloads = false;
+    }
+
+    /**
+     * Whether we're using the buffered responses or not
+     * @returns {boolean}
+     */
+    usingBufferedDownloads()
+    {
+        return this._useBufferedDownloads;
     }
 
     /**
@@ -1770,6 +1739,7 @@ class FeatureTrackingAlgorithm extends _feature_algorithm__WEBPACK_IMPORTED_MODU
     constructor()
     {
         super();
+        this._downloader.disableBufferedDownloads();
     }
 
     /**
@@ -1798,7 +1768,7 @@ class FeatureTrackingAlgorithm extends _feature_algorithm__WEBPACK_IMPORTED_MODU
     download(gpu, encodedKeypoints, descriptorSize, useAsyncTransfer = true, discard = undefined)
     {
         const output = discard ? { discard: discard, userData: [] } : undefined;
-        return this._downloader.download(gpu, encodedKeypoints, descriptorSize, undefined, useAsyncTransfer, false, output).then(keypoints => {
+        return this._downloader.download(gpu, encodedKeypoints, descriptorSize, undefined, useAsyncTransfer, output).then(keypoints => {
             // discard keypoints if they are outside
             // the image or if they are of "bad quality"
             if(discard) {
@@ -2443,8 +2413,9 @@ class SpeedyFeatureDetectorFactory extends _speedy_namespace__WEBPACK_IMPORTED_M
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyFeatureDetector", function() { return SpeedyFeatureDetector; });
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _keypoints_feature_detection_algorithm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./keypoints/feature-detection-algorithm */ "./src/core/keypoints/feature-detection-algorithm.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _keypoints_automatic_sensitivity__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./keypoints/automatic-sensitivity */ "./src/core/keypoints/automatic-sensitivity.js");
+/* harmony import */ var _keypoints_feature_detection_algorithm__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./keypoints/feature-detection-algorithm */ "./src/core/keypoints/feature-detection-algorithm.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -2470,6 +2441,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /**
  * Basic feature detection & description API
  * This is an easy-to-use wrapper around the internal
@@ -2487,12 +2459,16 @@ class SpeedyFeatureDetector
         // Set the algorithm
         this._algorithm = algorithm;
 
+        // automatic sensitivity (lazy instantiation)
+        this._automaticSensitivity = null;
+
         // cap the number of keypoints?
         this._max = undefined;
 
         // enhance the image in different ways before detecting the features
         this._enhancements = {
-            denoise: true
+            denoise: true,
+            illumination: false,
         };
 
         // Copy getters and setters from the algorithm
@@ -2529,7 +2505,7 @@ class SpeedyFeatureDetector
 
         // check if the media has been released
         if(media.isReleased())
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`Can't detect features: the SpeedyMedia has been released`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`Can't detect features: the SpeedyMedia has been released`);
 
         // Upload & preprocess media
         let texture = gpu.upload(media.source);
@@ -2599,7 +2575,7 @@ class SpeedyFeatureDetector
     {
         // validate parameter
         if(typeof enhancements !== 'object')
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"]('enhancements must be an object');
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"]('enhancements must be an object');
 
         // merge enhancements object
         this._enhancements = Object.assign(this._enhancements, enhancements);
@@ -2612,10 +2588,21 @@ class SpeedyFeatureDetector
      */
     expect(numberOfFeaturePoints, tolerance = 0.10)
     {
-        this.expected = numberOfFeaturePoints !== undefined ? {
-            number: Math.max(0, numberOfFeaturePoints),
-            tolerance: Math.max(0, tolerance)
-        } : undefined;
+        if(numberOfFeaturePoints !== undefined) {
+            // enable automatic sensitivity
+            if(this._automaticSensitivity == null) {
+                this._automaticSensitivity = new _keypoints_automatic_sensitivity__WEBPACK_IMPORTED_MODULE_1__["AutomaticSensitivity"](this._algorithm._downloader);
+                this._automaticSensitivity.subscribe(value => this._algorithm.sensitivity = value);
+            }
+            this._automaticSensitivity.expected = numberOfFeaturePoints;
+            this._automaticSensitivity.tolerance = tolerance;
+        }
+        else {
+            // disable automatic sensitivity
+            if(this._automaticSensitivity != null)
+                this._automaticSensitivity.disable();
+            this._automaticSensitivity = null;
+        }
     }
 }
 
@@ -2694,9 +2681,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyFeatureTrackerFactory", function() { return SpeedyFeatureTrackerFactory; });
 /* harmony import */ var _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-namespace */ "./src/core/speedy-namespace.js");
 /* harmony import */ var _speedy_media__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-media */ "./src/core/speedy-media.js");
-/* harmony import */ var _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-feature-detector */ "./src/core/speedy-feature-detector.js");
-/* harmony import */ var _speedy_feature_tracker__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-feature-tracker */ "./src/core/speedy-feature-tracker.js");
-/* harmony import */ var _keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./keypoints/trackers/lk */ "./src/core/keypoints/trackers/lk.js");
+/* harmony import */ var _speedy_feature_tracker__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-feature-tracker */ "./src/core/speedy-feature-tracker.js");
+/* harmony import */ var _keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./keypoints/trackers/lk */ "./src/core/keypoints/trackers/lk.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -2723,7 +2709,6 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-
 /**
  * A collection of methods for instantiating Feature Trackers
  */
@@ -2732,15 +2717,12 @@ class SpeedyFeatureTrackerFactory extends _speedy_namespace__WEBPACK_IMPORTED_MO
     /**
      * Spawns a LK feature tracker
      * @param {SpeedyMedia} media
-     * @param {SpeedyFeatureDetector} [featureDetector]
      * @returns {SpeedyFeatureTracker}
      */
-    static LK(media, featureDetector = null)
+    static LK(media)
     {
-        const trackingAlgorithm = new _keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_4__["LKFeatureTrackingAlgorithm"]();
-        const detectionAlgorithm = featureDetector ? featureDetector._algorithm : null;
-
-        return new _speedy_feature_tracker__WEBPACK_IMPORTED_MODULE_3__["SpeedyFeatureTracker"](media, trackingAlgorithm, detectionAlgorithm);
+        const trackingAlgorithm = new _keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_3__["LKFeatureTrackingAlgorithm"]();
+        return new _speedy_feature_tracker__WEBPACK_IMPORTED_MODULE_2__["SpeedyFeatureTracker"](trackingAlgorithm, media);
     }
 }
 
@@ -2756,11 +2738,12 @@ class SpeedyFeatureTrackerFactory extends _speedy_namespace__WEBPACK_IMPORTED_MO
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyFeatureTracker", function() { return SpeedyFeatureTracker; });
-/* harmony import */ var _keypoints_feature_detection_algorithm__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./keypoints/feature-detection-algorithm */ "./src/core/keypoints/feature-detection-algorithm.js");
-/* harmony import */ var _keypoints_feature_tracking_algorithm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./keypoints/feature-tracking-algorithm */ "./src/core/keypoints/feature-tracking-algorithm.js");
-/* harmony import */ var _speedy_media__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-media */ "./src/core/speedy-media.js");
-/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-feature-detector */ "./src/core/speedy-feature-detector.js");
+/* harmony import */ var _keypoints_feature_detection_algorithm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./keypoints/feature-detection-algorithm */ "./src/core/keypoints/feature-detection-algorithm.js");
+/* harmony import */ var _keypoints_feature_tracking_algorithm__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./keypoints/feature-tracking-algorithm */ "./src/core/keypoints/feature-tracking-algorithm.js");
+/* harmony import */ var _speedy_media__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-media */ "./src/core/speedy-media.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -2788,6 +2771,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /**
  * An easy-to-use class for working with feature trackers
  */
@@ -2795,17 +2779,35 @@ class SpeedyFeatureTracker
 {
     /**
      * Class constructor
-     * @param {SpeedyMedia} media the media that holds the features
      * @param {FeatureTrackingAlgorithm} trackingAlgorithm used to track the features
-     * @param {FeatureDetectionAlgorithm} [detectionAlgorithm] used to detect & describe the tracked features
+     * @param {SpeedyMedia} media the media that holds the features
      */
-    constructor(media, trackingAlgorithm, detectionAlgorithm = null)
+    constructor(trackingAlgorithm, media)
     {
-        this._trackingAlgorithm = trackingAlgorithm;
-        this._detectionAlgorithm = detectionAlgorithm;
         this._media = media;
+        this._trackingAlgorithm = trackingAlgorithm;
+        this._descriptionAlgorithm = null;
         this._inputTexture = null;
         this._prevInputTexture = null;
+    }
+
+    /**
+     * Augments the feature tracker, so that tracked features
+     * are also described before being returned to the user.
+     * This is a chainable method and can be called when
+     * instantiating the tracker.
+     * @param {SpeedyFeatureDetector} featureDescriptor used to describe the tracked features
+     * @returns {SpeedyFeatureTracker} this object
+     */
+    includeDescriptor(featureDescriptor)
+    {
+        const algorithm = featureDescriptor._algorithm;
+
+        // update feature descriptor
+        this._descriptionAlgorithm = algorithm;
+
+        // chainable method
+        return this;
     }
 
     /**
@@ -2821,7 +2823,7 @@ class SpeedyFeatureTracker
 
         // validate arguments
         if(!Array.isArray(keypoints) || (found != null && !Array.isArray(found)) || (flow != null && !Array.isArray(flow)))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"]();
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"]();
 
         // upload media to the GPU
         this._updateMedia(this._media, gpu);
@@ -2829,24 +2831,19 @@ class SpeedyFeatureTracker
         // preliminary data
         const nextImage = this._inputTexture;
         const prevImage = this._prevInputTexture;
-        const descriptorSize = this._detectionAlgorithm != null ? this._detectionAlgorithm.descriptorSize : 0;
+        const descriptorSize = this._descriptionAlgorithm != null ? this._descriptionAlgorithm.descriptorSize : 0;
         const useAsyncTransfer = (this._media.options.usage != 'static');
 
         // reserve space for the encoder
         gpu.programs.encoders.reserve(keypoints.length, descriptorSize);
-
-        // disable buffer queue on the feature detector,
-        // so we don't get delayed responses
-        if(this._detectionAlgorithm != null)
-            this._detectionAlgorithm.disableBufferQueue();
 
         // upload & track keypoints
         const prevKeypoints = this._trackingAlgorithm.upload(gpu, keypoints, descriptorSize);
         const trackedKeypoints = this._trackingAlgorithm.track(gpu, nextImage, prevImage, prevKeypoints, descriptorSize);
 
         // compute feature descriptors (if an algorithm is provided)
-        const trackedKeypointsWithDescriptors = this._detectionAlgorithm == null ? trackedKeypoints :
-            this._detectionAlgorithm.describe(gpu, nextImage, trackedKeypoints);
+        const trackedKeypointsWithDescriptors = this._descriptionAlgorithm == null ? trackedKeypoints :
+            this._descriptionAlgorithm.describe(gpu, nextImage, trackedKeypoints);
 
         // download keypoints
         const discard = [];
@@ -2891,7 +2888,7 @@ class SpeedyFeatureTracker
     {
         // validate the media
         if(media.isReleased())
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`The media has been released`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalOperationError"](`The media has been released`);
 
         // upload the media
         const newInputTexture = gpu.upload(media.source);
@@ -5564,7 +5561,8 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
             if(x >= 0xFFFF && y >= 0xFFFF) // if end of list
                 break;
 
-            // likely to be incorrect black pixels
+            // We've cleared the texture to black.
+            // Likely to be incorrect black pixels
             // due to resize. Bad for encoderLength
             if(x + y == 0 && pixels[i+6] + pixels[i+5] == 0)
                 continue; // discard, it's noise
@@ -5623,10 +5621,10 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
      * Download RAW encoded keypoint data from the GPU - this is a bottleneck!
      * @param {SpeedyTexture} encodedKeypoints texture with keypoints that have already been encoded
      * @param {boolean} [useAsyncTransfer] transfer data from the GPU without blocking the CPU
-     * @param {boolean} [useBufferQueue] optimize async transfers
+     * @param {boolean} [useBufferedDownloads] optimize async transfers
      * @returns {Promise<Uint8Array[]>} pixels in the [r,g,b,a, ...] format
      */
-    async downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer = true, useBufferQueue = true)
+    async downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer = true, useBufferedDownloads = true)
     {
         try {
             // helper shader for reading the data
@@ -5635,7 +5633,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
             // read data from the GPU
             let downloadTime = performance.now(), pixels;
             if(useAsyncTransfer)
-                pixels = await this._downloadKeypoints.readPixelsAsync(0, 0, -1, -1, useBufferQueue);
+                pixels = await this._downloadKeypoints.readPixelsAsync(0, 0, -1, -1, useBufferedDownloads);
             else
                 pixels = this._downloadKeypoints.readPixelsSync(); // bottleneck!
             downloadTime = performance.now() - downloadTime;
@@ -9141,10 +9139,10 @@ class SpeedyProgram extends Function
      * @param {number} [y] 
      * @param {number} [width]
      * @param {number} [height]
-     * @param {boolean} [useBufferQueue] optimize downloads
+     * @param {boolean} [useBufferedDownloads] optimize downloads
      * @returns {Promise<Uint8Array>} resolves to an array of pixels in the RGBA format
      */
-    readPixelsAsync(x = 0, y = 0, width = -1, height = -1, useBufferQueue = true)
+    readPixelsAsync(x = 0, y = 0, width = -1, height = -1, useBufferedDownloads = true)
     {
         const gl = this._gl;
 
@@ -9169,7 +9167,7 @@ class SpeedyProgram extends Function
             this._reallocatePixelBuffers(this._stdprog.width, this._stdprog.height);
 
         // do not optimize?
-        if(!useBufferQueue) {
+        if(!useBufferedDownloads) {
             return _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].readPixelsViaPBO(gl, this._pixelBuffer[0], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
                 return this._pixelBuffer[0];
             });
