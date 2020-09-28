@@ -372,10 +372,16 @@ export class SpeedyMedia
         // Settings
         if(settings.hasOwnProperty('sensitivity'))
             this._featureDetector.sensitivity = +settings.sensitivity;
-        //if(settings.hasOwnProperty('expected'))
-        //    this._featureDetector.expected = settings.expected;
         if(settings.hasOwnProperty('max'))
-            this._featureDetector.max = settings.max;
+            this._featureDetector.max = settings.max | 0;
+        if(settings.hasOwnProperty('denoise'))
+            this._featureDetector.setEnhancements({ denoise: Boolean(settings.denoise) });
+        if(settings.hasOwnProperty('expected')) {
+            if(typeof settings.expected == 'object')
+                this._featureDetector.expect(settings.expected.number | 0, +settings.expected.tolerance);
+            else
+                this._featureDetector.expect(settings.expected | 0);
+        }
 
         // Find features
         return this._featureDetector.detect(this);
