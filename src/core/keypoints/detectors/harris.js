@@ -222,6 +222,7 @@ export class MultiscaleHarrisFeatures extends HarrisFeatures
         const pyramid = inputTexture.generateMipmap();
 
         // compute orientation
-        return gpu.programs.encoders.orientEncodedKeypoints(pyramid, orientationPatchRadius, detectedKeypoints, descriptorSize);
+        const encoderLength = gpu.programs.encoders.encoderLength;
+        return gpu.programs.keypoints.orientationViaCentroid(pyramid, detectedKeypoints, orientationPatchRadius, descriptorSize, encoderLength);
     }
 }

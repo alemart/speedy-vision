@@ -107,6 +107,10 @@ const samescaleSuppression = importShader('keypoints/samescale-suppression.glsl'
 // Sobel derivatives
 const multiscaleSobel = importShader('filters/multiscale-sobel.glsl').withArguments('pyramid', 'lod');
 
+// compute keypoint orientation
+const orientationViaCentroid = importShader('keypoints/orientation-via-centroid.glsl')
+                              .withArguments('pyramid', 'encodedKeypoints', 'patchRadius', 'descriptorSize', 'encoderLength')
+
 
 
 
@@ -164,20 +168,38 @@ export class GPUKeypoints extends SpeedyProgramGroup
             .declare('multiscaleSobel', multiscaleSobel, {
                 ...this.program.doesNotRecycleTextures()
             }) // scale-space
+
+            // Compute keypoint orientation
+            .declare('_orientationViaCentroid', orientationViaCentroid);
         ;
     }
 
     /**
      * Compute ORB descriptor (256 bits)
      * @param {SpeedyTexture} pyramid pre-smoothed on the intensity channel
-     * @param {SpeedyTexture} encodedCorners tiny texture
+     * @param {SpeedyTexture} encodedKeypoints tiny texture
      * @param {number} encoderLength
-     * @return {SpeedyTexture}
+     * @returns {SpeedyTexture}
      */
-    orb(pyramid, encodedCorners, encoderLength)
+    orb(pyramid, encodedKeypoints, encoderLength)
     {
         this._orb.resize(encoderLength, encoderLength);
-        return this._orb(pyramid, encodedCorners, encoderLength);
+        return this._orb(pyramid, encodedKeypoints, encoderLength);
+    }
+
+    /**
+     * Finds the orientation of all keypoints given a texture with encoded keypoints
+     * (using the centroid method)
+     * @param {SpeedyTexture} pyramid image pyramid
+     * @param {SpeedyTexture} encodedKeypoints tiny texture
+     * @param {number} patchRadius radius of a circular patch used to compute the radius when lod = 0 (e.g., 7)
+     * @param {number} descriptorSize in bytes
+     * @param {number} encoderLength
+     * @returns {SpeedyTexture}
+     */
+    orientationViaCentroid(pyramid, encodedKeypoints, patchRadius, descriptorSize, encoderLength)
+    {
+        this._orientationViaCentroid.resize(encoderLength, encoderLength);
+        return this._orientationViaCentroid(pyramid, encodedKeypoints, patchRadius, descriptorSize, encoderLength);
     }
 }
-

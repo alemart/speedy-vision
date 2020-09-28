@@ -51,9 +51,6 @@ const encodeKeypointOffsets = importShader('encoders/encode-keypoint-offsets.gls
 // encode keypoints
 const encodeKeypoints = importShader('encoders/encode-keypoints.glsl').withArguments('image', 'imageSize', 'encoderLength', 'descriptorSize');
 
-// find orientation of encoded keypoints
-const orientEncodedKeypoints = importShader('encoders/orient-encoded-keypoints.glsl').withArguments('pyramid', 'patchRadius', 'encodedKeypoints', 'encoderLength', 'descriptorSize')
-
 // helper for downloading the keypoints
 const downloadKeypoints = importShader('utils/identity.glsl').withArguments('image');
 
@@ -90,9 +87,6 @@ export class GPUEncoders extends SpeedyProgramGroup
                 ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
             })
             .declare('_downloadKeypoints', downloadKeypoints, {
-                ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
-            })
-            .declare('_orientEncodedKeypoints', orientEncodedKeypoints, {
                 ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
             })
             .declare('_uploadKeypoints', uploadKeypoints, {
@@ -132,7 +126,6 @@ export class GPUEncoders extends SpeedyProgramGroup
             this._encoderLength = newEncoderLength;
             this._encodeKeypoints.resize(newEncoderLength, newEncoderLength);
             this._downloadKeypoints.resize(newEncoderLength, newEncoderLength);
-            this._orientEncodedKeypoints.resize(newEncoderLength, newEncoderLength);
             this._uploadKeypoints.resize(newEncoderLength, newEncoderLength);
         }
 
@@ -152,19 +145,6 @@ export class GPUEncoders extends SpeedyProgramGroup
             return this.optimize(keypointCount, descriptorSize);
 
         return false;
-    }
-
-    /**
-     * Finds the orientation of all keypoints given a texture with encoded keypoints
-     * @param {SpeedyTexture} pyramid image pyramid
-     * @param {number} patchRadius radius of a circular patch used to compute the radius when lod = 0 (e.g., 7)
-     * @param {SpeedyTexture} encodedKeypoints the result of encodeKeypoints()
-     * @param {number} descriptorSize in bytes
-     */
-    orientEncodedKeypoints(pyramid, patchRadius, encodedKeypoints, descriptorSize)
-    {
-        const encoderLength = this._encoderLength;
-        return this._orientEncodedKeypoints(pyramid, patchRadius, encodedKeypoints, encoderLength, descriptorSize);
     }
 
     /**

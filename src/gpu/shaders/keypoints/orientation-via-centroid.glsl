@@ -15,17 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * orient-encoded-keypoints.glsl
+ * orientation-via-centroid.glsl
  * Given an encoded keypoint texture, find the orientation of all keypoints
  */
 
 @include "keypoints.glsl"
 
 uniform sampler2D pyramid; // image pyramid (patch size depends on keypoint scale)
-uniform int patchRadius; // use a circular patch of radius <= 7 (for lod = 0)
 uniform sampler2D encodedKeypoints; // encoded keypoints
-uniform int encoderLength;
+uniform int patchRadius; // use a circular patch of radius <= 7 (for lod = 0)
 uniform int descriptorSize;
+uniform int encoderLength;
 
 // Circular patches around the origin
 const int patchStart[8] = int[8](0, 0, 8, 28, 64, 132, 228, 356);
