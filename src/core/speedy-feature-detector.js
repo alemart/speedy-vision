@@ -23,6 +23,7 @@ import { ColorFormat } from '../utils/types'
 import { AutomaticSensitivity } from './keypoints/automatic-sensitivity';
 import { FeatureDetectionAlgorithm } from './keypoints/feature-detection-algorithm';
 import { IllegalArgumentError, IllegalOperationError } from '../utils/errors';
+import { SpeedyFlags } from './speedy-flags';
 
 /**
  * Basic feature detection & description API
@@ -41,9 +42,6 @@ export class SpeedyFeatureDetector
         // Set the algorithm
         this._algorithm = algorithm;
 
-        // automatic sensitivity (lazy instantiation)
-        this._automaticSensitivity = null;
-
         // cap the number of keypoints?
         this._max = undefined;
 
@@ -52,6 +50,9 @@ export class SpeedyFeatureDetector
             denoise: true,
             illumination: false,
         };
+
+        // misc
+        this._automaticSensitivity = null; // automatic sensitivity (lazy instantiation)
 
         // Copy getters and setters from the algorithm
         // (e.g., sensitivity)
@@ -79,9 +80,10 @@ export class SpeedyFeatureDetector
     /**
      * Detect & describe feature points
      * @param {SpeedyMedia} media
+     * @param {number} [flags]
      * @returns {Promise<SpeedyFeature[]>}
      */
-    detect(media)
+    detect(media, flags = 0)
     {
         const gpu = media._gpu;
 
@@ -89,9 +91,19 @@ export class SpeedyFeatureDetector
         if(media.isReleased())
             throw new IllegalOperationError(`Can't detect features: the SpeedyMedia has been released`);
 
+        // Reset downloader capacity?
+        if(flags & SpeedyFlags.FEATURE_DETECTOR_RESET_CAPACITY) {
+            // Speedy performs optimizations behind the scenes,
+            // specially when detecting features in videos.
+            // This flag will undo these optimizations. Use it
+            // when you expect a sudden increase in the number
+            // of keypoints (between two consecutive frames).
+            this._algorithm.resetDownloader(gpu);
+        }
+
         // Upload & preprocess media
-        let texture = gpu.upload(media.source);
-        texture = preprocessTexture(
+        const texture = gpu.upload(media.source);
+        const preprocessedTexture = preprocessTexture(
             gpu,
             texture,
             this._enhancements.denoise == true,
@@ -99,7 +111,7 @@ export class SpeedyFeatureDetector
         );
         const enhancedTexture = enhanceTexture(
             gpu,
-            texture,
+            preprocessedTexture,
             this._enhancements.illumination == true
         );
 
@@ -115,11 +127,12 @@ export class SpeedyFeatureDetector
         );
 
         // Download keypoints from the GPU
+        const useAsyncTransfer = (media.options.usage != 'static');
         return this._algorithm.download(
             gpu,
             describedKeypoints,
             this._max,
-            media.options.usage != 'static'
+            useAsyncTransfer
         );
     }
 

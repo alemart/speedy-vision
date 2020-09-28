@@ -28,6 +28,7 @@ import { IllegalOperationError, IllegalArgumentError } from '../utils/errors';
 
 /**
  * An easy-to-use class for working with feature trackers
+ * (it performs sparse optical-flow)
  */
 export class SpeedyFeatureTracker
 {
@@ -67,11 +68,11 @@ export class SpeedyFeatureTracker
     /**
      * Track keypoints in the media
      * @param {SpeedyFeature[]} keypoints the keypoints you want to track
-     * @param {boolean[]} [found] output parameter: found[i] will be true if the i-th keypoint has been found
-     * @param {SpeedyVector2[]} [flow] output parameter: flow vector for the i-th keypoint
+     * @param {SpeedyVector2[]|null} [flow] output parameter: flow vector for the i-th keypoint
+     * @param {boolean[]|null} [found] output parameter: found[i] will be true if the i-th keypoint has been found
      * @returns {Promise<SpeedyFeature[]>}
      */
-    track(keypoints, found = null, flow = null)
+    track(keypoints, flow = null, found = null)
     {
         const gpu = this._media._gpu; // friend class?!
 

@@ -303,13 +303,15 @@ console.log(features);
 
 ##### SpeedyFeatureDetector.detect()
 
-`SpeedyFeatureDetector.detect(media: SpeedyMedia): Promise<SpeedyFeature[]>`
+`SpeedyFeatureDetector.detect(media: SpeedyMedia, flags?: number): Promise<SpeedyFeature[]>`
 
 Detects feature points in a `SpeedyMedia`.
 
 ###### Arguments
 
 * `media: SpeedyMedia`. The media object (image, video, etc.)
+* `flags: number, optional`. You may specify a combination of the following flags with the bitwise or:
+  * `Speedy.FEATURE_DETECTOR_RESET_CAPACITY`. Speedy performs optimizations behind the scenes, specially when detecting features in videos. This flag will undo these optimizations. Use it when you expect a sudden increase in the number of keypoints (i.e., between two consecutive frames).
 
 ###### Returns
 

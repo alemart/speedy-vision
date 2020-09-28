@@ -24,6 +24,7 @@ import { SpeedyPipeline } from './speedy-pipeline';
 import { FPSCounter } from '../utils/fps-counter';
 import { SpeedyFeatureDetectorFactory } from './speedy-feature-detector-factory';
 import { SpeedyFeatureTrackerFactory } from './speedy-feature-tracker-factory';
+import { SpeedyFlags } from './speedy-flags';
 
 /**
  * Speedy's main class
@@ -99,3 +100,9 @@ export class Speedy
         return SpeedyFeatureTrackerFactory;
     }
 }
+
+// Mix SpeedyFlags with Speedy
+// and make Speedy immutable
+Object.freeze(
+    Object.assign(Speedy.constructor.prototype, SpeedyFlags)
+);
