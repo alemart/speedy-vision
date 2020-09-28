@@ -24,13 +24,15 @@ import { FeatureDetectionAlgorithm } from './keypoints/feature-detection-algorit
 import { FeatureTrackingAlgorithm } from './keypoints/feature-tracking-algorithm';
 import { SpeedyMedia } from './speedy-media';
 import { SpeedyGPU } from '../gpu/speedy-gpu';
-import { IllegalOperationError, IllegalArgumentError } from '../utils/errors';
+import { IllegalOperationError, IllegalArgumentError, AbstractMethodError } from '../utils/errors';
+import { LKFeatureTrackingAlgorithm } from './keypoints/trackers/lk';
 
 /**
  * An easy-to-use class for working with feature trackers
  * (it performs sparse optical-flow)
+ * @abstract
  */
-export class SpeedyFeatureTracker
+class SpeedyFeatureTracker
 {
     /**
      * Class constructor
@@ -94,7 +96,7 @@ export class SpeedyFeatureTracker
 
         // upload & track keypoints
         const prevKeypoints = this._trackingAlgorithm.upload(gpu, keypoints, descriptorSize);
-        const trackedKeypoints = this._trackingAlgorithm.track(gpu, nextImage, prevImage, prevKeypoints, descriptorSize);
+        const trackedKeypoints = this._trackKeypoints(gpu, nextImage, prevImage, prevKeypoints, descriptorSize);
 
         // compute feature descriptors (if an algorithm is provided)
         const trackedKeypointsWithDescriptors = this._descriptionAlgorithm == null ? trackedKeypoints :
@@ -159,5 +161,138 @@ export class SpeedyFeatureTracker
         // is it the first frame?
         if(this._prevInputTexture == null)
             this._prevInputTexture = newInputTexture;
+    }
+
+    /**
+     * Calls the underlying tracking algorithm,
+     * possibly with additional options
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTexture} nextImage
+     * @param {SpeedyTexture} prevImage
+     * @param {SpeedyTexture} prevKeypoints tiny texture
+     * @param {number} descriptorSize in bytes
+     * @returns {SpeedyTexture}
+     */
+    _trackKeypoints(gpu, nextImage, prevImage, prevKeypoints, descriptorSize)
+    {
+        // template method
+        return this._trackingAlgorithm.track(
+            gpu,
+            nextImage,
+            prevImage,
+            prevKeypoints,
+            descriptorSize
+        );
+    }
+}
+
+
+
+/**
+ * LK feature tracker with image pyramids
+ */
+export class SpeedyLKFeatureTracker extends SpeedyFeatureTracker
+{
+    /**
+     * Class constructor
+     * @param {SpeedyMedia} media media to track
+     */
+    constructor(media)
+    {
+        const trackingAlgorithm = new LKFeatureTrackingAlgorithm();
+        super(trackingAlgorithm, media);
+
+        // default options
+        this._windowSize = 21;
+        this._depth = 5;
+        this._discardThreshold = 0.0001;
+    }
+
+    /**
+     * Calls the LK feature tracker
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTexture} nextImage
+     * @param {SpeedyTexture} prevImage
+     * @param {SpeedyTexture} prevKeypoints tiny texture
+     * @param {number} descriptorSize in bytes
+     * @returns {SpeedyTexture}
+     */
+    _trackKeypoints(gpu, nextImage, prevImage, prevKeypoints, descriptorSize)
+    {
+        return this._trackingAlgorithm.track(
+            gpu,
+            nextImage,
+            prevImage,
+            prevKeypoints,
+            descriptorSize,
+            this._windowSize,
+            this._depth,
+            this._discardThreshold
+        );
+    }
+
+    /**
+     * Neighborhood size
+     * @returns {number}
+     */
+    get windowSize()
+    {
+        return this._windowSize;
+    }
+
+    /**
+     * Neighborhood size
+     * @param {number} newSize a positive odd number, typically 21 or 15
+     */
+    set windowSize(newSize)
+    {
+        // make sure it's a positive odd number
+        if(typeof newSize !== 'number' || newSize < 1 || newSize % 2 == 0)
+            throw new IllegalArgumentError(`Window newSize must be a positive odd number`);
+
+        // update field
+        this._windowSize = newSize | 0;
+    }
+
+    /**
+     * How many pyramid levels will be scanned
+     * @returns {number}
+     */
+    get depth()
+    {
+        return this._depth;
+    }
+
+    /**
+     * How many pyramid levels will be scanned
+     * @param {number} newDepth positive integer
+     */
+    set depth(newDepth)
+    {
+        if(typeof newDepth !== 'number' || depth < 1)
+            throw new IllegalArgumentError(`Invalid depth: ${depth}`);
+
+        this._depth = newDepth | 0;
+    }
+
+    /**
+     * A threshold used to discard "bad" keypoints
+     * @returns {number}
+     */
+    get discardThreshold()
+    {
+        return this._discardThreshold;
+    }
+
+    /**
+     * A threshold used to discard "bad" keypoints
+     * @param {number} threshold typically 0.0001 - increase to discard more keypoints
+     */
+    set discardThreshold(threshold)
+    {
+        if(typeof threshold !== 'number')
+            throw new IllegalArgumentError(`Invalid discardThreshold`);
+
+        this._discardThreshold = Math.max(0, threshold);
     }
 }
