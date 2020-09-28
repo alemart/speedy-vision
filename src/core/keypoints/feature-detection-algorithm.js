@@ -20,7 +20,6 @@
  */
 
 import { AbstractMethodError } from '../../utils/errors';
-import { AutomaticSensitivity } from './automatic-sensitivity';
 import { FeatureAlgorithm } from './feature-algorithm';
 import { SpeedyFeature } from '../speedy-feature';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
@@ -39,8 +38,7 @@ export class FeatureDetectionAlgorithm extends FeatureAlgorithm
     {
         super();
         this._sensitivity = 0;
-        this._automaticSensitivity = null;
-        this._useBufferQueue = true;
+        this._downloader.enableBufferedDownloads();
     }
 
     /**
@@ -110,7 +108,15 @@ export class FeatureDetectionAlgorithm extends FeatureAlgorithm
      */
     download(gpu, encodedKeypoints, max = undefined, useAsyncTransfer = true)
     {
-        return this._downloader.download(gpu, encodedKeypoints, this.descriptorSize, max, useAsyncTransfer, this._useBufferQueue);
+        // download feature points
+        const keypoints = this._downloader.download(gpu, encodedKeypoints, this.descriptorSize, max, useAsyncTransfer);
+
+        // restore buffered downloads (if previously disabled) for improved performance
+        if(!this._downloader.usingBufferedDownloads())
+            this._downloader.enableBufferedDownloads();
+
+        // done!
+        return keypoints;
     }
 
     /**
@@ -119,8 +125,13 @@ export class FeatureDetectionAlgorithm extends FeatureAlgorithm
      */
     resetDownloader(gpu)
     {
-        this._downloader.reset(gpu, this.descriptorSize);
-        // maybe you want to disable the buffer queue?
+        // temporarily disable buffered downloads,
+        // so we get fresh results in the next
+        // call to download()
+        this._downloader.disableBufferedDownloads();
+
+        // reset the downloader
+        super.resetDownloader(gpu, this.descriptorSize);
     }
 
     /**
@@ -141,83 +152,5 @@ export class FeatureDetectionAlgorithm extends FeatureAlgorithm
     {
         this._sensitivity = Math.max(0, Math.min(+sensitivity, 1));
         this._onSensitivityChange(this._sensitivity);
-    }
-
-    /**
-     * Automatic sensitivity: expected number of keypoints
-     * @returns {object|undefined}
-     */
-    get expected()
-    {
-        if(this._automaticSensitivity == null) {
-            return {
-                number: this._automaticSensitivity.expected,
-                tolerance: this._automaticSensitivity.tolerance
-            };
-        }
-        else
-            return undefined;
-    }
-
-    /**
-     * Setup automatic sensitivity
-     * @param {number|object|undefined} expected
-     */
-    set expected(expected)
-    {
-        if(expected !== undefined) {
-            // enable automatic sensitivity
-            if(this._automaticSensitivity == null) {
-                this._automaticSensitivity = new AutomaticSensitivity(this._downloader);
-                this._automaticSensitivity.subscribe(value => this.sensitivity = value);
-            }
-
-            // set parameters
-            if(typeof expected === 'object') {
-                if(expected.hasOwnProperty('number'))
-                    this._automaticSensitivity.expected = +(expected.number);
-                if(expected.hasOwnProperty('tolerance'))
-                    this._automaticSensitivity.tolerance = +(expected.tolerance);
-            }
-            else
-                this._automaticSensitivity.expected = +expected;
-        }
-        else {
-            // disable automatic sensitivity
-            if(this._automaticSensitivity != null)
-                this._automaticSensitivity.disable();
-            this._automaticSensitivity = null;
-        }
-    }
-
-    /**
-     * Enable the buffer queue optimization
-     * It's an optimization technique that implies a 1-frame delay
-     * in the downloads when using async transfers; it may or may
-     * not be acceptable, depending on what you're trying to do
-     */
-    enableBufferQueue()
-    {
-        this._useBufferQueue = true;
-    }
-
-    /**
-     * Disable the buffer queue optimization
-     * It's an optimization technique that implies a 1-frame delay
-     * in the downloads when using async transfers; it may or may
-     * not be acceptable, depending on what you're trying to do
-     */
-    disableBufferQueue()
-    {
-        this._useBufferQueue = false;
-    }
-
-    /**
-     * Whether we're using the buffer queue optimization or not
-     * @returns {boolean}
-     */
-    isBufferQueueEnabled()
-    {
-        return this._useBufferQueue;
     }
 }

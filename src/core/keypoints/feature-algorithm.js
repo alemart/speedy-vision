@@ -21,6 +21,7 @@
 
 import { FeatureDownloader } from './feature-downloader';
 import { AbstractMethodError, IllegalArgumentError } from '../../utils/errors';
+import { Utils } from '../../utils/utils';
 
 
 /**
@@ -59,8 +60,12 @@ export class FeatureAlgorithm
     resetDownloader(gpu, descriptorSize)
     {
         if(descriptorSize === undefined)
-            throw IllegalArgumentError();
+            throw new IllegalArgumentError();
 
         this._downloader.reset(gpu, descriptorSize);
+
+        // note: buffered responses imply a 1-frame delay
+        if(this._downloader.usingBufferedDownloads())
+            Utils.warning(`The feature downloader has been reset, but buffered downloads are enabled and cause a 1-frame delay`);
     }
 }

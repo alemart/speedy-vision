@@ -221,7 +221,8 @@ export class GPUEncoders extends SpeedyProgramGroup
             if(x >= 0xFFFF && y >= 0xFFFF) // if end of list
                 break;
 
-            // likely to be incorrect black pixels
+            // We've cleared the texture to black.
+            // Likely to be incorrect black pixels
             // due to resize. Bad for encoderLength
             if(x + y == 0 && pixels[i+6] + pixels[i+5] == 0)
                 continue; // discard, it's noise
@@ -280,10 +281,10 @@ export class GPUEncoders extends SpeedyProgramGroup
      * Download RAW encoded keypoint data from the GPU - this is a bottleneck!
      * @param {SpeedyTexture} encodedKeypoints texture with keypoints that have already been encoded
      * @param {boolean} [useAsyncTransfer] transfer data from the GPU without blocking the CPU
-     * @param {boolean} [useBufferQueue] optimize async transfers
+     * @param {boolean} [useBufferedDownloads] optimize async transfers
      * @returns {Promise<Uint8Array[]>} pixels in the [r,g,b,a, ...] format
      */
-    async downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer = true, useBufferQueue = true)
+    async downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer = true, useBufferedDownloads = true)
     {
         try {
             // helper shader for reading the data
@@ -292,7 +293,7 @@ export class GPUEncoders extends SpeedyProgramGroup
             // read data from the GPU
             let downloadTime = performance.now(), pixels;
             if(useAsyncTransfer)
-                pixels = await this._downloadKeypoints.readPixelsAsync(0, 0, -1, -1, useBufferQueue);
+                pixels = await this._downloadKeypoints.readPixelsAsync(0, 0, -1, -1, useBufferedDownloads);
             else
                 pixels = this._downloadKeypoints.readPixelsSync(); // bottleneck!
             downloadTime = performance.now() - downloadTime;

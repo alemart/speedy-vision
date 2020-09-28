@@ -132,6 +132,7 @@ export class FeatureDownloader extends Observable
     constructor()
     {
         super();
+        this._useBufferedDownloads = false;
         this._estimator = new FeatureCountEstimator();
     }
 
@@ -142,13 +143,12 @@ export class FeatureDownloader extends Observable
      * @param {number} descriptorSize in bytes (set it to zero if there is no descriptor)
      * @param {number} [max] cap the number of keypoints to this value
      * @param {boolean} [useAsyncTransfer] transfer keypoints asynchronously
-     * @param {boolean} [useBufferQueue] optimize async transfers with a 1-frame delay
      * @param {object} [output] output object with additional info about the keypoints (see the encoder for details)
      * @returns {Promise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, descriptorSize, max = -1, useAsyncTransfer = true, useBufferQueue = true, output = undefined)
+    download(gpu, encodedKeypoints, descriptorSize, max = -1, useAsyncTransfer = true, output = undefined)
     {
-        return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer, useBufferQueue).then(data => {
+        return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer, this._useBufferedDownloads).then(data => {
 
             // decode the keypoints
             const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize, output);
@@ -200,6 +200,37 @@ export class FeatureDownloader extends Observable
 
         this._estimator.reset();
         gpu.programs.encoders.reserve(capacity, descriptorSize);
+    }
+
+    /**
+     * Enable buffered downloads
+     * It's an optimization technique that implies a 1-frame delay
+     * in the downloads when using async transfers; it may or may
+     * not be acceptable, depending on what you're trying to do
+     */
+    enableBufferedDownloads()
+    {
+        this._useBufferedDownloads = true;
+    }
+
+    /**
+     * Disable buffered downloads
+     * It's an optimization technique that implies a 1-frame delay
+     * in the downloads when using async transfers; it may or may
+     * not be acceptable, depending on what you're trying to do
+     */
+    disableBufferedDownloads()
+    {
+        this._useBufferedDownloads = false;
+    }
+
+    /**
+     * Whether we're using the buffered responses or not
+     * @returns {boolean}
+     */
+    usingBufferedDownloads()
+    {
+        return this._useBufferedDownloads;
     }
 
     /**

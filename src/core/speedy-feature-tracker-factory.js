@@ -21,7 +21,6 @@
 
 import { SpeedyNamespace } from './speedy-namespace';
 import { SpeedyMedia } from './speedy-media';
-import { SpeedyFeatureDetector } from './speedy-feature-detector';
 import { SpeedyFeatureTracker } from './speedy-feature-tracker';
 import { LKFeatureTrackingAlgorithm } from './keypoints/trackers/lk';
 
@@ -33,14 +32,11 @@ export class SpeedyFeatureTrackerFactory extends SpeedyNamespace
     /**
      * Spawns a LK feature tracker
      * @param {SpeedyMedia} media
-     * @param {SpeedyFeatureDetector} [featureDetector]
      * @returns {SpeedyFeatureTracker}
      */
-    static LK(media, featureDetector = null)
+    static LK(media)
     {
         const trackingAlgorithm = new LKFeatureTrackingAlgorithm();
-        const detectionAlgorithm = featureDetector ? featureDetector._algorithm : null;
-
-        return new SpeedyFeatureTracker(media, trackingAlgorithm, detectionAlgorithm);
+        return new SpeedyFeatureTracker(trackingAlgorithm, media);
     }
 }

@@ -20,6 +20,7 @@
  */
 
 import { ColorFormat } from '../utils/types'
+import { AutomaticSensitivity } from './keypoints/automatic-sensitivity';
 import { FeatureDetectionAlgorithm } from './keypoints/feature-detection-algorithm';
 import { IllegalArgumentError, IllegalOperationError } from '../utils/errors';
 
@@ -40,12 +41,16 @@ export class SpeedyFeatureDetector
         // Set the algorithm
         this._algorithm = algorithm;
 
+        // automatic sensitivity (lazy instantiation)
+        this._automaticSensitivity = null;
+
         // cap the number of keypoints?
         this._max = undefined;
 
         // enhance the image in different ways before detecting the features
         this._enhancements = {
-            denoise: true
+            denoise: true,
+            illumination: false,
         };
 
         // Copy getters and setters from the algorithm
@@ -165,10 +170,21 @@ export class SpeedyFeatureDetector
      */
     expect(numberOfFeaturePoints, tolerance = 0.10)
     {
-        this.expected = numberOfFeaturePoints !== undefined ? {
-            number: Math.max(0, numberOfFeaturePoints),
-            tolerance: Math.max(0, tolerance)
-        } : undefined;
+        if(numberOfFeaturePoints !== undefined) {
+            // enable automatic sensitivity
+            if(this._automaticSensitivity == null) {
+                this._automaticSensitivity = new AutomaticSensitivity(this._algorithm._downloader);
+                this._automaticSensitivity.subscribe(value => this._algorithm.sensitivity = value);
+            }
+            this._automaticSensitivity.expected = numberOfFeaturePoints;
+            this._automaticSensitivity.tolerance = tolerance;
+        }
+        else {
+            // disable automatic sensitivity
+            if(this._automaticSensitivity != null)
+                this._automaticSensitivity.disable();
+            this._automaticSensitivity = null;
+        }
     }
 }
 

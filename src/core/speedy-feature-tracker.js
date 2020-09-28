@@ -19,6 +19,7 @@
  * An easy-to-use class for working with feature trackers
  */
 
+import { SpeedyFeatureDetector } from './speedy-feature-detector';
 import { FeatureDetectionAlgorithm } from './keypoints/feature-detection-algorithm';
 import { FeatureTrackingAlgorithm } from './keypoints/feature-tracking-algorithm';
 import { SpeedyMedia } from './speedy-media';
@@ -32,17 +33,35 @@ export class SpeedyFeatureTracker
 {
     /**
      * Class constructor
-     * @param {SpeedyMedia} media the media that holds the features
      * @param {FeatureTrackingAlgorithm} trackingAlgorithm used to track the features
-     * @param {FeatureDetectionAlgorithm} [detectionAlgorithm] used to detect & describe the tracked features
+     * @param {SpeedyMedia} media the media that holds the features
      */
-    constructor(media, trackingAlgorithm, detectionAlgorithm = null)
+    constructor(trackingAlgorithm, media)
     {
-        this._trackingAlgorithm = trackingAlgorithm;
-        this._detectionAlgorithm = detectionAlgorithm;
         this._media = media;
+        this._trackingAlgorithm = trackingAlgorithm;
+        this._descriptionAlgorithm = null;
         this._inputTexture = null;
         this._prevInputTexture = null;
+    }
+
+    /**
+     * Augments the feature tracker, so that tracked features
+     * are also described before being returned to the user.
+     * This is a chainable method and can be called when
+     * instantiating the tracker.
+     * @param {SpeedyFeatureDetector} featureDescriptor used to describe the tracked features
+     * @returns {SpeedyFeatureTracker} this object
+     */
+    includeDescriptor(featureDescriptor)
+    {
+        const algorithm = featureDescriptor._algorithm;
+
+        // update feature descriptor
+        this._descriptionAlgorithm = algorithm;
+
+        // chainable method
+        return this;
     }
 
     /**
@@ -66,24 +85,19 @@ export class SpeedyFeatureTracker
         // preliminary data
         const nextImage = this._inputTexture;
         const prevImage = this._prevInputTexture;
-        const descriptorSize = this._detectionAlgorithm != null ? this._detectionAlgorithm.descriptorSize : 0;
+        const descriptorSize = this._descriptionAlgorithm != null ? this._descriptionAlgorithm.descriptorSize : 0;
         const useAsyncTransfer = (this._media.options.usage != 'static');
 
         // reserve space for the encoder
         gpu.programs.encoders.reserve(keypoints.length, descriptorSize);
-
-        // disable buffer queue on the feature detector,
-        // so we don't get delayed responses
-        if(this._detectionAlgorithm != null)
-            this._detectionAlgorithm.disableBufferQueue();
 
         // upload & track keypoints
         const prevKeypoints = this._trackingAlgorithm.upload(gpu, keypoints, descriptorSize);
         const trackedKeypoints = this._trackingAlgorithm.track(gpu, nextImage, prevImage, prevKeypoints, descriptorSize);
 
         // compute feature descriptors (if an algorithm is provided)
-        const trackedKeypointsWithDescriptors = this._detectionAlgorithm == null ? trackedKeypoints :
-            this._detectionAlgorithm.describe(gpu, nextImage, trackedKeypoints);
+        const trackedKeypointsWithDescriptors = this._descriptionAlgorithm == null ? trackedKeypoints :
+            this._descriptionAlgorithm.describe(gpu, nextImage, trackedKeypoints);
 
         // download keypoints
         const discard = [];
