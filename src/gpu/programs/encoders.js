@@ -122,12 +122,7 @@ export class GPUEncoders extends SpeedyProgramGroup
         const newEncoderLength = this._minimumEncoderLength(keypointCount, descriptorSize);
         const oldEncoderLength = this._encoderLength;
 
-        if(newEncoderLength != oldEncoderLength) {
-            this._encoderLength = newEncoderLength;
-            this._encodeKeypoints.resize(newEncoderLength, newEncoderLength);
-            this._downloadKeypoints.resize(newEncoderLength, newEncoderLength);
-            this._uploadKeypoints.resize(newEncoderLength, newEncoderLength);
-        }
+        this._encoderLength = newEncoderLength;
 
         return (newEncoderLength - oldEncoderLength) != 0;
     }
@@ -160,8 +155,11 @@ export class GPUEncoders extends SpeedyProgramGroup
         const imageSize = [ this._width, this._height ];
         const maxIterations = this._tuner.currentValue(); // any value between 32 and 48 should work on PC & mobile
 
-        // encode keypoints
+        // encode offsets
         const offsets = this._encodeKeypointOffsets(corners, imageSize, maxIterations);
+
+        // encode keypoints
+        this._encodeKeypoints.resize(this._encoderLength, this._encoderLength);
         this._encodeKeypoints.clear(0, 0, 0, 0); // clear all pixels to 0
         return this._encodeKeypoints(offsets, imageSize, encoderLength, descriptorSize);
     }
@@ -268,6 +266,7 @@ export class GPUEncoders extends SpeedyProgramGroup
     {
         try {
             // helper shader for reading the data
+            this._downloadKeypoints.resize(this._encoderLength, this._encoderLength);
             this._downloadKeypoints(encodedKeypoints);
 
             // read data from the GPU
@@ -334,6 +333,7 @@ export class GPUEncoders extends SpeedyProgramGroup
         this.reserve(keypointCount, descriptorSize);
 
         // Upload data
+        this._uploadKeypoints.resize(this._encoderLength, this._encoderLength);
         this._uploadKeypoints.setUBO('KeypointBuffer', this._uploadBuffer);
         return this._uploadKeypoints(keypointCount, this._encoderLength, descriptorSize);
     }

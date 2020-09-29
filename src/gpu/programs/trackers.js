@@ -30,7 +30,9 @@ import { PYRAMID_MAX_LEVELS } from '../../utils/globals';
 //
 
 // LK
-const LK_MAX_WINDOW_SIZE = 21; // 10x10 window (use 15 for a 7x7 window)
+//const LK_MAX_WINDOW_SIZE = 21; // 10x10 window (use 15 for a 7x7 window)
+const LK_MAX_WINDOW_SIZE = 31; // 15x15 window
+const LK_MIN_WINDOW_SIZE = 5; // 2x2 window
 
 const lk = importShader('trackers/lk.glsl')
            .withArguments('nextPyramid', 'prevPyramid', 'prevKeypoints', 'windowSize', 'depth', 'descriptorSize', 'encoderLength')
@@ -87,9 +89,8 @@ export class GPUTrackers extends SpeedyProgramGroup
         depth = Math.max(MIN_DEPTH, Math.min(depth | 0, MAX_DEPTH));
 
         // windowSize must be a positive odd number
-        const MIN_WINDOW_SIZE = 5; // 2x2 window
         windowSize = windowSize + ((windowSize+1) % 2);
-        windowSize = Math.max(MIN_WINDOW_SIZE, Math.min(windowSize, LK_MAX_WINDOW_SIZE));
+        windowSize = Math.max(LK_MIN_WINDOW_SIZE, Math.min(windowSize, LK_MAX_WINDOW_SIZE));
 
         // resize programs
         this._lk.resize(encoderLength, encoderLength);

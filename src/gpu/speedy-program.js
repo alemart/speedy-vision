@@ -643,9 +643,22 @@ StandardProgram.prototype.resize = function(width, height)
         for(let i = 0; i < numTextures; i++) {
             newTexture[i] = new SpeedyTexture(gl, width, height);
 
+            /*
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo[i]);
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, newTexture[i].glTexture);
+
+            //
+            // BUG: calling copyTexSubImage2D() below generates a warning
+            //      on Firefox - investigate further
+            //
+            // "Texture has not been initialized prior to a partial upload,
+            //  forcing the browser to clear it. This may be slow."
+            //
+            // FIXME: Currently, texture contents are being lost on resize
+            //
+
+            // copy old content
             gl.copyTexSubImage2D(gl.TEXTURE_2D,     // target
                                  0,                 // mipmap level
                                  0,                 // xoffset
@@ -654,8 +667,10 @@ StandardProgram.prototype.resize = function(width, height)
                                  0,                 // y
                                  Math.min(width, oldWidth),    // width
                                  Math.min(height, oldHeight)); // height
+
             gl.bindTexture(gl.TEXTURE_2D, null);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            */
 
             newFBO[i] = GLUtils.createFramebuffer(gl, newTexture[i].glTexture);
         }

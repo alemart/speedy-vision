@@ -98,7 +98,7 @@ export class SpeedyGPU
 
     /**
      * Upload data to the GPU
-     * We reuse textures within an internal buffer of size UPLOAD_BUFFER_SIZE
+     * We reuse textures by means of an internal buffer of size UPLOAD_BUFFER_SIZE
      * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} data 
      * @param {number} [width]
      * @param {number} [height] 
