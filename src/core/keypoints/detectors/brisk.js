@@ -20,19 +20,11 @@
  */
 
 import { FeatureDetectionAlgorithm } from '../feature-detection-algorithm';
-import { IllegalArgumentError, NotImplementedError } from '../../../utils/errors';
+import { NotImplementedError } from '../../../utils/errors';
 import { SpeedyGPU } from '../../../gpu/speedy-gpu';
-import { PYRAMID_MAX_LEVELS } from '../../../utils/globals';
 
 // constants
 const DESCRIPTOR_SIZE = 64; // 512 bits
-const DEFAULT_DEPTH = 4; // will check 4 pyramid layers (7 octaves)
-const MIN_DEPTH = 1; // minimum depth level
-const MAX_DEPTH = PYRAMID_MAX_LEVELS; // maximum depth level
-
-// static data
-let shortPairs = null, longPairs = null;
-
 
 /**
  * BRISK feature detector & descriptor
@@ -40,44 +32,12 @@ let shortPairs = null, longPairs = null;
 export class BRISKFeatures extends FeatureDetectionAlgorithm
 {
     /**
-     * Class constructor
-     */
-    constructor()
-    {
-        super();
-
-        // default settings
-        this._depth = DEFAULT_DEPTH;
-    }
-
-    /**
      * Descriptor size for BRISK
      * @returns {number} in bytes
      */
     get descriptorSize()
     {
         return DESCRIPTOR_SIZE;
-    }
-
-    /**
-     * Get the depth of the algorithm: how many pyramid layers will be scanned
-     * @returns {number}
-     */
-    get depth()
-    {
-        return this._depth;
-    }
-
-    /**
-     * Set the depth of the algorithm: how many pyramid layers will be scanned
-     * @param {number} depth
-     */
-    set depth(depth)
-    {
-        if(depth < MIN_DEPTH || depth > MAX_DEPTH)
-            throw new IllegalArgumentError(`Invalid depth: ${depth}`);
-
-        this._depth = depth | 0;
     }
 
     /**
@@ -104,27 +64,10 @@ export class BRISKFeatures extends FeatureDetectionAlgorithm
         // TODO
         throw new NotImplementedError();
     }
-
-    /**
-     * Short distance pairings, for scale = 1.0. Format:
-     * [x1,y1,x2,y2, ...]. Thus, 4 elements for each pair
-     * @returns {Float32Array<number>} flattened array
-     */
-    static get shortDistancePairs()
-    {
-        return shortPairs || (shortPairs = briskShortDistancePairs());
-    };
-
-    /**
-     * Long distance pairings, for scale = 1.0. Format:
-     * [x1,y1,x2,y2, ...]. Thus, 4 elements for each pair
-     * @returns {Float32Array<number>} flattened array
-     */
-    static get longDistancePairs()
-    {
-        return longPairs || (longPairs = briskLongDistancePairs());
-    }
 }
+
+
+
 
 /**
  * (Modified) BRISK pattern for 60 points:
@@ -224,7 +167,8 @@ function briskPairs(threshold, scale = 1.0)
 }
 
 /**
- * BRISK short distance pairs
+ * BRISK short distance pairings for scale = 1.0
+ * Format: [x1,y1,x2,y2, ...] => 4 elements for each pair
  * @param {number} threshold pick pairs with distance < threshold*scale
  * @param {number} [scale] pattern scale
  * @returns {Float32Array<number>} format [x1,y1,x2,y2, ...]
@@ -235,7 +179,8 @@ function briskShortDistancePairs(threshold = 9.75, scale = 1.0)
 }
 
 /**
- * BRISK long distance pairs
+ * BRISK long distance pairings for scale = 1.0
+ * Format: [x1,y1,x2,y2, ...] => 4 elements for each pair
  * @param {number} threshold pick pairs with distance > threshold*scale
  * @param {number} [scale] pattern scale
  * @returns {Float32Array<number>} format [x1,y1,x2,y2, ...]

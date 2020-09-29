@@ -31,14 +31,6 @@ const DESCRIPTOR_SIZE = 32; // 256 bits
 export class ORBFeatures extends MultiscaleHarrisFeatures
 {
     /**
-     * Class constructor
-     */
-    constructor()
-    {
-        super();
-    }
-
-    /**
      * Descriptor size for ORB
      * @returns {number} in bytes
      */
@@ -51,12 +43,14 @@ export class ORBFeatures extends MultiscaleHarrisFeatures
      * Detect feature points for ORB
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} inputTexture pre-processed greyscale image
+     * @param {number} [quality] a value in [0,1]: will pick corners having score >= quality * max(score)
+     * @param {number} [depth] how many pyramid levels will be scanned
      * @returns {SpeedyTexture} encoded keypoints
      */
-    detect(gpu, inputTexture)
+    detect(gpu, inputTexture, quality = undefined, depth = undefined)
     {
         // Multiscale Harris gives us nice corners in scale-space
-        return super.detect(gpu, inputTexture);
+        return super.detect(gpu, inputTexture, quality, depth);
     }
 
     /**

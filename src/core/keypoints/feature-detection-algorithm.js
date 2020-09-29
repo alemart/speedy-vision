@@ -23,6 +23,7 @@ import { AbstractMethodError } from '../../utils/errors';
 import { FeatureAlgorithm } from './feature-algorithm';
 import { SpeedyFeature } from '../speedy-feature';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
+import { SpeedyTexture } from '../../gpu/speedy-texture';
 
 /**
  * An abstract class for feature
@@ -37,7 +38,6 @@ export class FeatureDetectionAlgorithm extends FeatureAlgorithm
     constructor()
     {
         super();
-        this._sensitivity = 0;
         this._downloader.enableBufferedDownloads();
     }
 
@@ -51,23 +51,6 @@ export class FeatureDetectionAlgorithm extends FeatureAlgorithm
      * @returns {number} descriptor size in bytes
      */
     get descriptorSize()
-    {
-        // This must be implemented in subclasses
-        throw new AbstractMethodError();
-    }
-
-    /**
-     * Convert a normalized sensitivity into an
-     * algorithm-specific value such as a threshold
-     * 
-     * Sensitivity is a generic parameter that can be
-     * mapped to different feature detectors. The
-     * higher the sensitivity, the more features
-     * you should get
-     *
-     * @param {number} sensitivity a value in [0,1]
-     */
-    _onSensitivityChange(sensitivity)
     {
         // This must be implemented in subclasses
         throw new AbstractMethodError();
@@ -132,25 +115,5 @@ export class FeatureDetectionAlgorithm extends FeatureAlgorithm
 
         // reset the downloader
         super.resetDownloader(gpu, this.descriptorSize);
-    }
-
-    /**
-     * Get the current detector sensitivity
-     * @returns {number} a value in [0,1]
-     */
-    get sensitivity()
-    {
-        return this._sensitivity;
-    }
-
-    /**
-     * Set the sensitivity of the feature detector
-     * The higher the sensitivity, the more features you get
-     * @param {number} sensitivity a value in [0,1]
-     */
-    set sensitivity(sensitivity)
-    {
-        this._sensitivity = Math.max(0, Math.min(+sensitivity, 1));
-        this._onSensitivityChange(this._sensitivity);
     }
 }

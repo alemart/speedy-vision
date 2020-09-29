@@ -21,85 +21,18 @@
 
 import { SpeedyGPU } from '../../../gpu/speedy-gpu';
 import { FeatureDetectionAlgorithm } from '../feature-detection-algorithm';
-import { NotSupportedError, IllegalArgumentError } from '../../../utils/errors';
-import { PYRAMID_MAX_LEVELS } from '../../../utils/globals';
+import { NotSupportedError } from '../../../utils/errors';
 
 // constants
-const DEFAULT_N = 9; // use FAST-9,16 by default
-const DEFAULT_THRESHOLD = 10; // default FAST threshold
-const DEFAULT_DEPTH = 3; // for multiscale: will check 3 pyramid levels (LODs: 0, 0.5, 1, 1.5, 2)
-const MIN_DEPTH = 1; // minimum depth level
-const MAX_DEPTH = PYRAMID_MAX_LEVELS; // maximum depth level
 const DEFAULT_ORIENTATION_PATCH_RADIUS = 7; // for computing keypoint orientation
+
+
 
 /**
  * FAST corner detector
  */
 export class FASTFeatures extends FeatureDetectionAlgorithm
 {
-    /**
-     * Class constructor
-     * @param {number} [n] Variant of the algorithm. Must be 9, 7 or 5.
-     */
-    constructor(n = DEFAULT_N)
-    {
-        super();
-
-        // default settings
-        this._threshold = DEFAULT_THRESHOLD;
-
-        // set the type of the algorithm
-        this.n = n;
-    }   
-
-    /**
-     * The current type of FAST (9, 7 or 5)
-     * @returns {number}
-     */
-    get n()
-    {
-        return this._n;
-    }
-
-    /**
-     * Set the type of the algorithm
-     * @param {number} n 9 for FAST-9,16; 7 for FAST-7,12; 5 for FAST-5,8
-     */
-    set n(n)
-    {
-        if(!(n == 9 || n == 7 || n == 5))
-            throw new NotSupportedError(`Can't run FAST with n = ${n}`);
-
-        this._n = n | 0;
-    }
-
-    /**
-     * Get FAST threshold
-     * @returns {number} a value in [0,255]
-     */
-    get threshold()
-    {
-        return this._threshold;
-    }
-
-    /**
-     * Set FAST threshold
-     * @param {number} threshold a value in [0,255]
-     */
-    set threshold(threshold)
-    {
-        this._threshold = Math.max(0, Math.min(threshold | 0, 255));
-    }
-
-    /**
-     * Convert a normalized sensitivity to a FAST threshold
-     * @param {number} sensitivity 
-     */
-    _onSensitivityChange(sensitivity)
-    {
-        this.threshold = Math.round(255.0 * (1.0 - Math.tanh(2.77 * sensitivity)));
-    }
-
     /**
      * FAST has no keypoint descriptor
      */
@@ -112,12 +45,13 @@ export class FASTFeatures extends FeatureDetectionAlgorithm
      * Detect feature points
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} inputTexture pre-processed greyscale image
+     * @param {number} [n] FAST variant: 9, 7 or 5
+     * @param {number} [threshold] a number in [0,255]
      * @returns {SpeedyTexture} encoded keypoints
      */
-    detect(gpu, inputTexture)
+    detect(gpu, inputTexture, n = 9, threshold = 10)
     {
-        const n = this._n;
-        const normalizedThreshold = this._threshold / 255.0;
+        const normalizedThreshold = threshold / 255.0;
         const descriptorSize = this.descriptorSize;
 
         // find corners
@@ -128,6 +62,8 @@ export class FASTFeatures extends FeatureDetectionAlgorithm
             corners = gpu.programs.keypoints.fast7(inputTexture, normalizedThreshold);
         else if(n == 5)
             corners = gpu.programs.keypoints.fast5(inputTexture, normalizedThreshold);
+        else
+            throw new NotSupportedError();
 
         // non-maximum suppression
         corners = gpu.programs.keypoints.nonmaxSuppression(corners);
@@ -137,93 +73,29 @@ export class FASTFeatures extends FeatureDetectionAlgorithm
     }
 }
 
+
+
+
+
 /**
  * FAST corner detector in an image pyramid
  */
 export class MultiscaleFASTFeatures extends FASTFeatures
 {
     /**
-     * Class constructor
-     * @param {number} [n] Variant of the algorithm. Must be 9.
-     */
-    constructor(n = 9)
-    {
-        super();
-
-        // default settings
-        this._depth = DEFAULT_DEPTH;
-        this._useHarrisScore = false;
-
-        // set the type of the algorithm
-        this.n = n;
-    }
-
-    /**
-     * Get the depth of the algorithm: how many pyramid layers will be scanned
-     * @returns {number}
-     */
-    get depth()
-    {
-        return this._depth;
-    }
-
-    /**
-     * Set the depth of the algorithm: how many pyramid layers will be scanned
-     * @param {number} depth
-     */
-    set depth(depth)
-    {
-        if(depth < MIN_DEPTH || depth > MAX_DEPTH)
-            throw new IllegalArgumentError(`Invalid depth: ${depth}`);
-
-        this._depth = depth | 0;
-    }
-
-    /**
-     * Whether or not we're using an approximation of
-     * Harris corner responses for keypoint scores
-     * @returns {boolean}
-     */
-    get useHarrisScore()
-    {
-        return this._useHarrisScore;
-    }
-
-    /**
-     * Should we use an approximation of Harris corner
-     * responses for keypoint scores?
-     * @param {boolean} useHarris
-     */
-    set useHarrisScore(useHarris)
-    {
-        this._useHarrisScore = Boolean(useHarris);
-    }
-
-    /**
-     * Set the type of the Multiscale FAST
-     * @param {number} n must be 9
-     */
-    set n(n)
-    {
-        // only Multiscale FAST-9 is supported at the moment
-        if(n != 9)
-            throw new NotSupportedError(`Can't run Multiscale FAST with n = ${n}`);
-
-        this._n = n | 0;
-    }
-
-    /**
      * Detect feature points
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} inputTexture pre-processed greyscale image
+     * @param {number} [threshold] a value in [0,255]
+     * @param {number} [depth] how many pyramid levels to check
+     * @param {boolean} [useHarrisScore] use Harris scoring function
      * @returns {SpeedyTexture} encoded keypoints
      */
-    detect(gpu, inputTexture)
+    detect(gpu, inputTexture, threshold = 10, depth = 3, useHarrisScore = false)
     {
-        const normalizedThreshold = this._threshold / 255.0;
-        const useHarrisScore = this._useHarrisScore;
+        const normalizedThreshold = threshold / 255.0;
+        const numberOfOctaves = 2 * depth - 1;
         const descriptorSize = this.descriptorSize;
-        const numberOfOctaves = 2 * this._depth - 1;
 
         // generate pyramid
         const pyramid = inputTexture.generateMipmap();

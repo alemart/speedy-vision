@@ -20,11 +20,14 @@
  */
 
 import { SpeedyNamespace } from './speedy-namespace';
-import { SpeedyFeatureDetector } from './speedy-feature-detector';
-import { FASTFeatures, MultiscaleFASTFeatures } from './keypoints/detectors/fast';
-import { HarrisFeatures, MultiscaleHarrisFeatures } from './keypoints/detectors/harris';
-import { ORBFeatures } from './keypoints/detectors/orb';
-import { BRISKFeatures } from './keypoints/detectors/brisk';
+import {
+    FASTFeatureDetector,
+    MultiscaleFASTFeatureDetector,
+    HarrisFeatureDetector,
+    MultiscaleHarrisFeatureDetector,
+    ORBFeatureDetector,
+    BRISKFeatureDetector
+} from './speedy-feature-detector';
 
 /**
  * A collection of methods for instantiating SpeedyFeatureDetectors
@@ -34,56 +37,56 @@ export class SpeedyFeatureDetectorFactory extends SpeedyNamespace
     /**
      * FAST feature detector
      * @param {number} [n] Variant of the algorithm. Must be 9, 7 or 5.
-     * @returns {SpeedyFeatureDetector}
+     * @returns {FASTFeatureDetector}
      */
     static FAST(n = 9)
     {
-        return new SpeedyFeatureDetector(new FASTFeatures(n));
+        return new FASTFeatureDetector(n);
     }
 
     /**
      * FAST feature detector in scale-space
      * @param {number} [n] Variant of the algorithm. Must be 9.
-     * @returns {SpeedyFeatureDetector}
+     * @returns {MultiscaleFASTFeatureDetector}
      */
     static MultiscaleFAST(n = 9)
     {
-        return new SpeedyFeatureDetector(new MultiscaleFASTFeatures(n));
+        return new MultiscaleFASTFeatureDetector(n);
     }
 
     /**
      * Harris corner detector
-     * @returns {SpeedyFeatureDetector}
+     * @returns {HarrisFeatureDetector}
      */
     static Harris()
     {
-        return new SpeedyFeatureDetector(new HarrisFeatures());
+        return new HarrisFeatureDetector();
     }
 
     /**
      * Harris corner detector in scale-space
-     * @returns {SpeedyFeatureDetector}
+     * @returns {MultiscaleHarrisFeatureDetector}
      */
     static MultiscaleHarris()
     {
-        return new SpeedyFeatureDetector(new MultiscaleHarrisFeatures());
+        return new MultiscaleHarrisFeatureDetector();
     }
 
     /**
      * ORB feature detector & descriptor
-     * @returns {SpeedyFeatureDetector}
+     * @returns {ORBFeatureDetector}
      */
     static ORB()
     {
-        return new SpeedyFeatureDetector(new ORBFeatures());
+        return new ORBFeatureDetector();
     }
 
     /**
      * BRISK feature detector & descriptor
-     * @returns {SpeedyFeatureDetector}
+     * @returns {BRISKFeatureDetector}
      */
     static BRISK()
     {
-        return new SpeedyFeatureDetector(new BRISKFeatures());
+        return new BRISKFeatureDetector();
     }
 }

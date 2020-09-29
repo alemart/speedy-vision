@@ -102,7 +102,4 @@ export class Speedy
 }
 
 // Mix SpeedyFlags with Speedy
-// and make Speedy immutable
-Object.freeze(
-    Object.assign(Speedy.constructor.prototype, SpeedyFlags)
-);
+Object.assign(Speedy.constructor.prototype, SpeedyFlags);

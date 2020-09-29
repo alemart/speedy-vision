@@ -22,14 +22,9 @@
 import { SpeedyGPU } from '../../../gpu/speedy-gpu';
 import { FeatureDetectionAlgorithm } from '../feature-detection-algorithm';
 import { PixelComponent } from '../../../utils/types';
-import { IllegalArgumentError } from '../../../utils/errors';
 import { PYRAMID_MAX_LEVELS } from '../../../utils/globals';
 
 // constants
-const DEFAULT_QUALITY = 0.1; // in [0,1]: pick corners having score >= quality * max(score)
-const DEFAULT_DEPTH = 3; // for multiscale: will check 3 pyramid levels (LODs: 0, 0.5, 1, 1.5, 2)
-const MIN_DEPTH = 1; // minimum depth level
-const MAX_DEPTH = PYRAMID_MAX_LEVELS; // maximum depth level
 const DEFAULT_WINDOW_SIZE = 3; // compute Harris autocorrelation matrix within a 3x3 window
 const MIN_WINDOW_SIZE = 0; // minimum window size when computing the autocorrelation matrix
 const MAX_WINDOW_SIZE = 7; // maximum window size when computing the autocorrelation matrix
@@ -42,44 +37,6 @@ const SOBEL_OCTAVE_COUNT = 2 * PYRAMID_MAX_LEVELS - 1; // Sobel derivatives for 
 export class HarrisFeatures extends FeatureDetectionAlgorithm
 {
     /**
-     * Class constructor
-     */
-    constructor()
-    {
-        super();
-
-        // default settings
-        this._quality = DEFAULT_QUALITY;
-    }   
-
-    /**
-     * Get current quality level
-     * @returns {number} a value in [0,1]
-     */
-    get quality()
-    {
-        return this._quality;
-    }
-
-    /**
-     * Set quality level
-     * @param {number} quality a value in [0,1]
-     */
-    set quality(quality)
-    {
-        this._quality = Math.max(0, Math.min(quality, 1));
-    }
-
-    /**
-     * Convert a normalized sensitivity to a quality value
-     * @param {number} sensitivity 
-     */
-    _onSensitivityChange(sensitivity)
-    {
-        this.quality = 1.0 - Math.tanh(2.3 * sensitivity);
-    }
-
-    /**
      * Harris has no keypoint descriptor
      */
     get descriptorSize()
@@ -91,11 +48,11 @@ export class HarrisFeatures extends FeatureDetectionAlgorithm
      * Detect feature points
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} inputTexture pre-processed greyscale image
+     * @param {number} [quality] a value in [0,1]: will pick corners having score >= quality * max(score)
      * @returns {SpeedyTexture} encoded keypoints
      */
-    detect(gpu, inputTexture)
+    detect(gpu, inputTexture, quality = 0.1)
     {
-        const quality = this._quality;
         const descriptorSize = this.descriptorSize;
         const windowRadius = DEFAULT_WINDOW_SIZE >> 1;
         const lod = 0, numberOfOctaves = 1;
@@ -130,49 +87,18 @@ export class HarrisFeatures extends FeatureDetectionAlgorithm
 export class MultiscaleHarrisFeatures extends HarrisFeatures
 {
     /**
-     * Class constructor
-     */
-    constructor()
-    {
-        super();
-
-        // default settings
-        this._depth = DEFAULT_DEPTH;
-    }
-
-    /**
-     * Get the depth of the algorithm: how many pyramid layers will be scanned
-     * @returns {number}
-     */
-    get depth()
-    {
-        return this._depth;
-    }
-
-    /**
-     * Set the depth of the algorithm: how many pyramid layers will be scanned
-     * @param {number} depth a number between 1 and PYRAMID_MAX_LEVELS, inclusive
-     */
-    set depth(depth)
-    {
-        if(depth < MIN_DEPTH || depth > MAX_DEPTH)
-            throw new IllegalArgumentError(`Invalid depth: ${depth}`);
-
-        this._depth = depth | 0;
-    }
-
-    /**
      * Detect feature points
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} inputTexture pre-processed greyscale image
+     * @param {number} [quality] a value in [0,1]: will pick corners having score >= quality * max(score)
+     * @param {number} [depth] how many pyramid levels will be scanned
      * @returns {SpeedyTexture} encoded keypoints
      */
-    detect(gpu, inputTexture)
+    detect(gpu, inputTexture, quality = 0.1, depth = 3)
     {
-        const quality = this._quality;
         const descriptorSize = this.descriptorSize;
         const windowRadius = DEFAULT_WINDOW_SIZE >> 1;
-        const numberOfOctaves = 2 * this._depth - 1;
+        const numberOfOctaves = 2 * depth - 1;
 
         // generate pyramid
         const pyramid = inputTexture.generateMipmap();
