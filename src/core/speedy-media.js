@@ -21,7 +21,7 @@
 
 import { SpeedyGPU } from '../gpu/speedy-gpu';
 import { MediaType, ColorFormat } from '../utils/types'
-import { TimeoutError, IllegalArgumentError, NotSupportedError, AccessDeniedError } from '../utils/errors';
+import { TimeoutError, IllegalArgumentError, IllegalOperationError, NotSupportedError, AccessDeniedError } from '../utils/errors';
 import { Utils } from '../utils/utils';
 import { SpeedyFeatureDetectorFactory } from './speedy-feature-detector-factory';
 
@@ -87,26 +87,15 @@ export class SpeedyMedia
      */
     static load(mediaSource, options = { })
     {
-        return new Promise((resolve, reject) => {
+        return waitMediaToLoad(mediaSource).then(() => {
             const dimensions = getMediaDimensions(mediaSource);
-            if(dimensions != null) {
-                // try to load the media until it's ready
-                (function loadMedia(dimensions, k = 500) {
-                    if(dimensions.width > 0 && dimensions.height > 0) {
-                        const media = new SpeedyMedia(mediaSource, dimensions.width, dimensions.height, options);
-                        Utils.log(`Loaded SpeedyMedia with a ${mediaSource}.`);
-                        resolve(media);
-                    }
-                    else if(k > 0)
-                        setTimeout(() => loadMedia(getMediaDimensions(mediaSource), k-1), 0);
-                    else
-                        reject(new TimeoutError(`Can't load SpeedyMedia with a ${mediaSource}: timeout.`));
-                })(dimensions);
-            }
-            else {
-                // invalid media source
-                reject(new IllegalArgumentError(`Can't load SpeedyMedia with a ${mediaSource}: invalid media source.`));
-            }
+            if(dimensions.width == 0 || dimensions.height == 0)
+                throw new IllegalOperationError(`Can't load media: invalid dimensions`);
+
+            const media = new SpeedyMedia(mediaSource, dimensions.width, dimensions.height, options);
+            Utils.log(`Loaded SpeedyMedia with a ${mediaSource}.`);
+
+            return media;
         });
     }
 
@@ -118,7 +107,7 @@ export class SpeedyMedia
      * @param {object} [mediaOptions] additional options for advanced configuration of the SpeedyMedia
      * @returns {Promise<SpeedyMedia>}
      */
-    static loadCameraStream(width = 426, height = 240, cameraOptions = {}, mediaOptions = {})
+    static loadCameraStream(width = 426, height = 240, cameraOptions = { }, mediaOptions = { })
     {
         return requestCameraStream(width, height, cameraOptions).then(
             video => SpeedyMedia.load(video, mediaOptions)
@@ -414,6 +403,52 @@ function getMediaType(mediaSource)
     }
 
     throw new IllegalArgumentError(`Can't get media type: invalid media source. ${mediaSource}`);
+}
+
+// wait until a media source is loaded
+function waitMediaToLoad(mediaSource, timeout = 5000)
+{
+    // a promise that resolves as soon as the media is loaded
+    const waitUntil = eventName => new Promise((resolve, reject) => {
+        Utils.log(`Loading media ${mediaSource} ...`);
+
+        const timer = setTimeout(() => {
+            reject(new TimeoutError(`Can't load ${mediaSource}: timeout (${timeout}ms)`));
+        }, timeout);
+
+        mediaSource.addEventListener(eventName, ev => {
+            clearTimeout(timer);
+            resolve(mediaSource);
+        });
+    });
+
+    // check if the media is already loaded
+    // if it's not, wait until it is
+    if(mediaSource && mediaSource.constructor) {
+        switch(mediaSource.constructor.name) {
+            case 'HTMLImageElement':
+                if(mediaSource.complete && mediaSource.naturalWidth !== 0)
+                    return Promise.resolve(mediaSource);
+                else
+                    return waitUntil('load');
+
+            case 'HTMLVideoElement':
+                if(mediaSource.readyState >= 4)
+                    return Promise.resolve(mediaSource);
+                else
+                    return waitUntil('canplaythrough');
+                    //return waitUntil('canplay'); // use readyState >= 3
+
+            case 'HTMLCanvasElement':
+                return Promise.resolve(mediaSource);
+
+            case 'ImageBitmap':
+                return Promise.resolve(mediaSource);
+        }
+    }
+
+    // unrecognized media type
+    throw new IllegalArgumentError(`Can't load the media: unrecognized media type. ${mediaSource}`);
 }
 
 // build & validate options object
