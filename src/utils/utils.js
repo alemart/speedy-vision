@@ -133,6 +133,26 @@ export class Utils
     }
 
     /**
+     * Get all property descriptors from an object,
+     * traversing its entire prototype chain
+     * @param {object} obj 
+     * @returns {object}
+     */
+    static getAllPropertyDescriptors(obj)
+    {
+        if(obj) {
+            const proto = Object.getPrototypeOf(obj);
+
+            return {
+                ...(Utils.getAllPropertyDescriptors(proto)),
+                ...Object.getOwnPropertyDescriptors(obj)
+            };
+        }
+        else
+            return Object.create(null);
+    }
+
+    /**
      * Creates a <canvas> element with the given dimensions
      * @param {number} width in pixels
      * @param {number} height in pixels
