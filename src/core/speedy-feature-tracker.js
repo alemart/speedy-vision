@@ -24,6 +24,7 @@ import { FeatureDetectionAlgorithm } from './keypoints/feature-detection-algorit
 import { FeatureTrackingAlgorithm } from './keypoints/feature-tracking-algorithm';
 import { SpeedyMedia } from './speedy-media';
 import { SpeedyGPU } from '../gpu/speedy-gpu';
+import { SpeedyVector2 } from './speedy-vectors';
 import { IllegalOperationError, IllegalArgumentError, AbstractMethodError } from '../utils/errors';
 import { LKFeatureTrackingAlgorithm } from './keypoints/trackers/lk';
 

@@ -25,6 +25,7 @@ import { FPSCounter } from '../utils/fps-counter';
 import { SpeedyFeatureDetectorFactory } from './speedy-feature-detector-factory';
 import { SpeedyFeatureTrackerFactory } from './speedy-feature-tracker-factory';
 import { SpeedyFlags } from './speedy-flags';
+import { SpeedyVector2 } from './speedy-vectors';
 
 /**
  * Speedy's main class
@@ -98,6 +99,16 @@ export class Speedy
     static get FeatureTracker()
     {
         return SpeedyFeatureTrackerFactory;
+    }
+
+    /**
+     * Create a 2D vector
+     * @param {number} x
+     * @param {number} y
+     */
+    static Vector2(x, y)
+    {
+        return new SpeedyVector2(x, y);
     }
 }
 

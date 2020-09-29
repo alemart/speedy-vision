@@ -44,6 +44,7 @@ speedy-vision.js is developed by [Alexandre Martins](https://github.com/alemart)
   * [Feature detection](#feature-detection)
   * [Feature matching](#feature-matching)
   * [Image processing](#image-processing)
+  * [Maths](#maths)
   * [Extras](#extras)
 * [Unit tests](https://alemart.github.io/speedy-vision-js/tests/index.html)
 
@@ -674,6 +675,161 @@ Nightvision enhances the illumination of the scene. It improves local contrast a
 * `gain: number`. A value used to stretch the contrast, typically between `0` and `1`.
 * `offset: number`. A value used to adjust the brightness, typically between `0` and `1`.
 * `decay: number`. A value between `0` (no decay, default) and `1` (full decay) that modifies the gain from the center of the image to its corners. Used to get high contrast at the center and low contrast at the corners.
+
+### Maths
+
+#### Vectors
+
+Speedy works with immutable vectors. Many methods are chainable, giving you an elegant way of expressing different computations.
+
+##### Speedy.Vector2()
+
+`Speedy.Vector2(x: number, y: number): SpeedyVector2`
+
+Creates a new 2D vector with the given coordinates.
+
+###### Arguments
+
+* `x: number`. The x-coordinate of the vector.
+* `y: number`. The y-coordinate of the vector.
+
+###### Returns
+
+A new `SpeedyVector2` instance.
+
+###### Example
+
+```js
+const zero = Speedy.Vector2(0, 0);
+```
+
+##### SpeedyVector2.x
+
+`SpeedyVector2.x: number, read-only`
+
+The x-coordinate of the vector.
+
+##### SpeedyVector2.y
+
+`SpeedyVector2.y: number, read-only`
+
+The y-coordinate of the vector.
+
+##### SpeedyVector2.length
+
+`SpeedyVector2.length: number, read-only`
+
+The length of the vector (Euclidean norm).
+
+###### Example
+
+```js
+const v = Speedy.Vector2(3, 4);
+
+console.log('Coordinates', v.x, v.y);
+console.log('Length', v.length); // 5
+```
+
+##### SpeedyVector2.clone()
+
+`SpeedyVector2.clone(): SpeedyVector2`
+
+Creates a new vector with the same coordinates as the original one.
+
+###### Returns
+
+A clone of the vector.
+
+##### SpeedyVector2.translatedBy()
+
+`SpeedyVector2.translatedBy(offset: SpeedyVector2): SpeedyVector2`
+`SpeedyVector2.translatedBy(x: number, y: number): SpeedyVector2`
+
+Translate by an offset. A new vector is returned. This method has two forms: it accepts either a vector, or a pair of (x,y) coordinates.
+
+###### Arguments
+
+* `offset: SpeedyVector2`. Offset to translate by.
+* `x: number`. Offset in the x-axis.
+* `y: number`. Offset in the x-axis.
+
+###### Returns
+
+A new vector having its coordinates translated by the given offset.
+
+###### Example
+
+```js
+const one = Speedy.Vector2(1, 1);
+const zero = Speedy.Vector2(2, 1).translatedBy(one).translatedBy(-3, -2);
+```
+
+##### SpeedyVector2.scaledBy()
+
+`SpeedyVector2.scaledBy(lambda: number): SpeedyVector2`
+
+Multiply by a scalar.
+
+###### Arguments
+
+* `lambda: number`. Scale factor.
+
+###### Returns
+
+A new vector scaled by `lambda`.
+
+###### Example
+
+```js
+const five = Speedy.Vector2(1, 1).scaledBy(5);
+```
+
+##### SpeedyVector2.normalized()
+
+`SpeedyVector2.normalized(): SpeedyVector2`
+
+Normalize vector.
+
+###### Returns
+
+A unit vector in the same direction as the original one.
+
+##### SpeedyVector2.distanceTo()
+
+`SpeedyVector2.distanceTo(v: SpeedyVector2): number`
+
+Distance between two vectors.
+
+###### Arguments
+
+* `v: SpeedyVector2`. A vector.
+
+###### Returns
+
+The Euclidean distance between the two vectors.
+
+###### Example
+
+```js
+const u = Speedy.Vector2(1, 0);
+const v = Speedy.Vector2(5, 0);
+
+console.log(u.distanceTo(v)); // 4
+```
+
+##### SpeedyVector2.dot()
+
+`SpeedyVector2.dot(v: SpeedyVector2): number`
+
+Dot product.
+
+###### Arguments
+
+* `v: SpeedyVector2`. A vector.
+
+###### Returns
+
+The dot product between the two vectors.
 
 ### Extras
 
