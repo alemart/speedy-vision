@@ -36,7 +36,7 @@
 @include "pyramids.glsl"
 
 uniform sampler2D pyramid;
-uniform int windowRadius; // 0, 1, 2 ... for 1x1, 3x3 or 5x5 windows. Shouldn't be larger than 7.
+uniform int windowSize; // 1 (1x1 window), 3 (3x3 window), 5, ... up to 15 (positive odd number)
 uniform int numberOfOctaves; // each pyramid octave uses a scaling factor of sqrt(2)
 uniform sampler2D sobelDerivatives[@PYRAMID_MAX_OCTAVES@]; // for each LOD sub-level (0, 0.5, 1, 1.5, 2...)
 
@@ -60,6 +60,7 @@ void main()
     ivec2 thread = threadLocation();
     vec4 pixel = threadPixel(pyramid);
     vec2 best = vec2(0.0f, pixel.a);
+    int r = (windowSize - 1) / 2; // window radius
 
     // for each octave
     for(int octave = 0; octave < numberOfOctaves; octave++) {
@@ -68,9 +69,9 @@ void main()
         // M = [ a  b ]   <=>   m = (a, b, c)
         //     [ b  c ]
         vec3 m = vec3(0.0f, 0.0f, 0.0f);
-        for(int j = -windowRadius; j <= windowRadius; j++) {
-            for(int i = -windowRadius; i <= windowRadius; i++) {
-                vec2 df = decodeSobel(pickSobelDerivatives(octave, ivec2(i, j)));
+        for(int j = 0; j < windowSize; j++) {
+            for(int i = 0; i < windowSize; i++) {
+                vec2 df = decodeSobel(pickSobelDerivatives(octave, ivec2(i-r, j-r)));
                 m += vec3(df.x * df.x, df.x * df.y, df.y * df.y);
             }
         }

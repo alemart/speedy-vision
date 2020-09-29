@@ -73,7 +73,7 @@ const multiscaleFastWithHarris = importShader('keypoints/multiscale-fast.glsl')
 
 // compute corner responses (score map)
 const multiscaleHarris = importShader('keypoints/multiscale-harris.glsl')
-                        .withArguments('pyramid', 'windowRadius', 'numberOfOctaves', 'sobelDerivatives');
+                        .withArguments('pyramid', 'windowSize', 'numberOfOctaves', 'sobelDerivatives');
 
 // discard corners below a specified quality level
 const harrisCutoff = importShader('keypoints/harris-cutoff.glsl').withArguments('corners', 'maxScore', 'quality');

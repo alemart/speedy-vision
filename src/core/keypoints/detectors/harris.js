@@ -54,7 +54,7 @@ export class HarrisFeatures extends FeatureDetectionAlgorithm
     detect(gpu, inputTexture, quality = 0.1)
     {
         const descriptorSize = this.descriptorSize;
-        const windowRadius = DEFAULT_WINDOW_SIZE >> 1;
+        const windowSize = DEFAULT_WINDOW_SIZE;
         const lod = 0, numberOfOctaves = 1;
 
         // compute derivatives
@@ -62,7 +62,7 @@ export class HarrisFeatures extends FeatureDetectionAlgorithm
         const sobelDerivatives = Array(SOBEL_OCTAVE_COUNT).fill(df);
 
         // corner detection
-        const corners = gpu.programs.keypoints.multiscaleHarris(inputTexture, windowRadius, numberOfOctaves, sobelDerivatives);
+        const corners = gpu.programs.keypoints.multiscaleHarris(inputTexture, windowSize, numberOfOctaves, sobelDerivatives);
 
         // release derivatives
         df.release();
@@ -97,7 +97,7 @@ export class MultiscaleHarrisFeatures extends HarrisFeatures
     detect(gpu, inputTexture, quality = 0.1, depth = 3)
     {
         const descriptorSize = this.descriptorSize;
-        const windowRadius = DEFAULT_WINDOW_SIZE >> 1;
+        const windowSize = DEFAULT_WINDOW_SIZE;
         const numberOfOctaves = 2 * depth - 1;
 
         // generate pyramid
@@ -111,7 +111,7 @@ export class MultiscaleHarrisFeatures extends HarrisFeatures
             sobelDerivatives[k] = sobelDerivatives[k-1]; // can't call shaders with null pointers
 
         // corner detection
-        const corners = gpu.programs.keypoints.multiscaleHarris(pyramid, windowRadius, numberOfOctaves, sobelDerivatives);
+        const corners = gpu.programs.keypoints.multiscaleHarris(pyramid, windowSize, numberOfOctaves, sobelDerivatives);
 
         // release derivatives
         for(let i = 0; i < numberOfOctaves; i++)
