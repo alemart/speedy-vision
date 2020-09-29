@@ -96,7 +96,7 @@ class SpeedyFeatureTracker
 
         // upload & track keypoints
         const prevKeypoints = this._trackingAlgorithm.upload(gpu, keypoints, descriptorSize);
-        const trackedKeypoints = this._trackKeypoints(gpu, nextImage, prevImage, prevKeypoints, descriptorSize);
+        const trackedKeypoints = this._trackFeatures(gpu, nextImage, prevImage, prevKeypoints, descriptorSize);
 
         // compute feature descriptors (if an algorithm is provided)
         const trackedKeypointsWithDescriptors = this._descriptionAlgorithm == null ? trackedKeypoints :
@@ -173,7 +173,7 @@ class SpeedyFeatureTracker
      * @param {number} descriptorSize in bytes
      * @returns {SpeedyTexture}
      */
-    _trackKeypoints(gpu, nextImage, prevImage, prevKeypoints, descriptorSize)
+    _trackFeatures(gpu, nextImage, prevImage, prevKeypoints, descriptorSize)
     {
         // template method
         return this._trackingAlgorithm.track(
@@ -191,7 +191,7 @@ class SpeedyFeatureTracker
 /**
  * LK feature tracker with image pyramids
  */
-export class SpeedyLKFeatureTracker extends SpeedyFeatureTracker
+export class LKFeatureTracker extends SpeedyFeatureTracker
 {
     /**
      * Class constructor
@@ -217,7 +217,7 @@ export class SpeedyLKFeatureTracker extends SpeedyFeatureTracker
      * @param {number} descriptorSize in bytes
      * @returns {SpeedyTexture}
      */
-    _trackKeypoints(gpu, nextImage, prevImage, prevKeypoints, descriptorSize)
+    _trackFeatures(gpu, nextImage, prevImage, prevKeypoints, descriptorSize)
     {
         return this._trackingAlgorithm.track(
             gpu,
