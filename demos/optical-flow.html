@@ -1,0 +1,230 @@
+<!--
+  speedy-vision.js
+  GPU-accelerated Computer Vision for JavaScript
+  Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  tracking-demo.html
+  Feature tracking demo
+-->
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Optical flow - feature tracking</title>
+        <script src="../dist/speedy-vision.js"></script>
+        <link href="style.css" rel="stylesheet">
+    </head>
+    <body>
+        <h1>Optical flow</h1>
+        <p><em>Click on a <strong>_moving_</strong> corner of the video to track it</em></p>
+        <form autocomplete="off">
+            <div>
+                <label for="window-size">Window size</label>
+                <select id="window-size">
+                    <option value="5">5</option>
+                    <option value="7">7</option>
+                    <option value="15" selected>15</option>
+                    <option value="21">21</option>
+                </select>
+                <label for="discard-threshold">Discard threshold</label>
+                <select id="discard-threshold">
+                    <option value="0.0">0.0</option>
+                    <option value="0.0001" selected>0.0001</option>
+                    <option value="0.001">0.001</option>
+                    <option value="0.01">0.01</option>
+                </select>
+                <label for="speed-slider">Video speed</label>
+                <input type="range" id="speed-slider" min="0.10" max="2" value="1" step="0.01">
+            </div>
+        </form>
+        <div>
+            <canvas id="canvas-demo"></canvas>
+            <br>
+            <button id="play">Play / pause</button>
+            &nbsp;
+            <button id="detect">Detect features</button>
+            &nbsp;
+            <button id="clear">Clear features</button>
+        </div>
+        <video
+            src="../assets/corridor.mp4"
+            width="640" height="360"
+            preload="auto"
+            muted hidden
+            title="Free video by Ricardo Esquivel (pexels.com)">
+        </video>
+        <script>
+let userPoints = [];
+
+window.onload = async function()
+{
+    // tell Speedy to load the video
+    const video = document.querySelector('video');
+    const media = await Speedy.load(video);
+    video.play();
+
+    // create a canvas to display the features
+    const canvas = createCanvas(media.width, media.height, video.title);
+
+    // get DOM elements
+    const windowSize = document.getElementById('window-size');
+    const discardThreshold = document.getElementById('discard-threshold');
+
+    // create a feature detector
+    const featureDetector = Speedy.FeatureDetector.Harris();
+    featureDetector.sensitivity = 0.4;
+
+    // create a feature tracker
+    const featureTracker = Speedy.FeatureTracker.LK(media)
+                          .includeDescriptor(featureDetector);
+
+    // update features
+    let features = [], detect = false, clear = false;
+    async function loop()
+    {
+        // update tracker parameters
+        featureTracker.windowSize = Number(windowSize.value);
+        featureTracker.discardThreshold = Number(discardThreshold.value);
+
+        // track existing features
+        features = await featureTracker.track(features);
+
+        // find new features
+        if(detect) {
+            if(features.length < 500)
+                userPoints = await featureDetector.detect(media, Speedy.FEATURE_DETECTOR_RESET_CAPACITY);
+            detect = false;
+        }
+
+        // clear all features
+        if(clear) {
+            features.length = 0;
+            userPoints.length = 0;
+            clear = false;
+        }
+
+        // render features
+        media.draw(canvas);
+        renderFeatures(canvas, features, 4, '#0fa');
+        renderStatus(canvas, features);
+
+        // handle new features added by the user
+        while(userPoints.length > 0)
+            features.push(userPoints.pop());
+
+        // next frame
+        setTimeout(loop, 1000 / 60);
+    }
+    loop();
+
+    // play/pause
+    const playButton = document.getElementById('play');
+    playButton.onclick = () => video.paused ? video.play() : video.pause();
+
+    // video speed
+    const speedSlider = document.getElementById('speed-slider');
+    speedSlider.oninput = () => video.playbackRate = speedSlider.value;
+
+    // detect features
+    const detectButton = document.getElementById('detect');
+    detectButton.onclick = () => detect = true;
+
+    // clear features
+    const clearButton = document.getElementById('clear');
+    clearButton.onclick = () => clear = true;
+
+    // restart the video and clear the features
+    video.onended = () => {
+        clear = true;
+        video.currentTime = 0.2;
+        video.play();
+    };
+}
+
+function createCanvas(width, height, title)
+{
+    const canvas = document.getElementById('canvas-demo') || document.createElement('canvas');
+
+    canvas.width = width;
+    canvas.height = height;
+    canvas.title = title;
+
+    if(!document.body.contains(canvas))
+        document.body.appendChild(canvas);
+
+    canvas.addEventListener('mousedown', ev => {
+        const position = cursorPosition(canvas, ev);
+        userPoints.push({
+            x: position.x,
+            y: position.y,
+        });
+    });
+
+    return canvas;
+}
+
+function renderFeatures(canvas, features, size = 2, color = 'yellow')
+{
+    const context = canvas.getContext('2d');
+
+    context.beginPath();
+    for(let feature of features) {
+        let radius = size * feature.scale;
+
+        // draw scaled circle
+        context.moveTo(feature.x + radius, feature.y);
+        context.arc(feature.x, feature.y, radius, 0, Math.PI * 2.0);
+
+        // draw rotation line
+        const sin = Math.sin(feature.rotation);
+        const cos = Math.cos(feature.rotation);
+        context.moveTo(feature.x, feature.y);
+        context.lineTo(feature.x + radius * cos, feature.y + radius * sin);
+    }
+    context.strokeStyle = color;
+    context.lineWidth = 3;
+    context.stroke();
+}
+
+function renderStatus(canvas, features, color = 'white', size = 18)
+{
+    const context = canvas.getContext('2d');
+
+    context.font = `bold ${size}px sans-serif`;
+    context.fillStyle = color;
+    context.textBaseline = 'top';
+
+    context.shadowOffsetX = 2;
+    context.shadowOffsetY = 2;
+    context.shadowBlur = 2;
+    context.shadowColor = 'rgba(0, 0, 0, 0.5)';
+
+    context.fillText(`FPS: ${Speedy.fps} | Keypoints: ${features.length}`, 8, 8);
+
+    context.shadowColor = 'rgba(0, 0, 0, 0)';
+}
+
+function cursorPosition(canvas, event)
+{
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    return { x, y };
+}
+        </script>
+        <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>
+    </body>
+</html>

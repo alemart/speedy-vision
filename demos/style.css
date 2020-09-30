@@ -48,6 +48,10 @@ form label {
   margin-right: 0.5em;
 }
 
+form label:not(:first-child) {
+  margin-left: 0.5em;
+}
+
 form input {
   margin-right: 1.5em;
 }
