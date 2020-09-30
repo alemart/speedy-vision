@@ -139,6 +139,15 @@ export class SpeedyGPU
             return this.upload(data, width, height);
         }
 
+        // bugfix: if the media is a video, we can't really
+        // upload it to the GPU unless it's ready
+        if(data.constructor.name == 'HTMLVideoElement') {
+            if(data.readyState < 2) {
+                // return the previously uploaded texture
+                return this._inputTexture[this._inputTextureIndex];
+            }
+        }
+
         // use round-robin to mitigate WebGL's implicit synchronization
         // and maybe minimize texture upload times
         this._inputTextureIndex = (1 + this._inputTextureIndex) % UPLOAD_BUFFER_SIZE;
@@ -146,8 +155,9 @@ export class SpeedyGPU
         // done! note: the input texture is upside-down, i.e.,
         // flipped on the y-axis. We need to unflip it on the
         // output, so that (0,0) becomes the top-left corner
-        this._inputTexture[this._inputTextureIndex].upload(data);
-        return this._inputTexture[this._inputTextureIndex];
+        const texture = this._inputTexture[this._inputTextureIndex];
+        texture.upload(data);
+        return texture;
     }
 
     /**
