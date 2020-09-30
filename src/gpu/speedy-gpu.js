@@ -143,6 +143,7 @@ export class SpeedyGPU
         // upload it to the GPU unless it's ready
         if(data.constructor.name == 'HTMLVideoElement') {
             if(data.readyState < 2) {
+                // this may happen when the video loops (Firefox)
                 // return the previously uploaded texture
                 return this._inputTexture[this._inputTextureIndex];
             }

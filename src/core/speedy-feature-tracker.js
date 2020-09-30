@@ -153,12 +153,6 @@ class SpeedyFeatureTracker
         this._prevInputTexture = this._inputTexture;
         this._inputTexture = newInputTexture;
 
-        // make sure we have two different textures as returned by gpu.upload()
-        /*
-        if(this._prevInputTexture === this._inputTexture)
-            throw new IllegalOperationError(`Can't keep history of uploaded images`);
-        */
-
         // is it the first frame?
         if(this._prevInputTexture == null)
             this._prevInputTexture = newInputTexture;
@@ -294,6 +288,6 @@ export class LKFeatureTracker extends SpeedyFeatureTracker
         if(typeof threshold !== 'number')
             throw new IllegalArgumentError(`Invalid discardThreshold`);
 
-        this._discardThreshold = Math.max(0, threshold);
+        this._discardThreshold = Math.max(0, +threshold);
     }
 }
