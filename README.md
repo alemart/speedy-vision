@@ -61,7 +61,7 @@ Try the demos and take a look at their source code:
   * [Automatic sensitivity](https://alemart.github.io/speedy-vision-js/demos/automatic-sensitivity.html)
   * [ORB features](https://alemart.github.io/speedy-vision-js/demos/orb-features.html)
 * Feature tracking
-  * [Optical flow demo](https://alemart.github.io/speedy-vision-js/demos/optical-flow.html)
+  * [Optical flow in a corridor](https://alemart.github.io/speedy-vision-js/demos/optical-flow.html)
 * Image processing
   * [Nightvision camera](https://alemart.github.io/speedy-vision-js/demos/nightvision-camera.html)
   * [Cool effects with image convolutions](https://alemart.github.io/speedy-vision-js/demos/convolution.html)
