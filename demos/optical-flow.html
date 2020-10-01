@@ -89,8 +89,7 @@ window.onload = async function()
     featureDetector.sensitivity = 0.4;
 
     // create a feature tracker
-    const featureTracker = Speedy.FeatureTracker.LK(media)
-                          .includeDescriptor(featureDetector);
+    const featureTracker = Speedy.FeatureTracker.LK(media);
 
     // update features
     let features = [], detect = false, clear = false;
