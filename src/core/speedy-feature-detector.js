@@ -62,6 +62,7 @@ class SpeedyFeatureDetector
         this._enhancements = {
             denoise: true,
             illumination: false,
+            nightvision: null,
         };
 
         // misc
@@ -105,7 +106,7 @@ class SpeedyFeatureDetector
         const enhancedTexture = this._enhanceTexture(
             gpu,
             preprocessedTexture,
-            this._enhancements.illumination == true
+            this._enhancements.illumination == true || this._enhancements.nightvision
         );
         const detectedKeypoints = this._detectFeatures(gpu, enhancedTexture);
 
@@ -231,15 +232,23 @@ class SpeedyFeatureDetector
      * Enhances a texture for feature DETECTION (not description)
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} inputTexture
-     * @param {boolean} [enhanceIllumination] fix irregular lighting in the scene?
+     * @param {object|boolean} [nightvision] fix irregular lighting in the scene?
      * @returns {SpeedyTexture}
      */
-    _enhanceTexture(gpu, inputTexture, enhanceIllumination = false)
+    _enhanceTexture(gpu, inputTexture, nightvision = false)
     {
-        let texture = inputTexture;
+        let texture = inputTexture, options = {
+            gain: 0.9,
+            offset: 0.5,
+            decay: 0.85,
+            quality: 'low'
+        };
 
-        if(enhanceIllumination) {
-            texture = gpu.programs.enhancements.nightvision(texture, 0.9, 0.5, 0.85, 'low', true);
+        if(typeof nightvision == 'object')
+            options = Object.assign(options, nightvision);
+
+        if(nightvision != false) {
+            texture = gpu.programs.enhancements.nightvision(texture, options.gain, options.offset, options.decay, options.quality, true);
             texture = gpu.programs.filters.gauss3(texture); // blur a bit more
         }
 
