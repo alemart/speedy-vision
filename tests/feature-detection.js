@@ -67,13 +67,6 @@ describe('Feature detection', function() {
         runFastTests(createFeatureDetector);
     });
 
-    xdescribe('BRISK', function() {
-        const createFeatureDetector = () => Speedy.FeatureDetector.BRISK();
-
-        runGenericTests(createFeatureDetector);
-        runGenericMultiscaleTests(createFeatureDetector);
-    });
-
     describe('Harris', function() {
         const createFeatureDetector = () => Speedy.FeatureDetector.Harris();
 
@@ -87,6 +80,22 @@ describe('Feature detection', function() {
         runGenericTests(createFeatureDetector);
         runGenericMultiscaleTests(createFeatureDetector);
         runHarrisTests(createFeatureDetector);
+    });
+
+    xdescribe('BRISK', function() {
+        const createFeatureDetector = () => Speedy.FeatureDetector.BRISK();
+
+        runGenericTests(createFeatureDetector);
+        runGenericMultiscaleTests(createFeatureDetector);
+        runGenericTestsForDescriptors(createFeatureDetector, 64);
+    });
+
+    describe('ORB', function() {
+        const createFeatureDetector = () => Speedy.FeatureDetector.ORB();
+
+        runGenericTests(createFeatureDetector);
+        runGenericMultiscaleTests(createFeatureDetector);
+        runGenericTestsForDescriptors(createFeatureDetector, 32);
     });
 
     describe('Context loss', function() {
@@ -217,26 +226,25 @@ describe('Feature detection', function() {
                 featureDetector = createFeatureDetector();
             });
 
-            it('gets you more features the deeper you go, given a fixed sensitivity', async function() {
+            it('gets you features in multiple scales', async function() {
                 const depths = [1, 2, 3, 4];
-                let lastNumFeatures = 0;
 
                 for(const depth of depths) {
+                    const set = new Set();
                     const features = await repeat(5, () => {
                         featureDetector.sensitivity = 0.5;
                         featureDetector.depth = depth;
                         return featureDetector.detect(media);
                     });
-                    const numFeatures = features.length;
 
-                    print(`With depth = ${depth}, we get ${numFeatures} features.`);
+                    for(let i = 0; i < features.length; i++)
+                        set.add(features[i].lod);
+
+                    print(`With depth = ${depth}, we get ${features.length} features in ${set.size} different scales.`);
                     displayFeatures(media, features);
 
-                    expect(numFeatures).toBeGreaterThanOrEqual(lastNumFeatures);
-                    lastNumFeatures = numFeatures;
+                    expect(set.size).toBeGreaterThanOrEqual(depth);
                 }
-                
-                expect(lastNumFeatures).toBeGreaterThan(0);
             });
         });
     }
@@ -324,6 +332,54 @@ describe('Feature detection', function() {
                 }
                 
                 expect(lastNumFeatures).toBeGreaterThan(0);
+            });
+        });
+    }
+
+
+
+
+    //
+    // Tests that apply to all feature descriptors
+    //
+
+    function runGenericTestsForDescriptors(createFeatureDescriptor, descriptorSize)
+    {
+        describe('Feature descriptor', function() {
+            let featureDescriptor;
+            let checksum = function(buffer) {
+                let sum = 0;
+                for(let i = 0; i < buffer.length; i++)
+                    sum += buffer[i];
+                return sum;
+            };
+
+            beforeEach(function() {
+                featureDescriptor = createFeatureDescriptor();
+            });
+
+            it('computes a feature descriptor of ' + descriptorSize + ' bytes', async function() {
+                const features = await featureDescriptor.detect(media);
+
+                for(let i = 0; i < features.length; i++)
+                    expect(features[i].descriptor.size).toEqual(descriptorSize);
+                expect(features.length).toBeGreaterThan(0);
+
+                print(`Found ${features.length} features of ${descriptorSize} bytes`);
+            });
+
+            it('computes different feature descriptors', async function() {
+                const features = await featureDescriptor.detect(media);
+                const set = new Set();
+
+                for(let i = 0; i < features.length; i++)
+                    set.add(checksum(features[i].descriptor.data));
+
+                print(`Found ${set.size} different checksums in ${features.length} features`);
+                displayFeatures(media, features);
+
+                expect(features.length).toBeGreaterThan(0);
+                expect(set.size / features.length).toBeGreaterThan(0.5);
             });
         });
     }
