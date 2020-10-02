@@ -43,6 +43,15 @@ class SpeedyDescriptor
     {
         return null;
     }
+
+    /**
+     * Descriptor size, in bytes
+     * @returns {number}
+     */
+    get size()
+    {
+        return 0;
+    }
 }
 
 /**
@@ -90,5 +99,14 @@ export class BinaryDescriptor extends SpeedyDescriptor
     get data()
     {
         return this._data;
+    }
+
+    /**
+     * Descriptor size, in bytes
+     * @returns {number}
+     */
+    get size()
+    {
+        return this._data.length;
     }
 }
