@@ -63,6 +63,7 @@
         </div>
         <video
             src="../assets/corridor.mp4"
+            poster="../assets/loading.jpg"
             width="640" height="360"
             preload="auto"
             muted hidden
@@ -87,7 +88,8 @@ window.onload = async function()
 
     // create a feature detector
     const featureDetector = Speedy.FeatureDetector.Harris();
-    featureDetector.sensitivity = 0.4;
+    featureDetector.sensitivity = 0.3;
+    featureDetector.max = 600;
 
     // create a feature tracker
     const featureTracker = Speedy.FeatureTracker.LK(media);
@@ -105,7 +107,7 @@ window.onload = async function()
 
         // find new features
         if(detect) {
-            if(features.length < 500)
+            if(features.length < featureDetector.max)
                 userPoints = await featureDetector.detect(media, Speedy.FEATURE_DETECTOR_RESET_CAPACITY);
             detect = false;
         }
