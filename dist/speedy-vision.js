@@ -6,7 +6,7 @@
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-09-30T01:12:03.411Z
+ * Date: 2020-10-03T01:46:06.078Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -1942,6 +1942,15 @@ class SpeedyDescriptor
     {
         return null;
     }
+
+    /**
+     * Descriptor size, in bytes
+     * @returns {number}
+     */
+    get size()
+    {
+        return 0;
+    }
 }
 
 /**
@@ -1989,6 +1998,15 @@ class BinaryDescriptor extends SpeedyDescriptor
     get data()
     {
         return this._data;
+    }
+
+    /**
+     * Descriptor size, in bytes
+     * @returns {number}
+     */
+    get size()
+    {
+        return this._data.length;
     }
 }
 
@@ -2185,6 +2203,7 @@ class SpeedyFeatureDetector
         this._enhancements = {
             denoise: true,
             illumination: false,
+            nightvision: null,
         };
 
         // misc
@@ -2228,7 +2247,7 @@ class SpeedyFeatureDetector
         const enhancedTexture = this._enhanceTexture(
             gpu,
             preprocessedTexture,
-            this._enhancements.illumination == true
+            this._enhancements.illumination == true || this._enhancements.nightvision
         );
         const detectedKeypoints = this._detectFeatures(gpu, enhancedTexture);
 
@@ -2354,15 +2373,23 @@ class SpeedyFeatureDetector
      * Enhances a texture for feature DETECTION (not description)
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} inputTexture
-     * @param {boolean} [enhanceIllumination] fix irregular lighting in the scene?
+     * @param {object|boolean} [nightvision] fix irregular lighting in the scene?
      * @returns {SpeedyTexture}
      */
-    _enhanceTexture(gpu, inputTexture, enhanceIllumination = false)
+    _enhanceTexture(gpu, inputTexture, nightvision = false)
     {
-        let texture = inputTexture;
+        let texture = inputTexture, options = {
+            gain: 0.9,
+            offset: 0.5,
+            decay: 0.85,
+            quality: 'low'
+        };
 
-        if(enhanceIllumination) {
-            texture = gpu.programs.enhancements.nightvision(texture, 0.9, 0.5, 0.85, 'low', true);
+        if(typeof nightvision == 'object')
+            options = Object.assign(options, nightvision);
+
+        if(nightvision != false) {
+            texture = gpu.programs.enhancements.nightvision(texture, options.gain, options.offset, options.decay, options.quality, true);
             texture = gpu.programs.filters.gauss3(texture); // blur a bit more
         }
 
@@ -2994,12 +3021,6 @@ class SpeedyFeatureTracker
         this._prevInputTexture = this._inputTexture;
         this._inputTexture = newInputTexture;
 
-        // make sure we have two different textures as returned by gpu.upload()
-        /*
-        if(this._prevInputTexture === this._inputTexture)
-            throw new IllegalOperationError(`Can't keep history of uploaded images`);
-        */
-
         // is it the first frame?
         if(this._prevInputTexture == null)
             this._prevInputTexture = newInputTexture;
@@ -3135,7 +3156,7 @@ class LKFeatureTracker extends SpeedyFeatureTracker
         if(typeof threshold !== 'number')
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_6__["IllegalArgumentError"](`Invalid discardThreshold`);
 
-        this._discardThreshold = Math.max(0, threshold);
+        this._discardThreshold = Math.max(0, +threshold);
     }
 }
 
@@ -3744,7 +3765,7 @@ function getMediaType(mediaSource)
 }
 
 // wait until a media source is loaded
-function waitMediaToLoad(mediaSource, timeout = 5000)
+function waitMediaToLoad(mediaSource, timeout = 30000)
 {
     // a promise that resolves as soon as the media is loaded
     const waitUntil = eventName => new Promise((resolve, reject) => {
@@ -7040,7 +7061,7 @@ __webpack_require__.r(__webpack_exports__);
 
 // LK
 //const LK_MAX_WINDOW_SIZE = 21; // 10x10 window (use 15 for a 7x7 window)
-const LK_MAX_WINDOW_SIZE = 31; // 15x15 window
+const LK_MAX_WINDOW_SIZE = 31; // 15x15 windows
 const LK_MIN_WINDOW_SIZE = 5; // 2x2 window
 
 const lk = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('trackers/lk.glsl')
@@ -8971,6 +8992,7 @@ class SpeedyGPU
         // upload it to the GPU unless it's ready
         if(data.constructor.name == 'HTMLVideoElement') {
             if(data.readyState < 2) {
+                // this may happen when the video loops (Firefox)
                 // return the previously uploaded texture
                 return this._inputTexture[this._inputTextureIndex];
             }
