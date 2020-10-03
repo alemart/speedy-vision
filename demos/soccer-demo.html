@@ -1,0 +1,268 @@
+<!--
+  speedy-vision.js
+  GPU-accelerated Computer Vision for JavaScript
+  Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  soccer-demo.html
+  Tracking a soccer player
+-->
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
+        <meta name="author" content="Alexandre Martins">
+        <title>Tracking a soccer player</title>
+        <script src="../dist/speedy-vision.js"></script>
+        <link href="style.css" rel="stylesheet">
+    </head>
+    <body>
+        <h1>Tracking a soccer player</h1>
+        <p><em><strong>Click on a player</strong> to track him.</em></p>
+        <div>
+            <canvas id="canvas-demo" style="cursor:pointer"></canvas>
+            <br>
+            <button id="play">Play / pause</button>
+            &nbsp;
+        </div>
+        <video
+            src="../assets/soccer.mp4"
+            poster="../assets/loading.jpg"
+            preload="auto"
+            loop muted hidden
+            title="Free video by Tom Fisk (pexels.com)">
+        </video>
+        <script>
+// define a tracked circle
+const trackedCircle = {
+    x: -1000,
+    y: -1000,
+    radius: 25,
+    active: false,
+    path: [],
+};
+
+let detect = false;
+window.onload = async function()
+{
+    // tell Speedy to load the video
+    const video = document.querySelector('video');
+    const media = await Speedy.load(video);
+    video.play();
+
+    // create a canvas to display the features
+    const canvas = createCanvas(media.width, media.height, video.title);
+
+    // create a feature detector
+    const featureDetector = Speedy.FeatureDetector.Harris();
+    featureDetector.sensitivity = 0.6;
+    featureDetector.setEnhancements({
+        nightvision: { // remove background
+            gain: 0.07,
+            offset: 0.77,
+            decay: 0,
+            quality: 'low'
+        }
+    });
+
+    // create a feature tracker
+    const featureTracker = Speedy.FeatureTracker.LK(media);
+    featureTracker.windowSize = 21;
+
+    // update features
+    const zero = Speedy.Vector2(0, 0);
+    let features = [], flow = [];
+    async function loop()
+    {
+        // track existing features
+        features = await featureTracker.track(features, flow);
+
+        // compute average position & flow
+        let fx = 0, fy = 0, px = 0, py = 0, n = 0;
+        for(let i = 0; i < features.length; i++) {
+            if(insideCircle(trackedCircle, features[i])) {
+                px += features[i].x;
+                py += features[i].y;
+                fx += flow[i].x;
+                fy += flow[i].y;
+                n += 1;
+            }
+        }
+        const oldpos = Speedy.Vector2(trackedCircle.x, trackedCircle.y);
+        const avgpos = n > 0 ? Speedy.Vector2(px / n, py / n) : oldpos;
+        const avgflow = n > 0 ? Speedy.Vector2(fx / n, fy / n) : zero;
+
+        // lost tracking?
+        trackedCircle.active = n > 0 || (detect && trackedCircle.active);
+        if(!trackedCircle.active)
+            trackedCircle.path.length = 0;
+
+        // find new features
+        if(detect) {
+            const newFeatures = await featureDetector.detect(media, Speedy.FEATURE_DETECTOR_RESET_CAPACITY);
+
+            // pick features inside the trackedCircle
+            for(let i = 0; i < newFeatures.length; i++) {
+                if(insideCircle(trackedCircle, newFeatures[i]))
+                    features.unshift(newFeatures[i]);
+            }
+        }
+
+        // remove elements outside the circle
+        const maxFeatures = 64;
+        features = features.filter((feature, i) => insideCircle(trackedCircle, feature) && i < maxFeatures);
+
+        // update tracked circle
+        if(trackedCircle.active) {
+            const alpha = detect ? 1 : 0;
+            const offset = avgflow;
+            const p1 = Speedy.Vector2(trackedCircle.x + offset.x, trackedCircle.y + offset.y);
+            const p2 = avgpos;
+            trackedCircle.x = p1.x + alpha * (p2.x - p1.x);
+            trackedCircle.y = p1.y + alpha * (p2.y - p1.y);
+            trackedCircle.path.push(avgflow);
+        }
+
+        // render features
+        media.draw(canvas);
+        renderFeatures(canvas, features, 4, 'rgba(0,255,160,0.5)');
+        renderCircle(canvas, trackedCircle);
+        renderStatus(canvas, features);
+
+        // next frame
+        detect = false;
+        setTimeout(loop, 1000 / 60);
+    }
+    loop();
+
+    // play/pause
+    const playButton = document.getElementById('play');
+    playButton.onclick = () => video.paused ? video.play() : video.pause();
+
+    // detect new features
+    setInterval(() => detect = true, 200);
+}
+
+function createCanvas(width, height, title)
+{
+    const canvas = document.getElementById('canvas-demo') || document.createElement('canvas');
+
+    canvas.width = width;
+    canvas.height = height;
+    canvas.title = title;
+
+    if(!document.body.contains(canvas))
+        document.body.appendChild(canvas);
+
+    canvas.addEventListener('mousedown', ev => {
+        const position = cursorPosition(canvas, ev);
+        trackedCircle.x = position.x;
+        trackedCircle.y = position.y;
+        trackedCircle.path.length = 0;
+        detect = true;
+    });
+
+    return canvas;
+}
+
+function renderFeatures(canvas, features, size = 2, color = 'yellow')
+{
+    const context = canvas.getContext('2d');
+
+    context.beginPath();
+    for(let feature of features) {
+        let radius = size;
+
+        // draw scaled circle
+        context.moveTo(feature.x + radius, feature.y);
+        context.arc(feature.x, feature.y, radius, 0, Math.PI * 2.0);
+
+        // draw rotation line
+        const sin = Math.sin(feature.rotation);
+        const cos = Math.cos(feature.rotation);
+        context.moveTo(feature.x, feature.y);
+        context.lineTo(feature.x + radius * cos, feature.y + radius * sin);
+    }
+    context.strokeStyle = color;
+    context.lineWidth = 3;
+    context.stroke();
+}
+
+function renderCircle(canvas, circle, color = 'yellow', maxSegments = 400)
+{
+    const context = canvas.getContext('2d');
+    const numSegments = Math.min(circle.path.length, maxSegments);
+    let x = circle.x, y = circle.y;
+
+    context.beginPath();
+
+    // highlight the player
+    context.moveTo(x + circle.radius, y);
+    context.arc(x, y, circle.radius, 0, Math.PI * 2.0);
+
+    // render the tracked path
+    context.moveTo(x, y);
+    for(let i = 0; i < numSegments; i++) {
+        const flow = circle.path[circle.path.length - 1 - i];
+        x -= flow.x; y -= flow.y;
+        context.lineTo(x, y);
+    }
+
+    // done!
+    context.strokeStyle = color;
+    context.lineWidth = 2;
+    context.stroke();
+}
+
+function renderStatus(canvas, features, color = 'white', size = 18)
+{
+    const context = canvas.getContext('2d');
+
+    context.font = `bold ${size}px sans-serif`;
+    context.fillStyle = color;
+    context.textBaseline = 'top';
+
+    context.shadowOffsetX = 2;
+    context.shadowOffsetY = 2;
+    context.shadowBlur = 2;
+    context.shadowColor = 'rgba(0, 0, 0, 0.5)';
+
+    const status = trackedCircle.active ? `Tracked keypoints: ${features.length}` : 'not tracking!'
+    context.fillText(`FPS: ${Speedy.fps} | ${status}`, 8, 8);
+
+    context.shadowColor = 'rgba(0, 0, 0, 0)';
+}
+
+function cursorPosition(canvas, event)
+{
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    return { x, y };
+}
+
+function insideCircle(circle, point)
+{
+    const dx = circle.x - point.x;
+    const dy = circle.y - point.y;
+    const r = circle.radius;
+
+    return dx * dx + dy * dy <= r * r;
+}
+        </script>
+        <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>
+    </body>
+</html>

@@ -62,6 +62,7 @@ Try the demos and take a look at their source code:
   * [ORB features](https://alemart.github.io/speedy-vision-js/demos/orb-features.html)
 * Feature tracking
   * [Optical flow in a corridor](https://alemart.github.io/speedy-vision-js/demos/optical-flow.html)
+  * [Tracking a soccer player](https://alemart.github.io/speedy-vision-js/demos/soccer-demo.html)
 * Image processing
   * [Nightvision camera](https://alemart.github.io/speedy-vision-js/demos/nightvision-camera.html)
   * [Cool effects with image convolutions](https://alemart.github.io/speedy-vision-js/demos/convolution.html)
