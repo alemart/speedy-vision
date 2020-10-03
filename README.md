@@ -2,7 +2,7 @@
 
 Build real-time stuff with **speedy-vision.js**, a GPU-accelerated Computer Vision library for JavaScript.
 
-[<img src="assets/demo-orb.gif" width="640" alt="Speedy feature detection">](https://alemart.github.io/speedy-vision-js/demos/orb-features.html)
+[<img src="assets/demo-soccer.gif" alt="Speedy feature detection">](https://alemart.github.io/speedy-vision-js/demos/soccer-demo.html "Click to open a demo")
 
 ## Features
 
