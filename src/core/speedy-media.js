@@ -406,7 +406,7 @@ function getMediaType(mediaSource)
 }
 
 // wait until a media source is loaded
-function waitMediaToLoad(mediaSource, timeout = 5000)
+function waitMediaToLoad(mediaSource, timeout = 30000)
 {
     // a promise that resolves as soon as the media is loaded
     const waitUntil = eventName => new Promise((resolve, reject) => {
