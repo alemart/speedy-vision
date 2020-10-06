@@ -1,6 +1,6 @@
 {
   "name": "speedy-vision.js",
-  "version": "0.4.0-wip",
+  "version": "0.4.0",
   "description": "GPU-accelerated Computer Vision for JavaScript",
   "author": "Alexandre Martins <alemartf@gmail.com> (https://github.com/alemart)",
   "homepage": "https://github.com/alemart/speedy-vision-js",
@@ -11,8 +11,7 @@
     "build": "npm run build-dev && npm run build-pro",
     "build-dev": "NODE_ENV=development webpack --mode development",
     "build-pro": "NODE_ENV=production webpack --mode production",
-    "watch": "webpack --watch",
-    "test": "ava"
+    "watch": "webpack --watch"
   },
   "keywords": [
     "computer vision",
