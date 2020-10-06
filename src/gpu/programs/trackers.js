@@ -30,8 +30,9 @@ import { PYRAMID_MAX_LEVELS } from '../../utils/globals';
 //
 
 // LK
-//const LK_MAX_WINDOW_SIZE = 21; // 10x10 window (use 15 for a 7x7 window)
-const LK_MAX_WINDOW_SIZE = 31; // 15x15 windows
+//const LK_MAX_WINDOW_SIZE = 21; // 10x10 window
+//const LK_MAX_WINDOW_SIZE = 15; // 7x7 window
+const LK_MAX_WINDOW_SIZE = 21; // 7x7 window
 const LK_MIN_WINDOW_SIZE = 5; // 2x2 window
 
 const lk = importShader('trackers/lk.glsl')

@@ -44,6 +44,7 @@ window.onload = async function()
 
     // create a feature detector
     const featureDetector = Speedy.FeatureDetector.Harris();
+    featureDetector.sensitivity = 0.5;
 
     // find features
     const features = await featureDetector.detect(media);

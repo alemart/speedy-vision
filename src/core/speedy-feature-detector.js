@@ -25,6 +25,7 @@ import { IllegalArgumentError, IllegalOperationError, AbstractMethodError, NotSu
 import { SpeedyFlags } from './speedy-flags';
 import { SpeedyGPU } from '../gpu/speedy-gpu';
 import { SpeedyTexture } from '../gpu/speedy-texture';
+import { SpeedyMedia } from './speedy-media';
 import { AutomaticSensitivity } from './keypoints/automatic-sensitivity';
 import { FeatureDetectionAlgorithm } from './keypoints/feature-detection-algorithm';
 import { FASTFeatures, MultiscaleFASTFeatures } from './keypoints/detectors/fast';
@@ -78,6 +79,7 @@ class SpeedyFeatureDetector
     detect(media, flags = 0)
     {
         const gpu = media._gpu;
+        const isStaticMedia = (media.options.usage == 'static');
 
         // check if the media has been released
         if(media.isReleased())
@@ -91,6 +93,12 @@ class SpeedyFeatureDetector
             // when you expect a sudden increase in the number
             // of keypoints (between two consecutive frames).
             this._algorithm.resetDownloader(gpu);
+        }
+
+        // Allocate encoder space for static media
+        if(isStaticMedia) {
+            const INITIAL_KEYPOINT_GUESS = 1024 * 3;
+            gpu.programs.encoders.reserveSpace(INITIAL_KEYPOINT_GUESS, this._algorithm.descriptorSize);
         }
 
         // Upload & preprocess media
@@ -114,12 +122,11 @@ class SpeedyFeatureDetector
         const describedKeypoints = this._describeFeatures(gpu, preprocessedTexture, detectedKeypoints);
 
         // Download keypoints from the GPU
-        const useAsyncTransfer = (media.options.usage != 'static');
         return this._algorithm.download(
             gpu,
             describedKeypoints,
             this._max,
-            useAsyncTransfer
+            !isStaticMedia
         );
     }
 
@@ -486,7 +493,7 @@ export class HarrisFeatureDetector extends SpeedyFeatureDetector
         super(algorithm || new HarrisFeatures());
 
         // default settings
-        this._quality = 0.1; // in [0,1]
+        this._quality = 0.9; // in [0,1]
     }
 
     /**

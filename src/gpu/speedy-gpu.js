@@ -145,7 +145,10 @@ export class SpeedyGPU
             if(data.readyState < 2) {
                 // this may happen when the video loops (Firefox)
                 // return the previously uploaded texture
-                return this._inputTexture[this._inputTextureIndex];
+                if(this._inputTexture[this._inputTextureIndex] != null)
+                    return this._inputTexture[this._inputTextureIndex];
+                else
+                    Utils.warning(`Trying to process a video that isn't ready yet`);
             }
         }
 

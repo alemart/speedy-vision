@@ -36,7 +36,7 @@ const MAX_PIXELS_PER_KEYPOINT = (MAX_KEYPOINT_SIZE / 4) | 0; // in pixels
 const MIN_ENCODER_LENGTH = 1;
 const MAX_ENCODER_LENGTH = 300; // in pixels (if too large, WebGL may lose context - so be careful!)
 const MAX_KEYPOINTS = ((MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH) / MAX_PIXELS_PER_KEYPOINT) | 0;
-const INITIAL_ENCODER_LENGTH = 128; // pick a large value <= MAX (useful on static images when no encoder optimization is performed beforehand)
+const INITIAL_ENCODER_LENGTH = 16; // pick a small number to reduce processing load and not crash things on mobile (WebGL lost context)
 const KEYPOINT_BUFFER_LENGTH = 1024; // maximum number of keypoints that can be uploaded to the GPU via UBOs
 
 
@@ -123,6 +123,7 @@ export class GPUEncoders extends SpeedyProgramGroup
         const oldEncoderLength = this._encoderLength;
 
         this._encoderLength = newEncoderLength;
+        //console.log('optimized for', keypointCount, 'keypoints. length:', newEncoderLength);
 
         return (newEncoderLength - oldEncoderLength) != 0;
     }
@@ -130,10 +131,10 @@ export class GPUEncoders extends SpeedyProgramGroup
     /**
      * Ensures that the encoder has enough capacity to deliver the specified number of keypoints
      * @param {number} keypointCount the number of keypoints
-     * @param {number} [descriptorSize] in bytes
+     * @param {number} descriptorSize in bytes
      * @returns {boolean} true if there was any change to the length of the encoder
      */
-    reserve(keypointCount, descriptorSize)
+    reserveSpace(keypointCount, descriptorSize)
     {
         // resize if not enough space
         if(this._minimumEncoderLength(keypointCount, descriptorSize) > this._encoderLength)
@@ -178,6 +179,7 @@ export class GPUEncoders extends SpeedyProgramGroup
         const pixelsPerKeypoint = 2 + descriptorSize / 4;
         let x, y, lod, rotation, score;
         let hasLod, hasRotation;
+        let discardCount = 0;
         const keypoints = [];
 
         // initialize output arrays
@@ -210,10 +212,11 @@ export class GPUEncoders extends SpeedyProgramGroup
             y /= FIX_RESOLUTION;
 
             // emit signal to discard keypoints outside the image
-            if(output.discard != undefined) {
-                const isDiscardedKeypoint = (x > MAX_TEXTURE_LENGTH || y > MAX_TEXTURE_LENGTH || x < 0 || y < 0);
+            const isDiscardedKeypoint = (x > MAX_TEXTURE_LENGTH || y > MAX_TEXTURE_LENGTH || x < 0 || y < 0);
+            if(output.discard != undefined)
                 output.discard.push(isDiscardedKeypoint);
-            }
+            if(output.discardCount != undefined && isDiscardedKeypoint)
+                output.discardCount[0] = ++discardCount;
 
             // extract LOD
             hasLod = (pixels[i+4] < 255);
@@ -330,7 +333,7 @@ export class GPUEncoders extends SpeedyProgramGroup
         }
 
         // Reserve space for the keypoints
-        this.reserve(keypointCount, descriptorSize);
+        this.reserveSpace(keypointCount, descriptorSize);
 
         // Upload data
         this._uploadKeypoints.resize(this._encoderLength, this._encoderLength);

@@ -88,7 +88,7 @@ window.onload = async function()
 
     // create a feature detector
     const featureDetector = Speedy.FeatureDetector.Harris();
-    featureDetector.sensitivity = 0.3;
+    featureDetector.quality = 0.8;
     featureDetector.max = 600;
 
     // create a feature tracker

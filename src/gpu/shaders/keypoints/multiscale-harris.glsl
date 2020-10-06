@@ -80,7 +80,7 @@ void main()
         float response = 0.5f * (m.x + m.z - sqrt((m.x - m.z) * (m.x - m.z) + 4.0f * m.y * m.y));
 
         // compute corner score in [0,1]
-        float score = max(0.0f, response / 5.0f); // hmmmmmm....
+        float score = clamp(response / 8.0f, 0.0f, 1.0f); // hmmmmmm....
 
         // compute corner scale
         float lod = 0.5f * float(octave);

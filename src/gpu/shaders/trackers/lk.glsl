@@ -241,8 +241,7 @@ void main()
         readWindow(keypoint.position, lod);
 
         // compute inverse autocorrelation matrix (transpose Harris)
-        mat2 invHarris = mat2(0.0f, 0.0f, 0.0f, 0.0f);
-        vec3 sumOfSquaredDerivatives = vec3(0.0f);
+        highp mat2 invHarris = mat2(0.0f, 0.0f, 0.0f, 0.0f);
         for(int j = 0; j < windowSize; j++) {
             for(int i = 0; i < windowSize; i++) {
                 vec2 derivatives = computeDerivatives(PREV_IMAGE, ivec2(i-r, j-r));
@@ -253,15 +252,16 @@ void main()
             }
         }
 
+
         // compute the determinant of the matrix
         const float minDet = 0.00001f; // why?
-        float det = invHarris[0][0] * invHarris[1][1] - invHarris[0][1] * invHarris[1][0];
+        highp float det = invHarris[0][0] * invHarris[1][1] - invHarris[0][1] * invHarris[1][0];
         //float det = determinant(invHarris); // performance?
 
         // iterative LK
-        vec2 localGuess = vec2(0.0f); // guess for this level of the pyramid
+        highp vec2 localGuess = vec2(0.0f); // guess for this level of the pyramid
         for(int k = 0; k < NUM_ITERATIONS; k++) { // meant to reach convergence
-            vec2 spaceTime = vec2(0.0f);
+            highp vec2 spaceTime = vec2(0.0f);
 
             for(int _y = 0; _y < windowSize; _y++) {
                 for(int _x = 0; _x < windowSize; _x++) {
@@ -276,7 +276,7 @@ void main()
                 }
             }
 
-            vec2 localOpticalFlow = abs(det) < minDet ? vec2(0.0f) : invHarris * spaceTime / det;
+            highp vec2 localOpticalFlow = abs(det) < minDet ? vec2(0.0f) : invHarris * spaceTime / det;
             localGuess += localOpticalFlow;
         }
 

@@ -26,8 +26,8 @@ import { SpeedyGPU } from '../../gpu/speedy-gpu';
 
 // constants
 const INITIAL_FILTER_GAIN = 0.85; // a number in [0,1]
-const INITIAL_KEYPOINTS_GUESS = 1024; // a guess about the initial number of keypoints
-const MIN_KEYPOINTS = 64; // at any point in time, the encoder will have space for
+const INITIAL_KEYPOINTS_GUESS = 600; // a guess about the initial number of keypoints
+const MIN_KEYPOINTS = 32; // at any point in time, the encoder will have space for
                           // at least this number of keypoints
 
 
@@ -151,10 +151,11 @@ export class FeatureDownloader extends Observable
         return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer, this._useBufferedDownloads).then(data => {
 
             // decode the keypoints
-            const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize, output);
+            const out = Object.assign({ discardCount: [0] }, output);
+            const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize, out);
 
             // how many keypoints do we expect in the next frame?
-            const nextCount = this._estimator.estimate(keypoints.length);
+            const nextCount = this._estimator.estimate(keypoints.length - out.discardCount[0]);
 
             // optimize the keypoint encoder
             //console.log('Encoder Length', gpu.programs.encoders.encoderLength);
@@ -167,7 +168,7 @@ export class FeatureDownloader extends Observable
             else {
                 // static usage
                 const capacity = Math.max(nextCount, MIN_KEYPOINTS);
-                gpu.programs.encoders.reserve(capacity, descriptorSize);
+                gpu.programs.encoders.reserveSpace(capacity, descriptorSize);
             }
 
             // cap the number of keypoints if requested to do so
@@ -199,7 +200,7 @@ export class FeatureDownloader extends Observable
         const capacity = INITIAL_KEYPOINTS_GUESS;
 
         this._estimator.reset();
-        gpu.programs.encoders.reserve(capacity, descriptorSize);
+        gpu.programs.encoders.reserveSpace(capacity, descriptorSize);
     }
 
     /**

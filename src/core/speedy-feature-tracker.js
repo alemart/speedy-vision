@@ -93,7 +93,7 @@ class SpeedyFeatureTracker
         const useAsyncTransfer = (this._media.options.usage != 'static');
 
         // reserve space for the encoder
-        gpu.programs.encoders.reserve(keypoints.length, descriptorSize);
+        gpu.programs.encoders.reserveSpace(keypoints.length, descriptorSize);
 
         // upload & track keypoints
         const prevKeypoints = this._trackingAlgorithm.upload(gpu, keypoints, descriptorSize);
@@ -152,6 +152,10 @@ class SpeedyFeatureTracker
         const newInputTexture = gpu.upload(media.source);
         this._prevInputTexture = this._inputTexture;
         this._inputTexture = newInputTexture;
+
+        // something wrong with the upload?
+        if(this._inputTexture == null)
+            throw new IllegalOperationError(`Tracking error: can't upload image to the GPU ${media.source}`);
 
         // is it the first frame?
         if(this._prevInputTexture == null)
