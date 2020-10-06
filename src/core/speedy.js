@@ -25,7 +25,7 @@ import { FPSCounter } from '../utils/fps-counter';
 import { SpeedyFeatureDetectorFactory } from './speedy-feature-detector-factory';
 import { SpeedyFeatureTrackerFactory } from './speedy-feature-tracker-factory';
 import { SpeedyFlags } from './speedy-flags';
-import { SpeedyVector2 } from './speedy-vectors';
+import { SpeedyVector2 } from './math/speedy-vector';
 
 /**
  * Speedy's main class

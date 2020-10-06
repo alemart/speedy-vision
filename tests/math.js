@@ -51,7 +51,7 @@ describe('Math', function() {
 
         it('clones vectors', function() {
             const u = Speedy.Vector2(4, 5);
-            const v = u.clone();
+            const v = Speedy.Vector2(u.x, u.y);
 
             expect(u.x).toEqual(v.x);
             expect(u.y).toEqual(v.y);
@@ -62,25 +62,17 @@ describe('Math', function() {
             const u = Speedy.Vector2(-3, -4);
             const v = Speedy.Vector2(3, 4);
 
-            expect(u.length).toEqual(5);
-            expect(v.length).toEqual(5);
-            expect(zero.length).toEqual(0);
-        });
-
-        it('won\'t accept non-numbers as coordinates', function() {
-            expect(() => Speedy.Vector2('2', 'a')).toThrow();
-            expect(() => Speedy.Vector2(2, null)).toThrow();
-            expect(() => Speedy.Vector2(null)).toThrow();
-            expect(() => Speedy.Vector2(undefined)).toThrow();
-            expect(() => Speedy.Vector2({})).toThrow();
-            expect(() => Speedy.Vector2('test')).toThrow();
-            expect(() => Speedy.Vector2(true, 1)).toThrow();
-            expect(() => Speedy.Vector2(2, Math.exp(2))).not.toThrow();
+            expect(u.length()).toEqual(5);
+            expect(v.length()).toEqual(5);
+            expect(zero.length()).toEqual(0);
         });
 
         it('supports translations', function() {
-            const v = zero.translatedBy(5, 5);
-            const w = Speedy.Vector2(2, 3).translatedBy(v);
+            const v = Speedy.Vector2(zero.x + 5, zero.y + 5);
+            const w = Speedy.Vector2(2, 3);
+
+            w.x += v.x;
+            w.y += v.y;
 
             expect(v.x).toEqual(5);
             expect(v.y).toEqual(5);
@@ -89,8 +81,11 @@ describe('Math', function() {
         });
 
         it('supports scaling', function() {
-            const v = Speedy.Vector2(3, 4).scaledBy(2);
-            const w = v.scaledBy(0.5);
+            const v = Speedy.Vector2(3 * 2, 4 * 2);
+            const w = Speedy.Vector2(v.x, v.y);
+
+            w.x /= 2;
+            w.y /= 2;
 
             expect(v.x).toEqual(6);
             expect(v.y).toEqual(8);
@@ -107,21 +102,21 @@ describe('Math', function() {
         });
 
         it('normalizes vectors', function() {
-            const v = Speedy.Vector2(4, 0).normalized();
-            const u = Speedy.Vector2(0, 5).normalized().normalized();
-            const z = zero.normalized();
+            const v = Speedy.Vector2(4, 0).normalize();
+            const u = Speedy.Vector2(0, 5).normalize().normalize();
+            const z = zero.normalize();
 
             expect(v.x).toEqual(1);
             expect(v.y).toEqual(0);
-            expect(v.length).toEqual(1);
+            expect(v.length()).toEqual(1);
 
             expect(u.x).toEqual(0);
             expect(u.y).toEqual(1);
-            expect(u.length).toEqual(1);
+            expect(u.length()).toEqual(1);
 
             expect(z.x).toEqual(0);
             expect(z.y).toEqual(0);
-            expect(z.length).toEqual(0);
+            expect(z.length()).toEqual(0);
         });
 
         it('computes the dot product', function() {

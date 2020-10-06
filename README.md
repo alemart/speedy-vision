@@ -683,8 +683,6 @@ Nightvision enhances the illumination of the scene. It improves local contrast a
 
 #### Vectors
 
-Speedy works with immutable vectors. Many methods are chainable, giving you an elegant way of expressing different computations.
-
 ##### Speedy.Vector2()
 
 `Speedy.Vector2(x: number, y: number): SpeedyVector2`
@@ -708,21 +706,25 @@ const zero = Speedy.Vector2(0, 0);
 
 ##### SpeedyVector2.x
 
-`SpeedyVector2.x: number, read-only`
+`SpeedyVector2.x: number`
 
 The x-coordinate of the vector.
 
 ##### SpeedyVector2.y
 
-`SpeedyVector2.y: number, read-only`
+`SpeedyVector2.y: number`
 
 The y-coordinate of the vector.
 
-##### SpeedyVector2.length
+##### SpeedyVector2.length()
 
-`SpeedyVector2.length: number, read-only`
+`SpeedyVector2.length(): number`
 
-The length of the vector (Euclidean norm).
+Computes the length of the vector (Euclidean norm).
+
+###### Returns
+
+The length of the vector.
 
 ###### Example
 
@@ -730,78 +732,24 @@ The length of the vector (Euclidean norm).
 const v = Speedy.Vector2(3, 4);
 
 console.log('Coordinates', v.x, v.y);
-console.log('Length', v.length); // 5
+console.log('Length', v.length()); // 5
 ```
 
-##### SpeedyVector2.clone()
+##### SpeedyVector2.normalize()
 
-`SpeedyVector2.clone(): SpeedyVector2`
+`SpeedyVector2.normalize(): SpeedyVector2`
 
-Creates a new vector with the same coordinates as the original one.
-
-###### Returns
-
-A clone of the vector.
-
-##### SpeedyVector2.translatedBy()
-
-`SpeedyVector2.translatedBy(offset: SpeedyVector2): SpeedyVector2`
-`SpeedyVector2.translatedBy(x: number, y: number): SpeedyVector2`
-
-Translate by an offset. A new vector is returned. This method has two forms: it accepts either a vector, or a pair of (x,y) coordinates.
-
-###### Arguments
-
-* `offset: SpeedyVector2`. Offset to translate by.
-* `x: number`. Offset in the x-axis.
-* `y: number`. Offset in the x-axis.
+Normalizes the vector, so that its length becomes one.
 
 ###### Returns
 
-A new vector having its coordinates translated by the given offset.
-
-###### Example
-
-```js
-const one = Speedy.Vector2(1, 1);
-const zero = Speedy.Vector2(2, 1).translatedBy(one).translatedBy(-3, -2);
-```
-
-##### SpeedyVector2.scaledBy()
-
-`SpeedyVector2.scaledBy(lambda: number): SpeedyVector2`
-
-Multiply by a scalar.
-
-###### Arguments
-
-* `lambda: number`. Scale factor.
-
-###### Returns
-
-A new vector scaled by `lambda`.
-
-###### Example
-
-```js
-const five = Speedy.Vector2(1, 1).scaledBy(5);
-```
-
-##### SpeedyVector2.normalized()
-
-`SpeedyVector2.normalized(): SpeedyVector2`
-
-Normalize vector.
-
-###### Returns
-
-A unit vector in the same direction as the original one.
+The vector itself.
 
 ##### SpeedyVector2.distanceTo()
 
 `SpeedyVector2.distanceTo(v: SpeedyVector2): number`
 
-Distance between two vectors.
+Computes the distance between two vectors.
 
 ###### Arguments
 
