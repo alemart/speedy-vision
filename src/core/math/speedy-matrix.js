@@ -69,6 +69,11 @@ export class SpeedyMatrix
         return this._channels;
     }
 
+    toString()
+    {
+        return `SpeedyMatrix(${this._rows}, ${this._cols})`;
+    }
+
     at(row, column = 0)
     {
         /*

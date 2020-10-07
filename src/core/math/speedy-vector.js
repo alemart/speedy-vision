@@ -89,6 +89,15 @@ export class SpeedyVector2 extends SpeedyMatrix
     //
 
     /**
+     * Convert to string
+     * @returns {string}
+     */
+    toString()
+    {
+        return `SpeedyVector2(${this._data[0]}, ${this._data[1]})`;
+    }
+
+    /**
      * Get vector coordinate
      * @param {number} row 0 or 1
      * @returns {number}

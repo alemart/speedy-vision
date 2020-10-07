@@ -870,6 +870,16 @@ Dot product.
 
 The dot product between the two vectors.
 
+##### SpeedyVector2.toString()
+
+`SpeedyVector2.toString(): string`
+
+Get a string representation of the vector.
+
+###### Returns
+
+A string representation of the vector.
+
 ### Extras
 
 #### Frames per second (FPS)
