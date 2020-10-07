@@ -26,6 +26,7 @@ uniform sampler2D prevPyramid; // image pyramid at time t-1
 uniform sampler2D prevKeypoints; // encoded keypoints at time t-1
 uniform int windowSize; // odd number - typical values: 5, 7, 11, ..., 21
 uniform int depth; // how many pyramid layers to check (1, 2, 3, 4...)
+uniform int firstKeypointIndex, lastKeypointIndex; // process only these keypoints in this pass of the shader
 uniform int descriptorSize; // in bytes
 uniform int encoderLength;
 
@@ -230,6 +231,11 @@ void main()
     // decode keypoint
     Keypoint keypoint = decodeKeypoint(prevKeypoints, encoderLength, address);
     if(isDiscardedOrNullKeypoint(keypoint))
+        return;
+
+    // we'll only compute optical-flow for a subset of all keypoints in this pass of the shader
+    int idx = findKeypointIndex(address, descriptorSize);
+    if(idx < firstKeypointIndex || idx > lastKeypointIndex)
         return;
 
     // for each LOD

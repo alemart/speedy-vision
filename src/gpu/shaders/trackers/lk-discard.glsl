@@ -26,6 +26,7 @@ uniform sampler2D pyramid; // image pyramid at time t
 uniform sampler2D encodedKeypoints; // encoded keypoints at time t
 uniform int windowSize; // odd number - typical values: 5, 7, 11, ..., 21
 uniform float discardThreshold; // typical value: 10^(-4)
+uniform int firstKeypointIndex, lastKeypointIndex; // process only these keypoints in this pass of the shader
 uniform int descriptorSize; // in bytes
 uniform int encoderLength;
 
@@ -38,7 +39,7 @@ uniform int encoderLength;
 const int MAX_WINDOW_SIZE_PLUS = MAX_WINDOW_SIZE + 2; // add slack for the derivatives (both sides)
 const int MAX_WINDOW_SIZE_PLUS_SQUARED = MAX_WINDOW_SIZE_PLUS * MAX_WINDOW_SIZE_PLUS;
 const int MAX_WINDOW_RADIUS_PLUS = (MAX_WINDOW_SIZE_PLUS - 1) / 2;
-const float DISCARD_SCALE = 0.00024318695068359375f; // 255 / (2^20) - that's ~2.43 x 10^(-4)
+const float DISCARD_SCALE = 0.00024318695068359375f; // 255 / (2^20) for a discard threshold similar to opencv's
 
 // pixel storage (greyscale values)
 float pixelBuffer[MAX_WINDOW_SIZE_PLUS_SQUARED];
@@ -154,6 +155,11 @@ void main()
     // decode keypoint
     Keypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);
     if(isDiscardedOrNullKeypoint(keypoint))
+        return;
+
+    // we'll only compute optical-flow for a subset of all keypoints in this pass of the shader
+    int idx = findKeypointIndex(address, descriptorSize);
+    if(idx < firstKeypointIndex || idx > lastKeypointIndex)
         return;
 
     // read window around the keypoint

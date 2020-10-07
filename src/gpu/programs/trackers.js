@@ -30,24 +30,47 @@ import { PYRAMID_MAX_LEVELS } from '../../utils/globals';
 //
 
 // LK
-//const LK_MAX_WINDOW_SIZE = 21; // 10x10 window
-//const LK_MAX_WINDOW_SIZE = 15; // 7x7 window
-const LK_MAX_WINDOW_SIZE = 21; // 7x7 window
+const LK_MAX_WINDOW_SIZE = 21; // 10x10 window - default
+const LK_MAX_WINDOW_SIZE_SMALL = 15; // 7x7 window - the smaller the window, the easier it is on the GPU
+const LK_MAX_WINDOW_SIZE_SMALLER = 11; // 5x5 window - works best on mobile
 const LK_MIN_WINDOW_SIZE = 5; // 2x2 window
+const LK_MAX_KEYPOINTS_PER_PASS = 100;
 
 const lk = importShader('trackers/lk.glsl')
-           .withArguments('nextPyramid', 'prevPyramid', 'prevKeypoints', 'windowSize', 'depth', 'descriptorSize', 'encoderLength')
+           .withArguments('nextPyramid', 'prevPyramid', 'prevKeypoints', 'windowSize', 'depth', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'encoderLength')
            .withDefines({
                'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE
            });
 
 const lkDiscard = importShader('trackers/lk-discard.glsl')
-                  .withArguments('pyramid', 'encodedKeypoints', 'windowSize', 'discardThreshold', 'descriptorSize', 'encoderLength')
+                  .withArguments('pyramid', 'encodedKeypoints', 'windowSize', 'discardThreshold', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'encoderLength')
                   .withDefines({
                       'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE
                   });
 
+const lkSmall = importShader('trackers/lk.glsl')
+                .withArguments('nextPyramid', 'prevPyramid', 'prevKeypoints', 'windowSize', 'depth', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'encoderLength')
+                .withDefines({
+                    'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALL
+                });
 
+const lkDiscardSmall = importShader('trackers/lk-discard.glsl')
+                       .withArguments('pyramid', 'encodedKeypoints', 'windowSize', 'discardThreshold', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'encoderLength')
+                       .withDefines({
+                           'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALL
+                       });
+
+const lkSmaller = importShader('trackers/lk.glsl')
+                  .withArguments('nextPyramid', 'prevPyramid', 'prevKeypoints', 'windowSize', 'depth', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'encoderLength')
+                  .withDefines({
+                      'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALLER
+                  });
+
+const lkDiscardSmaller = importShader('trackers/lk-discard.glsl')
+                         .withArguments('pyramid', 'encodedKeypoints', 'windowSize', 'discardThreshold', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'encoderLength')
+                         .withDefines({
+                             'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALLER
+                         });
 
 /**
  * GPUTrackers
@@ -67,7 +90,11 @@ export class GPUTrackers extends SpeedyProgramGroup
         this
             // LK
             .declare('_lk', lk)
+            .declare('_lkSmall', lkSmall)
+            .declare('_lkSmaller', lkSmaller)
             .declare('_lkDiscard', lkDiscard)
+            .declare('_lkDiscardSmall', lkDiscardSmall)
+            .declare('_lkDiscardSmaller', lkDiscardSmaller)
         ;
     }
 
@@ -93,12 +120,44 @@ export class GPUTrackers extends SpeedyProgramGroup
         windowSize = windowSize + ((windowSize+1) % 2);
         windowSize = Math.max(LK_MIN_WINDOW_SIZE, Math.min(windowSize, LK_MAX_WINDOW_SIZE));
 
-        // resize programs
-        this._lk.resize(encoderLength, encoderLength);
-        this._lkDiscard.resize(encoderLength, encoderLength);
+        // select programs
+        let lk = '_lk', lkDiscard = '_lkDiscard';
+        if(windowSize <= LK_MAX_WINDOW_SIZE_SMALLER) {
+            lk += 'Smaller'; lkDiscard += 'Smaller';
+        }
+        else if(windowSize <= LK_MAX_WINDOW_SIZE_SMALL) {
+            lk += 'Small'; lkDiscard += 'Small';
+        }
 
-        // optical-flow
-        const nextKeypoints = this._lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, depth, descriptorSize, encoderLength);
-        return this._lkDiscard(nextPyramid, nextKeypoints, windowSize, discardThreshold, descriptorSize, encoderLength);
+        // resize programs
+        this[lk].resize(encoderLength, encoderLength);
+        this[lkDiscard].resize(encoderLength, encoderLength);
+
+        //
+        // Optimization!
+        // because this is such a demanding algorithm, we'll
+        // split the work into multiple passes of the shaders
+        // (so we don't get WebGL context loss on mobile)
+        //
+        const pixelsPerKeypoint = 2 + descriptorSize / 4;
+        const numKeypointsApprox = encoderLength * encoderLength / pixelsPerKeypoint;
+        const numPasses = Math.ceil(Math.max(1, numKeypointsApprox) / LK_MAX_KEYPOINTS_PER_PASS);
+        //console.log('num passes', numPasses, lk);
+
+        // for each pass
+        let nextKeypoints = prevKeypoints;
+        for(let i = 0; i < numPasses; i++) {
+            const firstKeypointIndex = i * LK_MAX_KEYPOINTS_PER_PASS;
+            const lastKeypointIndex = firstKeypointIndex + LK_MAX_KEYPOINTS_PER_PASS - 1;
+
+            // compute optical-flow
+            nextKeypoints = (this[lk])(nextPyramid, prevPyramid, nextKeypoints, windowSize, depth, firstKeypointIndex, lastKeypointIndex, descriptorSize, encoderLength);
+
+            // discard "bad" keypoints
+            nextKeypoints = (this[lkDiscard])(nextPyramid, nextKeypoints, windowSize, discardThreshold, firstKeypointIndex, lastKeypointIndex, descriptorSize, encoderLength);
+        }
+
+        // done!
+        return nextKeypoints;
     }
 }
