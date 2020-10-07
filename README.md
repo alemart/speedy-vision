@@ -42,6 +42,7 @@ speedy-vision.js is developed by [Alexandre Martins](https://github.com/alemart)
 * [API Reference](#api-reference)
   * [Media routines](#media-routines)
   * [Feature detection](#feature-detection)
+  * [Feature tracking](#feature-tracking)
   * [Feature matching](#feature-matching)
   * [Image processing](#image-processing)
   * [Maths](#maths)
@@ -520,6 +521,91 @@ The orientation angle of the image feature, in radians. Only a subset of the fea
 `SpeedyFeature.score: number, read-only`
 
 A score measure of the image feature. Although different detection methods employ different measurement strategies, the larger the score, the "better" the feature is.
+
+### Feature tracking
+
+Feature point tracking is the process of tracking feature points across a sequence of images. Feature tracking allows you to get a sense of how keypoints are moving in time (how fast they are moving and where they are going).
+
+Speedy uses sparse optical-flow algorithms to track feature points in a video. Applications of optical-flow are numerous. You may get a sense of how objects are moving in a scene, you may estimate how the camera itself is moving, you may detect a transition in a film (a cut between two shots), and so on.
+
+#### Tracking methods
+
+Currently, the following feature trackers are available:
+
+| Tracker | Description |
+|---------|-------------|
+| `LK`    | Pyramid-based LK optical-flow |
+
+Feature trackers are associated with a `SpeedyMedia`, so that consecutive frames of a video are automatically stored in memory and used in the optical-flow algorithms.
+
+**Note:** some keypoints may be discarded during tracking. Additionally, feature trackers will not recompute any keypoints.
+
+#### Tracking API
+
+##### SpeedyFeatureTracker.track()
+
+`SpeedyFeatureTracker.track(features: SpeedyFeature[], flow?: SpeedyVector2[], found?: boolean[]): Promise<SpeedyFeature[]>`
+
+Track a collection of `features` between frames. You may optionally specify the `flow` array to get the flow vector for each of the tracked features. Additionally, `found[i]` will tell you whether the i-th feature point has been found in the next frame of the video/animation or not.
+
+###### Arguments
+
+* `features: SpeedyFeature[]`. The feature points you want to track.
+* `flow: SpeedyVector2[], optional`. Output parameter giving you the flow vector of each feature point. Pass an array to it.
+* `found: boolean[], optional`. Output parameter telling you whether the feature points remain in the scene or not. Pass an array to it.
+
+###### Returns
+
+A Promise that resolves to an array of `SpeedyFeature` objects.
+
+###### Example
+
+```js
+// setup a feature tracker
+const featureTracker = Speedy.FeatureTracker.LK(media);
+
+// [...]
+
+// features is an array of SpeedyFeature objects
+let flow = [];
+features = await featureTracker.track(features, flow);
+
+// output
+console.log(features, flow);
+```
+
+##### SpeedyFeatureTracker.includeDescriptor()
+
+`SpeedyFeatureTracker.includeDescriptor(featureDescriptor: SpeedyFeatureDetector): SpeedyFeatureTracker`
+
+Attaches a feature descriptor to the feature tracker. You'll get your tracked features with updated descriptors.
+
+###### Arguments
+
+* `featureDescriptor: SpeedyFeatureDetector`. A feature detection object that includes feature description capabilities.
+
+###### Returns
+
+The feature tracker itself.
+
+###### Example
+
+```js
+const orb = Speedy.FeatureDetector.ORB();
+
+const lk = Speedy.FeatureTracker.LK(media)
+          .includeDescriptor(orb);
+```
+
+#### LK feature tracker
+
+`Speedy.FeatureTracker.LK(media: SpeedyMedia): LKFeatureTracker`
+
+Pyramid-based LK optical-flow algorithm. The following properties are available:
+
+* `windowSize: number`. The size of the window to be used by the feature tracker. For a window of size *n*, the algorithm will read *n* x *n* neighboring pixels to determine the motion of a keypoint. Typical values for this property include: `21`, `15`, `11`, `7`. Defaults to `15`.
+* `discardThreshold: number`. A threshold used to discard keypoints that are not "good" candidates for tracking. Defaults to `0.0001`. The higher the value, the more keypoints will be discarded.
+* `depth: number`. Specifies how many pyramid levels will be used in the computation. You should generally leave this property as it is. Defaults to `5`.
 
 ### Feature matching
 
