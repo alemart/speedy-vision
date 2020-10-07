@@ -348,7 +348,7 @@ export class SpeedyMedia
         if(settings.hasOwnProperty('max'))
             this._featureDetector.max = settings.max | 0;
         if(settings.hasOwnProperty('denoise'))
-            this._featureDetector.setEnhancements({ denoise: Boolean(settings.denoise) });
+            this._featureDetector.enhance({ denoise: Boolean(settings.denoise) });
         if(settings.hasOwnProperty('expected')) {
             if(typeof settings.expected == 'object')
                 this._featureDetector.expect(settings.expected.number | 0, +settings.expected.tolerance);

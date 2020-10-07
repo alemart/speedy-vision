@@ -376,14 +376,15 @@ window.onload = () => {
 
 Used to cap the number of keypoints: Speedy will return the best keypoints (according to their scores) up to this number. If it's `undefined`, no such limit will be applied.
 
-##### SpeedyFeatureDetector.setEnhancements()
+##### SpeedyFeatureDetector.enhance()
 
-`SpeedyFeatureDetector.setEnhancements(enhancements: object)`
+`SpeedyFeatureDetector.enhance(enhancements: object)`
 
 Speedy can enhance your images in different ways before detecting the interest points. These enhancements are intended to make the feature detection more robust, at a slighly higher computational cost. The desired enhancements are specified in the `enhancements` parameter. That's an object that accepts the following keys (all are optional):
 
 * `denoise: boolean`. Whether or not to denoise the image before finding the features. A simple Gaussian Blur will be applied. Defaults to `true`.
 * `illumination: boolean`. If set to `true`, the feature detection algorithm will be more robust when dealing with lighting changes and shadows. It will use the [Nightvision](#nightvision) filter behind the scenes. Defaults to `false`.
+* `nightvision: object`. An object with the following keys: `gain`, `offset`, `decay` and `quality`, as in the [Nightvision](#nightvision) filter.
 
 
 
@@ -763,7 +764,8 @@ Nightvision enhances the illumination of the scene. It improves local contrast a
 
 * `gain: number`. A value used to stretch the contrast, typically between `0` and `1`.
 * `offset: number`. A value used to adjust the brightness, typically between `0` and `1`.
-* `decay: number`. A value between `0` (no decay, default) and `1` (full decay) that modifies the gain from the center of the image to its corners. Used to get high contrast at the center and low contrast at the corners.
+* `decay: number`. A value between `0` (no decay, default) and `1` (full decay) that modifies the gain from the center of the image to its corners. Used to get high contrast at the center and low contrast at the corners. Defaults to `0`.
+* `quality: string`. One of the following: `"high"`, `"medium"`, `"low"`. Defaults to `"medium"`.
 
 ### Maths
 

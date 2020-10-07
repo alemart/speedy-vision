@@ -180,7 +180,7 @@ class SpeedyFeatureDetector
      * to the image before detecting the features
      * @param {object} enhancements
      */
-    setEnhancements(enhancements)
+    enhance(enhancements)
     {
         // validate parameter
         if(typeof enhancements !== 'object')
