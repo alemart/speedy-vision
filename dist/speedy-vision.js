@@ -1,12 +1,12 @@
 /*!
- * speedy-vision.js v0.4.0-wip
+ * speedy-vision.js v0.4.0
  * GPU-accelerated Computer Vision for JavaScript
  * https://github.com/alemart/speedy-vision-js
  * 
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-10-03T01:46:06.078Z
+ * Date: 2020-10-07T21:06:24.144Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -1166,8 +1166,8 @@ __webpack_require__.r(__webpack_exports__);
 
 // constants
 const INITIAL_FILTER_GAIN = 0.85; // a number in [0,1]
-const INITIAL_KEYPOINTS_GUESS = 1024; // a guess about the initial number of keypoints
-const MIN_KEYPOINTS = 64; // at any point in time, the encoder will have space for
+const INITIAL_KEYPOINTS_GUESS = 600; // a guess about the initial number of keypoints
+const MIN_KEYPOINTS = 32; // at any point in time, the encoder will have space for
                           // at least this number of keypoints
 
 
@@ -1291,10 +1291,11 @@ class FeatureDownloader extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__["
         return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer, this._useBufferedDownloads).then(data => {
 
             // decode the keypoints
-            const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize, output);
+            const out = Object.assign({ discardCount: [0] }, output);
+            const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize, out);
 
             // how many keypoints do we expect in the next frame?
-            const nextCount = this._estimator.estimate(keypoints.length);
+            const nextCount = this._estimator.estimate(keypoints.length - out.discardCount[0]);
 
             // optimize the keypoint encoder
             //console.log('Encoder Length', gpu.programs.encoders.encoderLength);
@@ -1307,7 +1308,7 @@ class FeatureDownloader extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__["
             else {
                 // static usage
                 const capacity = Math.max(nextCount, MIN_KEYPOINTS);
-                gpu.programs.encoders.reserve(capacity, descriptorSize);
+                gpu.programs.encoders.reserveSpace(capacity, descriptorSize);
             }
 
             // cap the number of keypoints if requested to do so
@@ -1339,7 +1340,7 @@ class FeatureDownloader extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__["
         const capacity = INITIAL_KEYPOINTS_GUESS;
 
         this._estimator.reset();
-        gpu.programs.encoders.reserve(capacity, descriptorSize);
+        gpu.programs.encoders.reserveSpace(capacity, descriptorSize);
     }
 
     /**
@@ -1557,6 +1558,279 @@ class LKFeatureTrackingAlgorithm extends _feature_tracking_algorithm__WEBPACK_IM
         // track feature points
         const encoderLength = gpu.programs.encoders.encoderLength;
         return gpu.programs.trackers.lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, depth, discardThreshold, descriptorSize, encoderLength);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/math/speedy-matrix.js":
+/*!****************************************!*\
+  !*** ./src/core/math/speedy-matrix.js ***!
+  \****************************************/
+/*! exports provided: SpeedyMatrix */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrix", function() { return SpeedyMatrix; });
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _speedy_flags__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../speedy-flags */ "./src/core/speedy-flags.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-matrix.js
+ * Matrix operations
+ */
+
+
+
+
+const matrixType = {
+    [_speedy_flags__WEBPACK_IMPORTED_MODULE_1__["SpeedyFlags"].F32]: Float32Array,
+    [_speedy_flags__WEBPACK_IMPORTED_MODULE_1__["SpeedyFlags"].U8]: Uint8Array,
+};
+
+/**
+ * Generic matrix
+ */
+class SpeedyMatrix
+{
+    constructor(rows, columns, type = _speedy_flags__WEBPACK_IMPORTED_MODULE_1__["SpeedyFlags"].F32)
+    {
+        this._type = type & (~3); // F32, U8...
+
+        const numChannels = 1 + (type & 3);
+        const dataType = matrixType[this._type];
+
+        if(rows <= 0 || columns <= 0)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Invalid dimensions`);
+        else if(numChannels < 1 || numChannels > 4)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Invalid number of channels`);
+        else if(dataType == undefined)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Invalid data type`);
+
+        this._rows = rows | 0;
+        this._cols = columns | 0;
+        this._channels = numChannels;
+        this._length = this._rows * this._cols * this._channels;
+
+        this._data = new dataType(this._length);
+    }
+
+    get rows()
+    {
+        return this._rows;
+    }
+
+    get columns()
+    {
+        return this._cols;
+    }
+
+    get channels()
+    {
+        return this._channels;
+    }
+
+    at(row, column = 0)
+    {
+        /*
+        if(row < 0 || row >= this._rows || column < 0 || column >= this._cols)
+            throw new IllegalArgumentError(`Out of bounds`);
+        */
+
+        return this._data[row * this._cols + column];
+    }
+
+    fill(value)
+    {
+        const length = this._length;
+
+        for(let i = 0; i < length; i++)
+            this._data[i] = value;
+
+        return this;
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/math/speedy-vector.js":
+/*!****************************************!*\
+  !*** ./src/core/math/speedy-vector.js ***!
+  \****************************************/
+/*! exports provided: SpeedyVector2 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyVector2", function() { return SpeedyVector2; });
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _speedy_matrix__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-matrix */ "./src/core/math/speedy-matrix.js");
+/* harmony import */ var _speedy_flags__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../speedy-flags */ "./src/core/speedy-flags.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-vector.js
+ * Vectors
+ */
+
+
+
+
+
+/**
+ * 2D vector of floating-point numbers
+ */
+class SpeedyVector2 extends _speedy_matrix__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrix"]
+{
+    /**
+     * Create a 2D vector
+     * @param {number} x
+     * @param {number} y
+     */
+    constructor(x, y)
+    {
+        super(2, 1, _speedy_flags__WEBPACK_IMPORTED_MODULE_2__["SpeedyFlags"].F32);
+        this._data[0] = x;
+        this._data[1] = y;
+    }
+
+
+    //
+    // ===== PROPERTIES =====
+    //
+
+    /**
+     * Get x-coordinate
+     * @returns {number}
+     */
+    get x()
+    {
+        return this._data[0];
+    }
+
+    /**
+     * Set x-coordinate
+     * @param {number} value
+     */
+    set x(value)
+    {
+        this._data[0] = value;
+    }
+
+    /**
+     * Get y-coordinate
+     * @returns {number}
+     */
+    get y()
+    {
+        return this._data[1];
+    }
+
+    /**
+     * Set y-coordinate
+     * @param {number} value
+     */
+    set y(value)
+    {
+        this._data[1] = value;
+    }
+
+
+
+
+    //
+    // ===== METHODS =====
+    //
+
+    /**
+     * Get vector coordinate
+     * @param {number} row 0 or 1
+     * @returns {number}
+     */
+    at(row)
+    {
+        return this._data[row];
+    }
+
+    /**
+     * Dot product between this vector and another vector
+     * @param {SpeedyVector2} v another vector
+     * @returns {number}
+     */
+    dot(v)
+    {
+        return this._data[0] * v._data[0] + this._data[1] * v._data[1];
+    }
+
+    /**
+     * The distance between this vector and another vector
+     * @param {SpeedyVector2} v another vector
+     * @returns {number}
+     */
+    distanceTo(v)
+    {
+        const dx = this._data[0] - v._data[0];
+        const dy = this._data[1] - v._data[1];
+
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    /**
+     * Euclidean norm
+     * @returns {number}
+     */
+    length()
+    {
+        return Math.sqrt(this._data[0] * this._data[0] + this._data[1] * this._data[1]);
+    }
+
+    /**
+     * Normalizes this vector
+     * @returns {SpeedyVector2} this vector, normalized
+     */
+    normalize()
+    {
+        const l = this.length();
+
+        if(l == 0.0) {
+            this._data[0] = this._data[1] = 0.0;
+            return this;
+        }
+
+        this._data[0] /= l;
+        this._data[1] /= l;
+
+        return this;
     }
 }
 
@@ -2133,12 +2407,13 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_flags__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-flags */ "./src/core/speedy-flags.js");
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _keypoints_automatic_sensitivity__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./keypoints/automatic-sensitivity */ "./src/core/keypoints/automatic-sensitivity.js");
-/* harmony import */ var _keypoints_feature_detection_algorithm__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./keypoints/feature-detection-algorithm */ "./src/core/keypoints/feature-detection-algorithm.js");
-/* harmony import */ var _keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./keypoints/detectors/fast */ "./src/core/keypoints/detectors/fast.js");
-/* harmony import */ var _keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./keypoints/detectors/harris */ "./src/core/keypoints/detectors/harris.js");
-/* harmony import */ var _keypoints_detectors_orb__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./keypoints/detectors/orb */ "./src/core/keypoints/detectors/orb.js");
-/* harmony import */ var _keypoints_detectors_brisk__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./keypoints/detectors/brisk */ "./src/core/keypoints/detectors/brisk.js");
+/* harmony import */ var _speedy_media__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./speedy-media */ "./src/core/speedy-media.js");
+/* harmony import */ var _keypoints_automatic_sensitivity__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./keypoints/automatic-sensitivity */ "./src/core/keypoints/automatic-sensitivity.js");
+/* harmony import */ var _keypoints_feature_detection_algorithm__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./keypoints/feature-detection-algorithm */ "./src/core/keypoints/feature-detection-algorithm.js");
+/* harmony import */ var _keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./keypoints/detectors/fast */ "./src/core/keypoints/detectors/fast.js");
+/* harmony import */ var _keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./keypoints/detectors/harris */ "./src/core/keypoints/detectors/harris.js");
+/* harmony import */ var _keypoints_detectors_orb__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./keypoints/detectors/orb */ "./src/core/keypoints/detectors/orb.js");
+/* harmony import */ var _keypoints_detectors_brisk__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./keypoints/detectors/brisk */ "./src/core/keypoints/detectors/brisk.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -2159,6 +2434,7 @@ __webpack_require__.r(__webpack_exports__);
  * speedy-feature-detector.js
  * Feature detection API
  */
+
 
 
 
@@ -2219,6 +2495,7 @@ class SpeedyFeatureDetector
     detect(media, flags = 0)
     {
         const gpu = media._gpu;
+        const isStaticMedia = (media.options.usage == 'static');
 
         // check if the media has been released
         if(media.isReleased())
@@ -2232,6 +2509,12 @@ class SpeedyFeatureDetector
             // when you expect a sudden increase in the number
             // of keypoints (between two consecutive frames).
             this._algorithm.resetDownloader(gpu);
+        }
+
+        // Allocate encoder space for static media
+        if(isStaticMedia) {
+            const INITIAL_KEYPOINT_GUESS = 1024 * 3;
+            gpu.programs.encoders.reserveSpace(INITIAL_KEYPOINT_GUESS, this._algorithm.descriptorSize);
         }
 
         // Upload & preprocess media
@@ -2255,12 +2538,11 @@ class SpeedyFeatureDetector
         const describedKeypoints = this._describeFeatures(gpu, preprocessedTexture, detectedKeypoints);
 
         // Download keypoints from the GPU
-        const useAsyncTransfer = (media.options.usage != 'static');
         return this._algorithm.download(
             gpu,
             describedKeypoints,
             this._max,
-            useAsyncTransfer
+            !isStaticMedia
         );
     }
 
@@ -2314,7 +2596,7 @@ class SpeedyFeatureDetector
      * to the image before detecting the features
      * @param {object} enhancements
      */
-    setEnhancements(enhancements)
+    enhance(enhancements)
     {
         // validate parameter
         if(typeof enhancements !== 'object')
@@ -2334,7 +2616,7 @@ class SpeedyFeatureDetector
         if(numberOfFeaturePoints !== undefined) {
             // enable automatic sensitivity
             if(this._automaticSensitivity == null) {
-                this._automaticSensitivity = new _keypoints_automatic_sensitivity__WEBPACK_IMPORTED_MODULE_6__["AutomaticSensitivity"](this._algorithm._downloader);
+                this._automaticSensitivity = new _keypoints_automatic_sensitivity__WEBPACK_IMPORTED_MODULE_7__["AutomaticSensitivity"](this._algorithm._downloader);
                 this._automaticSensitivity.subscribe(value => this._algorithm.sensitivity = value);
             }
             this._automaticSensitivity.expected = numberOfFeaturePoints;
@@ -2474,7 +2756,7 @@ class FASTFeatureDetector extends SpeedyFeatureDetector
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["NotSupportedError"](`Can't create FAST feature detector with n = ${n}`);
 
         // Create algorithm
-        super(algorithm || new _keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_8__["FASTFeatures"]());
+        super(algorithm || new _keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_9__["FASTFeatures"]());
 
         // Set default settings
         this._n = n | 0;
@@ -2543,7 +2825,7 @@ class MultiscaleFASTFeatureDetector extends FASTFeatureDetector
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["NotSupportedError"](`Can't create Multiscale FAST feature detector with n = ${n}`);
 
         // setup algorithm
-        super(9, new _keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_8__["MultiscaleFASTFeatures"]());
+        super(9, new _keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_9__["MultiscaleFASTFeatures"]());
 
         // default settings
         this._depth = 3;
@@ -2624,10 +2906,10 @@ class HarrisFeatureDetector extends SpeedyFeatureDetector
     constructor(algorithm = null)
     {
         // setup the algorithm
-        super(algorithm || new _keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_9__["HarrisFeatures"]());
+        super(algorithm || new _keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_10__["HarrisFeatures"]());
 
         // default settings
-        this._quality = 0.1; // in [0,1]
+        this._quality = 0.9; // in [0,1]
     }
 
     /**
@@ -2689,7 +2971,7 @@ class MultiscaleHarrisFeatureDetector extends HarrisFeatureDetector
     constructor(algorithm = null)
     {
         // setup algorithm
-        super(algorithm || new _keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_9__["MultiscaleHarrisFeatures"]());
+        super(algorithm || new _keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_10__["MultiscaleHarrisFeatures"]());
 
         // default settings
         this._depth = 3;
@@ -2745,7 +3027,7 @@ class ORBFeatureDetector extends MultiscaleHarrisFeatureDetector
      */
     constructor()
     {
-        super(new _keypoints_detectors_orb__WEBPACK_IMPORTED_MODULE_10__["ORBFeatures"]());
+        super(new _keypoints_detectors_orb__WEBPACK_IMPORTED_MODULE_11__["ORBFeatures"]());
     }
 }
 
@@ -2762,7 +3044,7 @@ class BRISKFeatureDetector extends SpeedyFeatureDetector
     constructor()
     {
         // setup algorithm
-        super(new _keypoints_detectors_brisk__WEBPACK_IMPORTED_MODULE_11__["BRISKFeatures"]());
+        super(new _keypoints_detectors_brisk__WEBPACK_IMPORTED_MODULE_12__["BRISKFeatures"]());
 
         // default settings
         this._depth = 4; // 4 layers, 7 octaves
@@ -2863,7 +3145,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _keypoints_feature_tracking_algorithm__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./keypoints/feature-tracking-algorithm */ "./src/core/keypoints/feature-tracking-algorithm.js");
 /* harmony import */ var _speedy_media__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-media */ "./src/core/speedy-media.js");
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
-/* harmony import */ var _speedy_vectors__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./speedy-vectors */ "./src/core/speedy-vectors.js");
+/* harmony import */ var _math_speedy_vector__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./math/speedy-vector */ "./src/core/math/speedy-vector.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./keypoints/trackers/lk */ "./src/core/keypoints/trackers/lk.js");
 /*
@@ -2915,6 +3197,7 @@ class SpeedyFeatureTracker
         this._descriptionAlgorithm = null;
         this._inputTexture = null;
         this._prevInputTexture = null;
+        this._updateLock = false;
     }
 
     /**
@@ -2961,7 +3244,7 @@ class SpeedyFeatureTracker
         const useAsyncTransfer = (this._media.options.usage != 'static');
 
         // reserve space for the encoder
-        gpu.programs.encoders.reserve(keypoints.length, descriptorSize);
+        gpu.programs.encoders.reserveSpace(keypoints.length, descriptorSize);
 
         // upload & track keypoints
         const prevKeypoints = this._trackingAlgorithm.upload(gpu, keypoints, descriptorSize);
@@ -2995,8 +3278,8 @@ class SpeedyFeatureTracker
 
                 if(flow != null) {
                     flow[i] = goodFeature ? 
-                        new _speedy_vectors__WEBPACK_IMPORTED_MODULE_5__["SpeedyVector2"](trackedKeypoints[i].x - keypoints[i].x, trackedKeypoints[i].y - keypoints[i].y) :
-                        new _speedy_vectors__WEBPACK_IMPORTED_MODULE_5__["SpeedyVector2"](0, 0);
+                        new _math_speedy_vector__WEBPACK_IMPORTED_MODULE_5__["SpeedyVector2"](trackedKeypoints[i].x - keypoints[i].x, trackedKeypoints[i].y - keypoints[i].y) :
+                        new _math_speedy_vector__WEBPACK_IMPORTED_MODULE_5__["SpeedyVector2"](0, 0);
                 }
             }
 
@@ -3016,10 +3299,20 @@ class SpeedyFeatureTracker
         if(media.isReleased())
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_6__["IllegalOperationError"](`The media has been released`);
 
+        // it's too early to change the input texture
+        if(this._updateLock)
+            return;
+        setTimeout(() => this._updateLock = false, 1000.0 / 50.0);
+        this._updateLock = true;
+
         // upload the media
         const newInputTexture = gpu.upload(media.source);
         this._prevInputTexture = this._inputTexture;
         this._inputTexture = newInputTexture;
+
+        // something wrong with the upload?
+        if(this._inputTexture == null)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_6__["IllegalOperationError"](`Tracking error: can't upload image to the GPU ${media.source}`);
 
         // is it the first frame?
         if(this._prevInputTexture == null)
@@ -3066,7 +3359,7 @@ class LKFeatureTracker extends SpeedyFeatureTracker
         super(trackingAlgorithm, media);
 
         // default options
-        this._windowSize = 21;
+        this._windowSize = 15;
         this._depth = 5;
         this._discardThreshold = 0.0001;
     }
@@ -3338,6 +3631,17 @@ const SpeedyFlags = Object.freeze({
     // Feature detectors
     FEATURE_DETECTOR_RESET_CAPACITY: 0x1,
 
+    // Matrix types
+    F32: 0x0,         // 32-bit float, 1 channel
+    F32C1: 0x0 | 0x0, // 32-bit float, 1 channel
+    F32C2: 0x0 | 0x1, // 32-bit float, 2 channels
+    F32C3: 0x0 | 0x2, // 32-bit float, 3 channels
+    F32C4: 0x0 | 0x3, // 32-bit float, 4 channels
+    U8: 0x4,          // 8-bit unsigned integer, 1 channel
+    U8C1: 0x4 | 0x0,  // 8-bit unsigned integer, 1 channel
+    U8C2: 0x4 | 0x1,  // 8-bit unsigned integer, 2 channels
+    U8C3: 0x4 | 0x2,  // 8-bit unsigned integer, 3 channels
+    U8C4: 0x4 | 0x3,  // 8-bit unsigned integer, 4 channels
 });
 
 /***/ }),
@@ -3707,7 +4011,7 @@ class SpeedyMedia
         if(settings.hasOwnProperty('max'))
             this._featureDetector.max = settings.max | 0;
         if(settings.hasOwnProperty('denoise'))
-            this._featureDetector.setEnhancements({ denoise: Boolean(settings.denoise) });
+            this._featureDetector.enhance({ denoise: Boolean(settings.denoise) });
         if(settings.hasOwnProperty('expected')) {
             if(typeof settings.expected == 'object')
                 this._featureDetector.expect(settings.expected.number | 0, +settings.expected.tolerance);
@@ -4125,184 +4429,6 @@ class SpeedyPipeline
 
 /***/ }),
 
-/***/ "./src/core/speedy-vectors.js":
-/*!************************************!*\
-  !*** ./src/core/speedy-vectors.js ***!
-  \************************************/
-/*! exports provided: SpeedyVector2 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyVector2", function() { return SpeedyVector2; });
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * speedy-vectors.js
- * Vectors
- */
-
-
-
-/**
- * Immutable 2D vector
- */
-class SpeedyVector2
-{
-    /**
-     * Create a 2D vector
-     * @param {number} x
-     * @param {number} y
-     */
-    constructor(x, y)
-    {
-        if(typeof x !== 'number' || typeof y !== 'number')
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't create 2D vector. Invalid components: ${x}, ${y}`);
-
-        this._x = x;
-        this._y = y;
-    }
-
-
-    //
-    // ===== PROPERTIES =====
-    //
-
-    /**
-     * Get x-coordinate
-     * @returns {number}
-     */
-    get x()
-    {
-        return this._x;
-    }
-
-    /**
-     * Get y-coordinate
-     * @returns {number}
-     */
-    get y()
-    {
-        return this._y;
-    }
-
-    /**
-     * Euclidean norm
-     * @returns {number}
-     */
-    get length()
-    {
-        return Math.sqrt(this._x * this._x + this._y * this._y);
-    }
-
-
-
-    //
-    // ===== METHODS =====
-    // Note: everything is immutable
-    //
-
-    /**
-     * Clones this vector
-     * @returns {SpeedyVector2}
-     */
-    clone()
-    {
-        return new SpeedyVector2(this._x, this._y);
-    }
-
-    /**
-     * Translate by an offset
-     * If one parameter is provided, x is expected to be a vector
-     * If two parameters are provided, x and y are expected to be numbers
-     * @param {SpeedyVector2|number} x 
-     * @param {number} [y] 
-     * @returns {SpeedyVector2}
-     */
-    translatedBy(x, y = undefined)
-    {
-        if(y === undefined)
-            return new SpeedyVector2(this._x + x._x, this._y + x._y);
-        else
-            return new SpeedyVector2(this._x + (+x), this._y + (+y));
-    }
-
-    /**
-     * Multiply by scalar
-     * @param {number} lambda 
-     * @returns {SpeedyVector2}
-     */
-    scaledBy(lambda)
-    {
-        return new SpeedyVector2(this._x * (+lambda), this._y * (+lambda));
-    }
-
-    /**
-     * Returns a unit vector in the same direction as the original one
-     * @returns {SpeedyVector2}
-     */
-    normalized()
-    {
-        const length = this.length;
-
-        if(length > 0)
-            return new SpeedyVector2(this._x / length, this._y / length);
-        else
-            return new SpeedyVector2(0, 0);
-    }
-
-    /**
-     * Euclidean distance between this vector and another vector
-     * @param {SpeedyVector2} v another vector
-     */
-    distanceTo(v)
-    {
-        const dx = this._x - v._x;
-        const dy = this._y - v._y;
-
-        return Math.sqrt(dx * dx + dy * dy);
-    }
-
-    /**
-     * Dot product between this vector and another vector
-     * @param {SpeedyVector2} v another vector
-     */
-    dot(v)
-    {
-        return this._x * v._x + this._y * v._y;
-    }
-
-
-
-
-    //
-    // ===== STATIC METHODS =====
-    // Internal utilities
-    //
-
-    static get zero()
-    {
-        return this._zero || (this._zero = new SpeedyVector2(0, 0));
-    }
-}
-
-/***/ }),
-
 /***/ "./src/core/speedy.js":
 /*!****************************!*\
   !*** ./src/core/speedy.js ***!
@@ -4319,7 +4445,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-feature-detector-factory */ "./src/core/speedy-feature-detector-factory.js");
 /* harmony import */ var _speedy_feature_tracker_factory__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./speedy-feature-tracker-factory */ "./src/core/speedy-feature-tracker-factory.js");
 /* harmony import */ var _speedy_flags__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./speedy-flags */ "./src/core/speedy-flags.js");
-/* harmony import */ var _speedy_vectors__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./speedy-vectors */ "./src/core/speedy-vectors.js");
+/* harmony import */ var _math_speedy_vector__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./math/speedy-vector */ "./src/core/math/speedy-vector.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -4393,7 +4519,7 @@ class Speedy
      */
     static get version()
     {
-        return "0.4.0-wip";
+        return "0.4.0";
     }
 
     /**
@@ -4430,7 +4556,7 @@ class Speedy
      */
     static Vector2(x, y)
     {
-        return new _speedy_vectors__WEBPACK_IMPORTED_MODULE_6__["SpeedyVector2"](x, y);
+        return new _math_speedy_vector__WEBPACK_IMPORTED_MODULE_6__["SpeedyVector2"](x, y);
     }
 }
 
@@ -5889,7 +6015,7 @@ const MAX_PIXELS_PER_KEYPOINT = (MAX_KEYPOINT_SIZE / 4) | 0; // in pixels
 const MIN_ENCODER_LENGTH = 1;
 const MAX_ENCODER_LENGTH = 300; // in pixels (if too large, WebGL may lose context - so be careful!)
 const MAX_KEYPOINTS = ((MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH) / MAX_PIXELS_PER_KEYPOINT) | 0;
-const INITIAL_ENCODER_LENGTH = 128; // pick a large value <= MAX (useful on static images when no encoder optimization is performed beforehand)
+const INITIAL_ENCODER_LENGTH = 16; // pick a small number to reduce processing load and not crash things on mobile (WebGL lost context)
 const KEYPOINT_BUFFER_LENGTH = 1024; // maximum number of keypoints that can be uploaded to the GPU via UBOs
 
 
@@ -5976,6 +6102,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
         const oldEncoderLength = this._encoderLength;
 
         this._encoderLength = newEncoderLength;
+        //console.log('optimized for', keypointCount, 'keypoints. length:', newEncoderLength);
 
         return (newEncoderLength - oldEncoderLength) != 0;
     }
@@ -5983,10 +6110,10 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
     /**
      * Ensures that the encoder has enough capacity to deliver the specified number of keypoints
      * @param {number} keypointCount the number of keypoints
-     * @param {number} [descriptorSize] in bytes
+     * @param {number} descriptorSize in bytes
      * @returns {boolean} true if there was any change to the length of the encoder
      */
-    reserve(keypointCount, descriptorSize)
+    reserveSpace(keypointCount, descriptorSize)
     {
         // resize if not enough space
         if(this._minimumEncoderLength(keypointCount, descriptorSize) > this._encoderLength)
@@ -6031,6 +6158,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
         const pixelsPerKeypoint = 2 + descriptorSize / 4;
         let x, y, lod, rotation, score;
         let hasLod, hasRotation;
+        let discardCount = 0;
         const keypoints = [];
 
         // initialize output arrays
@@ -6063,10 +6191,11 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
             y /= _utils_globals__WEBPACK_IMPORTED_MODULE_7__["FIX_RESOLUTION"];
 
             // emit signal to discard keypoints outside the image
-            if(output.discard != undefined) {
-                const isDiscardedKeypoint = (x > _utils_globals__WEBPACK_IMPORTED_MODULE_7__["MAX_TEXTURE_LENGTH"] || y > _utils_globals__WEBPACK_IMPORTED_MODULE_7__["MAX_TEXTURE_LENGTH"] || x < 0 || y < 0);
+            const isDiscardedKeypoint = (x > _utils_globals__WEBPACK_IMPORTED_MODULE_7__["MAX_TEXTURE_LENGTH"] || y > _utils_globals__WEBPACK_IMPORTED_MODULE_7__["MAX_TEXTURE_LENGTH"] || x < 0 || y < 0);
+            if(output.discard != undefined)
                 output.discard.push(isDiscardedKeypoint);
-            }
+            if(output.discardCount != undefined && isDiscardedKeypoint)
+                output.discardCount[0] = ++discardCount;
 
             // extract LOD
             hasLod = (pixels[i+4] < 255);
@@ -6183,7 +6312,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
         }
 
         // Reserve space for the keypoints
-        this.reserve(keypointCount, descriptorSize);
+        this.reserveSpace(keypointCount, descriptorSize);
 
         // Upload data
         this._uploadKeypoints.resize(this._encoderLength, this._encoderLength);
@@ -7060,23 +7189,60 @@ __webpack_require__.r(__webpack_exports__);
 //
 
 // LK
-//const LK_MAX_WINDOW_SIZE = 21; // 10x10 window (use 15 for a 7x7 window)
-const LK_MAX_WINDOW_SIZE = 31; // 15x15 windows
-const LK_MIN_WINDOW_SIZE = 5; // 2x2 window
+const LK_MAX_WINDOW_SIZE = 21; // 21x21 window
+const LK_MAX_WINDOW_SIZE_SMALL = 15; // 15x15 window - the smaller the window, the easier it is on the GPU
+const LK_MAX_WINDOW_SIZE_SMALLER = 11; // 11x11 window - works best on mobile
+const LK_MAX_WINDOW_SIZE_SMALLEST = 7; // 7x7 window
+const LK_MIN_WINDOW_SIZE = 5; // 5x5 window: (-2, -1, 0, 1, 2) x (-2, -1, 0, 1, 2)
+const LK_MAX_KEYPOINTS_PER_PASS = 100;
 
 const lk = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('trackers/lk.glsl')
-           .withArguments('nextPyramid', 'prevPyramid', 'prevKeypoints', 'windowSize', 'depth', 'descriptorSize', 'encoderLength')
+           .withArguments('nextPyramid', 'prevPyramid', 'prevKeypoints', 'windowSize', 'depth', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'encoderLength')
            .withDefines({
                'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE
            });
 
 const lkDiscard = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('trackers/lk-discard.glsl')
-                  .withArguments('pyramid', 'encodedKeypoints', 'windowSize', 'discardThreshold', 'descriptorSize', 'encoderLength')
+                  .withArguments('pyramid', 'encodedKeypoints', 'windowSize', 'discardThreshold', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'encoderLength')
                   .withDefines({
                       'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE
                   });
 
+const lkSmall = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('trackers/lk.glsl')
+                .withArguments('nextPyramid', 'prevPyramid', 'prevKeypoints', 'windowSize', 'depth', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'encoderLength')
+                .withDefines({
+                    'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALL
+                });
 
+const lkDiscardSmall = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('trackers/lk-discard.glsl')
+                       .withArguments('pyramid', 'encodedKeypoints', 'windowSize', 'discardThreshold', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'encoderLength')
+                       .withDefines({
+                           'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALL
+                       });
+
+const lkSmaller = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('trackers/lk.glsl')
+                  .withArguments('nextPyramid', 'prevPyramid', 'prevKeypoints', 'windowSize', 'depth', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'encoderLength')
+                  .withDefines({
+                      'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALLER
+                  });
+
+const lkDiscardSmaller = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('trackers/lk-discard.glsl')
+                         .withArguments('pyramid', 'encodedKeypoints', 'windowSize', 'discardThreshold', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'encoderLength')
+                         .withDefines({
+                             'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALLER
+                         });
+
+const lkSmallest = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('trackers/lk.glsl')
+                   .withArguments('nextPyramid', 'prevPyramid', 'prevKeypoints', 'windowSize', 'depth', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'encoderLength')
+                   .withDefines({
+                       'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALLEST
+                   });
+
+const lkDiscardSmallest = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('trackers/lk-discard.glsl')
+                          .withArguments('pyramid', 'encodedKeypoints', 'windowSize', 'discardThreshold', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'encoderLength')
+                          .withDefines({
+                              'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALLEST
+                          });
 
 /**
  * GPUTrackers
@@ -7096,7 +7262,13 @@ class GPUTrackers extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
         this
             // LK
             .declare('_lk', lk)
+            .declare('_lkSmall', lkSmall)
+            .declare('_lkSmaller', lkSmaller)
+            .declare('_lkSmallest', lkSmallest)
             .declare('_lkDiscard', lkDiscard)
+            .declare('_lkDiscardSmall', lkDiscardSmall)
+            .declare('_lkDiscardSmaller', lkDiscardSmaller)
+            .declare('_lkDiscardSmallest', lkDiscardSmallest)
         ;
     }
 
@@ -7122,13 +7294,48 @@ class GPUTrackers extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
         windowSize = windowSize + ((windowSize+1) % 2);
         windowSize = Math.max(LK_MIN_WINDOW_SIZE, Math.min(windowSize, LK_MAX_WINDOW_SIZE));
 
-        // resize programs
-        this._lk.resize(encoderLength, encoderLength);
-        this._lkDiscard.resize(encoderLength, encoderLength);
+        // select programs
+        let lk = '_lk', lkDiscard = '_lkDiscard';
+        if(windowSize <= LK_MAX_WINDOW_SIZE_SMALLEST) {
+            lk = '_lkSmallest'; lkDiscard = '_lkDiscardSmallest';
+        }
+        else if(windowSize <= LK_MAX_WINDOW_SIZE_SMALLER) {
+            lk = '_lkSmaller'; lkDiscard = '_lkDiscardSmaller';
+        }
+        else if(windowSize <= LK_MAX_WINDOW_SIZE_SMALL) {
+            lk = '_lkSmall'; lkDiscard = '_lkDiscardSmall';
+        }
 
-        // optical-flow
-        const nextKeypoints = this._lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, depth, descriptorSize, encoderLength);
-        return this._lkDiscard(nextPyramid, nextKeypoints, windowSize, discardThreshold, descriptorSize, encoderLength);
+        // resize programs
+        this[lk].resize(encoderLength, encoderLength);
+        this[lkDiscard].resize(encoderLength, encoderLength);
+
+        //
+        // Optimization!
+        // because this is such a demanding algorithm, we'll
+        // split the work into multiple passes of the shaders
+        // (so we don't get WebGL context loss on mobile)
+        //
+        const pixelsPerKeypoint = 2 + descriptorSize / 4;
+        const numKeypointsApprox = encoderLength * encoderLength / pixelsPerKeypoint;
+        const numPasses = Math.ceil(Math.max(1, numKeypointsApprox) / LK_MAX_KEYPOINTS_PER_PASS);
+        //console.log('num passes', numPasses, lk);
+
+        // for each pass
+        let nextKeypoints = prevKeypoints;
+        for(let i = 0; i < numPasses; i++) {
+            const firstKeypointIndex = i * LK_MAX_KEYPOINTS_PER_PASS;
+            const lastKeypointIndex = firstKeypointIndex + LK_MAX_KEYPOINTS_PER_PASS - 1;
+
+            // compute optical-flow
+            nextKeypoints = (this[lk])(nextPyramid, prevPyramid, nextKeypoints, windowSize, depth, firstKeypointIndex, lastKeypointIndex, descriptorSize, encoderLength);
+
+            // discard "bad" keypoints
+            nextKeypoints = (this[lkDiscard])(nextPyramid, nextKeypoints, windowSize, discardThreshold, firstKeypointIndex, lastKeypointIndex, descriptorSize, encoderLength);
+        }
+
+        // done!
+        return nextKeypoints;
     }
 }
 
@@ -8640,7 +8847,7 @@ module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D pyramid;\nunifor
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"sobel.glsl\"\n@include \"pyramids.glsl\"\nuniform sampler2D pyramid;\nuniform int windowSize;\nuniform int numberOfOctaves;\nuniform sampler2D sobelDerivatives[@PYRAMID_MAX_OCTAVES@];\nvec4 pickSobelDerivatives(int index, ivec2 offset)\n{\nswitch(index) {\ncase 0:  return textureLod(sobelDerivatives[0], texCoord + vec2(offset) / texSize, 0.0f);\ncase 1:  return textureLod(sobelDerivatives[1], texCoord + vec2(offset) / texSize, 0.0f);\ncase 2:  return textureLod(sobelDerivatives[2], texCoord + vec2(offset) / texSize, 0.0f);\ncase 3:  return textureLod(sobelDerivatives[3], texCoord + vec2(offset) / texSize, 0.0f);\ncase 4:  return textureLod(sobelDerivatives[4], texCoord + vec2(offset) / texSize, 0.0f);\ncase 5:  return textureLod(sobelDerivatives[5], texCoord + vec2(offset) / texSize, 0.0f);\ncase 6:  return textureLod(sobelDerivatives[6], texCoord + vec2(offset) / texSize, 0.0f);\ndefault: return textureLod(sobelDerivatives[0], texCoord + vec2(offset) / texSize, 0.0f);\n}\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(pyramid);\nvec2 best = vec2(0.0f, pixel.a);\nint r = (windowSize - 1) / 2;\nfor(int octave = 0; octave < numberOfOctaves; octave++) {\nvec3 m = vec3(0.0f, 0.0f, 0.0f);\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nvec2 df = decodeSobel(pickSobelDerivatives(octave, ivec2(i-r, j-r)));\nm += vec3(df.x * df.x, df.x * df.y, df.y * df.y);\n}\n}\nfloat response = 0.5f * (m.x + m.z - sqrt((m.x - m.z) * (m.x - m.z) + 4.0f * m.y * m.y));\nfloat score = max(0.0f, response / 5.0f);\nfloat lod = 0.5f * float(octave);\nfloat scale = encodeLod(lod);\nbest = (score > best.x) ? vec2(score, scale) : best;\n}\ncolor = vec4(best.x, pixel.g, best.xy);\n}"
+module.exports = "@include \"sobel.glsl\"\n@include \"pyramids.glsl\"\nuniform sampler2D pyramid;\nuniform int windowSize;\nuniform int numberOfOctaves;\nuniform sampler2D sobelDerivatives[@PYRAMID_MAX_OCTAVES@];\nvec4 pickSobelDerivatives(int index, ivec2 offset)\n{\nswitch(index) {\ncase 0:  return textureLod(sobelDerivatives[0], texCoord + vec2(offset) / texSize, 0.0f);\ncase 1:  return textureLod(sobelDerivatives[1], texCoord + vec2(offset) / texSize, 0.0f);\ncase 2:  return textureLod(sobelDerivatives[2], texCoord + vec2(offset) / texSize, 0.0f);\ncase 3:  return textureLod(sobelDerivatives[3], texCoord + vec2(offset) / texSize, 0.0f);\ncase 4:  return textureLod(sobelDerivatives[4], texCoord + vec2(offset) / texSize, 0.0f);\ncase 5:  return textureLod(sobelDerivatives[5], texCoord + vec2(offset) / texSize, 0.0f);\ncase 6:  return textureLod(sobelDerivatives[6], texCoord + vec2(offset) / texSize, 0.0f);\ndefault: return textureLod(sobelDerivatives[0], texCoord + vec2(offset) / texSize, 0.0f);\n}\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(pyramid);\nvec2 best = vec2(0.0f, pixel.a);\nint r = (windowSize - 1) / 2;\nfor(int octave = 0; octave < numberOfOctaves; octave++) {\nvec3 m = vec3(0.0f, 0.0f, 0.0f);\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nvec2 df = decodeSobel(pickSobelDerivatives(octave, ivec2(i-r, j-r)));\nm += vec3(df.x * df.x, df.x * df.y, df.y * df.y);\n}\n}\nfloat response = 0.5f * (m.x + m.z - sqrt((m.x - m.z) * (m.x - m.z) + 4.0f * m.y * m.y));\nfloat score = clamp(response / 8.0f, 0.0f, 1.0f);\nfloat lod = 0.5f * float(octave);\nfloat scale = encodeLod(lod);\nbest = (score > best.x) ? vec2(score, scale) : best;\n}\ncolor = vec4(best.x, pixel.g, best.xy);\n}"
 
 /***/ }),
 
@@ -8750,7 +8957,7 @@ module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threa
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D pyramid;\nuniform sampler2D encodedKeypoints;\nuniform int windowSize;\nuniform float discardThreshold;\nuniform int descriptorSize;\nuniform int encoderLength;\n#ifndef MAX_WINDOW_SIZE\n#error Must define MAX_WINDOW_SIZE\n#endif\nconst int MAX_WINDOW_SIZE_PLUS = MAX_WINDOW_SIZE + 2;\nconst int MAX_WINDOW_SIZE_PLUS_SQUARED = MAX_WINDOW_SIZE_PLUS * MAX_WINDOW_SIZE_PLUS;\nconst int MAX_WINDOW_RADIUS_PLUS = (MAX_WINDOW_SIZE_PLUS - 1) / 2;\nconst float DISCARD_SCALE = 0.00024318695068359375f;\nfloat pixelBuffer[MAX_WINDOW_SIZE_PLUS_SQUARED];\n#define pixelIndex(i, j) (((j) + MAX_WINDOW_RADIUS_PLUS) * MAX_WINDOW_SIZE_PLUS + ((i) + MAX_WINDOW_RADIUS_PLUS))\n#define windowRadius() ((windowSize - 1) / 2)\nvoid readWindow(vec2 center, float lod)\n{\nivec2 pyrBaseSize = textureSize(pyramid, 0);\nfloat pot = exp2(lod);\nint r = windowRadius();\n#define readPixelAt(ox, oy) pixelBuffer[pixelIndex((ox), (oy))] = pyrSubpixelAtExOffset(pyramid, center, lod, pot, ivec2((ox), (oy)), pyrBaseSize).g\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nreadPixelAt(i-r, j-r);\n}\n}\nint r1 = r+1;\nfor(int k = 0; k < windowSize; k++) {\nreadPixelAt(-r1, k-r);\nreadPixelAt( r1, k-r);\nreadPixelAt(k-r,-r1);\nreadPixelAt(k-r, r1);\n}\nreadPixelAt(-r1,-r1);\nreadPixelAt( r1,-r1);\nreadPixelAt(-r1, r1);\nreadPixelAt( r1, r1);\n}\nvec2 computeDerivatives(ivec2 offset)\n{\nconst mat3 derivX = mat3(\n3, 0, -3,\n10, 0, -10,\n3, 0, -3\n);\nconst mat3 derivY = mat3(\n3, 10, 3,\n0, 0, 0,\n-3, -10, -3\n);\nmat3 window = mat3(\npixelBuffer[pixelIndex(offset.x-1, offset.y-1)],\npixelBuffer[pixelIndex(offset.x+0, offset.y-1)],\npixelBuffer[pixelIndex(offset.x+1, offset.y-1)],\npixelBuffer[pixelIndex(offset.x-1, offset.y+0)],\n0.0f,\npixelBuffer[pixelIndex(offset.x+1, offset.y+0)],\npixelBuffer[pixelIndex(offset.x-1, offset.y+1)],\npixelBuffer[pixelIndex(offset.x+0, offset.y+1)],\npixelBuffer[pixelIndex(offset.x+1, offset.y+1)]\n);\nmat3 fx = matrixCompMult(derivX, window);\nmat3 fy = matrixCompMult(derivY, window);\nconst vec3 ones = vec3(1.0f);\nreturn vec2(\ndot(fx[0], ones) + dot(fx[1], ones) + dot(fx[2], ones),\ndot(fy[0], ones) + dot(fy[1], ones) + dot(fy[2], ones)\n);\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);\nint r = windowRadius();\ncolor = pixel;\nif(address.offset != 1)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nif(isDiscardedOrNullKeypoint(keypoint))\nreturn;\nreadWindow(keypoint.position, keypoint.lod);\nvec2 derivatives = vec2(0.0f);\nmat2 harris = mat2(0.0f, 0.0f, 0.0f, 0.0f);\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nderivatives = computeDerivatives(ivec2(i-r, j-r));\nharris += mat2(\nderivatives.x * derivatives.x, derivatives.x * derivatives.y,\nderivatives.x * derivatives.y, derivatives.y * derivatives.y\n) * DISCARD_SCALE;\n}\n}\nfloat delta = harris[0][0] - harris[1][1];\nfloat eigenvalue = 0.5f * ((harris[0][0] + harris[1][1]) - sqrt(delta * delta - 4.0f * harris[0][1] * harris[0][1]));\nint windowArea = windowSize * windowSize;\nfloat cornerness = eigenvalue / float(windowArea);\nbool unsuitable = (cornerness < discardThreshold);\ncolor = vec4(pixel.rgb, float(unsuitable));\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D pyramid;\nuniform sampler2D encodedKeypoints;\nuniform int windowSize;\nuniform float discardThreshold;\nuniform int firstKeypointIndex, lastKeypointIndex;\nuniform int descriptorSize;\nuniform int encoderLength;\n#ifndef MAX_WINDOW_SIZE\n#error Must define MAX_WINDOW_SIZE\n#endif\nconst int MAX_WINDOW_SIZE_PLUS = MAX_WINDOW_SIZE + 2;\nconst int MAX_WINDOW_SIZE_PLUS_SQUARED = MAX_WINDOW_SIZE_PLUS * MAX_WINDOW_SIZE_PLUS;\nconst int MAX_WINDOW_RADIUS_PLUS = (MAX_WINDOW_SIZE_PLUS - 1) / 2;\nconst float DISCARD_SCALE = 0.00024318695068359375f;\nfloat pixelBuffer[MAX_WINDOW_SIZE_PLUS_SQUARED];\n#define pixelIndex(i, j) (((j) + MAX_WINDOW_RADIUS_PLUS) * MAX_WINDOW_SIZE_PLUS + ((i) + MAX_WINDOW_RADIUS_PLUS))\n#define windowRadius() ((windowSize - 1) / 2)\nvoid readWindow(vec2 center, float lod)\n{\nivec2 pyrBaseSize = textureSize(pyramid, 0);\nfloat pot = exp2(lod);\nint r = windowRadius();\n#define readPixelAt(ox, oy) pixelBuffer[pixelIndex((ox), (oy))] = pyrSubpixelAtExOffset(pyramid, center, lod, pot, ivec2((ox), (oy)), pyrBaseSize).g\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nreadPixelAt(i-r, j-r);\n}\n}\nint r1 = r+1;\nfor(int k = 0; k < windowSize; k++) {\nreadPixelAt(-r1, k-r);\nreadPixelAt( r1, k-r);\nreadPixelAt(k-r,-r1);\nreadPixelAt(k-r, r1);\n}\nreadPixelAt(-r1,-r1);\nreadPixelAt( r1,-r1);\nreadPixelAt(-r1, r1);\nreadPixelAt( r1, r1);\n}\nvec2 computeDerivatives(ivec2 offset)\n{\nconst mat3 derivX = mat3(\n3, 0, -3,\n10, 0, -10,\n3, 0, -3\n);\nconst mat3 derivY = mat3(\n3, 10, 3,\n0, 0, 0,\n-3, -10, -3\n);\nmat3 window = mat3(\npixelBuffer[pixelIndex(offset.x-1, offset.y-1)],\npixelBuffer[pixelIndex(offset.x+0, offset.y-1)],\npixelBuffer[pixelIndex(offset.x+1, offset.y-1)],\npixelBuffer[pixelIndex(offset.x-1, offset.y+0)],\n0.0f,\npixelBuffer[pixelIndex(offset.x+1, offset.y+0)],\npixelBuffer[pixelIndex(offset.x-1, offset.y+1)],\npixelBuffer[pixelIndex(offset.x+0, offset.y+1)],\npixelBuffer[pixelIndex(offset.x+1, offset.y+1)]\n);\nmat3 fx = matrixCompMult(derivX, window);\nmat3 fy = matrixCompMult(derivY, window);\nconst vec3 ones = vec3(1.0f);\nreturn vec2(\ndot(fx[0], ones) + dot(fx[1], ones) + dot(fx[2], ones),\ndot(fy[0], ones) + dot(fy[1], ones) + dot(fy[2], ones)\n);\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);\nint r = windowRadius();\ncolor = pixel;\nif(address.offset != 1)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nif(isDiscardedOrNullKeypoint(keypoint))\nreturn;\nint idx = findKeypointIndex(address, descriptorSize);\nif(idx < firstKeypointIndex || idx > lastKeypointIndex)\nreturn;\nreadWindow(keypoint.position, keypoint.lod);\nvec2 derivatives = vec2(0.0f);\nmat2 harris = mat2(0.0f, 0.0f, 0.0f, 0.0f);\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nderivatives = computeDerivatives(ivec2(i-r, j-r));\nharris += mat2(\nderivatives.x * derivatives.x, derivatives.x * derivatives.y,\nderivatives.x * derivatives.y, derivatives.y * derivatives.y\n) * DISCARD_SCALE;\n}\n}\nfloat delta = harris[0][0] - harris[1][1];\nfloat eigenvalue = 0.5f * ((harris[0][0] + harris[1][1]) - sqrt(delta * delta - 4.0f * harris[0][1] * harris[0][1]));\nint windowArea = windowSize * windowSize;\nfloat cornerness = eigenvalue / float(windowArea);\nbool unsuitable = (cornerness < discardThreshold);\ncolor = vec4(pixel.rgb, float(unsuitable));\n}"
 
 /***/ }),
 
@@ -8761,7 +8968,7 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D pyramid;\nunifo
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D nextPyramid;\nuniform sampler2D prevPyramid;\nuniform sampler2D prevKeypoints;\nuniform int windowSize;\nuniform int depth;\nuniform int descriptorSize;\nuniform int encoderLength;\n#ifndef NUM_ITERATIONS\n#define NUM_ITERATIONS 5\n#endif\n#ifndef MAX_WINDOW_SIZE\n#error Must define MAX_WINDOW_SIZE\n#endif\n#ifndef DISCARD_MARGIN\n#define DISCARD_MARGIN 20\n#endif\n#define NEXT_IMAGE 1\n#define PREV_IMAGE 0\nconst int MAX_WINDOW_SIZE_PLUS = MAX_WINDOW_SIZE + 2;\nconst int MAX_WINDOW_SIZE_PLUS_SQUARED = MAX_WINDOW_SIZE_PLUS * MAX_WINDOW_SIZE_PLUS;\nconst int DBL_MAX_WINDOW_SIZE_PLUS_SQUARED = 2 * MAX_WINDOW_SIZE_PLUS_SQUARED;\nconst int MAX_WINDOW_RADIUS_PLUS = (MAX_WINDOW_SIZE_PLUS - 1) / 2;\n#define windowRadius() ((windowSize - 1) / 2)\nfloat pixelBuffer[DBL_MAX_WINDOW_SIZE_PLUS_SQUARED];\n#define prevPixel(index) pixelBuffer[(index)]\n#define nextPixel(index) pixelBuffer[MAX_WINDOW_SIZE_PLUS_SQUARED + (index)]\n#define pixelIndex(i, j) (((j) + MAX_WINDOW_RADIUS_PLUS) * MAX_WINDOW_SIZE_PLUS + ((i) + MAX_WINDOW_RADIUS_PLUS))\nvoid readWindow(vec2 center, float lod)\n{\nivec2 pyrBaseSize = textureSize(prevPyramid, 0);\nfloat pot = exp2(lod);\nint r = windowRadius();\nivec2 offset; int idx;\n#define readPixelsAt(ox, oy) offset = ivec2((ox), (oy)); idx = pixelIndex(offset.x, offset.y); nextPixel(idx) = pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g; prevPixel(idx) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nreadPixelsAt(i-r, j-r);\n}\n}\nint r1 = r+1;\nfor(int k = 0; k < windowSize; k++) {\nreadPixelsAt(-r1, k-r);\nreadPixelsAt( r1, k-r);\nreadPixelsAt(k-r,-r1);\nreadPixelsAt(k-r, r1);\n}\nreadPixelsAt(-r1,-r1);\nreadPixelsAt( r1,-r1);\nreadPixelsAt(-r1, r1);\nreadPixelsAt( r1, r1);\n}\nvec2 computeDerivatives(int imageCode, ivec2 offset)\n{\nconst mat3 derivX = mat3(\n3, 0, -3,\n10, 0, -10,\n3, 0, -3\n);\nconst mat3 derivY = mat3(\n3, 10, 3,\n0, 0, 0,\n-3, -10, -3\n);\nint indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;\nmat3 window = mat3(\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y+0)],\n0.0f,\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y+0)],\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y+1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y+1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y+1)]\n);\nmat3 fx = matrixCompMult(derivX, window);\nmat3 fy = matrixCompMult(derivY, window);\nconst vec3 ones = vec3(1.0f);\nreturn vec2(\ndot(fx[0], ones) + dot(fx[1], ones) + dot(fx[2], ones),\ndot(fy[0], ones) + dot(fy[1], ones) + dot(fy[2], ones)\n);\n}\nfloat readBufferedPixel(int imageCode, ivec2 offset)\n{\nivec2 limit = ivec2(windowRadius());\noffset = clamp(offset, -limit, limit);\nint indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;\nreturn pixelBuffer[indexOffset + pixelIndex(offset.x, offset.y)];\n}\nvoid main()\n{\nvec4 pixel = threadPixel(prevKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);\nint r = windowRadius();\ncolor = pixel;\nif(address.offset > 0)\nreturn;\nKeypoint keypoint = decodeKeypoint(prevKeypoints, encoderLength, address);\nif(isDiscardedOrNullKeypoint(keypoint))\nreturn;\nvec2 pyrGuess = vec2(0.0f);\nfor(int d = 0; d < depth; d++) {\nfloat lod = float(depth - 1 - d);\nreadWindow(keypoint.position, lod);\nmat2 invHarris = mat2(0.0f, 0.0f, 0.0f, 0.0f);\nvec3 sumOfSquaredDerivatives = vec3(0.0f);\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nvec2 derivatives = computeDerivatives(PREV_IMAGE, ivec2(i-r, j-r));\ninvHarris += mat2(\nderivatives.y * derivatives.y, -derivatives.x * derivatives.y,\n-derivatives.x * derivatives.y, derivatives.x * derivatives.x\n);\n}\n}\nconst float minDet = 0.00001f;\nfloat det = invHarris[0][0] * invHarris[1][1] - invHarris[0][1] * invHarris[1][0];\nvec2 localGuess = vec2(0.0f);\nfor(int k = 0; k < NUM_ITERATIONS; k++) {\nvec2 spaceTime = vec2(0.0f);\nfor(int _y = 0; _y < windowSize; _y++) {\nfor(int _x = 0; _x < windowSize; _x++) {\nint x = _x - r; int y = _y - r;\nvec2 spatialDerivative = computeDerivatives(PREV_IMAGE, ivec2(x, y));\nfloat timeDerivative = readBufferedPixel(NEXT_IMAGE,\nivec2(round(vec2(x, y) + pyrGuess + localGuess))\n) - readBufferedPixel(PREV_IMAGE, ivec2(x, y));\nspaceTime += spatialDerivative * timeDerivative;\n}\n}\nvec2 localOpticalFlow = abs(det) < minDet ? vec2(0.0f) : invHarris * spaceTime / det;\nlocalGuess += localOpticalFlow;\n}\npyrGuess = 2.0f * (pyrGuess + localGuess);\n}\nvec2 opticalFlow = pyrGuess;\nvec2 nextPosition = keypoint.position + opticalFlow;\nvec2 imageSize = vec2(textureSize(nextPyramid, 0));\nfloat margin = float(DISCARD_MARGIN);\nbool keypointIsWithinBoundaries = (\nnextPosition.x >= margin &&\nnextPosition.y >= margin &&\nnextPosition.x <= imageSize.x - margin &&\nnextPosition.y <= imageSize.y - margin\n);\ncolor = keypointIsWithinBoundaries ? encodeKeypointPosition(nextPosition) : encodeDiscardedKeypointPosition();\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D nextPyramid;\nuniform sampler2D prevPyramid;\nuniform sampler2D prevKeypoints;\nuniform int windowSize;\nuniform int depth;\nuniform int firstKeypointIndex, lastKeypointIndex;\nuniform int descriptorSize;\nuniform int encoderLength;\n#ifndef NUM_ITERATIONS\n#define NUM_ITERATIONS 5\n#endif\n#ifndef MAX_WINDOW_SIZE\n#error Must define MAX_WINDOW_SIZE\n#endif\n#ifndef DISCARD_MARGIN\n#define DISCARD_MARGIN 20\n#endif\n#define NEXT_IMAGE 1\n#define PREV_IMAGE 0\nconst int MAX_WINDOW_SIZE_PLUS = MAX_WINDOW_SIZE + 2;\nconst int MAX_WINDOW_SIZE_PLUS_SQUARED = MAX_WINDOW_SIZE_PLUS * MAX_WINDOW_SIZE_PLUS;\nconst int DBL_MAX_WINDOW_SIZE_PLUS_SQUARED = 2 * MAX_WINDOW_SIZE_PLUS_SQUARED;\nconst int MAX_WINDOW_RADIUS_PLUS = (MAX_WINDOW_SIZE_PLUS - 1) / 2;\n#define windowRadius() ((windowSize - 1) / 2)\nfloat pixelBuffer[DBL_MAX_WINDOW_SIZE_PLUS_SQUARED];\n#define prevPixel(index) pixelBuffer[(index)]\n#define nextPixel(index) pixelBuffer[MAX_WINDOW_SIZE_PLUS_SQUARED + (index)]\n#define pixelIndex(i, j) (((j) + MAX_WINDOW_RADIUS_PLUS) * MAX_WINDOW_SIZE_PLUS + ((i) + MAX_WINDOW_RADIUS_PLUS))\nvoid readWindow(vec2 center, float lod)\n{\nivec2 pyrBaseSize = textureSize(prevPyramid, 0);\nfloat pot = exp2(lod);\nint r = windowRadius();\nivec2 offset; int idx;\n#define readPixelsAt(ox, oy) offset = ivec2((ox), (oy)); idx = pixelIndex(offset.x, offset.y); nextPixel(idx) = pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g; prevPixel(idx) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nreadPixelsAt(i-r, j-r);\n}\n}\nint r1 = r+1;\nfor(int k = 0; k < windowSize; k++) {\nreadPixelsAt(-r1, k-r);\nreadPixelsAt( r1, k-r);\nreadPixelsAt(k-r,-r1);\nreadPixelsAt(k-r, r1);\n}\nreadPixelsAt(-r1,-r1);\nreadPixelsAt( r1,-r1);\nreadPixelsAt(-r1, r1);\nreadPixelsAt( r1, r1);\n}\nvec2 computeDerivatives(int imageCode, ivec2 offset)\n{\nconst mat3 derivX = mat3(\n3, 0, -3,\n10, 0, -10,\n3, 0, -3\n);\nconst mat3 derivY = mat3(\n3, 10, 3,\n0, 0, 0,\n-3, -10, -3\n);\nint indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;\nmat3 window = mat3(\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y+0)],\n0.0f,\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y+0)],\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y+1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y+1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y+1)]\n);\nmat3 fx = matrixCompMult(derivX, window);\nmat3 fy = matrixCompMult(derivY, window);\nconst vec3 ones = vec3(1.0f);\nreturn vec2(\ndot(fx[0], ones) + dot(fx[1], ones) + dot(fx[2], ones),\ndot(fy[0], ones) + dot(fy[1], ones) + dot(fy[2], ones)\n);\n}\nfloat readBufferedPixel(int imageCode, ivec2 offset)\n{\nivec2 limit = ivec2(windowRadius());\noffset = clamp(offset, -limit, limit);\nint indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;\nreturn pixelBuffer[indexOffset + pixelIndex(offset.x, offset.y)];\n}\nvoid main()\n{\nvec4 pixel = threadPixel(prevKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);\nint r = windowRadius();\ncolor = pixel;\nif(address.offset > 0)\nreturn;\nKeypoint keypoint = decodeKeypoint(prevKeypoints, encoderLength, address);\nif(isDiscardedOrNullKeypoint(keypoint))\nreturn;\nint idx = findKeypointIndex(address, descriptorSize);\nif(idx < firstKeypointIndex || idx > lastKeypointIndex)\nreturn;\nvec2 pyrGuess = vec2(0.0f);\nfor(int d = 0; d < depth; d++) {\nfloat lod = float(depth - 1 - d);\nreadWindow(keypoint.position, lod);\nhighp mat2 invHarris = mat2(0.0f, 0.0f, 0.0f, 0.0f);\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nvec2 derivatives = computeDerivatives(PREV_IMAGE, ivec2(i-r, j-r));\ninvHarris += mat2(\nderivatives.y * derivatives.y, -derivatives.x * derivatives.y,\n-derivatives.x * derivatives.y, derivatives.x * derivatives.x\n);\n}\n}\nconst float minDet = 0.00001f;\nhighp float det = invHarris[0][0] * invHarris[1][1] - invHarris[0][1] * invHarris[1][0];\nhighp vec2 localGuess = vec2(0.0f);\nfor(int k = 0; k < NUM_ITERATIONS; k++) {\nhighp vec2 spaceTime = vec2(0.0f);\nfor(int _y = 0; _y < windowSize; _y++) {\nfor(int _x = 0; _x < windowSize; _x++) {\nint x = _x - r; int y = _y - r;\nvec2 spatialDerivative = computeDerivatives(PREV_IMAGE, ivec2(x, y));\nfloat timeDerivative = readBufferedPixel(NEXT_IMAGE,\nivec2(round(vec2(x, y) + pyrGuess + localGuess))\n) - readBufferedPixel(PREV_IMAGE, ivec2(x, y));\nspaceTime += spatialDerivative * timeDerivative;\n}\n}\nhighp vec2 localOpticalFlow = abs(det) < minDet ? vec2(0.0f) : invHarris * spaceTime / det;\nlocalGuess += localOpticalFlow;\n}\npyrGuess = 2.0f * (pyrGuess + localGuess);\n}\nvec2 opticalFlow = pyrGuess;\nvec2 nextPosition = keypoint.position + opticalFlow;\nvec2 imageSize = vec2(textureSize(nextPyramid, 0));\nfloat margin = float(DISCARD_MARGIN);\nbool keypointIsWithinBoundaries = (\nnextPosition.x >= margin &&\nnextPosition.y >= margin &&\nnextPosition.x <= imageSize.x - margin &&\nnextPosition.y <= imageSize.y - margin\n);\ncolor = keypointIsWithinBoundaries ? encodeKeypointPosition(nextPosition) : encodeDiscardedKeypointPosition();\n}"
 
 /***/ }),
 
@@ -8994,7 +9201,10 @@ class SpeedyGPU
             if(data.readyState < 2) {
                 // this may happen when the video loops (Firefox)
                 // return the previously uploaded texture
-                return this._inputTexture[this._inputTextureIndex];
+                if(this._inputTexture[this._inputTextureIndex] != null)
+                    return this._inputTexture[this._inputTextureIndex];
+                else
+                    _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning(`Trying to process a video that isn't ready yet`);
             }
         }
 
