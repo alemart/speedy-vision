@@ -47,6 +47,7 @@ class SpeedyFeatureTracker
         this._descriptionAlgorithm = null;
         this._inputTexture = null;
         this._prevInputTexture = null;
+        this._updateLock = false;
     }
 
     /**
@@ -148,6 +149,12 @@ class SpeedyFeatureTracker
         if(media.isReleased())
             throw new IllegalOperationError(`The media has been released`);
 
+        // it's too early to change the input texture
+        if(this._updateLock)
+            return;
+        setTimeout(() => this._updateLock = false, 1000.0 / 50.0);
+        this._updateLock = true;
+
         // upload the media
         const newInputTexture = gpu.upload(media.source);
         this._prevInputTexture = this._inputTexture;
@@ -202,7 +209,7 @@ export class LKFeatureTracker extends SpeedyFeatureTracker
         super(trackingAlgorithm, media);
 
         // default options
-        this._windowSize = 21;
+        this._windowSize = 15;
         this._depth = 5;
         this._discardThreshold = 0.0001;
     }

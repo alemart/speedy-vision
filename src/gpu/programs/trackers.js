@@ -30,10 +30,11 @@ import { PYRAMID_MAX_LEVELS } from '../../utils/globals';
 //
 
 // LK
-const LK_MAX_WINDOW_SIZE = 21; // 10x10 window - default
-const LK_MAX_WINDOW_SIZE_SMALL = 15; // 7x7 window - the smaller the window, the easier it is on the GPU
-const LK_MAX_WINDOW_SIZE_SMALLER = 11; // 5x5 window - works best on mobile
-const LK_MIN_WINDOW_SIZE = 5; // 2x2 window
+const LK_MAX_WINDOW_SIZE = 21; // 21x21 window
+const LK_MAX_WINDOW_SIZE_SMALL = 15; // 15x15 window - the smaller the window, the easier it is on the GPU
+const LK_MAX_WINDOW_SIZE_SMALLER = 11; // 11x11 window - works best on mobile
+const LK_MAX_WINDOW_SIZE_SMALLEST = 7; // 7x7 window
+const LK_MIN_WINDOW_SIZE = 5; // 5x5 window: (-2, -1, 0, 1, 2) x (-2, -1, 0, 1, 2)
 const LK_MAX_KEYPOINTS_PER_PASS = 100;
 
 const lk = importShader('trackers/lk.glsl')
@@ -72,6 +73,18 @@ const lkDiscardSmaller = importShader('trackers/lk-discard.glsl')
                              'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALLER
                          });
 
+const lkSmallest = importShader('trackers/lk.glsl')
+                   .withArguments('nextPyramid', 'prevPyramid', 'prevKeypoints', 'windowSize', 'depth', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'encoderLength')
+                   .withDefines({
+                       'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALLEST
+                   });
+
+const lkDiscardSmallest = importShader('trackers/lk-discard.glsl')
+                          .withArguments('pyramid', 'encodedKeypoints', 'windowSize', 'discardThreshold', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'encoderLength')
+                          .withDefines({
+                              'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALLEST
+                          });
+
 /**
  * GPUTrackers
  * Feature trackers
@@ -92,9 +105,11 @@ export class GPUTrackers extends SpeedyProgramGroup
             .declare('_lk', lk)
             .declare('_lkSmall', lkSmall)
             .declare('_lkSmaller', lkSmaller)
+            .declare('_lkSmallest', lkSmallest)
             .declare('_lkDiscard', lkDiscard)
             .declare('_lkDiscardSmall', lkDiscardSmall)
             .declare('_lkDiscardSmaller', lkDiscardSmaller)
+            .declare('_lkDiscardSmallest', lkDiscardSmallest)
         ;
     }
 
@@ -122,7 +137,10 @@ export class GPUTrackers extends SpeedyProgramGroup
 
         // select programs
         let lk = '_lk', lkDiscard = '_lkDiscard';
-        if(windowSize <= LK_MAX_WINDOW_SIZE_SMALLER) {
+        if(windowSize <= LK_MAX_WINDOW_SIZE_SMALLEST) {
+            lk = '_lkSmallest'; lkDiscard = '_lkDiscardSmallest';
+        }
+        else if(windowSize <= LK_MAX_WINDOW_SIZE_SMALLER) {
             lk = '_lkSmaller'; lkDiscard = '_lkDiscardSmaller';
         }
         else if(windowSize <= LK_MAX_WINDOW_SIZE_SMALL) {
