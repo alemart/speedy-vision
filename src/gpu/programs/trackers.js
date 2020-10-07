@@ -123,10 +123,10 @@ export class GPUTrackers extends SpeedyProgramGroup
         // select programs
         let lk = '_lk', lkDiscard = '_lkDiscard';
         if(windowSize <= LK_MAX_WINDOW_SIZE_SMALLER) {
-            lk += 'Smaller'; lkDiscard += 'Smaller';
+            lk = '_lkSmaller'; lkDiscard = '_lkDiscardSmaller';
         }
         else if(windowSize <= LK_MAX_WINDOW_SIZE_SMALL) {
-            lk += 'Small'; lkDiscard += 'Small';
+            lk = '_lkSmall'; lkDiscard = '_lkDiscardSmall';
         }
 
         // resize programs
