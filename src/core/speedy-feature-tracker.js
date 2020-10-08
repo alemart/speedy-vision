@@ -299,6 +299,6 @@ export class LKFeatureTracker extends SpeedyFeatureTracker
         if(typeof threshold !== 'number')
             throw new IllegalArgumentError(`Invalid discardThreshold`);
 
-        this._discardThreshold = Math.max(0, +threshold);
+        this._discardThreshold = Math.max(0, threshold);
     }
 }
