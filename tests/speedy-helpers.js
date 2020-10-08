@@ -294,6 +294,31 @@ async function repeat(n, fn)
     return result;
 }
 
+// sleep for a few milliseconds
+function sleep(ms)
+{
+    return new Promise(resolve => {
+        setTimeout(resolve, ms);
+    });
+}
+
+// compute the center of mass of a collection of SpeedyFeatures
+function centerOfMass(features)
+{
+    const avg = features.reduce((avg, p) => {
+        avg.x += p.x;
+        avg.y += p.y;
+        return avg;
+    }, { x: 0, y: 0 });
+
+    if(features.length > 0) {
+        avg.x /= features.length;
+        avg.y /= features.length;
+    }
+
+    return avg;
+}
+
 
 //
 // Internal utilities
@@ -357,6 +382,20 @@ function createCanvasFromPixels(width, height, pixels, title = '')
     const imageData = new ImageData(new Uint8ClampedArray(rgb), width, height);
 
     ctx.putImageData(imageData, 0, 0);
+
+    return canvas;
+}
+
+function createCanvasWithASquare(xpos = 0, ypos = 0, squareLength = 100, title = '')
+{
+    const canvas = createCanvas(480, 360, title);
+    const context = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height, s = squareLength;
+
+    context.fillStyle = 'beige';
+    context.fillRect(0, 0, w, h);
+    context.fillStyle = 'lightsalmon';
+    context.fillRect((w-s)/2 + xpos, (h-s)/2 + ypos, s, s);
 
     return canvas;
 }
