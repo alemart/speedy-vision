@@ -1,5 +1,19 @@
 # Release notes
 
+## 0.4.0 - October 8th, 2020
+
+* Added ORB feature descriptor
+* Added LK feature tracker (optical-flow)
+* Added subpixel support for feature points
+* Changed the feature detection API
+* Created new image enhancement algorithm: Nightvision
+* Implemented image normalization algorithm
+* Data can now uploaded to the GPU using UBOs
+* Added 2D vector routines
+* Added support to ImageBitmaps
+* New demos & visual improvements
+* General improvements & fixes
+
 ## 0.3.2 - August 5th, 2020
 
 * New feature detectors: harris, multiscale-harris, multiscale-fast
