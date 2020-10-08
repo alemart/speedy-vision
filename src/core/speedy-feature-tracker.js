@@ -275,8 +275,8 @@ export class LKFeatureTracker extends SpeedyFeatureTracker
      */
     set depth(newDepth)
     {
-        if(typeof newDepth !== 'number' || depth < 1)
-            throw new IllegalArgumentError(`Invalid depth: ${depth}`);
+        if(typeof newDepth !== 'number' || newDepth < 1)
+            throw new IllegalArgumentError(`Invalid depth: ${newDepth}`);
 
         this._depth = newDepth | 0;
     }
