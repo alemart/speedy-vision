@@ -6,7 +6,7 @@
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-10-07T21:06:24.144Z
+ * Date: 2020-10-08T15:27:00.145Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -1646,6 +1646,11 @@ class SpeedyMatrix
         return this._channels;
     }
 
+    toString()
+    {
+        return `SpeedyMatrix(${this._rows}, ${this._cols})`;
+    }
+
     at(row, column = 0)
     {
         /*
@@ -1771,6 +1776,15 @@ class SpeedyVector2 extends _speedy_matrix__WEBPACK_IMPORTED_MODULE_1__["SpeedyM
     //
     // ===== METHODS =====
     //
+
+    /**
+     * Convert to string
+     * @returns {string}
+     */
+    toString()
+    {
+        return `SpeedyVector2(${this._data[0]}, ${this._data[1]})`;
+    }
 
     /**
      * Get vector coordinate
@@ -3425,8 +3439,8 @@ class LKFeatureTracker extends SpeedyFeatureTracker
      */
     set depth(newDepth)
     {
-        if(typeof newDepth !== 'number' || depth < 1)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_6__["IllegalArgumentError"](`Invalid depth: ${depth}`);
+        if(typeof newDepth !== 'number' || newDepth < 1)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_6__["IllegalArgumentError"](`Invalid depth: ${newDepth}`);
 
         this._depth = newDepth | 0;
     }
@@ -3449,7 +3463,7 @@ class LKFeatureTracker extends SpeedyFeatureTracker
         if(typeof threshold !== 'number')
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_6__["IllegalArgumentError"](`Invalid discardThreshold`);
 
-        this._discardThreshold = Math.max(0, +threshold);
+        this._discardThreshold = Math.max(0, threshold);
     }
 }
 
