@@ -52,7 +52,7 @@ export class SpeedyMatrix
         this._channels = numChannels;
         this._length = this._rows * this._cols * this._channels;
 
-        this._data = new dataType(this._length);
+        this._data = new dataType(this._length); // column-major format
     }
 
     get rows()
@@ -82,7 +82,8 @@ export class SpeedyMatrix
             throw new IllegalArgumentError(`Out of bounds`);
         */
 
-        return this._data[row * this._cols + column];
+        // column-major storage
+        return this._data[column * this._rows + row];
     }
 
     fill(value)
