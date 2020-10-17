@@ -23,6 +23,7 @@ import { IllegalArgumentError } from '../../utils/errors';
 import { SpeedyFlags } from '../speedy-flags';
 
 const matrixType = {
+    [SpeedyFlags.F64]: Float64Array,
     [SpeedyFlags.F32]: Float32Array,
     [SpeedyFlags.U8]: Uint8Array,
 };
@@ -32,11 +33,11 @@ const matrixType = {
  */
 export class SpeedyMatrix
 {
-    constructor(rows, columns, type = SpeedyFlags.F32)
+    constructor(rows, columns, type = SpeedyFlags.F64)
     {
-        this._type = type & (~3); // F32, U8...
+        this._type = type & (~3); // F64, F32, U8...
 
-        const numChannels = 1 + (type & 3);
+        const numChannels = 1 + (type & 3); // 1, 2, 3 or 4
         const dataType = matrixType[this._type];
 
         if(rows <= 0 || columns <= 0)

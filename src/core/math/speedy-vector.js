@@ -35,7 +35,7 @@ export class SpeedyVector2 extends SpeedyMatrix
      */
     constructor(x, y)
     {
-        super(2, 1, SpeedyFlags.F32);
+        super(2, 1, SpeedyFlags.F64);
         this._data[0] = x;
         this._data[1] = y;
     }
