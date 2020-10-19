@@ -19,25 +19,14 @@
  * Flags available to users
  */
 
+import { MatrixMath } from './math/matrix-math';
+
 export const SpeedyFlags = Object.freeze({
 
     // Feature detectors
     FEATURE_DETECTOR_RESET_CAPACITY: 0x1,
 
     // Matrix types
-    F64: 0x0,         // 64-bit float, 1 channel
-    F64C1: 0x0 | 0x0, // 64-bit float, 1 channel
-    F64C1: 0x0 | 0x1, // 64-bit float, 2 channels
-    F64C1: 0x0 | 0x2, // 64-bit float, 3 channels
-    F64C1: 0x0 | 0x3, // 64-bit float, 4 channels
-    F32: 0x4,         // 32-bit float, 1 channel
-    F32C1: 0x4 | 0x0, // 32-bit float, 1 channel
-    F32C2: 0x4 | 0x1, // 32-bit float, 2 channels
-    F32C3: 0x4 | 0x2, // 32-bit float, 3 channels
-    F32C4: 0x4 | 0x3, // 32-bit float, 4 channels
-    U8: 0x8,          // 8-bit unsigned integer, 1 channel
-    U8C1: 0x8 | 0x0,  // 8-bit unsigned integer, 1 channel
-    U8C2: 0x8 | 0x1,  // 8-bit unsigned integer, 2 channels
-    U8C3: 0x8 | 0x2,  // 8-bit unsigned integer, 3 channels
-    U8C4: 0x8 | 0x3,  // 8-bit unsigned integer, 4 channels
+    ...(MatrixMath.MatrixType),
+
 });

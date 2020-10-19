@@ -20,13 +20,11 @@
  */
 
 import { IllegalArgumentError } from '../../utils/errors';
-import { SpeedyMatrix } from './speedy-matrix';
-import { SpeedyFlags } from '../speedy-flags';
 
 /**
  * 2D vector of floating-point numbers
  */
-export class SpeedyVector2 extends SpeedyMatrix
+export class SpeedyVector2
 {
     /**
      * Create a 2D vector
@@ -35,9 +33,7 @@ export class SpeedyVector2 extends SpeedyMatrix
      */
     constructor(x, y)
     {
-        super(2, 1, SpeedyFlags.F64);
-        this._data[0] = x;
-        this._data[1] = y;
+        this._data = new Float32Array([x, y]);
     }
 
 
@@ -148,7 +144,7 @@ export class SpeedyVector2 extends SpeedyMatrix
         const l = this.length();
 
         if(l == 0.0) {
-            this._data[0] = this._data[1] = 0.0;
+            this._data.fill(0.0);
             return this;
         }
 

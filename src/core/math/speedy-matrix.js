@@ -19,26 +19,38 @@
  * Matrix operations
  */
 
-import { IllegalArgumentError } from '../../utils/errors';
+import { IllegalArgumentError, IllegalOperationError } from '../../utils/errors';
 import { SpeedyFlags } from '../speedy-flags';
+import { MatrixBuffer } from './matrix-buffer';
+import { MatrixMath } from './matrix-math';
+import { MatrixOperationsQueue } from './matrix-operations-queue';
+import {
+    MatrixOperationNop,
+    MatrixOperationEye,
+    MatrixOperationFill,
+    MatrixOperationTranspose,
+    MatrixOperationAdd,
+} from './matrix-operations';
 
-const matrixType = {
-    [SpeedyFlags.F64]: Float64Array,
-    [SpeedyFlags.F32]: Float32Array,
-    [SpeedyFlags.U8]: Uint8Array,
-};
+// Matrix Operations Queue
+const matrixOperationsQueue = MatrixOperationsQueue.instance;
 
 /**
  * Generic matrix
  */
 export class SpeedyMatrix
 {
-    constructor(rows, columns, type = SpeedyFlags.F64)
+    /**
+     * Class constructor
+     * @param {number} rows number of rows
+     * @param {number} [columns] number of columns (defaults to the number of rows)
+     * @param {number[]} [values] initial values in column-major format
+     * @param {number} [type] F64, F32, etc.
+     */
+    constructor(rows, columns = rows, values = null, type = SpeedyFlags.F32)
     {
-        this._type = type & (~3); // F64, F32, U8...
-
-        const numChannels = 1 + (type & 3); // 1, 2, 3 or 4
-        const dataType = matrixType[this._type];
+        const dataType = MatrixBuffer.DataType[type & (~3)];
+        const numChannels = 1 + (type & 3);
 
         if(rows <= 0 || columns <= 0)
             throw new IllegalArgumentError(`Invalid dimensions`);
@@ -48,51 +60,289 @@ export class SpeedyMatrix
             throw new IllegalArgumentError(`Invalid data type`);
 
         this._rows = rows | 0;
-        this._cols = columns | 0;
+        this._columns = columns | 0;
+        this._type = type | 0;
         this._channels = numChannels;
-        this._length = this._rows * this._cols * this._channels;
-
-        this._data = new dataType(this._length); // column-major format
+        this._stride = this._rows;
+        this._buffer = new MatrixBuffer(this._rows * this._columns * this._channels, values, type);
+        this._pendingWriteOperations = 0; // number of pending operations that write to the buffer
+        this._pendingAccessesQueue = []; // a list of Function<void> to be called as soon as there are no pending operations
+        this._resolvePendingAccesses = this._resolvePendingAccesses.bind(this);
+        this._nop = null;
     }
 
+
+
+    // ====================================
+    // MATRIX PROPERTIES
+    // ====================================
+
+    /**
+     * Number of rows of the matrix
+     * @returns {number}
+     */
     get rows()
     {
         return this._rows;
     }
 
+    /**
+     * Number of columns of the matrix
+     * @returns {number}
+     */
     get columns()
     {
-        return this._cols;
+        return this._columns;
     }
 
+    /**
+     * Number of channels
+     * @returns {number} defaults to 1
+     */
     get channels()
     {
         return this._channels;
     }
 
+    /**
+     * The number of entries, in the MatrixBuffer, between two columns
+     * @returns {number}
+     */
+    get stride()
+    {
+        return this._stride;
+    }
+
+    /**
+     * Data type
+     * @returns {number}
+     */
+    get type()
+    {
+        return this._type;
+    }
+
+    /**
+     * Data type (string)
+     * @returns {string}
+     */
+    get dtype()
+    {
+        return MatrixBuffer.DataTypeName[this._type & (~3)];
+    }
+
+
+
+    // ====================================
+    // MATRIX DATA
+    // ====================================
+
+    /**
+     * Internal buffer. Since the internal buffer holds a
+     * Transferable object, the data may or may not be
+     * available right now. The returned Promise will be
+     * resolved as soon as the buffer is available for reading
+     * @returns {Promise<MatrixBuffer>}
+     */
+    buffer()
+    {
+        if(this._pendingWriteOperations > 0) {
+            // we're not ready yet: there are calculations taking place...
+            // we'll resolve this promise as soon as there are no pending calculations
+            return new Promise(resolve => {
+                this._pendingAccessesQueue.push(() => resolve(this._buffer));
+            });
+        }
+        else {
+            // we're ready to go!
+            // no pending operations
+            return Promise.resolve(this._buffer);
+        }
+    }
+
+    /**
+     * Read entries of the matrix. Note that this method is asynchronous.
+     * It will read the data as soon as all relevant calculations have been
+     * completed. Make sure you await.
+     * @param {number[]} entries a flattened array of (row,col) indices, indexed by zero
+     * @param {number[]} [result] pre-allocated array where we'll store the results
+     * @returns {Promise<number[]>} a promise that resolves to the requested entries
+     */
+    read(entries, result = new Array(entries.length))
+    {
+        if(entries.length % 2 > 0)
+            throw new IllegalArgumentError(`Can't read matrix entries: missing index`);
+
+        return this.buffer().then(buffer => {
+            const rows = this._rows, cols = this._columns;
+            const data = buffer.data; // Transferable TypedArray
+            const n = entries.length >> 1;
+
+            // resize result array
+            if(result.length != n)
+                result.length = n;
+
+            // read entries
+            let row, col;
+            for(let i = 0; i < n; i++) {
+                row = entries[i<<1] | 0;
+                col = entries[1 + (i<<1)] | 0;
+                result[i] = ((row >= 0 && row < rows && col >= 0 && col < cols) &&
+                    data[col * rows + row]
+                ) || undefined;
+            }
+
+            // done!
+            return result;
+        });
+    }
+
+    /**
+     * Read a single entry of the matrix. This is provided for your convenience.
+     * It's much faster to use read() if you need to read multiple entries
+     * @param {number} row the row you want to read, indexed by zero
+     * @param {number} column the column you want to read, indexed by zero
+     * @returns {Promise<number>} a promise that resolves to the requested entry
+     */
+    at(row, column)
+    {
+        return this.read([ row, column ]).then(nums => nums[0]);
+    }
+
+    /**
+     * Print matrix (useful for debugging). Note that this method is asynchronous.
+     * It will print the data as soon as all relevant calculations have been
+     * completed. Make sure you await.
+     * @returns {Promise} a promise that resolves as soon as the matrix is printed
+     */
+    print()
+    {
+        return this.buffer().then(buffer => {
+            const rows = this._rows, columns = this._columns;
+            const col = new Array(columns);
+
+            const data = buffer.data; // Transferable TypedArray
+            for(let j = 0; j < columns; j++)
+                col[j] = data.subarray(j * rows, j * rows + rows);
+
+            const fmt = col.map(c => '    ' + c.toString()).join(',\n');
+            const str = `SpeedyMatrix(rows=${rows}, cols=${columns}, dtype="${this.dtype}", data=[\n${fmt}\n])`;
+            console.log(str);
+        });
+    }
+
+    submatrix()
+    {
+    }
+
+
+
+
+
+    // ====================================
+    // MATRIX UTILITIES
+    // ====================================
+
+    /**
+     * Convert to string
+     * @returns {string}
+     */
     toString()
     {
-        return `SpeedyMatrix(${this._rows}, ${this._cols})`;
+        return `SpeedyMatrix(rows=${this.rows}, cols=${this.columns}, dtype="${this.dtype}")`;
     }
 
-    at(row, column = 0)
+    /**
+     * Decrease the pending operations counter and
+     * resolves all pending accesses, if there are
+     * no more pending operations remaining
+     */
+    _resolvePendingAccesses()
     {
-        /*
-        if(row < 0 || row >= this._rows || column < 0 || column >= this._cols)
-            throw new IllegalArgumentError(`Out of bounds`);
-        */
-
-        // column-major storage
-        return this._data[column * this._rows + row];
+        if(--this._pendingWriteOperations <= 0) {
+            this._pendingWriteOperations = 0;
+            this._pendingAccessesQueue.forEach(fn => fn());
+            //console.log(`Called ${this._pendingAccessesQueue.length} pending accesses!`);
+            this._pendingAccessesQueue.length = 0;
+        }
     }
 
-    fill(value)
+    /**
+     * Returns a promise that resolves as soon as all
+     * operations submitted UP TO NOW have finished
+     * @returns {Promise}
+     */
+    sync()
     {
-        const length = this._length;
+        this._nop = this._nop || (this._nop = new MatrixOperationNop(this));
+        return matrixOperationsQueue.enqueue(this._nop, this);
+    }
 
-        for(let i = 0; i < length; i++)
-            this._data[i] = value;
+    /**
+     * Assign this matrix to the result of a matrix operation
+     * @param {MatrixOperation} matrixOperation
+     * @returns {SpeedyMatrix} this matrix
+     */
+    assign(matrixOperation)
+    {
+        ++this._pendingWriteOperations;
+        matrixOperationsQueue.enqueue(matrixOperation, this).then(this._resolvePendingAccesses);
 
         return this;
+    }
+
+    /**
+     * Set this matrix to the identity matrix
+     * @returns {SpeedyMatrix} this matrix
+     */
+    setToIdentity()
+    {
+        return this.assign(new MatrixOperationEye(this));
+    }
+
+    /**
+     * Fill the matrix with a value
+     * @param {number} value
+     * @returns {SpeedyMatrix} this matrix
+     */
+    fill(value)
+    {
+        return this.assign(new MatrixOperationFill(this, +value));
+    }
+
+
+
+
+
+    // ====================================
+    // MATRIX OPERATIONS
+    // ====================================
+
+    copy()
+    {
+    }
+
+    transpose()
+    {
+        return new MatrixOperationTranspose(this);
+    }
+
+    plus(matrix)
+    {
+        // TODO
+    }
+
+    minus(matrix)
+    {
+    }
+
+    times(matrix)
+    {
+        // TODO
+    }
+
+    scale(scalar)
+    {
+        // TODO
     }
 }

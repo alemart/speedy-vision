@@ -26,6 +26,7 @@ import { SpeedyFeatureDetectorFactory } from './speedy-feature-detector-factory'
 import { SpeedyFeatureTrackerFactory } from './speedy-feature-tracker-factory';
 import { SpeedyFlags } from './speedy-flags';
 import { SpeedyVector2 } from './math/speedy-vector';
+import { SpeedyMatrix } from './math/speedy-matrix';
 
 /**
  * Speedy's main class
@@ -104,11 +105,23 @@ export class Speedy
     /**
      * Create a 2D vector
      * @param {number} x
-     * @param {number} y
+     * @param {number} [y]
      */
-    static Vector2(x, y)
+    static Vector2(x, y = x)
     {
         return new SpeedyVector2(x, y);
+    }
+
+    /**
+     * Create a Matrix
+     * @param {number} rows number of rows
+     * @param {number} [columns] number of columns (defaults to the number of rows)
+     * @param {number[]} [values] initial values in column-major format
+     * @param {number} [type] F64, F32, etc.
+     */
+    static Matrix(rows, columns = rows, values = undefined, type = undefined)
+    {
+        return new SpeedyMatrix(rows, columns, values, type);
     }
 }
 
