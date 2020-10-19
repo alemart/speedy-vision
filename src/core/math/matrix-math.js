@@ -55,7 +55,7 @@ class MatrixMath
         const channels = 1 + (type & 3);
         for(let j = 0; j < m; j++) {
             for(let c = 0; c < channels; c++)
-                output[(j * rows + j) * channels + c] = 1;
+                output[(j * stride + j) * channels + c] = 1;
         }
         */
 

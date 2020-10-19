@@ -46,8 +46,9 @@ export class SpeedyMatrix
      * @param {number} [columns] number of columns (defaults to the number of rows)
      * @param {number[]} [values] initial values in column-major format
      * @param {number} [type] F64, F32, etc.
+     * @param {number} [stride] custom stride
      */
-    constructor(rows, columns = rows, values = null, type = SpeedyFlags.F32)
+    constructor(rows, columns = rows, values = null, type = SpeedyFlags.F32, stride = rows)
     {
         const dataType = MatrixBuffer.DataType[type & (~3)];
         const numChannels = 1 + (type & 3);
@@ -63,8 +64,8 @@ export class SpeedyMatrix
         this._columns = columns | 0;
         this._type = type | 0;
         this._channels = numChannels;
-        this._stride = this._rows;
-        this._buffer = new MatrixBuffer(this._rows * this._columns * this._channels, values, type);
+        this._stride = stride | 0;
+        this._buffer = new MatrixBuffer(this._stride * this._columns * this._channels, values, type);
         this._pendingWriteOperations = 0; // number of pending operations that write to the buffer
         this._pendingAccessesQueue = []; // a list of Function<void> to be called as soon as there are no pending operations
         this._resolvePendingAccesses = this._resolvePendingAccesses.bind(this);
@@ -105,7 +106,8 @@ export class SpeedyMatrix
     }
 
     /**
-     * The number of entries, in the MatrixBuffer, between two columns
+     * The number of entries, in the MatrixBuffer,
+     * between the beginning of two columns
      * @returns {number}
      */
     get stride()
@@ -175,6 +177,7 @@ export class SpeedyMatrix
 
         return this.buffer().then(buffer => {
             const rows = this._rows, cols = this._columns;
+            const stride = this._stride;
             const data = buffer.data; // Transferable TypedArray
             const n = entries.length >> 1;
 
@@ -185,10 +188,10 @@ export class SpeedyMatrix
             // read entries
             let row, col;
             for(let i = 0; i < n; i++) {
-                row = entries[i<<1] | 0;
-                col = entries[1 + (i<<1)] | 0;
+                row = entries[i << 1] | 0;
+                col = entries[1 + (i << 1)] | 0;
                 result[i] = ((row >= 0 && row < rows && col >= 0 && col < cols) &&
-                    data[col * rows + row]
+                    data[col * stride + row]
                 ) || undefined;
             }
 
@@ -219,11 +222,12 @@ export class SpeedyMatrix
     {
         return this.buffer().then(buffer => {
             const rows = this._rows, columns = this._columns;
+            const stride = this._stride;
             const col = new Array(columns);
 
             const data = buffer.data; // Transferable TypedArray
             for(let j = 0; j < columns; j++)
-                col[j] = data.subarray(j * rows, j * rows + rows);
+                col[j] = data.subarray(j * stride, j * stride + rows);
 
             const fmt = col.map(c => '    ' + c.toString()).join(',\n');
             const str = `SpeedyMatrix(rows=${rows}, cols=${columns}, dtype="${this.dtype}", data=[\n${fmt}\n])`;
