@@ -74,8 +74,8 @@ class MatrixMath
         const strideT = header.strideOfInputs[0];
         const input = inputs[0];
 
-        for(let j = 0; j < columns; j++) {
-            for(let i = 0; i < rows; i++)
+        for(let i = 0; i < rows; i++) {
+            for(let j = 0; j < columns; j++)
                 output[j * stride + i] = input[i * strideT + j];
         }
     }
@@ -83,8 +83,16 @@ class MatrixMath
     // Add two matrices
     static add(header, output, inputs)
     {
-        // TODO
-        return this.zeros(header, output, inputs);
+        const { rows, columns, stride } = header;
+        const [ a, b ] = inputs;
+        let k;
+
+        for(let j = 0; j < columns; j++) {
+            for(let i = 0; i < rows; i++) {
+                k = j * stride + i;
+                output[k] = a[k] + b[k];
+            }
+        }
     }
 
 
