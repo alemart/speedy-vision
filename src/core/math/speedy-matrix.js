@@ -32,10 +32,14 @@ import {
     MatrixOperationAdd,
 } from './matrix-operations';
 
+
+
 // Constants
 const DataType = MatrixMath.DataType;
 const DataTypeName = MatrixMath.DataTypeName;
 const matrixOperationsQueue = MatrixOperationsQueue.instance;
+
+
 
 /**
  * Generic matrix
@@ -170,22 +174,54 @@ export class SpeedyMatrix
      * Read entries of the matrix. Note that this method is asynchronous.
      * It will read the data as soon as all relevant calculations have been
      * completed. Make sure you await.
-     * @param {number[]} entries a flattened array of (row,col) indices, indexed by zero
+     *
+     * If the entries parameter is left unspecified, the entire matrix will
+     * be read and its contents will be returned as a flattened array in
+     * column-major format.
+     *
+     * @param {number[]} [entries] a flattened array of (row,col) indices, indexed by zero
      * @param {number[]} [result] pre-allocated array where we'll store the results
      * @returns {Promise<number[]>} a promise that resolves to the requested entries
      */
-    read(entries, result = new Array(entries.length))
+    read(entries = undefined, result = undefined)
     {
+        const rows = this._rows, cols = this._columns;
+        const stride = this._stride;
+
+        // read the entire array
+        if(entries === undefined)
+        {
+            return this.buffer().then(buffer => {
+                const data = buffer.data;
+                const n = rows * cols;
+
+                // resize result array
+                result = result || new Array(n);
+                if(result.length != n)
+                    result.length = n;
+
+                // write entries in column-major format
+                let k = 0;
+                for(let j = 0; j < cols; j++) {
+                    for(let i = 0; i < rows; i++)
+                        result[k++] = data[j * stride + i];
+                }
+
+                // done!
+                return result;
+            });
+        }
+
+        // read specific entries
         if(entries.length % 2 > 0)
             throw new IllegalArgumentError(`Can't read matrix entries: missing index`);
 
         return this.buffer().then(buffer => {
-            const rows = this._rows, cols = this._columns;
-            const stride = this._stride;
             const data = buffer.data;
             const n = entries.length >> 1;
 
             // resize result array
+            result = result || new Array(n);
             if(result.length != n)
                 result.length = n;
 
@@ -220,7 +256,7 @@ export class SpeedyMatrix
      * Print matrix (useful for debugging). Note that this method is asynchronous.
      * It will print the data as soon as all relevant calculations have been
      * completed. Make sure you await.
-     * @returns {Promise} a promise that resolves as soon as the matrix is printed
+     * @returns {Promise<void>} a promise that resolves as soon as the matrix is printed
      */
     print()
     {
@@ -310,7 +346,7 @@ export class SpeedyMatrix
     /**
      * Returns a promise that resolves as soon as all
      * operations submitted UP TO NOW have finished
-     * @returns {Promise}
+     * @returns {Promise<void>}
      */
     sync()
     {
@@ -362,14 +398,23 @@ export class SpeedyMatrix
     {
     }
 
+    /**
+     * Transpose this matrix
+     * @returns {MatrixOperation}
+     */
     transpose()
     {
         return new MatrixOperationTranspose(this);
     }
 
+    /**
+     * Computes the addition this matrix + other matrix
+     * @param {SpeedyMatrix} matrix
+     * @returns {MatrixOperation}
+     */
     plus(matrix)
     {
-        // TODO
+        return new MatrixOperationAdd(this, matrix);
     }
 
     minus(matrix)
@@ -381,7 +426,7 @@ export class SpeedyMatrix
         // TODO
     }
 
-    scale(scalar)
+    timesScalar(scalar)
     {
         // TODO
     }
