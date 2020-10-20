@@ -49,7 +49,7 @@ export class MatrixOperationsQueue
      * Enqueue matrix operation
      * @param {MatrixOperation} matrixOperation 
      * @param {SpeedyMatrix} matrix
-     * @returns {Promise} a promise that resolves as soon as the operation is complete
+     * @returns {Promise<void>} a promise that resolves as soon as the operation is complete
      */
     enqueue(matrixOperation, matrix)
     {
@@ -73,7 +73,7 @@ export class MatrixOperationsQueue
             return;
         }
 
-        // run the next command
+        // run the next operation
         const { matrixOperation, matrix, resolve } = this._queue.shift();
 
         matrixOperation.run(

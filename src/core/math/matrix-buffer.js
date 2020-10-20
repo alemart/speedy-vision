@@ -64,8 +64,8 @@ export class MatrixBuffer
         // check if it's a proper TypedArray
         if(!(values.buffer instanceof ArrayBuffer))
             throw new IllegalArgumentError(`Invalid matrix type`);
-        else if(values.length < length)
-            throw new IllegalArgumentError(`Invalid matrix length`);
+        else if(values.length > length)
+            throw new IllegalArgumentError(`Incorrect matrix length`);
 
         // store data
         this.type = type & (~3); // F64, F32, etc.

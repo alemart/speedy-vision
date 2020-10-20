@@ -96,7 +96,7 @@ export class MatrixOperation
      * @param {number} stride stride of the output matrix
      * @param {number} type MatrixType enum - type of the output matrix
      * @param {TypedArray} output output buffer
-     * @returns {Promise<TypedArray>} a promise that resolves to outbuf as soon as the operation is completed
+     * @returns {Promise<void>} a promise that resolves to outbuf as soon as the operation is completed
      */
     run(rows, columns, stride, type, output)
     {
@@ -111,7 +111,7 @@ export class MatrixOperation
      * @param {number} stride stride of the output matrix
      * @param {number} type MatrixType enum - type of the output matrix
      * @param {TypedArray} output output buffer
-     * @returns {Promise<TypedArray>} a promise that resolves to outbuf as soon as the operation is completed
+     * @returns {Promise<void>} a promise that resolves to outbuf as soon as the operation is completed
      */
     runLocally(rows, columns, stride, type, output)
     {
@@ -126,7 +126,7 @@ export class MatrixOperation
         // run matrix operation
         return new Promise(resolve => {
             this._fun(this._header, output, this._inputs);
-            resolve(output);
+            resolve();
         });
     }
 
@@ -137,7 +137,6 @@ export class MatrixOperation
      * @param {number} stride stride of the output matrix
      * @param {number} type MatrixType enum - type of the output matrix
      * @param {TypedArray} output output buffer
-     * @returns {TypedArray} output buffer
      */
     runSync(rows, columns, stride, type, output)
     {
@@ -151,7 +150,6 @@ export class MatrixOperation
 
         // run matrix operation
         this._fun(this._header, output, this._inputs);
-        return output;
     }
 
     /**
