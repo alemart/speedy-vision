@@ -37,32 +37,50 @@ export class MatrixOperation
      * @param {number} requiredRows required number of rows of the output matrix
      * @param {number} requiredColumns required number of columns of the output matrix
      * @param {number} requiredType required type of the output matrix
-     * @param {TypedArray[]} [inputs] input buffer(s), if any
-     * @param {number[]|null} [strideOfInputs] stride of each input matrix
-     * @param {number[]|null} [rowsOfInputs] (optional) number of rows of each input matrix
-     * @param {number[]|null} [columnsOfInputs] (optional) number of columns of each input matrix
-     * @param {object|null} [serializableData] custom user-data, serializable
+     * @param {SpeedyMatrix[]} [inputMatrices] input matrices, if any
+     * @param {object|null} [userData] custom user-data, serializable
      */
-    constructor(opcode, requiredRows, requiredColumns, requiredType, inputs = [], strideOfInputs = null, rowsOfInputs = null, columnsOfInputs = null, serializableData = null)
+    constructor(opcode, requiredRows, requiredColumns, requiredType, inputMatrices = [], userData = null)
     {
         // store the operation code
         this._opcode = opcode;
 
+        // obtain the data of the input matrices
+        const inputs = inputMatrices.map(matrix => matrix._buffer.data); // this is a TypedArray[]
+        const inputBuffers = inputs.map(input => input.buffer); // this is an ArrayBuffer[]
+        const hasInput = inputs.length > 0; // a handy var, so we won't create unneeded arrays
+
+        // obtain the shape of the input matrices
+        const rowsOfInputs = hasInput && inputMatrices.map(matrix => matrix.rows);
+        const columnsOfInputs = hasInput && inputMatrices.map(matrix => matrix.columns);
+        const strideOfInputs = hasInput && inputMatrices.map(matrix => matrix.stride);
+
+        // these are used to recover the TypedArrays from the ArrayBuffers
+        const byteOffsetOfInputs = hasInput && inputs.map(input => input.byteOffset);
+        const lengthOfInputs = hasInput && inputs.map(input => input.length);
+
         // the header stores metadata related to the operation
         // (all fields are serializable)
         this._header = {
-            stride: null, // stride of the output matrix (unknown)
             rows: requiredRows, // number of rows of the output matrix
             columns: requiredColumns, // number of columns of the output matrix
-            strideOfInputs: strideOfInputs, // strides of the input matrices
+            stride: null, // stride of the output matrix (unknown)
+            byteOffset: null, // used to recover the data view (unknown)
+            length: null, // used to recover the data view (unknown)
+
             rowsOfInputs: rowsOfInputs, // number of rows of the input matrices
             columnsOfInputs: columnsOfInputs, // number of columns of the input matrices
-            type: requiredType, // type of the output matrix
-            custom: serializableData // custom user-data
+            strideOfInputs: strideOfInputs, // strides of the input matrices
+            byteOffsetOfInputs: byteOffsetOfInputs, // used to recover the data view
+            lengthOfInputs: lengthOfInputs, // used to recover the data view
+
+            type: requiredType, // type of the output matrix (the same as the input matrices)
+            custom: userData // custom user-data
         };
 
         // save the input buffer(s)
-        this._inputs = inputs; // this is a Transferable[]
+        this._inputs = inputs;
+        this._inputBuffers = inputBuffers;
 
         // is it a valid opcode?
         if(undefined == (this._fun = MatrixMath.opcode2fun[this._opcode]))
@@ -95,9 +113,15 @@ export class MatrixOperation
      */
     runLocally(rows, columns, stride, type, output)
     {
+        // do we have a compatible output matrix?
         this._assertCompatibility(rows, columns, type);
-        this._header.stride = stride;
 
+        // save output metadata
+        this._header.stride = stride;
+        this._header.byteOffset = output.byteOffset; // unused
+        this._header.length = output.length; // unused
+
+        // run matrix operation
         return new Promise(resolve => {
             this._fun(this._header, output, this._inputs);
             resolve(output);
@@ -115,9 +139,15 @@ export class MatrixOperation
      */
     runSync(rows, columns, stride, type, output)
     {
+        // do we have a compatible output matrix?
         this._assertCompatibility(rows, columns, type);
-        this._header.stride = stride;
 
+        // save output metadata
+        this._header.stride = stride;
+        this._header.byteOffset = output.byteOffset; // unused
+        this._header.length = output.length; // unused
+
+        // run matrix operation
         this._fun(this._header, output, this._inputs);
         return output;
     }
@@ -168,11 +198,7 @@ export class MatrixOperationFill extends MatrixOperation
      */
     constructor(matrix, value)
     {
-        super(Opcode.FILL,
-            matrix.rows, matrix.columns, matrix.type,
-            undefined, undefined, undefined, undefined,
-            { value }
-        );
+        super(Opcode.FILL, matrix.rows, matrix.columns, matrix.type, [], { value });
     }
 }
 
@@ -187,9 +213,7 @@ export class MatrixOperationEye extends MatrixOperation
      */
     constructor(matrix)
     {
-        super(Opcode.EYE,
-            matrix.rows, matrix.columns, matrix.type
-        );
+        super(Opcode.EYE, matrix.rows, matrix.columns, matrix.type);
     }
 }
 
@@ -204,10 +228,7 @@ export class MatrixOperationTranspose extends MatrixOperation
      */
     constructor(matrix)
     {
-        super(Opcode.TRANSPOSE,
-            matrix.columns, matrix.rows, matrix.type,
-            [ matrix._buffer.data ], [ matrix.stride ]
-        );
+        super(Opcode.TRANSPOSE, matrix.columns, matrix.rows, matrix.type, [ matrix ]);
     }
 }
 
@@ -223,10 +244,7 @@ export class MatrixOperationAdd extends MatrixOperation
      */
     constructor(matrixA, matrixB)
     {
-        super(Opcode.ADD,
-            matrixA.rows, matrixA.columns, matrixA.type,
-            [ matrixA._buffer.data, matrixB._buffer.data ], [ matrixA.stride, matrixB.stride ]
-        );
+        super(Opcode.ADD, matrixA.rows, matrixA.columns, matrixA.type, [ matrixA, matrixB ]);
         this._assertCompatibility(matrixB.rows, matrixB.columns, matrixB.type);
     }
 }

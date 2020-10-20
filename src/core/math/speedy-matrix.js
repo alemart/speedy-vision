@@ -57,6 +57,8 @@ export class SpeedyMatrix
             throw new IllegalArgumentError(`Invalid dimensions`);
         else if(numChannels < 1 || numChannels > 4)
             throw new IllegalArgumentError(`Invalid number of channels`);
+        else if(stride < rows)
+            throw new IllegalArgumentError(`Invalid stride`);
         else if(dataType == undefined)
             throw new IllegalArgumentError(`Invalid data type`);
 
@@ -65,7 +67,7 @@ export class SpeedyMatrix
         this._type = type | 0;
         this._channels = numChannels;
         this._stride = stride | 0;
-        this._buffer = new MatrixBuffer(this._stride * this._columns * this._channels, values, type);
+        this._buffer = new MatrixBuffer(this._stride * this._columns * this._channels, values, this._type);
         this._pendingWriteOperations = 0; // number of pending operations that write to the buffer
         this._pendingAccessesQueue = []; // a list of Function<void> to be called as soon as there are no pending operations
         this._resolvePendingAccesses = this._resolvePendingAccesses.bind(this);
@@ -178,7 +180,7 @@ export class SpeedyMatrix
         return this.buffer().then(buffer => {
             const rows = this._rows, cols = this._columns;
             const stride = this._stride;
-            const data = buffer.data; // Transferable TypedArray
+            const data = buffer.data;
             const n = entries.length >> 1;
 
             // resize result array
@@ -225,7 +227,7 @@ export class SpeedyMatrix
             const stride = this._stride;
             const col = new Array(columns);
 
-            const data = buffer.data; // Transferable TypedArray
+            const data = buffer.data;
             for(let j = 0; j < columns; j++)
                 col[j] = data.subarray(j * stride, j * stride + rows);
 
@@ -235,8 +237,40 @@ export class SpeedyMatrix
         });
     }
 
-    submatrix()
+    /**
+     * Create a submatrix using the range [firstRow:lastRow, firstColumn:lastColumn].
+     * It will have size (lastRow - firstRow + 1) x (lastColumn - firstColumn + 1).
+     * The internal buffer of the matrix will be shared with the submatrix,
+     * so if you modify one, you'll modify the other.
+     * @param {number} firstRow indexed by 0
+     * @param {number} lastRow indexed by 0
+     * @param {number} firstColumn indexed by 0
+     * @param {number} lastColumn indexed by 0
+     * @returns {SpeedyMatrix}
+     */
+    block(firstRow, lastRow, firstColumn, lastColumn)
     {
+        const rows = this._rows, columns = this._columns;
+
+        // validate range
+        if(lastRow < firstRow || lastColumn < firstColumn)
+            throw new IllegalArgumentError(`Can't create empty submatrix - invalid range [${firstRow}:${lastRow}, ${firstColumn}:${lastColumn}]`);
+        else if(firstRow < 0 || lastRow >= rows || firstColumn < 0 || lastColumn >= columns)
+            throw new IllegalArgumentError(`Can't create submatrix - invalid range [${firstRow}:${lastRow}, ${firstColumn}:${lastColumn}] of ${rows} x ${columns} matrix`);
+
+        // compute the dimensions of the new submatrix
+        const subRows = lastRow - firstRow + 1;
+        const subColumns = lastColumn - firstColumn + 1;
+
+        // obtain the relevant portion of the data
+        const stride = this._stride;
+        const data = this._buffer.data.subarray(
+            firstColumn * stride + firstRow,
+            lastColumn * stride + firstRow + subRows
+        );
+
+        // create submatrix
+        return new SpeedyMatrix(subRows, subColumns, data, this._type, stride);
     }
 
 

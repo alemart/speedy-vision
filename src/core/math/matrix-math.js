@@ -91,7 +91,10 @@ class MatrixMath
         return this.zeros(header, output, inputs);
     }
 
-    // Types of matrices
+    /**
+     * Types of matrices
+     * @returns {object} enum
+     */
     static get MatrixType()
     {
         return this._MatrixType || (this._MatrixType = Object.freeze({

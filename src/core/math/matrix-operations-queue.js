@@ -33,6 +33,7 @@ export class MatrixOperationsQueue
     constructor()
     {
         this._queue = [];
+        this._busy = false;
     }
 
     /**
@@ -54,8 +55,10 @@ export class MatrixOperationsQueue
     {
         return new Promise(resolve => {
             this._queue.push({ matrixOperation, matrix, resolve });
-            if(this._queue.length == 1)
+            if(!this._busy) {
+                this._busy = true;
                 this._resolveAll();
+            }
         });
     }
 
@@ -64,9 +67,13 @@ export class MatrixOperationsQueue
      */
     _resolveAll()
     {
-        if(this._queue.length == 0)
+        // finished the processing?
+        if(this._queue.length == 0) {
+            this._busy = false;
             return;
+        }
 
+        // run the next command
         const { matrixOperation, matrix, resolve } = this._queue.shift();
 
         matrixOperation.run(
