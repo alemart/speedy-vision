@@ -30,10 +30,6 @@ class MatrixMath
     /**
      * No-operation
      * @param {object} header properties of the output matrix
-     * @param {number} header.rows number of rows of the output matrix
-     * @param {number} header.columns number of columns of the output matrix
-     * @param {number} header.type type of the output matrix (MatrixType enum)
-     * @param {object|null} header.custom custom user-data
      * @param {TypedArray} output output buffer (column-major format)
      * @param {TypedArray[]} inputs input buffer(s), 0 or more
      */
@@ -91,6 +87,14 @@ class MatrixMath
         return this.zeros(header, output, inputs);
     }
 
+
+
+
+
+    // ========================================================
+    // Enums & utilities
+    // ========================================================
+
     /**
      * Types of matrices
      * @returns {object} enum
@@ -98,16 +102,16 @@ class MatrixMath
     static get MatrixType()
     {
         return this._MatrixType || (this._MatrixType = Object.freeze({
-            F64: 0x0,         // 64-bit float, 1 channel
-            //F64C1: 0x0 | 0x0, // 64-bit float, 1 channel
-            //F64C2: 0x0 | 0x1, // 64-bit float, 2 channels
-            //F64C3: 0x0 | 0x2, // 64-bit float, 3 channels
-            //F64C4: 0x0 | 0x3, // 64-bit float, 4 channels
-            F32: 0x4,         // 32-bit float, 1 channel
-            //F32C1: 0x4 | 0x0, // 32-bit float, 1 channel
-            //F32C2: 0x4 | 0x1, // 32-bit float, 2 channels
-            //F32C3: 0x4 | 0x2, // 32-bit float, 3 channels
-            //F32C4: 0x4 | 0x3, // 32-bit float, 4 channels
+            F32: 0x0,         // 32-bit float, 1 channel
+            //F32C1: 0x0 | 0x0, // 32-bit float, 1 channel
+            //F32C2: 0x0 | 0x1, // 32-bit float, 2 channels
+            //F32C3: 0x0 | 0x2, // 32-bit float, 3 channels
+            //F32C4: 0x0 | 0x3, // 32-bit float, 4 channels
+            F64: 0x4,         // 64-bit float, 1 channel
+            //F64C1: 0x4 | 0x0, // 64-bit float, 1 channel
+            //F64C2: 0x4 | 0x1, // 64-bit float, 2 channels
+            //F64C3: 0x4 | 0x2, // 64-bit float, 3 channels
+            //F64C4: 0x4 | 0x3, // 64-bit float, 4 channels
             I32: 0x8,         // 32-bit signed integer, 1 channel
             //I32C1: 0x8 | 0x0, // 32-bit signed integer, 1 channel
             //I32C2: 0x8 | 0x1, // 32-bit signed integer, 2 channels
@@ -120,39 +124,65 @@ class MatrixMath
             //U8C4: 0xC | 0x3,  // 8-bit unsigned integer, 4 channels
         }));
     }
+
+    /**
+     * A mapping between MatrixTypes and TypedArrays
+     * @returns {object}
+     */
+    static get DataType()
+    {
+        return this._DataType || (this._DataType = Object.freeze({
+            [this.MatrixType.F32]: Float32Array,
+            [this.MatrixType.F64]: Float64Array,
+            [this.MatrixType.I32]: Int32Array,
+            [this.MatrixType.U8]:  Uint8Array,
+        }));
+    }
+
+    /**
+     * A mapping between MatrixTypes and descriptive strings
+     * @returns {object}
+     */
+    static get DataTypeName()
+    {
+        return this._DataTypeName || (this._DataTypeName = Object.freeze({
+            [this.MatrixType.F32]: 'float32',
+            [this.MatrixType.F64]: 'float64',
+            [this.MatrixType.I32]: 'int32',
+            [this.MatrixType.U8]:  'uint8',
+        }));
+    }
+
+    /**
+     * Each operation is mapped to a unique number, called an operation code
+     * @returns {object}
+     */
+    static get Opcode()
+    {
+        return this._Opcode || (this._Opcode = Object.freeze({
+            NOP: 0x0,        // no-operation
+            EYE: 0x1,        // identity matrix
+            FILL: 0x2,       // fill the matrix with a constant
+            TRANSPOSE: 0x3,  // transpose matrix
+            ADD: 0x4,        // add two matrices
+        }));
+    }
+
+    /**
+     * A mapping between operation codes and functions
+     * @returns {object}
+     */
+    static get Opcode2fun()
+    {
+        return this._Opcode2fun || (this._Opcode2fun = Object.freeze({
+            [this.Opcode.NOP]: this.nop,
+            [this.Opcode.EYE]: this.eye,
+            [this.Opcode.FILL]: this.fill,
+            [this.Opcode.TRANSPOSE]: this.transpose,
+            [this.Opcode.ADD]: this.add,
+        }));
+    }
 }
-
-
-
-
-//
-// Enums & types
-//
-
-// opcodes
-MatrixMath.OperationCode = Object.freeze({
-    NOP: 0x0,        // no-operation
-    EYE: 0X1,        // identity matrix
-    FILL: 0x2,       // fill the matrix with a constant
-    TRANSPOSE: 0x3,  // transpose matrix
-    ADD: 0x4,        // add two matrices
-});
-
-// Convert operation code to actual function
-MatrixMath.opcode2fun = Object.freeze({
-    [MatrixMath.OperationCode.NOP]: MatrixMath.nop,
-    [MatrixMath.OperationCode.EYE]: MatrixMath.eye,
-    [MatrixMath.OperationCode.FILL]: MatrixMath.fill,
-    [MatrixMath.OperationCode.TRANSPOSE]: MatrixMath.transpose,
-    [MatrixMath.OperationCode.ADD]: MatrixMath.add,
-});
-
-
-
-
-//
-// Export
-//
 
 if(typeof module !== 'undefined')
     module.exports = { MatrixMath };

@@ -22,20 +22,9 @@
 import { MatrixMath } from './matrix-math';
 import { IllegalArgumentError } from '../../utils/errors';
 
-const DataType = Object.freeze({
-    [MatrixMath.MatrixType.F64]: Float64Array,
-    [MatrixMath.MatrixType.F32]: Float32Array,
-    [MatrixMath.MatrixType.I32]: Int32Array,
-    [MatrixMath.MatrixType.U8]:  Uint8Array,
-});
-
-const DataTypeName = Object.freeze({
-    [MatrixMath.MatrixType.F64]: 'float64',
-    [MatrixMath.MatrixType.F32]: 'float32',
-    [MatrixMath.MatrixType.I32]: 'int32',
-    [MatrixMath.MatrixType.U8]:  'uint8',
-});
-
+// constants
+const MatrixType = MatrixMath.MatrixType;
+const DataType = MatrixMath.DataType;
 const TypedArray2DataType = Object.freeze(Object.keys(DataType).reduce(
     (obj, type) => Object.assign(obj, { [DataType[type].name]: type | 0 }),
 {}));
@@ -51,7 +40,7 @@ export class MatrixBuffer
      * @param {number[]|Float64Array|Float32Array|Int32Array|Uint8Array} [values] initial values in column-major format
      * @param {number} [type] the type of the elements of the matrix: F64, F32, etc.
      */
-    constructor(length, values = null, type = MatrixMath.MatrixType.F64)
+    constructor(length, values = null, type = MatrixType.F64)
     {
         length = length | 0;
 
@@ -84,23 +73,5 @@ export class MatrixBuffer
 
         // freeze object
         return Object.freeze(this);
-    }
-
-    /**
-     * DataType dictonary
-     * @returns {object}
-     */
-    static get DataType()
-    {
-        return DataType;
-    }
-
-    /**
-     * DataTypeName dictonary
-     * @returns {object}
-     */
-    static get DataTypeName()
-    {
-        return DataTypeName;
     }
 }

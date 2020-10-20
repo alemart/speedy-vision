@@ -22,7 +22,10 @@
 import { IllegalArgumentError, IllegalOperationError } from '../../utils/errors';
 import { SpeedyMatrix } from './speedy-matrix';
 import { MatrixMath } from './matrix-math';
-const Opcode = MatrixMath.OperationCode;
+
+// Constants
+const Opcode = MatrixMath.Opcode;
+const Opcode2fun = MatrixMath.Opcode2fun;
 
 
 /**
@@ -42,9 +45,6 @@ export class MatrixOperation
      */
     constructor(opcode, requiredRows, requiredColumns, requiredType, inputMatrices = [], userData = null)
     {
-        // store the operation code
-        this._opcode = opcode;
-
         // obtain the data of the input matrices
         const inputs = inputMatrices.map(matrix => matrix._buffer.data); // this is a TypedArray[]
         const inputBuffers = inputs.map(input => input.buffer); // this is an ArrayBuffer[]
@@ -62,6 +62,9 @@ export class MatrixOperation
         // the header stores metadata related to the operation
         // (all fields are serializable)
         this._header = {
+            opcode: opcode, // operation code
+            type: requiredType, // type of the output matrix (the same as the input matrices)
+
             rows: requiredRows, // number of rows of the output matrix
             columns: requiredColumns, // number of columns of the output matrix
             stride: null, // stride of the output matrix (unknown)
@@ -74,7 +77,6 @@ export class MatrixOperation
             byteOffsetOfInputs: byteOffsetOfInputs, // used to recover the data view
             lengthOfInputs: lengthOfInputs, // used to recover the data view
 
-            type: requiredType, // type of the output matrix (the same as the input matrices)
             custom: userData // custom user-data
         };
 
@@ -83,7 +85,7 @@ export class MatrixOperation
         this._inputBuffers = inputBuffers;
 
         // is it a valid opcode?
-        if(undefined == (this._fun = MatrixMath.opcode2fun[this._opcode]))
+        if(undefined == (this._fun = Opcode2fun[opcode]))
             throw new IllegalArgumentError(`Invalid matrix operation (0x${opcode.toString(16)})`);
     }
 

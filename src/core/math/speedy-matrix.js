@@ -32,7 +32,9 @@ import {
     MatrixOperationAdd,
 } from './matrix-operations';
 
-// Matrix Operations Queue
+// Constants
+const DataType = MatrixMath.DataType;
+const DataTypeName = MatrixMath.DataTypeName;
 const matrixOperationsQueue = MatrixOperationsQueue.instance;
 
 /**
@@ -50,7 +52,7 @@ export class SpeedyMatrix
      */
     constructor(rows, columns = rows, values = null, type = SpeedyFlags.F32, stride = rows)
     {
-        const dataType = MatrixBuffer.DataType[type & (~3)];
+        const dataType = DataType[type & (~3)];
         const numChannels = 1 + (type & 3);
 
         if(rows <= 0 || columns <= 0)
@@ -132,7 +134,7 @@ export class SpeedyMatrix
      */
     get dtype()
     {
-        return MatrixBuffer.DataTypeName[this._type & (~3)];
+        return DataTypeName[this._type & (~3)];
     }
 
 
