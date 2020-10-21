@@ -25,6 +25,7 @@ import { MatrixBuffer } from './matrix-buffer';
 import { MatrixMath } from './matrix-math';
 import { MatrixOperationsQueue } from './matrix-operations-queue';
 import {
+    MatrixOperation,
     MatrixOperationNop,
     MatrixOperationEye,
     MatrixOperationFill,
@@ -74,9 +75,8 @@ export class SpeedyMatrix
         this._channels = numChannels;
         this._stride = stride | 0;
         this._buffer = new MatrixBuffer(this._stride * this._columns * this._channels, values, this._type);
-        this._pendingWriteOperations = 0; // number of pending operations that write to the buffer
+        this._pendingOperations = 0; // number of pending operations that read from or write to the buffer
         this._pendingAccessesQueue = []; // a list of Function<void> to be called as soon as there are no pending operations
-        this._resolvePendingAccesses = this._resolvePendingAccesses.bind(this);
         this._nop = null;
     }
 
@@ -156,7 +156,7 @@ export class SpeedyMatrix
      */
     buffer()
     {
-        if(this._pendingWriteOperations > 0) {
+        if(this._pendingOperations > 0) {
             // we're not ready yet: there are calculations taking place...
             // we'll resolve this promise as soon as there are no pending calculations
             return new Promise(resolve => {
@@ -260,14 +260,15 @@ export class SpeedyMatrix
      */
     print()
     {
-        return this.buffer().then(buffer => {
+        return this.read().then(data => {
             const rows = this._rows, columns = this._columns;
-            const stride = this._stride;
             const col = new Array(columns);
 
-            const data = buffer.data;
-            for(let j = 0; j < columns; j++)
-                col[j] = data.subarray(j * stride, j * stride + rows);
+            for(let j = 0; j < columns; j++) {
+                col[j] = new Array(rows);
+                for(let i = 0; i < rows; i++)
+                    col[j][i] = data[j * columns + i];
+            }
 
             const fmt = col.map(c => '    ' + c.toString()).join(',\n');
             const str = `SpeedyMatrix(rows=${rows}, cols=${columns}, dtype="${this.dtype}", data=[\n${fmt}\n])`;
@@ -335,8 +336,8 @@ export class SpeedyMatrix
      */
     _resolvePendingAccesses()
     {
-        if(--this._pendingWriteOperations <= 0) {
-            this._pendingWriteOperations = 0;
+        if(--this._pendingOperations <= 0) {
+            this._pendingOperations = 0;
             this._pendingAccessesQueue.forEach(fn => fn());
             //console.log(`Called ${this._pendingAccessesQueue.length} pending accesses!`);
             this._pendingAccessesQueue.length = 0;
@@ -361,8 +362,15 @@ export class SpeedyMatrix
      */
     assign(matrixOperation)
     {
-        ++this._pendingWriteOperations;
-        matrixOperationsQueue.enqueue(matrixOperation, this).then(this._resolvePendingAccesses);
+        if(!(matrixOperation instanceof MatrixOperation))
+            throw new IllegalArgumentError(`SpeedyMatrix.assign() requires a MatrixOperation`);
+
+        ++this._pendingOperations;
+        matrixOperation.matrices.forEach(m => ++m._pendingOperations);
+        matrixOperationsQueue.enqueue(matrixOperation, this).then(() => {
+            matrixOperation.matrices.forEach(m => m._resolvePendingAccesses());
+            this._resolvePendingAccesses();
+        });
 
         return this;
     }

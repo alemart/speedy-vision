@@ -64,6 +64,7 @@ class MatrixMath
     // Fill matrix with a constant
     static fill(header, output, inputs)
     {
+        // FIXME: what if stride != rows? two cases ...
         output.fill(header.custom.value);
     }
 
@@ -84,14 +85,12 @@ class MatrixMath
     static add(header, output, inputs)
     {
         const { rows, columns, stride } = header;
+        const [ strideA, strideB ] = header.strideOfInputs;
         const [ a, b ] = inputs;
-        let k;
 
         for(let j = 0; j < columns; j++) {
-            for(let i = 0; i < rows; i++) {
-                k = j * stride + i;
-                output[k] = a[k] + b[k];
-            }
+            for(let i = 0; i < rows; i++)
+                output[j * stride + i] = a[j * strideA + i] + b[j * strideB + i];
         }
     }
 
@@ -192,5 +191,4 @@ class MatrixMath
     }
 }
 
-if(typeof module !== 'undefined')
-    module.exports = { MatrixMath };
+module.exports = { MatrixMath };

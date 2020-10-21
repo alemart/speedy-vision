@@ -22,10 +22,16 @@
 import { IllegalArgumentError, IllegalOperationError } from '../../utils/errors';
 import { SpeedyMatrix } from './speedy-matrix';
 import { MatrixMath } from './matrix-math';
+import { MatrixWorker } from './matrix-worker';
 
 // Constants
 const Opcode = MatrixMath.Opcode;
 const Opcode2fun = MatrixMath.Opcode2fun;
+const SMALL_WORKLOAD = 30; // how much is "small"? further experimental testing is desirable
+                           // a binary operation for 3x3 matrices, e.g. C = A + B
+
+// Worker
+const matrixWorker = MatrixWorker.instance;
 
 
 /**
@@ -45,19 +51,13 @@ export class MatrixOperation
      */
     constructor(opcode, requiredRows, requiredColumns, requiredType, inputMatrices = [], userData = null)
     {
-        // obtain the data of the input matrices
-        const inputs = inputMatrices.map(matrix => matrix._buffer.data); // this is a TypedArray[]
-        const inputBuffers = inputs.map(input => input.buffer); // this is an ArrayBuffer[]
-        const hasInput = inputs.length > 0; // a handy var, so we won't create unneeded arrays
+        // a handy var, so we won't create unneeded arrays
+        const hasInput = inputMatrices.length > 0;
 
         // obtain the shape of the input matrices
         const rowsOfInputs = hasInput && inputMatrices.map(matrix => matrix.rows);
         const columnsOfInputs = hasInput && inputMatrices.map(matrix => matrix.columns);
         const strideOfInputs = hasInput && inputMatrices.map(matrix => matrix.stride);
-
-        // these are used to recover the TypedArrays from the ArrayBuffers
-        const byteOffsetOfInputs = hasInput && inputs.map(input => input.byteOffset);
-        const lengthOfInputs = hasInput && inputs.map(input => input.length);
 
         // the header stores metadata related to the operation
         // (all fields are serializable)
@@ -74,15 +74,20 @@ export class MatrixOperation
             rowsOfInputs: rowsOfInputs, // number of rows of the input matrices
             columnsOfInputs: columnsOfInputs, // number of columns of the input matrices
             strideOfInputs: strideOfInputs, // strides of the input matrices
-            byteOffsetOfInputs: byteOffsetOfInputs, // used to recover the data view
-            lengthOfInputs: lengthOfInputs, // used to recover the data view
+            byteOffsetOfInputs: null, // used to recover the data view (to be determined later - buffer may be locked)
+            lengthOfInputs: null, // used to recover the data view (to be determined layer - buffer may be locked)
 
             custom: userData // custom user-data
         };
 
-        // save the input buffer(s)
-        this._inputs = inputs;
-        this._inputBuffers = inputBuffers;
+        // save the data type
+        this._dataType = MatrixMath.DataType[requiredType];
+
+        // save the input matrices
+        this._inputMatrices = inputMatrices;
+
+        // compute a measure of (a fraction of) the workload of this operation
+        this._workloadOfInputs = inputMatrices.reduce((w, m) => w + this._workload(m), 0);
 
         // is it a valid opcode?
         if(undefined == (this._fun = Opcode2fun[opcode]))
@@ -90,66 +95,116 @@ export class MatrixOperation
     }
 
     /**
-     * Run matrix operation
-     * @param {number} rows number of rows of the output matrix
-     * @param {number} columns number of columns of the output matrix
-     * @param {number} stride stride of the output matrix
-     * @param {number} type MatrixType enum - type of the output matrix
-     * @param {TypedArray} output output buffer
+     * Run the matrix operation in a Web Worker
+     * @param {SpeedyMatrix} outputMatrix
      * @returns {Promise<void>} a promise that resolves to outbuf as soon as the operation is completed
      */
-    run(rows, columns, stride, type, output)
+    run(outputMatrix)
     {
-        // TODO
-        return this.runLocally(rows, columns, stride, type, output);
+        // run locally if the matrices are "small enough"
+        const workload = this._workloadOfInputs + this._workload(outputMatrix);
+        console.log("WORKLOAD", workload);
+        if(0)
+        if(workload <= SMALL_WORKLOAD) {
+            // there's an overhead for passing data
+            // back and forth to the Web Worker, and
+            // we don't want to pay it if we're
+            // dealing with "small" matrices
+            return this.runLocally(outputMatrix);
+        }
+
+        // obtain properties of the output matrix
+        const { rows, columns, stride, type } = outputMatrix;
+
+        // do we have a compatible output matrix?
+        this._assertCompatibility(rows, columns, type);
+
+        // save output metadata
+        const output = outputMatrix._buffer.data;
+        this._header.stride = stride;
+        this._header.byteOffset = output.byteOffset;
+        this._header.length = output.length;
+
+        // save input metadata
+        const inputs = this._inputMatrices.map(inputMatrix => inputMatrix._buffer.data);
+        if(this._header.byteOffsetOfInputs === null)
+            this._header.byteOffsetOfInputs = inputs.map(input => input.byteOffset);
+        if(this._header.lengthOfInputs === null)
+            this._header.lengthOfInputs = inputs.map(input => input.length);
+
+        // run matrix operation
+        return matrixWorker.run(
+            this._header,
+            output.buffer,
+            inputs.map(input => input.buffer)
+        ).then(([outputBuffer, inputBuffers]) => {
+            const { byteOffset, length, byteOffsetOfInputs, lengthOfInputs } = this._header;
+            const dataType = this._dataType;
+
+            outputMatrix._buffer.data = new dataType(outputBuffer, byteOffset, length);
+            this._inputMatrices.forEach((inputMatrix, i) =>
+                inputMatrix._buffer.data = new dataType(inputBuffers[i], byteOffsetOfInputs[i], lengthOfInputs[i])
+            );
+            console.log("volteeeeei", outputBuffer, outputMatrix._buffer.data);
+        });
     }
 
     /**
      * Run matrix operation in the same thread
-     * @param {number} rows number of rows of the output matrix
-     * @param {number} columns number of columns of the output matrix
-     * @param {number} stride stride of the output matrix
-     * @param {number} type MatrixType enum - type of the output matrix
-     * @param {TypedArray} output output buffer
+     * @param {SpeedyMatrix} outputMatrix
      * @returns {Promise<void>} a promise that resolves to outbuf as soon as the operation is completed
      */
-    runLocally(rows, columns, stride, type, output)
+    runLocally(outputMatrix)
     {
+        // obtain properties of the output matrix
+        const { rows, columns, stride, type } = outputMatrix;
+        const output = outputMatrix._buffer.data;
+
         // do we have a compatible output matrix?
         this._assertCompatibility(rows, columns, type);
 
         // save output metadata
         this._header.stride = stride;
-        this._header.byteOffset = output.byteOffset; // unused
-        this._header.length = output.length; // unused
+        //this._header.byteOffset = output.byteOffset; // unused
+        //this._header.length = output.length; // unused
 
         // run matrix operation
         return new Promise(resolve => {
-            this._fun(this._header, output, this._inputs);
+            this._fun(this._header, output, this._inputMatrices.map(inputMatrix => inputMatrix._buffer.data));
             resolve();
         });
     }
 
     /**
      * Run the matrix operation synchronously, in the same thread
-     * @param {number} rows number of rows of the output matrix
-     * @param {number} columns number of columns of the output matrix
-     * @param {number} stride stride of the output matrix
-     * @param {number} type MatrixType enum - type of the output matrix
-     * @param {TypedArray} output output buffer
+     * @param {SpeedyMatrix} outputMatrix
      */
-    runSync(rows, columns, stride, type, output)
+    runSync(outputMatrix)
     {
+        // obtain properties of the output matrix
+        const { rows, columns, stride, type } = outputMatrix;
+        const output = outputMatrix._buffer.data;
+
         // do we have a compatible output matrix?
         this._assertCompatibility(rows, columns, type);
 
         // save output metadata
         this._header.stride = stride;
-        this._header.byteOffset = output.byteOffset; // unused
-        this._header.length = output.length; // unused
+        //this._header.byteOffset = output.byteOffset; // unused
+        //this._header.length = output.length; // unused
 
         // run matrix operation
-        this._fun(this._header, output, this._inputs);
+        this._fun(this._header, output, this._inputMatrices.map(inputMatrix => inputMatrix._buffer.data));
+    }
+
+    /**
+     * The matrices that belong to the operation,
+     * with the exception of the output matrix
+     * @returns {SpeedyMatrix[]}
+     */
+    get matrices()
+    {
+        return this._inputMatrices;
     }
 
     /**
@@ -168,6 +223,16 @@ export class MatrixOperation
             throw new IllegalOperationError(`Incompatible matrix type (0x${requiredType.toString(16)} vs 0x${type.toString(16)})`);
         else
             throw new IllegalOperationError(`Invalid matrix size: ${rows} x ${columns} (expected ${requiredRows} x ${requiredColumns})`);
+    }
+
+    /**
+     * Compute a measure of the workload of an operation involving this matrix
+     * @param {SpeedyMatrix} matrix
+     * @returns {number}
+     */
+    _workload(matrix)
+    {
+        return matrix.rows * matrix.columns;
     }
 }
 

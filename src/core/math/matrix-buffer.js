@@ -42,6 +42,7 @@ export class MatrixBuffer
      */
     constructor(length, values = null, type = MatrixType.F64)
     {
+        let data;
         length = length | 0;
 
         // type inference
@@ -57,21 +58,29 @@ export class MatrixBuffer
 
         // allocate new TypedArray
         if(values == null)
-            values = new dataType(length);
+            data = new dataType(length);
         else if(Array.isArray(values))
-            values = new dataType(values);
+            data = new dataType(values);
+        else
+            data = values;
 
         // check if it's a proper TypedArray
-        if(!(values.buffer instanceof ArrayBuffer))
+        if(!(data.buffer instanceof ArrayBuffer))
             throw new IllegalArgumentError(`Invalid matrix type`);
-        else if(values.length > length)
+        else if(data.length > length)
             throw new IllegalArgumentError(`Incorrect matrix length`);
 
         // store data
-        this.type = type & (~3); // F64, F32, etc.
-        this.data = values; // a reference to the TypedArray
+        this._type = type & (~3); // F64, F32, etc.
+        this.data = data; // a reference to the TypedArray
+    }
 
-        // freeze object
-        return Object.freeze(this);
+    /**
+     * Data type
+     * @returns {number}
+     */
+    get type()
+    {
+        return this._type;
     }
 }

@@ -73,16 +73,12 @@ export class MatrixOperationsQueue
             return;
         }
 
-        // run the next operation
+        // obtain the next operation
         const { matrixOperation, matrix, resolve } = this._queue.shift();
 
-        matrixOperation.run(
-            matrix.rows,
-            matrix.columns,
-            matrix.stride,
-            matrix.type,
-            matrix._buffer.data
-        ).then(() => {
+        // run the next operation
+        console.log('vou rodar comando', matrixOperation, matrix);
+        matrixOperation.run(matrix).then(() => {
             resolve();
             this._resolveAll();
         });
