@@ -157,7 +157,7 @@ export class MatrixOperation
             // back and forth to the Web Worker, and
             // we don't want to pay it if we're
             // dealing with "small" matrices
-            return this.runLocally(outputMatrix);
+            return this._runLocally(outputMatrix);
         }
 
         // obtain properties of the output matrix
@@ -198,7 +198,7 @@ export class MatrixOperation
      * @param {SpeedyMatrix} outputMatrix
      * @returns {Promise<void>} a promise that resolves to outbuf as soon as the operation is completed
      */
-    runLocally(outputMatrix)
+    _runLocally(outputMatrix)
     {
         // obtain properties of the output matrix
         const { rows, columns, stride, type } = outputMatrix;

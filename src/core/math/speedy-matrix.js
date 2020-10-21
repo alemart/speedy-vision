@@ -70,6 +70,8 @@ export class SpeedyMatrix
             throw new IllegalArgumentError(`Invalid stride`);
         else if(dataType == undefined)
             throw new IllegalArgumentError(`Invalid data type`);
+        else if(Array.isArray(values) && values.length != rows * columns * numChannels)
+            throw new IllegalArgumentError(`Incorrect number of matrix elements`);
 
         this._rows = rows | 0;
         this._columns = columns | 0;
