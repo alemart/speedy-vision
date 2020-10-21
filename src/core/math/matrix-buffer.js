@@ -133,19 +133,20 @@ export class MatrixBuffer
      */
     lock(ascend = true)
     {
+        let my = this;
+
         // climb the tree
-        if(this._parent && ascend) {
-            this._parent.lock(true);
-            return;
+        if(my._parent && ascend) {
+            do { my = my._parent; } while(my._parent);
         }
 
         // lock this buffer
-        ++this._pendingOperations;
+        ++my._pendingOperations;
 
         // broadcast
-        if(this._children.length) {
-            for(let i = 0; i < this._children.length; i++)
-                this._children[i].lock(false);
+        if(my._children.length) {
+            for(let i = 0; i < my._children.length; i++)
+                my._children[i].lock(false);
         }
     }
 
@@ -155,25 +156,26 @@ export class MatrixBuffer
      */
     unlock(ascend = true)
     {
+        let my = this;
+
         // climb the tree
-        if(this._parent && ascend) {
-            this._parent.unlock(true);
-            return;
+        if(my._parent && ascend) {
+            do { my = my._parent; } while(my._parent);
         }
 
         // unlock this buffer
-        if(--this._pendingOperations <= 0) {
-            this._pendingOperations = 0;
-            for(let i = 0; i < this._pendingAccessesQueue.length; i++)
-                this._pendingAccessesQueue[i].call(this);
-            //console.log(`Called ${this._pendingAccessesQueue.length} pending accesses!`);
-            this._pendingAccessesQueue.length = 0;
+        if(--my._pendingOperations <= 0) {
+            my._pendingOperations = 0;
+            for(let i = 0; i < my._pendingAccessesQueue.length; i++)
+                my._pendingAccessesQueue[i].call(my);
+            //console.log(`Called ${my._pendingAccessesQueue.length} pending accesses!`);
+            my._pendingAccessesQueue.length = 0;
         }
 
         // broadcast
-        if(this._children.length) {
-            for(let i = 0; i < this._children.length; i++)
-                this._children[i].unlock(false);
+        if(my._children.length) {
+            for(let i = 0; i < my._children.length; i++)
+                my._children[i].unlock(false);
         }
     }
 
@@ -184,20 +186,21 @@ export class MatrixBuffer
      */
     replace(arrayBuffer, ascend = true)
     {
+        let my = this;
+
         // climb the tree
-        if(this._parent && ascend) {
-            this._parent.replace(arrayBuffer, true);
-            return;
+        if(my._parent && ascend) {
+            do { my = my._parent; } while(my._parent);
         }
 
         // replace the internal buffer
-        const dataType = DataType[this._type];
-        this._data = new dataType(arrayBuffer, this._byteOffset, this._length);
+        const dataType = DataType[my._type];
+        my._data = new dataType(arrayBuffer, my._byteOffset, my._length);
 
         // broadcast
-        if(this._children.length) {
-            for(let i = 0; i < this._children.length; i++)
-                this._children[i].replace(arrayBuffer, false);
+        if(my._children.length) {
+            for(let i = 0; i < my._children.length; i++)
+                my._children[i].replace(arrayBuffer, false);
         }
     }
 
