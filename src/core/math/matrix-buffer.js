@@ -20,7 +20,7 @@
  */
 
 import { MatrixMath } from './matrix-math';
-import { IllegalArgumentError } from '../../utils/errors';
+import { IllegalArgumentError, IllegalOperationError } from '../../utils/errors';
 
 // constants
 const MatrixType = MatrixMath.MatrixType;
@@ -165,11 +165,23 @@ export class MatrixBuffer
 
         // unlock this buffer
         if(--my._pendingOperations <= 0) {
+            const callbackQueue = my._pendingAccessesQueue.slice(0); // fast clone
+
             my._pendingOperations = 0;
-            for(let i = 0; i < my._pendingAccessesQueue.length; i++)
-                my._pendingAccessesQueue[i].call(my);
-            //console.log(`Called ${my._pendingAccessesQueue.length} pending accesses!`);
             my._pendingAccessesQueue.length = 0;
+
+            for(let i = 0; i < callbackQueue.length; i++) {
+                // if the buffer has been locked again, put the functions back in the queue
+                if(my._pendingOperations > 0) {
+                    for(let j = callbackQueue.length - 1; j >= i; j--) {
+                        my._pendingAccessesQueue.unshift(callbackQueue[j]);
+                    }
+                    break;
+                }
+
+                // if the buffer remains unlocked, we're cool
+                callbackQueue[i].call(my);
+            }
         }
 
         // broadcast
@@ -192,6 +204,10 @@ export class MatrixBuffer
         if(my._parent && ascend) {
             do { my = my._parent; } while(my._parent);
         }
+
+        // error if unlocked
+        if(my._pendingOperations == 0)
+            throw new IllegalOperationError(`Can't replace MatrixBuffer when it's unlocked`);
 
         // replace the internal buffer
         const dataType = DataType[my._type];
