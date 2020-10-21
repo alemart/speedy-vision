@@ -238,15 +238,15 @@ export class SpeedyMatrix
     {
         return this.read().then(data => {
             const rows = this._rows, columns = this._columns;
-            const col = new Array(columns);
+            const row = new Array(rows);
 
-            for(let j = 0; j < columns; j++) {
-                col[j] = new Array(rows);
-                for(let i = 0; i < rows; i++)
-                    col[j][i] = data[j * rows + i];
+            for(let i = 0; i < rows; i++) {
+                row[i] = new Array(columns);
+                for(let j = 0; j < columns; j++)
+                    row[i][j] = data[j * rows + i];
             }
 
-            const fmt = col.map(c => '    ' + c.toString()).join(',\n');
+            const fmt = row.map(r => '    ' + r.join(', ')).join(',\n');
             const str = `SpeedyMatrix(rows=${rows}, cols=${columns}, dtype="${this.dtype}", data=[\n${fmt}\n])`;
             console.log(str);
         });
@@ -286,6 +286,28 @@ export class SpeedyMatrix
         return this._buffer.createSharedBuffer(begin, length).then(sharedBuffer =>
             new SpeedyMatrix(subRows, subColumns, null, this._type, stride, sharedBuffer)
         );
+    }
+
+    /**
+     * Get the i-th row. The internal buffer will be shared,
+     * so if you change one you change the other
+     * @param {number} i in { 0, 1, ..., rows - 1 }
+     * @returns {Promise<SpeedyMatrix>}
+     */
+    row(i)
+    {
+        return block(i, i, 0, this._columns - 1);
+    }
+
+    /**
+     * Get the j-th column. The internal buffer will be shared,
+     * so if you change one you change the other
+     * @param {number} j in { 0, 1, ..., columns - 1 }
+     * @returns {Promise<SpeedyMatrix>}
+     */
+    column(j)
+    {
+        return block(0, this._rows - 1, j, j);
     }
 
 
