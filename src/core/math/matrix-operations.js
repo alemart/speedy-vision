@@ -197,7 +197,7 @@ export class MatrixOperation
      * with the exception of the output matrix
      * @returns {SpeedyMatrix[]}
      */
-    get matrices()
+    get inputMatrices()
     {
         return this._inputMatrices;
     }

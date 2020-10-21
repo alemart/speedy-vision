@@ -330,15 +330,24 @@ export class SpeedyMatrix
     }
 
     /**
-     * Decrease the pending operations counter and
-     * resolves all pending accesses, if there are
-     * no more pending operations remaining
+     * Lock the internal buffer of this matrix,
+     * so it can't be read from nor written to
      */
-    _resolvePendingAccesses()
+    lock()
+    {
+        ++this._pendingOperations;
+    }
+
+    /**
+     * Unlocks the internal buffer of this matrix and
+     * resolves all pending read/write operations
+     */
+    unlock()
     {
         if(--this._pendingOperations <= 0) {
             this._pendingOperations = 0;
-            this._pendingAccessesQueue.forEach(fn => fn());
+            for(let i = 0; i < this._pendingAccessesQueue.length; i++)
+                (this._pendingAccessesQueue[i])();
             //console.log(`Called ${this._pendingAccessesQueue.length} pending accesses!`);
             this._pendingAccessesQueue.length = 0;
         }
@@ -365,13 +374,7 @@ export class SpeedyMatrix
         if(!(matrixOperation instanceof MatrixOperation))
             throw new IllegalArgumentError(`SpeedyMatrix.assign() requires a MatrixOperation`);
 
-        ++this._pendingOperations;
-        matrixOperation.matrices.forEach(m => ++m._pendingOperations);
-        matrixOperationsQueue.enqueue(matrixOperation, this).then(() => {
-            matrixOperation.matrices.forEach(m => m._resolvePendingAccesses());
-            this._resolvePendingAccesses();
-        });
-
+        matrixOperationsQueue.enqueue(matrixOperation, this);
         return this;
     }
 
