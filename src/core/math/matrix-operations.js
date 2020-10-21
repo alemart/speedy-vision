@@ -118,6 +118,16 @@ export class MatrixOperation
         return this._header.type;
     }
 
+    /**
+     * Create a new Matrix and store in it the result of this operation
+     * @returns {SpeedyMatrix}
+     */
+    toMatrix()
+    {
+        const matrix = new SpeedyMatrix(this.rows, this.columns, undefined, this.type);
+        return matrix.assign(this);
+    }
+
 
 
 
