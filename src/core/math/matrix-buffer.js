@@ -39,8 +39,9 @@ export class MatrixBuffer
      * @param {number} length number of elements of the buffer
      * @param {number[]|Float64Array|Float32Array|Int32Array|Uint8Array} [values] initial values in column-major format
      * @param {number} [type] the type of the elements of the matrix: F64, F32, etc.
+     * @param {MatrixBuffer} [parent] the buffer that originated this one, if any
      */
-    constructor(length, values = null, type = MatrixType.F64)
+    constructor(length, values = null, type = MatrixType.F64, parent = null)
     {
         let data;
         length = length | 0;
@@ -80,6 +81,7 @@ export class MatrixBuffer
         this._pendingOperations = 0; // number of pending operations that read from or write to the buffer
         this._pendingAccessesQueue = []; // a list of Function<void> to be called as soon as there are no pending operations
         this._children = []; // a list of MatrixBuffers that share their internal memory with this one
+        this._parent = parent; // the buffer that originated this one, if any
     }
 
     /**
@@ -127,22 +129,39 @@ export class MatrixBuffer
 
     /**
      * Lock the buffer, so it can't be read from nor written to
+     * @param {boolean} [ascend] internal
      */
-    lock()
+    lock(ascend = true)
     {
+        // climb the tree
+        if(this._parent && ascend) {
+            this._parent.lock(true);
+            return;
+        }
+
+        // lock this buffer
         ++this._pendingOperations;
 
+        // broadcast
         if(this._children.length) {
             for(let i = 0; i < this._children.length; i++)
-                this._children[i].lock();
+                this._children[i].lock(false);
         }
     }
 
     /**
      * Unlock the buffer and resolve all pending read/write operations
+     * @param {boolean} [ascend] internal
      */
-    unlock()
+    unlock(ascend = true)
     {
+        // climb the tree
+        if(this._parent && ascend) {
+            this._parent.unlock(true);
+            return;
+        }
+
+        // unlock this buffer
         if(--this._pendingOperations <= 0) {
             this._pendingOperations = 0;
             for(let i = 0; i < this._pendingAccessesQueue.length; i++)
@@ -151,26 +170,34 @@ export class MatrixBuffer
             this._pendingAccessesQueue.length = 0;
         }
 
+        // broadcast
         if(this._children.length) {
             for(let i = 0; i < this._children.length; i++)
-                this._children[i].unlock();
+                this._children[i].unlock(false);
         }
     }
 
     /**
      * Replace the internal buffer of the internal TypedArray
      * @param {ArrayBuffer} arrayBuffer
+     * @param {boolean} [ascend] internal
      */
-    replace(arrayBuffer)
+    replace(arrayBuffer, ascend = true)
     {
+        // climb the tree
+        if(this._parent && ascend) {
+            this._parent.replace(arrayBuffer, true);
+            return;
+        }
+
+        // replace the internal buffer
         const dataType = DataType[this._type];
-        const data = new dataType(arrayBuffer, this._byteOffset, this._length);
+        this._data = new dataType(arrayBuffer, this._byteOffset, this._length);
 
-        this._data = data;
-
+        // broadcast
         if(this._children.length) {
             for(let i = 0; i < this._children.length; i++)
-                this._children[i].replace(arrayBuffer);
+                this._children[i].replace(arrayBuffer, false);
         }
     }
 
@@ -186,7 +213,7 @@ export class MatrixBuffer
             const end = Math.min(begin + length, this._length);
             const data = this._data.subarray(begin, end);
 
-            const sharedBuffer = new MatrixBuffer(length, data, this._type);
+            const sharedBuffer = new MatrixBuffer(length, data, this._type, this);
             this._children.push(sharedBuffer);
 
             return sharedBuffer;

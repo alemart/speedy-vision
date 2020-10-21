@@ -283,8 +283,8 @@ export class SpeedyMatrix
         const length = (lastColumn - firstColumn) * stride + subRows;
 
         // create submatrix
-        return this._buffer.createSharedBuffer(begin, length).then(buffer =>
-            new SpeedyMatrix(subRows, subColumns, null, this._type, stride, buffer)
+        return this._buffer.createSharedBuffer(begin, length).then(sharedBuffer =>
+            new SpeedyMatrix(subRows, subColumns, null, this._type, stride, sharedBuffer)
         );
     }
 
