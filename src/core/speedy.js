@@ -27,6 +27,7 @@ import { SpeedyFeatureTrackerFactory } from './speedy-feature-tracker-factory';
 import { SpeedyFlags } from './speedy-flags';
 import { SpeedyVector2 } from './math/speedy-vector';
 import { SpeedyMatrix } from './math/speedy-matrix';
+import { IllegalArgumentError } from '../utils/errors';
 
 /**
  * Speedy's main class
@@ -121,6 +122,9 @@ export class Speedy
      */
     static Matrix(rows, columns = rows, values = undefined, type = undefined)
     {
+        if(values !== undefined && !Array.isArray(values))
+            throw new IllegalArgumentError(`Can't initialize Matrix with values ${values}`);
+
         return new SpeedyMatrix(rows, columns, values, type);
     }
 }
