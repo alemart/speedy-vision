@@ -54,8 +54,9 @@ export class SpeedyMatrix
      * @param {number[]} [values] initial values in column-major format
      * @param {number} [type] F64, F32, etc.
      * @param {number} [stride] custom stride
+     * @param {MatrixBuffer} [buffer] custom buffer
      */
-    constructor(rows, columns = rows, values = null, type = SpeedyFlags.F32, stride = rows)
+    constructor(rows, columns = rows, values = null, type = SpeedyFlags.F32, stride = rows, buffer = null)
     {
         const dataType = DataType[type & (~3)];
         const numChannels = 1 + (type & 3);
@@ -74,7 +75,7 @@ export class SpeedyMatrix
         this._type = type | 0;
         this._channels = numChannels;
         this._stride = stride | 0;
-        this._buffer = new MatrixBuffer(this._stride * this._columns * this._channels, values, this._type);
+        this._buffer = buffer || new MatrixBuffer(this._stride * this._columns * this._channels, values, this._type);
         this._nop = null;
     }
 
@@ -260,7 +261,7 @@ export class SpeedyMatrix
      * @param {number} lastRow indexed by 0
      * @param {number} firstColumn indexed by 0
      * @param {number} lastColumn indexed by 0
-     * @returns {SpeedyMatrix}
+     * @returns {Promise<SpeedyMatrix>}
      */
     block(firstRow, lastRow, firstColumn, lastColumn)
     {
@@ -278,13 +279,13 @@ export class SpeedyMatrix
 
         // obtain the relevant portion of the data
         const stride = this._stride;
-        const data = this._buffer.data.subarray(
-            firstColumn * stride + firstRow,
-            lastColumn * stride + firstRow + subRows
-        );
+        const begin = firstColumn * stride + firstRow;
+        const length = (lastColumn - firstColumn) * stride + subRows;
 
         // create submatrix
-        return new SpeedyMatrix(subRows, subColumns, data, this._type, stride);
+        return this._buffer.createSharedBuffer(begin, length).then(buffer =>
+            new SpeedyMatrix(subRows, subColumns, null, this._type, stride, buffer)
+        );
     }
 
 
