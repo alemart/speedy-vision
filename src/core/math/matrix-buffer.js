@@ -79,6 +79,7 @@ export class MatrixBuffer
         // concurrency control
         this._pendingOperations = 0; // number of pending operations that read from or write to the buffer
         this._pendingAccessesQueue = []; // a list of Function<void> to be called as soon as there are no pending operations
+        this._children = []; // a list of MatrixBuffers that share their internal memory with this one
     }
 
     /**
@@ -92,6 +93,7 @@ export class MatrixBuffer
 
     /**
      * Get the internal TypedArray that holds the entries of the Matrix
+     * Make sure the buffer is ready() before accessing this property
      * @returns {Float32Array|Float64Array|Int32Array|Uint8Array}
      */
     get data()
@@ -129,6 +131,11 @@ export class MatrixBuffer
     lock()
     {
         ++this._pendingOperations;
+
+        if(this._children.length) {
+            for(let i = 0; i < this._children.length; i++)
+                this._children[i].lock();
+        }
     }
 
     /**
@@ -143,21 +150,46 @@ export class MatrixBuffer
             //console.log(`Called ${this._pendingAccessesQueue.length} pending accesses!`);
             this._pendingAccessesQueue.length = 0;
         }
+
+        if(this._children.length) {
+            for(let i = 0; i < this._children.length; i++)
+                this._children[i].unlock();
+        }
     }
 
     /**
      * Replace the internal buffer of the internal TypedArray
      * @param {ArrayBuffer} arrayBuffer
-     * @param {number} [byteOffset]
-     * @param {number} [length] number of elements of the TypedArray
      */
-    replace(arrayBuffer, byteOffset = this._byteOffset, length = this._length)
+    replace(arrayBuffer)
     {
         const dataType = DataType[this._type];
-        const data = new dataType(arrayBuffer, byteOffset, length);
+        const data = new dataType(arrayBuffer, this._byteOffset, this._length);
 
         this._data = data;
-        this._byteOffset = data.byteOffset;
-        this._length = data.length;
+
+        if(this._children.length) {
+            for(let i = 0; i < this._children.length; i++)
+                this._children[i].replace(arrayBuffer);
+        }
+    }
+
+    /**
+     * Create a MatrixBuffer that shares its internal memory with this one
+     * @param {number} [begin] index of the first element of the TypedArray
+     * @param {number} [length] number of elements of the TypedArray
+     * @returns {Promise<MatrixBuffer>}
+     */
+    createSharedBuffer(begin = 0, length = this._length)
+    {
+        return this.ready().then(() => {
+            const end = Math.min(begin + length, this._length);
+            const data = this._data.subarray(begin, end);
+
+            const sharedBuffer = new MatrixBuffer(length, data, this._type);
+            this._children.push(sharedBuffer);
+
+            return sharedBuffer;
+        });
     }
 }
