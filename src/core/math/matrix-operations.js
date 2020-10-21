@@ -92,6 +92,45 @@ export class MatrixOperation
     }
 
     /**
+     * The required number of rows of the output matrix
+     * @returns {number}
+     */
+    get rows()
+    {
+        return this._header.rows;
+    }
+
+    /**
+     * The required number of columns of the output matrix
+     * @returns {number}
+     */
+    get columns()
+    {
+        return this._header.columns;
+    }
+
+    /**
+     * The required type of the output matrix
+     * @returns {number}
+     */
+    get type()
+    {
+        return this._header.type;
+    }
+
+
+
+
+
+
+    // =======================================================
+
+
+
+
+
+
+    /**
      * Run the matrix operation in a Web Worker
      * The internal buffers of the input & the output matrices are assumed to be locked
      * @param {SpeedyMatrix} outputMatrix
