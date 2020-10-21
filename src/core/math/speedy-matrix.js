@@ -267,7 +267,7 @@ export class SpeedyMatrix
             for(let j = 0; j < columns; j++) {
                 col[j] = new Array(rows);
                 for(let i = 0; i < rows; i++)
-                    col[j][i] = data[j * columns + i];
+                    col[j][i] = data[j * rows + i];
             }
 
             const fmt = col.map(c => '    ' + c.toString()).join(',\n');
