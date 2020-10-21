@@ -75,6 +75,10 @@ export class MatrixBuffer
         this._byteOffset = data.byteOffset;
         this._length = data.length;
         this._data = data; // a reference to the TypedArray
+
+        // concurrency control
+        this._pendingOperations = 0; // number of pending operations that read from or write to the buffer
+        this._pendingAccessesQueue = []; // a list of Function<void> to be called as soon as there are no pending operations
     }
 
     /**
@@ -93,6 +97,52 @@ export class MatrixBuffer
     get data()
     {
         return this._data;
+    }
+
+    /**
+     * Wait for buffer readiness. Since the buffer holds
+     * a Transferable object, the data may or may not be
+     * available right now. The returned Promise will be
+     * resolved as soon as the buffer is available for
+     * reading and writing
+     * @returns {Promise<MatrixBuffer>}
+     */
+    ready()
+    {
+        if(this._pendingOperations > 0) {
+            // we're not ready yet: there are calculations taking place...
+            // we'll resolve this promise as soon as there are no pending calculations
+            return new Promise(resolve => {
+                this._pendingAccessesQueue.push(() => resolve(this));
+            });
+        }
+        else {
+            // we're ready to go!
+            // no pending operations
+            return Promise.resolve(this);
+        }
+    }
+
+    /**
+     * Lock the buffer, so it can't be read from nor written to
+     */
+    lock()
+    {
+        ++this._pendingOperations;
+    }
+
+    /**
+     * Unlock the buffer and resolve all pending read/write operations
+     */
+    unlock()
+    {
+        if(--this._pendingOperations <= 0) {
+            this._pendingOperations = 0;
+            for(let i = 0; i < this._pendingAccessesQueue.length; i++)
+                this._pendingAccessesQueue[i].call(this);
+            //console.log(`Called ${this._pendingAccessesQueue.length} pending accesses!`);
+            this._pendingAccessesQueue.length = 0;
+        }
     }
 
     /**

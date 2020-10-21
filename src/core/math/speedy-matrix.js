@@ -75,8 +75,6 @@ export class SpeedyMatrix
         this._channels = numChannels;
         this._stride = stride | 0;
         this._buffer = new MatrixBuffer(this._stride * this._columns * this._channels, values, this._type);
-        this._pendingOperations = 0; // number of pending operations that read from or write to the buffer
-        this._pendingAccessesQueue = []; // a list of Function<void> to be called as soon as there are no pending operations
         this._nop = null;
     }
 
@@ -148,29 +146,6 @@ export class SpeedyMatrix
     // ====================================
 
     /**
-     * Internal buffer. Since the internal buffer holds a
-     * Transferable object, the data may or may not be
-     * available right now. The returned Promise will be
-     * resolved as soon as the buffer is available for reading
-     * @returns {Promise<MatrixBuffer>}
-     */
-    buffer()
-    {
-        if(this._pendingOperations > 0) {
-            // we're not ready yet: there are calculations taking place...
-            // we'll resolve this promise as soon as there are no pending calculations
-            return new Promise(resolve => {
-                this._pendingAccessesQueue.push(() => resolve(this._buffer));
-            });
-        }
-        else {
-            // we're ready to go!
-            // no pending operations
-            return Promise.resolve(this._buffer);
-        }
-    }
-
-    /**
      * Read entries of the matrix. Note that this method is asynchronous.
      * It will read the data as soon as all relevant calculations have been
      * completed. Make sure you await.
@@ -191,7 +166,7 @@ export class SpeedyMatrix
         // read the entire array
         if(entries === undefined)
         {
-            return this.buffer().then(buffer => {
+            return this._buffer.ready().then(buffer => {
                 const data = buffer.data;
                 const n = rows * cols;
 
@@ -216,7 +191,7 @@ export class SpeedyMatrix
         if(entries.length % 2 > 0)
             throw new IllegalArgumentError(`Can't read matrix entries: missing index`);
 
-        return this.buffer().then(buffer => {
+        return this._buffer.ready().then(buffer => {
             const data = buffer.data;
             const n = entries.length >> 1;
 
@@ -330,12 +305,12 @@ export class SpeedyMatrix
     }
 
     /**
-     * Lock the internal buffer of this matrix,
+     * Locks the internal buffer of this matrix,
      * so it can't be read from nor written to
      */
     lock()
     {
-        ++this._pendingOperations;
+        this._buffer.lock();
     }
 
     /**
@@ -344,13 +319,7 @@ export class SpeedyMatrix
      */
     unlock()
     {
-        if(--this._pendingOperations <= 0) {
-            this._pendingOperations = 0;
-            for(let i = 0; i < this._pendingAccessesQueue.length; i++)
-                (this._pendingAccessesQueue[i])();
-            //console.log(`Called ${this._pendingAccessesQueue.length} pending accesses!`);
-            this._pendingAccessesQueue.length = 0;
-        }
+        this._buffer.unlock();
     }
 
     /**
