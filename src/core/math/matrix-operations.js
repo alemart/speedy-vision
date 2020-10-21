@@ -80,9 +80,6 @@ export class MatrixOperation
             custom: userData // custom user-data
         };
 
-        // save the data type
-        this._dataType = MatrixMath.DataType[requiredType];
-
         // save the input matrices
         this._inputMatrices = inputMatrices;
 
@@ -96,6 +93,7 @@ export class MatrixOperation
 
     /**
      * Run the matrix operation in a Web Worker
+     * The internal buffers of the input & the output matrices are assumed to be locked
      * @param {SpeedyMatrix} outputMatrix
      * @returns {Promise<void>} a promise that resolves to outbuf as soon as the operation is completed
      */
@@ -138,13 +136,10 @@ export class MatrixOperation
             output.buffer,
             inputs.map(input => input.buffer)
         ).then(([outputBuffer, inputBuffers]) => {
-            const { byteOffset, length, byteOffsetOfInputs, lengthOfInputs } = this._header;
-            const dataType = this._dataType;
-
-            outputMatrix._buffer.data = new dataType(outputBuffer, byteOffset, length);
-            this._inputMatrices.forEach((inputMatrix, i) =>
-                inputMatrix._buffer.data = new dataType(inputBuffers[i], byteOffsetOfInputs[i], lengthOfInputs[i])
-            );
+            // update the internal buffers with the new data
+            outputMatrix._buffer.replace(outputBuffer);
+            for(let i = 0; i < this._inputMatrices.length; i++)
+                this._inputMatrices[i]._buffer.replace(inputBuffers[i]);
             console.log("volteeeeei", outputBuffer, outputMatrix._buffer.data);
         });
     }

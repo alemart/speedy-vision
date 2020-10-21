@@ -72,7 +72,9 @@ export class MatrixBuffer
 
         // store data
         this._type = type & (~3); // F64, F32, etc.
-        this.data = data; // a reference to the TypedArray
+        this._byteOffset = data.byteOffset;
+        this._length = data.length;
+        this._data = data; // a reference to the TypedArray
     }
 
     /**
@@ -82,5 +84,30 @@ export class MatrixBuffer
     get type()
     {
         return this._type;
+    }
+
+    /**
+     * Get the internal TypedArray that holds the entries of the Matrix
+     * @returns {Float32Array|Float64Array|Int32Array|Uint8Array}
+     */
+    get data()
+    {
+        return this._data;
+    }
+
+    /**
+     * Replace the internal buffer of the internal TypedArray
+     * @param {ArrayBuffer} arrayBuffer
+     * @param {number} [byteOffset]
+     * @param {number} [length] number of elements of the TypedArray
+     */
+    replace(arrayBuffer, byteOffset = this._byteOffset, length = this._length)
+    {
+        const dataType = DataType[this._type];
+        const data = new dataType(arrayBuffer, byteOffset, length);
+
+        this._data = data;
+        this._byteOffset = data.byteOffset;
+        this._length = data.length;
     }
 }

@@ -48,13 +48,13 @@ export class MatrixOperationsQueue
     /**
      * Enqueue matrix operation
      * @param {MatrixOperation} matrixOperation 
-     * @param {SpeedyMatrix} matrix
+     * @param {SpeedyMatrix} outputMatrix
      * @returns {Promise<void>} a promise that resolves as soon as the operation is complete
      */
-    enqueue(matrixOperation, matrix)
+    enqueue(matrixOperation, outputMatrix)
     {
         return new Promise(resolve => {
-            this._queue.push({ matrixOperation, matrix, resolve });
+            this._queue.push([ matrixOperation, outputMatrix, resolve ]);
             if(!this._busy) {
                 this._busy = true;
                 this._resolveAll();
@@ -74,11 +74,10 @@ export class MatrixOperationsQueue
         }
 
         // obtain the next operation
-        const { matrixOperation, matrix, resolve } = this._queue.shift();
+        const [ matrixOperation, outputMatrix, resolve ] = this._queue.shift();
 
         // run the next operation
-        console.log('vou rodar comando', matrixOperation, matrix);
-        matrixOperation.run(matrix).then(() => {
+        matrixOperation.run(outputMatrix).then(() => {
             resolve();
             this._resolveAll();
         });

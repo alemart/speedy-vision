@@ -46,7 +46,7 @@ export class MatrixWorker
     constructor()
     {
         this._msgId = 0;
-        this._callbackTable = {};
+        this._callbackTable = new Map();
         this._worker = this._createWorker();
     }
 
@@ -62,17 +62,16 @@ export class MatrixWorker
         const id = (this._msgId + 1) & MAX_MESSAGE_ID;
 
         return new Promise(resolve => {
-            this._callbackTable[id] = (outputBuffer, inputBuffers) => {
-                delete this._callbackTable[id];
+            this._callbackTable.set(id, (outputBuffer, inputBuffers) => {
+                this._callbackTable.delete(id);
                 resolve([outputBuffer, inputBuffers]);
-            };
+            });
 
-            const transferables = [ outputBuffer, ...inputBuffers ];
-            const distinctTransferables = transferables.filter(
-                (x, i) => transferables.indexOf(x) === i // remove duplicates
+            const transferables = [ outputBuffer, ...inputBuffers ].filter(
+                (x, i, arr) => arr.indexOf(x) === i // remove duplicates
             );
-            const msg = { id, header, outputBuffer, inputBuffers };
-            this._worker.postMessage(msg, distinctTransferables);
+            const msg = { id, header, outputBuffer, inputBuffers, transferables };
+            this._worker.postMessage(msg, transferables);
         });
     }
 
@@ -91,9 +90,9 @@ export class MatrixWorker
         const worker = new Worker(URL.createObjectURL(blob));
         worker.onmessage = ev => {
             const msg = ev.data;
-            const resolve = this._callbackTable[msg.id];
+            const done = this._callbackTable.get(msg.id);
             console.warn('voltei do worker', msg, new Float32Array(msg.outputBuffer));
-            resolve(msg.outputBuffer, msg.inputBuffers);
+            done(msg.outputBuffer, msg.inputBuffers);
         };
         worker.onerror = ev => {
             throw new IllegalOperationError(`Worker error: ${ev.message}`);
@@ -106,13 +105,13 @@ export class MatrixWorker
 
 /**
  * This function runs in the Web Worker
- * @param {*} ev 
+ * @param {MessageEvent} ev
  */
 function onmessage(ev)
 {
-    const { id, header, outputBuffer, inputBuffers } = ev.data;
+    const { id, header, outputBuffer, inputBuffers, transferables } = ev.data;
 
-    // wrap the buffers with the appropriate TypedArrays
+    // wrap the incoming buffers with the appropriate TypedArrays
     const dataType = self.MatrixMath.DataType[header.type];
     const output = new dataType(outputBuffer, header.byteOffset, header.length);
     const inputs = inputBuffers.map((inputBuffer, i) =>
@@ -124,11 +123,7 @@ function onmessage(ev)
     console.log('oie from worker', output, inputs);
     compute(header, output, inputs);
 
-    // send the data back to the main thread
-    const transferables = [ outputBuffer, ...inputBuffers ];
-    const distinctTransferables = transferables.filter(
-        (x, i) => transferables.indexOf(x) === i
-    );
+    // send the result of the computation back to the main thread
     const msg = { id, outputBuffer, inputBuffers };
-    self.postMessage(msg, distinctTransferables);
+    self.postMessage(msg, transferables);
 }
