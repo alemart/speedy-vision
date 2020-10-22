@@ -20,7 +20,6 @@
  */
 
 import { IllegalArgumentError, IllegalOperationError } from '../../utils/errors';
-import { SpeedyFlags } from '../speedy-flags';
 import { MatrixBuffer } from './matrix-buffer';
 import { MatrixMath } from './matrix-math';
 import { MatrixOperationsQueue } from './matrix-operations-queue';
@@ -266,7 +265,7 @@ export class SpeedyMatrix
      * @param {number} lastColumn indexed by 0
      * @returns {Promise<SpeedyMatrix>}
      */
-    block(firstRow, lastRow, firstColumn, lastColumn)
+    _createSubmatrix(firstRow, lastRow, firstColumn, lastColumn)
     {
         const rows = this._rows, columns = this._columns;
 
@@ -287,7 +286,7 @@ export class SpeedyMatrix
 
         // create submatrix
         return this._buffer.createSharedBuffer(begin, length).then(sharedBuffer =>
-            new SpeedyMatrix(subRows, subColumns, null, this._type, stride, sharedBuffer)
+            new SpeedyMatrix(subRows, subColumns, undefined, this._type, stride, sharedBuffer)
         );
     }
 
@@ -295,22 +294,20 @@ export class SpeedyMatrix
      * Get the i-th row. The internal buffer will be shared,
      * so if you change one you change the other
      * @param {number} i in { 0, 1, ..., rows - 1 }
-     * @returns {Promise<SpeedyMatrix>}
+     * @returns {SpeedyMatrix}
      */
     row(i)
     {
-        return block(i, i, 0, this._columns - 1);
     }
 
     /**
      * Get the j-th column. The internal buffer will be shared,
      * so if you change one you change the other
      * @param {number} j in { 0, 1, ..., columns - 1 }
-     * @returns {Promise<SpeedyMatrix>}
+     * @returns {SpeedyMatrix}
      */
     column(j)
     {
-        return block(0, this._rows - 1, j, j);
     }
 
 
@@ -346,6 +343,15 @@ export class SpeedyMatrix
     unlock()
     {
         this._buffer.unlock();
+    }
+
+    /**
+     * The internal buffer of this matrix
+     * @returns {MatrixBuffer}
+     */
+    get buffer()
+    {
+        return this._buffer;
     }
 
     /**

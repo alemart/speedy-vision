@@ -19,7 +19,7 @@
  * Matrix operations
  */
 
-import { IllegalArgumentError, IllegalOperationError } from '../../utils/errors';
+import { IllegalArgumentError, IllegalOperationError, NotSupportedError } from '../../utils/errors';
 import { SpeedyMatrix } from './speedy-matrix';
 import { MatrixMath } from './matrix-math';
 import { MatrixWorker } from './matrix-worker';
@@ -167,13 +167,13 @@ export class MatrixOperation
         this._assertCompatibility(rows, columns, type);
 
         // save output metadata
-        const output = outputMatrix._buffer.data;
+        const output = outputMatrix.buffer.data;
         this._header.stride = stride;
         this._header.byteOffset = output.byteOffset;
         this._header.length = output.length;
 
         // save input metadata
-        const inputs = this._inputMatrices.map(inputMatrix => inputMatrix._buffer.data);
+        const inputs = this._inputMatrices.map(inputMatrix => inputMatrix.buffer.data);
         if(this._header.byteOffsetOfInputs === null)
             this._header.byteOffsetOfInputs = inputs.map(input => input.byteOffset);
         if(this._header.lengthOfInputs === null)
@@ -186,10 +186,10 @@ export class MatrixOperation
             inputs.map(input => input.buffer)
         ).then(([outputBuffer, inputBuffers]) => {
             // update the internal buffers with the new data
-            outputMatrix._buffer.replace(outputBuffer);
+            outputMatrix.buffer.replace(outputBuffer);
             for(let i = 0; i < this._inputMatrices.length; i++)
-                this._inputMatrices[i]._buffer.replace(inputBuffers[i]);
-            console.log("volteeeeei", outputBuffer, outputMatrix._buffer.data);
+                this._inputMatrices[i].buffer.replace(inputBuffers[i]);
+            console.log("volteeeeei", outputBuffer, outputMatrix.buffer.data);
         });
     }
 
@@ -202,7 +202,7 @@ export class MatrixOperation
     {
         // obtain properties of the output matrix
         const { rows, columns, stride, type } = outputMatrix;
-        const output = outputMatrix._buffer.data;
+        const output = outputMatrix.buffer.data;
 
         // do we have a compatible output matrix?
         this._assertCompatibility(rows, columns, type);
@@ -214,7 +214,7 @@ export class MatrixOperation
 
         // run matrix operation
         return new Promise(resolve => {
-            this._fun(this._header, output, this._inputMatrices.map(inputMatrix => inputMatrix._buffer.data));
+            this._fun(this._header, output, this._inputMatrices.map(inputMatrix => inputMatrix.buffer.data));
             resolve();
         });
     }
@@ -227,7 +227,7 @@ export class MatrixOperation
     {
         // obtain properties of the output matrix
         const { rows, columns, stride, type } = outputMatrix;
-        const output = outputMatrix._buffer.data;
+        const output = outputMatrix.buffer.data;
 
         // do we have a compatible output matrix?
         this._assertCompatibility(rows, columns, type);
@@ -238,7 +238,7 @@ export class MatrixOperation
         //this._header.length = output.length; // unused
 
         // run matrix operation
-        this._fun(this._header, output, this._inputMatrices.map(inputMatrix => inputMatrix._buffer.data));
+        this._fun(this._header, output, this._inputMatrices.map(inputMatrix => inputMatrix.buffer.data));
     }
 
     /**

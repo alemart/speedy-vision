@@ -112,7 +112,7 @@ function onmessage(ev)
     const { id, header, outputBuffer, inputBuffers, transferables } = ev.data;
 
     // wrap the incoming buffers with the appropriate TypedArrays
-    const dataType = self.MatrixMath.DataType[header.type];
+    const dataType = self.MatrixMath.DataType[header.type & (~3)];
     const output = new dataType(outputBuffer, header.byteOffset, header.length);
     const inputs = inputBuffers.map((inputBuffer, i) =>
         new dataType(inputBuffer, header.byteOffsetOfInputs[i], header.lengthOfInputs[i])

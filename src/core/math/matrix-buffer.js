@@ -20,7 +20,7 @@
  */
 
 import { MatrixMath } from './matrix-math';
-import { IllegalArgumentError, IllegalOperationError } from '../../utils/errors';
+import { IllegalArgumentError, IllegalOperationError, NotSupportedError } from '../../utils/errors';
 
 // constants
 const MatrixType = MatrixMath.MatrixType;
@@ -49,7 +49,7 @@ export class MatrixBuffer
         // type inference
         if(values != null && !Array.isArray(values))
             type = TypedArray2DataType[values.constructor.name];
-        const dataType = DataType[type];
+        const dataType = DataType[type & (~3)];
         if(dataType === undefined)
             throw new IllegalArgumentError(`Unknown matrix type`);
 
@@ -68,8 +68,6 @@ export class MatrixBuffer
         // check if it's a proper TypedArray
         if(!(data.buffer instanceof ArrayBuffer))
             throw new IllegalArgumentError(`Invalid matrix type`);
-        else if(data.length > length)
-            throw new IllegalArgumentError(`Incorrect matrix length`);
 
         // store data
         this._type = type & (~3); // F64, F32, etc.
@@ -78,7 +76,7 @@ export class MatrixBuffer
         this._data = data; // a reference to the TypedArray
 
         // concurrency control
-        this._pendingOperations = 0; // number of pending operations that read from or write to the buffer
+        this._pendingOperations = parent ? parent._pendingOperations : 0; // number of pending operations that read from or write to the buffer
         this._pendingAccessesQueue = []; // a list of Function<void> to be called as soon as there are no pending operations
         this._children = []; // a list of MatrixBuffers that share their internal memory with this one
         this._parent = parent; // the buffer that originated this one, if any
@@ -192,11 +190,13 @@ export class MatrixBuffer
     }
 
     /**
-     * Replace the internal buffer of the internal TypedArray
-     * @param {ArrayBuffer} arrayBuffer
+     * Replace the internal buffer of the TypedArray
+     * @param {ArrayBuffer} arrayBuffer new internal buffer
+     * @param {number} [byteOffset] used to change the memory layout
+     * @param {number} [length] used to change the memory layout
      * @param {boolean} [ascend] internal
      */
-    replace(arrayBuffer, ascend = true)
+    replace(arrayBuffer, byteOffset = undefined, length = undefined, ascend = true)
     {
         let my = this;
 
@@ -209,14 +209,26 @@ export class MatrixBuffer
         if(my._pendingOperations == 0)
             throw new IllegalOperationError(`Can't replace MatrixBuffer when it's unlocked`);
 
+        /*
+        // change the memory layout
+        if(byteOffset !== undefined || length !== undefined) {
+            if(my._parent || my._children.length)
+                throw new NotSupportedError(`Can't change the memory layout of a shared buffer`);
+            byteOffset = byteOffset === undefined ? my._byteOffset : byteOffset;
+            length = length === undefined ? my._length : length;
+            my._byteOffset = byteOffset;
+            my._length = length;
+        }
+        */
+
         // replace the internal buffer
-        const dataType = DataType[my._type];
+        const dataType = DataType[my._type & (~3)];
         my._data = new dataType(arrayBuffer, my._byteOffset, my._length);
 
         // broadcast
         if(my._children.length) {
             for(let i = 0; i < my._children.length; i++)
-                my._children[i].replace(arrayBuffer, false);
+                my._children[i].replace(arrayBuffer, byteOffset, length, false);
         }
     }
 
@@ -229,12 +241,15 @@ export class MatrixBuffer
     createSharedBuffer(begin = 0, length = this._length)
     {
         return this.ready().then(() => {
+            // obtain shared area of memory
             const end = Math.min(begin + length, this._length);
-            const data = this._data.subarray(begin, end);
+            const data = this._data.subarray(begin, end); // the main thread should own this._data
 
+            // create shared buffer
             const sharedBuffer = new MatrixBuffer(length, data, this._type, this);
             this._children.push(sharedBuffer);
 
+            // done!
             return sharedBuffer;
         });
     }
