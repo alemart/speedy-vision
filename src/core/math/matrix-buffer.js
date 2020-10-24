@@ -49,7 +49,7 @@ export class MatrixBuffer
         // type inference
         if(values != null && !Array.isArray(values))
             type = TypedArray2DataType[values.constructor.name];
-        const dataType = DataType[type & (~3)];
+        const dataType = DataType[type];
         if(dataType === undefined)
             throw new IllegalArgumentError(`Unknown matrix type`);
 
@@ -71,8 +71,8 @@ export class MatrixBuffer
 
         // store data
         this._type = type & (~3); // F64, F32, etc.
-        this._byteOffset = data.byteOffset;
-        this._length = data.length;
+        this._byteOffset = data.byteOffset; // assumed to be constant
+        this._length = data.length; // assumed to be constant
         this._data = data; // a reference to the TypedArray
 
         // concurrency control
@@ -142,10 +142,8 @@ export class MatrixBuffer
         ++my._pendingOperations;
 
         // broadcast
-        if(my._children.length) {
-            for(let i = 0; i < my._children.length; i++)
-                my._children[i].lock(false);
-        }
+        for(let i = my._children.length - 1; i >= 0; i--)
+            my._children[i].lock(false);
     }
 
     /**
@@ -183,20 +181,17 @@ export class MatrixBuffer
         }
 
         // broadcast
-        if(my._children.length) {
-            for(let i = 0; i < my._children.length; i++)
-                my._children[i].unlock(false);
-        }
+        for(let i = my._children.length - 1; i >= 0; i--)
+            my._children[i].unlock(false);
     }
 
     /**
      * Replace the internal buffer of the TypedArray
+     * Note: byteOffset and length are assumed to be constant (e.g., in MatrixOperation)
      * @param {ArrayBuffer} arrayBuffer new internal buffer
-     * @param {number} [byteOffset] used to change the memory layout
-     * @param {number} [length] used to change the memory layout
      * @param {boolean} [ascend] internal
      */
-    replace(arrayBuffer, byteOffset = undefined, length = undefined, ascend = true)
+    replace(arrayBuffer, ascend = true)
     {
         let my = this;
 
@@ -205,31 +200,13 @@ export class MatrixBuffer
             do { my = my._parent; } while(my._parent);
         }
 
-        // error if unlocked
-        if(my._pendingOperations == 0)
-            throw new IllegalOperationError(`Can't replace MatrixBuffer when it's unlocked`);
-
-        /*
-        // change the memory layout
-        if(byteOffset !== undefined || length !== undefined) {
-            if(my._parent || my._children.length)
-                throw new NotSupportedError(`Can't change the memory layout of a shared buffer`);
-            byteOffset = byteOffset === undefined ? my._byteOffset : byteOffset;
-            length = length === undefined ? my._length : length;
-            my._byteOffset = byteOffset;
-            my._length = length;
-        }
-        */
-
         // replace the internal buffer
-        const dataType = DataType[my._type & (~3)];
+        const dataType = DataType[my._type];
         my._data = new dataType(arrayBuffer, my._byteOffset, my._length);
 
         // broadcast
-        if(my._children.length) {
-            for(let i = 0; i < my._children.length; i++)
-                my._children[i].replace(arrayBuffer, byteOffset, length, false);
-        }
+        for(let i = my._children.length - 1; i >= 0; i--)
+            my._children[i].replace(arrayBuffer, false);
     }
 
     /**
@@ -243,7 +220,7 @@ export class MatrixBuffer
         return this.ready().then(() => {
             // obtain shared area of memory
             const end = Math.min(begin + length, this._length);
-            const data = this._data.subarray(begin, end); // the main thread should own this._data
+            const data = this._data.subarray(begin, end); // the main thread must own this._data
 
             // create shared buffer
             const sharedBuffer = new MatrixBuffer(length, data, this._type, this);

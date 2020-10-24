@@ -53,10 +53,6 @@ export class MatrixOperationsQueue
      */
     enqueue(matrixOperation, outputMatrix)
     {
-        // lock matrices
-        outputMatrix.lock();
-        matrixOperation.inputMatrices.forEach(inputMatrix => inputMatrix.lock());
-
         // enqueue operation
         return new Promise(resolve => {
             this._queue.push([ matrixOperation, outputMatrix, resolve ]);
@@ -80,6 +76,10 @@ export class MatrixOperationsQueue
 
         // obtain the next operation
         const [ matrixOperation, outputMatrix, resolve ] = this._queue.shift();
+
+        // lock matrices
+        outputMatrix.lock();
+        matrixOperation.inputMatrices.forEach(inputMatrix => inputMatrix.lock());
 
         // run the next operation
         matrixOperation.run(outputMatrix).then(() => {

@@ -27,6 +27,7 @@ import { SpeedyFeatureTrackerFactory } from './speedy-feature-tracker-factory';
 import { SpeedyFlags } from './speedy-flags';
 import { SpeedyVector2 } from './math/speedy-vector';
 import { SpeedyMatrix } from './math/speedy-matrix';
+import { SpeedyMatrixExpr } from './math/matrix-expressions';
 import { IllegalArgumentError } from '../utils/errors';
 
 /**

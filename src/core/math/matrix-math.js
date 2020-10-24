@@ -38,13 +38,23 @@ class MatrixMath
         ;
     }
 
-    // Set to identity matrix
+    // Set output := identity matrix
     static eye(header, output, inputs)
     {
-        const { rows, columns, stride } = header;
+        const { rows, columns, stride, length } = header;
 
-        // set to zeroes
-        output.fill(0);
+        // set the matrix to zeroes
+        if(rows * columns == length) {
+            // use a memset-like operation if possible
+            output.fill(0);
+        }
+        else {
+            // set each entry to zero
+            for(let j = 0; j < columns; j++) {
+                for(let i = 0; i < rows; i++)
+                    output[j * stride + i] = 0;
+            }
+        }
 
         /*
         // multi-channel matrices
@@ -61,19 +71,51 @@ class MatrixMath
             output[j * stride + j] = 1;
     }
 
-    // Fill matrix with a constant
+    // Fill the matrix with a constant value
     static fill(header, output, inputs)
     {
-        // FIXME: what if stride != rows? two cases ...
-        output.fill(header.custom.value);
+        const { rows, columns, stride, length } = header;
+        const { value } = header.custom;
+
+        // use a memset-like operation if possible
+        if(rows * columns == length) {
+            output.fill(value);
+            return;
+        }
+
+        // set the entries one by one
+        for(let j = 0; j < columns; j++) {
+            for(let i = 0; i < rows; i++)
+                output[j * stride + i] = value;
+        }
+    }
+
+    // Copy matrix
+    static copy(header, output, inputs)
+    {
+        const { rows, columns, stride, length } = header;
+        const [ strideI ] = header.strideOfInputs;
+        const [ input ] = inputs;
+
+        // use a memcpy-like operation if possible
+        if(length == header.lengthOfInputs[0] && rows * columns == length) {
+            output.set(input);
+            return;
+        }
+
+        // copy values one by one
+        for(let j = 0; j < columns; j++) {
+            for(let i = 0; i < rows; i++)
+                output[j * stride + i] = input[j * strideI + i];
+        }
     }
 
     // Transpose matrix
     static transpose(header, output, inputs)
     {
         const { rows, columns, stride } = header;
-        const strideT = header.strideOfInputs[0];
-        const input = inputs[0];
+        const [ strideT ] = header.strideOfInputs;
+        const [ input ] = inputs;
 
         for(let i = 0; i < rows; i++) {
             for(let j = 0; j < columns; j++)
@@ -140,6 +182,10 @@ class MatrixMath
     {
         return this._DataType || (this._DataType = Object.freeze({
             [this.MatrixType.F32]: Float32Array,
+            //[this.MatrixType.F32C1]: Float32Array,
+            //[this.MatrixType.F32C2]: Float32Array,
+            //[this.MatrixType.F32C3]: Float32Array,
+            //[this.MatrixType.F32C4]: Float32Array,
             [this.MatrixType.F64]: Float64Array,
             [this.MatrixType.I32]: Int32Array,
             [this.MatrixType.U8]:  Uint8Array,
@@ -170,8 +216,9 @@ class MatrixMath
             NOP: 0x0,        // no-operation
             EYE: 0x1,        // identity matrix
             FILL: 0x2,       // fill the matrix with a constant
-            TRANSPOSE: 0x3,  // transpose matrix
-            ADD: 0x4,        // add two matrices
+            COPY: 0x3,       // copy matrix
+            TRANSPOSE: 0x4,  // transpose matrix
+            ADD: 0x5,        // add two matrices
         }));
     }
 
@@ -185,6 +232,7 @@ class MatrixMath
             [this.Opcode.NOP]: this.nop,
             [this.Opcode.EYE]: this.eye,
             [this.Opcode.FILL]: this.fill,
+            [this.Opcode.COPY]: this.copy,
             [this.Opcode.TRANSPOSE]: this.transpose,
             [this.Opcode.ADD]: this.add,
         }));

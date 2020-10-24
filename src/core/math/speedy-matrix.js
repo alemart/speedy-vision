@@ -19,7 +19,7 @@
  * Matrix operations
  */
 
-import { IllegalArgumentError, IllegalOperationError } from '../../utils/errors';
+import { IllegalArgumentError, IllegalOperationError, NotSupportedError } from '../../utils/errors';
 import { MatrixBuffer } from './matrix-buffer';
 import { MatrixMath } from './matrix-math';
 import { MatrixOperationsQueue } from './matrix-operations-queue';
@@ -58,13 +58,11 @@ export class SpeedyMatrix
      */
     constructor(rows, columns = rows, values = null, type = MatrixType.F32, stride = rows, buffer = null)
     {
-        const dataType = DataType[type & (~3)];
+        const dataType = DataType[type];
         const numChannels = 1 + (type & 3);
 
         if(rows <= 0 || columns <= 0)
             throw new IllegalArgumentError(`Invalid dimensions`);
-        else if(numChannels < 1 || numChannels > 4)
-            throw new IllegalArgumentError(`Invalid number of channels`);
         else if(stride < rows)
             throw new IllegalArgumentError(`Invalid stride`);
         else if(dataType == undefined)
@@ -139,7 +137,7 @@ export class SpeedyMatrix
      */
     get dtype()
     {
-        return DataTypeName[this._type & (~3)];
+        return DataTypeName[this._type];
     }
 
 
@@ -169,7 +167,7 @@ export class SpeedyMatrix
         // read the entire array
         if(entries === undefined)
         {
-            return this._buffer.ready().then(buffer => {
+            return this.sync().then(() => this._buffer.ready().then(buffer => {
                 const data = buffer.data;
                 const n = rows * cols;
 
@@ -187,14 +185,14 @@ export class SpeedyMatrix
 
                 // done!
                 return result;
-            });
+            }));
         }
 
         // read specific entries
         if(entries.length % 2 > 0)
             throw new IllegalArgumentError(`Can't read matrix entries: missing index`);
 
-        return this._buffer.ready().then(buffer => {
+        return this.sync().then(() => this._buffer.ready().then(buffer => {
             const data = buffer.data;
             const n = entries.length >> 1;
 
@@ -215,7 +213,7 @@ export class SpeedyMatrix
 
             // done!
             return result;
-        });
+        }));
     }
 
     /**
@@ -265,7 +263,7 @@ export class SpeedyMatrix
      * @param {number} lastColumn indexed by 0
      * @returns {Promise<SpeedyMatrix>}
      */
-    _createSubmatrix(firstRow, lastRow, firstColumn, lastColumn)
+    block(firstRow, lastRow, firstColumn, lastColumn)
     {
         const rows = this._rows, columns = this._columns;
 
@@ -288,26 +286,6 @@ export class SpeedyMatrix
         return this._buffer.createSharedBuffer(begin, length).then(sharedBuffer =>
             new SpeedyMatrix(subRows, subColumns, undefined, this._type, stride, sharedBuffer)
         );
-    }
-
-    /**
-     * Get the i-th row. The internal buffer will be shared,
-     * so if you change one you change the other
-     * @param {number} i in { 0, 1, ..., rows - 1 }
-     * @returns {SpeedyMatrix}
-     */
-    row(i)
-    {
-    }
-
-    /**
-     * Get the j-th column. The internal buffer will be shared,
-     * so if you change one you change the other
-     * @param {number} j in { 0, 1, ..., columns - 1 }
-     * @returns {SpeedyMatrix}
-     */
-    column(j)
-    {
     }
 
 

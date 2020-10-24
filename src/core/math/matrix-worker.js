@@ -24,6 +24,7 @@ import { IllegalOperationError } from '../../utils/errors';
 
 // Constants
 const MAX_MESSAGE_ID = (1 << 30) - 1; // use the form 2^n - 1
+const NOP = MatrixMath.Opcode.NOP;
 
 /**
  * A bridge between the main thread and a Web Worker
@@ -61,6 +62,9 @@ export class MatrixWorker
     {
         const id = (this._msgId + 1) & MAX_MESSAGE_ID;
 
+        if(header.opcode === NOP) // save some time
+            return Promise.resolve([outputBuffer, inputBuffers]);
+
         return new Promise(resolve => {
             this._callbackTable.set(id, (outputBuffer, inputBuffers) => {
                 this._callbackTable.delete(id);
@@ -91,7 +95,7 @@ export class MatrixWorker
         worker.onmessage = ev => {
             const msg = ev.data;
             const done = this._callbackTable.get(msg.id);
-            console.warn('voltei do worker', msg, new Float32Array(msg.outputBuffer));
+            //console.warn('voltei do worker', msg, new Float32Array(msg.outputBuffer));
             done(msg.outputBuffer, msg.inputBuffers);
         };
         worker.onerror = ev => {
@@ -112,7 +116,7 @@ function onmessage(ev)
     const { id, header, outputBuffer, inputBuffers, transferables } = ev.data;
 
     // wrap the incoming buffers with the appropriate TypedArrays
-    const dataType = self.MatrixMath.DataType[header.type & (~3)];
+    const dataType = self.MatrixMath.DataType[header.type];
     const output = new dataType(outputBuffer, header.byteOffset, header.length);
     const inputs = inputBuffers.map((inputBuffer, i) =>
         new dataType(inputBuffer, header.byteOffsetOfInputs[i], header.lengthOfInputs[i])
@@ -120,7 +124,7 @@ function onmessage(ev)
 
     // perform the computation
     const compute = self.MatrixMath.Opcode2fun[header.opcode];
-    console.log('oie from worker', output, inputs);
+    //console.log('oie from worker', output, inputs);
     compute(header, output, inputs);
 
     // send the result of the computation back to the main thread

@@ -27,7 +27,7 @@ import { MatrixWorker } from './matrix-worker';
 // Constants
 const Opcode = MatrixMath.Opcode;
 const Opcode2fun = MatrixMath.Opcode2fun;
-const SMALL_WORKLOAD = 30; // how much is "small"? further experimental testing is desirable
+const SMALL_WORKLOAD = 30; //30; // how much is "small"? further experimental testing is desirable
                            // a binary operation for 3x3 matrices, e.g. C = A + B
 
 // Worker
@@ -119,13 +119,35 @@ export class MatrixOperation
     }
 
     /**
-     * Create a new Matrix and store in it the result of this operation
-     * @returns {SpeedyMatrix}
+     * Replace input matrices
+     * @param {SpeedyMatrix[]} inputMatrices 
      */
-    toMatrix()
+    replaceInputMatrices(inputMatrices)
     {
-        const matrix = new SpeedyMatrix(this.rows, this.columns, undefined, this.type);
-        return matrix.assign(this);
+        if(this._inputMatrices.length !== inputMatrices.length)
+            throw new IllegalOperationError();
+
+        for(let i = inputMatrices.length - 1; i >= 0; i--) {
+            const inputMatrix = inputMatrices[i];
+            const prevInputMatrix = this._inputMatrices[i];
+
+            // i-th matrix didn't change
+            if(inputMatrix === prevInputMatrix)
+                continue;
+
+            // can't change shape
+            if(inputMatrix.rows !== prevInputMatrix.rows || inputMatrix.columns !== prevInputMatrix.columns || inputMatrix.type !== prevInputMatrix.type)
+                throw new IllegalOperationError(`Can't change the input matrix shape / type`);
+
+            // update fields
+            this._header.strideOfInputs[i] = inputMatrix.stride;
+
+            //
+            // NOTE:
+            // byteOffsetOfInputs and lengthOfInputs are assumed to be constant
+            // see MatrixBuffer class
+            //
+        }
     }
 
 
@@ -150,8 +172,6 @@ export class MatrixOperation
     {
         // run locally if the matrices are "small enough"
         const workload = this._workloadOfInputs + this._workload(outputMatrix);
-        console.log("WORKLOAD", workload);
-        if(0)
         if(workload <= SMALL_WORKLOAD) {
             // there's an overhead for passing data
             // back and forth to the Web Worker, and
@@ -173,23 +193,22 @@ export class MatrixOperation
         this._header.length = output.length;
 
         // save input metadata
-        const inputs = this._inputMatrices.map(inputMatrix => inputMatrix.buffer.data);
         if(this._header.byteOffsetOfInputs === null)
-            this._header.byteOffsetOfInputs = inputs.map(input => input.byteOffset);
+            this._header.byteOffsetOfInputs = this._inputMatrices.map(inputMatrix => inputMatrix.buffer.data.byteOffset); // assumed to be constant in time
         if(this._header.lengthOfInputs === null)
-            this._header.lengthOfInputs = inputs.map(input => input.length);
+            this._header.lengthOfInputs = this._inputMatrices.map(inputMatrix => inputMatrix.buffer.data.length); // assumed to be constant in time
 
         // run matrix operation
         return matrixWorker.run(
             this._header,
             output.buffer,
-            inputs.map(input => input.buffer)
+            this._inputMatrices.map(inputMatrix => inputMatrix.buffer.data.buffer)
         ).then(([outputBuffer, inputBuffers]) => {
             // update the internal buffers with the new data
             outputMatrix.buffer.replace(outputBuffer);
-            for(let i = 0; i < this._inputMatrices.length; i++)
+            for(let i = this._inputMatrices.length - 1; i >= 0; i--)
                 this._inputMatrices[i].buffer.replace(inputBuffers[i]);
-            console.log("volteeeeei", outputBuffer, outputMatrix.buffer.data);
+            //console.log("volteeeeei", outputBuffer, outputMatrix.buffer.data);
         });
     }
 
@@ -209,8 +228,14 @@ export class MatrixOperation
 
         // save output metadata
         this._header.stride = stride;
-        //this._header.byteOffset = output.byteOffset; // unused
-        //this._header.length = output.length; // unused
+        this._header.byteOffset = output.byteOffset;
+        this._header.length = output.length;
+
+        // save input metadata
+        if(this._header.byteOffsetOfInputs === null)
+            this._header.byteOffsetOfInputs = this._inputMatrices.map(inputMatrix => inputMatrix.buffer.data.byteOffset); // assumed to be constant in time
+        if(this._header.lengthOfInputs === null)
+            this._header.lengthOfInputs = this._inputMatrices.map(inputMatrix => inputMatrix.buffer.data.length); // assumed to be constant in time
 
         // run matrix operation
         return new Promise(resolve => {
@@ -234,8 +259,14 @@ export class MatrixOperation
 
         // save output metadata
         this._header.stride = stride;
-        //this._header.byteOffset = output.byteOffset; // unused
-        //this._header.length = output.length; // unused
+        this._header.byteOffset = output.byteOffset;
+        this._header.length = output.length;
+
+        // save input metadata
+        if(this._header.byteOffsetOfInputs === null)
+            this._header.byteOffsetOfInputs = this._inputMatrices.map(inputMatrix => inputMatrix.buffer.data.byteOffset); // assumed to be constant in time
+        if(this._header.lengthOfInputs === null)
+            this._header.lengthOfInputs = this._inputMatrices.map(inputMatrix => inputMatrix.buffer.data.length); // assumed to be constant in time
 
         // run matrix operation
         this._fun(this._header, output, this._inputMatrices.map(inputMatrix => inputMatrix.buffer.data));
@@ -323,6 +354,21 @@ export class MatrixOperationEye extends MatrixOperation
     constructor(matrix)
     {
         super(Opcode.EYE, matrix.rows, matrix.columns, matrix.type);
+    }
+}
+
+/**
+ * Copy matrix
+ */
+export class MatrixOperationCopy extends MatrixOperation
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrix} matrix 
+     */
+    constructor(matrix)
+    {
+        super(Opcode.COPY, matrix.rows, matrix.columns, matrix.type, [ matrix ]);
     }
 }
 
