@@ -68,7 +68,7 @@ export class SpeedyMatrix
         else if(dataType == undefined)
             throw new IllegalArgumentError(`Invalid data type`);
         else if(Array.isArray(values) && values.length != rows * columns * numChannels)
-            throw new IllegalArgumentError(`Incorrect number of matrix elements`);
+            throw new IllegalArgumentError(`Incorrect number of matrix elements (expected ${rows * columns * numChannels}, found ${values.length})`);
 
         this._rows = rows | 0;
         this._columns = columns | 0;

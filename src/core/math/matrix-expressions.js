@@ -61,6 +61,7 @@ class SpeedyMatrixExpr
         this._rows = rows | 0;
         this._columns = columns | 0;
         this._type = type | 0;
+        this._readbuf = null;
 
         if(this._rows <= 0 || this._columns <= 0)
             throw new IllegalArgumentError(`Invalid dimensions for a matrix expression: ${this._rows} x ${this._columns}`);
@@ -115,9 +116,9 @@ class SpeedyMatrixExpr
         if(requiredRows === this._rows && requiredColumns === this._columns && requiredType === this._type)
             return;
         else if(requiredType !== this._type)
-            throw new IllegalOperationError(`Incompatible matrix type (0x${requiredType.toString(16)} vs 0x${this._type.toString(16)})`);
+            throw new IllegalOperationError(`Incompatible matrix type (expected ${MatrixMath.DataTypeName[requiredType]}, found ${this.dtype})`);
         else
-            throw new IllegalOperationError(`Incompatible matrix shape: ${this._rows} x ${this._columns} (expected ${requiredRows} x ${requiredColumns})`);
+            throw new IllegalOperationError(`Incompatible matrix shape (expected ${requiredRows} x ${requiredColumns}, found ${this._rows} x ${this._columns})`);
     }
 
     /**
@@ -156,28 +157,13 @@ class SpeedyMatrixExpr
     //
 
     /**
-     * Print the result of this matrix expression to the console
-     * @returns {Promise<void>} a promise that resolves as soon as the matrix is printed
-     */
-    print()
-    {
-        return this._evaluate().then(expr => expr._matrix.print());
-    }
-
-
-
-    //
-    // L-VALUES
-    //
-
-    /**
-     * Assign an expression to this
-     * @param {SpeedyMatrixExpr} expr
+     * Assign an expression (i.e., this := expr)
+     * @param {SpeedyMatrixExpr|number[]} expr
      * @returns {Promise<SpeedyMatrixAssignmentExpr>}
      */
     assign(expr)
     {
-        throw new IllegalOperationError(`Can't assign expression: not a l-value`);
+        throw new IllegalOperationError(`Can't assign matrix: not a l-value`);
     }
 
     /**
@@ -190,15 +176,38 @@ class SpeedyMatrixExpr
         throw new IllegalOperationError(`Can't fill matrix: not a l-value`);
     }
 
+    /**
+     * Read the entries of this matrix
+     * Results are given in column-major format
+     * @returns {Promise<number[]>}
+     */
+    read()
+    {
+        this._readbuf = this._readbuf || [];
+        return this._evaluate().then(expr => expr._matrix.read(undefined, this._readbuf));
+    }
+
+    /**
+     * Print the result of this matrix expression to the console
+     * @returns {Promise<void>} a promise that resolves as soon as the matrix is printed
+     */
+    print()
+    {
+        return this._evaluate().then(expr => expr._matrix.print());
+    }
+
+
+
 
 
     //
-    // GENERAL OPERATIONS
+    // ACCESS BY BLOCK
     //
 
     /**
      * Extract a (lastRow - firstRow + 1) x (lastColumn - firstColumn + 1)
-     * block from the matrix. All indexes are 0-based.
+     * block from the matrix. All indices are 0-based. Note that the
+     * memory of the block is shared with the memory of the matrix.
      * @param {number} firstRow
      * @param {number} lastRow
      * @param {number} firstColumn
@@ -209,6 +218,52 @@ class SpeedyMatrixExpr
     {
         return new SpeedyMatrixReadonlyBlockExpr(this, firstRow, lastRow, firstColumn, lastColumn);
     }
+
+    /**
+     * Get the i-th row of the matrix
+     * @param {number} i
+     */
+    row(i)
+    {
+        return this.block(i, i, 0, this.columns - 1);
+    }
+
+    /**
+     * Get the j-th column of the matrix
+     * @param {number} j
+     */
+    column(j)
+    {
+        return this.block(0, this.rows - 1, j, j);
+    }
+
+    /**
+     * Get a range of (lastRow - firstRow + 1) rows. Both indices are inclusive.
+     * @param {number} firstRow
+     * @param {number} lastRow
+     */
+    rowRange(firstRow, lastRow)
+    {
+        return this.block(firstRow, lastRow, 0, this.columns - 1);
+    }
+
+    /**
+     * Get a range of (lastColumn - firstColumn + 1) columns. Both indices are inclusive.
+     * @param {number} firstColumn
+     * @param {number} lastColumn
+     */
+    columnRange(firstColumn, lastColumn)
+    {
+        return this.block(0, this.rows - 1, firstColumn, lastColumn);
+    }
+
+
+
+
+    //
+    // GENERAL OPERATIONS
+    //
+
 
     /**
      * Clone matrix
@@ -445,7 +500,7 @@ class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
 
     /**
      * Assign an expression to this lvalue
-     * @param {SpeedyMatrixExpr} expr
+     * @param {SpeedyMatrixExpr|number[]} expr
      * @returns {Promise<SpeedyMatrixAssignmentExpr>} resolves as soon as the assignment is done
      */
     assign(expr)
@@ -461,13 +516,13 @@ class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
      */
     fill(value)
     {
-        const { rows, columns, type } = this._matrix;
-        return this.assign(new SpeedyMatrixFillExpr(rows, columns, type, +value));
+        return this.assign(new SpeedyMatrixFillExpr(this._rows, this._columns, this._type, +value));
     }
 
     /**
      * Extract a (lastRow - firstRow + 1) x (lastColumn - firstColumn + 1)
-     * block from the matrix. All indexes are 0-based.
+     * block from the matrix. All indexes are 0-based. Note that the
+     * memory of the block is shared with the memory of the matrix.
      * @param {number} firstRow
      * @param {number} lastRow
      * @param {number} firstColumn
@@ -489,13 +544,24 @@ class SpeedyMatrixAssignmentExpr extends SpeedyMatrixLvalueExpr
     /**
      * Constructor
      * @param {SpeedyMatrixLvalueExpr} lvalue
-     * @param {SpeedyMatrixExpr} rvalue
+     * @param {SpeedyMatrixExpr|number[]} rvalue matrix expression or array of numbers in column-major format
      */
     constructor(lvalue, rvalue)
     {
-        super(lvalue.rows, lvalue.columns, lvalue.type);
-        this._assertCompatibility(rvalue.rows, rvalue.columns, rvalue.type);
+        const { rows, columns, type } = lvalue;
+        super(rows, columns, type);
 
+        // convert rvalue to SpeedyMatrixExpr
+        if(!(rvalue instanceof SpeedyMatrixExpr)) {
+            if(Array.isArray(rvalue)) {
+                const matrix = new SpeedyMatrix(rows, columns, rvalue, type);
+                rvalue = new SpeedyMatrixElementaryExpr(rows, columns, type, matrix);
+            }
+            else
+                throw new IllegalArgumentError(`Can't assign matrix to ${rvalue}`)
+        }
+
+        this._assertCompatibility(rvalue.rows, rvalue.columns, rvalue.type);
         this._lvalue = lvalue;
         this._rvalue = rvalue;
     }
@@ -523,12 +589,20 @@ class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
 {
     /**
      * Constructor
-     * @param {SpeedyMatrix} matrix user matrix
+     * @param {number} rows
+     * @param {number} columns
+     * @param {number} type
+     * @param {SpeedyMatrix} [matrix] user matrix
      */
-    constructor(matrix)
+    constructor(rows, columns, type, matrix = null)
     {
-        super(matrix.rows, matrix.columns, matrix.type);
-        this._usermatrix = matrix;
+        super(rows, columns, type);
+        this._usermatrix = null;
+
+        if(matrix != null) {
+            this._assertCompatibility(matrix.rows, matrix.columns, matrix.type);
+            this._usermatrix = matrix;
+        }
     }
 
     /**
@@ -538,6 +612,9 @@ class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
      */
     get _matrix()
     {
+        if(this._usermatrix == null)
+            throw new IllegalOperationError(`Matrix doesn't have any data. Make sure you assign data to it.`);
+
         return this._usermatrix;
     }
 
@@ -765,18 +842,23 @@ export class SpeedyMatrixExprFactory
 {
     /**
      * Create a new SpeedyMatrixExpr that evaluates to a user-defined matrix
-     * (or to a matrix filled with zeroes if its entries are not provided)
+     * (or to a matrix without data if its entries are not provided)
      * @param {number} rows number of rows
      * @param {number} [columns] number of columns (defaults to the number of rows)
      * @param {number[]} [values] initial values in column-major format
      * @param {number} [type] F32, F64, etc.
      */
-    static create(rows, columns = rows, values = undefined, type = undefined)
+    static create(rows, columns = rows, values = null, type = MatrixType.F32)
     {
-        if(values !== undefined && !Array.isArray(values))
-            throw new IllegalArgumentError(`Can't initialize Matrix with values ${values}`);
+        let matrix = null;
 
-        const matrix = new SpeedyMatrix(rows, columns, values, type);
-        return new SpeedyMatrixElementaryExpr(matrix);
+        if(values != null) {
+            if(!Array.isArray(values))
+                throw new IllegalArgumentError(`Can't initialize Matrix with values ${values}`);
+            if(values.length > 0)
+                matrix = new SpeedyMatrix(rows, columns, values, type);
+        }
+
+        return new SpeedyMatrixElementaryExpr(rows, columns, type, matrix);
     }
 }
