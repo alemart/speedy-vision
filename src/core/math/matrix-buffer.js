@@ -187,7 +187,6 @@ export class MatrixBuffer
 
     /**
      * Replace the internal buffer of the TypedArray
-     * Note: byteOffset and length are assumed to be constant (e.g., in MatrixOperation)
      * @param {ArrayBuffer} arrayBuffer new internal buffer
      * @param {boolean} [ascend] internal
      */

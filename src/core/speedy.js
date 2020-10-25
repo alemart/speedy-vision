@@ -26,8 +26,7 @@ import { SpeedyFeatureDetectorFactory } from './speedy-feature-detector-factory'
 import { SpeedyFeatureTrackerFactory } from './speedy-feature-tracker-factory';
 import { SpeedyFlags } from './speedy-flags';
 import { SpeedyVector2 } from './math/speedy-vector';
-import { SpeedyMatrix } from './math/speedy-matrix';
-import { SpeedyMatrixExpr } from './math/matrix-expressions';
+import { SpeedyMatrixExprFactory } from './math/matrix-expressions';
 import { IllegalArgumentError } from '../utils/errors';
 
 /**
@@ -115,7 +114,7 @@ export class Speedy
     }
 
     /**
-     * Create a Matrix
+     * Create a matrix expression
      * @param {number} rows number of rows
      * @param {number} [columns] number of columns (defaults to the number of rows)
      * @param {number[]} [values] initial values in column-major format
@@ -123,10 +122,7 @@ export class Speedy
      */
     static Matrix(rows, columns = rows, values = undefined, type = undefined)
     {
-        if(values !== undefined && !Array.isArray(values))
-            throw new IllegalArgumentError(`Can't initialize Matrix with values ${values}`);
-
-        return new SpeedyMatrix(rows, columns, values, type);
+        return SpeedyMatrixExprFactory.create(rows, columns, values, type);
     }
 }
 

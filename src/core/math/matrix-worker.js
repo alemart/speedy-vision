@@ -60,7 +60,7 @@ export class MatrixWorker
      */
     run(header, outputBuffer, inputBuffers)
     {
-        const id = (this._msgId + 1) & MAX_MESSAGE_ID;
+        const id = (this._msgId = (this._msgId + 1) & MAX_MESSAGE_ID);
 
         if(header.opcode === NOP) // save some time
             return Promise.resolve([outputBuffer, inputBuffers]);
@@ -124,7 +124,7 @@ function onmessage(ev)
 
     // perform the computation
     const compute = self.MatrixMath.Opcode2fun[header.opcode];
-    //console.log('oie from worker', output, inputs);
+    //console.log('mensagem do worker', output, inputs);
     compute(header, output, inputs);
 
     // send the result of the computation back to the main thread

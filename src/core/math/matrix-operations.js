@@ -27,7 +27,7 @@ import { MatrixWorker } from './matrix-worker';
 // Constants
 const Opcode = MatrixMath.Opcode;
 const Opcode2fun = MatrixMath.Opcode2fun;
-const SMALL_WORKLOAD = 30; //30; // how much is "small"? further experimental testing is desirable
+const SMALL_WORKLOAD = 0; //30; // how much is "small"? further experimental testing is desirable
                            // a binary operation for 3x3 matrices, e.g. C = A + B
 
 // Worker
@@ -51,13 +51,16 @@ export class MatrixOperation
      */
     constructor(opcode, requiredRows, requiredColumns, requiredType, inputMatrices = [], userData = null)
     {
-        // a handy var, so we won't create unneeded arrays
-        const hasInput = inputMatrices.length > 0;
+        // handy vars
+        const n = inputMatrices.length;
+        const hasInput = n > 0;
 
         // obtain the shape of the input matrices
         const rowsOfInputs = hasInput && inputMatrices.map(matrix => matrix.rows);
         const columnsOfInputs = hasInput && inputMatrices.map(matrix => matrix.columns);
-        const strideOfInputs = hasInput && inputMatrices.map(matrix => matrix.stride);
+        const strideOfInputs = hasInput && new Array(n);
+        const byteOffsetOfInputs = hasInput && new Array(n);
+        const lengthOfInputs = hasInput && new Array(n);
 
         // the header stores metadata related to the operation
         // (all fields are serializable)
@@ -74,14 +77,15 @@ export class MatrixOperation
             rowsOfInputs: rowsOfInputs, // number of rows of the input matrices
             columnsOfInputs: columnsOfInputs, // number of columns of the input matrices
             strideOfInputs: strideOfInputs, // strides of the input matrices
-            byteOffsetOfInputs: null, // used to recover the data view (to be determined later - buffer may be locked)
-            lengthOfInputs: null, // used to recover the data view (to be determined layer - buffer may be locked)
+            byteOffsetOfInputs: byteOffsetOfInputs, // used to recover the data view (to be determined later - buffer may be locked)
+            lengthOfInputs: lengthOfInputs, // used to recover the data view (to be determined layer - buffer may be locked)
 
             custom: userData // custom user-data
         };
 
         // save the input matrices
         this._inputMatrices = inputMatrices;
+        this._inputBuffers = new Array(n); // temporary storage
 
         // compute a measure of (a fraction of) the workload of this operation
         this._workloadOfInputs = inputMatrices.reduce((w, m) => w + this._workload(m), 0);
@@ -121,8 +125,9 @@ export class MatrixOperation
     /**
      * Replace input matrices
      * @param {SpeedyMatrix[]} inputMatrices 
+     * @returns {MatrixOperation} this
      */
-    replaceInputMatrices(inputMatrices)
+    update(inputMatrices)
     {
         if(this._inputMatrices.length !== inputMatrices.length)
             throw new IllegalOperationError();
@@ -139,15 +144,11 @@ export class MatrixOperation
             if(inputMatrix.rows !== prevInputMatrix.rows || inputMatrix.columns !== prevInputMatrix.columns || inputMatrix.type !== prevInputMatrix.type)
                 throw new IllegalOperationError(`Can't change the input matrix shape / type`);
 
-            // update fields
-            this._header.strideOfInputs[i] = inputMatrix.stride;
-
-            //
-            // NOTE:
-            // byteOffsetOfInputs and lengthOfInputs are assumed to be constant
-            // see MatrixBuffer class
-            //
+            // update input matrix
+            this._inputMatrices[i] = inputMatrix;
         }
+
+        return this;
     }
 
 
@@ -170,6 +171,9 @@ export class MatrixOperation
      */
     run(outputMatrix)
     {
+        const { rows, columns, stride, type } = outputMatrix;
+        const header = this._header;
+
         // run locally if the matrices are "small enough"
         const workload = this._workloadOfInputs + this._workload(outputMatrix);
         if(workload <= SMALL_WORKLOAD) {
@@ -180,34 +184,39 @@ export class MatrixOperation
             return this._runLocally(outputMatrix);
         }
 
-        // obtain properties of the output matrix
-        const { rows, columns, stride, type } = outputMatrix;
-
         // do we have a compatible output matrix?
         this._assertCompatibility(rows, columns, type);
 
         // save output metadata
         const output = outputMatrix.buffer.data;
-        this._header.stride = stride;
-        this._header.byteOffset = output.byteOffset;
-        this._header.length = output.length;
+        header.stride = stride;
+        header.byteOffset = output.byteOffset;
+        header.length = output.length;
 
-        // save input metadata
-        if(this._header.byteOffsetOfInputs === null)
-            this._header.byteOffsetOfInputs = this._inputMatrices.map(inputMatrix => inputMatrix.buffer.data.byteOffset); // assumed to be constant in time
-        if(this._header.lengthOfInputs === null)
-            this._header.lengthOfInputs = this._inputMatrices.map(inputMatrix => inputMatrix.buffer.data.length); // assumed to be constant in time
+        // save input metadata & buffers
+        const inputMatrices = this._inputMatrices;
+        const inputBuffers = this._inputBuffers; // new Array(inputMatrices.length);
+        for(let i = inputMatrices.length - 1; i >= 0; i--) {
+            const inputMatrix = inputMatrices[i];
+            const input = inputMatrix.buffer.data;
+
+            header.strideOfInputs[i] = inputMatrix.stride;
+            header.byteOffsetOfInputs[i] = input.byteOffset;
+            header.lengthOfInputs[i] = input.length;
+
+            inputBuffers[i] = input.buffer;
+        }
 
         // run matrix operation
         return matrixWorker.run(
-            this._header,
+            header,
             output.buffer,
-            this._inputMatrices.map(inputMatrix => inputMatrix.buffer.data.buffer)
-        ).then(([outputBuffer, inputBuffers]) => {
+            inputBuffers
+        ).then(([newOutputBuffer, newInputBuffers]) => {
             // update the internal buffers with the new data
-            outputMatrix.buffer.replace(outputBuffer);
-            for(let i = this._inputMatrices.length - 1; i >= 0; i--)
-                this._inputMatrices[i].buffer.replace(inputBuffers[i]);
+            outputMatrix.buffer.replace(newOutputBuffer);
+            for(let i = inputMatrices.length - 1; i >= 0; i--)
+                inputMatrices[i].buffer.replace(newInputBuffers[i]);
             //console.log("volteeeeei", outputBuffer, outputMatrix.buffer.data);
         });
     }
@@ -221,25 +230,34 @@ export class MatrixOperation
     {
         // obtain properties of the output matrix
         const { rows, columns, stride, type } = outputMatrix;
-        const output = outputMatrix.buffer.data;
+        const header = this._header;
 
         // do we have a compatible output matrix?
         this._assertCompatibility(rows, columns, type);
 
         // save output metadata
-        this._header.stride = stride;
-        this._header.byteOffset = output.byteOffset;
-        this._header.length = output.length;
+        const output = outputMatrix.buffer.data;
+        header.stride = stride;
+        header.byteOffset = output.byteOffset;
+        header.length = output.length;
 
-        // save input metadata
-        if(this._header.byteOffsetOfInputs === null)
-            this._header.byteOffsetOfInputs = this._inputMatrices.map(inputMatrix => inputMatrix.buffer.data.byteOffset); // assumed to be constant in time
-        if(this._header.lengthOfInputs === null)
-            this._header.lengthOfInputs = this._inputMatrices.map(inputMatrix => inputMatrix.buffer.data.length); // assumed to be constant in time
+        // save input metadata & buffers
+        const inputMatrices = this._inputMatrices;
+        const inputs = this._inputBuffers; // new Array(inputMatrices.length);
+        for(let i = inputMatrices.length - 1; i >= 0; i--) {
+            const inputMatrix = inputMatrices[i];
+            const input = inputMatrix.buffer.data;
+
+            header.strideOfInputs[i] = inputMatrix.stride;
+            header.byteOffsetOfInputs[i] = input.byteOffset;
+            header.lengthOfInputs[i] = input.length;
+
+            inputs[i] = input;
+        }
 
         // run matrix operation
         return new Promise(resolve => {
-            this._fun(this._header, output, this._inputMatrices.map(inputMatrix => inputMatrix.buffer.data));
+            this._fun(header, output, inputs);
             resolve();
         });
     }
@@ -252,24 +270,33 @@ export class MatrixOperation
     {
         // obtain properties of the output matrix
         const { rows, columns, stride, type } = outputMatrix;
-        const output = outputMatrix.buffer.data;
+        const header = this._header;
 
         // do we have a compatible output matrix?
         this._assertCompatibility(rows, columns, type);
 
         // save output metadata
-        this._header.stride = stride;
-        this._header.byteOffset = output.byteOffset;
-        this._header.length = output.length;
+        const output = outputMatrix.buffer.data;
+        header.stride = stride;
+        header.byteOffset = output.byteOffset;
+        header.length = output.length;
 
-        // save input metadata
-        if(this._header.byteOffsetOfInputs === null)
-            this._header.byteOffsetOfInputs = this._inputMatrices.map(inputMatrix => inputMatrix.buffer.data.byteOffset); // assumed to be constant in time
-        if(this._header.lengthOfInputs === null)
-            this._header.lengthOfInputs = this._inputMatrices.map(inputMatrix => inputMatrix.buffer.data.length); // assumed to be constant in time
+        // save input metadata & buffers
+        const inputMatrices = this._inputMatrices;
+        const inputs = this._inputBuffers; // new Array(inputMatrices.length);
+        for(let i = inputMatrices.length - 1; i >= 0; i--) {
+            const inputMatrix = inputMatrices[i];
+            const input = inputMatrix.buffer.data;
+
+            header.strideOfInputs[i] = inputMatrix.stride;
+            header.byteOffsetOfInputs[i] = input.byteOffset;
+            header.lengthOfInputs[i] = input.length;
+
+            inputs[i] = input;
+        }
 
         // run matrix operation
-        this._fun(this._header, output, this._inputMatrices.map(inputMatrix => inputMatrix.buffer.data));
+        this._fun(header, output, inputs);
     }
 
     /**
@@ -318,11 +345,13 @@ export class MatrixOperationNop extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {SpeedyMatrix} matrix
+     * @param {number} requiredRows required number of rows of the output matrix
+     * @param {number} requiredColumns required number of columns of the output matrix
+     * @param {number} requiredType required type of the output matrix
      */
-    constructor(matrix)
+    constructor(requiredRows, requiredColumns, requiredType)
     {
-        super(Opcode.NOP, matrix.rows, matrix.columns, matrix.type);
+        super(Opcode.NOP, requiredRows, requiredColumns, requiredType);
     }
 }
 
@@ -333,12 +362,14 @@ export class MatrixOperationFill extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {SpeedyMatrix} matrix we'll create a matrix with the dimensions of this
+     * @param {number} requiredRows required number of rows of the output matrix
+     * @param {number} requiredColumns required number of columns of the output matrix
+     * @param {number} requiredType required type of the output matrix
      * @param {number} value the value we'll use to fill the matrix
      */
-    constructor(matrix, value)
+    constructor(requiredRows, requiredColumns, requiredType, value)
     {
-        super(Opcode.FILL, matrix.rows, matrix.columns, matrix.type, [], { value });
+        super(Opcode.FILL, requiredRows, requiredColumns, requiredType, [], { value: +value });
     }
 }
 
@@ -349,11 +380,13 @@ export class MatrixOperationEye extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {SpeedyMatrix} matrix we'll create an identity matrix with the dimensions of this
+     * @param {number} requiredRows required number of rows of the output matrix
+     * @param {number} requiredColumns required number of columns of the output matrix
+     * @param {number} requiredType required type of the output matrix
      */
-    constructor(matrix)
+    constructor(requiredRows, requiredColumns, requiredType)
     {
-        super(Opcode.EYE, matrix.rows, matrix.columns, matrix.type);
+        super(Opcode.EYE, requiredRows, requiredColumns, requiredType);
     }
 }
 
