@@ -19,7 +19,7 @@
  * Run matrix operations in a FIFO fashion
  */
 
-import { SpeedyMatrix } from './speedy-matrix';
+import { SpeedyMatrix } from './matrix';
 import { MatrixOperation } from './matrix-operations';
 
 /**

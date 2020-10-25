@@ -29,6 +29,9 @@ import { SpeedyVector2 } from './math/speedy-vector';
 import { SpeedyMatrixExprFactory } from './math/matrix-expressions';
 import { IllegalArgumentError } from '../utils/errors';
 
+// Constants
+const matrixExprFactory = new SpeedyMatrixExprFactory();
+
 /**
  * Speedy's main class
  */
@@ -115,14 +118,11 @@ export class Speedy
 
     /**
      * Create a matrix expression
-     * @param {number} rows number of rows
-     * @param {number} [columns] number of columns (defaults to the number of rows)
-     * @param {number[]} [values] initial values in column-major format
-     * @param {number} [type] F64, F32, etc.
+     * @returns {SpeedyMatrixExprFactory}
      */
-    static Matrix(rows, columns = rows, values = undefined, type = undefined)
+    static get Matrix()
     {
-        return SpeedyMatrixExprFactory.create(rows, columns, values, type);
+        return matrixExprFactory;
     }
 }
 

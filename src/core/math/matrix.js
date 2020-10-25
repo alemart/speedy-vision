@@ -15,8 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * speedy-matrix.js
- * Matrix operations
+ * matrix.js
+ * Matrix type
  */
 
 import { IllegalArgumentError, IllegalOperationError, NotSupportedError } from '../../utils/errors';

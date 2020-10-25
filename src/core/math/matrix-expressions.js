@@ -19,7 +19,7 @@
  * Abstract Matrix Algebra
  */
 
-import { SpeedyMatrix } from './speedy-matrix';
+import { SpeedyMatrix } from './matrix';
 import { MatrixMath } from './matrix-math';
 import { MatrixOperationsQueue } from './matrix-operations-queue';
 import { AbstractMethodError, IllegalArgumentError, IllegalOperationError } from '../../utils/errors';
@@ -33,9 +33,13 @@ import {
 } from './matrix-operations';
 
 // constants
-const DataType = MatrixMath.DataType;
-const MatrixType = MatrixMath.MatrixType;
 const matrixOperationsQueue = MatrixOperationsQueue.instance;
+const MatrixType = MatrixMath.MatrixType;
+const DataType = MatrixMath.DataType;
+const DataTypeName = MatrixMath.DataTypeName;
+const DataTypeName2DataType = Object.freeze(Object.keys(DataTypeName).reduce(
+    (obj, type) => Object.assign(obj, { [ DataTypeName[type] ]: type }),
+{}));
 
 
 
@@ -221,7 +225,7 @@ class SpeedyMatrixExpr
 
     /**
      * Get the i-th row of the matrix
-     * @param {number} i
+     * @param {number} i 0-based index
      */
     row(i)
     {
@@ -230,7 +234,7 @@ class SpeedyMatrixExpr
 
     /**
      * Get the j-th column of the matrix
-     * @param {number} j
+     * @param {number} j 0-based index
      */
     column(j)
     {
@@ -521,7 +525,7 @@ class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
 
     /**
      * Extract a (lastRow - firstRow + 1) x (lastColumn - firstColumn + 1)
-     * block from the matrix. All indexes are 0-based. Note that the
+     * block from the matrix. All indices are 0-based. Note that the
      * memory of the block is shared with the memory of the matrix.
      * @param {number} firstRow
      * @param {number} lastRow
@@ -838,7 +842,7 @@ class SpeedyMatrixAddExpr extends SpeedyMatrixBinaryExpr
 /**
  * A Factory of matrix expressions
  */
-export class SpeedyMatrixExprFactory
+export class SpeedyMatrixExprFactory extends Function
 {
     /**
      * Create a new SpeedyMatrixExpr that evaluates to a user-defined matrix
@@ -846,11 +850,16 @@ export class SpeedyMatrixExprFactory
      * @param {number} rows number of rows
      * @param {number} [columns] number of columns (defaults to the number of rows)
      * @param {number[]} [values] initial values in column-major format
-     * @param {number} [type] F32, F64, etc.
+     * @param {string} [dtype] 'float32' | 'float64' | 'int32' | 'uint8'
+     * @returns {SpeedyMatrixElementaryExpr}
      */
-    static create(rows, columns = rows, values = null, type = MatrixType.F32)
+    _create(rows, columns = rows, values = null, dtype = 'float32')
     {
+        let type = DataTypeName2DataType[dtype];
         let matrix = null;
+
+        if(type === undefined)
+            throw new IllegalArgumentError(`Unknown matrix type: "${dtype}"`);
 
         if(values != null) {
             if(!Array.isArray(values))
@@ -860,5 +869,60 @@ export class SpeedyMatrixExprFactory
         }
 
         return new SpeedyMatrixElementaryExpr(rows, columns, type, matrix);
+    }
+
+    /**
+     * Create a new matrix filled with zeroes
+     * @param {number} rows number of rows
+     * @param {number} [columns] number of columns (defaults to the number of rows)
+     * @param {number[]} [values] initial values in column-major format
+     * @param {string} [dtype] 'float32' | 'float64' | 'int32' | 'uint8'
+     * @returns {SpeedyMatrixElementaryExpr}
+     */
+    Zeros(rows, columns = rows, dtype = 'float32')
+    {
+        const values = (new Array(rows * columns)).fill(0);
+        return this._create(rows, columns, values, dtype);
+    }
+
+    /**
+     * Create a new matrix filled with ones
+     * @param {number} rows number of rows
+     * @param {number} [columns] number of columns (defaults to the number of rows)
+     * @param {number[]} [values] initial values in column-major format
+     * @param {string} [dtype] 'float32' | 'float64' | 'int32' | 'uint8'
+     * @returns {SpeedyMatrixElementaryExpr}
+     */
+    Ones(rows, columns = rows, dtype = 'float32')
+    {
+        const values = (new Array(rows * columns)).fill(1);
+        return this._create(rows, columns, values, dtype);
+    }
+
+    /**
+     * Create a new identity matrix
+     * @param {number} rows number of rows
+     * @param {number} [columns] number of columns (defaults to the number of rows)
+     * @param {number[]} [values] initial values in column-major format
+     * @param {string} [dtype] 'float32' | 'float64' | 'int32' | 'uint8'
+     * @returns {SpeedyMatrixElementaryExpr}
+     */
+    Eye(rows, columns = rows, dtype = 'float32')
+    {
+        const values = (new Array(rows * columns)).fill(0);
+        for(let j = Math.min(rows, columns) - 1; j >= 0; j--)
+            values[j * rows + j] = 1;
+
+        return this._create(rows, columns, values, dtype);
+    }
+
+    /**
+     * The factory can be invoked as a function
+     * This is an alias to SpeedyMatrixExprFactory._create()
+     */
+    constructor()
+    {
+        super('...args', 'return this._create(...args)');
+        return this.bind(this);
     }
 }

@@ -20,7 +20,7 @@
  */
 
 import { IllegalArgumentError, IllegalOperationError, NotSupportedError } from '../../utils/errors';
-import { SpeedyMatrix } from './speedy-matrix';
+import { SpeedyMatrix } from './matrix';
 import { MatrixMath } from './matrix-math';
 import { MatrixWorker } from './matrix-worker';
 
