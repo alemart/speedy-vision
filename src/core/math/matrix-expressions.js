@@ -139,6 +139,16 @@ class SpeedyMatrixExpr
         throw new AbstractMethodError();
     }
 
+    /**
+     * Assign a matrix
+     * @param {SpeedyMatrix} matrix
+     * @returns {Promise<void>} resolves as soon as the assignment is done
+     */
+    _assign(matrix)
+    {
+        throw new IllegalOperationError(`Can't assign matrix: not a l-value`);
+    }
+
 
 
     //
@@ -163,7 +173,7 @@ class SpeedyMatrixExpr
     /**
      * Assign an expression to this
      * @param {SpeedyMatrixExpr} expr
-     * @returns {SpeedyMatrixLvalueExpr}
+     * @returns {Promise<SpeedyMatrixAssignmentExpr>}
      */
     assign(expr)
     {
@@ -171,18 +181,9 @@ class SpeedyMatrixExpr
     }
 
     /**
-     * Set this matrix to the identity matrix
-     * @returns {SpeedyMatrixLvalueExpr}
-     */
-    eye()
-    {
-        throw new IllegalOperationError(`Can't set to identity: not a l-value`);
-    }
-
-    /**
      * Fill the matrix with a constant value
      * @param {number} value
-     * @returns {SpeedyMatrixLvalueExpr}
+     * @returns {Promise<SpeedyMatrixAssignmentExpr>}
      */
     fill(value)
     {
@@ -235,68 +236,6 @@ class SpeedyMatrixExpr
     plus(expr)
     {
         return new SpeedyMatrixAddExpr(this, expr);
-    }
-}
-
-/**
- * An lvalue (locator value) expression represents a user-owned object stored in memory
- * @abstract
- */
-class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
-{
-    /**
-     * Get the matrix associated with this lvalue expression
-     * This matrix must be guaranteed to be available after evaluating this expression
-     * @returns {SpeedyMatrix}
-     */
-    get _matrix()
-    {
-        throw new AbstractMethodError();
-    }
-
-    /**
-     * Assign an expression to this lvalue
-     * @param {SpeedyMatrixExpr} expr
-     * @returns {SpeedyMatrixLvalueExpr}
-     */
-    assign(expr)
-    {
-        throw new AbstractMethodError();
-    }
-
-    /**
-     * Set this matrix to the identity matrix
-     * @returns {SpeedyMatrixLvalueExpr}
-     */
-    eye()
-    {
-        const { rows, columns, type } = this._matrix;
-        return this.assign(new SpeedyMatrixEyeExpr(rows, columns, type));
-    }
-
-    /**
-     * Fill the matrix with a constant value
-     * @param {number} value
-     * @returns {SpeedyMatrixLvalueExpr}
-     */
-    fill(value)
-    {
-        const { rows, columns, type } = this._matrix;
-        return this.assign(new SpeedyMatrixFillExpr(rows, columns, type, +value));
-    }
-
-    /**
-     * Extract a (lastRow - firstRow + 1) x (lastColumn - firstColumn + 1)
-     * block from the matrix. All indexes are 0-based.
-     * @param {number} firstRow
-     * @param {number} lastRow
-     * @param {number} firstColumn
-     * @param {number} lastColumn
-     * @returns {SpeedyMatrixReadwriteBlockExpr}
-     */
-    block(firstRow, lastRow, firstColumn, lastColumn)
-    {
-        return new SpeedyMatrixReadwriteBlockExpr(this, firstRow, lastRow, firstColumn, lastColumn);
     }
 }
 
@@ -479,10 +418,108 @@ class SpeedyMatrixReadonlyBlockExpr extends SpeedyMatrixExpr
 // ================================================
 
 /**
- * A base expression representing a single matrix,
- * i.e., a leaf in the expression tree
+ * An lvalue (locator value) expression represents a user-owned object stored in memory
+ * @abstract
  */
-class SpeedyMatrixBaseExpr extends SpeedyMatrixLvalueExpr
+class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
+{
+    /**
+     * Get the matrix associated with this lvalue expression
+     * This matrix must be guaranteed to be available after evaluating this expression
+     * @returns {SpeedyMatrix}
+     */
+    get _matrix()
+    {
+        throw new AbstractMethodError();
+    }
+
+    /**
+     * Assign a matrix
+     * @param {SpeedyMatrix} matrix
+     * @returns {Promise<void>} resolves as soon as the assignment is done
+     */
+    _assign(matrix)
+    {
+        throw new AbstractMethodError();
+    }
+
+    /**
+     * Assign an expression to this lvalue
+     * @param {SpeedyMatrixExpr} expr
+     * @returns {Promise<SpeedyMatrixAssignmentExpr>} resolves as soon as the assignment is done
+     */
+    assign(expr)
+    {
+        const assignment = new SpeedyMatrixAssignmentExpr(this, expr);
+        return assignment._evaluate();
+    }
+
+    /**
+     * Fill the matrix with a constant value
+     * @param {number} value
+     * @returns {Promise<SpeedyMatrixAssignmentExpr>}
+     */
+    fill(value)
+    {
+        const { rows, columns, type } = this._matrix;
+        return this.assign(new SpeedyMatrixFillExpr(rows, columns, type, +value));
+    }
+
+    /**
+     * Extract a (lastRow - firstRow + 1) x (lastColumn - firstColumn + 1)
+     * block from the matrix. All indexes are 0-based.
+     * @param {number} firstRow
+     * @param {number} lastRow
+     * @param {number} firstColumn
+     * @param {number} lastColumn
+     * @returns {SpeedyMatrixReadwriteBlockExpr}
+     */
+    block(firstRow, lastRow, firstColumn, lastColumn)
+    {
+        return new SpeedyMatrixReadwriteBlockExpr(this, firstRow, lastRow, firstColumn, lastColumn);
+    }
+}
+
+/**
+ * Assignment expression
+ * Assign rvalue to lvalue (i.e., lvalue := rvalue)
+ */
+class SpeedyMatrixAssignmentExpr extends SpeedyMatrixLvalueExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixLvalueExpr} lvalue
+     * @param {SpeedyMatrixExpr} rvalue
+     */
+    constructor(lvalue, rvalue)
+    {
+        super(lvalue.rows, lvalue.columns, lvalue.type);
+        this._assertCompatibility(rvalue.rows, rvalue.columns, rvalue.type);
+
+        this._lvalue = lvalue;
+        this._rvalue = rvalue;
+    }
+
+    /**
+     * Evaluate expression
+     * @returns {Promise<SpeedyMatrixAssignmentExpr>}
+     */
+    _evaluate()
+    {
+        return Promise.all([
+            this._lvalue._evaluate(),
+            this._rvalue._evaluate()
+        ]).then(([ lvalue, rvalue ]) =>
+            lvalue._assign(rvalue._matrix)
+        ).then(() => this);
+    }
+}
+
+/**
+ * An elementary expression representing a single matrix
+ * (e.g., expression 'A' represents a single matrix)
+ */
+class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
 {
     /**
      * Constructor
@@ -492,7 +529,6 @@ class SpeedyMatrixBaseExpr extends SpeedyMatrixLvalueExpr
     {
         super(matrix.rows, matrix.columns, matrix.type);
         this._usermatrix = matrix;
-        this._nop = null;
     }
 
     /**
@@ -515,19 +551,15 @@ class SpeedyMatrixBaseExpr extends SpeedyMatrixLvalueExpr
     }
 
     /**
-     * Assign an expression to this matrix
+     * Assign a matrix
      * We just change pointers; no actual copying of data takes place
-     * @param {SpeedyMatrixExpr} expr 
-     * @returns {SpeedyMatrixLvalueExpr}
+     * @param {SpeedyMatrix} matrix
+     * @returns {Promise<void>} resolves as soon as the assignment is done
      */
-    assign(expr)
+    _assign(matrix)
     {
-        this._assertCompatibility(expr.rows, expr.columns, expr.type);
-        expr._evaluate().then(result =>
-            this._usermatrix = result._matrix
-        );
-
-        return this;
+        this._usermatrix = matrix;
+        return Promise.resolve();
     }
 }
 
@@ -587,29 +619,23 @@ class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
     }
 
     /**
-     * Assign an expression to this matrix
-     * Copy the data from expr to this
-     * This is a submatrix - we can't just assign pointers!
-     * @param {SpeedyMatrixExpr} expr 
-     * @returns {SpeedyMatrixLvalueExpr} this
+     * Assign a matrix
+     * Since this is a submatrix, we can't just assign pointers.
+     * We need to copy the data
+     * @param {SpeedyMatrix} matrix
+     * @returns {Promise<void>} resolves as soon as the assignment is done
      */
-    assign(expr)
+    _assign(matrix)
     {
-        this._assertCompatibility(expr.rows, expr.columns, expr.type);
-        expr._evaluate().then(result =>
-            matrixOperationsQueue.enqueue(
-                (
-                    this._operation ? this._operation.update([ result._matrix ]) :
-                    (this._operation = new MatrixOperationCopy(result._matrix))
-                ),
-                this._submatrix
-            )
+        return matrixOperationsQueue.enqueue(
+            (
+                this._operation ? this._operation.update([ matrix ]) :
+                (this._operation = new MatrixOperationCopy(matrix))
+            ),
+            this._submatrix
         );
-
-        return this;
     }
 }
-
 
 
 // ================================================
@@ -751,6 +777,6 @@ export class SpeedyMatrixExprFactory
             throw new IllegalArgumentError(`Can't initialize Matrix with values ${values}`);
 
         const matrix = new SpeedyMatrix(rows, columns, values, type);
-        return new SpeedyMatrixBaseExpr(matrix);
+        return new SpeedyMatrixElementaryExpr(matrix);
     }
 }
