@@ -374,23 +374,6 @@ export class MatrixOperationFill extends MatrixOperation
 }
 
 /**
- * Set to identity matrix
- */
-export class MatrixOperationEye extends MatrixOperation
-{
-    /**
-     * Class constructor
-     * @param {number} requiredRows required number of rows of the output matrix
-     * @param {number} requiredColumns required number of columns of the output matrix
-     * @param {number} requiredType required type of the output matrix
-     */
-    constructor(requiredRows, requiredColumns, requiredType)
-    {
-        super(Opcode.EYE, requiredRows, requiredColumns, requiredType);
-    }
-}
-
-/**
  * Copy matrix
  */
 export class MatrixOperationCopy extends MatrixOperation
@@ -422,6 +405,7 @@ export class MatrixOperationTranspose extends MatrixOperation
 
 /**
  * Add two matrices
+ * e.g., A + B
  */
 export class MatrixOperationAdd extends MatrixOperation
 {
@@ -433,6 +417,72 @@ export class MatrixOperationAdd extends MatrixOperation
     constructor(matrixA, matrixB)
     {
         super(Opcode.ADD, matrixA.rows, matrixA.columns, matrixA.type, [ matrixA, matrixB ]);
-        this._assertCompatibility(matrixB.rows, matrixB.columns, matrixB.type);
+    }
+}
+
+/**
+ * Subtract two matrices
+ * e.g., A - B
+ */
+export class MatrixOperationSubtract extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {SpeedyMatrix} matrixA
+     * @param {SpeedyMatrix} matrixB
+     */
+    constructor(matrixA, matrixB)
+    {
+        super(Opcode.SUBTRACT, matrixA.rows, matrixA.columns, matrixA.type, [ matrixA, matrixB ]);
+    }
+}
+
+/**
+ * Multiply two matrices
+ * e.g., A * B
+ */
+export class MatrixOperationMultiply extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {SpeedyMatrix} matrixA left matrix
+     * @param {SpeedyMatrix} matrixB right matrix
+     */
+    constructor(matrixA, matrixB)
+    {
+        super(Opcode.MULTIPLY, matrixA.rows, matrixB.columns, matrixA.type, [ matrixA, matrixB ]);
+    }
+}
+
+/**
+ * Multiply by a scalar
+ * e.g., alpha * A
+ */
+export class MatrixOperationScale extends MatrixOperation
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrix} matrix
+     * @param {number} scalar
+     */
+    constructor(matrix, scalar)
+    {
+        super(Opcode.SCALE, matrix.rows, matrix.columns, matrix.type, [ matrix ], { scalar: +scalar });
+    }
+}
+
+/**
+ * Component-wise multiplication
+ */
+export class MatrixOperationCompMult extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {SpeedyMatrix} matrixA
+     * @param {SpeedyMatrix} matrixB
+     */
+    constructor(matrixA, matrixB)
+    {
+        super(Opcode.COMPMULT, matrixA.rows, matrixA.columns, matrixA.type, [ matrixA, matrixB ]);
     }
 }

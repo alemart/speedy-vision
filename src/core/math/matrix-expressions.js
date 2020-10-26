@@ -29,6 +29,10 @@ import {
     MatrixOperationCopy,
     MatrixOperationTranspose,
     MatrixOperationAdd,
+    MatrixOperationSubtract,
+    MatrixOperationMultiply,
+    MatrixOperationScale,
+    MatrixOperationCompMult,
 } from './matrix-operations';
 
 // constants
@@ -303,6 +307,39 @@ class SpeedyMatrixExpr
     plus(expr)
     {
         return new SpeedyMatrixAddExpr(this, expr);
+    }
+
+    /**
+     * Subtract another matrix from this
+     * @param {SpeedyMatrixExpr} expr
+     * @returns {SpeedyMatrixExpr}
+     */
+    minus(expr)
+    {
+        return new SpeedyMatrixSubtractExpr(this, expr);
+    }
+
+    /**
+     * Multiply by a matrix or by a number
+     * @param {SpeedyMatrixExpr|number} expr
+     * @returns {SpeedyMatrixExpr}
+     */
+    times(expr)
+    {
+        if(expr instanceof SpeedyMatrixExpr)
+            return new SpeedyMatrixMultiplyExpr(this, expr);
+        else
+            return new SpeedyMatrixScaleExpr(this, expr);
+    }
+
+    /**
+     * Component-wise multiplication
+     * @param {SpeedyMatrixExpr} expr
+     * @returns {SpeedyMatrixExpr}
+     */
+    compMult(expr)
+    {
+        return new SpeedyMatrixCompMultExpr(this, expr);
     }
 }
 
@@ -931,6 +968,97 @@ class SpeedyMatrixAddExpr extends SpeedyMatrixBinaryExpr
     constructor(leftExpr, rightExpr)
     {
         super(leftExpr.rows, leftExpr.columns, leftExpr, rightExpr, MatrixOperationAdd);
+        this._assertCompatibility(rightExpr.rows, rightExpr.columns);
+    }
+}
+
+/**
+ * Subtract two matrix expressions,
+ * e.g., A = B - C
+ */
+class SpeedyMatrixSubtractExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} leftExpr
+     * @param {SpeedyMatrixExpr} rightExpr
+     */
+    constructor(leftExpr, rightExpr)
+    {
+        super(leftExpr.rows, leftExpr.columns, leftExpr, rightExpr, MatrixOperationSubtract);
+        this._assertCompatibility(rightExpr.rows, rightExpr.columns);
+    }
+}
+
+/**
+ * Multiply two matrix expressions,
+ * e.g., A = B * C
+ */
+class SpeedyMatrixMultiplyExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} leftExpr
+     * @param {SpeedyMatrixExpr} rightExpr
+     */
+    constructor(leftExpr, rightExpr)
+    {
+        super(leftExpr.rows, rightExpr.columns, leftExpr, rightExpr, MatrixOperationMultiply);
+        if(leftExpr.columns !== rightExpr.rows)
+            throw new IllegalArgumentError(`Can't multiply a ${leftExpr.rows} x ${leftExpr.columns} matrix by a ${rightExpr.rows} x ${rightExpr.columns} matrix`);
+    }
+}
+
+/**
+ * Multiply a matrix expression by a number,
+ * e.g., A = alpha B
+ */
+class SpeedyMatrixScaleExpr extends SpeedyMatrixTempExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} expr
+     * @param {number} scalar
+     */
+    constructor(expr, scalar)
+    {
+        super(expr.rows, expr.columns, expr.type);
+        this._expr = expr;
+        this._scalar = scalar;
+        this._operation = null;
+    }
+
+    /**
+     * Evaluate expression
+     * @returns {Promise<SpeedyMatrixExpr>}
+     */
+    _evaluate()
+    {
+        return this._expr._evaluate().then(result =>
+            matrixOperationsQueue.enqueue(
+                (
+                    this._operation ? this._operation.update([ result._matrix ]) :
+                    (this._operation = new MatrixOperationScale(result._matrix, this._scalar))
+                ),
+                this._matrix
+            )
+        ).then(() => this);
+    }
+}
+
+/**
+ * Component-wise multiplication of two matrix expressions
+ */
+class SpeedyMatrixCompMultExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} leftExpr
+     * @param {SpeedyMatrixExpr} rightExpr
+     */
+    constructor(leftExpr, rightExpr)
+    {
+        super(leftExpr.rows, leftExpr.columns, leftExpr, rightExpr, MatrixOperationCompMult);
         this._assertCompatibility(rightExpr.rows, rightExpr.columns);
     }
 }

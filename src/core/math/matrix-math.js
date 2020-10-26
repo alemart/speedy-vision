@@ -231,51 +231,6 @@ class MatrixMath
         }
     }
 
-    /**
-     * Component-wise minimum
-     * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
-     */
-    static min(header, output, inputs)
-    {
-        const { rows, columns, stride } = header;
-        const [ strideA, strideB ] = header.strideOfInputs;
-        const [ a, b ] = inputs;
-
-        let i, j, oj, aj, bj;
-        for(j = 0; j < columns; j++) {
-            oj = j * stride;
-            aj = j * strideA;
-            bj = j * strideB;
-            for(i = 0; i < rows; i++)
-                output[oj + i] = Math.min(a[aj + i], b[bj + i]);
-        }
-    }
-
-    /**
-     * Component-wise maximum
-     * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
-     */
-    static max(header, output, inputs)
-    {
-        const { rows, columns, stride } = header;
-        const [ strideA, strideB ] = header.strideOfInputs;
-        const [ a, b ] = inputs;
-
-        let i, j, oj, aj, bj;
-        for(j = 0; j < columns; j++) {
-            oj = j * stride;
-            aj = j * strideA;
-            bj = j * strideB;
-            for(i = 0; i < rows; i++)
-                output[oj + i] = Math.max(a[aj + i], b[bj + i]);
-        }
-    }
-
-
 
 
 
@@ -362,8 +317,7 @@ class MatrixMath
             MULTIPLY: 0x7,   // multiply two matrices
             SCALE: 0x8,      // multiply by scalar
             COMPMULT: 0x9,   // component-wise product
-            MIN: 0xA,        // component-wise minimum
-            MAX: 0xB,        // component-wise maximum
+            // 0xA
         }));
     }
 
