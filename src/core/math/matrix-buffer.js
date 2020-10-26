@@ -41,7 +41,7 @@ export class MatrixBuffer
      * @param {number} [type] the type of the elements of the matrix: F64, F32, etc.
      * @param {MatrixBuffer} [parent] the buffer that originated this one, if any
      */
-    constructor(length, values = null, type = MatrixType.F64, parent = null)
+    constructor(length, values = null, type = MatrixType.F32, parent = null)
     {
         let data;
         length = length | 0;

@@ -27,18 +27,27 @@
  */
 class MatrixMath
 {
+    // ========================================================
+    // Math routines
+    // ========================================================
+
     /**
      * No-operation
-     * @param {object} header properties of the output matrix
-     * @param {TypedArray} output output buffer (column-major format)
-     * @param {TypedArray[]} inputs input buffer(s), 0 or more
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
      */
     static nop(header, output, inputs)
     {
         ;
     }
 
-    // Fill the matrix with a constant value
+    /**
+     * Fill the matrix with a constant value
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
     static fill(header, output, inputs)
     {
         const { rows, columns, stride, length } = header;
@@ -50,16 +59,17 @@ class MatrixMath
             return;
         }
 
-        // set the entries one by one
-        let i, j, oj;
-        for(j = 0; j < columns; j++) {
-            oj = j * stride;
-            for(i = 0; i < rows; i++)
-                output[oj + i] = value;
-        }
+        // fill the columns one by one
+        for(let j = 0; j < columns; j++)
+            output.fill(value, j * stride, j * stride + rows);
     }
 
-    // Copy matrix
+    /**
+     * Copy matrix
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
     static copy(header, output, inputs)
     {
         const { rows, columns, stride, length } = header;
@@ -82,7 +92,12 @@ class MatrixMath
         }
     }
 
-    // Transpose matrix
+    /**
+     * Transpose matrix
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
     static transpose(header, output, inputs)
     {
         const { rows, columns, stride } = header;
@@ -98,7 +113,12 @@ class MatrixMath
         }
     }
 
-    // Add two matrices
+    /**
+     * Add two matrices
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
     static add(header, output, inputs)
     {
         const { rows, columns, stride } = header;
@@ -115,7 +135,12 @@ class MatrixMath
         }
     }
 
-    // Subtract two matrices
+    /**
+     * Subtract two matrices
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
     static subtract(header, output, inputs)
     {
         const { rows, columns, stride } = header;
@@ -132,7 +157,12 @@ class MatrixMath
         }
     }
 
-    // Multiply two matrices
+    /**
+     * Multiply two matrices
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
     static multiply(header, output, inputs)
     {
         const { rows, columns, stride, length } = header;
@@ -159,7 +189,12 @@ class MatrixMath
         }
     }
 
-    // Multiply by a constant
+    /**
+     * Multiply by a constant
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
     static scale(header, output, inputs)
     {
         const { rows, columns, stride } = header;
@@ -174,7 +209,12 @@ class MatrixMath
         }
     }
 
-    // Component-wise multiplication
+    /**
+     * Component-wise multiplication
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
     static compmult(header, output, inputs)
     {
         const { rows, columns, stride } = header;
@@ -191,7 +231,12 @@ class MatrixMath
         }
     }
 
-    // Component-wise minimum
+    /**
+     * Component-wise minimum
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
     static min(header, output, inputs)
     {
         const { rows, columns, stride } = header;
@@ -208,8 +253,13 @@ class MatrixMath
         }
     }
 
-    // Component-wise maximum
-    static min(header, output, inputs)
+    /**
+     * Component-wise maximum
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
+    static max(header, output, inputs)
     {
         const { rows, columns, stride } = header;
         const [ strideA, strideB ] = header.strideOfInputs;
