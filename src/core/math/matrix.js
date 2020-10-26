@@ -23,14 +23,7 @@ import { IllegalArgumentError, IllegalOperationError, NotSupportedError } from '
 import { MatrixBuffer } from './matrix-buffer';
 import { MatrixMath } from './matrix-math';
 import { MatrixOperationsQueue } from './matrix-operations-queue';
-import {
-    MatrixOperation,
-    MatrixOperationNop,
-    MatrixOperationEye,
-    MatrixOperationFill,
-    MatrixOperationTranspose,
-    MatrixOperationAdd,
-} from './matrix-operations';
+import { MatrixOperationNop } from './matrix-operations';
 
 
 
@@ -43,7 +36,7 @@ const matrixOperationsQueue = MatrixOperationsQueue.instance;
 
 
 /**
- * Generic matrix
+ * Matrix class
  */
 export class SpeedyMatrix
 {
@@ -143,7 +136,7 @@ export class SpeedyMatrix
 
 
     // ====================================
-    // MATRIX DATA
+    // READ MATRIX
     // ====================================
 
     /**
@@ -252,6 +245,14 @@ export class SpeedyMatrix
         });
     }
 
+
+
+
+
+    // ====================================
+    // ACCESS BY BLOCK
+    // ====================================
+
     /**
      * Create a submatrix using the range [firstRow:lastRow, firstColumn:lastColumn].
      * It will have size (lastRow - firstRow + 1) x (lastColumn - firstColumn + 1).
@@ -285,6 +286,24 @@ export class SpeedyMatrix
         // create submatrix
         return this._buffer.createSharedBuffer(begin, length).then(sharedBuffer =>
             new SpeedyMatrix(subRows, subColumns, undefined, this._type, stride, sharedBuffer)
+        );
+    }
+
+    /**
+     * Creates a column-vector featuring the elements of the main diagonal
+     * of the matrix. The internal buffers of the column-vector and of the
+     * matrix are shared, so if you change the data in one, you'll change
+     * the data in the other.
+     * @returns {Promise<SpeedyMatrix>}
+     */
+    diagonal()
+    {
+        const rows = this._rows, stride = this._stride;
+        const diagonalLength = Math.min(rows, this._columns);
+        const bufferLength = (diagonalLength - 1) * stride + rows;
+
+        return this._buffer.createSharedBuffer(0, bufferLength).then(sharedBuffer =>
+            new SpeedyMatrix(1, diagonalLength, undefined, this._type, stride + 1, sharedBuffer)
         );
     }
 

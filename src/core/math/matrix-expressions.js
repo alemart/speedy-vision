@@ -260,6 +260,15 @@ class SpeedyMatrixExpr
         return this.block(0, this._rows - 1, firstColumn, lastColumn);
     }
 
+    /**
+     * Get the main diagonal of the matrix. Internal buffer is shared.
+     * @returns {SpeedyMatrixReadonlyDiagonalExpr}
+     */
+    diagonal()
+    {
+        return new SpeedyMatrixReadonlyDiagonalExpr(this);
+    }
+
 
 
 
@@ -468,6 +477,54 @@ class SpeedyMatrixReadonlyBlockExpr extends SpeedyMatrixExpr
     }
 }
 
+/**
+ * Extract a read-only diagonal from a matrix expression
+ */
+class SpeedyMatrixReadonlyDiagonalExpr extends SpeedyMatrixExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} expr originating matrix expression
+     */
+    constructor(expr)
+    {
+        const diagonalLength = Math.min(expr.rows, expr.columns);
+        super(1, diagonalLength, expr.type);
+
+        this._expr = expr;
+        this._diagonal = null;
+        this._cachedMatrix = null;
+    }
+
+    /**
+     * Get the matrix associated with this expression
+     * This matrix must be guaranteed to be available after evaluating this expression
+     * @returns {SpeedyMatrix}
+     */
+    get _matrix()
+    {
+        return this._diagonal;
+    }
+
+    /**
+     * Evaluate the expression
+     * @returns {Promise<SpeedyMatrixExpr>}
+     */
+    _evaluate()
+    {
+        return this._expr._evaluate().then(result => {
+            if(result._matrix !== this._cachedMatrix) {
+                this._cachedMatrix = result._matrix;
+                return this._cachedMatrix.diagonal();
+            }
+            return this._diagonal; // we've already extracted the diagonal
+        }).then(diagonal => {
+            this._diagonal = diagonal;
+            return this;
+        });
+    }
+}
+
 
 
 
@@ -535,6 +592,15 @@ class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
     block(firstRow, lastRow, firstColumn, lastColumn)
     {
         return new SpeedyMatrixReadwriteBlockExpr(this, firstRow, lastRow, firstColumn, lastColumn);
+    }
+
+    /**
+     * Get the main diagonal of the matrix. Internal buffer is shared.
+     * @returns {SpeedyMatrixReadwriteDiagonalExpr}
+     */
+    diagonal()
+    {
+        return new SpeedyMatrixReadwriteDiagonalExpr(this);
     }
 }
 
@@ -713,6 +779,72 @@ class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
                 (this._operation = new MatrixOperationCopy(matrix))
             ),
             this._submatrix
+        );
+    }
+}
+
+/**
+ * Extract a read-write diagonal from a matrix expression
+ */
+class SpeedyMatrixReadwriteDiagonalExpr extends SpeedyMatrixLvalueExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} expr originating matrix expression
+     */
+    constructor(expr)
+    {
+        const diagonalLength = Math.min(expr.rows, expr.columns);
+        super(1, diagonalLength, expr.type);
+
+        this._expr = expr;
+        this._diagonal = null;
+        this._cachedMatrix = null;
+    }
+
+    /**
+     * Get the matrix associated with this expression
+     * This matrix must be guaranteed to be available after evaluating this expression
+     * @returns {SpeedyMatrix}
+     */
+    get _matrix()
+    {
+        return this._diagonal;
+    }
+
+    /**
+     * Evaluate the expression
+     * @returns {Promise<SpeedyMatrixExpr>}
+     */
+    _evaluate()
+    {
+        return this._expr._evaluate().then(result => {
+            if(result._matrix !== this._cachedMatrix) {
+                this._cachedMatrix = result._matrix;
+                return this._cachedMatrix.diagonal();
+            }
+            return this._diagonal; // we've already extracted the diagonal
+        }).then(diagonal => {
+            this._diagonal = diagonal;
+            return this;
+        });
+    }
+
+    /**
+     * Assign a matrix
+     * Since this is a diagonal, we can't just assign pointers.
+     * We need to copy the data
+     * @param {SpeedyMatrix} matrix
+     * @returns {Promise<void>} resolves as soon as the assignment is done
+     */
+    _assign(matrix)
+    {
+        return matrixOperationsQueue.enqueue(
+            (
+                this._operation ? this._operation.update([ matrix ]) :
+                (this._operation = new MatrixOperationCopy(matrix))
+            ),
+            this._diagonal
         );
     }
 }

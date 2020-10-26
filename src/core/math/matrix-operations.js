@@ -27,7 +27,7 @@ import { MatrixWorker } from './matrix-worker';
 // Constants
 const Opcode = MatrixMath.Opcode;
 const Opcode2fun = MatrixMath.Opcode2fun;
-const SMALL_WORKLOAD = 0; //30; // how much is "small"? further experimental testing is desirable
+const SMALL_WORKLOAD = 0; //30; // what is "small"? further experimental testing is desirable
                            // a binary operation for 3x3 matrices, e.g. C = A + B
 
 // Worker
