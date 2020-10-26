@@ -26,7 +26,6 @@ import { AbstractMethodError, IllegalArgumentError, IllegalOperationError } from
 import {
     MatrixOperationNop,
     MatrixOperationFill,
-    MatrixOperationEye,
     MatrixOperationCopy,
     MatrixOperationTranspose,
     MatrixOperationAdd,
@@ -229,7 +228,7 @@ class SpeedyMatrixExpr
      */
     row(i)
     {
-        return this.block(i, i, 0, this.columns - 1);
+        return this.block(i, i, 0, this._columns - 1);
     }
 
     /**
@@ -238,27 +237,27 @@ class SpeedyMatrixExpr
      */
     column(j)
     {
-        return this.block(0, this.rows - 1, j, j);
+        return this.block(0, this._rows - 1, j, j);
     }
 
     /**
-     * Get a range of (lastRow - firstRow + 1) rows. Both indices are inclusive.
+     * Get (lastRow - firstRow + 1) contiguous rows. Both indices are inclusive.
      * @param {number} firstRow
      * @param {number} lastRow
      */
-    rowRange(firstRow, lastRow)
+    rowSet(firstRow, lastRow)
     {
-        return this.block(firstRow, lastRow, 0, this.columns - 1);
+        return this.block(firstRow, lastRow, 0, this._columns - 1);
     }
 
     /**
-     * Get a range of (lastColumn - firstColumn + 1) columns. Both indices are inclusive.
+     * Get (lastColumn - firstColumn + 1) contiguous columns. Both indices are inclusive.
      * @param {number} firstColumn
      * @param {number} lastColumn
      */
-    columnRange(firstColumn, lastColumn)
+    columnSet(firstColumn, lastColumn)
     {
-        return this.block(0, this.rows - 1, firstColumn, lastColumn);
+        return this.block(0, this._rows - 1, firstColumn, lastColumn);
     }
 
 
@@ -722,36 +721,6 @@ class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
 // ================================================
 // BASIC OPERATIONS
 // ================================================
-
-/**
- * Make the output matrix become an identity matrix
- */
-class SpeedyMatrixEyeExpr extends SpeedyMatrixTempExpr
-{
-    /**
-     * Constructor
-     * @param {number} rows number of rows of the resulting (output) matrix
-     * @param {number} columns number of columns of the resulting (output) matrix
-     * @param {number} type type of the resulting (output) matrix
-     */
-    constructor(rows, columns, type)
-    {
-        super(rows, columns, type);
-        this._operation = new MatrixOperationEye(rows, columns, type);
-    }
-
-    /**
-     * Evaluate expression
-     * @returns {Promise<SpeedyMatrixExpr>}
-     */
-    _evaluate()
-    {
-        return matrixOperationsQueue.enqueue(
-            this._operation,
-            this._matrix
-        ).then(() => this);
-    }
-}
 
 /**
  * Fill the output matrix with a constant value

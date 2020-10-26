@@ -38,39 +38,6 @@ class MatrixMath
         ;
     }
 
-    // Set output := identity matrix
-    static eye(header, output, inputs)
-    {
-        const { rows, columns, stride, length } = header;
-
-        // set the matrix to zeroes
-        if(rows * columns == length) {
-            // use a memset-like operation if possible
-            output.fill(0);
-        }
-        else {
-            // set each entry to zero
-            for(let j = 0; j < columns; j++) {
-                for(let i = 0; i < rows; i++)
-                    output[j * stride + i] = 0;
-            }
-        }
-
-        /*
-        // multi-channel matrices
-        const channels = 1 + (type & 3);
-        for(let j = 0; j < m; j++) {
-            for(let c = 0; c < channels; c++)
-                output[(j * stride + j) * channels + c] = 1;
-        }
-        */
-
-        // set the main diagonal
-        const m = Math.min(rows, columns);
-        for(let j = 0; j < m; j++)
-            output[j * stride + j] = 1;
-    }
-
     // Fill the matrix with a constant value
     static fill(header, output, inputs)
     {
@@ -79,14 +46,16 @@ class MatrixMath
 
         // use a memset-like operation if possible
         if(rows * columns == length) {
-            output.fill(value);
+            output.fill(value, 0, length);
             return;
         }
 
         // set the entries one by one
-        for(let j = 0; j < columns; j++) {
-            for(let i = 0; i < rows; i++)
-                output[j * stride + i] = value;
+        let i, j, oj;
+        for(j = 0; j < columns; j++) {
+            oj = j * stride;
+            for(i = 0; i < rows; i++)
+                output[oj + i] = value;
         }
     }
 
@@ -99,14 +68,17 @@ class MatrixMath
 
         // use a memcpy-like operation if possible
         if(length == header.lengthOfInputs[0] && rows * columns == length) {
-            output.set(input);
+            output.set(input, 0, length);
             return;
         }
 
         // copy values one by one
-        for(let j = 0; j < columns; j++) {
-            for(let i = 0; i < rows; i++)
-                output[j * stride + i] = input[j * strideI + i];
+        let i, j, oj, ij;
+        for(j = 0; j < columns; j++) {
+            oj = j * stride;
+            ij = j * strideI;
+            for(i = 0; i < rows; i++)
+                output[oj + i] = input[ij + i];
         }
     }
 
@@ -117,9 +89,12 @@ class MatrixMath
         const [ strideT ] = header.strideOfInputs;
         const [ input ] = inputs;
 
-        for(let i = 0; i < rows; i++) {
-            for(let j = 0; j < columns; j++)
-                output[j * stride + i] = input[i * strideT + j];
+        let i, j, oj, ii;
+        for(i = 0; i < rows; i++) {
+            oj = j * stride;
+            ii = i * strideT;
+            for(j = 0; j < columns; j++)
+                output[oj + i] = input[ii + j];
         }
     }
 
@@ -130,9 +105,123 @@ class MatrixMath
         const [ strideA, strideB ] = header.strideOfInputs;
         const [ a, b ] = inputs;
 
-        for(let j = 0; j < columns; j++) {
-            for(let i = 0; i < rows; i++)
-                output[j * stride + i] = a[j * strideA + i] + b[j * strideB + i];
+        let i, j, oj, aj, bj;
+        for(j = 0; j < columns; j++) {
+            oj = j * stride;
+            aj = j * strideA;
+            bj = j * strideB;
+            for(i = 0; i < rows; i++)
+                output[oj + i] = a[aj + i] + b[bj + i];
+        }
+    }
+
+    // Subtract two matrices
+    static subtract(header, output, inputs)
+    {
+        const { rows, columns, stride } = header;
+        const [ strideA, strideB ] = header.strideOfInputs;
+        const [ a, b ] = inputs;
+
+        let i, j, oj, aj, bj;
+        for(j = 0; j < columns; j++) {
+            oj = j * stride;
+            aj = j * strideA;
+            bj = j * strideB;
+            for(i = 0; i < rows; i++)
+                output[oj + i] = a[aj + i] - b[bj + i];
+        }
+    }
+
+    // Multiply two matrices
+    static multiply(header, output, inputs)
+    {
+        const { rows, columns, stride, length } = header;
+        const [ columnsA, columnsB ] = header.columnsOfInputs;
+        const [ strideA, strideB ] = header.strideOfInputs;
+        const [ a, b ] = inputs;
+
+        // clear matrix
+        if(rows * columns != length) {
+            for(let c = 0; c < columns; c++)
+                output.fill(0, c * stride, c * stride + rows);
+        }
+        else
+            output.fill(0, 0, length);
+
+        // multiply taking cache locality into account
+        let i, j, k, ok, aj, bk, bjk;
+        for(ok = bk = k = 0; k < columnsB; k++, ok += stride, bk += strideB) {
+            for(aj = j = 0; j < columnsA; j++, aj += strideA) {
+                bjk = b[bk + j];
+                for(i = 0; i < rows; i++)
+                    output[ok + i] += a[aj + i] * bjk;
+            }
+        }
+    }
+
+    // Multiply by a constant
+    static scale(header, output, inputs)
+    {
+        const { rows, columns, stride } = header;
+        const { scalar } = header.custom;
+        const [ input ] = inputs;
+
+        let i, j, oj;
+        for(j = 0; j < columns; j++) {
+            oj = j * stride;
+            for(i = 0; i < rows; i++)
+                output[oj + i] = input[oj + i] * scalar;
+        }
+    }
+
+    // Component-wise multiplication
+    static compmult(header, output, inputs)
+    {
+        const { rows, columns, stride } = header;
+        const [ strideA, strideB ] = header.strideOfInputs;
+        const [ a, b ] = inputs;
+
+        let i, j, oj, aj, bj;
+        for(j = 0; j < columns; j++) {
+            oj = j * stride;
+            aj = j * strideA;
+            bj = j * strideB;
+            for(i = 0; i < rows; i++)
+                output[oj + i] = a[aj + i] * b[bj + i];
+        }
+    }
+
+    // Component-wise minimum
+    static min(header, output, inputs)
+    {
+        const { rows, columns, stride } = header;
+        const [ strideA, strideB ] = header.strideOfInputs;
+        const [ a, b ] = inputs;
+
+        let i, j, oj, aj, bj;
+        for(j = 0; j < columns; j++) {
+            oj = j * stride;
+            aj = j * strideA;
+            bj = j * strideB;
+            for(i = 0; i < rows; i++)
+                output[oj + i] = Math.min(a[aj + i], b[bj + i]);
+        }
+    }
+
+    // Component-wise maximum
+    static min(header, output, inputs)
+    {
+        const { rows, columns, stride } = header;
+        const [ strideA, strideB ] = header.strideOfInputs;
+        const [ a, b ] = inputs;
+
+        let i, j, oj, aj, bj;
+        for(j = 0; j < columns; j++) {
+            oj = j * stride;
+            aj = j * strideA;
+            bj = j * strideB;
+            for(i = 0; i < rows; i++)
+                output[oj + i] = Math.max(a[aj + i], b[bj + i]);
         }
     }
 
@@ -214,11 +303,17 @@ class MatrixMath
     {
         return this._Opcode || (this._Opcode = Object.freeze({
             NOP: 0x0,        // no-operation
-            EYE: 0x1,        // identity matrix
+            //EYE: 0x1,      // identity matrix
             FILL: 0x2,       // fill the matrix with a constant
             COPY: 0x3,       // copy matrix
             TRANSPOSE: 0x4,  // transpose matrix
             ADD: 0x5,        // add two matrices
+            SUBTRACT: 0x6,   // subtract two matrices
+            MULTIPLY: 0x7,   // multiply two matrices
+            SCALE: 0x8,      // multiply by scalar
+            COMPMULT: 0x9,   // component-wise product
+            MIN: 0xA,        // component-wise minimum
+            MAX: 0xB,        // component-wise maximum
         }));
     }
 
@@ -230,11 +325,16 @@ class MatrixMath
     {
         return this._Opcode2fun || (this._Opcode2fun = Object.freeze({
             [this.Opcode.NOP]: this.nop,
-            [this.Opcode.EYE]: this.eye,
             [this.Opcode.FILL]: this.fill,
             [this.Opcode.COPY]: this.copy,
             [this.Opcode.TRANSPOSE]: this.transpose,
             [this.Opcode.ADD]: this.add,
+            [this.Opcode.SUBTRACT]: this.subtract,
+            [this.Opcode.MULTIPLY]: this.multiply,
+            [this.Opcode.SCALE]: this.scale,
+            [this.Opcode.COMPMULT]: this.compmult,
+            [this.Opcode.MIN]: this.min,
+            [this.Opcode.MAX]: this.max,
         }));
     }
 }
