@@ -172,7 +172,7 @@ export class MatrixBuffer
                     for(let j = callbackQueue.length - 1; j >= i; j--) {
                         my._pendingAccessesQueue.unshift(callbackQueue[j]);
                     }
-                    break;
+                    break; // note: for each lock() we need an unlock()
                 }
 
                 // if the buffer remains unlocked, we're cool
