@@ -486,3 +486,37 @@ export class MatrixOperationCompMult extends MatrixOperation
         super(Opcode.COMPMULT, matrixA.rows, matrixA.columns, matrixA.type, [ matrixA, matrixB ]);
     }
 }
+
+/**
+ * Multiply two matrices, transposing the left operand
+ * e.g., A^T * B
+ */
+export class MatrixOperationMultiplyLT extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {SpeedyMatrix} matrixA left matrix
+     * @param {SpeedyMatrix} matrixB right matrix
+     */
+    constructor(matrixA, matrixB)
+    {
+        super(Opcode.MULTIPLYLT, matrixA.rows, matrixB.columns, matrixA.type, [ matrixA, matrixB ]);
+    }
+}
+
+/**
+ * Multiply two matrices, transposing the right operand
+ * e.g., A * B^T
+ */
+export class MatrixOperationMultiplyRT extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {SpeedyMatrix} matrixA left matrix
+     * @param {SpeedyMatrix} matrixB right matrix
+     */
+    constructor(matrixA, matrixB)
+    {
+        super(Opcode.MULTIPLYRT, matrixA.rows, matrixB.columns, matrixA.type, [ matrixA, matrixB ]);
+    }
+}

@@ -31,6 +31,8 @@ import {
     MatrixOperationAdd,
     MatrixOperationSubtract,
     MatrixOperationMultiply,
+    MatrixOperationMultiplyLT,
+    MatrixOperationMultiplyRT,
     MatrixOperationScale,
     MatrixOperationCompMult,
 } from './matrix-operations';
@@ -410,6 +412,15 @@ class SpeedyMatrixUnaryExpr extends SpeedyMatrixTempExpr
             )
         ).then(() => this);
     }
+
+    /**
+     * Input expression
+     * @returns {SpeedyMatrixExpr}
+     */
+    get child()
+    {
+        return this._expr;
+    }
 }
 
 /**
@@ -456,6 +467,24 @@ class SpeedyMatrixBinaryExpr extends SpeedyMatrixTempExpr
                 this._matrix
             )
         ).then(() => this);
+    }
+
+    /**
+     * Left input expression
+     * @returns {SpeedyMatrixExpr}
+     */
+    get leftChild()
+    {
+        return this._leftExpr;
+    }
+
+    /**
+     * Right input expression
+     * @returns {SpeedyMatrixExpr}
+     */
+    get rightChild()
+    {
+        return this._rightExpr;
     }
 }
 
@@ -950,6 +979,13 @@ class SpeedyMatrixTransposeExpr extends SpeedyMatrixUnaryExpr
      */
     constructor(expr)
     {
+        // optimize if the input expression is a transposition
+        if(expr instanceof SpeedyMatrixTransposeExpr) {
+            // A = (A^T)^T
+            return expr.child;
+        }
+
+        // regular transposition
         super(expr.columns, expr.rows, expr, MatrixOperationTranspose);
     }
 }
@@ -1003,9 +1039,66 @@ class SpeedyMatrixMultiplyExpr extends SpeedyMatrixBinaryExpr
      */
     constructor(leftExpr, rightExpr)
     {
+        // optimize if the input expressions are transposed
+        const lt = leftExpr instanceof SpeedyMatrixTransposeExpr;
+        const rt = rightExpr instanceof SpeedyMatrixTransposeExpr;
+        if(lt && rt) {
+            // A = (B^T) (C^T) = (C B)^T
+            return new SpeedyMatrixTransposeExpr(
+                new SpeedyMatrixMultiplyExpr(rightExpr.child, leftExpr.child)
+            );
+        }
+        else if(lt && !rt) {
+            // A = (B^T) C
+            return new SpeedyMatrixMultiplyLTExpr(leftExpr.child, rightExpr);
+        }
+        else if(!lt && rt) {
+            // A = B (C^T)
+            return new SpeedyMatrixMultiplyRTExpr(leftExpr, rightExpr.child);
+        }
+
+        // regular multiplication
         super(leftExpr.rows, rightExpr.columns, leftExpr, rightExpr, MatrixOperationMultiply);
         if(leftExpr.columns !== rightExpr.rows)
             throw new IllegalArgumentError(`Can't multiply a ${leftExpr.rows} x ${leftExpr.columns} matrix by a ${rightExpr.rows} x ${rightExpr.columns} matrix`);
+    }
+}
+
+/**
+ * Multiply two matrix expressions, transposing the left operand
+ * e.g., A = B^T * C
+ */
+class SpeedyMatrixMultiplyLTExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} leftExpr
+     * @param {SpeedyMatrixExpr} rightExpr
+     */
+    constructor(leftExpr, rightExpr)
+    {
+        super(leftExpr.columns, rightExpr.columns, leftExpr, rightExpr, MatrixOperationMultiplyLT);
+        if(leftExpr.rows !== rightExpr.rows)
+            throw new IllegalArgumentError(`Can't multiply a ${leftExpr.columns} x ${leftExpr.rows} (transposed) matrix by a ${rightExpr.rows} x ${rightExpr.columns} matrix`);
+    }
+}
+
+/**
+ * Multiply two matrix expressions, transposing the right operand
+ * e.g., A = B * C^T
+ */
+class SpeedyMatrixMultiplyRTExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} leftExpr
+     * @param {SpeedyMatrixExpr} rightExpr
+     */
+    constructor(leftExpr, rightExpr)
+    {
+        super(leftExpr.rows, rightExpr.rows, leftExpr, rightExpr, MatrixOperationMultiplyRT);
+        if(leftExpr.columns !== rightExpr.columns)
+            throw new IllegalArgumentError(`Can't multiply a ${leftExpr.rows} x ${leftExpr.columns} matrix by a ${rightExpr.columns} x ${rightExpr.rows} (transposed) matrix`);
     }
 }
 

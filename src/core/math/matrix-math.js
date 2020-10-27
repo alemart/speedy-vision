@@ -84,9 +84,7 @@ class MatrixMath
 
         // copy values one by one
         let i, j, oj, ij;
-        for(j = 0; j < columns; j++) {
-            oj = j * stride;
-            ij = j * strideI;
+        for(oj = ij = j = 0; j < columns; j++, oj += stride, ij += strideI) {
             for(i = 0; i < rows; i++)
                 output[oj + i] = input[ij + i];
         }
@@ -104,11 +102,9 @@ class MatrixMath
         const [ strideT ] = header.strideOfInputs;
         const [ input ] = inputs;
 
-        let i, j, oj, ii;
-        for(i = 0; i < rows; i++) {
-            oj = j * stride;
-            ii = i * strideT;
-            for(j = 0; j < columns; j++)
+        let i, j, ii, oj;
+        for(ii = i = 0; i < rows; i++, ii += strideT) {
+            for(oj = j = 0; j < columns; j++, oj += stride)
                 output[oj + i] = input[ii + j];
         }
     }
@@ -158,7 +154,7 @@ class MatrixMath
     }
 
     /**
-     * Multiply two matrices
+     * Multiply two matrices (e.g., C = A B)
      * @param {object} header
      * @param {TypedArray} output
      * @param {TypedArray[]} inputs
@@ -185,6 +181,66 @@ class MatrixMath
                 bjk = b[bk + j];
                 for(i = 0; i < rows; i++)
                     output[ok + i] += a[aj + i] * bjk;
+            }
+        }
+    }
+
+    /**
+     * Multiply two matrices, transposing the left operand
+     * (e.g., C = A^T B)
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
+    static multiplylt(header, output, inputs)
+    {
+        const { rows, columns, stride, length } = header;
+        const [ columnsA, columnsB ] = header.columnsOfInputs;
+        const [ rowsA, rowsB ] = header.rowsOfInputs;
+        const [ strideA, strideB ] = header.strideOfInputs;
+        const [ a, b ] = inputs;
+
+        // multiply taking cache locality into account
+        let i, j, k, aj, bk, ok, ojk;
+        for(ok = bk = k = 0; k < columnsB; k++, ok += stride, bk += strideB) {
+            for(aj = j = 0; j < columnsA; j++, aj += strideA) {
+                output[ojk = ok + j] = 0;
+                for(i = 0; i < rowsB; i++)
+                    output[ojk] += a[aj + i] * b[bk + i];
+            }
+        }
+    }
+
+    /**
+     * Multiply two matrices, transposing the right operand
+     * (e.g., C = A B^T)
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
+    static multiplyrt(header, output, inputs)
+    {
+        const { rows, columns, stride, length } = header;
+        const [ columnsA, columnsB ] = header.columnsOfInputs;
+        const [ rowsA, rowsB ] = header.rowsOfInputs;
+        const [ strideA, strideB ] = header.strideOfInputs;
+        const [ a, b ] = inputs;
+
+        // clear matrix
+        if(rows * columns != length) {
+            for(let c = 0; c < columns; c++)
+                output.fill(0, c * stride, c * stride + rows);
+        }
+        else
+            output.fill(0, 0, length);
+
+        // multiply taking cache locality into account
+        let i, j, k, ok, aj, bj, bkj;
+        for(aj = bj = j = 0; j < columnsA; j++, aj += strideA, bj += strideB) {
+            for(ok = k = 0; k < rowsB; k++, ok += stride) {
+                bkj = b[bj + k];
+                for(i = 0; i < rows; i++)
+                    output[ok + i] += a[aj + i] * bkj;
             }
         }
     }
@@ -317,7 +373,8 @@ class MatrixMath
             MULTIPLY: 0x7,   // multiply two matrices
             SCALE: 0x8,      // multiply by scalar
             COMPMULT: 0x9,   // component-wise product
-            // 0xA
+            MULTIPLYLT: 0xA, // multiply tranposing the left operand
+            MULTIPLYRT: 0xB, // multiply tranposing the right operand
         }));
     }
 
@@ -337,8 +394,8 @@ class MatrixMath
             [this.Opcode.MULTIPLY]: this.multiply,
             [this.Opcode.SCALE]: this.scale,
             [this.Opcode.COMPMULT]: this.compmult,
-            [this.Opcode.MIN]: this.min,
-            [this.Opcode.MAX]: this.max,
+            [this.Opcode.MULTIPLYLT]: this.multiplylt,
+            [this.Opcode.MULTIPLYRT]: this.multiplyrt,
         }));
     }
 }
