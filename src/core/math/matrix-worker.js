@@ -125,7 +125,7 @@ function onmessage(ev)
     // perform the computation
     const compute = self.MatrixMath.Opcode2fun[header.opcode];
     //console.log('mensagem do worker', output, inputs);
-    compute(header, output, inputs);
+    compute.call(self.MatrixMath, header, output, inputs);
 
     // send the result of the computation back to the main thread
     const msg = { id, outputBuffer, inputBuffers };

@@ -35,6 +35,7 @@ import {
     MatrixOperationMultiplyRT,
     MatrixOperationScale,
     MatrixOperationCompMult,
+    MatrixOperationQR,
 } from './matrix-operations';
 
 // constants
@@ -198,11 +199,12 @@ class SpeedyMatrixExpr
 
     /**
      * Print the result of this matrix expression to the console
+     * @param {number} [decimals] format numbers to a number of decimals
      * @returns {Promise<void>} a promise that resolves as soon as the matrix is printed
      */
-    print()
+    print(decimals = undefined)
     {
-        return this._evaluate().then(expr => expr._matrix.print());
+        return this._evaluate().then(expr => expr._matrix.print(decimals));
     }
 
 
@@ -343,6 +345,22 @@ class SpeedyMatrixExpr
     {
         return new SpeedyMatrixCompMultExpr(this, expr);
     }
+
+
+
+    //
+    // Linear Algebra
+    //
+
+    /**
+     * QR decomposition
+     * @param {string} [mode] 'full' | 'reduced'
+     * @returns {SpeedyMatrixExpr}
+     */
+    qr(mode = 'reduced')
+    {
+        return new SpeedyMatrixQRExpr(this, mode);
+    }
 }
 
 /**
@@ -387,13 +405,15 @@ class SpeedyMatrixUnaryExpr extends SpeedyMatrixTempExpr
      * @param {number} columns number of columns of the resulting (output) matrix
      * @param {SpeedyMatrixExpr} expr input expression
      * @param {Function} operationClass unary operation
+     * @param {any[]} [...args] will be used when instantiating the unary operation
      */
-    constructor(rows, columns, expr, operationClass)
+    constructor(rows, columns, expr, operationClass, ...args)
     {
         super(rows, columns, expr.type);
         this._expr = expr;
         this._operationClass = operationClass;
         this._operation = null; // cache the MatrixOperation object
+        this._args = args;
     }
 
     /**
@@ -406,7 +426,7 @@ class SpeedyMatrixUnaryExpr extends SpeedyMatrixTempExpr
             matrixOperationsQueue.enqueue(
                 (
                     this._operation ? this._operation.update([ result._matrix ]) :
-                    (this._operation = new (this._operationClass)(result._matrix))
+                    (this._operation = new (this._operationClass)(result._matrix, ...(this._args)))
                 ),
                 this._matrix
             )
@@ -1106,7 +1126,7 @@ class SpeedyMatrixMultiplyRTExpr extends SpeedyMatrixBinaryExpr
  * Multiply a matrix expression by a number,
  * e.g., A = alpha B
  */
-class SpeedyMatrixScaleExpr extends SpeedyMatrixTempExpr
+class SpeedyMatrixScaleExpr extends SpeedyMatrixUnaryExpr
 {
     /**
      * Constructor
@@ -1115,27 +1135,7 @@ class SpeedyMatrixScaleExpr extends SpeedyMatrixTempExpr
      */
     constructor(expr, scalar)
     {
-        super(expr.rows, expr.columns, expr.type);
-        this._expr = expr;
-        this._scalar = scalar;
-        this._operation = null;
-    }
-
-    /**
-     * Evaluate expression
-     * @returns {Promise<SpeedyMatrixExpr>}
-     */
-    _evaluate()
-    {
-        return this._expr._evaluate().then(result =>
-            matrixOperationsQueue.enqueue(
-                (
-                    this._operation ? this._operation.update([ result._matrix ]) :
-                    (this._operation = new MatrixOperationScale(result._matrix, this._scalar))
-                ),
-                this._matrix
-            )
-        ).then(() => this);
+        super(expr.rows, expr.columns, expr, MatrixOperationScale, scalar);
     }
 }
 
@@ -1156,6 +1156,25 @@ class SpeedyMatrixCompMultExpr extends SpeedyMatrixBinaryExpr
     }
 }
 
+/**
+ * QR decomposition
+ */
+class SpeedyMatrixQRExpr extends SpeedyMatrixUnaryExpr
+{
+    /**
+     * Constructor
+     * @param {string} mode 'full' | 'reduced'
+     * @param {SpeedyMatrixExpr} expr
+     */
+    constructor(expr, mode)
+    {
+        const columns = mode == 'full' ? expr.columns + expr.rows : 2 * expr.columns;
+        if(expr.rows < expr.columns)
+            throw new IllegalArgumentError(`Can't compute the QR decomposition of a ${expr.rows} x ${expr.columns} matrix`);
+
+        super(expr.rows, columns, expr, MatrixOperationQR, mode);
+    }
+}
 
 // ================================================
 // MATRIX FACTORY

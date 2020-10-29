@@ -287,6 +287,312 @@ class MatrixMath
         }
     }
 
+    /**
+     * Outer product (m x 1 vector by 1 x n vector)
+     * @param {object} header 
+     * @param {TypedArray} output 
+     * @param {TypedArray[]} inputs 
+     */
+    static outer(header, output, inputs)
+    {
+        const { rows, columns, stride } = header;
+        const [ strideA, strideB ] = header.strideOfInputs;
+        const [ a, b ] = inputs;       
+
+        let i, j, bj, oj;
+        for(j = 0; j < columns; j++) {
+            bj = b[j * strideB];
+            oj = j * stride;
+            for(i = 0; i < rows; i++)
+                output[oj + i] = a[i] * bj;
+        }
+    }
+
+    /**
+     * QR decomposition
+     * @param {object} header
+     * @param {TypedArray} output becomes [ Q | R ]
+     * @param {TypedArray[]} inputs
+     */
+    static qr(header, output, inputs)
+    {
+        const { stride, type } = header;
+        const [ irows ] = header.rowsOfInputs;
+        const [ icolumns ] = header.columnsOfInputs;
+        const [ istride ] = header.strideOfInputs;
+        const [ input, x ] = inputs;
+        const { mode } = header.custom;
+        const [ orows, ocolumns ] = [ header.rows, header.columns ];
+        const subheader = Object.assign(header, { custom: null });
+        const wantMatrices = (mode == 'full-qr' || mode == 'reduced-qr');
+
+        // create temporary storage
+        const num = wantMatrices ? 2 : 3;
+        const storage = this._createTypedArray(num * irows * icolumns + icolumns, type);
+        const reflect = storage.subarray(0, irows * icolumns);
+        const tmprow = storage.subarray(irows * icolumns, irows * icolumns + icolumns);
+        const tmp = storage.subarray(irows * icolumns + icolumns, 2 * irows * icolumns + icolumns);
+
+        // create soon-to-be upper triangular matrix R
+        const rstride = wantMatrices ? stride : irows;
+        const triangular = !wantMatrices ? storage.subarray(2 * irows * icolumns + icolumns) :
+            output.subarray(((mode == 'reduced-qr') ? icolumns : irows) * rstride);
+
+        // input matrix is m x n and should be such that m >= n
+        if(irows < icolumns)
+            throw new Error(`Can't compute the QR decomposition of a ${irows} x ${icolumns} matrix`);
+
+        // copy input[:,:] to triangular[:,:]
+        if(input.length != triangular.length) {
+            submatrices = this._submatrices(subheader, triangular, [ input ], rstride, [ istride ],
+                [ 0, irows-1, 0, icolumns-1 ],
+                [[ 0, irows-1, 0, icolumns-1 ]]
+            );
+            this.copy(submatrices.header, submatrices.output, submatrices.inputs);
+        }
+        else
+            triangular.set(input, 0, input.length);
+
+        // Compute the reflection vectors and the upper triangular matrix R
+        let i, j, k, n, norm, sign, fkk, rkk, submatrices;
+        for(k = 0; k < icolumns; k++) {
+            fkk = k * irows + k; // reflector index
+            rkk = k * rstride + k; // upper-triangular R
+
+            n = irows - k; // the k-th reflection vector has n components
+            sign = (+(triangular[rkk] >= 0)) - (+(triangular[rkk] < 0)); // sign(triangular[k,k]) is +1 or -1
+
+            // use reflect[k:irows-1,k] to temporarily store the k-th reflection vector
+            for(i = 0; i < n; i++) // copy triangular[k:irows-1,k] to reflect[k:irows-1,k]
+                reflect[fkk + i] = triangular[rkk + i];
+            reflect[fkk] += sign * this._norm2(reflect, fkk, n); // 1st coordinate
+
+            // normalize the k-th reflection vector
+            norm = this._norm2(reflect, fkk, n);
+            for(i = fkk + n - 1; i >= fkk; i--)
+                reflect[i] /= norm;
+
+            // extract reflect[k:irows-1,k], triangular[k:irows-1,k:icolumns-1] and tmprow[0,0:icolumns-k-1]
+            submatrices = this._submatrices(subheader, tmprow, [ reflect, triangular ], 1, [ irows, rstride ],
+                [ 0, 0, 0, icolumns-k-1 ], // row vector tmprow[0,0:icolumns-k-1]
+                [
+                    [ k, irows-1, k, k ], // reflect[k:irows-1,k]
+                    [ k, irows-1, k, icolumns-1 ] // triangular[k:irows-1,k:icolumns-1]
+                ]
+            );
+
+            // compute tmprow[0,0:icolumns-k-1] = reflect[k:irows-1,k]^T * triangular[k:irows-1,k:icolumns-1]
+            this.multiplylt(submatrices.header, submatrices.output, submatrices.inputs);
+
+            // extract reflect[k:irows-1,k], tmprow[0,0:icolumns-k-1] and tmp[0:irows-k-1,0:icolumns-k-1]
+            submatrices = this._submatrices(subheader, tmp, [ reflect, tmprow ], irows, [ irows, 1 ],
+                [ 0, irows-k-1, 0, icolumns-k-1 ], // tmp[0:irows-k-1,0:icolumns-k-1]
+                [
+                    [ k, irows-1, k, k ], // reflect[k:irows-1,k]
+                    [ 0, 0, 0, icolumns-k-1] // tmprow[0,0:icolumns-k-1], the result of the previous calculation
+                ]
+            );
+
+            // compute tmp[0:irows-k-1,0:icolumns-k-1] = reflect[k:irows-1,k] * tmprow[0,0:icolumns-k-1]
+            this.outer(submatrices.header, submatrices.output, submatrices.inputs);
+
+            // extract tmp[0:irows-k-1,0:icolumns-k-1] and triangular[k:irows-1,k:icolumns-1] (compute in-place)
+            submatrices = this._submatrices(subheader, triangular, [ triangular, tmp ], rstride, [ rstride, irows ],
+                [ k, irows-1, k, icolumns-1 ], // triangular[k:irows-1,k:icolumns-1]
+                [
+                    [ k, irows-1, k, icolumns-1 ], // triangular[k:irows-1,k:icolumns-1]
+                    [ 0, irows-k-1, 0, icolumns-k-1 ] // tmp[0:irows-k-1,0:icolumns-k-1], the result of the previous calculation
+                ]
+            );
+
+            // apply Householder reflector to set the column vector triangular[k+1:irows-1,k] to zero
+            this._addInPlace(submatrices.header, submatrices.output, submatrices.inputs, 1, -2);
+        }
+
+        // Compute the unitary matrix Q
+        switch(mode) {
+            case 'full-qr': {
+                const qstride = stride;
+                const unitary = output.subarray(0, qstride * irows).fill(0);
+                let rk, fk, qj, dot;
+
+                // validate output size
+                if(orows != irows || ocolumns != icolumns + irows)
+                    throw new Error(`Can't compute the full QR decomposition of a ${irows} x ${icolumns} matrix: expected an output matrix of size ${irows} x ${icolumns + irows}, found ${orows} x ${ocolumns}`);
+
+                // apply Householder reflectors to e_j = e_1, ... , e_m
+                for(j = 0; j < irows; j++) { // for each e_j
+                    qj = j * qstride;
+                    unitary[qj + j] = 1; // setup e_j = [ 0 0 0 ... 1 ... 0 0 0 ]^T
+                    for(k = icolumns - 1; k >= 0; k--) { // compute Q e_j = ( Q_1 ... Q_n ) e_j
+                        fk = k * irows;
+                        dot = -2 * this._dot(unitary, reflect, qj + k, fk + k, irows - k);
+                        for(i = irows - 1; i >= k; i--)
+                            unitary[qj + i] += dot * reflect[fk + i];
+                    }
+                }
+
+                // fill the lower part of R with zeros
+                for(rk = k = 0; k < icolumns; k++, rk += rstride) {
+                    for(i = icolumns; i < irows; i++)
+                        triangular[rk + i] = 0;
+                }
+
+                break;
+            }
+
+            case 'reduced-qr': {
+                const qstride = stride;
+                const unitary = output.subarray(0, qstride * icolumns).fill(0);
+                let fk, qj, dot;
+
+                // validate output size
+                if(orows != irows || ocolumns != icolumns + icolumns)
+                    throw new Error(`Can't compute the reduced QR decomposition of a ${irows} x ${icolumns} matrix: expected an output matrix of size ${irows} x ${icolumns + icolumns}, found ${orows} x ${ocolumns}`);
+
+                // apply Householder reflectors to e_j = e_1, ... , e_n (n <= m)
+                for(j = 0; j < icolumns; j++) { // for each e_j
+                    qj = j * qstride;
+                    unitary[qj + j] = 1; // setup e_j = [ 0 0 0 ... 1 ... 0 0 0 ]^T
+                    for(k = icolumns - 1; k >= 0; k--) { // compute Q e_j = ( Q_1 ... Q_n ) e_j
+                        fk = k * irows;
+                        dot = -2 * this._dot(unitary, reflect, qj + k, fk + k, irows - k);
+                        for(i = irows - 1; i >= k; i--)
+                            unitary[qj + i] += dot * reflect[fk + i];
+                    }
+                }
+
+                break;
+            }
+
+            default:
+                throw new Error(`QR decomposition: unknown mode "${mode}"`);
+        }
+    }
+
+
+
+
+    // ========================================================
+    // Internal low-level utilities
+    // ========================================================
+
+    /**
+     * Create a new TypedArray with the specified length
+     * @param {number} length 
+     * @param {number} type 
+     * @returns {TypedArray}
+     */
+    static _createTypedArray(length, type)
+    {
+        const dataType = this.DataType[type];
+        return new dataType(length);
+    }
+
+    /**
+     * The 2-norm of a column vector
+     * @param {TypedArray} column 
+     * @param {number} [begin] first index
+     * @param {number} [length]
+     * @returns {number}
+     */
+    static _norm2(column, begin = 0, length = column.length)
+    {
+        let norm = 0, end = begin + length, i;
+
+        // Since we store data in column-major format,
+        // we don't need to use stride
+        for(i = begin; i < end; i++)
+            norm += column[i] * column[i];
+
+        return Math.sqrt(norm);
+    }
+
+    /**
+     * The dot product of two column vectors
+     * @param {TypedArray} u 
+     * @param {TypedArray} v 
+     * @param {number} [uBegin] first index 
+     * @param {number} [vBegin] first index 
+     * @param {number} [length] 
+     */
+    static _dot(u, v, uBegin = 0, vBegin = 0, length = u.length)
+    {
+        let dot = 0, i;
+
+        for(i = 0; i < length; i++)
+            dot += u[uBegin + i] * v[vBegin + i];
+
+        return dot;
+    }
+
+    /**
+     * Given matrices A and B, scalars alpha and beta,
+     * compute the sum (alpha A + beta B). The output
+     * array is allowed to be one of the input arrays
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     * @param {number} alpha
+     * @param {number} beta
+     */
+    static _addInPlace(header, output, inputs, alpha, beta)
+    {
+        const { rows, columns, stride } = header;
+        const [ strideA, strideB ] = header.strideOfInputs;
+        const [ a, b ] = inputs;
+
+        let i, j, oj, aj, bj;
+        for(aj = bj = oj = j = 0; j < columns; j++, oj += stride, aj += strideA, bj += strideB) {
+            for(i = 0; i < rows; i++)
+                output[oj + i] = alpha * a[aj + i] + beta * b[bj + i];
+        }
+    }
+
+    /**
+     * Create submatrices / block-views with shared memory
+     * Low-level stuff. Make sure you pass valid indices...
+     * @param {object} header will be modified!
+     * @param {TypedArray} output contains data
+     * @param {TypedArray} inputs contains data
+     * @param {number} stride of output
+     * @param {number[]} strideOfInputs
+     * @param {number[4]} outputIndices [firstRow, lastRow, firstColumn, lastColumn] inclusive
+     * @param {Array<number[4]>} inputsIndices for each input matrix
+     * @returns {object} { header, output, inputs }
+     */
+    static _submatrices(header, output, inputs, stride, strideOfInputs, outputIndices, inputsIndices)
+    {
+        let i, inputIndices;
+
+        header.rows = outputIndices[1] - outputIndices[0] + 1;
+        header.columns = outputIndices[3] - outputIndices[2] + 1;
+        header.stride = stride;
+        output = output.subarray(
+            outputIndices[2] * stride + outputIndices[0],
+            outputIndices[3] * stride + outputIndices[1] + 1
+        );
+        header.length = output.length;
+        header.byteOffset = output.byteOffset;
+
+        for(i = inputs.length - 1; i >= 0; i--) {
+            inputIndices = inputsIndices[i];
+
+            header.rowsOfInputs[i] = inputIndices[1] - inputIndices[0] + 1;
+            header.columnsOfInputs[i] = inputIndices[3] - inputIndices[2] + 1;
+            header.strideOfInputs[i] = strideOfInputs[i];
+            inputs[i] = inputs[i].subarray(
+                inputIndices[2] * strideOfInputs[i] + inputIndices[0],
+                inputIndices[3] * strideOfInputs[i] + inputIndices[1] + 1
+            );
+            header.lengthOfInputs[i] = inputs[i].length;
+            header.byteOffsetOfInputs[i] = inputs[i].byteOffset;
+        }
+
+        return { header, output, inputs };
+    }
+
+
 
 
 
@@ -375,6 +681,8 @@ class MatrixMath
             COMPMULT: 0x9,   // component-wise product
             MULTIPLYLT: 0xA, // multiply tranposing the left operand
             MULTIPLYRT: 0xB, // multiply tranposing the right operand
+            OUTER: 0xC,      // outer product
+            QR: 0x10,        // QR decomposition (Householder)
         }));
     }
 
@@ -396,6 +704,8 @@ class MatrixMath
             [this.Opcode.COMPMULT]: this.compmult,
             [this.Opcode.MULTIPLYLT]: this.multiplylt,
             [this.Opcode.MULTIPLYRT]: this.multiplyrt,
+            [this.Opcode.OUTER]: this.outer,
+            [this.Opcode.QR]: this.qr,
         }));
     }
 }

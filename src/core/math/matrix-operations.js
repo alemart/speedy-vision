@@ -520,3 +520,24 @@ export class MatrixOperationMultiplyRT extends MatrixOperation
         super(Opcode.MULTIPLYRT, matrixA.rows, matrixB.columns, matrixA.type, [ matrixA, matrixB ]);
     }
 }
+
+/**
+ * QR decomposition
+ */
+export class MatrixOperationQR extends MatrixOperation
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrix} matrix
+     * @param {string} mode 'full' | 'reduced'
+     */
+    constructor(matrix, mode)
+    {
+        const m = ({ 'full': 'full-qr', 'reduced': 'reduced-qr' })[mode];
+        if(m === undefined)
+            throw new IllegalArgumentError(`QR decomposition: unknown mode "${mode}"`)
+
+        const columns = m == 'full-qr' ? matrix.columns + matrix.rows : 2 * matrix.columns;
+        super(Opcode.QR, matrix.rows, columns, matrix.type, [ matrix ], { mode: m });
+    }
+}

@@ -225,9 +225,10 @@ export class SpeedyMatrix
      * Print matrix (useful for debugging). Note that this method is asynchronous.
      * It will print the data as soon as all relevant calculations have been
      * completed. Make sure you await.
+     * @param {number} [decimals] format numbers to a number of decimals
      * @returns {Promise<void>} a promise that resolves as soon as the matrix is printed
      */
-    print()
+    print(decimals = undefined)
     {
         return this.read().then(data => {
             const rows = this._rows, columns = this._columns;
@@ -239,7 +240,8 @@ export class SpeedyMatrix
                     row[i][j] = data[j * rows + i];
             }
 
-            const fmt = row.map(r => '    ' + r.join(', ')).join(',\n');
+            const fix = decimals !== undefined ? x => x.toFixed(decimals) : x => x;
+            const fmt = row.map(r => '    ' + r.map(fix).join(', ')).join(',\n');
             const str = `SpeedyMatrix(rows=${rows}, cols=${columns}, dtype="${this.dtype}", data=[\n${fmt}\n])`;
             console.log(str);
         });
