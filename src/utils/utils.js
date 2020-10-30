@@ -95,7 +95,7 @@ export class Utils
                     const msgId = ev.data;
                     const fn = ctx.callbacks.get(msgId);
                     if(fn !== undefined) {
-                        event.stopPropagation();
+                        ev.stopPropagation();
                         fn.call(window);
                         ctx.callbacks.delete(msgId);
                     }
