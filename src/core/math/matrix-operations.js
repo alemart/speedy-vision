@@ -91,8 +91,10 @@ export class MatrixOperation
         this._workloadOfInputs = inputMatrices.reduce((w, m) => w + this._workload(m), 0);
 
         // is it a valid opcode?
-        if(undefined == (this._fun = Opcode2fun[opcode]))
+        const fun = Opcode2fun[opcode];
+        if(fun === undefined)
             throw new IllegalArgumentError(`Invalid matrix operation (0x${opcode.toString(16)})`);
+        this._fun = fun.bind(MatrixMath);
     }
 
     /**
