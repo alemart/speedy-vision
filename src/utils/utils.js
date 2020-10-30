@@ -105,7 +105,7 @@ export class Utils
 
         const msgId = '0%' + Math.random().toString(36);
         this._setZeroTimeoutContext.callbacks.set(msgId, fn);
-        window.postMessage(msgId, '*')
+        window.postMessage(msgId, '*');
     }
 
     /**
