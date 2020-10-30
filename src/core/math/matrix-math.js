@@ -317,14 +317,15 @@ class MatrixMath
     static qr(header, output, inputs)
     {
         const { stride, type } = header;
-        const [ irows ] = header.rowsOfInputs;
-        const [ icolumns ] = header.columnsOfInputs;
+        const [ orows, ocolumns ] = [ header.rows, header.columns ];
+        const [ irows, xrows ] = header.rowsOfInputs;
+        const [ icolumns, xcolumns ] = header.columnsOfInputs;
         const [ istride ] = header.strideOfInputs;
         const [ input, x ] = inputs;
         const { mode } = header.custom;
-        const [ orows, ocolumns ] = [ header.rows, header.columns ];
         const subheader = Object.assign(header, { custom: null });
         const wantMatrices = (mode == 'full-qr' || mode == 'reduced-qr');
+        let submatrices = [ null, null, null ];
 
         // create temporary storage
         const num = wantMatrices ? 2 : 3;
@@ -348,13 +349,13 @@ class MatrixMath
                 [ 0, irows-1, 0, icolumns-1 ],
                 [[ 0, irows-1, 0, icolumns-1 ]]
             );
-            this.copy(submatrices.header, submatrices.output, submatrices.inputs);
+            this.copy(submatrices[0], submatrices[1], submatrices[2]);
         }
         else
             triangular.set(input, 0, input.length);
 
         // Compute the reflection vectors and the upper triangular matrix R
-        let i, j, k, n, norm, sign, fkk, rkk, submatrices;
+        let i, j, k, n, norm, sign, fkk, rkk;
         for(k = 0; k < icolumns; k++) {
             fkk = k * irows + k; // reflector index
             rkk = k * rstride + k; // upper-triangular R
@@ -382,7 +383,7 @@ class MatrixMath
             );
 
             // compute tmprow[0,0:icolumns-k-1] = reflect[k:irows-1,k]^T * triangular[k:irows-1,k:icolumns-1]
-            this.multiplylt(submatrices.header, submatrices.output, submatrices.inputs);
+            this.multiplylt(submatrices[0], submatrices[1], submatrices[2]);
 
             // extract reflect[k:irows-1,k], tmprow[0,0:icolumns-k-1] and tmp[0:irows-k-1,0:icolumns-k-1]
             submatrices = this._submatrices(subheader, tmp, [ reflect, tmprow ], irows, [ irows, 1 ],
@@ -394,7 +395,7 @@ class MatrixMath
             );
 
             // compute tmp[0:irows-k-1,0:icolumns-k-1] = reflect[k:irows-1,k] * tmprow[0,0:icolumns-k-1]
-            this.outer(submatrices.header, submatrices.output, submatrices.inputs);
+            this.outer(submatrices[0], submatrices[1], submatrices[2]);
 
             // extract tmp[0:irows-k-1,0:icolumns-k-1] and triangular[k:irows-1,k:icolumns-1] (compute in-place)
             submatrices = this._submatrices(subheader, triangular, [ triangular, tmp ], rstride, [ rstride, irows ],
@@ -406,11 +407,16 @@ class MatrixMath
             );
 
             // apply Householder reflector to set the column vector triangular[k+1:irows-1,k] to zero
-            this._addInPlace(submatrices.header, submatrices.output, submatrices.inputs, 1, -2);
+            this._addInPlace(submatrices[0], submatrices[1], submatrices[2], 1, -2);
         }
 
         // Compute the unitary matrix Q
         switch(mode) {
+
+            //
+            // Full QR decomposition
+            // Q: m x m, R: m x n
+            //
             case 'full-qr': {
                 const qstride = stride;
                 const unitary = output.subarray(0, qstride * irows).fill(0);
@@ -441,6 +447,10 @@ class MatrixMath
                 break;
             }
 
+            //
+            // Reduced QR decomposition
+            // Q: m x n, R: n x n
+            //
             case 'reduced-qr': {
                 const qstride = stride;
                 const unitary = output.subarray(0, qstride * icolumns).fill(0);
@@ -460,6 +470,60 @@ class MatrixMath
                         for(i = irows - 1; i >= k; i--)
                             unitary[qj + i] += dot * reflect[fk + i];
                     }
+                }
+
+                break;
+            }
+
+            //
+            // Compute Q'x for an input vector x (Q' means Q^T)
+            // x: m x 1
+            //
+            case 'Q\'x': {
+
+                // validate input / output size
+                if(irows != xrows || 1 != xcolumns)
+                    throw new Error(`QR decomposition: the input vector is expected to be ${irows} x 1, but is ${xrows} x ${xcolumns}`);
+                else if(irows != orows || 1 != ocolumns)
+                    throw new Error(`QR decomposition: the output vector is expected to be ${irows} x 1, but is ${orows} x ${ocolumns}`);
+
+                // initialize output vector
+                for(i = 0; i < irows; i++)
+                    output[i] = x[i];
+
+                // apply Householder reflectors to input x
+                for(k = 0; k < icolumns; k++) { // compute Q'x = ( Q_n ... Q_1 ) x
+                    fk = k * irows; // get the k-th reflector
+                    dot = -2 * this._dot(output, reflect, k, fk + k, irows - k);
+                    for(i = k; i < irows; i++)
+                        output[i] += dot * reflect[fk + i];
+                }
+
+                break;
+            }
+
+            //
+            // Compute Qx for an input vector x
+            // x: m x 1
+            //
+            case 'Qx': {
+
+                // validate input / output size
+                if(irows != xrows || 1 != xcolumns)
+                    throw new Error(`QR decomposition: the input vector is expected to be ${irows} x 1, but is ${xrows} x ${xcolumns}`);
+                else if(irows != orows || 1 != ocolumns)
+                    throw new Error(`QR decomposition: the output vector is expected to be ${irows} x 1, but is ${orows} x ${ocolumns}`);
+
+                // initialize output vector
+                for(i = 0; i < irows; i++)
+                    output[i] = x[i];
+
+                // apply Householder reflectors to input x
+                for(k = icolumns - 1; k >= 0; k--) { // compute Qx = ( Q_1 ... Q_n ) x
+                    fk = k * irows; // get the k-th reflector
+                    dot = -2 * this._dot(output, reflect, k, fk + k, irows - k);
+                    for(i = k; i < irows; i++)
+                        output[i] += dot * reflect[fk + i];
                 }
 
                 break;
@@ -554,12 +618,12 @@ class MatrixMath
      * Low-level stuff. Make sure you pass valid indices...
      * @param {object} header will be modified!
      * @param {TypedArray} output contains data
-     * @param {TypedArray} inputs contains data
+     * @param {TypedArray[]} inputs contains data
      * @param {number} stride of output
      * @param {number[]} strideOfInputs
      * @param {number[4]} outputIndices [firstRow, lastRow, firstColumn, lastColumn] inclusive
      * @param {Array<number[4]>} inputsIndices for each input matrix
-     * @returns {object} { header, output, inputs }
+     * @returns {Array} a triple [ header, output, inputs ]
      */
     static _submatrices(header, output, inputs, stride, strideOfInputs, outputIndices, inputsIndices)
     {
@@ -589,8 +653,9 @@ class MatrixMath
             header.byteOffsetOfInputs[i] = inputs[i].byteOffset;
         }
 
-        return { header, output, inputs };
+        return [ header, output, inputs ];
     }
+
 
 
 

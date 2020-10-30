@@ -60,21 +60,20 @@ export class MatrixWorker
      */
     run(header, outputBuffer, inputBuffers)
     {
-        const id = (this._msgId = (this._msgId + 1) & MAX_MESSAGE_ID);
-
         if(header.opcode === NOP) // save some time
             return Promise.resolve([outputBuffer, inputBuffers]);
+
+        const id = (this._msgId = (this._msgId + 1) & MAX_MESSAGE_ID);
+        const transferables = [ outputBuffer, ...inputBuffers ].filter(
+            (x, i, arr) => arr.indexOf(x) === i // remove duplicates
+        );
+        const msg = { id, header, outputBuffer, inputBuffers, transferables };
 
         return new Promise(resolve => {
             this._callbackTable.set(id, (outputBuffer, inputBuffers) => {
                 this._callbackTable.delete(id);
                 resolve([outputBuffer, inputBuffers]);
             });
-
-            const transferables = [ outputBuffer, ...inputBuffers ].filter(
-                (x, i, arr) => arr.indexOf(x) === i // remove duplicates
-            );
-            const msg = { id, header, outputBuffer, inputBuffers, transferables };
             this._worker.postMessage(msg, transferables);
         });
     }

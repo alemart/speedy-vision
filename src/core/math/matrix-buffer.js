@@ -74,6 +74,7 @@ export class MatrixBuffer
         this._byteOffset = data.byteOffset; // assumed to be constant
         this._length = data.length; // assumed to be constant
         this._data = data; // a reference to the TypedArray
+        this._dataType = dataType; // TypedArray class
 
         // concurrency control
         this._pendingOperations = parent ? parent._pendingOperations : 0; // number of pending operations that read from or write to the buffer
@@ -200,7 +201,7 @@ export class MatrixBuffer
         }
 
         // replace the internal buffer
-        const dataType = DataType[my._type];
+        const dataType = this._dataType;
         my._data = new dataType(arrayBuffer, my._byteOffset, my._length);
 
         // broadcast
