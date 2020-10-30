@@ -366,28 +366,28 @@ export class GLUtils
      */
     static clientWaitAsync(gl, sync, flags = 0)
     {
-        return new Promise((resolve, reject) => {
-            function checkStatus() {
-                const status = gl.clientWaitSync(sync, flags, 0);
-                if(status == gl.TIMEOUT_EXPIRED) {
-                    Utils.setZeroTimeout(checkStatus); // better performance (preferred)
-                    //setTimeout(checkStatus, 0); // easier on the CPU
-                }
-                else if(status == gl.WAIT_FAILED) {
-                    if(isFirefox && gl.getError() == gl.NO_ERROR) { // firefox bug?
-                        Utils.setZeroTimeout(checkStatus);
-                        //setTimeout(checkStatus, 0);
-                    }
-                    else {
-                        reject(GLUtils.getError(gl));
-                    }
+        this._checkStatus = this._checkStatus || (this._checkStatus = function checkStatus(gl, sync, flags, resolve, reject) {
+            const status = gl.clientWaitSync(sync, flags, 0);
+            if(status == gl.TIMEOUT_EXPIRED) {
+                Utils.setZeroTimeout(() => checkStatus.call(this, gl, sync, flags, resolve, reject)); // better performance (preferred)
+                //setTimeout(() => checkStatus.call(this, gl, sync, flags, resolve, reject), 0); // easier on the CPU
+            }
+            else if(status == gl.WAIT_FAILED) {
+                if(isFirefox && gl.getError() == gl.NO_ERROR) { // firefox bug?
+                    Utils.setZeroTimeout(() => checkStatus.call(this, gl, sync, flags, resolve, reject));
+                    //setTimeout(() => checkStatus.call(this, gl, sync, flags, resolve, reject), 0);
                 }
                 else {
-                    resolve();
+                    reject(GLUtils.getError(gl));
                 }
             }
+            else {
+                resolve();
+            }
+        });
 
-            checkStatus();
+        return new Promise((resolve, reject) => {
+            this._checkStatus(gl, sync, flags, resolve, reject);
         });
     }
 
