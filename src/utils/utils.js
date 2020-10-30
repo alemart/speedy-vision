@@ -87,23 +87,29 @@ export class Utils
     //static setZeroTimeout(fn) { setTimeout(fn, 0); } // easier on the CPU
     static get setZeroTimeout()
     {
-        return this._setZeroTimeout || (this._setZeroTimeout = (() => {
-            const msgId = '0%' + Math.random().toString(36).slice(2);
-            const queue = [];
-
-            window.addEventListener('message', ev => {
-                if(ev.source === window && ev.data === msgId) {
-                    event.stopPropagation();
-                    queue.shift().call(window);
+        this._setZeroTimeoutContext = this._setZeroTimeoutContext || (this._setZeroTimeoutContext = {
+            callbacks: new Map(),
+            setZeroTimeout: fn => {
+                const ctx = this._setZeroTimeoutContext;
+                const msgId = '0%' + Math.random().toString(36);
+                ctx.callbacks.set(msgId, fn);
+                window.postMessage(msgId, '*')
+            },
+            _setup: window.addEventListener('message', ev => {
+                if(ev.source === window) {
+                    const ctx = this._setZeroTimeoutContext;
+                    const msgId = ev.data;
+                    const fn = ctx.callbacks.get(msgId);
+                    if(fn !== undefined) {
+                        event.stopPropagation();
+                        fn.call(window);
+                        ctx.callbacks.delete(msgId);
+                    }
                 }
-            }, true);
+            }, true)
+        });
 
-            // make it efficient
-            return function setZeroTimeout(fn) {
-                queue.push(fn);
-                window.postMessage(msgId, '*');
-            }
-        })());
+        return this._setZeroTimeoutContext.setZeroTimeout;
     }
 
     /**
