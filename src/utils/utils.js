@@ -87,7 +87,7 @@ export class Utils
     //static setZeroTimeout(fn) { setTimeout(fn, 0); } // easier on the CPU
     static setZeroTimeout(fn)
     {
-        this._setZeroTimeoutContext = this._setZeroTimeoutContext || (this._setZeroTimeoutContext = {
+        const ctx = (this._setZeroTimeoutContext = this._setZeroTimeoutContext || (this._setZeroTimeoutContext = {
             callbacks: new Map(),
             _setup: window.addEventListener('message', ev => {
                 if(ev.source === window) {
@@ -101,10 +101,10 @@ export class Utils
                     }
                 }
             }, true)
-        });
+        }));
 
-        const msgId = '0%' + Math.random().toString(36);
-        this._setZeroTimeoutContext.callbacks.set(msgId, fn);
+        const msgId = '0%' + Math.random();
+        ctx.callbacks.set(msgId, fn);
         window.postMessage(msgId, '*');
     }
 
