@@ -21,6 +21,7 @@
 
 import { SpeedyMatrix } from './matrix';
 import { MatrixOperation } from './matrix-operations';
+import { SpeedyPromise } from '../../utils/speedy-promise';
 
 /**
  * Used to run matrix operations in a FIFO fashion
@@ -49,12 +50,12 @@ export class MatrixOperationsQueue
      * Enqueue matrix operation
      * @param {MatrixOperation} matrixOperation 
      * @param {SpeedyMatrix} outputMatrix
-     * @returns {Promise<void>} a promise that resolves as soon as the operation is complete
+     * @returns {SpeedyPromise<void>} a promise that resolves as soon as the operation is complete
      */
     enqueue(matrixOperation, outputMatrix)
     {
         // enqueue operation
-        return new Promise(resolve => {
+        return new SpeedyPromise(resolve => {
             this._queue.push([ matrixOperation, outputMatrix, resolve ]);
             if(!this._busy) {
                 this._busy = true;
@@ -90,6 +91,6 @@ export class MatrixOperationsQueue
             // this operation is done
             resolve();
             this._resolveAll();
-        });
+        }).turbocharge();
     }
 }

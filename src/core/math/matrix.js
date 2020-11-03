@@ -24,6 +24,7 @@ import { MatrixBuffer } from './matrix-buffer';
 import { MatrixMath } from './matrix-math';
 import { MatrixOperationsQueue } from './matrix-operations-queue';
 import { MatrixOperationNop } from './matrix-operations';
+import { SpeedyPromise } from '../../utils/speedy-promise';
 
 
 
@@ -150,7 +151,7 @@ export class SpeedyMatrix
      *
      * @param {number[]} [entries] a flattened array of (row,col) indices, indexed by zero
      * @param {number[]} [result] pre-allocated array where we'll store the results
-     * @returns {Promise<number[]>} a promise that resolves to the requested entries
+     * @returns {SpeedyPromise<number[]>} a promise that resolves to the requested entries
      */
     read(entries = undefined, result = undefined)
     {
@@ -160,7 +161,7 @@ export class SpeedyMatrix
         // read the entire array
         if(entries === undefined)
         {
-            return this.sync().then(() => this._buffer.ready().then(buffer => {
+            return this.sync().then(() => this._buffer.ready().turbocharge()).then(buffer => {
                 const data = buffer.data;
                 const n = rows * cols;
 
@@ -170,22 +171,22 @@ export class SpeedyMatrix
                     result.length = n;
 
                 // write entries in column-major format
-                let k = 0;
-                for(let j = 0; j < cols; j++) {
-                    for(let i = 0; i < rows; i++)
+                let i, j, k = 0;
+                for(j = 0; j < cols; j++) {
+                    for(i = 0; i < rows; i++)
                         result[k++] = data[j * stride + i];
                 }
 
                 // done!
                 return result;
-            }));
+            }).turbocharge();
         }
 
         // read specific entries
         if(entries.length % 2 > 0)
             throw new IllegalArgumentError(`Can't read matrix entries: missing index`);
 
-        return this.sync().then(() => this._buffer.ready().then(buffer => {
+        return this.sync().then(() => this._buffer.ready().turbocharge()).then(buffer => {
             const data = buffer.data;
             const n = entries.length >> 1;
 
@@ -206,7 +207,7 @@ export class SpeedyMatrix
 
             // done!
             return result;
-        }));
+        }).turbocharge();
     }
 
     /**
@@ -214,29 +215,28 @@ export class SpeedyMatrix
      * It's much faster to use read() if you need to read multiple entries
      * @param {number} row the row you want to read, indexed by zero
      * @param {number} column the column you want to read, indexed by zero
-     * @returns {Promise<number>} a promise that resolves to the requested entry
+     * @returns {SpeedyPromise<number>} a promise that resolves to the requested entry
      */
     at(row, column)
     {
-        return this.read([ row, column ]).then(nums => nums[0]);
+        return this.read([ row, column ]).then(nums => nums[0]).turbocharge();
     }
 
     /**
-     * Print matrix (useful for debugging). Note that this method is asynchronous.
-     * It will print the data as soon as all relevant calculations have been
-     * completed. Make sure you await.
+     * Print the matrix. Useful for debugging
      * @param {number} [decimals] format numbers to a number of decimals
-     * @returns {Promise<void>} a promise that resolves as soon as the matrix is printed
+     * @returns {SpeedyPromise<void>} a promise that resolves as soon as the matrix is printed
      */
     print(decimals = undefined)
     {
         return this.read().then(data => {
             const rows = this._rows, columns = this._columns;
             const row = new Array(rows);
+            let i, j;
 
-            for(let i = 0; i < rows; i++) {
+            for(i = 0; i < rows; i++) {
                 row[i] = new Array(columns);
-                for(let j = 0; j < columns; j++)
+                for(j = 0; j < columns; j++)
                     row[i][j] = data[j * rows + i];
             }
 
@@ -264,7 +264,7 @@ export class SpeedyMatrix
      * @param {number} lastRow indexed by 0
      * @param {number} firstColumn indexed by 0
      * @param {number} lastColumn indexed by 0
-     * @returns {Promise<SpeedyMatrix>}
+     * @returns {SpeedyPromise<SpeedyMatrix>}
      */
     block(firstRow, lastRow, firstColumn, lastColumn)
     {
@@ -288,7 +288,7 @@ export class SpeedyMatrix
         // create submatrix
         return this._buffer.createSharedBuffer(begin, length).then(sharedBuffer =>
             new SpeedyMatrix(subRows, subColumns, undefined, this._type, stride, sharedBuffer)
-        );
+        ).turbocharge();
     }
 
     /**
@@ -296,7 +296,7 @@ export class SpeedyMatrix
      * of the matrix. The internal buffers of the column-vector and of the
      * matrix are shared, so if you change the data in one, you'll change
      * the data in the other.
-     * @returns {Promise<SpeedyMatrix>}
+     * @returns {SpeedyPromise<SpeedyMatrix>}
      */
     diagonal()
     {
@@ -306,7 +306,7 @@ export class SpeedyMatrix
 
         return this._buffer.createSharedBuffer(0, bufferLength).then(sharedBuffer =>
             new SpeedyMatrix(1, diagonalLength, undefined, this._type, stride + 1, sharedBuffer)
-        );
+        ).turbocharge();
     }
 
 
@@ -356,7 +356,7 @@ export class SpeedyMatrix
     /**
      * Returns a promise that resolves as soon as all
      * operations submitted UP TO NOW have finished
-     * @returns {Promise<void>}
+     * @returns {SpeedyPromise<void>}
      */
     sync()
     {

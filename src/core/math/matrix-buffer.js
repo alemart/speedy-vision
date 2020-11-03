@@ -21,6 +21,7 @@
 
 import { MatrixMath } from './matrix-math';
 import { IllegalArgumentError, IllegalOperationError, NotSupportedError } from '../../utils/errors';
+import { SpeedyPromise } from '../../utils/speedy-promise';
 
 // constants
 const MatrixType = MatrixMath.MatrixType;
@@ -105,24 +106,24 @@ export class MatrixBuffer
     /**
      * Wait for buffer readiness. Since the buffer holds
      * a Transferable object, the data may or may not be
-     * available right now. The returned Promise will be
+     * available right now. The returned SpeedyPromise will be
      * resolved as soon as the buffer is available for
      * reading and writing
-     * @returns {Promise<MatrixBuffer>}
+     * @returns {SpeedyPromise<MatrixBuffer>}
      */
     ready()
     {
         if(this._pendingOperations > 0) {
             // we're not ready yet: there are calculations taking place...
             // we'll resolve this promise as soon as there are no pending calculations
-            return new Promise(resolve => {
+            return new SpeedyPromise(resolve => {
                 this._pendingAccessesQueue.push(() => resolve(this));
             });
         }
         else {
             // we're ready to go!
             // no pending operations
-            return Promise.resolve(this);
+            return SpeedyPromise.resolve(this);
         }
     }
 
@@ -213,7 +214,7 @@ export class MatrixBuffer
      * Create a MatrixBuffer that shares its internal memory with this one
      * @param {number} [begin] index of the first element of the TypedArray
      * @param {number} [length] number of elements of the TypedArray
-     * @returns {Promise<MatrixBuffer>}
+     * @returns {SpeedyPromise<MatrixBuffer>}
      */
     createSharedBuffer(begin = 0, length = this._length)
     {

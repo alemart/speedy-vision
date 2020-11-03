@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  * speedy-promise.js
- * Speedy Promises: a custom implementation of Promises
+ * Speedy Promises: a fast implementation of Promises
  */
 
 const PENDING = 0;
@@ -34,7 +34,7 @@ const asap = (typeof queueMicrotask !== 'undefined' && queueMicrotask) || // bro
  * interoperate with ES6 Promises. This implementation is
  * based on the Promises/A+ specification.
  */
-class SpeedyPromise
+ class SpeedyPromise
 {
     /**
      * Constructor
@@ -328,12 +328,12 @@ class SpeedyPromise
     {
         const children = this._children;
         const state = this._state;
-        let i, child, callback;
 
         if(state === FULFILLED) {
-            for(i = 0; i < children; i++) {
-                child = this[i];
-                callback = child._onFulfillment;
+            for(let i = 0; i < children; i++) {
+                const child = this[i];
+                const callback = child._onFulfillment;
+
                 try {
                     if(callback) {
                         if(callback !== child._nop) {
@@ -350,9 +350,10 @@ class SpeedyPromise
             }
         }
         else if(state === REJECTED) {
-            for(i = 0; i < children; i++) {
-                child = this[i];
-                callback = child._onRejection;
+            for(let i = 0; i < children; i++) {
+                const child = this[i];
+                const callback = child._onRejection;
+
                 try {
                     if(callback) {
                         if(callback !== child._nop) {
@@ -430,3 +431,9 @@ class SpeedyPromise
 }
 
 module.exports = { SpeedyPromise };
+
+/*
+// Uncomment to test performance with regular Promises
+module.exports = { SpeedyPromise: Promise };
+Promise.prototype.turbocharge = function() { return this };
+*/

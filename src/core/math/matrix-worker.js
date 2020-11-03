@@ -21,6 +21,7 @@
 
 import { MatrixMath } from './matrix-math';
 import { IllegalOperationError } from '../../utils/errors';
+import { SpeedyPromise } from '../../utils/speedy-promise';
 
 // Constants
 const MAX_MESSAGE_ID = (1 << 30) - 1; // use the form 2^n - 1
@@ -56,12 +57,12 @@ export class MatrixWorker
      * @param {object} header serializable
      * @param {ArrayBuffer} outputBuffer data of the output matrix
      * @param {ArrayBuffer[]} inputBuffers data of the input matrices
-     * @returns {Promise<Array>} resolves as soon as the computation is complete
+     * @returns {SpeedyPromise<Array>} resolves as soon as the computation is complete
      */
     run(header, outputBuffer, inputBuffers)
     {
         if(header.opcode === NOP) // save some time
-            return Promise.resolve([outputBuffer, inputBuffers]);
+            return SpeedyPromise.resolve([outputBuffer, inputBuffers]);
 
         const id = (this._msgId = (this._msgId + 1) & MAX_MESSAGE_ID);
         const transferables = [ outputBuffer, ...inputBuffers ].filter(
@@ -69,13 +70,13 @@ export class MatrixWorker
         );
         const msg = { id, header, outputBuffer, inputBuffers, transferables };
 
-        return new Promise(resolve => {
+        return new SpeedyPromise(resolve => {
             this._callbackTable.set(id, (outputBuffer, inputBuffers) => {
-                this._callbackTable.delete(id);
                 resolve([outputBuffer, inputBuffers]);
+                this._callbackTable.delete(id);
             });
             this._worker.postMessage(msg, transferables);
-        });
+        }, true);
     }
 
     /**
@@ -94,7 +95,6 @@ export class MatrixWorker
         worker.onmessage = ev => {
             const msg = ev.data;
             const done = this._callbackTable.get(msg.id);
-            //console.warn('voltei do worker', msg, new Float32Array(msg.outputBuffer));
             done(msg.outputBuffer, msg.inputBuffers);
         };
         worker.onerror = ev => {

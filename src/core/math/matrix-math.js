@@ -323,7 +323,7 @@ class MatrixMath
         const [ istride ] = header.strideOfInputs;
         const [ input, x ] = inputs;
         const { mode } = header.custom;
-        const subheader = Object.assign(header, { custom: null });
+        const subheader = Object.assign({ }, header, { custom: null });
         const wantMatrices = (mode == 'full-qr' || mode == 'reduced-qr');
         let submatrices = [ null, null, null ];
 

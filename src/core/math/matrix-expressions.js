@@ -23,6 +23,7 @@ import { SpeedyMatrix } from './matrix';
 import { MatrixMath } from './matrix-math';
 import { MatrixOperationsQueue } from './matrix-operations-queue';
 import { AbstractMethodError, IllegalArgumentError, IllegalOperationError } from '../../utils/errors';
+import { SpeedyPromise } from '../../utils/speedy-promise';
 import {
     MatrixOperationNop,
     MatrixOperationFill,
@@ -133,7 +134,7 @@ class SpeedyMatrixExpr
 
     /**
      * Evaluate the expression
-     * @returns {Promise<SpeedyMatrixExpr>}
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
      */
     _evaluate()
     {
@@ -153,7 +154,7 @@ class SpeedyMatrixExpr
     /**
      * Assign a matrix
      * @param {SpeedyMatrix} matrix
-     * @returns {Promise<void>} resolves as soon as the assignment is done
+     * @returns {SpeedyPromise<void>} resolves as soon as the assignment is done
      */
     _assign(matrix)
     {
@@ -169,7 +170,7 @@ class SpeedyMatrixExpr
     /**
      * Assign an expression (i.e., this := expr)
      * @param {SpeedyMatrixExpr|number[]} expr
-     * @returns {Promise<SpeedyMatrixAssignmentExpr>}
+     * @returns {SpeedyPromise<SpeedyMatrixAssignmentExpr>}
      */
     assign(expr)
     {
@@ -179,7 +180,7 @@ class SpeedyMatrixExpr
     /**
      * Fill the matrix with a constant value
      * @param {number} value
-     * @returns {Promise<SpeedyMatrixAssignmentExpr>}
+     * @returns {SpeedyPromise<SpeedyMatrixAssignmentExpr>}
      */
     fill(value)
     {
@@ -189,22 +190,22 @@ class SpeedyMatrixExpr
     /**
      * Read the entries of this matrix
      * Results are given in column-major format
-     * @returns {Promise<number[]>}
+     * @returns {SpeedyPromise<number[]>}
      */
     read()
     {
         this._readbuf = this._readbuf || [];
-        return this._evaluate().then(expr => expr._matrix.read(undefined, this._readbuf));
+        return this._evaluate().then(expr => expr._matrix.read(undefined, this._readbuf)).turbocharge();
     }
 
     /**
      * Print the result of this matrix expression to the console
      * @param {number} [decimals] format numbers to a number of decimals
-     * @returns {Promise<void>} a promise that resolves as soon as the matrix is printed
+     * @returns {SpeedyPromise<void>} a promise that resolves as soon as the matrix is printed
      */
     print(decimals = undefined)
     {
-        return this._evaluate().then(expr => expr._matrix.print(decimals));
+        return this._evaluate().then(expr => expr._matrix.print(decimals)).turbocharge();
     }
 
 
@@ -418,7 +419,7 @@ class SpeedyMatrixUnaryExpr extends SpeedyMatrixTempExpr
 
     /**
      * Evaluate expression
-     * @returns {Promise<SpeedyMatrixExpr>}
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
      */
     _evaluate()
     {
@@ -471,13 +472,13 @@ class SpeedyMatrixBinaryExpr extends SpeedyMatrixTempExpr
 
     /**
      * Evaluate expression
-     * @returns {Promise<SpeedyMatrixExpr>}
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
      */
     _evaluate()
     {
-        return Promise.all([
-            this._leftExpr._evaluate(),
-            this._rightExpr._evaluate()
+        return SpeedyPromise.all([
+            this._leftExpr._evaluate().turbocharge(),
+            this._rightExpr._evaluate().turbocharge()
         ]).then(([ leftResult, rightResult ]) =>
             matrixOperationsQueue.enqueue(
                 (
@@ -546,7 +547,7 @@ class SpeedyMatrixReadonlyBlockExpr extends SpeedyMatrixExpr
 
     /**
      * Evaluate the expression
-     * @returns {Promise<SpeedyMatrixExpr>}
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
      */
     _evaluate()
     {
@@ -594,7 +595,7 @@ class SpeedyMatrixReadonlyDiagonalExpr extends SpeedyMatrixExpr
 
     /**
      * Evaluate the expression
-     * @returns {Promise<SpeedyMatrixExpr>}
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
      */
     _evaluate()
     {
@@ -637,7 +638,7 @@ class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
     /**
      * Assign a matrix
      * @param {SpeedyMatrix} matrix
-     * @returns {Promise<void>} resolves as soon as the assignment is done
+     * @returns {SpeedyPromise<void>} resolves as soon as the assignment is done
      */
     _assign(matrix)
     {
@@ -647,18 +648,18 @@ class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
     /**
      * Assign an expression to this lvalue
      * @param {SpeedyMatrixExpr|number[]} expr
-     * @returns {Promise<SpeedyMatrixAssignmentExpr>} resolves as soon as the assignment is done
+     * @returns {SpeedyPromise<SpeedyMatrixAssignmentExpr>} resolves as soon as the assignment is done
      */
     assign(expr)
     {
         const assignment = new SpeedyMatrixAssignmentExpr(this, expr);
-        return assignment._evaluate();
+        return assignment._evaluate().turbocharge();
     }
 
     /**
      * Fill the matrix with a constant value
      * @param {number} value
-     * @returns {Promise<SpeedyMatrixAssignmentExpr>}
+     * @returns {SpeedyPromise<SpeedyMatrixAssignmentExpr>}
      */
     fill(value)
     {
@@ -723,15 +724,15 @@ class SpeedyMatrixAssignmentExpr extends SpeedyMatrixLvalueExpr
 
     /**
      * Evaluate expression
-     * @returns {Promise<SpeedyMatrixAssignmentExpr>}
+     * @returns {SpeedyPromise<SpeedyMatrixAssignmentExpr>}
      */
     _evaluate()
     {
-        return Promise.all([
-            this._lvalue._evaluate(),
-            this._rvalue._evaluate()
+        return SpeedyPromise.all([
+            this._lvalue._evaluate().turbocharge(),
+            this._rvalue._evaluate().turbocharge()
         ]).then(([ lvalue, rvalue ]) =>
-            lvalue._assign(rvalue._matrix)
+            lvalue._assign(rvalue._matrix).turbocharge()
         ).then(() => this);
     }
 }
@@ -775,23 +776,23 @@ class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
 
     /**
      * Evaluate the expression
-     * @returns {Promise<SpeedyMatrixExpr>}
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
      */
     _evaluate()
     {
-        return Promise.resolve(this);
+        return SpeedyPromise.resolve(this);
     }
 
     /**
      * Assign a matrix
      * We just change pointers; no actual copying of data takes place
      * @param {SpeedyMatrix} matrix
-     * @returns {Promise<void>} resolves as soon as the assignment is done
+     * @returns {SpeedyPromise<void>} resolves as soon as the assignment is done
      */
     _assign(matrix)
     {
         this._usermatrix = matrix;
-        return Promise.resolve();
+        return SpeedyPromise.resolve();
     }
 }
 
@@ -834,7 +835,7 @@ class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
 
     /**
      * Evaluate the expression
-     * @returns {Promise<SpeedyMatrixExpr>}
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
      */
     _evaluate()
     {
@@ -855,7 +856,7 @@ class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
      * Since this is a submatrix, we can't just assign pointers.
      * We need to copy the data
      * @param {SpeedyMatrix} matrix
-     * @returns {Promise<void>} resolves as soon as the assignment is done
+     * @returns {SpeedyPromise<void>} resolves as soon as the assignment is done
      */
     _assign(matrix)
     {
@@ -900,7 +901,7 @@ class SpeedyMatrixReadwriteDiagonalExpr extends SpeedyMatrixLvalueExpr
 
     /**
      * Evaluate the expression
-     * @returns {Promise<SpeedyMatrixExpr>}
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
      */
     _evaluate()
     {
@@ -921,7 +922,7 @@ class SpeedyMatrixReadwriteDiagonalExpr extends SpeedyMatrixLvalueExpr
      * Since this is a diagonal, we can't just assign pointers.
      * We need to copy the data
      * @param {SpeedyMatrix} matrix
-     * @returns {Promise<void>} resolves as soon as the assignment is done
+     * @returns {SpeedyPromise<void>} resolves as soon as the assignment is done
      */
     _assign(matrix)
     {
@@ -960,7 +961,7 @@ class SpeedyMatrixFillExpr extends SpeedyMatrixTempExpr
 
     /**
      * Evaluate expression
-     * @returns {Promise<SpeedyMatrixExpr>}
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
      */
     _evaluate()
     {

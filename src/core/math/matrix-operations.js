@@ -20,6 +20,7 @@
  */
 
 import { IllegalArgumentError, IllegalOperationError, NotSupportedError } from '../../utils/errors';
+import { SpeedyPromise } from '../../utils/speedy-promise';
 import { SpeedyMatrix } from './matrix';
 import { MatrixMath } from './matrix-math';
 import { MatrixWorker } from './matrix-worker';
@@ -27,8 +28,8 @@ import { MatrixWorker } from './matrix-worker';
 // Constants
 const Opcode = MatrixMath.Opcode;
 const Opcode2fun = MatrixMath.Opcode2fun;
-const SMALL_WORKLOAD = 0; //30; // what is "small"? further experimental testing is desirable
-                           // a binary operation for 3x3 matrices, e.g. C = A + B
+const SMALL_WORKLOAD = 0; //40; // what is "small"? further experimental testing is desirable
+                           // a binary operation for 3x3 matrices, e.g. C = A + B, has "small" workload
 
 // Worker
 const matrixWorker = MatrixWorker.instance;
@@ -169,7 +170,7 @@ export class MatrixOperation
      * Run the matrix operation in a Web Worker
      * The internal buffers of the input & the output matrices are assumed to be locked
      * @param {SpeedyMatrix} outputMatrix
-     * @returns {Promise<void>} a promise that resolves to outbuf as soon as the operation is completed
+     * @returns {SpeedyPromise<void>} a promise that resolves to outbuf as soon as the operation is completed
      */
     run(outputMatrix)
     {
@@ -219,14 +220,13 @@ export class MatrixOperation
             outputMatrix.buffer.replace(newOutputBuffer);
             for(let i = inputMatrices.length - 1; i >= 0; i--)
                 inputMatrices[i].buffer.replace(newInputBuffers[i]);
-            //console.log("volteeeeei", outputBuffer, outputMatrix.buffer.data);
         });
     }
 
     /**
      * Run matrix operation in the same thread
      * @param {SpeedyMatrix} outputMatrix
-     * @returns {Promise<void>} a promise that resolves to outbuf as soon as the operation is completed
+     * @returns {SpeedyPromise<void>} a promise that resolves to outbuf as soon as the operation is completed
      */
     _runLocally(outputMatrix)
     {
@@ -258,47 +258,8 @@ export class MatrixOperation
         }
 
         // run matrix operation
-        return new Promise(resolve => {
-            this._fun(header, output, inputs);
-            resolve();
-        });
-    }
-
-    /**
-     * Run the matrix operation synchronously, in the same thread
-     * @param {SpeedyMatrix} outputMatrix
-     */
-    runSync(outputMatrix)
-    {
-        // obtain properties of the output matrix
-        const { rows, columns, stride, type } = outputMatrix;
-        const header = this._header;
-
-        // do we have a compatible output matrix?
-        this._assertCompatibility(rows, columns, type);
-
-        // save output metadata
-        const output = outputMatrix.buffer.data;
-        header.stride = stride;
-        header.byteOffset = output.byteOffset;
-        header.length = output.length;
-
-        // save input metadata & buffers
-        const inputMatrices = this._inputMatrices;
-        const inputs = this._inputBuffers; // new Array(inputMatrices.length);
-        for(let i = inputMatrices.length - 1; i >= 0; i--) {
-            const inputMatrix = inputMatrices[i];
-            const input = inputMatrix.buffer.data;
-
-            header.strideOfInputs[i] = inputMatrix.stride;
-            header.byteOffsetOfInputs[i] = input.byteOffset;
-            header.lengthOfInputs[i] = input.length;
-
-            inputs[i] = input;
-        }
-
-        // run matrix operation
         this._fun(header, output, inputs);
+        return SpeedyPromise.resolve();
     }
 
     /**
