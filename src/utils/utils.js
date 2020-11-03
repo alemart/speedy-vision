@@ -87,11 +87,11 @@ export class Utils
     //static setZeroTimeout(fn) { setTimeout(fn, 0); } // easier on the CPU
     static setZeroTimeout(fn)
     {
-        const ctx = (this._setZeroTimeoutContext = this._setZeroTimeoutContext || (this._setZeroTimeoutContext = {
+        const ctx = (Utils._setZeroTimeoutContext = Utils._setZeroTimeoutContext || (Utils._setZeroTimeoutContext = {
             callbacks: new Map(),
             _setup: window.addEventListener('message', ev => {
                 if(ev.source === window) {
-                    const ctx = this._setZeroTimeoutContext;
+                    const ctx = Utils._setZeroTimeoutContext;
                     const msgId = ev.data;
                     const fn = ctx.callbacks.get(msgId);
                     if(fn !== undefined) {
