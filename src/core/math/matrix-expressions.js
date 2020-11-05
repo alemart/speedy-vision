@@ -37,6 +37,8 @@ import {
     MatrixOperationScale,
     MatrixOperationCompMult,
     MatrixOperationQR,
+    MatrixOperationQRSolve,
+    MatrixOperationBackSubstitution,
 } from './matrix-operations';
 
 // constants
@@ -362,6 +364,37 @@ class SpeedyMatrixExpr
     {
         return new SpeedyMatrixQRExpr(this, mode);
     }
+
+
+
+
+
+
+    //
+    // Internal utilities
+    //
+
+    /**
+     * Internal QR solver: Ax = b
+     * This creates a matrix [ (Q^T) b | R ] using reduced QR
+     * All (m-n) entries at the bottom are zeros
+     * @param {SpeedyMatrixExpr} b
+     * @returns {SpeedyMatrixExpr}
+     */
+    _qrSolve(b)
+    {
+        return new SpeedyMatrixQRSolverNodeExpr(this, b);
+    }
+
+    /**
+     * Internal back-substitution algorithm, assuming
+     * this matrix expression is of the form [ b | R ]
+     * for some upper-triangular R matrix and vector b
+     */
+    _backSubstitution()
+    {
+        return new SpeedyMatrixBackSubstitutionNodeExpr(this);
+    }
 }
 
 /**
@@ -457,14 +490,16 @@ class SpeedyMatrixBinaryExpr extends SpeedyMatrixTempExpr
      * @param {SpeedyMatrixExpr} leftExpr left operand/expression
      * @param {SpeedyMatrixExpr} rightExpr right operand/expression
      * @param {Function} operationClass binary operation
+     * @param {any[]} [...args] will be used when instantiating the binary operation
      */
-    constructor(rows, columns, leftExpr, rightExpr, operationClass)
+    constructor(rows, columns, leftExpr, rightExpr, operationClass, ...args)
     {
         super(rows, columns, leftExpr.type);
         this._leftExpr = leftExpr;
         this._rightExpr = rightExpr;
         this._operationClass = operationClass;
         this._operation = null; // cache the MatrixOperation object
+        this._args = args;
 
         if(rightExpr.type !== leftExpr.type) // just in case...
             this._assertCompatibility(rows, columns, rightExpr.type);
@@ -483,7 +518,7 @@ class SpeedyMatrixBinaryExpr extends SpeedyMatrixTempExpr
             matrixOperationsQueue.enqueue(
                 (
                     this._operation ? this._operation.update([ leftResult._matrix, rightResult._matrix ]) :
-                    (this._operation = new (this._operationClass)(leftResult._matrix, rightResult._matrix))
+                    (this._operation = new (this._operationClass)(leftResult._matrix, rightResult._matrix, ...(this._args)))
                 ),
                 this._matrix
             )
@@ -1164,8 +1199,8 @@ class SpeedyMatrixQRExpr extends SpeedyMatrixUnaryExpr
 {
     /**
      * Constructor
-     * @param {string} mode 'full' | 'reduced'
      * @param {SpeedyMatrixExpr} expr
+     * @param {string} mode 'full' | 'reduced'
      */
     constructor(expr, mode)
     {
@@ -1174,6 +1209,46 @@ class SpeedyMatrixQRExpr extends SpeedyMatrixUnaryExpr
             throw new IllegalArgumentError(`Can't compute the QR decomposition of a ${expr.rows} x ${expr.columns} matrix`);
 
         super(expr.rows, columns, expr, MatrixOperationQR, mode);
+    }
+}
+
+/**
+ * Internal QR solver (Ax = b)
+ */
+class SpeedyMatrixQRSolverNodeExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} matrixA m x n matrix
+     * @param {SpeedyMatrixExpr} vectorB m x 1 vector
+     */
+    constructor(matrixA, vectorB)
+    {
+        if(matrixA.rows < matrixA.columns)
+            throw new IllegalArgumentError(`Can't compute the QR decomposition of a ${matrixA.rows} x ${matrixA.columns} matrix`);
+        else if(vectorB.columns != 1 || vectorB.rows != matrixA.rows)
+            throw new IllegalArgumentError(`Expected a ${matrixA.rows} x 1 column-vector, but found a ${vectorB.rows} x ${vectorB.columns} matrix`);
+
+        super(matrixA.rows, matrixA.columns + 1, matrixA, vectorB, MatrixOperationQRSolve);
+    }
+}
+
+/**
+ * Back-substitution algorithm
+ * (solve Rx = b for x, R is upper-triangular)
+ */
+class SpeedyMatrixBackSubstitutionNodeExpr extends SpeedyMatrixUnaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} input [b | R] matrix
+     */
+    constructor(input)
+    {
+        if(input.columns !== input.rows + 1)
+            throw new IllegalArgumentError(`Expected a ${input.rows} x ${input.rows + 1} matrix, but found a ${input.rows} x ${input.columns} matrix`);
+
+        super(input.rows, 1, input, MatrixOperationBackSubstitution);
     }
 }
 

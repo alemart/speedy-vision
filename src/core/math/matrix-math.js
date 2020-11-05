@@ -73,7 +73,7 @@ class MatrixMath
     static copy(header, output, inputs)
     {
         const { rows, columns, stride, length } = header;
-        const [ strideI ] = header.strideOfInputs;
+        const [ istride ] = header.strideOfInputs;
         const [ input ] = inputs;
 
         // use a memcpy-like operation if possible
@@ -84,7 +84,7 @@ class MatrixMath
 
         // copy values one by one
         let i, j, oj, ij;
-        for(oj = ij = j = 0; j < columns; j++, oj += stride, ij += strideI) {
+        for(oj = ij = j = 0; j < columns; j++, oj += stride, ij += istride) {
             for(i = 0; i < rows; i++)
                 output[oj + i] = input[ij + i];
         }
@@ -335,8 +335,8 @@ class MatrixMath
 
         // create soon-to-be upper triangular matrix R
         const rstride = stride;
-        const triangular = !wantMatrices ? output.subarray(rstride) :
-            output.subarray(((mode == 'reduced-qr') ? icolumns : irows) * rstride);
+        const triangular = !wantMatrices ? output.subarray(stride) :
+            output.subarray(((mode == 'reduced-qr') ? icolumns : irows) * stride);
 
         // input matrix is m x n and should be such that m >= n
         if(irows < icolumns)
@@ -480,18 +480,19 @@ class MatrixMath
 
             //
             // Compute y = Q'x for an input vector x (Q' means Q^T)
-            // x: m x 1
+            // x: m x 1, y: m x 1
             //
             case 'Q\'x': {
                 const ystride = stride;
                 const y = output.subarray(0, ystride);
                 const m = irows, n = icolumns;
+                let fk, dot;
 
                 // validate input / output size
                 if(m != xrows || 1 != xcolumns)
                     throw new Error(`QR decomposition: the input vector is expected to be ${m} x 1, but is ${xrows} x ${xcolumns}`);
                 else if(m != orows || 1 + n != ocolumns)
-                    throw new Error(`QR decomposition: the output matrix is expected to be ${n} x ${1+n}, but is ${orows} x ${ocolumns}`);
+                    throw new Error(`QR decomposition: the output matrix is expected to be ${m} x ${1+n}, but is ${orows} x ${ocolumns}`);
 
                 // initialize output vector
                 for(i = 0; i < m; i++)
@@ -510,12 +511,13 @@ class MatrixMath
 
             //
             // Compute Qx for an input vector x
-            // x: m x 1
+            // x: m x 1, y: m x 1
             //
             case 'Qx': {
                 const ystride = stride;
                 const y = output.subarray(0, ystride);
                 const m = irows, n = icolumns;
+                let fk, dot;
 
                 // validate input / output size
                 if(m != xrows || 1 != xcolumns)
@@ -538,8 +540,86 @@ class MatrixMath
                 break;
             }
 
+            //
+            // Compute y = Q'x for an input vector x using reduced QR
+            // x: m x 1, y: n x 1
+            //
+            case 'reduced-Q\'x': {
+                const m = irows, n = icolumns;
+                const y = output.subarray(0, n); // output[n..m-1] is unused
+                const e = tmp.subarray(0, m); // e_j is m x 1, for all j = 0, 1 .. n-1
+                let fk, dot;
+
+                // validate input / output size
+                if(m != xrows || 1 != xcolumns)
+                    throw new Error(`QR decomposition: the input vector is expected to be ${m} x 1, but is ${xrows} x ${xcolumns}`);
+                else if(m != orows || 1 + n != ocolumns)
+                    throw new Error(`QR decomposition: the output matrix is expected to be ${m} x ${1+n}, but is ${orows} x ${ocolumns}`);
+
+                // apply Householder reflectors
+                for(j = 0; j < n; j++) { // for each e_j
+                    // setup e_j = [ 0 0 0 ... 1 ... 0 0 0 ]^T
+                    e.fill(0);
+                    e[j] = 1;
+
+                    // compute Q e_j = ( Q_1 ... Q_n ) e_j
+                    for(k = n - 1; k >= 0; k--) {
+                        fk = k * irows;
+                        dot = -2 * this._dot(e, reflect, k, fk + k, m - k);
+                        for(i = m - 1; i >= k; i--)
+                            e[i] += dot * reflect[fk + i];
+                    }
+
+                    // compute y_j = dot(x, Q e_j)
+                    y[j] = this._dot(x, e, 0, 0, m);
+                }
+
+                break;
+            }
+
             default:
                 throw new Error(`QR decomposition: unknown mode "${mode}"`);
+        }
+    }
+
+
+    /**
+     * Back-substitution: solve Rx = b for x,
+     * where R is n x n upper triangular
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs a single input of the form [ b | R ]
+     */
+    static backsub(header, output, inputs)
+    {
+        const { rows, columns } = header;
+        const [ input ] = inputs;
+        const [ irows ] = header.rowsOfInputs;
+        const [ icolumns ] = header.columnsOfInputs;
+        const [ istride ] = header.strideOfInputs;
+
+        if(icolumns !== irows + 1)
+            throw new Error(`Invalid input for backsub: expected ${irows} x ${irows+1} or ${icolumns-1} x ${icolumns} matrix, but found ${irows} x ${icolumns} matrix`);
+        else if(rows !== irows || columns !== 1)
+            throw new Error(`Invalid output for backsub: expected ${irows} x 1 matrix, but found ${rows} x ${columns} matrix`);
+
+        // Back-substitution
+        const n = irows;
+        const x = output; // x is n x 1 vector (output)
+        const b = input.subarray(0, istride); // b is n x 1 vector
+        const r = input.subarray(istride); // R is n x n upper triangular
+        let i, j, rjj, rj = (n-1) * istride; // column index
+
+        x[n-1] = b[n-1] / r[rj + (n-1)];
+        for(j = n-2; j >= 0; j--) {
+            x[j] = b[j];
+            for(i = j+1; i < n; i++)
+                x[j] -= x[i] * r[istride * i + j];
+
+            rj -= istride;
+            if((rjj = r[rj + j]) === 0)
+                throw new Error(`Invalid input for backsub: ${j+1}-th diagonal element of the upper triangular matrix is zero`);
+            x[j] /= rjj;
         }
     }
 
@@ -757,6 +837,7 @@ class MatrixMath
             MULTIPLYRT: 0xB, // multiply tranposing the right operand
             OUTER: 0xC,      // outer product
             QR: 0x10,        // QR decomposition (Householder)
+            BACKSUB: 0x11,   // back-substitution
         }));
     }
 
@@ -780,6 +861,7 @@ class MatrixMath
             [this.Opcode.MULTIPLYRT]: this.multiplyrt,
             [this.Opcode.OUTER]: this.outer,
             [this.Opcode.QR]: this.qr,
+            [this.Opcode.BACKSUB]: this.backsub,
         }));
     }
 }

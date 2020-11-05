@@ -504,3 +504,39 @@ export class MatrixOperationQR extends MatrixOperation
         super(Opcode.QR, matrix.rows, columns, matrix.type, [ matrix ], { mode: m });
     }
 }
+
+/**
+ * Internal QR solver (Ax = b) produces
+ * the matrix [(Q^T)b | R] using reduced QR
+ * A is m x n (m >= n), b is m x 1,
+ * (Q^T)b is n x 1 and R is n x n
+ */
+export class MatrixOperationQRSolve extends MatrixOperation
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrix} matrixA
+     * @param {SpeedyMatrix} vectorB
+     */
+    constructor(matrixA, vectorB)
+    {
+        super(Opcode.QR, matrixA.rows, matrixA.columns + 1, matrixA.type, [ matrixA, vectorB ], { mode: 'reduced-Q\'x' });
+    }
+}
+
+/**
+ * Given an input matrix of the form [b | R]
+ * where b is n x 1 and R is an n x n upper
+ * triangular matrix, solve Rx = b for x
+ */
+export class MatrixOperationBackSubstitution extends MatrixOperation
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrix} input
+     */
+    constructor(input)
+    {
+        super(Opcode.BACKSUB, input.rows, 1, input.type, [ input ]);
+    }
+}
