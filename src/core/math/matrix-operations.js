@@ -507,9 +507,14 @@ export class MatrixOperationQR extends MatrixOperation
 
 /**
  * Internal QR solver (Ax = b) produces
- * the matrix [(Q^T)b | R] using reduced QR
+ * the matrix [(Q^T)b | R] using reduced QR(*)
  * A is m x n (m >= n), b is m x 1,
- * (Q^T)b is n x 1 and R is n x n
+ * (Q^T)b is m x 1 and R is m x n
+ *
+ * (*) The last (m-n) rows of the output matrix
+ * will be filled with zeros. Those rows are
+ * required by the calculation. You may extract
+ * the first n rows
  */
 export class MatrixOperationQRSolve extends MatrixOperation
 {

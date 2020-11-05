@@ -365,6 +365,31 @@ class SpeedyMatrixExpr
         return new SpeedyMatrixQRExpr(this, mode);
     }
 
+    /**
+     * Find least squares solution for a system of linear equations,
+     * i.e., find x such that the 2-norm |b - Ax| is minimized.
+     * A is this (m x n) matrix expression, satisfying m >= n
+     * @param {SpeedyMatrixExpr} b m x 1 matrix
+     */
+    lssolve(b)
+    {
+        // m: rows (number of equations), n: columns (number of unknowns)
+        const rows = this._rows, columns = this._columns;
+
+        // validate size
+        if(b.rows !== rows)
+            throw new IllegalArgumentError(`lssolve expected a ${rows} x 1 input vector, but received a ${b.rows} x ${b.columns} matrix`);
+        else if(rows < columns)
+            throw new IllegalArgumentError(`lssolve requires an input matrix with more rows than columns (more equations than unknowns). It received a ${rows} x ${columns} matrix`);
+
+        // least squares via reduced QR
+        const qr = new SpeedyMatrixQRSolverNodeExpr(this, b); // [(Q^T) b | R], a m x (1+n) matrix
+        const equations = new SpeedyMatrixReadonlyBlockExpr(qr, 0, columns - 1, 0, columns); // a n x (1+n) matrix
+        const solution = new SpeedyMatrixBackSubstitutionNodeExpr(equations); // output: a n x 1 vector
+        return solution;
+    }
+
+
 
 
 
@@ -387,9 +412,9 @@ class SpeedyMatrixExpr
     }
 
     /**
-     * Internal back-substitution algorithm, assuming
-     * this matrix expression is of the form [ b | R ]
-     * for some upper-triangular R matrix and vector b
+     * Internal back-substitution algorithm. It assumes this
+     * matrix expression is of the form [ b | R ] for some
+     * upper-triangular R matrix and some column-vector b
      */
     _backSubstitution()
     {
@@ -1212,6 +1237,15 @@ class SpeedyMatrixQRExpr extends SpeedyMatrixUnaryExpr
     }
 }
 
+
+
+
+
+
+// ==============================================
+// INTERNAL UTILITIES
+// ==============================================
+
 /**
  * Internal QR solver (Ax = b)
  */
@@ -1251,6 +1285,9 @@ class SpeedyMatrixBackSubstitutionNodeExpr extends SpeedyMatrixUnaryExpr
         super(input.rows, 1, input, MatrixOperationBackSubstitution);
     }
 }
+
+
+
 
 // ================================================
 // MATRIX FACTORY

@@ -373,6 +373,7 @@ class MatrixMath
 
             // normalize the k-th reflection vector
             norm = this._norm2(reflect, fkk, n);
+            // if(norm > 0) // error
             for(i = fkk + n - 1; i >= fkk; i--)
                 reflect[i] /= norm;
 
@@ -423,7 +424,7 @@ class MatrixMath
             case 'full-qr': {
                 const qstride = stride;
                 const unitary = output.subarray(0, qstride * irows).fill(0);
-                let rk, fk, qj, dot;
+                let fk, qj, dot;
 
                 // validate output size
                 if(orows != irows || ocolumns != icolumns + irows)
@@ -441,11 +442,14 @@ class MatrixMath
                     }
                 }
 
+                /*
                 // fill the lower part of R with zeros
+                let rk;
                 for(rk = k = 0; k < icolumns; k++, rk += rstride) {
                     for(i = icolumns; i < irows; i++)
                         triangular[rk + i] = 0;
                 }
+                */
 
                 break;
             }
@@ -542,7 +546,7 @@ class MatrixMath
 
             //
             // Compute y = Q'x for an input vector x using reduced QR
-            // x: m x 1, y: n x 1
+            // x: m x 1, y: m x 1
             //
             case 'reduced-Q\'x': {
                 const m = irows, n = icolumns;
