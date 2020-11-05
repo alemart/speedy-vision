@@ -311,7 +311,7 @@ class MatrixMath
     /**
      * QR decomposition
      * @param {object} header
-     * @param {TypedArray} output becomes [ Q | R ]
+     * @param {TypedArray} output becomes [ Q | R ] or [ Q'x | R ] or [ Qx | R ]
      * @param {TypedArray[]} inputs
      */
     static qr(header, output, inputs)
@@ -328,20 +328,23 @@ class MatrixMath
         let submatrices = [ null, null, null ];
 
         // create temporary storage
-        const num = wantMatrices ? 2 : 3;
-        const storage = this._createTypedArray(num * irows * icolumns + icolumns, type);
+        const storage = this._createTypedArray(2 * irows * icolumns + icolumns, type);
         const reflect = storage.subarray(0, irows * icolumns);
         const tmprow = storage.subarray(irows * icolumns, irows * icolumns + icolumns);
         const tmp = storage.subarray(irows * icolumns + icolumns, 2 * irows * icolumns + icolumns);
 
         // create soon-to-be upper triangular matrix R
-        const rstride = wantMatrices ? stride : irows;
-        const triangular = !wantMatrices ? storage.subarray(2 * irows * icolumns + icolumns) :
+        const rstride = stride;
+        const triangular = !wantMatrices ? output.subarray(rstride) :
             output.subarray(((mode == 'reduced-qr') ? icolumns : irows) * rstride);
 
         // input matrix is m x n and should be such that m >= n
         if(irows < icolumns)
             throw new Error(`Can't compute the QR decomposition of a ${irows} x ${icolumns} matrix`);
+
+        // validate the number of rows of the output
+        if(orows != irows)
+            throw new Error(`Can't compute the QR decomposition of a ${irows} x ${icolumns} matrix: expected an output matrix of ${irows} rows, but found a matrix of ${orows} rows`);
 
         // copy input[:,:] to triangular[:,:]
         if(input.length != triangular.length) {
@@ -476,27 +479,30 @@ class MatrixMath
             }
 
             //
-            // Compute Q'x for an input vector x (Q' means Q^T)
+            // Compute y = Q'x for an input vector x (Q' means Q^T)
             // x: m x 1
             //
             case 'Q\'x': {
+                const ystride = stride;
+                const y = output.subarray(0, ystride);
+                const m = irows, n = icolumns;
 
                 // validate input / output size
-                if(irows != xrows || 1 != xcolumns)
-                    throw new Error(`QR decomposition: the input vector is expected to be ${irows} x 1, but is ${xrows} x ${xcolumns}`);
-                else if(irows != orows || 1 != ocolumns)
-                    throw new Error(`QR decomposition: the output vector is expected to be ${irows} x 1, but is ${orows} x ${ocolumns}`);
+                if(m != xrows || 1 != xcolumns)
+                    throw new Error(`QR decomposition: the input vector is expected to be ${m} x 1, but is ${xrows} x ${xcolumns}`);
+                else if(m != orows || 1 + n != ocolumns)
+                    throw new Error(`QR decomposition: the output matrix is expected to be ${n} x ${1+n}, but is ${orows} x ${ocolumns}`);
 
                 // initialize output vector
-                for(i = 0; i < irows; i++)
-                    output[i] = x[i];
+                for(i = 0; i < m; i++)
+                    y[i] = x[i];
 
                 // apply Householder reflectors to input x
-                for(k = 0; k < icolumns; k++) { // compute Q'x = ( Q_n ... Q_1 ) x
+                for(k = 0; k < n; k++) { // compute Q'x = ( Q_n ... Q_1 ) x
                     fk = k * irows; // get the k-th reflector
-                    dot = -2 * this._dot(output, reflect, k, fk + k, irows - k);
-                    for(i = k; i < irows; i++)
-                        output[i] += dot * reflect[fk + i];
+                    dot = -2 * this._dot(y, reflect, k, fk + k, m - k);
+                    for(i = k; i < m; i++)
+                        y[i] += dot * reflect[fk + i];
                 }
 
                 break;
@@ -507,23 +513,26 @@ class MatrixMath
             // x: m x 1
             //
             case 'Qx': {
+                const ystride = stride;
+                const y = output.subarray(0, ystride);
+                const m = irows, n = icolumns;
 
                 // validate input / output size
-                if(irows != xrows || 1 != xcolumns)
-                    throw new Error(`QR decomposition: the input vector is expected to be ${irows} x 1, but is ${xrows} x ${xcolumns}`);
-                else if(irows != orows || 1 != ocolumns)
-                    throw new Error(`QR decomposition: the output vector is expected to be ${irows} x 1, but is ${orows} x ${ocolumns}`);
+                if(m != xrows || 1 != xcolumns)
+                    throw new Error(`QR decomposition: the input vector is expected to be ${m} x 1, but is ${xrows} x ${xcolumns}`);
+                else if(m != orows || 1 + n != ocolumns)
+                    throw new Error(`QR decomposition: the output matrix is expected to be ${m} x ${1+n}, but is ${orows} x ${ocolumns}`);
 
                 // initialize output vector
-                for(i = 0; i < irows; i++)
-                    output[i] = x[i];
+                for(i = 0; i < m; i++)
+                    y[i] = x[i];
 
                 // apply Householder reflectors to input x
-                for(k = icolumns - 1; k >= 0; k--) { // compute Qx = ( Q_1 ... Q_n ) x
+                for(k = n - 1; k >= 0; k--) { // compute Qx = ( Q_1 ... Q_n ) x
                     fk = k * irows; // get the k-th reflector
-                    dot = -2 * this._dot(output, reflect, k, fk + k, irows - k);
-                    for(i = k; i < irows; i++)
-                        output[i] += dot * reflect[fk + i];
+                    dot = -2 * this._dot(y, reflect, k, fk + k, m - k);
+                    for(i = k; i < m; i++)
+                        y[i] += dot * reflect[fk + i];
                 }
 
                 break;

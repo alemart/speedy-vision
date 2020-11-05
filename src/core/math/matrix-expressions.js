@@ -552,7 +552,7 @@ class SpeedyMatrixReadonlyBlockExpr extends SpeedyMatrixExpr
     _evaluate()
     {
         return this._expr._evaluate().then(result => {
-            if(result._matrix !== this._cachedMatrix) {
+            if(result._matrix !== this._cachedMatrix || this._submatrix === null) {
                 this._cachedMatrix = result._matrix;
                 return this._cachedMatrix.block(this._firstRow, this._lastRow, this._firstColumn, this._lastColumn);
             }
@@ -600,7 +600,7 @@ class SpeedyMatrixReadonlyDiagonalExpr extends SpeedyMatrixExpr
     _evaluate()
     {
         return this._expr._evaluate().then(result => {
-            if(result._matrix !== this._cachedMatrix) {
+            if(result._matrix !== this._cachedMatrix || this._diagonal === null) {
                 this._cachedMatrix = result._matrix;
                 return this._cachedMatrix.diagonal();
             }
@@ -840,7 +840,7 @@ class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
     _evaluate()
     {
         return this._expr._evaluate().then(result => {
-            if(result._matrix !== this._cachedMatrix) {
+            if(result._matrix !== this._cachedMatrix || this._submatrix === null) {
                 this._cachedMatrix = result._matrix;
                 return this._cachedMatrix.block(this._firstRow, this._lastRow, this._firstColumn, this._lastColumn);
             }
@@ -906,7 +906,7 @@ class SpeedyMatrixReadwriteDiagonalExpr extends SpeedyMatrixLvalueExpr
     _evaluate()
     {
         return this._expr._evaluate().then(result => {
-            if(result._matrix !== this._cachedMatrix) {
+            if(result._matrix !== this._cachedMatrix || this._diagonal === null) {
                 this._cachedMatrix = result._matrix;
                 return this._cachedMatrix.diagonal();
             }

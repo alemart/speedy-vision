@@ -28,7 +28,7 @@ import { MatrixWorker } from './matrix-worker';
 // Constants
 const Opcode = MatrixMath.Opcode;
 const Opcode2fun = MatrixMath.Opcode2fun;
-const SMALL_WORKLOAD = 0; //40; // what is "small"? further experimental testing is desirable
+const SMALL_WORKLOAD = 40; // what is "small"? further experimental testing is desirable
                            // a binary operation for 3x3 matrices, e.g. C = A + B, has "small" workload
 
 // Worker
@@ -463,7 +463,7 @@ export class MatrixOperationMultiplyLT extends MatrixOperation
      */
     constructor(matrixA, matrixB)
     {
-        super(Opcode.MULTIPLYLT, matrixA.rows, matrixB.columns, matrixA.type, [ matrixA, matrixB ]);
+        super(Opcode.MULTIPLYLT, matrixA.columns, matrixB.columns, matrixA.type, [ matrixA, matrixB ]);
     }
 }
 
@@ -480,7 +480,7 @@ export class MatrixOperationMultiplyRT extends MatrixOperation
      */
     constructor(matrixA, matrixB)
     {
-        super(Opcode.MULTIPLYRT, matrixA.rows, matrixB.columns, matrixA.type, [ matrixA, matrixB ]);
+        super(Opcode.MULTIPLYRT, matrixA.rows, matrixB.rows, matrixA.type, [ matrixA, matrixB ]);
     }
 }
 
