@@ -377,8 +377,8 @@ class SpeedyMatrixExpr
         const rows = this._rows, columns = this._columns;
 
         // validate size
-        if(b.rows !== rows)
-            throw new IllegalArgumentError(`lssolve expected a ${rows} x 1 input vector, but received a ${b.rows} x ${b.columns} matrix`);
+        if(b.rows !== rows || b.columns !== 1)
+            throw new IllegalArgumentError(`lssolve expects a ${rows} x 1 input vector, but received a ${b.rows} x ${b.columns} matrix`);
         else if(rows < columns)
             throw new IllegalArgumentError(`lssolve requires an input matrix with more rows than columns (more equations than unknowns). It received a ${rows} x ${columns} matrix`);
 
@@ -387,6 +387,36 @@ class SpeedyMatrixExpr
         const equations = new SpeedyMatrixReadonlyBlockExpr(qr, 0, columns - 1, 0, columns); // a n x (1+n) matrix
         const solution = new SpeedyMatrixBackSubstitutionNodeExpr(equations); // output: a n x 1 vector
         return solution;
+    }
+
+    /**
+     * Solve a linear system of equations,
+     * i.e., solve Ax = b for x. A is this
+     * (m x m) expression and b is m x 1
+     * @param {SpeedyMatrixExpr} b
+     * @param {string} [method] 'qr'
+     */
+    solve(b, method = 'qr')
+    {
+        // m: rows (number of equations), n: columns (number of unknowns)
+        const rows = this._rows, columns = this._columns;
+
+        // validate size
+        if(rows !== columns)
+            throw new IllegalArgumentError(`solve expects a square matrix, but received a ${rows} x ${columns} matrix`);
+        else if(b.rows !== rows || b.columns !== 1)
+            throw new IllegalArgumentError(`solve expected a ${rows} x 1 input vector, but received a ${b.rows} x ${b.columns} matrix`);
+
+        // solve system of equations
+        switch(method)
+        {
+            case 'qr':
+                // TODO: Gaussian elimination
+                return this.lssolve(b);
+
+            default:
+                throw new IllegalArgumentError(`Unknown method for solve: "${method}"`);
+        }
     }
 
 
