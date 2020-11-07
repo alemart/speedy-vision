@@ -202,12 +202,13 @@ class SpeedyMatrixExpr
 
     /**
      * Print the result of this matrix expression to the console
+     * @param {Function} [printFunction] prints a string
      * @param {number} [decimals] format numbers to a number of decimals
      * @returns {SpeedyPromise<void>} a promise that resolves as soon as the matrix is printed
      */
-    print(decimals = undefined)
+    print(printFunction = undefined, decimals = undefined)
     {
-        return this._evaluate().then(expr => expr._matrix.print(decimals)).turbocharge();
+        return this._evaluate().then(expr => expr._matrix.print(printFunction, decimals)).turbocharge();
     }
 
 
