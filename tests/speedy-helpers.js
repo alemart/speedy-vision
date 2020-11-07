@@ -249,6 +249,11 @@ function l1dist(a, b) // Manhattan distance
     return subtract(a, b).reduce((s, d) => s + Math.abs(d), 0);
 }
 
+function norm(a) // Euclidean norm
+{
+    return Math.sqrt(a.reduce((s, ai) => s + ai * ai, 0));
+}
+
 function mean(v) // mean
 {
     const sum = a.reduce((s, x) => s + x, 0);
@@ -317,6 +322,12 @@ function centerOfMass(features)
     }
 
     return avg;
+}
+
+// a random integer i such that 0 <= i < n
+function randomInt(n)
+{
+    return (n * Math.random()) | 0;
 }
 
 
@@ -408,7 +419,7 @@ var speedyMatchers =
     // Array matchers
     //
 
-    toBeElementwiseEqual: (util, customEqualityMatchers) =>
+    toBeElementwiseEqual: util =>
     ({
         compare(a, b)
         {
@@ -420,17 +431,18 @@ var speedyMatchers =
                 `Arrays are expected to differ` :
                 `Arrays are not expected to differ, but ${(a.length > b.length ? a : b).filter((_, i) => a[i] !== b[i]).length} elements do differ. ` +
                 `They differ by at most ${errmax(a, b, 0)}\n` +
-                `Relative error count: ${relerrcnt(a, b, tolerance)}\n` +
                 `Mean average error: ${mae(a, b)}`;
 
             return { pass, message };
         }
     }),
 
-    toBeElementwiseNearlyEqual: (util, customEqualityMatchers) =>
+    toBeElementwiseNearlyEqual: util =>
     ({
-        compare(a, b, tolerance = PIXEL_TOLERANCE)
+        compare(a, b)
         {
+            const tolerance = 1e-5;
+
             let pass = (a.length == b.length);
             for(let i = 0; i < a.length && pass; i++)
                 pass = pass && Math.abs(a[i] - b[i]) <= tolerance;
@@ -447,7 +459,29 @@ var speedyMatchers =
         }
     }),
 
-    toBeElementwiseGreaterThanOrEqual: (util, customEqualityMatchers) =>
+    toBeElementwiseNearlyTheSamePixels: util =>
+    ({
+        compare(a, b)
+        {
+            const tolerance = PIXEL_TOLERANCE;
+
+            let pass = (a.length == b.length);
+            for(let i = 0; i < a.length && pass; i++)
+                pass = pass && Math.abs(a[i] - b[i]) <= tolerance;
+
+            let message = pass ?
+                `Arrays are expected not to be elementwise nearly the same pixels` :
+                `Arrays are expected to be elementwise nearly the same pixels, but ${errcnt(a, b, tolerance)} pairs aren't so. ` +
+                `Their elements differ by at most ${errmax(a, b, tolerance)}, ` +
+                `whereas the test tolerance is ${tolerance}\n` +
+                `Relative error count: ${relerrcnt(a, b, tolerance)}\n` +
+                `Mean average error: ${mae(a, b)}`;
+                
+            return { pass, message };
+        }
+    }),
+
+    toBeElementwiseGreaterThanOrEqual: util =>
     ({
         compare(a, b)
         {
@@ -464,7 +498,7 @@ var speedyMatchers =
         }
     }),
 
-    toBeElementwiseGreaterThan: (util, customEqualityMatchers) =>
+    toBeElementwiseGreaterThan: util =>
     ({
         compare(a, b)
         {
@@ -481,7 +515,7 @@ var speedyMatchers =
         }
     }),
 
-    toBeElementwiseLessThanOrEqual: (util, customEqualityMatchers) =>
+    toBeElementwiseLessThanOrEqual: util =>
     ({
         compare(a, b)
         {
@@ -498,7 +532,7 @@ var speedyMatchers =
         }
     }),
 
-    toBeElementwiseLessThan: (util, customEqualityMatchers) =>
+    toBeElementwiseLessThan: util =>
     ({
         compare(a, b)
         {
@@ -519,7 +553,7 @@ var speedyMatchers =
     // Image matchers
     //
 
-    toBeAnAcceptableImageError: (util, customEqualityMatchers) =>
+    toBeAnAcceptableImageError: util =>
     ({
         compare(err, toleranceMultiplier = 1.0)
         {

@@ -92,7 +92,7 @@ describe('SpeedyPipeline', function() {
 
         // Not equal to the original media
         const pix = pixels(media).filter((p, i) => i % 4 < 3);
-        expect(pix).not.toBeElementwiseNearlyEqual(rrr);
+        expect(pix).not.toBeElementwiseNearlyTheSamePixels(rrr);
         
         await pipeline.release();
     });
@@ -186,13 +186,13 @@ describe('SpeedyPipeline', function() {
             display(imdiff(square, convolved7x7), 'Difference');
 
             expect(pixels(convolved3x3))
-            .toBeElementwiseNearlyEqual(pixels(square));
+            .toBeElementwiseNearlyTheSamePixels(pixels(square));
 
             expect(pixels(convolved5x5))
-            .toBeElementwiseNearlyEqual(pixels(square));
+            .toBeElementwiseNearlyTheSamePixels(pixels(square));
 
             expect(pixels(convolved7x7))
-            .toBeElementwiseNearlyEqual(pixels(square));
+            .toBeElementwiseNearlyTheSamePixels(pixels(square));
 
             clone1.release();
             clone2.release();
@@ -284,7 +284,7 @@ describe('SpeedyPipeline', function() {
             display(imdiff(convolved, square), `Error: ${error}`);
 
             expect(pixels(square))
-            .toBeElementwiseNearlyEqual(pixels(convolved));
+            .toBeElementwiseNearlyTheSamePixels(pixels(convolved));
 
             await pipeline.release();
         });
@@ -339,7 +339,7 @@ describe('SpeedyPipeline', function() {
             display(imdiff(convolved, square), `Error: ${error}`);
 
             expect(pixels(square))
-            .toBeElementwiseNearlyEqual(pixels(convolved));
+            .toBeElementwiseNearlyTheSamePixels(pixels(convolved));
             
             await pipeline.release();
         });
