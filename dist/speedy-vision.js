@@ -1,12 +1,12 @@
 /*!
- * speedy-vision.js v0.4.0
+ * speedy-vision.js v0.5.0-wip
  * GPU-accelerated Computer Vision for JavaScript
  * https://github.com/alemart/speedy-vision-js
  * 
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-10-08T15:27:00.145Z
+ * Date: 2020-11-07T20:05:18.818Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -96,6 +96,201 @@ var Speedy =
 /******/ })
 /************************************************************************/
 /******/ ({
+
+/***/ "./node_modules/process/browser.js":
+/*!*****************************************!*\
+  !*** ./node_modules/process/browser.js ***!
+  \*****************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+// shim for using process in browser
+var process = module.exports = {};
+
+// cached from whatever global is present so that test runners that stub it
+// don't break things.  But we need to wrap it in a try catch in case it is
+// wrapped in strict mode code which doesn't define any globals.  It's inside a
+// function because try/catches deoptimize in certain engines.
+
+var cachedSetTimeout;
+var cachedClearTimeout;
+
+function defaultSetTimout() {
+    throw new Error('setTimeout has not been defined');
+}
+function defaultClearTimeout () {
+    throw new Error('clearTimeout has not been defined');
+}
+(function () {
+    try {
+        if (typeof setTimeout === 'function') {
+            cachedSetTimeout = setTimeout;
+        } else {
+            cachedSetTimeout = defaultSetTimout;
+        }
+    } catch (e) {
+        cachedSetTimeout = defaultSetTimout;
+    }
+    try {
+        if (typeof clearTimeout === 'function') {
+            cachedClearTimeout = clearTimeout;
+        } else {
+            cachedClearTimeout = defaultClearTimeout;
+        }
+    } catch (e) {
+        cachedClearTimeout = defaultClearTimeout;
+    }
+} ())
+function runTimeout(fun) {
+    if (cachedSetTimeout === setTimeout) {
+        //normal enviroments in sane situations
+        return setTimeout(fun, 0);
+    }
+    // if setTimeout wasn't available but was latter defined
+    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
+        cachedSetTimeout = setTimeout;
+        return setTimeout(fun, 0);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedSetTimeout(fun, 0);
+    } catch(e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
+            return cachedSetTimeout.call(null, fun, 0);
+        } catch(e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
+            return cachedSetTimeout.call(this, fun, 0);
+        }
+    }
+
+
+}
+function runClearTimeout(marker) {
+    if (cachedClearTimeout === clearTimeout) {
+        //normal enviroments in sane situations
+        return clearTimeout(marker);
+    }
+    // if clearTimeout wasn't available but was latter defined
+    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
+        cachedClearTimeout = clearTimeout;
+        return clearTimeout(marker);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedClearTimeout(marker);
+    } catch (e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
+            return cachedClearTimeout.call(null, marker);
+        } catch (e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
+            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
+            return cachedClearTimeout.call(this, marker);
+        }
+    }
+
+
+
+}
+var queue = [];
+var draining = false;
+var currentQueue;
+var queueIndex = -1;
+
+function cleanUpNextTick() {
+    if (!draining || !currentQueue) {
+        return;
+    }
+    draining = false;
+    if (currentQueue.length) {
+        queue = currentQueue.concat(queue);
+    } else {
+        queueIndex = -1;
+    }
+    if (queue.length) {
+        drainQueue();
+    }
+}
+
+function drainQueue() {
+    if (draining) {
+        return;
+    }
+    var timeout = runTimeout(cleanUpNextTick);
+    draining = true;
+
+    var len = queue.length;
+    while(len) {
+        currentQueue = queue;
+        queue = [];
+        while (++queueIndex < len) {
+            if (currentQueue) {
+                currentQueue[queueIndex].run();
+            }
+        }
+        queueIndex = -1;
+        len = queue.length;
+    }
+    currentQueue = null;
+    draining = false;
+    runClearTimeout(timeout);
+}
+
+process.nextTick = function (fun) {
+    var args = new Array(arguments.length - 1);
+    if (arguments.length > 1) {
+        for (var i = 1; i < arguments.length; i++) {
+            args[i - 1] = arguments[i];
+        }
+    }
+    queue.push(new Item(fun, args));
+    if (queue.length === 1 && !draining) {
+        runTimeout(drainQueue);
+    }
+};
+
+// v8 likes predictible objects
+function Item(fun, array) {
+    this.fun = fun;
+    this.array = array;
+}
+Item.prototype.run = function () {
+    this.fun.apply(null, this.array);
+};
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
+process.version = ''; // empty string to avoid regexp issues
+process.versions = {};
+
+function noop() {}
+
+process.on = noop;
+process.addListener = noop;
+process.once = noop;
+process.off = noop;
+process.removeListener = noop;
+process.removeAllListeners = noop;
+process.emit = noop;
+process.prependListener = noop;
+process.prependOnceListener = noop;
+
+process.listeners = function (name) { return [] }
+
+process.binding = function (name) {
+    throw new Error('process.binding is not supported');
+};
+
+process.cwd = function () { return '/' };
+process.chdir = function (dir) {
+    throw new Error('process.chdir is not supported');
+};
+process.umask = function() { return 0; };
+
+
+/***/ }),
 
 /***/ "./src/core/keypoints/automatic-sensitivity.js":
 /*!*****************************************************!*\
@@ -1563,18 +1758,21 @@ class LKFeatureTrackingAlgorithm extends _feature_tracking_algorithm__WEBPACK_IM
 
 /***/ }),
 
-/***/ "./src/core/math/speedy-matrix.js":
+/***/ "./src/core/math/matrix-buffer.js":
 /*!****************************************!*\
-  !*** ./src/core/math/speedy-matrix.js ***!
+  !*** ./src/core/math/matrix-buffer.js ***!
   \****************************************/
-/*! exports provided: SpeedyMatrix */
+/*! exports provided: MatrixBuffer */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrix", function() { return SpeedyMatrix; });
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _speedy_flags__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../speedy-flags */ "./src/core/speedy-flags.js");
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixBuffer", function() { return MatrixBuffer; });
+/* harmony import */ var _matrix_math__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix-math */ "./src/core/math/matrix-math.js");
+/* harmony import */ var _matrix_math__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_matrix_math__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -1592,83 +1790,3755 @@ __webpack_require__.r(__webpack_exports__);
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * speedy-matrix.js
+ * matrix-buffer.js
+ * Storage for elements of matrices
+ */
+
+
+
+
+
+// constants
+const MatrixType = _matrix_math__WEBPACK_IMPORTED_MODULE_0__["MatrixMath"].MatrixType;
+const DataType = _matrix_math__WEBPACK_IMPORTED_MODULE_0__["MatrixMath"].DataType;
+const TypedArray2DataType = Object.freeze(Object.keys(DataType).reduce(
+    (obj, type) => Object.assign(obj, { [DataType[type].name]: type | 0 }),
+{}));
+
+/**
+ * Stores the contents of a matrix
+ */
+class MatrixBuffer
+{
+    /**
+     * Class constructor
+     * @param {number} length number of elements of the buffer
+     * @param {number[]|Float64Array|Float32Array|Int32Array|Uint8Array} [values] initial values in column-major format
+     * @param {number} [type] the type of the elements of the matrix: F64, F32, etc.
+     * @param {MatrixBuffer} [parent] the buffer that originated this one, if any
+     */
+    constructor(length, values = null, type = MatrixType.F32, parent = null)
+    {
+        let data;
+        length = length | 0;
+
+        // type inference
+        if(values != null && !Array.isArray(values))
+            type = TypedArray2DataType[values.constructor.name];
+        const dataType = DataType[type];
+        if(dataType === undefined)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Unknown matrix type`);
+
+        // validate length
+        if(length <= 0)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Invalid matrix length`);
+
+        // allocate new TypedArray
+        if(values == null)
+            data = new dataType(length);
+        else if(Array.isArray(values))
+            data = new dataType(values);
+        else
+            data = values;
+
+        // check if it's a proper TypedArray
+        if(!(data.buffer instanceof ArrayBuffer))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Invalid matrix type`);
+
+        // store data
+        this._type = type & (~3); // F64, F32, etc.
+        this._byteOffset = data.byteOffset; // assumed to be constant
+        this._length = data.length; // assumed to be constant
+        this._data = data; // a reference to the TypedArray
+        this._dataType = dataType; // TypedArray class
+
+        // concurrency control
+        this._pendingOperations = parent ? parent._pendingOperations : 0; // number of pending operations that read from or write to the buffer
+        this._pendingAccessesQueue = []; // a list of Function<void> to be called as soon as there are no pending operations
+        this._children = []; // a list of MatrixBuffers that share their internal memory with this one
+        this._parent = parent; // the buffer that originated this one, if any
+    }
+
+    /**
+     * Data type
+     * @returns {number}
+     */
+    get type()
+    {
+        return this._type;
+    }
+
+    /**
+     * Get the internal TypedArray that holds the entries of the Matrix
+     * Make sure the buffer is ready() before accessing this property
+     * @returns {Float32Array|Float64Array|Int32Array|Uint8Array}
+     */
+    get data()
+    {
+        return this._data;
+    }
+
+    /**
+     * Wait for buffer readiness. Since the buffer holds
+     * a Transferable object, the data may or may not be
+     * available right now. The returned SpeedyPromise will be
+     * resolved as soon as the buffer is available for
+     * reading and writing
+     * @returns {SpeedyPromise<MatrixBuffer>}
+     */
+    ready()
+    {
+        if(this._pendingOperations > 0) {
+            // we're not ready yet: there are calculations taking place...
+            // we'll resolve this promise as soon as there are no pending calculations
+            return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"](resolve => {
+                this._pendingAccessesQueue.push(() => resolve(this));
+            });
+        }
+        else {
+            // we're ready to go!
+            // no pending operations
+            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(this);
+        }
+    }
+
+    /**
+     * Lock the buffer, so it can't be read from nor written to
+     * @param {boolean} [ascend] internal
+     */
+    lock(ascend = true)
+    {
+        let my = this;
+
+        // climb the tree
+        if(my._parent && ascend) {
+            do { my = my._parent; } while(my._parent);
+        }
+
+        // lock this buffer
+        ++my._pendingOperations;
+
+        // broadcast
+        for(let i = my._children.length - 1; i >= 0; i--)
+            my._children[i].lock(false);
+    }
+
+    /**
+     * Unlock the buffer and resolve all pending read/write operations
+     * @param {boolean} [ascend] internal
+     */
+    unlock(ascend = true)
+    {
+        let my = this;
+
+        // climb the tree
+        if(my._parent && ascend) {
+            do { my = my._parent; } while(my._parent);
+        }
+
+        // unlock this buffer
+        if(--my._pendingOperations <= 0) {
+            const callbackQueue = my._pendingAccessesQueue.slice(0); // fast clone
+
+            my._pendingOperations = 0;
+            my._pendingAccessesQueue.length = 0;
+
+            for(let i = 0; i < callbackQueue.length; i++) {
+                // if the buffer has been locked again, put the functions back in the queue
+                if(my._pendingOperations > 0) {
+                    for(let j = callbackQueue.length - 1; j >= i; j--) {
+                        my._pendingAccessesQueue.unshift(callbackQueue[j]);
+                    }
+                    break; // note: for each lock() we need an unlock()
+                }
+
+                // if the buffer remains unlocked, we're cool
+                callbackQueue[i].call(my);
+            }
+        }
+
+        // broadcast
+        for(let i = my._children.length - 1; i >= 0; i--)
+            my._children[i].unlock(false);
+    }
+
+    /**
+     * Replace the internal buffer of the TypedArray
+     * @param {ArrayBuffer} arrayBuffer new internal buffer
+     * @param {boolean} [ascend] internal
+     */
+    replace(arrayBuffer, ascend = true)
+    {
+        let my = this;
+
+        // climb the tree
+        if(my._parent && ascend) {
+            do { my = my._parent; } while(my._parent);
+        }
+
+        // replace the internal buffer
+        const dataType = this._dataType;
+        my._data = new dataType(arrayBuffer, my._byteOffset, my._length);
+
+        // broadcast
+        for(let i = my._children.length - 1; i >= 0; i--)
+            my._children[i].replace(arrayBuffer, false);
+    }
+
+    /**
+     * Create a MatrixBuffer that shares its internal memory with this one
+     * @param {number} [begin] index of the first element of the TypedArray
+     * @param {number} [length] number of elements of the TypedArray
+     * @returns {SpeedyPromise<MatrixBuffer>}
+     */
+    createSharedBuffer(begin = 0, length = this._length)
+    {
+        return this.ready().then(() => {
+            // obtain shared area of memory
+            const end = Math.min(begin + length, this._length);
+            const data = this._data.subarray(begin, end); // the main thread must own this._data
+
+            // create shared buffer
+            const sharedBuffer = new MatrixBuffer(length, data, this._type, this);
+            this._children.push(sharedBuffer);
+
+            // done!
+            return sharedBuffer;
+        });
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/math/matrix-expressions.js":
+/*!*********************************************!*\
+  !*** ./src/core/math/matrix-expressions.js ***!
+  \*********************************************/
+/*! exports provided: SpeedyMatrixExprFactory */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixExprFactory", function() { return SpeedyMatrixExprFactory; });
+/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix */ "./src/core/math/matrix.js");
+/* harmony import */ var _matrix_math__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-math */ "./src/core/math/matrix-math.js");
+/* harmony import */ var _matrix_math__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_matrix_math__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _matrix_operations_queue__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix-operations-queue */ "./src/core/math/matrix-operations-queue.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(_utils_speedy_promise__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var _matrix_operations__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./matrix-operations */ "./src/core/math/matrix-operations.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * matrix-expressions.js
+ * Abstract Matrix Algebra
+ */
+
+
+
+
+
+
+
+
+// constants
+const matrixOperationsQueue = _matrix_operations_queue__WEBPACK_IMPORTED_MODULE_2__["MatrixOperationsQueue"].instance;
+const MatrixType = _matrix_math__WEBPACK_IMPORTED_MODULE_1__["MatrixMath"].MatrixType;
+const DataType = _matrix_math__WEBPACK_IMPORTED_MODULE_1__["MatrixMath"].DataType;
+const DataTypeName = _matrix_math__WEBPACK_IMPORTED_MODULE_1__["MatrixMath"].DataTypeName;
+const DataTypeName2DataType = Object.freeze(Object.keys(DataTypeName).reduce(
+    (obj, type) => Object.assign(obj, { [ DataTypeName[type] ]: type }),
+{}));
+
+
+
+// ================================================
+// ABSTRACT TYPES
+// ================================================
+
+/**
+ * An abstract algebraic expression with matrices
+ * All expressions must be immutable from the outside
+ * @abstract
+ */
+class SpeedyMatrixExpr
+{
+    /**
+     * Constructor
+     * @param {number} rows expected number of rows of the resulting expression
+     * @param {number} columns expected number of columns of the resulting expression
+     * @param {number} type matrix type: F32, F64, etc.
+     */
+    constructor(rows, columns, type)
+    {
+        this._rows = rows | 0;
+        this._columns = columns | 0;
+        this._type = type | 0;
+        this._readbuf = null;
+
+        if(this._rows <= 0 || this._columns <= 0)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Invalid dimensions for a matrix expression: ${this._rows} x ${this._columns}`);
+        else if(DataType[this._type] === undefined)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Invalid type for a matrix expression: 0x${this._type.toString(16)}`);
+    }
+
+    /**
+     * Number of rows of the resulting matrix
+     * @returns {number}
+     */
+    get rows()
+    {
+        return this._rows;
+    }
+
+    /**
+     * Number of columns of the resulting matrix
+     * @returns {number}
+     */
+    get columns()
+    {
+        return this._columns;
+    }
+
+    /**
+     * Type of the resulting matrix
+     * @returns {number}
+     */
+    get type()
+    {
+        return this._type;
+    }
+
+    /**
+     * Type of the resulting matrix, as a string
+     * @returns {string}
+     */
+    get dtype()
+    {
+        return _matrix_math__WEBPACK_IMPORTED_MODULE_1__["MatrixMath"].DataTypeName[this._type];
+    }
+
+    /**
+     * Assert matrix shape and type
+     * @param {number} requiredRows
+     * @param {number} requiredColumns
+     * @param {number} [requiredType]
+     */
+    _assertCompatibility(requiredRows, requiredColumns, requiredType = this._type)
+    {
+        if(requiredRows === this._rows && requiredColumns === this._columns && requiredType === this._type)
+            return;
+        else if(requiredType !== this._type)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`Incompatible matrix type (expected ${_matrix_math__WEBPACK_IMPORTED_MODULE_1__["MatrixMath"].DataTypeName[requiredType]}, found ${this.dtype})`);
+        else
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`Incompatible matrix shape (expected ${requiredRows} x ${requiredColumns}, found ${this._rows} x ${this._columns})`);
+    }
+
+    /**
+     * Evaluate the expression
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
+     */
+    _evaluate()
+    {
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["AbstractMethodError"]();
+    }
+
+    /**
+     * Get the matrix associated with the result of this expression
+     * This matrix must be guaranteed to be available after evaluating this expression
+     * @returns {SpeedyMatrix}
+     */
+    get _matrix()
+    {
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["AbstractMethodError"]();
+    }
+
+    /**
+     * Assign a matrix
+     * @param {SpeedyMatrix} matrix
+     * @returns {SpeedyPromise<void>} resolves as soon as the assignment is done
+     */
+    _assign(matrix)
+    {
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`Can't assign matrix: not a l-value`);
+    }
+
+
+
+    //
+    // GENERIC UTILITIES
+    //
+
+    /**
+     * Assign an expression (i.e., this := expr)
+     * @param {SpeedyMatrixExpr|number[]} expr
+     * @returns {SpeedyPromise<SpeedyMatrixAssignmentExpr>}
+     */
+    assign(expr)
+    {
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`Can't assign matrix: not a l-value`);
+    }
+
+    /**
+     * Fill the matrix with a constant value
+     * @param {number} value
+     * @returns {SpeedyPromise<SpeedyMatrixAssignmentExpr>}
+     */
+    fill(value)
+    {
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`Can't fill matrix: not a l-value`);
+    }
+
+    /**
+     * Read the entries of this matrix
+     * Results are given in column-major format
+     * @returns {SpeedyPromise<number[]>}
+     */
+    read()
+    {
+        this._readbuf = this._readbuf || [];
+        return this._evaluate().then(expr => expr._matrix.read(undefined, this._readbuf)).turbocharge();
+    }
+
+    /**
+     * Print the result of this matrix expression to the console
+     * @param {Function} [printFunction] prints a string
+     * @param {number} [decimals] format numbers to a number of decimals
+     * @returns {SpeedyPromise<void>} a promise that resolves as soon as the matrix is printed
+     */
+    print(printFunction = undefined, decimals = undefined)
+    {
+        return this._evaluate().then(expr => expr._matrix.print(printFunction, decimals)).turbocharge();
+    }
+
+
+
+
+
+    //
+    // ACCESS BY BLOCK
+    //
+
+    /**
+     * Extract a (lastRow - firstRow + 1) x (lastColumn - firstColumn + 1)
+     * block from the matrix. All indices are 0-based. Note that the
+     * memory of the block is shared with the memory of the matrix.
+     * @param {number} firstRow
+     * @param {number} lastRow
+     * @param {number} firstColumn
+     * @param {number} lastColumn
+     * @returns {SpeedyMatrixReadonlyBlockExpr}
+     */
+    block(firstRow, lastRow, firstColumn, lastColumn)
+    {
+        return new SpeedyMatrixReadonlyBlockExpr(this, firstRow, lastRow, firstColumn, lastColumn);
+    }
+
+    /**
+     * Get the i-th row of the matrix
+     * @param {number} i 0-based index
+     */
+    row(i)
+    {
+        return this.block(i, i, 0, this._columns - 1);
+    }
+
+    /**
+     * Get the j-th column of the matrix
+     * @param {number} j 0-based index
+     */
+    column(j)
+    {
+        return this.block(0, this._rows - 1, j, j);
+    }
+
+    /**
+     * Get (lastRow - firstRow + 1) contiguous rows. Both indices are inclusive.
+     * @param {number} firstRow
+     * @param {number} lastRow
+     */
+    rowSet(firstRow, lastRow)
+    {
+        return this.block(firstRow, lastRow, 0, this._columns - 1);
+    }
+
+    /**
+     * Get (lastColumn - firstColumn + 1) contiguous columns. Both indices are inclusive.
+     * @param {number} firstColumn
+     * @param {number} lastColumn
+     */
+    columnSet(firstColumn, lastColumn)
+    {
+        return this.block(0, this._rows - 1, firstColumn, lastColumn);
+    }
+
+    /**
+     * Get the main diagonal of the matrix. Internal buffer is shared.
+     * @returns {SpeedyMatrixReadonlyDiagonalExpr}
+     */
+    diagonal()
+    {
+        return new SpeedyMatrixReadonlyDiagonalExpr(this);
+    }
+
+
+
+
+    //
+    // GENERAL OPERATIONS
+    //
+
+
+    /**
+     * Clone matrix
+     * @returns {SpeedyMatrixExpr}
+     */
+    clone()
+    {
+        return new SpeedyMatrixCloneExpr(this);
+    }
+
+    /**
+     * Transpose matrix
+     * @returns {SpeedyMatrixExpr}
+     */
+    transpose()
+    {
+        return new SpeedyMatrixTransposeExpr(this);
+    }
+
+    /**
+     * Add this matrix to another
+     * @param {SpeedyMatrixExpr} expr
+     * @returns {SpeedyMatrixExpr}
+     */
+    plus(expr)
+    {
+        return new SpeedyMatrixAddExpr(this, expr);
+    }
+
+    /**
+     * Subtract another matrix from this
+     * @param {SpeedyMatrixExpr} expr
+     * @returns {SpeedyMatrixExpr}
+     */
+    minus(expr)
+    {
+        return new SpeedyMatrixSubtractExpr(this, expr);
+    }
+
+    /**
+     * Multiply by a matrix or by a number
+     * @param {SpeedyMatrixExpr|number} expr
+     * @returns {SpeedyMatrixExpr}
+     */
+    times(expr)
+    {
+        if(expr instanceof SpeedyMatrixExpr)
+            return new SpeedyMatrixMultiplyExpr(this, expr);
+        else
+            return new SpeedyMatrixScaleExpr(this, expr);
+    }
+
+    /**
+     * Component-wise multiplication
+     * @param {SpeedyMatrixExpr} expr
+     * @returns {SpeedyMatrixExpr}
+     */
+    compMult(expr)
+    {
+        return new SpeedyMatrixCompMultExpr(this, expr);
+    }
+
+
+
+    //
+    // Linear Algebra
+    //
+
+    /**
+     * QR decomposition
+     * @param {string} [mode] 'full' | 'reduced'
+     * @returns {SpeedyMatrixExpr}
+     */
+    qr(mode = 'reduced')
+    {
+        return new SpeedyMatrixQRExpr(this, mode);
+    }
+
+    /**
+     * Find least squares solution for a system of linear equations,
+     * i.e., find x such that the 2-norm |b - Ax| is minimized.
+     * A is this (m x n) matrix expression, satisfying m >= n
+     * @param {SpeedyMatrixExpr} b m x 1 matrix
+     */
+    lssolve(b)
+    {
+        // m: rows (number of equations), n: columns (number of unknowns)
+        const rows = this._rows, columns = this._columns;
+
+        // validate size
+        if(b.rows !== rows || b.columns !== 1)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`lssolve expects a ${rows} x 1 input vector, but received a ${b.rows} x ${b.columns} matrix`);
+        else if(rows < columns)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`lssolve requires an input matrix with more rows than columns (more equations than unknowns). It received a ${rows} x ${columns} matrix`);
+
+        // least squares via reduced QR
+        const qr = new SpeedyMatrixQRSolverNodeExpr(this, b); // [(Q^T) b | R], a m x (1+n) matrix
+        const equations = new SpeedyMatrixReadonlyBlockExpr(qr, 0, columns - 1, 0, columns); // a n x (1+n) matrix
+        const solution = new SpeedyMatrixBackSubstitutionNodeExpr(equations); // output: a n x 1 vector
+        return solution;
+    }
+
+    /**
+     * Solve a linear system of equations,
+     * i.e., solve Ax = b for x. A is this
+     * (m x m) expression and b is m x 1
+     * @param {SpeedyMatrixExpr} b
+     * @param {string} [method] 'qr'
+     */
+    solve(b, method = 'qr')
+    {
+        // m: rows (number of equations), n: columns (number of unknowns)
+        const rows = this._rows, columns = this._columns;
+
+        // validate size
+        if(rows !== columns)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`solve expects a square matrix, but received a ${rows} x ${columns} matrix`);
+        else if(b.rows !== rows || b.columns !== 1)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`solve expected a ${rows} x 1 input vector, but received a ${b.rows} x ${b.columns} matrix`);
+
+        // solve system of equations
+        switch(method)
+        {
+            case 'qr':
+                // TODO: Gaussian elimination
+                return this.lssolve(b);
+
+            default:
+                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Unknown method for solve: "${method}"`);
+        }
+    }
+
+
+
+
+
+
+
+    //
+    // Internal utilities
+    //
+
+    /**
+     * Internal QR solver: Ax = b
+     * This creates a matrix [ (Q^T) b | R ] using reduced QR
+     * All (m-n) entries at the bottom are zeros
+     * @param {SpeedyMatrixExpr} b
+     * @returns {SpeedyMatrixExpr}
+     */
+    _qrSolve(b)
+    {
+        return new SpeedyMatrixQRSolverNodeExpr(this, b);
+    }
+
+    /**
+     * Internal back-substitution algorithm. It assumes this
+     * matrix expression is of the form [ b | R ] for some
+     * upper-triangular R matrix and some column-vector b
+     */
+    _backSubstitution()
+    {
+        return new SpeedyMatrixBackSubstitutionNodeExpr(this);
+    }
+}
+
+/**
+ * The result of an intermediate calculation (e.g., A + B)
+ * A temporary matrix for storing the result of the calculation is created
+ * @abstract
+ */
+class SpeedyMatrixTempExpr extends SpeedyMatrixExpr
+{
+    /**
+     * Constructor
+     * @param {number} rows number of rows of the output matrix
+     * @param {number} columns number of columns of the output matrix
+     * @param {number} type type of the output matrix
+     */
+    constructor(rows, columns, type)
+    {
+        super(rows, columns, type);
+        this._tmpmatrix = new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](rows, columns, undefined, type); // used for temporary calculations
+    }
+
+    /**
+     * Get the matrix associated with this expression
+     * This matrix must be guaranteed to be available after evaluating this expression
+     * @returns {SpeedyMatrix}
+     */
+    get _matrix()
+    {
+        return this._tmpmatrix;
+    }
+}
+
+/**
+ * Unary expression
+ * @abstract
+ */
+class SpeedyMatrixUnaryExpr extends SpeedyMatrixTempExpr
+{
+    /**
+     * Constructor
+     * @param {number} rows number of rows of the resulting (output) matrix
+     * @param {number} columns number of columns of the resulting (output) matrix
+     * @param {SpeedyMatrixExpr} expr input expression
+     * @param {Function} operationClass unary operation
+     * @param {any[]} [...args] will be used when instantiating the unary operation
+     */
+    constructor(rows, columns, expr, operationClass, ...args)
+    {
+        super(rows, columns, expr.type);
+        this._expr = expr;
+        this._operationClass = operationClass;
+        this._operation = null; // cache the MatrixOperation object
+        this._args = args;
+    }
+
+    /**
+     * Evaluate expression
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
+     */
+    _evaluate()
+    {
+        return this._expr._evaluate().then(result =>
+            matrixOperationsQueue.enqueue(
+                (
+                    this._operation ? this._operation.update([ result._matrix ]) :
+                    (this._operation = new (this._operationClass)(result._matrix, ...(this._args)))
+                ),
+                this._matrix
+            )
+        ).then(() => this);
+    }
+
+    /**
+     * Input expression
+     * @returns {SpeedyMatrixExpr}
+     */
+    get child()
+    {
+        return this._expr;
+    }
+}
+
+/**
+ * Binary expression
+ * @abstract
+ */
+class SpeedyMatrixBinaryExpr extends SpeedyMatrixTempExpr
+{
+    /**
+     * Constructor
+     * @param {number} rows number of rows of the resulting (output) matrix
+     * @param {number} columns number of columns of the resulting (output) matrix
+     * @param {SpeedyMatrixExpr} leftExpr left operand/expression
+     * @param {SpeedyMatrixExpr} rightExpr right operand/expression
+     * @param {Function} operationClass binary operation
+     * @param {any[]} [...args] will be used when instantiating the binary operation
+     */
+    constructor(rows, columns, leftExpr, rightExpr, operationClass, ...args)
+    {
+        super(rows, columns, leftExpr.type);
+        this._leftExpr = leftExpr;
+        this._rightExpr = rightExpr;
+        this._operationClass = operationClass;
+        this._operation = null; // cache the MatrixOperation object
+        this._args = args;
+
+        if(rightExpr.type !== leftExpr.type) // just in case...
+            this._assertCompatibility(rows, columns, rightExpr.type);
+    }
+
+    /**
+     * Evaluate expression
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
+     */
+    _evaluate()
+    {
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_4__["SpeedyPromise"].all([
+            this._leftExpr._evaluate().turbocharge(),
+            this._rightExpr._evaluate().turbocharge()
+        ]).then(([ leftResult, rightResult ]) =>
+            matrixOperationsQueue.enqueue(
+                (
+                    this._operation ? this._operation.update([ leftResult._matrix, rightResult._matrix ]) :
+                    (this._operation = new (this._operationClass)(leftResult._matrix, rightResult._matrix, ...(this._args)))
+                ),
+                this._matrix
+            )
+        ).then(() => this);
+    }
+
+    /**
+     * Left input expression
+     * @returns {SpeedyMatrixExpr}
+     */
+    get leftChild()
+    {
+        return this._leftExpr;
+    }
+
+    /**
+     * Right input expression
+     * @returns {SpeedyMatrixExpr}
+     */
+    get rightChild()
+    {
+        return this._rightExpr;
+    }
+}
+
+/**
+ * Extract a read-only block submatrix from a matrix expression
+ */
+class SpeedyMatrixReadonlyBlockExpr extends SpeedyMatrixExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} expr originating matrix expression
+     * @param {number} firstRow indexed by 0
+     * @param {number} lastRow
+     * @param {number} firstColumn
+     * @param {number} lastColumn
+     */
+    constructor(expr, firstRow, lastRow, firstColumn, lastColumn)
+    {
+        super(lastRow - firstRow + 1, lastColumn - firstColumn + 1, expr.type);
+
+        this._expr = expr;
+        this._firstRow = firstRow;
+        this._lastRow = lastRow;
+        this._firstColumn = firstColumn;
+        this._lastColumn = lastColumn;
+        this._submatrix = null;
+        this._cachedMatrix = null;
+    }
+
+    /**
+     * Get the matrix associated with this expression
+     * This matrix must be guaranteed to be available after evaluating this expression
+     * @returns {SpeedyMatrix}
+     */
+    get _matrix()
+    {
+        return this._submatrix;
+    }
+
+    /**
+     * Evaluate the expression
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
+     */
+    _evaluate()
+    {
+        return this._expr._evaluate().then(result => {
+            if(result._matrix !== this._cachedMatrix || this._submatrix === null) {
+                this._cachedMatrix = result._matrix;
+                return this._cachedMatrix.block(this._firstRow, this._lastRow, this._firstColumn, this._lastColumn);
+            }
+            return this._submatrix; // we've already extracted the submatrix
+        }).then(submatrix => {
+            this._submatrix = submatrix;
+            return this;
+        });
+    }
+}
+
+/**
+ * Extract a read-only diagonal from a matrix expression
+ */
+class SpeedyMatrixReadonlyDiagonalExpr extends SpeedyMatrixExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} expr originating matrix expression
+     */
+    constructor(expr)
+    {
+        const diagonalLength = Math.min(expr.rows, expr.columns);
+        super(1, diagonalLength, expr.type);
+
+        this._expr = expr;
+        this._diagonal = null;
+        this._cachedMatrix = null;
+    }
+
+    /**
+     * Get the matrix associated with this expression
+     * This matrix must be guaranteed to be available after evaluating this expression
+     * @returns {SpeedyMatrix}
+     */
+    get _matrix()
+    {
+        return this._diagonal;
+    }
+
+    /**
+     * Evaluate the expression
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
+     */
+    _evaluate()
+    {
+        return this._expr._evaluate().then(result => {
+            if(result._matrix !== this._cachedMatrix || this._diagonal === null) {
+                this._cachedMatrix = result._matrix;
+                return this._cachedMatrix.diagonal();
+            }
+            return this._diagonal; // we've already extracted the diagonal
+        }).then(diagonal => {
+            this._diagonal = diagonal;
+            return this;
+        });
+    }
+}
+
+
+
+
+// ================================================
+// L-VALUES
+// ================================================
+
+/**
+ * An lvalue (locator value) expression represents a user-owned object stored in memory
+ * @abstract
+ */
+class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
+{
+    /**
+     * Get the matrix associated with this lvalue expression
+     * This matrix must be guaranteed to be available after evaluating this expression
+     * @returns {SpeedyMatrix}
+     */
+    get _matrix()
+    {
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["AbstractMethodError"]();
+    }
+
+    /**
+     * Assign a matrix
+     * @param {SpeedyMatrix} matrix
+     * @returns {SpeedyPromise<void>} resolves as soon as the assignment is done
+     */
+    _assign(matrix)
+    {
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["AbstractMethodError"]();
+    }
+
+    /**
+     * Assign an expression to this lvalue
+     * @param {SpeedyMatrixExpr|number[]} expr
+     * @returns {SpeedyPromise<SpeedyMatrixAssignmentExpr>} resolves as soon as the assignment is done
+     */
+    assign(expr)
+    {
+        const assignment = new SpeedyMatrixAssignmentExpr(this, expr);
+        return assignment._evaluate().turbocharge();
+    }
+
+    /**
+     * Fill the matrix with a constant value
+     * @param {number} value
+     * @returns {SpeedyPromise<SpeedyMatrixAssignmentExpr>}
+     */
+    fill(value)
+    {
+        return this.assign(new SpeedyMatrixFillExpr(this._rows, this._columns, this._type, +value));
+    }
+
+    /**
+     * Extract a (lastRow - firstRow + 1) x (lastColumn - firstColumn + 1)
+     * block from the matrix. All indices are 0-based. Note that the
+     * memory of the block is shared with the memory of the matrix.
+     * @param {number} firstRow
+     * @param {number} lastRow
+     * @param {number} firstColumn
+     * @param {number} lastColumn
+     * @returns {SpeedyMatrixReadwriteBlockExpr}
+     */
+    block(firstRow, lastRow, firstColumn, lastColumn)
+    {
+        return new SpeedyMatrixReadwriteBlockExpr(this, firstRow, lastRow, firstColumn, lastColumn);
+    }
+
+    /**
+     * Get the main diagonal of the matrix. Internal buffer is shared.
+     * @returns {SpeedyMatrixReadwriteDiagonalExpr}
+     */
+    diagonal()
+    {
+        return new SpeedyMatrixReadwriteDiagonalExpr(this);
+    }
+}
+
+/**
+ * Assignment expression
+ * Assign rvalue to lvalue (i.e., lvalue := rvalue)
+ */
+class SpeedyMatrixAssignmentExpr extends SpeedyMatrixLvalueExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixLvalueExpr} lvalue
+     * @param {SpeedyMatrixExpr|number[]} rvalue matrix expression or array of numbers in column-major format
+     */
+    constructor(lvalue, rvalue)
+    {
+        const { rows, columns, type } = lvalue;
+        super(rows, columns, type);
+
+        // convert rvalue to SpeedyMatrixExpr
+        if(!(rvalue instanceof SpeedyMatrixExpr)) {
+            if(Array.isArray(rvalue)) {
+                const matrix = new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](rows, columns, rvalue, type);
+                rvalue = new SpeedyMatrixElementaryExpr(rows, columns, type, matrix);
+            }
+            else
+                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Can't assign matrix to ${rvalue}`)
+        }
+
+        this._assertCompatibility(rvalue.rows, rvalue.columns, rvalue.type);
+        this._lvalue = lvalue;
+        this._rvalue = rvalue;
+    }
+
+    /**
+     * Evaluate expression
+     * @returns {SpeedyPromise<SpeedyMatrixAssignmentExpr>}
+     */
+    _evaluate()
+    {
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_4__["SpeedyPromise"].all([
+            this._lvalue._evaluate().turbocharge(),
+            this._rvalue._evaluate().turbocharge()
+        ]).then(([ lvalue, rvalue ]) =>
+            lvalue._assign(rvalue._matrix).turbocharge()
+        ).then(() => this);
+    }
+}
+
+/**
+ * An elementary expression representing a single matrix
+ * (e.g., expression 'A' represents a single matrix)
+ */
+class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
+{
+    /**
+     * Constructor
+     * @param {number} rows
+     * @param {number} columns
+     * @param {number} type
+     * @param {SpeedyMatrix} [matrix] user matrix
+     */
+    constructor(rows, columns, type, matrix = null)
+    {
+        super(rows, columns, type);
+        this._usermatrix = null;
+
+        if(matrix != null) {
+            this._assertCompatibility(matrix.rows, matrix.columns, matrix.type);
+            this._usermatrix = matrix;
+        }
+    }
+
+    /**
+     * Get the matrix associated with this lvalue expression
+     * This matrix must be guaranteed to be available after evaluating this expression
+     * @returns {SpeedyMatrix}
+     */
+    get _matrix()
+    {
+        if(this._usermatrix == null)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`Matrix doesn't have any data. Make sure you assign data to it.`);
+
+        return this._usermatrix;
+    }
+
+    /**
+     * Evaluate the expression
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
+     */
+    _evaluate()
+    {
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_4__["SpeedyPromise"].resolve(this);
+    }
+
+    /**
+     * Assign a matrix
+     * We just change pointers; no actual copying of data takes place
+     * @param {SpeedyMatrix} matrix
+     * @returns {SpeedyPromise<void>} resolves as soon as the assignment is done
+     */
+    _assign(matrix)
+    {
+        this._usermatrix = matrix;
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_4__["SpeedyPromise"].resolve();
+    }
+}
+
+/**
+ * Extract a read-write block submatrix from a matrix expression
+ */
+class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} expr originating matrix expression
+     * @param {number} firstRow indexed by 0
+     * @param {number} lastRow
+     * @param {number} firstColumn
+     * @param {number} lastColumn
+     */
+    constructor(expr, firstRow, lastRow, firstColumn, lastColumn)
+    {
+        super(lastRow - firstRow + 1, lastColumn - firstColumn + 1, expr.type);
+
+        this._expr = expr;
+        this._firstRow = firstRow;
+        this._lastRow = lastRow;
+        this._firstColumn = firstColumn;
+        this._lastColumn = lastColumn;
+        this._submatrix = null;
+        this._cachedMatrix = null;
+        this._operation = null; // cached operation
+    }
+
+    /**
+     * Get the matrix associated with this lvalue expression
+     * This matrix must be guaranteed to be available after evaluating this expression
+     * @returns {SpeedyMatrix}
+     */
+    get _matrix()
+    {
+        return this._submatrix;
+    }
+
+    /**
+     * Evaluate the expression
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
+     */
+    _evaluate()
+    {
+        return this._expr._evaluate().then(result => {
+            if(result._matrix !== this._cachedMatrix || this._submatrix === null) {
+                this._cachedMatrix = result._matrix;
+                return this._cachedMatrix.block(this._firstRow, this._lastRow, this._firstColumn, this._lastColumn);
+            }
+            return this._submatrix; // we've already extracted the submatrix
+        }).then(submatrix => {
+            this._submatrix = submatrix;
+            return this;
+        });
+    }
+
+    /**
+     * Assign a matrix
+     * Since this is a submatrix, we can't just assign pointers.
+     * We need to copy the data
+     * @param {SpeedyMatrix} matrix
+     * @returns {SpeedyPromise<void>} resolves as soon as the assignment is done
+     */
+    _assign(matrix)
+    {
+        return matrixOperationsQueue.enqueue(
+            (
+                this._operation ? this._operation.update([ matrix ]) :
+                (this._operation = new _matrix_operations__WEBPACK_IMPORTED_MODULE_5__["MatrixOperationCopy"](matrix))
+            ),
+            this._submatrix
+        );
+    }
+}
+
+/**
+ * Extract a read-write diagonal from a matrix expression
+ */
+class SpeedyMatrixReadwriteDiagonalExpr extends SpeedyMatrixLvalueExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} expr originating matrix expression
+     */
+    constructor(expr)
+    {
+        const diagonalLength = Math.min(expr.rows, expr.columns);
+        super(1, diagonalLength, expr.type);
+
+        this._expr = expr;
+        this._diagonal = null;
+        this._cachedMatrix = null;
+    }
+
+    /**
+     * Get the matrix associated with this expression
+     * This matrix must be guaranteed to be available after evaluating this expression
+     * @returns {SpeedyMatrix}
+     */
+    get _matrix()
+    {
+        return this._diagonal;
+    }
+
+    /**
+     * Evaluate the expression
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
+     */
+    _evaluate()
+    {
+        return this._expr._evaluate().then(result => {
+            if(result._matrix !== this._cachedMatrix || this._diagonal === null) {
+                this._cachedMatrix = result._matrix;
+                return this._cachedMatrix.diagonal();
+            }
+            return this._diagonal; // we've already extracted the diagonal
+        }).then(diagonal => {
+            this._diagonal = diagonal;
+            return this;
+        });
+    }
+
+    /**
+     * Assign a matrix
+     * Since this is a diagonal, we can't just assign pointers.
+     * We need to copy the data
+     * @param {SpeedyMatrix} matrix
+     * @returns {SpeedyPromise<void>} resolves as soon as the assignment is done
+     */
+    _assign(matrix)
+    {
+        return matrixOperationsQueue.enqueue(
+            (
+                this._operation ? this._operation.update([ matrix ]) :
+                (this._operation = new _matrix_operations__WEBPACK_IMPORTED_MODULE_5__["MatrixOperationCopy"](matrix))
+            ),
+            this._diagonal
+        );
+    }
+}
+
+
+// ================================================
+// BASIC OPERATIONS
+// ================================================
+
+/**
+ * Fill the output matrix with a constant value
+ */
+class SpeedyMatrixFillExpr extends SpeedyMatrixTempExpr
+{
+    /**
+     * Constructor
+     * @param {number} rows number of rows of the resulting (output) matrix
+     * @param {number} columns number of columns of the resulting (output) matrix
+     * @param {number} type type of the resulting (output) matrix
+     * @param {number} value will fill the output matrix with this constant value
+     */
+    constructor(rows, columns, type, value)
+    {
+        super(rows, columns, type);
+        this._operation = new _matrix_operations__WEBPACK_IMPORTED_MODULE_5__["MatrixOperationFill"](rows, columns, type, value);
+    }
+
+    /**
+     * Evaluate expression
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
+     */
+    _evaluate()
+    {
+        return matrixOperationsQueue.enqueue(
+            this._operation,
+            this._matrix
+        ).then(() => this);
+    }
+}
+
+/**
+ * Clone a matrix, copying individual entries
+ * e.g., A = B.clone()
+ */
+class SpeedyMatrixCloneExpr extends SpeedyMatrixUnaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} expr
+     */
+    constructor(expr)
+    {
+        super(expr.rows, expr.columns, expr, _matrix_operations__WEBPACK_IMPORTED_MODULE_5__["MatrixOperationCopy"]);
+    }
+}
+
+/**
+ * Tranpose a matrix,
+ * e.g., A = A^T
+ */
+class SpeedyMatrixTransposeExpr extends SpeedyMatrixUnaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} expr
+     */
+    constructor(expr)
+    {
+        // optimize if the input expression is a transposition
+        if(expr instanceof SpeedyMatrixTransposeExpr) {
+            // A = (A^T)^T
+            return expr.child;
+        }
+
+        // regular transposition
+        super(expr.columns, expr.rows, expr, _matrix_operations__WEBPACK_IMPORTED_MODULE_5__["MatrixOperationTranspose"]);
+    }
+}
+
+/**
+ * Add two matrix expressions,
+ * e.g., A = B + C
+ */
+class SpeedyMatrixAddExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} leftExpr
+     * @param {SpeedyMatrixExpr} rightExpr
+     */
+    constructor(leftExpr, rightExpr)
+    {
+        super(leftExpr.rows, leftExpr.columns, leftExpr, rightExpr, _matrix_operations__WEBPACK_IMPORTED_MODULE_5__["MatrixOperationAdd"]);
+        this._assertCompatibility(rightExpr.rows, rightExpr.columns);
+    }
+}
+
+/**
+ * Subtract two matrix expressions,
+ * e.g., A = B - C
+ */
+class SpeedyMatrixSubtractExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} leftExpr
+     * @param {SpeedyMatrixExpr} rightExpr
+     */
+    constructor(leftExpr, rightExpr)
+    {
+        super(leftExpr.rows, leftExpr.columns, leftExpr, rightExpr, _matrix_operations__WEBPACK_IMPORTED_MODULE_5__["MatrixOperationSubtract"]);
+        this._assertCompatibility(rightExpr.rows, rightExpr.columns);
+    }
+}
+
+/**
+ * Multiply two matrix expressions,
+ * e.g., A = B * C
+ */
+class SpeedyMatrixMultiplyExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} leftExpr
+     * @param {SpeedyMatrixExpr} rightExpr
+     */
+    constructor(leftExpr, rightExpr)
+    {
+        // optimize if the input expressions are transposed
+        const lt = leftExpr instanceof SpeedyMatrixTransposeExpr;
+        const rt = rightExpr instanceof SpeedyMatrixTransposeExpr;
+        if(lt && rt) {
+            // A = (B^T) (C^T) = (C B)^T
+            return new SpeedyMatrixTransposeExpr(
+                new SpeedyMatrixMultiplyExpr(rightExpr.child, leftExpr.child)
+            );
+        }
+        else if(lt && !rt) {
+            // A = (B^T) C
+            return new SpeedyMatrixMultiplyLTExpr(leftExpr.child, rightExpr);
+        }
+        else if(!lt && rt) {
+            // A = B (C^T)
+            return new SpeedyMatrixMultiplyRTExpr(leftExpr, rightExpr.child);
+        }
+
+        // regular multiplication
+        super(leftExpr.rows, rightExpr.columns, leftExpr, rightExpr, _matrix_operations__WEBPACK_IMPORTED_MODULE_5__["MatrixOperationMultiply"]);
+        if(leftExpr.columns !== rightExpr.rows)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Can't multiply a ${leftExpr.rows} x ${leftExpr.columns} matrix by a ${rightExpr.rows} x ${rightExpr.columns} matrix`);
+    }
+}
+
+/**
+ * Multiply two matrix expressions, transposing the left operand
+ * e.g., A = B^T * C
+ */
+class SpeedyMatrixMultiplyLTExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} leftExpr
+     * @param {SpeedyMatrixExpr} rightExpr
+     */
+    constructor(leftExpr, rightExpr)
+    {
+        super(leftExpr.columns, rightExpr.columns, leftExpr, rightExpr, _matrix_operations__WEBPACK_IMPORTED_MODULE_5__["MatrixOperationMultiplyLT"]);
+        if(leftExpr.rows !== rightExpr.rows)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Can't multiply a ${leftExpr.columns} x ${leftExpr.rows} (transposed) matrix by a ${rightExpr.rows} x ${rightExpr.columns} matrix`);
+    }
+}
+
+/**
+ * Multiply two matrix expressions, transposing the right operand
+ * e.g., A = B * C^T
+ */
+class SpeedyMatrixMultiplyRTExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} leftExpr
+     * @param {SpeedyMatrixExpr} rightExpr
+     */
+    constructor(leftExpr, rightExpr)
+    {
+        super(leftExpr.rows, rightExpr.rows, leftExpr, rightExpr, _matrix_operations__WEBPACK_IMPORTED_MODULE_5__["MatrixOperationMultiplyRT"]);
+        if(leftExpr.columns !== rightExpr.columns)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Can't multiply a ${leftExpr.rows} x ${leftExpr.columns} matrix by a ${rightExpr.columns} x ${rightExpr.rows} (transposed) matrix`);
+    }
+}
+
+/**
+ * Multiply a matrix expression by a number,
+ * e.g., A = alpha B
+ */
+class SpeedyMatrixScaleExpr extends SpeedyMatrixUnaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} expr
+     * @param {number} scalar
+     */
+    constructor(expr, scalar)
+    {
+        super(expr.rows, expr.columns, expr, _matrix_operations__WEBPACK_IMPORTED_MODULE_5__["MatrixOperationScale"], scalar);
+    }
+}
+
+/**
+ * Component-wise multiplication of two matrix expressions
+ */
+class SpeedyMatrixCompMultExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} leftExpr
+     * @param {SpeedyMatrixExpr} rightExpr
+     */
+    constructor(leftExpr, rightExpr)
+    {
+        super(leftExpr.rows, leftExpr.columns, leftExpr, rightExpr, _matrix_operations__WEBPACK_IMPORTED_MODULE_5__["MatrixOperationCompMult"]);
+        this._assertCompatibility(rightExpr.rows, rightExpr.columns);
+    }
+}
+
+/**
+ * QR decomposition
+ */
+class SpeedyMatrixQRExpr extends SpeedyMatrixUnaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} expr
+     * @param {string} mode 'full' | 'reduced'
+     */
+    constructor(expr, mode)
+    {
+        const columns = mode == 'full' ? expr.columns + expr.rows : 2 * expr.columns;
+        if(expr.rows < expr.columns)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Can't compute the QR decomposition of a ${expr.rows} x ${expr.columns} matrix`);
+
+        super(expr.rows, columns, expr, _matrix_operations__WEBPACK_IMPORTED_MODULE_5__["MatrixOperationQR"], mode);
+    }
+}
+
+
+
+
+
+
+// ==============================================
+// INTERNAL UTILITIES
+// ==============================================
+
+/**
+ * Internal QR solver (Ax = b)
+ */
+class SpeedyMatrixQRSolverNodeExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} matrixA m x n matrix
+     * @param {SpeedyMatrixExpr} vectorB m x 1 vector
+     */
+    constructor(matrixA, vectorB)
+    {
+        if(matrixA.rows < matrixA.columns)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Can't compute the QR decomposition of a ${matrixA.rows} x ${matrixA.columns} matrix`);
+        else if(vectorB.columns != 1 || vectorB.rows != matrixA.rows)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Expected a ${matrixA.rows} x 1 column-vector, but found a ${vectorB.rows} x ${vectorB.columns} matrix`);
+
+        super(matrixA.rows, matrixA.columns + 1, matrixA, vectorB, _matrix_operations__WEBPACK_IMPORTED_MODULE_5__["MatrixOperationQRSolve"]);
+    }
+}
+
+/**
+ * Back-substitution algorithm
+ * (solve Rx = b for x, R is upper-triangular)
+ */
+class SpeedyMatrixBackSubstitutionNodeExpr extends SpeedyMatrixUnaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} input [b | R] matrix
+     */
+    constructor(input)
+    {
+        if(input.columns !== input.rows + 1)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Expected a ${input.rows} x ${input.rows + 1} matrix, but found a ${input.rows} x ${input.columns} matrix`);
+
+        super(input.rows, 1, input, _matrix_operations__WEBPACK_IMPORTED_MODULE_5__["MatrixOperationBackSubstitution"]);
+    }
+}
+
+
+
+
+// ================================================
+// MATRIX FACTORY
+// ================================================
+
+/**
+ * A Factory of matrix expressions
+ */
+class SpeedyMatrixExprFactory extends Function
+{
+    /**
+     * Create a new SpeedyMatrixExpr that evaluates to a user-defined matrix
+     * (or to a matrix without data if its entries are not provided)
+     * @param {number} rows number of rows
+     * @param {number} [columns] number of columns (defaults to the number of rows)
+     * @param {number[]} [values] initial values in column-major format
+     * @param {string} [dtype] 'float32' | 'float64' | 'int32' | 'uint8'
+     * @returns {SpeedyMatrixElementaryExpr}
+     */
+    _create(rows, columns = rows, values = null, dtype = 'float32')
+    {
+        let type = DataTypeName2DataType[dtype];
+        let matrix = null;
+
+        if(type === undefined)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Unknown matrix type: "${dtype}"`);
+
+        if(values != null) {
+            if(!Array.isArray(values))
+                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Can't initialize Matrix with values ${values}`);
+            if(values.length > 0)
+                matrix = new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](rows, columns, values, type);
+        }
+
+        return new SpeedyMatrixElementaryExpr(rows, columns, type, matrix);
+    }
+
+    /**
+     * Create a new matrix filled with zeroes
+     * @param {number} rows number of rows
+     * @param {number} [columns] number of columns (defaults to the number of rows)
+     * @param {number[]} [values] initial values in column-major format
+     * @param {string} [dtype] 'float32' | 'float64' | 'int32' | 'uint8'
+     * @returns {SpeedyMatrixElementaryExpr}
+     */
+    Zeros(rows, columns = rows, dtype = 'float32')
+    {
+        const values = (new Array(rows * columns)).fill(0);
+        return this._create(rows, columns, values, dtype);
+    }
+
+    /**
+     * Create a new matrix filled with ones
+     * @param {number} rows number of rows
+     * @param {number} [columns] number of columns (defaults to the number of rows)
+     * @param {number[]} [values] initial values in column-major format
+     * @param {string} [dtype] 'float32' | 'float64' | 'int32' | 'uint8'
+     * @returns {SpeedyMatrixElementaryExpr}
+     */
+    Ones(rows, columns = rows, dtype = 'float32')
+    {
+        const values = (new Array(rows * columns)).fill(1);
+        return this._create(rows, columns, values, dtype);
+    }
+
+    /**
+     * Create a new identity matrix
+     * @param {number} rows number of rows
+     * @param {number} [columns] number of columns (defaults to the number of rows)
+     * @param {number[]} [values] initial values in column-major format
+     * @param {string} [dtype] 'float32' | 'float64' | 'int32' | 'uint8'
+     * @returns {SpeedyMatrixElementaryExpr}
+     */
+    Eye(rows, columns = rows, dtype = 'float32')
+    {
+        const values = (new Array(rows * columns)).fill(0);
+        for(let j = Math.min(rows, columns) - 1; j >= 0; j--)
+            values[j * rows + j] = 1;
+
+        return this._create(rows, columns, values, dtype);
+    }
+
+    /**
+     * The factory can be invoked as a function
+     * This is an alias to SpeedyMatrixExprFactory._create()
+     */
+    constructor()
+    {
+        super('...args', 'return this._create(...args)');
+        return this.bind(this);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/math/matrix-math.js":
+/*!**************************************!*\
+  !*** ./src/core/math/matrix-math.js ***!
+  \**************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * matrix-math.js
+ * Linear algebra routines
+ */
+
+//! No imports here
+
+/**
+ * Matrix math routines
+ * All routines are stateless
+ */
+class MatrixMath
+{
+    // ========================================================
+    // Math routines
+    // ========================================================
+
+    /**
+     * No-operation
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
+    static nop(header, output, inputs)
+    {
+        ;
+    }
+
+    /**
+     * Fill the matrix with a constant value
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
+    static fill(header, output, inputs)
+    {
+        const { rows, columns, stride, length } = header;
+        const { value } = header.custom;
+
+        // use a memset-like operation if possible
+        if(rows * columns == length) {
+            output.fill(value, 0, length);
+            return;
+        }
+
+        // fill the columns one by one
+        for(let j = 0; j < columns; j++)
+            output.fill(value, j * stride, j * stride + rows);
+    }
+
+    /**
+     * Copy matrix
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
+    static copy(header, output, inputs)
+    {
+        const { rows, columns, stride, length } = header;
+        const [ istride ] = header.strideOfInputs;
+        const [ input ] = inputs;
+
+        // use a memcpy-like operation if possible
+        if(length == header.lengthOfInputs[0] && rows * columns == length) {
+            output.set(input, 0, length);
+            return;
+        }
+
+        // copy values one by one
+        let i, j, oj, ij;
+        for(oj = ij = j = 0; j < columns; j++, oj += stride, ij += istride) {
+            for(i = 0; i < rows; i++)
+                output[oj + i] = input[ij + i];
+        }
+    }
+
+    /**
+     * Transpose matrix
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
+    static transpose(header, output, inputs)
+    {
+        const { rows, columns, stride } = header;
+        const [ strideT ] = header.strideOfInputs;
+        const [ input ] = inputs;
+
+        let i, j, ii, oj;
+        for(ii = i = 0; i < rows; i++, ii += strideT) {
+            for(oj = j = 0; j < columns; j++, oj += stride)
+                output[oj + i] = input[ii + j];
+        }
+    }
+
+    /**
+     * Add two matrices
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
+    static add(header, output, inputs)
+    {
+        const { rows, columns, stride } = header;
+        const [ strideA, strideB ] = header.strideOfInputs;
+        const [ a, b ] = inputs;
+
+        let i, j, oj, aj, bj;
+        for(j = 0; j < columns; j++) {
+            oj = j * stride;
+            aj = j * strideA;
+            bj = j * strideB;
+            for(i = 0; i < rows; i++)
+                output[oj + i] = a[aj + i] + b[bj + i];
+        }
+    }
+
+    /**
+     * Subtract two matrices
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
+    static subtract(header, output, inputs)
+    {
+        const { rows, columns, stride } = header;
+        const [ strideA, strideB ] = header.strideOfInputs;
+        const [ a, b ] = inputs;
+
+        let i, j, oj, aj, bj;
+        for(j = 0; j < columns; j++) {
+            oj = j * stride;
+            aj = j * strideA;
+            bj = j * strideB;
+            for(i = 0; i < rows; i++)
+                output[oj + i] = a[aj + i] - b[bj + i];
+        }
+    }
+
+    /**
+     * Multiply two matrices (e.g., C = A B)
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
+    static multiply(header, output, inputs)
+    {
+        const { rows, columns, stride, length } = header;
+        const [ columnsA, columnsB ] = header.columnsOfInputs;
+        const [ strideA, strideB ] = header.strideOfInputs;
+        const [ a, b ] = inputs;
+
+        // clear matrix
+        if(rows * columns != length) {
+            for(let c = 0; c < columns; c++)
+                output.fill(0, c * stride, c * stride + rows);
+        }
+        else
+            output.fill(0, 0, length);
+
+        // multiply taking cache locality into account
+        let i, j, k, ok, aj, bk, bjk;
+        for(ok = bk = k = 0; k < columnsB; k++, ok += stride, bk += strideB) {
+            for(aj = j = 0; j < columnsA; j++, aj += strideA) {
+                bjk = b[bk + j];
+                for(i = 0; i < rows; i++)
+                    output[ok + i] += a[aj + i] * bjk;
+            }
+        }
+    }
+
+    /**
+     * Multiply two matrices, transposing the left operand
+     * (e.g., C = A^T B)
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
+    static multiplylt(header, output, inputs)
+    {
+        const { rows, columns, stride, length } = header;
+        const [ columnsA, columnsB ] = header.columnsOfInputs;
+        const [ rowsA, rowsB ] = header.rowsOfInputs;
+        const [ strideA, strideB ] = header.strideOfInputs;
+        const [ a, b ] = inputs;
+
+        // multiply taking cache locality into account
+        let i, j, k, aj, bk, ok, ojk;
+        for(ok = bk = k = 0; k < columnsB; k++, ok += stride, bk += strideB) {
+            for(aj = j = 0; j < columnsA; j++, aj += strideA) {
+                output[ojk = ok + j] = 0;
+                for(i = 0; i < rowsB; i++)
+                    output[ojk] += a[aj + i] * b[bk + i];
+            }
+        }
+    }
+
+    /**
+     * Multiply two matrices, transposing the right operand
+     * (e.g., C = A B^T)
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
+    static multiplyrt(header, output, inputs)
+    {
+        const { rows, columns, stride, length } = header;
+        const [ columnsA, columnsB ] = header.columnsOfInputs;
+        const [ rowsA, rowsB ] = header.rowsOfInputs;
+        const [ strideA, strideB ] = header.strideOfInputs;
+        const [ a, b ] = inputs;
+
+        // clear matrix
+        if(rows * columns != length) {
+            for(let c = 0; c < columns; c++)
+                output.fill(0, c * stride, c * stride + rows);
+        }
+        else
+            output.fill(0, 0, length);
+
+        // multiply taking cache locality into account
+        let i, j, k, ok, aj, bj, bkj;
+        for(aj = bj = j = 0; j < columnsA; j++, aj += strideA, bj += strideB) {
+            for(ok = k = 0; k < rowsB; k++, ok += stride) {
+                bkj = b[bj + k];
+                for(i = 0; i < rows; i++)
+                    output[ok + i] += a[aj + i] * bkj;
+            }
+        }
+    }
+
+    /**
+     * Multiply by a constant
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
+    static scale(header, output, inputs)
+    {
+        const { rows, columns, stride } = header;
+        const { scalar } = header.custom;
+        const [ input ] = inputs;
+
+        let i, j, oj;
+        for(j = 0; j < columns; j++) {
+            oj = j * stride;
+            for(i = 0; i < rows; i++)
+                output[oj + i] = input[oj + i] * scalar;
+        }
+    }
+
+    /**
+     * Component-wise multiplication
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
+    static compmult(header, output, inputs)
+    {
+        const { rows, columns, stride } = header;
+        const [ strideA, strideB ] = header.strideOfInputs;
+        const [ a, b ] = inputs;
+
+        let i, j, oj, aj, bj;
+        for(j = 0; j < columns; j++) {
+            oj = j * stride;
+            aj = j * strideA;
+            bj = j * strideB;
+            for(i = 0; i < rows; i++)
+                output[oj + i] = a[aj + i] * b[bj + i];
+        }
+    }
+
+    /**
+     * Outer product (m x 1 vector by 1 x n vector)
+     * @param {object} header 
+     * @param {TypedArray} output 
+     * @param {TypedArray[]} inputs 
+     */
+    static outer(header, output, inputs)
+    {
+        const { rows, columns, stride } = header;
+        const [ strideA, strideB ] = header.strideOfInputs;
+        const [ a, b ] = inputs;       
+
+        let i, j, bj, oj;
+        for(j = 0; j < columns; j++) {
+            bj = b[j * strideB];
+            oj = j * stride;
+            for(i = 0; i < rows; i++)
+                output[oj + i] = a[i] * bj;
+        }
+    }
+
+    /**
+     * QR decomposition
+     * @param {object} header
+     * @param {TypedArray} output becomes [ Q | R ] or [ Q'x | R ] or [ Qx | R ]
+     * @param {TypedArray[]} inputs
+     */
+    static qr(header, output, inputs)
+    {
+        const { stride, type } = header;
+        const [ orows, ocolumns ] = [ header.rows, header.columns ];
+        const [ irows, xrows ] = header.rowsOfInputs;
+        const [ icolumns, xcolumns ] = header.columnsOfInputs;
+        const [ istride ] = header.strideOfInputs;
+        const [ input, x ] = inputs;
+        const { mode } = header.custom;
+        const subheader = Object.assign({ }, header, { custom: null });
+        const wantMatrices = (mode == 'full-qr' || mode == 'reduced-qr');
+        let submatrices = [ null, null, null ];
+
+        // create temporary storage
+        const storage = this._createTypedArray(2 * irows * icolumns + icolumns, type);
+        const reflect = storage.subarray(0, irows * icolumns);
+        const tmprow = storage.subarray(irows * icolumns, irows * icolumns + icolumns);
+        const tmp = storage.subarray(irows * icolumns + icolumns, 2 * irows * icolumns + icolumns);
+
+        // create soon-to-be upper triangular matrix R
+        const rstride = stride;
+        const triangular = !wantMatrices ? output.subarray(stride) :
+            output.subarray(((mode == 'reduced-qr') ? icolumns : irows) * stride);
+
+        // input matrix is m x n and should be such that m >= n
+        if(irows < icolumns)
+            throw new Error(`Can't compute the QR decomposition of a ${irows} x ${icolumns} matrix`);
+
+        // validate the number of rows of the output
+        if(orows != irows)
+            throw new Error(`Can't compute the QR decomposition of a ${irows} x ${icolumns} matrix: expected an output matrix of ${irows} rows, but found a matrix of ${orows} rows`);
+
+        // copy input[:,:] to triangular[:,:]
+        if(input.length != triangular.length) {
+            submatrices = this._submatrices(subheader, triangular, [ input ], rstride, [ istride ],
+                [ 0, irows-1, 0, icolumns-1 ],
+                [[ 0, irows-1, 0, icolumns-1 ]]
+            );
+            this.copy(submatrices[0], submatrices[1], submatrices[2]);
+        }
+        else
+            triangular.set(input, 0, input.length);
+
+        // Compute the reflection vectors and the upper triangular matrix R
+        let i, j, k, n, norm, sign, fkk, rkk;
+        for(k = 0; k < icolumns; k++) {
+            fkk = k * irows + k; // reflector index
+            rkk = k * rstride + k; // upper-triangular R
+
+            n = irows - k; // the k-th reflection vector has n components
+            sign = (+(triangular[rkk] >= 0)) - (+(triangular[rkk] < 0)); // sign(triangular[k,k]) is +1 or -1
+
+            // use reflect[k:irows-1,k] to temporarily store the k-th reflection vector
+            for(i = 0; i < n; i++) // copy triangular[k:irows-1,k] to reflect[k:irows-1,k]
+                reflect[fkk + i] = triangular[rkk + i];
+            reflect[fkk] += sign * this._norm2(reflect, fkk, n); // 1st coordinate
+
+            // normalize the k-th reflection vector
+            norm = this._norm2(reflect, fkk, n);
+            // if(norm > 0) // error
+            for(i = fkk + n - 1; i >= fkk; i--)
+                reflect[i] /= norm;
+
+            // extract reflect[k:irows-1,k], triangular[k:irows-1,k:icolumns-1] and tmprow[0,0:icolumns-k-1]
+            submatrices = this._submatrices(subheader, tmprow, [ reflect, triangular ], 1, [ irows, rstride ],
+                [ 0, 0, 0, icolumns-k-1 ], // row vector tmprow[0,0:icolumns-k-1]
+                [
+                    [ k, irows-1, k, k ], // reflect[k:irows-1,k]
+                    [ k, irows-1, k, icolumns-1 ] // triangular[k:irows-1,k:icolumns-1]
+                ]
+            );
+
+            // compute tmprow[0,0:icolumns-k-1] = reflect[k:irows-1,k]^T * triangular[k:irows-1,k:icolumns-1]
+            this.multiplylt(submatrices[0], submatrices[1], submatrices[2]);
+
+            // extract reflect[k:irows-1,k], tmprow[0,0:icolumns-k-1] and tmp[0:irows-k-1,0:icolumns-k-1]
+            submatrices = this._submatrices(subheader, tmp, [ reflect, tmprow ], irows, [ irows, 1 ],
+                [ 0, irows-k-1, 0, icolumns-k-1 ], // tmp[0:irows-k-1,0:icolumns-k-1]
+                [
+                    [ k, irows-1, k, k ], // reflect[k:irows-1,k]
+                    [ 0, 0, 0, icolumns-k-1] // tmprow[0,0:icolumns-k-1], the result of the previous calculation
+                ]
+            );
+
+            // compute tmp[0:irows-k-1,0:icolumns-k-1] = reflect[k:irows-1,k] * tmprow[0,0:icolumns-k-1]
+            this.outer(submatrices[0], submatrices[1], submatrices[2]);
+
+            // extract tmp[0:irows-k-1,0:icolumns-k-1] and triangular[k:irows-1,k:icolumns-1] (compute in-place)
+            submatrices = this._submatrices(subheader, triangular, [ triangular, tmp ], rstride, [ rstride, irows ],
+                [ k, irows-1, k, icolumns-1 ], // triangular[k:irows-1,k:icolumns-1]
+                [
+                    [ k, irows-1, k, icolumns-1 ], // triangular[k:irows-1,k:icolumns-1]
+                    [ 0, irows-k-1, 0, icolumns-k-1 ] // tmp[0:irows-k-1,0:icolumns-k-1], the result of the previous calculation
+                ]
+            );
+
+            // apply Householder reflector to set the column vector triangular[k+1:irows-1,k] to zero
+            this._addInPlace(submatrices[0], submatrices[1], submatrices[2], 1, -2);
+        }
+
+        // Compute the unitary matrix Q
+        switch(mode) {
+
+            //
+            // Full QR decomposition
+            // Q: m x m, R: m x n
+            //
+            case 'full-qr': {
+                const qstride = stride;
+                const unitary = output.subarray(0, qstride * irows).fill(0);
+                let fk, qj, dot;
+
+                // validate output size
+                if(orows != irows || ocolumns != icolumns + irows)
+                    throw new Error(`Can't compute the full QR decomposition of a ${irows} x ${icolumns} matrix: expected an output matrix of size ${irows} x ${icolumns + irows}, found ${orows} x ${ocolumns}`);
+
+                // apply Householder reflectors to e_j = e_1, ... , e_m
+                for(j = 0; j < irows; j++) { // for each e_j
+                    qj = j * qstride;
+                    unitary[qj + j] = 1; // setup e_j = [ 0 0 0 ... 1 ... 0 0 0 ]^T
+                    for(k = icolumns - 1; k >= 0; k--) { // compute Q e_j = ( Q_1 ... Q_n ) e_j
+                        fk = k * irows;
+                        dot = -2 * this._dot(unitary, reflect, qj + k, fk + k, irows - k);
+                        for(i = irows - 1; i >= k; i--)
+                            unitary[qj + i] += dot * reflect[fk + i];
+                    }
+                }
+
+                /*
+                // fill the lower part of R with zeros
+                let rk;
+                for(rk = k = 0; k < icolumns; k++, rk += rstride) {
+                    for(i = icolumns; i < irows; i++)
+                        triangular[rk + i] = 0;
+                }
+                */
+
+                break;
+            }
+
+            //
+            // Reduced QR decomposition
+            // Q: m x n, R: n x n
+            //
+            case 'reduced-qr': {
+                const qstride = stride;
+                const unitary = output.subarray(0, qstride * icolumns).fill(0);
+                let fk, qj, dot;
+
+                // validate output size
+                if(orows != irows || ocolumns != icolumns + icolumns)
+                    throw new Error(`Can't compute the reduced QR decomposition of a ${irows} x ${icolumns} matrix: expected an output matrix of size ${irows} x ${icolumns + icolumns}, found ${orows} x ${ocolumns}`);
+
+                // apply Householder reflectors to e_j = e_1, ... , e_n (n <= m)
+                for(j = 0; j < icolumns; j++) { // for each e_j
+                    qj = j * qstride;
+                    unitary[qj + j] = 1; // setup e_j = [ 0 0 0 ... 1 ... 0 0 0 ]^T
+                    for(k = icolumns - 1; k >= 0; k--) { // compute Q e_j = ( Q_1 ... Q_n ) e_j
+                        fk = k * irows;
+                        dot = -2 * this._dot(unitary, reflect, qj + k, fk + k, irows - k);
+                        for(i = irows - 1; i >= k; i--)
+                            unitary[qj + i] += dot * reflect[fk + i];
+                    }
+                }
+
+                break;
+            }
+
+            //
+            // Compute y = Q'x for an input vector x (Q' means Q^T)
+            // x: m x 1, y: m x 1
+            //
+            case 'Q\'x': {
+                const ystride = stride;
+                const y = output.subarray(0, ystride);
+                const m = irows, n = icolumns;
+                let fk, dot;
+
+                // validate input / output size
+                if(m != xrows || 1 != xcolumns)
+                    throw new Error(`QR decomposition: the input vector is expected to be ${m} x 1, but is ${xrows} x ${xcolumns}`);
+                else if(m != orows || 1 + n != ocolumns)
+                    throw new Error(`QR decomposition: the output matrix is expected to be ${m} x ${1+n}, but is ${orows} x ${ocolumns}`);
+
+                // initialize output vector
+                for(i = 0; i < m; i++)
+                    y[i] = x[i];
+
+                // apply Householder reflectors to input x
+                for(k = 0; k < n; k++) { // compute Q'x = ( Q_n ... Q_1 ) x
+                    fk = k * irows; // get the k-th reflector
+                    dot = -2 * this._dot(y, reflect, k, fk + k, m - k);
+                    for(i = k; i < m; i++)
+                        y[i] += dot * reflect[fk + i];
+                }
+
+                break;
+            }
+
+            //
+            // Compute Qx for an input vector x
+            // x: m x 1, y: m x 1
+            //
+            case 'Qx': {
+                const ystride = stride;
+                const y = output.subarray(0, ystride);
+                const m = irows, n = icolumns;
+                let fk, dot;
+
+                // validate input / output size
+                if(m != xrows || 1 != xcolumns)
+                    throw new Error(`QR decomposition: the input vector is expected to be ${m} x 1, but is ${xrows} x ${xcolumns}`);
+                else if(m != orows || 1 + n != ocolumns)
+                    throw new Error(`QR decomposition: the output matrix is expected to be ${m} x ${1+n}, but is ${orows} x ${ocolumns}`);
+
+                // initialize output vector
+                for(i = 0; i < m; i++)
+                    y[i] = x[i];
+
+                // apply Householder reflectors to input x
+                for(k = n - 1; k >= 0; k--) { // compute Qx = ( Q_1 ... Q_n ) x
+                    fk = k * irows; // get the k-th reflector
+                    dot = -2 * this._dot(y, reflect, k, fk + k, m - k);
+                    for(i = k; i < m; i++)
+                        y[i] += dot * reflect[fk + i];
+                }
+
+                break;
+            }
+
+            //
+            // Compute y = Q'x for an input vector x using reduced QR
+            // x: m x 1, y: m x 1
+            //
+            case 'reduced-Q\'x': {
+                const m = irows, n = icolumns;
+                const y = output.subarray(0, n); // output[n..m-1] is unused
+                const e = tmp.subarray(0, m); // e_j is m x 1, for all j = 0, 1 .. n-1
+                let fk, dot;
+
+                // validate input / output size
+                if(m != xrows || 1 != xcolumns)
+                    throw new Error(`QR decomposition: the input vector is expected to be ${m} x 1, but is ${xrows} x ${xcolumns}`);
+                else if(m != orows || 1 + n != ocolumns)
+                    throw new Error(`QR decomposition: the output matrix is expected to be ${m} x ${1+n}, but is ${orows} x ${ocolumns}`);
+
+                // apply Householder reflectors
+                for(j = 0; j < n; j++) { // for each e_j
+                    // setup e_j = [ 0 0 0 ... 1 ... 0 0 0 ]^T
+                    e.fill(0);
+                    e[j] = 1;
+
+                    // compute Q e_j = ( Q_1 ... Q_n ) e_j
+                    for(k = n - 1; k >= 0; k--) {
+                        fk = k * irows;
+                        dot = -2 * this._dot(e, reflect, k, fk + k, m - k);
+                        for(i = m - 1; i >= k; i--)
+                            e[i] += dot * reflect[fk + i];
+                    }
+
+                    // compute y_j = dot(x, Q e_j)
+                    y[j] = this._dot(x, e, 0, 0, m);
+                }
+
+                break;
+            }
+
+            default:
+                throw new Error(`QR decomposition: unknown mode "${mode}"`);
+        }
+    }
+
+
+    /**
+     * Back-substitution: solve Rx = b for x,
+     * where R is n x n upper triangular
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs a single input of the form [ b | R ]
+     */
+    static backsub(header, output, inputs)
+    {
+        const { rows, columns } = header;
+        const [ input ] = inputs;
+        const [ irows ] = header.rowsOfInputs;
+        const [ icolumns ] = header.columnsOfInputs;
+        const [ istride ] = header.strideOfInputs;
+
+        if(icolumns !== irows + 1)
+            throw new Error(`Invalid input for backsub: expected ${irows} x ${irows+1} or ${icolumns-1} x ${icolumns} matrix, but found ${irows} x ${icolumns} matrix`);
+        else if(rows !== irows || columns !== 1)
+            throw new Error(`Invalid output for backsub: expected ${irows} x 1 matrix, but found ${rows} x ${columns} matrix`);
+
+        // Back-substitution
+        const n = irows;
+        const x = output; // x is n x 1 vector (output)
+        const b = input.subarray(0, istride); // b is n x 1 vector
+        const r = input.subarray(istride); // R is n x n upper triangular
+        let i, j, rjj, rj = (n-1) * istride; // column index
+
+        x[n-1] = b[n-1] / r[rj + (n-1)];
+        for(j = n-2; j >= 0; j--) {
+            x[j] = b[j];
+            for(i = j+1; i < n; i++)
+                x[j] -= x[i] * r[istride * i + j];
+
+            rj -= istride;
+            if((rjj = r[rj + j]) === 0)
+                throw new Error(`Invalid input for backsub: ${j+1}-th diagonal element of the upper triangular matrix is zero`);
+            x[j] /= rjj;
+        }
+    }
+
+
+
+
+    // ========================================================
+    // Internal low-level utilities
+    // ========================================================
+
+    /**
+     * Create a new TypedArray with the specified length
+     * @param {number} length 
+     * @param {number} type 
+     * @returns {TypedArray}
+     */
+    static _createTypedArray(length, type)
+    {
+        const dataType = this.DataType[type];
+        return new dataType(length);
+    }
+
+    /**
+     * The 2-norm of a column vector
+     * @param {TypedArray} column 
+     * @param {number} [begin] first index
+     * @param {number} [length]
+     * @returns {number}
+     */
+    static _norm2(column, begin = 0, length = column.length)
+    {
+        let norm = 0, end = begin + length, i;
+
+        // Since we store data in column-major format,
+        // we don't need to use stride
+        for(i = begin; i < end; i++)
+            norm += column[i] * column[i];
+
+        return Math.sqrt(norm);
+    }
+
+    /**
+     * The dot product of two column vectors
+     * @param {TypedArray} u 
+     * @param {TypedArray} v 
+     * @param {number} [uBegin] first index 
+     * @param {number} [vBegin] first index 
+     * @param {number} [length] 
+     */
+    static _dot(u, v, uBegin = 0, vBegin = 0, length = u.length)
+    {
+        let dot = 0, i;
+
+        for(i = 0; i < length; i++)
+            dot += u[uBegin + i] * v[vBegin + i];
+
+        return dot;
+    }
+
+    /**
+     * Given matrices A and B, scalars alpha and beta,
+     * compute the sum (alpha A + beta B). The output
+     * array is allowed to be one of the input arrays
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     * @param {number} alpha
+     * @param {number} beta
+     */
+    static _addInPlace(header, output, inputs, alpha, beta)
+    {
+        const { rows, columns, stride } = header;
+        const [ strideA, strideB ] = header.strideOfInputs;
+        const [ a, b ] = inputs;
+
+        let i, j, oj, aj, bj;
+        for(aj = bj = oj = j = 0; j < columns; j++, oj += stride, aj += strideA, bj += strideB) {
+            for(i = 0; i < rows; i++)
+                output[oj + i] = alpha * a[aj + i] + beta * b[bj + i];
+        }
+    }
+
+    /**
+     * Create submatrices / block-views with shared memory
+     * Low-level stuff. Make sure you pass valid indices...
+     * @param {object} header will be modified!
+     * @param {TypedArray} output contains data
+     * @param {TypedArray[]} inputs contains data
+     * @param {number} stride of output
+     * @param {number[]} strideOfInputs
+     * @param {number[4]} outputIndices [firstRow, lastRow, firstColumn, lastColumn] inclusive
+     * @param {Array<number[4]>} inputsIndices for each input matrix
+     * @returns {Array} a triple [ header, output, inputs ]
+     */
+    static _submatrices(header, output, inputs, stride, strideOfInputs, outputIndices, inputsIndices)
+    {
+        let i, inputIndices;
+
+        header.rows = outputIndices[1] - outputIndices[0] + 1;
+        header.columns = outputIndices[3] - outputIndices[2] + 1;
+        header.stride = stride;
+        output = output.subarray(
+            outputIndices[2] * stride + outputIndices[0],
+            outputIndices[3] * stride + outputIndices[1] + 1
+        );
+        header.length = output.length;
+        header.byteOffset = output.byteOffset;
+
+        for(i = inputs.length - 1; i >= 0; i--) {
+            inputIndices = inputsIndices[i];
+
+            header.rowsOfInputs[i] = inputIndices[1] - inputIndices[0] + 1;
+            header.columnsOfInputs[i] = inputIndices[3] - inputIndices[2] + 1;
+            header.strideOfInputs[i] = strideOfInputs[i];
+            inputs[i] = inputs[i].subarray(
+                inputIndices[2] * strideOfInputs[i] + inputIndices[0],
+                inputIndices[3] * strideOfInputs[i] + inputIndices[1] + 1
+            );
+            header.lengthOfInputs[i] = inputs[i].length;
+            header.byteOffsetOfInputs[i] = inputs[i].byteOffset;
+        }
+
+        return [ header, output, inputs ];
+    }
+
+
+
+
+
+
+    // ========================================================
+    // Enums & utilities
+    // ========================================================
+
+    /**
+     * Types of matrices
+     * @returns {object} enum
+     */
+    static get MatrixType()
+    {
+        return this._MatrixType || (this._MatrixType = Object.freeze({
+            F32: 0x0,         // 32-bit float, 1 channel
+            //F32C1: 0x0 | 0x0, // 32-bit float, 1 channel
+            //F32C2: 0x0 | 0x1, // 32-bit float, 2 channels
+            //F32C3: 0x0 | 0x2, // 32-bit float, 3 channels
+            //F32C4: 0x0 | 0x3, // 32-bit float, 4 channels
+            F64: 0x4,         // 64-bit float, 1 channel
+            //F64C1: 0x4 | 0x0, // 64-bit float, 1 channel
+            //F64C2: 0x4 | 0x1, // 64-bit float, 2 channels
+            //F64C3: 0x4 | 0x2, // 64-bit float, 3 channels
+            //F64C4: 0x4 | 0x3, // 64-bit float, 4 channels
+            I32: 0x8,         // 32-bit signed integer, 1 channel
+            //I32C1: 0x8 | 0x0, // 32-bit signed integer, 1 channel
+            //I32C2: 0x8 | 0x1, // 32-bit signed integer, 2 channels
+            //I32C3: 0x8 | 0x2, // 32-bit signed integer, 3 channels
+            //I32C4: 0x8 | 0x3, // 32-bit signed integer, 4 channels
+            U8: 0xC,          // 8-bit unsigned integer, 1 channel
+            //U8C1: 0xC | 0x0,  // 8-bit unsigned integer, 1 channel
+            //U8C2: 0xC | 0x1,  // 8-bit unsigned integer, 2 channels
+            //U8C3: 0xC | 0x2,  // 8-bit unsigned integer, 3 channels
+            //U8C4: 0xC | 0x3,  // 8-bit unsigned integer, 4 channels
+        }));
+    }
+
+    /**
+     * A mapping between MatrixTypes and TypedArrays
+     * @returns {object}
+     */
+    static get DataType()
+    {
+        return this._DataType || (this._DataType = Object.freeze({
+            [this.MatrixType.F32]: Float32Array,
+            //[this.MatrixType.F32C1]: Float32Array,
+            //[this.MatrixType.F32C2]: Float32Array,
+            //[this.MatrixType.F32C3]: Float32Array,
+            //[this.MatrixType.F32C4]: Float32Array,
+            [this.MatrixType.F64]: Float64Array,
+            [this.MatrixType.I32]: Int32Array,
+            [this.MatrixType.U8]:  Uint8Array,
+        }));
+    }
+
+    /**
+     * A mapping between MatrixTypes and descriptive strings
+     * @returns {object}
+     */
+    static get DataTypeName()
+    {
+        return this._DataTypeName || (this._DataTypeName = Object.freeze({
+            [this.MatrixType.F32]: 'float32',
+            [this.MatrixType.F64]: 'float64',
+            [this.MatrixType.I32]: 'int32',
+            [this.MatrixType.U8]:  'uint8',
+        }));
+    }
+
+    /**
+     * Each operation is mapped to a unique number, called an operation code
+     * @returns {object}
+     */
+    static get Opcode()
+    {
+        return this._Opcode || (this._Opcode = Object.freeze({
+            NOP: 0x0,        // no-operation
+            //EYE: 0x1,      // identity matrix
+            FILL: 0x2,       // fill the matrix with a constant
+            COPY: 0x3,       // copy matrix
+            TRANSPOSE: 0x4,  // transpose matrix
+            ADD: 0x5,        // add two matrices
+            SUBTRACT: 0x6,   // subtract two matrices
+            MULTIPLY: 0x7,   // multiply two matrices
+            SCALE: 0x8,      // multiply by scalar
+            COMPMULT: 0x9,   // component-wise product
+            MULTIPLYLT: 0xA, // multiply tranposing the left operand
+            MULTIPLYRT: 0xB, // multiply tranposing the right operand
+            OUTER: 0xC,      // outer product
+            QR: 0x10,        // QR decomposition (Householder)
+            BACKSUB: 0x11,   // back-substitution
+        }));
+    }
+
+    /**
+     * A mapping between operation codes and functions
+     * @returns {object}
+     */
+    static get Opcode2fun()
+    {
+        return this._Opcode2fun || (this._Opcode2fun = Object.freeze({
+            [this.Opcode.NOP]: this.nop,
+            [this.Opcode.FILL]: this.fill,
+            [this.Opcode.COPY]: this.copy,
+            [this.Opcode.TRANSPOSE]: this.transpose,
+            [this.Opcode.ADD]: this.add,
+            [this.Opcode.SUBTRACT]: this.subtract,
+            [this.Opcode.MULTIPLY]: this.multiply,
+            [this.Opcode.SCALE]: this.scale,
+            [this.Opcode.COMPMULT]: this.compmult,
+            [this.Opcode.MULTIPLYLT]: this.multiplylt,
+            [this.Opcode.MULTIPLYRT]: this.multiplyrt,
+            [this.Opcode.OUTER]: this.outer,
+            [this.Opcode.QR]: this.qr,
+            [this.Opcode.BACKSUB]: this.backsub,
+        }));
+    }
+}
+
+module.exports = { MatrixMath };
+
+/***/ }),
+
+/***/ "./src/core/math/matrix-operations-queue.js":
+/*!**************************************************!*\
+  !*** ./src/core/math/matrix-operations-queue.js ***!
+  \**************************************************/
+/*! exports provided: MatrixOperationsQueue */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationsQueue", function() { return MatrixOperationsQueue; });
+/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix */ "./src/core/math/matrix.js");
+/* harmony import */ var _matrix_operations__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-operations */ "./src/core/math/matrix-operations.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__);
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * matrix-operations-queue.js
+ * Run matrix operations in a FIFO fashion
+ */
+
+
+
+
+
+/**
+ * Used to run matrix operations in a FIFO fashion
+ */
+class MatrixOperationsQueue
+{
+    /**
+     * Class constructor
+     */
+    constructor()
+    {
+        this._queue = [];
+        this._busy = false;
+    }
+
+    /**
+     * Get Singleton
+     * @returns {MatrixOperationsQueue}
+     */
+    static get instance()
+    {
+        return this._instance || (this._instance = new MatrixOperationsQueue());
+    }
+
+    /**
+     * Enqueue matrix operation
+     * @param {MatrixOperation} matrixOperation 
+     * @param {SpeedyMatrix} outputMatrix
+     * @returns {SpeedyPromise<void>} a promise that resolves as soon as the operation is complete
+     */
+    enqueue(matrixOperation, outputMatrix)
+    {
+        // enqueue operation
+        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"](resolve => {
+            this._queue.push([ matrixOperation, outputMatrix, resolve ]);
+            if(!this._busy) {
+                this._busy = true;
+                this._resolveAll();
+            }
+        });
+    }
+
+    /**
+     * Run all enqueued matrix operations
+     */
+    _resolveAll()
+    {
+        // finished the processing?
+        if(this._queue.length == 0) {
+            this._busy = false;
+            return;
+        }
+
+        // obtain the next operation
+        const [ matrixOperation, outputMatrix, resolve ] = this._queue.shift();
+
+        // lock matrices
+        outputMatrix.lock();
+        matrixOperation.inputMatrices.forEach(inputMatrix => inputMatrix.lock());
+
+        // run the next operation
+        matrixOperation.run(outputMatrix).then(() => {
+            // unlock matrices
+            matrixOperation.inputMatrices.forEach(inputMatrix => inputMatrix.unlock());
+            outputMatrix.unlock();
+
+            // this operation is done
+            resolve();
+            this._resolveAll();
+        }).turbocharge();
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/math/matrix-operations.js":
+/*!********************************************!*\
+  !*** ./src/core/math/matrix-operations.js ***!
+  \********************************************/
+/*! exports provided: MatrixOperation, MatrixOperationNop, MatrixOperationFill, MatrixOperationCopy, MatrixOperationTranspose, MatrixOperationAdd, MatrixOperationSubtract, MatrixOperationMultiply, MatrixOperationScale, MatrixOperationCompMult, MatrixOperationMultiplyLT, MatrixOperationMultiplyRT, MatrixOperationQR, MatrixOperationQRSolve, MatrixOperationBackSubstitution */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperation", function() { return MatrixOperation; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationNop", function() { return MatrixOperationNop; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationFill", function() { return MatrixOperationFill; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationCopy", function() { return MatrixOperationCopy; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationTranspose", function() { return MatrixOperationTranspose; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationAdd", function() { return MatrixOperationAdd; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationSubtract", function() { return MatrixOperationSubtract; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationMultiply", function() { return MatrixOperationMultiply; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationScale", function() { return MatrixOperationScale; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationCompMult", function() { return MatrixOperationCompMult; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationMultiplyLT", function() { return MatrixOperationMultiplyLT; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationMultiplyRT", function() { return MatrixOperationMultiplyRT; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationQR", function() { return MatrixOperationQR; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationQRSolve", function() { return MatrixOperationQRSolve; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationBackSubstitution", function() { return MatrixOperationBackSubstitution; });
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix */ "./src/core/math/matrix.js");
+/* harmony import */ var _matrix_math__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./matrix-math */ "./src/core/math/matrix-math.js");
+/* harmony import */ var _matrix_math__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(_matrix_math__WEBPACK_IMPORTED_MODULE_3__);
+/* harmony import */ var _matrix_worker__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./matrix-worker */ "./src/core/math/matrix-worker.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * matrix-operations.js
  * Matrix operations
  */
 
 
 
 
-const matrixType = {
-    [_speedy_flags__WEBPACK_IMPORTED_MODULE_1__["SpeedyFlags"].F32]: Float32Array,
-    [_speedy_flags__WEBPACK_IMPORTED_MODULE_1__["SpeedyFlags"].U8]: Uint8Array,
-};
+
+
+
+// Constants
+const Opcode = _matrix_math__WEBPACK_IMPORTED_MODULE_3__["MatrixMath"].Opcode;
+const Opcode2fun = _matrix_math__WEBPACK_IMPORTED_MODULE_3__["MatrixMath"].Opcode2fun;
+const SMALL_WORKLOAD = 40; // what is "small"? further experimental testing is desirable
+                           // a binary operation for 3x3 matrices, e.g. C = A + B, has "small" workload
+
+// Worker
+const matrixWorker = _matrix_worker__WEBPACK_IMPORTED_MODULE_4__["MatrixWorker"].instance;
+
 
 /**
- * Generic matrix
+ * Abstract matrix operation
+ * @abstract
+ */
+class MatrixOperation
+{
+    /**
+     * (protected) Class constructor
+     * @param {number} opcode MatrixMath.OperationCode enum
+     * @param {number} requiredRows required number of rows of the output matrix
+     * @param {number} requiredColumns required number of columns of the output matrix
+     * @param {number} requiredType required type of the output matrix
+     * @param {SpeedyMatrix[]} [inputMatrices] input matrices, if any
+     * @param {object|null} [userData] custom user-data, serializable
+     */
+    constructor(opcode, requiredRows, requiredColumns, requiredType, inputMatrices = [], userData = null)
+    {
+        // handy vars
+        const n = inputMatrices.length;
+        const hasInput = n > 0;
+
+        // obtain the shape of the input matrices
+        const rowsOfInputs = hasInput && inputMatrices.map(matrix => matrix.rows);
+        const columnsOfInputs = hasInput && inputMatrices.map(matrix => matrix.columns);
+        const strideOfInputs = hasInput && new Array(n);
+        const byteOffsetOfInputs = hasInput && new Array(n);
+        const lengthOfInputs = hasInput && new Array(n);
+
+        // the header stores metadata related to the operation
+        // (all fields are serializable)
+        this._header = {
+            opcode: opcode, // operation code
+            type: requiredType, // type of the output matrix (the same as the input matrices)
+
+            rows: requiredRows, // number of rows of the output matrix
+            columns: requiredColumns, // number of columns of the output matrix
+            stride: null, // stride of the output matrix (unknown)
+            byteOffset: null, // used to recover the data view (unknown)
+            length: null, // used to recover the data view (unknown)
+
+            rowsOfInputs: rowsOfInputs, // number of rows of the input matrices
+            columnsOfInputs: columnsOfInputs, // number of columns of the input matrices
+            strideOfInputs: strideOfInputs, // strides of the input matrices
+            byteOffsetOfInputs: byteOffsetOfInputs, // used to recover the data view (to be determined later - buffer may be locked)
+            lengthOfInputs: lengthOfInputs, // used to recover the data view (to be determined layer - buffer may be locked)
+
+            custom: userData // custom user-data
+        };
+
+        // save the input matrices
+        this._inputMatrices = inputMatrices;
+        this._inputBuffers = new Array(n); // temporary storage
+
+        // compute a measure of (a fraction of) the workload of this operation
+        this._workloadOfInputs = inputMatrices.reduce((w, m) => w + this._workload(m), 0);
+
+        // is it a valid opcode?
+        const fun = Opcode2fun[opcode];
+        if(fun === undefined)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Invalid matrix operation (0x${opcode.toString(16)})`);
+        this._fun = fun.bind(_matrix_math__WEBPACK_IMPORTED_MODULE_3__["MatrixMath"]);
+    }
+
+    /**
+     * The required number of rows of the output matrix
+     * @returns {number}
+     */
+    get rows()
+    {
+        return this._header.rows;
+    }
+
+    /**
+     * The required number of columns of the output matrix
+     * @returns {number}
+     */
+    get columns()
+    {
+        return this._header.columns;
+    }
+
+    /**
+     * The required type of the output matrix
+     * @returns {number}
+     */
+    get type()
+    {
+        return this._header.type;
+    }
+
+    /**
+     * Replace input matrices
+     * @param {SpeedyMatrix[]} inputMatrices 
+     * @returns {MatrixOperation} this
+     */
+    update(inputMatrices)
+    {
+        if(this._inputMatrices.length !== inputMatrices.length)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalOperationError"]();
+
+        for(let i = inputMatrices.length - 1; i >= 0; i--) {
+            const inputMatrix = inputMatrices[i];
+            const prevInputMatrix = this._inputMatrices[i];
+
+            // i-th matrix didn't change
+            if(inputMatrix === prevInputMatrix)
+                continue;
+
+            // can't change shape
+            if(inputMatrix.rows !== prevInputMatrix.rows || inputMatrix.columns !== prevInputMatrix.columns || inputMatrix.type !== prevInputMatrix.type)
+                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalOperationError"](`Can't change the input matrix shape / type`);
+
+            // update input matrix
+            this._inputMatrices[i] = inputMatrix;
+        }
+
+        return this;
+    }
+
+
+
+
+
+
+    // =======================================================
+
+
+
+
+
+
+    /**
+     * Run the matrix operation in a Web Worker
+     * The internal buffers of the input & the output matrices are assumed to be locked
+     * @param {SpeedyMatrix} outputMatrix
+     * @returns {SpeedyPromise<void>} a promise that resolves to outbuf as soon as the operation is completed
+     */
+    run(outputMatrix)
+    {
+        const { rows, columns, stride, type } = outputMatrix;
+        const header = this._header;
+
+        // run locally if the matrices are "small enough"
+        const workload = this._workloadOfInputs + this._workload(outputMatrix);
+        if(workload <= SMALL_WORKLOAD) {
+            // there's an overhead for passing data
+            // back and forth to the Web Worker, and
+            // we don't want to pay it if we're
+            // dealing with "small" matrices
+            return this._runLocally(outputMatrix);
+        }
+
+        // do we have a compatible output matrix?
+        this._assertCompatibility(rows, columns, type);
+
+        // save output metadata
+        const output = outputMatrix.buffer.data;
+        header.stride = stride;
+        header.byteOffset = output.byteOffset;
+        header.length = output.length;
+
+        // save input metadata & buffers
+        const inputMatrices = this._inputMatrices;
+        const inputBuffers = this._inputBuffers; // new Array(inputMatrices.length);
+        for(let i = inputMatrices.length - 1; i >= 0; i--) {
+            const inputMatrix = inputMatrices[i];
+            const input = inputMatrix.buffer.data;
+
+            header.strideOfInputs[i] = inputMatrix.stride;
+            header.byteOffsetOfInputs[i] = input.byteOffset;
+            header.lengthOfInputs[i] = input.length;
+
+            inputBuffers[i] = input.buffer;
+        }
+
+        // run matrix operation
+        return matrixWorker.run(
+            header,
+            output.buffer,
+            inputBuffers
+        ).then(([newOutputBuffer, newInputBuffers]) => {
+            // update the internal buffers with the new data
+            outputMatrix.buffer.replace(newOutputBuffer);
+            for(let i = inputMatrices.length - 1; i >= 0; i--)
+                inputMatrices[i].buffer.replace(newInputBuffers[i]);
+        });
+    }
+
+    /**
+     * Run matrix operation in the same thread
+     * @param {SpeedyMatrix} outputMatrix
+     * @returns {SpeedyPromise<void>} a promise that resolves to outbuf as soon as the operation is completed
+     */
+    _runLocally(outputMatrix)
+    {
+        // obtain properties of the output matrix
+        const { rows, columns, stride, type } = outputMatrix;
+        const header = this._header;
+
+        // do we have a compatible output matrix?
+        this._assertCompatibility(rows, columns, type);
+
+        // save output metadata
+        const output = outputMatrix.buffer.data;
+        header.stride = stride;
+        header.byteOffset = output.byteOffset;
+        header.length = output.length;
+
+        // save input metadata & buffers
+        const inputMatrices = this._inputMatrices;
+        const inputs = this._inputBuffers; // new Array(inputMatrices.length);
+        for(let i = inputMatrices.length - 1; i >= 0; i--) {
+            const inputMatrix = inputMatrices[i];
+            const input = inputMatrix.buffer.data;
+
+            header.strideOfInputs[i] = inputMatrix.stride;
+            header.byteOffsetOfInputs[i] = input.byteOffset;
+            header.lengthOfInputs[i] = input.length;
+
+            inputs[i] = input;
+        }
+
+        // run matrix operation
+        this._fun(header, output, inputs);
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"].resolve();
+    }
+
+    /**
+     * The matrices that belong to the operation,
+     * with the exception of the output matrix
+     * @returns {SpeedyMatrix[]}
+     */
+    get inputMatrices()
+    {
+        return this._inputMatrices;
+    }
+
+    /**
+     * Assert matrix size and type
+     * @param {number} requiredRows 
+     * @param {number} requiredColumns 
+     * @param {number} [requiredType] 
+     */
+    _assertCompatibility(requiredRows, requiredColumns, requiredType = this._header.type)
+    {
+        const { rows, columns, type } = this._header;
+
+        if(requiredRows === rows && requiredColumns === columns && requiredType === type)
+            return;
+        else if(requiredType !== type)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalOperationError"](`Incompatible matrix type (0x${requiredType.toString(16)} vs 0x${type.toString(16)})`);
+        else
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalOperationError"](`Invalid matrix size: ${rows} x ${columns} (expected ${requiredRows} x ${requiredColumns})`);
+    }
+
+    /**
+     * Compute a measure of the workload of an operation involving this matrix
+     * @param {SpeedyMatrix} matrix
+     * @returns {number}
+     */
+    _workload(matrix)
+    {
+        return matrix.rows * matrix.columns;
+    }
+}
+
+/**
+ * No-operation
+ */
+class MatrixOperationNop extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {number} requiredRows required number of rows of the output matrix
+     * @param {number} requiredColumns required number of columns of the output matrix
+     * @param {number} requiredType required type of the output matrix
+     */
+    constructor(requiredRows, requiredColumns, requiredType)
+    {
+        super(Opcode.NOP, requiredRows, requiredColumns, requiredType);
+    }
+}
+
+/**
+ * Fill matrix with a number
+ */
+class MatrixOperationFill extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {number} requiredRows required number of rows of the output matrix
+     * @param {number} requiredColumns required number of columns of the output matrix
+     * @param {number} requiredType required type of the output matrix
+     * @param {number} value the value we'll use to fill the matrix
+     */
+    constructor(requiredRows, requiredColumns, requiredType, value)
+    {
+        super(Opcode.FILL, requiredRows, requiredColumns, requiredType, [], { value: +value });
+    }
+}
+
+/**
+ * Copy matrix
+ */
+class MatrixOperationCopy extends MatrixOperation
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrix} matrix 
+     */
+    constructor(matrix)
+    {
+        super(Opcode.COPY, matrix.rows, matrix.columns, matrix.type, [ matrix ]);
+    }
+}
+
+/**
+ * Transpose Matrix
+ */
+class MatrixOperationTranspose extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {SpeedyMatrix} matrix the matrix that we'll transpose
+     */
+    constructor(matrix)
+    {
+        super(Opcode.TRANSPOSE, matrix.columns, matrix.rows, matrix.type, [ matrix ]);
+    }
+}
+
+/**
+ * Add two matrices
+ * e.g., A + B
+ */
+class MatrixOperationAdd extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {SpeedyMatrix} matrixA
+     * @param {SpeedyMatrix} matrixB
+     */
+    constructor(matrixA, matrixB)
+    {
+        super(Opcode.ADD, matrixA.rows, matrixA.columns, matrixA.type, [ matrixA, matrixB ]);
+    }
+}
+
+/**
+ * Subtract two matrices
+ * e.g., A - B
+ */
+class MatrixOperationSubtract extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {SpeedyMatrix} matrixA
+     * @param {SpeedyMatrix} matrixB
+     */
+    constructor(matrixA, matrixB)
+    {
+        super(Opcode.SUBTRACT, matrixA.rows, matrixA.columns, matrixA.type, [ matrixA, matrixB ]);
+    }
+}
+
+/**
+ * Multiply two matrices
+ * e.g., A * B
+ */
+class MatrixOperationMultiply extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {SpeedyMatrix} matrixA left matrix
+     * @param {SpeedyMatrix} matrixB right matrix
+     */
+    constructor(matrixA, matrixB)
+    {
+        super(Opcode.MULTIPLY, matrixA.rows, matrixB.columns, matrixA.type, [ matrixA, matrixB ]);
+    }
+}
+
+/**
+ * Multiply by a scalar
+ * e.g., alpha * A
+ */
+class MatrixOperationScale extends MatrixOperation
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrix} matrix
+     * @param {number} scalar
+     */
+    constructor(matrix, scalar)
+    {
+        super(Opcode.SCALE, matrix.rows, matrix.columns, matrix.type, [ matrix ], { scalar: +scalar });
+    }
+}
+
+/**
+ * Component-wise multiplication
+ */
+class MatrixOperationCompMult extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {SpeedyMatrix} matrixA
+     * @param {SpeedyMatrix} matrixB
+     */
+    constructor(matrixA, matrixB)
+    {
+        super(Opcode.COMPMULT, matrixA.rows, matrixA.columns, matrixA.type, [ matrixA, matrixB ]);
+    }
+}
+
+/**
+ * Multiply two matrices, transposing the left operand
+ * e.g., A^T * B
+ */
+class MatrixOperationMultiplyLT extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {SpeedyMatrix} matrixA left matrix
+     * @param {SpeedyMatrix} matrixB right matrix
+     */
+    constructor(matrixA, matrixB)
+    {
+        super(Opcode.MULTIPLYLT, matrixA.columns, matrixB.columns, matrixA.type, [ matrixA, matrixB ]);
+    }
+}
+
+/**
+ * Multiply two matrices, transposing the right operand
+ * e.g., A * B^T
+ */
+class MatrixOperationMultiplyRT extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {SpeedyMatrix} matrixA left matrix
+     * @param {SpeedyMatrix} matrixB right matrix
+     */
+    constructor(matrixA, matrixB)
+    {
+        super(Opcode.MULTIPLYRT, matrixA.rows, matrixB.rows, matrixA.type, [ matrixA, matrixB ]);
+    }
+}
+
+/**
+ * QR decomposition
+ */
+class MatrixOperationQR extends MatrixOperation
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrix} matrix
+     * @param {string} mode 'full' | 'reduced'
+     */
+    constructor(matrix, mode)
+    {
+        const m = ({ 'full': 'full-qr', 'reduced': 'reduced-qr' })[mode];
+        if(m === undefined)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`QR decomposition: unknown mode "${mode}"`)
+
+        const columns = m == 'full-qr' ? matrix.columns + matrix.rows : 2 * matrix.columns;
+        super(Opcode.QR, matrix.rows, columns, matrix.type, [ matrix ], { mode: m });
+    }
+}
+
+/**
+ * Internal QR solver (Ax = b) produces
+ * the matrix [(Q^T)b | R] using reduced QR(*)
+ * A is m x n (m >= n), b is m x 1,
+ * (Q^T)b is m x 1 and R is m x n
+ *
+ * (*) The last (m-n) rows of the output matrix
+ * will be filled with zeros. Those rows are
+ * required by the calculation. You may extract
+ * the first n rows
+ */
+class MatrixOperationQRSolve extends MatrixOperation
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrix} matrixA
+     * @param {SpeedyMatrix} vectorB
+     */
+    constructor(matrixA, vectorB)
+    {
+        super(Opcode.QR, matrixA.rows, matrixA.columns + 1, matrixA.type, [ matrixA, vectorB ], { mode: 'reduced-Q\'x' });
+    }
+}
+
+/**
+ * Given an input matrix of the form [b | R]
+ * where b is n x 1 and R is an n x n upper
+ * triangular matrix, solve Rx = b for x
+ */
+class MatrixOperationBackSubstitution extends MatrixOperation
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrix} input
+     */
+    constructor(input)
+    {
+        super(Opcode.BACKSUB, input.rows, 1, input.type, [ input ]);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/math/matrix-worker.js":
+/*!****************************************!*\
+  !*** ./src/core/math/matrix-worker.js ***!
+  \****************************************/
+/*! exports provided: MatrixWorker */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixWorker", function() { return MatrixWorker; });
+/* harmony import */ var _matrix_math__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix-math */ "./src/core/math/matrix-math.js");
+/* harmony import */ var _matrix_math__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_matrix_math__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__);
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * matrix-worker.js
+ * Web Worker bridge
+ */
+
+
+
+
+
+// Constants
+const MAX_MESSAGE_ID = (1 << 30) - 1; // use the form 2^n - 1
+const NOP = _matrix_math__WEBPACK_IMPORTED_MODULE_0__["MatrixMath"].Opcode.NOP;
+
+/**
+ * A bridge between the main thread and a Web Worker
+ * that performs matrix computations
+ */
+class MatrixWorker
+{
+    /**
+     * Get Singleton
+     * @returns {MatrixWorker}
+     */
+    static get instance()
+    {
+        return this._instance || (this._instance = new MatrixWorker());
+    }
+
+    /**
+     * Class constructor
+     */
+    constructor()
+    {
+        this._msgId = 0;
+        this._callbackTable = new Map();
+        this._worker = this._createWorker();
+    }
+
+    /**
+     * Run computation in a Web Worker
+     * @param {object} header serializable
+     * @param {ArrayBuffer} outputBuffer data of the output matrix
+     * @param {ArrayBuffer[]} inputBuffers data of the input matrices
+     * @returns {SpeedyPromise<Array>} resolves as soon as the computation is complete
+     */
+    run(header, outputBuffer, inputBuffers)
+    {
+        if(header.opcode === NOP) // save some time
+            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve([outputBuffer, inputBuffers]);
+
+        const id = (this._msgId = (this._msgId + 1) & MAX_MESSAGE_ID);
+        const transferables = [ outputBuffer, ...inputBuffers ].filter(
+            (x, i, arr) => arr.indexOf(x) === i // remove duplicates
+        );
+        const msg = { id, header, outputBuffer, inputBuffers, transferables };
+
+        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"](resolve => {
+            this._callbackTable.set(id, (outputBuffer, inputBuffers) => {
+                resolve([outputBuffer, inputBuffers]);
+                this._callbackTable.delete(id);
+            });
+            this._worker.postMessage(msg, transferables);
+        }, true);
+    }
+
+    /**
+     * Create a Web Worker capable of performing Matrix computations
+     * @returns {Worker}
+     */
+    _createWorker()
+    {
+        // setup the code
+        const js = 'self.MatrixMath = ' + _matrix_math__WEBPACK_IMPORTED_MODULE_0__["MatrixMath"].toString() + '\n' +
+                   'self.onmessage = ' + onmessage.toString();
+        const blob = new Blob([ js ], { type: 'application/javascript' });
+
+        // setup the Worker
+        const worker = new Worker(URL.createObjectURL(blob));
+        worker.onmessage = ev => {
+            const msg = ev.data;
+            const done = this._callbackTable.get(msg.id);
+            done(msg.outputBuffer, msg.inputBuffers);
+        };
+        worker.onerror = ev => {
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalOperationError"](`Worker error: ${ev.message}`);
+        };
+
+        // done!
+        return worker;
+    }
+}
+
+/**
+ * This function runs in the Web Worker
+ * @param {MessageEvent} ev
+ */
+function onmessage(ev)
+{
+    const { id, header, outputBuffer, inputBuffers, transferables } = ev.data;
+
+    // wrap the incoming buffers with the appropriate TypedArrays
+    const dataType = self.MatrixMath.DataType[header.type];
+    const output = new dataType(outputBuffer, header.byteOffset, header.length);
+    const inputs = inputBuffers.map((inputBuffer, i) =>
+        new dataType(inputBuffer, header.byteOffsetOfInputs[i], header.lengthOfInputs[i])
+    );
+
+    // perform the computation
+    const compute = self.MatrixMath.Opcode2fun[header.opcode];
+    //console.log('mensagem do worker', output, inputs);
+    compute.call(self.MatrixMath, header, output, inputs);
+
+    // send the result of the computation back to the main thread
+    const msg = { id, outputBuffer, inputBuffers };
+    self.postMessage(msg, transferables);
+}
+
+/***/ }),
+
+/***/ "./src/core/math/matrix.js":
+/*!*********************************!*\
+  !*** ./src/core/math/matrix.js ***!
+  \*********************************/
+/*! exports provided: SpeedyMatrix */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrix", function() { return SpeedyMatrix; });
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _matrix_buffer__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-buffer */ "./src/core/math/matrix-buffer.js");
+/* harmony import */ var _matrix_math__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix-math */ "./src/core/math/matrix-math.js");
+/* harmony import */ var _matrix_math__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_matrix_math__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _matrix_operations_queue__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./matrix-operations-queue */ "./src/core/math/matrix-operations-queue.js");
+/* harmony import */ var _matrix_operations__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./matrix-operations */ "./src/core/math/matrix-operations.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5___default = /*#__PURE__*/__webpack_require__.n(_utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__);
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * matrix.js
+ * Matrix type
+ */
+
+
+
+
+
+
+
+
+
+
+// Constants
+const MatrixType = _matrix_math__WEBPACK_IMPORTED_MODULE_2__["MatrixMath"].MatrixType;
+const DataType = _matrix_math__WEBPACK_IMPORTED_MODULE_2__["MatrixMath"].DataType;
+const DataTypeName = _matrix_math__WEBPACK_IMPORTED_MODULE_2__["MatrixMath"].DataTypeName;
+const matrixOperationsQueue = _matrix_operations_queue__WEBPACK_IMPORTED_MODULE_3__["MatrixOperationsQueue"].instance;
+
+
+
+/**
+ * Matrix class
  */
 class SpeedyMatrix
 {
-    constructor(rows, columns, type = _speedy_flags__WEBPACK_IMPORTED_MODULE_1__["SpeedyFlags"].F32)
+    /**
+     * Class constructor
+     * @param {number} rows number of rows
+     * @param {number} [columns] number of columns (defaults to the number of rows)
+     * @param {number[]} [values] initial values in column-major format
+     * @param {number} [type] F64, F32, etc.
+     * @param {number} [stride] custom stride
+     * @param {MatrixBuffer} [buffer] custom buffer
+     */
+    constructor(rows, columns = rows, values = null, type = MatrixType.F32, stride = rows, buffer = null)
     {
-        this._type = type & (~3); // F32, U8...
-
+        const dataType = DataType[type];
         const numChannels = 1 + (type & 3);
-        const dataType = matrixType[this._type];
 
         if(rows <= 0 || columns <= 0)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Invalid dimensions`);
-        else if(numChannels < 1 || numChannels > 4)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Invalid number of channels`);
+        else if(stride < rows)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Invalid stride`);
         else if(dataType == undefined)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Invalid data type`);
+        else if(Array.isArray(values) && values.length != rows * columns * numChannels)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Incorrect number of matrix elements (expected ${rows * columns * numChannels}, found ${values.length})`);
 
         this._rows = rows | 0;
-        this._cols = columns | 0;
+        this._columns = columns | 0;
+        this._type = type | 0;
         this._channels = numChannels;
-        this._length = this._rows * this._cols * this._channels;
-
-        this._data = new dataType(this._length);
+        this._stride = stride | 0;
+        this._buffer = buffer || new _matrix_buffer__WEBPACK_IMPORTED_MODULE_1__["MatrixBuffer"](this._stride * this._columns * this._channels, values, this._type);
+        this._nop = null;
     }
 
+
+
+    // ====================================
+    // MATRIX PROPERTIES
+    // ====================================
+
+    /**
+     * Number of rows of the matrix
+     * @returns {number}
+     */
     get rows()
     {
         return this._rows;
     }
 
+    /**
+     * Number of columns of the matrix
+     * @returns {number}
+     */
     get columns()
     {
-        return this._cols;
+        return this._columns;
     }
 
+    /**
+     * Number of channels
+     * @returns {number} defaults to 1
+     */
     get channels()
     {
         return this._channels;
     }
 
+    /**
+     * The number of entries, in the MatrixBuffer,
+     * between the beginning of two columns
+     * @returns {number}
+     */
+    get stride()
+    {
+        return this._stride;
+    }
+
+    /**
+     * Data type
+     * @returns {number}
+     */
+    get type()
+    {
+        return this._type;
+    }
+
+    /**
+     * Data type (string)
+     * @returns {string}
+     */
+    get dtype()
+    {
+        return DataTypeName[this._type];
+    }
+
+
+
+    // ====================================
+    // READ MATRIX
+    // ====================================
+
+    /**
+     * Read entries of the matrix. Note that this method is asynchronous.
+     * It will read the data as soon as all relevant calculations have been
+     * completed. Make sure you await.
+     *
+     * If the entries parameter is left unspecified, the entire matrix will
+     * be read and its contents will be returned as a flattened array in
+     * column-major format.
+     *
+     * @param {number[]} [entries] a flattened array of (row,col) indices, indexed by zero
+     * @param {number[]} [result] pre-allocated array where we'll store the results
+     * @returns {SpeedyPromise<number[]>} a promise that resolves to the requested entries
+     */
+    read(entries = undefined, result = undefined)
+    {
+        const rows = this._rows, cols = this._columns;
+        const stride = this._stride;
+
+        // read the entire array
+        if(entries === undefined)
+        {
+            return this.sync().then(() => this._buffer.ready().turbocharge()).then(buffer => {
+                const data = buffer.data;
+                const n = rows * cols;
+
+                // resize result array
+                result = result || new Array(n);
+                if(result.length != n)
+                    result.length = n;
+
+                // write entries in column-major format
+                let i, j, k = 0;
+                for(j = 0; j < cols; j++) {
+                    for(i = 0; i < rows; i++)
+                        result[k++] = data[j * stride + i];
+                }
+
+                // done!
+                return result;
+            }).turbocharge();
+        }
+
+        // read specific entries
+        if(entries.length % 2 > 0)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't read matrix entries: missing index`);
+
+        return this.sync().then(() => this._buffer.ready().turbocharge()).then(buffer => {
+            const data = buffer.data;
+            const n = entries.length >> 1;
+
+            // resize result array
+            result = result || new Array(n);
+            if(result.length != n)
+                result.length = n;
+
+            // read entries
+            let row, col;
+            for(let i = 0; i < n; i++) {
+                row = entries[i << 1] | 0;
+                col = entries[1 + (i << 1)] | 0;
+                result[i] = ((row >= 0 && row < rows && col >= 0 && col < cols) &&
+                    data[col * stride + row]
+                ) || undefined;
+            }
+
+            // done!
+            return result;
+        }).turbocharge();
+    }
+
+    /**
+     * Read a single entry of the matrix. This is provided for your convenience.
+     * It's much faster to use read() if you need to read multiple entries
+     * @param {number} row the row you want to read, indexed by zero
+     * @param {number} column the column you want to read, indexed by zero
+     * @returns {SpeedyPromise<number>} a promise that resolves to the requested entry
+     */
+    at(row, column)
+    {
+        return this.read([ row, column ]).then(nums => nums[0]).turbocharge();
+    }
+
+    /**
+     * Print the matrix. Useful for debugging
+     * @param {Function} [printFunction] prints a string
+     * @param {number} [decimals] format numbers to a number of decimals
+     * @returns {SpeedyPromise<void>} a promise that resolves as soon as the matrix is printed
+     */
+    print(printFunction = console.log, decimals = undefined)
+    {
+        return this.read().then(data => {
+            const rows = this._rows, columns = this._columns;
+            const row = new Array(rows);
+            let i, j;
+
+            for(i = 0; i < rows; i++) {
+                row[i] = new Array(columns);
+                for(j = 0; j < columns; j++)
+                    row[i][j] = data[j * rows + i];
+            }
+
+            const fix = decimals !== undefined ? x => x.toFixed(decimals) : x => x;
+            const fmt = row.map(r => '    ' + r.map(fix).join(', ')).join(',\n');
+            const str = `SpeedyMatrix(rows=${rows}, cols=${columns}, dtype="${this.dtype}", data=[\n${fmt}\n])`;
+            printFunction(str);
+        });
+    }
+
+
+
+
+
+    // ====================================
+    // ACCESS BY BLOCK
+    // ====================================
+
+    /**
+     * Create a submatrix using the range [firstRow:lastRow, firstColumn:lastColumn].
+     * It will have size (lastRow - firstRow + 1) x (lastColumn - firstColumn + 1).
+     * The internal buffer of the matrix will be shared with the submatrix,
+     * so if you modify one, you'll modify the other.
+     * @param {number} firstRow indexed by 0
+     * @param {number} lastRow indexed by 0
+     * @param {number} firstColumn indexed by 0
+     * @param {number} lastColumn indexed by 0
+     * @returns {SpeedyPromise<SpeedyMatrix>}
+     */
+    block(firstRow, lastRow, firstColumn, lastColumn)
+    {
+        const rows = this._rows, columns = this._columns;
+
+        // validate range
+        if(lastRow < firstRow || lastColumn < firstColumn)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't create empty submatrix - invalid range [${firstRow}:${lastRow}, ${firstColumn}:${lastColumn}]`);
+        else if(firstRow < 0 || lastRow >= rows || firstColumn < 0 || lastColumn >= columns)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't create submatrix - invalid range [${firstRow}:${lastRow}, ${firstColumn}:${lastColumn}] of ${rows} x ${columns} matrix`);
+
+        // compute the dimensions of the new submatrix
+        const subRows = lastRow - firstRow + 1;
+        const subColumns = lastColumn - firstColumn + 1;
+
+        // obtain the relevant portion of the data
+        const stride = this._stride;
+        const begin = firstColumn * stride + firstRow;
+        const length = (lastColumn - firstColumn) * stride + subRows;
+
+        // create submatrix
+        return this._buffer.createSharedBuffer(begin, length).then(sharedBuffer =>
+            new SpeedyMatrix(subRows, subColumns, undefined, this._type, stride, sharedBuffer)
+        ).turbocharge();
+    }
+
+    /**
+     * Creates a column-vector featuring the elements of the main diagonal
+     * of the matrix. The internal buffers of the column-vector and of the
+     * matrix are shared, so if you change the data in one, you'll change
+     * the data in the other.
+     * @returns {SpeedyPromise<SpeedyMatrix>}
+     */
+    diagonal()
+    {
+        const rows = this._rows, stride = this._stride;
+        const diagonalLength = Math.min(rows, this._columns);
+        const bufferLength = (diagonalLength - 1) * stride + rows;
+
+        return this._buffer.createSharedBuffer(0, bufferLength).then(sharedBuffer =>
+            new SpeedyMatrix(1, diagonalLength, undefined, this._type, stride + 1, sharedBuffer)
+        ).turbocharge();
+    }
+
+
+
+
+
+    // ====================================
+    // MATRIX UTILITIES
+    // ====================================
+
+    /**
+     * Convert to string
+     * @returns {string}
+     */
     toString()
     {
-        return `SpeedyMatrix(${this._rows}, ${this._cols})`;
+        return `SpeedyMatrix(rows=${this.rows}, cols=${this.columns}, dtype="${this.dtype}")`;
     }
 
-    at(row, column = 0)
+    /**
+     * Locks the internal buffer of this matrix,
+     * so it can't be read from nor written to
+     */
+    lock()
     {
-        /*
-        if(row < 0 || row >= this._rows || column < 0 || column >= this._cols)
-            throw new IllegalArgumentError(`Out of bounds`);
-        */
-
-        return this._data[row * this._cols + column];
+        this._buffer.lock();
     }
 
-    fill(value)
+    /**
+     * Unlocks the internal buffer of this matrix and
+     * resolves all pending read/write operations
+     */
+    unlock()
     {
-        const length = this._length;
+        this._buffer.unlock();
+    }
 
-        for(let i = 0; i < length; i++)
-            this._data[i] = value;
+    /**
+     * The internal buffer of this matrix
+     * @returns {MatrixBuffer}
+     */
+    get buffer()
+    {
+        return this._buffer;
+    }
 
-        return this;
+    /**
+     * Returns a promise that resolves as soon as all
+     * operations submitted UP TO NOW have finished
+     * @returns {SpeedyPromise<void>}
+     */
+    sync()
+    {
+        this._nop = this._nop || (this._nop = new _matrix_operations__WEBPACK_IMPORTED_MODULE_4__["MatrixOperationNop"](this._rows, this._columns, this._type));
+        return matrixOperationsQueue.enqueue(this._nop, this);
     }
 }
 
@@ -1685,8 +5555,6 @@ class SpeedyMatrix
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyVector2", function() { return SpeedyVector2; });
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _speedy_matrix__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-matrix */ "./src/core/math/speedy-matrix.js");
-/* harmony import */ var _speedy_flags__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../speedy-flags */ "./src/core/speedy-flags.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -1710,12 +5578,10 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-
-
 /**
  * 2D vector of floating-point numbers
  */
-class SpeedyVector2 extends _speedy_matrix__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrix"]
+class SpeedyVector2
 {
     /**
      * Create a 2D vector
@@ -1724,9 +5590,7 @@ class SpeedyVector2 extends _speedy_matrix__WEBPACK_IMPORTED_MODULE_1__["SpeedyM
      */
     constructor(x, y)
     {
-        super(2, 1, _speedy_flags__WEBPACK_IMPORTED_MODULE_2__["SpeedyFlags"].F32);
-        this._data[0] = x;
-        this._data[1] = y;
+        this._data = new Float32Array([x, y]);
     }
 
 
@@ -1837,7 +5701,7 @@ class SpeedyVector2 extends _speedy_matrix__WEBPACK_IMPORTED_MODULE_1__["SpeedyM
         const l = this.length();
 
         if(l == 0.0) {
-            this._data[0] = this._data[1] = 0.0;
+            this._data.fill(0.0);
             return this;
         }
 
@@ -3619,6 +7483,8 @@ class SpeedyFeature
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyFlags", function() { return SpeedyFlags; });
+/* harmony import */ var _math_matrix_math__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./math/matrix-math */ "./src/core/math/matrix-math.js");
+/* harmony import */ var _math_matrix_math__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_math_matrix_math__WEBPACK_IMPORTED_MODULE_0__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -3640,22 +7506,16 @@ __webpack_require__.r(__webpack_exports__);
  * Flags available to users
  */
 
+
+
 const SpeedyFlags = Object.freeze({
 
     // Feature detectors
     FEATURE_DETECTOR_RESET_CAPACITY: 0x1,
 
     // Matrix types
-    F32: 0x0,         // 32-bit float, 1 channel
-    F32C1: 0x0 | 0x0, // 32-bit float, 1 channel
-    F32C2: 0x0 | 0x1, // 32-bit float, 2 channels
-    F32C3: 0x0 | 0x2, // 32-bit float, 3 channels
-    F32C4: 0x0 | 0x3, // 32-bit float, 4 channels
-    U8: 0x4,          // 8-bit unsigned integer, 1 channel
-    U8C1: 0x4 | 0x0,  // 8-bit unsigned integer, 1 channel
-    U8C2: 0x4 | 0x1,  // 8-bit unsigned integer, 2 channels
-    U8C3: 0x4 | 0x2,  // 8-bit unsigned integer, 3 channels
-    U8C4: 0x4 | 0x3,  // 8-bit unsigned integer, 4 channels
+    ...(_math_matrix_math__WEBPACK_IMPORTED_MODULE_0__["MatrixMath"].MatrixType),
+
 });
 
 /***/ }),
@@ -4460,6 +8320,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_feature_tracker_factory__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./speedy-feature-tracker-factory */ "./src/core/speedy-feature-tracker-factory.js");
 /* harmony import */ var _speedy_flags__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./speedy-flags */ "./src/core/speedy-flags.js");
 /* harmony import */ var _math_speedy_vector__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./math/speedy-vector */ "./src/core/math/speedy-vector.js");
+/* harmony import */ var _math_matrix_expressions__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./math/matrix-expressions */ "./src/core/math/matrix-expressions.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -4488,6 +8350,11 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
+
+// Constants
+const matrixExprFactory = new _math_matrix_expressions__WEBPACK_IMPORTED_MODULE_7__["SpeedyMatrixExprFactory"]();
 
 /**
  * Speedy's main class
@@ -4533,7 +8400,7 @@ class Speedy
      */
     static get version()
     {
-        return "0.4.0";
+        return "0.5.0-wip";
     }
 
     /**
@@ -4566,11 +8433,20 @@ class Speedy
     /**
      * Create a 2D vector
      * @param {number} x
-     * @param {number} y
+     * @param {number} [y]
      */
-    static Vector2(x, y)
+    static Vector2(x, y = x)
     {
         return new _math_speedy_vector__WEBPACK_IMPORTED_MODULE_6__["SpeedyVector2"](x, y);
+    }
+
+    /**
+     * Create a matrix expression
+     * @returns {SpeedyMatrixExprFactory}
+     */
+    static get Matrix()
+    {
+        return matrixExprFactory;
     }
 }
 
@@ -5786,28 +9662,28 @@ class GLUtils
      */
     static clientWaitAsync(gl, sync, flags = 0)
     {
-        return new Promise((resolve, reject) => {
-            function checkStatus() {
-                const status = gl.clientWaitSync(sync, flags, 0);
-                if(status == gl.TIMEOUT_EXPIRED) {
-                    _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].setZeroTimeout(checkStatus); // better performance (preferred)
-                    //setTimeout(checkStatus, 0); // easier on the CPU
-                }
-                else if(status == gl.WAIT_FAILED) {
-                    if(isFirefox && gl.getError() == gl.NO_ERROR) { // firefox bug?
-                        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].setZeroTimeout(checkStatus);
-                        //setTimeout(checkStatus, 0);
-                    }
-                    else {
-                        reject(GLUtils.getError(gl));
-                    }
+        this._checkStatus = this._checkStatus || (this._checkStatus = function checkStatus(gl, sync, flags, resolve, reject) {
+            const status = gl.clientWaitSync(sync, flags, 0);
+            if(status == gl.TIMEOUT_EXPIRED) {
+                _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].setZeroTimeout(() => checkStatus.call(this, gl, sync, flags, resolve, reject)); // better performance (preferred)
+                //setTimeout(() => checkStatus.call(this, gl, sync, flags, resolve, reject), 0); // easier on the CPU
+            }
+            else if(status == gl.WAIT_FAILED) {
+                if(isFirefox && gl.getError() == gl.NO_ERROR) { // firefox bug?
+                    _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].setZeroTimeout(() => checkStatus.call(this, gl, sync, flags, resolve, reject));
+                    //setTimeout(() => checkStatus.call(this, gl, sync, flags, resolve, reject), 0);
                 }
                 else {
-                    resolve();
+                    reject(GLUtils.getError(gl));
                 }
             }
+            else {
+                resolve();
+            }
+        });
 
-            checkStatus();
+        return new Promise((resolve, reject) => {
+            this._checkStatus(gl, sync, flags, resolve, reject);
         });
     }
 
@@ -11263,6 +15139,456 @@ class Observable
 
 /***/ }),
 
+/***/ "./src/utils/speedy-promise.js":
+/*!*************************************!*\
+  !*** ./src/utils/speedy-promise.js ***!
+  \*************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+/* WEBPACK VAR INJECTION */(function(process) {/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-promise.js
+ * Speedy Promises: a fast implementation of Promises
+ */
+
+const PENDING = 0;
+const FULFILLED = 1;
+const REJECTED = 2;
+
+const SUSPEND_ASYNC = 1;
+const DISABLE_ASYNC = 2;
+const asap = (typeof queueMicrotask !== 'undefined' && queueMicrotask) || // browsers
+             (typeof process !== 'undefined' && process.nextTick) || // node.js
+             (f => Promise.resolve().then(f)); // most compatible
+
+/**
+ * SpeedyPromise: Super Fast Promises. SpeedyPromises can
+ * interoperate with ES6 Promises. This implementation is
+ * based on the Promises/A+ specification.
+ */
+ class SpeedyPromise
+{
+    /**
+     * Constructor
+     * @param {Function} callback
+     * @param {boolean} [sync] a hint that you'll be calling turbocharge() after a chain of then()/catch()/finally()
+     */
+    constructor(callback, sync = false)
+    {
+        this._state = PENDING;
+        this._value = undefined;
+
+        this._onFulfillment = null;
+        this._onRejection = null;
+        this._children = 0;
+        this[0] = this;
+        this._parent = undefined;
+        this._flags = sync ? DISABLE_ASYNC : 0;
+
+        this._fulfill = this._fulfill.bind(this);
+        this._reject = this._reject.bind(this);
+        this._resolve = this._resolve.bind(this);
+        this._broadcastIfAsync = this._broadcastIfAsync.bind(this);
+
+        callback(this._fulfill, this._reject);
+    }
+
+    /**
+     * Setup handlers
+     * @param {Function} onFulfillment called when the SpeedyPromise is fulfilled
+     * @param {Function} [onRejection] called when the SpeedyPromise is rejected
+     * @returns {SpeedyPromise}
+     */
+    then(onFulfillment, onRejection = null)
+    {
+        const child = new SpeedyPromise(this._nop);
+        child._onFulfillment = typeof onFulfillment === 'function' && onFulfillment;
+        child._onRejection = typeof onRejection === 'function' && onRejection;
+        child._parent = this;
+
+        this[this._children++] = child; // attach child
+        this._flags &= ~SUSPEND_ASYNC; // restore the async behavior
+        this._notify();
+
+        return child;
+    }
+
+    /**
+     * Setup rejection handler
+     * @param {Function} onRejection called when the SpeedyPromise is rejected
+     * @returns {SpeedyPromise}
+     */
+    catch(onRejection)
+    {
+        return this.then(null, onRejection);
+    }
+
+    /**
+     * Execute a callback when the promise is settled
+     * (i.e., fulfilled or rejected)
+     * @param {Function} onFinally
+     * @returns {SpeedyPromise}
+     */
+    finally(onFinally)
+    {
+        const fn = val => { onFinally(); return val; };
+        return this.then(fn, fn);
+    }
+
+    /**
+     * Start the computation immediately, synchronously.
+     * Can't afford to spend any time at all waiting for micro-tasks, etc.
+     * @returns {SpeedyPromise} this
+     */
+    turbocharge()
+    {
+        let my = this;
+
+        // suspend the async behavior
+        this._flags |= SUSPEND_ASYNC;
+        while(my._parent !== undefined) {
+            my = my._parent;
+            my._flags |= SUSPEND_ASYNC;
+        }
+
+        // notify the children of the root
+        my._notify(); // will be synchronous
+
+        // return this SpeedyPromise
+        return this;
+    }
+
+    /**
+     * Convert to string
+     * @returns {string}
+     */
+    toString()
+    {
+        switch(this._state) {
+            case PENDING:
+                return `SpeedyPromise { <pending> }`;
+            case FULFILLED:
+                return `SpeedyPromise { <fulfilled> ${this._value} }`;
+            case REJECTED:
+                return `SpeedyPromise { <rejected> ${this._value} }`;
+            default:
+                return '';
+        }
+    }
+
+    /**
+     * Creates a resolved SpeedyPromise
+     * @param {any} value
+     * @returns {SpeedyPromise}
+     */
+    static resolve(value)
+    {
+        const promise = new SpeedyPromise(this._snop);
+
+        if((typeof value === 'object' && value !== null && 'then' in value) || (typeof value === 'function' && 'then' in value)) {
+            // resolve asynchronously
+            promise._resolve(value);
+        }
+        else {
+            // fulfill synchronously
+            promise._value = value;
+            promise._state = FULFILLED;
+        }
+
+        return promise;
+    }
+
+    /**
+     * Creates a rejected SpeedyPromise
+     * @param {any} reason usually an instance of Error
+     * @returns {SpeedyPromise}
+     */
+    static reject(reason)
+    {
+        const promise = new SpeedyPromise(this._snop);
+        promise._value = reason;
+        promise._state = REJECTED;
+        return promise;
+    }
+
+    /**
+     * Returns a SpeedyPromise that resolves to an array
+     * containing the results of the input promises/values,
+     * in their given order. The returned SpeedyPromise will
+     * resolve if all input promises resolve, or reject if
+     * any input promise rejects.
+     * @param {iterable} iterable e.g., a SpeedyPromise[]
+     * @returns {SpeedyPromise}
+     */
+    static all(iterable)
+    {
+        return new SpeedyPromise((resolve, reject) => {
+            const input = [];
+
+            // get elements
+            for(const element of iterable)
+                input.push(element);
+
+            // resolve synchronously if there are no elements
+            const length = input.length;
+            if(length == 0) {
+                resolve([]);
+                return;
+            }
+
+            // resolve asynchronously
+            let counter = length;
+            const output = new Array(length);
+            const partialResolve = i => (val => { output[i] = val; if(0 == --counter) resolve(output); });
+            for(let i = 0; i < length; i++) {
+                const element = input[i];
+                if(element.__proto__ === SpeedyPromise.prototype || element.__proto__ === Promise.prototype)
+                    element.then(partialResolve(i), reject);
+                else
+                    SpeedyPromise.resolve(element).then(partialResolve(i), reject);
+            }
+        });
+    }
+
+    /**
+     * Returns a promise that gets fulfilled or rejected as soon
+     * as the first promise in the iterable gets fulfilled or
+     * rejected (with its value/reason).
+     * @param {iterable} iterable e.g., a SpeedyPromise[]
+     * @returns {SpeedyPromise}
+     */
+    static race(iterable)
+    {
+        return new SpeedyPromise((resolve, reject) => {
+            const input = [];
+
+            // get elements
+            for(const element of iterable)
+                input.push(element);
+
+            // if the iterable is empty, the promise
+            // will be pending forever...
+
+            // resolve asynchronously
+            const length = input.length;
+            for(let i = 0; i < length; i++) {
+                const element = input[i];
+                if(element.__proto__ === SpeedyPromise.prototype || element.__proto__ === Promise.prototype)
+                    element.then(resolve, reject);
+                else
+                    SpeedyPromise.resolve(element).then(resolve, reject);
+            }
+        });
+    }
+
+    /**
+     * Fulfill this promise with a value
+     * @param {any} value
+     */
+    _fulfill(value)
+    {
+        this._setState(FULFILLED, value);
+    }
+
+    /**
+     * Reject this promise with a reason
+     * @param {any} reason
+     */
+    _reject(reason)
+    {
+        this._setState(REJECTED, reason);
+    }
+
+    /**
+     * Set the state and the value of this promise
+     * @param {number} state
+     * @param {any} value
+     */
+    _setState(state, value)
+    {
+        // the promise is already fulfilled or rejected
+        if(this._state != PENDING)
+            return;
+
+        // set the new state
+        this._state = state;
+        this._value = value;
+        this._notify();
+    }
+
+    /**
+     * Notify my children that this promise is no
+     * longer pending. This is an async operation:
+     * my childen will be notified "as soon
+     * as possible" (it will be scheduled).
+     * We may force this to be synchronous, though
+     */
+    _notify()
+    {
+        // nothing to do
+        if(this._state == PENDING)
+            return;
+
+        // have we turbocharged this promise?
+        if(this._flags & SUSPEND_ASYNC) {
+            this._broadcast(); // execute synchronously
+            return;
+        }
+
+        // install a timer (default behavior)
+        if(!(this._flags & DISABLE_ASYNC))
+            asap(this._broadcastIfAsync);
+    }
+
+    /**
+     * Helper method
+     */
+    _broadcastIfAsync()
+    {
+        // we may have installed a timer at some
+        // point, but turbocharged the promise later
+        if(!(this._flags & SUSPEND_ASYNC))
+            this._broadcast();
+    }
+
+    /**
+     * Tell my children that this promise
+     * is either fulfilled or rejected.
+     * This is a synchronous operation
+     */
+    _broadcast()
+    {
+        const children = this._children;
+        const state = this._state;
+
+        if(state === FULFILLED) {
+            for(let i = 0; i < children; i++) {
+                const child = this[i];
+                const callback = child._onFulfillment;
+
+                try {
+                    if(callback) {
+                        if(callback !== child._nop) {
+                            child._resolve(callback(this._value)); // promise resolution procedure
+                            child._onFulfillment = child._nop; // will not be called again
+                        }
+                    }
+                    else
+                        child._fulfill(this._value);
+                }
+                catch(e) {
+                    child._reject(e);
+                }
+            }
+        }
+        else if(state === REJECTED) {
+            for(let i = 0; i < children; i++) {
+                const child = this[i];
+                const callback = child._onRejection;
+
+                try {
+                    if(callback) {
+                        if(callback !== child._nop) {
+                            child._resolve(callback(this._value)); // promise resolution procedure
+                            child._onRejection = child._nop; // will not be called again
+                        }
+                    }
+                    else
+                        child._reject(this._value);
+                }
+                catch(e) {
+                    child._reject(e);
+                }
+            }
+        }
+    }
+
+    /**
+     * Promise Resolution Procedure
+     * based on the Promises/A+ spec
+     * @param {any} x
+     */
+    _resolve(x)
+    {
+        if((typeof x !== 'object' && typeof x !== 'function') || (x === null)) { // if(x !== Object(x))
+            this._fulfill(x);
+            return;
+        }
+
+        if(x === this)
+            throw new TypeError(); // Circular reference
+
+        if(x.__proto__ === SpeedyPromise.prototype || x.__proto__ === Promise.prototype) {
+            x.then(this._resolve, this._reject);
+            return;
+        }
+
+        try {
+            const then = x.then;
+            if(typeof then === 'function') {
+                let resolve = this._resolve, reject = this._reject;
+                try {
+                    then.call(x,
+                        y => { resolve(y); resolve = reject = this._nop; },
+                        r => { reject(r); resolve = reject = this._nop; }
+                    );
+                }
+                catch(e) {
+                    if(resolve !== this._nop && reject !== this._nop)
+                        this._reject(e);
+                }
+            }
+            else {
+                this._fulfill(x);
+            }
+        }
+        catch(e) {
+            this._reject(e);
+        }
+    }
+
+    /**
+     * No-operation
+     */
+    _nop()
+    {
+    }
+
+    /**
+     * Static no-operation
+     */
+    static _snop()
+    {
+    }
+}
+
+module.exports = { SpeedyPromise };
+
+/*
+// Uncomment to test performance with regular Promises
+module.exports = { SpeedyPromise: Promise };
+Promise.prototype.turbocharge = function() { return this };
+*/
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../../node_modules/process/browser.js */ "./node_modules/process/browser.js")))
+
+/***/ }),
+
 /***/ "./src/utils/types.js":
 /*!****************************!*\
   !*** ./src/utils/types.js ***!
@@ -11428,25 +15754,27 @@ class Utils
      * @param {Function} fn
      */
     //static setZeroTimeout(fn) { setTimeout(fn, 0); } // easier on the CPU
-    static get setZeroTimeout()
+    static setZeroTimeout(fn)
     {
-        return this._setZeroTimeout || (this._setZeroTimeout = (() => {
-            const msgId = '0%' + Math.random().toString(36).slice(2);
-            const queue = [];
-
-            window.addEventListener('message', ev => {
-                if(ev.source === window && ev.data === msgId) {
-                    event.stopPropagation();
-                    queue.shift().call(window);
+        const ctx = (Utils._setZeroTimeoutContext = Utils._setZeroTimeoutContext || (Utils._setZeroTimeoutContext = {
+            callbacks: new Map(),
+            _setup: window.addEventListener('message', ev => {
+                if(ev.source === window) {
+                    const ctx = Utils._setZeroTimeoutContext;
+                    const msgId = ev.data;
+                    const fn = ctx.callbacks.get(msgId);
+                    if(fn !== undefined) {
+                        ev.stopPropagation();
+                        fn.call(window);
+                        ctx.callbacks.delete(msgId);
+                    }
                 }
-            }, true);
+            }, true)
+        }));
 
-            // make it efficient
-            return function setZeroTimeout(fn) {
-                queue.push(fn);
-                window.postMessage(msgId, '*');
-            }
-        })());
+        const msgId = '0%' + Math.random();
+        ctx.callbacks.set(msgId, fn);
+        window.postMessage(msgId, '*');
     }
 
     /**
