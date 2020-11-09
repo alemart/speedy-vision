@@ -654,6 +654,43 @@ class MatrixMath
         }
     }
 
+    /**
+     * Find best-fit solution of Ax = b with least-squares method
+     * A is m x n, b is m x 1, output x is n x 1
+     * (m equations, n unknowns, m >= n)
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs [ A, b ]
+     */
+    static lssolve(header, output, inputs)
+    {
+        const { stride } = header;
+        const [ m, n ] = [ header.rowsOfInputs[0], header.columnsOfInputs[0] ];
+        const tmp = this._createTypedArray(m * (n+1), header.type);
+        const lsHeader = Object.assign({ }, header);
+
+        // find [ Q'b | R ] with reduced QR of A
+        lsHeader.rows = m;
+        lsHeader.columns = n+1;
+        lsHeader.stride = m;
+        lsHeader.custom = { mode: 'reduced-Q\'x' };
+        lsHeader.byteOffset = 0;
+        lsHeader.length = tmp.length;
+        this.qr(lsHeader, tmp, inputs);
+
+        // extract the top n x (n+1) submatrix of [ Q'b | R ]
+        // (the bottom rows are zeros)
+        const triangsys = this._submatrices(lsHeader, output, [ tmp ], stride, [ m ],
+            [ 0, n-1, 0, 0 ],
+            [
+                [ 0, n-1, 0, n ]
+            ]
+        );
+
+        // solve R x = Q'b for x
+        this.backsub(triangsys[0], triangsys[1], triangsys[2]);
+    }
+
 
 
 
@@ -870,6 +907,7 @@ class MatrixMath
             OUTER: 0xD,      // outer product
             QR: 0x10,        // QR decomposition (Householder)
             BACKSUB: 0x11,   // back-substitution
+            LSSOLVE: 0x12,   // least-squares (Ax = b)
         }));
     }
 
@@ -895,6 +933,7 @@ class MatrixMath
             [this.Opcode.OUTER]: this.outer,
             [this.Opcode.QR]: this.qr,
             [this.Opcode.BACKSUB]: this.backsub,
+            [this.Opcode.LSSOLVE]: this.lssolve,
         }));
     }
 }

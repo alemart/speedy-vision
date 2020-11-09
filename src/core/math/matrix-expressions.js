@@ -40,6 +40,7 @@ import {
     MatrixOperationQR,
     MatrixOperationQRSolve,
     MatrixOperationBackSubstitution,
+    MatrixOperationLSSolve,
 } from './matrix-operations';
 
 // constants
@@ -371,24 +372,12 @@ class SpeedyMatrixExpr
      * Find least squares solution for a system of linear equations,
      * i.e., find x such that the 2-norm |b - Ax| is minimized.
      * A is this (m x n) matrix expression, satisfying m >= n
+     * m is the number of equations and n is the number of unknowns
      * @param {SpeedyMatrixExpr} b m x 1 matrix
      */
     lssolve(b)
     {
-        // m: rows (number of equations), n: columns (number of unknowns)
-        const rows = this._rows, columns = this._columns;
-
-        // validate size
-        if(b.rows !== rows || b.columns !== 1)
-            throw new IllegalArgumentError(`lssolve expects a ${rows} x 1 input vector, but received a ${b.rows} x ${b.columns} matrix`);
-        else if(rows < columns)
-            throw new IllegalArgumentError(`lssolve requires an input matrix with more rows than columns (more equations than unknowns). It received a ${rows} x ${columns} matrix`);
-
-        // least squares via reduced QR
-        const qr = new SpeedyMatrixQRSolverNodeExpr(this, b); // [(Q^T) b | R], a m x (1+n) matrix
-        const equations = new SpeedyMatrixReadonlyBlockExpr(qr, 0, columns - 1, 0, columns); // a n x (1+n) matrix
-        const solution = new SpeedyMatrixBackSubstitutionNodeExpr(equations); // output: a n x 1 vector
-        return solution;
+        return new SpeedyMatrixLSSolveNodeExpr(this, b);
     }
 
     /**
@@ -413,8 +402,10 @@ class SpeedyMatrixExpr
         switch(method)
         {
             case 'qr':
-                // TODO: Gaussian elimination
                 return this.lssolve(b);
+
+            // TODO: Gaussian elimination
+            //case 'lu':
 
             default:
                 throw new IllegalArgumentError(`Unknown method for solve: "${method}"`);
@@ -1334,10 +1325,30 @@ class SpeedyMatrixBackSubstitutionNodeExpr extends SpeedyMatrixUnaryExpr
      */
     constructor(input)
     {
-        if(input.columns !== input.rows + 1)
+        if(input.columns != input.rows + 1)
             throw new IllegalArgumentError(`Expected a ${input.rows} x ${input.rows + 1} matrix, but found a ${input.rows} x ${input.columns} matrix`);
 
         super(input.rows, 1, input, MatrixOperationBackSubstitution);
+    }
+}
+
+/**
+ * Find best-fit solution x of Ax = b with least-squares method
+ * A is m x n, b is m x 1, output x is n x 1
+ * (m equations, n unknowns, m >= n)
+ */
+class SpeedyMatrixLSSolveNodeExpr extends SpeedyMatrixBinaryExpr
+{
+    constructor(matrixA, vectorB)
+    {
+        const [ m, n ] = [ matrixA.rows, matrixA.columns ];
+
+        if(m < n)
+            throw new IllegalArgumentError(`Input matrix has more columns than rows - it's ${m} x ${n}`);
+        else if(vectorB.rows != m || vectorB.columns != 1)
+            throw new IllegalArgumentError(`Expected a ${m} x 1 column-vector, but found a ${vectorB.rows} x ${vectorB.columns} matrix`);
+
+        super(n, 1, matrixA, vectorB, MatrixOperationLSSolve);
     }
 }
 

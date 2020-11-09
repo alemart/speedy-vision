@@ -562,3 +562,16 @@ export class MatrixOperationBackSubstitution extends MatrixOperation
         super(Opcode.BACKSUB, input.rows, 1, input.type, [ input ]);
     }
 }
+
+/**
+ * Find best-fit solution x of Ax = b with least-squares method
+ * A is m x n, b is m x 1, output x is n x 1
+ * (m equations, n unknowns, m >= n)
+ */
+export class MatrixOperationLSSolve extends MatrixOperation
+{
+    constructor(matrixA, vectorB)
+    {
+        super(Opcode.LSSOLVE, matrixA.columns, 1, matrixA.type, [ matrixA, vectorB ]);
+    }
+}
