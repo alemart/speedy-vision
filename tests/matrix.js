@@ -278,9 +278,13 @@ describe('Matrix', function() {
             let aat = await AAt.read();
             let ata = await AtA.read();
 
-            await A.print(print); print('*'); await A.transpose().print(print); print('='); await A.times(A.transpose()).print(print);
-            print('----------');
-            await A.transpose().print(print); print('*'); await A.print(print); print('='); await A.transpose().times(A).print(print);
+            await printm(
+                'A:', A,
+                'A^T:', A.transpose(),
+                'A A^T:', A.times(A.transpose()),
+                'A^T A:', A.transpose().times(A),
+                '-----'
+            );
 
             let aat_ = await A.times(A.transpose()).read();
             let ata_ = await A.transpose().times(A).read();
@@ -312,12 +316,12 @@ describe('Matrix', function() {
                 let b = await B.read();
                 let c = multiply(a, scalar);
 
-                await A.print(print);
-                print('*');
-                print(scalar);
-                print('=');
-                await B.print(print);
-                print('---------');
+                await printm(
+                    'A:', A,
+                    'alpha: ' + scalar,
+                    '(alpha) A:', B,
+                    '-----'
+                );
 
                 expect(b).toBeElementwiseEqual(c);
             }
@@ -328,14 +332,38 @@ describe('Matrix', function() {
             let I = Speedy.Matrix.Eye(n);
             let a = await A.read();
 
-            await A.print(print); print('*'); await I.print(print); print('='); await A.times(I).print(print);
-            print('----------');
-            await I.print(print); print('*'); await A.print(print); print('='); await I.times(A).print(print);
+            await printm(
+                'A:', A,
+                'I:', I,
+                'I A:', I.times(A),
+                'A I:', A.times(I)
+            );
 
             let ai = await A.times(I).read();
             let ia = await I.times(A).read();
             expect(ai).toBeElementwiseEqual(a);
             expect(ia).toBeElementwiseEqual(a);
+        });
+
+        it('multiplies a matrix by a column-vector', async function() {
+            let A = Speedy.Matrix(4, 3, [
+                1, 2, 3, 4,
+                5, 6, 7, 8,
+                9, 10, 11, 12,
+            ]);
+            let x = Speedy.Matrix(3, 1, [
+                10, 20, 30,
+            ]);
+            let soln = [ 380, 440, 500, 560 ];
+
+            await printm(
+                'A:', A,
+                'x:', x,
+                'A x:', A.times(x)
+            );
+
+            let ax = await A.times(x).read();
+            expect(ax).toBeElementwiseEqual(soln);
         });
 
         it('does component-wise multiplication', async function() {
@@ -355,7 +383,12 @@ describe('Matrix', function() {
                 -49, -64, -81,
             ]);
 
-            await A.print(print); print('<comp-mult>'); await B.print(print); print('='); await A.compMult(B).print(print);
+            await printm(
+                'A:', A,
+                'B:', B,
+                'A <comp-mult> B:', A.compMult(B),
+                'B <comp-mult> A:', B.compMult(A)
+            );
 
             let a = await A.read();
             let b = await B.read();
