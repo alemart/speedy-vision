@@ -485,6 +485,23 @@ export class MatrixOperationMultiplyRT extends MatrixOperation
 }
 
 /**
+ * Multiply by a column vector,
+ * e.g., y = A x
+ */
+export class MatrixOperationMultiplyVec extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {SpeedyMatrix} matrixA left matrix
+     * @param {SpeedyMatrix} vectorX column-vector
+     */
+    constructor(matrixA, vectorX)
+    {
+        super(Opcode.MULTIPLYVEC, matrixA.rows, 1, matrixA.type, [ matrixA, vectorX ]);
+    }
+}
+
+/**
  * QR decomposition
  */
 export class MatrixOperationQR extends MatrixOperation

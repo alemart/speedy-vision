@@ -34,6 +34,7 @@ import {
     MatrixOperationMultiply,
     MatrixOperationMultiplyLT,
     MatrixOperationMultiplyRT,
+    MatrixOperationMultiplyVec,
     MatrixOperationScale,
     MatrixOperationCompMult,
     MatrixOperationQR,
@@ -1169,6 +1170,10 @@ class SpeedyMatrixMultiplyExpr extends SpeedyMatrixBinaryExpr
             return new SpeedyMatrixMultiplyRTExpr(leftExpr, rightExpr.child);
         }
 
+        // multiply by a column-vector
+        if(rightExpr.columns === 1)
+            return new SpeedyMatrixMultiplyVecExpr(leftExpr, rightExpr);
+
         // regular multiplication
         super(leftExpr.rows, rightExpr.columns, leftExpr, rightExpr, MatrixOperationMultiply);
         if(leftExpr.columns !== rightExpr.rows)
@@ -1211,6 +1216,25 @@ class SpeedyMatrixMultiplyRTExpr extends SpeedyMatrixBinaryExpr
         super(leftExpr.rows, rightExpr.rows, leftExpr, rightExpr, MatrixOperationMultiplyRT);
         if(leftExpr.columns !== rightExpr.columns)
             throw new IllegalArgumentError(`Can't multiply a ${leftExpr.rows} x ${leftExpr.columns} matrix by a ${rightExpr.columns} x ${rightExpr.rows} (transposed) matrix`);
+    }
+}
+
+/**
+ * Multiply a matrix A by a column-vector x,
+ * e.g., y = A x
+ */
+class SpeedyMatrixMultiplyVecExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} leftExpr
+     * @param {SpeedyMatrixExpr} rightExpr
+     */
+    constructor(leftExpr, rightExpr)
+    {
+        super(leftExpr.rows, rightExpr.columns, leftExpr, rightExpr, MatrixOperationMultiplyVec);
+        if(leftExpr.columns !== rightExpr.rows || rightExpr.columns !== 1)
+            throw new IllegalArgumentError(`Can't multiply a ${leftExpr.rows} x ${leftExpr.columns} matrix by a ${rightExpr.rows} x ${rightExpr.columns} matrix / column-vector`);
     }
 }
 

@@ -246,6 +246,30 @@ class MatrixMath
     }
 
     /**
+     * Multiply by a column-vector
+     * (i.e., y = A x)
+     * @param {object} header
+     * @param {TypedArray} output
+     * @param {TypedArray[]} inputs
+     */
+    static multiplyvec(header, output, inputs)
+    {
+        const [ irows ] = header.rowsOfInputs;
+        const [ icolumns ] = header.columnsOfInputs;
+        const [ istride ] = header.strideOfInputs;
+        const [ a, x ] = inputs;
+
+        output.fill(0, 0, irows);
+
+        let i, j, aj, xj;
+        for(aj = j = 0; j < icolumns; j++, aj += istride) {
+            xj = x[j];
+            for(i = 0; i < irows; i++)
+                output[i] += a[aj + i] * xj;
+        }
+    }
+
+    /**
      * Multiply by a constant
      * @param {object} header
      * @param {TypedArray} output
@@ -621,8 +645,11 @@ class MatrixMath
                 x[j] -= x[i] * r[istride * i + j];
 
             rj -= istride;
-            if((rjj = r[rj + j]) === 0)
+            rjj = r[rj + j];
+            /*
+            if(rjj === 0)
                 throw new Error(`Invalid input for backsub: ${j+1}-th diagonal element of the upper triangular matrix is zero`);
+            */
             x[j] /= rjj;
         }
     }
@@ -839,7 +866,8 @@ class MatrixMath
             COMPMULT: 0x9,   // component-wise product
             MULTIPLYLT: 0xA, // multiply tranposing the left operand
             MULTIPLYRT: 0xB, // multiply tranposing the right operand
-            OUTER: 0xC,      // outer product
+            MULTIPLYVEC: 0xC,// multiply by a column-vector
+            OUTER: 0xD,      // outer product
             QR: 0x10,        // QR decomposition (Householder)
             BACKSUB: 0x11,   // back-substitution
         }));
@@ -863,6 +891,7 @@ class MatrixMath
             [this.Opcode.COMPMULT]: this.compmult,
             [this.Opcode.MULTIPLYLT]: this.multiplylt,
             [this.Opcode.MULTIPLYRT]: this.multiplyrt,
+            [this.Opcode.MULTIPLYVEC]: this.multiplyvec,
             [this.Opcode.OUTER]: this.outer,
             [this.Opcode.QR]: this.qr,
             [this.Opcode.BACKSUB]: this.backsub,
