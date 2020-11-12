@@ -27,6 +27,7 @@ import { SpeedyFeatureTrackerFactory } from './speedy-feature-tracker-factory';
 import { SpeedyFlags } from './speedy-flags';
 import { SpeedyVector2 } from './math/speedy-vector';
 import { SpeedyMatrixExprFactory } from './math/matrix-expressions';
+import { SpeedyPromise } from '../utils/speedy-promise';
 import { IllegalArgumentError } from '../utils/errors';
 
 // Constants
@@ -123,6 +124,15 @@ export class Speedy
     static get Matrix()
     {
         return matrixExprFactory;
+    }
+
+    /**
+     * Speedy Promises
+     * @returns {Function}
+     */
+    static get Promise()
+    {
+        return SpeedyPromise;
     }
 }
 
