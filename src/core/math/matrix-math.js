@@ -660,13 +660,13 @@ class MatrixMath
      * (m equations, n unknowns, m >= n)
      * @param {object} header
      * @param {TypedArray} output
-     * @param {TypedArray[]} inputs [ A, b ]
+     * @param {TypedArray[]} inputs [ A, b [,tmp] ] where optional tmp is m x (n+1)
      */
     static lssolve(header, output, inputs)
     {
         const { stride } = header;
         const [ m, n ] = [ header.rowsOfInputs[0], header.columnsOfInputs[0] ];
-        const tmp = this._createTypedArray(m * (n+1), header.type);
+        const tmp = inputs[2] || this._createTypedArray(m * (n+1), header.type);
         const lsHeader = Object.assign({ }, header);
 
         // find [ Q'b | R ] with reduced QR of A
@@ -676,7 +676,7 @@ class MatrixMath
         lsHeader.custom = { mode: 'reduced-Q\'x' };
         lsHeader.byteOffset = 0;
         lsHeader.length = tmp.length;
-        this.qr(lsHeader, tmp, inputs);
+        this.qr(lsHeader, tmp, [ inputs[0], inputs[1] ]);
 
         // extract the top n x (n+1) submatrix of [ Q'b | R ]
         // (the bottom rows are zeros)
