@@ -155,6 +155,24 @@ export class Utils
     }
 
     /**
+     * Are we in a little-endian platform?
+     * @returns {boolean}
+     */
+    static isLittleEndian()
+    {
+        if(Utils._isLittleEndian !== undefined)
+            return Utils._isLittleEndian;
+
+        const buf = new ArrayBuffer(2);
+        const u8 = new Uint8Array(buf);
+        const u16 = new Uint16Array(buf);
+
+        u8[1] = 0xCA; u8[0] = 0xFE;
+
+        return Utils._isLittleEndian = (u16[0] == 0xCAFE);
+    }
+
+    /**
      * Creates a <canvas> element with the given dimensions
      * @param {number} width in pixels
      * @param {number} height in pixels
