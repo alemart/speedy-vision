@@ -246,14 +246,32 @@ export class SpeedyProgram extends Function
     }
 
     /**
+     * Width of the internal texture, in pixels
+     * @returns {number}
+     */
+    get width()
+    {
+        return this._stdprog.width;
+    }
+
+    /**
+     * Height of the internal texture, in pixels
+     * @returns {number}
+     */
+    get height()
+    {
+        return this._stdprog.height;
+    }
+
+    /**
      * Clear the internal textures to a color
-     * @param {number} [r] in [0,1]
-     * @param {number} [g] in [0,1]
-     * @param {number} [b] in [0,1]
+     * @param {number} r in [0,1]
+     * @param {number} g in [0,1]
+     * @param {number} b in [0,1]
      * @param {number} [a] in [0,1]
      * @returns {SpeedyTexture}
      */
-    clear(r = 1.0, g = 1.0, b = 1.0, a = 1.0)
+    clear(r, g, b, a = 1.0)
     {
         const gl = this._gl;
         const stdprog = this._stdprog;
