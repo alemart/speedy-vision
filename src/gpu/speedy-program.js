@@ -579,12 +579,16 @@ function StandardProgram(gl, width, height, shaderdecl, uniforms = { })
     this.height = height;
     this.dirtySize = false;
     this.vertexObjects = vertexObjects;
-    this._fbo = this._texture = null; this._texIndex = 0;
+    this._fbo = this._texture = null;
+    this._texIndex = 0;
     Object.defineProperty(this, 'fbo', {
         get: () => this._fbo ? this._fbo[this._texIndex] : null
     });
     Object.defineProperty(this, 'texture', {
         get: () => this._texture ? this._texture[this._texIndex] : null
+    });
+    Object.defineProperty(this, 'pingpongTexture', {
+        get: () => this._texture && this._texture.length > 1 ? this._texture[1 - this._texIndex] : null
     });
 }
 
