@@ -41,6 +41,7 @@ const KEYPOINT_BUFFER_LENGTH = 1024; // maximum number of keypoints that can be 
 
 
 
+
 //
 // Shaders
 //
@@ -317,10 +318,19 @@ export class GPUEncoders extends SpeedyProgramGroup
             const sizeofVec4 = Float32Array.BYTES_PER_ELEMENT * 4; // 16
             const internalBuffer = new ArrayBuffer(sizeofVec4 * KEYPOINT_BUFFER_LENGTH);
             this._uploadBuffer = new Float32Array(internalBuffer);
+
+            // UBOs can hold at least 16KB of data (each keypoint uses 16 bytes)
+            Utils.assert(internalBuffer.byteLength <= 16384);
+        }
+
+        // Too many keypoints?
+        const keypointCount = keypoints.length;
+        if(keypointCount > KEYPOINT_BUFFER_LENGTH) {
+            // TODO: multipass
+            throw new NotSupportedError(`Can't upload ${keypointCount} keypoints: maximum is currently ${KEYPOINT_BUFFER_LENGTH}`);
         }
 
         // Format data as follows: (xpos, ypos, lod, score)
-        const keypointCount = keypoints.length;
         for(let i = 0; i < keypointCount; i++) {
             const keypoint = keypoints[i];
             const j = i * 4;
