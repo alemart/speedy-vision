@@ -24,6 +24,7 @@
 uniform int keypointCount; // how many keypoints
 uniform int encoderLength;
 uniform int descriptorSize; // in bytes
+uniform int extraSize; // in bytes
 
 #ifndef KEYPOINT_BUFFER_LENGTH
 #error Must specify KEYPOINT_BUFFER_LENGTH
@@ -38,8 +39,8 @@ layout(std140) uniform KeypointBuffer
 void main()
 {
     ivec2 thread = threadLocation();
-    KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);
-    int q = findKeypointIndex(address, descriptorSize);
+    KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);
+    int q = findKeypointIndex(address, descriptorSize, extraSize);
 
     // q-th keypoint doesn't exist
     color = vec4(1.0f);
@@ -70,7 +71,7 @@ void main()
         }
 
         default: {
-            // keypoint descriptor
+            // keypoint descriptor or extra data
             color = vec4(0.0f);
             break;
         }

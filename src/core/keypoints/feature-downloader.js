@@ -141,18 +141,19 @@ export class FeatureDownloader extends Observable
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
      * @param {number} descriptorSize in bytes (set it to zero if there is no descriptor)
+     * @param {number} extraSize in bytes (set it to zero if there is no extra data)
      * @param {number} [max] cap the number of keypoints to this value
      * @param {boolean} [useAsyncTransfer] transfer keypoints asynchronously
      * @param {object} [output] output object with additional info about the keypoints (see the encoder for details)
      * @returns {Promise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, descriptorSize, max = -1, useAsyncTransfer = true, output = undefined)
+    download(gpu, encodedKeypoints, descriptorSize, extraSize, max = -1, useAsyncTransfer = true, output = undefined)
     {
         return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer, this._useBufferedDownloads).then(data => {
 
             // decode the keypoints
             const out = Object.assign({ discardCount: [0] }, output);
-            const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize, out);
+            const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize, extraSize, out);
 
             // how many keypoints do we expect in the next frame?
             const nextCount = this._estimator.estimate(keypoints.length - out.discardCount[0]);
@@ -163,12 +164,12 @@ export class FeatureDownloader extends Observable
                 // add slack (maxGrowth) to accomodate abrupt changes in the number of keypoints
                 const capacity = Math.max(nextCount, MIN_KEYPOINTS);
                 const extraCapacity = this._estimator.maxGrowth * capacity;
-                gpu.programs.encoders.optimize(extraCapacity, descriptorSize);
+                gpu.programs.encoders.optimize(extraCapacity, descriptorSize, extraSize);
             }
             else {
                 // static usage
                 const capacity = Math.max(nextCount, MIN_KEYPOINTS);
-                gpu.programs.encoders.reserveSpace(capacity, descriptorSize);
+                gpu.programs.encoders.reserveSpace(capacity, descriptorSize, extraSize);
             }
 
             // cap the number of keypoints if requested to do so
@@ -194,13 +195,14 @@ export class FeatureDownloader extends Observable
      * (i.e., how many keypoints it can deliver)
      * @param {SpeedyGPU} gpu
      * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
      */
-    reset(gpu, descriptorSize)
+    reset(gpu, descriptorSize, extraSize)
     {
         const capacity = INITIAL_KEYPOINTS_GUESS;
 
         this._estimator.reset();
-        gpu.programs.encoders.reserveSpace(capacity, descriptorSize);
+        gpu.programs.encoders.reserveSpace(capacity, descriptorSize, extraSize);
     }
 
     /**

@@ -53,6 +53,7 @@ export class FASTFeatures extends FeatureDetectionAlgorithm
     {
         const normalizedThreshold = threshold / 255.0;
         const descriptorSize = this.descriptorSize;
+        const extraSize = this.extraSize;
 
         // find corners
         let corners = null;
@@ -69,7 +70,7 @@ export class FASTFeatures extends FeatureDetectionAlgorithm
         corners = gpu.programs.keypoints.nonmaxSuppression(corners);
 
         // encode corners
-        return gpu.programs.encoders.encodeKeypoints(corners, descriptorSize);
+        return gpu.programs.encoders.encodeKeypoints(corners, descriptorSize, extraSize);
     }
 }
 
@@ -96,6 +97,7 @@ export class MultiscaleFASTFeatures extends FASTFeatures
         const normalizedThreshold = threshold / 255.0;
         const numberOfOctaves = 2 * depth - 1;
         const descriptorSize = this.descriptorSize;
+        const extraSize = this.extraSize;
 
         // generate pyramid
         const pyramid = inputTexture.generateMipmap();
@@ -112,7 +114,7 @@ export class MultiscaleFASTFeatures extends FASTFeatures
         corners = gpu.programs.keypoints.multiscaleSuppression(corners);
 
         // encode keypoints
-        return gpu.programs.encoders.encodeKeypoints(corners, descriptorSize);
+        return gpu.programs.encoders.encodeKeypoints(corners, descriptorSize, extraSize);
     }
 
     /**
@@ -125,14 +127,15 @@ export class MultiscaleFASTFeatures extends FASTFeatures
      */
     describe(gpu, inputTexture, detectedKeypoints)
     {
-        const descriptorSize = this.descriptorSize;
         const orientationPatchRadius = DEFAULT_ORIENTATION_PATCH_RADIUS;
+        const descriptorSize = this.descriptorSize;
+        const extraSize = this.extraSize;
 
         // generate pyramid
         const pyramid = inputTexture.generateMipmap();
 
         // compute orientation
         const encoderLength = gpu.programs.encoders.encoderLength;
-        return gpu.programs.keypoints.orientationViaCentroid(pyramid, detectedKeypoints, orientationPatchRadius, descriptorSize, encoderLength);
+        return gpu.programs.keypoints.orientationViaCentroid(pyramid, detectedKeypoints, orientationPatchRadius, descriptorSize, extraSize, encoderLength);
     }
 }

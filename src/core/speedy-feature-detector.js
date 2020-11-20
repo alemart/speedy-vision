@@ -98,7 +98,7 @@ class SpeedyFeatureDetector
         // Allocate encoder space for static media
         if(isStaticMedia) {
             const INITIAL_KEYPOINT_GUESS = 1024 * 3;
-            gpu.programs.encoders.reserveSpace(INITIAL_KEYPOINT_GUESS, this._algorithm.descriptorSize);
+            gpu.programs.encoders.reserveSpace(INITIAL_KEYPOINT_GUESS, this._algorithm.descriptorSize, this._algorithm.extraSize);
         }
 
         // Upload & preprocess media

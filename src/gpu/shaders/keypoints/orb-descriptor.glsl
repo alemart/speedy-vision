@@ -35,6 +35,7 @@
 uniform sampler2D encodedCorners;
 uniform int encoderLength;
 uniform sampler2D pyramid; // previously smoothed with a Gaussian
+uniform int extraSize; // in bytes
 
 // ORB constants
 const int descriptorSize = 32; // 32 bytes = 256 bits = 8 pixels
@@ -319,8 +320,8 @@ void main()
 {
     vec4 pixel = threadPixel(encodedCorners);
     ivec2 thread = threadLocation();
-    KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);
-    int descriptorCell = address.offset - 2;
+    KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);
+    int descriptorCell = address.offset - extraSize - 2;
 
     // this is not a descriptor cell?
     color = pixel;

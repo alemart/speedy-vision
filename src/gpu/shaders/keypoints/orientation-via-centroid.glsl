@@ -24,7 +24,8 @@
 uniform sampler2D pyramid; // image pyramid (patch size depends on keypoint scale)
 uniform sampler2D encodedKeypoints; // encoded keypoints
 uniform int patchRadius; // use a circular patch of radius <= 7 (for lod = 0)
-uniform int descriptorSize;
+uniform int descriptorSize; // in bytes
+uniform int extraSize; // in bytes
 uniform int encoderLength;
 
 // Circular patches around the origin
@@ -97,7 +98,7 @@ void main()
 {
     vec4 pixel = threadPixel(encodedKeypoints);
     ivec2 thread = threadLocation();
-    KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);
+    KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);
 
     // this is not the keypoint properties cell?
     color = pixel;

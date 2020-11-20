@@ -91,14 +91,15 @@ class SpeedyFeatureTracker
         const nextImage = this._inputTexture;
         const prevImage = this._prevInputTexture;
         const descriptorSize = this._descriptionAlgorithm != null ? this._descriptionAlgorithm.descriptorSize : 0;
+        const extraSize = this._descriptionAlgorithm != null ? this._descriptionAlgorithm.extraSize : 0;
         const useAsyncTransfer = (this._media.options.usage != 'static');
 
-        // reserve space for the encoder
-        gpu.programs.encoders.reserveSpace(keypoints.length, descriptorSize);
+        // adjust the size of the encoder
+        gpu.programs.encoders.optimize(keypoints.length, descriptorSize, extraSize);
 
         // upload & track keypoints
-        const prevKeypoints = this._trackingAlgorithm.upload(gpu, keypoints, descriptorSize);
-        const trackedKeypoints = this._trackFeatures(gpu, nextImage, prevImage, prevKeypoints, descriptorSize);
+        const prevKeypoints = this._trackingAlgorithm.upload(gpu, keypoints, descriptorSize, extraSize);
+        const trackedKeypoints = this._trackFeatures(gpu, nextImage, prevImage, prevKeypoints, descriptorSize, extraSize);
 
         // compute feature descriptors (if an algorithm is provided)
         const trackedKeypointsWithDescriptors = this._descriptionAlgorithm == null ? trackedKeypoints :
@@ -106,7 +107,7 @@ class SpeedyFeatureTracker
 
         // download keypoints
         const discard = [];
-        return this._trackingAlgorithm.download(gpu, trackedKeypointsWithDescriptors, descriptorSize, useAsyncTransfer, discard).then(trackedKeypoints => {
+        return this._trackingAlgorithm.download(gpu, trackedKeypointsWithDescriptors, descriptorSize, extraSize, useAsyncTransfer, discard).then(trackedKeypoints => {
             const filteredKeypoints = [];
 
             // initialize output arrays
@@ -177,9 +178,10 @@ class SpeedyFeatureTracker
      * @param {SpeedyTexture} prevImage
      * @param {SpeedyTexture} prevKeypoints tiny texture
      * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
      * @returns {SpeedyTexture}
      */
-    _trackFeatures(gpu, nextImage, prevImage, prevKeypoints, descriptorSize)
+    _trackFeatures(gpu, nextImage, prevImage, prevKeypoints, descriptorSize, extraSize)
     {
         // template method
         return this._trackingAlgorithm.track(
@@ -187,7 +189,8 @@ class SpeedyFeatureTracker
             nextImage,
             prevImage,
             prevKeypoints,
-            descriptorSize
+            descriptorSize,
+            extraSize
         );
     }
 }
@@ -221,9 +224,10 @@ export class LKFeatureTracker extends SpeedyFeatureTracker
      * @param {SpeedyTexture} prevImage
      * @param {SpeedyTexture} prevKeypoints tiny texture
      * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
      * @returns {SpeedyTexture}
      */
-    _trackFeatures(gpu, nextImage, prevImage, prevKeypoints, descriptorSize)
+    _trackFeatures(gpu, nextImage, prevImage, prevKeypoints, descriptorSize, extraSize)
     {
         return this._trackingAlgorithm.track(
             gpu,
@@ -231,6 +235,7 @@ export class LKFeatureTracker extends SpeedyFeatureTracker
             prevImage,
             prevKeypoints,
             descriptorSize,
+            extraSize,
             this._windowSize,
             this._depth,
             this._discardThreshold

@@ -24,6 +24,7 @@ import { FeatureAlgorithm } from './feature-algorithm';
 import { SpeedyFeature } from '../speedy-feature';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../gpu/speedy-texture';
+import { Utils } from '../../utils/utils';
 
 /**
  * An abstract class for feature
@@ -38,6 +39,7 @@ export class FeatureDetectionAlgorithm extends FeatureAlgorithm
     constructor()
     {
         super();
+        this._extraSize = 0; // extra header size, in bytes (for encoded keypoint textures)
         this._downloader.enableBufferedDownloads();
     }
 
@@ -92,7 +94,7 @@ export class FeatureDetectionAlgorithm extends FeatureAlgorithm
     download(gpu, encodedKeypoints, max = undefined, useAsyncTransfer = true)
     {
         // download feature points
-        const keypoints = this._downloader.download(gpu, encodedKeypoints, this.descriptorSize, max, useAsyncTransfer);
+        const keypoints = this._downloader.download(gpu, encodedKeypoints, this.descriptorSize, this.extraSize, max, useAsyncTransfer);
 
         // restore buffered downloads (if previously disabled) for improved performance
         if(!this._downloader.usingBufferedDownloads())
@@ -114,6 +116,28 @@ export class FeatureDetectionAlgorithm extends FeatureAlgorithm
         this._downloader.disableBufferedDownloads();
 
         // reset the downloader
-        super.resetDownloader(gpu, this.descriptorSize);
+        super.resetDownloader(gpu, this.descriptorSize, this.extraSize);
+    }
+
+    /**
+     * Extra size of the headers of the encoded keypoint texture
+     * By default, this is set to zero
+     * @return {number} in bytes
+     */
+    get extraSize()
+    {
+        return this._extraSize;
+    }
+
+    /**
+     * Set the extra size of the headers of the encoded keypoint texture
+     * By default, this is set to zero
+     * This is low-level stuff!
+     * @param {number} bytes a multiple of 4 (32 bits)
+     */
+    set extraSize(bytes)
+    {
+        this._extraSize = Math.max(0, bytes | 0);
+        Utils.assert(this._extraSize % 4 === 0); // stored as a pixel
     }
 }

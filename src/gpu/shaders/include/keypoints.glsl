@@ -22,10 +22,10 @@
 /*
  * Keypoints are encoded as follows:
  *
- * each keypoint takes (2 + N/4) pixels of 32 bits
+ * each keypoint takes (2 + M/4 + N/4) pixels of 32 bits
  *
- *    1 pixel        1 pixel         N/4 pixels
- * [  X  |  Y  ][ S | R | C | * ][  ...  D  ...  ]
+ *    1 pixel        1 pixel       M/4 pixels      N/4 pixels
+ * [  X  |  Y  ][ S | R | C | * ][ ... E ... ][  ...  D  ...  ]
  *
  * X: keypoint_xpos (2 bytes)
  * Y: keypoint_ypos (2 bytes)
@@ -33,6 +33,7 @@
  * R: keypoint_rotation (1 byte)
  * C: keypoint_cornerness_score (1 byte)
  * *: general purpose user_data (1 byte)
+ * E: extra binary string (M bytes)
  * D: descriptor binary string (N bytes)
  *
  *
@@ -91,17 +92,19 @@ struct KeypointAddress
  * The size of an encoded keypoint in bytes
  * (must be a multiple of 4 - that's 32 bits per pixel)
  * @param {int} descriptorSize in bytes
+ * @param {int} extraSize in bytes
  * @returns {int}
  */
-#define sizeofEncodedKeypoint(descriptorSize) (8 + (descriptorSize))
+#define sizeofEncodedKeypoint(descriptorSize, extraSize) (8 + (descriptorSize) + (extraSize))
 
 /**
  * Find the keypoint index given its base address
  * @param {KeypointAddress} address
  * @param {int} descriptorSize in bytes
+ * @param {int} extraSize in bytes
  * @returns {int} a number in { 0, 1, 2, ..., keypointCount - 1 }
  */
-#define findKeypointIndex(address, descriptorSize) ((address).base / ((sizeofEncodedKeypoint(descriptorSize)) / 4))
+#define findKeypointIndex(address, descriptorSize, extraSize) ((address).base / ((sizeofEncodedKeypoint((descriptorSize), (extraSize))) / 4))
 
 /**
  * Given a thread location, return the corresponding keypoint base address & offset
@@ -110,12 +113,13 @@ struct KeypointAddress
  * @param {ivec2} thread The desired thread from which to decode the keypoint, usually threadLocation()
  * @param {int} encoderLength encoded keypoint texture is encoderLength x encoderLength
  * @param {int} descriptorSize in bytes
+ * @param {int} extraSize in bytes
  * @returns {KeypointAddress}
  */
-KeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descriptorSize)
+KeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descriptorSize, int extraSize)
 {
     int threadRaster = thread.y * encoderLength + thread.x;
-    int pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize) / 4;
+    int pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;
     KeypointAddress address;
 
     // get the keypoint address in the encoded texture

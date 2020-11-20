@@ -28,6 +28,7 @@ uniform int windowSize; // odd number - typical values: 5, 7, 11, ..., 21
 uniform int depth; // how many pyramid layers to check (1, 2, 3, 4...)
 uniform int firstKeypointIndex, lastKeypointIndex; // process only these keypoints in this pass of the shader
 uniform int descriptorSize; // in bytes
+uniform int extraSize; // in bytes
 uniform int encoderLength;
 
 // iterative LK for improved accuracy
@@ -220,7 +221,7 @@ void main()
 {
     vec4 pixel = threadPixel(prevKeypoints);
     ivec2 thread = threadLocation();
-    KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);
+    KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);
     int r = windowRadius();
 
     // not a position cell?
@@ -234,7 +235,7 @@ void main()
         return;
 
     // we'll only compute optical-flow for a subset of all keypoints in this pass of the shader
-    int idx = findKeypointIndex(address, descriptorSize);
+    int idx = findKeypointIndex(address, descriptorSize, extraSize);
     if(idx < firstKeypointIndex || idx > lastKeypointIndex)
         return;
 

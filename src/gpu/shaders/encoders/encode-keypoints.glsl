@@ -37,6 +37,7 @@ uniform sampler2D image;
 uniform ivec2 imageSize;
 uniform int encoderLength;
 uniform int descriptorSize;
+uniform int extraSize;
 
 // q = 0, 1, 2... keypoint index
 bool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)
@@ -60,12 +61,12 @@ bool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)
 void main()
 {
     ivec2 thread = threadLocation();
-    KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize);
-    int q = findKeypointIndex(address, descriptorSize);
+    KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);
+    int q = findKeypointIndex(address, descriptorSize, extraSize);
     ivec2 position;
     vec4 pixel;
 
-    // is it a descriptor cell?
+    // is it a descriptor/extra cell?
     color = vec4(0.0f); // fill it with zeroes
     if(address.offset > 1)
         return;

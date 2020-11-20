@@ -21,6 +21,7 @@
 
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
+import { Utils } from '../../utils/utils';
 
 
 
@@ -91,7 +92,8 @@ const brisk = importShader('keypoints/brisk.glsl')
 //
 // ORB feature description
 //
-const orb = importShader('keypoints/orb-descriptor.glsl').withArguments('pyramid', 'encodedCorners', 'encoderLength');
+const orb = importShader('keypoints/orb-descriptor.glsl')
+           .withArguments('pyramid', 'encodedCorners', 'extraSize', 'encoderLength');
 
 
 
@@ -109,7 +111,7 @@ const multiscaleSobel = importShader('filters/multiscale-sobel.glsl').withArgume
 
 // compute keypoint orientation
 const orientationViaCentroid = importShader('keypoints/orientation-via-centroid.glsl')
-                              .withArguments('pyramid', 'encodedKeypoints', 'patchRadius', 'descriptorSize', 'encoderLength')
+                              .withArguments('pyramid', 'encodedKeypoints', 'patchRadius', 'descriptorSize', 'extraSize', 'encoderLength')
 
 
 
@@ -178,13 +180,16 @@ export class GPUKeypoints extends SpeedyProgramGroup
      * Compute ORB descriptor (256 bits)
      * @param {SpeedyTexture} pyramid pre-smoothed on the intensity channel
      * @param {SpeedyTexture} encodedKeypoints tiny texture
+     * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
      * @param {number} encoderLength
      * @returns {SpeedyTexture}
      */
-    orb(pyramid, encodedKeypoints, encoderLength)
+    orb(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength)
     {
+        Utils.assert(descriptorSize === 32);
         this._orb.resize(encoderLength, encoderLength);
-        return this._orb(pyramid, encodedKeypoints, encoderLength);
+        return this._orb(pyramid, encodedKeypoints, extraSize, encoderLength);
     }
 
     /**
@@ -194,12 +199,13 @@ export class GPUKeypoints extends SpeedyProgramGroup
      * @param {SpeedyTexture} encodedKeypoints tiny texture
      * @param {number} patchRadius radius of a circular patch used to compute the radius when lod = 0 (e.g., 7)
      * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
      * @param {number} encoderLength
      * @returns {SpeedyTexture}
      */
-    orientationViaCentroid(pyramid, encodedKeypoints, patchRadius, descriptorSize, encoderLength)
+    orientationViaCentroid(pyramid, encodedKeypoints, patchRadius, descriptorSize, extraSize, encoderLength)
     {
         this._orientationViaCentroid.resize(encoderLength, encoderLength);
-        return this._orientationViaCentroid(pyramid, encodedKeypoints, patchRadius, descriptorSize, encoderLength);
+        return this._orientationViaCentroid(pyramid, encodedKeypoints, patchRadius, descriptorSize, extraSize, encoderLength);
     }
 }

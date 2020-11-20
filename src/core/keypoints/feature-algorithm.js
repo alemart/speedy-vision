@@ -56,13 +56,12 @@ export class FeatureAlgorithm
      * Reset the capacity of the keypoint downloader
      * @param {SpeedyGPU} gpu 
      * @param {number} descriptorSize
+     * @param {number} extraSize
      */
-    resetDownloader(gpu, descriptorSize)
+    resetDownloader(gpu, descriptorSize, extraSize)
     {
-        if(descriptorSize === undefined)
-            throw new IllegalArgumentError();
-
-        this._downloader.reset(gpu, descriptorSize);
+        Utils.assert(descriptorSize !== undefined && extraSize !== undefined);
+        this._downloader.reset(gpu, descriptorSize, extraSize);
 
         // note: buffered responses imply a 1-frame delay
         if(this._downloader.usingBufferedDownloads())

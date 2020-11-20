@@ -46,9 +46,10 @@ export class FeatureTrackingAlgorithm extends FeatureAlgorithm
      * @param {SpeedyTexture} prevImage previous image (time: t-1)
      * @param {SpeedyTexture} prevKeypoints tiny texture with encoded keypoints (time: t-1)
      * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
      * @returns {SpeedyTexture} nextKeypoints tiny texture with encoded keypoints (time: t)
      */
-    track(gpu, nextImage, prevImage, prevKeypoints, descriptorSize)
+    track(gpu, nextImage, prevImage, prevKeypoints, descriptorSize, extraSize)
     {
         throw new AbstractMethodError();
     }
@@ -58,14 +59,15 @@ export class FeatureTrackingAlgorithm extends FeatureAlgorithm
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
      * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
      * @param {boolean} [useAsyncTransfer] transfer feature points asynchronously
      * @param {boolean[]} [discard] i-th element will be true if the i-th should be discarded
      * @returns {Promise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, descriptorSize, useAsyncTransfer = true, discard = undefined)
+    download(gpu, encodedKeypoints, descriptorSize, extraSize, useAsyncTransfer = true, discard = undefined)
     {
         const output = discard ? { discard: discard, userData: [] } : undefined;
-        return this._downloader.download(gpu, encodedKeypoints, descriptorSize, undefined, useAsyncTransfer, output).then(keypoints => {
+        return this._downloader.download(gpu, encodedKeypoints, descriptorSize, extraSize, undefined, useAsyncTransfer, output).then(keypoints => {
             // discard keypoints if they are outside
             // the image or if they are of "bad quality"
             if(discard) {
@@ -82,10 +84,11 @@ export class FeatureTrackingAlgorithm extends FeatureAlgorithm
      * @param {SpeedyGPU} gpu
      * @param {SpeedyFeature[]} keypoints feature points
      * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
      * @returns {SpeedyTexture}
      */
-    upload(gpu, keypoints, descriptorSize)
+    upload(gpu, keypoints, descriptorSize, extraSize)
     {
-        return gpu.programs.encoders.uploadKeypoints(keypoints, descriptorSize);
+        return gpu.programs.encoders.uploadKeypoints(keypoints, descriptorSize, extraSize);
     }
 }

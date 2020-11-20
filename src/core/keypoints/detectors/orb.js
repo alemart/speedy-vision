@@ -62,6 +62,9 @@ export class ORBFeatures extends MultiscaleHarrisFeatures
      */
     describe(gpu, inputTexture, detectedKeypoints)
     {
+        const descriptorSize = this.descriptorSize;
+        const extraSize = this.extraSize;
+
         // get oriented keypoints
         const orientedKeypoints = super.describe(gpu, inputTexture, detectedKeypoints);
 
@@ -71,6 +74,6 @@ export class ORBFeatures extends MultiscaleHarrisFeatures
 
         // compute ORB feature descriptors
         const encoderLength = gpu.programs.encoders.encoderLength;
-        return gpu.programs.keypoints.orb(smoothPyramid, orientedKeypoints, encoderLength);
+        return gpu.programs.keypoints.orb(smoothPyramid, orientedKeypoints, descriptorSize, extraSize, encoderLength);
     }
 }
