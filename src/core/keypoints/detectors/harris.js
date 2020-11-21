@@ -23,8 +23,11 @@ import { SpeedyGPU } from '../../../gpu/speedy-gpu';
 import { FeatureDetectionAlgorithm } from '../feature-detection-algorithm';
 import { PixelComponent } from '../../../utils/types';
 import { PYRAMID_MAX_LEVELS } from '../../../utils/globals';
+import { Utils } from '../../../utils/utils';
 
 // constants
+const DEFAULT_QUALITY = 0.9; // default quality metric
+const DEFAULT_DEPTH = 3; // default depth for multiscale feature detection
 const DEFAULT_WINDOW_SIZE = 3; // compute Harris autocorrelation matrix within a 3x3 window
 const MIN_WINDOW_SIZE = 0; // minimum window size when computing the autocorrelation matrix
 const MAX_WINDOW_SIZE = 7; // maximum window size when computing the autocorrelation matrix
@@ -37,22 +40,42 @@ const SOBEL_OCTAVE_COUNT = 2 * PYRAMID_MAX_LEVELS - 1; // Sobel derivatives for 
 export class HarrisFeatures extends FeatureDetectionAlgorithm
 {
     /**
-     * Harris has no keypoint descriptor
+     * Constructor
      */
-    get descriptorSize()
+    constructor()
     {
-        return 0;
+        super();
+        this._quality = DEFAULT_QUALITY;
     }
 
     /**
-     * Detect feature points
+     * Get detector quality
+     * @returns {number}
+     */
+    get quality()
+    {
+        return this._quality;
+    }
+
+    /**
+     * Set detector quality
+     * @param {number} value a number in [0,1]: we will pick corners having score >= quality * max(score)
+     */
+    set quality(value)
+    {
+        this._quality = +value;
+        Utils.assert(this._quality >= 0 && this._quality <= 1);
+    }
+
+    /**
+     * Run the Harris corner detector
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} inputTexture pre-processed greyscale image
-     * @param {number} [quality] a value in [0,1]: will pick corners having score >= quality * max(score)
      * @returns {SpeedyTexture} encoded keypoints
      */
-    detect(gpu, inputTexture, quality = 0.1)
+    _detect(gpu, inputTexture)
     {
+        const quality = this._quality;
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
         const windowSize = DEFAULT_WINDOW_SIZE;
@@ -85,18 +108,66 @@ export class HarrisFeatures extends FeatureDetectionAlgorithm
 /**
  * Harris corner detector in an image pyramid
  */
-export class MultiscaleHarrisFeatures extends HarrisFeatures
+export class MultiscaleHarrisFeatures extends FeatureDetectionAlgorithm
 {
+    /**
+     * Constructor
+     */
+    constructor()
+    {
+        super();
+        this._quality = DEFAULT_QUALITY;
+        this._depth = DEFAULT_DEPTH;
+    }
+
+    /**
+     * Get detector quality
+     * @returns {number}
+     */
+    get quality()
+    {
+        return this._quality;
+    }
+
+    /**
+     * Set detector quality
+     * @param {number} value a number in [0,1]: we will pick corners having score >= quality * max(score)
+     */
+    set quality(value)
+    {
+        this._quality = +value;
+        Utils.assert(this._quality >= 0 && this._quality <= 1);
+    }
+
+    /**
+     * Get depth: how many pyramid levels we will scan
+     * @returns {number}
+     */
+    get depth()
+    {
+        return this._depth;
+    }
+
+    /**
+     * Set depth: how many pyramid levels we will scan
+     * @param {number} value 1, 2, 3...
+     */
+    set depth(value)
+    {
+        this._depth = value | 0;
+        Utils.assert(this._depth >= 1 && this._depth <= PYRAMID_MAX_LEVELS);
+    }
+
     /**
      * Detect feature points
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} inputTexture pre-processed greyscale image
-     * @param {number} [quality] a value in [0,1]: will pick corners having score >= quality * max(score)
-     * @param {number} [depth] how many pyramid levels will be scanned
      * @returns {SpeedyTexture} encoded keypoints
      */
-    detect(gpu, inputTexture, quality = 0.1, depth = 3)
+    _detect(gpu, inputTexture)
     {
+        const quality = this._quality;
+        const depth = this._depth;
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
         const windowSize = DEFAULT_WINDOW_SIZE;
@@ -130,18 +201,20 @@ export class MultiscaleHarrisFeatures extends HarrisFeatures
         const suppressed2 = gpu.programs.keypoints.multiscaleSuppression(suppressed1);
 
         // encode keypoints
-        return gpu.programs.encoders.encodeKeypoints(suppressed2, descriptorSize, extraSize);
+        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(suppressed2, descriptorSize, extraSize);
+
+        // compute orientation
+        return this._computeOrientation(gpu, inputTexture, detectedKeypoints);
     }
 
     /**
-     * Describe feature points
-     * (actually, this just orients the keypoints, since this algorithm has no built-in descriptor)
+     * Compute the orientation of the keypoints
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} inputTexture pre-processed greyscale image
      * @param {SpeedyTexture} detectedKeypoints tiny texture with appropriate size for the descriptors
      * @returns {SpeedyTexture} tiny texture with encoded keypoints & descriptors
      */
-    describe(gpu, inputTexture, detectedKeypoints)
+    _computeOrientation(gpu, inputTexture, detectedKeypoints)
     {
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;

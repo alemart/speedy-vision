@@ -19,15 +19,15 @@
  * Feature detection API
  */
 
+import { IllegalArgumentError, IllegalOperationError, AbstractMethodError, NotSupportedError, NotImplementedError } from '../utils/errors';
 import { ColorFormat } from '../utils/types'
-import { PYRAMID_MAX_LEVELS } from '../utils/globals';
-import { IllegalArgumentError, IllegalOperationError, AbstractMethodError, NotSupportedError } from '../utils/errors';
 import { SpeedyFlags } from './speedy-flags';
 import { SpeedyGPU } from '../gpu/speedy-gpu';
 import { SpeedyTexture } from '../gpu/speedy-texture';
 import { SpeedyMedia } from './speedy-media';
 import { AutomaticSensitivity } from './keypoints/automatic-sensitivity';
 import { FeatureDetectionAlgorithm } from './keypoints/feature-detection-algorithm';
+import { FeatureDescriptionAlgorithm } from './keypoints/feature-description-algorithm';
 import { FASTFeatures, MultiscaleFASTFeatures } from './keypoints/detectors/fast';
 import { HarrisFeatures, MultiscaleHarrisFeatures } from './keypoints/detectors/harris';
 import { ORBFeatures } from './keypoints/detectors/orb';
@@ -46,7 +46,7 @@ class SpeedyFeatureDetector
 {
     /**
      * Class constructor
-     * @param {FeatureDetectionAlgorithm} algorithm 
+     * @param {FeatureDetectionAlgorithm | FeatureDescriptionAlgorithm} algorithm 
      */
     constructor(algorithm)
     {
@@ -110,21 +110,16 @@ class SpeedyFeatureDetector
             media._colorFormat != ColorFormat.Greyscale
         );
 
-        // Feature detection
-        const enhancedTexture = this._enhanceTexture(
-            gpu,
-            preprocessedTexture,
-            this._enhancements.illumination == true || this._enhancements.nightvision
+        // Feature detection & description
+        this._algorithm.setEnhancements(
+            this._enhancements.nightvision || this._enhancements.illumination
         );
-        const detectedKeypoints = this._detectFeatures(gpu, enhancedTexture);
-
-        // Feature description
-        const describedKeypoints = this._describeFeatures(gpu, preprocessedTexture, detectedKeypoints);
+        const encodedKeypoints = this._algorithm.run(gpu, preprocessedTexture);
 
         // Download keypoints from the GPU
         return this._algorithm.download(
             gpu,
-            describedKeypoints,
+            encodedKeypoints,
             this._max,
             !isStaticMedia
         );
@@ -236,74 +231,6 @@ class SpeedyFeatureDetector
     }
 
     /**
-     * Enhances a texture for feature DETECTION (not description)
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} inputTexture
-     * @param {object|boolean} [nightvision] fix irregular lighting in the scene?
-     * @returns {SpeedyTexture}
-     */
-    _enhanceTexture(gpu, inputTexture, nightvision = false)
-    {
-        let texture = inputTexture, options = {
-            gain: 0.9,
-            offset: 0.5,
-            decay: 0.85,
-            quality: 'low'
-        };
-
-        if(typeof nightvision == 'object')
-            options = Object.assign(options, nightvision);
-
-        if(nightvision != false) {
-            texture = gpu.programs.enhancements.nightvision(texture, options.gain, options.offset, options.decay, options.quality, true);
-            texture = gpu.programs.filters.gauss3(texture); // blur a bit more
-        }
-
-        return texture;
-    }
-
-
-
-
-
-
-    //
-    // ===== IMPLEMENT THE FOLLOWING METHODS IN SUBCLASSES =====
-    //
-
-    /**
-     * Calls the underlying feature detection algorithm
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} texture source image
-     * @returns {SpeedyTexture}
-     */
-    _detectFeatures(gpu, texture)
-    {
-        // template method
-        return this._algorithm.detect(
-            gpu,
-            texture
-        );
-    }
-
-    /**
-     * Calls the underlying feature description algorithm
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} texture source image
-     * @param {SpeedyTexture} encodedKeypoints tiny texture
-     * @returns {SpeedyTexture}
-     */
-    _describeFeatures(gpu, texture, encodedKeypoints)
-    {
-        // template method
-        return this._algorithm.describe(
-            gpu,
-            texture,
-            encodedKeypoints
-        );
-    }
-
-    /**
      * Convert a normalized sensitivity into an
      * algorithm-specific value such as a threshold
      * 
@@ -331,20 +258,27 @@ export class FASTFeatureDetector extends SpeedyFeatureDetector
     /**
      * Class constructor
      * @param {number} [n] FAST variant: 9, 7 or 5
-     * @param {FeatureDetectionAlgorithm} [algorithm]
      */
-    constructor(n = 9, algorithm = null)
+    constructor(n = 9)
     {
+        // Create algorithm
+        super(new FASTFeatures());
+
         // Validate FAST variant
-        if(!(n == 9 || n == 7 || n == 5))
+        if(!(n === 9 || n === 7 || n === 5))
             throw new NotSupportedError(`Can't create FAST feature detector with n = ${n}`);
 
-        // Create algorithm
-        super(algorithm || new FASTFeatures());
+        // Set FAST variant
+        this._algorithm.n = n;
+    }
 
-        // Set default settings
-        this._n = n | 0;
-        this._threshold = 10;
+    /**
+     * Get FAST variant
+     * @returns {number}
+     */
+    get n()
+    {
+        return this._algorithm.n;
     }
 
     /**
@@ -353,16 +287,16 @@ export class FASTFeatureDetector extends SpeedyFeatureDetector
      */
     get threshold()
     {
-        return this._threshold;
+        return this._algorithm.threshold;
     }
 
     /**
      * Set FAST threshold
-     * @param {number} threshold a value in [0,255]
+     * @param {number} threshold an integer in [0,255]
      */
     set threshold(threshold)
     {
-        this._threshold = Math.max(0, Math.min(threshold | 0, 255));
+        this._algorithm.threshold = threshold;
     }
 
     /**
@@ -373,22 +307,6 @@ export class FASTFeatureDetector extends SpeedyFeatureDetector
     {
         this.threshold = Math.round(255.0 * (1.0 - Math.tanh(2.77 * sensitivity)));
     }
-
-    /**
-     * Calls the underlying feature detection algorithm
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} texture source image
-     * @returns {SpeedyTexture}
-     */
-    _detectFeatures(gpu, texture)
-    {
-        return this._algorithm.detect(
-            gpu,
-            texture,
-            this._n,
-            this._threshold
-        );
-    }
 }
 
 
@@ -396,7 +314,7 @@ export class FASTFeatureDetector extends SpeedyFeatureDetector
 /**
  * FAST feature detector in an image pyramid
  */
-export class MultiscaleFASTFeatureDetector extends FASTFeatureDetector
+export class MultiscaleFASTFeatureDetector extends SpeedyFeatureDetector
 {
     /**
      * Class constructor
@@ -404,16 +322,42 @@ export class MultiscaleFASTFeatureDetector extends FASTFeatureDetector
      */
     constructor(n = 9)
     {
+        // setup algorithm
+        super(new MultiscaleFASTFeatures());
+
         // Validate FAST variant
-        if(n != 9)
+        if(n !== 9)
             throw new NotSupportedError(`Can't create Multiscale FAST feature detector with n = ${n}`);
 
-        // setup algorithm
-        super(9, new MultiscaleFASTFeatures());
+        // Set FAST variant
+        this._algorithm.n = n;
+    }
 
-        // default settings
-        this._depth = 3;
-        this._useHarrisScore = false;
+    /**
+     * Get FAST variant
+     * @returns {number}
+     */
+    get n()
+    {
+        return this._algorithm.n;
+    }
+
+    /**
+     * Get FAST threshold
+     * @returns {number} a value in [0,255]
+     */
+    get threshold()
+    {
+        return this._algorithm.threshold;
+    }
+
+    /**
+     * Set FAST threshold
+     * @param {number} threshold an integer in [0,255]
+     */
+    set threshold(threshold)
+    {
+        this._algorithm.threshold = threshold;
     }
 
     /**
@@ -422,7 +366,7 @@ export class MultiscaleFASTFeatureDetector extends FASTFeatureDetector
      */
     get depth()
     {
-        return this._depth;
+        return this._algorithm.depth;
     }
 
     /**
@@ -431,10 +375,7 @@ export class MultiscaleFASTFeatureDetector extends FASTFeatureDetector
      */
     set depth(depth)
     {
-        if(depth < 1 || depth > PYRAMID_MAX_LEVELS)
-            throw new IllegalArgumentError(`Invalid depth: ${depth}`);
-
-        this._depth = depth | 0;
+        this._algorithm.depth = depth;
     }
 
     /**
@@ -444,7 +385,7 @@ export class MultiscaleFASTFeatureDetector extends FASTFeatureDetector
      */
     get useHarrisScore()
     {
-        return this._useHarrisScore;
+        return this._algorithm.useHarrisScore;
     }
 
     /**
@@ -454,24 +395,16 @@ export class MultiscaleFASTFeatureDetector extends FASTFeatureDetector
      */
     set useHarrisScore(useHarris)
     {
-        this._useHarrisScore = Boolean(useHarris);
+        this._algorithm.useHarrisScore = useHarris;
     }
 
     /**
-     * Calls the underlying feature detection algorithm
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} texture source image
-     * @returns {SpeedyTexture}
+     * Convert a normalized sensitivity to a FAST threshold
+     * @param {number} sensitivity 
      */
-    _detectFeatures(gpu, texture)
+    _onSensitivityChange(sensitivity)
     {
-        return this._algorithm.detect(
-            gpu,
-            texture,
-            this._threshold,
-            this._depth,
-            this._useHarrisScore
-        );
+        this.threshold = Math.round(255.0 * (1.0 - Math.tanh(2.77 * sensitivity)));
     }
 }
 
@@ -485,15 +418,11 @@ export class HarrisFeatureDetector extends SpeedyFeatureDetector
 {
     /**
      * Class constructor
-     * @param {FeatureDetectionAlgorithm} [algorithm]
      */
-    constructor(algorithm = null)
+    constructor()
     {
         // setup the algorithm
-        super(algorithm || new HarrisFeatures());
-
-        // default settings
-        this._quality = 0.9; // in [0,1]
+        super(new HarrisFeatures());
     }
 
     /**
@@ -503,7 +432,7 @@ export class HarrisFeatureDetector extends SpeedyFeatureDetector
      */
     get quality()
     {
-        return this._quality;
+        return this._algorithm.quality;
     }
 
     /**
@@ -513,7 +442,7 @@ export class HarrisFeatureDetector extends SpeedyFeatureDetector
      */
     set quality(quality)
     {
-        this._quality = Math.max(0, Math.min(quality, 1));
+        this._algorithm.quality = Math.max(0, Math.min(quality, 1));
     }
 
     /**
@@ -524,21 +453,6 @@ export class HarrisFeatureDetector extends SpeedyFeatureDetector
     {
         this.quality = 1.0 - Math.tanh(2.3 * sensitivity);
     }
-
-    /**
-     * Calls the underlying feature detection algorithm
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} texture source image
-     * @returns {SpeedyTexture}
-     */
-    _detectFeatures(gpu, texture)
-    {
-        return this._algorithm.detect(
-            gpu,
-            texture,
-            this._quality
-        );
-    }
 }
 
 
@@ -546,19 +460,15 @@ export class HarrisFeatureDetector extends SpeedyFeatureDetector
 /**
  * Harris corner detector in an image pyramid
  */
-export class MultiscaleHarrisFeatureDetector extends HarrisFeatureDetector
+export class MultiscaleHarrisFeatureDetector extends SpeedyFeatureDetector
 {
     /**
      * Class constructor
-     * @param {FeatureDetectionAlgorithm} [algorithm]
      */
-    constructor(algorithm = null)
+    constructor()
     {
         // setup algorithm
-        super(algorithm || new MultiscaleHarrisFeatures());
-
-        // default settings
-        this._depth = 3;
+        super(new MultiscaleHarrisFeatures());
     }
 
     /**
@@ -567,7 +477,7 @@ export class MultiscaleHarrisFeatureDetector extends HarrisFeatureDetector
      */
     get depth()
     {
-        return this._depth;
+        return this._algorithm.depth;
     }
 
     /**
@@ -576,45 +486,166 @@ export class MultiscaleHarrisFeatureDetector extends HarrisFeatureDetector
      */
     set depth(depth)
     {
-        if(depth < 1 || depth > PYRAMID_MAX_LEVELS)
-            throw new IllegalArgumentError(`Invalid depth: ${depth}`);
-
-        this._depth = depth | 0;
+        this._algorithm.depth = depth;
     }
 
     /**
-     * Calls the underlying feature detection algorithm
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} texture source image
-     * @returns {SpeedyTexture}
+     * Get current quality level
+     * We will pick corners having score >= quality * max(score)
+     * @returns {number} a value in [0,1]
      */
-    _detectFeatures(gpu, texture)
+    get quality()
     {
-        return this._algorithm.detect(
-            gpu,
-            texture,
-            this._quality,
-            this._depth
-        );
+        return this._algorithm.quality;
+    }
+
+    /**
+     * Set quality level
+     * We will pick corners having score >= quality * max(score)
+     * @param {number} quality a value in [0,1]
+     */
+    set quality(quality)
+    {
+        this._algorithm.quality = Math.max(0, Math.min(quality, 1));
+    }
+
+    /**
+     * Convert a normalized sensitivity to a quality value
+     * @param {number} sensitivity 
+     */
+    _onSensitivityChange(sensitivity)
+    {
+        this.quality = 1.0 - Math.tanh(2.3 * sensitivity);
     }
 }
 
 
-
 /**
- * ORB feature descriptor (& detector)
+ * ORB feature descriptor
+ * With Multiscale Harris as a feature detector
  */
-export class ORBFeatureDetector extends MultiscaleHarrisFeatureDetector
+export class ORBHarrisFeatureDetector extends SpeedyFeatureDetector
 {
     /**
      * Class constructor
      */
     constructor()
     {
-        super(new ORBFeatures());
+        // setup algorithm
+        super(new ORBFeatures(new MultiscaleHarrisFeatures()));
+    }
+
+    /**
+     * Get the depth of the algorithm: how many pyramid layers will be scanned
+     * @returns {number}
+     */
+    get depth()
+    {
+        return this._algorithm.detectionAlgorithm.depth;
+    }
+
+    /**
+     * Set the depth of the algorithm: how many pyramid layers will be scanned
+     * @param {number} depth a number between 1 and PYRAMID_MAX_LEVELS, inclusive
+     */
+    set depth(depth)
+    {
+        this._algorithm.detectionAlgorithm.depth = depth;
+    }
+
+    /**
+     * Get current quality level
+     * We will pick corners having score >= quality * max(score)
+     * @returns {number} a value in [0,1]
+     */
+    get quality()
+    {
+        return this._algorithm.detectionAlgorithm.quality;
+    }
+
+    /**
+     * Set quality level
+     * We will pick corners having score >= quality * max(score)
+     * @param {number} quality a value in [0,1]
+     */
+    set quality(quality)
+    {
+        this._algorithm.detectionAlgorithm.quality = Math.max(0, Math.min(quality, 1));
+    }
+
+    /**
+     * Convert a normalized sensitivity to a quality value
+     * @param {number} sensitivity 
+     */
+    _onSensitivityChange(sensitivity)
+    {
+        this.quality = 1.0 - Math.tanh(2.3 * sensitivity);
     }
 }
 
+
+/**
+ * ORB feature descriptor
+ * With Multiscale FAST as a feature detector
+ */
+export class ORBFASTFeatureDetector extends SpeedyFeatureDetector
+{
+    /**
+     * Class constructor
+     * @param {boolean} [useHarrisScore]
+     */
+    constructor(useHarrisScore = false)
+    {
+        // setup algorithm
+        super(new ORBFeatures(new MultiscaleFASTFeatures()));
+        this._algorithm.detectionAlgorithm.useHarrisScore = useHarrisScore;
+    }
+
+    /**
+     * Get the depth of the algorithm: how many pyramid layers will be scanned
+     * @returns {number}
+     */
+    get depth()
+    {
+        return this._algorithm.detectionAlgorithm.depth;
+    }
+
+    /**
+     * Set the depth of the algorithm: how many pyramid layers will be scanned
+     * @param {number} depth a number between 1 and PYRAMID_MAX_LEVELS, inclusive
+     */
+    set depth(depth)
+    {
+        this._algorithm.detectionAlgorithm.depth = depth;
+    }
+
+    /**
+     * Get FAST threshold
+     * @returns {number} a value in [0,255]
+     */
+    get threshold()
+    {
+        return this._algorithm.detectionAlgorithm.threshold;
+    }
+
+    /**
+     * Set FAST threshold
+     * @param {number} threshold an integer in [0,255]
+     */
+    set threshold(threshold)
+    {
+        this._algorithm.detectionAlgorithm.threshold = threshold;
+    }
+
+    /**
+     * Convert a normalized sensitivity to a FAST threshold
+     * @param {number} sensitivity 
+     */
+    _onSensitivityChange(sensitivity)
+    {
+        this.threshold = Math.round(255.0 * (1.0 - Math.tanh(2.77 * sensitivity)));
+    }
+}
 
 
 /**
@@ -627,31 +658,7 @@ export class BRISKFeatureDetector extends SpeedyFeatureDetector
      */
     constructor()
     {
-        // setup algorithm
-        super(new BRISKFeatures());
-
-        // default settings
-        this._depth = 4; // 4 layers, 7 octaves
-    }
-
-    /**
-     * Get the depth of the algorithm: how many pyramid layers will be scanned
-     * @returns {number}
-     */
-    get depth()
-    {
-        return this._depth;
-    }
-
-    /**
-     * Set the depth of the algorithm: how many pyramid layers will be scanned
-     * @param {number} depth
-     */
-    set depth(depth)
-    {
-        if(depth < 1 || depth > PYRAMID_MAX_LEVELS)
-            throw new IllegalArgumentError(`Invalid depth: ${depth}`);
-
-        this._depth = depth | 0;
+        // TODO
+        throw new NotImplementedError();
     }
 }

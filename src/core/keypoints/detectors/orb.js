@@ -20,7 +20,8 @@
  */
 
 import { SpeedyGPU } from '../../../gpu/speedy-gpu';
-import { MultiscaleHarrisFeatures } from './harris';
+import { FeatureDescriptionAlgorithm } from '../feature-description-algorithm';
+import { FeatureDetectionAlgorithm } from '../feature-detection-algorithm';
 
 // constants
 const DESCRIPTOR_SIZE = 32; // 256 bits
@@ -28,29 +29,15 @@ const DESCRIPTOR_SIZE = 32; // 256 bits
 /**
  * ORB features
  */
-export class ORBFeatures extends MultiscaleHarrisFeatures
+export class ORBFeatures extends FeatureDescriptionAlgorithm
 {
     /**
-     * Descriptor size for ORB
-     * @returns {number} in bytes
+     * Constructor
+     * @param {FeatureDetectionAlgorithm} detectionAlgorithm preferably Multiscale Harris
      */
-    get descriptorSize()
+    constructor(detectionAlgorithm)
     {
-        return DESCRIPTOR_SIZE;
-    }
-
-    /**
-     * Detect feature points for ORB
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} inputTexture pre-processed greyscale image
-     * @param {number} [quality] a value in [0,1]: will pick corners having score >= quality * max(score)
-     * @param {number} [depth] how many pyramid levels will be scanned
-     * @returns {SpeedyTexture} encoded keypoints
-     */
-    detect(gpu, inputTexture, quality = undefined, depth = undefined)
-    {
-        // Multiscale Harris gives us nice corners in scale-space
-        return super.detect(gpu, inputTexture, quality, depth);
+        super(detectionAlgorithm, DESCRIPTOR_SIZE);
     }
 
     /**
@@ -60,13 +47,13 @@ export class ORBFeatures extends MultiscaleHarrisFeatures
      * @param {SpeedyTexture} detectedKeypoints tiny texture with appropriate size for the descriptors
      * @returns {SpeedyTexture} tiny texture with encoded keypoints & descriptors
      */
-    describe(gpu, inputTexture, detectedKeypoints)
+    _describe(gpu, inputTexture, detectedKeypoints)
     {
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
 
         // get oriented keypoints
-        const orientedKeypoints = super.describe(gpu, inputTexture, detectedKeypoints);
+        const orientedKeypoints = detectedKeypoints;
 
         // smooth the image before computing the descriptors
         const smoothTexture = gpu.programs.filters.gauss7(inputTexture);

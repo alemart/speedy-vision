@@ -20,11 +20,17 @@
  */
 
 import { SpeedyGPU } from '../../../gpu/speedy-gpu';
+import { SpeedyTexture } from '../../../gpu/speedy-texture';
 import { FeatureDetectionAlgorithm } from '../feature-detection-algorithm';
 import { NotSupportedError } from '../../../utils/errors';
+import { Utils } from '../../../utils/utils';
+import { PYRAMID_MAX_LEVELS } from '../../../utils/globals';
 
 // constants
-const DEFAULT_ORIENTATION_PATCH_RADIUS = 7; // for computing keypoint orientation
+const DEFAULT_FAST_VARIANT = 9;
+const DEFAULT_FAST_THRESHOLD = 10;
+const DEFAULT_DEPTH = 3;
+const DEFAULT_ORIENTATION_PATCH_RADIUS = 7;
 
 
 
@@ -34,23 +40,63 @@ const DEFAULT_ORIENTATION_PATCH_RADIUS = 7; // for computing keypoint orientatio
 export class FASTFeatures extends FeatureDetectionAlgorithm
 {
     /**
-     * FAST has no keypoint descriptor
+     * Constructor
      */
-    get descriptorSize()
+    constructor()
     {
-        return 0;
+        super();
+        this._n = DEFAULT_FAST_VARIANT;
+        this._threshold = DEFAULT_FAST_THRESHOLD;
+    }
+
+    /**
+     * Get FAST variant
+     * @returns {number}
+     */
+    get n()
+    {
+        return this._n;
+    }
+
+    /**
+     * Set FAST variant
+     * @param {number} value 9, 7 or 5
+     */
+    set n(value)
+    {
+        this._n = value | 0;
+        Utils.assert(this._n === 9 || this._n === 7 || this._n === 5);
+    }
+
+    /**
+     * Get FAST threshold
+     * @returns {number}
+     */
+    get threshold()
+    {
+        return this._threshold;
+    }
+
+    /**
+     * Set FAST threshold
+     * @param {number} value a number in [0,255]
+     */
+    set threshold(value)
+    {
+        this._threshold = value | 0;
+        Utils.assert(this._threshold >= 0 && this._threshold <= 255);
     }
 
     /**
      * Detect feature points
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} inputTexture pre-processed greyscale image
-     * @param {number} [n] FAST variant: 9, 7 or 5
-     * @param {number} [threshold] a number in [0,255]
      * @returns {SpeedyTexture} encoded keypoints
      */
-    detect(gpu, inputTexture, n = 9, threshold = 10)
+    _detect(gpu, inputTexture)
     {
+        const n = this._n;
+        const threshold = this._threshold;
         const normalizedThreshold = threshold / 255.0;
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
@@ -81,19 +127,106 @@ export class FASTFeatures extends FeatureDetectionAlgorithm
 /**
  * FAST corner detector in an image pyramid
  */
-export class MultiscaleFASTFeatures extends FASTFeatures
+export class MultiscaleFASTFeatures extends FeatureDetectionAlgorithm
 {
+    /**
+     * Constructor
+     */
+    constructor()
+    {
+        super();
+        this._n = DEFAULT_FAST_VARIANT;
+        this._threshold = DEFAULT_FAST_THRESHOLD;
+        this._depth = DEFAULT_DEPTH;
+        this._useHarrisScore = false;
+    }
+
+    /**
+     * Get FAST variant
+     * @returns {number}
+     */
+    get n()
+    {
+        return this._n;
+    }
+
+    /**
+     * Set FAST variant
+     * @param {number} value only 9 is supported at this time
+     */
+    set n(value)
+    {
+        this._n = value | 0;
+        Utils.assert(this._n === 9);
+    }
+
+    /**
+     * Get FAST threshold
+     * @returns {number}
+     */
+    get threshold()
+    {
+        return this._threshold;
+    }
+
+    /**
+     * Set FAST threshold
+     * @param {number} value a number in [0,255]
+     */
+    set threshold(value)
+    {
+        this._threshold = value | 0;
+        Utils.assert(this._threshold >= 0 && this._threshold <= 255);
+    }
+
+    /**
+     * Get depth: how many pyramid levels we will scan
+     * @returns {number}
+     */
+    get depth()
+    {
+        return this._depth;
+    }
+
+    /**
+     * Set depth: how many pyramid levels we will scan
+     * @param {number} value 1, 2, 3...
+     */
+    set depth(value)
+    {
+        this._depth = value | 0;
+        Utils.assert(this._depth >= 1 && this._depth <= PYRAMID_MAX_LEVELS);
+    }
+
+    /**
+     * Use Harris scoring function?
+     * @returns {boolean}
+     */
+    get useHarrisScore()
+    {
+        return this._useHarrisScore;
+    }
+
+    /**
+     * Use Harris scoring function?
+     * @param {boolean} value
+     */
+    set useHarrisScore(value)
+    {
+        this._useHarrisScore = !!value;
+    }
+
     /**
      * Detect feature points
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} inputTexture pre-processed greyscale image
-     * @param {number} [threshold] a value in [0,255]
-     * @param {number} [depth] how many pyramid levels to check
-     * @param {boolean} [useHarrisScore] use Harris scoring function
      * @returns {SpeedyTexture} encoded keypoints
      */
-    detect(gpu, inputTexture, threshold = 10, depth = 3, useHarrisScore = false)
+    _detect(gpu, inputTexture)
     {
+        const threshold = this._threshold;
+        const depth = this._depth;
+        const useHarrisScore = this._useHarrisScore;
         const normalizedThreshold = threshold / 255.0;
         const numberOfOctaves = 2 * depth - 1;
         const descriptorSize = this.descriptorSize;
@@ -114,18 +247,20 @@ export class MultiscaleFASTFeatures extends FASTFeatures
         corners = gpu.programs.keypoints.multiscaleSuppression(corners);
 
         // encode keypoints
-        return gpu.programs.encoders.encodeKeypoints(corners, descriptorSize, extraSize);
+        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(corners, descriptorSize, extraSize);
+
+        // compute orientation
+        return this._computeOrientation(gpu, inputTexture, detectedKeypoints);
     }
 
     /**
-     * Describe feature points
-     * (actually, this just orients the keypoints, since this algorithm has no built-in descriptor)
+     * Compute the orientation of the keypoints
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} inputTexture pre-processed greyscale image
      * @param {SpeedyTexture} detectedKeypoints tiny texture with appropriate size for the descriptors
      * @returns {SpeedyTexture} tiny texture with encoded keypoints & descriptors
      */
-    describe(gpu, inputTexture, detectedKeypoints)
+    _computeOrientation(gpu, inputTexture, detectedKeypoints)
     {
         const orientationPatchRadius = DEFAULT_ORIENTATION_PATCH_RADIUS;
         const descriptorSize = this.descriptorSize;

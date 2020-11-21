@@ -26,6 +26,14 @@ import { SpeedyGPU } from '../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../gpu/speedy-texture';
 import { Utils } from '../../utils/utils';
 
+// Constants
+const DEFAULT_ENHANCEMENTS = Object.freeze({
+    gain: 0.9,
+    offset: 0.5,
+    decay: 0.85,
+    quality: 'low'
+});
+
 /**
  * An abstract class for feature
  * detection & description
@@ -38,49 +46,21 @@ export class FeatureDetectionAlgorithm extends FeatureAlgorithm
      */
     constructor()
     {
-        super();
-        this._extraSize = 0; // extra header size, in bytes (for encoded keypoint textures)
+        super(0, 0);
         this._downloader.enableBufferedDownloads();
+        this._enhancements = null;
     }
 
     /**
-     * The size in bytes of the feature descriptor
-     * This method may be overridden in subclasses
-     * 
-     * It must return 0 if the algorithm has no
-     * descriptor attached to it
-     *
-     * @returns {number} descriptor size in bytes
-     */
-    get descriptorSize()
-    {
-        // This must be implemented in subclasses
-        throw new AbstractMethodError();
-    }
-
-    /**
-     * Detect feature points
+     * To "run" this algorithm means: to detect feature points
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} inputTexture pre-processed greyscale image
      * @returns {SpeedyTexture} tiny texture with encoded keypoints
      */
-    detect(gpu, inputTexture)
+    run(gpu, inputTexture)
     {
-        // This must be implemented in subclasses
-        throw new AbstractMethodError();
-    }
-
-    /**
-     * Describe feature points
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} inputTexture pre-processed greyscale image
-     * @param {SpeedyTexture} detectedKeypoints tiny texture with appropriate size for the descriptors
-     * @returns {SpeedyTexture} tiny texture with encoded keypoints & descriptors
-     */
-    describe(gpu, inputTexture, detectedKeypoints)
-    {
-        // No descriptor is computed by default
-        return detectedKeypoints;
+        const enhancedInputTexture = this._enhanceTexture(gpu, inputTexture);
+        return this._detect(gpu, enhancedInputTexture);
     }
 
     /**
@@ -116,28 +96,58 @@ export class FeatureDetectionAlgorithm extends FeatureAlgorithm
         this._downloader.disableBufferedDownloads();
 
         // reset the downloader
-        super.resetDownloader(gpu, this.descriptorSize, this.extraSize);
+        this._downloader.reset(gpu, this.descriptorSize, this.extraSize);
+
+        /*
+        // note: buffered responses imply a 1-frame delay
+        if(this._downloader.usingBufferedDownloads())
+            Utils.warning(`The feature downloader has been reset, but buffered downloads are enabled and cause a 1-frame delay`);
+        */
     }
 
     /**
-     * Extra size of the headers of the encoded keypoint texture
-     * By default, this is set to zero
-     * @return {number} in bytes
+     * Setup enhancements to be applied when detecting features
+     * @param {object|boolean} [enhancements] fix irregular lighting in the scene?
      */
-    get extraSize()
+    setEnhancements(enhancements)
     {
-        return this._extraSize;
+        if(enhancements === true)
+            this._enhancements = DEFAULT_ENHANCEMENTS;
+        else if(typeof enhancements === 'object' && enhancements !== null)
+            this._enhancements = Object.assign({ }, DEFAULT_ENHANCEMENTS, enhancements);
+        else
+            this._enhancements = null;
     }
 
     /**
-     * Set the extra size of the headers of the encoded keypoint texture
-     * By default, this is set to zero
-     * This is low-level stuff!
-     * @param {number} bytes a multiple of 4 (32 bits)
+     * Detect feature points
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTexture} inputTexture pre-processed greyscale image
+     * @param {...any} args additional arguments
+     * @returns {SpeedyTexture} tiny texture with encoded keypoints
      */
-    set extraSize(bytes)
+    _detect(gpu, inputTexture, ...args)
     {
-        this._extraSize = Math.max(0, bytes | 0);
-        Utils.assert(this._extraSize % 4 === 0); // stored as a pixel
+        // This must be implemented in subclasses
+        throw new AbstractMethodError();
+    }
+
+    /**
+     * Enhances a texture specifically for feature detection
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTexture} inputTexture
+     * @returns {SpeedyTexture}
+     */
+    _enhanceTexture(gpu, inputTexture)
+    {
+        let texture = inputTexture;
+        const options = this._enhancements;
+
+        if(options !== null) {
+            texture = gpu.programs.enhancements.nightvision(texture, options.gain, options.offset, options.decay, options.quality, true);
+            texture = gpu.programs.filters.gauss3(texture); // blur a bit more
+        }
+
+        return texture;
     }
 }

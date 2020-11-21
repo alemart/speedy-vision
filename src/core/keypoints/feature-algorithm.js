@@ -20,9 +20,8 @@
  */
 
 import { FeatureDownloader } from './feature-downloader';
-import { AbstractMethodError, IllegalArgumentError } from '../../utils/errors';
+import { AbstractMethodError, IllegalOperationError } from '../../utils/errors';
 import { Utils } from '../../utils/utils';
-
 
 /**
  * An abstract algorithm that deals with
@@ -34,37 +33,105 @@ export class FeatureAlgorithm
 {
     /**
      * Class constructor
+     * @param {number} [descriptorSize] in bytes, required for GPU algorithms
+     * @param {number} [extraSize] in bytes, required for GPU algorithms
      */
-    constructor()
+    constructor(descriptorSize = 0, extraSize = 0)
     {
+        Utils.assert(descriptorSize % 4 === 0 && extraSize % 4 === 0);
+
         this._downloader = new FeatureDownloader();
+        this._descriptorSize = descriptorSize; // for encoded keypoint textures
+        this._extraSize = extraSize; // for encoded keypoint textures
+    }
+
+    /**
+     * Abstract "run" operation:
+     * runs something on the GPU
+     * @param {SpeedyGPU} gpu 
+     * @param {...any} args
+     * @returns {SpeedyTexture}
+     */
+    run(gpu, ...args)
+    {
+        throw new AbstractMethodError();
     }
 
     /**
      * Download feature points from the GPU
      * Needs to be overridden in subclasses
-     * @param {SpeedyGPU} gpu 
-     * @param {SpeedyTexture} encodedKeypoints 
-     * @returns {Promise<SpeedyFeature[]} feature 
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTexture} encodedKeypoints tiny texture
+     * @param {boolean} [useAsyncTransfer]
+     * @returns {Promise<SpeedyFeature[]>} feature points
      */
-    download(gpu, encodedKeypoints)
+    download(gpu, encodedKeypoints, useAsyncTransfer = true)
     {
         throw new AbstractMethodError();
     }
 
     /**
      * Reset the capacity of the keypoint downloader
+     * Needs to be overridden in subclasses
      * @param {SpeedyGPU} gpu 
-     * @param {number} descriptorSize
-     * @param {number} extraSize
      */
-    resetDownloader(gpu, descriptorSize, extraSize)
+    resetDownloader(gpu)
     {
-        Utils.assert(descriptorSize !== undefined && extraSize !== undefined);
-        this._downloader.reset(gpu, descriptorSize, extraSize);
+        throw new AbstractMethodError();
+    }
 
-        // note: buffered responses imply a 1-frame delay
-        if(this._downloader.usingBufferedDownloads())
-            Utils.warning(`The feature downloader has been reset, but buffered downloads are enabled and cause a 1-frame delay`);
+    /**
+     * Upload feature points to the GPU
+     * Needs to be overridden in subclasses
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyFeature[]} keypoints feature points
+     * @returns {SpeedyTexture}
+     */
+    upload(gpu, keypoints)
+    {
+        throw new IllegalOperationError();
+    }
+
+    /**
+     * Extra size of the headers of the encoded keypoint texture
+     * By default, this is set to zero
+     * @return {number} in bytes
+     */
+    get extraSize()
+    {
+        return this._extraSize;
+    }
+
+    /**
+     * Set the extra size of the headers of the encoded keypoint texture
+     * By default, this is set to zero
+     * This is low-level stuff!
+     * @param {number} bytes a multiple of 4 (32 bits)
+     */
+    set extraSize(bytes)
+    {
+        this._extraSize = Math.max(0, bytes | 0);
+        Utils.assert(this._extraSize % 4 === 0); // multiple of 32 bits (RGBA pixel)
+    }
+
+    /**
+     * Descriptor size
+     * By default, this is set to zero
+     * @return {number} in bytes
+     */
+    get descriptorSize()
+    {
+        return this._descriptorSize;
+    }
+
+    /**
+     * Set the descriptor size, in bytes
+     * By default, this is set to zero
+     * @param {number} bytes a multiple of 4 (32 bits)
+     */
+    set descriptorSize(bytes)
+    {
+        this._descriptorSize = Math.max(0, bytes | 0);
+        Utils.assert(this._descriptorSize % 4 === 0); // multiple of 32 bits (RGBA pixel)
     }
 }

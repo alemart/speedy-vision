@@ -25,9 +25,11 @@ import {
     MultiscaleFASTFeatureDetector,
     HarrisFeatureDetector,
     MultiscaleHarrisFeatureDetector,
-    ORBFeatureDetector,
+    ORBHarrisFeatureDetector,
+    ORBFASTFeatureDetector,
     BRISKFeatureDetector
 } from './speedy-feature-detector';
+import { IllegalArgumentError } from '../utils/errors';
 
 /**
  * A collection of methods for instantiating SpeedyFeatureDetectors
@@ -74,11 +76,19 @@ export class SpeedyFeatureDetectorFactory extends SpeedyNamespace
 
     /**
      * ORB feature detector & descriptor
-     * @returns {ORBFeatureDetector}
+     * @param {string} [detector] 'harris' | 'fast'
+     * @returns {ORBHarrisFeatureDetector | ORBFASTFeatureDetector}
      */
-    static ORB()
+    static ORB(detector = 'harris')
     {
-        return new ORBFeatureDetector();
+        if(detector == 'harris')
+            return new ORBHarrisFeatureDetector();
+        else if(detector == 'fast')
+            return new ORBFASTFeatureDetector();
+        else if(detector == 'fast-with-harris') // discard this?
+            return new ORBFASTFeatureDetector(true);
+        else
+            throw new IllegalArgumentError(`Invalid detector for ORB: "${detector}"`);
     }
 
     /**

@@ -19,6 +19,7 @@
  * BRISK feature detector & descriptor
  */
 
+import { FeatureDescriptionAlgorithm } from '../feature-description-algorithm';
 import { FeatureDetectionAlgorithm } from '../feature-detection-algorithm';
 import { NotImplementedError } from '../../../utils/errors';
 import { SpeedyGPU } from '../../../gpu/speedy-gpu';
@@ -29,27 +30,15 @@ const DESCRIPTOR_SIZE = 64; // 512 bits
 /**
  * BRISK feature detector & descriptor
  */
-export class BRISKFeatures extends FeatureDetectionAlgorithm
+export class BRISKFeatures extends FeatureDescriptionAlgorithm
 {
     /**
-     * Descriptor size for BRISK
-     * @returns {number} in bytes
+     * Constructor
+     * @param {FeatureDetectionAlgorithm} detectionAlgorithm TODO brisk detector
      */
-    get descriptorSize()
+    constructor(detectionAlgorithm)
     {
-        return DESCRIPTOR_SIZE;
-    }
-
-    /**
-     * Detect BRISK features
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} inputTexture pre-processed greyscale image
-     * @returns {SpeedyTexture} encoded keypoints
-     */
-    detect(gpu, inputTexture)
-    {
-        // TODO
-        throw new NotImplementedError();
+        super(detectionAlgorithm, DESCRIPTOR_SIZE);
     }
 
     /**
@@ -59,7 +48,7 @@ export class BRISKFeatures extends FeatureDetectionAlgorithm
      * @param {SpeedyTexture} detectedKeypoints tiny texture with appropriate size for the descriptors
      * @returns {SpeedyTexture} tiny texture with encoded keypoints & descriptors
      */
-    describe(gpu, inputTexture, detectedKeypoints)
+    _describe(gpu, inputTexture, detectedKeypoints)
     {
         // TODO
         throw new NotImplementedError();

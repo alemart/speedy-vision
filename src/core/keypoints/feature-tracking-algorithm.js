@@ -80,12 +80,12 @@ export class FeatureTrackingAlgorithm extends FeatureAlgorithm
     }
 
     /**
-     * Upload feature points to the GPU (before tracking)
+     * Upload feature points to the GPU
      * @param {SpeedyGPU} gpu
      * @param {SpeedyFeature[]} keypoints feature points
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyTexture} tiny texture
      */
     upload(gpu, keypoints, descriptorSize, extraSize)
     {
