@@ -40,7 +40,7 @@
                 <input type="checkbox" id="multiscale">
             </div>
         </form>
-        <img src="../assets/speedy-large.jpg" title="Image by JD Hancock (CC-BY)" hidden>
+        <img src="../assets/masp.jpg" title="Free photo by ckturistando (pexels.com)" hidden>
         <script>
 window.onload = async function()
 {
@@ -57,8 +57,8 @@ window.onload = async function()
 
     // create the feature detectors
     const featureDetectors = [
-        Speedy.FeatureDetector.FAST(),
-        Speedy.FeatureDetector.MultiscaleFAST()
+        Speedy.FeatureDetector.Harris(),
+        Speedy.FeatureDetector.MultiscaleHarris()
     ];
 
     // update function
@@ -101,7 +101,7 @@ function createCanvas(width, height, title)
     return canvas;
 }
 
-function renderFeatures(canvas, features, size = 2, color = 'white')
+function renderFeatures(canvas, features, size = 2, color = 'yellow')
 {
     const context = canvas.getContext('2d');
 
@@ -123,7 +123,7 @@ function renderFeatures(canvas, features, size = 2, color = 'white')
     context.stroke();
 }
 
-function renderStatus(canvas, features, color = 'white', size = 18)
+function renderStatus(canvas, features, color = 'lightslategrey', size = 18)
 {
     const context = canvas.getContext('2d');
 
@@ -134,7 +134,7 @@ function renderStatus(canvas, features, color = 'white', size = 18)
     context.shadowOffsetX = 2;
     context.shadowOffsetY = 2;
     context.shadowBlur = 2;
-    context.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    context.shadowColor = 'rgba(0, 0, 0, 0.15)';
 
     context.fillText(`Keypoints: ${features.length}`, 8, 8);
 
