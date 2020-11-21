@@ -154,7 +154,11 @@ void main()
         hm += vec3(df8.x * df8.x, df8.x * df8.y, df8.y * df8.y);
 
         float response = 0.5f * (hm.x + hm.z - sqrt((hm.x - hm.z) * (hm.x - hm.z) + 4.0f * hm.y * hm.y));
-        score = max(0.0f, response / 5.0f);
+
+        // compute corner score in [0,1]
+        const float WINDOW_AREA = 9.0f;
+        const float EIGENVALUE_NORMALIZER = 3.0f / WINDOW_AREA;
+        score = clamp(response * EIGENVALUE_NORMALIZER, 0.0f, 1.0f);
 #else
         // Compute FAST score
         mat4 mct = mp - mat4(
