@@ -34,11 +34,11 @@ export class BRISKFeatures extends FeatureDescriptionAlgorithm
 {
     /**
      * Constructor
-     * @param {FeatureDetectionAlgorithm} detectionAlgorithm TODO brisk detector
+     * @param {FeatureAlgorithm} decoratedAlgorithm TODO brisk detector
      */
-    constructor(detectionAlgorithm)
+    constructor(decoratedAlgorithm)
     {
-        super(detectionAlgorithm, DESCRIPTOR_SIZE);
+        super(decoratedAlgorithm, DESCRIPTOR_SIZE);
     }
 
     /**

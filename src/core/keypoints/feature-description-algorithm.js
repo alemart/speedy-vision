@@ -32,26 +32,17 @@ export class FeatureDescriptionAlgorithm extends FeatureAlgorithmDecorator
 {
     /**
      * Constructor
-     * @param {FeatureDetectionAlgorithm} detectionAlgorithm 
+     * @param {FeatureAlgorithm} decoratedAlgorithm usually the feature detection algorithm 
      * @param {number} descriptorSize in bytes, required for GPU algorithms
      */
-    constructor(detectionAlgorithm, descriptorSize)
+    constructor(decoratedAlgorithm, descriptorSize)
     {
-        Utils.assert(detectionAlgorithm instanceof FeatureDetectionAlgorithm);
+        Utils.assert(decoratedAlgorithm instanceof FeatureAlgorithm);
+        Utils.assert(descriptorSize > 0);
 
-        super(detectionAlgorithm, descriptorSize, 0);
-        detectionAlgorithm.descriptorSize = this.descriptorSize;
-        detectionAlgorithm.extraSize = this.extraSize;
-    }
-
-    /**
-     * The feature detection algorithm associated with
-     * this feature description algorithm
-     * @returns {FeatureDetectionAlgorithm}
-     */
-    get detectionAlgorithm()
-    {
-        return this.decoratedAlgorithm;
+        super(decoratedAlgorithm, descriptorSize, 0);
+        decoratedAlgorithm.descriptorSize = this.descriptorSize;
+        decoratedAlgorithm.extraSize = this.extraSize;
     }
 
     /**
@@ -62,8 +53,8 @@ export class FeatureDescriptionAlgorithm extends FeatureAlgorithmDecorator
      */
     run(gpu, inputTexture)
     {
-        // run feature detection algorithm
-        const detectedKeypoints = this.detectionAlgorithm.run(gpu, inputTexture);
+        // run decorated algorithm (e.g., feature detection)
+        const detectedKeypoints = this.decoratedAlgorithm.run(gpu, inputTexture);
 
         // run feature description algorithm
         return this._describe(gpu, inputTexture, detectedKeypoints);
@@ -73,13 +64,12 @@ export class FeatureDescriptionAlgorithm extends FeatureAlgorithmDecorator
      * Download feature points from the GPU
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
-     * @param {number} [max] cap the number of keypoints to this value
      * @param {boolean} [useAsyncTransfer] transfer feature points asynchronously
      * @returns {Promise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, max = undefined, useAsyncTransfer = true)
+    download(gpu, encodedKeypoints, useAsyncTransfer = true)
     {
-        return this.detectionAlgorithm.download(gpu, encodedKeypoints, max, useAsyncTransfer);
+        return this.decoratedAlgorithm.download(gpu, encodedKeypoints, useAsyncTransfer);
     }
 
     /**
@@ -88,7 +78,7 @@ export class FeatureDescriptionAlgorithm extends FeatureAlgorithmDecorator
      */
     resetDownloader(gpu)
     {
-        this.detectionAlgorithm.resetDownloader(gpu);
+        this.decoratedAlgorithm.resetDownloader(gpu);
     }
 
     /**
@@ -97,7 +87,8 @@ export class FeatureDescriptionAlgorithm extends FeatureAlgorithmDecorator
      */
     setEnhancements(enhancements)
     {
-        this.detectionAlgorithm.setEnhancements(enhancements);
+        //if(this.decoratedAlgorithm instanceof FeatureDetectionAlgorithm)
+        this.decoratedAlgorithm.setEnhancements(enhancements);
     }
 
     /**

@@ -58,6 +58,7 @@ class SpeedyFeatureDetector
 
         // cap the number of keypoints?
         this._max = undefined;
+        this._capKeypoints = this._capKeypoints.bind(this);
 
         // enhance the image in different ways before detecting the features
         this._enhancements = {
@@ -120,9 +121,8 @@ class SpeedyFeatureDetector
         return this._algorithm.download(
             gpu,
             encodedKeypoints,
-            this._max,
             !isStaticMedia
-        );
+        ).then(this._capKeypoints);
     }
 
     /**
@@ -244,6 +244,33 @@ class SpeedyFeatureDetector
     _onSensitivityChange(sensitivity)
     {
         throw new AbstractMethodError();
+    }
+
+    /**
+     * Compare two keypoints for sorting (higher scores come first)
+     * @param {SpeedyFeature} a
+     * @param {SpeedyFeature} b
+     * @returns {number}
+     */
+    _compareKeypoints(a, b)
+    {
+        return (+(b.score)) - (+(a.score));
+    }
+
+    /**
+     * Cap the number of keypoints, so that only the ones with
+     * the highest scores will be returned to the user
+     * @param {SpeedyFeature[]} keypoints
+     * @returns {SpeedyFeature[]}
+     */
+    _capKeypoints(keypoints)
+    {
+        // nothing to do
+        if(this._max === undefined)
+            return keypoints;
+
+        // cap the number of keypoints
+        return keypoints.sort(this._compareKeypoints).slice(0, this._max);
     }
 }
 
@@ -541,7 +568,7 @@ export class ORBHarrisFeatureDetector extends SpeedyFeatureDetector
      */
     get depth()
     {
-        return this._algorithm.detectionAlgorithm.depth;
+        return this._algorithm.decoratedAlgorithm.depth;
     }
 
     /**
@@ -550,7 +577,7 @@ export class ORBHarrisFeatureDetector extends SpeedyFeatureDetector
      */
     set depth(depth)
     {
-        this._algorithm.detectionAlgorithm.depth = depth;
+        this._algorithm.decoratedAlgorithm.depth = depth;
     }
 
     /**
@@ -560,7 +587,7 @@ export class ORBHarrisFeatureDetector extends SpeedyFeatureDetector
      */
     get quality()
     {
-        return this._algorithm.detectionAlgorithm.quality;
+        return this._algorithm.decoratedAlgorithm.quality;
     }
 
     /**
@@ -570,7 +597,7 @@ export class ORBHarrisFeatureDetector extends SpeedyFeatureDetector
      */
     set quality(quality)
     {
-        this._algorithm.detectionAlgorithm.quality = Math.max(0, Math.min(quality, 1));
+        this._algorithm.decoratedAlgorithm.quality = Math.max(0, Math.min(quality, 1));
     }
 
     /**
@@ -598,7 +625,7 @@ export class ORBFASTFeatureDetector extends SpeedyFeatureDetector
     {
         // setup algorithm
         super(new ORBFeatures(new MultiscaleFASTFeatures()));
-        this._algorithm.detectionAlgorithm.useHarrisScore = useHarrisScore;
+        this._algorithm.decoratedAlgorithm.useHarrisScore = useHarrisScore;
     }
 
     /**
@@ -607,7 +634,7 @@ export class ORBFASTFeatureDetector extends SpeedyFeatureDetector
      */
     get depth()
     {
-        return this._algorithm.detectionAlgorithm.depth;
+        return this._algorithm.decoratedAlgorithm.depth;
     }
 
     /**
@@ -616,7 +643,7 @@ export class ORBFASTFeatureDetector extends SpeedyFeatureDetector
      */
     set depth(depth)
     {
-        this._algorithm.detectionAlgorithm.depth = depth;
+        this._algorithm.decoratedAlgorithm.depth = depth;
     }
 
     /**
@@ -625,7 +652,7 @@ export class ORBFASTFeatureDetector extends SpeedyFeatureDetector
      */
     get threshold()
     {
-        return this._algorithm.detectionAlgorithm.threshold;
+        return this._algorithm.decoratedAlgorithm.threshold;
     }
 
     /**
@@ -634,7 +661,7 @@ export class ORBFASTFeatureDetector extends SpeedyFeatureDetector
      */
     set threshold(threshold)
     {
-        this._algorithm.detectionAlgorithm.threshold = threshold;
+        this._algorithm.decoratedAlgorithm.threshold = threshold;
     }
 
     /**

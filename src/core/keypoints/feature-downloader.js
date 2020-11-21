@@ -142,12 +142,11 @@ export class FeatureDownloader extends Observable
      * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
      * @param {number} descriptorSize in bytes (set it to zero if there is no descriptor)
      * @param {number} extraSize in bytes (set it to zero if there is no extra data)
-     * @param {number} [max] cap the number of keypoints to this value
      * @param {boolean} [useAsyncTransfer] transfer keypoints asynchronously
      * @param {object} [output] output object with additional info about the keypoints (see the encoder for details)
      * @returns {Promise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, descriptorSize, extraSize, max = -1, useAsyncTransfer = true, output = undefined)
+    download(gpu, encodedKeypoints, descriptorSize, extraSize, useAsyncTransfer = true, output = undefined)
     {
         return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer, this._useBufferedDownloads).then(data => {
 
@@ -170,13 +169,6 @@ export class FeatureDownloader extends Observable
                 // static usage
                 const capacity = Math.max(nextCount, MIN_KEYPOINTS);
                 gpu.programs.encoders.reserveSpace(capacity, descriptorSize, extraSize);
-            }
-
-            // cap the number of keypoints if requested to do so
-            max = Number(max);
-            if(Number.isFinite(max) && max >= 0) {
-                keypoints.sort(this._compareKeypoints); // sort by descending cornerness score
-                keypoints.splice(max, keypoints.length - max);
             }
 
             // notify observers
@@ -234,16 +226,5 @@ export class FeatureDownloader extends Observable
     usingBufferedDownloads()
     {
         return this._useBufferedDownloads;
-    }
-
-    /**
-     * Compare two keypoints (higher scores come first)
-     * @param {SpeedyFeature} a 
-     * @param {SpeedyFeature} b 
-     * @returns {number}
-     */
-    _compareKeypoints(a, b)
-    {
-        return (+(b.score)) - (+(a.score));
     }
 }

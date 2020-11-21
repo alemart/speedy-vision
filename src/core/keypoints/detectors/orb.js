@@ -33,11 +33,11 @@ export class ORBFeatures extends FeatureDescriptionAlgorithm
 {
     /**
      * Constructor
-     * @param {FeatureDetectionAlgorithm} detectionAlgorithm preferably Multiscale Harris
+     * @param {FeatureAlgorithm} decoratedAlgorithm preferably Multiscale Harris
      */
-    constructor(detectionAlgorithm)
+    constructor(decoratedAlgorithm)
     {
-        super(detectionAlgorithm, DESCRIPTOR_SIZE);
+        super(decoratedAlgorithm, DESCRIPTOR_SIZE);
     }
 
     /**

@@ -67,7 +67,7 @@ export class FeatureTrackingAlgorithm extends FeatureAlgorithm
     download(gpu, encodedKeypoints, descriptorSize, extraSize, useAsyncTransfer = true, discard = undefined)
     {
         const output = discard ? { discard: discard, userData: [] } : undefined;
-        return this._downloader.download(gpu, encodedKeypoints, descriptorSize, extraSize, undefined, useAsyncTransfer, output).then(keypoints => {
+        return this._downloader.download(gpu, encodedKeypoints, descriptorSize, extraSize, useAsyncTransfer, output).then(keypoints => {
             // discard keypoints if they are outside
             // the image or if they are of "bad quality"
             if(discard) {
