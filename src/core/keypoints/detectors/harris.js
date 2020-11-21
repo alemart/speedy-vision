@@ -26,7 +26,7 @@ import { PYRAMID_MAX_LEVELS } from '../../../utils/globals';
 import { Utils } from '../../../utils/utils';
 
 // constants
-const DEFAULT_QUALITY = 0.9; // default quality metric
+const DEFAULT_QUALITY = 0.1; // default quality metric
 const DEFAULT_DEPTH = 3; // default depth for multiscale feature detection
 const DEFAULT_WINDOW_SIZE = 3; // compute Harris autocorrelation matrix within a 3x3 window
 const MIN_WINDOW_SIZE = 0; // minimum window size when computing the autocorrelation matrix
