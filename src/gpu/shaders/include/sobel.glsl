@@ -30,7 +30,7 @@
  */
 vec4 encodeSobel(vec2 df)
 {
-    vec2 zeroes = vec2(0.0f, 0.0f);
+    const vec2 zeroes = vec2(0.0f, 0.0f);
     vec2 dmax = -max(df, zeroes);
     vec2 dmin = min(df, zeroes);
     return exp2(vec4(dmax, dmin));
