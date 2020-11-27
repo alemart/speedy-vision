@@ -25,6 +25,7 @@ import { Utils } from '../../utils/utils';
 /**
  * This decorator lets us extend and combine
  * the FeatureAlgorithm class in many ways
+ * @abstract
  */
 export class FeatureAlgorithmDecorator extends FeatureAlgorithm
 {
@@ -46,12 +47,12 @@ export class FeatureAlgorithmDecorator extends FeatureAlgorithm
      * Abstract "run" operation:
      * runs something on the GPU
      * @param {SpeedyGPU} gpu
-     * @param {...any} args
+     * @param {SpeedyTexture} inputTexture
      * @returns {SpeedyTexture}
      */
-    run(gpu, ...args)
+    run(gpu, inputTexture)
     {
-        return this._decoratedAlgorithm.run(gpu, ...args);
+        return this._decoratedAlgorithm.run(gpu, inputTexture);
     }
 
     /**

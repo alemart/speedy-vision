@@ -27,6 +27,7 @@ import { Utils } from '../../utils/utils';
 
 /**
  * Abstract feature description algorithm
+ * @abstract
  */
 export class FeatureDescriptionAlgorithm extends FeatureAlgorithmDecorator
 {

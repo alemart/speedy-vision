@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * speedy-feature-tracker.js
+ * speedy-feature-tracker-factory.js
  * A collection of methods for instantiating Feature Trackers
  */
 

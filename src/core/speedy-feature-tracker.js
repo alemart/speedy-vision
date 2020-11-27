@@ -15,17 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * feature-tracker.js
+ * speedy-feature-tracker.js
  * An easy-to-use class for working with feature trackers
  */
 
-import { SpeedyFeatureDetector } from './speedy-feature-detector';
-import { FeatureDetectionAlgorithm } from './keypoints/feature-detection-algorithm';
 import { FeatureTrackingAlgorithm } from './keypoints/feature-tracking-algorithm';
 import { SpeedyMedia } from './speedy-media';
 import { SpeedyGPU } from '../gpu/speedy-gpu';
 import { SpeedyVector2 } from './math/speedy-vector';
-import { IllegalOperationError, IllegalArgumentError, AbstractMethodError } from '../utils/errors';
+import { IllegalOperationError, IllegalArgumentError } from '../utils/errors';
+import { Utils } from '../utils/utils';
 import { LKFeatureTrackingAlgorithm } from './keypoints/trackers/lk';
 
 /**
@@ -33,7 +32,7 @@ import { LKFeatureTrackingAlgorithm } from './keypoints/trackers/lk';
  * (it performs sparse optical-flow)
  * @abstract
  */
-class SpeedyFeatureTracker
+export class SpeedyFeatureTracker
 {
     /**
      * Class constructor
@@ -44,28 +43,21 @@ class SpeedyFeatureTracker
     {
         this._media = media;
         this._trackingAlgorithm = trackingAlgorithm;
-        this._descriptionAlgorithm = null;
+        this._decoratedAlgorithm = this._trackingAlgorithm;
         this._inputTexture = null;
         this._prevInputTexture = null;
         this._updateLock = false;
     }
 
     /**
-     * Augments the feature tracker, so that tracked features
-     * are also described before being returned to the user.
-     * This is a chainable method and can be called when
-     * instantiating the tracker.
-     * @param {SpeedyFeatureDetector} featureDescriptor used to describe the tracked features
-     * @returns {SpeedyFeatureTracker} this object
+     * Decorate the underlying algorithm
+     * @param {Function} decorator
+     * @returns {SpeedyFeatureTracker} this instance, now decorated
      */
-    includeDescriptor(featureDescriptor)
+    decorate(decorator)
     {
-        const algorithm = featureDescriptor._algorithm;
-
-        // update feature descriptor
-        this._descriptionAlgorithm = algorithm;
-
-        // chainable method
+        this._decoratedAlgorithm = new decorator(this._decoratedAlgorithm);
+        Utils.assert(this._decoratedAlgorithm instanceof FeatureAlgorithmDecorator);
         return this;
     }
 
@@ -79,6 +71,9 @@ class SpeedyFeatureTracker
     track(keypoints, flow = null, found = null)
     {
         const gpu = this._media._gpu; // friend class?!
+        const descriptorSize = this._decoratedAlgorithm.descriptorSize;
+        const extraSize = this._decoratedAlgorithm.extraSize;
+        const useAsyncTransfer = (this._media.options.usage != 'static');
 
         // validate arguments
         if(!Array.isArray(keypoints) || (found != null && !Array.isArray(found)) || (flow != null && !Array.isArray(flow)))
@@ -87,27 +82,21 @@ class SpeedyFeatureTracker
         // upload media to the GPU
         this._updateMedia(this._media, gpu);
 
-        // preliminary data
+        // get the input images
         const nextImage = this._inputTexture;
         const prevImage = this._prevInputTexture;
-        const descriptorSize = this._descriptionAlgorithm != null ? this._descriptionAlgorithm.descriptorSize : 0;
-        const extraSize = this._descriptionAlgorithm != null ? this._descriptionAlgorithm.extraSize : 0;
-        const useAsyncTransfer = (this._media.options.usage != 'static');
 
         // adjust the size of the encoder
         gpu.programs.encoders.optimize(keypoints.length, descriptorSize, extraSize);
 
         // upload & track keypoints
-        const prevKeypoints = this._trackingAlgorithm.upload(gpu, keypoints, descriptorSize, extraSize);
-        const trackedKeypoints = this._trackFeatures(gpu, nextImage, prevImage, prevKeypoints, descriptorSize, extraSize);
-
-        // compute feature descriptors (if an algorithm is provided)
-        const trackedKeypointsWithDescriptors = this._descriptionAlgorithm == null ? trackedKeypoints :
-            this._descriptionAlgorithm.describe(gpu, nextImage, trackedKeypoints);
+        this._trackingAlgorithm.prevImage = prevImage;
+        this._trackingAlgorithm.prevKeypoints = this._trackingAlgorithm.upload(gpu, keypoints);
+        const trackedKeypoints = this._decoratedAlgorithm.run(gpu, nextImage);
 
         // download keypoints
         const discard = [];
-        return this._trackingAlgorithm.download(gpu, trackedKeypointsWithDescriptors, descriptorSize, extraSize, useAsyncTransfer, discard).then(trackedKeypoints => {
+        return this._trackingAlgorithm.download(gpu, trackedKeypoints, useAsyncTransfer, discard).then(trackedKeypoints => {
             const filteredKeypoints = [];
 
             // initialize output arrays
@@ -158,43 +147,15 @@ class SpeedyFeatureTracker
 
         // upload the media
         const newInputTexture = gpu.upload(media.source);
-        this._prevInputTexture = this._inputTexture;
-        this._inputTexture = newInputTexture;
-
-        // something wrong with the upload?
-        if(this._inputTexture == null)
+        if(newInputTexture == null)
             throw new IllegalOperationError(`Tracking error: can't upload image to the GPU ${media.source}`);
 
-        // is it the first frame?
-        if(this._prevInputTexture == null)
-            this._prevInputTexture = newInputTexture;
-    }
-
-    /**
-     * Calls the underlying tracking algorithm,
-     * possibly with additional options
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} nextImage
-     * @param {SpeedyTexture} prevImage
-     * @param {SpeedyTexture} prevKeypoints tiny texture
-     * @param {number} descriptorSize in bytes
-     * @param {number} extraSize in bytes
-     * @returns {SpeedyTexture}
-     */
-    _trackFeatures(gpu, nextImage, prevImage, prevKeypoints, descriptorSize, extraSize)
-    {
-        // template method
-        return this._trackingAlgorithm.track(
-            gpu,
-            nextImage,
-            prevImage,
-            prevKeypoints,
-            descriptorSize,
-            extraSize
-        );
+        // store the textures
+        const prevInputTexture = this._inputTexture; // may be null (1st frame)
+        this._inputTexture = newInputTexture;
+        this._prevInputTexture = prevInputTexture || newInputTexture;
     }
 }
-
 
 
 /**
@@ -208,38 +169,8 @@ export class LKFeatureTracker extends SpeedyFeatureTracker
      */
     constructor(media)
     {
-        const trackingAlgorithm = new LKFeatureTrackingAlgorithm();
-        super(trackingAlgorithm, media);
-
-        // default options
-        this._windowSize = 15;
-        this._depth = 5;
-        this._discardThreshold = 0.0001;
-    }
-
-    /**
-     * Calls the LK feature tracker
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} nextImage
-     * @param {SpeedyTexture} prevImage
-     * @param {SpeedyTexture} prevKeypoints tiny texture
-     * @param {number} descriptorSize in bytes
-     * @param {number} extraSize in bytes
-     * @returns {SpeedyTexture}
-     */
-    _trackFeatures(gpu, nextImage, prevImage, prevKeypoints, descriptorSize, extraSize)
-    {
-        return this._trackingAlgorithm.track(
-            gpu,
-            nextImage,
-            prevImage,
-            prevKeypoints,
-            descriptorSize,
-            extraSize,
-            this._windowSize,
-            this._depth,
-            this._discardThreshold
-        );
+        const algorithm = new LKFeatureTrackingAlgorithm();
+        super(algorithm, media);
     }
 
     /**
@@ -248,7 +179,7 @@ export class LKFeatureTracker extends SpeedyFeatureTracker
      */
     get windowSize()
     {
-        return this._windowSize;
+        return this._trackingAlgorithm.windowSize;
     }
 
     /**
@@ -257,12 +188,10 @@ export class LKFeatureTracker extends SpeedyFeatureTracker
      */
     set windowSize(newSize)
     {
-        // make sure it's a positive odd number
         if(typeof newSize !== 'number' || newSize < 1 || newSize % 2 == 0)
-            throw new IllegalArgumentError(`Window newSize must be a positive odd number`);
+            throw new IllegalArgumentError(`Window size must be a positive odd number`);
 
-        // update field
-        this._windowSize = newSize | 0;
+        this._trackingAlgorithm.windowSize = newSize;
     }
 
     /**
@@ -271,7 +200,7 @@ export class LKFeatureTracker extends SpeedyFeatureTracker
      */
     get depth()
     {
-        return this._depth;
+        return this._trackingAlgorithm.depth;
     }
 
     /**
@@ -283,7 +212,7 @@ export class LKFeatureTracker extends SpeedyFeatureTracker
         if(typeof newDepth !== 'number' || newDepth < 1)
             throw new IllegalArgumentError(`Invalid depth: ${newDepth}`);
 
-        this._depth = newDepth | 0;
+        this._trackingAlgorithm.depth = newDepth;
     }
 
     /**
@@ -292,7 +221,7 @@ export class LKFeatureTracker extends SpeedyFeatureTracker
      */
     get discardThreshold()
     {
-        return this._discardThreshold;
+        return this._trackingAlgorithm.discardThreshold;
     }
 
     /**
@@ -301,9 +230,9 @@ export class LKFeatureTracker extends SpeedyFeatureTracker
      */
     set discardThreshold(threshold)
     {
-        if(typeof threshold !== 'number')
+        if(typeof threshold !== 'number' || threshold < 0)
             throw new IllegalArgumentError(`Invalid discardThreshold`);
 
-        this._discardThreshold = Math.max(0, threshold);
+        this._trackingAlgorithm.discardThreshold = threshold;
     }
 }

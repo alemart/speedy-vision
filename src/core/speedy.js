@@ -24,6 +24,7 @@ import { SpeedyPipeline } from './speedy-pipeline';
 import { FPSCounter } from '../utils/fps-counter';
 import { SpeedyFeatureDetectorFactory } from './speedy-feature-detector-factory';
 import { SpeedyFeatureTrackerFactory } from './speedy-feature-tracker-factory';
+import { SpeedyFeatureDescriptorFactory } from './speedy-feature-descriptor-factory';
 import { SpeedyFlags } from './speedy-flags';
 import { SpeedyVector2 } from './math/speedy-vector';
 import { SpeedyMatrixExprFactory } from './math/matrix-expressions';
@@ -105,6 +106,15 @@ export class Speedy
     static get FeatureTracker()
     {
         return SpeedyFeatureTrackerFactory;
+    }
+
+    /**
+     * Feature descriptors
+     * @returns {SpeedyFeatureDescriptorFactory}
+     */
+    static get FeatureDescriptor()
+    {
+        return SpeedyFeatureDescriptorFactory;
     }
 
     /**

@@ -19,8 +19,10 @@
  * An abstract algorithm related to feature points
  */
 
+import { SpeedyGPU } from '../../gpu/speedy-gpu';
+import { SpeedyTexture } from '../../gpu/speedy-texture';
 import { FeatureDownloader } from './feature-downloader';
-import { AbstractMethodError, IllegalOperationError } from '../../utils/errors';
+import { AbstractMethodError } from '../../utils/errors';
 import { Utils } from '../../utils/utils';
 
 /**
@@ -38,7 +40,8 @@ export class FeatureAlgorithm
      */
     constructor(descriptorSize = 0, extraSize = 0)
     {
-        Utils.assert(descriptorSize % 4 === 0 && extraSize % 4 === 0);
+        Utils.assert(descriptorSize % 4 === 0);
+        Utils.assert(extraSize % 4 === 0);
 
         this._downloader = new FeatureDownloader();
         this._descriptorSize = descriptorSize; // for encoded keypoint textures
@@ -48,11 +51,11 @@ export class FeatureAlgorithm
     /**
      * Abstract "run" operation:
      * runs something on the GPU
-     * @param {SpeedyGPU} gpu 
-     * @param {...any} args
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTexture} inputTexture
      * @returns {SpeedyTexture}
      */
-    run(gpu, ...args)
+    run(gpu, inputTexture)
     {
         throw new AbstractMethodError();
     }
@@ -82,14 +85,13 @@ export class FeatureAlgorithm
 
     /**
      * Upload feature points to the GPU
-     * Needs to be overridden in subclasses
      * @param {SpeedyGPU} gpu
      * @param {SpeedyFeature[]} keypoints feature points
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyTexture} tiny texture
      */
     upload(gpu, keypoints)
     {
-        throw new IllegalOperationError();
+        return gpu.programs.encoders.uploadKeypoints(keypoints, this.descriptorSize, this.extraSize);
     }
 
     /**

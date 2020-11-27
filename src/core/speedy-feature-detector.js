@@ -19,7 +19,8 @@
  * Feature detection API
  */
 
-import { IllegalArgumentError, IllegalOperationError, AbstractMethodError, NotSupportedError, NotImplementedError } from '../utils/errors';
+import { IllegalArgumentError, IllegalOperationError, AbstractMethodError, NotSupportedError } from '../utils/errors';
+import { Utils } from '../utils/utils';
 import { ColorFormat } from '../utils/types'
 import { SpeedyFlags } from './speedy-flags';
 import { SpeedyGPU } from '../gpu/speedy-gpu';
@@ -30,8 +31,7 @@ import { FeatureDetectionAlgorithm } from './keypoints/feature-detection-algorit
 import { FeatureDescriptionAlgorithm } from './keypoints/feature-description-algorithm';
 import { FASTFeatures, MultiscaleFASTFeatures } from './keypoints/detectors/fast';
 import { HarrisFeatures, MultiscaleHarrisFeatures } from './keypoints/detectors/harris';
-import { ORBFeatures } from './keypoints/detectors/orb';
-import { BRISKFeatures } from './keypoints/detectors/brisk';
+import { FeatureAlgorithmDecorator } from './keypoints/feature-algorithm-decorator';
 
 
 
@@ -42,16 +42,17 @@ import { BRISKFeatures } from './keypoints/detectors/brisk';
  * textures and is not suitable for end-user usage
  * @abstract
  */
-class SpeedyFeatureDetector
+export class SpeedyFeatureDetector
 {
     /**
      * Class constructor
-     * @param {FeatureDetectionAlgorithm | FeatureDescriptionAlgorithm} algorithm 
+     * @param {FeatureDetectionAlgorithm | FeatureAlgorithmDecorator} algorithm 
      */
     constructor(algorithm)
     {
         // Set the algorithm
         this._algorithm = algorithm;
+        this._decoratedAlgorithm = this._algorithm;
 
         // sensitivity: the higher the value, the more feature points you get
         this._sensitivity = 0; // a value in [0,1]
@@ -72,6 +73,18 @@ class SpeedyFeatureDetector
     }
 
     /**
+     * Decorate the underlying algorithm
+     * @param {Function} decorator
+     * @returns {SpeedyFeatureDetector} this instance, now decorated
+     */
+    decorate(decorator)
+    {
+        this._decoratedAlgorithm = new decorator(this._decoratedAlgorithm);
+        Utils.assert(this._decoratedAlgorithm instanceof FeatureAlgorithmDecorator);
+        return this;
+    }
+
+    /**
      * Detect & describe feature points
      * @param {SpeedyMedia} media
      * @param {number} [flags]
@@ -81,6 +94,8 @@ class SpeedyFeatureDetector
     {
         const gpu = media._gpu;
         const isStaticMedia = (media.options.usage == 'static');
+        const descriptorSize = this._decoratedAlgorithm.descriptorSize;
+        const extraSize = this._decoratedAlgorithm.extraSize;
 
         // check if the media has been released
         if(media.isReleased())
@@ -93,13 +108,13 @@ class SpeedyFeatureDetector
             // This flag will undo these optimizations. Use it
             // when you expect a sudden increase in the number
             // of keypoints (between two consecutive frames).
-            this._algorithm.resetDownloader(gpu);
+            this._decoratedAlgorithm.resetDownloader(gpu);
         }
 
         // Allocate encoder space for static media
         if(isStaticMedia) {
             const INITIAL_KEYPOINT_GUESS = 1024 * 3;
-            gpu.programs.encoders.reserveSpace(INITIAL_KEYPOINT_GUESS, this._algorithm.descriptorSize, this._algorithm.extraSize);
+            gpu.programs.encoders.reserveSpace(INITIAL_KEYPOINT_GUESS, descriptorSize, extraSize);
         }
 
         // Upload & preprocess media
@@ -115,7 +130,7 @@ class SpeedyFeatureDetector
         this._algorithm.setEnhancements(
             this._enhancements.nightvision || this._enhancements.illumination
         );
-        const encodedKeypoints = this._algorithm.run(gpu, preprocessedTexture);
+        const encodedKeypoints = this._decoratedAlgorithm.run(gpu, preprocessedTexture);
 
         // Download keypoints from the GPU
         return this._algorithm.download(
@@ -196,7 +211,7 @@ class SpeedyFeatureDetector
             // enable automatic sensitivity
             if(this._automaticSensitivity == null) {
                 this._automaticSensitivity = new AutomaticSensitivity(this._algorithm._downloader);
-                this._automaticSensitivity.subscribe(value => this._algorithm.sensitivity = value);
+                this._automaticSensitivity.subscribe(value => this.sensitivity = value);
             }
             this._automaticSensitivity.expected = numberOfFeaturePoints;
             this._automaticSensitivity.tolerance = tolerance;
@@ -543,149 +558,5 @@ export class MultiscaleHarrisFeatureDetector extends SpeedyFeatureDetector
     _onSensitivityChange(sensitivity)
     {
         this.quality = 1.0 - Math.tanh(2.3 * sensitivity);
-    }
-}
-
-
-/**
- * ORB feature descriptor
- * With Multiscale Harris as a feature detector
- */
-export class ORBHarrisFeatureDetector extends SpeedyFeatureDetector
-{
-    /**
-     * Class constructor
-     */
-    constructor()
-    {
-        // setup algorithm
-        super(new ORBFeatures(new MultiscaleHarrisFeatures()));
-    }
-
-    /**
-     * Get the depth of the algorithm: how many pyramid layers will be scanned
-     * @returns {number}
-     */
-    get depth()
-    {
-        return this._algorithm.decoratedAlgorithm.depth;
-    }
-
-    /**
-     * Set the depth of the algorithm: how many pyramid layers will be scanned
-     * @param {number} depth a number between 1 and PYRAMID_MAX_LEVELS, inclusive
-     */
-    set depth(depth)
-    {
-        this._algorithm.decoratedAlgorithm.depth = depth;
-    }
-
-    /**
-     * Get current quality level
-     * We will pick corners having score >= quality * max(score)
-     * @returns {number} a value in [0,1]
-     */
-    get quality()
-    {
-        return this._algorithm.decoratedAlgorithm.quality;
-    }
-
-    /**
-     * Set quality level
-     * We will pick corners having score >= quality * max(score)
-     * @param {number} quality a value in [0,1]
-     */
-    set quality(quality)
-    {
-        this._algorithm.decoratedAlgorithm.quality = Math.max(0, Math.min(quality, 1));
-    }
-
-    /**
-     * Convert a normalized sensitivity to a quality value
-     * @param {number} sensitivity 
-     */
-    _onSensitivityChange(sensitivity)
-    {
-        this.quality = 1.0 - Math.tanh(2.3 * sensitivity);
-    }
-}
-
-
-/**
- * ORB feature descriptor
- * With Multiscale FAST as a feature detector
- */
-export class ORBFASTFeatureDetector extends SpeedyFeatureDetector
-{
-    /**
-     * Class constructor
-     * @param {boolean} [useHarrisScore]
-     */
-    constructor(useHarrisScore = false)
-    {
-        // setup algorithm
-        super(new ORBFeatures(new MultiscaleFASTFeatures()));
-        this._algorithm.decoratedAlgorithm.useHarrisScore = useHarrisScore;
-    }
-
-    /**
-     * Get the depth of the algorithm: how many pyramid layers will be scanned
-     * @returns {number}
-     */
-    get depth()
-    {
-        return this._algorithm.decoratedAlgorithm.depth;
-    }
-
-    /**
-     * Set the depth of the algorithm: how many pyramid layers will be scanned
-     * @param {number} depth a number between 1 and PYRAMID_MAX_LEVELS, inclusive
-     */
-    set depth(depth)
-    {
-        this._algorithm.decoratedAlgorithm.depth = depth;
-    }
-
-    /**
-     * Get FAST threshold
-     * @returns {number} a value in [0,255]
-     */
-    get threshold()
-    {
-        return this._algorithm.decoratedAlgorithm.threshold;
-    }
-
-    /**
-     * Set FAST threshold
-     * @param {number} threshold an integer in [0,255]
-     */
-    set threshold(threshold)
-    {
-        this._algorithm.decoratedAlgorithm.threshold = threshold;
-    }
-
-    /**
-     * Convert a normalized sensitivity to a FAST threshold
-     * @param {number} sensitivity 
-     */
-    _onSensitivityChange(sensitivity)
-    {
-        this.threshold = Math.round(255.0 * (1.0 - Math.tanh(2.77 * sensitivity)));
-    }
-}
-
-
-/**
- * BRISK feature detector
- */
-export class BRISKFeatureDetector extends SpeedyFeatureDetector
-{
-    /**
-     * Class constructor
-     */
-    constructor()
-    {
-        // TODO
-        throw new NotImplementedError();
     }
 }

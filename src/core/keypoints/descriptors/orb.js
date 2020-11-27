@@ -21,7 +21,7 @@
 
 import { SpeedyGPU } from '../../../gpu/speedy-gpu';
 import { FeatureDescriptionAlgorithm } from '../feature-description-algorithm';
-import { FeatureDetectionAlgorithm } from '../feature-detection-algorithm';
+import { FeatureAlgorithm } from '../feature-algorithm';
 
 // constants
 const DESCRIPTOR_SIZE = 32; // 256 bits

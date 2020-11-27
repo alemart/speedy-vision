@@ -42,6 +42,7 @@ speedy-vision.js is developed by [Alexandre Martins](https://github.com/alemart)
 * [API Reference](#api-reference)
   * [Media routines](#media-routines)
   * [Feature detection](#feature-detection)
+  * [Feature description](#feature-description)
   * [Feature tracking](#feature-tracking)
   * [Feature matching](#feature-matching)
   * [Image processing](#image-processing)
@@ -406,6 +407,7 @@ When using any variation of the FAST feature detector, the following additional 
 
 When using the `MultiscaleFAST` detector, you may also specify:
 
+* `depth: number`. An integer between `1` and `4` that tells Speedy how "deep" it should go when searching for keypoints in scale-space. Defaults to `3`.
 * `useHarrisScore: boolean`. Adopt a better scoring function (cornerness measure). It will give you slightly better features. Defaults to `false` (using the `MultiscaleHarris` detector is preferred).
 
 #### Harris corners
@@ -419,6 +421,10 @@ Speedy includes an implementation of the Harris corner detector with the Shi-Tom
 * `quality: number`. A value between `0` and `1` representing the minimum "quality" of the returned keypoints. Speedy will discard any keypoint whose score is lower than the specified fraction of the maximum keypoint score. A typical value for `quality` is `0.10` (10%).
   * Note: `quality` is an alternative to `sensitivity`.
 
+When using the `MultiscaleHarris` detector, the following additional properties are available:
+
+* `depth: number`. An integer between `1` and `4` that tells Speedy how "deep" it should go when searching for keypoints in scale-space. Defaults to `3`.
+
 #### ORB features
 
 `Speedy.FeatureDetector.ORB(): SpeedyFeatureDetector`
@@ -427,15 +433,6 @@ Speedy includes an implementation of ORB. It is an efficient solution that first
 
 * `depth: number`. An integer between `1` and `4` that tells Speedy how "deep" it should go when searching for keypoints in scale-space. Defaults to `3`.
 * `quality: number`. A value between `0` and `1`, as in the Harris detector. This is an alternative to `sensitivity`.
-
-#### BRISK features
-
-`Speedy.FeatureDetector.BRISK(): SpeedyFeatureDetector`
-
-**Currently work-in-progress.** Speedy implements a modified version of the BRISK feature detector. It is able to give you feature points at multiple scales. The following additional properties are available:
-
-* `depth: number`. An integer between `1` and `4` telling how "deep" the algorithm should go when searching for keypoints in scale-space. The higher the value, the more robust it is against scale transformations (at a slighly higher computational cost). Defaults to `4`.
-* `threshold: number`. An integer between `0` and `255`, just like in FAST.
 
 #### Automatic sensitivity
 
@@ -489,6 +486,36 @@ window.onload = async function() {
 };
 ```
 
+### Feature description
+
+Feature descriptors are data that somehow describe feature points. "Similar" feature points have "similar" descriptors, according to a distance metric. There are different algorithms for computing descriptors. The idea is to use the descriptors to match feature points of different images.
+
+Feature detectors and feature trackers may be augmented with a feature description decorator. The decorator design pattern lets you dynamically add new behavior to objects. It creates a flexible way of combining detection and description algorithms, even though the actual computations take place in the GPU.
+
+#### ORB features
+
+Augments a feature detector/tracker with 256-bit binary descriptors for feature matching.
+
+###### Arguments
+
+* `detector: SpeedyFeatureDetector`. The detector you want to augment.
+* `tracker: SpeedyFeatureTracker`. The tracker you want to augment.
+
+###### Returns
+
+The input argument, augmented with ORB descriptors.
+
+###### Example
+
+```js
+// Combine Harris corner detector with ORB descriptors
+const orb = Speedy.FeatureDescriptor.ORB(
+    Speedy.FeatureDetector.MultiscaleHarris()
+);
+
+const features = await orb.detect(media);
+```
+
 #### Examining your feature points
 
 A `SpeedyFeature` object represents an image feature.
@@ -522,6 +549,12 @@ The orientation angle of the image feature, in radians. Only a subset of the fea
 `SpeedyFeature.score: number, read-only`
 
 A score measure of the image feature. Although different detection methods employ different measurement strategies, the larger the score, the "better" the feature is.
+
+##### SpeedyFeature.lod
+
+`SpeedyFeature.lod: number, read-only`
+
+The level-of-detail (pyramid level) corresponding to the feature point, starting from zero. While not the same, `lod` is equivalent to `scale`.
 
 ### Feature tracking
 
@@ -573,29 +606,6 @@ features = await featureTracker.track(features, flow);
 
 // output
 console.log(features, flow);
-```
-
-##### SpeedyFeatureTracker.includeDescriptor()
-
-`SpeedyFeatureTracker.includeDescriptor(featureDescriptor: SpeedyFeatureDetector): SpeedyFeatureTracker`
-
-Attaches a feature descriptor to the feature tracker. You'll get your tracked features with updated descriptors.
-
-###### Arguments
-
-* `featureDescriptor: SpeedyFeatureDetector`. A feature detection object that includes feature description capabilities.
-
-###### Returns
-
-The feature tracker itself.
-
-###### Example
-
-```js
-const orb = Speedy.FeatureDetector.ORB();
-
-const lk = Speedy.FeatureTracker.LK(media)
-          .includeDescriptor(orb);
 ```
 
 #### LK feature tracker

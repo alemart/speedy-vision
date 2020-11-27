@@ -122,10 +122,9 @@ export class FeatureDetectionAlgorithm extends FeatureAlgorithm
      * Detect feature points
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} inputTexture pre-processed greyscale image
-     * @param {...any} args additional arguments
      * @returns {SpeedyTexture} tiny texture with encoded keypoints
      */
-    _detect(gpu, inputTexture, ...args)
+    _detect(gpu, inputTexture)
     {
         // This must be implemented in subclasses
         throw new AbstractMethodError();
