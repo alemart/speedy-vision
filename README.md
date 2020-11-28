@@ -490,7 +490,7 @@ window.onload = async function() {
 
 Feature descriptors are data that somehow describe feature points. "Similar" feature points have "similar" descriptors, according to a distance metric. There are different algorithms for computing descriptors. The idea is to use the descriptors to match feature points of different images.
 
-Feature detectors and feature trackers may be augmented with a feature description decorator. The decorator design pattern lets you dynamically add new behavior to objects. It creates a flexible way of combining detection and description algorithms, even though the actual computations take place in the GPU.
+Feature detectors and feature trackers may be augmented with a feature description decorator. The decorator design pattern lets you dynamically add new behavior to objects. It creates a flexible way of combining detection and description algorithms, considering that the actual computations take place in the GPU.
 
 #### ORB features
 
