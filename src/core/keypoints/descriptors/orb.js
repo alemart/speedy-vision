@@ -25,6 +25,7 @@ import { FeatureAlgorithm } from '../feature-algorithm';
 
 // constants
 const DESCRIPTOR_SIZE = 32; // 256 bits
+const DEFAULT_ORIENTATION_PATCH_RADIUS = 7; // for computing keypoint orientation
 
 /**
  * ORB features
@@ -53,7 +54,7 @@ export class ORBFeatures extends FeatureDescriptionAlgorithm
         const extraSize = this.extraSize;
 
         // get oriented keypoints
-        const orientedKeypoints = detectedKeypoints;
+        const orientedKeypoints = this._computeOrientation(gpu, inputTexture, detectedKeypoints);
 
         // smooth the image before computing the descriptors
         const smoothTexture = gpu.programs.filters.gauss7(inputTexture);
@@ -62,5 +63,26 @@ export class ORBFeatures extends FeatureDescriptionAlgorithm
         // compute ORB feature descriptors
         const encoderLength = gpu.programs.encoders.encoderLength;
         return gpu.programs.keypoints.orb(smoothPyramid, orientedKeypoints, descriptorSize, extraSize, encoderLength);
+    }
+
+    /**
+     * Compute the orientation of the keypoints
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTexture} inputTexture pre-processed greyscale image
+     * @param {SpeedyTexture} detectedKeypoints tiny texture with appropriate size for the descriptors
+     * @returns {SpeedyTexture} tiny texture with encoded keypoints & descriptors
+     */
+    _computeOrientation(gpu, inputTexture, detectedKeypoints)
+    {
+        const descriptorSize = this.descriptorSize;
+        const extraSize = this.extraSize;
+        const orientationPatchRadius = DEFAULT_ORIENTATION_PATCH_RADIUS;
+
+        // generate pyramid
+        const pyramid = inputTexture.generateMipmap();
+
+        // compute orientation
+        const encoderLength = gpu.programs.encoders.encoderLength;
+        return gpu.programs.keypoints.orientationViaCentroid(pyramid, detectedKeypoints, orientationPatchRadius, descriptorSize, extraSize, encoderLength);
     }
 }

@@ -20,6 +20,7 @@
  */
 
 import { FeatureTrackingAlgorithm } from './keypoints/feature-tracking-algorithm';
+import { FeatureAlgorithmDecorator } from './keypoints/feature-algorithm-decorator';
 import { SpeedyMedia } from './speedy-media';
 import { SpeedyGPU } from '../gpu/speedy-gpu';
 import { SpeedyVector2 } from './math/speedy-vector';

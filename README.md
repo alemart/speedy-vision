@@ -280,14 +280,14 @@ A `Promise` that resolves as soon as the resources are released.
 
 #### Detection methods
 
-Speedy can use different methods for detecting feature points. Different methods return different results. Some work in scale-space and return oriented keypoints, others do not. Currently, the following detectors are available:
+Speedy can use different methods for detecting feature points. Different methods return different results. Some work in scale-space, others do not. Currently, the following detectors are available:
 
 | Detector | Description                      | Multi-scale | Oriented | Includes descriptor |
 |----------|----------------------------------|-------------|----------|---------------------|
 |`FAST`    | FAST corner detector             | -           | -        | -                   |
-|`MultiscaleFAST` | FAST augmented with scale & orientation | Yes | Yes | -                  |
+|`MultiscaleFAST` | FAST augmented with scale | Yes         | -        | -                   |
 |`Harris`  | Harris corner detector           | -           | -        | -                   |
-|`MultiscaleHarris` | Harris augmented with scale & orientation | Yes | Yes | -              |
+|`MultiscaleHarris` | Harris augmented with scale | Yes     | -        | -                   |
 |`ORB`     | ORB features                     | Yes         | Yes      | Yes                 |
 |`BRISK`   | BRISK features                   | Soon        | Soon     | Soon                |
 

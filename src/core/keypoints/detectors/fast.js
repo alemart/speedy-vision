@@ -30,7 +30,6 @@ import { PYRAMID_MAX_LEVELS } from '../../../utils/globals';
 const DEFAULT_FAST_VARIANT = 9;
 const DEFAULT_FAST_THRESHOLD = 10;
 const DEFAULT_DEPTH = 3;
-const DEFAULT_ORIENTATION_PATCH_RADIUS = 7;
 
 
 
@@ -249,28 +248,7 @@ export class MultiscaleFASTFeatures extends FeatureDetectionAlgorithm
         // encode keypoints
         const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(corners, descriptorSize, extraSize);
 
-        // compute orientation
-        return this._computeOrientation(gpu, inputTexture, detectedKeypoints);
-    }
-
-    /**
-     * Compute the orientation of the keypoints
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} inputTexture pre-processed greyscale image
-     * @param {SpeedyTexture} detectedKeypoints tiny texture with appropriate size for the descriptors
-     * @returns {SpeedyTexture} tiny texture with encoded keypoints & descriptors
-     */
-    _computeOrientation(gpu, inputTexture, detectedKeypoints)
-    {
-        const orientationPatchRadius = DEFAULT_ORIENTATION_PATCH_RADIUS;
-        const descriptorSize = this.descriptorSize;
-        const extraSize = this.extraSize;
-
-        // generate pyramid
-        const pyramid = inputTexture.generateMipmap();
-
-        // compute orientation
-        const encoderLength = gpu.programs.encoders.encoderLength;
-        return gpu.programs.keypoints.orientationViaCentroid(pyramid, detectedKeypoints, orientationPatchRadius, descriptorSize, extraSize, encoderLength);
+        // done
+        return detectedKeypoints;
     }
 }

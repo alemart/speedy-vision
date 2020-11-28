@@ -31,7 +31,6 @@ const DEFAULT_DEPTH = 3; // default depth for multiscale feature detection
 const DEFAULT_WINDOW_SIZE = 3; // compute Harris autocorrelation matrix within a 3x3 window
 const MIN_WINDOW_SIZE = 0; // minimum window size when computing the autocorrelation matrix
 const MAX_WINDOW_SIZE = 7; // maximum window size when computing the autocorrelation matrix
-const DEFAULT_ORIENTATION_PATCH_RADIUS = 7; // for computing keypoint orientation
 const SOBEL_OCTAVE_COUNT = 2 * PYRAMID_MAX_LEVELS - 1; // Sobel derivatives for each pyramid layer
 
 /**
@@ -203,28 +202,7 @@ export class MultiscaleHarrisFeatures extends FeatureDetectionAlgorithm
         // encode keypoints
         const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(suppressed2, descriptorSize, extraSize);
 
-        // compute orientation
-        return this._computeOrientation(gpu, inputTexture, detectedKeypoints);
-    }
-
-    /**
-     * Compute the orientation of the keypoints
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} inputTexture pre-processed greyscale image
-     * @param {SpeedyTexture} detectedKeypoints tiny texture with appropriate size for the descriptors
-     * @returns {SpeedyTexture} tiny texture with encoded keypoints & descriptors
-     */
-    _computeOrientation(gpu, inputTexture, detectedKeypoints)
-    {
-        const descriptorSize = this.descriptorSize;
-        const extraSize = this.extraSize;
-        const orientationPatchRadius = DEFAULT_ORIENTATION_PATCH_RADIUS;
-
-        // generate pyramid
-        const pyramid = inputTexture.generateMipmap();
-
-        // compute orientation
-        const encoderLength = gpu.programs.encoders.encoderLength;
-        return gpu.programs.keypoints.orientationViaCentroid(pyramid, detectedKeypoints, orientationPatchRadius, descriptorSize, extraSize, encoderLength);
+        // done
+        return detectedKeypoints;
     }
 }
