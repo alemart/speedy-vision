@@ -27,7 +27,7 @@ describe('SpeedyMedia', function() {
 
     it('can load an image', function() {
         return expectAsync(
-            loadImage('speedy-large.jpg').then(image =>
+            loadImage('speedy-wall-large.jpg').then(image =>
                 Speedy.load(image).then(media =>
                     (display(media, 'Image'), Promise.resolve(media))
                 )
@@ -48,7 +48,7 @@ describe('SpeedyMedia', function() {
 
     it('can load a bitmap', function() {
         return expectAsync(
-            loadImage('speedy-wall.jpg').then(image =>
+            loadImage('speedy-wall-large.jpg').then(image =>
                 createImageBitmap(image).then(bitmap =>
                     Speedy.load(bitmap).then(media =>
                         (display(media, 'Bitmap'), Promise.resolve(media))
@@ -59,7 +59,7 @@ describe('SpeedyMedia', function() {
     });
 
     it('has a valid source', async function() {
-        const image = await loadImage('speedy.jpg');
+        const image = await loadImage('paulista.jpg');
         const media = await Speedy.load(image);
 
         expect(media.source).toBe(image);
@@ -69,9 +69,9 @@ describe('SpeedyMedia', function() {
 
     it('has a valid type', async function() {
         const assets = {
-            'speedy.jpg': {
+            'paulista.jpg': {
                 type: 'image',
-                data: await loadImage('speedy.jpg'),
+                data: await loadImage('paulista.jpg'),
             },
             'jelly.mp4': {
                 type: 'video',
@@ -79,7 +79,7 @@ describe('SpeedyMedia', function() {
             },
             'bitmap': {
                 type: 'bitmap',
-                data: await createImageBitmap(await loadImage('speedy.jpg')),
+                data: await createImageBitmap(await loadImage('paulista.jpg')),
             },
         };
 
@@ -95,7 +95,7 @@ describe('SpeedyMedia', function() {
     });
 
     it('has valid dimensions', async function() {
-        const image = await loadImage('speedy.jpg');
+        const image = await loadImage('paulista.jpg');
         const video = await loadVideo('jelly.mp4');
         const media = [
             await Speedy.load(image),
@@ -113,7 +113,7 @@ describe('SpeedyMedia', function() {
     });
 
     it('creates a clone with valid source, type and dimensions', async function() {
-        const image = await loadImage('speedy.jpg');
+        const image = await loadImage('paulista.jpg');
         const media = await Speedy.load(image);
 
         display(media, 'Original');
@@ -153,7 +153,7 @@ describe('SpeedyMedia', function() {
     });
 
     it('draws a bitmap', async function() {
-        const image = await loadImage('speedy.jpg');
+        const image = await loadImage('speedy-wall.jpg');
         const bitmap = await createImageBitmap(image);
         const media = await Speedy.load(bitmap);
         const canvas = createCanvas(bitmap.width, bitmap.height);
@@ -171,7 +171,7 @@ describe('SpeedyMedia', function() {
     });
 
     it('creates a bitmap', async function() {
-        const image = await loadImage('speedy.jpg');
+        const image = await loadImage('speedy-wall.jpg');
         const media = await Speedy.load(image);
         const bitmap = await media.toBitmap();
 

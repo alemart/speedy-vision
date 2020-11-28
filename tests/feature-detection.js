@@ -28,7 +28,7 @@ describe('Feature detection', function() {
     });
 
     beforeEach(async function() {
-        const image = [ await loadImage('speedy.jpg'), await loadImage('square.png') ];
+        const image = [ await loadImage('masp.jpg'), await loadImage('square.png') ];
         media = await Speedy.load(image[0]);
         square = await Speedy.load(image[1]);
     });
