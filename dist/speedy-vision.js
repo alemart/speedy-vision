@@ -6,7 +6,7 @@
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-11-28T01:31:52.092Z
+ * Date: 2020-12-03T18:46:49.424Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -6724,6 +6724,76 @@ class BinaryDescriptor extends SpeedyDescriptor
 
 /***/ }),
 
+/***/ "./src/core/speedy-feature-decorator.js":
+/*!**********************************************!*\
+  !*** ./src/core/speedy-feature-decorator.js ***!
+  \**********************************************/
+/*! exports provided: SpeedyFeatureDecorator */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyFeatureDecorator", function() { return SpeedyFeatureDecorator; });
+/* harmony import */ var _keypoints_feature_algorithm_decorator__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./keypoints/feature-algorithm-decorator */ "./src/core/keypoints/feature-algorithm-decorator.js");
+/* harmony import */ var _keypoints_feature_algorithm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./keypoints/feature-algorithm */ "./src/core/keypoints/feature-algorithm.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-feature-decorator.js
+ * A wrapper around a FeatureAlgorithmDecorator
+ */
+
+
+
+
+
+/**
+ * A wrapper around a FeatureAlgorithmDecorator
+ */
+class SpeedyFeatureDecorator
+{
+    /**
+     * Constructor
+     * @param {Function} decorator a FeatureAlgorithmDecorator
+     */
+    constructor(decorator)
+    {
+        this._decorator = decorator;
+    }
+
+    /**
+     * Decorate an algorithm
+     * @param {FeatureAlgorithm} algorithm 
+     * @returns {FeatureAlgorithmDecorator}
+     */
+    decorate(algorithm)
+    {
+        const decorator = this._decorator;
+        const decoratedAlgorithm = new decorator(algorithm);
+
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(decoratedAlgorithm instanceof _keypoints_feature_algorithm_decorator__WEBPACK_IMPORTED_MODULE_0__["FeatureAlgorithmDecorator"]);
+
+        return decoratedAlgorithm;
+    }
+}
+
+/***/ }),
+
 /***/ "./src/core/speedy-feature-descriptor-factory.js":
 /*!*******************************************************!*\
   !*** ./src/core/speedy-feature-descriptor-factory.js ***!
@@ -6735,10 +6805,8 @@ class BinaryDescriptor extends SpeedyDescriptor
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyFeatureDescriptorFactory", function() { return SpeedyFeatureDescriptorFactory; });
 /* harmony import */ var _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-namespace */ "./src/core/speedy-namespace.js");
-/* harmony import */ var _speedy_feature_tracker__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-feature-tracker */ "./src/core/speedy-feature-tracker.js");
-/* harmony import */ var _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-feature-detector */ "./src/core/speedy-feature-detector.js");
-/* harmony import */ var _keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./keypoints/descriptors/orb */ "./src/core/keypoints/descriptors/orb.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _speedy_feature_decorator__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-feature-decorator */ "./src/core/speedy-feature-decorator.js");
+/* harmony import */ var _keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./keypoints/descriptors/orb */ "./src/core/keypoints/descriptors/orb.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -6764,8 +6832,6 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-
-
 /**
  * A collection of methods for decorating Feature Detectors &
  * Feature Trackers with Descriptors
@@ -6774,14 +6840,11 @@ class SpeedyFeatureDescriptorFactory extends _speedy_namespace__WEBPACK_IMPORTED
 {
     /**
      * ORB descriptor
-     * @param {SpeedyFeatureTracker|SpeedyFeatureDetector} obj
-     * @returns {SpeedyFeatureTracker|SpeedyFeatureDetector} obj
+     * @returns {SpeedyFeatureDecorator}
      */
-    static ORB(obj)
+    static ORB()
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert((obj instanceof _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_2__["SpeedyFeatureDetector"]) || (obj instanceof _speedy_feature_tracker__WEBPACK_IMPORTED_MODULE_1__["SpeedyFeatureTracker"]));
-        obj.decorate(_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_3__["ORBFeatures"]);
-        return obj;
+        return new _speedy_feature_decorator__WEBPACK_IMPORTED_MODULE_1__["SpeedyFeatureDecorator"](_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_2__["ORBFeatures"]);
     }
 }
 
@@ -6800,7 +6863,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-namespace */ "./src/core/speedy-namespace.js");
 /* harmony import */ var _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-feature-detector */ "./src/core/speedy-feature-detector.js");
 /* harmony import */ var _keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./keypoints/descriptors/orb */ "./src/core/keypoints/descriptors/orb.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _speedy_feature_descriptor_factory__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-feature-descriptor-factory */ "./src/core/speedy-feature-descriptor-factory.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -6876,7 +6939,8 @@ class SpeedyFeatureDetectorFactory extends _speedy_namespace__WEBPACK_IMPORTED_M
      */
     static ORB()
     {
-        return (new _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_1__["MultiscaleHarrisFeatureDetector"]()).decorate(_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_2__["ORBFeatures"]);
+        const orb = _speedy_feature_descriptor_factory__WEBPACK_IMPORTED_MODULE_3__["SpeedyFeatureDescriptorFactory"].ORB();
+        return (new _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_1__["MultiscaleHarrisFeatureDetector"]()).link(orb);
     }
 
     /**
@@ -6917,7 +6981,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _keypoints_feature_description_algorithm__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./keypoints/feature-description-algorithm */ "./src/core/keypoints/feature-description-algorithm.js");
 /* harmony import */ var _keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./keypoints/detectors/fast */ "./src/core/keypoints/detectors/fast.js");
 /* harmony import */ var _keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./keypoints/detectors/harris */ "./src/core/keypoints/detectors/harris.js");
-/* harmony import */ var _keypoints_feature_algorithm_decorator__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./keypoints/feature-algorithm-decorator */ "./src/core/keypoints/feature-algorithm-decorator.js");
+/* harmony import */ var _speedy_feature_decorator__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./speedy-feature-decorator */ "./src/core/speedy-feature-decorator.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -6966,7 +7030,7 @@ class SpeedyFeatureDetector
 {
     /**
      * Class constructor
-     * @param {FeatureDetectionAlgorithm | FeatureAlgorithmDecorator} algorithm 
+     * @param {FeatureDetectionAlgorithm} algorithm
      */
     constructor(algorithm)
     {
@@ -6994,13 +7058,12 @@ class SpeedyFeatureDetector
 
     /**
      * Decorate the underlying algorithm
-     * @param {Function} decorator
+     * @param {SpeedyFeatureDecorator} decorator
      * @returns {SpeedyFeatureDetector} this instance, now decorated
      */
-    decorate(decorator)
+    link(decorator)
     {
-        this._decoratedAlgorithm = new decorator(this._decoratedAlgorithm);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(this._decoratedAlgorithm instanceof _keypoints_feature_algorithm_decorator__WEBPACK_IMPORTED_MODULE_12__["FeatureAlgorithmDecorator"]);
+        this._decoratedAlgorithm = decorator.decorate(this._decoratedAlgorithm);
         return this;
     }
 
@@ -7551,13 +7614,13 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyFeatureTracker", function() { return SpeedyFeatureTracker; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "LKFeatureTracker", function() { return LKFeatureTracker; });
 /* harmony import */ var _keypoints_feature_tracking_algorithm__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./keypoints/feature-tracking-algorithm */ "./src/core/keypoints/feature-tracking-algorithm.js");
-/* harmony import */ var _keypoints_feature_algorithm_decorator__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./keypoints/feature-algorithm-decorator */ "./src/core/keypoints/feature-algorithm-decorator.js");
-/* harmony import */ var _speedy_media__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-media */ "./src/core/speedy-media.js");
-/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
-/* harmony import */ var _math_speedy_vector__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./math/speedy-vector */ "./src/core/math/speedy-vector.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./keypoints/trackers/lk */ "./src/core/keypoints/trackers/lk.js");
+/* harmony import */ var _speedy_media__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-media */ "./src/core/speedy-media.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _math_speedy_vector__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./math/speedy-vector */ "./src/core/math/speedy-vector.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./keypoints/trackers/lk */ "./src/core/keypoints/trackers/lk.js");
+/* harmony import */ var _speedy_feature_decorator__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./speedy-feature-decorator */ "./src/core/speedy-feature-decorator.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -7612,13 +7675,12 @@ class SpeedyFeatureTracker
 
     /**
      * Decorate the underlying algorithm
-     * @param {Function} decorator
-     * @returns {SpeedyFeatureTracker} this instance, now decorated
+     * @param {SpeedyFeatureDecorator} decorator
+     * @returns {SpeedyFeatureDetector} this instance, now decorated
      */
-    decorate(decorator)
+    link(decorator)
     {
-        this._decoratedAlgorithm = new decorator(this._decoratedAlgorithm);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(this._decoratedAlgorithm instanceof _keypoints_feature_algorithm_decorator__WEBPACK_IMPORTED_MODULE_1__["FeatureAlgorithmDecorator"]);
+        this._decoratedAlgorithm = decorator.decorate(this._decoratedAlgorithm);
         return this;
     }
 
@@ -7638,7 +7700,7 @@ class SpeedyFeatureTracker
 
         // validate arguments
         if(!Array.isArray(keypoints) || (found != null && !Array.isArray(found)) || (flow != null && !Array.isArray(flow)))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"]();
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"]();
 
         // upload media to the GPU
         this._updateMedia(this._media, gpu);
@@ -7679,8 +7741,8 @@ class SpeedyFeatureTracker
 
                 if(flow != null) {
                     flow[i] = goodFeature ? 
-                        new _math_speedy_vector__WEBPACK_IMPORTED_MODULE_4__["SpeedyVector2"](trackedKeypoints[i].x - keypoints[i].x, trackedKeypoints[i].y - keypoints[i].y) :
-                        new _math_speedy_vector__WEBPACK_IMPORTED_MODULE_4__["SpeedyVector2"](0, 0);
+                        new _math_speedy_vector__WEBPACK_IMPORTED_MODULE_3__["SpeedyVector2"](trackedKeypoints[i].x - keypoints[i].x, trackedKeypoints[i].y - keypoints[i].y) :
+                        new _math_speedy_vector__WEBPACK_IMPORTED_MODULE_3__["SpeedyVector2"](0, 0);
                 }
             }
 
@@ -7698,7 +7760,7 @@ class SpeedyFeatureTracker
     {
         // validate the media
         if(media.isReleased())
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalOperationError"](`The media has been released`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`The media has been released`);
 
         // it's too early to change the input texture
         if(this._updateLock)
@@ -7709,7 +7771,7 @@ class SpeedyFeatureTracker
         // upload the media
         const newInputTexture = gpu.upload(media.source);
         if(newInputTexture == null)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalOperationError"](`Tracking error: can't upload image to the GPU ${media.source}`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`Tracking error: can't upload image to the GPU ${media.source}`);
 
         // store the textures
         const prevInputTexture = this._inputTexture; // may be null (1st frame)
@@ -7730,7 +7792,7 @@ class LKFeatureTracker extends SpeedyFeatureTracker
      */
     constructor(media)
     {
-        const algorithm = new _keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_7__["LKFeatureTrackingAlgorithm"]();
+        const algorithm = new _keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_6__["LKFeatureTrackingAlgorithm"]();
         super(algorithm, media);
     }
 
@@ -7750,7 +7812,7 @@ class LKFeatureTracker extends SpeedyFeatureTracker
     set windowSize(newSize)
     {
         if(typeof newSize !== 'number' || newSize < 1 || newSize % 2 == 0)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Window size must be a positive odd number`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Window size must be a positive odd number`);
 
         this._trackingAlgorithm.windowSize = newSize;
     }
@@ -7771,7 +7833,7 @@ class LKFeatureTracker extends SpeedyFeatureTracker
     set depth(newDepth)
     {
         if(typeof newDepth !== 'number' || newDepth < 1)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Invalid depth: ${newDepth}`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Invalid depth: ${newDepth}`);
 
         this._trackingAlgorithm.depth = newDepth;
     }
@@ -7792,7 +7854,7 @@ class LKFeatureTracker extends SpeedyFeatureTracker
     set discardThreshold(threshold)
     {
         if(typeof threshold !== 'number' || threshold < 0)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Invalid discardThreshold`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Invalid discardThreshold`);
 
         this._trackingAlgorithm.discardThreshold = threshold;
     }
