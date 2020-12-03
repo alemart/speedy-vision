@@ -20,10 +20,8 @@
  */
 
 import { SpeedyNamespace } from './speedy-namespace';
-import { SpeedyFeatureTracker } from './speedy-feature-tracker';
-import { SpeedyFeatureDetector } from './speedy-feature-detector';
+import { SpeedyFeatureDecorator } from './speedy-feature-decorator';
 import { ORBFeatures } from './keypoints/descriptors/orb';
-import { Utils } from '../utils/utils';
 
 /**
  * A collection of methods for decorating Feature Detectors &
@@ -33,13 +31,10 @@ export class SpeedyFeatureDescriptorFactory extends SpeedyNamespace
 {
     /**
      * ORB descriptor
-     * @param {SpeedyFeatureTracker|SpeedyFeatureDetector} obj
-     * @returns {SpeedyFeatureTracker|SpeedyFeatureDetector} obj
+     * @returns {SpeedyFeatureDecorator}
      */
-    static ORB(obj)
+    static ORB()
     {
-        Utils.assert((obj instanceof SpeedyFeatureDetector) || (obj instanceof SpeedyFeatureTracker));
-        obj.decorate(ORBFeatures);
-        return obj;
+        return new SpeedyFeatureDecorator(ORBFeatures);
     }
 }

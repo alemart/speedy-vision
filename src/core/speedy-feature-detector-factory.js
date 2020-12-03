@@ -27,7 +27,7 @@ import {
     MultiscaleHarrisFeatureDetector,
 } from './speedy-feature-detector';
 import { ORBFeatures } from './keypoints/descriptors/orb';
-import { IllegalArgumentError } from '../utils/errors';
+import { SpeedyFeatureDescriptorFactory } from './speedy-feature-descriptor-factory';
 
 /**
  * A collection of methods for instantiating SpeedyFeatureDetectors
@@ -78,7 +78,8 @@ export class SpeedyFeatureDetectorFactory extends SpeedyNamespace
      */
     static ORB()
     {
-        return (new MultiscaleHarrisFeatureDetector()).decorate(ORBFeatures);
+        const orb = SpeedyFeatureDescriptorFactory.ORB();
+        return (new MultiscaleHarrisFeatureDetector()).link(orb);
     }
 
     /**

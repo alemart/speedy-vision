@@ -20,13 +20,13 @@
  */
 
 import { FeatureTrackingAlgorithm } from './keypoints/feature-tracking-algorithm';
-import { FeatureAlgorithmDecorator } from './keypoints/feature-algorithm-decorator';
 import { SpeedyMedia } from './speedy-media';
 import { SpeedyGPU } from '../gpu/speedy-gpu';
 import { SpeedyVector2 } from './math/speedy-vector';
 import { IllegalOperationError, IllegalArgumentError } from '../utils/errors';
 import { Utils } from '../utils/utils';
 import { LKFeatureTrackingAlgorithm } from './keypoints/trackers/lk';
+import { SpeedyFeatureDecorator } from './speedy-feature-decorator';
 
 /**
  * An easy-to-use class for working with feature trackers
@@ -52,13 +52,12 @@ export class SpeedyFeatureTracker
 
     /**
      * Decorate the underlying algorithm
-     * @param {Function} decorator
-     * @returns {SpeedyFeatureTracker} this instance, now decorated
+     * @param {SpeedyFeatureDecorator} decorator
+     * @returns {SpeedyFeatureDetector} this instance, now decorated
      */
-    decorate(decorator)
+    link(decorator)
     {
-        this._decoratedAlgorithm = new decorator(this._decoratedAlgorithm);
-        Utils.assert(this._decoratedAlgorithm instanceof FeatureAlgorithmDecorator);
+        this._decoratedAlgorithm = decorator.decorate(this._decoratedAlgorithm);
         return this;
     }
 

@@ -31,7 +31,7 @@ import { FeatureDetectionAlgorithm } from './keypoints/feature-detection-algorit
 import { FeatureDescriptionAlgorithm } from './keypoints/feature-description-algorithm';
 import { FASTFeatures, MultiscaleFASTFeatures } from './keypoints/detectors/fast';
 import { HarrisFeatures, MultiscaleHarrisFeatures } from './keypoints/detectors/harris';
-import { FeatureAlgorithmDecorator } from './keypoints/feature-algorithm-decorator';
+import { SpeedyFeatureDecorator } from './speedy-feature-decorator';
 
 
 
@@ -46,7 +46,7 @@ export class SpeedyFeatureDetector
 {
     /**
      * Class constructor
-     * @param {FeatureDetectionAlgorithm | FeatureAlgorithmDecorator} algorithm 
+     * @param {FeatureDetectionAlgorithm} algorithm
      */
     constructor(algorithm)
     {
@@ -74,13 +74,12 @@ export class SpeedyFeatureDetector
 
     /**
      * Decorate the underlying algorithm
-     * @param {Function} decorator
+     * @param {SpeedyFeatureDecorator} decorator
      * @returns {SpeedyFeatureDetector} this instance, now decorated
      */
-    decorate(decorator)
+    link(decorator)
     {
-        this._decoratedAlgorithm = new decorator(this._decoratedAlgorithm);
-        Utils.assert(this._decoratedAlgorithm instanceof FeatureAlgorithmDecorator);
+        this._decoratedAlgorithm = decorator.decorate(this._decoratedAlgorithm);
         return this;
     }
 

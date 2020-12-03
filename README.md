@@ -387,6 +387,20 @@ Speedy can enhance your images in different ways before detecting the interest p
 * `illumination: boolean`. If set to `true`, the feature detection algorithm will be more robust when dealing with lighting changes and shadows. It will use the [Nightvision](#nightvision) filter behind the scenes. Defaults to `false`.
 * `nightvision: object`. An object with the following keys: `gain`, `offset`, `decay` and `quality`, as in the [Nightvision](#nightvision) filter.
 
+##### SpeedyFeatureDetector.link()
+
+`SpeedyFeatureDetector.link(decorator: SpeedyFeatureDecorator): SpeedyFeatureDetector`
+
+Links the feature detector with a feature descriptor. As soon as the link is established, the `detect()` method will return additional data.
+
+###### Arguments
+
+* `decorator: SpeedyFeatureDecorator`.
+
+###### Returns
+
+The `SpeedyFeatureDetector` itself.
+
 
 
 
@@ -395,7 +409,7 @@ Speedy can enhance your images in different ways before detecting the interest p
 
 #### FAST features
 
-`Speedy.FeatureDetector.FAST(n: number): SpeedyFeatureDetector`
+`Speedy.FeatureDetector.FAST(n?: number): SpeedyFeatureDetector`
 
 `Speedy.FeatureDetector.MultiscaleFAST(): SpeedyFeatureDetector`
 
@@ -433,6 +447,11 @@ Speedy includes an implementation of ORB. It is an efficient solution that first
 
 * `depth: number`. An integer between `1` and `4` that tells Speedy how "deep" it should go when searching for keypoints in scale-space. Defaults to `3`.
 * `quality: number`. A value between `0` and `1`, as in the Harris detector. This is an alternative to `sensitivity`.
+
+
+
+
+
 
 #### Automatic sensitivity
 
@@ -490,30 +509,26 @@ window.onload = async function() {
 
 Feature descriptors are data that somehow describe feature points. "Similar" feature points have "similar" descriptors, according to a distance metric. There are different algorithms for computing descriptors. The idea is to use the descriptors to match feature points of different images.
 
-Feature detectors and feature trackers may be augmented with a feature description decorator. The decorator design pattern lets you dynamically add new behavior to objects. It creates a flexible way of combining detection and description algorithms, considering that the actual computations take place in the GPU.
+Feature detectors and feature trackers may be linked with a feature descriptor using a decorator. The decorator design pattern lets you dynamically add new behavior to objects. It creates a flexible way of combining detection and description algorithms, considering that the actual computations take place in the GPU.
 
 #### ORB features
 
-Augments a feature detector/tracker with 256-bit binary descriptors for feature matching.
+`SpeedyFeatureDescriptor.ORB(): SpeedyFeatureDecorator`
 
-###### Arguments
-
-* `detector: SpeedyFeatureDetector`. The detector you want to augment.
-* `tracker: SpeedyFeatureTracker`. The tracker you want to augment.
+Used to augment a feature detector/tracker with 256-bit binary descriptors for feature matching.
 
 ###### Returns
 
-The input argument, augmented with ORB descriptors.
+A `SpeedyFeatureDecorator` to be linked with the feature detector or tracker.
 
 ###### Example
 
 ```js
 // Combine Harris corner detector with ORB descriptors
-const orb = Speedy.FeatureDescriptor.ORB(
-    Speedy.FeatureDetector.MultiscaleHarris()
-);
+const orb = Speedy.FeatureDescriptor.ORB();
+const detector = Speedy.FeatureDetector.MultiscaleHarris().link(orb);
 
-const features = await orb.detect(media);
+const features = await detector.detect(media);
 ```
 
 #### Examining your feature points
@@ -602,11 +617,29 @@ const featureTracker = Speedy.FeatureTracker.LK(media);
 
 // features is an array of SpeedyFeature objects
 let flow = [];
-features = await featureTracker.track(features, flow);
+let features = await featureTracker.track(features, flow);
 
 // output
 console.log(features, flow);
 ```
+
+##### SpeedyFeatureTracker.link()
+
+`SpeedyFeatureTracker.link(decorator: SpeedyFeatureDecorator): SpeedyFeatureTracker`
+
+Links the feature tracker with a feature descriptor. As soon as the link is established, the `track()` method will return additional data.
+
+###### Arguments
+
+* `decorator: SpeedyFeatureDecorator`.
+
+###### Returns
+
+The `SpeedyFeatureTracker` itself.
+
+
+
+
 
 #### LK feature tracker
 
