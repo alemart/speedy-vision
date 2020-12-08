@@ -65,10 +65,10 @@ export class FeatureAlgorithm
      * Needs to be overridden in subclasses
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} encodedKeypoints tiny texture
-     * @param {boolean} [useAsyncTransfer]
+     * @param {boolean} useAsyncTransfer transfer feature points asynchronously
      * @returns {Promise<SpeedyFeature[]>} feature points
      */
-    download(gpu, encodedKeypoints, useAsyncTransfer = true)
+    download(gpu, encodedKeypoints, useAsyncTransfer)
     {
         throw new AbstractMethodError();
     }

@@ -67,10 +67,10 @@ export class FeatureDetectionAlgorithm extends FeatureAlgorithm
      * Download feature points from the GPU
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
-     * @param {boolean} [useAsyncTransfer] transfer feature points asynchronously
+     * @param {boolean} useAsyncTransfer transfer feature points asynchronously
      * @returns {Promise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, useAsyncTransfer = true)
+    download(gpu, encodedKeypoints, useAsyncTransfer)
     {
         // download feature points
         const keypoints = this._downloader.download(gpu, encodedKeypoints, this.descriptorSize, this.extraSize, useAsyncTransfer);
