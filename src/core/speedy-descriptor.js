@@ -55,29 +55,6 @@ class SpeedyDescriptor
 }
 
 /**
- * Null feature descriptor
- */
-export class NullDescriptor extends SpeedyDescriptor
-{
-    /**
-     * Class constructor
-     */
-    constructor()
-    {
-        super();
-    }
-
-    /**
-     * Descriptor data
-     * @returns {null}
-     */
-    get data()
-    {
-        return null;
-    }
-}
-
-/**
  * Binary feature descriptor
  */
 export class BinaryDescriptor extends SpeedyDescriptor

@@ -26,7 +26,7 @@ import { BinaryDescriptor } from '../../core/speedy-descriptor';
 import { StochasticTuner } from '../../core/tuners/stochastic-tuner';
 import { Utils } from '../../utils/utils'
 import { IllegalOperationError } from '../../utils/errors';
-import { FIX_RESOLUTION, PYRAMID_MAX_LEVELS, LOG2_PYRAMID_MAX_SCALE, MAX_TEXTURE_LENGTH } from '../../utils/globals';
+import { FIX_RESOLUTION, PYRAMID_MAX_LEVELS, LOG2_PYRAMID_MAX_SCALE, MAX_TEXTURE_LENGTH, KPF_DISCARD } from '../../utils/globals';
 
 // We won't admit more than MAX_KEYPOINTS per media.
 // The larger this value is, the more data we need to transfer from the GPU.
@@ -178,24 +178,14 @@ export class GPUEncoders extends SpeedyProgramGroup
      * @param {Uint8Array[]} pixels pixels in the [r,g,b,a,...] format
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
-     * @param {object} [output] optional output object
-     * @param {number[]} [output.userData] generic user-data related to the i-th keypoint
-     * @param {boolean[]} [output.discard] signals that the i-th keypoint should be discarded
      * @returns {SpeedyFeature[]} keypoints
      */
-    decodeKeypoints(pixels, descriptorSize, extraSize, output = {})
+    decodeKeypoints(pixels, descriptorSize, extraSize)
     {
         const pixelsPerKeypoint = 2 + (descriptorSize + extraSize) / 4;
-        let x, y, lod, rotation, score;
+        let x, y, lod, rotation, score, flags, extraBytes, descriptorBytes;
         let hasLod, hasRotation;
-        let discardCount = 0;
         const keypoints = [];
-
-        // initialize output arrays
-        if(output.userData != undefined)
-            output.userData.length = 0;
-        if(output.discard != undefined)
-            output.discard.length = 0;
 
         // how many bytes should we read?
         const e = this._encoderLength;
@@ -220,12 +210,12 @@ export class GPUEncoders extends SpeedyProgramGroup
             x /= FIX_RESOLUTION;
             y /= FIX_RESOLUTION;
 
-            // emit signal to discard keypoints outside the image
-            const isDiscardedKeypoint = (x > MAX_TEXTURE_LENGTH || y > MAX_TEXTURE_LENGTH || x < 0 || y < 0);
-            if(output.discard != undefined)
-                output.discard.push(isDiscardedKeypoint);
-            if(output.discardCount != undefined && isDiscardedKeypoint)
-                output.discardCount[0] = ++discardCount;
+            // extract flags
+            flags = pixels[i+7];
+            if(flags > 0) // FIXME
+                flags |= KPF_DISCARD;
+            if(x > MAX_TEXTURE_LENGTH || y > MAX_TEXTURE_LENGTH || x < 0 || y < 0) // FIXME move to shader
+                flags |= KPF_DISCARD;
 
             // extract LOD
             hasLod = (pixels[i+4] < 255);
@@ -240,26 +230,20 @@ export class GPUEncoders extends SpeedyProgramGroup
             // extract score
             score = pixels[i+6] / 255.0;
 
-            // extract generic user-data
-            if(output.userData != undefined) {
-                const data = pixels[i+7] / 255.0;
-                output.userData.push(data);
-            }
+            // extra bytes
+            extraBytes = (extraSize > 0) ? new Uint8Array(
+                pixels.slice(8 + i, 8 + i + extraSize)
+            ) : null;
 
-            // extra pixels (TODO)
-            if(extraSize > 0) {
-                ;
-            }
+            // descriptor bytes
+            descriptorBytes = (descriptorSize > 0) ? new Uint8Array(
+                pixels.slice(8 + i + extraSize, 8 + i + extraSize + descriptorSize)
+            ) : null;
 
-            // register keypoint, possibly with a descriptor
-            if(descriptorSize > 0) {
-                const offset = 8 + extraSize + i;
-                const bytes = new Uint8Array(pixels.slice(offset, offset + descriptorSize));
-                const descriptor = new BinaryDescriptor(bytes);
-                keypoints.push(new SpeedyFeature(x, y, lod, rotation, score, descriptor));
-            }
-            else
-                keypoints.push(new SpeedyFeature(x, y, lod, rotation, score));
+            // register keypoint
+            keypoints.push(
+                new SpeedyFeature(x, y, lod, rotation, score, flags, extraBytes, descriptorBytes)
+            );
         }
 
         // developer's secret ;)

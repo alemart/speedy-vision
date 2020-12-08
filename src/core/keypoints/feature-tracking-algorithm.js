@@ -107,26 +107,15 @@ export class FeatureTrackingAlgorithm extends FeatureAlgorithm
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
      * @param {boolean} [useAsyncTransfer] transfer feature points asynchronously
-     * @param {boolean[]} [discard] i-th element will be set to true if the i-th should be discarded
      * @returns {Promise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, useAsyncTransfer = true, discard = undefined)
+    download(gpu, encodedKeypoints, useAsyncTransfer = true)
     {
         if(this._downloader.usingBufferedDownloads()) {
             Utils.warning(`Feature trackers shouldn't use buffered downloads`);
             this._downloader.disableBufferedDownloads();
         }
 
-        const output = discard ? { discard: discard, userData: [] } : undefined;
-        return this._downloader.download(gpu, encodedKeypoints, this.descriptorSize, this.extraSize, useAsyncTransfer, output).then(keypoints => {
-            // discard keypoints if they are outside
-            // the image or if they are of "bad quality"
-            if(discard) {
-                for(let i = 0; i < discard.length; i++)
-                    discard[i] = discard[i] || (output.userData[i] > 0);
-            }
-
-            return keypoints;
-        });
+        return this._downloader.download(gpu, encodedKeypoints, this.descriptorSize, this.extraSize, useAsyncTransfer);
     }
 }

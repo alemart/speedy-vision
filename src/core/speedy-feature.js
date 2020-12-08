@@ -19,29 +19,33 @@
  * Feature Point class
  */
 
-import { NullDescriptor } from './speedy-descriptor';
+import { BinaryDescriptor } from './speedy-descriptor';
+import { Utils } from '../utils/utils';
 
 // Constants
-const nullDescriptor = new NullDescriptor();
+const noBytes = new Uint8Array([]);
 
 
 
 /**
  * A SpeedyFeature is a keypoint in an image,
- * with optional scale, rotation and descriptor
+ * with optional scale, rotation and
+ * descriptor bytes / extra bytes
  */
 export class SpeedyFeature
 {
     /**
-     * Creates a new SpeedyFeature
+     * Constructor
      * @param {number} x X position
      * @param {number} y Y position
      * @param {number} [lod] Level-of-detail
      * @param {number} [rotation] Rotation in radians
      * @param {number} [score] Cornerness measure
-     * @param {SpeedyDescriptor} [descriptor] Feature descriptor
+     * @param {number} [flags] Keypoint flags
+     * @param {Uint8Array} [extraBytes] extra bytes of the header, if any
+     * @param {Uint8Array} [descriptorBytes] bytes of the feature descriptor, if any
      */
-    constructor(x, y, lod = 0.0, rotation = 0.0, score = 0.0, descriptor = null)
+    constructor(x, y, lod = 0.0, rotation = 0.0, score = 0.0, flags = 0, extraBytes = null, descriptorBytes = null)
     {
         this._x = +x;
         this._y = +y;
@@ -49,7 +53,9 @@ export class SpeedyFeature
         this._rotation = +rotation;
         this._score = +score;
         this._scale = Math.pow(2, +lod);
-        this._descriptor = descriptor === null ? nullDescriptor : descriptor;
+        this._flags = flags | 0;
+        this._extraBytes = extraBytes || noBytes;
+        this._descriptorBytes = descriptorBytes || noBytes;
     }
 
     /**
@@ -116,11 +122,69 @@ export class SpeedyFeature
     }
 
     /**
+     * Internal flags
+     * @returns {number}
+     */
+    get flags()
+    {
+        return this._flags;
+    }
+}
+
+/**
+ * A feature point with a descriptor
+ * @abstract
+ */
+class SpeedyFeatureWithDescriptor extends SpeedyFeature
+{
+    /**
+     * Constructor
+     * @param {SpeedyFeature} feature
+     */
+    constructor(feature)
+    {
+        // copy values
+        super(
+            feature._x,
+            feature._y,
+            feature._lod,
+            feature._rotation,
+            feature._score,
+            feature._flags,
+            feature._extraBytes,
+            feature._descriptorBytes
+        );
+
+        // setup descriptor
+        this._descriptor = null; // subclass responsibility
+    }
+
+    /**
      * The descriptor of the feature point
      * @return {SpeedyDescriptor} feature descriptor
      */
     get descriptor()
     {
         return this._descriptor;
+    }
+}
+
+/**
+ * A feature point with a binary descriptor
+ */
+export class SpeedyFeatureWithBinaryDescriptor extends SpeedyFeatureWithDescriptor
+{
+    /**
+     * Constructor
+     * @param {SpeedyFeature} feature
+     */
+    constructor(feature)
+    {
+        // setup feature point
+        super(feature);
+
+        // setup descriptor
+        //Utils.assert(this._descriptorBytes.length > 0);
+        this._descriptor = new BinaryDescriptor(this._descriptorBytes);
     }
 }

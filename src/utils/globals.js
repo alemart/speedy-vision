@@ -55,3 +55,12 @@ export const FIX_RESOLUTION = 1.0 * (1 << FIX_BITS); // float(2^(FIX_BITS))
 
 // Maximum texture length
 export const MAX_TEXTURE_LENGTH = (1 << (16 - FIX_BITS)) - 2; // 2^n - 2 due to keypoint encoding
+
+
+
+// -----------------------------------------------------------------
+// KEYPOINT FLAGS
+// -----------------------------------------------------------------
+
+// Should the keypoint be discarded?
+export const KPF_DISCARD = 0x80;

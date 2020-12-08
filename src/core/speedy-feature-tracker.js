@@ -25,6 +25,7 @@ import { SpeedyGPU } from '../gpu/speedy-gpu';
 import { SpeedyVector2 } from './math/speedy-vector';
 import { IllegalOperationError, IllegalArgumentError } from '../utils/errors';
 import { Utils } from '../utils/utils';
+import { KPF_DISCARD } from '../utils/globals';
 import { LKFeatureTrackingAlgorithm } from './keypoints/trackers/lk';
 import { SpeedyFeatureDecorator } from './speedy-feature-decorator';
 
@@ -92,11 +93,10 @@ export class SpeedyFeatureTracker
         // upload & track keypoints
         this._trackingAlgorithm.prevImage = prevImage;
         this._trackingAlgorithm.prevKeypoints = this._trackingAlgorithm.upload(gpu, keypoints);
-        const trackedKeypoints = this._decoratedAlgorithm.run(gpu, nextImage);
+        const encodedKeypoints = this._decoratedAlgorithm.run(gpu, nextImage);
 
         // download keypoints
-        const discard = [];
-        return this._trackingAlgorithm.download(gpu, trackedKeypoints, useAsyncTransfer, discard).then(trackedKeypoints => {
+        return this._decoratedAlgorithm.download(gpu, encodedKeypoints, useAsyncTransfer).then(trackedKeypoints => {
             const filteredKeypoints = [];
 
             // initialize output arrays
@@ -108,7 +108,7 @@ export class SpeedyFeatureTracker
             // compute additional data and
             // filter out discarded keypoints
             for(let i = 0; i < trackedKeypoints.length; i++) {
-                const goodFeature = !discard[i];
+                const goodFeature = ((trackedKeypoints[i].flags & KPF_DISCARD) == 0);
 
                 if(goodFeature)
                     filteredKeypoints.push(trackedKeypoints[i]);

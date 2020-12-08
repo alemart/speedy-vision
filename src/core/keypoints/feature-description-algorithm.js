@@ -70,7 +70,9 @@ export class FeatureDescriptionAlgorithm extends FeatureAlgorithmDecorator
      */
     download(gpu, encodedKeypoints, useAsyncTransfer = true)
     {
-        return this.decoratedAlgorithm.download(gpu, encodedKeypoints, useAsyncTransfer);
+        return this.decoratedAlgorithm.download(gpu, encodedKeypoints, useAsyncTransfer).then(
+            keypoints => this._postProcess(keypoints)
+        );
     }
 
     /**
@@ -101,6 +103,17 @@ export class FeatureDescriptionAlgorithm extends FeatureAlgorithmDecorator
      */
     _describe(gpu, inputTexture, detectedKeypoints)
     {
+        throw new AbstractMethodError();
+    }
+
+    /**
+     * Post-process the keypoints after downloading them
+     * @param {SpeedyFeature[]} keypoints
+     * @returns {SpeedyFeature[]}
+     */
+    _postProcess(keypoints)
+    {
+        //return keypoints;
         throw new AbstractMethodError();
     }
 }

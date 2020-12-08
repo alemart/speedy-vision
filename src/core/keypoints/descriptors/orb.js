@@ -22,6 +22,8 @@
 import { SpeedyGPU } from '../../../gpu/speedy-gpu';
 import { FeatureDescriptionAlgorithm } from '../feature-description-algorithm';
 import { FeatureAlgorithm } from '../feature-algorithm';
+import { SpeedyFeatureWithBinaryDescriptor } from '../../speedy-feature';
+import { AbstractMethodError } from '../../../utils/errors';
 
 // constants
 const DESCRIPTOR_SIZE = 32; // 256 bits
@@ -84,5 +86,15 @@ export class ORBFeatures extends FeatureDescriptionAlgorithm
         // compute orientation
         const encoderLength = gpu.programs.encoders.encoderLength;
         return gpu.programs.keypoints.orientationViaCentroid(pyramid, detectedKeypoints, orientationPatchRadius, descriptorSize, extraSize, encoderLength);
+    }
+
+    /**
+     * Post-process the keypoints after downloading them
+     * @param {SpeedyFeature[]} keypoints
+     * @returns {SpeedyFeature[]}
+     */
+    _postProcess(keypoints)
+    {
+        return keypoints.map(keypoint => new SpeedyFeatureWithBinaryDescriptor(keypoint));
     }
 }

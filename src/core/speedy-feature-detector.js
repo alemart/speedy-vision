@@ -132,7 +132,7 @@ export class SpeedyFeatureDetector
         const encodedKeypoints = this._decoratedAlgorithm.run(gpu, preprocessedTexture);
 
         // Download keypoints from the GPU
-        return this._algorithm.download(
+        return this._decoratedAlgorithm.download(
             gpu,
             encodedKeypoints,
             !isStaticMedia

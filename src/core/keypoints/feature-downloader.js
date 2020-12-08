@@ -23,6 +23,7 @@ import { IllegalOperationError } from '../../utils/errors';
 import { Observable } from '../../utils/observable';
 import { SpeedyFeature } from '../speedy-feature';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
+import { KPF_DISCARD } from '../../utils/globals';
 
 // constants
 const INITIAL_FILTER_GAIN = 0.85; // a number in [0,1]
@@ -143,19 +144,18 @@ export class FeatureDownloader extends Observable
      * @param {number} descriptorSize in bytes (set it to zero if there is no descriptor)
      * @param {number} extraSize in bytes (set it to zero if there is no extra data)
      * @param {boolean} [useAsyncTransfer] transfer keypoints asynchronously
-     * @param {object} [output] output object with additional info about the keypoints (see the encoder for details)
      * @returns {Promise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, descriptorSize, extraSize, useAsyncTransfer = true, output = undefined)
+    download(gpu, encodedKeypoints, descriptorSize, extraSize, useAsyncTransfer = true)
     {
         return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer, this._useBufferedDownloads).then(data => {
 
             // decode the keypoints
-            const out = Object.assign({ discardCount: [0] }, output);
-            const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize, extraSize, out);
+            const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize, extraSize);
 
             // how many keypoints do we expect in the next frame?
-            const nextCount = this._estimator.estimate(keypoints.length - out.discardCount[0]);
+            const discardedCount = this._countDiscardedKeypoints(keypoints);
+            const nextCount = this._estimator.estimate(keypoints.length - discardedCount);
 
             // optimize the keypoint encoder
             //console.log('Encoder Length', gpu.programs.encoders.encoderLength);
@@ -226,5 +226,19 @@ export class FeatureDownloader extends Observable
     usingBufferedDownloads()
     {
         return this._useBufferedDownloads;
+    }
+
+    /**
+     * Count keypoints that should be discarded
+     * @param {SpeedyFeature[]} keypoints
+     */
+    _countDiscardedKeypoints(keypoints)
+    {
+        let i, count = 0;
+
+        for(i = keypoints.length - 1; i >= 0; i--)
+            count += ((keypoints[i].flags & KPF_DISCARD) != 0) | 0;
+
+        return count;
     }
 }
