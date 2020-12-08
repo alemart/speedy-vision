@@ -65,5 +65,8 @@ export const MAX_TEXTURE_LENGTH = (1 << (16 - FIX_BITS)) - 2; // 2^n - 2 due to 
 // No special flags
 export const KPF_NONE = 0x0;
 
+// The keypoint is oriented
+export const KPF_ORIENTED = 0x1;
+
 // Should the keypoint be discarded? (in the next frame)
 export const KPF_DISCARD = 0x80;

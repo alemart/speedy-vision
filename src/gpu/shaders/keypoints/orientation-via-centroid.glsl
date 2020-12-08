@@ -128,4 +128,5 @@ void main()
 
     // done!
     color.g = encodeOrientation(angle);
+    color.a = encodeKeypointFlags(keypoint.flags | KPF_ORIENTED);
 }

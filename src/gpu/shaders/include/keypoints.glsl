@@ -85,6 +85,7 @@ struct KeypointAddress
  * Keypoint Flags
  */
 const int KPF_NONE = int(@KPF_NONE@); // no special flags
+const int KPF_ORIENTED = int(@KPF_ORIENTED@); // the keypoint is oriented
 const int KPF_DISCARD = int(@KPF_DISCARD@); // the keypoint should be discarded in the next frame
 
 /**

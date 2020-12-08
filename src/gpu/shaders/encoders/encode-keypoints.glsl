@@ -79,7 +79,7 @@ void main()
     // write keypoint data
     color = (address.offset == 1) ? vec4(
         pixel.a, // scale
-        encodeOrientation(0.0f), // rotation
+        0.0f, // rotation
         pixel.r, // score
         encodeKeypointFlags(KPF_NONE) // flags
     ) : encodeKeypointPosition(

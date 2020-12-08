@@ -26,7 +26,11 @@ import { BinaryDescriptor } from '../../core/speedy-descriptor';
 import { StochasticTuner } from '../../core/tuners/stochastic-tuner';
 import { Utils } from '../../utils/utils'
 import { IllegalOperationError } from '../../utils/errors';
-import { FIX_RESOLUTION, PYRAMID_MAX_LEVELS, LOG2_PYRAMID_MAX_SCALE, MAX_TEXTURE_LENGTH, KPF_DISCARD } from '../../utils/globals';
+import {
+    PYRAMID_MAX_LEVELS, LOG2_PYRAMID_MAX_SCALE,
+    FIX_RESOLUTION, MAX_TEXTURE_LENGTH,
+    KPF_ORIENTED, KPF_DISCARD
+} from '../../utils/globals';
 
 // We won't admit more than MAX_KEYPOINTS per media.
 // The larger this value is, the more data we need to transfer from the GPU.
@@ -219,7 +223,7 @@ export class GPUEncoders extends SpeedyProgramGroup
                 -LOG2_PYRAMID_MAX_SCALE + (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS) * pixels[i+4] / 255.0;
 
             // extract orientation
-            hasRotation = hasLod; // think of a better solution
+            hasRotation = (flags & KPF_ORIENTED != 0);
             rotation = !hasRotation ? 0.0 :
                 ((2 * pixels[i+5]) / 255.0 - 1.0) * Math.PI;
 
