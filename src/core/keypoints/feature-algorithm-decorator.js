@@ -56,6 +56,18 @@ export class FeatureAlgorithmDecorator extends FeatureAlgorithm
     }
 
     /**
+     * Download feature points from the GPU
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
+     * @param {boolean} useAsyncTransfer transfer feature points asynchronously
+     * @returns {Promise<SpeedyFeature[]>}
+     */
+    download(gpu, encodedKeypoints, useAsyncTransfer)
+    {
+        return this._decoratedAlgorithm.download(gpu, encodedKeypoints, useAsyncTransfer);
+    }
+
+    /**
      * The decorated algorithm
      * @returns {FeatureAlgorithm}
      */
