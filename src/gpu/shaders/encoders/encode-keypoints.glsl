@@ -72,7 +72,7 @@ void main()
         return;
 
     // find the q-th keypoint, if it exists
-    color = encodeNullKeypointPosition(); // end of list
+    color = encodeNullKeypoint(); // end of list
     if(!findQthKeypoint(q, position, pixel))
         return;
 
@@ -81,7 +81,7 @@ void main()
         pixel.a, // scale
         encodeOrientation(0.0f), // rotation
         pixel.r, // score
-        0.0f
+        encodeKeypointFlags(KPF_NONE) // flags
     ) : encodeKeypointPosition(
         vec2(position) // position
     );

@@ -19,8 +19,12 @@
  * Custom preprocessor for shaders
  */
 
-import { PYRAMID_MAX_LEVELS, PYRAMID_MAX_OCTAVES, LOG2_PYRAMID_MAX_SCALE, MAX_TEXTURE_LENGTH } from '../utils/globals';
-import { FIX_BITS, FIX_RESOLUTION } from '../utils/globals';
+import {
+    PYRAMID_MAX_LEVELS, PYRAMID_MAX_OCTAVES, LOG2_PYRAMID_MAX_SCALE,
+    MAX_TEXTURE_LENGTH,
+    FIX_BITS, FIX_RESOLUTION,
+    KPF_NONE, KPF_DISCARD
+} from '../utils/globals';
 import { PixelComponent } from '../utils/types';
 import { FileNotFoundError } from '../utils/errors';
 
@@ -48,6 +52,10 @@ const constants = {
     // fixed-point math
     'FIX_BITS': FIX_BITS,
     'FIX_RESOLUTION': FIX_RESOLUTION,
+
+    // keypoint flags
+    'KPF_NONE': KPF_NONE,
+    'KPF_DISCARD': KPF_DISCARD,
 };
 
 /**
@@ -70,7 +78,7 @@ export class ShaderPreprocessor
                                 ShaderPreprocessor.run(readfileSync(filename))
                             )
                             .replace(constantRegex, (_, name) =>
-                                String(constants[name] || 'UNDEFINED_CONSTANT')
+                                String(constants[name] !== undefined ? constants[name] : 'UNDEFINED_CONSTANT')
                             );
     }
 }

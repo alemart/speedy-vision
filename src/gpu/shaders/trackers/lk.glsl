@@ -231,7 +231,7 @@ void main()
 
     // decode keypoint
     Keypoint keypoint = decodeKeypoint(prevKeypoints, encoderLength, address);
-    if(isDiscardedOrNullKeypoint(keypoint))
+    if(isNullKeypoint(keypoint))
         return;
 
     // we'll only compute optical-flow for a subset of all keypoints in this pass of the shader
@@ -298,7 +298,7 @@ void main()
     // check if the keypoint is within boundaries
     vec2 imageSize = vec2(textureSize(nextPyramid, 0));
     float margin = float(DISCARD_MARGIN);
-    bool keypointIsWithinBoundaries = (
+    bool isKeypointWithinBoundaries = (
         nextPosition.x >= margin &&
         nextPosition.y >= margin &&
         nextPosition.x <= imageSize.x - margin &&
@@ -306,5 +306,5 @@ void main()
     );
 
     // discard keypoint if outside boundaries, otherwise update it
-    color = keypointIsWithinBoundaries ? encodeKeypointPosition(nextPosition) : encodeDiscardedKeypointPosition();
+    color = isKeypointWithinBoundaries ? encodeKeypointPosition(nextPosition) : encodeKeypointPositionAtInfinity();
 }

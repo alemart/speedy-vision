@@ -62,5 +62,8 @@ export const MAX_TEXTURE_LENGTH = (1 << (16 - FIX_BITS)) - 2; // 2^n - 2 due to 
 // KEYPOINT FLAGS
 // -----------------------------------------------------------------
 
-// Should the keypoint be discarded?
+// No special flags
+export const KPF_NONE = 0x0;
+
+// Should the keypoint be discarded? (in the next frame)
 export const KPF_DISCARD = 0x80;

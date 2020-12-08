@@ -155,12 +155,17 @@ void main()
 
     // decode keypoint
     Keypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);
-    if(isDiscardedOrNullKeypoint(keypoint))
+    if(isNullKeypoint(keypoint))
         return;
 
     // we'll only compute optical-flow for a subset of all keypoints in this pass of the shader
     int idx = findKeypointIndex(address, descriptorSize, extraSize);
     if(idx < firstKeypointIndex || idx > lastKeypointIndex)
+        return;
+
+    // should we simply discard the keypoint? (outside bounds)
+    color = vec4(pixel.rgb, encodeKeypointFlags(keypoint.flags | KPF_DISCARD));
+    if(isKeypointAtInfinity(keypoint))
         return;
 
     // read window around the keypoint
@@ -189,8 +194,9 @@ void main()
     float cornerness = eigenvalue / float(windowArea); // average it over the window area
 
     // should we discard this keypoint?
-    bool unsuitable = (cornerness < discardThreshold);
+    int flags = keypoint.flags;
+    flags |= (cornerness < discardThreshold) ? KPF_DISCARD : 0;
 
-    // write the data
-    color = vec4(pixel.rgb, float(unsuitable));
+    // update flags
+    color = vec4(pixel.rgb, encodeKeypointFlags(flags));
 }

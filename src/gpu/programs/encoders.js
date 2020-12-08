@@ -212,10 +212,6 @@ export class GPUEncoders extends SpeedyProgramGroup
 
             // extract flags
             flags = pixels[i+7];
-            if(flags > 0) // FIXME
-                flags |= KPF_DISCARD;
-            if(x > MAX_TEXTURE_LENGTH || y > MAX_TEXTURE_LENGTH || x < 0 || y < 0) // FIXME move to shader
-                flags |= KPF_DISCARD;
 
             // extract LOD
             hasLod = (pixels[i+4] < 255);
