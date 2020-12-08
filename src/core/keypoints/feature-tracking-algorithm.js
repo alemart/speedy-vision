@@ -23,6 +23,7 @@ import { SpeedyGPU } from '../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../gpu/speedy-texture';
 import { AbstractMethodError } from '../../utils/errors';
 import { FeatureAlgorithm } from './feature-algorithm';
+import { FeatureDownloader } from './feature-downloader';
 import { SpeedyFeature } from '../speedy-feature';
 
 /**
@@ -37,8 +38,10 @@ export class FeatureTrackingAlgorithm extends FeatureAlgorithm
     constructor()
     {
         super(0, 0);
+
         this._prevImage = null; // previous image
         this._prevKeypoints = null; // tiny texture with encoded keypoints
+        this._downloader = new FeatureDownloader();
         this._downloader.disableBufferedDownloads();
     }
 

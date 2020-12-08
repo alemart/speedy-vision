@@ -21,6 +21,7 @@
 
 import { AbstractMethodError } from '../../utils/errors';
 import { FeatureAlgorithm } from './feature-algorithm';
+import { FeatureDownloader } from './feature-downloader';
 import { SpeedyFeature } from '../speedy-feature';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../gpu/speedy-texture';
@@ -47,8 +48,10 @@ export class FeatureDetectionAlgorithm extends FeatureAlgorithm
     constructor()
     {
         super(0, 0);
-        this._downloader.enableBufferedDownloads();
+
         this._enhancements = null;
+        this._downloader = new FeatureDownloader();
+        this._downloader.enableBufferedDownloads();
     }
 
     /**

@@ -21,7 +21,6 @@
 
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../gpu/speedy-texture';
-import { FeatureDownloader } from './feature-downloader';
 import { AbstractMethodError } from '../../utils/errors';
 import { Utils } from '../../utils/utils';
 
@@ -43,7 +42,6 @@ export class FeatureAlgorithm
         Utils.assert(descriptorSize % 4 === 0);
         Utils.assert(extraSize % 4 === 0);
 
-        this._downloader = new FeatureDownloader();
         this._descriptorSize = descriptorSize; // for encoded keypoint textures
         this._extraSize = extraSize; // for encoded keypoint textures
     }
