@@ -161,7 +161,7 @@ export class SpeedyFeatureWithDescriptor extends SpeedyFeature
 
     /**
      * The descriptor of the feature point
-     * @return {SpeedyDescriptor} feature descriptor
+     * @returns {SpeedyDescriptor} feature descriptor
      */
     get descriptor()
     {
