@@ -121,4 +121,13 @@ export class FeatureTrackingAlgorithm extends FeatureAlgorithm
 
         return this._downloader.download(gpu, encodedKeypoints, this.descriptorSize, this.extraSize, useAsyncTransfer);
     }
+
+    /**
+     * Reset the capacity of the keypoint downloader
+     * @param {SpeedyGPU} gpu 
+     */
+    resetDownloader(gpu)
+    {
+        this._downloader.reset(gpu, this.descriptorSize, this.extraSize);
+    }
 }
