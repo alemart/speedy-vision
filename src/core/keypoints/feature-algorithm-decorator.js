@@ -68,6 +68,15 @@ export class FeatureAlgorithmDecorator extends FeatureAlgorithm
     }
 
     /**
+     * Reset the capacity of the keypoint downloader
+     * @param {SpeedyGPU} gpu
+     */
+    resetDownloader(gpu)
+    {
+        this._decoratedAlgorithm.resetDownloader(gpu);
+    }
+
+    /**
      * The decorated algorithm
      * @returns {FeatureAlgorithm}
      */

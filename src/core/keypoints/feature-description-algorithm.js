@@ -76,25 +76,6 @@ export class FeatureDescriptionAlgorithm extends FeatureAlgorithmDecorator
     }
 
     /**
-     * Reset the capacity of the keypoint downloader
-     * @param {SpeedyGPU} gpu 
-     */
-    resetDownloader(gpu)
-    {
-        this.decoratedAlgorithm.resetDownloader(gpu);
-    }
-
-    /**
-     * Setup enhancements to be applied when **DETECTING** (not describing) features
-     * @param {object|boolean} [enhancements] fix irregular lighting in the scene?
-     */
-    setEnhancements(enhancements)
-    {
-        //if(this.decoratedAlgorithm instanceof FeatureDetectionAlgorithm)
-        this.decoratedAlgorithm.setEnhancements(enhancements);
-    }
-
-    /**
      * Describe feature points
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} inputTexture pre-processed greyscale image
