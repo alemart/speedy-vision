@@ -37,10 +37,15 @@ export class FeatureAlgorithmDecorator extends FeatureAlgorithm
      */
     constructor(decoratedAlgorithm, descriptorSize = 0, extraSize = 0)
     {
+        Utils.assert(decoratedAlgorithm instanceof FeatureAlgorithm);
+        Utils.assert(descriptorSize >= decoratedAlgorithm.descriptorSize);
+        Utils.assert(extraSize >= decoratedAlgorithm.extraSize);
+
         super(descriptorSize, extraSize);
 
-        Utils.assert(decoratedAlgorithm instanceof FeatureAlgorithm);
         this._decoratedAlgorithm = decoratedAlgorithm;
+        this._decoratedAlgorithm.descriptorSize = this.descriptorSize;
+        this._decoratedAlgorithm.extraSize = this.extraSize;
     }
 
     /**

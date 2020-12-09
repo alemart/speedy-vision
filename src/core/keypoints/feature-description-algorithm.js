@@ -42,8 +42,6 @@ export class FeatureDescriptionAlgorithm extends FeatureAlgorithmDecorator
         Utils.assert(descriptorSize > 0);
 
         super(decoratedAlgorithm, descriptorSize, 0);
-        decoratedAlgorithm.descriptorSize = this.descriptorSize;
-        decoratedAlgorithm.extraSize = this.extraSize;
     }
 
     /**
