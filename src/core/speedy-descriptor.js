@@ -67,6 +67,7 @@ export class BinaryDescriptor extends SpeedyDescriptor
     {
         super();
         this._data = bytes;
+        this._size = bytes.length;
     }
 
     /**
@@ -84,6 +85,6 @@ export class BinaryDescriptor extends SpeedyDescriptor
      */
     get size()
     {
-        return this._data.length;
+        return this._size;
     }
 }
