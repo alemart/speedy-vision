@@ -41,8 +41,8 @@ const MIN_ENCODER_LENGTH = 1;
 const MAX_ENCODER_LENGTH = 300; // in pixels (if too large, WebGL may lose context - so be careful!)
 const MAX_KEYPOINTS = ((MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH) / MAX_PIXELS_PER_KEYPOINT) | 0;
 const INITIAL_ENCODER_LENGTH = 16; // pick a small number to reduce processing load and not crash things on mobile (WebGL lost context)
-const KEYPOINT_BUFFER_LENGTH = 1024; // maximum number of keypoints that can be uploaded to the GPU via UBOs
-const UBO_MAX_BYTES = 16384; // UBOs can hold at least 16KB of data (each keypoint uses 16 bytes)
+const UBO_MAX_BYTES = 16384; // UBOs can hold at least 16KB of data: gl.MAX_UNIFORM_BLOCK_SIZE >= 16384 according to the GL ES 3 reference
+const KEYPOINT_BUFFER_LENGTH = UBO_MAX_BYTES >> 4; // maximum number of keypoints that can be uploaded to the GPU via UBOs (each keypoint uses 16 bytes)
 
 
 
@@ -312,19 +312,19 @@ export class GPUEncoders extends SpeedyProgramGroup
      */
     uploadKeypoints(keypoints, descriptorSize, extraSize)
     {
+        // Too many keypoints?
+        const keypointCount = keypoints.length;
+        if(keypointCount > KEYPOINT_BUFFER_LENGTH) {
+            // TODO: multipass
+            throw new NotSupportedError(`Can't upload ${keypointCount} keypoints: maximum is currently ${KEYPOINT_BUFFER_LENGTH}`);
+        }
+
         // Create a buffer for uploading the data
         if(this._uploadBuffer === null) {
             const sizeofVec4 = Float32Array.BYTES_PER_ELEMENT * 4; // 16
             const internalBuffer = new ArrayBuffer(sizeofVec4 * KEYPOINT_BUFFER_LENGTH);
             Utils.assert(internalBuffer.byteLength <= UBO_MAX_BYTES);
             this._uploadBuffer = new Float32Array(internalBuffer);
-        }
-
-        // Too many keypoints?
-        const keypointCount = keypoints.length;
-        if(keypointCount > KEYPOINT_BUFFER_LENGTH) {
-            // TODO: multipass
-            throw new NotSupportedError(`Can't upload ${keypointCount} keypoints: maximum is currently ${KEYPOINT_BUFFER_LENGTH}`);
         }
 
         // Format data as follows: (xpos, ypos, lod, score)
