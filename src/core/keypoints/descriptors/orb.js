@@ -22,7 +22,8 @@
 import { SpeedyGPU } from '../../../gpu/speedy-gpu';
 import { FeatureDescriptionAlgorithm } from '../feature-description-algorithm';
 import { FeatureAlgorithm } from '../feature-algorithm';
-import { SpeedyFeatureWithBinaryDescriptor } from '../../speedy-feature';
+import { BinaryDescriptor } from '../../speedy-descriptor';
+import { SpeedyFeatureWithDescriptor } from '../../speedy-feature';
 import { AbstractMethodError } from '../../../utils/errors';
 
 // constants
@@ -95,6 +96,11 @@ export class ORBFeatures extends FeatureDescriptionAlgorithm
      */
     _postProcess(keypoints)
     {
-        return keypoints.map(keypoint => new SpeedyFeatureWithBinaryDescriptor(keypoint));
+        return keypoints.map(
+            keypoint => new SpeedyFeatureWithDescriptor(
+                keypoint,
+                descriptorBytes => new BinaryDescriptor(descriptorBytes)
+            )
+        );
     }
 }

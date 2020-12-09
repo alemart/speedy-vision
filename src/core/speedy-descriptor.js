@@ -24,7 +24,7 @@ import { AbstractMethodError } from '../utils/errors';
 /**
  * Abstract feature descriptor
  */
-class SpeedyDescriptor
+export class SpeedyDescriptor
 {
     /**
      * Abstract constructor

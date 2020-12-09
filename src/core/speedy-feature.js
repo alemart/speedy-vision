@@ -19,7 +19,7 @@
  * Feature Point class
  */
 
-import { BinaryDescriptor } from './speedy-descriptor';
+import { SpeedyDescriptor } from './speedy-descriptor';
 import { Utils } from '../utils/utils';
 
 // Constants
@@ -133,15 +133,15 @@ export class SpeedyFeature
 
 /**
  * A feature point with a descriptor
- * @abstract
  */
-class SpeedyFeatureWithDescriptor extends SpeedyFeature
+export class SpeedyFeatureWithDescriptor extends SpeedyFeature
 {
     /**
      * Constructor
      * @param {SpeedyFeature} feature
+     * @param {function(Uint8Array): SpeedyDescriptor} spawnDescriptor spawns a descriptor given a sequence of bytes
      */
-    constructor(feature)
+    constructor(feature, spawnDescriptor)
     {
         // copy values
         super(
@@ -156,7 +156,7 @@ class SpeedyFeatureWithDescriptor extends SpeedyFeature
         );
 
         // setup descriptor
-        this._descriptor = null; // subclass responsibility
+        this._descriptor = spawnDescriptor(this._descriptorBytes);
     }
 
     /**
@@ -166,25 +166,5 @@ class SpeedyFeatureWithDescriptor extends SpeedyFeature
     get descriptor()
     {
         return this._descriptor;
-    }
-}
-
-/**
- * A feature point with a binary descriptor
- */
-export class SpeedyFeatureWithBinaryDescriptor extends SpeedyFeatureWithDescriptor
-{
-    /**
-     * Constructor
-     * @param {SpeedyFeature} feature
-     */
-    constructor(feature)
-    {
-        // setup feature point
-        super(feature);
-
-        // setup descriptor
-        //Utils.assert(this._descriptorBytes.length > 0);
-        this._descriptor = new BinaryDescriptor(this._descriptorBytes);
     }
 }
