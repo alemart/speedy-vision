@@ -31,10 +31,12 @@ export class SpeedyFeatureDecorator
     /**
      * Constructor
      * @param {Function} decorator a FeatureAlgorithmDecorator
+     * @param {...*} [args] additional arguments to be passed when instantiating the decorator
      */
-    constructor(decorator)
+    constructor(decorator, ...args)
     {
         this._decorator = decorator;
+        this._args = args;
     }
 
     /**
@@ -44,8 +46,9 @@ export class SpeedyFeatureDecorator
      */
     decorate(algorithm)
     {
+        const args = this._args;
         const decorator = this._decorator;
-        const decoratedAlgorithm = new decorator(algorithm);
+        const decoratedAlgorithm = new decorator(algorithm, ...args);
 
         Utils.assert(decoratedAlgorithm instanceof FeatureAlgorithmDecorator);
 
