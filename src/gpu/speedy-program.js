@@ -602,8 +602,8 @@ StandardProgram.prototype.attachFBO = function(pingpong = false)
     const numTextures = pingpong ? 2 : 1;
 
     this._texIndex = 0;
-    this._texture = Array(numTextures);
-    this._fbo = Array(numTextures);
+    this._texture = new Array(numTextures);
+    this._fbo = new Array(numTextures);
 
     for(let i = 0; i < numTextures; i++) {
         this._texture[i] = new SpeedyTexture(gl, width, height);
@@ -659,27 +659,20 @@ StandardProgram.prototype.resize = function(width, height)
     // resize textures
     if(this._fbo != null) {
         const numTextures = this._fbo.length;
-        const newTexture = Array(numTextures);
-        const newFBO = Array(numTextures);
+        const zeros = new Uint8Array(width * height * 4);
 
         // create textures with new size & old content
         for(let i = 0; i < numTextures; i++) {
-            newTexture[i] = new SpeedyTexture(gl, width, height);
+            // create new texture
+            const newTexture = new SpeedyTexture(gl, width, height);
 
-            /*
+            // bind
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo[i]);
-            gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, newTexture[i].glTexture);
+            gl.bindTexture(gl.TEXTURE_2D, newTexture.glTexture);
 
-            //
-            // BUG: calling copyTexSubImage2D() below generates a warning
-            //      on Firefox - investigate further
-            //
-            // "Texture has not been initialized prior to a partial upload,
-            //  forcing the browser to clear it. This may be slow."
-            //
-            // FIXME: Currently, texture contents are being lost on resize
-            //
+            // initialize the new texture with zeros to avoid a
+            // warning when calling copyTexSubImage2D() on Firefox
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, zeros);
 
             // copy old content
             gl.copyTexSubImage2D(gl.TEXTURE_2D,     // target
@@ -691,23 +684,21 @@ StandardProgram.prototype.resize = function(width, height)
                                  Math.min(width, oldWidth),    // width
                                  Math.min(height, oldHeight)); // height
 
+            // attach the new texture to the existing framebuffer
+            gl.framebufferTexture2D(gl.FRAMEBUFFER,         // target
+                                    gl.COLOR_ATTACHMENT0,   // color buffer
+                                    gl.TEXTURE_2D,          // tex target
+                                    newTexture.glTexture,   // texture
+                                    0);                     // mipmap level
+
+            // unbind
             gl.bindTexture(gl.TEXTURE_2D, null);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            */
 
-            newFBO[i] = GLUtils.createFramebuffer(gl, newTexture[i].glTexture);
+            // release old texture & replace it
+            this._texture[i].release();
+            this._texture[i] = newTexture;
         }
-
-        // release old textures
-        for(let fbo of this._fbo)
-            GLUtils.destroyFramebuffer(gl, fbo);
-
-        for(let texture of this._texture)
-            texture.release();
-
-        // update references
-        this._texture = newTexture;
-        this._fbo = newFBO;
     }
 
     //console.log(`Resized program to ${width} x ${height}`);
