@@ -321,7 +321,7 @@ void main()
     vec4 pixel = threadPixel(encodedCorners);
     ivec2 thread = threadLocation();
     KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);
-    int descriptorCell = address.offset - extraSize - 2;
+    int descriptorCell = address.offset - 2 - extraSize / 4;
 
     // this is not a descriptor cell?
     color = pixel;
