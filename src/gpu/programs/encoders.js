@@ -274,7 +274,7 @@ export class GPUEncoders extends SpeedyProgramGroup
             // read data from the GPU
             let downloadTime = performance.now(), pixels;
             if(useAsyncTransfer)
-                pixels = await this._downloadKeypoints.readPixelsAsync(0, 0, -1, -1, useBufferedDownloads);
+                pixels = await this._downloadKeypoints.readPixelsAsync(0, 0, -1, -1, useBufferedDownloads).turbocharge();
             else
                 pixels = this._downloadKeypoints.readPixelsSync(); // bottleneck!
             downloadTime = performance.now() - downloadTime;

@@ -20,6 +20,7 @@
  */
 
 import { Utils } from '../utils/utils';
+import { SpeedyPromise } from '../utils/speedy-promise';
 import { GLError, IllegalArgumentError, IllegalOperationError } from '../utils/errors';
 
 
@@ -362,7 +363,7 @@ export class GLUtils
      * @param {WebGL2RenderingContext} gl
      * @param {WebGLSync} sync sync object
      * @param {GLbitfield} [flags] may be gl.SYNC_FLUSH_COMMANDS_BIT or 0
-     * @returns {Promise} a promise that resolves as soon as the sync object becomes signaled
+     * @returns {SpeedyPromise} a promise that resolves as soon as the sync object becomes signaled
      */
     static clientWaitAsync(gl, sync, flags = 0)
     {
@@ -386,7 +387,7 @@ export class GLUtils
             }
         });
 
-        return new Promise((resolve, reject) => {
+        return new SpeedyPromise((resolve, reject) => {
             this._checkStatus(gl, sync, flags, resolve, reject);
         });
     }
@@ -401,7 +402,7 @@ export class GLUtils
      * @param {ArrayBufferView} destBuffer
      * @param {GLuint} [destOffset]
      * @param {GLuint} [length]
-     * @returns {Promise<number>} a promise that resolves to the time it took to read the data (in ms)
+     * @returns {SpeedyPromise<number>} a promise that resolves to the time it took to read the data (in ms)
      */
     static getBufferSubDataAsync(gl, glBuffer, target, srcByteOffset, destBuffer, destOffset = 0, length = 0)
     {
@@ -434,7 +435,7 @@ export class GLUtils
      * @param {GLsizei} width
      * @param {GLsizei} height
      * @param {WebGLFramebuffer} [fbo]
-     * @returns {Promise<number>} a promise that resolves to the time it took to read the data (in ms)
+     * @returns {SpeedyPromise<number>} a promise that resolves to the time it took to read the data (in ms)
      */
     static readPixelsViaPBO(gl, arrayBuffer, x, y, width, height, fbo = null)
     {

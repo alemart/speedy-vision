@@ -21,6 +21,7 @@
 
 import { GLUtils } from './gl-utils.js';
 import { SpeedyTexture } from './speedy-texture';
+import { SpeedyPromise } from '../utils/speedy-promise';
 import { NotSupportedError, IllegalArgumentError, IllegalOperationError } from '../utils/errors';
 
 const LOCATION_ATTRIB_POSITION = 0;
@@ -159,7 +160,7 @@ export class SpeedyProgram extends Function
      * @param {number} [width]
      * @param {number} [height]
      * @param {boolean} [useBufferedDownloads] optimize downloads
-     * @returns {Promise<Uint8Array>} resolves to an array of pixels in the RGBA format
+     * @returns {SpeedyPromise<Uint8Array>} resolves to an array of pixels in the RGBA format
      */
     readPixelsAsync(x = 0, y = 0, width = -1, height = -1, useBufferedDownloads = true)
     {
@@ -167,7 +168,7 @@ export class SpeedyProgram extends Function
 
         // lost context?
         if(gl.isContextLost())
-            return Promise.resolve(this._pixelBuffer[0]);
+            return SpeedyPromise.resolve(this._pixelBuffer[0]);
 
         // default values
         if(width < 0)
@@ -204,22 +205,22 @@ export class SpeedyProgram extends Function
             GLUtils.readPixelsViaPBO(gl, this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
                 this._pboConsumerQueue.push(nextPBO);
             });
-        });
+        }).turbocharge();
 
         // CPU needs to consume data
         if(this._pboConsumerQueue.length > 0) {
             const readyPBO = this._pboConsumerQueue.shift();
-            return new Promise(resolve => {
+            return new SpeedyPromise(resolve => {
                 resolve(this._pixelBuffer[readyPBO]);
                 this._pboProducerQueue.push(readyPBO); // enqueue AFTER resolve()
             });
         }
-        else return new Promise(resolve => {
+        else return new SpeedyPromise(resolve => {
             waitForQueueNotEmpty(this._pboConsumerQueue).then(waitTime => {
                 const readyPBO = this._pboConsumerQueue.shift();
                 resolve(this._pixelBuffer[readyPBO]);
                 this._pboProducerQueue.push(readyPBO); // enqueue AFTER resolve()
-            });
+            }).turbocharge();
         });
     }
 
@@ -761,7 +762,7 @@ StandardProgram.prototype.invalidateFramebuffer = function()
 // wait for a queue to be not empty
 function waitForQueueNotEmpty(queue)
 {
-    return new Promise(resolve => {
+    return new SpeedyPromise(resolve => {
         const start = performance.now();
         function wait() {
             if(queue.length > 0)
