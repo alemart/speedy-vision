@@ -207,7 +207,7 @@ export class GPUEncoders extends SpeedyProgramGroup
             // We've cleared the texture to black.
             // Likely to be incorrect black pixels
             // due to resize. Bad for encoderLength
-            if(x + y == 0 && pixels[i+6] + pixels[i+5] == 0)
+            if(x + y == 0 && pixels[i+6] == 0)
                 continue; // discard, it's noise
 
             // convert from fixed-point
