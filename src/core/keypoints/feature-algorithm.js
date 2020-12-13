@@ -23,6 +23,7 @@ import { SpeedyGPU } from '../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../gpu/speedy-texture';
 import { AbstractMethodError } from '../../utils/errors';
 import { Utils } from '../../utils/utils';
+import { MAX_DESCRIPTOR_SIZE } from '../../utils/globals';
 
 /**
  * An abstract algorithm that deals with
@@ -39,6 +40,7 @@ export class FeatureAlgorithm
      */
     constructor(descriptorSize = 0, extraSize = 0)
     {
+        Utils.assert(descriptorSize <= MAX_DESCRIPTOR_SIZE);
         Utils.assert(descriptorSize % 4 === 0);
         Utils.assert(extraSize % 4 === 0);
 

@@ -23,6 +23,7 @@ import {
     PYRAMID_MAX_LEVELS, PYRAMID_MAX_OCTAVES, LOG2_PYRAMID_MAX_SCALE,
     MAX_TEXTURE_LENGTH,
     FIX_BITS, FIX_RESOLUTION,
+    MAX_DESCRIPTOR_SIZE,
     KPF_NONE, KPF_ORIENTED, KPF_DISCARD
 } from '../utils/globals';
 import { PixelComponent } from '../utils/types';
@@ -53,7 +54,8 @@ const constants = {
     'FIX_BITS': FIX_BITS,
     'FIX_RESOLUTION': FIX_RESOLUTION,
 
-    // keypoint flags
+    // keypoints
+    'MAX_DESCRIPTOR_SIZE': MAX_DESCRIPTOR_SIZE,
     'KPF_NONE': KPF_NONE,
     'KPF_ORIENTED': KPF_ORIENTED,
     'KPF_DISCARD': KPF_DISCARD,

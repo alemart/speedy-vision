@@ -59,14 +59,17 @@ export const MAX_TEXTURE_LENGTH = (1 << (16 - FIX_BITS)) - 2; // 2^n - 2 due to 
 
 
 // -----------------------------------------------------------------
-// KEYPOINT FLAGS
+// KEYPOINTS
 // -----------------------------------------------------------------
 
-// No special flags
+// Maximum size of a descriptor, in bytes
+export const MAX_DESCRIPTOR_SIZE = 64;
+
+// Flag: no special flags
 export const KPF_NONE = 0x0;
 
-// The keypoint is oriented
+// Flag: the keypoint is oriented
 export const KPF_ORIENTED = 0x1;
 
-// Should the keypoint be discarded? (in the next frame)
+// Flag: should the keypoint be discarded? (in the next frame)
 export const KPF_DISCARD = 0x80;

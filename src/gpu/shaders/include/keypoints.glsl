@@ -82,6 +82,11 @@ struct KeypointAddress
 };
 
 /**
+ * Keypoint Constants
+ */
+const int MAX_DESCRIPTOR_SIZE = int(@MAX_DESCRIPTOR_SIZE@); // in bytes
+
+/**
  * Keypoint Flags
  */
 const int KPF_NONE = int(@KPF_NONE@); // no special flags
