@@ -146,11 +146,10 @@ KeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descrip
 }
 
 /**
- * Decode a keypoint given a thread location in an encoded keypoint texture
+ * Decode keypoint header
  * @param {sampler2D} encodedKeypoints texture sampler
- * @param {ivec2} thread The desired thread from which to decode the keypoint, usually threadLocation()
  * @param {int} encoderLength encoded keypoint texture is encoderLength x encoderLength
- * @param {int} keypointBaseAddress base address of the keypoint in the texture
+ * @param {KeypointAddress} address keypoint address
  * @returns {Keypoint} decoded keypoint
  */
 Keypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)
