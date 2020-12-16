@@ -36,6 +36,8 @@
  * E: extra binary string (M bytes)
  * D: descriptor binary string (N bytes)
  *
+ * (X,Y,S,R,C,F) is the keypoint header (8 bytes)
+ *
  *
  *
  * The position of keypoints are encoded as follows:
@@ -103,13 +105,19 @@ const int KPF_DISCARD = int(@KPF_DISCARD@); // the keypoint should be discarded 
 #define readKeypointData(encodedKeypoints, encoderLength, rasterIndex) texelFetch((encodedKeypoints), ivec2((rasterIndex) % (encoderLength), (rasterIndex) / (encoderLength)), 0)
 
 /**
+ * The size of the header of an encoded keypoint, in bytes
+ * @returns {int}
+ */
+#define sizeofEncodedKeypointHeader() (8)
+
+/**
  * The size of an encoded keypoint in bytes
  * (must be a multiple of 4 - that's 32 bits per pixel)
  * @param {int} descriptorSize in bytes
  * @param {int} extraSize in bytes
  * @returns {int}
  */
-#define sizeofEncodedKeypoint(descriptorSize, extraSize) (8 + (descriptorSize) + (extraSize))
+#define sizeofEncodedKeypoint(descriptorSize, extraSize) (sizeofEncodedKeypointHeader() + (descriptorSize) + (extraSize))
 
 /**
  * Find the keypoint index given its base address
