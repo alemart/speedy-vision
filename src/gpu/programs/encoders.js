@@ -240,6 +240,13 @@ export class GPUEncoders extends SpeedyProgramGroup
                 pixels.slice(8 + i + extraSize, 8 + i + extraSize + descriptorSize)
             ) : null;
 
+            // something is off with the encoder length
+            if(
+                (descriptorSize > 0 && descriptorBytes.length < descriptorSize) ||
+                (extraSize > 0 && extraBytes.length < extraSize)
+            )
+                continue; // discard
+
             // register keypoint
             keypoints.push(
                 new SpeedyFeature(x, y, lod, rotation, score, flags, extraBytes, descriptorBytes)
