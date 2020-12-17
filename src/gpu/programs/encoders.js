@@ -42,7 +42,7 @@ const MAX_ENCODER_LENGTH = 300; // in pixels (if too large, WebGL may lose conte
 const MAX_KEYPOINTS = ((MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH) / MAX_PIXELS_PER_KEYPOINT) | 0;
 const INITIAL_ENCODER_LENGTH = 16; // pick a small number to reduce processing load and not crash things on mobile (WebGL lost context)
 const UBO_MAX_BYTES = 16384; // UBOs can hold at least 16KB of data: gl.MAX_UNIFORM_BLOCK_SIZE >= 16384 according to the GL ES 3 reference
-const KEYPOINT_BUFFER_LENGTH = UBO_MAX_BYTES >> 4; // maximum number of keypoints that can be uploaded to the GPU via UBOs (each keypoint uses 16 bytes)
+const KEYPOINT_BUFFER_LENGTH = UBO_MAX_BYTES / 16; // maximum number of keypoints that can be uploaded to the GPU via UBOs (each keypoint uses 16 bytes)
 
 
 
