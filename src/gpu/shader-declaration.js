@@ -121,7 +121,7 @@ class ShaderDeclaration
         // write the #defines
         const defs = [];
         for(const key of Object.keys(defines))
-            defs.push(`#define ${key} ${defines[key]}\n`);
+            defs.push(`#define ${key} ${+(defines[key])}\n`); // force numeric values
 
         // change the fragment shader
         const source = DEFAULT_FRAGMENT_SHADER_PREFIX + defs.join('') + this._userSource;
