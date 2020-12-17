@@ -24,6 +24,7 @@
 uniform sampler2D pyramid;
 uniform float threshold;
 uniform int numberOfOctaves;
+uniform float lodStep;
 
 const ivec4 margin = ivec4(3, 3, 4, 4);
 const vec4 zeroes = vec4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -48,7 +49,7 @@ void main()
          df1m[PYRAMID_MAX_OCTAVES], df10[PYRAMID_MAX_OCTAVES], df11[PYRAMID_MAX_OCTAVES];
     float pyrpix = 0.0f;
     for(int l = 0; l < numberOfOctaves; l++) {
-        float lod = float(l) * 0.5f;
+        float lod = float(l) * lodStep;
         float pot = exp2(lod);
         pyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(-1,-1)).g;
         dfmm[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));
@@ -82,7 +83,7 @@ void main()
 
     // for each level of the pyramid
     float lod = 0.0f, pot = 1.0f;
-    for(int octave = 0; octave < numberOfOctaves; octave++, pot = exp2(lod += 0.5f)) {
+    for(int octave = 0; octave < numberOfOctaves; octave++, pot = exp2(lod += lodStep)) {
 
         // update current pixel
         pixel = pyrPixel(pyramid, lod);

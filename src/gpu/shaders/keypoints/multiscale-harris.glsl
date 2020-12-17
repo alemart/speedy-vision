@@ -38,6 +38,7 @@
 uniform sampler2D pyramid;
 uniform int windowSize; // 1 (1x1 window), 3 (3x3 window), 5, ... up to 15 (positive odd number)
 uniform int numberOfOctaves; // each pyramid octave uses a scaling factor of sqrt(2)
+uniform float lodStep; // 0.5 for a scale factor of sqrt(2); 1 for a scale factor of 2
 uniform sampler2D sobelDerivatives[@PYRAMID_MAX_OCTAVES@]; // for each LOD sub-level (0, 0.5, 1, 1.5, 2...)
 
 vec4 pickSobelDerivatives(int index, ivec2 offset)
@@ -85,7 +86,7 @@ void main()
         float score = clamp(response * normalizer, 0.0f, 1.0f);
 
         // compute corner scale
-        float lod = 0.5f * float(octave);
+        float lod = lodStep * float(octave);
         float scale = encodeLod(lod);
 
         // pick the best score

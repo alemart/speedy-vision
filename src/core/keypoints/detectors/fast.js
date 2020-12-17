@@ -30,6 +30,7 @@ import { PYRAMID_MAX_LEVELS } from '../../../utils/globals';
 const DEFAULT_FAST_VARIANT = 9;
 const DEFAULT_FAST_THRESHOLD = 10;
 const DEFAULT_DEPTH = 3;
+const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // scale factor between consecutive pyramid layers (sqrt(2))
 
 
 
@@ -137,6 +138,7 @@ export class MultiscaleFASTFeatures extends FeatureDetectionAlgorithm
         this._n = DEFAULT_FAST_VARIANT;
         this._threshold = DEFAULT_FAST_THRESHOLD;
         this._depth = DEFAULT_DEPTH;
+        this._scaleFactor = DEFAULT_SCALE_FACTOR;
         this._useHarrisScore = false;
     }
 
@@ -198,6 +200,24 @@ export class MultiscaleFASTFeatures extends FeatureDetectionAlgorithm
     }
 
     /**
+     * Get the scale factor between consecutive pyramid layers
+     * @returns {number}
+     */
+    get scaleFactor()
+    {
+        return this._scaleFactor;
+    }
+
+    /**
+     * Set the scale factor between consecutive pyramid layers
+     * @param {number} value a value greater than 1
+     */
+    set scaleFactor(value)
+    {
+        this._scaleFactor = Math.max(1, +value);
+    }
+
+    /**
      * Use Harris scoring function?
      * @returns {boolean}
      */
@@ -228,6 +248,7 @@ export class MultiscaleFASTFeatures extends FeatureDetectionAlgorithm
         const useHarrisScore = this._useHarrisScore;
         const normalizedThreshold = threshold / 255.0;
         const numberOfOctaves = 2 * depth - 1;
+        const lodStep = Math.log2(this._scaleFactor);
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
 
@@ -237,13 +258,13 @@ export class MultiscaleFASTFeatures extends FeatureDetectionAlgorithm
         // find corners
         let corners = null;
         if(!useHarrisScore)
-            corners = gpu.programs.keypoints.multiscaleFast(pyramid, normalizedThreshold, numberOfOctaves);
+            corners = gpu.programs.keypoints.multiscaleFast(pyramid, normalizedThreshold, numberOfOctaves, lodStep);
         else
-            corners = gpu.programs.keypoints.multiscaleFastWithHarris(pyramid, normalizedThreshold, numberOfOctaves);
+            corners = gpu.programs.keypoints.multiscaleFastWithHarris(pyramid, normalizedThreshold, numberOfOctaves, lodStep);
 
         // non-maximum suppression
         corners = gpu.programs.keypoints.samescaleSuppression(corners);
-        corners = gpu.programs.keypoints.multiscaleSuppression(corners);
+        corners = gpu.programs.keypoints.multiscaleSuppression(corners, lodStep);
 
         // encode keypoints
         const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(corners, descriptorSize, extraSize);

@@ -29,6 +29,7 @@ import { Utils } from '../../../utils/utils';
 const DEFAULT_QUALITY = 0.1; // default quality metric
 const DEFAULT_DEPTH = 3; // default depth for multiscale feature detection
 const DEFAULT_WINDOW_SIZE = 3; // compute Harris autocorrelation matrix within a 3x3 window
+const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // scale factor between consecutive pyramid layers (sqrt(2))
 const MIN_WINDOW_SIZE = 0; // minimum window size when computing the autocorrelation matrix
 const MAX_WINDOW_SIZE = 7; // maximum window size when computing the autocorrelation matrix
 const SOBEL_OCTAVE_COUNT = 2 * PYRAMID_MAX_LEVELS - 1; // Sobel derivatives for each pyramid layer
@@ -78,14 +79,14 @@ export class HarrisFeatures extends FeatureDetectionAlgorithm
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
         const windowSize = DEFAULT_WINDOW_SIZE;
-        const lod = 0, numberOfOctaves = 1;
+        const lod = 0, lodStep = 1, numberOfOctaves = 1;
 
         // compute derivatives
         const df = gpu.programs.keypoints.multiscaleSobel(inputTexture, lod);
-        const sobelDerivatives = Array(SOBEL_OCTAVE_COUNT).fill(df);
+        const sobelDerivatives = new Array(SOBEL_OCTAVE_COUNT).fill(df);
 
         // corner detection
-        const corners = gpu.programs.keypoints.multiscaleHarris(inputTexture, windowSize, numberOfOctaves, sobelDerivatives);
+        const corners = gpu.programs.keypoints.multiscaleHarris(inputTexture, windowSize, numberOfOctaves, lodStep, sobelDerivatives);
 
         // release derivatives
         df.release();
@@ -117,6 +118,7 @@ export class MultiscaleHarrisFeatures extends FeatureDetectionAlgorithm
         super();
         this._quality = DEFAULT_QUALITY;
         this._depth = DEFAULT_DEPTH;
+        this._scaleFactor = DEFAULT_SCALE_FACTOR;
     }
 
     /**
@@ -158,6 +160,24 @@ export class MultiscaleHarrisFeatures extends FeatureDetectionAlgorithm
     }
 
     /**
+     * Get the scale factor between consecutive pyramid layers
+     * @returns {number}
+     */
+    get scaleFactor()
+    {
+        return this._scaleFactor;
+    }
+
+    /**
+     * Set the scale factor between consecutive pyramid layers
+     * @param {number} value a value greater than 1
+     */
+    set scaleFactor(value)
+    {
+        this._scaleFactor = Math.max(1, +value);
+    }
+
+    /**
      * Detect feature points
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} inputTexture pre-processed greyscale image
@@ -171,6 +191,7 @@ export class MultiscaleHarrisFeatures extends FeatureDetectionAlgorithm
         const extraSize = this.extraSize;
         const windowSize = DEFAULT_WINDOW_SIZE;
         const numberOfOctaves = 2 * depth - 1;
+        const lodStep = Math.log2(this._scaleFactor);
 
         // generate pyramid
         const pyramid = inputTexture.generateMipmap();
@@ -178,12 +199,12 @@ export class MultiscaleHarrisFeatures extends FeatureDetectionAlgorithm
         // compute derivatives
         const sobelDerivatives = Array(SOBEL_OCTAVE_COUNT);
         for(let j = 0; j < numberOfOctaves; j++)
-            sobelDerivatives[j] = gpu.programs.keypoints.multiscaleSobel(pyramid, j * 0.5);
+            sobelDerivatives[j] = gpu.programs.keypoints.multiscaleSobel(pyramid, j * lodStep);
         for(let k = numberOfOctaves; k < sobelDerivatives.length; k++)
             sobelDerivatives[k] = sobelDerivatives[k-1]; // can't call shaders with null pointers
 
         // corner detection
-        const corners = gpu.programs.keypoints.multiscaleHarris(pyramid, windowSize, numberOfOctaves, sobelDerivatives);
+        const corners = gpu.programs.keypoints.multiscaleHarris(pyramid, windowSize, numberOfOctaves, lodStep, sobelDerivatives);
 
         // release derivatives
         for(let i = 0; i < numberOfOctaves; i++)
@@ -197,7 +218,7 @@ export class MultiscaleHarrisFeatures extends FeatureDetectionAlgorithm
 
         // non-maximum suppression
         const suppressed1 = gpu.programs.keypoints.samescaleSuppression(filteredCorners);
-        const suppressed2 = gpu.programs.keypoints.multiscaleSuppression(suppressed1);
+        const suppressed2 = gpu.programs.keypoints.multiscaleSuppression(suppressed1, lodStep);
 
         // encode keypoints
         const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(suppressed2, descriptorSize, extraSize);

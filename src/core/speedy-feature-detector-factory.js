@@ -79,7 +79,9 @@ export class SpeedyFeatureDetectorFactory extends SpeedyNamespace
     static ORB()
     {
         const orb = SpeedyFeatureDescriptorFactory.ORB();
-        return (new MultiscaleHarrisFeatureDetector()).link(orb);
+        const detector = (new MultiscaleHarrisFeatureDetector()).link(orb);
+        detector.scaleFactor = 1.19;
+        return detector;
     }
 
     /**

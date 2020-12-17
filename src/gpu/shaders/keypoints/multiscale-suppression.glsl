@@ -22,6 +22,7 @@
 @include "pyramids.glsl"
 
 uniform sampler2D image;
+uniform float lodStep;
 
 // settings (better suppression = more texture reads)
 #define ENABLE_INNER_RING
@@ -34,8 +35,6 @@ void main()
 {
     vec4 pixel = threadPixel(image);
     float lod = decodeLod(pixel.a);
-    float lodJump = 0.5f; // 1.0f;
-    //float lodJump = 1.0f;
 
     // not a corner?
     color = pixel;
@@ -106,8 +105,8 @@ void main()
 #endif
 
     // get scores in (lodPlus, lodMinus)-scaled neighborhood
-    float lodPlus = min(lod + lodJump, F_PYRAMID_MAX_LEVELS - 1.0f);
-    float lodMinus = max(lod - lodJump, 0.0f);
+    float lodPlus = min(lod + lodStep, F_PYRAMID_MAX_LEVELS - 1.0f);
+    float lodMinus = max(lod - lodStep, 0.0f);
     float alphaPlus = encodeLod(lodPlus);
     float alphaMinus = encodeLod(lodMinus);
     mat3 innerScore = mat3(

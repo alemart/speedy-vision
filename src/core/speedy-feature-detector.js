@@ -420,6 +420,24 @@ export class MultiscaleFASTFeatureDetector extends SpeedyFeatureDetector
     }
 
     /**
+     * Get the scale factor between consecutive pyramid layers
+     * @returns {number}
+     */
+    get scaleFactor()
+    {
+        return this._algorithm.scaleFactor;
+    }
+
+    /**
+     * Set the scale factor between consecutive pyramid layers
+     * @param {number} value must be greater than 1
+     */
+    set scaleFactor(value)
+    {
+        this._algorithm.scaleFactor = value;
+    }
+
+    /**
      * Whether or not we're using an approximation of
      * Harris corner responses for keypoint scores
      * @returns {boolean}
@@ -528,6 +546,24 @@ export class MultiscaleHarrisFeatureDetector extends SpeedyFeatureDetector
     set depth(depth)
     {
         this._algorithm.depth = depth;
+    }
+
+    /**
+     * Get the scale factor between consecutive pyramid layers
+     * @returns {number}
+     */
+    get scaleFactor()
+    {
+        return this._algorithm.scaleFactor;
+    }
+
+    /**
+     * Set the scale factor between consecutive pyramid layers
+     * @param {number} value must be greater than 1
+     */
+    set scaleFactor(value)
+    {
+        this._algorithm.scaleFactor = value;
     }
 
     /**
