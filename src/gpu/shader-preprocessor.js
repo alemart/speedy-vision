@@ -35,8 +35,8 @@ const commentsRegex = [ /\/\*(.|\s)*?\*\//g , /\/\/.*$/gm ];
 const includeRegex = /^\s*@\s*include\s+"(.*?)"/gm;
 const constantRegex = /@(\w+)@/g;
 const unrollRegex = [
-    /@\s*unroll\s+?for\s*\(\s*(int|)\s*(?<counter>\w+)\s*\=\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*(<=?)\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*\+\+()\s*\)\s*\{([\s\S]+?)\}/g,
-    /@\s*unroll\s+?for\s*\(\s*(int|)\s*(?<counter>\w+)\s*\=\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*(<=?)\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*\+=\s*(-?\d+)\s*\)\s*\{([\s\S]+?)\}/g,
+    /@\s*unroll\s+?for\s*\(\s*(int|)\s*(?<counter>\w+)\s*\=\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*(<=?)\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*\+\+()\s*\)\s*\{\s*([\s\S]+?)\s*\}/g,
+    /@\s*unroll\s+?for\s*\(\s*(int|)\s*(?<counter>\w+)\s*\=\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*(<=?)\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*\+=\s*(-?\d+)\s*\)\s*\{\s*([\s\S]+?)\s*\}/g,
 ];
 
 // Constants accessible by all shaders
@@ -175,18 +175,19 @@ function unroll(match, type, counter, start, cmp, end, step, loopcode)
     console.log('Defines:', defines);
     */
 
-    // declare & initialize counter
-    let unrolledCode = `${type} ${counter} = ${start};\n`;
+    // create a new scope
+    let unrolledCode = '{\n';
 
-    // create new scopes for the loop body
-    loopcode = `{\n${loopcode.trim()}\n}`;
+    // declare counter
+    unrolledCode += `${type} ${counter};\n`;
 
     // unroll loop
     end += (cmp == '<=') ? 1 : 0;
-    for(let i = start; i < end; i += step) {
-        unrolledCode += loopcode;
-        unrolledCode += `\n${counter} = ${i + step};\n`;
-    }
+    for(let i = start; i < end; i += step)
+        unrolledCode += `{\n${counter} = ${i};\n${loopcode}\n}\n`;
+
+    // close scope
+    unrolledCode += '}\n';
     //console.log('Unrolled code:\n\n' + unrolledCode);
 
     // done!
