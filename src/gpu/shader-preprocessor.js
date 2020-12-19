@@ -178,6 +178,9 @@ function unroll(match, type, counter, start, cmp, end, step, loopcode)
     // declare & initialize counter
     let unrolledCode = `${type} ${counter} = ${start};\n`;
 
+    // create new scopes for the loop body
+    loopcode = `{\n${loopcode.trim()}\n}`;
+
     // unroll loop
     end += (cmp == '<=') ? 1 : 0;
     for(let i = start; i < end; i += step) {
