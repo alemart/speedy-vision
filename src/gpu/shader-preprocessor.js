@@ -175,12 +175,12 @@ function unroll(match, type, counter, start, cmp, end, step, loopcode)
     console.log('Defines:', defines);
     */
 
-    // continue statements are not supported
-    if(loopcode.match(/continue\s*;/g))
-        throw new NotSupportedError(`continue statements are not supported inside unrolled loops`);
+    // continue statements are not supported inside unrolled loops
+    // and will generate a compiler error. Using break is ok.
+    const hasBreak = (loopcode.match(/\bbreak\s*;/) !== null);
 
     // create a new scope
-    let unrolledCode = 'do {\n';
+    let unrolledCode = hasBreak ? 'switch(1) { default:\n' : '{\n';
 
     // declare counter
     unrolledCode += `${type} ${counter};\n`;
@@ -191,7 +191,7 @@ function unroll(match, type, counter, start, cmp, end, step, loopcode)
         unrolledCode += `{\n${counter} = ${i};\n${loopcode}\n}\n`;
 
     // close scope
-    unrolledCode += '} while(false);\n';
+    unrolledCode += '}\n';
     //console.log('Unrolled code:\n\n' + unrolledCode);
 
     // done!
