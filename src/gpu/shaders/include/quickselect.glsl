@@ -33,6 +33,15 @@
 #error Must define either QUICKSELECT_SIGNED or QUICKSELECT_UNSIGNED before including quickselect
 #endif
 
+// Define the order of the elements
+#if defined(QUICKSELECT_ASCENDING) && !defined(QUICKSELECT_DESCENDING)
+#define QS_ORD(element,pivot) ((element) < (pivot)) // find (k+1)th smallest element
+#elif defined(QUICKSELECT_DESCENDING) && !defined(QUICKSELECT_ASCENDING)
+#define QS_ORD(element,pivot) ((element) > (pivot)) // find (k+1)th largest element
+#else
+#error Must define either QUICKSELECT_ASCENDING or QUICKSELECT_DESCENDING before including quickselect
+#endif
+
 // Set array name
 #ifdef QUICKSELECT_ARRAY
 #define QS_ARRAY QUICKSELECT_ARRAY
@@ -61,11 +70,11 @@ int qspart(int l, int r, int p)
         e = QS_ARRAY[i];
         t = QS_ARRAY[q];
 
-        cond = int(e < pivot);
+        cond = int(QS_ORD(e, pivot));
         mask = QS_TYPE(-cond); // will preserve the bit pattern (GLSL ES 3 Spec sec 5.4.1)
         tmp = QS_TYPE4(mask & t, (~mask) & e, mask & e, (~mask) & t);
 
-        QS_ARRAY[i] = tmp.x | tmp.y; // swap QS_ARRAY[i] and QS_ARRAY[q] if e < pivot
+        QS_ARRAY[i] = tmp.x | tmp.y; // swap QS_ARRAY[i] and QS_ARRAY[q] if e < pivot (or e > pivot if descending)
         QS_ARRAY[q] = tmp.z | tmp.w;
         q += cond;
     }
@@ -79,7 +88,7 @@ int qspart(int l, int r, int p)
  * @param {int} l left index
  * @param {int} r right index
  * @param {int} k index of the desired element (0-based)
- * @returns {QS_TYPE} (k+1)th smallest element of QS_ARRAY[l..r]
+ * @returns {QS_TYPE} (k+1)th smallest (or largest) element of QS_ARRAY[l..r]
  */
 highp QS_TYPE quickselect(int l, int r, int k)
 {
