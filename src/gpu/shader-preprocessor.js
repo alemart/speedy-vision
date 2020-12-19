@@ -28,7 +28,7 @@ import {
 } from '../utils/globals';
 import { Utils } from '../utils/utils';
 import { PixelComponent } from '../utils/types';
-import { FileNotFoundError, ParseError } from '../utils/errors';
+import { FileNotFoundError, ParseError, NotSupportedError } from '../utils/errors';
 
 // Regular Expressions
 const commentsRegex = [ /\/\*(.|\s)*?\*\//g , /\/\/.*$/gm ];
@@ -175,8 +175,12 @@ function unroll(match, type, counter, start, cmp, end, step, loopcode)
     console.log('Defines:', defines);
     */
 
+    // continue statements are not supported
+    if(loopcode.match(/continue\s*;/g))
+        throw new NotSupportedError(`continue statements are not supported inside unrolled loops`);
+
     // create a new scope
-    let unrolledCode = '{\n';
+    let unrolledCode = 'do {\n';
 
     // declare counter
     unrolledCode += `${type} ${counter};\n`;
@@ -187,7 +191,7 @@ function unroll(match, type, counter, start, cmp, end, step, loopcode)
         unrolledCode += `{\n${counter} = ${i};\n${loopcode}\n}\n`;
 
     // close scope
-    unrolledCode += '}\n';
+    unrolledCode += '} while(false);\n';
     //console.log('Unrolled code:\n\n' + unrolledCode);
 
     // done!
