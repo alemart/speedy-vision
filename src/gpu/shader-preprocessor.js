@@ -26,13 +26,18 @@ import {
     MAX_DESCRIPTOR_SIZE,
     KPF_NONE, KPF_ORIENTED, KPF_DISCARD
 } from '../utils/globals';
+import { Utils } from '../utils/utils';
 import { PixelComponent } from '../utils/types';
-import { FileNotFoundError } from '../utils/errors';
+import { FileNotFoundError, ParseError } from '../utils/errors';
 
 // Regular Expressions
 const commentsRegex = [ /\/\*(.|\s)*?\*\//g , /\/\/.*$/gm ];
 const includeRegex = /^\s*@\s*include\s+"(.*?)"/gm;
 const constantRegex = /@(\w+)@/g;
+const unrollRegex = [
+    /@\s*unroll\s+?for\s*\(\s*(int|)\s*(?<counter>\w+)\s*\=\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*(<=?)\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*\+\+()\s*\)\s*\{([\s\S]+?)\}/g,
+    /@\s*unroll\s+?for\s*\(\s*(int|)\s*(?<counter>\w+)\s*\=\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*(<=?)\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*\+=\s*(-?\d+)\s*\)\s*\{([\s\S]+?)\}/g,
+];
 
 // Constants accessible by all shaders
 const constants = {
@@ -73,7 +78,11 @@ export class ShaderPreprocessor
      */
     static run(code)
     {
-        // remove comments and run the preprocessor
+        //
+        // The preprocessor will remove comments from GLSL code,
+        // include requested GLSL files and import global constants
+        // defined for all shaders (see above)
+        //
         return String(code).replace(commentsRegex[0], '')
                            .replace(commentsRegex[1], '')
                            .replace(includeRegex, (_, filename) =>
@@ -83,6 +92,34 @@ export class ShaderPreprocessor
                             .replace(constantRegex, (_, name) =>
                                 String(constants[name] !== undefined ? constants[name] : 'UNDEFINED_CONSTANT')
                             );
+    }
+
+    /**
+     * Unroll for loops in our own preprocessor
+     * @param {string} code
+     * @param {object} [defines]
+     * @returns {string}
+     */
+    static unrollLoops(code, defines = {})
+    {
+        //
+        // Currently, only integer for loops with positive step values
+        // can be unrolled. (TODO: negative step values?)
+        //
+        // The current implementation does not support curly braces
+        // inside unrolled loops. You may define macros to get around
+        // this, but do you actually need to unroll such loops?
+        //
+        // Loops that don't fit the supported pattern will crash
+        // the preprocessor if you try to unroll them.
+        //
+        const fn = unroll.bind(defines); // CRAZY!
+        const n = unrollRegex.length;
+
+        for(let i = 0; i < n; i++)
+            code = code.replace(unrollRegex[i], fn);
+
+        return code;
     }
 }
 
@@ -97,4 +134,58 @@ function readfileSync(filename)
         return require('./shaders/include/' + filename);
 
     throw new FileNotFoundError(`Shader preprocessor: can't read file \"${filename}\"`);
+}
+
+/**
+ * Unroll a loop pattern (regexp)
+ * @param {string} match the matched for loop
+ * @param {...string} pi matched expression
+ * @returns {string} unrolled loop
+ */
+function unroll(match, type, counter, start, cmp, end, step, loopcode)
+{
+    const defines = this;
+
+    // check if the loop limits are numeric constants or #defined numbers from the outside
+    start = Number.isFinite(+start) ? start : defines[start];
+    end = Number.isFinite(+end) ? end : defines[end];
+    if(start === undefined || end === undefined) {
+        if(Object.keys(defines).length > 0)
+            throw new ParseError(`Can't unroll loop: unknown limits (start=${start}, end=${end}). Code:\n\n${match}`);
+        else
+            return match; // don't unroll now, because defines is empty - maybe we'll succeed in the next pass
+    }
+
+    // parse limits
+    start = parseInt(start);
+    end = parseInt(end);
+    step = (step.length == 0) ? 1 : parseInt(step);
+    Utils.assert(start <= end && step > 0);
+
+    /*
+    // debug
+    console.log(`Encontrei "${match}"`);
+    console.log(`type="${type}"`);
+    console.log(`counter="${counter}"`);
+    console.log(`start="${start}"`);
+    console.log(`cmp="${cmp}"`);
+    console.log(`end="${end}"`);
+    console.log(`step="${step}"`);
+    console.log(`loopcode="${loopcode}"`)
+    console.log('Defines:', defines);
+    */
+
+    // declare & initialize counter
+    let unrolledCode = `${type} ${counter} = ${start};\n`;
+
+    // unroll loop
+    end += (cmp == '<=') ? 1 : 0;
+    for(let i = start; i < end; i += step) {
+        unrolledCode += loopcode;
+        unrolledCode += `\n${counter} = ${i + step};\n`;
+    }
+    //console.log('Unrolled code:\n\n' + unrolledCode);
+
+    // done!
+    return unrolledCode;
 }

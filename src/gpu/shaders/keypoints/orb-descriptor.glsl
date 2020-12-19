@@ -349,6 +349,7 @@ void main()
         vec4 a, b;
         int i = t * 8;
 
+        @unroll
         for(int j = 0; j < 8; j++) {
             getPair(patternStart + i + j, kcos, ksin, p, q);
             a = pyrPixelAtEx(pyramid, round(keypoint.position + pot * vec2(p)), keypoint.lod, imageSize);

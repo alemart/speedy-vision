@@ -57,8 +57,9 @@ class ShaderDeclaration
         const source = filepath ? require('./shaders/' + filepath) : (options.source || '');
 
         this._userSource = source;
-        this._fragmentSource = ShaderPreprocessor.run(DEFAULT_FRAGMENT_SHADER_PREFIX + source);
         this._vertexSource = ShaderPreprocessor.run(DEFAULT_VERTEX_SHADER);
+        this._fragmentSource = ShaderPreprocessor.run(DEFAULT_FRAGMENT_SHADER_PREFIX + source);
+        this._fragmentSource = ShaderPreprocessor.unrollLoops(this._fragmentSource);
         this._filepath = filepath || '<in-memory>';
         this._uniform = this._autodetectUniforms(this._fragmentSource);
         this._arguments = [];
@@ -125,8 +126,8 @@ class ShaderDeclaration
 
         // change the fragment shader
         const source = DEFAULT_FRAGMENT_SHADER_PREFIX + defs.join('') + this._userSource;
-        this._fragmentSource = ShaderPreprocessor.run(source);
-        // is it necessary to rescan the code for uniforms? hmm....
+        this._fragmentSource = ShaderPreprocessor.run(source); // is it necessary to rescan the code for uniforms? hmm....
+        this._fragmentSource = ShaderPreprocessor.unrollLoops(this._fragmentSource, defines);
 
         // done!
         return this;
