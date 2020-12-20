@@ -83,7 +83,7 @@ void main()
 
     // for each level of the pyramid
     float lod = 0.0f, pot = 1.0f;
-    for(int octave = 0; octave < numberOfOctaves; octave++, pot = exp2(lod += lodStep)) {
+    for(int octave = 0; octave < numberOfOctaves; octave++) {
 
         // update current pixel
         pixel = pyrPixel(pyramid, lod);
@@ -192,6 +192,10 @@ void main()
 
         // is it the best corner so far?
         best = (score > best.x) ? vec2(score, scale) : best;
+
+        // update pot & lod
+        lod += lodStep;
+        pot = exp2(lod);
     }
 
     // done
