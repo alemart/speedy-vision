@@ -184,9 +184,9 @@ Keypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointA
     keypoint.score = encodedProperties.b; // score
     keypoint.flags = int(encodedProperties.a * 255.0f); // flags
 
-    // got a null keypoint? encode it with a negative position
-    bool isNullKeypoint = all(greaterThanEqual(rawEncodedPosition, ones));
-    keypoint.position = isNullKeypoint ? vec2(-1.0f) : keypoint.position;
+    // got a null keypoint? encode it with score = 0 (end of list)
+    bool isNull = all(greaterThanEqual(rawEncodedPosition, ones));
+    keypoint.score *= float(!isNull);
 
     // done!
     return keypoint;
@@ -217,14 +217,10 @@ vec4 encodeKeypointPosition(vec2 position)
 /**
  * Checks whether the given keypoint is "null",
  * i.e., whether it represents the end of the list
+ * @param {Keypoint} keypoint
  * @returns {bool}
  */
-bool isNullKeypoint(Keypoint keypoint)
-{
-    // null keypoints are encoded as having negative position
-    const vec2 zeros = vec2(0.0f);
-    return all(lessThan(keypoint.position, zeros));
-}
+#define isNullKeypoint(keypoint) ((keypoint).score == 0.0f)
 
 /**
  * Encode the position of a keypoint at "infinity"
