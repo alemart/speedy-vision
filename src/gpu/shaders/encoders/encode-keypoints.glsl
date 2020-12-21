@@ -45,7 +45,7 @@ bool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)
     int i = 0, p = -1;
 
     position = ivec2(0, 0);
-    while(position.y < imageSize.y && p != q) {
+    while(p != q && position.y < imageSize.y) {
         pixel = texelFetch(image, position, 0);
         p += int(pixel.r > 0.0f);
         i += 1 + int(pixel.g * 255.0f);

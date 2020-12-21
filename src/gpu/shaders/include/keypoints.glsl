@@ -184,9 +184,10 @@ Keypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointA
     keypoint.score = encodedProperties.b; // score
     keypoint.flags = int(encodedProperties.a * 255.0f); // flags
 
-    // got a null keypoint? encode it with a negative score (end of list)
+    // got a null or invalid keypoint? encode it with a negative score
     bool isNull = all(greaterThanEqual(rawEncodedPosition, ones));
     keypoint.score = keypoint.score * float(!isNull) - float(isNull);
+    keypoint.score -= float(keypoint.score == 0.0f) * float(all(equal(keypoint.position, vec2(0.0f))));
 
     // done!
     return keypoint;
@@ -215,12 +216,12 @@ vec4 encodeKeypointPosition(vec2 position)
 #define encodeNullKeypoint() (vec4(1.0f)) // that's (0xFFFF, 0xFFFF)
 
 /**
- * Checks whether the given keypoint is "null",
- * i.e., whether it represents the end of the list
+ * Checks whether the given keypoint is "bad",
+ * i.e., whether it's null or invalid in some way
  * @param {Keypoint} keypoint
  * @returns {bool}
  */
-#define isNullKeypoint(keypoint) ((keypoint).score < 0.0f)
+#define isBadKeypoint(keypoint) ((keypoint).score < 0.0f)
 
 /**
  * Encode the position of a keypoint at "infinity"

@@ -231,7 +231,7 @@ void main()
 
     // decode keypoint
     Keypoint keypoint = decodeKeypoint(prevKeypoints, encoderLength, address);
-    if(isNullKeypoint(keypoint))
+    if(isBadKeypoint(keypoint))
         return;
 
     // we'll only compute optical-flow for a subset of all keypoints in this pass of the shader

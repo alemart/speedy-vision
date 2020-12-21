@@ -330,7 +330,7 @@ void main()
 
     // decode keypoint
     Keypoint keypoint = decodeKeypoint(encodedCorners, encoderLength, address);
-    if(isNullKeypoint(keypoint))
+    if(isBadKeypoint(keypoint))
         return;
 
     // get keypoint data
