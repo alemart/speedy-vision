@@ -90,7 +90,9 @@ void main()
         float scale = encodeLod(lod);
 
         // pick the best score
-        best = (score > best.x) ? vec2(score, scale) : best;
+        //best = (score > best.x) ? vec2(score, scale) : best;
+        best *= float(score <= best.x);
+        best += float(score > best.x) * vec2(score, scale);
     }
 
     // done

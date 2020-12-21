@@ -97,7 +97,8 @@ highp QS_TYPE quickselect(int l, int r, int k)
 
     while(idx.s < idx.t && p != k) {
         p = qspart(idx.s, idx.t, (idx.s + idx.t) / 2);
-        idx = (k < p) ? ivec2(idx.s, p-1) : ivec2(p+1, idx.t);
+        //idx = (k < p) ? ivec2(idx.s, p-1) : ivec2(p+1, idx.t);
+        idx = int(k < p) * ivec2(idx.s, p-1) + int(k >= p) * ivec2(p+1, idx.t);
     }
 
     return (p == k) ? QS_ARRAY[k] : QS_ARRAY[idx.s];

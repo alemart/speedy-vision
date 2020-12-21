@@ -191,7 +191,9 @@ void main()
         float scale = encodeLod(lod);
 
         // is it the best corner so far?
-        best = (score > best.x) ? vec2(score, scale) : best;
+        //best = (score > best.x) ? vec2(score, scale) : best;
+        best *= float(score <= best.x);
+        best += float(score > best.x) * vec2(score, scale);
 
         // update pot & lod
         lod += lodStep;

@@ -195,7 +195,7 @@ void main()
 
     // should we discard this keypoint?
     int flags = keypoint.flags;
-    flags |= (cornerness < discardThreshold) ? KPF_DISCARD : 0;
+    flags |= int(cornerness < discardThreshold) * KPF_DISCARD;
 
     // update flags
     color = vec4(pixel.rgb, encodeKeypointFlags(flags));

@@ -283,7 +283,7 @@ void main()
                 }
             }
 
-            highp vec2 localOpticalFlow = abs(det) < minDet ? vec2(0.0f) : invHarris * spaceTime / det;
+            highp vec2 localOpticalFlow = float(abs(det) >= minDet) * (invHarris * spaceTime / det);
             localGuess += localOpticalFlow;
         }
 

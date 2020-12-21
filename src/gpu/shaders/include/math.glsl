@@ -42,10 +42,11 @@
 #ifdef USE_FAST_ATAN
 float fastAtan(float x)
 {
+    const float PI_OVER_4_PLUS = PI_OVER_4 + 0.273f;
     float w = 1.0f - abs(x);
-    return (w >= 0.0f) ?
-        (PI_OVER_4 + 0.273f * w) * x :
-        sign(x) * PI_OVER_2 - (PI_OVER_4 + 0.273f * (1.0f - abs(1.0f / x))) / x;
+
+    return float(w >= 0.0f) * ((PI_OVER_4_PLUS * w) * x) +
+           float(w <  0.0f) * (sign(x) * PI_OVER_2 - (PI_OVER_4_PLUS * (1.0f - abs(1.0f / x))) / x);
 }
 #else
 #define fastAtan(x) atan(x)
