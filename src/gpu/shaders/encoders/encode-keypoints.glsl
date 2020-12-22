@@ -23,8 +23,8 @@
  * Keypoint images are encoded as follows:
  *
  * R - "cornerness" score of the pixel (0 means it's not a corner)
- * G - pixel intensity | skip offset
- * B - keypoint orientation
+ * G - pixel intensity
+ * B - skip offset
  * A - keypoint scale
  *
  * skip offset := min(c, -1 + offset to the next feature) / 255,
@@ -48,7 +48,7 @@ bool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)
     while(p != q && position.y < imageSize.y) {
         pixel = texelFetch(image, position, 0);
         p += int(pixel.r > 0.0f);
-        i += 1 + int(pixel.g * 255.0f);
+        i += 1 + int(pixel.b * 255.0f);
         position = ivec2(i % imageSize.x, i / imageSize.x);
     }
 

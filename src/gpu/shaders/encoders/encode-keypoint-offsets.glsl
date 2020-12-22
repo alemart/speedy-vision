@@ -23,7 +23,7 @@ uniform sampler2D image;
 uniform ivec2 imageSize;
 uniform int maxIterations; // c
 
-// Green = min(c, -1 + offset to the next keypoint) / 255,
+// Blue = min(c, -1 + offset to the next keypoint) / 255,
 // for a constant c in [1,255]
 void main()
 {
@@ -37,5 +37,5 @@ void main()
         pos.y += int(pos.x == 0);
     }
 
-    color = vec4(pixel.r, float(max(0, offset)) / 255.0f, pixel.ba);
+    color = vec4(pixel.rg, float(max(0, offset)) / 255.0f, pixel.a);
 }
