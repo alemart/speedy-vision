@@ -34,10 +34,13 @@
 @include "keypoints.glsl"
 
 uniform sampler2D image;
+uniform sampler2D encodedKeypoints;
 uniform ivec2 imageSize;
-uniform int encoderLength;
+uniform int tileSize; // preferably a power of 2
+uniform int tileIndex; // 0, 1, 2...
 uniform int descriptorSize;
 uniform int extraSize;
+uniform int encoderLength;
 
 // q = 0, 1, 2... keypoint index
 bool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)
@@ -45,7 +48,7 @@ bool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)
     int i = 0, p = -1;
 
     position = ivec2(0, 0);
-    while(p != q && position.y < imageSize.y) {
+    while(position.y < imageSize.y && p != q) {
         pixel = texelFetch(image, position, 0);
         p += int(pixel.r > 0.0f);
         i += 1 + int(pixel.b * 255.0f);
@@ -62,6 +65,14 @@ void main()
     int q = findKeypointIndex(address, descriptorSize, extraSize);
     ivec2 position;
     vec4 pixel;
+
+    // we divide the processing in a few tiles...
+    color = threadPixel(encodedKeypoints);
+    ivec2 tilePos = thread / tileSize;
+    int tileStride = encoderLength / tileSize;
+    int tile = tilePos.y * tileStride + tilePos.x;
+    if(tile != tileIndex) // not this tile?
+        return;
 
     // is it a descriptor/extra cell?
     color = vec4(0.0f); // fill it with zeroes

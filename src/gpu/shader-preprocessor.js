@@ -23,12 +23,12 @@ import {
     PYRAMID_MAX_LEVELS, PYRAMID_MAX_OCTAVES, LOG2_PYRAMID_MAX_SCALE,
     MAX_TEXTURE_LENGTH,
     FIX_BITS, FIX_RESOLUTION,
-    MAX_DESCRIPTOR_SIZE,
+    MAX_DESCRIPTOR_SIZE, MIN_KEYPOINT_SIZE,
     KPF_NONE, KPF_ORIENTED, KPF_DISCARD
 } from '../utils/globals';
 import { Utils } from '../utils/utils';
 import { PixelComponent } from '../utils/types';
-import { FileNotFoundError, ParseError, NotSupportedError } from '../utils/errors';
+import { FileNotFoundError, ParseError } from '../utils/errors';
 
 // Regular Expressions
 const commentsRegex = [ /\/\*(.|\s)*?\*\//g , /\/\/.*$/gm ];
@@ -61,6 +61,7 @@ const constants = {
 
     // keypoints
     'MAX_DESCRIPTOR_SIZE': MAX_DESCRIPTOR_SIZE,
+    'MIN_KEYPOINT_SIZE': MIN_KEYPOINT_SIZE,
     'KPF_NONE': KPF_NONE,
     'KPF_ORIENTED': KPF_ORIENTED,
     'KPF_DISCARD': KPF_DISCARD,

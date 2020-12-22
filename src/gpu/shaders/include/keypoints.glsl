@@ -87,6 +87,7 @@ struct KeypointAddress
  * Keypoint Constants
  */
 const int MAX_DESCRIPTOR_SIZE = int(@MAX_DESCRIPTOR_SIZE@); // in bytes
+const int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@); // in bytes
 
 /**
  * Keypoint Flags
@@ -105,19 +106,13 @@ const int KPF_DISCARD = int(@KPF_DISCARD@); // the keypoint should be discarded 
 #define readKeypointData(encodedKeypoints, encoderLength, rasterIndex) texelFetch((encodedKeypoints), ivec2((rasterIndex) % (encoderLength), (rasterIndex) / (encoderLength)), 0)
 
 /**
- * The size of the header of an encoded keypoint, in bytes
- * @returns {int}
- */
-#define sizeofEncodedKeypointHeader() (8)
-
-/**
  * The size of an encoded keypoint in bytes
  * (must be a multiple of 4 - that's 32 bits per pixel)
  * @param {int} descriptorSize in bytes
  * @param {int} extraSize in bytes
  * @returns {int}
  */
-#define sizeofEncodedKeypoint(descriptorSize, extraSize) (sizeofEncodedKeypointHeader() + (descriptorSize) + (extraSize))
+#define sizeofEncodedKeypoint(descriptorSize, extraSize) (MIN_KEYPOINT_SIZE + (descriptorSize) + (extraSize))
 
 /**
  * Find the keypoint index given its base address
@@ -142,12 +137,13 @@ KeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descrip
 {
     int threadRaster = thread.y * encoderLength + thread.x;
     int pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;
-    KeypointAddress address;
 
     // get the keypoint address in the encoded texture
     int keypointIndex = int(threadRaster / pixelsPerKeypoint);
-    address.base = keypointIndex * pixelsPerKeypoint; // raster order
-    address.offset = threadRaster % pixelsPerKeypoint;
+    KeypointAddress address = KeypointAddress(
+        keypointIndex * pixelsPerKeypoint, // base: raster order
+        threadRaster % pixelsPerKeypoint   // offset
+    );
 
     // done!
     return address;
