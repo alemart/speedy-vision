@@ -276,16 +276,21 @@ export class SpeedyProgram extends Function
     {
         const gl = this._gl;
         const stdprog = this._stdprog;
+        const texture = stdprog.texture;
 
         // skip things
         if(gl.isContextLost())
-            return stdprog.texture;
+            return texture;
 
         // clear internal textures
         stdprog.clear(r, g, b, a);
 
+        // ping-pong rendering?
+        if(this._options.pingpong)
+            stdprog.pingpong();
+
         // done!
-        return stdprog.texture;
+        return texture;
     }
 
     // Prepare the shader
