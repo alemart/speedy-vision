@@ -72,7 +72,7 @@ const float FIX_RESOLUTION = float(@FIX_RESOLUTION@);
  * @param {fixed2_t} f
  * @returns {ivec2}
  */
-#define fixtoivec2(f) ivec2((x) >> FIX_BITS)
+#define fixtoivec2(f) ivec2((f) >> FIX_BITS)
 
 /**
  * Convert a pair of floats to a pair of fixed-point numbers
