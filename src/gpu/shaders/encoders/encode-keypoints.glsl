@@ -36,52 +36,76 @@
 uniform sampler2D image;
 uniform sampler2D encodedKeypoints;
 uniform ivec2 imageSize;
-uniform int tileSize; // preferably a power of 2
-uniform int tileIndex; // 0, 1, 2...
+uniform int passId; // 0, 1, 2..., numPasses - 1
+uniform int numPasses; // >= 1
 uniform int descriptorSize;
 uniform int extraSize;
 uniform int encoderLength;
 
-// q = 0, 1, 2... keypoint index
-bool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)
+/**
+ * Find the q-th keypoint in the image
+ * @param {int} q desired keypoint index (0, 1, 2...)
+ * @param {int} p initial keypoint index for this pass (must be < q)
+ * @param {ivec2} [in] initial search position / [out] position of the q-th keypoint
+ * @param {vec4} pixel data corresponding to the q-th keypoint in the image
+ * @returns {bool} true on success
+ */
+bool findQthKeypoint(int q, int p, inout ivec2 position, out vec4 pixel)
 {
-    int i = 0, p = -1;
+    int notFirstPass = int(passId > 0);
 
-    position = ivec2(0, 0);
+    position *= notFirstPass; // use (0,0) on the first pass
+    p |= -(1 - notFirstPass); // use p = -1 on the first pass
+    p -= notFirstPass; // skip the last keypoint of the previous pass
+
+    int rasterIndex = position.y * imageSize.x + position.x;
     while(position.y < imageSize.y && p != q) {
+        position = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);
         pixel = texelFetch(image, position, 0);
         p += int(pixel.r > 0.0f);
-        i += 1 + int(pixel.b * 255.0f);
-        position = ivec2(i % imageSize.x, i / imageSize.x);
+        rasterIndex += 1 + int(pixel.b * 255.0f);
     }
 
     return (p == q);
 }
 
+// main
 void main()
 {
     ivec2 thread = threadLocation();
+    int pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;
     KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);
     int q = findKeypointIndex(address, descriptorSize, extraSize);
-    ivec2 position;
-    vec4 pixel;
-
-    // we divide the processing in a few tiles...
-    color = threadPixel(encodedKeypoints);
-    ivec2 tilePos = thread / tileSize;
-    int tileStride = encoderLength / tileSize;
-    int tile = tilePos.y * tileStride + tilePos.x;
-    if(tile != tileIndex) // not this tile?
-        return;
 
     // is it a descriptor/extra cell?
     color = vec4(0.0f); // fill it with zeroes
     if(address.offset > 1)
         return;
 
+    // we divide the processing in a few passes...
+    color = threadPixel(encodedKeypoints);
+    int numPixels = encoderLength * encoderLength;
+    int maxKeypoints = numPixels / pixelsPerKeypoint;
+    int maxKeypointsPerPass = maxKeypoints / numPasses + int(maxKeypoints % numPasses != 0); // ceil()
+    int targetPassId = q / maxKeypointsPerPass;
+    if(passId != targetPassId)
+        return;
+
+    #if 1
+    // find the position of the last keypoint of the last pass
+    int lastIndexFromPrevPass = passId * maxKeypointsPerPass - 1;
+    KeypointAddress lastAddressFromPrevPass = KeypointAddress(max(0, lastIndexFromPrevPass) * pixelsPerKeypoint, 0);
+    Keypoint lastKeypointFromPrevPass = decodeKeypoint(encodedKeypoints, encoderLength, lastAddressFromPrevPass);
+    ivec2 position = ivec2(lastKeypointFromPrevPass.position);
+    #else
+    // no optimization
+    int lastIndexFromPrevPass = -1; ivec2 position = ivec2(0);
+    #endif
+
     // find the q-th keypoint, if it exists
+    vec4 pixel;
     color = encodeNullKeypoint(); // end of list
-    if(!findQthKeypoint(q, position, pixel))
+    if(q >= maxKeypoints || !findQthKeypoint(q, lastIndexFromPrevPass, position, pixel))
         return;
 
     // write keypoint data

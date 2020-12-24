@@ -38,10 +38,11 @@ import {
 const MIN_PIXELS_PER_KEYPOINT = MIN_KEYPOINT_SIZE / 4; // encodes a keypoint header
 const MIN_ENCODER_LENGTH = 16; // storage for 16*16/MIN_PIXELS_PER_KEYPOINT <= 128 keypoints
 const MAX_ENCODER_LENGTH = 300; // in pixels (if too large, WebGL may lose context - so be careful!)
-const MAX_KEYPOINTS = 8192; // can't detect more than this number of keypoints per frame
 const INITIAL_ENCODER_LENGTH = MIN_ENCODER_LENGTH; // pick a small number to reduce processing load and not crash things on mobile (WebGL lost context)
+const MAX_KEYPOINTS = 8192; // can't detect more than this number of keypoints per frame
 const UBO_MAX_BYTES = 16384; // UBOs can hold at least 16KB of data: gl.MAX_UNIFORM_BLOCK_SIZE >= 16384 according to the GL ES 3 reference
 const KEYPOINT_BUFFER_LENGTH = (UBO_MAX_BYTES / 16) | 0; // maximum number of keypoints that can be uploaded to the GPU via UBOs (each keypoint uses 16 bytes)
+const ENCODER_PASSES = 4; // number of passes of the keypoint encoder
 
 
 
@@ -56,7 +57,7 @@ const encodeKeypointOffsets = importShader('encoders/encode-keypoint-offsets.gls
 
 // encode keypoints
 const encodeKeypoints = importShader('encoders/encode-keypoints.glsl')
-                       .withArguments('image', 'encodedKeypoints', 'imageSize', 'tileSize', 'tileIndex', 'descriptorSize', 'extraSize', 'encoderLength');
+                       .withArguments('image', 'encodedKeypoints', 'imageSize', 'passId', 'numPasses', 'descriptorSize', 'extraSize', 'encoderLength');
 
 // resize encoded keypoints
 const resizeEncodedKeypoints = importShader('encoders/resize-encoded-keypoints.glsl')
@@ -115,7 +116,7 @@ export class GPUEncoders extends SpeedyProgramGroup
         let neighborFn = (s) => Math.round(Utils.gaussianNoise(s, 64)) % 256;
         this._tuner = new StochasticTuner(48, 32, 48, 0.2, 8, 60, neighborFn);
         this._encoderLength = INITIAL_ENCODER_LENGTH;
-        this._estimatedKeypointCount = 1;
+        this._keypointCapacity = (INITIAL_ENCODER_LENGTH * INITIAL_ENCODER_LENGTH / MIN_KEYPOINT_SIZE) | 0;
         this._spawnedAt = performance.now();
         this._uploadBuffer = null; // lazy spawn
     }
@@ -131,19 +132,19 @@ export class GPUEncoders extends SpeedyProgramGroup
 
     /**
      * Optimizes the keypoint encoder for an expected number of keypoints
-     * @param {number} keypointCount expected number of keypoints (< 0 resets the encoder)
+     * @param {number} maxKeypointCount expected maximum number of keypoints
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
      * @returns {boolean} true if the encoder has been optimized
      */
-    optimize(keypointCount, descriptorSize, extraSize)
+    optimize(maxKeypointCount, descriptorSize, extraSize)
     {
-        const newEncoderLength = this._minimumEncoderLength(keypointCount, descriptorSize, extraSize);
+        const newEncoderLength = this._minimumEncoderLength(maxKeypointCount, descriptorSize, extraSize);
         const oldEncoderLength = this._encoderLength;
 
         this._encoderLength = newEncoderLength;
-        this._estimatedKeypointCount = keypointCount;
-        //console.log('optimized for', keypointCount, 'keypoints. length:', newEncoderLength);
+        this._keypointCapacity = maxKeypointCount;
+        //console.log('optimized for', maxKeypointCount, 'keypoints. length:', newEncoderLength);
 
         return (newEncoderLength - oldEncoderLength) != 0;
     }
@@ -182,13 +183,13 @@ export class GPUEncoders extends SpeedyProgramGroup
         const offsets = this._encodeKeypointOffsets(corners, imageSize, maxIterations);
 
         // encode keypoints
+        const numPasses = ENCODER_PASSES;
         const pixelsPerKeypointHeader = MIN_PIXELS_PER_KEYPOINT;
-        const headerEncoderLength = Math.max(MIN_ENCODER_LENGTH, Math.ceil(Math.sqrt(this._estimatedKeypointCount * pixelsPerKeypointHeader)));
-        const tileSize = Math.ceil(headerEncoderLength / 2);
+        const headerEncoderLength = Math.max(MIN_ENCODER_LENGTH, Math.ceil(Math.sqrt(this._keypointCapacity * pixelsPerKeypointHeader)));
         this._encodeKeypoints.resize(headerEncoderLength, headerEncoderLength);
         let encodedKeypointHeaders = this._encodeKeypoints.clear(0, 0, 0, 0);
-        for(let tile = 0; tile < 4; tile++)
-            encodedKeypointHeaders = this._encodeKeypoints(offsets, encodedKeypointHeaders, imageSize, tileSize, tile, 0, 0, headerEncoderLength);
+        for(let passId = 0; passId < numPasses; passId++)
+            encodedKeypointHeaders = this._encodeKeypoints(offsets, encodedKeypointHeaders, imageSize, passId, numPasses, 0, 0, headerEncoderLength);
 
         // transfer keypoints to a elastic tiny texture with storage for descriptors & extra data
         this._resizeEncodedKeypoints.resize(encoderLength, encoderLength);

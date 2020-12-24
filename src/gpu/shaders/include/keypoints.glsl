@@ -79,8 +79,8 @@ struct Keypoint
  */
 struct KeypointAddress
 {
-    int base; // pixel index in raster order corresponding to the keypoint data
-    int offset; // address offset based on thread location
+    int base; // pixel index in raster order corresponding to the first cell of the keypoint data
+    int offset; // pixel offset in raster order based on thread location
 };
 
 /**

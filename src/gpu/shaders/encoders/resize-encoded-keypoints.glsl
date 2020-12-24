@@ -50,8 +50,9 @@ void main()
     );
 
     // find the corresponding location in the input texture
+    int pixelsPerKeypoint = sizeofEncodedKeypoint(inputDescriptorSize, inputExtraSize) / 4;
     KeypointAddress otherAddress = KeypointAddress(
-        myIndex * (sizeofEncodedKeypoint(inputDescriptorSize, inputExtraSize) / 4),
+        myIndex * pixelsPerKeypoint,
         myAddress.offset
     );
 
