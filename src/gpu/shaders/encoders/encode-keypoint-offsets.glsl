@@ -21,21 +21,49 @@
 
 uniform sampler2D image;
 uniform ivec2 imageSize;
-uniform int maxIterations; // c
 
-// Blue = min(c, -1 + offset to the next keypoint) / 255,
-// for a constant c in [1,255]
+#if !defined(MAX_ITERATIONS)
+#error Must define MAX_ITERATIONS // any value between 32 and 48 works fine on both PC and mobile (determined experimentally)
+#elif MAX_ITERATIONS > 255
+#error MAX_ITERATIONS must be less than 256
+#endif
+
+//
+// We'll encode the following in the RGBA channels:
+//
+// R: keypoint score
+// G: keypoint scale
+// BA: skip offset (little endian)
+//
+// Skip offset = min(c, offset to the next keypoint),
+// for a constant c in [1, 65535]
+//
 void main()
 {
     vec4 pixel = threadPixel(image);
     ivec2 pos = threadLocation();
-    int offset = -1;
+    vec2 prefix = pixel.ra;
+    int offset = 0;
 
-    while(offset < maxIterations && pos.y < imageSize.y && pixelAt(image, pos).r == 0.0f) {
+#if 0
+    while(offset < MAX_ITERATIONS && pos.y < imageSize.y && pixelAt(image, pos).r == 0.0f) {
         ++offset;
         pos.x = (pos.x + 1) % imageSize.x;
         pos.y += int(pos.x == 0);
     }
+#else
+    int allow = 1;
 
-    color = vec4(pixel.rg, float(max(0, offset)) / 255.0f, pixel.a);
+    @unroll
+    for(int i = 0; i < MAX_ITERATIONS; i++) {
+        allow = allow * int(pos.y < imageSize.y) * int(pixel.r == 0.0f);
+        offset += allow;
+        pos.x = (pos.x + 1) % imageSize.x;
+        pos.y += int(pos.x == 0);
+        pixel = pixelAt(image, pos);
+    }
+#endif
+
+    //offset = min(offset, 255);
+    color = vec4(prefix, float(offset) / 255.0f, 0.0f);
 }

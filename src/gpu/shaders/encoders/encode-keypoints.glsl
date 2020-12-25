@@ -19,21 +19,9 @@
  * Encode keypoints in a texture
  */
 
-/*
- * Keypoint images are encoded as follows:
- *
- * R - "cornerness" score of the pixel (0 means it's not a corner)
- * G - pixel intensity
- * B - skip offset
- * A - keypoint scale
- *
- * skip offset := min(c, -1 + offset to the next feature) / 255,
- * for a constant c in [1,255]
- */
-
 @include "keypoints.glsl"
 
-uniform sampler2D image;
+uniform sampler2D offsetsImage;
 uniform sampler2D encodedKeypoints;
 uniform ivec2 imageSize;
 uniform int passId; // 0, 1, 2..., numPasses - 1
@@ -42,12 +30,14 @@ uniform int descriptorSize;
 uniform int extraSize;
 uniform int encoderLength;
 
+#define decodeSkipOffset(pixel) int((pixel).b * 255.0f) | (int((pixel).a * 255.0f) << 8)
+
 /**
- * Find the q-th keypoint in the image
+ * Find the q-th keypoint in the offsets image
  * @param {int} q desired keypoint index (0, 1, 2...)
  * @param {int} p initial keypoint index for this pass (must be < q)
  * @param {ivec2} [in] initial search position / [out] position of the q-th keypoint
- * @param {vec4} pixel data corresponding to the q-th keypoint in the image
+ * @param {vec4} pixel data corresponding to the q-th keypoint in the offsets image
  * @returns {bool} true on success
  */
 bool findQthKeypoint(int q, int p, inout ivec2 position, out vec4 pixel)
@@ -61,9 +51,9 @@ bool findQthKeypoint(int q, int p, inout ivec2 position, out vec4 pixel)
     int rasterIndex = position.y * imageSize.x + position.x;
     while(position.y < imageSize.y && p != q) {
         position = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);
-        pixel = texelFetch(image, position, 0);
+        pixel = texelFetch(offsetsImage, position, 0);
         p += int(pixel.r > 0.0f);
-        rasterIndex += 1 + int(pixel.b * 255.0f);
+        rasterIndex += max(1, decodeSkipOffset(pixel));
     }
 
     return (p == q);
@@ -110,7 +100,7 @@ void main()
 
     // write keypoint data
     color = (address.offset == 1) ? vec4(
-        pixel.a, // scale
+        pixel.g, // scale
         0.0f, // rotation
         pixel.r, // score
         encodeKeypointFlags(KPF_NONE) // flags

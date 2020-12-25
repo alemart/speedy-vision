@@ -42,7 +42,9 @@ const INITIAL_ENCODER_LENGTH = MIN_ENCODER_LENGTH; // pick a small number to red
 const MAX_KEYPOINTS = 8192; // can't detect more than this number of keypoints per frame
 const UBO_MAX_BYTES = 16384; // UBOs can hold at least 16KB of data: gl.MAX_UNIFORM_BLOCK_SIZE >= 16384 according to the GL ES 3 reference
 const KEYPOINT_BUFFER_LENGTH = (UBO_MAX_BYTES / 16) | 0; // maximum number of keypoints that can be uploaded to the GPU via UBOs (each keypoint uses 16 bytes)
-const ENCODER_PASSES = 4; // number of passes of the keypoint encoder
+const ENCODER_PASSES = 8; // number of passes of the keypoint encoder: directly impacts performance
+const LONG_SKIP_OFFSET_PASSES = 2; // number of passes of the long skip offsets shader
+const MAX_SKIP_OFFSET_ITERATIONS = [ 16, 16 ]; // used when computing skip offsets
 
 
 
@@ -51,13 +53,19 @@ const ENCODER_PASSES = 4; // number of passes of the keypoint encoder
 // Shaders
 //
 
-// encode keypoint offsets: maxIterations is an integer in [1,255], determined experimentally
-const encodeKeypointOffsets = importShader('encoders/encode-keypoint-offsets.glsl')
-                             .withArguments('image', 'imageSize', 'maxIterations');
+// encode keypoint offsets: maxIterations is an experimentally determined integer
+const encodeKeypointSkipOffsets = importShader('encoders/encode-keypoint-offsets.glsl')
+                                 .withArguments('image', 'imageSize')
+                                 .withDefines({ 'MAX_ITERATIONS': MAX_SKIP_OFFSET_ITERATIONS[0] });
+
+// encode long offsets for improved performance
+const encodeKeypointLongSkipOffsets = importShader('encoders/encode-keypoint-long-offsets.glsl')
+                                     .withArguments('offsetsImage', 'imageSize')
+                                     .withDefines({ 'MAX_ITERATIONS': MAX_SKIP_OFFSET_ITERATIONS[1] });
 
 // encode keypoints
 const encodeKeypoints = importShader('encoders/encode-keypoints.glsl')
-                       .withArguments('image', 'encodedKeypoints', 'imageSize', 'passId', 'numPasses', 'descriptorSize', 'extraSize', 'encoderLength');
+                       .withArguments('offsetsImage', 'encodedKeypoints', 'imageSize', 'passId', 'numPasses', 'descriptorSize', 'extraSize', 'encoderLength');
 
 // resize encoded keypoints
 const resizeEncodedKeypoints = importShader('encoders/resize-encoded-keypoints.glsl')
@@ -94,7 +102,10 @@ export class GPUEncoders extends SpeedyProgramGroup
         super(gpu, width, height);
         this
             // encode skip offsets
-            .declare('_encodeKeypointOffsets', encodeKeypointOffsets)
+            .declare('_encodeKeypointSkipOffsets', encodeKeypointSkipOffsets)
+            .declare('_encodeKeypointLongSkipOffsets', encodeKeypointLongSkipOffsets, {
+                ...this.program.usesPingpongRendering()
+            })
 
             // tiny textures
             .declare('_encodeKeypoints', encodeKeypoints, {
@@ -114,7 +125,7 @@ export class GPUEncoders extends SpeedyProgramGroup
 
         // setup internal data
         let neighborFn = (s) => Math.round(Utils.gaussianNoise(s, 64)) % 256;
-        this._tuner = new StochasticTuner(48, 32, 48, 0.2, 8, 60, neighborFn);
+        //this._tuner = new StochasticTuner(48, 32, 48, 0.2, 8, 60, neighborFn);
         this._encoderLength = INITIAL_ENCODER_LENGTH;
         this._keypointCapacity = (INITIAL_ENCODER_LENGTH * INITIAL_ENCODER_LENGTH / MIN_KEYPOINT_SIZE) | 0;
         this._spawnedAt = performance.now();
@@ -177,10 +188,13 @@ export class GPUEncoders extends SpeedyProgramGroup
         // parameters
         const encoderLength = this._encoderLength;
         const imageSize = [ this._width, this._height ];
-        const maxIterations = this._tuner.currentValue(); // any value between 32 and 48 should work on PC & mobile
 
-        // encode offsets
-        const offsets = this._encodeKeypointOffsets(corners, imageSize, maxIterations);
+        // encode skip offsets
+        let offsets = this._encodeKeypointSkipOffsets(corners, imageSize);
+        for(let i = 0; i < LONG_SKIP_OFFSET_PASSES; i++) // meant to boost performance
+            offsets = this._encodeKeypointLongSkipOffsets(offsets, imageSize);
+        //this._gpu.programs.utils.output(offsets);
+        //document.body.appendChild(this._gpu.canvas);
 
         // encode keypoints
         const numPasses = ENCODER_PASSES;
@@ -272,12 +286,14 @@ export class GPUEncoders extends SpeedyProgramGroup
             );
         }
 
+        /*
         // developer's secret ;)
         // reset the tuner
         if(keypoints.length == 0) {
             if(this._tuner.finished())
                 this._tuner.reset();
         }
+        */
 
         // done!
         return keypoints;
@@ -305,12 +321,14 @@ export class GPUEncoders extends SpeedyProgramGroup
                 pixels = this._downloadKeypoints.readPixelsSync(); // bottleneck!
             downloadTime = performance.now() - downloadTime;
 
+            /*
             // tuner: drop noisy feedback when the page loads
             if(performance.now() >= this._spawnedAt + 2000)
                 this._tuner.feedObservation(downloadTime);
+            */
 
-            // debug
             /*
+            // debug
             window._p = window._p || 0;
             window._m = window._m || 0;
             window._m = 0.9 * window._m + 0.1 * downloadTime;
