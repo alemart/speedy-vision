@@ -23,7 +23,7 @@ uniform sampler2D offsetsImage;
 uniform ivec2 imageSize;
 
 #ifndef MAX_ITERATIONS
-#define Must define MAX_ITERATIONS
+#error Must define MAX_ITERATIONS
 #endif
 
 // helper macros
@@ -52,7 +52,7 @@ void main()
 
 #if 0
     while(offset < MAX_ITERATIONS && pos.y < imageSize.y && pixel.r == 0.0f) {
-        rasterIndex += max(1, offset);
+        rasterIndex += offset;
         pos = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);
         pixel = pixelAt(offsetsImage, pos);
         offset = decodeSkipOffset(pixel);
@@ -61,10 +61,9 @@ void main()
 #else
     int allow = 1;
 
-    @unroll
     for(int i = 0; i < MAX_ITERATIONS; i++) { // branchless
-        allow = allow * int(pos.y < imageSize.y) * int(pixel.r == 0.0f);
-        rasterIndex += allow * max(1, offset);
+        allow *= int(pos.y < imageSize.y) * int(pixel.r == 0.0f);
+        rasterIndex += allow * offset;
         pos = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);
         pixel = pixelAt(offsetsImage, pos);
         offset = decodeSkipOffset(pixel);

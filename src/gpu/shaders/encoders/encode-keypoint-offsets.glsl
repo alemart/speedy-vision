@@ -54,9 +54,8 @@ void main()
 #else
     int allow = 1;
 
-    @unroll
     for(int i = 0; i < MAX_ITERATIONS; i++) {
-        allow = allow * int(pos.y < imageSize.y) * int(pixel.r == 0.0f);
+        allow *= int(pos.y < imageSize.y) * int(pixel.r == 0.0f);
         offset += allow;
         pos.x = (pos.x + 1) % imageSize.x;
         pos.y += int(pos.x == 0);
