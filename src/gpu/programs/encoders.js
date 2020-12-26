@@ -44,8 +44,8 @@ const MAX_KEYPOINTS = 8192; // can't detect more than this number of keypoints p
 const UBO_MAX_BYTES = 16384; // UBOs can hold at least 16KB of data: gl.MAX_UNIFORM_BLOCK_SIZE >= 16384 according to the GL ES 3 reference
 const KEYPOINT_BUFFER_LENGTH = (UBO_MAX_BYTES / 16) | 0; // maximum number of keypoints that can be uploaded to the GPU via UBOs (each keypoint uses 16 bytes)
 const ENCODER_PASSES = 8; // number of passes of the keypoint encoder: directly impacts performance
-const LONG_SKIP_OFFSET_PASSES = 3; // number of passes of the long skip offsets shader
-const MAX_SKIP_OFFSET_ITERATIONS = [ 16, 16 ]; // used when computing skip offsets
+const LONG_SKIP_OFFSET_PASSES = 2; // number of passes of the long skip offsets shader
+const MAX_SKIP_OFFSET_ITERATIONS = [ 32, 32 ]; // used when computing skip offsets
 
 
 
