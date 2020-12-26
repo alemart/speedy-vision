@@ -106,7 +106,7 @@ void main()
         float response = 0.5f * (m.x + m.z - sqrt((m.x - m.z) * (m.x - m.z) + 4.0f * m.y * m.y));
 
         // compute corner score
-        float normalizer = 9.0f / windowArea;
+        float normalizer = 9.0f / windowArea; // the default window size is 3x3
         float score = response * normalizer;
 
         // compute corner scale
