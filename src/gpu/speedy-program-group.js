@@ -118,7 +118,7 @@ export /* abstract */ class SpeedyProgramGroup
             // Dimensions are converted to integers
             hasTextureSize(width, height) {
                 return {
-                    output: [ width|0, height|0 ]
+                    output: [ Math.max(1, width | 0), Math.max(1, height | 0) ]
                 };
             },
 

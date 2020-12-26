@@ -60,23 +60,25 @@ export class GPUPyramids extends SpeedyProgramGroup
             .compose('reduce', '_smoothX', '_smoothY', '_downsample2')
             .compose('expand', '_upsample2', '_smoothX2', '_smoothY2')
            
+            /*
             // intra-pyramid operations (scale = 1.5)
             .compose('intraReduce', '_upsample2', '_smoothX2', '_smoothY2', '_downsample3/2')
             .compose('intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3')
+            */
 
-            // kernels for debugging
+            // utilities for debugging
             .declare('output1', flipY, {
                 ...this.program.hasTextureSize(this._width, this._height),
                 ...this.program.displaysGraphics()
             })
 
-            .declare('output2', flipY, {
-                ...this.program.hasTextureSize(2 * this._width, 2 * this._height),
+            .declare('outputHalf', flipY, {
+                ...this.program.hasTextureSize(Math.floor(this._width / 2), Math.floor(this._height / 2)),
                 ...this.program.displaysGraphics()
             })
 
-            .declare('output3', flipY, {
-                ...this.program.hasTextureSize(3 * this._width, 3 * this._height),
+            .declare('output2', flipY, {
+                ...this.program.hasTextureSize(2 * this._width, 2 * this._height),
                 ...this.program.displaysGraphics()
             })
 
@@ -95,13 +97,14 @@ export class GPUPyramids extends SpeedyProgramGroup
             // smoothing for 2x image
             // same rules as above with sum(k) = 2
             .declare('_smoothX2', convX([
-                0.1, 0.5, 0.8, 0.5, 0.1
+                0.1, 0.5, 0.8, 0.5, 0.1 // NOTE: this would saturate the image, but we apply it on a 2x upsampled version with lots of zero pixels
             ]), this.program.hasTextureSize(2 * this._width, 2 * this._height))
 
             .declare('_smoothY2', convY([
                 0.1, 0.5, 0.8, 0.5, 0.1
             ], 1.0 / 2.0), this.program.hasTextureSize(2 * this._width, 2 * this._height))
 
+            /*
             // smoothing for 3x image
             // use [1-b, b, 1, b, 1-b], where 0 < b < 1
             .declare('_smoothX3', convX([
@@ -111,25 +114,28 @@ export class GPUPyramids extends SpeedyProgramGroup
             .declare('_smoothY3', convY([
                 0.2, 0.8, 1.0, 0.8, 0.2
             ], 1.0 / 3.0), this.program.hasTextureSize(3 * this._width, 3 * this._height))
+            */
 
             // upsampling & downsampling
             .declare('_upsample2', upsample2,
                 this.program.hasTextureSize(2 * this._width, 2 * this._height))
 
             .declare('_downsample2', downsample2,
-                this.program.hasTextureSize((1 + this._width) / 2, (1 + this._height) / 2))
+                this.program.hasTextureSize(Math.max(1, Math.floor(this._width / 2)), Math.max(1, Math.floor(this._height / 2))))
 
+            /*
             .declare('_upsample3', upsample3,
                 this.program.hasTextureSize(3 * this._width, 3 * this._height))
 
             .declare('_downsample3', downsample3,
-                this.program.hasTextureSize((2 + this._width) / 3, (2 + this._height) / 3))
+                this.program.hasTextureSize(Math.floor(this._width / 3), Math.floor(this._height / 3)))
 
             .declare('_downsample2/3', downsample2,
-                this.program.hasTextureSize(3 * this._width / 2, 3 * this._height / 2))
+                this.program.hasTextureSize(Math.floor(3 * this._width / 2), Math.floor(3 * this._height / 2)))
 
             .declare('_downsample3/2', downsample3,
-                this.program.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
+                this.program.hasTextureSize(Math.floor(2 * this._width / 3), Math.floor(2 * this._height / 3)))
+            */
         ;
     }
 }

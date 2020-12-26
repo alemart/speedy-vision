@@ -93,7 +93,7 @@
  *
  * where x := scale of the image in the pyramid
  *            it may be 1, 0.5, 0.25, 0.125...
- *            also sqrt(2)/2, sqrt(2)/4... (intra-layers)
+ *            also sqrt(2)/2, sqrt(2)/4... (between layers)
  *            (note that lod = -log2(x))
  *
  *       h := height (depth) of the pyramid, an integer
@@ -152,10 +152,8 @@ float encodeLod(float lod)
  */
 float decodeLod(float encodedLod)
 {
-    return mix(0.0f,
-        encodedLod * (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS) - LOG2_PYRAMID_MAX_SCALE,
-        encodedLod < 1.0f
-    );
+    float lod = encodedLod * (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS) - LOG2_PYRAMID_MAX_SCALE;
+    return lod * float(encodedLod < 1.0f); // will be zero if encodedLod is 1
 }
 
 /**
@@ -167,9 +165,9 @@ float decodeLod(float encodedLod)
 #define isSameEncodedLod(alpha1, alpha2) (abs((alpha1) - (alpha2)) < encodedLodEps)
 
 /**
- * encodedLodEps is used to point out different encoded LODs
- * encodedLodEps must be < 0.5 / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS),
- * because min(|lod_i - lod_j|) >= 0.5 for any i, j
+ * encodedLodEps is used to separate different encoded LODs
+ * encodedLodEps must be < 0.25 / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS),
+ * because min(|lod_i - lod_j|) >= 0.25 for any i, j (previously 0.5)
  */
 const float encodedLodEps = 0.2f / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS);
 

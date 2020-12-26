@@ -53,7 +53,7 @@ void main()
     vec4 p7 = pixelAtShortOffset(image, ivec2(-1, 1));
 #else
     vec4 p0, p1, p2, p3, p4, p5, p6, p7;
-    p0 = p1 = p2 = p3 = p4 = p5 = p6 = p7 = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    p0 = p1 = p2 = p3 = p4 = p5 = p6 = p7 = vec4(0.0f);
 #endif
 
     // read middle ring
@@ -77,7 +77,7 @@ void main()
 #else
     vec4 q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15;
     q0 = q1 = q2 = q3 = q4 = q5 = q6 = q7 = q8 = q9 = q10 =
-    q11 = q12 = q13 = q14 = q15= vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    q11 = q12 = q13 = q14 = q15 = vec4(0.0f);
 #endif
 
     // read outer ring
@@ -101,12 +101,12 @@ void main()
 #else
     vec4 r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15;
     r0 = r1 = r2 = r3 = r4 = r5 = r6 = r7 = r8 = r9 = r10 =
-    r11 = r12 = r13 = r14 = r15 = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    r11 = r12 = r13 = r14 = r15 = vec4(0.0f);
 #endif
 
     // get scores in (lodPlus, lodMinus)-scaled neighborhood
-    float lodPlus = min(lod + lodStep, F_PYRAMID_MAX_LEVELS - 1.0f);
-    float lodMinus = max(lod - lodStep, 0.0f);
+    float lodPlus = lod + lodStep;
+    float lodMinus = lod - lodStep;
     float alphaPlus = encodeLod(lodPlus);
     float alphaMinus = encodeLod(lodMinus);
     mat3 innerScore = mat3(

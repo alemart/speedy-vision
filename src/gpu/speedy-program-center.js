@@ -27,6 +27,8 @@ import { GPUEncoders } from './programs/encoders';
 import { GPUPyramids } from './programs/pyramids';
 import { GPUEnhancements } from './programs/enhancements';
 import { GPUTrackers } from './programs/trackers';
+import { IllegalArgumentError } from '../utils/errors';
+import { PYRAMID_MAX_LEVELS } from '../utils/globals';
 
 /**
  * An access point to all programs that run on the CPU
@@ -55,9 +57,9 @@ export class SpeedyProgramCenter
         this._keypoints = null;
         this._encoders = null;
         this._descriptors = null;
-        this._pyramids = null;
         this._enhancements = null;
         this._trackers = null;
+        this._pyramids = (new Array(PYRAMID_MAX_LEVELS)).fill(null);
     }
 
     /**
@@ -133,20 +135,31 @@ export class SpeedyProgramCenter
     }
 
     /**
-     * Image pyramids & scale-space
-     * @returns {GPUPyramids}
-     */
-    get pyramids()
-    {
-        return this._pyramids || (this._pyramids = new GPUPyramids(this._gpu, this._width, this._height));
-    }
-
-    /**
      * Image enhancement algorithms
      * @returns {GPUEnhancements}
      */
     get enhancements()
     {
         return this._enhancements || (this._enhancements = new GPUEnhancements(this._gpu, this._width, this._height));
+    }
+
+    /**
+     * Image pyramids & scale-space
+     * @param {number} [level] level-of-detail: 0, 1, 2, ... (PYRAMID_MAX_LEVELS - 1)
+     * @returns {GPUPyramids}
+     */
+    pyramids(level = 0)
+    {
+        const lod = level | 0;
+        const pot = 1 << lod;
+
+        if(lod < 0 || lod >= PYRAMID_MAX_LEVELS)
+            throw new IllegalArgumentError(`Invalid pyramid level: ${lod} (outside of range [0,${PYRAMID_MAX_LEVELS-1}])`);
+
+        // use max(1, floor(size / 2^lod)), in accordance to the OpenGL ES 3.0 spec sec 3.8.10.4 (Mipmapping)
+        return this._pyramids[lod] || (this._pyramids[lod] = new GPUPyramids(this._gpu,
+            Math.max(1, Math.floor(this._width / pot)),
+            Math.max(1, Math.floor(this._height / pot))
+        ));
     }
 }
