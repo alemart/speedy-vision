@@ -121,7 +121,6 @@ void main()
 
     // encode score in [0,1]
     float encodedScore = 1.0f - exp2(-best.x); // assuming 0 <= score <= 4
-    encodedScore = min(encodedScore, 1.0f);
 
     // done
     color = vec4(encodedScore, pixel.g, best.xy);
