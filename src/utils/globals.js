@@ -27,7 +27,7 @@
 export const PYRAMID_MAX_LEVELS = 4; // scaling factor = 1
 
 // The maximum number of layers of the pyramid (counting intra-layers)
-export const PYRAMID_MAX_OCTAVES = 2 * PYRAMID_MAX_LEVELS - 1; // scaling factor = sqrt(2)
+export const PYRAMID_MAX_OCTAVES = 2 * PYRAMID_MAX_LEVELS - 1; // default scaling factor = sqrt(2)
 
 // The maximum supported scale for a pyramid layer
 export const PYRAMID_MAX_SCALE = 2; // preferably a power of 2 (image scale can go up to this value)

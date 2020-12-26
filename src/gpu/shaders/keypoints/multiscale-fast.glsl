@@ -158,8 +158,9 @@ void main()
 
         // compute corner score in [0,1]
         const float WINDOW_AREA = 9.0f;
-        const float EIGENVALUE_NORMALIZER = 3.0f / WINDOW_AREA;
-        score = clamp(response * EIGENVALUE_NORMALIZER, 0.0f, 1.0f);
+        const float EIGENVALUE_NORMALIZER = 9.0f / WINDOW_AREA;
+        score = response * EIGENVALUE_NORMALIZER;
+        score = min(1.0f, 1.0f - exp2(-score));
 #else
         // Compute FAST score
         mat4 mct = mp - mat4(

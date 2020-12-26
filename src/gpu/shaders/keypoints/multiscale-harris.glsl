@@ -43,6 +43,12 @@ uniform sampler2D sobelDerivatives[@PYRAMID_MAX_OCTAVES@]; // for each LOD sub-l
 
 vec4 pickSobelDerivatives(int index, ivec2 offset)
 {
+    #define MAX_OCTAVES @PYRAMID_MAX_OCTAVES@
+
+    #if MAX_OCTAVES < 7 || MAX_OCTAVES > 16 || MAX_OCTAVES % 2 == 0
+    #error MAX_OCTAVES cannot be @PYRAMID_MAX_OCTAVES@ // not supported
+    #endif
+
     // no dynamic indexing for samplers
     switch(index) {
         case 0:  return textureLod(sobelDerivatives[0], texCoord + vec2(offset) / texSize, 0.0f); // LOD = 0
@@ -52,7 +58,25 @@ vec4 pickSobelDerivatives(int index, ivec2 offset)
         case 4:  return textureLod(sobelDerivatives[4], texCoord + vec2(offset) / texSize, 0.0f);
         case 5:  return textureLod(sobelDerivatives[5], texCoord + vec2(offset) / texSize, 0.0f);
         case 6:  return textureLod(sobelDerivatives[6], texCoord + vec2(offset) / texSize, 0.0f); // LOD = 3 if using sub-levels
-        default: return textureLod(sobelDerivatives[0], texCoord + vec2(offset) / texSize, 0.0f);
+
+        // MAX_OCTAVES is not an even number
+        #if MAX_OCTAVES > 15
+        case 15: return textureLod(sobelDerivatives[15], texCoord + vec2(offset) / texSize, 0.0f);
+        #elif MAX_OCTAVES > 13
+        case 14: return textureLod(sobelDerivatives[14], texCoord + vec2(offset) / texSize, 0.0f);
+        case 13: return textureLod(sobelDerivatives[13], texCoord + vec2(offset) / texSize, 0.0f);
+        #elif MAX_OCTAVES > 11
+        case 12: return textureLod(sobelDerivatives[12], texCoord + vec2(offset) / texSize, 0.0f);
+        case 11: return textureLod(sobelDerivatives[11], texCoord + vec2(offset) / texSize, 0.0f);
+        #elif MAX_OCTAVES > 9
+        case 10: return textureLod(sobelDerivatives[10], texCoord + vec2(offset) / texSize, 0.0f);
+        case 9:  return textureLod(sobelDerivatives[9], texCoord + vec2(offset) / texSize, 0.0f);
+        #elif MAX_OCTAVES > 7
+        case 8:  return textureLod(sobelDerivatives[8], texCoord + vec2(offset) / texSize, 0.0f);
+        case 7:  return textureLod(sobelDerivatives[7], texCoord + vec2(offset) / texSize, 0.0f);
+        #endif
+
+        default: return vec4(0.0f);
     }
 }
 
@@ -70,7 +94,7 @@ void main()
         // compute Harris' autocorrelation matrix
         // M = [ a  b ]   <=>   m = (a, b, c)
         //     [ b  c ]
-        vec3 m = vec3(0.0f, 0.0f, 0.0f);
+        vec3 m = vec3(0.0f);
         for(int j = 0; j < windowSize; j++) {
             for(int i = 0; i < windowSize; i++) {
                 vec2 df = decodeSobel(pickSobelDerivatives(octave, ivec2(i-r, j-r)));
@@ -81,9 +105,9 @@ void main()
         // compute corner response (Shi-Tomasi)
         float response = 0.5f * (m.x + m.z - sqrt((m.x - m.z) * (m.x - m.z) + 4.0f * m.y * m.y));
 
-        // compute corner score in [0,1]
-        float normalizer = 3.0f / windowArea; // we are saturating the score
-        float score = clamp(response * normalizer, 0.0f, 1.0f);
+        // compute corner score
+        float normalizer = 9.0f / windowArea;
+        float score = response * normalizer;
 
         // compute corner scale
         float lod = lodStep * float(octave);
@@ -95,6 +119,10 @@ void main()
         best += float(score > best.x) * vec2(score, scale);
     }
 
+    // encode score in [0,1]
+    float encodedScore = 1.0f - exp2(-best.x); // assuming 0 <= score <= 4
+    encodedScore = min(encodedScore, 1.0f);
+
     // done
-    color = vec4(best.x, pixel.g, best.xy);
+    color = vec4(encodedScore, pixel.g, best.xy);
 }

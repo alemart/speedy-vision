@@ -94,14 +94,14 @@ export class HarrisFeatures extends FeatureDetectionAlgorithm
         // find the maximum corner response
         const maxScore = gpu.programs.utils.scanMax(corners, PixelComponent.RED);
 
-        // discard corners according to quality level
-        const filteredCorners = gpu.programs.keypoints.harrisCutoff(corners, maxScore, quality);
-
         // non-maximum suppression
-        const suppressedCorners = gpu.programs.keypoints.nonmaxSuppression(filteredCorners);
+        const suppressedCorners = gpu.programs.keypoints.nonmaxSuppression(corners);
+
+        // discard corners according to quality level
+        const filteredCorners = gpu.programs.keypoints.harrisCutoff(suppressedCorners, maxScore, quality);
 
         // encode corners
-        return gpu.programs.encoders.encodeKeypoints(suppressedCorners, descriptorSize, extraSize);
+        return gpu.programs.encoders.encodeKeypoints(filteredCorners, descriptorSize, extraSize);
     }
 }
 
@@ -213,15 +213,15 @@ export class MultiscaleHarrisFeatures extends FeatureDetectionAlgorithm
         // find the maximum corner response
         const maxScore = gpu.programs.utils.scanMax(corners, PixelComponent.RED);
 
-        // discard corners according to the quality level
-        const filteredCorners = gpu.programs.keypoints.harrisCutoff(corners, maxScore, quality);
-
         // non-maximum suppression
-        const suppressed1 = gpu.programs.keypoints.samescaleSuppression(filteredCorners);
+        const suppressed1 = gpu.programs.keypoints.samescaleSuppression(corners);
         const suppressed2 = gpu.programs.keypoints.multiscaleSuppression(suppressed1, lodStep);
 
+        // discard corners according to the quality level
+        const filteredCorners = gpu.programs.keypoints.harrisCutoff(suppressed2, maxScore, quality);
+
         // encode keypoints
-        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(suppressed2, descriptorSize, extraSize);
+        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(filteredCorners, descriptorSize, extraSize);
 
         // done
         return detectedKeypoints;

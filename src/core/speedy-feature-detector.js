@@ -510,7 +510,7 @@ export class HarrisFeatureDetector extends SpeedyFeatureDetector
      */
     _onSensitivityChange(sensitivity)
     {
-        this.quality = 1.0 - Math.tanh(2.3 * sensitivity);
+        this.quality = 1.0 - sensitivity;
     }
 }
 
@@ -592,6 +592,6 @@ export class MultiscaleHarrisFeatureDetector extends SpeedyFeatureDetector
      */
     _onSensitivityChange(sensitivity)
     {
-        this.quality = 1.0 - Math.tanh(2.3 * sensitivity);
+        this.quality = 1.0 - sensitivity;
     }
 }
