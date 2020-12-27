@@ -39,8 +39,8 @@ export class SpeedyTexture
     constructor(gl, width, height)
     {
         this._gl = gl;
-        this._width = width;
-        this._height = height;
+        this._width = Math.max(1, width | 0);
+        this._height = Math.max(1, height | 0);
         this._glTexture = GLUtils.createTexture(this._gl, this._width, this._height);
         this._hasMipmaps = false;
     }
@@ -65,11 +65,28 @@ export class SpeedyTexture
     /**
      * Upload pixel data to the texture
      * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} pixels 
+     * @return {SpeedyTexture} this
      */
     upload(pixels)
     {
         this._hasMipmaps = false;
         GLUtils.uploadToTexture(this._gl, this._glTexture, this._width, this._height, pixels, 0);
+        return this;
+    }
+
+    /**
+     * Copy pixels from a framebuffer into this texture
+     * @param {WebGLFramebuffer} fbo pixels will be copied from this framebuffer
+     * @param {number} [x] x coordinate: where to start copying
+     * @param {number} [y] y coordinate: where to start copying
+     * @param {number} [width]
+     * @param {number} [height]
+     * @returns {SpeedyTexture} this
+     */
+    copyFrom(fbo, x = 0, y = 0, width = this._width, height = this._height)
+    {
+        GLUtils.copyToTexture(this._gl, fbo, this._glTexture, x, y, width, height, 0);
+        return this;
     }
 
     /**
@@ -116,12 +133,12 @@ export class SpeedyTexture
 
     /**
      * Copy an image into a specific level-of-detail of this texture
+     * @param {number} lod level-of-detail
      * @param {WebGLFramebuffer} fbo
      * @param {number} width
      * @param {number} height
-     * @param {number} lod level-of-detail
      */
-    importPyramidLevel(fbo, width, height, lod)
+    importPyramidLevel(lod, fbo, width, height)
     {
         // compute texture size as max(1, floor(size / 2^lod)),
         // in accordance to the OpenGL ES 3.0 spec sec 3.8.10.4

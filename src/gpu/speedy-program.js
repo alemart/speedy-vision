@@ -422,41 +422,30 @@ export class SpeedyProgram extends Function
                       0,        // offset
                       4);       // count
 
-        // output texture
-        let outputTexture = null;
+        // are we rendering to a texture?
         if(options.renderToTexture) {
-            outputTexture = stdprog.texture;
+            // unbind fbo
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-            // clone outputTexture using the current framebuffer
-            if(!options.recycleTexture) {
-                const cloneTexture = new SpeedyTexture(gl, stdprog.width, stdprog.height);
-                gl.activeTexture(gl.TEXTURE0);
-                gl.bindTexture(gl.TEXTURE_2D, cloneTexture.glTexture);
-                gl.copyTexSubImage2D(gl.TEXTURE_2D,     // target
-                                     0,                 // mipmap level
-                                     0,                 // xoffset
-                                     0,                 // yoffset
-                                     0,                 // x
-                                     0,                 // y
-                                     stdprog.width,     // width
-                                     stdprog.height);   // height
-                gl.bindTexture(gl.TEXTURE_2D, null);
-                outputTexture = cloneTexture;
-            }
+            // we've just changed the contents of the output texture
+            // discard its pyramid
+            stdprog.texture.discardPyramid();
+
+            // should we clone the texture?
+            const outputTexture = options.recycleTexture ?
+                stdprog.texture : // no; simply return the internal texture
+                (new SpeedyTexture(gl, stdprog.width, stdprog.height)).copyFrom(stdprog.fbo); // clone
 
             // ping-pong rendering
             if(options.pingpong)
                 stdprog.pingpong();
 
-            // invalidate pyramid
-            outputTexture.discardPyramid();
+            // done!
+            return outputTexture;
         }
 
-        // unbind fbo
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-        // return texture (if available)
-        return outputTexture;
+        // we're not rendering to a texture
+        return null;
     }
 
     // set uniform to value
@@ -688,33 +677,20 @@ StandardProgram.prototype.resize = function(width, height)
             // create new texture
             const newTexture = new SpeedyTexture(gl, width, height);
 
-            // bind
-            gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo[i]);
-            gl.bindTexture(gl.TEXTURE_2D, newTexture.glTexture);
-
             // initialize the new texture with zeros to avoid a
             // warning when calling copyTexSubImage2D() on Firefox
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, zeros);
+            newTexture.upload(zeros);
 
             // copy old content
-            gl.copyTexSubImage2D(gl.TEXTURE_2D,     // target
-                                 0,                 // mipmap level
-                                 0,                 // xoffset
-                                 0,                 // yoffset
-                                 0,                 // x
-                                 0,                 // y
-                                 Math.min(width, oldWidth),    // width
-                                 Math.min(height, oldHeight)); // height
+            newTexture.copyFrom(this._fbo[i], 0, 0, Math.min(width, oldWidth), Math.min(height, oldHeight));
 
             // attach the new texture to the existing framebuffer
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo[i]);
             gl.framebufferTexture2D(gl.FRAMEBUFFER,         // target
                                     gl.COLOR_ATTACHMENT0,   // color buffer
                                     gl.TEXTURE_2D,          // tex target
                                     newTexture.glTexture,   // texture
                                     0);                     // mipmap level
-
-            // unbind
-            gl.bindTexture(gl.TEXTURE_2D, null);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
             // release old texture & replace it
