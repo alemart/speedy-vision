@@ -21,6 +21,7 @@
 
 import { SpeedyGPU } from './speedy-gpu';
 import { GLUtils } from './gl-utils';
+import { Utils } from '../utils/utils';
 import { IllegalOperationError } from '../utils/errors';
 import { PYRAMID_MAX_LEVELS } from '../utils/globals';
 
@@ -83,6 +84,9 @@ export class SpeedyTexture
         if(this._hasMipmaps)
             return this;
 
+        // validate gpu
+        Utils.assert(gpu.gl === this._gl);
+
         // let the hardware compute the all levels of the pyramid, up to 1x1
         // this might be a simple box filter...
         GLUtils.generateMipmap(this._gl, this._glTexture);
@@ -91,9 +95,9 @@ export class SpeedyTexture
         if(gaussian) {
             let layer = this, pyramid = null;
             for(let level = 1; level < PYRAMID_MAX_LEVELS; level++) {
-                pyramid = gpu.programs.pyramids(level - 1);
+                pyramid = gpu.programs.pyramids(level-1);
                 layer = pyramid.reduce(layer);
-                GLUtils.copyToTexture(this._gl, pyramid.fbo, this._glTexture, 0, 0, layer.width, layer.height, level);
+                pyramid.exportTo(this, level);
             }
         }
 

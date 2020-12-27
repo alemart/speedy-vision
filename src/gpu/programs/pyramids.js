@@ -20,9 +20,11 @@
  */
 
 import { SpeedyProgramGroup } from '../speedy-program-group';
+import { SpeedyProgram } from '../speedy-program';
+import { SpeedyTexture } from '../speedy-texture';
 import { importShader } from '../shader-declaration';
 import { convX, convY } from '../shaders/filters/convolution';
-import { SpeedyTexture } from '../speedy-texture';
+import { GLUtils } from '../gl-utils';
 
 
 
@@ -56,7 +58,6 @@ export class GPUPyramids extends SpeedyProgramGroup
     constructor(gpu, width, height)
     {
         super(gpu, width, height);
-        this._fbo = null;
         this
             /*
             // pyramid operations (scale = 2)
@@ -141,6 +142,18 @@ export class GPUPyramids extends SpeedyProgramGroup
                 this.program.hasTextureSize(Math.floor(2 * this._width / 3), Math.floor(2 * this._height / 3)))
             */
         ;
+
+        /**
+         * Data related to the last pyramid operation
+         * @property {WebGLFramebuffer} fbo
+         * @property {number} width
+         * @property {number} height
+         */
+        this._lastOperation = {
+            fbo: null,
+            width: 1,
+            height: 1,
+        };
     }
 
     /**
@@ -152,7 +165,8 @@ export class GPUPyramids extends SpeedyProgramGroup
     {
         const smoothImage = this._smoothY(this._smoothX(image));
         const downsampledImage = this._downsample2(smoothImage);
-        this._fbo = this._downsample2.fbo;
+
+        this._saveLastOperation(this._downsample2);
         return downsampledImage;
     }
 
@@ -165,16 +179,34 @@ export class GPUPyramids extends SpeedyProgramGroup
     {
         const upsampledImage = this._upsample2(image);
         const smoothImage = this._smoothY2(this._smoothX2(upsampledImage));
-        this._fbo = this._smoothY2.fbo;
+
+        this._saveLastOperation(this._smoothY2);
         return smoothImage;
     }
 
     /**
-     * Get the framebuffer associated with the last performed operation
-     * @returns {WebGLFramebuffer}
+     * Export the result of the last operation to
+     * a specific level of detail of a texture
+     * @param {SpeedyTexture} texture
+     * @param {number} lod level-of-detail
      */
-    get fbo()
+    exportTo(texture, lod)
     {
-        return this._fbo;
+        const gl = this._gpu.gl;
+        const { width, height, fbo } = this._lastOperation;
+
+        GLUtils.copyToTexture(gl, fbo, texture.glTexture, 0, 0, width, height, lod);
+    }
+
+    /**
+     * Save data related to the last operation
+     * @param {SpeedyProgram} program
+     */
+    _saveLastOperation(program)
+    {
+        // these fields are used in exportTo()
+        this._lastOperation.width = program.width;
+        this._lastOperation.height = program.height;
+        this._lastOperation.fbo = program.fbo;
     }
 }
