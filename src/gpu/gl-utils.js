@@ -291,25 +291,24 @@ export class GLUtils
      */
     static copyToTexture(gl, fbo, texture, x, y, width, height, lod = 0)
     {
-        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
 
-        // According to the WebGL spec, pixels lying outside the framebuffer
-        // will be initialized to zero
-        gl.copyTexImage2D(
+        gl.copyTexSubImage2D(
             gl.TEXTURE_2D, // target
             lod, // mipmap level
-            gl.RGBA8, // internal format
+            0, // xoffset
+            0, // yoffset
             x, // xpos (where to start copying)
             y, // ypos (where to start copying)
             width, // width of the texture
-            height, // height of the texture
-            0 // border
+            height // height of the texture
         );
 
-        gl.bindTexture(gl.TEXTURE_2D, null);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
         return texture;
     }
 
