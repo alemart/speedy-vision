@@ -24,7 +24,6 @@ void main()
 {
     ivec2 thread = threadLocation();
     vec4 pixel = pixelAt(image, thread / 3);
-    bool cond = ((thread.x - (thread.y % 3) + 3) % 3) == 0;
 
     // preserve scale
     color = (((thread.x - (thread.y % 3) + 3) % 3) == 0) ? pixel : vec4(0.0f, 0.0f, 0.0f, pixel.a);
