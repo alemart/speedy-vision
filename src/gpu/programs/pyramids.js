@@ -35,11 +35,11 @@ import { GLUtils } from '../gl-utils';
 // pyramid generation
 const upsample2 = importShader('pyramids/upsample2.glsl').withArguments('image');
 const downsample2 = importShader('pyramids/downsample2.glsl').withArguments('image');
-const upsample3 = importShader('pyramids/upsample3.glsl').withArguments('image');
-const downsample3 = importShader('pyramids/downsample3.glsl').withArguments('image');
+//const upsample3 = importShader('pyramids/upsample3.glsl').withArguments('image');
+//const downsample3 = importShader('pyramids/downsample3.glsl').withArguments('image');
 
 // debug
-const flipY = importShader('utils/flip-y.glsl').withArguments('image');
+//const flipY = importShader('utils/flip-y.glsl').withArguments('image');
 
 
 
@@ -63,9 +63,7 @@ export class GPUPyramids extends SpeedyProgramGroup
             // pyramid operations (scale = 2)
             .compose('_reduce', '_smoothX', '_smoothY', '_downsample2')
             .compose('_expand', '_upsample2', '_smoothX2', '_smoothY2')
-            */
            
-            /*
             // intra-pyramid operations (scale = 1.5)
             .compose('_intraReduce', '_upsample2', '_smoothX2', '_smoothY2', '_downsample3/2')
             .compose('_intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3')
