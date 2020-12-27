@@ -90,6 +90,7 @@ export class SpeedyTexture
         // let the hardware compute the all levels of the pyramid, up to 1x1
         // this might be a simple box filter...
         GLUtils.generateMipmap(this._gl, this._glTexture);
+        this._hasMipmaps = true;
 
         // compute a few layers of a Gaussian pyramid for better results
         if(gaussian) {
@@ -102,16 +103,38 @@ export class SpeedyTexture
         }
 
         // done!
-        this._hasMipmaps = true;
         return this;
     }
 
     /**
-     * Invalidates previously generated pyramid
+     * Invalidates previously generated pyramid (if any)
      */
     discardPyramid()
     {
         this._hasMipmaps = false;
+    }
+
+    /**
+     * Copy an image into a specific level-of-detail of this texture
+     * @param {WebGLFramebuffer} fbo
+     * @param {number} width
+     * @param {number} height
+     * @param {number} lod level-of-detail
+     */
+    importPyramidLevel(fbo, width, height, lod)
+    {
+        // compute texture size as max(1, floor(size / 2^lod)),
+        // in accordance to the OpenGL ES 3.0 spec sec 3.8.10.4
+        // (Mipmapping)
+        const pot = 1 << (lod |= 0);
+        const expectedWidth = Math.max(1, Math.floor(this._width / pot));
+        const expectedHeight = Math.max(1, Math.floor(this._height / pot));
+
+        Utils.assert(lod >= 0 && lod < PYRAMID_MAX_LEVELS);
+        Utils.assert(width === expectedWidth && height === expectedHeight);
+        Utils.assert(this._hasMipmaps); // make sure to generate the mipmap before importing a pyramid level
+
+        GLUtils.copyToTexture(this._gl, fbo, this._glTexture, 0, 0, width, height, lod);
     }
 
     /**

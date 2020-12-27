@@ -20,11 +20,12 @@
  */
 
 import { SpeedyProgramGroup } from '../speedy-program-group';
+import { SpeedyGPU } from '../speedy-gpu';
 import { SpeedyProgram } from '../speedy-program';
 import { SpeedyTexture } from '../speedy-texture';
 import { importShader } from '../shader-declaration';
 import { convX, convY } from '../shaders/filters/convolution';
-import { GLUtils } from '../gl-utils';
+import { IllegalOperationError } from '../../utils/errors';
 
 
 
@@ -181,9 +182,11 @@ export class GPUPyramids extends SpeedyProgramGroup
      */
     exportTo(texture, lod)
     {
-        const gl = this._gpu.gl;
-        const { width, height, fbo } = this._lastOperation;
-
-        GLUtils.copyToTexture(gl, fbo, texture.glTexture, 0, 0, width, height, lod);
+        if(this._lastOperation !== null) {
+            const { width, height, fbo } = this._lastOperation;
+            texture.importPyramidLevel(fbo, width, height, lod);
+        }
+        else
+            throw new IllegalOperationError(`Can't export pyramid level before generating it`);
     }
 }
