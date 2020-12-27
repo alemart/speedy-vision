@@ -143,17 +143,8 @@ export class GPUPyramids extends SpeedyProgramGroup
             */
         ;
 
-        /**
-         * Data related to the last pyramid operation
-         * @property {WebGLFramebuffer} fbo
-         * @property {number} width
-         * @property {number} height
-         */
-        this._lastOperation = {
-            fbo: null,
-            width: 1,
-            height: 1,
-        };
+        /** @type {SpeedyProgram} */
+        this._lastOperation = null;
     }
 
     /**
@@ -166,7 +157,7 @@ export class GPUPyramids extends SpeedyProgramGroup
         const smoothImage = this._smoothY(this._smoothX(image));
         const downsampledImage = this._downsample2(smoothImage);
 
-        this._saveLastOperation(this._downsample2);
+        this._lastOperation = this._downsample2;
         return downsampledImage;
     }
 
@@ -180,7 +171,7 @@ export class GPUPyramids extends SpeedyProgramGroup
         const upsampledImage = this._upsample2(image);
         const smoothImage = this._smoothY2(this._smoothX2(upsampledImage));
 
-        this._saveLastOperation(this._smoothY2);
+        this._lastOperation = this._smoothY2;
         return smoothImage;
     }
 
@@ -196,17 +187,5 @@ export class GPUPyramids extends SpeedyProgramGroup
         const { width, height, fbo } = this._lastOperation;
 
         GLUtils.copyToTexture(gl, fbo, texture.glTexture, 0, 0, width, height, lod);
-    }
-
-    /**
-     * Save data related to the last operation
-     * @param {SpeedyProgram} program
-     */
-    _saveLastOperation(program)
-    {
-        // these fields are used in exportTo()
-        this._lastOperation.width = program.width;
-        this._lastOperation.height = program.height;
-        this._lastOperation.fbo = program.fbo;
     }
 }
