@@ -6,7 +6,7 @@
  * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2020-12-08T18:18:31.646Z
+ * Date: 2020-12-27T00:36:04.385Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -483,8 +483,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /* harmony import */ var _feature_description_algorithm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../feature-description-algorithm */ "./src/core/keypoints/feature-description-algorithm.js");
 /* harmony import */ var _feature_algorithm__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../feature-algorithm */ "./src/core/keypoints/feature-algorithm.js");
-/* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../speedy-feature */ "./src/core/speedy-feature.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _speedy_descriptor__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../speedy-descriptor */ "./src/core/speedy-descriptor.js");
+/* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../speedy-feature */ "./src/core/speedy-feature.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -505,6 +506,7 @@ __webpack_require__.r(__webpack_exports__);
  * orb.js
  * ORB features
  */
+
 
 
 
@@ -547,7 +549,7 @@ class ORBFeatures extends _feature_description_algorithm__WEBPACK_IMPORTED_MODUL
 
         // smooth the image before computing the descriptors
         const smoothTexture = gpu.programs.filters.gauss7(inputTexture);
-        const smoothPyramid = smoothTexture.generateMipmap();
+        const smoothPyramid = smoothTexture.generatePyramid(gpu);
 
         // compute ORB feature descriptors
         const encoderLength = gpu.programs.encoders.encoderLength;
@@ -568,7 +570,7 @@ class ORBFeatures extends _feature_description_algorithm__WEBPACK_IMPORTED_MODUL
         const orientationPatchRadius = DEFAULT_ORIENTATION_PATCH_RADIUS;
 
         // generate pyramid
-        const pyramid = inputTexture.generateMipmap();
+        const pyramid = inputTexture.generatePyramid(gpu);
 
         // compute orientation
         const encoderLength = gpu.programs.encoders.encoderLength;
@@ -582,7 +584,12 @@ class ORBFeatures extends _feature_description_algorithm__WEBPACK_IMPORTED_MODUL
      */
     _postProcess(keypoints)
     {
-        return keypoints.map(keypoint => new _speedy_feature__WEBPACK_IMPORTED_MODULE_3__["SpeedyFeatureWithBinaryDescriptor"](keypoint));
+        return keypoints.map(
+            keypoint => new _speedy_feature__WEBPACK_IMPORTED_MODULE_4__["SpeedyFeatureWithDescriptor"](
+                keypoint,
+                descriptorBytes => new _speedy_descriptor__WEBPACK_IMPORTED_MODULE_3__["BinaryDescriptor"](descriptorBytes)
+            )
+        );
     }
 }
 
@@ -637,6 +644,7 @@ __webpack_require__.r(__webpack_exports__);
 const DEFAULT_FAST_VARIANT = 9;
 const DEFAULT_FAST_THRESHOLD = 10;
 const DEFAULT_DEPTH = 3;
+const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // scale factor between consecutive pyramid layers (sqrt(2))
 
 
 
@@ -744,6 +752,7 @@ class MultiscaleFASTFeatures extends _feature_detection_algorithm__WEBPACK_IMPOR
         this._n = DEFAULT_FAST_VARIANT;
         this._threshold = DEFAULT_FAST_THRESHOLD;
         this._depth = DEFAULT_DEPTH;
+        this._scaleFactor = DEFAULT_SCALE_FACTOR;
         this._useHarrisScore = false;
     }
 
@@ -805,6 +814,24 @@ class MultiscaleFASTFeatures extends _feature_detection_algorithm__WEBPACK_IMPOR
     }
 
     /**
+     * Get the scale factor between consecutive pyramid layers
+     * @returns {number}
+     */
+    get scaleFactor()
+    {
+        return this._scaleFactor;
+    }
+
+    /**
+     * Set the scale factor between consecutive pyramid layers
+     * @param {number} value a value greater than 1
+     */
+    set scaleFactor(value)
+    {
+        this._scaleFactor = Math.max(1, +value);
+    }
+
+    /**
      * Use Harris scoring function?
      * @returns {boolean}
      */
@@ -835,22 +862,23 @@ class MultiscaleFASTFeatures extends _feature_detection_algorithm__WEBPACK_IMPOR
         const useHarrisScore = this._useHarrisScore;
         const normalizedThreshold = threshold / 255.0;
         const numberOfOctaves = 2 * depth - 1;
+        const lodStep = Math.log2(this._scaleFactor);
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
 
         // generate pyramid
-        const pyramid = inputTexture.generateMipmap();
+        const pyramid = inputTexture.generatePyramid(gpu);
 
         // find corners
         let corners = null;
         if(!useHarrisScore)
-            corners = gpu.programs.keypoints.multiscaleFast(pyramid, normalizedThreshold, numberOfOctaves);
+            corners = gpu.programs.keypoints.multiscaleFast(pyramid, normalizedThreshold, numberOfOctaves, lodStep);
         else
-            corners = gpu.programs.keypoints.multiscaleFastWithHarris(pyramid, normalizedThreshold, numberOfOctaves);
+            corners = gpu.programs.keypoints.multiscaleFastWithHarris(pyramid, normalizedThreshold, numberOfOctaves, lodStep);
 
         // non-maximum suppression
         corners = gpu.programs.keypoints.samescaleSuppression(corners);
-        corners = gpu.programs.keypoints.multiscaleSuppression(corners);
+        corners = gpu.programs.keypoints.multiscaleSuppression(corners, lodStep);
 
         // encode keypoints
         const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(corners, descriptorSize, extraSize);
@@ -909,6 +937,7 @@ __webpack_require__.r(__webpack_exports__);
 const DEFAULT_QUALITY = 0.1; // default quality metric
 const DEFAULT_DEPTH = 3; // default depth for multiscale feature detection
 const DEFAULT_WINDOW_SIZE = 3; // compute Harris autocorrelation matrix within a 3x3 window
+const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // scale factor between consecutive pyramid layers (sqrt(2))
 const MIN_WINDOW_SIZE = 0; // minimum window size when computing the autocorrelation matrix
 const MAX_WINDOW_SIZE = 7; // maximum window size when computing the autocorrelation matrix
 const SOBEL_OCTAVE_COUNT = 2 * _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_LEVELS"] - 1; // Sobel derivatives for each pyramid layer
@@ -958,14 +987,14 @@ class HarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMPORTED_MODU
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
         const windowSize = DEFAULT_WINDOW_SIZE;
-        const lod = 0, numberOfOctaves = 1;
+        const lod = 0, lodStep = 1, numberOfOctaves = 1;
 
         // compute derivatives
         const df = gpu.programs.keypoints.multiscaleSobel(inputTexture, lod);
-        const sobelDerivatives = Array(SOBEL_OCTAVE_COUNT).fill(df);
+        const sobelDerivatives = new Array(SOBEL_OCTAVE_COUNT).fill(df);
 
         // corner detection
-        const corners = gpu.programs.keypoints.multiscaleHarris(inputTexture, windowSize, numberOfOctaves, sobelDerivatives);
+        const corners = gpu.programs.keypoints.multiscaleHarris(inputTexture, windowSize, numberOfOctaves, lodStep, sobelDerivatives);
 
         // release derivatives
         df.release();
@@ -973,14 +1002,14 @@ class HarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMPORTED_MODU
         // find the maximum corner response
         const maxScore = gpu.programs.utils.scanMax(corners, _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].RED);
 
-        // discard corners according to quality level
-        const filteredCorners = gpu.programs.keypoints.harrisCutoff(corners, maxScore, quality);
-
         // non-maximum suppression
-        const suppressedCorners = gpu.programs.keypoints.nonmaxSuppression(filteredCorners);
+        const suppressedCorners = gpu.programs.keypoints.nonmaxSuppression(corners);
+
+        // discard corners according to quality level
+        const filteredCorners = gpu.programs.keypoints.harrisCutoff(suppressedCorners, maxScore, quality);
 
         // encode corners
-        return gpu.programs.encoders.encodeKeypoints(suppressedCorners, descriptorSize, extraSize);
+        return gpu.programs.encoders.encodeKeypoints(filteredCorners, descriptorSize, extraSize);
     }
 }
 
@@ -997,6 +1026,7 @@ class MultiscaleHarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMP
         super();
         this._quality = DEFAULT_QUALITY;
         this._depth = DEFAULT_DEPTH;
+        this._scaleFactor = DEFAULT_SCALE_FACTOR;
     }
 
     /**
@@ -1038,6 +1068,24 @@ class MultiscaleHarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMP
     }
 
     /**
+     * Get the scale factor between consecutive pyramid layers
+     * @returns {number}
+     */
+    get scaleFactor()
+    {
+        return this._scaleFactor;
+    }
+
+    /**
+     * Set the scale factor between consecutive pyramid layers
+     * @param {number} value a value greater than 1
+     */
+    set scaleFactor(value)
+    {
+        this._scaleFactor = Math.max(1, +value);
+    }
+
+    /**
      * Detect feature points
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} inputTexture pre-processed greyscale image
@@ -1051,19 +1099,20 @@ class MultiscaleHarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMP
         const extraSize = this.extraSize;
         const windowSize = DEFAULT_WINDOW_SIZE;
         const numberOfOctaves = 2 * depth - 1;
+        const lodStep = Math.log2(this._scaleFactor);
 
         // generate pyramid
-        const pyramid = inputTexture.generateMipmap();
+        const pyramid = inputTexture.generatePyramid(gpu);
 
         // compute derivatives
         const sobelDerivatives = Array(SOBEL_OCTAVE_COUNT);
         for(let j = 0; j < numberOfOctaves; j++)
-            sobelDerivatives[j] = gpu.programs.keypoints.multiscaleSobel(pyramid, j * 0.5);
+            sobelDerivatives[j] = gpu.programs.keypoints.multiscaleSobel(pyramid, j * lodStep);
         for(let k = numberOfOctaves; k < sobelDerivatives.length; k++)
             sobelDerivatives[k] = sobelDerivatives[k-1]; // can't call shaders with null pointers
 
         // corner detection
-        const corners = gpu.programs.keypoints.multiscaleHarris(pyramid, windowSize, numberOfOctaves, sobelDerivatives);
+        const corners = gpu.programs.keypoints.multiscaleHarris(pyramid, windowSize, numberOfOctaves, lodStep, sobelDerivatives);
 
         // release derivatives
         for(let i = 0; i < numberOfOctaves; i++)
@@ -1072,15 +1121,15 @@ class MultiscaleHarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMP
         // find the maximum corner response
         const maxScore = gpu.programs.utils.scanMax(corners, _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].RED);
 
-        // discard corners according to the quality level
-        const filteredCorners = gpu.programs.keypoints.harrisCutoff(corners, maxScore, quality);
-
         // non-maximum suppression
-        const suppressed1 = gpu.programs.keypoints.samescaleSuppression(filteredCorners);
-        const suppressed2 = gpu.programs.keypoints.multiscaleSuppression(suppressed1);
+        const suppressed1 = gpu.programs.keypoints.samescaleSuppression(corners);
+        const suppressed2 = gpu.programs.keypoints.multiscaleSuppression(suppressed1, lodStep);
+
+        // discard corners according to the quality level
+        const filteredCorners = gpu.programs.keypoints.harrisCutoff(suppressed2, maxScore, quality);
 
         // encode keypoints
-        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(suppressed2, descriptorSize, extraSize);
+        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(filteredCorners, descriptorSize, extraSize);
 
         // done
         return detectedKeypoints;
@@ -1140,10 +1189,15 @@ class FeatureAlgorithmDecorator extends _feature_algorithm__WEBPACK_IMPORTED_MOD
      */
     constructor(decoratedAlgorithm, descriptorSize = 0, extraSize = 0)
     {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(decoratedAlgorithm instanceof _feature_algorithm__WEBPACK_IMPORTED_MODULE_0__["FeatureAlgorithm"]);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(descriptorSize >= decoratedAlgorithm.descriptorSize);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(extraSize >= decoratedAlgorithm.extraSize);
+
         super(descriptorSize, extraSize);
 
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(decoratedAlgorithm instanceof _feature_algorithm__WEBPACK_IMPORTED_MODULE_0__["FeatureAlgorithm"]);
         this._decoratedAlgorithm = decoratedAlgorithm;
+        this._decoratedAlgorithm.descriptorSize = this.descriptorSize;
+        this._decoratedAlgorithm.extraSize = this.extraSize;
     }
 
     /**
@@ -1156,6 +1210,27 @@ class FeatureAlgorithmDecorator extends _feature_algorithm__WEBPACK_IMPORTED_MOD
     run(gpu, inputTexture)
     {
         return this._decoratedAlgorithm.run(gpu, inputTexture);
+    }
+
+    /**
+     * Download feature points from the GPU
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
+     * @param {boolean} useAsyncTransfer transfer feature points asynchronously
+     * @returns {Promise<SpeedyFeature[]>}
+     */
+    download(gpu, encodedKeypoints, useAsyncTransfer)
+    {
+        return this._decoratedAlgorithm.download(gpu, encodedKeypoints, useAsyncTransfer);
+    }
+
+    /**
+     * Reset the capacity of the keypoint downloader
+     * @param {SpeedyGPU} gpu
+     */
+    resetDownloader(gpu)
+    {
+        this._decoratedAlgorithm.resetDownloader(gpu);
     }
 
     /**
@@ -1220,9 +1295,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FeatureAlgorithm", function() { return FeatureAlgorithm; });
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _feature_downloader__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./feature-downloader */ "./src/core/keypoints/feature-downloader.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -1265,10 +1340,10 @@ class FeatureAlgorithm
      */
     constructor(descriptorSize = 0, extraSize = 0)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(descriptorSize % 4 === 0);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(extraSize % 4 === 0);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(descriptorSize <= _utils_globals__WEBPACK_IMPORTED_MODULE_4__["MAX_DESCRIPTOR_SIZE"]);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(descriptorSize % 4 === 0);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(extraSize % 4 === 0);
 
-        this._downloader = new _feature_downloader__WEBPACK_IMPORTED_MODULE_2__["FeatureDownloader"]();
         this._descriptorSize = descriptorSize; // for encoded keypoint textures
         this._extraSize = extraSize; // for encoded keypoint textures
     }
@@ -1282,7 +1357,7 @@ class FeatureAlgorithm
      */
     run(gpu, inputTexture)
     {
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["AbstractMethodError"]();
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["AbstractMethodError"]();
     }
 
     /**
@@ -1295,7 +1370,7 @@ class FeatureAlgorithm
      */
     download(gpu, encodedKeypoints, useAsyncTransfer)
     {
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["AbstractMethodError"]();
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["AbstractMethodError"]();
     }
 
     /**
@@ -1305,7 +1380,7 @@ class FeatureAlgorithm
      */
     resetDownloader(gpu)
     {
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["AbstractMethodError"]();
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["AbstractMethodError"]();
     }
 
     /**
@@ -1338,7 +1413,7 @@ class FeatureAlgorithm
     set extraSize(bytes)
     {
         this._extraSize = Math.max(0, bytes | 0);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(this._extraSize % 4 === 0); // multiple of 32 bits (RGBA pixel)
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(this._extraSize % 4 === 0); // multiple of 32 bits (RGBA pixel)
     }
 
     /**
@@ -1359,7 +1434,7 @@ class FeatureAlgorithm
     set descriptorSize(bytes)
     {
         this._descriptorSize = Math.max(0, bytes | 0);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(this._descriptorSize % 4 === 0); // multiple of 32 bits (RGBA pixel)
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(this._descriptorSize % 4 === 0); // multiple of 32 bits (RGBA pixel)
     }
 }
 
@@ -1423,9 +1498,7 @@ class FeatureDescriptionAlgorithm extends _feature_algorithm_decorator__WEBPACK_
         _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(decoratedAlgorithm instanceof _feature_algorithm__WEBPACK_IMPORTED_MODULE_1__["FeatureAlgorithm"]);
         _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(descriptorSize > 0);
 
-        super(decoratedAlgorithm, descriptorSize, 0);
-        decoratedAlgorithm.descriptorSize = this.descriptorSize;
-        decoratedAlgorithm.extraSize = this.extraSize;
+        super(decoratedAlgorithm, descriptorSize, decoratedAlgorithm.extraSize);
     }
 
     /**
@@ -1455,25 +1528,6 @@ class FeatureDescriptionAlgorithm extends _feature_algorithm_decorator__WEBPACK_
         return this.decoratedAlgorithm.download(gpu, encodedKeypoints, useAsyncTransfer).then(
             keypoints => this._postProcess(keypoints)
         );
-    }
-
-    /**
-     * Reset the capacity of the keypoint downloader
-     * @param {SpeedyGPU} gpu 
-     */
-    resetDownloader(gpu)
-    {
-        this.decoratedAlgorithm.resetDownloader(gpu);
-    }
-
-    /**
-     * Setup enhancements to be applied when **DETECTING** (not describing) features
-     * @param {object|boolean} [enhancements] fix irregular lighting in the scene?
-     */
-    setEnhancements(enhancements)
-    {
-        //if(this.decoratedAlgorithm instanceof FeatureDetectionAlgorithm)
-        this.decoratedAlgorithm.setEnhancements(enhancements);
     }
 
     /**
@@ -1514,10 +1568,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FeatureDetectionAlgorithm", function() { return FeatureDetectionAlgorithm; });
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _feature_algorithm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./feature-algorithm */ "./src/core/keypoints/feature-algorithm.js");
-/* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../speedy-feature */ "./src/core/speedy-feature.js");
-/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
-/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _feature_downloader__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./feature-downloader */ "./src/core/keypoints/feature-downloader.js");
+/* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../speedy-feature */ "./src/core/speedy-feature.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -1538,6 +1593,7 @@ __webpack_require__.r(__webpack_exports__);
  * feature-detection-algorithm.js
  * Feature detection & description: abstract class
  */
+
 
 
 
@@ -1567,8 +1623,10 @@ class FeatureDetectionAlgorithm extends _feature_algorithm__WEBPACK_IMPORTED_MOD
     constructor()
     {
         super(0, 0);
-        this._downloader.enableBufferedDownloads();
+
         this._enhancements = null;
+        this._downloader = new _feature_downloader__WEBPACK_IMPORTED_MODULE_2__["FeatureDownloader"]();
+        this._downloader.enableBufferedDownloads();
     }
 
     /**
@@ -1948,7 +2006,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _feature_algorithm__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./feature-algorithm */ "./src/core/keypoints/feature-algorithm.js");
-/* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../speedy-feature */ "./src/core/speedy-feature.js");
+/* harmony import */ var _feature_downloader__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./feature-downloader */ "./src/core/keypoints/feature-downloader.js");
+/* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../speedy-feature */ "./src/core/speedy-feature.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -1976,6 +2035,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /**
  * Abstract feature tracking algorithm
  * @abstract
@@ -1988,8 +2048,10 @@ class FeatureTrackingAlgorithm extends _feature_algorithm__WEBPACK_IMPORTED_MODU
     constructor()
     {
         super(0, 0);
+
         this._prevImage = null; // previous image
         this._prevKeypoints = null; // tiny texture with encoded keypoints
+        this._downloader = new _feature_downloader__WEBPACK_IMPORTED_MODULE_4__["FeatureDownloader"]();
         this._downloader.disableBufferedDownloads();
     }
 
@@ -2068,6 +2130,15 @@ class FeatureTrackingAlgorithm extends _feature_algorithm__WEBPACK_IMPORTED_MODU
         }
 
         return this._downloader.download(gpu, encodedKeypoints, this.descriptorSize, this.extraSize, useAsyncTransfer);
+    }
+
+    /**
+     * Reset the capacity of the keypoint downloader
+     * @param {SpeedyGPU} gpu 
+     */
+    resetDownloader(gpu)
+    {
+        this._downloader.reset(gpu, this.descriptorSize, this.extraSize);
     }
 }
 
@@ -2205,8 +2276,8 @@ class LKFeatureTrackingAlgorithm extends _feature_tracking_algorithm__WEBPACK_IM
         const discardThreshold = this.discardThreshold;
 
         // create pyramids
-        const nextPyramid = nextImage.generateMipmap();
-        const prevPyramid = prevImage.generateMipmap();
+        const nextPyramid = nextImage.generatePyramid(gpu);
+        const prevPyramid = prevImage.generatePyramid(gpu);
 
         // track feature points
         const encoderLength = gpu.programs.encoders.encoderLength;
@@ -6632,11 +6703,12 @@ PipelineOperation.Nightvision = class extends SpeedyPipelineOperation
 /*!***************************************!*\
   !*** ./src/core/speedy-descriptor.js ***!
   \***************************************/
-/*! exports provided: BinaryDescriptor */
+/*! exports provided: SpeedyDescriptor, BinaryDescriptor */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyDescriptor", function() { return SpeedyDescriptor; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "BinaryDescriptor", function() { return BinaryDescriptor; });
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /*
@@ -6708,6 +6780,7 @@ class BinaryDescriptor extends SpeedyDescriptor
     {
         super();
         this._data = bytes;
+        this._size = bytes.length;
     }
 
     /**
@@ -6725,7 +6798,7 @@ class BinaryDescriptor extends SpeedyDescriptor
      */
     get size()
     {
-        return this._data.length;
+        return this._size;
     }
 }
 
@@ -6777,10 +6850,12 @@ class SpeedyFeatureDecorator
     /**
      * Constructor
      * @param {Function} decorator a FeatureAlgorithmDecorator
+     * @param {...*} [args] additional arguments to be passed when instantiating the decorator
      */
-    constructor(decorator)
+    constructor(decorator, ...args)
     {
         this._decorator = decorator;
+        this._args = args;
     }
 
     /**
@@ -6790,8 +6865,9 @@ class SpeedyFeatureDecorator
      */
     decorate(algorithm)
     {
+        const args = this._args;
         const decorator = this._decorator;
-        const decoratedAlgorithm = new decorator(algorithm);
+        const decoratedAlgorithm = new decorator(algorithm, ...args);
 
         _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(decoratedAlgorithm instanceof _keypoints_feature_algorithm_decorator__WEBPACK_IMPORTED_MODULE_0__["FeatureAlgorithmDecorator"]);
 
@@ -6947,7 +7023,9 @@ class SpeedyFeatureDetectorFactory extends _speedy_namespace__WEBPACK_IMPORTED_M
     static ORB()
     {
         const orb = _speedy_feature_descriptor_factory__WEBPACK_IMPORTED_MODULE_3__["SpeedyFeatureDescriptorFactory"].ORB();
-        return (new _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_1__["MultiscaleHarrisFeatureDetector"]()).link(orb);
+        const detector = (new _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_1__["MultiscaleHarrisFeatureDetector"]()).link(orb);
+        detector.scaleFactor = 1.19;
+        return detector;
     }
 
     /**
@@ -7411,6 +7489,24 @@ class MultiscaleFASTFeatureDetector extends SpeedyFeatureDetector
     }
 
     /**
+     * Get the scale factor between consecutive pyramid layers
+     * @returns {number}
+     */
+    get scaleFactor()
+    {
+        return this._algorithm.scaleFactor;
+    }
+
+    /**
+     * Set the scale factor between consecutive pyramid layers
+     * @param {number} value must be greater than 1
+     */
+    set scaleFactor(value)
+    {
+        this._algorithm.scaleFactor = value;
+    }
+
+    /**
      * Whether or not we're using an approximation of
      * Harris corner responses for keypoint scores
      * @returns {boolean}
@@ -7483,7 +7579,7 @@ class HarrisFeatureDetector extends SpeedyFeatureDetector
      */
     _onSensitivityChange(sensitivity)
     {
-        this.quality = 1.0 - Math.tanh(2.3 * sensitivity);
+        this.quality = 1.0 - sensitivity;
     }
 }
 
@@ -7522,6 +7618,24 @@ class MultiscaleHarrisFeatureDetector extends SpeedyFeatureDetector
     }
 
     /**
+     * Get the scale factor between consecutive pyramid layers
+     * @returns {number}
+     */
+    get scaleFactor()
+    {
+        return this._algorithm.scaleFactor;
+    }
+
+    /**
+     * Set the scale factor between consecutive pyramid layers
+     * @param {number} value must be greater than 1
+     */
+    set scaleFactor(value)
+    {
+        this._algorithm.scaleFactor = value;
+    }
+
+    /**
      * Get current quality level
      * We will pick corners having score >= quality * max(score)
      * @returns {number} a value in [0,1]
@@ -7547,7 +7661,7 @@ class MultiscaleHarrisFeatureDetector extends SpeedyFeatureDetector
      */
     _onSensitivityChange(sensitivity)
     {
-        this.quality = 1.0 - Math.tanh(2.3 * sensitivity);
+        this.quality = 1.0 - sensitivity;
     }
 }
 
@@ -7874,13 +7988,13 @@ class LKFeatureTracker extends SpeedyFeatureTracker
 /*!************************************!*\
   !*** ./src/core/speedy-feature.js ***!
   \************************************/
-/*! exports provided: SpeedyFeature, SpeedyFeatureWithBinaryDescriptor */
+/*! exports provided: SpeedyFeature, SpeedyFeatureWithDescriptor */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyFeature", function() { return SpeedyFeature; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyFeatureWithBinaryDescriptor", function() { return SpeedyFeatureWithBinaryDescriptor; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyFeatureWithDescriptor", function() { return SpeedyFeatureWithDescriptor; });
 /* harmony import */ var _speedy_descriptor__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-descriptor */ "./src/core/speedy-descriptor.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /*
@@ -8018,15 +8132,15 @@ class SpeedyFeature
 
 /**
  * A feature point with a descriptor
- * @abstract
  */
 class SpeedyFeatureWithDescriptor extends SpeedyFeature
 {
     /**
      * Constructor
      * @param {SpeedyFeature} feature
+     * @param {function(Uint8Array): SpeedyDescriptor} spawnDescriptor spawns a descriptor given a sequence of bytes
      */
-    constructor(feature)
+    constructor(feature, spawnDescriptor)
     {
         // copy values
         super(
@@ -8041,36 +8155,16 @@ class SpeedyFeatureWithDescriptor extends SpeedyFeature
         );
 
         // setup descriptor
-        this._descriptor = null; // subclass responsibility
+        this._descriptor = spawnDescriptor(this._descriptorBytes);
     }
 
     /**
      * The descriptor of the feature point
-     * @return {SpeedyDescriptor} feature descriptor
+     * @returns {SpeedyDescriptor} feature descriptor
      */
     get descriptor()
     {
         return this._descriptor;
-    }
-}
-
-/**
- * A feature point with a binary descriptor
- */
-class SpeedyFeatureWithBinaryDescriptor extends SpeedyFeatureWithDescriptor
-{
-    /**
-     * Constructor
-     * @param {SpeedyFeature} feature
-     */
-    constructor(feature)
-    {
-        // setup feature point
-        super(feature);
-
-        // setup descriptor
-        //Utils.assert(this._descriptorBytes.length > 0);
-        this._descriptor = new _speedy_descriptor__WEBPACK_IMPORTED_MODULE_0__["BinaryDescriptor"](this._descriptorBytes);
     }
 }
 
@@ -9919,7 +10013,9 @@ class Tuner
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GLUtils", function() { return GLUtils; });
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -9940,6 +10036,7 @@ __webpack_require__.r(__webpack_exports__);
  * gl-utils.js
  * WebGL utilities
  */
+
 
 
 
@@ -9977,7 +10074,7 @@ class GLUtils
 
         const glError = gl.getError();
         const message = recognizedErrors.find(error => gl[error] == glError) || 'Unknown';
-        return new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["GLError"](message);
+        return new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["GLError"](message);
     }
 
     /**
@@ -10034,7 +10131,7 @@ class GLUtils
                 .map((line, no) => col(1+no) + line)
                 .join('\n');
 
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["GLError"](
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["GLError"](
                 `Can't create shader.\n\n` +
                 `---------- ERROR ----------\n` +
                 errors.join('\n') + '\n\n' +
@@ -10123,7 +10220,7 @@ class GLUtils
     {
         // validate dimensions
         if(width <= 0 || height <= 0)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Invalid dimensions given to createTexture()`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Invalid dimensions given to createTexture()`);
 
         // create texture
         const texture = gl.createTexture();
@@ -10199,6 +10296,42 @@ class GLUtils
     }
 
     /**
+     * Copy data from a framebuffer into a texture
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLFramebuffer} fbo we'll read the data from this
+     * @param {WebGLTexture} texture destination texture
+     * @param {GLint} x xpos (where to start copying)
+     * @param {GLint} y ypos (where to start copying)
+     * @param {GLsizei} width width of the texture
+     * @param {GLsizei} height height of the texture
+     * @param {GLint} [lod] mipmap level-of-detail
+     * @returns {WebGLTexture} texture
+     */
+    static copyToTexture(gl, fbo, texture, x, y, width, height, lod = 0)
+    {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+
+        // According to the WebGL spec, pixels lying outside the framebuffer
+        // will be initialized to zero
+        gl.copyTexImage2D(
+            gl.TEXTURE_2D, // target
+            lod, // mipmap level
+            gl.RGBA8, // internal format
+            x, // xpos (where to start copying)
+            y, // ypos (where to start copying)
+            width, // width of the texture
+            height, // height of the texture
+            0 // border
+        );
+
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        return texture;
+    }
+
+    /**
      * Generate texture mipmap with bilinear interpolation
      * @param {WebGL2RenderingContext} gl 
      * @param {WebGLTexture} texture 
@@ -10222,7 +10355,7 @@ class GLUtils
             return;
 
         if(names.length > gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["GLError"](`Can't bind ${names.length} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["GLError"](`Can't bind ${names.length} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
 
         for(let i = 0; i < names.length; i++) {
             gl.activeTexture(gl.TEXTURE0 + i);
@@ -10259,7 +10392,7 @@ class GLUtils
                 'FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT',
                 'FRAMEBUFFER_INCOMPLETE_MULTISAMPLE'
             ].filter(err => gl[err] === status))[0] || 'unknown error'))();
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["GLError"](`Can't create framebuffer: ${error} (${status})`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["GLError"](`Can't create framebuffer: ${error} (${status})`);
         }
 
         // unbind & return
@@ -10284,7 +10417,7 @@ class GLUtils
      * @param {WebGL2RenderingContext} gl
      * @param {WebGLSync} sync sync object
      * @param {GLbitfield} [flags] may be gl.SYNC_FLUSH_COMMANDS_BIT or 0
-     * @returns {Promise} a promise that resolves as soon as the sync object becomes signaled
+     * @returns {SpeedyPromise} a promise that resolves as soon as the sync object becomes signaled
      */
     static clientWaitAsync(gl, sync, flags = 0)
     {
@@ -10308,7 +10441,7 @@ class GLUtils
             }
         });
 
-        return new Promise((resolve, reject) => {
+        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"]((resolve, reject) => {
             this._checkStatus(gl, sync, flags, resolve, reject);
         });
     }
@@ -10323,7 +10456,7 @@ class GLUtils
      * @param {ArrayBufferView} destBuffer
      * @param {GLuint} [destOffset]
      * @param {GLuint} [length]
-     * @returns {Promise<number>} a promise that resolves to the time it took to read the data (in ms)
+     * @returns {SpeedyPromise<number>} a promise that resolves to the time it took to read the data (in ms)
      */
     static getBufferSubDataAsync(gl, glBuffer, target, srcByteOffset, destBuffer, destOffset = 0, length = 0)
     {
@@ -10340,7 +10473,7 @@ class GLUtils
             gl.bindBuffer(target, null);
             return performance.now() - start;
         }).catch(err => {
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalOperationError"](`Can't getBufferSubDataAsync(): error in clientWaitAsync()`, err);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`Can't getBufferSubDataAsync(): error in clientWaitAsync()`, err);
         }).finally(() => {
             gl.deleteSync(sync);
         });
@@ -10356,7 +10489,7 @@ class GLUtils
      * @param {GLsizei} width
      * @param {GLsizei} height
      * @param {WebGLFramebuffer} [fbo]
-     * @returns {Promise<number>} a promise that resolves to the time it took to read the data (in ms)
+     * @returns {SpeedyPromise<number>} a promise that resolves to the time it took to read the data (in ms)
      */
     static readPixelsViaPBO(gl, arrayBuffer, x, y, width, height, fbo = null)
     {
@@ -10365,7 +10498,7 @@ class GLUtils
 
         // validate arrayBuffer
         if(!(arrayBuffer.byteLength >= width * height * 4))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Can't read pixels: invalid buffer size`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Can't read pixels: invalid buffer size`);
 
         // bind the PBO
         gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
@@ -10394,7 +10527,7 @@ class GLUtils
         ).then(timeInMs => {
             return timeInMs;
         }).catch(err => {
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalOperationError"](`Can't read pixels`, err);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`Can't read pixels`, err);
         }).finally(() => {
             gl.deleteBuffer(pbo);
         });
@@ -10490,9 +10623,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _core_speedy_feature__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../core/speedy-feature */ "./src/core/speedy-feature.js");
 /* harmony import */ var _core_speedy_descriptor__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../core/speedy-descriptor */ "./src/core/speedy-descriptor.js");
 /* harmony import */ var _core_tuners_stochastic_tuner__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../core/tuners/stochastic-tuner */ "./src/core/tuners/stochastic-tuner.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -10523,17 +10657,19 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 // We won't admit more than MAX_KEYPOINTS per media.
 // The larger this value is, the more data we need to transfer from the GPU.
-const MAX_DESCRIPTOR_SIZE = 64; // in bytes, must be divisible by 4 (1 pixel = 4 bytes)
-const MAX_KEYPOINT_SIZE = 8 + MAX_DESCRIPTOR_SIZE; // in bytes, must be divisible by 4
-const MAX_PIXELS_PER_KEYPOINT = (MAX_KEYPOINT_SIZE / 4) | 0; // in pixels
-const MIN_ENCODER_LENGTH = 1;
+const MIN_PIXELS_PER_KEYPOINT = _utils_globals__WEBPACK_IMPORTED_MODULE_8__["MIN_KEYPOINT_SIZE"] / 4; // encodes a keypoint header
+const MIN_ENCODER_LENGTH = 16; // storage for 16*16/MIN_PIXELS_PER_KEYPOINT <= 128 keypoints
 const MAX_ENCODER_LENGTH = 300; // in pixels (if too large, WebGL may lose context - so be careful!)
-const MAX_KEYPOINTS = ((MAX_ENCODER_LENGTH * MAX_ENCODER_LENGTH) / MAX_PIXELS_PER_KEYPOINT) | 0;
-const INITIAL_ENCODER_LENGTH = 16; // pick a small number to reduce processing load and not crash things on mobile (WebGL lost context)
-const KEYPOINT_BUFFER_LENGTH = 1024; // maximum number of keypoints that can be uploaded to the GPU via UBOs
-const UBO_MAX_BYTES = 16384; // UBOs can hold at least 16KB of data (each keypoint uses 16 bytes)
+const INITIAL_ENCODER_LENGTH = MIN_ENCODER_LENGTH; // pick a small number to reduce processing load and not crash things on mobile (WebGL lost context)
+const MAX_KEYPOINTS = 8192; // can't detect more than this number of keypoints per frame
+const UBO_MAX_BYTES = 16384; // UBOs can hold at least 16KB of data: gl.MAX_UNIFORM_BLOCK_SIZE >= 16384 according to the GL ES 3 reference
+const KEYPOINT_BUFFER_LENGTH = (UBO_MAX_BYTES / 16) | 0; // maximum number of keypoints that can be uploaded to the GPU via UBOs (each keypoint uses 16 bytes)
+const ENCODER_PASSES = 8; // number of passes of the keypoint encoder: directly impacts performance
+const LONG_SKIP_OFFSET_PASSES = 2; // number of passes of the long skip offsets shader
+const MAX_SKIP_OFFSET_ITERATIONS = [ 32, 32 ]; // used when computing skip offsets
 
 
 
@@ -10542,13 +10678,23 @@ const UBO_MAX_BYTES = 16384; // UBOs can hold at least 16KB of data (each keypoi
 // Shaders
 //
 
-// encode keypoint offsets: maxIterations is an integer in [1,255], determined experimentally
-const encodeKeypointOffsets = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('encoders/encode-keypoint-offsets.glsl')
-                             .withArguments('image', 'imageSize', 'maxIterations');
+// encode keypoint offsets: maxIterations is an experimentally determined integer
+const encodeKeypointSkipOffsets = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('encoders/encode-keypoint-offsets.glsl')
+                                 .withArguments('image', 'imageSize')
+                                 .withDefines({ 'MAX_ITERATIONS': MAX_SKIP_OFFSET_ITERATIONS[0] });
+
+// encode long offsets for improved performance
+const encodeKeypointLongSkipOffsets = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('encoders/encode-keypoint-long-offsets.glsl')
+                                     .withArguments('offsetsImage', 'imageSize')
+                                     .withDefines({ 'MAX_ITERATIONS': MAX_SKIP_OFFSET_ITERATIONS[1] });
 
 // encode keypoints
 const encodeKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('encoders/encode-keypoints.glsl')
-                       .withArguments('image', 'imageSize', 'encoderLength', 'descriptorSize', 'extraSize');
+                       .withArguments('offsetsImage', 'encodedKeypoints', 'imageSize', 'passId', 'numPasses', 'descriptorSize', 'extraSize', 'encoderLength');
+
+// resize encoded keypoints
+const resizeEncodedKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('encoders/resize-encoded-keypoints.glsl')
+                              .withArguments('inputTexture', 'inputDescriptorSize', 'inputExtraSize', 'inputEncoderLength', 'outputDescriptorSize', 'outputExtraSize', 'outputEncoderLength');
 
 // helper for downloading the keypoints
 const downloadKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('utils/identity.glsl')
@@ -10580,10 +10726,18 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
     {
         super(gpu, width, height);
         this
-            .declare('_encodeKeypointOffsets', encodeKeypointOffsets)
+            // encode skip offsets
+            .declare('_encodeKeypointSkipOffsets', encodeKeypointSkipOffsets)
+            .declare('_encodeKeypointLongSkipOffsets', encodeKeypointLongSkipOffsets, {
+                ...this.program.usesPingpongRendering()
+            })
 
             // tiny textures
             .declare('_encodeKeypoints', encodeKeypoints, {
+                ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH),
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('_resizeEncodedKeypoints', resizeEncodedKeypoints, {
                 ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
             })
             .declare('_downloadKeypoints', downloadKeypoints, {
@@ -10595,9 +10749,10 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
         ;
 
         // setup internal data
-        let neighborFn = (s) => Math.round(_utils_utils__WEBPACK_IMPORTED_MODULE_5__["Utils"].gaussianNoise(s, 64)) % 256;
-        this._tuner = new _core_tuners_stochastic_tuner__WEBPACK_IMPORTED_MODULE_4__["StochasticTuner"](48, 32, 48, 0.2, 8, 60, neighborFn);
+        let neighborFn = (s) => Math.round(_utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].gaussianNoise(s, 64)) % 256;
+        //this._tuner = new StochasticTuner(48, 32, 48, 0.2, 8, 60, neighborFn);
         this._encoderLength = INITIAL_ENCODER_LENGTH;
+        this._keypointCapacity = (INITIAL_ENCODER_LENGTH * INITIAL_ENCODER_LENGTH / _utils_globals__WEBPACK_IMPORTED_MODULE_8__["MIN_KEYPOINT_SIZE"]) | 0;
         this._spawnedAt = performance.now();
         this._uploadBuffer = null; // lazy spawn
     }
@@ -10613,18 +10768,19 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
 
     /**
      * Optimizes the keypoint encoder for an expected number of keypoints
-     * @param {number} keypointCount expected number of keypoints (< 0 resets the encoder)
+     * @param {number} maxKeypointCount expected maximum number of keypoints
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
      * @returns {boolean} true if the encoder has been optimized
      */
-    optimize(keypointCount, descriptorSize, extraSize)
+    optimize(maxKeypointCount, descriptorSize, extraSize)
     {
-        const newEncoderLength = this._minimumEncoderLength(keypointCount, descriptorSize, extraSize);
+        const newEncoderLength = this._minimumEncoderLength(maxKeypointCount, descriptorSize, extraSize);
         const oldEncoderLength = this._encoderLength;
 
         this._encoderLength = newEncoderLength;
-        //console.log('optimized for', keypointCount, 'keypoints. length:', newEncoderLength);
+        this._keypointCapacity = maxKeypointCount;
+        //console.log('optimized for', maxKeypointCount, 'keypoints. length:', newEncoderLength);
 
         return (newEncoderLength - oldEncoderLength) != 0;
     }
@@ -10657,15 +10813,35 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
         // parameters
         const encoderLength = this._encoderLength;
         const imageSize = [ this._width, this._height ];
-        const maxIterations = this._tuner.currentValue(); // any value between 32 and 48 should work on PC & mobile
 
-        // encode offsets
-        const offsets = this._encodeKeypointOffsets(corners, imageSize, maxIterations);
+        // encode skip offsets
+        let offsets = this._encodeKeypointSkipOffsets(corners, imageSize);
+        for(let i = 0; i < LONG_SKIP_OFFSET_PASSES; i++) // meant to boost performance
+            offsets = this._encodeKeypointLongSkipOffsets(offsets, imageSize);
+
+        /*
+        // debug: view corners
+        let cornerview = corners;
+        cornerview = this._gpu.programs.utils.fillComponents(cornerview, PixelComponent.GREEN, 0);
+        cornerview = this._gpu.programs.utils.identity(cornerview);
+        cornerview = this._gpu.programs.utils.fillComponents(cornerview, PixelComponent.ALPHA, 1);
+        this._gpu.programs.utils.output(cornerview);
+        if(!window._ww) document.body.appendChild(this._gpu.canvas);
+        window._ww = 1;
+        */
 
         // encode keypoints
-        this._encodeKeypoints.resize(this._encoderLength, this._encoderLength);
-        this._encodeKeypoints.clear(0, 0, 0, 0); // clear all pixels to 0
-        return this._encodeKeypoints(offsets, imageSize, encoderLength, descriptorSize, extraSize);
+        const numPasses = ENCODER_PASSES;
+        const pixelsPerKeypointHeader = MIN_PIXELS_PER_KEYPOINT;
+        const headerEncoderLength = Math.max(MIN_ENCODER_LENGTH, Math.ceil(Math.sqrt(this._keypointCapacity * pixelsPerKeypointHeader)));
+        this._encodeKeypoints.resize(headerEncoderLength, headerEncoderLength);
+        let encodedKeypointHeaders = this._encodeKeypoints.clear(0, 0, 0, 0);
+        for(let passId = 0; passId < numPasses; passId++)
+            encodedKeypointHeaders = this._encodeKeypoints(offsets, encodedKeypointHeaders, imageSize, passId, numPasses, 0, 0, headerEncoderLength);
+
+        // transfer keypoints to a elastic tiny texture with storage for descriptors & extra data
+        this._resizeEncodedKeypoints.resize(encoderLength, encoderLength);
+        return this._resizeEncodedKeypoints(encodedKeypointHeaders, 0, 0, headerEncoderLength, descriptorSize, extraSize, encoderLength);
     }
 
     /**
@@ -10677,7 +10853,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
      */
     decodeKeypoints(pixels, descriptorSize, extraSize)
     {
-        const pixelsPerKeypoint = 2 + (descriptorSize + extraSize) / 4;
+        const pixelsPerKeypoint = (_utils_globals__WEBPACK_IMPORTED_MODULE_8__["MIN_KEYPOINT_SIZE"] + descriptorSize + extraSize) / 4;
         let x, y, lod, rotation, score, flags, extraBytes, descriptorBytes;
         let hasLod, hasRotation;
         const keypoints = [];
@@ -10698,12 +10874,12 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
             // We've cleared the texture to black.
             // Likely to be incorrect black pixels
             // due to resize. Bad for encoderLength
-            if(x + y == 0 && pixels[i+6] + pixels[i+5] == 0)
+            if(x + y == 0 && pixels[i+6] == 0)
                 continue; // discard, it's noise
 
             // convert from fixed-point
-            x /= _utils_globals__WEBPACK_IMPORTED_MODULE_7__["FIX_RESOLUTION"];
-            y /= _utils_globals__WEBPACK_IMPORTED_MODULE_7__["FIX_RESOLUTION"];
+            x /= _utils_globals__WEBPACK_IMPORTED_MODULE_8__["FIX_RESOLUTION"];
+            y /= _utils_globals__WEBPACK_IMPORTED_MODULE_8__["FIX_RESOLUTION"];
 
             // extract flags
             flags = pixels[i+7];
@@ -10711,10 +10887,10 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
             // extract LOD
             hasLod = (pixels[i+4] < 255);
             lod = !hasLod ? 0.0 :
-                -_utils_globals__WEBPACK_IMPORTED_MODULE_7__["LOG2_PYRAMID_MAX_SCALE"] + (_utils_globals__WEBPACK_IMPORTED_MODULE_7__["LOG2_PYRAMID_MAX_SCALE"] + _utils_globals__WEBPACK_IMPORTED_MODULE_7__["PYRAMID_MAX_LEVELS"]) * pixels[i+4] / 255.0;
+                -_utils_globals__WEBPACK_IMPORTED_MODULE_8__["LOG2_PYRAMID_MAX_SCALE"] + (_utils_globals__WEBPACK_IMPORTED_MODULE_8__["LOG2_PYRAMID_MAX_SCALE"] + _utils_globals__WEBPACK_IMPORTED_MODULE_8__["PYRAMID_MAX_LEVELS"]) * pixels[i+4] / 255.0;
 
             // extract orientation
-            hasRotation = (flags & _utils_globals__WEBPACK_IMPORTED_MODULE_7__["KPF_ORIENTED"] != 0);
+            hasRotation = (flags & _utils_globals__WEBPACK_IMPORTED_MODULE_8__["KPF_ORIENTED"] != 0);
             rotation = !hasRotation ? 0.0 :
                 ((2 * pixels[i+5]) / 255.0 - 1.0) * Math.PI;
 
@@ -10731,18 +10907,27 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
                 pixels.slice(8 + i + extraSize, 8 + i + extraSize + descriptorSize)
             ) : null;
 
+            // something is off with the encoder length
+            if(
+                (descriptorSize > 0 && descriptorBytes.length < descriptorSize) ||
+                (extraSize > 0 && extraBytes.length < extraSize)
+            )
+                continue; // discard
+
             // register keypoint
             keypoints.push(
                 new _core_speedy_feature__WEBPACK_IMPORTED_MODULE_2__["SpeedyFeature"](x, y, lod, rotation, score, flags, extraBytes, descriptorBytes)
             );
         }
 
+        /*
         // developer's secret ;)
         // reset the tuner
         if(keypoints.length == 0) {
             if(this._tuner.finished())
                 this._tuner.reset();
         }
+        */
 
         // done!
         return keypoints;
@@ -10765,17 +10950,19 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
             // read data from the GPU
             let downloadTime = performance.now(), pixels;
             if(useAsyncTransfer)
-                pixels = await this._downloadKeypoints.readPixelsAsync(0, 0, -1, -1, useBufferedDownloads);
+                pixels = await this._downloadKeypoints.readPixelsAsync(0, 0, -1, -1, useBufferedDownloads).turbocharge();
             else
                 pixels = this._downloadKeypoints.readPixelsSync(); // bottleneck!
             downloadTime = performance.now() - downloadTime;
 
+            /*
             // tuner: drop noisy feedback when the page loads
             if(performance.now() >= this._spawnedAt + 2000)
                 this._tuner.feedObservation(downloadTime);
+            */
 
-            // debug
             /*
+            // debug
             window._p = window._p || 0;
             window._m = window._m || 0;
             window._m = 0.9 * window._m + 0.1 * downloadTime;
@@ -10788,7 +10975,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
             return pixels;
         }
         catch(err) {
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_6__["IllegalOperationError"](`Can't download encoded keypoint texture`, err);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__["IllegalOperationError"](`Can't download encoded keypoint texture`, err);
         }
     }
 
@@ -10803,19 +10990,19 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
      */
     uploadKeypoints(keypoints, descriptorSize, extraSize)
     {
-        // Create a buffer for uploading the data
-        if(this._uploadBuffer === null) {
-            const sizeofVec4 = Float32Array.BYTES_PER_ELEMENT * 4; // 16
-            const internalBuffer = new ArrayBuffer(sizeofVec4 * KEYPOINT_BUFFER_LENGTH);
-            _utils_utils__WEBPACK_IMPORTED_MODULE_5__["Utils"].assert(internalBuffer.byteLength <= UBO_MAX_BYTES);
-            this._uploadBuffer = new Float32Array(internalBuffer);
-        }
-
         // Too many keypoints?
         const keypointCount = keypoints.length;
         if(keypointCount > KEYPOINT_BUFFER_LENGTH) {
             // TODO: multipass
             throw new NotSupportedError(`Can't upload ${keypointCount} keypoints: maximum is currently ${KEYPOINT_BUFFER_LENGTH}`);
+        }
+
+        // Create a buffer for uploading the data
+        if(this._uploadBuffer === null) {
+            const sizeofVec4 = Float32Array.BYTES_PER_ELEMENT * 4; // 16
+            const internalBuffer = new ArrayBuffer(sizeofVec4 * KEYPOINT_BUFFER_LENGTH);
+            _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(internalBuffer.byteLength <= UBO_MAX_BYTES);
+            this._uploadBuffer = new Float32Array(internalBuffer);
         }
 
         // Format data as follows: (xpos, ypos, lod, score)
@@ -10849,7 +11036,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
     _minimumEncoderLength(keypointCount, descriptorSize, extraSize)
     {
         const clampedKeypointCount = Math.max(0, Math.min(Math.ceil(keypointCount), MAX_KEYPOINTS));
-        const pixelsPerKeypoint = Math.ceil(2 + (descriptorSize + extraSize) / 4);
+        const pixelsPerKeypoint = Math.ceil((_utils_globals__WEBPACK_IMPORTED_MODULE_8__["MIN_KEYPOINT_SIZE"] + descriptorSize + extraSize) / 4);
         const len = Math.ceil(Math.sqrt(clampedKeypointCount * pixelsPerKeypoint));
 
         return Math.max(MIN_ENCODER_LENGTH, Math.min(len, MAX_ENCODER_LENGTH));
@@ -11364,12 +11551,12 @@ const fastScore8 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["impo
 // FAST-9_16 on scale-space
 // Requires image mipmap
 const multiscaleFast = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/multiscale-fast.glsl')
-                      .withArguments('pyramid', 'threshold', 'numberOfOctaves');
+                      .withArguments('pyramid', 'threshold', 'numberOfOctaves', 'lodStep');
 
 // FAST-9_16 on scale-space
 // with Harris scoring
 const multiscaleFastWithHarris = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/multiscale-fast.glsl')
-                                .withArguments('pyramid', 'threshold', 'numberOfOctaves')
+                                .withArguments('pyramid', 'threshold', 'numberOfOctaves', 'lodStep')
                                 .withDefines({
                                     'USE_HARRIS_SCORE': 1
                                 });
@@ -11382,7 +11569,7 @@ const multiscaleFastWithHarris = Object(_shader_declaration__WEBPACK_IMPORTED_MO
 
 // compute corner responses (score map)
 const multiscaleHarris = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/multiscale-harris.glsl')
-                        .withArguments('pyramid', 'windowSize', 'numberOfOctaves', 'sobelDerivatives');
+                        .withArguments('pyramid', 'windowSize', 'numberOfOctaves', 'lodStep', 'sobelDerivatives');
 
 // discard corners below a specified quality level
 const harrisCutoff = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/harris-cutoff.glsl').withArguments('corners', 'maxScore', 'quality');
@@ -11411,7 +11598,7 @@ const orb = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShade
 
 // non-maximum suppression
 const nonmaxSuppression = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/nonmax-suppression.glsl').withArguments('image');
-const multiscaleSuppression = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/multiscale-suppression.glsl').withArguments('image');
+const multiscaleSuppression = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/multiscale-suppression.glsl').withArguments('image', 'lodStep');
 const samescaleSuppression = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/samescale-suppression.glsl').withArguments('image');
 
 // Sobel derivatives
@@ -11533,6 +11720,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-program-group */ "./src/gpu/speedy-program-group.js");
 /* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
 /* harmony import */ var _shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../shaders/filters/convolution */ "./src/gpu/shaders/filters/convolution.js");
+/* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../speedy-texture */ "./src/gpu/speedy-texture.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -11553,6 +11741,7 @@ __webpack_require__.r(__webpack_exports__);
  * pyramids.js
  * Image pyramids
  */
+
 
 
 
@@ -11590,18 +11779,29 @@ class GPUPyramids extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
     constructor(gpu, width, height)
     {
         super(gpu, width, height);
+        this._fbo = null;
         this
+            /*
             // pyramid operations (scale = 2)
-            .compose('reduce', '_smoothX', '_smoothY', '_downsample2')
-            .compose('expand', '_upsample2', '_smoothX2', '_smoothY2')
+            .compose('_reduce', '_smoothX', '_smoothY', '_downsample2')
+            .compose('_expand', '_upsample2', '_smoothX2', '_smoothY2')
+            */
            
+            /*
             // intra-pyramid operations (scale = 1.5)
-            .compose('intraReduce', '_upsample2', '_smoothX2', '_smoothY2', '_downsample3/2')
-            .compose('intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3')
+            .compose('_intraReduce', '_upsample2', '_smoothX2', '_smoothY2', '_downsample3/2')
+            .compose('_intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3')
+            */
 
-            // kernels for debugging
+            /*
+            // utilities for debugging
             .declare('output1', flipY, {
                 ...this.program.hasTextureSize(this._width, this._height),
+                ...this.program.displaysGraphics()
+            })
+
+            .declare('outputHalf', flipY, {
+                ...this.program.hasTextureSize(Math.floor(this._width / 2), Math.floor(this._height / 2)),
                 ...this.program.displaysGraphics()
             })
 
@@ -11609,13 +11809,7 @@ class GPUPyramids extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
                 ...this.program.hasTextureSize(2 * this._width, 2 * this._height),
                 ...this.program.displaysGraphics()
             })
-
-            .declare('output3', flipY, {
-                ...this.program.hasTextureSize(3 * this._width, 3 * this._height),
-                ...this.program.displaysGraphics()
-            })
-
-
+            */
             
             // separable kernels for gaussian smoothing
             // use [c, b, a, b, c] where a+2c = 2b and a+2b+2c = 1
@@ -11630,42 +11824,81 @@ class GPUPyramids extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
             // smoothing for 2x image
             // same rules as above with sum(k) = 2
             .declare('_smoothX2', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
-                0.1, 0.5, 0.8, 0.5, 0.1
+                0.1, 0.5, 0.8, 0.5, 0.1 // NOTE: this would saturate the image, but we apply it on a 2x upsampled version with lots of zero pixels
             ]), this.program.hasTextureSize(2 * this._width, 2 * this._height))
 
             .declare('_smoothY2', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
                 0.1, 0.5, 0.8, 0.5, 0.1
             ], 1.0 / 2.0), this.program.hasTextureSize(2 * this._width, 2 * this._height))
 
+            /*
             // smoothing for 3x image
             // use [1-b, b, 1, b, 1-b], where 0 < b < 1
-            .declare('_smoothX3', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
+            .declare('_smoothX3', convX([
                 0.2, 0.8, 1.0, 0.8, 0.2
             ]), this.program.hasTextureSize(3 * this._width, 3 * this._height))
 
-            .declare('_smoothY3', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
+            .declare('_smoothY3', convY([
                 0.2, 0.8, 1.0, 0.8, 0.2
             ], 1.0 / 3.0), this.program.hasTextureSize(3 * this._width, 3 * this._height))
+            */
 
             // upsampling & downsampling
             .declare('_upsample2', upsample2,
                 this.program.hasTextureSize(2 * this._width, 2 * this._height))
 
             .declare('_downsample2', downsample2,
-                this.program.hasTextureSize((1 + this._width) / 2, (1 + this._height) / 2))
+                this.program.hasTextureSize(Math.max(1, Math.floor(this._width / 2)), Math.max(1, Math.floor(this._height / 2))))
 
+            /*
             .declare('_upsample3', upsample3,
                 this.program.hasTextureSize(3 * this._width, 3 * this._height))
 
             .declare('_downsample3', downsample3,
-                this.program.hasTextureSize((2 + this._width) / 3, (2 + this._height) / 3))
+                this.program.hasTextureSize(Math.floor(this._width / 3), Math.floor(this._height / 3)))
 
             .declare('_downsample2/3', downsample2,
-                this.program.hasTextureSize(3 * this._width / 2, 3 * this._height / 2))
+                this.program.hasTextureSize(Math.floor(3 * this._width / 2), Math.floor(3 * this._height / 2)))
 
             .declare('_downsample3/2', downsample3,
-                this.program.hasTextureSize(2 * this._width / 3, 2 * this._height / 3))
+                this.program.hasTextureSize(Math.floor(2 * this._width / 3), Math.floor(2 * this._height / 3)))
+            */
         ;
+    }
+
+    /**
+     * Reduce the image (0.5x)
+     * @param {SpeedyTexture} image
+     * @returns {SpeedyTexture}
+     */
+    reduce(image)
+    {
+        const smoothImage = this._smoothY(this._smoothX(image));
+        const downsampledImage = this._downsample2(smoothImage);
+        this._fbo = this._downsample2.fbo;
+        return downsampledImage;
+    }
+
+    /**
+     * Expand the image (2x)
+     * @param {SpeedyTexture} image
+     * @returns {SpeedyTexture}
+     */
+    expand(image)
+    {
+        const upsampledImage = this._upsample2(image);
+        const smoothImage = this._smoothY2(this._smoothX2(upsampledImage));
+        this._fbo = this._smoothY2.fbo;
+        return smoothImage;
+    }
+
+    /**
+     * Get the framebuffer associated with the last performed operation
+     * @returns {WebGLFramebuffer}
+     */
+    get fbo()
+    {
+        return this._fbo;
     }
 }
 
@@ -11844,7 +12077,7 @@ class GPUTrackers extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
         // split the work into multiple passes of the shaders
         // (so we don't get WebGL context loss on mobile)
         //
-        const pixelsPerKeypoint = 2 + (descriptorSize + extraSize) / 4;
+        const pixelsPerKeypoint = (_utils_globals__WEBPACK_IMPORTED_MODULE_2__["MIN_KEYPOINT_SIZE"] + descriptorSize + extraSize) / 4;
         const numKeypointsApprox = encoderLength * encoderLength / pixelsPerKeypoint;
         const numPasses = Math.ceil(Math.max(1, numKeypointsApprox) / LK_MAX_KEYPOINTS_PER_PASS);
         //console.log('num passes', numPasses, lk);
@@ -12132,8 +12365,9 @@ class ShaderDeclaration
         const source = filepath ? __webpack_require__("./src/gpu/shaders sync recursive ^\\.\\/.*$")("./" + filepath) : (options.source || '');
 
         this._userSource = source;
-        this._fragmentSource = _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__["ShaderPreprocessor"].run(DEFAULT_FRAGMENT_SHADER_PREFIX + source);
         this._vertexSource = _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__["ShaderPreprocessor"].run(DEFAULT_VERTEX_SHADER);
+        this._fragmentSource = _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__["ShaderPreprocessor"].run(DEFAULT_FRAGMENT_SHADER_PREFIX + source);
+        this._fragmentSource = _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__["ShaderPreprocessor"].unrollLoops(this._fragmentSource);
         this._filepath = filepath || '<in-memory>';
         this._uniform = this._autodetectUniforms(this._fragmentSource);
         this._arguments = [];
@@ -12196,12 +12430,12 @@ class ShaderDeclaration
         // write the #defines
         const defs = [];
         for(const key of Object.keys(defines))
-            defs.push(`#define ${key} ${defines[key]}\n`);
+            defs.push(`#define ${key} ${+(defines[key])}\n`); // force numeric values
 
         // change the fragment shader
         const source = DEFAULT_FRAGMENT_SHADER_PREFIX + defs.join('') + this._userSource;
-        this._fragmentSource = _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__["ShaderPreprocessor"].run(source);
-        // is it necessary to rescan the code for uniforms? hmm....
+        this._fragmentSource = _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__["ShaderPreprocessor"].run(source); // is it necessary to rescan the code for uniforms? hmm....
+        this._fragmentSource = _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__["ShaderPreprocessor"].unrollLoops(this._fragmentSource, defines);
 
         // done!
         return this;
@@ -12339,8 +12573,9 @@ function createShader(source)
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ShaderPreprocessor", function() { return ShaderPreprocessor; });
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
-/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -12366,10 +12601,15 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 // Regular Expressions
 const commentsRegex = [ /\/\*(.|\s)*?\*\//g , /\/\/.*$/gm ];
 const includeRegex = /^\s*@\s*include\s+"(.*?)"/gm;
 const constantRegex = /@(\w+)@/g;
+const unrollRegex = [
+    /@\s*unroll\s+?for\s*\(\s*(int|)\s*(?<counter>\w+)\s*\=\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*(<=?)\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*\+\+()\s*\)\s*\{\s*([\s\S]+?)\s*\}/g,
+    /@\s*unroll\s+?for\s*\(\s*(int|)\s*(?<counter>\w+)\s*\=\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*(<=?)\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*\+=\s*(-?\d+)\s*\)\s*\{\s*([\s\S]+?)\s*\}/g,
+];
 
 // Constants accessible by all shaders
 const constants = {
@@ -12382,16 +12622,18 @@ const constants = {
     'PYRAMID_MAX_OCTAVES': _utils_globals__WEBPACK_IMPORTED_MODULE_0__["PYRAMID_MAX_OCTAVES"],
 
     // colors
-    'PIXELCOMPONENT_RED': _utils_types__WEBPACK_IMPORTED_MODULE_1__["PixelComponent"].RED,
-    'PIXELCOMPONENT_GREEN': _utils_types__WEBPACK_IMPORTED_MODULE_1__["PixelComponent"].GREEN,
-    'PIXELCOMPONENT_BLUE': _utils_types__WEBPACK_IMPORTED_MODULE_1__["PixelComponent"].BLUE,
-    'PIXELCOMPONENT_ALPHA': _utils_types__WEBPACK_IMPORTED_MODULE_1__["PixelComponent"].ALPHA,
+    'PIXELCOMPONENT_RED': _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].RED,
+    'PIXELCOMPONENT_GREEN': _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].GREEN,
+    'PIXELCOMPONENT_BLUE': _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].BLUE,
+    'PIXELCOMPONENT_ALPHA': _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].ALPHA,
 
     // fixed-point math
     'FIX_BITS': _utils_globals__WEBPACK_IMPORTED_MODULE_0__["FIX_BITS"],
     'FIX_RESOLUTION': _utils_globals__WEBPACK_IMPORTED_MODULE_0__["FIX_RESOLUTION"],
 
-    // keypoint flags
+    // keypoints
+    'MAX_DESCRIPTOR_SIZE': _utils_globals__WEBPACK_IMPORTED_MODULE_0__["MAX_DESCRIPTOR_SIZE"],
+    'MIN_KEYPOINT_SIZE': _utils_globals__WEBPACK_IMPORTED_MODULE_0__["MIN_KEYPOINT_SIZE"],
     'KPF_NONE': _utils_globals__WEBPACK_IMPORTED_MODULE_0__["KPF_NONE"],
     'KPF_ORIENTED': _utils_globals__WEBPACK_IMPORTED_MODULE_0__["KPF_ORIENTED"],
     'KPF_DISCARD': _utils_globals__WEBPACK_IMPORTED_MODULE_0__["KPF_DISCARD"],
@@ -12409,7 +12651,11 @@ class ShaderPreprocessor
      */
     static run(code)
     {
-        // remove comments and run the preprocessor
+        //
+        // The preprocessor will remove comments from GLSL code,
+        // include requested GLSL files and import global constants
+        // defined for all shaders (see above)
+        //
         return String(code).replace(commentsRegex[0], '')
                            .replace(commentsRegex[1], '')
                            .replace(includeRegex, (_, filename) =>
@@ -12419,6 +12665,34 @@ class ShaderPreprocessor
                             .replace(constantRegex, (_, name) =>
                                 String(constants[name] !== undefined ? constants[name] : 'UNDEFINED_CONSTANT')
                             );
+    }
+
+    /**
+     * Unroll for loops in our own preprocessor
+     * @param {string} code
+     * @param {object} [defines]
+     * @returns {string}
+     */
+    static unrollLoops(code, defines = {})
+    {
+        //
+        // Currently, only integer for loops with positive step values
+        // can be unrolled. (TODO: negative step values?)
+        //
+        // The current implementation does not support curly braces
+        // inside unrolled loops. You may define macros to get around
+        // this, but do you actually need to unroll such loops?
+        //
+        // Loops that don't fit the supported pattern will crash
+        // the preprocessor if you try to unroll them.
+        //
+        const fn = unroll.bind(defines); // CRAZY!
+        const n = unrollRegex.length;
+
+        for(let i = 0; i < n; i++)
+            code = code.replace(unrollRegex[i], fn);
+
+        return code;
     }
 }
 
@@ -12432,7 +12706,69 @@ function readfileSync(filename)
     if(String(filename).match(/^[a-zA-Z0-9_\-]+\.glsl$/))
         return __webpack_require__("./src/gpu/shaders/include sync recursive ^\\.\\/.*$")("./" + filename);
 
-    throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["FileNotFoundError"](`Shader preprocessor: can't read file \"${filename}\"`);
+    throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["FileNotFoundError"](`Shader preprocessor: can't read file \"${filename}\"`);
+}
+
+/**
+ * Unroll a loop pattern (regexp)
+ * @param {string} match the matched for loop
+ * @param {...string} pi matched expression
+ * @returns {string} unrolled loop
+ */
+function unroll(match, type, counter, start, cmp, end, step, loopcode)
+{
+    const defines = this;
+
+    // check if the loop limits are numeric constants or #defined numbers from the outside
+    start = Number.isFinite(+start) ? start : defines[start];
+    end = Number.isFinite(+end) ? end : defines[end];
+    if(start === undefined || end === undefined) {
+        if(Object.keys(defines).length > 0)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["ParseError"](`Can't unroll loop: unknown limits (start=${start}, end=${end}). Code:\n\n${match}`);
+        else
+            return match; // don't unroll now, because defines is empty - maybe we'll succeed in the next pass
+    }
+
+    // parse limits
+    start = parseInt(start);
+    end = parseInt(end);
+    step = (step.length == 0) ? 1 : parseInt(step);
+    _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(start <= end && step > 0);
+
+    /*
+    // debug
+    console.log(`Encontrei "${match}"`);
+    console.log(`type="${type}"`);
+    console.log(`counter="${counter}"`);
+    console.log(`start="${start}"`);
+    console.log(`cmp="${cmp}"`);
+    console.log(`end="${end}"`);
+    console.log(`step="${step}"`);
+    console.log(`loopcode="${loopcode}"`)
+    console.log('Defines:', defines);
+    */
+
+    // continue statements are not supported inside unrolled loops
+    // and will generate a compiler error. Using break is ok.
+    const hasBreak = (loopcode.match(/\bbreak\s*;/) !== null);
+
+    // create a new scope
+    let unrolledCode = hasBreak ? 'switch(1) { default:\n' : '{\n';
+
+    // declare counter
+    unrolledCode += `${type} ${counter};\n`;
+
+    // unroll loop
+    end += (cmp == '<=') ? 1 : 0;
+    for(let i = start; i < end; i += step)
+        unrolledCode += `{\n${counter} = ${i};\n${loopcode}\n}\n`;
+
+    // close scope
+    unrolledCode += '}\n';
+    //console.log('Unrolled code:\n\n' + unrolledCode);
+
+    // done!
+    return unrolledCode;
 }
 
 /***/ }),
@@ -12446,8 +12782,10 @@ function readfileSync(filename)
 
 var map = {
 	"./colors/rgb2grey.glsl": "./src/gpu/shaders/colors/rgb2grey.glsl",
+	"./encoders/encode-keypoint-long-offsets.glsl": "./src/gpu/shaders/encoders/encode-keypoint-long-offsets.glsl",
 	"./encoders/encode-keypoint-offsets.glsl": "./src/gpu/shaders/encoders/encode-keypoint-offsets.glsl",
 	"./encoders/encode-keypoints.glsl": "./src/gpu/shaders/encoders/encode-keypoints.glsl",
+	"./encoders/resize-encoded-keypoints.glsl": "./src/gpu/shaders/encoders/resize-encoded-keypoints.glsl",
 	"./encoders/upload-keypoints.glsl": "./src/gpu/shaders/encoders/upload-keypoints.glsl",
 	"./enhancements/nightvision.glsl": "./src/gpu/shaders/enhancements/nightvision.glsl",
 	"./enhancements/normalize-image.glsl": "./src/gpu/shaders/enhancements/normalize-image.glsl",
@@ -12464,6 +12802,7 @@ var map = {
 	"./include/math.glsl": "./src/gpu/shaders/include/math.glsl",
 	"./include/orientation.glsl": "./src/gpu/shaders/include/orientation.glsl",
 	"./include/pyramids.glsl": "./src/gpu/shaders/include/pyramids.glsl",
+	"./include/quickselect.glsl": "./src/gpu/shaders/include/quickselect.glsl",
 	"./include/sobel.glsl": "./src/gpu/shaders/include/sobel.glsl",
 	"./keypoints/brisk.glsl": "./src/gpu/shaders/keypoints/brisk.glsl",
 	"./keypoints/fast-score12.glsl": "./src/gpu/shaders/keypoints/fast-score12.glsl",
@@ -12480,6 +12819,7 @@ var map = {
 	"./keypoints/orb-descriptor.glsl": "./src/gpu/shaders/keypoints/orb-descriptor.glsl",
 	"./keypoints/orientation-via-centroid.glsl": "./src/gpu/shaders/keypoints/orientation-via-centroid.glsl",
 	"./keypoints/samescale-suppression.glsl": "./src/gpu/shaders/keypoints/samescale-suppression.glsl",
+	"./keypoints/sort-by-score.glsl": "./src/gpu/shaders/keypoints/sort-by-score.glsl",
 	"./pyramids/downsample2.glsl": "./src/gpu/shaders/pyramids/downsample2.glsl",
 	"./pyramids/downsample3.glsl": "./src/gpu/shaders/pyramids/downsample3.glsl",
 	"./pyramids/upsample2.glsl": "./src/gpu/shaders/pyramids/upsample2.glsl",
@@ -12527,6 +12867,17 @@ module.exports = "const vec4 grey = vec4(0.299f, 0.587f, 0.114f, 0.0f);\nuniform
 
 /***/ }),
 
+/***/ "./src/gpu/shaders/encoders/encode-keypoint-long-offsets.glsl":
+/*!********************************************************************!*\
+  !*** ./src/gpu/shaders/encoders/encode-keypoint-long-offsets.glsl ***!
+  \********************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D offsetsImage;\nuniform ivec2 imageSize;\n#ifndef MAX_ITERATIONS\n#error Must define MAX_ITERATIONS\n#endif\n#define decodeSkipOffset(pixel) int((pixel).b * 255.0f) | (int((pixel).a * 255.0f) << 8)\n#define encodeSkipOffset(offset) vec2((offset) & 255, (offset) >> 8) / 255.0f\nvoid main()\n{\nvec4 pixel = threadPixel(offsetsImage);\nivec2 thread = threadLocation();\nvec2 prefix = pixel.rg;\nint rasterIndex = thread.y * imageSize.x + thread.x;\nint offset = decodeSkipOffset(pixel);\nint totalOffset = offset;\nivec2 pos = thread;\n#if 0\nwhile(offset < MAX_ITERATIONS && pos.y < imageSize.y && pixel.r == 0.0f) {\nrasterIndex += offset;\npos = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);\npixel = pixelAt(offsetsImage, pos);\noffset = decodeSkipOffset(pixel);\ntotalOffset += offset;\n}\n#else\nint allow = 1;\nfor(int i = 0; i < MAX_ITERATIONS; i++) {\nallow *= int(pos.y < imageSize.y) * int(pixel.r == 0.0f);\nrasterIndex += allow * offset;\npos = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);\npixel = pixelAt(offsetsImage, pos);\noffset = decodeSkipOffset(pixel);\ntotalOffset += allow * offset;\n}\n#endif\ntotalOffset = min(totalOffset, 65535);\ncolor = vec4(prefix, encodeSkipOffset(totalOffset));\n}"
+
+/***/ }),
+
 /***/ "./src/gpu/shaders/encoders/encode-keypoint-offsets.glsl":
 /*!***************************************************************!*\
   !*** ./src/gpu/shaders/encoders/encode-keypoint-offsets.glsl ***!
@@ -12534,7 +12885,7 @@ module.exports = "const vec4 grey = vec4(0.299f, 0.587f, 0.114f, 0.0f);\nuniform
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nuniform ivec2 imageSize;\nuniform int maxIterations;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 pos = threadLocation();\nint offset = -1;\nwhile(offset < maxIterations && pos.y < imageSize.y && pixelAt(image, pos).r == 0.0f) {\n++offset;\npos.x = (pos.x + 1) % imageSize.x;\npos.y += int(pos.x == 0);\n}\ncolor = vec4(pixel.r, float(max(0, offset)) / 255.0f, pixel.ba);\n}"
+module.exports = "uniform sampler2D image;\nuniform ivec2 imageSize;\n#if !defined(MAX_ITERATIONS)\n#error Must define MAX_ITERATIONS\n#elif MAX_ITERATIONS > 255\n#error MAX_ITERATIONS must be less than 256\n#endif\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 pos = threadLocation();\nvec2 prefix = pixel.ra;\nint offset = 0;\n#if 0\nwhile(offset < MAX_ITERATIONS && pos.y < imageSize.y && pixelAt(image, pos).r == 0.0f) {\n++offset;\npos.x = (pos.x + 1) % imageSize.x;\npos.y += int(pos.x == 0);\n}\n#else\nint allow = 1;\nfor(int i = 0; i < MAX_ITERATIONS; i++) {\nallow *= int(pos.y < imageSize.y) * int(pixel.r == 0.0f);\noffset += allow;\npos.x = (pos.x + 1) % imageSize.x;\npos.y += int(pos.x == 0);\npixel = pixelAt(image, pos);\n}\n#endif\ncolor = vec4(prefix, float(offset) / 255.0f, 0.0f);\n}"
 
 /***/ }),
 
@@ -12545,7 +12896,18 @@ module.exports = "uniform sampler2D image;\nuniform ivec2 imageSize;\nuniform in
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D image;\nuniform ivec2 imageSize;\nuniform int encoderLength;\nuniform int descriptorSize;\nuniform int extraSize;\nbool findQthKeypoint(int q, out ivec2 position, out vec4 pixel)\n{\nint i = 0, p = -1;\nposition = ivec2(0, 0);\nwhile(position.y < imageSize.y) {\npixel = texelFetch(image, position, 0);\np += int(pixel.r > 0.0f);\nif(p == q)\nreturn true;\ni += 1 + int(pixel.g * 255.0f);\nposition = ivec2(i % imageSize.x, i / imageSize.x);\n}\nreturn false;\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint q = findKeypointIndex(address, descriptorSize, extraSize);\nivec2 position;\nvec4 pixel;\ncolor = vec4(0.0f);\nif(address.offset > 1)\nreturn;\ncolor = encodeNullKeypoint();\nif(!findQthKeypoint(q, position, pixel))\nreturn;\ncolor = (address.offset == 1) ? vec4(\npixel.a,\n0.0f,\npixel.r,\nencodeKeypointFlags(KPF_NONE)\n) : encodeKeypointPosition(\nvec2(position)\n);\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D offsetsImage;\nuniform sampler2D encodedKeypoints;\nuniform ivec2 imageSize;\nuniform int passId;\nuniform int numPasses;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#define decodeSkipOffset(pixel) int((pixel).b * 255.0f) | (int((pixel).a * 255.0f) << 8)\nbool findQthKeypoint(int q, int p, inout ivec2 position, out vec4 pixel)\n{\nint notFirstPass = int(passId > 0);\nposition *= notFirstPass;\np |= -(1 - notFirstPass);\np -= notFirstPass;\nint rasterIndex = position.y * imageSize.x + position.x;\nwhile(position.y < imageSize.y && p != q) {\nposition = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);\npixel = texelFetch(offsetsImage, position, 0);\np += int(pixel.r > 0.0f);\nrasterIndex += max(1, decodeSkipOffset(pixel));\n}\nreturn (p == q);\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint q = findKeypointIndex(address, descriptorSize, extraSize);\ncolor = vec4(0.0f);\nif(address.offset > 1)\nreturn;\ncolor = threadPixel(encodedKeypoints);\nint numPixels = encoderLength * encoderLength;\nint maxKeypoints = numPixels / pixelsPerKeypoint;\nint maxKeypointsPerPass = maxKeypoints / numPasses + int(maxKeypoints % numPasses != 0);\nint targetPassId = q / maxKeypointsPerPass;\nif(passId != targetPassId)\nreturn;\n#if 1\nint lastIndexFromPrevPass = passId * maxKeypointsPerPass - 1;\nKeypointAddress lastAddressFromPrevPass = KeypointAddress(max(0, lastIndexFromPrevPass) * pixelsPerKeypoint, 0);\nKeypoint lastKeypointFromPrevPass = decodeKeypoint(encodedKeypoints, encoderLength, lastAddressFromPrevPass);\nivec2 position = ivec2(lastKeypointFromPrevPass.position);\n#else\nint lastIndexFromPrevPass = -1; ivec2 position = ivec2(0);\n#endif\nvec4 pixel;\ncolor = encodeNullKeypoint();\nif(q >= maxKeypoints || !findQthKeypoint(q, lastIndexFromPrevPass, position, pixel))\nreturn;\ncolor = (address.offset == 1) ? vec4(\npixel.g,\n0.0f,\npixel.r,\nencodeKeypointFlags(KPF_NONE)\n) : encodeKeypointPosition(\nvec2(position)\n);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/encoders/resize-encoded-keypoints.glsl":
+/*!****************************************************************!*\
+  !*** ./src/gpu/shaders/encoders/resize-encoded-keypoints.glsl ***!
+  \****************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D inputTexture;\nuniform int inputDescriptorSize;\nuniform int inputExtraSize;\nuniform int inputEncoderLength;\nuniform int outputDescriptorSize;\nuniform int outputExtraSize;\nuniform int outputEncoderLength;\nvoid main()\n{\nvec4 pixel = threadPixel(inputTexture);\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(\nthread,\noutputEncoderLength,\noutputDescriptorSize,\noutputExtraSize\n);\nint myIndex = findKeypointIndex(\nmyAddress,\noutputDescriptorSize,\noutputExtraSize\n);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(inputDescriptorSize, inputExtraSize) / 4;\nKeypointAddress otherAddress = KeypointAddress(\nmyIndex * pixelsPerKeypoint,\nmyAddress.offset\n);\nint head = MIN_KEYPOINT_SIZE / 4;\nint rasterIndex = otherAddress.base + otherAddress.offset;\ncolor = (myAddress.offset >= head) ? vec4(0.0f) :\nreadKeypointData(inputTexture, inputEncoderLength, rasterIndex);\n}"
 
 /***/ }),
 
@@ -13160,6 +13522,7 @@ var map = {
 	"./math.glsl": "./src/gpu/shaders/include/math.glsl",
 	"./orientation.glsl": "./src/gpu/shaders/include/orientation.glsl",
 	"./pyramids.glsl": "./src/gpu/shaders/include/pyramids.glsl",
+	"./quickselect.glsl": "./src/gpu/shaders/include/quickselect.glsl",
 	"./sobel.glsl": "./src/gpu/shaders/include/sobel.glsl"
 };
 
@@ -13203,7 +13566,7 @@ module.exports = "#ifndef _COLORS_GLSL\n#define _COLORS_GLSL\n#define PIXELCOMPO
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "#ifndef _FIXEDPOINT_GLSL\n#define _FIXEDPOINT_GLSL\n#define fixed_t int\n#define fixed2_t ivec2\nconst int FIX_BITS = int(@FIX_BITS@);\nconst float FIX_RESOLUTION = float(@FIX_RESOLUTION@);\n#define itofix(x) fixed_t((x) << FIX_BITS)\n#define fixtoi(f) int((x) >> FIX_BITS)\n#define ftofix(x) fixed_t((x) * FIX_RESOLUTION + 0.5f)\n#define fixtof(f) (float(f) / FIX_RESOLUTION)\n#define ivec2tofix(x) fixed2_t((x) << FIX_BITS)\n#define fixtoivec2(f) ivec2((x) >> FIX_BITS)\n#define vec2tofix(v) fixed2_t((v) * FIX_RESOLUTION + vec2(0.5f))\n#define fixtovec2(f) (vec2(f) / FIX_RESOLUTION)\n#endif"
+module.exports = "#ifndef _FIXEDPOINT_GLSL\n#define _FIXEDPOINT_GLSL\n#define fixed_t int\n#define fixed2_t ivec2\nconst int FIX_BITS = int(@FIX_BITS@);\nconst float FIX_RESOLUTION = float(@FIX_RESOLUTION@);\n#define itofix(x) fixed_t((x) << FIX_BITS)\n#define fixtoi(f) int((x) >> FIX_BITS)\n#define ftofix(x) fixed_t((x) * FIX_RESOLUTION + 0.5f)\n#define fixtof(f) (float(f) / FIX_RESOLUTION)\n#define ivec2tofix(x) fixed2_t((x) << FIX_BITS)\n#define fixtoivec2(f) ivec2((f) >> FIX_BITS)\n#define vec2tofix(v) fixed2_t((v) * FIX_RESOLUTION + vec2(0.5f))\n#define fixtovec2(f) (vec2(f) / FIX_RESOLUTION)\n#endif"
 
 /***/ }),
 
@@ -13225,7 +13588,7 @@ module.exports = "#ifndef _GLOBAL_GLSL\n#define _GLOBAL_GLSL\n#define threadLoca
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "#ifndef _KEYPOINTS_GLSL\n#define _KEYPOINTS_GLSL\n@include \"pyramids.glsl\"\n@include \"orientation.glsl\"\n@include \"fixed-point.glsl\"\nstruct Keypoint\n{\nvec2 position;\nfloat orientation;\nfloat lod;\nfloat score;\nint flags;\n};\nstruct KeypointAddress\n{\nint base;\nint offset;\n};\nconst int KPF_NONE = int(@KPF_NONE@);\nconst int KPF_ORIENTED = int(@KPF_ORIENTED@);\nconst int KPF_DISCARD = int(@KPF_DISCARD@);\n#define readKeypointData(encodedKeypoints, encoderLength, keypointAddress) texelFetch((encodedKeypoints), ivec2((keypointAddress) % (encoderLength), (keypointAddress) / (encoderLength)), 0)\n#define sizeofEncodedKeypoint(descriptorSize, extraSize) (8 + (descriptorSize) + (extraSize))\n#define findKeypointIndex(address, descriptorSize, extraSize) ((address).base / ((sizeofEncodedKeypoint((descriptorSize), (extraSize))) / 4))\nKeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descriptorSize, int extraSize)\n{\nint threadRaster = thread.y * encoderLength + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address;\nint keypointIndex = int(threadRaster / pixelsPerKeypoint);\naddress.base = keypointIndex * pixelsPerKeypoint;\naddress.offset = threadRaster % pixelsPerKeypoint;\nreturn address;\n}\nKeypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nconst vec4 ones = vec4(1.0f);\nKeypoint keypoint;\nint positionAddress = address.base;\nint propertiesAddress = address.base + 1;\nvec4 rawEncodedPosition = readKeypointData(encodedKeypoints, encoderLength, positionAddress);\nivec4 encodedPosition = ivec4(rawEncodedPosition * 255.0f);\nkeypoint.position = fixtovec2(fixed2_t(\nencodedPosition.r | (encodedPosition.g << 8),\nencodedPosition.b | (encodedPosition.a << 8)\n));\nvec4 encodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);\nkeypoint.orientation = decodeOrientation(encodedProperties.g);\nkeypoint.lod = decodeLod(encodedProperties.r);\nkeypoint.score = encodedProperties.b;\nkeypoint.flags = int(encodedProperties.a * 255.0f);\nbool isNullKeypoint = all(greaterThanEqual(rawEncodedPosition, ones));\nkeypoint.position = isNullKeypoint ? vec2(-1.0f) : keypoint.position;\nreturn keypoint;\n}\nvec4 encodeKeypointPosition(vec2 position)\n{\nconst vec2 zeros = vec2(0.0f);\nfixed2_t pos = vec2tofix(max(position, zeros));\nfixed2_t lo = pos & 255;\nfixed2_t hi = pos >> 8;\nreturn vec4(float(lo.x), float(hi.x), float(lo.y), float(hi.y)) / 255.0f;\n}\n#define encodeNullKeypoint() (vec4(1.0f))\nbool isNullKeypoint(Keypoint keypoint)\n{\nconst vec2 zeros = vec2(0.0f);\nreturn all(lessThan(keypoint.position, zeros));\n}\n#define encodeKeypointPositionAtInfinity() (vec4(254.0f / 255.0f, vec3(1.0f)))\nbool isKeypointAtInfinity(Keypoint keypoint)\n{\nconst vec2 V2_MAX_TEXTURE_LENGTH = vec2(float(@MAX_TEXTURE_LENGTH@));\nreturn any(greaterThan(keypoint.position, V2_MAX_TEXTURE_LENGTH));\n}\n#define encodeKeypointFlags(flags) (float(flags) / 255.0f)\n#endif"
+module.exports = "#ifndef _KEYPOINTS_GLSL\n#define _KEYPOINTS_GLSL\n@include \"pyramids.glsl\"\n@include \"orientation.glsl\"\n@include \"fixed-point.glsl\"\nstruct Keypoint\n{\nvec2 position;\nfloat orientation;\nfloat lod;\nfloat score;\nint flags;\n};\nstruct KeypointAddress\n{\nint base;\nint offset;\n};\nconst int MAX_DESCRIPTOR_SIZE = int(@MAX_DESCRIPTOR_SIZE@);\nconst int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@);\nconst int KPF_NONE = int(@KPF_NONE@);\nconst int KPF_ORIENTED = int(@KPF_ORIENTED@);\nconst int KPF_DISCARD = int(@KPF_DISCARD@);\n#define readKeypointData(encodedKeypoints, encoderLength, rasterIndex) texelFetch((encodedKeypoints), ivec2((rasterIndex) % (encoderLength), (rasterIndex) / (encoderLength)), 0)\n#define sizeofEncodedKeypoint(descriptorSize, extraSize) (MIN_KEYPOINT_SIZE + (descriptorSize) + (extraSize))\n#define findKeypointIndex(address, descriptorSize, extraSize) ((address).base / ((sizeofEncodedKeypoint((descriptorSize), (extraSize))) / 4))\nKeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descriptorSize, int extraSize)\n{\nint threadRaster = thread.y * encoderLength + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nint keypointIndex = int(threadRaster / pixelsPerKeypoint);\nKeypointAddress address = KeypointAddress(\nkeypointIndex * pixelsPerKeypoint,\nthreadRaster % pixelsPerKeypoint\n);\nreturn address;\n}\nKeypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nconst vec4 ones = vec4(1.0f);\nKeypoint keypoint;\nint positionAddress = address.base;\nint propertiesAddress = address.base + 1;\nvec4 rawEncodedPosition = readKeypointData(encodedKeypoints, encoderLength, positionAddress);\nivec4 encodedPosition = ivec4(rawEncodedPosition * 255.0f);\nkeypoint.position = fixtovec2(fixed2_t(\nencodedPosition.r | (encodedPosition.g << 8),\nencodedPosition.b | (encodedPosition.a << 8)\n));\nvec4 encodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);\nkeypoint.orientation = decodeOrientation(encodedProperties.g);\nkeypoint.lod = decodeLod(encodedProperties.r);\nkeypoint.score = encodedProperties.b;\nkeypoint.flags = int(encodedProperties.a * 255.0f);\nbool isNull = all(greaterThanEqual(rawEncodedPosition, ones));\nkeypoint.score = keypoint.score * float(!isNull) - float(isNull);\nkeypoint.score -= float(keypoint.score == 0.0f) * float(all(equal(keypoint.position, vec2(0.0f))));\nreturn keypoint;\n}\nvec4 encodeKeypointPosition(vec2 position)\n{\nconst vec2 zeros = vec2(0.0f);\nfixed2_t pos = vec2tofix(max(position, zeros));\nfixed2_t lo = pos & 255;\nfixed2_t hi = pos >> 8;\nreturn vec4(float(lo.x), float(hi.x), float(lo.y), float(hi.y)) / 255.0f;\n}\n#define encodeNullKeypoint() (vec4(1.0f))\n#define isBadKeypoint(keypoint) ((keypoint).score < 0.0f)\n#define encodeKeypointPositionAtInfinity() (vec4(254.0f / 255.0f, vec3(1.0f)))\nbool isKeypointAtInfinity(Keypoint keypoint)\n{\nconst vec2 V2_MAX_TEXTURE_LENGTH = vec2(float(@MAX_TEXTURE_LENGTH@));\nreturn any(greaterThan(keypoint.position, V2_MAX_TEXTURE_LENGTH));\n}\n#define encodeKeypointFlags(flags) (float(flags) / 255.0f)\n#endif"
 
 /***/ }),
 
@@ -13236,7 +13599,7 @@ module.exports = "#ifndef _KEYPOINTS_GLSL\n#define _KEYPOINTS_GLSL\n@include \"p
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "#ifndef _MATH_GLSL\n#define _MATH_GLSL\n#define TWO_PI          6.28318530718f\n#define PI              3.14159265359f\n#define PI_OVER_2       1.57079632679f\n#define PI_OVER_4       0.78539816339f\n#define INV_PI          0.3183098861837907f\n#define USE_FAST_ATAN\n#ifdef USE_FAST_ATAN\nfloat fastAtan(float x)\n{\nfloat w = 1.0f - abs(x);\nreturn (w >= 0.0f) ?\n(PI_OVER_4 + 0.273f * w) * x :\nsign(x) * PI_OVER_2 - (PI_OVER_4 + 0.273f * (1.0f - abs(1.0f / x))) / x;\n}\n#else\n#define fastAtan(x) atan(x)\n#endif\n#ifdef USE_FAST_ATAN\nfloat fastAtan2(float y, float x)\n{\nreturn (x == 0.0f) ? PI_OVER_2 * sign(y) : fastAtan(y / x) + float(x < 0.0f) * PI * sign(y);\n}\n#else\n#define fastAtan2(y, x) atan((y), (x))\n#endif\n#endif"
+module.exports = "#ifndef _MATH_GLSL\n#define _MATH_GLSL\n#define TWO_PI          6.28318530718f\n#define PI              3.14159265359f\n#define PI_OVER_2       1.57079632679f\n#define PI_OVER_4       0.78539816339f\n#define INV_PI          0.3183098861837907f\n#define USE_FAST_ATAN\n#ifdef USE_FAST_ATAN\nfloat fastAtan(float x)\n{\nfloat w = 1.0f - abs(x);\nreturn (w >= 0.0f) ? ((PI_OVER_4 + 0.273 * w) * x) :\n(sign(x) * PI_OVER_2 - (PI_OVER_4 + 0.273 * (1.0f - abs(1.0f / x))) / x);\n}\n#else\n#define fastAtan(x) atan(x)\n#endif\n#ifdef USE_FAST_ATAN\nfloat fastAtan2(float y, float x)\n{\nreturn (x == 0.0f) ? PI_OVER_2 * sign(y) : fastAtan(y / x) + float(x < 0.0f) * PI * sign(y);\n}\n#else\n#define fastAtan2(y, x) atan((y), (x))\n#endif\n#endif"
 
 /***/ }),
 
@@ -13258,7 +13621,18 @@ module.exports = "#ifndef _ORIENTATION_GLSL\n#define _ORIENTATION_GLSL\n@include
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "#ifndef _PYRAMIDS_GLSL\n#define _PYRAMIDS_GLSL\n#define pyrPixel(pyr, lod) textureLod((pyr), texCoord, (lod))\n#define pyrPixelAtOffset(pyr, lod, pot, offset) textureLod((pyr), texCoord + ((pot) * vec2(offset)) / texSize, (lod))\n#define pyrPixelAt(pyr, pos, lod) textureLod((pyr), (vec2(pos) + vec2(0.5f)) / texSize, (lod))\n#define pyrPixelAtEx(pyr, pos, lod, pyrBaseSize) textureLod((pyr), (vec2(pos) + vec2(0.5f)) / vec2(pyrBaseSize), (lod))\n#define pyrSubpixelAtEx(pyr, pos, lod, pyrBaseSize) textureLod((pyr), ((pos) + vec2(0.5f)) / vec2(pyrBaseSize), (lod))\n#define pyrSubpixelAtExOffset(pyr, pos, lod, pot, offset, pyrBaseSize) textureLod((pyr), (((pos) + vec2(0.5f)) + ((pot) * vec2(offset))) / vec2(pyrBaseSize), (lod))\nconst int PYRAMID_MAX_OCTAVES = int(@PYRAMID_MAX_OCTAVES@);\nconst int PYRAMID_MAX_LEVELS = int(@PYRAMID_MAX_LEVELS@);\nconst float F_PYRAMID_MAX_LEVELS = float(@PYRAMID_MAX_LEVELS@);\nconst float LOG2_PYRAMID_MAX_SCALE = float(@LOG2_PYRAMID_MAX_SCALE@);\nfloat encodeLod(float lod)\n{\nreturn (LOG2_PYRAMID_MAX_SCALE + lod) / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS);\n}\nfloat decodeLod(float encodedLod)\n{\nreturn mix(0.0f,\nencodedLod * (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS) - LOG2_PYRAMID_MAX_SCALE,\nencodedLod < 1.0f\n);\n}\n#define isSameEncodedLod(alpha1, alpha2) (abs((alpha1) - (alpha2)) < encodedLodEps)\nconst float encodedLodEps = 0.2f / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS);\n#endif"
+module.exports = "#ifndef _PYRAMIDS_GLSL\n#define _PYRAMIDS_GLSL\n#define pyrPixel(pyr, lod) textureLod((pyr), texCoord, (lod))\n#define pyrPixelAtOffset(pyr, lod, pot, offset) textureLod((pyr), texCoord + ((pot) * vec2(offset)) / texSize, (lod))\n#define pyrPixelAt(pyr, pos, lod) textureLod((pyr), (vec2(pos) + vec2(0.5f)) / texSize, (lod))\n#define pyrPixelAtEx(pyr, pos, lod, pyrBaseSize) textureLod((pyr), (vec2(pos) + vec2(0.5f)) / vec2(pyrBaseSize), (lod))\n#define pyrSubpixelAtEx(pyr, pos, lod, pyrBaseSize) textureLod((pyr), ((pos) + vec2(0.5f)) / vec2(pyrBaseSize), (lod))\n#define pyrSubpixelAtExOffset(pyr, pos, lod, pot, offset, pyrBaseSize) textureLod((pyr), (((pos) + vec2(0.5f)) + ((pot) * vec2(offset))) / vec2(pyrBaseSize), (lod))\nconst int PYRAMID_MAX_OCTAVES = int(@PYRAMID_MAX_OCTAVES@);\nconst int PYRAMID_MAX_LEVELS = int(@PYRAMID_MAX_LEVELS@);\nconst float F_PYRAMID_MAX_LEVELS = float(@PYRAMID_MAX_LEVELS@);\nconst float LOG2_PYRAMID_MAX_SCALE = float(@LOG2_PYRAMID_MAX_SCALE@);\nfloat encodeLod(float lod)\n{\nreturn (LOG2_PYRAMID_MAX_SCALE + lod) / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS);\n}\nfloat decodeLod(float encodedLod)\n{\nfloat lod = encodedLod * (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS) - LOG2_PYRAMID_MAX_SCALE;\nreturn lod * float(encodedLod < 1.0f);\n}\n#define isSameEncodedLod(alpha1, alpha2) (abs((alpha1) - (alpha2)) < encodedLodEps)\nconst float encodedLodEps = 0.2f / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS);\n#endif"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/include/quickselect.glsl":
+/*!**************************************************!*\
+  !*** ./src/gpu/shaders/include/quickselect.glsl ***!
+  \**************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "#ifndef _QUICKSELECT_GLSL\n#define _QUICKSELECT_GLSL\n#if defined(QUICKSELECT_UNSIGNED) && !defined(QUICKSELECT_SIGNED)\n#define QS_TYPE uint\n#define QS_TYPE4 uvec4\n#elif !defined(QUICKSELECT_UNSIGNED) && defined(QUICKSELECT_SIGNED)\n#define QS_TYPE int\n#define QS_TYPE4 ivec4\n#else\n#error Must define either QUICKSELECT_SIGNED or QUICKSELECT_UNSIGNED before including quickselect\n#endif\n#if defined(QUICKSELECT_ASCENDING) && !defined(QUICKSELECT_DESCENDING)\n#define QS_ORD(element,pivot) ((element) < (pivot))\n#elif defined(QUICKSELECT_DESCENDING) && !defined(QUICKSELECT_ASCENDING)\n#define QS_ORD(element,pivot) ((element) > (pivot))\n#else\n#error Must define either QUICKSELECT_ASCENDING or QUICKSELECT_DESCENDING before including quickselect\n#endif\n#ifdef QUICKSELECT_ARRAY\n#define QS_ARRAY QUICKSELECT_ARRAY\n#else\n#error Must define QUICKSELECT_ARRAY before including quickselect\n#endif\nint qspart(int l, int r, int p)\n{\n#define QS_SWAP(a,b) t = QS_ARRAY[(a)]; QS_ARRAY[(a)] = QS_ARRAY[(b)]; QS_ARRAY[(b)] = t\nhighp QS_TYPE e, t, mask, pivot = QS_ARRAY[p];\nhighp QS_TYPE4 tmp;\nint q, cond;\nQS_SWAP(p, r);\nq = l;\nfor(int i = l; i < r; i++) {\ne = QS_ARRAY[i];\nt = QS_ARRAY[q];\ncond = int(QS_ORD(e, pivot));\nmask = QS_TYPE(-cond);\ntmp = QS_TYPE4(mask & t, (~mask) & e, mask & e, (~mask) & t);\nQS_ARRAY[i] = tmp.x | tmp.y;\nQS_ARRAY[q] = tmp.z | tmp.w;\nq += cond;\n}\nQS_SWAP(q, r);\nreturn q;\n}\nhighp QS_TYPE quickselect(int l, int r, int k)\n{\nint p = -1337;\nivec2 idx = ivec2(l, r);\nwhile(idx.s < idx.t && p != k) {\np = qspart(idx.s, idx.t, (idx.s + idx.t) / 2);\nidx = int(k < p) * ivec2(idx.s, p-1) + int(k >= p) * ivec2(p+1, idx.t);\n}\nreturn (p == k) ? QS_ARRAY[k] : QS_ARRAY[idx.s];\n}\n#endif"
 
 /***/ }),
 
@@ -13269,7 +13643,7 @@ module.exports = "#ifndef _PYRAMIDS_GLSL\n#define _PYRAMIDS_GLSL\n#define pyrPix
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "#ifndef _SOBEL_GLSL\n#define _SOBEL_GLSL\nvec4 encodeSobel(vec2 df)\n{\nconst vec2 zeroes = vec2(0.0f, 0.0f);\nvec2 dmax = -max(df, zeroes);\nvec2 dmin = min(df, zeroes);\nreturn exp2(vec4(dmax, dmin));\n}\nvec2 decodeSobel(vec4 encodedSobel)\n{\nvec4 lg = log2(encodedSobel);\nreturn vec2(lg.b - lg.r, lg.a - lg.g);\n}\n#endif"
+module.exports = "#ifndef _SOBEL_GLSL\n#define _SOBEL_GLSL\nvec4 encodeSobel(vec2 df)\n{\n#ifdef SOBEL_USE_LOG\nconst vec2 zero = vec2(0.0f);\nvec2 dmax = -max(df, zero);\nvec2 dmin = min(df, zero);\nreturn exp2(vec4(dmax, dmin));\n#else\nuint data = packHalf2x16(df);\nuvec4 bytes = uvec4(data, data >> 8, data >> 16, data >> 24) & 255u;\nreturn vec4(bytes) / 255.0f;\n#endif\n}\nvec2 decodeSobel(vec4 encodedSobel)\n{\n#ifdef SOBEL_USE_LOG\nvec4 lg = log2(encodedSobel);\nreturn vec2(lg.b - lg.r, lg.a - lg.g);\n#else\nuvec4 bytes = uvec4(encodedSobel * 255.0f);\nuint data = bytes.r | (bytes.g << 8) | (bytes.b << 16) | (bytes.a << 24);\nreturn unpackHalf2x16(data);\n#endif\n}\n#endif"
 
 /***/ }),
 
@@ -13357,7 +13731,7 @@ module.exports = "uniform sampler2D image;\nuniform float threshold;\nconst ivec
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D corners;\nuniform sampler2D maxScore;\nuniform float quality;\nvoid main()\n{\nvec4 pixel = threadPixel(corners);\nfloat threshold = threadPixel(maxScore).r * clamp(quality, 0.0f, 1.0f);\nfloat score = step(threshold, pixel.r) * pixel.r;\ncolor = vec4(score, pixel.gba);\n}"
+module.exports = "uniform sampler2D corners;\nuniform sampler2D maxScore;\nuniform float quality;\nvoid main()\n{\nvec4 pixel = threadPixel(corners);\nfloat maxVal = threadPixel(maxScore).r;\nfloat score = pixel.r;\nfloat threshold = maxVal * clamp(quality, 0.0f, 1.0f);\nscore *= step(threshold, score);\ncolor = vec4(score, pixel.gba);\n}"
 
 /***/ }),
 
@@ -13368,7 +13742,7 @@ module.exports = "uniform sampler2D corners;\nuniform sampler2D maxScore;\nunifo
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D pyramid;\nuniform float threshold;\nuniform int numberOfOctaves;\nconst ivec4 margin = ivec4(3, 3, 4, 4);\nconst vec4 zeroes = vec4(0.0f, 0.0f, 0.0f, 0.0f);\nconst vec4 ones = vec4(1.0f, 1.0f, 1.0f, 1.0f);\nvoid main()\n{\nvec4 pixel = threadPixel(pyramid);\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nvec2 best = vec2(0.0f, pixel.a);\n#ifdef USE_HARRIS_SCORE\nvec2 dfmm[PYRAMID_MAX_OCTAVES], dfm0[PYRAMID_MAX_OCTAVES], dfm1[PYRAMID_MAX_OCTAVES],\ndf0m[PYRAMID_MAX_OCTAVES], df00[PYRAMID_MAX_OCTAVES], df01[PYRAMID_MAX_OCTAVES],\ndf1m[PYRAMID_MAX_OCTAVES], df10[PYRAMID_MAX_OCTAVES], df11[PYRAMID_MAX_OCTAVES];\nfloat pyrpix = 0.0f;\nfor(int l = 0; l < numberOfOctaves; l++) {\nfloat lod = float(l) * 0.5f;\nfloat pot = exp2(lod);\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(-1,-1)).g;\ndfmm[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(-1,0)).g;\ndfm0[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(-1,1)).g;\ndfm1[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(0,-1)).g;\ndf0m[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(0,0)).g;\ndf00[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(0,1)).g;\ndf01[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(1,-1)).g;\ndf1m[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(1,0)).g;\ndf10[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(1,1)).g;\ndf11[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\n}\n#endif\ncolor = vec4(0.0f, pixel.g, 0.0f, pixel.a);\nfloat lod = 0.0f, pot = 1.0f;\nfor(int octave = 0; octave < numberOfOctaves; octave++, pot = exp2(lod += 0.5f)) {\npixel = pyrPixel(pyramid, lod);\nct = pixel.g + t;\nc_t = pixel.g - t;\nvec4 p4k = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, 3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, 0)).g\n);\nmat4 mp = mat4(\np4k.x,\np4k.y,\np4k.z,\np4k.w,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, 2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, -2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, -2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, 2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 3)).g\n);\nbool A=(mp[0][0]>ct),B=(mp[1][0]>ct),C=(mp[2][0]>ct),D=(mp[3][0]>ct),E=(mp[0][1]>ct),F=(mp[1][1]>ct),G=(mp[2][1]>ct),H=(mp[3][1]>ct),I=(mp[0][2]>ct),J=(mp[1][2]>ct),K=(mp[2][2]>ct),L=(mp[3][2]>ct),M=(mp[0][3]>ct),N=(mp[1][3]>ct),O=(mp[2][3]>ct),P=(mp[3][3]>ct),a=(mp[0][0]<c_t),b=(mp[1][0]<c_t),c=(mp[2][0]<c_t),d=(mp[3][0]<c_t),e=(mp[0][1]<c_t),f=(mp[1][1]<c_t),g=(mp[2][1]<c_t),h=(mp[3][1]<c_t),i=(mp[0][2]<c_t),j=(mp[1][2]<c_t),k=(mp[2][2]<c_t),l=(mp[3][2]<c_t),m=(mp[0][3]<c_t),n=(mp[1][3]<c_t),o=(mp[2][3]<c_t),p=(mp[3][3]<c_t);\nbool isCorner=A&&(B&&(K&&L&&J&&(M&&N&&O&&P||G&&H&&I&&(M&&N&&O||F&&(M&&N||E&&(M||D))))||C&&(K&&L&&M&&(N&&O&&P||G&&H&&I&&J&&(N&&O||F&&(N||E)))||D&&(N&&(L&&M&&(K&&G&&H&&I&&J&&(O||F)||O&&P)||k&&l&&m&&e&&f&&g&&h&&i&&j)||E&&(O&&(M&&N&&(K&&L&&G&&H&&I&&J||P)||k&&l&&m&&n&&f&&g&&h&&i&&j)||F&&(P&&(N&&O||k&&l&&m&&n&&o&&g&&h&&i&&j)||G&&(O&&P||H&&(P||I)||k&&l&&m&&n&&o&&p&&h&&i&&j)||k&&l&&m&&n&&o&&h&&i&&j&&(p||g))||k&&l&&m&&n&&h&&i&&j&&(o&&(p||g)||f&&(o&&p||g)))||k&&l&&m&&h&&i&&j&&(n&&(o&&p||g&&(o||f))||e&&(n&&o&&p||g&&(n&&o||f))))||k&&l&&h&&i&&j&&(m&&(n&&o&&p||g&&(n&&o||f&&(n||e)))||d&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e)))))||k&&h&&i&&j&&(l&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d))))))||K&&I&&J&&(L&&M&&N&&O&&P||G&&H&&(L&&M&&N&&O||F&&(L&&M&&N||E&&(L&&M||D&&(L||C)))))||h&&i&&j&&(b&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c)))))||k&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c)))))))||B&&(H&&I&&J&&(K&&L&&M&&N&&O&&P&&a||G&&(K&&L&&M&&N&&O&&a||F&&(K&&L&&M&&N&&a||E&&(K&&L&&M&&a||D&&(K&&L&&a||C)))))||a&&k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||C&&(K&&H&&I&&J&&(L&&M&&N&&O&&P&&a&&b||G&&(L&&M&&N&&O&&a&&b||F&&(L&&M&&N&&a&&b||E&&(L&&M&&a&&b||D))))||a&&b&&k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d)))))||D&&(K&&L&&H&&I&&J&&(M&&N&&O&&P&&a&&b&&c||G&&(M&&N&&O&&a&&b&&c||F&&(M&&N&&a&&b&&c||E)))||a&&b&&k&&l&&m&&c&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e))))||E&&(K&&L&&M&&H&&I&&J&&(N&&O&&P&&a&&b&&c&&d||G&&(N&&O&&a&&b&&c&&d||F))||a&&b&&l&&m&&n&&c&&d&&(k&&g&&h&&i&&j&&(o||f)||o&&p))||F&&(K&&L&&M&&N&&H&&I&&J&&(O&&P&&a&&b&&c&&d&&e||G)||a&&b&&m&&n&&o&&c&&d&&e&&(k&&l&&g&&h&&i&&j||p))||G&&(K&&L&&M&&N&&O&&H&&I&&J||a&&b&&n&&o&&p&&c&&d&&e&&f)||H&&(K&&L&&M&&N&&O&&P&&I&&J||a&&b&&o&&p&&c&&d&&e&&f&&g)||a&&(b&&(k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(k&&l&&m&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e)))||d&&(l&&m&&n&&(k&&g&&h&&i&&j&&(o||f)||o&&p)||e&&(m&&n&&o&&(k&&l&&g&&h&&i&&j||p)||f&&(n&&o&&p||g&&(o&&p||h&&(p||i)))))))||k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||h&&i&&j&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c&&(b||k))))));\nfloat score = 0.0f;\n#ifdef USE_HARRIS_SCORE\nvec2 df0 = dfmm[octave], df1 = dfm0[octave], df2 = dfm1[octave],\ndf3 = df0m[octave], df4 = df00[octave], df5 = df01[octave],\ndf6 = df1m[octave], df7 = df10[octave], df8 = df11[octave];\nvec3 hm = vec3(0.0f);\nhm += vec3(df0.x * df0.x, df0.x * df0.y, df0.y * df0.y);\nhm += vec3(df1.x * df1.x, df1.x * df1.y, df1.y * df1.y);\nhm += vec3(df2.x * df2.x, df2.x * df2.y, df2.y * df2.y);\nhm += vec3(df3.x * df3.x, df3.x * df3.y, df3.y * df3.y);\nhm += vec3(df4.x * df4.x, df4.x * df4.y, df4.y * df4.y);\nhm += vec3(df5.x * df5.x, df5.x * df5.y, df5.y * df5.y);\nhm += vec3(df6.x * df6.x, df6.x * df6.y, df6.y * df6.y);\nhm += vec3(df7.x * df7.x, df7.x * df7.y, df7.y * df7.y);\nhm += vec3(df8.x * df8.x, df8.x * df8.y, df8.y * df8.y);\nfloat response = 0.5f * (hm.x + hm.z - sqrt((hm.x - hm.z) * (hm.x - hm.z) + 4.0f * hm.y * hm.y));\nconst float WINDOW_AREA = 9.0f;\nconst float EIGENVALUE_NORMALIZER = 3.0f / WINDOW_AREA;\nscore = clamp(response * EIGENVALUE_NORMALIZER, 0.0f, 1.0f);\n#else\nmat4 mct = mp - mat4(\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct\n), mc_t = mat4(\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t\n) - mp;\nvec4 bs = max(mc_t[0], zeroes), ds = max(mct[0], zeroes);\nbs += max(mc_t[1], zeroes); ds += max(mct[1], zeroes);\nbs += max(mc_t[2], zeroes); ds += max(mct[2], zeroes);\nbs += max(mc_t[3], zeroes); ds += max(mct[3], zeroes);\nscore = max(dot(bs, ones), dot(ds, ones)) / 16.0f;\n#endif\nscore *= float(isCorner);\nivec2 remainder = thread % int(pot);\nscore *= float(remainder.x + remainder.y == 0);\nfloat scale = encodeLod(lod);\nbest = (score > best.x) ? vec2(score, scale) : best;\n}\ncolor.rba = best.xxy;\n}"
+module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D pyramid;\nuniform float threshold;\nuniform int numberOfOctaves;\nuniform float lodStep;\nconst ivec4 margin = ivec4(3, 3, 4, 4);\nconst vec4 zeroes = vec4(0.0f, 0.0f, 0.0f, 0.0f);\nconst vec4 ones = vec4(1.0f, 1.0f, 1.0f, 1.0f);\nvoid main()\n{\nvec4 pixel = threadPixel(pyramid);\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nvec2 best = vec2(0.0f, pixel.a);\n#ifdef USE_HARRIS_SCORE\nvec2 dfmm[PYRAMID_MAX_OCTAVES], dfm0[PYRAMID_MAX_OCTAVES], dfm1[PYRAMID_MAX_OCTAVES],\ndf0m[PYRAMID_MAX_OCTAVES], df00[PYRAMID_MAX_OCTAVES], df01[PYRAMID_MAX_OCTAVES],\ndf1m[PYRAMID_MAX_OCTAVES], df10[PYRAMID_MAX_OCTAVES], df11[PYRAMID_MAX_OCTAVES];\nfloat pyrpix = 0.0f;\nfor(int l = 0; l < numberOfOctaves; l++) {\nfloat lod = float(l) * lodStep;\nfloat pot = exp2(lod);\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(-1,-1)).g;\ndfmm[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(-1,0)).g;\ndfm0[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(-1,1)).g;\ndfm1[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(0,-1)).g;\ndf0m[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(0,0)).g;\ndf00[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(0,1)).g;\ndf01[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(1,-1)).g;\ndf1m[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(1,0)).g;\ndf10[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(1,1)).g;\ndf11[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\n}\n#endif\ncolor = vec4(0.0f, pixel.g, 0.0f, pixel.a);\nfloat lod = 0.0f, pot = 1.0f;\nfor(int octave = 0; octave < numberOfOctaves; octave++) {\npixel = pyrPixel(pyramid, lod);\nct = pixel.g + t;\nc_t = pixel.g - t;\nvec4 p4k = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, 3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, 0)).g\n);\nmat4 mp = mat4(\np4k.x,\np4k.y,\np4k.z,\np4k.w,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, 2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, -2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, -2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, 2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 3)).g\n);\nbool A=(mp[0][0]>ct),B=(mp[1][0]>ct),C=(mp[2][0]>ct),D=(mp[3][0]>ct),E=(mp[0][1]>ct),F=(mp[1][1]>ct),G=(mp[2][1]>ct),H=(mp[3][1]>ct),I=(mp[0][2]>ct),J=(mp[1][2]>ct),K=(mp[2][2]>ct),L=(mp[3][2]>ct),M=(mp[0][3]>ct),N=(mp[1][3]>ct),O=(mp[2][3]>ct),P=(mp[3][3]>ct),a=(mp[0][0]<c_t),b=(mp[1][0]<c_t),c=(mp[2][0]<c_t),d=(mp[3][0]<c_t),e=(mp[0][1]<c_t),f=(mp[1][1]<c_t),g=(mp[2][1]<c_t),h=(mp[3][1]<c_t),i=(mp[0][2]<c_t),j=(mp[1][2]<c_t),k=(mp[2][2]<c_t),l=(mp[3][2]<c_t),m=(mp[0][3]<c_t),n=(mp[1][3]<c_t),o=(mp[2][3]<c_t),p=(mp[3][3]<c_t);\nbool isCorner=A&&(B&&(K&&L&&J&&(M&&N&&O&&P||G&&H&&I&&(M&&N&&O||F&&(M&&N||E&&(M||D))))||C&&(K&&L&&M&&(N&&O&&P||G&&H&&I&&J&&(N&&O||F&&(N||E)))||D&&(N&&(L&&M&&(K&&G&&H&&I&&J&&(O||F)||O&&P)||k&&l&&m&&e&&f&&g&&h&&i&&j)||E&&(O&&(M&&N&&(K&&L&&G&&H&&I&&J||P)||k&&l&&m&&n&&f&&g&&h&&i&&j)||F&&(P&&(N&&O||k&&l&&m&&n&&o&&g&&h&&i&&j)||G&&(O&&P||H&&(P||I)||k&&l&&m&&n&&o&&p&&h&&i&&j)||k&&l&&m&&n&&o&&h&&i&&j&&(p||g))||k&&l&&m&&n&&h&&i&&j&&(o&&(p||g)||f&&(o&&p||g)))||k&&l&&m&&h&&i&&j&&(n&&(o&&p||g&&(o||f))||e&&(n&&o&&p||g&&(n&&o||f))))||k&&l&&h&&i&&j&&(m&&(n&&o&&p||g&&(n&&o||f&&(n||e)))||d&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e)))))||k&&h&&i&&j&&(l&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d))))))||K&&I&&J&&(L&&M&&N&&O&&P||G&&H&&(L&&M&&N&&O||F&&(L&&M&&N||E&&(L&&M||D&&(L||C)))))||h&&i&&j&&(b&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c)))))||k&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c)))))))||B&&(H&&I&&J&&(K&&L&&M&&N&&O&&P&&a||G&&(K&&L&&M&&N&&O&&a||F&&(K&&L&&M&&N&&a||E&&(K&&L&&M&&a||D&&(K&&L&&a||C)))))||a&&k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||C&&(K&&H&&I&&J&&(L&&M&&N&&O&&P&&a&&b||G&&(L&&M&&N&&O&&a&&b||F&&(L&&M&&N&&a&&b||E&&(L&&M&&a&&b||D))))||a&&b&&k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d)))))||D&&(K&&L&&H&&I&&J&&(M&&N&&O&&P&&a&&b&&c||G&&(M&&N&&O&&a&&b&&c||F&&(M&&N&&a&&b&&c||E)))||a&&b&&k&&l&&m&&c&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e))))||E&&(K&&L&&M&&H&&I&&J&&(N&&O&&P&&a&&b&&c&&d||G&&(N&&O&&a&&b&&c&&d||F))||a&&b&&l&&m&&n&&c&&d&&(k&&g&&h&&i&&j&&(o||f)||o&&p))||F&&(K&&L&&M&&N&&H&&I&&J&&(O&&P&&a&&b&&c&&d&&e||G)||a&&b&&m&&n&&o&&c&&d&&e&&(k&&l&&g&&h&&i&&j||p))||G&&(K&&L&&M&&N&&O&&H&&I&&J||a&&b&&n&&o&&p&&c&&d&&e&&f)||H&&(K&&L&&M&&N&&O&&P&&I&&J||a&&b&&o&&p&&c&&d&&e&&f&&g)||a&&(b&&(k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(k&&l&&m&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e)))||d&&(l&&m&&n&&(k&&g&&h&&i&&j&&(o||f)||o&&p)||e&&(m&&n&&o&&(k&&l&&g&&h&&i&&j||p)||f&&(n&&o&&p||g&&(o&&p||h&&(p||i)))))))||k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||h&&i&&j&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c&&(b||k))))));\nfloat score = 0.0f;\n#ifdef USE_HARRIS_SCORE\nvec2 df0 = dfmm[octave], df1 = dfm0[octave], df2 = dfm1[octave],\ndf3 = df0m[octave], df4 = df00[octave], df5 = df01[octave],\ndf6 = df1m[octave], df7 = df10[octave], df8 = df11[octave];\nvec3 hm = vec3(0.0f);\nhm += vec3(df0.x * df0.x, df0.x * df0.y, df0.y * df0.y);\nhm += vec3(df1.x * df1.x, df1.x * df1.y, df1.y * df1.y);\nhm += vec3(df2.x * df2.x, df2.x * df2.y, df2.y * df2.y);\nhm += vec3(df3.x * df3.x, df3.x * df3.y, df3.y * df3.y);\nhm += vec3(df4.x * df4.x, df4.x * df4.y, df4.y * df4.y);\nhm += vec3(df5.x * df5.x, df5.x * df5.y, df5.y * df5.y);\nhm += vec3(df6.x * df6.x, df6.x * df6.y, df6.y * df6.y);\nhm += vec3(df7.x * df7.x, df7.x * df7.y, df7.y * df7.y);\nhm += vec3(df8.x * df8.x, df8.x * df8.y, df8.y * df8.y);\nfloat response = 0.5f * (hm.x + hm.z - sqrt((hm.x - hm.z) * (hm.x - hm.z) + 4.0f * hm.y * hm.y));\nconst float WINDOW_AREA = 9.0f;\nconst float EIGENVALUE_NORMALIZER = 9.0f / WINDOW_AREA;\nscore = response * EIGENVALUE_NORMALIZER;\nscore = 1.0f - exp2(-score);\n#else\nmat4 mct = mp - mat4(\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct\n), mc_t = mat4(\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t\n) - mp;\nvec4 bs = max(mc_t[0], zeroes), ds = max(mct[0], zeroes);\nbs += max(mc_t[1], zeroes); ds += max(mct[1], zeroes);\nbs += max(mc_t[2], zeroes); ds += max(mct[2], zeroes);\nbs += max(mc_t[3], zeroes); ds += max(mct[3], zeroes);\nscore = max(dot(bs, ones), dot(ds, ones)) / 16.0f;\n#endif\nscore *= float(isCorner);\nivec2 remainder = thread % int(pot);\nscore *= float(remainder.x + remainder.y == 0);\nfloat scale = encodeLod(lod);\nbest *= float(score <= best.x);\nbest += float(score > best.x) * vec2(score, scale);\nlod += lodStep;\npot = exp2(lod);\n}\ncolor.rba = best.xxy;\n}"
 
 /***/ }),
 
@@ -13379,7 +13753,7 @@ module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D pyramid;\nunifor
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"sobel.glsl\"\n@include \"pyramids.glsl\"\nuniform sampler2D pyramid;\nuniform int windowSize;\nuniform int numberOfOctaves;\nuniform sampler2D sobelDerivatives[@PYRAMID_MAX_OCTAVES@];\nvec4 pickSobelDerivatives(int index, ivec2 offset)\n{\nswitch(index) {\ncase 0:  return textureLod(sobelDerivatives[0], texCoord + vec2(offset) / texSize, 0.0f);\ncase 1:  return textureLod(sobelDerivatives[1], texCoord + vec2(offset) / texSize, 0.0f);\ncase 2:  return textureLod(sobelDerivatives[2], texCoord + vec2(offset) / texSize, 0.0f);\ncase 3:  return textureLod(sobelDerivatives[3], texCoord + vec2(offset) / texSize, 0.0f);\ncase 4:  return textureLod(sobelDerivatives[4], texCoord + vec2(offset) / texSize, 0.0f);\ncase 5:  return textureLod(sobelDerivatives[5], texCoord + vec2(offset) / texSize, 0.0f);\ncase 6:  return textureLod(sobelDerivatives[6], texCoord + vec2(offset) / texSize, 0.0f);\ndefault: return textureLod(sobelDerivatives[0], texCoord + vec2(offset) / texSize, 0.0f);\n}\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(pyramid);\nvec2 best = vec2(0.0f, pixel.a);\nint r = (windowSize - 1) / 2;\nfloat windowArea = float(windowSize * windowSize);\nfor(int octave = 0; octave < numberOfOctaves; octave++) {\nvec3 m = vec3(0.0f, 0.0f, 0.0f);\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nvec2 df = decodeSobel(pickSobelDerivatives(octave, ivec2(i-r, j-r)));\nm += vec3(df.x * df.x, df.x * df.y, df.y * df.y);\n}\n}\nfloat response = 0.5f * (m.x + m.z - sqrt((m.x - m.z) * (m.x - m.z) + 4.0f * m.y * m.y));\nfloat normalizer = 3.0f / windowArea;\nfloat score = clamp(response * normalizer, 0.0f, 1.0f);\nfloat lod = 0.5f * float(octave);\nfloat scale = encodeLod(lod);\nbest = (score > best.x) ? vec2(score, scale) : best;\n}\ncolor = vec4(best.x, pixel.g, best.xy);\n}"
+module.exports = "@include \"sobel.glsl\"\n@include \"pyramids.glsl\"\nuniform sampler2D pyramid;\nuniform int windowSize;\nuniform int numberOfOctaves;\nuniform float lodStep;\nuniform sampler2D sobelDerivatives[@PYRAMID_MAX_OCTAVES@];\nvec4 pickSobelDerivatives(int index, ivec2 offset)\n{\n#define MAX_OCTAVES @PYRAMID_MAX_OCTAVES@\n#if MAX_OCTAVES < 7 || MAX_OCTAVES > 16 || MAX_OCTAVES % 2 == 0\n#error MAX_OCTAVES cannot be @PYRAMID_MAX_OCTAVES@\n#endif\nswitch(index) {\ncase 0:  return textureLod(sobelDerivatives[0], texCoord + vec2(offset) / texSize, 0.0f);\ncase 1:  return textureLod(sobelDerivatives[1], texCoord + vec2(offset) / texSize, 0.0f);\ncase 2:  return textureLod(sobelDerivatives[2], texCoord + vec2(offset) / texSize, 0.0f);\ncase 3:  return textureLod(sobelDerivatives[3], texCoord + vec2(offset) / texSize, 0.0f);\ncase 4:  return textureLod(sobelDerivatives[4], texCoord + vec2(offset) / texSize, 0.0f);\ncase 5:  return textureLod(sobelDerivatives[5], texCoord + vec2(offset) / texSize, 0.0f);\ncase 6:  return textureLod(sobelDerivatives[6], texCoord + vec2(offset) / texSize, 0.0f);\n#if MAX_OCTAVES > 15\ncase 15: return textureLod(sobelDerivatives[15], texCoord + vec2(offset) / texSize, 0.0f);\n#elif MAX_OCTAVES > 13\ncase 14: return textureLod(sobelDerivatives[14], texCoord + vec2(offset) / texSize, 0.0f);\ncase 13: return textureLod(sobelDerivatives[13], texCoord + vec2(offset) / texSize, 0.0f);\n#elif MAX_OCTAVES > 11\ncase 12: return textureLod(sobelDerivatives[12], texCoord + vec2(offset) / texSize, 0.0f);\ncase 11: return textureLod(sobelDerivatives[11], texCoord + vec2(offset) / texSize, 0.0f);\n#elif MAX_OCTAVES > 9\ncase 10: return textureLod(sobelDerivatives[10], texCoord + vec2(offset) / texSize, 0.0f);\ncase 9:  return textureLod(sobelDerivatives[9], texCoord + vec2(offset) / texSize, 0.0f);\n#elif MAX_OCTAVES > 7\ncase 8:  return textureLod(sobelDerivatives[8], texCoord + vec2(offset) / texSize, 0.0f);\ncase 7:  return textureLod(sobelDerivatives[7], texCoord + vec2(offset) / texSize, 0.0f);\n#endif\ndefault: return vec4(0.0f);\n}\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(pyramid);\nvec2 best = vec2(0.0f, pixel.a);\nint r = (windowSize - 1) / 2;\nfloat windowArea = float(windowSize * windowSize);\nfor(int octave = 0; octave < numberOfOctaves; octave++) {\nvec3 m = vec3(0.0f);\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nvec2 df = decodeSobel(pickSobelDerivatives(octave, ivec2(i-r, j-r)));\nm += vec3(df.x * df.x, df.x * df.y, df.y * df.y);\n}\n}\nfloat response = 0.5f * (m.x + m.z - sqrt((m.x - m.z) * (m.x - m.z) + 4.0f * m.y * m.y));\nfloat normalizer = 9.0f / windowArea;\nfloat score = response * normalizer;\nfloat lod = lodStep * float(octave);\nfloat scale = encodeLod(lod);\nbest *= float(score <= best.x);\nbest += float(score > best.x) * vec2(score, scale);\n}\nfloat encodedScore = 1.0f - exp2(-best.x);\ncolor = vec4(encodedScore, pixel.g, best.xy);\n}"
 
 /***/ }),
 
@@ -13390,7 +13764,7 @@ module.exports = "@include \"sobel.glsl\"\n@include \"pyramids.glsl\"\nuniform s
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\n#define ENABLE_INNER_RING\n#define ENABLE_MIDDLE_RING\n#define ENABLE_OUTER_RING\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat lod = decodeLod(pixel.a);\nfloat lodJump = 0.5f;\ncolor = pixel;\nif(pixel.r == 0.0f)\nreturn;\n#ifdef ENABLE_INNER_RING\nvec4 p0 = pixelAtShortOffset(image, ivec2(0, 1));\nvec4 p1 = pixelAtShortOffset(image, ivec2(1, 1));\nvec4 p2 = pixelAtShortOffset(image, ivec2(1, 0));\nvec4 p3 = pixelAtShortOffset(image, ivec2(1, -1));\nvec4 p4 = pixelAtShortOffset(image, ivec2(0, -1));\nvec4 p5 = pixelAtShortOffset(image, ivec2(-1, -1));\nvec4 p6 = pixelAtShortOffset(image, ivec2(-1, 0));\nvec4 p7 = pixelAtShortOffset(image, ivec2(-1, 1));\n#else\nvec4 p0, p1, p2, p3, p4, p5, p6, p7;\np0 = p1 = p2 = p3 = p4 = p5 = p6 = p7 = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n#endif\n#ifdef ENABLE_MIDDLE_RING\nvec4 q0 = pixelAtShortOffset(image, ivec2(0, 2));\nvec4 q1 = pixelAtShortOffset(image, ivec2(1, 2));\nvec4 q2 = pixelAtShortOffset(image, ivec2(2, 2));\nvec4 q3 = pixelAtShortOffset(image, ivec2(2, 1));\nvec4 q4 = pixelAtShortOffset(image, ivec2(2, 0));\nvec4 q5 = pixelAtShortOffset(image, ivec2(2, -1));\nvec4 q6 = pixelAtShortOffset(image, ivec2(2, -2));\nvec4 q7 = pixelAtShortOffset(image, ivec2(1, -2));\nvec4 q8 = pixelAtShortOffset(image, ivec2(0, -2));\nvec4 q9 = pixelAtShortOffset(image, ivec2(-1, -2));\nvec4 q10 = pixelAtShortOffset(image, ivec2(-2, -2));\nvec4 q11 = pixelAtShortOffset(image, ivec2(-2, -1));\nvec4 q12 = pixelAtShortOffset(image, ivec2(-2, 0));\nvec4 q13 = pixelAtShortOffset(image, ivec2(-2, 1));\nvec4 q14 = pixelAtShortOffset(image, ivec2(-2, 2));\nvec4 q15 = pixelAtShortOffset(image, ivec2(-1, 2));\n#else\nvec4 q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15;\nq0 = q1 = q2 = q3 = q4 = q5 = q6 = q7 = q8 = q9 = q10 =\nq11 = q12 = q13 = q14 = q15= vec4(0.0f, 0.0f, 0.0f, 1.0f);\n#endif\n#ifdef ENABLE_OUTER_RING\nvec4 r0 = pixelAtShortOffset(image, ivec2(0, 3));\nvec4 r1 = pixelAtShortOffset(image, ivec2(1, 3));\nvec4 r2 = pixelAtShortOffset(image, ivec2(3, 1));\nvec4 r3 = pixelAtShortOffset(image, ivec2(3, 0));\nvec4 r4 = pixelAtShortOffset(image, ivec2(3, -1));\nvec4 r5 = pixelAtShortOffset(image, ivec2(1, -3));\nvec4 r6 = pixelAtShortOffset(image, ivec2(0, -3));\nvec4 r7 = pixelAtShortOffset(image, ivec2(-1, -3));\nvec4 r8 = pixelAtShortOffset(image, ivec2(-3, -1));\nvec4 r9 = pixelAtShortOffset(image, ivec2(-3, 0));\nvec4 r10 = pixelAtShortOffset(image, ivec2(-3, 1));\nvec4 r11 = pixelAtShortOffset(image, ivec2(-1, 3));\nvec4 r12 = pixelAtShortOffset(image, ivec2(0, 4));\nvec4 r13 = pixelAtShortOffset(image, ivec2(4, 0));\nvec4 r14 = pixelAtShortOffset(image, ivec2(0, -4));\nvec4 r15 = pixelAtShortOffset(image, ivec2(-4, 0));\n#else\nvec4 r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15;\nr0 = r1 = r2 = r3 = r4 = r5 = r6 = r7 = r8 = r9 = r10 =\nr11 = r12 = r13 = r14 = r15 = vec4(0.0f, 0.0f, 0.0f, 1.0f);\n#endif\nfloat lodPlus = min(lod + lodJump, F_PYRAMID_MAX_LEVELS - 1.0f);\nfloat lodMinus = max(lod - lodJump, 0.0f);\nfloat alphaPlus = encodeLod(lodPlus);\nfloat alphaMinus = encodeLod(lodMinus);\nmat3 innerScore = mat3(\np0.r * float(isSameEncodedLod(p0.a, alphaPlus) || isSameEncodedLod(p0.a, alphaMinus)),\np1.r * float(isSameEncodedLod(p1.a, alphaPlus) || isSameEncodedLod(p1.a, alphaMinus)),\np2.r * float(isSameEncodedLod(p2.a, alphaPlus) || isSameEncodedLod(p2.a, alphaMinus)),\np3.r * float(isSameEncodedLod(p3.a, alphaPlus) || isSameEncodedLod(p3.a, alphaMinus)),\np4.r * float(isSameEncodedLod(p4.a, alphaPlus) || isSameEncodedLod(p4.a, alphaMinus)),\np5.r * float(isSameEncodedLod(p5.a, alphaPlus) || isSameEncodedLod(p5.a, alphaMinus)),\np6.r * float(isSameEncodedLod(p6.a, alphaPlus) || isSameEncodedLod(p6.a, alphaMinus)),\np7.r * float(isSameEncodedLod(p7.a, alphaPlus) || isSameEncodedLod(p7.a, alphaMinus)),\n0.0f\n);\nmat4 middleScore = mat4(\nq0.r * float(isSameEncodedLod(q0.a, alphaPlus) || isSameEncodedLod(q0.a, alphaMinus)),\nq1.r * float(isSameEncodedLod(q1.a, alphaPlus) || isSameEncodedLod(q1.a, alphaMinus)),\nq2.r * float(isSameEncodedLod(q2.a, alphaPlus) || isSameEncodedLod(q2.a, alphaMinus)),\nq3.r * float(isSameEncodedLod(q3.a, alphaPlus) || isSameEncodedLod(q3.a, alphaMinus)),\nq4.r * float(isSameEncodedLod(q4.a, alphaPlus) || isSameEncodedLod(q4.a, alphaMinus)),\nq5.r * float(isSameEncodedLod(q5.a, alphaPlus) || isSameEncodedLod(q5.a, alphaMinus)),\nq6.r * float(isSameEncodedLod(q6.a, alphaPlus) || isSameEncodedLod(q6.a, alphaMinus)),\nq7.r * float(isSameEncodedLod(q7.a, alphaPlus) || isSameEncodedLod(q7.a, alphaMinus)),\nq8.r * float(isSameEncodedLod(q8.a, alphaPlus) || isSameEncodedLod(q8.a, alphaMinus)),\nq9.r * float(isSameEncodedLod(q9.a, alphaPlus) || isSameEncodedLod(q9.a, alphaMinus)),\nq10.r * float(isSameEncodedLod(q10.a, alphaPlus) || isSameEncodedLod(q10.a, alphaMinus)),\nq11.r * float(isSameEncodedLod(q11.a, alphaPlus) || isSameEncodedLod(q11.a, alphaMinus)),\nq12.r * float(isSameEncodedLod(q12.a, alphaPlus) || isSameEncodedLod(q12.a, alphaMinus)),\nq13.r * float(isSameEncodedLod(q13.a, alphaPlus) || isSameEncodedLod(q13.a, alphaMinus)),\nq14.r * float(isSameEncodedLod(q14.a, alphaPlus) || isSameEncodedLod(q14.a, alphaMinus)),\nq15.r * float(isSameEncodedLod(q15.a, alphaPlus) || isSameEncodedLod(q15.a, alphaMinus))\n);\nmat4 outerScore = mat4(\nr0.r * float(isSameEncodedLod(r0.a, alphaPlus) || isSameEncodedLod(r0.a, alphaMinus)),\nr1.r * float(isSameEncodedLod(r1.a, alphaPlus) || isSameEncodedLod(r1.a, alphaMinus)),\nr2.r * float(isSameEncodedLod(r2.a, alphaPlus) || isSameEncodedLod(r2.a, alphaMinus)),\nr3.r * float(isSameEncodedLod(r3.a, alphaPlus) || isSameEncodedLod(r3.a, alphaMinus)),\nr4.r * float(isSameEncodedLod(r4.a, alphaPlus) || isSameEncodedLod(r4.a, alphaMinus)),\nr5.r * float(isSameEncodedLod(r5.a, alphaPlus) || isSameEncodedLod(r5.a, alphaMinus)),\nr6.r * float(isSameEncodedLod(r6.a, alphaPlus) || isSameEncodedLod(r6.a, alphaMinus)),\nr7.r * float(isSameEncodedLod(r7.a, alphaPlus) || isSameEncodedLod(r7.a, alphaMinus)),\nr8.r * float(isSameEncodedLod(r8.a, alphaPlus) || isSameEncodedLod(r8.a, alphaMinus)),\nr9.r * float(isSameEncodedLod(r9.a, alphaPlus) || isSameEncodedLod(r9.a, alphaMinus)),\nr10.r * float(isSameEncodedLod(r10.a, alphaPlus) || isSameEncodedLod(r10.a, alphaMinus)),\nr11.r * float(isSameEncodedLod(r11.a, alphaPlus) || isSameEncodedLod(r11.a, alphaMinus)),\nr12.r * float(isSameEncodedLod(r12.a, alphaPlus) || isSameEncodedLod(r12.a, alphaMinus)),\nr13.r * float(isSameEncodedLod(r13.a, alphaPlus) || isSameEncodedLod(r13.a, alphaMinus)),\nr14.r * float(isSameEncodedLod(r14.a, alphaPlus) || isSameEncodedLod(r14.a, alphaMinus)),\nr15.r * float(isSameEncodedLod(r15.a, alphaPlus) || isSameEncodedLod(r15.a, alphaMinus))\n);\nvec3 maxInnerScore3 = max(innerScore[0], max(innerScore[1], innerScore[2]));\nvec4 maxMiddleScore4 = max(max(middleScore[0], middleScore[1]), max(middleScore[2], middleScore[3]));\nvec4 maxOuterScore4 = max(max(outerScore[0], outerScore[1]), max(outerScore[2], outerScore[3]));\nfloat maxInnerScore = max(maxInnerScore3.x, max(maxInnerScore3.y, maxInnerScore3.z));\nfloat maxMiddleScore = max(max(maxMiddleScore4.x, maxMiddleScore4.y), max(maxMiddleScore4.z, maxMiddleScore4.w));\nfloat maxOuterScore = max(max(maxOuterScore4.x, maxOuterScore4.y), max(maxOuterScore4.z, maxOuterScore4.w));\nfloat maxScore = max(maxInnerScore, max(maxMiddleScore, maxOuterScore));\nfloat myScore = step(maxScore, pixel.r) * pixel.r;\ncolor = vec4(myScore, pixel.gba);\n}"
+module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\nuniform float lodStep;\n#define ENABLE_INNER_RING\n#define ENABLE_MIDDLE_RING\n#define ENABLE_OUTER_RING\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat lod = decodeLod(pixel.a);\ncolor = pixel;\nif(pixel.r == 0.0f)\nreturn;\n#ifdef ENABLE_INNER_RING\nvec4 p0 = pixelAtShortOffset(image, ivec2(0, 1));\nvec4 p1 = pixelAtShortOffset(image, ivec2(1, 1));\nvec4 p2 = pixelAtShortOffset(image, ivec2(1, 0));\nvec4 p3 = pixelAtShortOffset(image, ivec2(1, -1));\nvec4 p4 = pixelAtShortOffset(image, ivec2(0, -1));\nvec4 p5 = pixelAtShortOffset(image, ivec2(-1, -1));\nvec4 p6 = pixelAtShortOffset(image, ivec2(-1, 0));\nvec4 p7 = pixelAtShortOffset(image, ivec2(-1, 1));\n#else\nvec4 p0, p1, p2, p3, p4, p5, p6, p7;\np0 = p1 = p2 = p3 = p4 = p5 = p6 = p7 = vec4(0.0f);\n#endif\n#ifdef ENABLE_MIDDLE_RING\nvec4 q0 = pixelAtShortOffset(image, ivec2(0, 2));\nvec4 q1 = pixelAtShortOffset(image, ivec2(1, 2));\nvec4 q2 = pixelAtShortOffset(image, ivec2(2, 2));\nvec4 q3 = pixelAtShortOffset(image, ivec2(2, 1));\nvec4 q4 = pixelAtShortOffset(image, ivec2(2, 0));\nvec4 q5 = pixelAtShortOffset(image, ivec2(2, -1));\nvec4 q6 = pixelAtShortOffset(image, ivec2(2, -2));\nvec4 q7 = pixelAtShortOffset(image, ivec2(1, -2));\nvec4 q8 = pixelAtShortOffset(image, ivec2(0, -2));\nvec4 q9 = pixelAtShortOffset(image, ivec2(-1, -2));\nvec4 q10 = pixelAtShortOffset(image, ivec2(-2, -2));\nvec4 q11 = pixelAtShortOffset(image, ivec2(-2, -1));\nvec4 q12 = pixelAtShortOffset(image, ivec2(-2, 0));\nvec4 q13 = pixelAtShortOffset(image, ivec2(-2, 1));\nvec4 q14 = pixelAtShortOffset(image, ivec2(-2, 2));\nvec4 q15 = pixelAtShortOffset(image, ivec2(-1, 2));\n#else\nvec4 q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15;\nq0 = q1 = q2 = q3 = q4 = q5 = q6 = q7 = q8 = q9 = q10 =\nq11 = q12 = q13 = q14 = q15 = vec4(0.0f);\n#endif\n#ifdef ENABLE_OUTER_RING\nvec4 r0 = pixelAtShortOffset(image, ivec2(0, 3));\nvec4 r1 = pixelAtShortOffset(image, ivec2(1, 3));\nvec4 r2 = pixelAtShortOffset(image, ivec2(3, 1));\nvec4 r3 = pixelAtShortOffset(image, ivec2(3, 0));\nvec4 r4 = pixelAtShortOffset(image, ivec2(3, -1));\nvec4 r5 = pixelAtShortOffset(image, ivec2(1, -3));\nvec4 r6 = pixelAtShortOffset(image, ivec2(0, -3));\nvec4 r7 = pixelAtShortOffset(image, ivec2(-1, -3));\nvec4 r8 = pixelAtShortOffset(image, ivec2(-3, -1));\nvec4 r9 = pixelAtShortOffset(image, ivec2(-3, 0));\nvec4 r10 = pixelAtShortOffset(image, ivec2(-3, 1));\nvec4 r11 = pixelAtShortOffset(image, ivec2(-1, 3));\nvec4 r12 = pixelAtShortOffset(image, ivec2(0, 4));\nvec4 r13 = pixelAtShortOffset(image, ivec2(4, 0));\nvec4 r14 = pixelAtShortOffset(image, ivec2(0, -4));\nvec4 r15 = pixelAtShortOffset(image, ivec2(-4, 0));\n#else\nvec4 r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15;\nr0 = r1 = r2 = r3 = r4 = r5 = r6 = r7 = r8 = r9 = r10 =\nr11 = r12 = r13 = r14 = r15 = vec4(0.0f);\n#endif\nfloat lodPlus = lod + lodStep;\nfloat lodMinus = lod - lodStep;\nfloat alphaPlus = encodeLod(lodPlus);\nfloat alphaMinus = encodeLod(lodMinus);\nmat3 innerScore = mat3(\np0.r * float(isSameEncodedLod(p0.a, alphaPlus) || isSameEncodedLod(p0.a, alphaMinus)),\np1.r * float(isSameEncodedLod(p1.a, alphaPlus) || isSameEncodedLod(p1.a, alphaMinus)),\np2.r * float(isSameEncodedLod(p2.a, alphaPlus) || isSameEncodedLod(p2.a, alphaMinus)),\np3.r * float(isSameEncodedLod(p3.a, alphaPlus) || isSameEncodedLod(p3.a, alphaMinus)),\np4.r * float(isSameEncodedLod(p4.a, alphaPlus) || isSameEncodedLod(p4.a, alphaMinus)),\np5.r * float(isSameEncodedLod(p5.a, alphaPlus) || isSameEncodedLod(p5.a, alphaMinus)),\np6.r * float(isSameEncodedLod(p6.a, alphaPlus) || isSameEncodedLod(p6.a, alphaMinus)),\np7.r * float(isSameEncodedLod(p7.a, alphaPlus) || isSameEncodedLod(p7.a, alphaMinus)),\n0.0f\n);\nmat4 middleScore = mat4(\nq0.r * float(isSameEncodedLod(q0.a, alphaPlus) || isSameEncodedLod(q0.a, alphaMinus)),\nq1.r * float(isSameEncodedLod(q1.a, alphaPlus) || isSameEncodedLod(q1.a, alphaMinus)),\nq2.r * float(isSameEncodedLod(q2.a, alphaPlus) || isSameEncodedLod(q2.a, alphaMinus)),\nq3.r * float(isSameEncodedLod(q3.a, alphaPlus) || isSameEncodedLod(q3.a, alphaMinus)),\nq4.r * float(isSameEncodedLod(q4.a, alphaPlus) || isSameEncodedLod(q4.a, alphaMinus)),\nq5.r * float(isSameEncodedLod(q5.a, alphaPlus) || isSameEncodedLod(q5.a, alphaMinus)),\nq6.r * float(isSameEncodedLod(q6.a, alphaPlus) || isSameEncodedLod(q6.a, alphaMinus)),\nq7.r * float(isSameEncodedLod(q7.a, alphaPlus) || isSameEncodedLod(q7.a, alphaMinus)),\nq8.r * float(isSameEncodedLod(q8.a, alphaPlus) || isSameEncodedLod(q8.a, alphaMinus)),\nq9.r * float(isSameEncodedLod(q9.a, alphaPlus) || isSameEncodedLod(q9.a, alphaMinus)),\nq10.r * float(isSameEncodedLod(q10.a, alphaPlus) || isSameEncodedLod(q10.a, alphaMinus)),\nq11.r * float(isSameEncodedLod(q11.a, alphaPlus) || isSameEncodedLod(q11.a, alphaMinus)),\nq12.r * float(isSameEncodedLod(q12.a, alphaPlus) || isSameEncodedLod(q12.a, alphaMinus)),\nq13.r * float(isSameEncodedLod(q13.a, alphaPlus) || isSameEncodedLod(q13.a, alphaMinus)),\nq14.r * float(isSameEncodedLod(q14.a, alphaPlus) || isSameEncodedLod(q14.a, alphaMinus)),\nq15.r * float(isSameEncodedLod(q15.a, alphaPlus) || isSameEncodedLod(q15.a, alphaMinus))\n);\nmat4 outerScore = mat4(\nr0.r * float(isSameEncodedLod(r0.a, alphaPlus) || isSameEncodedLod(r0.a, alphaMinus)),\nr1.r * float(isSameEncodedLod(r1.a, alphaPlus) || isSameEncodedLod(r1.a, alphaMinus)),\nr2.r * float(isSameEncodedLod(r2.a, alphaPlus) || isSameEncodedLod(r2.a, alphaMinus)),\nr3.r * float(isSameEncodedLod(r3.a, alphaPlus) || isSameEncodedLod(r3.a, alphaMinus)),\nr4.r * float(isSameEncodedLod(r4.a, alphaPlus) || isSameEncodedLod(r4.a, alphaMinus)),\nr5.r * float(isSameEncodedLod(r5.a, alphaPlus) || isSameEncodedLod(r5.a, alphaMinus)),\nr6.r * float(isSameEncodedLod(r6.a, alphaPlus) || isSameEncodedLod(r6.a, alphaMinus)),\nr7.r * float(isSameEncodedLod(r7.a, alphaPlus) || isSameEncodedLod(r7.a, alphaMinus)),\nr8.r * float(isSameEncodedLod(r8.a, alphaPlus) || isSameEncodedLod(r8.a, alphaMinus)),\nr9.r * float(isSameEncodedLod(r9.a, alphaPlus) || isSameEncodedLod(r9.a, alphaMinus)),\nr10.r * float(isSameEncodedLod(r10.a, alphaPlus) || isSameEncodedLod(r10.a, alphaMinus)),\nr11.r * float(isSameEncodedLod(r11.a, alphaPlus) || isSameEncodedLod(r11.a, alphaMinus)),\nr12.r * float(isSameEncodedLod(r12.a, alphaPlus) || isSameEncodedLod(r12.a, alphaMinus)),\nr13.r * float(isSameEncodedLod(r13.a, alphaPlus) || isSameEncodedLod(r13.a, alphaMinus)),\nr14.r * float(isSameEncodedLod(r14.a, alphaPlus) || isSameEncodedLod(r14.a, alphaMinus)),\nr15.r * float(isSameEncodedLod(r15.a, alphaPlus) || isSameEncodedLod(r15.a, alphaMinus))\n);\nvec3 maxInnerScore3 = max(innerScore[0], max(innerScore[1], innerScore[2]));\nvec4 maxMiddleScore4 = max(max(middleScore[0], middleScore[1]), max(middleScore[2], middleScore[3]));\nvec4 maxOuterScore4 = max(max(outerScore[0], outerScore[1]), max(outerScore[2], outerScore[3]));\nfloat maxInnerScore = max(maxInnerScore3.x, max(maxInnerScore3.y, maxInnerScore3.z));\nfloat maxMiddleScore = max(max(maxMiddleScore4.x, maxMiddleScore4.y), max(maxMiddleScore4.z, maxMiddleScore4.w));\nfloat maxOuterScore = max(max(maxOuterScore4.x, maxOuterScore4.y), max(maxOuterScore4.z, maxOuterScore4.w));\nfloat maxScore = max(maxInnerScore, max(maxMiddleScore, maxOuterScore));\nfloat myScore = step(maxScore, pixel.r) * pixel.r;\ncolor = vec4(myScore, pixel.gba);\n}"
 
 /***/ }),
 
@@ -13412,7 +13786,7 @@ module.exports = "uniform sampler2D image;\nvoid main()\n{\nfloat p0 = pixelAtSh
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedCorners;\nuniform int encoderLength;\nuniform sampler2D pyramid;\nuniform int extraSize;\nconst int descriptorSize = 32;\nconst ivec4 pat31[256] = ivec4[256](\nivec4(8,-3,9,5),\nivec4(4,2,7,-12),\nivec4(-11,9,-8,2),\nivec4(7,-12,12,-13),\nivec4(2,-13,2,12),\nivec4(1,-7,1,6),\nivec4(-2,-10,-2,-4),\nivec4(-13,-13,-11,-8),\nivec4(-13,-3,-12,-9),\nivec4(10,4,11,9),\nivec4(-13,-8,-8,-9),\nivec4(-11,7,-9,12),\nivec4(7,7,12,6),\nivec4(-4,-5,-3,0),\nivec4(-13,2,-12,-3),\nivec4(-9,0,-7,5),\nivec4(12,-6,12,-1),\nivec4(-3,6,-2,12),\nivec4(-6,-13,-4,-8),\nivec4(11,-13,12,-8),\nivec4(4,7,5,1),\nivec4(5,-3,10,-3),\nivec4(3,-7,6,12),\nivec4(-8,-7,-6,-2),\nivec4(-2,11,-1,-10),\nivec4(-13,12,-8,10),\nivec4(-7,3,-5,-3),\nivec4(-4,2,-3,7),\nivec4(-10,-12,-6,11),\nivec4(5,-12,6,-7),\nivec4(5,-6,7,-1),\nivec4(1,0,4,-5),\nivec4(9,11,11,-13),\nivec4(4,7,4,12),\nivec4(2,-1,4,4),\nivec4(-4,-12,-2,7),\nivec4(-8,-5,-7,-10),\nivec4(4,11,9,12),\nivec4(0,-8,1,-13),\nivec4(-13,-2,-8,2),\nivec4(-3,-2,-2,3),\nivec4(-6,9,-4,-9),\nivec4(8,12,10,7),\nivec4(0,9,1,3),\nivec4(7,-5,11,-10),\nivec4(-13,-6,-11,0),\nivec4(10,7,12,1),\nivec4(-6,-3,-6,12),\nivec4(10,-9,12,-4),\nivec4(-13,8,-8,-12),\nivec4(-13,0,-8,-4),\nivec4(3,3,7,8),\nivec4(5,7,10,-7),\nivec4(-1,7,1,-12),\nivec4(3,-10,5,6),\nivec4(2,-4,3,-10),\nivec4(-13,0,-13,5),\nivec4(-13,-7,-12,12),\nivec4(-13,3,-11,8),\nivec4(-7,12,-4,7),\nivec4(6,-10,12,8),\nivec4(-9,-1,-7,-6),\nivec4(-2,-5,0,12),\nivec4(-12,5,-7,5),\nivec4(3,-10,8,-13),\nivec4(-7,-7,-4,5),\nivec4(-3,-2,-1,-7),\nivec4(2,9,5,-11),\nivec4(-11,-13,-5,-13),\nivec4(-1,6,0,-1),\nivec4(5,-3,5,2),\nivec4(-4,-13,-4,12),\nivec4(-9,-6,-9,6),\nivec4(-12,-10,-8,-4),\nivec4(10,2,12,-3),\nivec4(7,12,12,12),\nivec4(-7,-13,-6,5),\nivec4(-4,9,-3,4),\nivec4(7,-1,12,2),\nivec4(-7,6,-5,1),\nivec4(-13,11,-12,5),\nivec4(-3,7,-2,-6),\nivec4(7,-8,12,-7),\nivec4(-13,-7,-11,-12),\nivec4(1,-3,12,12),\nivec4(2,-6,3,0),\nivec4(-4,3,-2,-13),\nivec4(-1,-13,1,9),\nivec4(7,1,8,-6),\nivec4(1,-1,3,12),\nivec4(9,1,12,6),\nivec4(-1,-9,-1,3),\nivec4(-13,-13,-10,5),\nivec4(7,7,10,12),\nivec4(12,-5,12,9),\nivec4(6,3,7,11),\nivec4(5,-13,6,10),\nivec4(2,-12,2,3),\nivec4(3,8,4,-6),\nivec4(2,6,12,-13),\nivec4(9,-12,10,3),\nivec4(-8,4,-7,9),\nivec4(-11,12,-4,-6),\nivec4(1,12,2,-8),\nivec4(6,-9,7,-4),\nivec4(2,3,3,-2),\nivec4(6,3,11,0),\nivec4(3,-3,8,-8),\nivec4(7,8,9,3),\nivec4(-11,-5,-6,-4),\nivec4(-10,11,-5,10),\nivec4(-5,-8,-3,12),\nivec4(-10,5,-9,0),\nivec4(8,-1,12,-6),\nivec4(4,-6,6,-11),\nivec4(-10,12,-8,7),\nivec4(4,-2,6,7),\nivec4(-2,0,-2,12),\nivec4(-5,-8,-5,2),\nivec4(7,-6,10,12),\nivec4(-9,-13,-8,-8),\nivec4(-5,-13,-5,-2),\nivec4(8,-8,9,-13),\nivec4(-9,-11,-9,0),\nivec4(1,-8,1,-2),\nivec4(7,-4,9,1),\nivec4(-2,1,-1,-4),\nivec4(11,-6,12,-11),\nivec4(-12,-9,-6,4),\nivec4(3,7,7,12),\nivec4(5,5,10,8),\nivec4(0,-4,2,8),\nivec4(-9,12,-5,-13),\nivec4(0,7,2,12),\nivec4(-1,2,1,7),\nivec4(5,11,7,-9),\nivec4(3,5,6,-8),\nivec4(-13,-4,-8,9),\nivec4(-5,9,-3,-3),\nivec4(-4,-7,-3,-12),\nivec4(6,5,8,0),\nivec4(-7,6,-6,12),\nivec4(-13,6,-5,-2),\nivec4(1,-10,3,10),\nivec4(4,1,8,-4),\nivec4(-2,-2,2,-13),\nivec4(2,-12,12,12),\nivec4(-2,-13,0,-6),\nivec4(4,1,9,3),\nivec4(-6,-10,-3,-5),\nivec4(-3,-13,-1,1),\nivec4(7,5,12,-11),\nivec4(4,-2,5,-7),\nivec4(-13,9,-9,-5),\nivec4(7,1,8,6),\nivec4(7,-8,7,6),\nivec4(-7,-4,-7,1),\nivec4(-8,11,-7,-8),\nivec4(-13,6,-12,-8),\nivec4(2,4,3,9),\nivec4(10,-5,12,3),\nivec4(-6,-5,-6,7),\nivec4(8,-3,9,-8),\nivec4(2,-12,2,8),\nivec4(-11,-2,-10,3),\nivec4(-12,-13,-7,-9),\nivec4(-11,0,-10,-5),\nivec4(5,-3,11,8),\nivec4(-2,-13,-1,12),\nivec4(-1,-8,0,9),\nivec4(-13,-11,-12,-5),\nivec4(-10,-2,-10,11),\nivec4(-3,9,-2,-13),\nivec4(2,-3,3,2),\nivec4(-9,-13,-4,0),\nivec4(-4,6,-3,-10),\nivec4(-4,12,-2,-7),\nivec4(-6,-11,-4,9),\nivec4(6,-3,6,11),\nivec4(-13,11,-5,5),\nivec4(11,11,12,6),\nivec4(7,-5,12,-2),\nivec4(-1,12,0,7),\nivec4(-4,-8,-3,-2),\nivec4(-7,1,-6,7),\nivec4(-13,-12,-8,-13),\nivec4(-7,-2,-6,-8),\nivec4(-8,5,-6,-9),\nivec4(-5,-1,-4,5),\nivec4(-13,7,-8,10),\nivec4(1,5,5,-13),\nivec4(1,0,10,-13),\nivec4(9,12,10,-1),\nivec4(5,-8,10,-9),\nivec4(-1,11,1,-13),\nivec4(-9,-3,-6,2),\nivec4(-1,-10,1,12),\nivec4(-13,1,-8,-10),\nivec4(8,-11,10,-6),\nivec4(2,-13,3,-6),\nivec4(7,-13,12,-9),\nivec4(-10,-10,-5,-7),\nivec4(-10,-8,-8,-13),\nivec4(4,-6,8,5),\nivec4(3,12,8,-13),\nivec4(-4,2,-3,-3),\nivec4(5,-13,10,-12),\nivec4(4,-13,5,-1),\nivec4(-9,9,-4,3),\nivec4(0,3,3,-9),\nivec4(-12,1,-6,1),\nivec4(3,2,4,-8),\nivec4(-10,-10,-10,9),\nivec4(8,-13,12,12),\nivec4(-8,-12,-6,-5),\nivec4(2,2,3,7),\nivec4(10,6,11,-8),\nivec4(6,8,8,-12),\nivec4(-7,10,-6,5),\nivec4(-3,-9,-3,9),\nivec4(-1,-13,-1,5),\nivec4(-3,-7,-3,4),\nivec4(-8,-2,-8,3),\nivec4(4,2,12,12),\nivec4(2,-5,3,11),\nivec4(6,-9,11,-13),\nivec4(3,-1,7,12),\nivec4(11,-1,12,4),\nivec4(-3,0,-3,6),\nivec4(4,-11,4,12),\nivec4(2,-4,2,1),\nivec4(-10,-6,-8,1),\nivec4(-13,7,-11,1),\nivec4(-13,12,-11,-13),\nivec4(6,0,11,-13),\nivec4(0,-1,1,4),\nivec4(-13,3,-9,-2),\nivec4(-9,8,-6,-3),\nivec4(-13,-6,-8,-2),\nivec4(5,-9,8,10),\nivec4(2,7,3,-9),\nivec4(-1,-6,-1,-1),\nivec4(9,5,11,-2),\nivec4(11,-3,12,-8),\nivec4(3,0,3,5),\nivec4(-1,4,0,10),\nivec4(3,-6,4,5),\nivec4(-13,0,-10,5),\nivec4(5,8,12,11),\nivec4(8,9,9,-6),\nivec4(7,-4,8,-12),\nivec4(-10,4,-10,9),\nivec4(7,3,12,4),\nivec4(9,-7,10,-2),\nivec4(7,0,12,-2),\nivec4(-1,-6,0,-11)\n);\nvoid getPair(int index, float kcos, float ksin, out ivec2 p, out ivec2 q)\n{\nivec4 data = pat31[index];\nvec2 op = vec2(data.xy);\nvec2 oq = vec2(data.zw);\np = ivec2(round(op.x * kcos - op.y * ksin), round(op.x * ksin + op.y * kcos));\nq = ivec2(round(oq.x * kcos - oq.y * ksin), round(oq.x * ksin + oq.y * kcos));\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedCorners);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint descriptorCell = address.offset - extraSize - 2;\ncolor = pixel;\nif(descriptorCell < 0)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedCorners, encoderLength, address);\nif(isNullKeypoint(keypoint))\nreturn;\nfloat pot = exp2(keypoint.lod);\nfloat kcos = cos(keypoint.orientation);\nfloat ksin = sin(keypoint.orientation);\nvec2 imageSize = vec2(textureSize(pyramid, 0));\nint patternStart = 32 * descriptorCell;\nuint test[4] = uint[4](0u, 0u, 0u, 0u);\nfor(int t = 0; t < 4; t++) {\nuint bits = 0u;\nivec2 p, q;\nvec4 a, b;\nint i = t * 8;\nfor(int j = 0; j < 8; j++) {\ngetPair(patternStart + i + j, kcos, ksin, p, q);\na = pyrPixelAtEx(pyramid, round(keypoint.position + pot * vec2(p)), keypoint.lod, imageSize);\nb = pyrPixelAtEx(pyramid, round(keypoint.position + pot * vec2(q)), keypoint.lod, imageSize);\nbits |= uint(a.g < b.g) << j;\n}\ntest[t] = bits;\n}\ncolor = vec4(float(test[0]), float(test[1]), float(test[2]), float(test[3])) / 255.0f;\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedCorners;\nuniform int encoderLength;\nuniform sampler2D pyramid;\nuniform int extraSize;\nconst int descriptorSize = 32;\nconst ivec4 pat31[256] = ivec4[256](\nivec4(8,-3,9,5),\nivec4(4,2,7,-12),\nivec4(-11,9,-8,2),\nivec4(7,-12,12,-13),\nivec4(2,-13,2,12),\nivec4(1,-7,1,6),\nivec4(-2,-10,-2,-4),\nivec4(-13,-13,-11,-8),\nivec4(-13,-3,-12,-9),\nivec4(10,4,11,9),\nivec4(-13,-8,-8,-9),\nivec4(-11,7,-9,12),\nivec4(7,7,12,6),\nivec4(-4,-5,-3,0),\nivec4(-13,2,-12,-3),\nivec4(-9,0,-7,5),\nivec4(12,-6,12,-1),\nivec4(-3,6,-2,12),\nivec4(-6,-13,-4,-8),\nivec4(11,-13,12,-8),\nivec4(4,7,5,1),\nivec4(5,-3,10,-3),\nivec4(3,-7,6,12),\nivec4(-8,-7,-6,-2),\nivec4(-2,11,-1,-10),\nivec4(-13,12,-8,10),\nivec4(-7,3,-5,-3),\nivec4(-4,2,-3,7),\nivec4(-10,-12,-6,11),\nivec4(5,-12,6,-7),\nivec4(5,-6,7,-1),\nivec4(1,0,4,-5),\nivec4(9,11,11,-13),\nivec4(4,7,4,12),\nivec4(2,-1,4,4),\nivec4(-4,-12,-2,7),\nivec4(-8,-5,-7,-10),\nivec4(4,11,9,12),\nivec4(0,-8,1,-13),\nivec4(-13,-2,-8,2),\nivec4(-3,-2,-2,3),\nivec4(-6,9,-4,-9),\nivec4(8,12,10,7),\nivec4(0,9,1,3),\nivec4(7,-5,11,-10),\nivec4(-13,-6,-11,0),\nivec4(10,7,12,1),\nivec4(-6,-3,-6,12),\nivec4(10,-9,12,-4),\nivec4(-13,8,-8,-12),\nivec4(-13,0,-8,-4),\nivec4(3,3,7,8),\nivec4(5,7,10,-7),\nivec4(-1,7,1,-12),\nivec4(3,-10,5,6),\nivec4(2,-4,3,-10),\nivec4(-13,0,-13,5),\nivec4(-13,-7,-12,12),\nivec4(-13,3,-11,8),\nivec4(-7,12,-4,7),\nivec4(6,-10,12,8),\nivec4(-9,-1,-7,-6),\nivec4(-2,-5,0,12),\nivec4(-12,5,-7,5),\nivec4(3,-10,8,-13),\nivec4(-7,-7,-4,5),\nivec4(-3,-2,-1,-7),\nivec4(2,9,5,-11),\nivec4(-11,-13,-5,-13),\nivec4(-1,6,0,-1),\nivec4(5,-3,5,2),\nivec4(-4,-13,-4,12),\nivec4(-9,-6,-9,6),\nivec4(-12,-10,-8,-4),\nivec4(10,2,12,-3),\nivec4(7,12,12,12),\nivec4(-7,-13,-6,5),\nivec4(-4,9,-3,4),\nivec4(7,-1,12,2),\nivec4(-7,6,-5,1),\nivec4(-13,11,-12,5),\nivec4(-3,7,-2,-6),\nivec4(7,-8,12,-7),\nivec4(-13,-7,-11,-12),\nivec4(1,-3,12,12),\nivec4(2,-6,3,0),\nivec4(-4,3,-2,-13),\nivec4(-1,-13,1,9),\nivec4(7,1,8,-6),\nivec4(1,-1,3,12),\nivec4(9,1,12,6),\nivec4(-1,-9,-1,3),\nivec4(-13,-13,-10,5),\nivec4(7,7,10,12),\nivec4(12,-5,12,9),\nivec4(6,3,7,11),\nivec4(5,-13,6,10),\nivec4(2,-12,2,3),\nivec4(3,8,4,-6),\nivec4(2,6,12,-13),\nivec4(9,-12,10,3),\nivec4(-8,4,-7,9),\nivec4(-11,12,-4,-6),\nivec4(1,12,2,-8),\nivec4(6,-9,7,-4),\nivec4(2,3,3,-2),\nivec4(6,3,11,0),\nivec4(3,-3,8,-8),\nivec4(7,8,9,3),\nivec4(-11,-5,-6,-4),\nivec4(-10,11,-5,10),\nivec4(-5,-8,-3,12),\nivec4(-10,5,-9,0),\nivec4(8,-1,12,-6),\nivec4(4,-6,6,-11),\nivec4(-10,12,-8,7),\nivec4(4,-2,6,7),\nivec4(-2,0,-2,12),\nivec4(-5,-8,-5,2),\nivec4(7,-6,10,12),\nivec4(-9,-13,-8,-8),\nivec4(-5,-13,-5,-2),\nivec4(8,-8,9,-13),\nivec4(-9,-11,-9,0),\nivec4(1,-8,1,-2),\nivec4(7,-4,9,1),\nivec4(-2,1,-1,-4),\nivec4(11,-6,12,-11),\nivec4(-12,-9,-6,4),\nivec4(3,7,7,12),\nivec4(5,5,10,8),\nivec4(0,-4,2,8),\nivec4(-9,12,-5,-13),\nivec4(0,7,2,12),\nivec4(-1,2,1,7),\nivec4(5,11,7,-9),\nivec4(3,5,6,-8),\nivec4(-13,-4,-8,9),\nivec4(-5,9,-3,-3),\nivec4(-4,-7,-3,-12),\nivec4(6,5,8,0),\nivec4(-7,6,-6,12),\nivec4(-13,6,-5,-2),\nivec4(1,-10,3,10),\nivec4(4,1,8,-4),\nivec4(-2,-2,2,-13),\nivec4(2,-12,12,12),\nivec4(-2,-13,0,-6),\nivec4(4,1,9,3),\nivec4(-6,-10,-3,-5),\nivec4(-3,-13,-1,1),\nivec4(7,5,12,-11),\nivec4(4,-2,5,-7),\nivec4(-13,9,-9,-5),\nivec4(7,1,8,6),\nivec4(7,-8,7,6),\nivec4(-7,-4,-7,1),\nivec4(-8,11,-7,-8),\nivec4(-13,6,-12,-8),\nivec4(2,4,3,9),\nivec4(10,-5,12,3),\nivec4(-6,-5,-6,7),\nivec4(8,-3,9,-8),\nivec4(2,-12,2,8),\nivec4(-11,-2,-10,3),\nivec4(-12,-13,-7,-9),\nivec4(-11,0,-10,-5),\nivec4(5,-3,11,8),\nivec4(-2,-13,-1,12),\nivec4(-1,-8,0,9),\nivec4(-13,-11,-12,-5),\nivec4(-10,-2,-10,11),\nivec4(-3,9,-2,-13),\nivec4(2,-3,3,2),\nivec4(-9,-13,-4,0),\nivec4(-4,6,-3,-10),\nivec4(-4,12,-2,-7),\nivec4(-6,-11,-4,9),\nivec4(6,-3,6,11),\nivec4(-13,11,-5,5),\nivec4(11,11,12,6),\nivec4(7,-5,12,-2),\nivec4(-1,12,0,7),\nivec4(-4,-8,-3,-2),\nivec4(-7,1,-6,7),\nivec4(-13,-12,-8,-13),\nivec4(-7,-2,-6,-8),\nivec4(-8,5,-6,-9),\nivec4(-5,-1,-4,5),\nivec4(-13,7,-8,10),\nivec4(1,5,5,-13),\nivec4(1,0,10,-13),\nivec4(9,12,10,-1),\nivec4(5,-8,10,-9),\nivec4(-1,11,1,-13),\nivec4(-9,-3,-6,2),\nivec4(-1,-10,1,12),\nivec4(-13,1,-8,-10),\nivec4(8,-11,10,-6),\nivec4(2,-13,3,-6),\nivec4(7,-13,12,-9),\nivec4(-10,-10,-5,-7),\nivec4(-10,-8,-8,-13),\nivec4(4,-6,8,5),\nivec4(3,12,8,-13),\nivec4(-4,2,-3,-3),\nivec4(5,-13,10,-12),\nivec4(4,-13,5,-1),\nivec4(-9,9,-4,3),\nivec4(0,3,3,-9),\nivec4(-12,1,-6,1),\nivec4(3,2,4,-8),\nivec4(-10,-10,-10,9),\nivec4(8,-13,12,12),\nivec4(-8,-12,-6,-5),\nivec4(2,2,3,7),\nivec4(10,6,11,-8),\nivec4(6,8,8,-12),\nivec4(-7,10,-6,5),\nivec4(-3,-9,-3,9),\nivec4(-1,-13,-1,5),\nivec4(-3,-7,-3,4),\nivec4(-8,-2,-8,3),\nivec4(4,2,12,12),\nivec4(2,-5,3,11),\nivec4(6,-9,11,-13),\nivec4(3,-1,7,12),\nivec4(11,-1,12,4),\nivec4(-3,0,-3,6),\nivec4(4,-11,4,12),\nivec4(2,-4,2,1),\nivec4(-10,-6,-8,1),\nivec4(-13,7,-11,1),\nivec4(-13,12,-11,-13),\nivec4(6,0,11,-13),\nivec4(0,-1,1,4),\nivec4(-13,3,-9,-2),\nivec4(-9,8,-6,-3),\nivec4(-13,-6,-8,-2),\nivec4(5,-9,8,10),\nivec4(2,7,3,-9),\nivec4(-1,-6,-1,-1),\nivec4(9,5,11,-2),\nivec4(11,-3,12,-8),\nivec4(3,0,3,5),\nivec4(-1,4,0,10),\nivec4(3,-6,4,5),\nivec4(-13,0,-10,5),\nivec4(5,8,12,11),\nivec4(8,9,9,-6),\nivec4(7,-4,8,-12),\nivec4(-10,4,-10,9),\nivec4(7,3,12,4),\nivec4(9,-7,10,-2),\nivec4(7,0,12,-2),\nivec4(-1,-6,0,-11)\n);\nvoid getPair(int index, float kcos, float ksin, out ivec2 p, out ivec2 q)\n{\nivec4 data = pat31[index];\nvec2 op = vec2(data.xy);\nvec2 oq = vec2(data.zw);\np = ivec2(round(op.x * kcos - op.y * ksin), round(op.x * ksin + op.y * kcos));\nq = ivec2(round(oq.x * kcos - oq.y * ksin), round(oq.x * ksin + oq.y * kcos));\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedCorners);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint descriptorCell = address.offset - sizeofEncodedKeypoint(0, extraSize) / 4;\ncolor = pixel;\nif(descriptorCell < 0)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedCorners, encoderLength, address);\nif(isBadKeypoint(keypoint))\nreturn;\nfloat pot = exp2(keypoint.lod);\nfloat kcos = cos(keypoint.orientation);\nfloat ksin = sin(keypoint.orientation);\nvec2 imageSize = vec2(textureSize(pyramid, 0));\nint patternStart = 32 * descriptorCell;\nuint test[4] = uint[4](0u, 0u, 0u, 0u);\nfor(int t = 0; t < 4; t++) {\nuint bits = 0u;\nivec2 p, q;\nvec4 a, b;\nint i = t * 8;\n@unroll\nfor(int j = 0; j < 8; j++) {\ngetPair(patternStart + i + j, kcos, ksin, p, q);\na = pyrPixelAtEx(pyramid, round(keypoint.position + pot * vec2(p)), keypoint.lod, imageSize);\nb = pyrPixelAtEx(pyramid, round(keypoint.position + pot * vec2(q)), keypoint.lod, imageSize);\nbits |= uint(a.g < b.g) << j;\n}\ntest[t] = bits;\n}\ncolor = vec4(float(test[0]), float(test[1]), float(test[2]), float(test[3])) / 255.0f;\n}"
 
 /***/ }),
 
@@ -13435,6 +13809,17 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D pyramid;\nunifo
 /***/ (function(module, exports) {
 
 module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 thread = threadLocation();\nfloat lod = decodeLod(pixel.a);\nfloat pot = exp2(lod);\ncolor = pixel;\nif(pixel.r == 0.0f)\nreturn;\nvec4 p0 = pixelAtShortOffset(image, ivec2(0, 1));\nvec4 p1 = pixelAtShortOffset(image, ivec2(1, 1));\nvec4 p2 = pixelAtShortOffset(image, ivec2(1, 0));\nvec4 p3 = pixelAtShortOffset(image, ivec2(1, -1));\nvec4 p4 = pixelAtShortOffset(image, ivec2(0, -1));\nvec4 p5 = pixelAtShortOffset(image, ivec2(-1, -1));\nvec4 p6 = pixelAtShortOffset(image, ivec2(-1, 0));\nvec4 p7 = pixelAtShortOffset(image, ivec2(-1, 1));\nmat3 score = mat3(\np0.r * float(isSameEncodedLod(p0.a, pixel.a)),\np1.r * float(isSameEncodedLod(p1.a, pixel.a)),\np2.r * float(isSameEncodedLod(p2.a, pixel.a)),\np3.r * float(isSameEncodedLod(p3.a, pixel.a)),\np4.r * float(isSameEncodedLod(p4.a, pixel.a)),\np5.r * float(isSameEncodedLod(p5.a, pixel.a)),\np6.r * float(isSameEncodedLod(p6.a, pixel.a)),\np7.r * float(isSameEncodedLod(p7.a, pixel.a)),\n0.0f\n);\nvec3 maxScore3 = max(score[0], max(score[1], score[2]));\nfloat maxScore = max(maxScore3.x, max(maxScore3.y, maxScore3.z));\nfloat myScore = step(maxScore, pixel.r) * pixel.r;\ncolor = vec4(myScore, pixel.gba);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/sort-by-score.glsl":
+/*!******************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/sort-by-score.glsl ***!
+  \******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int estimatedKeypointCount;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#if !defined(MAX_KEYPOINTS)\n#error Must define MAX_KEYPOINTS\n#elif MAX_KEYPOINTS >= 65536\n#error MAX_KEYPOINTS is too large!\n#endif\nuint tuple[1 + MAX_KEYPOINTS];\nuint encodeTuple(Keypoint keypoint, int index)\n{\nuint mask = uint(-int(!isBadKeypoint(keypoint)));\nuint score = uint(clamp(keypoint.score, 0.0f, 1.0f) * 65535.0f);\nuint data = (uint(index) & 65535u) | (score << 16u);\nreturn data & mask;\n}\n#define decodeTupleIndex(tuple) int((tuple) & 16777215u)\n#define QUICKSELECT_UNSIGNED\n#define QUICKSELECT_DESCENDING\n#define QUICKSELECT_ARRAY tuple\n@include \"quickselect.glsl\"\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\ncolor = pixel;\nif(myIndex >= estimatedKeypointCount)\nreturn;\nKeypoint keypoint;\nKeypointAddress address = KeypointAddress(0, 0);\nint actualKeypointCount = estimatedKeypointCount;\nfor(int i = 0; i < estimatedKeypointCount; i++) {\nkeypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\ntuple[min(i, MAX_KEYPOINTS)] = encodeTuple(keypoint, i);\nactualKeypointCount = isBadKeypoint(keypoint) ? min(actualKeypointCount, i) : actualKeypointCount;\naddress.base += pixelsPerKeypoint;\n}\nint desiredTuple = quickselect(0, min(MAX_KEYPOINTS, actualKeypointCount - 1), myIndex);\nint desiredIndex = decodeTupleIndex(desiredTuple);\nKeypointAddress desiredAddress = KeypointAddress(desiredIndex * pixelsPerKeypoint, myAddress.offset);\nint desiredRasterIndex = desiredAddress.base + desiredAddress.offset;\nvec4 desiredPixel = readKeypointData(encodedKeypoints, encoderLength, desiredRasterIndex);\ncolor = myIndex < actualKeypointCount ? desiredPixel : encodeNullKeypoint();\n}"
 
 /***/ }),
 
@@ -13489,7 +13874,7 @@ module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threa
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D pyramid;\nuniform sampler2D encodedKeypoints;\nuniform int windowSize;\nuniform float discardThreshold;\nuniform int firstKeypointIndex, lastKeypointIndex;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#ifndef MAX_WINDOW_SIZE\n#error Must define MAX_WINDOW_SIZE\n#endif\nconst int MAX_WINDOW_SIZE_PLUS = MAX_WINDOW_SIZE + 2;\nconst int MAX_WINDOW_SIZE_PLUS_SQUARED = MAX_WINDOW_SIZE_PLUS * MAX_WINDOW_SIZE_PLUS;\nconst int MAX_WINDOW_RADIUS_PLUS = (MAX_WINDOW_SIZE_PLUS - 1) / 2;\nconst float DISCARD_SCALE = 0.00024318695068359375f;\nfloat pixelBuffer[MAX_WINDOW_SIZE_PLUS_SQUARED];\n#define pixelIndex(i, j) (((j) + MAX_WINDOW_RADIUS_PLUS) * MAX_WINDOW_SIZE_PLUS + ((i) + MAX_WINDOW_RADIUS_PLUS))\n#define windowRadius() ((windowSize - 1) / 2)\nvoid readWindow(vec2 center, float lod)\n{\nivec2 pyrBaseSize = textureSize(pyramid, 0);\nfloat pot = exp2(lod);\nint r = windowRadius();\n#define readPixelAt(ox, oy) pixelBuffer[pixelIndex((ox), (oy))] = pyrSubpixelAtExOffset(pyramid, center, lod, pot, ivec2((ox), (oy)), pyrBaseSize).g\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nreadPixelAt(i-r, j-r);\n}\n}\nint r1 = r+1;\nfor(int k = 0; k < windowSize; k++) {\nreadPixelAt(-r1, k-r);\nreadPixelAt( r1, k-r);\nreadPixelAt(k-r,-r1);\nreadPixelAt(k-r, r1);\n}\nreadPixelAt(-r1,-r1);\nreadPixelAt( r1,-r1);\nreadPixelAt(-r1, r1);\nreadPixelAt( r1, r1);\n}\nvec2 computeDerivatives(ivec2 offset)\n{\nconst mat3 derivX = mat3(\n3, 0, -3,\n10, 0, -10,\n3, 0, -3\n);\nconst mat3 derivY = mat3(\n3, 10, 3,\n0, 0, 0,\n-3, -10, -3\n);\nmat3 window = mat3(\npixelBuffer[pixelIndex(offset.x-1, offset.y-1)],\npixelBuffer[pixelIndex(offset.x+0, offset.y-1)],\npixelBuffer[pixelIndex(offset.x+1, offset.y-1)],\npixelBuffer[pixelIndex(offset.x-1, offset.y+0)],\n0.0f,\npixelBuffer[pixelIndex(offset.x+1, offset.y+0)],\npixelBuffer[pixelIndex(offset.x-1, offset.y+1)],\npixelBuffer[pixelIndex(offset.x+0, offset.y+1)],\npixelBuffer[pixelIndex(offset.x+1, offset.y+1)]\n);\nmat3 fx = matrixCompMult(derivX, window);\nmat3 fy = matrixCompMult(derivY, window);\nconst vec3 ones = vec3(1.0f);\nreturn vec2(\ndot(fx[0], ones) + dot(fx[1], ones) + dot(fx[2], ones),\ndot(fy[0], ones) + dot(fy[1], ones) + dot(fy[2], ones)\n);\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint r = windowRadius();\ncolor = pixel;\nif(address.offset != 1)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nif(isNullKeypoint(keypoint))\nreturn;\nint idx = findKeypointIndex(address, descriptorSize, extraSize);\nif(idx < firstKeypointIndex || idx > lastKeypointIndex)\nreturn;\ncolor = vec4(pixel.rgb, encodeKeypointFlags(keypoint.flags | KPF_DISCARD));\nif(isKeypointAtInfinity(keypoint))\nreturn;\nreadWindow(keypoint.position, keypoint.lod);\nvec2 derivatives = vec2(0.0f);\nmat2 harris = mat2(0.0f, 0.0f, 0.0f, 0.0f);\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nderivatives = computeDerivatives(ivec2(i-r, j-r));\nharris += mat2(\nderivatives.x * derivatives.x, derivatives.x * derivatives.y,\nderivatives.x * derivatives.y, derivatives.y * derivatives.y\n) * DISCARD_SCALE;\n}\n}\nfloat delta = harris[0][0] - harris[1][1];\nfloat eigenvalue = 0.5f * ((harris[0][0] + harris[1][1]) - sqrt(delta * delta - 4.0f * harris[0][1] * harris[0][1]));\nint windowArea = windowSize * windowSize;\nfloat cornerness = eigenvalue / float(windowArea);\nint flags = keypoint.flags;\nflags |= (cornerness < discardThreshold) ? KPF_DISCARD : 0;\ncolor = vec4(pixel.rgb, encodeKeypointFlags(flags));\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D pyramid;\nuniform sampler2D encodedKeypoints;\nuniform int windowSize;\nuniform float discardThreshold;\nuniform int firstKeypointIndex, lastKeypointIndex;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#ifndef MAX_WINDOW_SIZE\n#error Must define MAX_WINDOW_SIZE\n#endif\nconst int MAX_WINDOW_SIZE_PLUS = MAX_WINDOW_SIZE + 2;\nconst int MAX_WINDOW_SIZE_PLUS_SQUARED = MAX_WINDOW_SIZE_PLUS * MAX_WINDOW_SIZE_PLUS;\nconst int MAX_WINDOW_RADIUS_PLUS = (MAX_WINDOW_SIZE_PLUS - 1) / 2;\nconst float DISCARD_SCALE = 0.00024318695068359375f;\nfloat pixelBuffer[MAX_WINDOW_SIZE_PLUS_SQUARED];\n#define pixelIndex(i, j) (((j) + MAX_WINDOW_RADIUS_PLUS) * MAX_WINDOW_SIZE_PLUS + ((i) + MAX_WINDOW_RADIUS_PLUS))\n#define windowRadius() ((windowSize - 1) / 2)\nvoid readWindow(vec2 center, float lod)\n{\nivec2 pyrBaseSize = textureSize(pyramid, 0);\nfloat pot = exp2(lod);\nint r = windowRadius();\n#define readPixelAt(ox, oy) pixelBuffer[pixelIndex((ox), (oy))] = pyrSubpixelAtExOffset(pyramid, center, lod, pot, ivec2((ox), (oy)), pyrBaseSize).g\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nreadPixelAt(i-r, j-r);\n}\n}\nint r1 = r+1;\nfor(int k = 0; k < windowSize; k++) {\nreadPixelAt(-r1, k-r);\nreadPixelAt( r1, k-r);\nreadPixelAt(k-r,-r1);\nreadPixelAt(k-r, r1);\n}\nreadPixelAt(-r1,-r1);\nreadPixelAt( r1,-r1);\nreadPixelAt(-r1, r1);\nreadPixelAt( r1, r1);\n}\nvec2 computeDerivatives(ivec2 offset)\n{\nconst mat3 derivX = mat3(\n3, 0, -3,\n10, 0, -10,\n3, 0, -3\n);\nconst mat3 derivY = mat3(\n3, 10, 3,\n0, 0, 0,\n-3, -10, -3\n);\nmat3 window = mat3(\npixelBuffer[pixelIndex(offset.x-1, offset.y-1)],\npixelBuffer[pixelIndex(offset.x+0, offset.y-1)],\npixelBuffer[pixelIndex(offset.x+1, offset.y-1)],\npixelBuffer[pixelIndex(offset.x-1, offset.y+0)],\n0.0f,\npixelBuffer[pixelIndex(offset.x+1, offset.y+0)],\npixelBuffer[pixelIndex(offset.x-1, offset.y+1)],\npixelBuffer[pixelIndex(offset.x+0, offset.y+1)],\npixelBuffer[pixelIndex(offset.x+1, offset.y+1)]\n);\nmat3 fx = matrixCompMult(derivX, window);\nmat3 fy = matrixCompMult(derivY, window);\nconst vec3 ones = vec3(1.0f);\nreturn vec2(\ndot(fx[0], ones) + dot(fx[1], ones) + dot(fx[2], ones),\ndot(fy[0], ones) + dot(fy[1], ones) + dot(fy[2], ones)\n);\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint r = windowRadius();\ncolor = pixel;\nif(address.offset != 1)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nif(isBadKeypoint(keypoint))\nreturn;\nint idx = findKeypointIndex(address, descriptorSize, extraSize);\nif(idx < firstKeypointIndex || idx > lastKeypointIndex)\nreturn;\ncolor = vec4(pixel.rgb, encodeKeypointFlags(keypoint.flags | KPF_DISCARD));\nif(isKeypointAtInfinity(keypoint))\nreturn;\nreadWindow(keypoint.position, keypoint.lod);\nvec2 derivatives = vec2(0.0f);\nmat2 harris = mat2(0.0f, 0.0f, 0.0f, 0.0f);\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nderivatives = computeDerivatives(ivec2(i-r, j-r));\nharris += mat2(\nderivatives.x * derivatives.x, derivatives.x * derivatives.y,\nderivatives.x * derivatives.y, derivatives.y * derivatives.y\n) * DISCARD_SCALE;\n}\n}\nfloat delta = harris[0][0] - harris[1][1];\nfloat eigenvalue = 0.5f * ((harris[0][0] + harris[1][1]) - sqrt(delta * delta - 4.0f * harris[0][1] * harris[0][1]));\nint windowArea = windowSize * windowSize;\nfloat cornerness = eigenvalue / float(windowArea);\nint flags = keypoint.flags;\nflags |= int(cornerness < discardThreshold) * KPF_DISCARD;\ncolor = vec4(pixel.rgb, encodeKeypointFlags(flags));\n}"
 
 /***/ }),
 
@@ -13500,7 +13885,7 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D pyramid;\nunifo
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D nextPyramid;\nuniform sampler2D prevPyramid;\nuniform sampler2D prevKeypoints;\nuniform int windowSize;\nuniform int depth;\nuniform int firstKeypointIndex, lastKeypointIndex;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#ifndef NUM_ITERATIONS\n#define NUM_ITERATIONS 5\n#endif\n#ifndef MAX_WINDOW_SIZE\n#error Must define MAX_WINDOW_SIZE\n#endif\n#ifndef DISCARD_MARGIN\n#define DISCARD_MARGIN 20\n#endif\n#define NEXT_IMAGE 1\n#define PREV_IMAGE 0\nconst int MAX_WINDOW_SIZE_PLUS = MAX_WINDOW_SIZE + 2;\nconst int MAX_WINDOW_SIZE_PLUS_SQUARED = MAX_WINDOW_SIZE_PLUS * MAX_WINDOW_SIZE_PLUS;\nconst int DBL_MAX_WINDOW_SIZE_PLUS_SQUARED = 2 * MAX_WINDOW_SIZE_PLUS_SQUARED;\nconst int MAX_WINDOW_RADIUS_PLUS = (MAX_WINDOW_SIZE_PLUS - 1) / 2;\n#define windowRadius() ((windowSize - 1) / 2)\nfloat pixelBuffer[DBL_MAX_WINDOW_SIZE_PLUS_SQUARED];\n#define prevPixel(index) pixelBuffer[(index)]\n#define nextPixel(index) pixelBuffer[MAX_WINDOW_SIZE_PLUS_SQUARED + (index)]\n#define pixelIndex(i, j) (((j) + MAX_WINDOW_RADIUS_PLUS) * MAX_WINDOW_SIZE_PLUS + ((i) + MAX_WINDOW_RADIUS_PLUS))\nvoid readWindow(vec2 center, float lod)\n{\nivec2 pyrBaseSize = textureSize(prevPyramid, 0);\nfloat pot = exp2(lod);\nint r = windowRadius();\nivec2 offset; int idx;\n#define readPixelsAt(ox, oy) offset = ivec2((ox), (oy)); idx = pixelIndex(offset.x, offset.y); nextPixel(idx) = pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g; prevPixel(idx) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nreadPixelsAt(i-r, j-r);\n}\n}\nint r1 = r+1;\nfor(int k = 0; k < windowSize; k++) {\nreadPixelsAt(-r1, k-r);\nreadPixelsAt( r1, k-r);\nreadPixelsAt(k-r,-r1);\nreadPixelsAt(k-r, r1);\n}\nreadPixelsAt(-r1,-r1);\nreadPixelsAt( r1,-r1);\nreadPixelsAt(-r1, r1);\nreadPixelsAt( r1, r1);\n}\nvec2 computeDerivatives(int imageCode, ivec2 offset)\n{\nconst mat3 derivX = mat3(\n3, 0, -3,\n10, 0, -10,\n3, 0, -3\n);\nconst mat3 derivY = mat3(\n3, 10, 3,\n0, 0, 0,\n-3, -10, -3\n);\nint indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;\nmat3 window = mat3(\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y+0)],\n0.0f,\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y+0)],\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y+1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y+1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y+1)]\n);\nmat3 fx = matrixCompMult(derivX, window);\nmat3 fy = matrixCompMult(derivY, window);\nconst vec3 ones = vec3(1.0f);\nreturn vec2(\ndot(fx[0], ones) + dot(fx[1], ones) + dot(fx[2], ones),\ndot(fy[0], ones) + dot(fy[1], ones) + dot(fy[2], ones)\n);\n}\nfloat readBufferedPixel(int imageCode, ivec2 offset)\n{\nivec2 limit = ivec2(windowRadius());\noffset = clamp(offset, -limit, limit);\nint indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;\nreturn pixelBuffer[indexOffset + pixelIndex(offset.x, offset.y)];\n}\nvoid main()\n{\nvec4 pixel = threadPixel(prevKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint r = windowRadius();\ncolor = pixel;\nif(address.offset > 0)\nreturn;\nKeypoint keypoint = decodeKeypoint(prevKeypoints, encoderLength, address);\nif(isNullKeypoint(keypoint))\nreturn;\nint idx = findKeypointIndex(address, descriptorSize, extraSize);\nif(idx < firstKeypointIndex || idx > lastKeypointIndex)\nreturn;\nvec2 pyrGuess = vec2(0.0f);\nfor(int d = 0; d < depth; d++) {\nfloat lod = float(depth - 1 - d);\nreadWindow(keypoint.position, lod);\nhighp mat2 invHarris = mat2(0.0f, 0.0f, 0.0f, 0.0f);\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nvec2 derivatives = computeDerivatives(PREV_IMAGE, ivec2(i-r, j-r));\ninvHarris += mat2(\nderivatives.y * derivatives.y, -derivatives.x * derivatives.y,\n-derivatives.x * derivatives.y, derivatives.x * derivatives.x\n);\n}\n}\nconst float minDet = 0.00001f;\nhighp float det = invHarris[0][0] * invHarris[1][1] - invHarris[0][1] * invHarris[1][0];\nhighp vec2 localGuess = vec2(0.0f);\nfor(int k = 0; k < NUM_ITERATIONS; k++) {\nhighp vec2 spaceTime = vec2(0.0f);\nfor(int _y = 0; _y < windowSize; _y++) {\nfor(int _x = 0; _x < windowSize; _x++) {\nint x = _x - r; int y = _y - r;\nvec2 spatialDerivative = computeDerivatives(PREV_IMAGE, ivec2(x, y));\nfloat timeDerivative = readBufferedPixel(NEXT_IMAGE,\nivec2(round(vec2(x, y) + pyrGuess + localGuess))\n) - readBufferedPixel(PREV_IMAGE, ivec2(x, y));\nspaceTime += spatialDerivative * timeDerivative;\n}\n}\nhighp vec2 localOpticalFlow = abs(det) < minDet ? vec2(0.0f) : invHarris * spaceTime / det;\nlocalGuess += localOpticalFlow;\n}\npyrGuess = 2.0f * (pyrGuess + localGuess);\n}\nvec2 opticalFlow = pyrGuess;\nvec2 nextPosition = keypoint.position + opticalFlow;\nvec2 imageSize = vec2(textureSize(nextPyramid, 0));\nfloat margin = float(DISCARD_MARGIN);\nbool isKeypointWithinBoundaries = (\nnextPosition.x >= margin &&\nnextPosition.y >= margin &&\nnextPosition.x <= imageSize.x - margin &&\nnextPosition.y <= imageSize.y - margin\n);\ncolor = isKeypointWithinBoundaries ? encodeKeypointPosition(nextPosition) : encodeKeypointPositionAtInfinity();\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D nextPyramid;\nuniform sampler2D prevPyramid;\nuniform sampler2D prevKeypoints;\nuniform int windowSize;\nuniform int depth;\nuniform int firstKeypointIndex, lastKeypointIndex;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#ifndef NUM_ITERATIONS\n#define NUM_ITERATIONS 5\n#endif\n#ifndef MAX_WINDOW_SIZE\n#error Must define MAX_WINDOW_SIZE\n#endif\n#ifndef DISCARD_MARGIN\n#define DISCARD_MARGIN 20\n#endif\n#define NEXT_IMAGE 1\n#define PREV_IMAGE 0\nconst int MAX_WINDOW_SIZE_PLUS = MAX_WINDOW_SIZE + 2;\nconst int MAX_WINDOW_SIZE_PLUS_SQUARED = MAX_WINDOW_SIZE_PLUS * MAX_WINDOW_SIZE_PLUS;\nconst int DBL_MAX_WINDOW_SIZE_PLUS_SQUARED = 2 * MAX_WINDOW_SIZE_PLUS_SQUARED;\nconst int MAX_WINDOW_RADIUS_PLUS = (MAX_WINDOW_SIZE_PLUS - 1) / 2;\n#define windowRadius() ((windowSize - 1) / 2)\nfloat pixelBuffer[DBL_MAX_WINDOW_SIZE_PLUS_SQUARED];\n#define prevPixel(index) pixelBuffer[(index)]\n#define nextPixel(index) pixelBuffer[MAX_WINDOW_SIZE_PLUS_SQUARED + (index)]\n#define pixelIndex(i, j) (((j) + MAX_WINDOW_RADIUS_PLUS) * MAX_WINDOW_SIZE_PLUS + ((i) + MAX_WINDOW_RADIUS_PLUS))\nvoid readWindow(vec2 center, float lod)\n{\nivec2 pyrBaseSize = textureSize(prevPyramid, 0);\nfloat pot = exp2(lod);\nint r = windowRadius();\nivec2 offset; int idx;\n#define readPixelsAt(ox, oy) offset = ivec2((ox), (oy)); idx = pixelIndex(offset.x, offset.y); nextPixel(idx) = pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g; prevPixel(idx) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nreadPixelsAt(i-r, j-r);\n}\n}\nint r1 = r+1;\nfor(int k = 0; k < windowSize; k++) {\nreadPixelsAt(-r1, k-r);\nreadPixelsAt( r1, k-r);\nreadPixelsAt(k-r,-r1);\nreadPixelsAt(k-r, r1);\n}\nreadPixelsAt(-r1,-r1);\nreadPixelsAt( r1,-r1);\nreadPixelsAt(-r1, r1);\nreadPixelsAt( r1, r1);\n}\nvec2 computeDerivatives(int imageCode, ivec2 offset)\n{\nconst mat3 derivX = mat3(\n3, 0, -3,\n10, 0, -10,\n3, 0, -3\n);\nconst mat3 derivY = mat3(\n3, 10, 3,\n0, 0, 0,\n-3, -10, -3\n);\nint indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;\nmat3 window = mat3(\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y+0)],\n0.0f,\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y+0)],\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y+1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y+1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y+1)]\n);\nmat3 fx = matrixCompMult(derivX, window);\nmat3 fy = matrixCompMult(derivY, window);\nconst vec3 ones = vec3(1.0f);\nreturn vec2(\ndot(fx[0], ones) + dot(fx[1], ones) + dot(fx[2], ones),\ndot(fy[0], ones) + dot(fy[1], ones) + dot(fy[2], ones)\n);\n}\nfloat readBufferedPixel(int imageCode, ivec2 offset)\n{\nivec2 limit = ivec2(windowRadius());\noffset = clamp(offset, -limit, limit);\nint indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;\nreturn pixelBuffer[indexOffset + pixelIndex(offset.x, offset.y)];\n}\nvoid main()\n{\nvec4 pixel = threadPixel(prevKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint r = windowRadius();\ncolor = pixel;\nif(address.offset > 0)\nreturn;\nKeypoint keypoint = decodeKeypoint(prevKeypoints, encoderLength, address);\nif(isBadKeypoint(keypoint))\nreturn;\nint idx = findKeypointIndex(address, descriptorSize, extraSize);\nif(idx < firstKeypointIndex || idx > lastKeypointIndex)\nreturn;\nvec2 pyrGuess = vec2(0.0f);\nfor(int d = 0; d < depth; d++) {\nfloat lod = float(depth - 1 - d);\nreadWindow(keypoint.position, lod);\nhighp mat2 invHarris = mat2(0.0f, 0.0f, 0.0f, 0.0f);\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nvec2 derivatives = computeDerivatives(PREV_IMAGE, ivec2(i-r, j-r));\ninvHarris += mat2(\nderivatives.y * derivatives.y, -derivatives.x * derivatives.y,\n-derivatives.x * derivatives.y, derivatives.x * derivatives.x\n);\n}\n}\nconst float minDet = 0.00001f;\nhighp float det = invHarris[0][0] * invHarris[1][1] - invHarris[0][1] * invHarris[1][0];\nhighp vec2 localGuess = vec2(0.0f);\nfor(int k = 0; k < NUM_ITERATIONS; k++) {\nhighp vec2 spaceTime = vec2(0.0f);\nfor(int _y = 0; _y < windowSize; _y++) {\nfor(int _x = 0; _x < windowSize; _x++) {\nint x = _x - r; int y = _y - r;\nvec2 spatialDerivative = computeDerivatives(PREV_IMAGE, ivec2(x, y));\nfloat timeDerivative = readBufferedPixel(NEXT_IMAGE,\nivec2(round(vec2(x, y) + pyrGuess + localGuess))\n) - readBufferedPixel(PREV_IMAGE, ivec2(x, y));\nspaceTime += spatialDerivative * timeDerivative;\n}\n}\nhighp vec2 localOpticalFlow = float(abs(det) >= minDet) * (invHarris * spaceTime / det);\nlocalGuess += localOpticalFlow;\n}\npyrGuess = 2.0f * (pyrGuess + localGuess);\n}\nvec2 opticalFlow = pyrGuess;\nvec2 nextPosition = keypoint.position + opticalFlow;\nvec2 imageSize = vec2(textureSize(nextPyramid, 0));\nfloat margin = float(DISCARD_MARGIN);\nbool isKeypointWithinBoundaries = (\nnextPosition.x >= margin &&\nnextPosition.y >= margin &&\nnextPosition.x <= imageSize.x - margin &&\nnextPosition.y <= imageSize.y - margin\n);\ncolor = isKeypointWithinBoundaries ? encodeKeypointPosition(nextPosition) : encodeKeypointPositionAtInfinity();\n}"
 
 /***/ }),
 
@@ -13903,6 +14288,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _programs_pyramids__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./programs/pyramids */ "./src/gpu/programs/pyramids.js");
 /* harmony import */ var _programs_enhancements__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./programs/enhancements */ "./src/gpu/programs/enhancements.js");
 /* harmony import */ var _programs_trackers__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./programs/trackers */ "./src/gpu/programs/trackers.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -13923,6 +14310,8 @@ __webpack_require__.r(__webpack_exports__);
  * speedy-program-center.js
  * An access point to all programs that run on the GPU
  */
+
+
 
 
 
@@ -13960,9 +14349,9 @@ class SpeedyProgramCenter
         this._keypoints = null;
         this._encoders = null;
         this._descriptors = null;
-        this._pyramids = null;
         this._enhancements = null;
         this._trackers = null;
+        this._pyramids = (new Array(_utils_globals__WEBPACK_IMPORTED_MODULE_9__["PYRAMID_MAX_LEVELS"])).fill(null);
     }
 
     /**
@@ -14038,21 +14427,32 @@ class SpeedyProgramCenter
     }
 
     /**
-     * Image pyramids & scale-space
-     * @returns {GPUPyramids}
-     */
-    get pyramids()
-    {
-        return this._pyramids || (this._pyramids = new _programs_pyramids__WEBPACK_IMPORTED_MODULE_5__["GPUPyramids"](this._gpu, this._width, this._height));
-    }
-
-    /**
      * Image enhancement algorithms
      * @returns {GPUEnhancements}
      */
     get enhancements()
     {
         return this._enhancements || (this._enhancements = new _programs_enhancements__WEBPACK_IMPORTED_MODULE_6__["GPUEnhancements"](this._gpu, this._width, this._height));
+    }
+
+    /**
+     * Image pyramids & scale-space
+     * @param {number} [level] level-of-detail: 0, 1, 2, ... (PYRAMID_MAX_LEVELS - 1)
+     * @returns {GPUPyramids}
+     */
+    pyramids(level = 0)
+    {
+        const lod = level | 0;
+        const pot = 1 << lod;
+
+        if(lod < 0 || lod >= _utils_globals__WEBPACK_IMPORTED_MODULE_9__["PYRAMID_MAX_LEVELS"])
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["IllegalArgumentError"](`Invalid pyramid level: ${lod} (outside of range [0,${_utils_globals__WEBPACK_IMPORTED_MODULE_9__["PYRAMID_MAX_LEVELS"]-1}])`);
+
+        // use max(1, floor(size / 2^lod)), in accordance to the OpenGL ES 3.0 spec sec 3.8.10.4 (Mipmapping)
+        return this._pyramids[lod] || (this._pyramids[lod] = new _programs_pyramids__WEBPACK_IMPORTED_MODULE_5__["GPUPyramids"](this._gpu,
+            Math.max(1, Math.floor(this._width / pot)),
+            Math.max(1, Math.floor(this._height / pot))
+        ));
     }
 }
 
@@ -14189,7 +14589,7 @@ class SpeedyProgramGroup
             // Dimensions are converted to integers
             hasTextureSize(width, height) {
                 return {
-                    output: [ width|0, height|0 ]
+                    output: [ Math.max(1, width | 0), Math.max(1, height | 0) ]
                 };
             },
 
@@ -14246,7 +14646,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyProgram", function() { return SpeedyProgram; });
 /* harmony import */ var _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gl-utils.js */ "./src/gpu/gl-utils.js");
 /* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -14267,6 +14669,7 @@ __webpack_require__.r(__webpack_exports__);
  * speedy-program.js
  * SpeedyProgram class
  */
+
 
 
 
@@ -14353,6 +14756,35 @@ class SpeedyProgram extends Function
     }
 
     /**
+     * Clear the internal textures to a color
+     * @param {number} [r] in [0,1]
+     * @param {number} [g] in [0,1]
+     * @param {number} [b] in [0,1]
+     * @param {number} [a] in [0,1]
+     * @returns {SpeedyTexture}
+     */
+    clear(r = 0, g = 0, b = 0, a = 1)
+    {
+        const gl = this._gl;
+        const stdprog = this._stdprog;
+        const texture = stdprog.texture;
+
+        // skip things
+        if(gl.isContextLost())
+            return texture;
+
+        // clear internal textures
+        stdprog.clear(r, g, b, a);
+
+        // ping-pong rendering?
+        if(this._options.pingpong)
+            stdprog.pingpong();
+
+        // done!
+        return texture;
+    }
+
+    /**
      * Read pixels from the output texture.
      * You may optionally specify a (x,y,width,height) sub-rectangle.
      * @param {number} [x]
@@ -14408,7 +14840,7 @@ class SpeedyProgram extends Function
      * @param {number} [width]
      * @param {number} [height]
      * @param {boolean} [useBufferedDownloads] optimize downloads
-     * @returns {Promise<Uint8Array>} resolves to an array of pixels in the RGBA format
+     * @returns {SpeedyPromise<Uint8Array>} resolves to an array of pixels in the RGBA format
      */
     readPixelsAsync(x = 0, y = 0, width = -1, height = -1, useBufferedDownloads = true)
     {
@@ -14416,7 +14848,7 @@ class SpeedyProgram extends Function
 
         // lost context?
         if(gl.isContextLost())
-            return Promise.resolve(this._pixelBuffer[0]);
+            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(this._pixelBuffer[0]);
 
         // default values
         if(width < 0)
@@ -14453,22 +14885,22 @@ class SpeedyProgram extends Function
             _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].readPixelsViaPBO(gl, this._pixelBuffer[nextPBO], x, y, width, height, this._stdprog.fbo).then(downloadTime => {
                 this._pboConsumerQueue.push(nextPBO);
             });
-        });
+        }).turbocharge();
 
         // CPU needs to consume data
         if(this._pboConsumerQueue.length > 0) {
             const readyPBO = this._pboConsumerQueue.shift();
-            return new Promise(resolve => {
+            return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"](resolve => {
                 resolve(this._pixelBuffer[readyPBO]);
                 this._pboProducerQueue.push(readyPBO); // enqueue AFTER resolve()
             });
         }
-        else return new Promise(resolve => {
+        else return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"](resolve => {
             waitForQueueNotEmpty(this._pboConsumerQueue).then(waitTime => {
                 const readyPBO = this._pboConsumerQueue.shift();
                 resolve(this._pixelBuffer[readyPBO]);
                 this._pboProducerQueue.push(readyPBO); // enqueue AFTER resolve()
-            });
+            }).turbocharge();
         });
     }
 
@@ -14513,27 +14945,15 @@ class SpeedyProgram extends Function
     }
 
     /**
-     * Clear the internal textures to a color
-     * @param {number} r in [0,1]
-     * @param {number} g in [0,1]
-     * @param {number} b in [0,1]
-     * @param {number} [a] in [0,1]
-     * @returns {SpeedyTexture}
+     * Get the framebuffer associated with this SpeedyProgram
+     * @returns {WebGLFramebuffer}
      */
-    clear(r, g, b, a = 1.0)
+    get fbo()
     {
-        const gl = this._gl;
-        const stdprog = this._stdprog;
+        if(this._options.pingpong)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["NotSupportedError"](`Can't get the FBO of a pingpong-enabled SpeddyProgram`);
 
-        // skip things
-        if(gl.isContextLost())
-            return stdprog.texture;
-
-        // clear internal textures
-        stdprog.clear(r, g, b, a);
-
-        // done!
-        return stdprog.texture;
+        return this._stdprog.fbo;
     }
 
     // Prepare the shader
@@ -14551,7 +14971,7 @@ class SpeedyProgram extends Function
 
         // validate options
         if(options.pingpong && !options.renderToTexture)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`Pingpong rendering can only be used when rendering to textures`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`Pingpong rendering can only be used when rendering to textures`);
 
         // get size
         let width = Math.max(1, options.output[0] | 0);
@@ -14577,7 +14997,7 @@ class SpeedyProgram extends Function
         for(let j = 0; j < params.length; j++) {
             if(!stdprog.uniform.hasOwnProperty(params[j])) {
                 if(!stdprog.uniform.hasOwnProperty(params[j] + '[0]'))
-                    throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`Can't run shader: expected uniform "${params[j]}"`);
+                    throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`Can't run shader: expected uniform "${params[j]}"`);
             }
         }
 
@@ -14605,7 +15025,7 @@ class SpeedyProgram extends Function
         
         // matching arguments?
         if(args.length != params.length)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Can't run shader: incorrect number of arguments`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Can't run shader: incorrect number of arguments`);
 
         // use program
         gl.useProgram(stdprog.program);
@@ -14629,12 +15049,12 @@ class SpeedyProgram extends Function
                 // uniform array matches parameter name
                 const array = args[i];
                 if(stdprog.uniform.hasOwnProperty(`${argname}[${array.length}]`))
-                    throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Can't run shader: too few elements in array "${argname}"`);
+                    throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Can't run shader: too few elements in array "${argname}"`);
                 for(let j = 0; (uniform = stdprog.uniform[`${argname}[${j}]`]); j++)
                     texNo = this._setUniform(uniform, array[j], texNo);
             }
             else
-                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Can't run shader: unknown parameter "${argname}": ${args[i]}`);
+                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Can't run shader: unknown parameter "${argname}": ${args[i]}`);
         }
 
         // set Uniform Buffer Objects (if any)
@@ -14679,8 +15099,8 @@ class SpeedyProgram extends Function
             if(options.pingpong)
                 stdprog.pingpong();
 
-            // invalidate mipmaps
-            outputTexture.discardMipmap();
+            // invalidate pyramid
+            outputTexture.discardPyramid();
         }
 
         // unbind fbo
@@ -14699,11 +15119,11 @@ class SpeedyProgram extends Function
         if(uniform.type == 'sampler2D') {
             // set texture
             if(texNo > gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
-                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["NotSupportedError"](`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
+                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["NotSupportedError"](`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
             else if(value === this._stdprog.texture)
-                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["NotSupportedError"](`Can't run shader: cannot use its output texture as an input to itself`);
+                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["NotSupportedError"](`Can't run shader: cannot use its output texture as an input to itself`);
             else if(value == null)
-                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Can't run shader: cannot use null as an input texture`);
+                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Can't run shader: cannot use null as an input texture`);
 
             gl.activeTexture(gl.TEXTURE0 + texNo);
             gl.bindTexture(gl.TEXTURE_2D, value.glTexture);
@@ -14717,7 +15137,7 @@ class SpeedyProgram extends Function
             else if(Array.isArray(value))
                 (gl[UNIFORM_TYPES[uniform.type]])(uniform.location, ...value);
             else
-                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Can't run shader: unrecognized argument "${value}"`);
+                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Can't run shader: unrecognized argument "${value}"`);
         }
 
         return texNo;
@@ -14803,7 +15223,7 @@ function StandardProgram(gl, width, height, shaderdecl, uniforms = { })
 
         // validate type
         if(!UNIFORM_TYPES.hasOwnProperty(uniform[u].type))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["NotSupportedError"](`Unknown uniform type: ${uniform[u].type}`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["NotSupportedError"](`Unknown uniform type: ${uniform[u].type}`);
 
         // must set a default value?
         if(uniforms.hasOwnProperty(u)) {
@@ -14813,7 +15233,7 @@ function StandardProgram(gl, width, height, shaderdecl, uniforms = { })
             else if(typeof value == 'object')
                 (gl[UNIFORM_TYPES[uniform[u].type]])(uniform[u].location, ...Array.from(value));
             else
-                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Unrecognized uniform value: "${value}"`);
+                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Unrecognized uniform value: "${value}"`);
         }
 
         // note: to set the default value of array arr, pass
@@ -14836,9 +15256,14 @@ function StandardProgram(gl, width, height, shaderdecl, uniforms = { })
     Object.defineProperty(this, 'texture', {
         get: () => this._texture ? this._texture[this._texIndex] : null
     });
+    /*
     Object.defineProperty(this, 'pingpongTexture', {
         get: () => this._texture && this._texture.length > 1 ? this._texture[1 - this._texIndex] : null
     });
+    Object.defineProperty(this, 'pingpongFbo', {
+        get: () => this._fbo && this._fbo.length > 1 ? this._fbo[1 - this._texIndex] : null
+    });
+    */
 }
 
 // Attach a framebuffer object to a standard program
@@ -14850,8 +15275,8 @@ StandardProgram.prototype.attachFBO = function(pingpong = false)
     const numTextures = pingpong ? 2 : 1;
 
     this._texIndex = 0;
-    this._texture = Array(numTextures);
-    this._fbo = Array(numTextures);
+    this._texture = new Array(numTextures);
+    this._fbo = new Array(numTextures);
 
     for(let i = 0; i < numTextures; i++) {
         this._texture[i] = new _speedy_texture__WEBPACK_IMPORTED_MODULE_1__["SpeedyTexture"](gl, width, height);
@@ -14907,27 +15332,20 @@ StandardProgram.prototype.resize = function(width, height)
     // resize textures
     if(this._fbo != null) {
         const numTextures = this._fbo.length;
-        const newTexture = Array(numTextures);
-        const newFBO = Array(numTextures);
+        const zeros = new Uint8Array(width * height * 4);
 
         // create textures with new size & old content
         for(let i = 0; i < numTextures; i++) {
-            newTexture[i] = new _speedy_texture__WEBPACK_IMPORTED_MODULE_1__["SpeedyTexture"](gl, width, height);
+            // create new texture
+            const newTexture = new _speedy_texture__WEBPACK_IMPORTED_MODULE_1__["SpeedyTexture"](gl, width, height);
 
-            /*
+            // bind
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo[i]);
-            gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, newTexture[i].glTexture);
+            gl.bindTexture(gl.TEXTURE_2D, newTexture.glTexture);
 
-            //
-            // BUG: calling copyTexSubImage2D() below generates a warning
-            //      on Firefox - investigate further
-            //
-            // "Texture has not been initialized prior to a partial upload,
-            //  forcing the browser to clear it. This may be slow."
-            //
-            // FIXME: Currently, texture contents are being lost on resize
-            //
+            // initialize the new texture with zeros to avoid a
+            // warning when calling copyTexSubImage2D() on Firefox
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, zeros);
 
             // copy old content
             gl.copyTexSubImage2D(gl.TEXTURE_2D,     // target
@@ -14939,23 +15357,21 @@ StandardProgram.prototype.resize = function(width, height)
                                  Math.min(width, oldWidth),    // width
                                  Math.min(height, oldHeight)); // height
 
+            // attach the new texture to the existing framebuffer
+            gl.framebufferTexture2D(gl.FRAMEBUFFER,         // target
+                                    gl.COLOR_ATTACHMENT0,   // color buffer
+                                    gl.TEXTURE_2D,          // tex target
+                                    newTexture.glTexture,   // texture
+                                    0);                     // mipmap level
+
+            // unbind
             gl.bindTexture(gl.TEXTURE_2D, null);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-            */
 
-            newFBO[i] = _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].createFramebuffer(gl, newTexture[i].glTexture);
+            // release old texture & replace it
+            this._texture[i].release();
+            this._texture[i] = newTexture;
         }
-
-        // release old textures
-        for(let fbo of this._fbo)
-            _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].destroyFramebuffer(gl, fbo);
-
-        for(let texture of this._texture)
-            texture.release();
-
-        // update references
-        this._texture = newTexture;
-        this._fbo = newFBO;
     }
 
     //console.log(`Resized program to ${width} x ${height}`);
@@ -15010,7 +15426,7 @@ StandardProgram.prototype.invalidateFramebuffer = function()
 // wait for a queue to be not empty
 function waitForQueueNotEmpty(queue)
 {
-    return new Promise(resolve => {
+    return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"](resolve => {
         const start = performance.now();
         function wait() {
             if(queue.length > 0)
@@ -15106,8 +15522,10 @@ UBOHandler.prototype.update = function()
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyTexture", function() { return SpeedyTexture; });
-/* harmony import */ var _gl_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gl-utils */ "./src/gpu/gl-utils.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _speedy_gpu__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gl_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./gl-utils */ "./src/gpu/gl-utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -15132,6 +15550,8 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
 /**
  * A wrapper around WebGLTexture
  */
@@ -15148,7 +15568,7 @@ class SpeedyTexture
         this._gl = gl;
         this._width = width;
         this._height = height;
-        this._glTexture = _gl_utils__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].createTexture(this._gl, this._width, this._height);
+        this._glTexture = _gl_utils__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].createTexture(this._gl, this._width, this._height);
         this._hasMipmaps = false;
     }
 
@@ -15159,12 +15579,12 @@ class SpeedyTexture
     release()
     {
         if(this._glTexture !== null) {
-            _gl_utils__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].destroyTexture(this._gl, this._glTexture);
-            this._glTexture = null;
+            this._glTexture = _gl_utils__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].destroyTexture(this._gl, this._glTexture);
             this._width = this._height = 0;
+            this._hasMipmaps = false;
         }
         else
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalOperationError"](`The SpeedyTexture has already been released`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`The SpeedyTexture has already been released`);
 
         return null;
     }
@@ -15172,34 +15592,48 @@ class SpeedyTexture
     /**
      * Upload pixel data to the texture
      * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} pixels 
-     * @param {number} [lod] mipmap level-of-detail
      */
-    upload(pixels, lod = 0)
+    upload(pixels)
     {
         this._hasMipmaps = false;
-        _gl_utils__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].uploadToTexture(this._gl, this._glTexture, this._width, this._height, pixels, lod | 0);
+        _gl_utils__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].uploadToTexture(this._gl, this._glTexture, this._width, this._height, pixels, 0);
     }
 
     /**
-     * Generates mipmaps for this texture
-     * This computes the image pyramid via hardware
+     * Generates an image pyramid
+     * @param {SpeedyGPU} gpu
+     * @param {boolean} [gaussian] should we compute a Gaussian pyramid? Recommended!
      * @returns {SpeedyTexture} this
      */
-    generateMipmap()
+    generatePyramid(gpu, gaussian = true)
     {
-        if(!this._hasMipmaps) {
-            // TODO: generate octaves via gaussians
-            _gl_utils__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].generateMipmap(this._gl, this._glTexture);
-            this._hasMipmaps = true;
+        // nothing to do
+        if(this._hasMipmaps)
+            return this;
+
+        // let the hardware compute the all levels of the pyramid, up to 1x1
+        // this might be a simple box filter...
+        _gl_utils__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].generateMipmap(this._gl, this._glTexture);
+
+        // compute a few layers of a Gaussian pyramid for better results
+        if(gaussian) {
+            let layer = this, pyramid = null;
+            for(let level = 1; level < _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_LEVELS"]; level++) {
+                pyramid = gpu.programs.pyramids(level - 1);
+                layer = pyramid.reduce(layer);
+                _gl_utils__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].copyToTexture(this._gl, pyramid.fbo, this._glTexture, 0, 0, layer.width, layer.height, level);
+            }
         }
 
+        // done!
+        this._hasMipmaps = true;
         return this;
     }
 
     /**
-     * Invalidates previously generated mipmaps
+     * Invalidates previously generated pyramid
      */
-    discardMipmap()
+    discardPyramid()
     {
         this._hasMipmaps = false;
     }
@@ -15655,7 +16089,7 @@ class FPSCounter
 /*!******************************!*\
   !*** ./src/utils/globals.js ***!
   \******************************/
-/*! exports provided: PYRAMID_MAX_LEVELS, PYRAMID_MAX_OCTAVES, PYRAMID_MAX_SCALE, LOG2_PYRAMID_MAX_SCALE, FIX_BITS, FIX_RESOLUTION, MAX_TEXTURE_LENGTH, KPF_NONE, KPF_ORIENTED, KPF_DISCARD */
+/*! exports provided: PYRAMID_MAX_LEVELS, PYRAMID_MAX_OCTAVES, PYRAMID_MAX_SCALE, LOG2_PYRAMID_MAX_SCALE, FIX_BITS, FIX_RESOLUTION, MAX_TEXTURE_LENGTH, MAX_DESCRIPTOR_SIZE, MIN_KEYPOINT_SIZE, KPF_NONE, KPF_ORIENTED, KPF_DISCARD */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -15667,6 +16101,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FIX_BITS", function() { return FIX_BITS; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FIX_RESOLUTION", function() { return FIX_RESOLUTION; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MAX_TEXTURE_LENGTH", function() { return MAX_TEXTURE_LENGTH; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MAX_DESCRIPTOR_SIZE", function() { return MAX_DESCRIPTOR_SIZE; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MIN_KEYPOINT_SIZE", function() { return MIN_KEYPOINT_SIZE; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "KPF_NONE", function() { return KPF_NONE; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "KPF_ORIENTED", function() { return KPF_ORIENTED; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "KPF_DISCARD", function() { return KPF_DISCARD; });
@@ -15699,7 +16135,7 @@ __webpack_require__.r(__webpack_exports__);
 const PYRAMID_MAX_LEVELS = 4; // scaling factor = 1
 
 // The maximum number of layers of the pyramid (counting intra-layers)
-const PYRAMID_MAX_OCTAVES = 2 * PYRAMID_MAX_LEVELS - 1; // scaling factor = sqrt(2)
+const PYRAMID_MAX_OCTAVES = 2 * PYRAMID_MAX_LEVELS - 1; // default scaling factor = sqrt(2)
 
 // The maximum supported scale for a pyramid layer
 const PYRAMID_MAX_SCALE = 2; // preferably a power of 2 (image scale can go up to this value)
@@ -15731,16 +16167,22 @@ const MAX_TEXTURE_LENGTH = (1 << (16 - FIX_BITS)) - 2; // 2^n - 2 due to keypoin
 
 
 // -----------------------------------------------------------------
-// KEYPOINT FLAGS
+// KEYPOINTS
 // -----------------------------------------------------------------
 
-// No special flags
+// Maximum size of a descriptor, in bytes (must be divisible by 4)
+const MAX_DESCRIPTOR_SIZE = 64;
+
+// Size of a keypoint header, in bytes (must be divisible by 4)
+const MIN_KEYPOINT_SIZE = 8;
+
+// Flag: no special flags
 const KPF_NONE = 0x0;
 
-// The keypoint is oriented
+// Flag: the keypoint is oriented
 const KPF_ORIENTED = 0x1;
 
-// Should the keypoint be discarded? (in the next frame)
+// Flag: should the keypoint be discarded? (in the next frame)
 const KPF_DISCARD = 0x80;
 
 /***/ }),
