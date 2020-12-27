@@ -253,7 +253,7 @@ export class MultiscaleFASTFeatures extends FeatureDetectionAlgorithm
         const extraSize = this.extraSize;
 
         // generate pyramid
-        const pyramid = inputTexture.generateMipmap();
+        const pyramid = inputTexture.generatePyramid(gpu);
 
         // find corners
         let corners = null;

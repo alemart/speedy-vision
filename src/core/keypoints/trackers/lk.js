@@ -117,8 +117,8 @@ export class LKFeatureTrackingAlgorithm extends FeatureTrackingAlgorithm
         const discardThreshold = this.discardThreshold;
 
         // create pyramids
-        const nextPyramid = nextImage.generateMipmap();
-        const prevPyramid = prevImage.generateMipmap();
+        const nextPyramid = nextImage.generatePyramid(gpu);
+        const prevPyramid = prevImage.generatePyramid(gpu);
 
         // track feature points
         const encoderLength = gpu.programs.encoders.encoderLength;

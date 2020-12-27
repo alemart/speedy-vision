@@ -278,6 +278,42 @@ export class GLUtils
     }
 
     /**
+     * Copy data from a framebuffer into a texture
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLFramebuffer} fbo we'll read the data from this
+     * @param {WebGLTexture} texture destination texture
+     * @param {GLint} x xpos (where to start copying)
+     * @param {GLint} y ypos (where to start copying)
+     * @param {GLsizei} width width of the texture
+     * @param {GLsizei} height height of the texture
+     * @param {GLint} [lod] mipmap level-of-detail
+     * @returns {WebGLTexture} texture
+     */
+    static copyToTexture(gl, fbo, texture, x, y, width, height, lod = 0)
+    {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+
+        // According to the WebGL spec, pixels lying outside the framebuffer
+        // will be initialized to zero
+        gl.copyTexImage2D(
+            gl.TEXTURE_2D, // target
+            lod, // mipmap level
+            gl.RGBA8, // internal format
+            x, // xpos (where to start copying)
+            y, // ypos (where to start copying)
+            width, // width of the texture
+            height, // height of the texture
+            0 // border
+        );
+
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        return texture;
+    }
+
+    /**
      * Generate texture mipmap with bilinear interpolation
      * @param {WebGL2RenderingContext} gl 
      * @param {WebGLTexture} texture 

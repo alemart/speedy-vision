@@ -19,8 +19,10 @@
  * A wrapper around WebGLTexture
  */
 
+import { SpeedyGPU } from './speedy-gpu';
 import { GLUtils } from './gl-utils';
 import { IllegalOperationError } from '../utils/errors';
+import { PYRAMID_MAX_LEVELS } from '../utils/globals';
 
 /**
  * A wrapper around WebGLTexture
@@ -49,9 +51,9 @@ export class SpeedyTexture
     release()
     {
         if(this._glTexture !== null) {
-            GLUtils.destroyTexture(this._gl, this._glTexture);
-            this._glTexture = null;
+            this._glTexture = GLUtils.destroyTexture(this._gl, this._glTexture);
             this._width = this._height = 0;
+            this._hasMipmaps = false;
         }
         else
             throw new IllegalOperationError(`The SpeedyTexture has already been released`);
@@ -62,34 +64,48 @@ export class SpeedyTexture
     /**
      * Upload pixel data to the texture
      * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} pixels 
-     * @param {number} [lod] mipmap level-of-detail
      */
-    upload(pixels, lod = 0)
+    upload(pixels)
     {
         this._hasMipmaps = false;
-        GLUtils.uploadToTexture(this._gl, this._glTexture, this._width, this._height, pixels, lod | 0);
+        GLUtils.uploadToTexture(this._gl, this._glTexture, this._width, this._height, pixels, 0);
     }
 
     /**
-     * Generates mipmaps for this texture
-     * This computes the image pyramid via hardware
+     * Generates an image pyramid
+     * @param {SpeedyGPU} gpu
+     * @param {boolean} [gaussian] should we compute a Gaussian pyramid? Recommended!
      * @returns {SpeedyTexture} this
      */
-    generateMipmap()
+    generatePyramid(gpu, gaussian = true)
     {
-        if(!this._hasMipmaps) {
-            // TODO: generate octaves via gaussians
-            GLUtils.generateMipmap(this._gl, this._glTexture);
-            this._hasMipmaps = true;
+        // nothing to do
+        if(this._hasMipmaps)
+            return this;
+
+        // let the hardware compute the all levels of the pyramid, up to 1x1
+        // this might be a simple box filter...
+        GLUtils.generateMipmap(this._gl, this._glTexture);
+
+        // compute a few layers of a Gaussian pyramid for better results
+        if(gaussian) {
+            let layer = this, pyramid = null;
+            for(let level = 1; level < PYRAMID_MAX_LEVELS; level++) {
+                pyramid = gpu.programs.pyramids(level - 1);
+                layer = pyramid.reduce(layer);
+                GLUtils.copyToTexture(this._gl, pyramid.fbo, this._glTexture, 0, 0, layer.width, layer.height, level);
+            }
         }
 
+        // done!
+        this._hasMipmaps = true;
         return this;
     }
 
     /**
-     * Invalidates previously generated mipmaps
+     * Invalidates previously generated pyramid
      */
-    discardMipmap()
+    discardPyramid()
     {
         this._hasMipmaps = false;
     }

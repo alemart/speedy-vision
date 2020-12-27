@@ -22,6 +22,7 @@
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
 import { convX, convY } from '../shaders/filters/convolution';
+import { SpeedyTexture } from '../speedy-texture';
 
 
 
@@ -55,17 +56,21 @@ export class GPUPyramids extends SpeedyProgramGroup
     constructor(gpu, width, height)
     {
         super(gpu, width, height);
+        this._fbo = null;
         this
+            /*
             // pyramid operations (scale = 2)
-            .compose('reduce', '_smoothX', '_smoothY', '_downsample2')
-            .compose('expand', '_upsample2', '_smoothX2', '_smoothY2')
+            .compose('_reduce', '_smoothX', '_smoothY', '_downsample2')
+            .compose('_expand', '_upsample2', '_smoothX2', '_smoothY2')
+            */
            
             /*
             // intra-pyramid operations (scale = 1.5)
-            .compose('intraReduce', '_upsample2', '_smoothX2', '_smoothY2', '_downsample3/2')
-            .compose('intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3')
+            .compose('_intraReduce', '_upsample2', '_smoothX2', '_smoothY2', '_downsample3/2')
+            .compose('_intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3')
             */
 
+            /*
             // utilities for debugging
             .declare('output1', flipY, {
                 ...this.program.hasTextureSize(this._width, this._height),
@@ -81,8 +86,7 @@ export class GPUPyramids extends SpeedyProgramGroup
                 ...this.program.hasTextureSize(2 * this._width, 2 * this._height),
                 ...this.program.displaysGraphics()
             })
-
-
+            */
             
             // separable kernels for gaussian smoothing
             // use [c, b, a, b, c] where a+2c = 2b and a+2b+2c = 1
@@ -137,5 +141,40 @@ export class GPUPyramids extends SpeedyProgramGroup
                 this.program.hasTextureSize(Math.floor(2 * this._width / 3), Math.floor(2 * this._height / 3)))
             */
         ;
+    }
+
+    /**
+     * Reduce the image (0.5x)
+     * @param {SpeedyTexture} image
+     * @returns {SpeedyTexture}
+     */
+    reduce(image)
+    {
+        const smoothImage = this._smoothY(this._smoothX(image));
+        const downsampledImage = this._downsample2(smoothImage);
+        this._fbo = this._downsample2.fbo;
+        return downsampledImage;
+    }
+
+    /**
+     * Expand the image (2x)
+     * @param {SpeedyTexture} image
+     * @returns {SpeedyTexture}
+     */
+    expand(image)
+    {
+        const upsampledImage = this._upsample2(image);
+        const smoothImage = this._smoothY2(this._smoothX2(upsampledImage));
+        this._fbo = this._smoothY2.fbo;
+        return smoothImage;
+    }
+
+    /**
+     * Get the framebuffer associated with the last performed operation
+     * @returns {WebGLFramebuffer}
+     */
+    get fbo()
+    {
+        return this._fbo;
     }
 }

@@ -105,6 +105,35 @@ export class SpeedyProgram extends Function
     }
 
     /**
+     * Clear the internal textures to a color
+     * @param {number} [r] in [0,1]
+     * @param {number} [g] in [0,1]
+     * @param {number} [b] in [0,1]
+     * @param {number} [a] in [0,1]
+     * @returns {SpeedyTexture}
+     */
+    clear(r = 0, g = 0, b = 0, a = 1)
+    {
+        const gl = this._gl;
+        const stdprog = this._stdprog;
+        const texture = stdprog.texture;
+
+        // skip things
+        if(gl.isContextLost())
+            return texture;
+
+        // clear internal textures
+        stdprog.clear(r, g, b, a);
+
+        // ping-pong rendering?
+        if(this._options.pingpong)
+            stdprog.pingpong();
+
+        // done!
+        return texture;
+    }
+
+    /**
      * Read pixels from the output texture.
      * You may optionally specify a (x,y,width,height) sub-rectangle.
      * @param {number} [x]
@@ -265,32 +294,15 @@ export class SpeedyProgram extends Function
     }
 
     /**
-     * Clear the internal textures to a color
-     * @param {number} r in [0,1]
-     * @param {number} g in [0,1]
-     * @param {number} b in [0,1]
-     * @param {number} [a] in [0,1]
-     * @returns {SpeedyTexture}
+     * Get the framebuffer associated with this SpeedyProgram
+     * @returns {WebGLFramebuffer}
      */
-    clear(r, g, b, a = 1.0)
+    get fbo()
     {
-        const gl = this._gl;
-        const stdprog = this._stdprog;
-        const texture = stdprog.texture;
-
-        // skip things
-        if(gl.isContextLost())
-            return texture;
-
-        // clear internal textures
-        stdprog.clear(r, g, b, a);
-
-        // ping-pong rendering?
         if(this._options.pingpong)
-            stdprog.pingpong();
+            throw new NotSupportedError(`Can't get the FBO of a pingpong-enabled SpeddyProgram`);
 
-        // done!
-        return texture;
+        return this._stdprog.fbo;
     }
 
     // Prepare the shader
@@ -436,8 +448,8 @@ export class SpeedyProgram extends Function
             if(options.pingpong)
                 stdprog.pingpong();
 
-            // invalidate mipmaps
-            outputTexture.discardMipmap();
+            // invalidate pyramid
+            outputTexture.discardPyramid();
         }
 
         // unbind fbo
@@ -593,9 +605,14 @@ function StandardProgram(gl, width, height, shaderdecl, uniforms = { })
     Object.defineProperty(this, 'texture', {
         get: () => this._texture ? this._texture[this._texIndex] : null
     });
+    /*
     Object.defineProperty(this, 'pingpongTexture', {
         get: () => this._texture && this._texture.length > 1 ? this._texture[1 - this._texIndex] : null
     });
+    Object.defineProperty(this, 'pingpongFbo', {
+        get: () => this._fbo && this._fbo.length > 1 ? this._fbo[1 - this._texIndex] : null
+    });
+    */
 }
 
 // Attach a framebuffer object to a standard program
