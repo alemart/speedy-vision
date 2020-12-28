@@ -20,19 +20,21 @@
  */
 
 import { ShaderPreprocessor } from './shader-preprocessor';
-import { FileNotFoundError, IllegalArgumentError, ParseError } from '../utils/errors';
+import { FileNotFoundError, IllegalArgumentError, IllegalOperationError, ParseError } from '../utils/errors';
 
-const ATTRIB_POSITION = 'a_position';
-const ATTRIB_TEXCOORD = 'a_texCoord';
+const DEFAULT_ATTRIBUTES = Object.freeze({
+    position: 'a_position',
+    texCoord: 'a_texCoord'
+});
 
 const DEFAULT_VERTEX_SHADER = `#version 300 es
-in vec2 ${ATTRIB_POSITION};
-in vec2 ${ATTRIB_TEXCOORD};
+in vec2 ${DEFAULT_ATTRIBUTES.position};
+in vec2 ${DEFAULT_ATTRIBUTES.texCoord};
 out vec2 texCoord;
 
 void main() {
-    gl_Position = vec4(${ATTRIB_POSITION}, 0.0, 1.0);
-    texCoord = ${ATTRIB_TEXCOORD};
+    gl_Position = vec4(${DEFAULT_ATTRIBUTES.position}, 0.0, 1.0);
+    texCoord = ${DEFAULT_ATTRIBUTES.texCoord};
 }`;
 
 const DEFAULT_FRAGMENT_SHADER_PREFIX = `#version 300 es
@@ -51,24 +53,45 @@ uniform vec2 texSize;
  */
 class ShaderDeclaration
 {
-    /* private */ constructor(options)
+    /**
+     * @private Constructor
+     * @param {object} options
+     * @param {string} [options.filepath]
+     * @param {string} [options.source]
+     */
+    constructor(options)
     {
         const filepath = options.filepath || null;
         const source = filepath ? require('./shaders/' + filepath) : (options.source || '');
+        if(source.length == 0)
+            throw new IllegalArgumentError(`Can't import shader: empty code`);
 
+        /** @type {string} original source code provided by the user */
         this._userSource = source;
+
+        /** @type {string} preprocessed source code of the vertex shader */
         this._vertexSource = ShaderPreprocessor.run(DEFAULT_VERTEX_SHADER);
-        this._fragmentSource = ShaderPreprocessor.run(DEFAULT_FRAGMENT_SHADER_PREFIX + source);
-        this._fragmentSource = ShaderPreprocessor.unrollLoops(this._fragmentSource);
+
+        /** @type {string} preprocessed source code of the fragment shader */
+        this._fragmentSource = ShaderPreprocessor.run(DEFAULT_FRAGMENT_SHADER_PREFIX + this._userSource);
+
+        /** @type {string} the filepath from which the (fragment) shader was imported */
         this._filepath = filepath || '<in-memory>';
-        this._uniform = this._autodetectUniforms(this._fragmentSource);
+
+        /** @type {string[]} an ordered list of uniform names */
         this._arguments = [];
+
+        /** @type {Map<string,string>} it maps uniform names to their types */
+        this._uniforms = this._autodetectUniforms(this._fragmentSource);
+
+        /** @type {Map<string,number>} it maps externally #defined constants to their values */
+        this._defines = new Map();
     }
 
     /**
      * Creates a new Shader directly from a GLSL source
      * @param {string} source
-     * @returns {Shader}
+     * @returns {ShaderDeclaration}
      */
     static create(source)
     {
@@ -78,7 +101,7 @@ class ShaderDeclaration
     /**
      * Import a Shader from a file containing a GLSL source
      * @param {string} filepath path to .glsl file relative to the shaders/ folder
-     * @returns {Shader}
+     * @returns {ShaderDeclaration}
      */
     static import(filepath)
     {
@@ -96,13 +119,17 @@ class ShaderDeclaration
      */
     withArguments(...args)
     {
+        // the list of arguments may be declared only once
+        if(this._arguments.length > 0)
+            throw new IllegalOperationError(`Redefinition of shader arguments`);
+
         // get arguments
         this._arguments = args.map(arg => String(arg));
 
         // validate
         for(const argname of this._arguments) {
-            if(!this._uniform.hasOwnProperty(argname)) {
-                if(!this._uniform.hasOwnProperty(argname + '[0]'))
+            if(!this._uniforms.has(argname)) {
+                if(!this._uniforms.has(argname + '[0]'))
                     throw new IllegalArgumentError(`Argument "${argname}" has not been declared in the shader`);
             }
         }
@@ -112,22 +139,27 @@ class ShaderDeclaration
     }
 
     /**
-     * Specify a set of #defines to be prepended to
-     * the fragment shader
+     * Specify a set of #defines to be prepended to the fragment shader
      * @param {object} defines key-value pairs (define-name: define-value)
      * @returns {ShaderDeclaration} this
      */
     withDefines(defines)
     {
-        // write the #defines
-        const defs = [];
-        for(const key of Object.keys(defines))
-            defs.push(`#define ${key} ${+(defines[key])}\n`); // force numeric values
+        // the list of #defines may be defined only once
+        if(this._defines.size > 0)
+            throw new IllegalOperationError(`Redefinition of externally defined constants of a shader`);
 
-        // change the fragment shader
+        // store and write the #defines
+        const defs = [];
+        for(const key of Object.keys(defines)) {
+            const value = Number(defines[key]); // force numeric values
+            this._defines.set(key, value);
+            defs.push(`#define ${key} ${value}\n`);
+        }
+
+        // update the fragment shader
         const source = DEFAULT_FRAGMENT_SHADER_PREFIX + defs.join('') + this._userSource;
-        this._fragmentSource = ShaderPreprocessor.run(source); // is it necessary to rescan the code for uniforms? hmm....
-        this._fragmentSource = ShaderPreprocessor.unrollLoops(this._fragmentSource, defines);
+        this._fragmentSource = ShaderPreprocessor.run(source, this._defines);
 
         // done!
         return this;
@@ -157,16 +189,13 @@ class ShaderDeclaration
      */
     get attributes()
     {
-        return ShaderDeclaration._attr || (ShaderDeclaration._attr = Object.freeze({
-            position: ATTRIB_POSITION,
-            texCoord: ATTRIB_TEXCOORD,
-        }));
+        return DEFAULT_ATTRIBUTES;
     }
 
     /**
      * Names of the arguments that will be passed to the Shader,
      * corresponding to GLSL uniforms, in the order they will be passed
-     * @returns {Array<string>}
+     * @returns {string[]}
      */
     get arguments()
     {
@@ -175,37 +204,50 @@ class ShaderDeclaration
 
     /**
      * Names of the uniforms declared in the shader
-     * @returns {Array<string>}
+     * @returns {string[]}
      */
     get uniforms()
     {
-        return Object.keys(this._uniform);
+        return Array.from(this._uniforms.keys());
     }
 
     /**
-     * The GLSL type of an uniform variable declared in the shader
+     * The GLSL type of a uniform variable declared in the shader
      * @param {string} name
      * @returns {string}
      */
     uniformType(name)
     {
-        if(!this._uniform.hasOwnProperty(name))
+        if(!this._uniforms.has(name))
             throw new IllegalArgumentError(`Unrecognized uniform variable: "${name}"`);
 
-        return this._uniform[name];
+        return this._uniforms.get(name);
+    }
+
+    /**
+     * The value of an externally defined constant, i.e., via withDefines()
+     * @param {string} name 
+     * @returns {number}
+     */
+    definedConstant(name)
+    {
+        if(!this._defines.has(name))
+            throw new IllegalArgumentError(`Unrecognized externally defined constant: "${name}"`);
+
+        return this._defines.get(name);
     }
 
     /**
      * Parses a GLSL source and detects the uniform variables,
      * as well as their types
      * @param {string} preprocessedSource 
-     * @returns {object} specifies the types of all uniforms
+     * @returns {Map<string,string>} specifies the types of all uniforms
      */
     _autodetectUniforms(preprocessedSource)
     {
         const sourceWithoutComments = preprocessedSource; // assume we've preprocessed the source already
         const regex = /^\s*uniform\s+(highp\s+|mediump\s+|lowp\s+)?(\w+)\s+([^;]+)/gm;
-        const uniforms = { };
+        const uniforms = new Map();
 
         let match;
         while((match = regex.exec(sourceWithoutComments)) !== null) {
@@ -217,18 +259,24 @@ class ShaderDeclaration
                     // is it an array?
                     if(!(match = name.match(/(\w+)\s*\[\s*(\d+)\s*\]$/)))
                         throw new ParseError(`Unspecified array length for uniform "${name}" in the shader`);
-                    const [ array, length ] = [ match[1], Number(match[2]) ];
-                    for(let i = 0; i < length; i++)
-                        uniforms[`${array}[${i}]`] = type;
+
+                    // read array name & size
+                    const [ array, size ] = [ match[1], Number(match[2]) ];
+                    if(size == 0)
+                        throw new ParseError(`Array ${array} has size zero`);
+
+                    // register uniforms
+                    for(let i = 0; i < size; i++)
+                        uniforms.set(`${array}[${i}]`, type);
                 }
                 else {
-                    // regular uniform
-                    uniforms[name] = type;
+                    // register a regular uniform
+                    uniforms.set(name, type);
                 }
             }
         }
 
-        return Object.freeze(uniforms);
+        return uniforms;
     }
 }
 

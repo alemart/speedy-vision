@@ -40,7 +40,7 @@ const unrollRegex = [
 ];
 
 // Constants accessible by all shaders
-const constants = {
+const constants = Object.freeze({
     // general
     'MAX_TEXTURE_LENGTH': MAX_TEXTURE_LENGTH,
 
@@ -65,7 +65,7 @@ const constants = {
     'KPF_NONE': KPF_NONE,
     'KPF_ORIENTED': KPF_ORIENTED,
     'KPF_DISCARD': KPF_DISCARD,
-};
+});
 
 /**
  * Custom preprocessor for shaders
@@ -75,52 +75,29 @@ export class ShaderPreprocessor
     /**
      * Runs the preprocessor
      * @param {string} code 
+     * @param {Map<string,number>} [defines]
      * @returns {string} preprocessed code
      */
-    static run(code)
+    static run(code, defines = new Map())
     {
         //
         // The preprocessor will remove comments from GLSL code,
         // include requested GLSL files and import global constants
         // defined for all shaders (see above)
         //
-        return String(code).replace(commentsRegex[0], '')
-                           .replace(commentsRegex[1], '')
-                           .replace(includeRegex, (_, filename) =>
-                                // FIXME: no cycle detection for @include
-                                ShaderPreprocessor.run(readfileSync(filename))
-                            )
-                            .replace(constantRegex, (_, name) =>
-                                String(constants[name] !== undefined ? constants[name] : 'UNDEFINED_CONSTANT')
-                            );
-    }
-
-    /**
-     * Unroll for loops in our own preprocessor
-     * @param {string} code
-     * @param {object} [defines]
-     * @returns {string}
-     */
-    static unrollLoops(code, defines = {})
-    {
-        //
-        // Currently, only integer for loops with positive step values
-        // can be unrolled. (TODO: negative step values?)
-        //
-        // The current implementation does not support curly braces
-        // inside unrolled loops. You may define macros to get around
-        // this, but do you actually need to unroll such loops?
-        //
-        // Loops that don't fit the supported pattern will crash
-        // the preprocessor if you try to unroll them.
-        //
-        const fn = unroll.bind(defines); // CRAZY!
-        const n = unrollRegex.length;
-
-        for(let i = 0; i < n; i++)
-            code = code.replace(unrollRegex[i], fn);
-
-        return code;
+        return unrollLoops(
+            String(code)
+                .replace(commentsRegex[0], '')
+                .replace(commentsRegex[1], '')
+                .replace(includeRegex, (_, filename) =>
+                    // FIXME: no cycle detection for @include
+                    ShaderPreprocessor.run(readfileSync(filename), defines)
+                )
+                .replace(constantRegex, (_, name) =>
+                    String(constants[name] !== undefined ? constants[name] : 'UNDEFINED_CONSTANT')
+                ),
+            defines
+        );
     }
 }
 
@@ -134,7 +111,35 @@ function readfileSync(filename)
     if(String(filename).match(/^[a-zA-Z0-9_\-]+\.glsl$/))
         return require('./shaders/include/' + filename);
 
-    throw new FileNotFoundError(`Shader preprocessor: can't read file \"${filename}\"`);
+    throw new FileNotFoundError(`Shader preprocessor: can't read file "${filename}"`);
+}
+
+/**
+ * Unroll for loops in our own preprocessor
+ * @param {string} code
+ * @param {Map<string,number>} defines
+ * @returns {string}
+ */
+function unrollLoops(code, defines)
+{
+    //
+    // Currently, only integer for loops with positive step values
+    // can be unrolled. (TODO: negative step values?)
+    //
+    // The current implementation does not support curly braces
+    // inside unrolled loops. You may define macros to get around
+    // this, but do you actually need to unroll such loops?
+    //
+    // Loops that don't fit the supported pattern will crash
+    // the preprocessor if you try to unroll them.
+    //
+    const fn = unroll.bind(defines); // CRAZY!
+    const n = unrollRegex.length;
+
+    for(let i = 0; i < n; i++)
+        code = code.replace(unrollRegex[i], fn);
+
+    return code;
 }
 
 /**
@@ -148,10 +153,10 @@ function unroll(match, type, counter, start, cmp, end, step, loopcode)
     const defines = this;
 
     // check if the loop limits are numeric constants or #defined numbers from the outside
-    start = Number.isFinite(+start) ? start : defines[start];
-    end = Number.isFinite(+end) ? end : defines[end];
+    start = Number.isFinite(+start) ? start : defines.get(start);
+    end = Number.isFinite(+end) ? end : defines.get(end);
     if(start === undefined || end === undefined) {
-        if(Object.keys(defines).length > 0)
+        if(defines.size > 0)
             throw new ParseError(`Can't unroll loop: unknown limits (start=${start}, end=${end}). Code:\n\n${match}`);
         else
             return match; // don't unroll now, because defines is empty - maybe we'll succeed in the next pass
