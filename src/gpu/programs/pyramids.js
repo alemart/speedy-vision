@@ -182,10 +182,8 @@ export class GPUPyramids extends SpeedyProgramGroup
      */
     exportTo(texture, lod)
     {
-        if(this._lastOperation !== null) {
-            const { width, height, fbo } = this._lastOperation;
-            texture.importPyramidLevel(lod, fbo, width, height);
-        }
+        if(this._lastOperation !== null)
+            this._lastOperation.exportTo(texture, lod);
         else
             throw new IllegalOperationError(`Can't export pyramid level before generating it`);
     }
