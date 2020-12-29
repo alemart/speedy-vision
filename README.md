@@ -415,13 +415,13 @@ The `SpeedyFeatureDetector` itself.
 
 When using any variation of the FAST feature detector, the following additional properties are available:
 
-* `threshold: number`. An alternative to `sensitivity` representing the threshold paramter of FAST: an integer between `0` and `255`, inclusive. Lower thresholds get you more features.
+* `threshold: number`. An alternative to `sensitivity` representing the threshold paramter of FAST: an integer between `0` and `255`, inclusive. Lower thresholds get you more features. A typical value is `20`.
   * Note: `sensitivity` is an easier-to-use property and does *not* map linearly to `threshold`.
 * `n: number`. The FAST variant you want: use `9` for FAST-9,16 (default), `7` for FAST-7,12 or `5` for FAST-5,8. Option not available for multiscale.
 
 When using the `MultiscaleFAST` detector, you may also specify:
 
-* `depth: number`. An integer between `1` and `4` that tells Speedy how "deep" it should go when searching for keypoints in scale-space. Defaults to `3`.
+* `depth: number`. An integer between `1` and `7` that tells Speedy how "deep" it should go when searching for keypoints in scale-space. Defaults to `4`.
 * `scaleFactor: number`. The scale factor between two consecutive pyramid layers. Defaults to the square root of two.
 * `useHarrisScore: boolean`. Adopt a better scoring function (cornerness measure). It will give you slightly better features. Defaults to `false` (using the `MultiscaleHarris` detector is preferred).
 
@@ -438,7 +438,7 @@ Speedy includes an implementation of the Harris corner detector with the Shi-Tom
 
 When using the `MultiscaleHarris` detector, the following additional properties are available:
 
-* `depth: number`. An integer between `1` and `4` that tells Speedy how "deep" it should go when searching for keypoints in scale-space. Defaults to `3`.
+* `depth: number`. An integer between `1` and `7` that tells Speedy how "deep" it should go when searching for keypoints in scale-space. Defaults to `4`.
 * `scaleFactor: number`. The scale factor between two consecutive pyramid layers. Defaults to the square root of two.
 
 #### ORB features
@@ -447,7 +447,7 @@ When using the `MultiscaleHarris` detector, the following additional properties 
 
 Speedy includes an implementation of ORB. It is an efficient solution that first finds keypoints in scale-space and then computes descriptors for feature matching. The following additional properties are available:
 
-* `depth: number`. An integer between `1` and `4` that tells Speedy how "deep" it should go when searching for keypoints in scale-space. Defaults to `3`.
+* `depth: number`. An integer between `1` and `7` that tells Speedy how "deep" it should go when searching for keypoints in scale-space. Defaults to `4`.
 * `scaleFactor: number`. The scale factor between two consecutive pyramid layers. Defaults to `1.19`.
 * `quality: number`. A value between `0` and `1`, as in the Harris detector. This is an alternative to `sensitivity`.
 

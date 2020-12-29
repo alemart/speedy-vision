@@ -430,7 +430,7 @@ export class MultiscaleFASTFeatureDetector extends SpeedyFeatureDetector
 
     /**
      * Set the scale factor between consecutive pyramid layers
-     * @param {number} value must be greater than 1
+     * @param {number} value must be greater than 1 and less than or equal to 2
      */
     set scaleFactor(value)
     {

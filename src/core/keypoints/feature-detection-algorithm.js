@@ -25,13 +25,12 @@ import { FeatureDownloader } from './feature-downloader';
 import { SpeedyFeature } from '../speedy-feature';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../gpu/speedy-texture';
-import { Utils } from '../../utils/utils';
 
 // Constants
 const DEFAULT_ENHANCEMENTS = Object.freeze({
     gain: 0.9,
     offset: 0.5,
-    decay: 0.85,
+    decay: 0.0,
     quality: 'low'
 });
 

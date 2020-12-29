@@ -28,8 +28,8 @@ import { PYRAMID_MAX_LEVELS } from '../../../utils/globals';
 
 // constants
 const DEFAULT_FAST_VARIANT = 9;
-const DEFAULT_FAST_THRESHOLD = 10;
-const DEFAULT_DEPTH = 3;
+const DEFAULT_FAST_THRESHOLD = 20;
+const DEFAULT_DEPTH = 4;
 const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // scale factor between consecutive pyramid layers (sqrt(2))
 
 
@@ -210,11 +210,11 @@ export class MultiscaleFASTFeatures extends FeatureDetectionAlgorithm
 
     /**
      * Set the scale factor between consecutive pyramid layers
-     * @param {number} value a value greater than 1
+     * @param {number} value a value greater than 1 and less than or equal to 2
      */
     set scaleFactor(value)
     {
-        this._scaleFactor = Math.max(1, +value);
+        this._scaleFactor = Math.min(Math.max(1, +value), 2);
     }
 
     /**

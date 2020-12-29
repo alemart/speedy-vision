@@ -24,7 +24,7 @@
 // -----------------------------------------------------------------
 
 // The maximum number of layers of the pyramid (not counting intra-layers)
-export const PYRAMID_MAX_LEVELS = 4; // scaling factor = 1
+export const PYRAMID_MAX_LEVELS = 7; // scaling factor = 1
 
 // The maximum number of layers of the pyramid (counting intra-layers)
 export const PYRAMID_MAX_OCTAVES = 2 * PYRAMID_MAX_LEVELS - 1; // default scaling factor = sqrt(2)

@@ -27,7 +27,7 @@ import { Utils } from '../../../utils/utils';
 
 // constants
 const DEFAULT_QUALITY = 0.1; // default quality metric
-const DEFAULT_DEPTH = 3; // default depth for multiscale feature detection
+const DEFAULT_DEPTH = 4; // default depth for multiscale feature detection
 const DEFAULT_WINDOW_SIZE = 3; // compute Harris autocorrelation matrix within a 3x3 window
 const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // scale factor between consecutive pyramid layers (sqrt(2))
 const MIN_WINDOW_SIZE = 0; // minimum window size when computing the autocorrelation matrix
@@ -170,11 +170,11 @@ export class MultiscaleHarrisFeatures extends FeatureDetectionAlgorithm
 
     /**
      * Set the scale factor between consecutive pyramid layers
-     * @param {number} value a value greater than 1
+     * @param {number} value a value greater than 1 and less than or equal to 2
      */
     set scaleFactor(value)
     {
-        this._scaleFactor = Math.max(1, +value);
+        this._scaleFactor = Math.min(Math.max(1, +value), 2);
     }
 
     /**
