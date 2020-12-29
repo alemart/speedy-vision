@@ -75,21 +75,6 @@ export class SpeedyTexture
     }
 
     /**
-     * Copy pixels from a framebuffer into this texture
-     * @param {WebGLFramebuffer} fbo pixels will be copied from this framebuffer
-     * @param {number} [x] x coordinate: where to start copying
-     * @param {number} [y] y coordinate: where to start copying
-     * @param {number} [width]
-     * @param {number} [height]
-     * @returns {SpeedyTexture} this
-     */
-    copyFrom(fbo, x = 0, y = 0, width = this._width, height = this._height)
-    {
-        GLUtils.copyToTexture(this._gl, fbo, this._glTexture, x, y, width, height, 0);
-        return this;
-    }
-
-    /**
      * Generates an image pyramid
      * @param {SpeedyGPU} gpu
      * @param {boolean} [gaussian] should we compute a Gaussian pyramid? Recommended!

@@ -261,10 +261,13 @@ export class SpeedyProgram extends Function
             // we've just changed the contents of the internal texture
             texture.discardPyramid(); // discard its pyramid
 
-            // should we clone the internal texture?
-            const outputTexture = options.recycleTexture ?
-                texture : // no; simply return the internal texture
-                (new SpeedyTexture(gl, this._width, this._height)).copyFrom(fbo); // clone
+            // should we return the internal texture?
+            let outputTexture = texture;
+            if(!options.recycleTexture) {
+                // no; we must clone the intenal texture
+                outputTexture = new SpeedyTexture(gl, this._width, this._height);
+                GLUtils.copyToTexture(gl, fbo, outputTexture.glTexture, 0, 0, this._width, this._height);
+            }
 
             // ping-pong rendering
             this._pingpong();
@@ -317,10 +320,10 @@ export class SpeedyProgram extends Function
 
             // initialize the new texture with zeros to avoid a
             // warning when calling copyTexSubImage2D() on Firefox
-            newTexture.upload(zeros);
+            newTexture.upload(zeros); // may not be very efficient?
 
             // copy old content
-            newTexture.copyFrom(this._fbo[i], 0, 0, Math.min(width, oldWidth), Math.min(height, oldHeight));
+            GLUtils.copyToTexture(gl, this._fbo[i], newTexture.glTexture, 0, 0, Math.min(width, oldWidth), Math.min(height, oldHeight));
 
             // attach the new texture to the existing framebuffer
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo[i]);
@@ -347,7 +350,7 @@ export class SpeedyProgram extends Function
      * @param {number} [a] in [0,1]
      * @returns {SpeedyTexture}
      */
-    clear(r = 0, g = 0, b = 0, a = 1)
+    clear(r = 0, g = 0, b = 0, a = 0)
     {
         const gl = this._gl;
         const texture = this._texture[this._textureIndex];
