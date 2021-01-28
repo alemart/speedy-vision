@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,8 @@
  * Generic utilities
  */
 
-import { IllegalArgumentError, ParseError, AssertionError } from './errors'
+import { IllegalArgumentError, ParseError, AssertionError, AccessDeniedError, NotSupportedError } from './errors'
+import { SpeedyPromise } from './speedy-promise';
 
 /**
  * Generic utilities
@@ -173,7 +174,7 @@ export class Utils
     }
 
     /**
-     * Creates a <canvas> element with the given dimensions
+     * Creates a HTMLCanvasElement with the given dimensions
      * @param {number} width in pixels
      * @param {number} height in pixels
      * @returns {HTMLCanvasElement}
@@ -320,5 +321,50 @@ export class Utils
             throw new IllegalArgumentError(`Expected a positive integer as input`);
 
         return [...(Array(n).keys())];
+    }
+
+    /**
+     * Request webcam access (WebRTC)
+     * @param {number} width in pixels
+     * @param {number} height in pixels
+     * @param {object} [options] will be passed to navigator.mediaDevices.getUserMedia() 
+     * @returns {SpeedyPromise<HTMLVideoElement>}
+     */
+    static requestCameraStream(width, height, options = {})
+    {
+        Utils.log('Accessing the webcam...');
+
+        if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
+            throw new NotSupportedError('Unsupported browser: no mediaDevices.getUserMedia()');
+
+        return new SpeedyPromise((resolve, reject) => {
+            navigator.mediaDevices.getUserMedia({
+                audio: false,
+                video: {
+                    width: { ideal: width },
+                    height: { ideal: height },
+                    aspectRatio: width / height,
+                    //resizeMode: 'crop-and-scale',
+                    facingMode: 'environment',
+                    frameRate: 30,
+                },
+                ...options
+            })
+            .then(stream => {
+                const video = document.createElement('video');
+                video.onloadedmetadata = () => {
+                    video.play();
+                    Utils.log('The camera device is turned on!');
+                    resolve(video);
+                };
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                reject(new AccessDeniedError(
+                    `Please give access to the camera and reload the page`,
+                    err
+                ));
+            });
+        });
     }
 }
