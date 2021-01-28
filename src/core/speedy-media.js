@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,12 @@
 
 import { SpeedyGPU } from '../gpu/speedy-gpu';
 import { MediaType, ColorFormat } from '../utils/types'
-import { TimeoutError, IllegalArgumentError, IllegalOperationError, NotSupportedError, AccessDeniedError } from '../utils/errors';
+import { IllegalArgumentError, IllegalOperationError } from '../utils/errors';
 import { Utils } from '../utils/utils';
 import { SpeedyFeatureDetectorFactory } from './speedy-feature-detector-factory';
+import { SpeedyMediaSource } from './speedy-media-source';
+import { SpeedyPromise } from '../utils/speedy-promise';
+import { SpeedyPipeline } from './speedy-pipeline';
 
 /**
  * SpeedyMedia encapsulates a media element
@@ -33,49 +36,53 @@ export class SpeedyMedia
 {
     /**
      * Class constructor
-     * It assumes A VALID (!) media source that is already loaded
-     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} mediaSource Image or video
-     * @param {number} width media width
-     * @param {number} height media height
+     * It receives A VALID media source that is already loaded
+     * @param {SpeedyMediaSource|SpeedyMedia} source
      * @param {object} [options] options object
      */
-    /* private */ constructor(mediaSource, width, height, options = { })
+    /* private */ constructor(source, options = { })
     {
-        if(arguments.length > 1) {
-            // store data
-            this._source = mediaSource;
-            this._width = width | 0;
-            this._height = height | 0;
-            this._type = getMediaType(this._source);
-            this._colorFormat = ColorFormat.RGB;
+        /** @type {SpeedyMediaSource} media source */
+        this._source = null;
+
+        /** @type {SpeedyGPU} GPU routines */
+        this._gpu = null;
+
+        /** @type {Symbol} ColorFormat enum */
+        this._colorFormat = ColorFormat.RGB;
+
+        /** @type {object} options */
+        this._options = null;
+
+
+
+        // Setup the new SpeedyMedia
+        const constructor = source.constructor.name;
+        if(constructor == 'SpeedyMedia') {
+            // copy constructor (shallow copy)
+            const media = source;
+            this._source = media._source;
+            this._colorFormat = media._colorFormat;
+            this._options = media._options;
+            this._gpu = media._gpu;
+        }
+        else {
+            // store the media source
+            Utils.assert(source.isLoaded());
+            this._source = source;
 
             // warning: loading canvas without explicit usage option
-            if(this._type == MediaType.Canvas && options.usage === undefined)
+            if(this._source.type == MediaType.Canvas && options.usage === undefined)
                 Utils.warning('Loading a canvas without an explicit usage flag. I will set the usage to "static", resulting in suboptimal performance if the canvas is animated');
 
             // set options
-            this._options = buildOptions(options, {
-                usage: (this._type == MediaType.Video) ? 'dynamic' : 'static',
+            this._options = this._buildOptions(options, {
+                usage: (this._source.type == MediaType.Video) ? 'dynamic' : 'static',
             });
 
             // spawn relevant components
-            this._gpu = new SpeedyGPU(this._width, this._height);
+            this._gpu = new SpeedyGPU(this._source.width, this._source.height);
         }
-        else if(arguments.length == 1) {
-            // copy constructor (shallow copy)
-            const media = arguments[0];
-
-            this._source = media._source;
-            this._width = media._width;
-            this._height = media._height;
-            this._type = media._type;
-            this._colorFormat = media._colorFormat;
-            this._options = media._options;
-
-            this._gpu = media._gpu;
-        }
-        else
-            throw new IllegalArgumentError(`Invalid instantiation of SpeedyMedia`);
     }
 
     /**
@@ -83,16 +90,14 @@ export class SpeedyMedia
      * Will wait until the HTML media source is loaded
      * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} mediaSource An image, video or canvas
      * @param {object} [options] options object
-     * @returns {Promise<SpeedyMedia>}
+     * @returns {SpeedyPromise<SpeedyMedia>}
      */
     static load(mediaSource, options = { })
     {
-        return waitMediaToLoad(mediaSource).then(() => {
-            const dimensions = getMediaDimensions(mediaSource);
-            if(dimensions.width == 0 || dimensions.height == 0)
-                throw new IllegalOperationError(`Can't load media: invalid dimensions`);
+        return SpeedyMediaSource.load(mediaSource).then(source => {
+            Utils.assert(source.width !== 0 && source.height !== 0);
 
-            const media = new SpeedyMedia(mediaSource, dimensions.width, dimensions.height, options);
+            const media = new SpeedyMedia(source, options);
             Utils.log(`Loaded SpeedyMedia with a ${mediaSource}.`);
 
             return media;
@@ -109,7 +114,7 @@ export class SpeedyMedia
      */
     static loadCameraStream(width = 426, height = 240, cameraOptions = { }, mediaOptions = { })
     {
-        return requestCameraStream(width, height, cameraOptions).then(
+        return Utils.requestCameraStream(width, height, cameraOptions).then(
             video => SpeedyMedia.load(video, mediaOptions)
         );
     }
@@ -120,7 +125,7 @@ export class SpeedyMedia
      */
     get source()
     {
-        return this._source;
+        return this._source.data;
     }
 
     /**
@@ -129,7 +134,7 @@ export class SpeedyMedia
      */
     get width()
     {
-        return this._width;
+        return this._source.width;
     }
 
     /**
@@ -138,7 +143,7 @@ export class SpeedyMedia
      */
     get height()
     {
-        return this._height;
+        return this._source.height;
     }
 
     /**
@@ -147,7 +152,7 @@ export class SpeedyMedia
      */
     get type()
     {
-        switch(this._type) {
+        switch(this._source.type) {
             case MediaType.Image:
                 return 'image';
 
@@ -178,7 +183,7 @@ export class SpeedyMedia
     /**
      * Releases resources associated with this media.
      * You will no longer be able to use it, nor any of its lightweight clones.
-     * @returns {Promise} resolves as soon as the resources are released
+     * @returns {SpeedyPromise} resolves as soon as the resources are released
      */
     release()
     {
@@ -189,7 +194,7 @@ export class SpeedyMedia
             this._source = null;
         }
 
-        return Promise.resolve();
+        return SpeedyPromise.resolve();
     }
 
     /**
@@ -221,24 +226,13 @@ export class SpeedyMedia
         // clone the object
         if(options.lightweight) {
             // shallow copy
-            return Promise.resolve(new SpeedyMedia(this));
+            return SpeedyPromise.resolve(new SpeedyMedia(this, this._options));
         }
         else {
             // deep copy
-            if(this._type == MediaType.Bitmap) {
-                return createImageBitmap(this._source).then(
-                    bitmap => new SpeedyMedia(bitmap, this._width, this._height)
-                );               
-            }
-            else if(this._type == MediaType.Canvas) {
-                const clonedCanvas = Utils.createCanvas(this._width, this._height);
-                this.draw(clonedCanvas);
-                return Promise.resolve(new SpeedyMedia(clonedCanvas, this._width, this._height));
-            }
-            else {
-                const clonedSource = this._source.cloneNode(true);
-                return Promise.resolve(new SpeedyMedia(clonedSource, this._width, this._height));
-            }
+            return this._source.clone().then(
+                newSource => new SpeedyMedia(newSource, this._options)
+            );
         }
     }
 
@@ -253,10 +247,10 @@ export class SpeedyMedia
         if(this.isReleased())
             throw new IllegalOperationError('Can\'t run pipeline: SpeedyMedia has been released');
 
-        // run the pipeline on a cloned SpeedyMedia
+        // create a lightweight clone
         return this.clone({ lightweight: true }).then(media => {
-            // upload media to the GPU
-            let texture = media._gpu.upload(media._source);
+            // upload the media to the GPU
+            let texture = media._gpu.upload(media._source.data);
 
             // run the pipeline
             texture = pipeline._run(texture, media._gpu, media);
@@ -264,9 +258,10 @@ export class SpeedyMedia
             // convert to bitmap
             media._gpu.programs.utils.output(texture);
             return createImageBitmap(media._gpu.canvas, 0, 0, media.width, media.height).then(bitmap => {
-                media._type = MediaType.Bitmap;
-                media._source = bitmap;
-                return media;
+                return SpeedyMediaSource.load(bitmap).then(source => {
+                    media._source = source;
+                    return media;
+                });
             });
         });
     }
@@ -292,19 +287,22 @@ export class SpeedyMedia
 
         // draw
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(this._source, x, y, width, height);
+        ctx.drawImage(this._source.data, x, y, width, height);
     }
 
     /**
      * Converts the media to an ImageBitmap
      * @returns {Promise<ImageBitmap>}
      */
+
     toBitmap()
     {
         if(this.isReleased())
-            throw new IllegalOperationError('Can\'t convert to SpeedyMedia to ImageBitmap: the media has been released');
+            throw new IllegalOperationError('Can\'t convert SpeedyMedia to ImageBitmap: the media has been released');
+        else if(!this._source.isLoaded())
+            throw new IllegalOperationError('Can\'t convert SpeedyMedia to bitmap: the media hasn\'t been loaded');
 
-        return createImageBitmap(this._source);
+        return createImageBitmap(this._source.data);
     }
 
     /**
@@ -359,148 +357,26 @@ export class SpeedyMedia
         // Find features
         return this._featureDetector.detect(this);
     }
-}
 
-// get the { width, height } of a certain HTML element (image, video, canvas...)
-function getMediaDimensions(mediaSource)
-{
-    if(mediaSource && mediaSource.constructor && mediaSource.constructor.name) {
-        const element = mediaSource.constructor.name, key = {
-            HTMLImageElement: { width: 'naturalWidth', height: 'naturalHeight' },
-            HTMLVideoElement: { width: 'videoWidth', height: 'videoHeight' },
-            HTMLCanvasElement: { width: 'width', height: 'height' },
-            ImageBitmap: { width: 'width', height: 'height' },
-        };
+    /**
+     * Build & validate options object
+     * @param {object} options
+     * @param {object} defaultOptions
+     * @returns {object}
+     */
+    _buildOptions(options, defaultOptions)
+    {
+        // build options object
+        options = Object.assign({ }, defaultOptions, options);
 
-        if(key.hasOwnProperty(element)) {
-            return {
-                width: mediaSource[key[element].width],
-                height: mediaSource[key[element].height]
-            };
+        // validate
+        if(options.usage != 'dynamic' && options.usage != 'static') {
+            Utils.warning(`Can't load media. Unrecognized usage option: "${options.usage}"`);
+            options.usage = defaultOptions.usage;
+            Utils.assert(options.usage == 'dynamic' || options.usage == 'static');
         }
+
+        // done!
+        return Object.freeze(options); // must be read-only
     }
-
-    return null;
-}
-
-// get a string corresponding to the media type (image, video, canvas)
-function getMediaType(mediaSource)
-{
-    if(mediaSource && mediaSource.constructor) {
-        switch(mediaSource.constructor.name) {
-            case 'HTMLImageElement':
-                return MediaType.Image;
-
-            case 'HTMLVideoElement':
-                return MediaType.Video;
-
-            case 'HTMLCanvasElement':
-                return MediaType.Canvas;
-
-            case 'ImageBitmap':
-                return MediaType.Bitmap;
-        }
-    }
-
-    throw new IllegalArgumentError(`Can't get media type: invalid media source. ${mediaSource}`);
-}
-
-// wait until a media source is loaded
-function waitMediaToLoad(mediaSource, timeout = 30000)
-{
-    // a promise that resolves as soon as the media is loaded
-    const waitUntil = eventName => new Promise((resolve, reject) => {
-        Utils.log(`Loading media ${mediaSource} ...`);
-
-        const timer = setTimeout(() => {
-            reject(new TimeoutError(`Can't load ${mediaSource}: timeout (${timeout}ms)`));
-        }, timeout);
-
-        mediaSource.addEventListener(eventName, ev => {
-            clearTimeout(timer);
-            resolve(mediaSource);
-        });
-    });
-
-    // check if the media is already loaded
-    // if it's not, wait until it is
-    if(mediaSource && mediaSource.constructor) {
-        switch(mediaSource.constructor.name) {
-            case 'HTMLImageElement':
-                if(mediaSource.complete && mediaSource.naturalWidth !== 0)
-                    return Promise.resolve(mediaSource);
-                else
-                    return waitUntil('load');
-
-            case 'HTMLVideoElement':
-                if(mediaSource.readyState >= 4)
-                    return Promise.resolve(mediaSource);
-                else
-                    return waitUntil('canplaythrough');
-                    //return waitUntil('canplay'); // use readyState >= 3
-
-            case 'HTMLCanvasElement':
-                return Promise.resolve(mediaSource);
-
-            case 'ImageBitmap':
-                return Promise.resolve(mediaSource);
-        }
-    }
-
-    // unrecognized media type
-    throw new IllegalArgumentError(`Can't load the media: unrecognized media type. ${mediaSource}`);
-}
-
-// build & validate options object
-function buildOptions(options, defaultOptions)
-{
-    // build options object
-    options = Object.assign(defaultOptions, options);
-
-    // validate
-    if(options.usage != 'dynamic' && options.usage != 'static') {
-        Utils.warning(`Can't load media. Unrecognized usage option: "${options.usage}"`);
-        options.usage = defaultOptions.usage;
-    }
-
-    // done!
-    return Object.freeze(options); // must be read-only
-}
-
-// webcam access
-function requestCameraStream(width, height, options = {})
-{
-    return new Promise((resolve, reject) => {
-        Utils.log('Accessing the webcam...');
-
-        if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
-            return reject(new NotSupportedError('Unsupported browser: no mediaDevices.getUserMedia()'));
-
-        navigator.mediaDevices.getUserMedia({
-            audio: false,
-            video: {
-                width: { ideal: width },
-                height: { ideal: height },
-                aspectRatio: { ideal: width / height },
-                facingMode: 'environment',
-                frameRate: 30,
-            },
-            ...(options)
-        })
-        .then(stream => {
-            const video = document.createElement('video');
-            video.srcObject = stream;
-            video.onloadedmetadata = e => {
-                video.play();
-                Utils.log('The camera device is turned on!');
-                resolve(video, stream);
-            };
-        })
-        .catch(err => {
-            reject(new AccessDeniedError(
-                `Please give access to the camera and reload the page`,
-                err
-            ));
-        });
-    });
 }

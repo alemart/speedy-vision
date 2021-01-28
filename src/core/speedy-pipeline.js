@@ -39,6 +39,7 @@ export class SpeedyPipeline
      */
     constructor()
     {
+        /** @type {SpeedyPipelineOperation[]} operations vector */
         this._operations = [];
     }
 

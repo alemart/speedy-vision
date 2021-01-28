@@ -34,7 +34,7 @@ const asap = (typeof queueMicrotask !== 'undefined' && queueMicrotask) || // bro
  * interoperate with ES6 Promises. This implementation is
  * based on the Promises/A+ specification.
  */
- class SpeedyPromise
+export class SpeedyPromise
 {
     /**
      * Constructor
@@ -430,7 +430,7 @@ const asap = (typeof queueMicrotask !== 'undefined' && queueMicrotask) || // bro
     }
 }
 
-module.exports = { SpeedyPromise };
+//module.exports = { SpeedyPromise };
 
 /*
 // Uncomment to test performance with regular Promises
