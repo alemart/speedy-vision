@@ -294,7 +294,6 @@ export class SpeedyMedia
      * Converts the media to an ImageBitmap
      * @returns {Promise<ImageBitmap>}
      */
-
     toBitmap()
     {
         if(this.isReleased())
