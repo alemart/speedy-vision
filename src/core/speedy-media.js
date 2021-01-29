@@ -73,7 +73,10 @@ export class SpeedyMedia
 
             // warning: loading canvas without explicit usage option
             if(this._source.type == MediaType.Canvas && options.usage === undefined)
-                Utils.warning('Loading a canvas without an explicit usage flag. I will set the usage to "static", resulting in suboptimal performance if the canvas is animated');
+                Utils.warning('Loading a canvas without an explicit usage flag. I will set the usage to "static". This will result in suboptimal performance if the canvas is animated');
+
+            // set the color format
+            //this._colorFormat = ColorFormat.RGB;
 
             // set options
             this._options = this._buildOptions(options, {
