@@ -110,7 +110,7 @@ export class SpeedyMedia
      * @param {number} [height] height of the stream
      * @param {object} [cameraOptions] additional options to pass to getUserMedia()
      * @param {object} [mediaOptions] additional options for advanced configuration of the SpeedyMedia
-     * @returns {Promise<SpeedyMedia>}
+     * @returns {SpeedyPromise<SpeedyMedia>}
      */
     static loadCameraStream(width = 426, height = 240, cameraOptions = { }, mediaOptions = { })
     {
@@ -209,7 +209,7 @@ export class SpeedyMedia
     /**
      * Clones the SpeedyMedia object
      * @param {object} options options object
-     * @returns {Promise<SpeedyMedia>} a clone object
+     * @returns {SpeedyPromise<SpeedyMedia>} a clone object
      */
     clone(options = {})
     {
@@ -239,7 +239,7 @@ export class SpeedyMedia
     /**
      * Runs a pipeline
      * @param {SpeedyPipeline} pipeline
-     * @returns {Promise<SpeedyMedia>} a promise that resolves to A CLONE of this SpeedyMedia
+     * @returns {SpeedyPromise<SpeedyMedia>} a promise that resolves to A CLONE of this SpeedyMedia
      */
     run(pipeline)
     {
