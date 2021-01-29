@@ -306,59 +306,6 @@ export class SpeedyMedia
     }
 
     /**
-     * Finds feature points
-     * @deprecated Use the Feature Detection objects instead
-     * 
-     * @param {object} [settings] Configuration object
-     * @returns {Promise<SpeedyFeature[]>} A Promise returning an Array of SpeedyFeature objects
-     */
-    findFeatures(settings = {})
-    {
-        // Default settings
-        if(!settings.hasOwnProperty('method'))
-            settings.method = 'fast';
-        settings.method = String(settings.method);
-
-        // map: method string -> feature detector & descriptor
-        const createFeatureDetector = {
-            'fast': SpeedyFeatureDetectorFactory.FAST,
-            'multiscale-fast': SpeedyFeatureDetectorFactory.MultiscaleFAST,
-            'harris': SpeedyFeatureDetectorFactory.Harris,
-            'multiscale-harris': SpeedyFeatureDetectorFactory.MultiscaleHarris,
-            'orb': SpeedyFeatureDetectorFactory.ORB,
-            'brisk': SpeedyFeatureDetectorFactory.BRISK,
-        };
-
-        // Validate method
-        if(!createFeatureDetector.hasOwnProperty(settings.method))
-            throw new IllegalArgumentError(`Invalid method "${settings.method}" for feature detection`);
-
-        // Setup feature detector & descriptor
-        if(this._featureDetector == null || this._currFeatureDetector !== createFeatureDetector[settings.method]) {
-            const featureDetector = createFeatureDetector[settings.method];
-            this._currFeatureDetector = featureDetector;
-            this._featureDetector = featureDetector();
-        }
-
-        // Settings
-        if(settings.hasOwnProperty('sensitivity'))
-            this._featureDetector.sensitivity = +settings.sensitivity;
-        if(settings.hasOwnProperty('max'))
-            this._featureDetector.max = settings.max | 0;
-        if(settings.hasOwnProperty('denoise'))
-            this._featureDetector.enhance({ denoise: Boolean(settings.denoise) });
-        if(settings.hasOwnProperty('expected')) {
-            if(typeof settings.expected == 'object')
-                this._featureDetector.expect(settings.expected.number | 0, +settings.expected.tolerance);
-            else
-                this._featureDetector.expect(settings.expected | 0);
-        }
-
-        // Find features
-        return this._featureDetector.detect(this);
-    }
-
-    /**
      * Build & validate options object
      * @param {object} options
      * @param {object} defaultOptions
