@@ -117,7 +117,7 @@ A `SpeedyMedia` object encapsulates a media object: an image, a video, a canvas 
 
 ##### Speedy.load()
 
-`Speedy.load(source: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | ImageBitmap, options?: object): Promise<SpeedyMedia>`
+`Speedy.load(source: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement | ImageBitmap, options?: object): SpeedyPromise<SpeedyMedia>`
 
 Tells Speedy to load `source`. The `source` parameter may be an image, a video, a canvas or a bitmap.
 
@@ -128,7 +128,7 @@ Tells Speedy to load `source`. The `source` parameter may be an image, a video, 
 
 ###### Returns
 
-A `Promise<SpeedyMedia>` that resolves as soon as the media source is loaded.
+A `SpeedyPromise<SpeedyMedia>` that resolves as soon as the media source is loaded.
 
 ###### Example
 
@@ -141,7 +141,7 @@ window.onload = async function() {
 
 ##### Speedy.camera()
 
-`Speedy.camera(width?: number, height?: number, cameraOptions?: object, options?: object): Promise<SpeedyMedia>`
+`Speedy.camera(width?: number, height?: number, cameraOptions?: object, options?: object): SpeedyPromise<SpeedyMedia>`
 
 Loads a camera stream into a new `SpeedyMedia` object. This is a wrapper around `navigator.mediaDevices.getUserMedia()` provided for your convenience.
 
@@ -154,7 +154,7 @@ Loads a camera stream into a new `SpeedyMedia` object. This is a wrapper around 
 
 ###### Returns
 
-A `Promise<SpeedyMedia>` that resolves as soon as the media source is loaded with the camera stream.
+A `SpeedyPromise<SpeedyMedia>` that resolves as soon as the media source is loaded with the camera stream.
 
 ###### Example
 
@@ -237,7 +237,7 @@ Draws the media to a canvas.
 
 ##### SpeedyMedia.clone()
 
-`SpeedyMedia.clone(options?: object): Promise<SpeedyMedia>`
+`SpeedyMedia.clone(options?: object): SpeedyPromise<SpeedyMedia>`
 
 Clones the `SpeedyMedia` object.
 
@@ -248,7 +248,7 @@ Clones the `SpeedyMedia` object.
 
 ###### Returns
 
-A Promise that resolves to a clone of the `SpeedyMedia` object.
+A `SpeedyPromise` that resolves to a clone of the `SpeedyMedia` object.
 
 ###### Example
 
@@ -268,13 +268,13 @@ A Promise that resolves to an `ImageBitmap`.
 
 ##### SpeedyMedia.release()
 
-`SpeedyMedia.release(): Promise`
+`SpeedyMedia.release(): SpeedyPromise`
 
 Releases internal resources associated with this `SpeedyMedia`. You will no longer be able to use it, nor any of its [lightweight clones](#speedymediaclone).
 
 ###### Returns
 
-A `Promise` that resolves as soon as the resources are released.
+A `SpeedyPromise` that resolves as soon as the resources are released.
 
 ### Feature detection
 
@@ -608,7 +608,7 @@ Track a collection of `features` between frames. You may optionally specify the 
 
 ###### Returns
 
-A Promise that resolves to an array of `SpeedyFeature` objects.
+A `Promise` that resolves to an array of `SpeedyFeature` objects.
 
 ###### Example
 
@@ -942,6 +942,34 @@ Gets the FPS rate.
 
 ```js
 console.log(Speedy.fps);
+```
+
+#### Promises
+
+Speedy includes its own implementation of Promises, called SpeedyPromises. SpeedyPromises can interoperate with standard ES6 Promises and are based on the [Promises/A+ specification](https://promisesaplus.com). The main difference between SpeedyPromises and standard ES6 Promises is that, under certain circunstances, SpeedyPromises can be made to run faster than ES6 Promises.
+
+SpeedyPromises are specially beneficial when you have a chain of Promises. When (and if) their "turbocharged" mode is invoked, they will adopt a special (non-standard) behavior and skip the microtask queue when settling promises in a chain. This will save you a few milliseconds. While "a few milliseconds" doesn't sound much in terms of standard web development, for a real-time library such as Speedy it means a lot. Simply put, we're squeezing out performance. SpeedyPromises are used internally by the library.
+
+##### Speedy.Promise
+
+`Speedy.Promise: Function`
+
+Used to create a new `SpeedyPromise` object.
+
+###### Example
+
+```js
+let promise = new Speedy.Promise((resolve, reject) => {
+    setTimeout(resolve, 2000);
+});
+
+promise.then(() => {
+    console.log(`The SpeedyPromise is now fulfilled.`);
+}).catch(() => {
+    console.log(`The SpeedyPromise is now rejected.`);
+}).finally(() => {
+    console.log(`The SpeedyPromise is now settled.`);
+});
 ```
 
 #### Misc
