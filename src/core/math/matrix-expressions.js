@@ -818,6 +818,16 @@ class SpeedyMatrixAssignmentExpr extends SpeedyMatrixLvalueExpr
             lvalue._assign(rvalue._matrix).turbocharge()
         ).then(() => this);
     }
+
+    /**
+     * Get the matrix associated with this lvalue expression
+     * This matrix must be guaranteed to be available after evaluating this expression
+     * @returns {SpeedyMatrix}
+     */
+    get _matrix()
+    {
+        return this._lvalue._matrix;
+    }
 }
 
 /**
