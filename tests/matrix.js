@@ -444,8 +444,8 @@ describe('Matrix', function() {
                     1, 2, 3,
                 ]);
                 let QR = Speedy.Matrix(3, 6);
-                let Q = await QR.columnSet(0, 2);
-                let R = await QR.columnSet(3, 5);
+                let Q = await QR.columnSpan(0, 2);
+                let R = await QR.columnSpan(3, 5);
 
                 await QR.assign(A.qr());
 
@@ -481,7 +481,7 @@ describe('Matrix', function() {
 
                 // check if R is upper triangular
                 for(let jj = 0; jj < R.columns; jj++) {
-                    let rj = await R.column(jj).rowSet(jj, R.rows-1).read();
+                    let rj = await R.column(jj).rowSpan(jj, R.rows-1).read();
                     let rjj = await R.column(jj).row(jj).read();
                     expect(norm(rj)).toBeCloseTo(Math.abs(rjj[0]));
                 }
@@ -529,7 +529,7 @@ describe('Matrix', function() {
 
                 // check if R is upper triangular
                 for(let jj = 0; jj < R.columns; jj++) {
-                    let rj = await R.column(jj).rowSet(jj, R.rows-1).read();
+                    let rj = await R.column(jj).rowSpan(jj, R.rows-1).read();
                     let rjj = await R.column(jj).row(jj).read();
                     expect(norm(rj)).toBeCloseTo(Math.abs(rjj[0]));
                 }
@@ -576,7 +576,7 @@ describe('Matrix', function() {
 
                 // check if R is upper triangular
                 for(let jj = 0; jj < R.columns; jj++) {
-                    let rj = await R.column(jj).rowSet(jj, R.rows-1).read();
+                    let rj = await R.column(jj).rowSpan(jj, R.rows-1).read();
                     let rjj = await R.column(jj).row(jj).read();
                     expect(norm(rj)).toBeCloseTo(Math.abs(rjj[0]));
                 }
@@ -600,7 +600,7 @@ describe('Matrix', function() {
                 let Qtb = Speedy.Matrix.Zeros(3, 1); // n x 1
 
                 let QtbR = Speedy.Matrix.Zeros(4, 4); // m x (1+n) [Q'b | R]
-                let Qtb_ = await QtbR.column(0).rowSet(0, 2); // n x 1
+                let Qtb_ = await QtbR.column(0).rowSpan(0, 2); // n x 1
                 let R_ = await QtbR.block(0, 2, 1, 3); // n x n
 
                 await QR.assign(A.qr('reduced'));

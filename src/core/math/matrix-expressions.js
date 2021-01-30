@@ -259,7 +259,7 @@ class SpeedyMatrixExpr
      * @param {number} firstRow
      * @param {number} lastRow
      */
-    rowSet(firstRow, lastRow)
+    rowSpan(firstRow, lastRow)
     {
         return this.block(firstRow, lastRow, 0, this._columns - 1);
     }
@@ -269,7 +269,7 @@ class SpeedyMatrixExpr
      * @param {number} firstColumn
      * @param {number} lastColumn
      */
-    columnSet(firstColumn, lastColumn)
+    columnSpan(firstColumn, lastColumn)
     {
         return this.block(0, this._rows - 1, firstColumn, lastColumn);
     }
