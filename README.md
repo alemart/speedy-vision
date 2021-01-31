@@ -1193,6 +1193,7 @@ Not all matrix expressions can be written to (example: the result of a sum is re
 ##### SpeedyMatrixLvalueExpr.assign()
 
 `SpeedyMatrixLvalueExpr.assign(expr: SpeedyMatrixExpr): SpeedyPromise<SpeedyMatrixLvalueExpr>`
+
 `SpeedyMatrixLvalueExpr.assign(entries: number[]): SpeedyPromise<SpeedyMatrixLvalueExpr>`
 
 Assignment expression.
@@ -1276,6 +1277,7 @@ Speedy lets you work with blocks of matrices. This is a very handy feature! Colu
 ##### SpeedyMatrixExpr.block()
 
 `SpeedyMatrixExpr.block(firstRow: number, lastRow: number, firstColumn: number, lastColumn: number): SpeedyMatrixExpr`
+
 `SpeedyMatrixLvalueExpr.block(firstRow: number, lastRow: number, firstColumn: number, lastColumn: number): SpeedyMatrixLvalueExpr`
 
 Extract a `lastRow - firstRow + 1` x `lastColumn - firstColumn + 1` block from the matrix. All indices are 0-based. They are all inclusive. Note that the memory of the block is shared with the matrix.
@@ -1311,6 +1313,7 @@ await mat.print();
 ##### SpeedyMatrixExpr.column()
 
 `SpeedyMatrixExpr.column(index: number): SpeedyMatrixExpr`
+
 `SpeedyMatrixLvalueExpr.column(index: number): SpeedyMatrixLvalueExpr`
 
 Extract a column of the matrix.
@@ -1345,6 +1348,7 @@ console.log(firstColumn, secondColumn, thirdColumn);
 ##### SpeedyMatrixExpr.row()
 
 `SpeedyMatrixExpr.row(index: number): SpeedyMatrixExpr`
+
 `SpeedyMatrixLvalueExpr.row(index: number): SpeedyMatrixLvalueExpr`
 
 Extract a row of the matrix.
@@ -1376,6 +1380,7 @@ await mat.print();
 ##### SpeedyMatrixExpr.columnSpan()
 
 `SpeedyMatrixExpr.columnSpan(firstColumn: number, lastColumn: number): SpeedyMatrixExpr`
+
 `SpeedyMatrixLvalueExpr.columnSpan(firstColumn: number, lastColumn): SpeedyMatrixLvalueExpr`
 
 Extract a set of `lastColumn - firstColumn + 1` contiguous columns of the matrix.
@@ -1402,6 +1407,7 @@ await mat.columnSpan(0, 1).print();
 ##### SpeedyMatrixExpr.rowSpan()
 
 `SpeedyMatrixExpr.rowSpan(firstRow: number, lastRow: number): SpeedyMatrixExpr`
+
 `SpeedyMatrixLvalueExpr.rowSpan(firstRow: number, lastRow): SpeedyMatrixLvalueExpr`
 
 Extract a set of `lastRow - firstRow + 1` contiguous rows of the matrix.
@@ -1566,6 +1572,7 @@ A `SpeedyMatrixExpr` representing the difference between the matrix expression a
 ##### SpeedyMatrixExpr.times()
 
 `SpeedyMatrixExpr.times(expr: SpeedyMatrixExpr): SpeedyMatrixExpr`
+
 `SpeedyMatrixExpr.times(scalar: number): SpeedyMatrixExpr`
 
 Matrix multiplication.
