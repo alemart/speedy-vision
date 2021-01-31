@@ -1157,7 +1157,7 @@ Print the matrix in a neat format. Useful for debugging.
 ###### Arguments
 
 * `decimals: number, optional`. If specified, the entries of the matrix will be formatted with the specified number of digits after the decimal point. Defaults to `undefined`.
-* `fn: Function, optional`. The function to be used to print the matrix. Defaults to `console.log`.
+* `fn: Function, optional`. The function to be used in order to print the matrix. It must accept a string as input. Defaults to `console.log`.
 
 ###### Returns
 
