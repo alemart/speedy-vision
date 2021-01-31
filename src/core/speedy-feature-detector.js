@@ -26,7 +26,6 @@ import { SpeedyFlags } from './speedy-flags';
 import { SpeedyGPU } from '../gpu/speedy-gpu';
 import { SpeedyTexture } from '../gpu/speedy-texture';
 import { SpeedyMedia } from './speedy-media';
-import { AutomaticSensitivity } from './keypoints/automatic-sensitivity';
 import { FeatureDetectionAlgorithm } from './keypoints/feature-detection-algorithm';
 import { FeatureDescriptionAlgorithm } from './keypoints/feature-description-algorithm';
 import { FASTFeatures, MultiscaleFASTFeatures } from './keypoints/detectors/fast';
@@ -67,9 +66,6 @@ export class SpeedyFeatureDetector
             illumination: false,
             nightvision: null,
         };
-
-        // misc
-        this._automaticSensitivity = null; // automatic sensitivity (lazy instantiation)
     }
 
     /**
@@ -197,30 +193,6 @@ export class SpeedyFeatureDetector
 
         // merge enhancements object
         this._enhancements = Object.assign(this._enhancements, enhancements);
-    }
-
-    /**
-     * Set automatic sensitivity
-     * @param {number|undefined} numberOfFeaturePoints if set to undefined, we'll disable automatic sensitivity
-     * @param {number} [tolerance] percentage
-     */
-    expect(numberOfFeaturePoints, tolerance = 0.10)
-    {
-        if(numberOfFeaturePoints !== undefined) {
-            // enable automatic sensitivity
-            if(this._automaticSensitivity == null) {
-                this._automaticSensitivity = new AutomaticSensitivity(this._algorithm._downloader);
-                this._automaticSensitivity.subscribe(value => this.sensitivity = value);
-            }
-            this._automaticSensitivity.expected = numberOfFeaturePoints;
-            this._automaticSensitivity.tolerance = tolerance;
-        }
-        else {
-            // disable automatic sensitivity
-            if(this._automaticSensitivity != null)
-                this._automaticSensitivity.disable();
-            this._automaticSensitivity = null;
-        }
     }
 
     /**

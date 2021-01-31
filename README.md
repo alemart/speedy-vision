@@ -90,7 +90,6 @@ Try the demos and take a look at their source code:
   * [Feature detection in an image](https://alemart.github.io/speedy-vision-js/demos/image-features.html)
   * [Feature detection in a video](https://alemart.github.io/speedy-vision-js/demos/video-features.html)
   * [Find the best Harris corners](https://alemart.github.io/speedy-vision-js/demos/best-features.html)
-  * [Automatic sensitivity](https://alemart.github.io/speedy-vision-js/demos/automatic-sensitivity.html)
   * [ORB features](https://alemart.github.io/speedy-vision-js/demos/orb-features.html)
 * Feature tracking
   * [Optical flow in a corridor](https://alemart.github.io/speedy-vision-js/demos/optical-flow.html)
@@ -528,58 +527,6 @@ Speedy includes an implementation of ORB. It is an efficient solution that first
 
 
 
-
-#### Automatic sensitivity
-
-**Experimental feature**
-
-[Sensitivity](#speedyfeaturedetectorsensitivity) alone does not give you control of how many feature points you will get. When you specify the number of features you expect to get, Speedy will automatically learn a sensitivity value that gives you that amount of features, within a tolerance range.
-
-Automatic sensitivity is meant to be used with media configured for [dynamic usage](#speedymediaoptions). It takes multiple calls to the feature detector for Speedy to adjust the sensitivity. Multiple calls is what you will be doing anyway if you need to detect features in a video (see the example below).
-
-Speedy finds the feature points on the GPU. Although this is an efficient process, downloading data from the GPU is expensive. The more features you get, the more data has to be downloaded. Setting an expected number of feature points may thus help you keep the number of returned points in a controlled interval.
-
-Expected numbers between 100 and 500 have been found to work well in practice. Your results may vary depending on your media. If you need larger numbers and don't care about the exact amount, it's easier to adjust the sensitivity manually. If you need small numbers, you might want to increase the tolerance.
-
-##### SpeedyFeatureDetector.expect()
-
-`SpeedyFeatureDetector.expect(numberOfFeaturePoints: number | undefined, tolerance: number?)`
-
-Speedy can automatically adjust the [sensitivity](#speedyfeaturedetectorsensitivity) of the feature detector to get you *approximately* the number of features you ask.
-
-###### Arguments
-
-* `numberOfFeaturePoints: number | undefined`. The approximate number of feature points you desire, or `undefined` if you wish to disable automatic sensitivity
-* `tolerance: number, optional`. A tolerance margin, defined as a percentage relative to the number of features you expect. Defaults to `0.10` (10%)
-
-###### Example
-
-```js
-window.onload = async function() {
-    // load media
-    const video = document.getElementById('my-video');
-    const media = await Speedy.load(video);
-
-    // create a feature detector
-    const harris = Speedy.FeatureDetector.Harris();
-
-    // give me approximately 100 feature points
-    harris.expect(100);
-
-    // find features
-    async function loop()
-    {
-        // detect features
-        const features = await harris.detect(media);
-        console.log(`Found ${features.length} features`);
-
-        // loop
-        const FPS = 60;
-        setTimeout(loop, 1000.0 / FPS);
-    }
-    loop();
-};
-```
 
 ### Feature description
 

@@ -184,30 +184,6 @@ describe('Feature detection', function() {
                     });
                 }
             });
-
-            // FIXME Need to update the algorithm...
-            xdescribe('Automatic sensitivity', function() {
-                const tests = [100, 200, 300];
-                const tolerance = 0.10;
-                const numRepetitions = 100;
-
-                for(const expected of tests) {
-                    it(`finds ${expected} features within a ${(100 * tolerance).toFixed(2)}% tolerance margin`, async function() {
-                        const features = await repeat(numRepetitions, () => {
-                            featureDetector.expect(expected, tolerance);
-                            return featureDetector.detect(media);
-                        });
-                        const actual = features.length;
-                        const percentage = 100 * actual / expected;
-
-                        print(`Automatic sensitivity: with ${numRepetitions} repetitions of the algorithm, we've got ${actual} features (${percentage.toFixed(2)}%).`);
-                        displayFeatures(media, features);
-
-                        expect(actual).toBeLessThanOrEqual(expected * (1 + tolerance));
-                        expect(actual).toBeGreaterThanOrEqual(expected * (1 - tolerance));
-                    });
-                }
-            });
         });
     }
 
