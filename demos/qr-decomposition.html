@@ -1,0 +1,114 @@
+<!--
+  speedy-vision.js
+  GPU-accelerated Computer Vision for JavaScript
+  Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  qr-decomposition.html
+  QR decomposition demo
+-->
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
+        <meta name="author" content="Alexandre Martins">
+        <title>QR decomposition</title>
+        <script src="../dist/speedy-vision.js"></script>
+        <link href="style.css" rel="stylesheet">
+    </head>
+    <body>
+        <h1>QR decomposition</h1>
+        <form>
+            <div>
+                Let's compute a QR factorization of a 3x3 matrix.
+                <br>
+                Simply edit the fields below.
+            </div>
+            <div class="separator"></div>
+            <div>
+                <table>
+                    <tr>
+                        <td><input type="number" id="a0" step="0.5" value="1.0"></td>
+                        <td><input type="number" id="a3" step="0.5" value="0.0"></td>
+                        <td><input type="number" id="a6" step="0.5" value="0.0"></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" id="a1" step="0.5" value="0.0"></td>
+                        <td><input type="number" id="a4" step="0.5" value="1.0"></td>
+                        <td><input type="number" id="a7" step="0.5" value="0.0"></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" id="a2" step="0.5" value="0.0"></td>
+                        <td><input type="number" id="a5" step="0.5" value="0.0"></td>
+                        <td><input type="number" id="a8" step="0.5" value="1.0"></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="separator"></div>
+            <div>
+                The columns should be linearly independent.
+            </div>
+        </form>
+        <pre>Edit any field to begin!</pre>
+        <script>
+            window.onload = function() {
+                const output = document.querySelector('pre');
+                const input = {
+                    a: [ ...(new Array(9).keys()) ].map(j => document.querySelector('#a' + j))
+                };
+
+                // setup event listeners
+                input.a.forEach(field =>
+                    field.addEventListener('input', qr)
+                );
+
+                // output
+                function println(str)
+                {
+                    output.innerText += str + '\n';
+                }
+
+                function clear()
+                {
+                    output.innerText = '';
+                }
+
+                // compute a QR decomposition
+                async function qr()
+                {
+                    const A = Speedy.Matrix(3, 3, input.a.map(field => Number(field.value)), 'float64');
+                    const QR = Speedy.Matrix.Zeros(3, 6, 'float64');
+
+                    // create two "views" of the QR matrix
+                    const Q = QR.block(0, 2, 0, 2);
+                    const R = QR.block(0, 2, 3, 5);
+                    
+                    // compute QR
+                    await QR.assign(A.qr());
+                    
+                    // print the factorization
+                    clear();
+                    println('Matrix Q:\n');
+                    await Q.print(9, println);
+                    println('\nMatrix R:\n');
+                    await R.print(9, println);
+                    println('\nMatrix QR:\n');
+                    await Q.times(R).print(9, println);
+                }
+            }
+        </script>
+        <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>
+    </body>
+</html>
