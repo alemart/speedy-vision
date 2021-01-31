@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for the web
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -101,11 +101,16 @@ select option:hover {
   color: white;
 }
 
-input[type=text] {
+input[type=text], input[type=number] {
   background: whitesmoke;
   border: 0;
   padding: 4px;
   margin: 0px;
+  box-shadow: -1px -1px 2px lightslategrey;
+}
+
+input[type=number] {
+  width: 64px;
 }
 
 .separator::before {

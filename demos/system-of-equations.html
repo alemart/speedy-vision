@@ -1,0 +1,123 @@
+<!--
+  speedy-vision.js
+  GPU-accelerated Computer Vision for JavaScript
+  Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  system-of-equations.html
+  System of Equations Demo
+-->
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
+        <meta name="author" content="Alexandre Martins">
+        <title>Linear System of Equations</title>
+        <script src="../dist/speedy-vision.js"></script>
+        <link href="style.css" rel="stylesheet">
+    </head>
+    <body>
+        <h1>System of Equations</h1>
+        <form>
+            <div>
+                We have 3 equations and 3 unknowns.
+                <br>
+                Simply edit the fields below.
+                Method:
+                <select id="method">
+                    <option value="qr">qr</option>
+                    <option value="lu" disabled>lu (soon)</option>
+                </select>
+            </div>
+            <div class="separator"></div>
+            <div>
+                <table>
+                    <tr>
+                        <td><input type="number" id="a0" step="0.5" value="1.0"> x</td>
+                        <td>&nbsp; + &nbsp;</td>
+                        <td><input type="number" id="a3" step="0.5" value="0.0"> y</td>
+                        <td>&nbsp; + &nbsp;</td>
+                        <td><input type="number" id="a6" step="0.5" value="0.0"> z</td>
+                        <td></td>
+                        <td><input type="number" id="b0" step="0.5" value="0.0"></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" id="a1" step="0.5" value="0.0"> x</td>
+                        <td>&nbsp; + &nbsp;</td>
+                        <td><input type="number" id="a4" step="0.5" value="1.0"> y</td>
+                        <td>&nbsp; + &nbsp;</td>
+                        <td><input type="number" id="a7" step="0.5" value="0.0"> z</td>
+                        <td>&nbsp; = &nbsp;</td>
+                        <td><input type="number" id="b1" step="0.5" value="0.0"></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" id="a2" step="0.5" value="0.0"> x</td>
+                        <td>&nbsp; + &nbsp;</td>
+                        <td><input type="number" id="a5" step="0.5" value="0.0"> y</td>
+                        <td>&nbsp; + &nbsp;</td>
+                        <td><input type="number" id="a8" step="0.5" value="1.0"> z</td>
+                        <td></td>
+                        <td><input type="number" id="b2" step="0.5" value="0.0"></td>
+                    </tr>
+                </table>
+            </div>
+        </form>
+        <pre>Edit any text field to begin!</pre>
+        <script>
+            window.onload = function() {
+                const output = document.querySelector('pre');
+                const input = {
+                    method: document.querySelector('#method'),
+                    a: [ ...(new Array(9).keys()) ].map(j => document.querySelector('#a' + j)),
+                    b: [ ...(new Array(3).keys()) ].map(j => document.querySelector('#b' + j))
+                };
+
+                // setup event listener
+                [ ...input.a, ...input.b, input.method ].forEach(field =>
+                    field.addEventListener('input', solve)
+                );
+
+                // output
+                function println(str)
+                {
+                    output.innerText += str + '\n';
+                }
+
+                function clear()
+                {
+                    output.innerText = '';
+                }
+
+                // solve the system of equations
+                async function solve()
+                {
+                    // Solve Ax = b for x
+                    const A = Speedy.Matrix(3, 3, input.a.map(field => Number(field.value)), 'float64');
+                    const b = Speedy.Matrix(3, 1, input.b.map(field => Number(field.value)), 'float64');
+                    const x = A.solve(b, input.method.value);
+                    const soln = await x.read();
+                    
+                    // print the solution
+                    clear();
+                    println('Solution:\n');
+                    println('x = ' + soln[0].toFixed(9));
+                    println('y = ' + soln[1].toFixed(9));
+                    println('z = ' + soln[2].toFixed(9));
+                }
+            }
+        </script>
+        <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>
+    </body>
+</html>
