@@ -1176,6 +1176,16 @@ const mat = Speedy.Matrix(2, 2, [
 await mat.print();
 ```
 
+##### SpeedyMatrixExpr.toString()
+
+`SpeedyMatrixExpr.toString(): string`
+
+Convert to string. This is a synchronous method. Although the shape of the matrix will be available, its data will not. If you need the actual entries of the matrix, consider using asynchronous methods [SpeedyMatrixExpr.print()](#speedymatrixexprprint) or [SpeedyMatrixExpe.read()](#speedymatrixexprread) instead.
+
+###### Returns
+
+A string.
+
 #### Writing to the matrices
 
 Not all matrix expressions can be written to (example: the result of a sum is read-only). You need a *l-value* expression to be able to write. You'll have a *l-value* expression when you create a new matrix or when you access a block of a matrix that you have previously created. Think of a *l-value* expression as a sort of "matrix variable" that you can write data to.

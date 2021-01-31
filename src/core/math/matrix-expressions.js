@@ -213,6 +213,15 @@ class SpeedyMatrixExpr
         return this._evaluate().then(expr => expr._matrix.print(decimals, printFunction)).turbocharge();
     }
 
+    /**
+     * Convert to string
+     * @returns {string}
+     */
+    toString()
+    {
+        return this._matrix.toString();
+    }
+
 
 
 
