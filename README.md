@@ -1191,7 +1191,15 @@ A string.
 
 #### Writing to the matrices
 
-Not all matrix expressions can be written to (example: the result of a sum is read-only). You need a *l-value* expression to be able to write. You'll have a *l-value* expression when you create a new matrix or when you access a block of a matrix that you have previously created. Think of a *l-value* expression as a sort of "matrix variable" that you can write data to.
+Not all matrix expressions can be written to (example: the result of a sum is read-only). You need a *l-value* expression to be able to write. You'll have a *l-value* expression when you create a new matrix or when you access a block of a matrix that you have previously created. Think of a *l-value* expression as a sort of "matrix variable" that you can write data to. It's a *"locator value"*, as it is called in C. Let's illustrate:
+
+```js
+// Correct: myvariable is a l-value - you can assign a value to it
+myvariable = 2;
+
+// Error: 1 is not a l-value - you can't assign a value to it
+1 = 2;
+```
 
 ##### SpeedyMatrixLvalueExpr.assign()
 
