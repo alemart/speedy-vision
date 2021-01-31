@@ -18,7 +18,7 @@ module.exports = (env, argv) => ({
             `Date: ${date}`,
         ].join('\n'))(Object.assign(package, {
             'date': (new Date()).toISOString(),
-            'year': [...(new Set([2020, new Date().getFullYear()]))].join('-'),
+            'year': [2020, new Date().getFullYear()].join('-'),
             'author': package.author.replace('@', '(at)'),
         }))
     }),
