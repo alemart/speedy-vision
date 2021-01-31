@@ -34,7 +34,7 @@ describe('Matrix', function() {
         if(matrices.length > 0) {
             const m = matrices.shift();
             if(typeof m === 'object')
-                return m.print(print, 2).then(() => printm(...matrices));
+                return m.print(2, print).then(() => printm(...matrices));
             else {
                 print(m);
                 return Promise.resolve().then(() => printm(...matrices));
@@ -54,7 +54,7 @@ describe('Matrix', function() {
             for(const type of types) {
                 const data = [1, 8, 91, 81, 7, 4, 77, 10, 0];
                 const matrix = Speedy.Matrix(3, 3, data, type);
-                await matrix.print(print);
+                await printm(matrix);
 
                 const readData = await matrix.read();
                 expect(readData).toBeElementwiseEqual(data);
@@ -66,7 +66,7 @@ describe('Matrix', function() {
             for(let i = 0; i < cnt; i++) {
                 const data = new Array(25).fill(0).map(_ => Math.random());
                 const matrix = Speedy.Matrix(5, 5, data, 'float64');
-                //await matrix.print(print);
+                //await printm(matrix);
 
                 const readData = await matrix.read();
                 expect(readData).toBeElementwiseNearlyEqual(data);
@@ -77,7 +77,7 @@ describe('Matrix', function() {
             const n = 10;
             const data = new Array(n * n).fill(0);
             const matrix = Speedy.Matrix.Zeros(n);
-            await matrix.print(print);
+            await printm(matrix);
 
             const readData = await matrix.read();
             expect(readData.length).toEqual(data.length);
@@ -88,7 +88,7 @@ describe('Matrix', function() {
             const n = 10;
             const data = new Array(n * n).fill(1);
             const matrix = Speedy.Matrix.Ones(n);
-            await matrix.print(print);
+            await printm(matrix);
 
             const readData = await matrix.read();
             expect(readData.length).toEqual(data.length);
@@ -98,7 +98,7 @@ describe('Matrix', function() {
         it('creates an identity matrix', async function() {
             const data = [1, 0, 0, 0, 1, 0, 0, 0, 1];
             const matrix = Speedy.Matrix.Eye(3);
-            await matrix.print(print);
+            await printm(matrix);
 
             const readData = await matrix.read();
             expect(readData.length).toEqual(data.length);
@@ -116,7 +116,7 @@ describe('Matrix', function() {
             for(let i = 0; i < n; i++) {
                 const matrix = Speedy.Matrix.Zeros(n);
                 await matrix.row(i).fill(1);
-                await matrix.print(print);
+                await printm(matrix);
 
                 const readOnes = await matrix.row(i).read();
                 expect(readOnes).toBeElementwiseEqual(ones);
@@ -133,7 +133,7 @@ describe('Matrix', function() {
             for(let i = 0; i < n; i++) {
                 const matrix = Speedy.Matrix.Zeros(n);
                 await matrix.column(i).fill(1);
-                await matrix.print(print);
+                await printm(matrix);
 
                 const readOnes = await matrix.column(i).read();
                 expect(readOnes).toBeElementwiseEqual(ones);
@@ -150,7 +150,7 @@ describe('Matrix', function() {
                 const eye = Speedy.Matrix.Eye(i);
                 const matrix = Speedy.Matrix.Zeros(i);
                 await matrix.diagonal().fill(1);
-                await matrix.print(print);
+                await printm(matrix);
 
                 const readOnes = await matrix.diagonal().read();
                 expect(readOnes).toBeElementwiseEqual(Array(i).fill(1));
@@ -182,11 +182,11 @@ describe('Matrix', function() {
             C = Speedy.Matrix(n);
             await C.assign(A.plus(B));
 
-            await A.print(print);
+            await printm(A);
             print('+');
-            await B.print(print);
+            await printm(B);
             print('=');
-            await C.print(print);
+            await printm(C);
 
             a = await A.read();
             b = await B.read();
@@ -205,11 +205,11 @@ describe('Matrix', function() {
             C = Speedy.Matrix(n);
             await C.assign(A.minus(B));
 
-            await A.print(print);
+            await printm(A);
             print('-');
-            await B.print(print);
+            await printm(B);
             print('=');
-            await C.print(print);
+            await printm(C);
 
             a = await A.read();
             b = await B.read();
@@ -245,11 +245,11 @@ describe('Matrix', function() {
                 64, 154
             ]);
 
-            await A.print(print);
+            await printm(A);
             print("*");
-            await B.print(print);
+            await printm(B);
             print("=");
-            await (A.times(B)).print(print);
+            await printm(A.times(B));
 
             const expected = await C.read();
             const actual = await A.times(B).read();
@@ -413,8 +413,8 @@ describe('Matrix', function() {
                 4, 5, 6,
             ]);
 
-            await A.print(print);
-            await A.transpose().print(print);
+            await printm(A);
+            await printm(A.transpose());
 
             let at = await At.read();
             let at_ = await A.transpose().read();
