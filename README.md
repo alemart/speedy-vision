@@ -1424,6 +1424,7 @@ A `SpeedyMatrixLvalueExpr` (read-write) if the input expression is a `SpeedyMatr
 ##### SpeedyMatrixExpr.diagonal()
 
 `SpeedyMatrixExpr.diagonal(): SpeedyMatrixExpr`
+
 `SpeedyMatrixLvalueExpr.diagonal(): SpeedyMatrixLvalueExpr`
 
 Extract the main diagonal of the matrix.
