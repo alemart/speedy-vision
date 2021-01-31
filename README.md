@@ -1180,7 +1180,7 @@ await mat.print();
 
 `SpeedyMatrixExpr.toString(): string`
 
-Convert to string. This is a synchronous method. Although the shape of the matrix will be available, its data will not. If you need the actual entries of the matrix, consider using asynchronous methods [SpeedyMatrixExpr.print()](#speedymatrixexprprint) or [SpeedyMatrixExpe.read()](#speedymatrixexprread) instead.
+Convert to string. This is a synchronous method. Although the shape of the matrix will be available, its data will not. If you need the actual entries of the matrix, use asynchronous methods [SpeedyMatrixExpr.print()](#speedymatrixexprprint) or [SpeedyMatrixExpr.read()](#speedymatrixexprread) instead.
 
 ###### Returns
 
