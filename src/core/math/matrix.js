@@ -224,11 +224,11 @@ export class SpeedyMatrix
 
     /**
      * Print the matrix. Useful for debugging
-     * @param {Function} [printFunction] prints a string
      * @param {number} [decimals] format numbers to a number of decimals
+     * @param {Function} [printFunction] prints a string
      * @returns {SpeedyPromise<void>} a promise that resolves as soon as the matrix is printed
      */
-    print(printFunction = console.log, decimals = undefined)
+    print(decimals = undefined, printFunction = console.log)
     {
         return this.read().then(data => {
             const rows = this._rows, columns = this._columns;
