@@ -1699,7 +1699,7 @@ Compute a QR decomposition using Householder reflectors.
 
 ###### Returns
 
-A `SpeedyMatrixExpr` representing a matrix with two blocks, *Q* and *R*, such that *Q* is unitary, *R* is upper-triangular and *A = Q * R*. The output matrix is set up as follows:
+A `SpeedyMatrixExpr` representing a matrix with two blocks, *Q* and *R*, such that *Q* is orthogonal, *R* is upper-triangular and *A = Q * R*. The output matrix is set up as follows:
 
 * If `mode` is `"reduced"`, then its first *m* rows and its first *n* columns store *Q*, whereas its last *n* rows and its last *n* columns store *R*. Its shape is *m* x *2n*.
 * If `mode` is `"full"`, then its first *m* rows and its first *m* columns store *Q*, whereas its last *m* rows and its last *n* columns store *R* (*R* is a non-square matrix filled with zeros at the bottom). Its shape is *m* x *(m + n)*.
