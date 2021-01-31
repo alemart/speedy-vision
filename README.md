@@ -1629,7 +1629,7 @@ A `SpeedyMatrixExpr` representing the component-wise multiplication between the 
 
 `SpeedyMatrixExpr.solve(b: SpeedyMatrixExpr, method?: string): SpeedyMatrixExpr`
 
-Solve a linear system of equations. We'll solve *Ax = b* for *x*, where *A* is a *m* x *m* square matrix and *b* is a *m* x *1* column vector.
+Solve a linear system of equations. We'll solve *Ax = b* for *x*, where *A* is a *m* x *m* square matrix and *b* is a *m* x *1* column vector. *m* is the number of equations and the number of unknowns.
 
 ###### Arguments
 
