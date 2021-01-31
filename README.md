@@ -21,6 +21,10 @@ Build real-time stuff with **speedy-vision.js**, a GPU-accelerated Computer Visi
   * Custom convolution filters
   * Image normalization
   * Nightvision
+* Linear Algebra
+  * Beautiful matrix algebra with fluent interfaces
+  * Solve linear systems of equations
+  * QR decomposition
 
 ... and more in development!
 
@@ -41,13 +45,39 @@ speedy-vision.js is developed by [Alexandre Martins](https://github.com/alemart)
 * [Motivation](#motivation)
 * [API Reference](#api-reference)
   * [Media routines](#media-routines)
+    * [Loading your media](#loading-your-media)
+    * [Media properties](#media-properties)
+    * [Playing with your media](#playing-with-your-media)
   * [Feature detection](#feature-detection)
+    * [Detection methods](#detection-methods)
+    * [Properties of feature points](#properties-of-feature-points)
+    * [FAST features](#fast-features)
+    * [Harris corners](#harris-corners)
+    * [ORB features](#orb-features)
   * [Feature description](#feature-description)
+    * [ORB descriptors](#orb-descriptors)
   * [Feature tracking](#feature-tracking)
+    * [Tracking methods](#tracking-methods)
+    * [Tracking API](#tracking-api)
+    * [LK feature tracker](#lk-feature-tracker)
   * [Feature matching](#feature-matching)
   * [Image processing](#image-processing)
+    * [Creating a pipeline](#creating-a-pipeline)
+    * [Running a pipeline](#running-a-pipeline)
+    * [Pipeline operations](#pipeline-operations)
   * [Maths](#maths)
+    * [2D vectors](#2d-vectors)
+  * [Matrices & Linear Algebra](#matrices-linear-algebra)
+    * [Creating new matrices](#creating-new-matrices)
+    * [Matrix properties](#matrix-properties)
+    * [Reading from the matrices](#reading-from-the-matrices)
+    * [Writing to the matrices](#writing-to-the-matrices)
+    * [Elementary operations](#elementary-operations)
+    * [Access by block](#access-by-block)
+    * [Linear Algebra](#linear-algebra)
   * [Extras](#extras)
+    * [Promises](#promises)
+    * [Utilities](#utilities)
 * [Unit tests](https://alemart.github.io/speedy-vision-js/tests/index.html)
 
 ## Demos
@@ -183,7 +213,7 @@ function createCanvas(width, height)
 }
 ```
 
-#### Examining your media
+#### Media properties
 
 ##### SpeedyMedia.source
 
@@ -403,6 +433,46 @@ The `SpeedyFeatureDetector` itself.
 
 
 
+#### Properties of feature points
+
+A `SpeedyFeature` object represents a feature point (also known as keypoint).
+
+##### SpeedyFeature.x
+
+`SpeedyFeature.x: number, read-only`
+
+The x position of the feature in the image.
+
+##### SpeedyFeature.y
+
+`SpeedyFeature.y: number, read-only`
+
+The y position of the feature in the image.
+
+##### SpeedyFeature.scale
+
+`SpeedyFeature.scale: number, read-only`
+
+The scale of the image feature. Only a subset of the feature [detection methods](#detection-methods) support scaled features. Defaults to `1.0`.
+
+##### SpeedyFeature.rotation
+
+`SpeedyFeature.rotation: number, read-only`
+
+The orientation angle of the image feature, in radians. Only a subset of the feature [detection methods](#detection-methods) support oriented features. Defaults to `0.0`.
+
+##### SpeedyFeature.score
+
+`SpeedyFeature.score: number, read-only`
+
+A score measure of the image feature. Although different detection methods employ different measurement strategies, the larger the score, the "better" the feature is.
+
+##### SpeedyFeature.lod
+
+`SpeedyFeature.lod: number, read-only`
+
+The level-of-detail (pyramid level) corresponding to the feature point, starting from zero. While not the same, `lod` is equivalent to `scale`.
+
 
 
 
@@ -514,7 +584,7 @@ Feature descriptors are data that somehow describe feature points. "Similar" fea
 
 Feature detectors and feature trackers may be linked with a feature descriptor using a decorator. The decorator design pattern lets you dynamically add new behavior to objects. It creates a flexible way of combining detection and description algorithms, considering that the actual computations take place in the GPU.
 
-#### ORB features
+#### ORB descriptors
 
 `SpeedyFeatureDescriptor.ORB(): SpeedyFeatureDecorator`
 
@@ -534,45 +604,7 @@ const detector = Speedy.FeatureDetector.MultiscaleHarris().link(orb);
 const features = await detector.detect(media);
 ```
 
-#### Examining your feature points
 
-A `SpeedyFeature` object represents an image feature.
-
-##### SpeedyFeature.x
-
-`SpeedyFeature.x: number, read-only`
-
-The x position of the feature in the image.
-
-##### SpeedyFeature.y
-
-`SpeedyFeature.y: number, read-only`
-
-The y position of the feature in the image.
-
-##### SpeedyFeature.scale
-
-`SpeedyFeature.scale: number, read-only`
-
-The scale of the image feature. Only a subset of the feature [detection methods](#detection-methods) support scaled features. Defaults to `1.0`.
-
-##### SpeedyFeature.rotation
-
-`SpeedyFeature.rotation: number, read-only`
-
-The orientation angle of the image feature, in radians. Only a subset of the feature [detection methods](#detection-methods) support oriented features. Defaults to `0.0`.
-
-##### SpeedyFeature.score
-
-`SpeedyFeature.score: number, read-only`
-
-A score measure of the image feature. Although different detection methods employ different measurement strategies, the larger the score, the "better" the feature is.
-
-##### SpeedyFeature.lod
-
-`SpeedyFeature.lod: number, read-only`
-
-The level-of-detail (pyramid level) corresponding to the feature point, starting from zero. While not the same, `lod` is equivalent to `scale`.
 
 ### Feature tracking
 
@@ -815,7 +847,7 @@ Nightvision enhances the illumination of the scene. It improves local contrast a
 
 ### Maths
 
-#### Vectors
+#### 2D Vectors
 
 ##### Speedy.Vector2()
 
@@ -926,23 +958,762 @@ Get a string representation of the vector.
 
 A string representation of the vector.
 
-### Extras
 
-#### Frames per second (FPS)
 
-Speedy includes a FPS counter for testing purposes. It will be created as soon as you access it.
 
-##### Speedy.fps
+### Matrices & Linear Algebra
 
-`Speedy.fps: number, read-only`
+Matrix computations play a crucial role in computer vision applications. Speedy includes its own implementation of matrices. Matrix computations are specified using a fluent interface that has been crafted to be easy to use and to somewhat mirror how we write matrix algebra using pen-and-paper.
 
-Gets the FPS rate.
+Matrix computations may be computationally heavy. Speedy's Matrix system has been designed in such a way that the actual number crunching takes place in a WebWorker (with a few exceptions), so that the user interface will not be blocked during the computations.
+
+Since matrix operations usually do not take place in the main thread, Speedy's Matrix API is asynchronous in nature. Here's a brief overview of how it works:
+
+1. First, you specify the operations you want.
+2. Next, your operations will be quickly examined, and perhaps simplified.
+3. Your operations will be placed in a queue as soon as a result is required.
+4. A WebWorker will do the number crunching as soon as possible.
+5. Finally, you will get the results you asked for, asynchronously.
+
+Because Speedy's Matrix API has been designed to not block the main thread, be aware that there is a little bit of overhead to make this work. This overhead does not depend on the size of the matrices, but it is impacted by the number of matrix operations. Therefore, it's generally preferable to work with a few "large" matrices than lots of "small" ones (e.g., 3x3).
+
+If you intend to work with very "small" matrices, Speedy may perform the computations in the main thread in order to avoid the cost of transfering data to a WebWorker. If this is your case, then writing a closed algebraic expression to your problem - if at all possible - will likely give you the best performance.
+
+Finally, matrices in Speedy are stored in [column-major format](https://en.wikipedia.org/wiki/Row-_and_column-major_order), using Typed Arrays for extra performance.
+
+#### Creating new matrices
+
+##### Speedy.Matrix()
+
+`Speedy.Matrix(rows: number, columns: number, data?: number[], dtype?: string): SpeedyMatrixLvalueExpr`
+
+Creates a new matrix expression representing a matrix with the specified configuration.
+
+###### Arguments
+
+* `rows: number`. The number of rows of the matrix.
+* `columns: number, optional`. The number of columns of the matrix. If not specified, it will be set to `rows`, so that a square matrix will be created.
+* `data: number[], optional`. The elements of the matrix in column-major format. The length of this array must be `rows * columns`.
+* `dtype: string, optional`. Data type, used for storage purposes. One of the following: `"float32"`, `"float64"`, `"int32"`, `"uint8"`. Defaults to `"float32"`.
+
+###### Returns
+
+A new `SpeedyMatrixLvalueExpr` representing a single matrix.
 
 ###### Example
 
 ```js
-console.log(Speedy.fps);
+//
+// We use the column-major format to specify
+// the elements of the new matrix. For example,
+// to create the 2x3 matrix (2 rows, 3 columns)
+// below, we first specify the elements of the
+// first column, then the elements of the second
+// column, and finally the elements of the third
+// column.
+// 
+// M = [ 1  3  5 ]
+//     [ 2  4  6 ]
+//
+const mat = Speedy.Matrix(2, 3, [
+    1,
+    2,
+        3,
+        4,
+            5,
+            6
+]);
+
+// Alternatively, we may write the data in
+// column-major format in a compact form:
+const mat1 = Speedy.Matrix(2, 3, [
+    1, 2, // first column
+    3, 4, // second column
+    5, 6  // third column
+]);
+
+// Print the matrices to the console
+await mat.print();
+await mat1.print();
 ```
+
+##### Speedy.Matrix.Zeros()
+
+`Speedy.Matrix.Zeros(rows: number, columns?: number dtype?: string): SpeedyMatrixLvalueExpr`
+
+Creates a new matrix expression representing a matrix with the specified shape and filled with zeros.
+
+###### Arguments
+
+* `rows: number`. The number of rows of the matrix.
+* `columns: number, optional`. The number of columns of the matrix. If not specified, it will be set to `rows`, so that a square matrix will be created.
+* `dtype: string, optional`. Data type, used for storage purposes. One of the following: `"float32"`, `"float64"`, `"int32"`, `"uint8"`. Defaults to `"float32"`.
+
+###### Returns
+
+A new `SpeedyMatrixLvalueExpr` representing a matrix filled with zeros.
+
+###### Example
+
+```js
+// A 3x3 matrix filled with zeros
+const zeros = Speedy.Matrix.Zeros(3);
+await zeros.print();
+```
+
+##### Speedy.Matrix.Ones()
+
+`Speedy.Matrix.Ones(rows: number, columns?: number dtype?: string): SpeedyMatrixLvalueExpr`
+
+Creates a new matrix expression representing a matrix with the specified shape and filled with ones.
+
+###### Arguments
+
+* `rows: number`. The number of rows of the matrix.
+* `columns: number, optional`. The number of columns of the matrix. If not specified, it will be set to `rows`, so that a square matrix will be created.
+* `dtype: string, optional`. Data type, used for storage purposes. One of the following: `"float32"`, `"float64"`, `"int32"`, `"uint8"`. Defaults to `"float32"`.
+
+###### Returns
+
+A new `SpeedyMatrixLvalueExpr` representing a matrix filled with ones.
+
+##### Speedy.Matrix.Eye()
+
+`Speedy.Matrix.Eye(rows: number, columns?: number dtype?: string): SpeedyMatrixLvalueExpr`
+
+Creates a new matrix expression representing an identity matrix with the specified shape.
+
+###### Arguments
+
+* `rows: number`. The number of rows of the matrix.
+* `columns: number, optional`. The number of columns of the matrix. This is usually set to `rows`, so that you'll get a square matrix. Nonetheless, this parameter is configurable. If not specified, it will be set to `rows`.
+* `dtype: string, optional`. Data type, used for storage purposes. One of the following: `"float32"`, `"float64"`, `"int32"`, `"uint8"`. Defaults to `"float32"`.
+
+###### Returns
+
+A new `SpeedyMatrixLvalueExpr` representing an identity matrix.
+
+###### Example
+
+```js
+// A 3x3 identity matrix
+const eye = Speedy.Matrix.Eye(3);
+await eye.print();
+```
+
+
+#### Matrix properties
+
+##### SpeedyMatrixExpr.rows
+
+`SpeedyMatrixExpr.rows: number, read-only`
+
+The number of rows of the matrix.
+
+##### SpeedyMatrixExpr.columns
+
+`SpeedyMatrixExpr.columns: number, read-only`
+
+The number of columns of the matrix.
+
+##### SpeedyMatrixExpr.dtype
+
+`SpeedyMatrixExpr.dtype: string, read-only`
+
+The data type of the matrix. One of the following: `"float32"`, `"float64"`, `"int32"`, `"uint8"`.
+
+#### Reading from the matrices
+
+##### SpeedyMatrixExpr.read()
+
+`SpeedyMatrixExpr.read(): SpeedyPromise<number[]>`
+
+Read the entries of the matrix. Results will be received asynchronously, as an array of numbers in column-major format.
+
+###### Returns
+
+A new `SpeedyPromise` bringing you an array of numbers representing the entries of the matrix in column-major format.
+
+###### Example
+
+```js
+const mat = Speedy.Matrix(2, 2, [
+    1,
+    2,
+        3,
+        4
+]);
+
+const arr = await mat.read();
+console.log(arr); // [ 1, 2, 3, 4 ]
+```
+
+##### SpeedyMatrixExpr.print()
+
+`SpeedyMatrixExpr.print(decimals?: number, fn?: Function): SpeedyPromise<void>`
+
+Print the matrix in a neat format. Useful for debugging.
+
+###### Arguments
+
+* `decimals: number, optional`. If specified, the entries of the matrix will be formatted with the specified number of digits after the decimal point. Defaults to `undefined`.
+* `fn: Function, optional`. The function to be used to print the matrix. Defaults to `console.log`.
+
+###### Returns
+
+A new `SpeedyPromise` that will be fulfilled as soon as the matrix is printed.
+
+###### Example
+
+```js
+const mat = Speedy.Matrix(2, 2, [
+    1,
+    2,
+        3,
+        4
+]);
+
+await mat.print();
+```
+
+#### Writing to the matrices
+
+Not all matrix expressions can be written to (example: the result of a sum is read-only). You need a *l-value* expression to be able to write. You'll have a *l-value* expression when you create a new matrix or when you access a block of a matrix that you have previously created. Think of a *l-value* expression as a sort of "matrix variable" that you can assign data to.
+
+##### SpeedyMatrixLvalueExpr.assign()
+
+`SpeedyMatrixLvalueExpr.assign(expr: SpeedyMatrixExpr): SpeedyPromise<SpeedyMatrixLvalueExpr>`
+`SpeedyMatrixLvalueExpr.assign(entries: number[]): SpeedyPromise<SpeedyMatrixLvalueExpr>`
+
+Assignment expression.
+
+###### Arguments
+
+* `expr: SpeedyMatrixExpr`. A matrix expression.
+* `entries: number[]`. Numbers in column-major format. The length of this array must match the number of entries of the matrix.
+
+###### Returns
+
+In the first form: a `SpeedyPromise` that resolves to a `SpeedyMatrixLvalueExpr` featuring a matrix with the same entries as the evaluation of `expr`.
+
+In the second form: a `SpeedyPromise` that resolves to a `SpeedyMatrixLvalueExpr` featuring a matrix with the same entries as `entries`.
+
+*Note:* in an assignment operation, no data is copied. Only an internal pointer is changed (for performance). This is enough for most cases, but if you need to copy the data, take a look at [SpeedyMatrixExpr.clone()](#speedymatrixexprclone).
+
+###### Example
+
+```js
+//
+// Let's add two matrices:
+//
+// A = [ 1  3 ]    B = [ 4  2 ]
+//     [ 2  4 ]        [ 3  1 ]
+//
+// We'll set C to be the sum A + B,
+// that is, C = A + B
+//
+const matA = Speedy.Matrix(2, 2, [
+    1, 2,
+    3, 4
+]);
+const matB = Speedy.Matrix(2, 2, [
+    4, 3,
+    2, 1
+]);
+
+// We'll store A + B into matrix C
+const matC = Speedy.Matrix(2, 2);
+
+// Compute C = A + B
+await matC.assign(matA.plus(matB));
+
+//
+// Print the result:
+//
+// C = [ 5  5 ]
+//     [ 5  5 ]
+//
+await matC.print();
+```
+
+##### SpeedyMatrixLvalueExpr.fill()
+
+`SpeedyMatrixLvalueExpr.fill(value: number): SpeedyPromise<SpeedyMatrixLvalueExpr>`
+
+Fill a matrix with a single number.
+
+###### Arguments
+
+* `value: number`. We'll fill the matrix with this number.
+
+###### Returns
+
+A `SpeedyPromise` that resolves to a `SpeedyMatrixLvalueExpr` featuring a matrix with all entries set to `value`.
+
+###### Example
+
+```js
+// Create a 5x5 matrix filled with twos
+const twos = Speedy.Matrix(5);
+await twos.fill(2);
+await twos.print();
+```
+
+#### Access by block
+
+Speedy lets you work with blocks of matrices. This is a very handy feature! Columns and rows are trivial examples of blocks. Blocks share memory with the originating matrices, meaning: if you modify the entries of a block of a matrix *M*, you'll modify the corresponding entries of *M*.
+
+##### SpeedyMatrixExpr.block()
+
+`SpeedyMatrixExpr.block(firstRow: number, lastRow: number, firstColumn: number, lastColumn: number): SpeedyMatrixExpr`
+`SpeedyMatrixLvalueExpr.block(firstRow: number, lastRow: number, firstColumn: number, lastColumn: number): SpeedyMatrixLvalueExpr`
+
+Extract a `lastRow - firstRow + 1` x `lastColumn - firstColumn + 1` block from the matrix. All indices are 0-based. They are all inclusive. Note that the memory of the block is shared with the matrix.
+
+###### Arguments
+
+* `firstRow: number`. Index of the first row (0-based).
+* `lastRow: number`. Index of the last row (0-based). Use `lastRow >= firstRow`.
+* `firstColumn: number`. Index of the first column (0-based).
+* `lastColumn: number`. Index of the last column (0-based). Use `lastColumn >= firstColumn`.
+
+###### Returns
+
+A `SpeedyMatrixLvalueExpr` (read-write) if the input expression is a `SpeedyMatrixLvalueExpr`, or a `SpeedyMatrixExpr` otherwise (read-only).
+
+###### Example
+
+```js
+//
+// We'll create the following 4x4 matrix:
+// (a dot represents a zero)
+//
+// [ 5  5  5  . ]
+// [ 5  5  5  . ]
+// [ 5  5  5  . ]
+// [ .  .  .  . ]
+//
+const mat = Speedy.Matrix.Zeros(4);
+await mat.block(0, 2, 0, 2).fill(5);
+await mat.print();
+```
+
+##### SpeedyMatrixExpr.column()
+
+`SpeedyMatrixExpr.column(index: number): SpeedyMatrixExpr`
+`SpeedyMatrixLvalueExpr.column(index: number): SpeedyMatrixLvalueExpr`
+
+Extract a column of the matrix.
+
+###### Arguments
+
+* `index: number`. Index of the column (0-based).
+
+###### Returns
+
+A `SpeedyMatrixLvalueExpr` (read-write) if the input expression is a `SpeedyMatrixLvalueExpr`, or a `SpeedyMatrixExpr` otherwise (read-only).
+
+###### Example
+
+```js
+const mat = Speedy.Matrix(2, 3, [
+    1,
+    2,
+        3,
+        4,
+            5,
+            6
+]);
+
+const firstColumn = await mat.column(0).read(); // [1, 2]
+const secondColumn = await mat.column(1).read(); // [3, 4]
+const thirdColumn = await mat.column(2).read(); // [5, 6]
+
+console.log(firstColumn, secondColumn, thirdColumn);
+```
+
+##### SpeedyMatrixExpr.row()
+
+`SpeedyMatrixExpr.row(index: number): SpeedyMatrixExpr`
+`SpeedyMatrixLvalueExpr.row(index: number): SpeedyMatrixLvalueExpr`
+
+Extract a row of the matrix.
+
+###### Arguments
+
+* `index: number`. Index of the row (0-based).
+
+###### Returns
+
+A `SpeedyMatrixLvalueExpr` (read-write) if the input expression is a `SpeedyMatrixLvalueExpr`, or a `SpeedyMatrixExpr` otherwise (read-only).
+
+###### Example
+
+```js
+//
+// We'll create the following matrix:
+// [ 0  0  0  0 ]
+// [ 1  1  1  1 ]
+// [ 2  2  2  2 ]
+// [ 0  0  0  0 ]
+//
+const mat = Speedy.Matrix.Zeros(4);
+await mat.row(1).fill(1);
+await mat.row(2).fill(2);
+await mat.print();
+```
+
+##### SpeedyMatrixExpr.columnSpan()
+
+`SpeedyMatrixExpr.columnSpan(firstColumn: number, lastColumn: number): SpeedyMatrixExpr`
+`SpeedyMatrixLvalueExpr.columnSpan(firstColumn: number, lastColumn): SpeedyMatrixLvalueExpr`
+
+Extract a set of `lastColumn - firstColumn + 1` contiguous columns of the matrix.
+
+###### Arguments
+
+* `firstColumn: number`. Index of the first column (0-based).
+* `lastColumn: number`. Index of the last column (0-based). Use `lastColumn >= firstColumn`.
+
+###### Returns
+
+A `SpeedyMatrixLvalueExpr` (read-write) if the input expression is a `SpeedyMatrixLvalueExpr`, or a `SpeedyMatrixExpr` otherwise (read-only).
+
+###### Example
+
+```js
+// We'll print a 4x2 matrix featuring
+// the first two columns of the 4x4
+// identity matrix
+const mat = Speedy.Matrix.Eye(4);
+await mat.columnSpan(0, 1).print();
+```
+
+##### SpeedyMatrixExpr.rowSpan()
+
+`SpeedyMatrixExpr.rowSpan(firstRow: number, lastRow: number): SpeedyMatrixExpr`
+`SpeedyMatrixLvalueExpr.rowSpan(firstRow: number, lastRow): SpeedyMatrixLvalueExpr`
+
+Extract a set of `lastRow - firstRow + 1` contiguous rows of the matrix.
+
+###### Arguments
+
+* `firstRow: number`. Index of the first row (0-based).
+* `lastRow: number`. Index of the last row (0-based). Use `lastRow >= firstRow`.
+
+###### Returns
+
+A `SpeedyMatrixLvalueExpr` (read-write) if the input expression is a `SpeedyMatrixLvalueExpr`, or a `SpeedyMatrixExpr` otherwise (read-only).
+
+##### SpeedyMatrixExpr.diagonal()
+
+`SpeedyMatrixExpr.diagonal(): SpeedyMatrixExpr`
+`SpeedyMatrixLvalueExpr.diagonal(): SpeedyMatrixLvalueExpr`
+
+Extract the main diagonal of the matrix.
+
+###### Returns
+
+A `SpeedyMatrixLvalueExpr` (read-write) if the input expression is a `SpeedyMatrixLvalueExpr`, or a `SpeedyMatrixExpr` otherwise (read-only).
+
+###### Example
+
+```js
+//
+// We'll create the following matrix:
+// (a dot represents a zero)
+//
+// [ 5  .  .  .  . ]
+// [ .  5  .  .  . ]
+// [ .  .  5  .  . ]
+// [ .  .  .  .  . ]
+// [ .  .  .  .  . ]
+//
+const mat = Speedy.Matrix.Zeros(5); // create a 5x5 matrix filled with zeros
+const submat = mat.block(0, 2, 0, 2); // extract 3x3 submatrix at the "top-left"
+const diag = submat.diagonal(); // extract the diagonal of the submatrix
+
+await diag.fill(5); // fill the diagonal of the submatrix with a constant
+await mat.print(); // print the entire matrix
+
+// Alternatively, we may use this compact form:
+await mat.block(0, 2, 0, 2).diagonal().fill(5);
+```
+
+#### Elementary operations
+
+##### SpeedyMatrixExpr.clone()
+
+`SpeedyMatrixExpr.clone(): SpeedyMatrixExpr`
+
+Clone a matrix, so that when you call `lvalue.assign()`, no data will be shared between the matrices.
+
+###### Returns
+
+A `SpeedyMatrixExpr` representing a clone of the input expression.
+
+###### Example
+
+```js
+const matA = Speedy.Matrix(2);
+const matB = Speedy.Matrix(2, 2, [
+    1, 2,
+    3, 4
+]);
+
+// matA and matB will share the same buffer
+// (the same underlying data), so if you
+// change the contents of matB, you'll
+// change the contents of matA as well
+await matA.assign(matB);
+
+// matA and matB will NOT share the same buffer,
+// meaning that you'll be able to change matB
+// without matA being affected
+await matA.assign(matB.clone());
+
+// print
+await matA.print();
+```
+
+##### SpeedyMatrixExpr.transpose()
+
+`SpeedyMatrixExpr.transpose(): SpeedyMatrixExpr`
+
+Transpose a matrix.
+
+###### Returns
+
+A `SpeedyMatrixExpr` representing the tranpose of the input expression.
+
+###### Example
+
+```js
+// Create a 2x3 matrix
+const mat = Speedy.Matrix(2, 3, [
+    1, 2,
+    3, 4,
+    5, 6
+]);
+
+// Print the matrix and its transpose
+await mat.print();
+await mat.transpose().print();
+
+// We can also store its transpose in matT
+const matT = Speedy.Matrix(3, 2);
+await matT.assign(mat.transpose());
+await matT.print();
+```
+
+##### SpeedyMatrixExpr.plus()
+
+`SpeedyMatrixExpr.plus(expr: SpeedyMatrixExpr): SpeedyMatrixExpr`
+
+Compute the sum between the matrix expression and `expr`. Both matrices must have the same shape.
+
+###### Arguments
+
+* `expr: SpeedyMatrixExpr`. Another matrix expression.
+
+###### Returns
+
+A `SpeedyMatrixExpr` representing the sum between the matrix expression and `expr`.
+
+###### Example
+
+```js
+const matA = Speedy.Matrix(3, 3, [
+    1, 2, 3,
+    4, 5, 6,
+    7, 8, 9
+]);
+const ones = Speedy.Matrix.Ones(3);
+
+// print A + 1
+await matA.plus(ones).print();
+
+// set B = A + 1
+const matB = Speedy.Matrix(3);
+await matB.assign(ones.plus(matA));
+await matB.print(); // print B
+```
+
+##### SpeedyMatrixExpr.minus()
+
+`SpeedyMatrixExpr.minus(expr: SpeedyMatrixExpr): SpeedyMatrixExpr`
+
+Compute the difference between the matrix expression and `expr`. Both matrices must have the same shape.
+
+###### Arguments
+
+* `expr: SpeedyMatrixExpr`. Another matrix expression.
+
+###### Returns
+
+A `SpeedyMatrixExpr` representing the difference between the matrix expression and `expr`.
+
+##### SpeedyMatrixExpr.times()
+
+`SpeedyMatrixExpr.times(expr: SpeedyMatrixExpr): SpeedyMatrixExpr`
+`SpeedyMatrixExpr.times(scalar: number): SpeedyMatrixExpr`
+
+Matrix multiplication.
+
+In the first form, compute the matrix multiplication between the matrix expression and `expr`. The shape of `expr` must be compatible with the shape of the matrix expression.
+
+In the second form, multiply the matrix expression by a `scalar`.
+
+###### Arguments
+
+* `expr: SpeedyMatrixExpr`. Matrix expression.
+* `scalar: number`. A number.
+
+###### Returns
+
+A `SpeedyMatrixExpr` representing the result of the multiplication.
+
+###### Example
+
+```js
+const col = Speedy.Matrix(3, 1, [0, 5, 2]);
+const row = Speedy.Matrix(1, 3, [1, 2, 3]);
+
+const dot = row.times(col);
+await dot.print(); // 1x1 matrix (a scalar)
+
+const out = col.times(row);
+await out.print(); // 3x3 matrix
+
+const len = col.transpose().times(col);
+await len.print(); // square of L2 norm of col
+```
+
+##### SpeedyMatrixExpr.compMult()
+
+`SpeedyMatrixExpr.compMult(expr: SpeedyMatrixExpr): SpeedyMatrixExpr`
+
+Compute the component-wise multiplication between the matrix expression and `expr`. Both matrices must have the same shape.
+
+###### Arguments
+
+* `expr: SpeedyMatrixExpr`. Matrix expression.
+
+###### Returns
+
+A `SpeedyMatrixExpr` representing the component-wise multiplication between the matrix expression and `expr`.
+
+#### Linear Algebra
+
+##### SpeedyMatrixExpr.solve()
+
+`SpeedyMatrixExpr.solve(b: SpeedyMatrixExpr, method?: string): SpeedyMatrixExpr`
+
+Solve a linear system of equations. We'll solve *Ax = b* for *x*, where *A* is a *m* x *m* square matrix and *b* is a *m* x *1* column vector.
+
+###### Arguments
+
+* `b: SpeedyMatrixExpr`. Column vector.
+* `method: string, optional`. One of the following: `"qr"`. Defaults to `"qr"`.
+
+###### Returns
+
+A `SpeedyMatrixExpr` featuring the solution of the linear system of equations, if such a solution exists. The shape of the returned matrix will be the same as the shape of `b`.
+
+###### Example
+
+```js
+//
+// We'll solve the following system of equations:
+// y - z = 9
+// y + z = 6
+//
+// Let's write it in matrix form:
+// [ 1  -1 ] [ y ] = [ 9 ]
+// [ 1   1 ] [ z ]   [ 6 ]
+//
+// The code below solves Ax = b for x, where
+// x = (y, z) is the column vector of unknowns.
+//
+const A = Speedy.Matrix(2, 2, [
+    1, 1,  // first column
+    -1, 1  // second column
+]);
+const b = Speedy.Matrix(2, 1, [
+    9, 6   // column vector
+]);
+
+// Solve Ax = b for x
+const x = A.solve(b);
+const soln = await x.read();
+console.log(soln); // [ 7.5, -1.5 ]
+```
+
+##### SpeedyMatrixExpr.lssolve()
+
+`SpeedyMatrixExpr.lssolve(b: SpeedyMatrixExpr): SpeedyMatrixExpr`
+
+"Solve" an overdetermined linear system of equations *Ax = b* for *x* using least squares, where *A* is a *m* x *n* matrix (satisfying *m* >= *n*) and *b* is a *m* x *1* column vector. *m* is the number of equations and *n* is the number of unknowns.
+
+To "solve" an overdetermined linear system of equations *Ax = b* for *x* using least squares means: to find a *n* x *1* column vector *x* such that the 2-norm *|b - Ax|* is minimized.
+
+###### Arguments
+
+* `b: SpeedyMatrixExpr`. Column vector.
+
+###### Returns
+
+A `SpeedyMatrixExpr` featuring the "solution" of the overdetermined linear system of equations, if such a solution exists.
+
+##### SpeedyMatrixExpr.qr()
+
+`SpeedyMatrixExpr.qr(mode?: string): SpeedyMatrixExpr`
+
+Compute a QR decomposition using Householder reflectors.
+
+*Note:* it is expected that the number of rows *m* of the input matrix *A* is greater than or equal to its number of columns *n* (i.e., *m* >= *n*).
+
+###### Arguments
+
+* `mode: string, optional`. One of the following: `"reduced"`, `"full"`. Defaults to `"reduced"`.
+
+###### Returns
+
+A `SpeedyMatrixExpr` representing a matrix with two blocks, *Q* and *R*, such that *Q* is unitary, *R* is upper-triangular and *A = Q * R*. The output matrix is set up as follows:
+
+* If `mode` is `"reduced"`, then its first *m* rows and its first *n* columns store *Q*, whereas its last *n* rows and its last *n* columns store *R*. Its shape is *m* x *2n*.
+* If `mode` is `"full"`, then its first *m* rows and its first *m* columns store *Q*, whereas its last *m* rows and its last *n* columns store *R* (*R* is a non-square matrix filled with zeros at the bottom). Its shape is *m* x *(m + n)*.
+
+###### Example
+
+```js
+//
+// Compute a QR decomposition of A
+//
+const A = Speedy.Matrix(3, 3, [
+    0, 1, 0,
+    1, 1, 0,
+    1, 2, 3,
+]);
+
+// the shape of the output is m x 2n
+const QR = Speedy.Matrix(3, 6);
+
+// extract blocks
+const Q = QR.columnSpan(0, 2);
+const R = QR.columnSpan(3, 5);
+
+// compute QR
+await QR.assign(A.qr());
+
+// print the result
+await Q.print();
+await R.print();
+```
+
+
+
+### Extras
 
 #### Promises
 
@@ -972,10 +1743,22 @@ promise.then(() => {
 });
 ```
 
-#### Misc
+#### Utilities
 
 ##### Speedy.version
 
 `Speedy.version: string, read-only`
 
 The version of the library.
+
+##### Speedy.fps
+
+`Speedy.fps: number, read-only`
+
+Speedy includes a frames per second (FPS) counter for testing purposes. It will be created as soon as you access it.
+
+###### Example
+
+```js
+console.log(Speedy.fps);
+```
