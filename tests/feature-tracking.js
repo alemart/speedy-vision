@@ -40,12 +40,9 @@ describe('Feature tracking', function() {
     describe('LK feature tracker', function() {
 
         let media;
-        let tracker;
 
         beforeEach(async function() {
             media = await Speedy.load(canvas, { usage: 'static' });
-            tracker = Speedy.FeatureTracker.LK(media);
-            tracker.discardThreshold = 0; // don't discard keypoints
         });
 
         afterEach(async function() {
@@ -72,15 +69,25 @@ describe('Feature tracking', function() {
             await track360(length);
         });
 
+        it('tracks keypoints that move large distances between frames', async function() {
+            const length = 8;
+            await track360(length);
+        });
+
         // Test the feature tracking in many directions
-        async function track360(length, maxError = 0.99999)
+        async function track360(length, maxError = 1.2)
         {
             let features;
+            let tracker;
 
             print(`Testing feature tracking with a displacement of ${length} pixels:`);
             for(const angle of [0, 45, 90, 135, 180, 225, 270, 315]) {
                 print(`-----`);
                 print(`Tracking a displacement of ${length} pixels (${angle} degrees):`);
+
+                // create new tracker
+                tracker = Speedy.FeatureTracker.LK(media);
+                tracker.discardThreshold = 0; // don't discard keypoints
 
                 // prepare stuff
                 const offset = Speedy.Vector2(
@@ -98,10 +105,9 @@ describe('Feature tracking', function() {
                 const n1 = features.length;
 
                 // prepare tracker frames (simulate loop)
-                for(let i = 0; i < 2; i++) {
-                    features = await tracker.track(features);
-                    await sleep(deltaTime);
-                }
+                tracker._prevInputImage = tracker._inputTexture = null;
+                features = await tracker.track(features);
+                await sleep(deltaTime);
 
                 // render second image
                 renderToCanvas(sq2);
