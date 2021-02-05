@@ -82,13 +82,15 @@ describe('Feature detection', function() {
         runHarrisTests(createFeatureDetector);
     });
 
-    xdescribe('BRISK', function() {
+    /*
+    describe('BRISK', function() {
         const createFeatureDetector = () => Speedy.FeatureDetector.BRISK();
 
         runGenericTests(createFeatureDetector);
         runGenericMultiscaleTests(createFeatureDetector);
         runGenericTestsForDescriptors(createFeatureDetector, 64);
     });
+    */
 
     describe('ORB', function() {
         const createFeatureDetector = () => Speedy.FeatureDetector.ORB();
@@ -208,7 +210,7 @@ describe('Feature detection', function() {
                 for(const depth of depths) {
                     const set = new Set();
                     const features = await repeat(5, () => {
-                        featureDetector.sensitivity = 0.5;
+                        featureDetector.sensitivity = 0.8;
                         featureDetector.depth = depth;
                         return featureDetector.detect(media);
                     });
@@ -323,11 +325,11 @@ describe('Feature detection', function() {
     {
         describe('Feature descriptor', function() {
             let featureDescriptor;
-            let checksum = function(buffer) {
-                let sum = 0;
+            const uid = function(buffer) {
+                let a = [];
                 for(let i = 0; i < buffer.length; i++)
-                    sum += buffer[i];
-                return sum;
+                    a.push(buffer[i]);
+                return a.join(',');
             };
 
             beforeEach(function() {
@@ -349,9 +351,9 @@ describe('Feature detection', function() {
                 const set = new Set();
 
                 for(let i = 0; i < features.length; i++)
-                    set.add(checksum(features[i].descriptor.data));
+                    set.add(uid(features[i].descriptor.data));
 
-                print(`Found ${set.size} different checksums in ${features.length} features`);
+                print(`Found ${set.size} different descriptors in ${features.length} features`);
                 displayFeatures(media, features);
 
                 expect(features.length).toBeGreaterThan(0);
