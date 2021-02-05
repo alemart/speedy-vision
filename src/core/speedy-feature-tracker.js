@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,11 @@
  */
 
 import { FeatureTrackingAlgorithm } from './keypoints/feature-tracking-algorithm';
+import { FeatureAlgorithm } from './keypoints/feature-algorithm';
+import { FeatureDownloader } from './keypoints/feature-downloader';
 import { SpeedyMedia } from './speedy-media';
 import { SpeedyGPU } from '../gpu/speedy-gpu';
+import { SpeedyTexture } from '../gpu/speedy-texture';
 import { SpeedyVector2 } from './math/speedy-vector';
 import { IllegalOperationError, IllegalArgumentError } from '../utils/errors';
 import { Utils } from '../utils/utils';
@@ -43,18 +46,26 @@ export class SpeedyFeatureTracker
      */
     constructor(trackingAlgorithm, media)
     {
-        this._media = media;
+        /** @type {FeatureTrackingAlgorithm} tracking algorithm */
         this._trackingAlgorithm = trackingAlgorithm;
+
+        /** @type {FeatureAlgorithm} decorated tracking algorithm */
         this._decoratedAlgorithm = this._trackingAlgorithm;
+
+        /** @type {SpeedyMedia} the media we're using to track the features */
+        this._media = media;
+
+        /** @type {SpeedyTexture} image at time t */
         this._inputTexture = null;
+
+        /** @type {SpeedyTexture} image at time t-1 */
         this._prevInputTexture = null;
-        this._updateLock = false;
     }
 
     /**
      * Decorate the underlying algorithm
      * @param {SpeedyFeatureDecorator} decorator
-     * @returns {SpeedyFeatureDetector} this instance, now decorated
+     * @returns {SpeedyFeatureTracker} this instance, now decorated
      */
     link(decorator)
     {
@@ -74,18 +85,16 @@ export class SpeedyFeatureTracker
         const gpu = this._media._gpu; // friend class?!
         const descriptorSize = this._decoratedAlgorithm.descriptorSize;
         const extraSize = this._decoratedAlgorithm.extraSize;
-        const useAsyncTransfer = (this._media.options.usage != 'static');
+        const flags = 0;
 
         // validate arguments
         if(!Array.isArray(keypoints) || (found != null && !Array.isArray(found)) || (flow != null && !Array.isArray(flow)))
             throw new IllegalArgumentError();
 
         // upload media to the GPU
-        this._updateMedia(this._media, gpu);
-
-        // get the input images
-        const nextImage = this._inputTexture;
-        const prevImage = this._prevInputTexture;
+        const [ nextImage, prevImage ] = this._updatedImages(this._media, gpu, this._prevInputTexture);
+        this._prevInputTexture = prevImage;
+        this._inputTexture = nextImage;
 
         // adjust the size of the encoder
         gpu.programs.encoders.optimize(keypoints.length, descriptorSize, extraSize);
@@ -96,7 +105,7 @@ export class SpeedyFeatureTracker
         const encodedKeypoints = this._decoratedAlgorithm.run(gpu, nextImage);
 
         // download keypoints
-        return this._decoratedAlgorithm.download(gpu, encodedKeypoints, useAsyncTransfer).then(trackedKeypoints => {
+        return this._decoratedAlgorithm.download(gpu, encodedKeypoints, flags).then(trackedKeypoints => {
             const filteredKeypoints = [];
 
             // initialize output arrays
@@ -105,8 +114,7 @@ export class SpeedyFeatureTracker
             if(flow != null)
                 flow.length = trackedKeypoints.length;
 
-            // compute additional data and
-            // filter out discarded keypoints
+            // compute additional data and filter out discarded keypoints
             for(let i = 0; i < trackedKeypoints.length; i++) {
                 const goodFeature = ((trackedKeypoints[i].flags & KPF_DISCARD) == 0);
 
@@ -132,28 +140,22 @@ export class SpeedyFeatureTracker
      * Upload the media to GPU and keep track of the previous frame
      * @param {SpeedyMedia} media
      * @param {SpeedyGPU} gpu
+     * @param {SpeedyTexture|null} prevImage
+     * @returns {SpeedyTexture[]} [nextImage, prevImage] tuple
      */
-    _updateMedia(media, gpu)
+    _updatedImages(media, gpu, prevImage)
     {
         // validate the media
         if(media.isReleased())
             throw new IllegalOperationError(`The media has been released`);
 
-        // it's too early to change the input texture
-        if(this._updateLock)
-            return;
-        setTimeout(() => this._updateLock = false, 1000.0 / 50.0);
-        this._updateLock = true;
-
         // upload the media
-        const newInputTexture = gpu.upload(media.source);
-        if(newInputTexture == null)
+        const nextImage = gpu.upload(media.source);
+        if(nextImage == null)
             throw new IllegalOperationError(`Tracking error: can't upload image to the GPU ${media.source}`);
 
-        // store the textures
-        const prevInputTexture = this._inputTexture; // may be null (1st frame)
-        this._inputTexture = newInputTexture;
-        this._prevInputTexture = prevInputTexture || newInputTexture;
+        // done!
+        return [ nextImage, prevImage || nextImage ];
     }
 }
 

@@ -90,7 +90,7 @@ export class SpeedyVector2
      */
     toString()
     {
-        return `SpeedyVector2(${this._data[0]}, ${this._data[1]})`;
+        return `SpeedyVector2(${this._data[0].toFixed(5)}, ${this._data[1].toFixed(5)})`;
     }
 
     /**

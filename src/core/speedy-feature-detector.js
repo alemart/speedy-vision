@@ -28,6 +28,7 @@ import { SpeedyTexture } from '../gpu/speedy-texture';
 import { SpeedyMedia } from './speedy-media';
 import { FeatureDetectionAlgorithm } from './keypoints/feature-detection-algorithm';
 import { FeatureDescriptionAlgorithm } from './keypoints/feature-description-algorithm';
+import { FeatureDownloader } from './keypoints/feature-downloader';
 import { FASTFeatures, MultiscaleFASTFeatures } from './keypoints/detectors/fast';
 import { HarrisFeatures, MultiscaleHarrisFeatures } from './keypoints/detectors/harris';
 import { SpeedyFeatureDecorator } from './speedy-feature-decorator';
@@ -91,25 +92,39 @@ export class SpeedyFeatureDetector
         const isStaticMedia = (media.options.usage == 'static');
         const descriptorSize = this._decoratedAlgorithm.descriptorSize;
         const extraSize = this._decoratedAlgorithm.extraSize;
+        let downloaderFlags = 0;
 
         // check if the media has been released
         if(media.isReleased())
             throw new IllegalOperationError(`Can't detect features: the SpeedyMedia has been released`);
 
-        // Reset downloader capacity?
+        // Check usage hint: dynamic or static
+        if(isStaticMedia) {
+            // Allocate encoder space for static media
+            const MAX_KEYPOINT_GUESS = 8192; // hmmmmmmmm...
+            gpu.programs.encoders.reserveSpace(MAX_KEYPOINT_GUESS, descriptorSize, extraSize);
+        }
+        else {
+            // Use buffered downloads for dynamic media
+            downloaderFlags |= FeatureDownloader.USE_BUFFERED_DOWNLOADS;
+        }
+
+        // Reset encoder capacity & downloader state
         if(flags & SpeedyFlags.FEATURE_DETECTOR_RESET_CAPACITY) {
             // Speedy performs optimizations behind the scenes,
             // specially when detecting features in videos.
-            // This flag will undo these optimizations. Use it
+            // This flag will undo some optimizations. Use it
             // when you expect a sudden increase in the number
             // of keypoints (between two consecutive frames).
-            this._decoratedAlgorithm.resetDownloader(gpu);
-        }
+            downloaderFlags |= FeatureDownloader.RESET_DOWNLOADER_STATE;
 
-        // Allocate encoder space for static media
-        if(isStaticMedia) {
-            const INITIAL_KEYPOINT_GUESS = 1024 * 3;
-            gpu.programs.encoders.reserveSpace(INITIAL_KEYPOINT_GUESS, descriptorSize, extraSize);
+            // reset the encoder capacity
+            const A_LOT_OF_KEYPOINTS = 2048; // hmmmm...
+            gpu.programs.encoders.reserveSpace(A_LOT_OF_KEYPOINTS, descriptorSize, extraSize);
+
+            // since we're resizing the encoder, we can't use
+            // buffered downloads in this framestep
+            downloaderFlags &= ~(FeatureDownloader.USE_BUFFERED_DOWNLOADS);
         }
 
         // Upload & preprocess media
@@ -131,7 +146,7 @@ export class SpeedyFeatureDetector
         return this._decoratedAlgorithm.download(
             gpu,
             encodedKeypoints,
-            !isStaticMedia
+            downloaderFlags
         ).then(this._capKeypoints);
     }
 

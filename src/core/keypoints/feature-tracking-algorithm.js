@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,8 @@ import { AbstractMethodError } from '../../utils/errors';
 import { FeatureAlgorithm } from './feature-algorithm';
 import { FeatureDownloader } from './feature-downloader';
 import { SpeedyFeature } from '../speedy-feature';
+import { SpeedyPromise } from '../../utils/speedy-promise';
+import { Utils } from '../../utils/utils';
 
 /**
  * Abstract feature tracking algorithm
@@ -39,10 +41,14 @@ export class FeatureTrackingAlgorithm extends FeatureAlgorithm
     {
         super(0, 0);
 
-        this._prevImage = null; // previous image
-        this._prevKeypoints = null; // tiny texture with encoded keypoints
+        /** @type {SpeedyTexture} previous image */
+        this._prevImage = null;
+
+        /** @type {SpeedyTexture} tiny texture with encoded keypoints */
+        this._prevKeypoints = null;
+
+        /** @type {FeatureDownloader} keypoint downloader */
         this._downloader = new FeatureDownloader();
-        this._downloader.disableBufferedDownloads();
     }
 
     /**
@@ -95,6 +101,21 @@ export class FeatureTrackingAlgorithm extends FeatureAlgorithm
     }
 
     /**
+     * Download feature points from the GPU
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
+     * @param {FeatureDownloaderFlag} [flags] will be passed to the downloader
+     * @returns {SpeedyPromise<SpeedyFeature[]>}
+     */
+    download(gpu, encodedKeypoints, flags = 0)
+    {
+        if(flags & FeatureDownloader.USE_BUFFERED_DOWNLOADS != 0)
+            Utils.warning(`Feature trackers shouldn't use buffered downloads`);
+
+        return this._downloader.download(gpu, encodedKeypoints, this.descriptorSize, this.extraSize, flags);
+    }
+
+    /**
      * Track a set of feature points
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} nextImage next image (time: t)
@@ -103,31 +124,5 @@ export class FeatureTrackingAlgorithm extends FeatureAlgorithm
     _track(gpu, nextImage)
     {
         throw new AbstractMethodError();
-    }
-
-    /**
-     * Download feature points from the GPU
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
-     * @param {boolean} useAsyncTransfer transfer feature points asynchronously
-     * @returns {Promise<SpeedyFeature[]>}
-     */
-    download(gpu, encodedKeypoints, useAsyncTransfer)
-    {
-        if(this._downloader.usingBufferedDownloads()) {
-            Utils.warning(`Feature trackers shouldn't use buffered downloads`);
-            this._downloader.disableBufferedDownloads();
-        }
-
-        return this._downloader.download(gpu, encodedKeypoints, this.descriptorSize, this.extraSize, useAsyncTransfer);
-    }
-
-    /**
-     * Reset the capacity of the keypoint downloader
-     * @param {SpeedyGPU} gpu 
-     */
-    resetDownloader(gpu)
-    {
-        this._downloader.reset(gpu, this.descriptorSize, this.extraSize);
     }
 }

@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,18 @@ import { FeatureDownloader } from './feature-downloader';
 import { SpeedyFeature } from '../speedy-feature';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../gpu/speedy-texture';
+import { SpeedyPromise } from '../../utils/speedy-promise';
 
 // Constants
+
+/**
+ * Enhancements
+ * @typedef {object} FeatureDetectionEnhancements
+ * @property {number} gain contrast stretching, typically in [0,1]
+ * @property {number} offset global brightness, typically in [0,1]
+ * @property {number} decay from the center, in [0,1]
+ * @property {string} quality filter quality ('high' | 'medium' | 'low')
+ */
 const DEFAULT_ENHANCEMENTS = Object.freeze({
     gain: 0.9,
     offset: 0.5,
@@ -48,9 +58,11 @@ export class FeatureDetectionAlgorithm extends FeatureAlgorithm
     {
         super(0, 0);
 
+        /** @type {FeatureDetectionEnhancements|null} */
         this._enhancements = null;
+
+        /** @type {FeatureDownloader} */
         this._downloader = new FeatureDownloader();
-        this._downloader.enableBufferedDownloads();
     }
 
     /**
@@ -69,46 +81,17 @@ export class FeatureDetectionAlgorithm extends FeatureAlgorithm
      * Download feature points from the GPU
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
-     * @param {boolean} useAsyncTransfer transfer feature points asynchronously
-     * @returns {Promise<SpeedyFeature[]>}
+     * @param {FeatureDownloaderFlag} [flags] will be passed to the downloader
+     * @returns {SpeedyPromise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, useAsyncTransfer)
+    download(gpu, encodedKeypoints, flags = 0)
     {
-        // download feature points
-        const keypoints = this._downloader.download(gpu, encodedKeypoints, this.descriptorSize, this.extraSize, useAsyncTransfer);
-
-        // restore buffered downloads (if previously disabled) for improved performance
-        if(!this._downloader.usingBufferedDownloads())
-            this._downloader.enableBufferedDownloads();
-
-        // done!
-        return keypoints;
-    }
-
-    /**
-     * Reset the capacity of the keypoint downloader
-     * @param {SpeedyGPU} gpu 
-     */
-    resetDownloader(gpu)
-    {
-        // temporarily disable buffered downloads,
-        // so we get fresh results in the next
-        // call to download()
-        this._downloader.disableBufferedDownloads();
-
-        // reset the downloader
-        this._downloader.reset(gpu, this.descriptorSize, this.extraSize);
-
-        /*
-        // note: buffered responses imply a 1-frame delay
-        if(this._downloader.usingBufferedDownloads())
-            Utils.warning(`The feature downloader has been reset, but buffered downloads are enabled and cause a 1-frame delay`);
-        */
+        return this._downloader.download(gpu, encodedKeypoints, this.descriptorSize, this.extraSize, flags);
     }
 
     /**
      * Setup enhancements to be applied when detecting features
-     * @param {object|boolean} [enhancements] fix irregular lighting in the scene?
+     * @param {FeatureDetectionEnhancements|boolean} [enhancements] fix irregular lighting in the scene?
      */
     setEnhancements(enhancements)
     {

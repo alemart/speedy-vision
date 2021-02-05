@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@
  */
 
 import { FeatureAlgorithm } from './feature-algorithm';
+import { SpeedyFeature } from '../speedy-feature';
+import { SpeedyPromise } from '../../utils/speedy-promise';
 import { Utils } from '../../utils/utils';
 
 /**
@@ -43,6 +45,7 @@ export class FeatureAlgorithmDecorator extends FeatureAlgorithm
 
         super(descriptorSize, extraSize);
 
+        /** @type {FeatureAlgorithm} decorated algorithm */
         this._decoratedAlgorithm = decoratedAlgorithm;
         this._decoratedAlgorithm.descriptorSize = this.descriptorSize;
         this._decoratedAlgorithm.extraSize = this.extraSize;
@@ -64,21 +67,15 @@ export class FeatureAlgorithmDecorator extends FeatureAlgorithm
      * Download feature points from the GPU
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
-     * @param {boolean} useAsyncTransfer transfer feature points asynchronously
-     * @returns {Promise<SpeedyFeature[]>}
+     * @param {FeatureDownloaderFlag} [flags] will be passed to the downloader
+     * @returns {SpeedyPromise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, useAsyncTransfer)
+    download(gpu, encodedKeypoints, flags = 0)
     {
-        return this._decoratedAlgorithm.download(gpu, encodedKeypoints, useAsyncTransfer);
-    }
+        Utils.assert(this.extraSize == this._decoratedAlgorithm.extraSize);
+        Utils.assert(this.descriptorSize == this._decoratedAlgorithm.descriptorSize);
 
-    /**
-     * Reset the capacity of the keypoint downloader
-     * @param {SpeedyGPU} gpu
-     */
-    resetDownloader(gpu)
-    {
-        this._decoratedAlgorithm.resetDownloader(gpu);
+        return this._decoratedAlgorithm.download(gpu, encodedKeypoints, flags);
     }
 
     /**

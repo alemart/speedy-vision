@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
  */
 
 import { SpeedyGPU } from '../../../gpu/speedy-gpu';
+import { SpeedyTexture } from '../../../gpu/speedy-texture';
 import { FeatureTrackingAlgorithm } from '../feature-tracking-algorithm';
 import { Utils } from '../../../utils/utils';
 

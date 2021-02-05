@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ import { SpeedyGPU } from '../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../gpu/speedy-texture';
 import { AbstractMethodError } from '../../utils/errors';
 import { Utils } from '../../utils/utils';
+import { SpeedyFeature } from '../speedy-feature';
+import { SpeedyPromise } from '../../utils/speedy-promise';
 import { MAX_DESCRIPTOR_SIZE } from '../../utils/globals';
 
 /**
@@ -44,7 +46,10 @@ export class FeatureAlgorithm
         Utils.assert(descriptorSize % 4 === 0);
         Utils.assert(extraSize % 4 === 0);
 
+        /** @type {number} descriptor size in bytes */
         this._descriptorSize = descriptorSize; // for encoded keypoint textures
+
+        /** @type {number} extra size in bytes */
         this._extraSize = extraSize; // for encoded keypoint textures
     }
 
@@ -65,20 +70,10 @@ export class FeatureAlgorithm
      * Needs to be overridden in subclasses
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} encodedKeypoints tiny texture
-     * @param {boolean} useAsyncTransfer transfer feature points asynchronously
-     * @returns {Promise<SpeedyFeature[]>} feature points
+     * @param {FeatureDownloaderFlag} [flags] will be passed to the downloader
+     * @returns {SpeedyPromise<SpeedyFeature[]>} feature points
      */
-    download(gpu, encodedKeypoints, useAsyncTransfer)
-    {
-        throw new AbstractMethodError();
-    }
-
-    /**
-     * Reset the capacity of the keypoint downloader
-     * Needs to be overridden in subclasses
-     * @param {SpeedyGPU} gpu 
-     */
-    resetDownloader(gpu)
+    download(gpu, encodedKeypoints, flags = 0)
     {
         throw new AbstractMethodError();
     }

@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import { IllegalOperationError } from '../../utils/errors';
 import { Observable } from '../../utils/observable';
 import { SpeedyFeature } from '../speedy-feature';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
+import { SpeedyPromise } from '../../utils/speedy-promise';
 import { KPF_DISCARD } from '../../utils/globals';
 
 // constants
@@ -133,7 +134,11 @@ export class FeatureDownloader extends Observable
     constructor()
     {
         super();
-        this._useBufferedDownloads = false;
+
+        /**
+         * Used to estimate the future number of keypoints
+         * @type {FeatureCountEstimator}
+         */
         this._estimator = new FeatureCountEstimator();
     }
 
@@ -143,12 +148,19 @@ export class FeatureDownloader extends Observable
      * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
      * @param {number} descriptorSize in bytes (set it to zero if there is no descriptor)
      * @param {number} extraSize in bytes (set it to zero if there is no extra data)
-     * @param {boolean} [useAsyncTransfer] transfer keypoints asynchronously
-     * @returns {Promise<SpeedyFeature[]>}
+     * @param {FeatureDownloaderFlag} [flags] used to modify the behavior of the downloader
+     * @returns {SpeedyPromise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, descriptorSize, extraSize, useAsyncTransfer = true)
+    download(gpu, encodedKeypoints, descriptorSize, extraSize, flags = 0)
     {
-        return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer, this._useBufferedDownloads).then(data => {
+        // reset the capacity of the downloader
+        if(flags & FeatureDownloader.RESET_DOWNLOADER_STATE != 0)
+            this._estimator.reset();
+
+        // download keypoints
+        //console.log('downloading with encoderlength=', gpu.programs.encoders.encoderLength);
+        const useBufferedDownloads = (flags & FeatureDownloader.USE_BUFFERED_DOWNLOADS) != 0;
+        return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useBufferedDownloads).then(data => {
 
             // decode the keypoints
             const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize, extraSize);
@@ -158,18 +170,11 @@ export class FeatureDownloader extends Observable
             const nextCount = this._estimator.estimate(keypoints.length - discardedCount);
 
             // optimize the keypoint encoder
+            // add slack (maxGrowth) to accomodate abrupt changes in the number of keypoints
+            const capacity = Math.max(nextCount, MIN_KEYPOINTS);
+            const extraCapacity = this._estimator.maxGrowth * capacity;
+            gpu.programs.encoders.optimize(extraCapacity, descriptorSize, extraSize);
             //console.log('Encoder Length', gpu.programs.encoders.encoderLength);
-            if(useAsyncTransfer) {
-                // add slack (maxGrowth) to accomodate abrupt changes in the number of keypoints
-                const capacity = Math.max(nextCount, MIN_KEYPOINTS);
-                const extraCapacity = this._estimator.maxGrowth * capacity;
-                gpu.programs.encoders.optimize(extraCapacity, descriptorSize, extraSize);
-            }
-            else {
-                // static usage
-                const capacity = Math.max(nextCount, MIN_KEYPOINTS);
-                gpu.programs.encoders.reserveSpace(capacity, descriptorSize, extraSize);
-            }
 
             // notify observers
             this._notify(keypoints);
@@ -180,52 +185,6 @@ export class FeatureDownloader extends Observable
         }).catch(err => {
             throw new IllegalOperationError(`Can't download keypoints`, err);
         });
-    }
-
-    /**
-     * Resets the capacity of the downloader
-     * (i.e., how many keypoints it can deliver)
-     * @param {SpeedyGPU} gpu
-     * @param {number} descriptorSize in bytes
-     * @param {number} extraSize in bytes
-     */
-    reset(gpu, descriptorSize, extraSize)
-    {
-        const capacity = INITIAL_KEYPOINTS_GUESS;
-
-        this._estimator.reset();
-        gpu.programs.encoders.reserveSpace(capacity, descriptorSize, extraSize);
-    }
-
-    /**
-     * Enable buffered downloads
-     * It's an optimization technique that implies a 1-frame delay
-     * in the downloads when using async transfers; it may or may
-     * not be acceptable, depending on what you're trying to do
-     */
-    enableBufferedDownloads()
-    {
-        this._useBufferedDownloads = true;
-    }
-
-    /**
-     * Disable buffered downloads
-     * It's an optimization technique that implies a 1-frame delay
-     * in the downloads when using async transfers; it may or may
-     * not be acceptable, depending on what you're trying to do
-     */
-    disableBufferedDownloads()
-    {
-        this._useBufferedDownloads = false;
-    }
-
-    /**
-     * Whether we're using the buffered responses or not
-     * @returns {boolean}
-     */
-    usingBufferedDownloads()
-    {
-        return this._useBufferedDownloads;
     }
 
     /**
@@ -242,3 +201,23 @@ export class FeatureDownloader extends Observable
         return count;
     }
 }
+
+/**
+ * Flags accepted by the FeatureDownloader (bitwise)
+ * @typedef {number} FeatureDownloaderFlag
+ */
+
+/**
+ * Flag: reset the state of the downloader
+ * @type {FeatureDownloaderFlag}
+ */
+FeatureDownloader.RESET_DOWNLOADER_STATE = 1;
+
+/**
+ * Flag: use buffered downloads
+ * It's an optimization technique that implies a 1-frame delay
+ * in the downloads when using async transfers; it may or may
+ * not be acceptable, depending on what you're trying to do
+ * @type {FeatureDownloaderFlag}
+ */
+FeatureDownloader.USE_BUFFERED_DOWNLOADS = 2;

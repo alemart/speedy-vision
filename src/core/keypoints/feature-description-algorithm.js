@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ import { AbstractMethodError } from '../../utils/errors';
 import { FeatureAlgorithm } from './feature-algorithm';
 import { FeatureAlgorithmDecorator } from './feature-algorithm-decorator';
 import { FeatureDetectionAlgorithm } from './feature-detection-algorithm';
+import { SpeedyFeature } from '../speedy-feature';
+import { SpeedyPromise } from '../../utils/speedy-promise';
 import { Utils } from '../../utils/utils';
 
 /**
@@ -63,12 +65,12 @@ export class FeatureDescriptionAlgorithm extends FeatureAlgorithmDecorator
      * Download feature points from the GPU
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} encodedKeypoints tiny texture with encoded keypoints
-     * @param {boolean} useAsyncTransfer transfer feature points asynchronously
-     * @returns {Promise<SpeedyFeature[]>}
+     * @param {FeatureDownloaderFlag} [flags] will be passed to the downloader
+     * @returns {SpeedyPromise<SpeedyFeature[]>}
      */
-    download(gpu, encodedKeypoints, useAsyncTransfer)
+    download(gpu, encodedKeypoints, flags = 0)
     {
-        return this.decoratedAlgorithm.download(gpu, encodedKeypoints, useAsyncTransfer).then(
+        return this.decoratedAlgorithm.download(gpu, encodedKeypoints, flags).then(
             keypoints => this._postProcess(keypoints)
         );
     }

@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,11 +22,10 @@
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
 import { SpeedyFeature } from '../../core/speedy-feature';
-import { BinaryDescriptor } from '../../core/speedy-descriptor';
-import { StochasticTuner } from '../../core/tuners/stochastic-tuner';
 import { PixelComponent } from '../../utils/types';
 import { Utils } from '../../utils/utils'
-import { IllegalOperationError } from '../../utils/errors';
+import { SpeedyPromise } from '../../utils/speedy-promise'
+import { IllegalOperationError, NotSupportedError } from '../../utils/errors';
 import {
     PYRAMID_MAX_LEVELS, LOG2_PYRAMID_MAX_SCALE,
     FIX_RESOLUTION, MAX_TEXTURE_LENGTH,
@@ -124,12 +123,17 @@ export class GPUEncoders extends SpeedyProgramGroup
             })
         ;
 
+
+
         // setup internal data
-        let neighborFn = (s) => Math.round(Utils.gaussianNoise(s, 64)) % 256;
-        //this._tuner = new StochasticTuner(48, 32, 48, 0.2, 8, 60, neighborFn);
+
+        /** @type {number} length of the tiny encoding textures */
         this._encoderLength = INITIAL_ENCODER_LENGTH;
+
+        /** @type {number} how many keypoints we can encode at the moment */
         this._keypointCapacity = (INITIAL_ENCODER_LENGTH * INITIAL_ENCODER_LENGTH / MIN_KEYPOINT_SIZE) | 0;
-        this._spawnedAt = performance.now();
+
+        /** @type {Float32Array} UBO stuff */
         this._uploadBuffer = null; // lazy spawn
     }
 
@@ -151,28 +155,28 @@ export class GPUEncoders extends SpeedyProgramGroup
      */
     optimize(maxKeypointCount, descriptorSize, extraSize)
     {
-        const newEncoderLength = this._minimumEncoderLength(maxKeypointCount, descriptorSize, extraSize);
+        const keypointCapacity = Math.ceil(maxKeypointCount); // ensure this is an integer
+        const newEncoderLength = this._minimumEncoderLength(keypointCapacity, descriptorSize, extraSize);
         const oldEncoderLength = this._encoderLength;
 
         this._encoderLength = newEncoderLength;
-        this._keypointCapacity = maxKeypointCount;
-        //console.log('optimized for', maxKeypointCount, 'keypoints. length:', newEncoderLength);
+        this._keypointCapacity = keypointCapacity;
 
         return (newEncoderLength - oldEncoderLength) != 0;
     }
 
     /**
      * Ensures that the encoder has enough capacity to deliver the specified number of keypoints
-     * @param {number} keypointCount the number of keypoints
+     * @param {number} keypointCapacity the number of keypoints
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
      * @returns {boolean} true if there was any change to the length of the encoder
      */
-    reserveSpace(keypointCount, descriptorSize, extraSize)
+    reserveSpace(keypointCapacity, descriptorSize, extraSize)
     {
         // resize if not enough space
-        if(this._minimumEncoderLength(keypointCount, descriptorSize, extraSize) > this._encoderLength)
-            return this.optimize(keypointCount, descriptorSize, extraSize);
+        if(this._minimumEncoderLength(keypointCapacity, descriptorSize, extraSize) > this._encoderLength)
+            return this.optimize(keypointCapacity, descriptorSize, extraSize);
 
         return false;
     }
@@ -312,47 +316,19 @@ export class GPUEncoders extends SpeedyProgramGroup
     /**
      * Download RAW encoded keypoint data from the GPU - this is a bottleneck!
      * @param {SpeedyTexture} encodedKeypoints texture with keypoints that have already been encoded
-     * @param {boolean} [useAsyncTransfer] transfer data from the GPU without blocking the CPU
-     * @param {boolean} [useBufferedDownloads] optimize async transfers
-     * @returns {Promise<Uint8Array[]>} pixels in the [r,g,b,a, ...] format
+     * @param {boolean} [useBufferedDownloads] download keypoints detected in the previous framestep (optimization)
+     * @returns {SpeedyPromise<Uint8Array[]>} pixels in the [r,g,b,a, ...] format
      */
-    async downloadEncodedKeypoints(encodedKeypoints, useAsyncTransfer = true, useBufferedDownloads = true)
+    downloadEncodedKeypoints(encodedKeypoints, useBufferedDownloads = true)
     {
-        try {
-            // helper shader for reading the data
-            this._downloadKeypoints.resize(this._encoderLength, this._encoderLength);
-            this._downloadKeypoints(encodedKeypoints);
+        // helper shader for reading the data
+        this._downloadKeypoints.resize(this._encoderLength, this._encoderLength);
+        this._downloadKeypoints(encodedKeypoints);
 
-            // read data from the GPU
-            let downloadTime = performance.now(), pixels;
-            if(useAsyncTransfer)
-                pixels = await this._downloadKeypoints.readPixelsAsync(useBufferedDownloads).turbocharge();
-            else
-                pixels = this._downloadKeypoints.readPixelsSync(); // bottleneck!
-            downloadTime = performance.now() - downloadTime;
-
-            /*
-            // tuner: drop noisy feedback when the page loads
-            if(performance.now() >= this._spawnedAt + 2000)
-                this._tuner.feedObservation(downloadTime);
-            */
-
-            /*
-            // debug
-            window._p = window._p || 0;
-            window._m = window._m || 0;
-            window._m = 0.9 * window._m + 0.1 * downloadTime;
-            if(window._p++ % 50 == 0)
-                console.log(window._m, ' | ', maxIterations);
-            //console.log(JSON.stringify(this._tuner.info()));
-            */
-
-            // done!
-            return pixels;
-        }
-        catch(err) {
-            throw new IllegalOperationError(`Can't download encoded keypoint texture`, err);
-        }
+        // read data from the GPU
+        return this._downloadKeypoints.readPixelsAsync(useBufferedDownloads).catch(err => {
+            return new IllegalOperationError(`Can't download encoded keypoint texture`, err);
+        });
     }
 
     /**
