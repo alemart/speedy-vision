@@ -2,7 +2,7 @@
 
 Build real-time stuff with **speedy-vision.js**, a GPU-accelerated Computer Vision library for JavaScript.
 
-[<img src="assets/demo-soccer.gif" alt="Speedy feature detection">](https://alemart.github.io/speedy-vision-js/demos/soccer-demo.html "Click to open a demo")
+[<img src="assets/demo-bestfeatures.gif" alt="Speedy feature detection">](https://alemart.github.io/speedy-vision-js/demos/best-features.html "Click to open a demo")
 
 ## Features
 
@@ -32,9 +32,9 @@ There are plenty of [demos](#demos) available!
 
 ## Author
 
-speedy-vision.js is developed by [Alexandre Martins](https://github.com/alemart), a computer scientist from Brazil. It is released under the [Apache-2.0 license](LICENSE).
+**speedy-vision.js** is developed by [Alexandre Martins](https://github.com/alemart), a computer scientist from Brazil. It is released under the [Apache-2.0 license](LICENSE).
 
-**Contact:** alemartf at gmail.com
+**Contact:** alemartf `at` gmail `.` com
 
 -----
 
