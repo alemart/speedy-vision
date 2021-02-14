@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-02-05T18:06:54.541Z
+ * Date: 2021-02-14T03:46:08.442Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -2080,14 +2080,14 @@ class LKFeatureTrackingAlgorithm extends _feature_tracking_algorithm__WEBPACK_IM
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixBuffer", function() { return MatrixBuffer; });
-/* harmony import */ var _matrix_math__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix-math */ "./src/core/math/matrix-math.js");
-/* harmony import */ var _matrix_math__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_matrix_math__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix-type */ "./src/core/math/matrix-type.js");
+/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_matrix_type__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2109,12 +2109,6 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-// constants
-const MatrixType = _matrix_math__WEBPACK_IMPORTED_MODULE_0__["MatrixMath"].MatrixType;
-const DataType = _matrix_math__WEBPACK_IMPORTED_MODULE_0__["MatrixMath"].DataType;
-const TypedArray2DataType = Object.freeze(Object.keys(DataType).reduce(
-    (obj, type) => Object.assign(obj, { [DataType[type].name]: type | 0 }),
-{}));
 
 /**
  * Stores the contents of a matrix
@@ -2124,65 +2118,72 @@ class MatrixBuffer
     /**
      * Class constructor
      * @param {number} length number of elements of the buffer
-     * @param {number[]|Float64Array|Float32Array|Int32Array|Uint8Array} [values] initial values in column-major format
-     * @param {number} [type] the type of the elements of the matrix: F64, F32, etc.
-     * @param {MatrixBuffer} [parent] the buffer that originated this one, if any
+     * @param {number[]|ArrayBufferView|null} [values] initial values in column-major format
+     * @param {MatrixDataType} [dtype] the type of the elements of the matrix
+     * @param {?MatrixBuffer} [parent] the buffer that originated this one, if any
      */
-    constructor(length, values = null, type = MatrixType.F32, parent = null)
+    constructor(length, values = null, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_0__["MatrixType"].default, parent = null)
     {
-        let data;
-        length = length | 0;
+        length |= 0;
 
-        // type inference
-        if(values != null && !Array.isArray(values))
-            type = TypedArray2DataType[values.constructor.name];
-        const dataType = DataType[type];
-        if(dataType === undefined)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Unknown matrix type`);
-
-        // validate length
+        // validate
+        if(!_matrix_type__WEBPACK_IMPORTED_MODULE_0__["MatrixType"].isValid(dtype))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Invalid data type: "${dtype}"`);
         if(length <= 0)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Invalid matrix length`);
 
         // allocate new TypedArray
-        if(values == null)
-            data = new dataType(length);
-        else if(Array.isArray(values))
-            data = new dataType(values);
-        else
-            data = values;
+        const data =
+            (values == null) ? _matrix_type__WEBPACK_IMPORTED_MODULE_0__["MatrixType"].createTypedArray(dtype, length) : (
+            Array.isArray(values) ? _matrix_type__WEBPACK_IMPORTED_MODULE_0__["MatrixType"].createTypedArray(dtype, values) :
+            values);
 
-        // check if it's a proper TypedArray
-        if(!(data.buffer instanceof ArrayBuffer))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Invalid matrix type`);
 
         // store data
-        this._type = type & (~3); // F64, F32, etc.
-        this._byteOffset = data.byteOffset; // assumed to be constant
-        this._length = data.length; // assumed to be constant
-        this._data = data; // a reference to the TypedArray
-        this._dataType = dataType; // TypedArray class
+
+        /** @type {MatrixDataType} data type */
+        this._dtype = dtype;
+
+        /** @type {ArrayBufferView} a reference to the TypedArray (storage) */
+        this._data = data;
+
+        /** @type {number} TypedArray byte offset: assumed to be constant */
+        this._byteOffset = data.byteOffset;
+
+        /** @type {number} TypedArray length: assumed to be constant */
+        this._length = data.length;
+
+
+
 
         // concurrency control
-        this._pendingOperations = parent ? parent._pendingOperations : 0; // number of pending operations that read from or write to the buffer
-        this._pendingAccessesQueue = []; // a list of Function<void> to be called as soon as there are no pending operations
-        this._children = []; // a list of MatrixBuffers that share their internal memory with this one
-        this._parent = parent; // the buffer that originated this one, if any
+
+        /** @type {number} number of pending operations that read from or write to the buffer */
+        this._pendingOperations = parent ? parent._pendingOperations : 0;
+
+        /** @type {Array<function()>} a list of Function<void> to be called as soon as there are no pending operations */
+        this._pendingAccessesQueue = [];
+
+        /** @type {MatrixBuffer[]} a list of MatrixBuffers that share their internal memory with this one (we create a tree structure) */
+        this._children = [];
+
+        /** @type {?MatrixBuffer} the buffer that originated this one, if any (null if none) */
+        this._parent = parent;
     }
 
     /**
      * Data type
-     * @returns {number}
+     * @returns {MatrixDataType}
      */
-    get type()
+    get dtype()
     {
-        return this._type;
+        return this._dtype;
     }
 
     /**
      * Get the internal TypedArray that holds the entries of the Matrix
      * Make sure the buffer is ready() before accessing this property
-     * @returns {Float32Array|Float64Array|Int32Array|Uint8Array}
+     * @returns {ArrayBufferView}
      */
     get data()
     {
@@ -2288,8 +2289,7 @@ class MatrixBuffer
         }
 
         // replace the internal buffer
-        const dataType = this._dataType;
-        my._data = new dataType(arrayBuffer, my._byteOffset, my._length);
+        my._data = _matrix_type__WEBPACK_IMPORTED_MODULE_0__["MatrixType"].createTypedArray(this._dtype, arrayBuffer, my._byteOffset, my._length);
 
         // broadcast
         for(let i = my._children.length - 1; i >= 0; i--)
@@ -2310,7 +2310,7 @@ class MatrixBuffer
             const data = this._data.subarray(begin, end); // the main thread must own this._data
 
             // create shared buffer
-            const sharedBuffer = new MatrixBuffer(length, data, this._type, this);
+            const sharedBuffer = new MatrixBuffer(length, data, this._dtype, this);
             this._children.push(sharedBuffer);
 
             // done!
@@ -2332,8 +2332,8 @@ class MatrixBuffer
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixExprFactory", function() { return SpeedyMatrixExprFactory; });
 /* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix */ "./src/core/math/matrix.js");
-/* harmony import */ var _matrix_math__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-math */ "./src/core/math/matrix-math.js");
-/* harmony import */ var _matrix_math__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_matrix_math__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-type */ "./src/core/math/matrix-type.js");
+/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_matrix_type__WEBPACK_IMPORTED_MODULE_1__);
 /* harmony import */ var _matrix_operations_queue__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix-operations-queue */ "./src/core/math/matrix-operations-queue.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
@@ -2341,7 +2341,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2368,13 +2368,6 @@ __webpack_require__.r(__webpack_exports__);
 
 // constants
 const matrixOperationsQueue = _matrix_operations_queue__WEBPACK_IMPORTED_MODULE_2__["MatrixOperationsQueue"].instance;
-const MatrixType = _matrix_math__WEBPACK_IMPORTED_MODULE_1__["MatrixMath"].MatrixType;
-const DataType = _matrix_math__WEBPACK_IMPORTED_MODULE_1__["MatrixMath"].DataType;
-const DataTypeName = _matrix_math__WEBPACK_IMPORTED_MODULE_1__["MatrixMath"].DataTypeName;
-const DataTypeName2DataType = Object.freeze(Object.keys(DataTypeName).reduce(
-    (obj, type) => Object.assign(obj, { [ DataTypeName[type] ]: type }),
-{}));
-
 
 
 // ================================================
@@ -2392,19 +2385,29 @@ class SpeedyMatrixExpr
      * Constructor
      * @param {number} rows expected number of rows of the resulting expression
      * @param {number} columns expected number of columns of the resulting expression
-     * @param {number} type matrix type: F32, F64, etc.
+     * @param {MatrixDataType} dtype data type
      */
-    constructor(rows, columns, type)
+    constructor(rows, columns, dtype)
     {
+        /** @type {number} expected number of rows of the resulting expression */
         this._rows = rows | 0;
+
+        /** @type {number} expected number of columns of the resulting expression */
         this._columns = columns | 0;
-        this._type = type | 0;
+
+        /** @type {MatrixDataType} data type of the elements of the matrix */
+        this._dtype = dtype;
+
+        /** @type {?number[]} internal buffer for reading matrix data */
         this._readbuf = null;
 
+
+
+        // validate
         if(this._rows <= 0 || this._columns <= 0)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Invalid dimensions for a matrix expression: ${this._rows} x ${this._columns}`);
-        else if(DataType[this._type] === undefined)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Invalid type for a matrix expression: 0x${this._type.toString(16)}`);
+        else if(!_matrix_type__WEBPACK_IMPORTED_MODULE_1__["MatrixType"].isValid(this._dtype))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Invalid type for a matrix expression: "${this._dtype}"`);
     }
 
     /**
@@ -2426,35 +2429,26 @@ class SpeedyMatrixExpr
     }
 
     /**
-     * Type of the resulting matrix
-     * @returns {number}
-     */
-    get type()
-    {
-        return this._type;
-    }
-
-    /**
      * Type of the resulting matrix, as a string
-     * @returns {string}
+     * @returns {MatrixDataType}
      */
     get dtype()
     {
-        return _matrix_math__WEBPACK_IMPORTED_MODULE_1__["MatrixMath"].DataTypeName[this._type];
+        return this._dtype;
     }
 
     /**
      * Assert matrix shape and type
      * @param {number} requiredRows
      * @param {number} requiredColumns
-     * @param {number} [requiredType]
+     * @param {MatrixDataType} [requiredDataType]
      */
-    _assertCompatibility(requiredRows, requiredColumns, requiredType = this._type)
+    _assertCompatibility(requiredRows, requiredColumns, requiredDataType = this._dtype)
     {
-        if(requiredRows === this._rows && requiredColumns === this._columns && requiredType === this._type)
+        if(requiredRows === this._rows && requiredColumns === this._columns && requiredDataType === this._dtype)
             return;
-        else if(requiredType !== this._type)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`Incompatible matrix type (expected ${_matrix_math__WEBPACK_IMPORTED_MODULE_1__["MatrixMath"].DataTypeName[requiredType]}, found ${this.dtype})`);
+        else if(requiredDataType !== this._dtype)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`Incompatible matrix type (expected "${requiredDataType}", found "${this._dtype}")`);
         else
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`Incompatible matrix shape (expected ${requiredRows} x ${requiredColumns}, found ${this._rows} x ${this._columns})`);
     }
@@ -2788,12 +2782,14 @@ class SpeedyMatrixTempExpr extends SpeedyMatrixExpr
      * Constructor
      * @param {number} rows number of rows of the output matrix
      * @param {number} columns number of columns of the output matrix
-     * @param {number} type type of the output matrix
+     * @param {MatrixDataType} dtype type of the output matrix
      */
-    constructor(rows, columns, type)
+    constructor(rows, columns, dtype)
     {
-        super(rows, columns, type);
-        this._tmpmatrix = new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](rows, columns, undefined, type); // used for temporary calculations
+        super(rows, columns, dtype);
+
+        /** @type {SpeedyMatrix} used for temporary calculations */
+        this._tmpmatrix = new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](rows, columns, undefined, dtype);
     }
 
     /**
@@ -2823,10 +2819,18 @@ class SpeedyMatrixUnaryExpr extends SpeedyMatrixTempExpr
      */
     constructor(rows, columns, expr, operationClass, ...args)
     {
-        super(rows, columns, expr.type);
+        super(rows, columns, expr.dtype);
+
+        /** @type {SpeedyMatrixExpr} input expression */
         this._expr = expr;
+
+        /** @type {Function} unary operation */
         this._operationClass = operationClass;
-        this._operation = null; // cache the MatrixOperation object
+
+        /** @type {?MatrixOperation} we cache the MatrixOperation object */
+        this._operation = null;
+
+        /** @type {any[]} arguments to be used when instantiating the unary operation */
         this._args = args;
     }
 
@@ -2874,15 +2878,28 @@ class SpeedyMatrixBinaryExpr extends SpeedyMatrixTempExpr
      */
     constructor(rows, columns, leftExpr, rightExpr, operationClass, ...args)
     {
-        super(rows, columns, leftExpr.type);
+        super(rows, columns, leftExpr.dtype);
+
+        /** @type {SpeedyMatrixExpr} left operand */
         this._leftExpr = leftExpr;
+
+        /** @type {SpeedyMatrixExpr} right operand */
         this._rightExpr = rightExpr;
+
+        /** @type {Function} binary operation */
         this._operationClass = operationClass;
-        this._operation = null; // cache the MatrixOperation object
+
+        /** @type {?MatrixOperation} we cache the MatrixOperation object */
+        this._operation = null;
+
+        /** @type {any[]} arguments to be used when instantiating the binary operation */
         this._args = args;
 
-        if(rightExpr.type !== leftExpr.type) // just in case...
-            this._assertCompatibility(rows, columns, rightExpr.type);
+
+
+        // validate
+        if(rightExpr.dtype !== leftExpr.dtype) // just in case...
+            this._assertCompatibility(rows, columns, rightExpr.dtype);
     }
 
     /**
@@ -2939,14 +2956,27 @@ class SpeedyMatrixReadonlyBlockExpr extends SpeedyMatrixExpr
      */
     constructor(expr, firstRow, lastRow, firstColumn, lastColumn)
     {
-        super(lastRow - firstRow + 1, lastColumn - firstColumn + 1, expr.type);
+        super(lastRow - firstRow + 1, lastColumn - firstColumn + 1, expr.dtype);
 
+        /** @type {SpeedyMatrixExpr} originating matrix expression */
         this._expr = expr;
+
+        /** @type {number} index of the top-most row (starts at zero) */
         this._firstRow = firstRow;
+
+        /** @type {number} index of the last row */
         this._lastRow = lastRow;
+
+        /** @type {number} index of the left-most column (starts at zero) */
         this._firstColumn = firstColumn;
+
+        /** @type {number} index of the right-most column */
         this._lastColumn = lastColumn;
+
+        /** @type {?SpeedyMatrix} the matrix associated with this expression */
         this._submatrix = null;
+
+        /** @type {?SpeedyMatrix} used for caching */
         this._cachedMatrix = null;
     }
 
@@ -2991,10 +3021,15 @@ class SpeedyMatrixReadonlyDiagonalExpr extends SpeedyMatrixExpr
     constructor(expr)
     {
         const diagonalLength = Math.min(expr.rows, expr.columns);
-        super(1, diagonalLength, expr.type);
+        super(1, diagonalLength, expr.dtype);
 
+        /** @type {SpeedyMatrixExpr} originating matrix expression */
         this._expr = expr;
+
+        /** @type {?SpeedyMatrix} the matrix associated with this expression */
         this._diagonal = null;
+
+        /** @type {?SpeedyMatrix} used for caching */
         this._cachedMatrix = null;
     }
 
@@ -3078,7 +3113,7 @@ class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
      */
     fill(value)
     {
-        return this.assign(new SpeedyMatrixFillExpr(this._rows, this._columns, this._type, +value));
+        return this.assign(new SpeedyMatrixFillExpr(this._rows, this._columns, this._dtype, +value));
     }
 
     /**
@@ -3119,21 +3154,25 @@ class SpeedyMatrixAssignmentExpr extends SpeedyMatrixLvalueExpr
      */
     constructor(lvalue, rvalue)
     {
-        const { rows, columns, type } = lvalue;
-        super(rows, columns, type);
+        const { rows, columns, dtype } = lvalue;
+        super(rows, columns, dtype);
 
         // convert rvalue to SpeedyMatrixExpr
         if(!(rvalue instanceof SpeedyMatrixExpr)) {
             if(Array.isArray(rvalue)) {
-                const matrix = new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](rows, columns, rvalue, type);
-                rvalue = new SpeedyMatrixElementaryExpr(rows, columns, type, matrix);
+                const matrix = new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](rows, columns, rvalue, dtype);
+                rvalue = new SpeedyMatrixElementaryExpr(rows, columns, dtype, matrix);
             }
             else
                 throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Can't assign matrix to ${rvalue}`)
         }
 
-        this._assertCompatibility(rvalue.rows, rvalue.columns, rvalue.type);
+        this._assertCompatibility(rvalue.rows, rvalue.columns, rvalue.dtype);
+
+        /** @type {SpeedyMatrixLvalueExpr} */
         this._lvalue = lvalue;
+
+        /** @type {SpeedyMatrixExpr} */
         this._rvalue = rvalue;
     }
 
@@ -3172,18 +3211,19 @@ class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
      * Constructor
      * @param {number} rows
      * @param {number} columns
-     * @param {number} type
+     * @param {MatrixDataType} dtype
      * @param {SpeedyMatrix} [matrix] user matrix
      */
-    constructor(rows, columns, type, matrix = null)
+    constructor(rows, columns, dtype, matrix = null)
     {
-        super(rows, columns, type);
-        this._usermatrix = null;
+        super(rows, columns, dtype);
 
-        if(matrix != null) {
-            this._assertCompatibility(matrix.rows, matrix.columns, matrix.type);
-            this._usermatrix = matrix;
-        }
+        // validate
+        if(matrix != null)
+            this._assertCompatibility(matrix.rows, matrix.columns, matrix.dtype);
+
+        /** @type {?SpeedyMatrix} the matrix associated with this expression */
+        this._usermatrix = matrix;
     }
 
     /**
@@ -3236,16 +3276,31 @@ class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
      */
     constructor(expr, firstRow, lastRow, firstColumn, lastColumn)
     {
-        super(lastRow - firstRow + 1, lastColumn - firstColumn + 1, expr.type);
+        super(lastRow - firstRow + 1, lastColumn - firstColumn + 1, expr.dtype);
 
+        /** @type {SpeedyMatrixExpr} originating matrix expression */
         this._expr = expr;
+
+        /** @type {number} index of the top-most row (starts at zero) */
         this._firstRow = firstRow;
+
+        /** @type {number} index of the last row */
         this._lastRow = lastRow;
+
+        /** @type {number} index of the left-most column (starts at zero) */
         this._firstColumn = firstColumn;
+
+        /** @type {number} index of the right-most column */
         this._lastColumn = lastColumn;
+
+        /** @type {?SpeedyMatrix} the matrix associated with this expression */
         this._submatrix = null;
+
+        /** @type {?SpeedyMatrix} used for caching */
         this._cachedMatrix = null;
-        this._operation = null; // cached operation
+
+        /** @type {?MatrixOperation} cached operation */
+        this._operation = null;
     }
 
     /**
@@ -3307,10 +3362,15 @@ class SpeedyMatrixReadwriteDiagonalExpr extends SpeedyMatrixLvalueExpr
     constructor(expr)
     {
         const diagonalLength = Math.min(expr.rows, expr.columns);
-        super(1, diagonalLength, expr.type);
+        super(1, diagonalLength, expr.dtype);
 
+        /** @type {SpeedyMatrixExpr} originating matrix expression */
         this._expr = expr;
+
+        /** @type {?SpeedyMatrix} the matrix associated with this expression */
         this._diagonal = null;
+
+        /** @type {?SpeedyMatrix} used for caching */
         this._cachedMatrix = null;
     }
 
@@ -3375,13 +3435,15 @@ class SpeedyMatrixFillExpr extends SpeedyMatrixTempExpr
      * Constructor
      * @param {number} rows number of rows of the resulting (output) matrix
      * @param {number} columns number of columns of the resulting (output) matrix
-     * @param {number} type type of the resulting (output) matrix
+     * @param {MatrixDataType} dtype type of the resulting (output) matrix
      * @param {number} value will fill the output matrix with this constant value
      */
-    constructor(rows, columns, type, value)
+    constructor(rows, columns, dtype, value)
     {
-        super(rows, columns, type);
-        this._operation = new _matrix_operations__WEBPACK_IMPORTED_MODULE_5__["MatrixOperationFill"](rows, columns, type, value);
+        super(rows, columns, dtype);
+
+        /** @type {MatrixOperation} */
+        this._operation = new _matrix_operations__WEBPACK_IMPORTED_MODULE_5__["MatrixOperationFill"](rows, columns, dtype, value);
     }
 
     /**
@@ -3712,25 +3774,24 @@ class SpeedyMatrixExprFactory extends Function
      * @param {number} rows number of rows
      * @param {number} [columns] number of columns (defaults to the number of rows)
      * @param {number[]} [values] initial values in column-major format
-     * @param {string} [dtype] 'float32' | 'float64' | 'int32' | 'uint8'
+     * @param {MatrixDataType} [dtype] data type of the elements of the matrix
      * @returns {SpeedyMatrixElementaryExpr}
      */
-    _create(rows, columns = rows, values = null, dtype = 'float32')
+    _create(rows, columns = rows, values = null, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_1__["MatrixType"].default)
     {
-        let type = DataTypeName2DataType[dtype];
         let matrix = null;
 
-        if(type === undefined)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Unknown matrix type: "${dtype}"`);
+        if(!_matrix_type__WEBPACK_IMPORTED_MODULE_1__["MatrixType"].isValid(dtype))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Invalid matrix type: "${dtype}"`);
 
         if(values != null) {
             if(!Array.isArray(values))
                 throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Can't initialize Matrix with values ${values}`);
             if(values.length > 0)
-                matrix = new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](rows, columns, values, type);
+                matrix = new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](rows, columns, values, dtype);
         }
 
-        return new SpeedyMatrixElementaryExpr(rows, columns, type, matrix);
+        return new SpeedyMatrixElementaryExpr(rows, columns, dtype, matrix);
     }
 
     /**
@@ -3738,10 +3799,10 @@ class SpeedyMatrixExprFactory extends Function
      * @param {number} rows number of rows
      * @param {number} [columns] number of columns (defaults to the number of rows)
      * @param {number[]} [values] initial values in column-major format
-     * @param {string} [dtype] 'float32' | 'float64' | 'int32' | 'uint8'
+     * @param {MatrixDataType} [dtype] data type of the elements of the matrix
      * @returns {SpeedyMatrixElementaryExpr}
      */
-    Zeros(rows, columns = rows, dtype = 'float32')
+    Zeros(rows, columns = rows, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_1__["MatrixType"].default)
     {
         const values = (new Array(rows * columns)).fill(0);
         return this._create(rows, columns, values, dtype);
@@ -3752,10 +3813,10 @@ class SpeedyMatrixExprFactory extends Function
      * @param {number} rows number of rows
      * @param {number} [columns] number of columns (defaults to the number of rows)
      * @param {number[]} [values] initial values in column-major format
-     * @param {string} [dtype] 'float32' | 'float64' | 'int32' | 'uint8'
+     * @param {MatrixDataType} [dtype] data type of the elements of the matrix
      * @returns {SpeedyMatrixElementaryExpr}
      */
-    Ones(rows, columns = rows, dtype = 'float32')
+    Ones(rows, columns = rows, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_1__["MatrixType"].default)
     {
         const values = (new Array(rows * columns)).fill(1);
         return this._create(rows, columns, values, dtype);
@@ -3766,10 +3827,10 @@ class SpeedyMatrixExprFactory extends Function
      * @param {number} rows number of rows
      * @param {number} [columns] number of columns (defaults to the number of rows)
      * @param {number[]} [values] initial values in column-major format
-     * @param {string} [dtype] 'float32' | 'float64' | 'int32' | 'uint8'
+     * @param {MatrixDataType} [dtype] data type of the elements of the matrix
      * @returns {SpeedyMatrixElementaryExpr}
      */
-    Eye(rows, columns = rows, dtype = 'float32')
+    Eye(rows, columns = rows, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_1__["MatrixType"].default)
     {
         const values = (new Array(rows * columns)).fill(0);
         for(let j = Math.min(rows, columns) - 1; j >= 0; j--)
@@ -3796,12 +3857,12 @@ class SpeedyMatrixExprFactory extends Function
   !*** ./src/core/math/matrix-math.js ***!
   \**************************************/
 /*! no static exports found */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
 
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3819,7 +3880,9 @@ class SpeedyMatrixExprFactory extends Function
  * Linear algebra routines
  */
 
-//! No imports here
+//! A note on imports: the MatrixMath
+//! class is exported to WebWorkers
+const { MatrixType } = __webpack_require__(/*! ./matrix-type */ "./src/core/math/matrix-type.js");
 
 /**
  * Matrix math routines
@@ -3834,8 +3897,8 @@ class MatrixMath
     /**
      * No-operation
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static nop(header, output, inputs)
     {
@@ -3845,8 +3908,8 @@ class MatrixMath
     /**
      * Fill the matrix with a constant value
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static fill(header, output, inputs)
     {
@@ -3867,8 +3930,8 @@ class MatrixMath
     /**
      * Copy matrix
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static copy(header, output, inputs)
     {
@@ -3893,8 +3956,8 @@ class MatrixMath
     /**
      * Transpose matrix
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static transpose(header, output, inputs)
     {
@@ -3912,8 +3975,8 @@ class MatrixMath
     /**
      * Add two matrices
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static add(header, output, inputs)
     {
@@ -3934,8 +3997,8 @@ class MatrixMath
     /**
      * Subtract two matrices
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static subtract(header, output, inputs)
     {
@@ -3956,8 +4019,8 @@ class MatrixMath
     /**
      * Multiply two matrices (e.g., C = A B)
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static multiply(header, output, inputs)
     {
@@ -3989,8 +4052,8 @@ class MatrixMath
      * Multiply two matrices, transposing the left operand
      * (e.g., C = A^T B)
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static multiplylt(header, output, inputs)
     {
@@ -4015,8 +4078,8 @@ class MatrixMath
      * Multiply two matrices, transposing the right operand
      * (e.g., C = A B^T)
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static multiplyrt(header, output, inputs)
     {
@@ -4049,8 +4112,8 @@ class MatrixMath
      * Multiply by a column-vector
      * (i.e., y = A x)
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static multiplyvec(header, output, inputs)
     {
@@ -4072,8 +4135,8 @@ class MatrixMath
     /**
      * Multiply by a constant
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static scale(header, output, inputs)
     {
@@ -4092,8 +4155,8 @@ class MatrixMath
     /**
      * Component-wise multiplication
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static compmult(header, output, inputs)
     {
@@ -4113,9 +4176,9 @@ class MatrixMath
 
     /**
      * Outer product (m x 1 vector by 1 x n vector)
-     * @param {object} header 
-     * @param {TypedArray} output 
-     * @param {TypedArray[]} inputs 
+     * @param {object} header
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static outer(header, output, inputs)
     {
@@ -4135,12 +4198,12 @@ class MatrixMath
     /**
      * QR decomposition
      * @param {object} header
-     * @param {TypedArray} output becomes [ Q | R ] or [ Q'x | R ] or [ Qx | R ]
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output becomes [ Q | R ] or [ Q'x | R ] or [ Qx | R ]
+     * @param {ArrayBufferView[]} inputs
      */
     static qr(header, output, inputs)
     {
-        const { stride, type } = header;
+        const { stride, dtype } = header;
         const [ orows, ocolumns ] = [ header.rows, header.columns ];
         const [ irows, xrows ] = header.rowsOfInputs;
         const [ icolumns, xcolumns ] = header.columnsOfInputs;
@@ -4152,7 +4215,7 @@ class MatrixMath
         let submatrices = [ null, null, null ];
 
         // create temporary storage
-        const storage = this._createTypedArray(2 * irows * icolumns + icolumns, type);
+        const storage = this._createTypedArray(dtype, 2 * irows * icolumns + icolumns);
         const reflect = storage.subarray(0, irows * icolumns);
         const tmprow = storage.subarray(irows * icolumns, irows * icolumns + icolumns);
         const tmp = storage.subarray(irows * icolumns + icolumns, 2 * irows * icolumns + icolumns);
@@ -4415,8 +4478,8 @@ class MatrixMath
      * Back-substitution: solve Rx = b for x,
      * where R is n x n upper triangular
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs a single input of the form [ b | R ]
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs a single input of the form [ b | R ]
      */
     static backsub(header, output, inputs)
     {
@@ -4459,14 +4522,14 @@ class MatrixMath
      * A is m x n, b is m x 1, output x is n x 1
      * (m equations, n unknowns, m >= n)
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs [ A, b [,tmp] ] where optional tmp is m x (n+1)
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs [ A, b [,tmp] ] where optional tmp is m x (n+1)
      */
     static lssolve(header, output, inputs)
     {
-        const { stride } = header;
+        const { stride, dtype } = header;
         const [ m, n ] = [ header.rowsOfInputs[0], header.columnsOfInputs[0] ];
-        const tmp = inputs[2] || this._createTypedArray(m * (n+1), header.type);
+        const tmp = inputs[2] || this._createTypedArray(dtype, m * (n+1));
         const lsHeader = Object.assign({ }, header);
 
         // find [ Q'b | R ] with reduced QR of A
@@ -4499,20 +4562,20 @@ class MatrixMath
     // ========================================================
 
     /**
-     * Create a new TypedArray with the specified length
-     * @param {number} length 
-     * @param {number} type 
-     * @returns {TypedArray}
+     * Create a new TypedArray with the specified type
+     * @param {MatrixDataType} dtype data type
+     * @param {any[]} args arguments to be passed to the Typed Array constructor
+     * @returns {ArrayBufferView}
      */
-    static _createTypedArray(length, type)
+    static _createTypedArray(dtype, ...args)
     {
-        const dataType = this.DataType[type];
-        return new dataType(length);
+        const M = self.MatrixType || MatrixType;
+        return M.createTypedArray(dtype, ...args);
     }
 
     /**
      * The 2-norm of a column vector
-     * @param {TypedArray} column 
+     * @param {ArrayBufferView} column
      * @param {number} [begin] first index
      * @param {number} [length]
      * @returns {number}
@@ -4531,8 +4594,8 @@ class MatrixMath
 
     /**
      * The dot product of two column vectors
-     * @param {TypedArray} u 
-     * @param {TypedArray} v 
+     * @param {ArrayBufferView} u
+     * @param {ArrayBufferView} v
      * @param {number} [uBegin] first index 
      * @param {number} [vBegin] first index 
      * @param {number} [length] 
@@ -4552,8 +4615,8 @@ class MatrixMath
      * compute the sum (alpha A + beta B). The output
      * array is allowed to be one of the input arrays
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      * @param {number} alpha
      * @param {number} beta
      */
@@ -4574,8 +4637,8 @@ class MatrixMath
      * Create submatrices / block-views with shared memory
      * Low-level stuff. Make sure you pass valid indices...
      * @param {object} header will be modified!
-     * @param {TypedArray} output contains data
-     * @param {TypedArray[]} inputs contains data
+     * @param {ArrayBufferView} output contains data
+     * @param {ArrayBufferView[]} inputs contains data
      * @param {number} stride of output
      * @param {number[]} strideOfInputs
      * @param {number[4]} outputIndices [firstRow, lastRow, firstColumn, lastColumn] inclusive
@@ -4619,70 +4682,8 @@ class MatrixMath
 
 
     // ========================================================
-    // Enums & utilities
+    // Operation codes
     // ========================================================
-
-    /**
-     * Types of matrices
-     * @returns {object} enum
-     */
-    static get MatrixType()
-    {
-        return this._MatrixType || (this._MatrixType = Object.freeze({
-            F32: 0x0,         // 32-bit float, 1 channel
-            //F32C1: 0x0 | 0x0, // 32-bit float, 1 channel
-            //F32C2: 0x0 | 0x1, // 32-bit float, 2 channels
-            //F32C3: 0x0 | 0x2, // 32-bit float, 3 channels
-            //F32C4: 0x0 | 0x3, // 32-bit float, 4 channels
-            F64: 0x4,         // 64-bit float, 1 channel
-            //F64C1: 0x4 | 0x0, // 64-bit float, 1 channel
-            //F64C2: 0x4 | 0x1, // 64-bit float, 2 channels
-            //F64C3: 0x4 | 0x2, // 64-bit float, 3 channels
-            //F64C4: 0x4 | 0x3, // 64-bit float, 4 channels
-            I32: 0x8,         // 32-bit signed integer, 1 channel
-            //I32C1: 0x8 | 0x0, // 32-bit signed integer, 1 channel
-            //I32C2: 0x8 | 0x1, // 32-bit signed integer, 2 channels
-            //I32C3: 0x8 | 0x2, // 32-bit signed integer, 3 channels
-            //I32C4: 0x8 | 0x3, // 32-bit signed integer, 4 channels
-            U8: 0xC,          // 8-bit unsigned integer, 1 channel
-            //U8C1: 0xC | 0x0,  // 8-bit unsigned integer, 1 channel
-            //U8C2: 0xC | 0x1,  // 8-bit unsigned integer, 2 channels
-            //U8C3: 0xC | 0x2,  // 8-bit unsigned integer, 3 channels
-            //U8C4: 0xC | 0x3,  // 8-bit unsigned integer, 4 channels
-        }));
-    }
-
-    /**
-     * A mapping between MatrixTypes and TypedArrays
-     * @returns {object}
-     */
-    static get DataType()
-    {
-        return this._DataType || (this._DataType = Object.freeze({
-            [this.MatrixType.F32]: Float32Array,
-            //[this.MatrixType.F32C1]: Float32Array,
-            //[this.MatrixType.F32C2]: Float32Array,
-            //[this.MatrixType.F32C3]: Float32Array,
-            //[this.MatrixType.F32C4]: Float32Array,
-            [this.MatrixType.F64]: Float64Array,
-            [this.MatrixType.I32]: Int32Array,
-            [this.MatrixType.U8]:  Uint8Array,
-        }));
-    }
-
-    /**
-     * A mapping between MatrixTypes and descriptive strings
-     * @returns {object}
-     */
-    static get DataTypeName()
-    {
-        return this._DataTypeName || (this._DataTypeName = Object.freeze({
-            [this.MatrixType.F32]: 'float32',
-            [this.MatrixType.F64]: 'float64',
-            [this.MatrixType.I32]: 'int32',
-            [this.MatrixType.U8]:  'uint8',
-        }));
-    }
 
     /**
      * Each operation is mapped to a unique number, called an operation code
@@ -4889,7 +4890,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -4934,11 +4935,11 @@ class MatrixOperation
      * @param {number} opcode MatrixMath.OperationCode enum
      * @param {number} requiredRows required number of rows of the output matrix
      * @param {number} requiredColumns required number of columns of the output matrix
-     * @param {number} requiredType required type of the output matrix
+     * @param {MatrixDataType} requiredDataType required type of the output matrix
      * @param {SpeedyMatrix[]} [inputMatrices] input matrices, if any
-     * @param {object|null} [userData] custom user-data, serializable
+     * @param {?object} [userData] custom user-data, serializable
      */
-    constructor(opcode, requiredRows, requiredColumns, requiredType, inputMatrices = [], userData = null)
+    constructor(opcode, requiredRows, requiredColumns, requiredDataType, inputMatrices = [], userData = null)
     {
         // handy vars
         const n = inputMatrices.length;
@@ -4955,7 +4956,7 @@ class MatrixOperation
         // (all fields are serializable)
         this._header = {
             opcode: opcode, // operation code
-            type: requiredType, // type of the output matrix (the same as the input matrices)
+            dtype: requiredDataType, // type of the output matrix (the same as the input matrices)
 
             rows: requiredRows, // number of rows of the output matrix
             columns: requiredColumns, // number of columns of the output matrix
@@ -5006,11 +5007,11 @@ class MatrixOperation
 
     /**
      * The required type of the output matrix
-     * @returns {number}
+     * @returns {MatrixDataType}
      */
-    get type()
+    get dtype()
     {
-        return this._header.type;
+        return this._header.dtype;
     }
 
     /**
@@ -5032,7 +5033,7 @@ class MatrixOperation
                 continue;
 
             // can't change shape
-            if(inputMatrix.rows !== prevInputMatrix.rows || inputMatrix.columns !== prevInputMatrix.columns || inputMatrix.type !== prevInputMatrix.type)
+            if(inputMatrix.rows !== prevInputMatrix.rows || inputMatrix.columns !== prevInputMatrix.columns || inputMatrix.dtype !== prevInputMatrix.dtype)
                 throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalOperationError"](`Can't change the input matrix shape / type`);
 
             // update input matrix
@@ -5062,7 +5063,7 @@ class MatrixOperation
      */
     run(outputMatrix)
     {
-        const { rows, columns, stride, type } = outputMatrix;
+        const { rows, columns, stride, dtype } = outputMatrix;
         const header = this._header;
 
         // run locally if the matrices are "small enough"
@@ -5076,7 +5077,7 @@ class MatrixOperation
         }
 
         // do we have a compatible output matrix?
-        this._assertCompatibility(rows, columns, type);
+        this._assertCompatibility(rows, columns, dtype);
 
         // save output metadata
         const output = outputMatrix.buffer.data;
@@ -5119,11 +5120,11 @@ class MatrixOperation
     _runLocally(outputMatrix)
     {
         // obtain properties of the output matrix
-        const { rows, columns, stride, type } = outputMatrix;
+        const { rows, columns, stride, dtype } = outputMatrix;
         const header = this._header;
 
         // do we have a compatible output matrix?
-        this._assertCompatibility(rows, columns, type);
+        this._assertCompatibility(rows, columns, dtype);
 
         // save output metadata
         const output = outputMatrix.buffer.data;
@@ -5164,16 +5165,16 @@ class MatrixOperation
      * Assert matrix size and type
      * @param {number} requiredRows 
      * @param {number} requiredColumns 
-     * @param {number} [requiredType] 
+     * @param {MatrixDataType} [requiredDataType]
      */
-    _assertCompatibility(requiredRows, requiredColumns, requiredType = this._header.type)
+    _assertCompatibility(requiredRows, requiredColumns, requiredDataType = this._header.dtype)
     {
-        const { rows, columns, type } = this._header;
+        const { rows, columns, dtype } = this._header;
 
-        if(requiredRows === rows && requiredColumns === columns && requiredType === type)
+        if(requiredRows === rows && requiredColumns === columns && requiredDataType === dtype)
             return;
-        else if(requiredType !== type)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalOperationError"](`Incompatible matrix type (0x${requiredType.toString(16)} vs 0x${type.toString(16)})`);
+        else if(requiredDataType !== dtype)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalOperationError"](`Incompatible matrix type: "${requiredDataType}" vs "${dtype}"`);
         else
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalOperationError"](`Invalid matrix size: ${rows} x ${columns} (expected ${requiredRows} x ${requiredColumns})`);
     }
@@ -5198,11 +5199,11 @@ class MatrixOperationNop extends MatrixOperation
      * Class constructor
      * @param {number} requiredRows required number of rows of the output matrix
      * @param {number} requiredColumns required number of columns of the output matrix
-     * @param {number} requiredType required type of the output matrix
+     * @param {MatrixDataType} requiredDataType required type of the output matrix
      */
-    constructor(requiredRows, requiredColumns, requiredType)
+    constructor(requiredRows, requiredColumns, requiredDataType)
     {
-        super(Opcode.NOP, requiredRows, requiredColumns, requiredType);
+        super(Opcode.NOP, requiredRows, requiredColumns, requiredDataType);
     }
 }
 
@@ -5215,12 +5216,12 @@ class MatrixOperationFill extends MatrixOperation
      * Class constructor
      * @param {number} requiredRows required number of rows of the output matrix
      * @param {number} requiredColumns required number of columns of the output matrix
-     * @param {number} requiredType required type of the output matrix
+     * @param {MatrixDataType} requiredDataType required type of the output matrix
      * @param {number} value the value we'll use to fill the matrix
      */
-    constructor(requiredRows, requiredColumns, requiredType, value)
+    constructor(requiredRows, requiredColumns, requiredDataType, value)
     {
-        super(Opcode.FILL, requiredRows, requiredColumns, requiredType, [], { value: +value });
+        super(Opcode.FILL, requiredRows, requiredColumns, requiredDataType, [], { value: +value });
     }
 }
 
@@ -5235,7 +5236,7 @@ class MatrixOperationCopy extends MatrixOperation
      */
     constructor(matrix)
     {
-        super(Opcode.COPY, matrix.rows, matrix.columns, matrix.type, [ matrix ]);
+        super(Opcode.COPY, matrix.rows, matrix.columns, matrix.dtype, [ matrix ]);
     }
 }
 
@@ -5250,7 +5251,7 @@ class MatrixOperationTranspose extends MatrixOperation
      */
     constructor(matrix)
     {
-        super(Opcode.TRANSPOSE, matrix.columns, matrix.rows, matrix.type, [ matrix ]);
+        super(Opcode.TRANSPOSE, matrix.columns, matrix.rows, matrix.dtype, [ matrix ]);
     }
 }
 
@@ -5267,7 +5268,7 @@ class MatrixOperationAdd extends MatrixOperation
      */
     constructor(matrixA, matrixB)
     {
-        super(Opcode.ADD, matrixA.rows, matrixA.columns, matrixA.type, [ matrixA, matrixB ]);
+        super(Opcode.ADD, matrixA.rows, matrixA.columns, matrixA.dtype, [ matrixA, matrixB ]);
     }
 }
 
@@ -5284,7 +5285,7 @@ class MatrixOperationSubtract extends MatrixOperation
      */
     constructor(matrixA, matrixB)
     {
-        super(Opcode.SUBTRACT, matrixA.rows, matrixA.columns, matrixA.type, [ matrixA, matrixB ]);
+        super(Opcode.SUBTRACT, matrixA.rows, matrixA.columns, matrixA.dtype, [ matrixA, matrixB ]);
     }
 }
 
@@ -5301,7 +5302,7 @@ class MatrixOperationMultiply extends MatrixOperation
      */
     constructor(matrixA, matrixB)
     {
-        super(Opcode.MULTIPLY, matrixA.rows, matrixB.columns, matrixA.type, [ matrixA, matrixB ]);
+        super(Opcode.MULTIPLY, matrixA.rows, matrixB.columns, matrixA.dtype, [ matrixA, matrixB ]);
     }
 }
 
@@ -5318,7 +5319,7 @@ class MatrixOperationScale extends MatrixOperation
      */
     constructor(matrix, scalar)
     {
-        super(Opcode.SCALE, matrix.rows, matrix.columns, matrix.type, [ matrix ], { scalar: +scalar });
+        super(Opcode.SCALE, matrix.rows, matrix.columns, matrix.dtype, [ matrix ], { scalar: +scalar });
     }
 }
 
@@ -5334,7 +5335,7 @@ class MatrixOperationCompMult extends MatrixOperation
      */
     constructor(matrixA, matrixB)
     {
-        super(Opcode.COMPMULT, matrixA.rows, matrixA.columns, matrixA.type, [ matrixA, matrixB ]);
+        super(Opcode.COMPMULT, matrixA.rows, matrixA.columns, matrixA.dtype, [ matrixA, matrixB ]);
     }
 }
 
@@ -5351,7 +5352,7 @@ class MatrixOperationMultiplyLT extends MatrixOperation
      */
     constructor(matrixA, matrixB)
     {
-        super(Opcode.MULTIPLYLT, matrixA.columns, matrixB.columns, matrixA.type, [ matrixA, matrixB ]);
+        super(Opcode.MULTIPLYLT, matrixA.columns, matrixB.columns, matrixA.dtype, [ matrixA, matrixB ]);
     }
 }
 
@@ -5368,7 +5369,7 @@ class MatrixOperationMultiplyRT extends MatrixOperation
      */
     constructor(matrixA, matrixB)
     {
-        super(Opcode.MULTIPLYRT, matrixA.rows, matrixB.rows, matrixA.type, [ matrixA, matrixB ]);
+        super(Opcode.MULTIPLYRT, matrixA.rows, matrixB.rows, matrixA.dtype, [ matrixA, matrixB ]);
     }
 }
 
@@ -5385,7 +5386,7 @@ class MatrixOperationMultiplyVec extends MatrixOperation
      */
     constructor(matrixA, vectorX)
     {
-        super(Opcode.MULTIPLYVEC, matrixA.rows, 1, matrixA.type, [ matrixA, vectorX ]);
+        super(Opcode.MULTIPLYVEC, matrixA.rows, 1, matrixA.dtype, [ matrixA, vectorX ]);
     }
 }
 
@@ -5406,7 +5407,7 @@ class MatrixOperationQR extends MatrixOperation
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`QR decomposition: unknown mode "${mode}"`)
 
         const columns = m == 'full-qr' ? matrix.columns + matrix.rows : 2 * matrix.columns;
-        super(Opcode.QR, matrix.rows, columns, matrix.type, [ matrix ], { mode: m });
+        super(Opcode.QR, matrix.rows, columns, matrix.dtype, [ matrix ], { mode: m });
     }
 }
 
@@ -5430,7 +5431,7 @@ class MatrixOperationQRSolve extends MatrixOperation
      */
     constructor(matrixA, vectorB)
     {
-        super(Opcode.QR, matrixA.rows, matrixA.columns + 1, matrixA.type, [ matrixA, vectorB ], { mode: 'reduced-Q\'x' });
+        super(Opcode.QR, matrixA.rows, matrixA.columns + 1, matrixA.dtype, [ matrixA, vectorB ], { mode: 'reduced-Q\'x' });
     }
 }
 
@@ -5447,7 +5448,7 @@ class MatrixOperationBackSubstitution extends MatrixOperation
      */
     constructor(input)
     {
-        super(Opcode.BACKSUB, input.rows, 1, input.type, [ input ]);
+        super(Opcode.BACKSUB, input.rows, 1, input.dtype, [ input ]);
     }
 }
 
@@ -5460,9 +5461,112 @@ class MatrixOperationLSSolve extends MatrixOperation
 {
     constructor(matrixA, vectorB)
     {
-        super(Opcode.LSSOLVE, matrixA.columns, 1, matrixA.type, [ matrixA, vectorB ]);
+        super(Opcode.LSSOLVE, matrixA.columns, 1, matrixA.dtype, [ matrixA, vectorB ]);
     }
 }
+
+/***/ }),
+
+/***/ "./src/core/math/matrix-type.js":
+/*!**************************************!*\
+  !*** ./src/core/math/matrix-type.js ***!
+  \**************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * matrix-type.js
+ * Data types of matrices
+ */
+
+//! No imports here
+//! MatrixType is exported to a WebWorker
+
+/**
+ * Types of matrices: utilities
+ * 
+ * Matrices store data of a certain type
+ * (e.g., 'float32', 'float64', etc.)
+ * 
+ * @typedef {string} MatrixDataType
+ */
+class MatrixType
+{
+    /**
+     * Is the specified matrix data type valid?
+     * @param {MatrixDataType} dtype data type
+     * @returns {boolean}
+     */
+    static isValid(dtype)
+    {
+        return Object.prototype.hasOwnProperty.call(this._classOf, dtype);
+    }
+
+    /**
+     * Create a TypedArray of the specified type
+     * @param {MatrixDataType} dtype data type
+     * @param {any[]} args will be passed to the constructor of the TypedArray
+     * @returns {ArrayBufferView}
+     */
+    static createTypedArray(dtype, ...args)
+    {
+        if(!this.isValid(dtype))
+            throw new Error(`Invalid matrix type: "${dtype}"`);
+
+        return Reflect.construct(this._classOf[dtype], args);
+    }
+
+    /**
+     * Default data type for matrices
+     * @returns {MatrixDataType}
+     */
+    static get default()
+    {
+        return 'float32';
+    }
+
+    /**
+     * A mapping between MatrixDataType and
+     * corresponding TypedArray constructors
+     * @returns {object}
+     */
+    static get _classOf()
+    {
+        return this._dataType || (this._dataType = Object.freeze({
+
+            /** 32-bit float */
+            'float32': Float32Array,
+
+            /** 64-bit float */
+            'float64': Float64Array,
+
+            /** 32-bit signed integer */
+            'int32': Int32Array,
+
+            /** 8-bit unsigned integer */
+            'uint8': Uint8Array,
+
+        }));
+    }
+}
+
+module.exports = { MatrixType };
 
 /***/ }),
 
@@ -5476,14 +5580,16 @@ class MatrixOperationLSSolve extends MatrixOperation
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixWorker", function() { return MatrixWorker; });
-/* harmony import */ var _matrix_math__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix-math */ "./src/core/math/matrix-math.js");
-/* harmony import */ var _matrix_math__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_matrix_math__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix-type */ "./src/core/math/matrix-type.js");
+/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_matrix_type__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var _matrix_math__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-math */ "./src/core/math/matrix-math.js");
+/* harmony import */ var _matrix_math__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_matrix_math__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -5505,9 +5611,10 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 // Constants
 const MAX_MESSAGE_ID = (1 << 30) - 1; // use the form 2^n - 1
-const NOP = _matrix_math__WEBPACK_IMPORTED_MODULE_0__["MatrixMath"].Opcode.NOP;
+const NOP = _matrix_math__WEBPACK_IMPORTED_MODULE_1__["MatrixMath"].Opcode.NOP;
 
 /**
  * A bridge between the main thread and a Web Worker
@@ -5544,7 +5651,7 @@ class MatrixWorker
     run(header, outputBuffer, inputBuffers)
     {
         if(header.opcode === NOP) // save some time
-            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve([outputBuffer, inputBuffers]);
+            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"].resolve([outputBuffer, inputBuffers]);
 
         const id = (this._msgId = (this._msgId + 1) & MAX_MESSAGE_ID);
         const transferables = [ outputBuffer, ...inputBuffers ].filter(
@@ -5552,7 +5659,7 @@ class MatrixWorker
         );
         const msg = { id, header, outputBuffer, inputBuffers, transferables };
 
-        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"](resolve => {
+        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"](resolve => {
             this._callbackTable.set(id, (outputBuffer, inputBuffers) => {
                 resolve([outputBuffer, inputBuffers]);
                 this._callbackTable.delete(id);
@@ -5568,7 +5675,8 @@ class MatrixWorker
     _createWorker()
     {
         // setup the code
-        const js = 'self.MatrixMath = ' + _matrix_math__WEBPACK_IMPORTED_MODULE_0__["MatrixMath"].toString() + '\n' +
+        const js = 'self.MatrixType = ' + _matrix_type__WEBPACK_IMPORTED_MODULE_0__["MatrixType"].toString() + '\n' +
+                   'self.MatrixMath = ' + _matrix_math__WEBPACK_IMPORTED_MODULE_1__["MatrixMath"].toString() + '\n' +
                    'self.onmessage = ' + onmessage.toString();
         const blob = new Blob([ js ], { type: 'application/javascript' });
 
@@ -5580,7 +5688,7 @@ class MatrixWorker
             done(msg.outputBuffer, msg.inputBuffers);
         };
         worker.onerror = ev => {
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalOperationError"](`Worker error: ${ev.message}`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`Worker error: ${ev.message}`);
         };
 
         // done!
@@ -5597,10 +5705,9 @@ function onmessage(ev)
     const { id, header, outputBuffer, inputBuffers, transferables } = ev.data;
 
     // wrap the incoming buffers with the appropriate TypedArrays
-    const dataType = self.MatrixMath.DataType[header.type];
-    const output = new dataType(outputBuffer, header.byteOffset, header.length);
+    const output = self.MatrixType.createTypedArray(header.dtype, outputBuffer, header.byteOffset, header.length);
     const inputs = inputBuffers.map((inputBuffer, i) =>
-        new dataType(inputBuffer, header.byteOffsetOfInputs[i], header.lengthOfInputs[i])
+        self.MatrixType.createTypedArray(header.dtype, inputBuffer, header.byteOffsetOfInputs[i], header.lengthOfInputs[i])
     );
 
     // perform the computation
@@ -5626,16 +5733,16 @@ function onmessage(ev)
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrix", function() { return SpeedyMatrix; });
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _matrix_buffer__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-buffer */ "./src/core/math/matrix-buffer.js");
-/* harmony import */ var _matrix_math__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix-math */ "./src/core/math/matrix-math.js");
-/* harmony import */ var _matrix_math__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(_matrix_math__WEBPACK_IMPORTED_MODULE_2__);
+/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-type */ "./src/core/math/matrix-type.js");
+/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_matrix_type__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _matrix_buffer__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix-buffer */ "./src/core/math/matrix-buffer.js");
 /* harmony import */ var _matrix_operations_queue__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./matrix-operations-queue */ "./src/core/math/matrix-operations-queue.js");
 /* harmony import */ var _matrix_operations__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./matrix-operations */ "./src/core/math/matrix-operations.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -5663,9 +5770,6 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // Constants
-const MatrixType = _matrix_math__WEBPACK_IMPORTED_MODULE_2__["MatrixMath"].MatrixType;
-const DataType = _matrix_math__WEBPACK_IMPORTED_MODULE_2__["MatrixMath"].DataType;
-const DataTypeName = _matrix_math__WEBPACK_IMPORTED_MODULE_2__["MatrixMath"].DataTypeName;
 const matrixOperationsQueue = _matrix_operations_queue__WEBPACK_IMPORTED_MODULE_3__["MatrixOperationsQueue"].instance;
 
 
@@ -5680,30 +5784,26 @@ class SpeedyMatrix
      * @param {number} rows number of rows
      * @param {number} [columns] number of columns (defaults to the number of rows)
      * @param {number[]} [values] initial values in column-major format
-     * @param {number} [type] F64, F32, etc.
+     * @param {MatrixDataType} [dtype] data type: the type of the elements of the matrix
      * @param {number} [stride] custom stride
      * @param {MatrixBuffer} [buffer] custom buffer
      */
-    constructor(rows, columns = rows, values = null, type = MatrixType.F32, stride = rows, buffer = null)
+    constructor(rows, columns = rows, values = null, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_1__["MatrixType"].default, stride = rows, buffer = null)
     {
-        const dataType = DataType[type];
-        const numChannels = 1 + (type & 3);
-
         if(rows <= 0 || columns <= 0)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Invalid dimensions`);
         else if(stride < rows)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Invalid stride`);
-        else if(dataType == undefined)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Invalid data type`);
-        else if(Array.isArray(values) && values.length != rows * columns * numChannels)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Incorrect number of matrix elements (expected ${rows * columns * numChannels}, found ${values.length})`);
+        else if(!_matrix_type__WEBPACK_IMPORTED_MODULE_1__["MatrixType"].isValid(dtype))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Invalid data type: "${dtype}"`);
+        else if(Array.isArray(values) && values.length != rows * columns)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Incorrect number of matrix elements (expected ${rows * columns}, found ${values.length})`);
 
         this._rows = rows | 0;
         this._columns = columns | 0;
-        this._type = type | 0;
-        this._channels = numChannels;
         this._stride = stride | 0;
-        this._buffer = buffer || new _matrix_buffer__WEBPACK_IMPORTED_MODULE_1__["MatrixBuffer"](this._stride * this._columns * this._channels, values, this._type);
+        this._dtype = dtype;
+        this._buffer = buffer || new _matrix_buffer__WEBPACK_IMPORTED_MODULE_2__["MatrixBuffer"](this._stride * this._columns, values, this._dtype);
         this._nop = null;
     }
 
@@ -5732,15 +5832,6 @@ class SpeedyMatrix
     }
 
     /**
-     * Number of channels
-     * @returns {number} defaults to 1
-     */
-    get channels()
-    {
-        return this._channels;
-    }
-
-    /**
      * The number of entries, in the MatrixBuffer,
      * between the beginning of two columns
      * @returns {number}
@@ -5751,21 +5842,12 @@ class SpeedyMatrix
     }
 
     /**
-     * Data type
-     * @returns {number}
-     */
-    get type()
-    {
-        return this._type;
-    }
-
-    /**
      * Data type (string)
-     * @returns {string}
+     * @returns {MatrixDataType}
      */
     get dtype()
     {
-        return DataTypeName[this._type];
+        return this._dtype;
     }
 
 
@@ -5865,7 +5947,7 @@ class SpeedyMatrix
     print(decimals = undefined, printFunction = console.log)
     {
         return this.read().then(data => {
-            const rows = this._rows, columns = this._columns;
+            const rows = this.rows, columns = this.columns;
             const row = new Array(rows);
             let i, j;
 
@@ -5922,7 +6004,7 @@ class SpeedyMatrix
 
         // create submatrix
         return this._buffer.createSharedBuffer(begin, length).then(sharedBuffer =>
-            new SpeedyMatrix(subRows, subColumns, undefined, this._type, stride, sharedBuffer)
+            new SpeedyMatrix(subRows, subColumns, undefined, this._dtype, stride, sharedBuffer)
         ).turbocharge();
     }
 
@@ -5940,7 +6022,7 @@ class SpeedyMatrix
         const bufferLength = (diagonalLength - 1) * stride + rows;
 
         return this._buffer.createSharedBuffer(0, bufferLength).then(sharedBuffer =>
-            new SpeedyMatrix(1, diagonalLength, undefined, this._type, stride + 1, sharedBuffer)
+            new SpeedyMatrix(1, diagonalLength, undefined, this._dtype, stride + 1, sharedBuffer)
         ).turbocharge();
     }
 
@@ -5995,7 +6077,7 @@ class SpeedyMatrix
      */
     sync()
     {
-        this._nop = this._nop || (this._nop = new _matrix_operations__WEBPACK_IMPORTED_MODULE_4__["MatrixOperationNop"](this._rows, this._columns, this._type));
+        this._nop = this._nop || (this._nop = new _matrix_operations__WEBPACK_IMPORTED_MODULE_4__["MatrixOperationNop"](this._rows, this._columns, this._dtype));
         return matrixOperationsQueue.enqueue(this._nop, this);
     }
 }
