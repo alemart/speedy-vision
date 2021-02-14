@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@
  */
 
 import { IllegalArgumentError, IllegalOperationError, NotSupportedError } from '../../utils/errors';
+import { MatrixType } from './matrix-type';
 import { MatrixBuffer } from './matrix-buffer';
-import { MatrixMath } from './matrix-math';
 import { MatrixOperationsQueue } from './matrix-operations-queue';
 import { MatrixOperationNop } from './matrix-operations';
 import { SpeedyPromise } from '../../utils/speedy-promise';
@@ -29,9 +29,6 @@ import { SpeedyPromise } from '../../utils/speedy-promise';
 
 
 // Constants
-const MatrixType = MatrixMath.MatrixType;
-const DataType = MatrixMath.DataType;
-const DataTypeName = MatrixMath.DataTypeName;
 const matrixOperationsQueue = MatrixOperationsQueue.instance;
 
 
@@ -46,30 +43,26 @@ export class SpeedyMatrix
      * @param {number} rows number of rows
      * @param {number} [columns] number of columns (defaults to the number of rows)
      * @param {number[]} [values] initial values in column-major format
-     * @param {number} [type] F64, F32, etc.
+     * @param {MatrixDataType} [dtype] data type: the type of the elements of the matrix
      * @param {number} [stride] custom stride
      * @param {MatrixBuffer} [buffer] custom buffer
      */
-    constructor(rows, columns = rows, values = null, type = MatrixType.F32, stride = rows, buffer = null)
+    constructor(rows, columns = rows, values = null, dtype = MatrixType.default, stride = rows, buffer = null)
     {
-        const dataType = DataType[type];
-        const numChannels = 1 + (type & 3);
-
         if(rows <= 0 || columns <= 0)
             throw new IllegalArgumentError(`Invalid dimensions`);
         else if(stride < rows)
             throw new IllegalArgumentError(`Invalid stride`);
-        else if(dataType == undefined)
-            throw new IllegalArgumentError(`Invalid data type`);
-        else if(Array.isArray(values) && values.length != rows * columns * numChannels)
-            throw new IllegalArgumentError(`Incorrect number of matrix elements (expected ${rows * columns * numChannels}, found ${values.length})`);
+        else if(!MatrixType.isValid(dtype))
+            throw new IllegalArgumentError(`Invalid data type: "${dtype}"`);
+        else if(Array.isArray(values) && values.length != rows * columns)
+            throw new IllegalArgumentError(`Incorrect number of matrix elements (expected ${rows * columns}, found ${values.length})`);
 
         this._rows = rows | 0;
         this._columns = columns | 0;
-        this._type = type | 0;
-        this._channels = numChannels;
         this._stride = stride | 0;
-        this._buffer = buffer || new MatrixBuffer(this._stride * this._columns * this._channels, values, this._type);
+        this._dtype = dtype;
+        this._buffer = buffer || new MatrixBuffer(this._stride * this._columns, values, this._dtype);
         this._nop = null;
     }
 
@@ -98,15 +91,6 @@ export class SpeedyMatrix
     }
 
     /**
-     * Number of channels
-     * @returns {number} defaults to 1
-     */
-    get channels()
-    {
-        return this._channels;
-    }
-
-    /**
      * The number of entries, in the MatrixBuffer,
      * between the beginning of two columns
      * @returns {number}
@@ -117,21 +101,12 @@ export class SpeedyMatrix
     }
 
     /**
-     * Data type
-     * @returns {number}
-     */
-    get type()
-    {
-        return this._type;
-    }
-
-    /**
      * Data type (string)
-     * @returns {string}
+     * @returns {MatrixDataType}
      */
     get dtype()
     {
-        return DataTypeName[this._type];
+        return this._dtype;
     }
 
 
@@ -231,7 +206,7 @@ export class SpeedyMatrix
     print(decimals = undefined, printFunction = console.log)
     {
         return this.read().then(data => {
-            const rows = this._rows, columns = this._columns;
+            const rows = this.rows, columns = this.columns;
             const row = new Array(rows);
             let i, j;
 
@@ -288,7 +263,7 @@ export class SpeedyMatrix
 
         // create submatrix
         return this._buffer.createSharedBuffer(begin, length).then(sharedBuffer =>
-            new SpeedyMatrix(subRows, subColumns, undefined, this._type, stride, sharedBuffer)
+            new SpeedyMatrix(subRows, subColumns, undefined, this._dtype, stride, sharedBuffer)
         ).turbocharge();
     }
 
@@ -306,7 +281,7 @@ export class SpeedyMatrix
         const bufferLength = (diagonalLength - 1) * stride + rows;
 
         return this._buffer.createSharedBuffer(0, bufferLength).then(sharedBuffer =>
-            new SpeedyMatrix(1, diagonalLength, undefined, this._type, stride + 1, sharedBuffer)
+            new SpeedyMatrix(1, diagonalLength, undefined, this._dtype, stride + 1, sharedBuffer)
         ).turbocharge();
     }
 
@@ -361,7 +336,7 @@ export class SpeedyMatrix
      */
     sync()
     {
-        this._nop = this._nop || (this._nop = new MatrixOperationNop(this._rows, this._columns, this._type));
+        this._nop = this._nop || (this._nop = new MatrixOperationNop(this._rows, this._columns, this._dtype));
         return matrixOperationsQueue.enqueue(this._nop, this);
     }
 }

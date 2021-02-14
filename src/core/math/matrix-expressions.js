@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,12 @@
  */
 
 import { SpeedyMatrix } from './matrix';
-import { MatrixMath } from './matrix-math';
+import { MatrixType } from './matrix-type';
 import { MatrixOperationsQueue } from './matrix-operations-queue';
 import { AbstractMethodError, IllegalArgumentError, IllegalOperationError } from '../../utils/errors';
 import { SpeedyPromise } from '../../utils/speedy-promise';
 import {
+    MatrixOperation,
     MatrixOperationNop,
     MatrixOperationFill,
     MatrixOperationCopy,
@@ -45,13 +46,6 @@ import {
 
 // constants
 const matrixOperationsQueue = MatrixOperationsQueue.instance;
-const MatrixType = MatrixMath.MatrixType;
-const DataType = MatrixMath.DataType;
-const DataTypeName = MatrixMath.DataTypeName;
-const DataTypeName2DataType = Object.freeze(Object.keys(DataTypeName).reduce(
-    (obj, type) => Object.assign(obj, { [ DataTypeName[type] ]: type }),
-{}));
-
 
 
 // ================================================
@@ -69,19 +63,29 @@ class SpeedyMatrixExpr
      * Constructor
      * @param {number} rows expected number of rows of the resulting expression
      * @param {number} columns expected number of columns of the resulting expression
-     * @param {number} type matrix type: F32, F64, etc.
+     * @param {MatrixDataType} dtype data type
      */
-    constructor(rows, columns, type)
+    constructor(rows, columns, dtype)
     {
+        /** @type {number} expected number of rows of the resulting expression */
         this._rows = rows | 0;
+
+        /** @type {number} expected number of columns of the resulting expression */
         this._columns = columns | 0;
-        this._type = type | 0;
+
+        /** @type {MatrixDataType} data type of the elements of the matrix */
+        this._dtype = dtype;
+
+        /** @type {?number[]} internal buffer for reading matrix data */
         this._readbuf = null;
 
+
+
+        // validate
         if(this._rows <= 0 || this._columns <= 0)
             throw new IllegalArgumentError(`Invalid dimensions for a matrix expression: ${this._rows} x ${this._columns}`);
-        else if(DataType[this._type] === undefined)
-            throw new IllegalArgumentError(`Invalid type for a matrix expression: 0x${this._type.toString(16)}`);
+        else if(!MatrixType.isValid(this._dtype))
+            throw new IllegalArgumentError(`Invalid type for a matrix expression: "${this._dtype}"`);
     }
 
     /**
@@ -103,35 +107,26 @@ class SpeedyMatrixExpr
     }
 
     /**
-     * Type of the resulting matrix
-     * @returns {number}
-     */
-    get type()
-    {
-        return this._type;
-    }
-
-    /**
      * Type of the resulting matrix, as a string
-     * @returns {string}
+     * @returns {MatrixDataType}
      */
     get dtype()
     {
-        return MatrixMath.DataTypeName[this._type];
+        return this._dtype;
     }
 
     /**
      * Assert matrix shape and type
      * @param {number} requiredRows
      * @param {number} requiredColumns
-     * @param {number} [requiredType]
+     * @param {MatrixDataType} [requiredDataType]
      */
-    _assertCompatibility(requiredRows, requiredColumns, requiredType = this._type)
+    _assertCompatibility(requiredRows, requiredColumns, requiredDataType = this._dtype)
     {
-        if(requiredRows === this._rows && requiredColumns === this._columns && requiredType === this._type)
+        if(requiredRows === this._rows && requiredColumns === this._columns && requiredDataType === this._dtype)
             return;
-        else if(requiredType !== this._type)
-            throw new IllegalOperationError(`Incompatible matrix type (expected ${MatrixMath.DataTypeName[requiredType]}, found ${this.dtype})`);
+        else if(requiredDataType !== this._dtype)
+            throw new IllegalOperationError(`Incompatible matrix type (expected "${requiredDataType}", found "${this._dtype}")`);
         else
             throw new IllegalOperationError(`Incompatible matrix shape (expected ${requiredRows} x ${requiredColumns}, found ${this._rows} x ${this._columns})`);
     }
@@ -465,12 +460,14 @@ class SpeedyMatrixTempExpr extends SpeedyMatrixExpr
      * Constructor
      * @param {number} rows number of rows of the output matrix
      * @param {number} columns number of columns of the output matrix
-     * @param {number} type type of the output matrix
+     * @param {MatrixDataType} dtype type of the output matrix
      */
-    constructor(rows, columns, type)
+    constructor(rows, columns, dtype)
     {
-        super(rows, columns, type);
-        this._tmpmatrix = new SpeedyMatrix(rows, columns, undefined, type); // used for temporary calculations
+        super(rows, columns, dtype);
+
+        /** @type {SpeedyMatrix} used for temporary calculations */
+        this._tmpmatrix = new SpeedyMatrix(rows, columns, undefined, dtype);
     }
 
     /**
@@ -500,10 +497,18 @@ class SpeedyMatrixUnaryExpr extends SpeedyMatrixTempExpr
      */
     constructor(rows, columns, expr, operationClass, ...args)
     {
-        super(rows, columns, expr.type);
+        super(rows, columns, expr.dtype);
+
+        /** @type {SpeedyMatrixExpr} input expression */
         this._expr = expr;
+
+        /** @type {Function} unary operation */
         this._operationClass = operationClass;
-        this._operation = null; // cache the MatrixOperation object
+
+        /** @type {?MatrixOperation} we cache the MatrixOperation object */
+        this._operation = null;
+
+        /** @type {any[]} arguments to be used when instantiating the unary operation */
         this._args = args;
     }
 
@@ -551,15 +556,28 @@ class SpeedyMatrixBinaryExpr extends SpeedyMatrixTempExpr
      */
     constructor(rows, columns, leftExpr, rightExpr, operationClass, ...args)
     {
-        super(rows, columns, leftExpr.type);
+        super(rows, columns, leftExpr.dtype);
+
+        /** @type {SpeedyMatrixExpr} left operand */
         this._leftExpr = leftExpr;
+
+        /** @type {SpeedyMatrixExpr} right operand */
         this._rightExpr = rightExpr;
+
+        /** @type {Function} binary operation */
         this._operationClass = operationClass;
-        this._operation = null; // cache the MatrixOperation object
+
+        /** @type {?MatrixOperation} we cache the MatrixOperation object */
+        this._operation = null;
+
+        /** @type {any[]} arguments to be used when instantiating the binary operation */
         this._args = args;
 
-        if(rightExpr.type !== leftExpr.type) // just in case...
-            this._assertCompatibility(rows, columns, rightExpr.type);
+
+
+        // validate
+        if(rightExpr.dtype !== leftExpr.dtype) // just in case...
+            this._assertCompatibility(rows, columns, rightExpr.dtype);
     }
 
     /**
@@ -616,14 +634,27 @@ class SpeedyMatrixReadonlyBlockExpr extends SpeedyMatrixExpr
      */
     constructor(expr, firstRow, lastRow, firstColumn, lastColumn)
     {
-        super(lastRow - firstRow + 1, lastColumn - firstColumn + 1, expr.type);
+        super(lastRow - firstRow + 1, lastColumn - firstColumn + 1, expr.dtype);
 
+        /** @type {SpeedyMatrixExpr} originating matrix expression */
         this._expr = expr;
+
+        /** @type {number} index of the top-most row (starts at zero) */
         this._firstRow = firstRow;
+
+        /** @type {number} index of the last row */
         this._lastRow = lastRow;
+
+        /** @type {number} index of the left-most column (starts at zero) */
         this._firstColumn = firstColumn;
+
+        /** @type {number} index of the right-most column */
         this._lastColumn = lastColumn;
+
+        /** @type {?SpeedyMatrix} the matrix associated with this expression */
         this._submatrix = null;
+
+        /** @type {?SpeedyMatrix} used for caching */
         this._cachedMatrix = null;
     }
 
@@ -668,10 +699,15 @@ class SpeedyMatrixReadonlyDiagonalExpr extends SpeedyMatrixExpr
     constructor(expr)
     {
         const diagonalLength = Math.min(expr.rows, expr.columns);
-        super(1, diagonalLength, expr.type);
+        super(1, diagonalLength, expr.dtype);
 
+        /** @type {SpeedyMatrixExpr} originating matrix expression */
         this._expr = expr;
+
+        /** @type {?SpeedyMatrix} the matrix associated with this expression */
         this._diagonal = null;
+
+        /** @type {?SpeedyMatrix} used for caching */
         this._cachedMatrix = null;
     }
 
@@ -755,7 +791,7 @@ class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
      */
     fill(value)
     {
-        return this.assign(new SpeedyMatrixFillExpr(this._rows, this._columns, this._type, +value));
+        return this.assign(new SpeedyMatrixFillExpr(this._rows, this._columns, this._dtype, +value));
     }
 
     /**
@@ -796,21 +832,25 @@ class SpeedyMatrixAssignmentExpr extends SpeedyMatrixLvalueExpr
      */
     constructor(lvalue, rvalue)
     {
-        const { rows, columns, type } = lvalue;
-        super(rows, columns, type);
+        const { rows, columns, dtype } = lvalue;
+        super(rows, columns, dtype);
 
         // convert rvalue to SpeedyMatrixExpr
         if(!(rvalue instanceof SpeedyMatrixExpr)) {
             if(Array.isArray(rvalue)) {
-                const matrix = new SpeedyMatrix(rows, columns, rvalue, type);
-                rvalue = new SpeedyMatrixElementaryExpr(rows, columns, type, matrix);
+                const matrix = new SpeedyMatrix(rows, columns, rvalue, dtype);
+                rvalue = new SpeedyMatrixElementaryExpr(rows, columns, dtype, matrix);
             }
             else
                 throw new IllegalArgumentError(`Can't assign matrix to ${rvalue}`)
         }
 
-        this._assertCompatibility(rvalue.rows, rvalue.columns, rvalue.type);
+        this._assertCompatibility(rvalue.rows, rvalue.columns, rvalue.dtype);
+
+        /** @type {SpeedyMatrixLvalueExpr} */
         this._lvalue = lvalue;
+
+        /** @type {SpeedyMatrixExpr} */
         this._rvalue = rvalue;
     }
 
@@ -849,18 +889,19 @@ class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
      * Constructor
      * @param {number} rows
      * @param {number} columns
-     * @param {number} type
+     * @param {MatrixDataType} dtype
      * @param {SpeedyMatrix} [matrix] user matrix
      */
-    constructor(rows, columns, type, matrix = null)
+    constructor(rows, columns, dtype, matrix = null)
     {
-        super(rows, columns, type);
-        this._usermatrix = null;
+        super(rows, columns, dtype);
 
-        if(matrix != null) {
-            this._assertCompatibility(matrix.rows, matrix.columns, matrix.type);
-            this._usermatrix = matrix;
-        }
+        // validate
+        if(matrix != null)
+            this._assertCompatibility(matrix.rows, matrix.columns, matrix.dtype);
+
+        /** @type {?SpeedyMatrix} the matrix associated with this expression */
+        this._usermatrix = matrix;
     }
 
     /**
@@ -913,16 +954,31 @@ class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
      */
     constructor(expr, firstRow, lastRow, firstColumn, lastColumn)
     {
-        super(lastRow - firstRow + 1, lastColumn - firstColumn + 1, expr.type);
+        super(lastRow - firstRow + 1, lastColumn - firstColumn + 1, expr.dtype);
 
+        /** @type {SpeedyMatrixExpr} originating matrix expression */
         this._expr = expr;
+
+        /** @type {number} index of the top-most row (starts at zero) */
         this._firstRow = firstRow;
+
+        /** @type {number} index of the last row */
         this._lastRow = lastRow;
+
+        /** @type {number} index of the left-most column (starts at zero) */
         this._firstColumn = firstColumn;
+
+        /** @type {number} index of the right-most column */
         this._lastColumn = lastColumn;
+
+        /** @type {?SpeedyMatrix} the matrix associated with this expression */
         this._submatrix = null;
+
+        /** @type {?SpeedyMatrix} used for caching */
         this._cachedMatrix = null;
-        this._operation = null; // cached operation
+
+        /** @type {?MatrixOperation} cached operation */
+        this._operation = null;
     }
 
     /**
@@ -984,10 +1040,15 @@ class SpeedyMatrixReadwriteDiagonalExpr extends SpeedyMatrixLvalueExpr
     constructor(expr)
     {
         const diagonalLength = Math.min(expr.rows, expr.columns);
-        super(1, diagonalLength, expr.type);
+        super(1, diagonalLength, expr.dtype);
 
+        /** @type {SpeedyMatrixExpr} originating matrix expression */
         this._expr = expr;
+
+        /** @type {?SpeedyMatrix} the matrix associated with this expression */
         this._diagonal = null;
+
+        /** @type {?SpeedyMatrix} used for caching */
         this._cachedMatrix = null;
     }
 
@@ -1052,13 +1113,15 @@ class SpeedyMatrixFillExpr extends SpeedyMatrixTempExpr
      * Constructor
      * @param {number} rows number of rows of the resulting (output) matrix
      * @param {number} columns number of columns of the resulting (output) matrix
-     * @param {number} type type of the resulting (output) matrix
+     * @param {MatrixDataType} dtype type of the resulting (output) matrix
      * @param {number} value will fill the output matrix with this constant value
      */
-    constructor(rows, columns, type, value)
+    constructor(rows, columns, dtype, value)
     {
-        super(rows, columns, type);
-        this._operation = new MatrixOperationFill(rows, columns, type, value);
+        super(rows, columns, dtype);
+
+        /** @type {MatrixOperation} */
+        this._operation = new MatrixOperationFill(rows, columns, dtype, value);
     }
 
     /**
@@ -1389,25 +1452,24 @@ export class SpeedyMatrixExprFactory extends Function
      * @param {number} rows number of rows
      * @param {number} [columns] number of columns (defaults to the number of rows)
      * @param {number[]} [values] initial values in column-major format
-     * @param {string} [dtype] 'float32' | 'float64' | 'int32' | 'uint8'
+     * @param {MatrixDataType} [dtype] data type of the elements of the matrix
      * @returns {SpeedyMatrixElementaryExpr}
      */
-    _create(rows, columns = rows, values = null, dtype = 'float32')
+    _create(rows, columns = rows, values = null, dtype = MatrixType.default)
     {
-        let type = DataTypeName2DataType[dtype];
         let matrix = null;
 
-        if(type === undefined)
-            throw new IllegalArgumentError(`Unknown matrix type: "${dtype}"`);
+        if(!MatrixType.isValid(dtype))
+            throw new IllegalArgumentError(`Invalid matrix type: "${dtype}"`);
 
         if(values != null) {
             if(!Array.isArray(values))
                 throw new IllegalArgumentError(`Can't initialize Matrix with values ${values}`);
             if(values.length > 0)
-                matrix = new SpeedyMatrix(rows, columns, values, type);
+                matrix = new SpeedyMatrix(rows, columns, values, dtype);
         }
 
-        return new SpeedyMatrixElementaryExpr(rows, columns, type, matrix);
+        return new SpeedyMatrixElementaryExpr(rows, columns, dtype, matrix);
     }
 
     /**
@@ -1415,10 +1477,10 @@ export class SpeedyMatrixExprFactory extends Function
      * @param {number} rows number of rows
      * @param {number} [columns] number of columns (defaults to the number of rows)
      * @param {number[]} [values] initial values in column-major format
-     * @param {string} [dtype] 'float32' | 'float64' | 'int32' | 'uint8'
+     * @param {MatrixDataType} [dtype] data type of the elements of the matrix
      * @returns {SpeedyMatrixElementaryExpr}
      */
-    Zeros(rows, columns = rows, dtype = 'float32')
+    Zeros(rows, columns = rows, dtype = MatrixType.default)
     {
         const values = (new Array(rows * columns)).fill(0);
         return this._create(rows, columns, values, dtype);
@@ -1429,10 +1491,10 @@ export class SpeedyMatrixExprFactory extends Function
      * @param {number} rows number of rows
      * @param {number} [columns] number of columns (defaults to the number of rows)
      * @param {number[]} [values] initial values in column-major format
-     * @param {string} [dtype] 'float32' | 'float64' | 'int32' | 'uint8'
+     * @param {MatrixDataType} [dtype] data type of the elements of the matrix
      * @returns {SpeedyMatrixElementaryExpr}
      */
-    Ones(rows, columns = rows, dtype = 'float32')
+    Ones(rows, columns = rows, dtype = MatrixType.default)
     {
         const values = (new Array(rows * columns)).fill(1);
         return this._create(rows, columns, values, dtype);
@@ -1443,10 +1505,10 @@ export class SpeedyMatrixExprFactory extends Function
      * @param {number} rows number of rows
      * @param {number} [columns] number of columns (defaults to the number of rows)
      * @param {number[]} [values] initial values in column-major format
-     * @param {string} [dtype] 'float32' | 'float64' | 'int32' | 'uint8'
+     * @param {MatrixDataType} [dtype] data type of the elements of the matrix
      * @returns {SpeedyMatrixElementaryExpr}
      */
-    Eye(rows, columns = rows, dtype = 'float32')
+    Eye(rows, columns = rows, dtype = MatrixType.default)
     {
         const values = (new Array(rows * columns)).fill(0);
         for(let j = Math.min(rows, columns) - 1; j >= 0; j--)

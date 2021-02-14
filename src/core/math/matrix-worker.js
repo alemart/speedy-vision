@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
  * Web Worker bridge
  */
 
+import { MatrixType } from './matrix-type';
 import { MatrixMath } from './matrix-math';
 import { IllegalOperationError } from '../../utils/errors';
 import { SpeedyPromise } from '../../utils/speedy-promise';
@@ -86,7 +87,8 @@ export class MatrixWorker
     _createWorker()
     {
         // setup the code
-        const js = 'self.MatrixMath = ' + MatrixMath.toString() + '\n' +
+        const js = 'self.MatrixType = ' + MatrixType.toString() + '\n' +
+                   'self.MatrixMath = ' + MatrixMath.toString() + '\n' +
                    'self.onmessage = ' + onmessage.toString();
         const blob = new Blob([ js ], { type: 'application/javascript' });
 
@@ -115,10 +117,9 @@ function onmessage(ev)
     const { id, header, outputBuffer, inputBuffers, transferables } = ev.data;
 
     // wrap the incoming buffers with the appropriate TypedArrays
-    const dataType = self.MatrixMath.DataType[header.type];
-    const output = new dataType(outputBuffer, header.byteOffset, header.length);
+    const output = self.MatrixType.createTypedArray(header.dtype, outputBuffer, header.byteOffset, header.length);
     const inputs = inputBuffers.map((inputBuffer, i) =>
-        new dataType(inputBuffer, header.byteOffsetOfInputs[i], header.lengthOfInputs[i])
+        self.MatrixType.createTypedArray(header.dtype, inputBuffer, header.byteOffsetOfInputs[i], header.lengthOfInputs[i])
     );
 
     // perform the computation

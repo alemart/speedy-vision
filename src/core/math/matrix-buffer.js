@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,16 +19,10 @@
  * Storage for elements of matrices
  */
 
-import { MatrixMath } from './matrix-math';
+import { MatrixType } from './matrix-type';
 import { IllegalArgumentError, IllegalOperationError, NotSupportedError } from '../../utils/errors';
 import { SpeedyPromise } from '../../utils/speedy-promise';
 
-// constants
-const MatrixType = MatrixMath.MatrixType;
-const DataType = MatrixMath.DataType;
-const TypedArray2DataType = Object.freeze(Object.keys(DataType).reduce(
-    (obj, type) => Object.assign(obj, { [DataType[type].name]: type | 0 }),
-{}));
 
 /**
  * Stores the contents of a matrix
@@ -38,65 +32,72 @@ export class MatrixBuffer
     /**
      * Class constructor
      * @param {number} length number of elements of the buffer
-     * @param {number[]|Float64Array|Float32Array|Int32Array|Uint8Array} [values] initial values in column-major format
-     * @param {number} [type] the type of the elements of the matrix: F64, F32, etc.
-     * @param {MatrixBuffer} [parent] the buffer that originated this one, if any
+     * @param {number[]|ArrayBufferView|null} [values] initial values in column-major format
+     * @param {MatrixDataType} [dtype] the type of the elements of the matrix
+     * @param {?MatrixBuffer} [parent] the buffer that originated this one, if any
      */
-    constructor(length, values = null, type = MatrixType.F32, parent = null)
+    constructor(length, values = null, dtype = MatrixType.default, parent = null)
     {
-        let data;
-        length = length | 0;
+        length |= 0;
 
-        // type inference
-        if(values != null && !Array.isArray(values))
-            type = TypedArray2DataType[values.constructor.name];
-        const dataType = DataType[type];
-        if(dataType === undefined)
-            throw new IllegalArgumentError(`Unknown matrix type`);
-
-        // validate length
+        // validate
+        if(!MatrixType.isValid(dtype))
+            throw new IllegalArgumentError(`Invalid data type: "${dtype}"`);
         if(length <= 0)
             throw new IllegalArgumentError(`Invalid matrix length`);
 
         // allocate new TypedArray
-        if(values == null)
-            data = new dataType(length);
-        else if(Array.isArray(values))
-            data = new dataType(values);
-        else
-            data = values;
+        const data =
+            (values == null) ? MatrixType.createTypedArray(dtype, length) : (
+            Array.isArray(values) ? MatrixType.createTypedArray(dtype, values) :
+            values);
 
-        // check if it's a proper TypedArray
-        if(!(data.buffer instanceof ArrayBuffer))
-            throw new IllegalArgumentError(`Invalid matrix type`);
 
         // store data
-        this._type = type & (~3); // F64, F32, etc.
-        this._byteOffset = data.byteOffset; // assumed to be constant
-        this._length = data.length; // assumed to be constant
-        this._data = data; // a reference to the TypedArray
-        this._dataType = dataType; // TypedArray class
+
+        /** @type {MatrixDataType} data type */
+        this._dtype = dtype;
+
+        /** @type {ArrayBufferView} a reference to the TypedArray (storage) */
+        this._data = data;
+
+        /** @type {number} TypedArray byte offset: assumed to be constant */
+        this._byteOffset = data.byteOffset;
+
+        /** @type {number} TypedArray length: assumed to be constant */
+        this._length = data.length;
+
+
+
 
         // concurrency control
-        this._pendingOperations = parent ? parent._pendingOperations : 0; // number of pending operations that read from or write to the buffer
-        this._pendingAccessesQueue = []; // a list of Function<void> to be called as soon as there are no pending operations
-        this._children = []; // a list of MatrixBuffers that share their internal memory with this one
-        this._parent = parent; // the buffer that originated this one, if any
+
+        /** @type {number} number of pending operations that read from or write to the buffer */
+        this._pendingOperations = parent ? parent._pendingOperations : 0;
+
+        /** @type {Array<function()>} a list of Function<void> to be called as soon as there are no pending operations */
+        this._pendingAccessesQueue = [];
+
+        /** @type {MatrixBuffer[]} a list of MatrixBuffers that share their internal memory with this one (we create a tree structure) */
+        this._children = [];
+
+        /** @type {?MatrixBuffer} the buffer that originated this one, if any (null if none) */
+        this._parent = parent;
     }
 
     /**
      * Data type
-     * @returns {number}
+     * @returns {MatrixDataType}
      */
-    get type()
+    get dtype()
     {
-        return this._type;
+        return this._dtype;
     }
 
     /**
      * Get the internal TypedArray that holds the entries of the Matrix
      * Make sure the buffer is ready() before accessing this property
-     * @returns {Float32Array|Float64Array|Int32Array|Uint8Array}
+     * @returns {ArrayBufferView}
      */
     get data()
     {
@@ -202,8 +203,7 @@ export class MatrixBuffer
         }
 
         // replace the internal buffer
-        const dataType = this._dataType;
-        my._data = new dataType(arrayBuffer, my._byteOffset, my._length);
+        my._data = MatrixType.createTypedArray(this._dtype, arrayBuffer, my._byteOffset, my._length);
 
         // broadcast
         for(let i = my._children.length - 1; i >= 0; i--)
@@ -224,7 +224,7 @@ export class MatrixBuffer
             const data = this._data.subarray(begin, end); // the main thread must own this._data
 
             // create shared buffer
-            const sharedBuffer = new MatrixBuffer(length, data, this._type, this);
+            const sharedBuffer = new MatrixBuffer(length, data, this._dtype, this);
             this._children.push(sharedBuffer);
 
             // done!

@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,11 +46,11 @@ export class MatrixOperation
      * @param {number} opcode MatrixMath.OperationCode enum
      * @param {number} requiredRows required number of rows of the output matrix
      * @param {number} requiredColumns required number of columns of the output matrix
-     * @param {number} requiredType required type of the output matrix
+     * @param {MatrixDataType} requiredDataType required type of the output matrix
      * @param {SpeedyMatrix[]} [inputMatrices] input matrices, if any
-     * @param {object|null} [userData] custom user-data, serializable
+     * @param {?object} [userData] custom user-data, serializable
      */
-    constructor(opcode, requiredRows, requiredColumns, requiredType, inputMatrices = [], userData = null)
+    constructor(opcode, requiredRows, requiredColumns, requiredDataType, inputMatrices = [], userData = null)
     {
         // handy vars
         const n = inputMatrices.length;
@@ -67,7 +67,7 @@ export class MatrixOperation
         // (all fields are serializable)
         this._header = {
             opcode: opcode, // operation code
-            type: requiredType, // type of the output matrix (the same as the input matrices)
+            dtype: requiredDataType, // type of the output matrix (the same as the input matrices)
 
             rows: requiredRows, // number of rows of the output matrix
             columns: requiredColumns, // number of columns of the output matrix
@@ -118,11 +118,11 @@ export class MatrixOperation
 
     /**
      * The required type of the output matrix
-     * @returns {number}
+     * @returns {MatrixDataType}
      */
-    get type()
+    get dtype()
     {
-        return this._header.type;
+        return this._header.dtype;
     }
 
     /**
@@ -144,7 +144,7 @@ export class MatrixOperation
                 continue;
 
             // can't change shape
-            if(inputMatrix.rows !== prevInputMatrix.rows || inputMatrix.columns !== prevInputMatrix.columns || inputMatrix.type !== prevInputMatrix.type)
+            if(inputMatrix.rows !== prevInputMatrix.rows || inputMatrix.columns !== prevInputMatrix.columns || inputMatrix.dtype !== prevInputMatrix.dtype)
                 throw new IllegalOperationError(`Can't change the input matrix shape / type`);
 
             // update input matrix
@@ -174,7 +174,7 @@ export class MatrixOperation
      */
     run(outputMatrix)
     {
-        const { rows, columns, stride, type } = outputMatrix;
+        const { rows, columns, stride, dtype } = outputMatrix;
         const header = this._header;
 
         // run locally if the matrices are "small enough"
@@ -188,7 +188,7 @@ export class MatrixOperation
         }
 
         // do we have a compatible output matrix?
-        this._assertCompatibility(rows, columns, type);
+        this._assertCompatibility(rows, columns, dtype);
 
         // save output metadata
         const output = outputMatrix.buffer.data;
@@ -231,11 +231,11 @@ export class MatrixOperation
     _runLocally(outputMatrix)
     {
         // obtain properties of the output matrix
-        const { rows, columns, stride, type } = outputMatrix;
+        const { rows, columns, stride, dtype } = outputMatrix;
         const header = this._header;
 
         // do we have a compatible output matrix?
-        this._assertCompatibility(rows, columns, type);
+        this._assertCompatibility(rows, columns, dtype);
 
         // save output metadata
         const output = outputMatrix.buffer.data;
@@ -276,16 +276,16 @@ export class MatrixOperation
      * Assert matrix size and type
      * @param {number} requiredRows 
      * @param {number} requiredColumns 
-     * @param {number} [requiredType] 
+     * @param {MatrixDataType} [requiredDataType]
      */
-    _assertCompatibility(requiredRows, requiredColumns, requiredType = this._header.type)
+    _assertCompatibility(requiredRows, requiredColumns, requiredDataType = this._header.dtype)
     {
-        const { rows, columns, type } = this._header;
+        const { rows, columns, dtype } = this._header;
 
-        if(requiredRows === rows && requiredColumns === columns && requiredType === type)
+        if(requiredRows === rows && requiredColumns === columns && requiredDataType === dtype)
             return;
-        else if(requiredType !== type)
-            throw new IllegalOperationError(`Incompatible matrix type (0x${requiredType.toString(16)} vs 0x${type.toString(16)})`);
+        else if(requiredDataType !== dtype)
+            throw new IllegalOperationError(`Incompatible matrix type: "${requiredDataType}" vs "${dtype}"`);
         else
             throw new IllegalOperationError(`Invalid matrix size: ${rows} x ${columns} (expected ${requiredRows} x ${requiredColumns})`);
     }
@@ -310,11 +310,11 @@ export class MatrixOperationNop extends MatrixOperation
      * Class constructor
      * @param {number} requiredRows required number of rows of the output matrix
      * @param {number} requiredColumns required number of columns of the output matrix
-     * @param {number} requiredType required type of the output matrix
+     * @param {MatrixDataType} requiredDataType required type of the output matrix
      */
-    constructor(requiredRows, requiredColumns, requiredType)
+    constructor(requiredRows, requiredColumns, requiredDataType)
     {
-        super(Opcode.NOP, requiredRows, requiredColumns, requiredType);
+        super(Opcode.NOP, requiredRows, requiredColumns, requiredDataType);
     }
 }
 
@@ -327,12 +327,12 @@ export class MatrixOperationFill extends MatrixOperation
      * Class constructor
      * @param {number} requiredRows required number of rows of the output matrix
      * @param {number} requiredColumns required number of columns of the output matrix
-     * @param {number} requiredType required type of the output matrix
+     * @param {MatrixDataType} requiredDataType required type of the output matrix
      * @param {number} value the value we'll use to fill the matrix
      */
-    constructor(requiredRows, requiredColumns, requiredType, value)
+    constructor(requiredRows, requiredColumns, requiredDataType, value)
     {
-        super(Opcode.FILL, requiredRows, requiredColumns, requiredType, [], { value: +value });
+        super(Opcode.FILL, requiredRows, requiredColumns, requiredDataType, [], { value: +value });
     }
 }
 
@@ -347,7 +347,7 @@ export class MatrixOperationCopy extends MatrixOperation
      */
     constructor(matrix)
     {
-        super(Opcode.COPY, matrix.rows, matrix.columns, matrix.type, [ matrix ]);
+        super(Opcode.COPY, matrix.rows, matrix.columns, matrix.dtype, [ matrix ]);
     }
 }
 
@@ -362,7 +362,7 @@ export class MatrixOperationTranspose extends MatrixOperation
      */
     constructor(matrix)
     {
-        super(Opcode.TRANSPOSE, matrix.columns, matrix.rows, matrix.type, [ matrix ]);
+        super(Opcode.TRANSPOSE, matrix.columns, matrix.rows, matrix.dtype, [ matrix ]);
     }
 }
 
@@ -379,7 +379,7 @@ export class MatrixOperationAdd extends MatrixOperation
      */
     constructor(matrixA, matrixB)
     {
-        super(Opcode.ADD, matrixA.rows, matrixA.columns, matrixA.type, [ matrixA, matrixB ]);
+        super(Opcode.ADD, matrixA.rows, matrixA.columns, matrixA.dtype, [ matrixA, matrixB ]);
     }
 }
 
@@ -396,7 +396,7 @@ export class MatrixOperationSubtract extends MatrixOperation
      */
     constructor(matrixA, matrixB)
     {
-        super(Opcode.SUBTRACT, matrixA.rows, matrixA.columns, matrixA.type, [ matrixA, matrixB ]);
+        super(Opcode.SUBTRACT, matrixA.rows, matrixA.columns, matrixA.dtype, [ matrixA, matrixB ]);
     }
 }
 
@@ -413,7 +413,7 @@ export class MatrixOperationMultiply extends MatrixOperation
      */
     constructor(matrixA, matrixB)
     {
-        super(Opcode.MULTIPLY, matrixA.rows, matrixB.columns, matrixA.type, [ matrixA, matrixB ]);
+        super(Opcode.MULTIPLY, matrixA.rows, matrixB.columns, matrixA.dtype, [ matrixA, matrixB ]);
     }
 }
 
@@ -430,7 +430,7 @@ export class MatrixOperationScale extends MatrixOperation
      */
     constructor(matrix, scalar)
     {
-        super(Opcode.SCALE, matrix.rows, matrix.columns, matrix.type, [ matrix ], { scalar: +scalar });
+        super(Opcode.SCALE, matrix.rows, matrix.columns, matrix.dtype, [ matrix ], { scalar: +scalar });
     }
 }
 
@@ -446,7 +446,7 @@ export class MatrixOperationCompMult extends MatrixOperation
      */
     constructor(matrixA, matrixB)
     {
-        super(Opcode.COMPMULT, matrixA.rows, matrixA.columns, matrixA.type, [ matrixA, matrixB ]);
+        super(Opcode.COMPMULT, matrixA.rows, matrixA.columns, matrixA.dtype, [ matrixA, matrixB ]);
     }
 }
 
@@ -463,7 +463,7 @@ export class MatrixOperationMultiplyLT extends MatrixOperation
      */
     constructor(matrixA, matrixB)
     {
-        super(Opcode.MULTIPLYLT, matrixA.columns, matrixB.columns, matrixA.type, [ matrixA, matrixB ]);
+        super(Opcode.MULTIPLYLT, matrixA.columns, matrixB.columns, matrixA.dtype, [ matrixA, matrixB ]);
     }
 }
 
@@ -480,7 +480,7 @@ export class MatrixOperationMultiplyRT extends MatrixOperation
      */
     constructor(matrixA, matrixB)
     {
-        super(Opcode.MULTIPLYRT, matrixA.rows, matrixB.rows, matrixA.type, [ matrixA, matrixB ]);
+        super(Opcode.MULTIPLYRT, matrixA.rows, matrixB.rows, matrixA.dtype, [ matrixA, matrixB ]);
     }
 }
 
@@ -497,7 +497,7 @@ export class MatrixOperationMultiplyVec extends MatrixOperation
      */
     constructor(matrixA, vectorX)
     {
-        super(Opcode.MULTIPLYVEC, matrixA.rows, 1, matrixA.type, [ matrixA, vectorX ]);
+        super(Opcode.MULTIPLYVEC, matrixA.rows, 1, matrixA.dtype, [ matrixA, vectorX ]);
     }
 }
 
@@ -518,7 +518,7 @@ export class MatrixOperationQR extends MatrixOperation
             throw new IllegalArgumentError(`QR decomposition: unknown mode "${mode}"`)
 
         const columns = m == 'full-qr' ? matrix.columns + matrix.rows : 2 * matrix.columns;
-        super(Opcode.QR, matrix.rows, columns, matrix.type, [ matrix ], { mode: m });
+        super(Opcode.QR, matrix.rows, columns, matrix.dtype, [ matrix ], { mode: m });
     }
 }
 
@@ -542,7 +542,7 @@ export class MatrixOperationQRSolve extends MatrixOperation
      */
     constructor(matrixA, vectorB)
     {
-        super(Opcode.QR, matrixA.rows, matrixA.columns + 1, matrixA.type, [ matrixA, vectorB ], { mode: 'reduced-Q\'x' });
+        super(Opcode.QR, matrixA.rows, matrixA.columns + 1, matrixA.dtype, [ matrixA, vectorB ], { mode: 'reduced-Q\'x' });
     }
 }
 
@@ -559,7 +559,7 @@ export class MatrixOperationBackSubstitution extends MatrixOperation
      */
     constructor(input)
     {
-        super(Opcode.BACKSUB, input.rows, 1, input.type, [ input ]);
+        super(Opcode.BACKSUB, input.rows, 1, input.dtype, [ input ]);
     }
 }
 
@@ -572,6 +572,6 @@ export class MatrixOperationLSSolve extends MatrixOperation
 {
     constructor(matrixA, vectorB)
     {
-        super(Opcode.LSSOLVE, matrixA.columns, 1, matrixA.type, [ matrixA, vectorB ]);
+        super(Opcode.LSSOLVE, matrixA.columns, 1, matrixA.dtype, [ matrixA, vectorB ]);
     }
 }

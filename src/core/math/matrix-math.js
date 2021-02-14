@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,9 @@
  * Linear algebra routines
  */
 
-//! No imports here
+//! A note on imports: the MatrixMath
+//! class is exported to WebWorkers
+const { MatrixType } = require('./matrix-type');
 
 /**
  * Matrix math routines
@@ -34,8 +36,8 @@ class MatrixMath
     /**
      * No-operation
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static nop(header, output, inputs)
     {
@@ -45,8 +47,8 @@ class MatrixMath
     /**
      * Fill the matrix with a constant value
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static fill(header, output, inputs)
     {
@@ -67,8 +69,8 @@ class MatrixMath
     /**
      * Copy matrix
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static copy(header, output, inputs)
     {
@@ -93,8 +95,8 @@ class MatrixMath
     /**
      * Transpose matrix
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static transpose(header, output, inputs)
     {
@@ -112,8 +114,8 @@ class MatrixMath
     /**
      * Add two matrices
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static add(header, output, inputs)
     {
@@ -134,8 +136,8 @@ class MatrixMath
     /**
      * Subtract two matrices
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static subtract(header, output, inputs)
     {
@@ -156,8 +158,8 @@ class MatrixMath
     /**
      * Multiply two matrices (e.g., C = A B)
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static multiply(header, output, inputs)
     {
@@ -189,8 +191,8 @@ class MatrixMath
      * Multiply two matrices, transposing the left operand
      * (e.g., C = A^T B)
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static multiplylt(header, output, inputs)
     {
@@ -215,8 +217,8 @@ class MatrixMath
      * Multiply two matrices, transposing the right operand
      * (e.g., C = A B^T)
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static multiplyrt(header, output, inputs)
     {
@@ -249,8 +251,8 @@ class MatrixMath
      * Multiply by a column-vector
      * (i.e., y = A x)
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static multiplyvec(header, output, inputs)
     {
@@ -272,8 +274,8 @@ class MatrixMath
     /**
      * Multiply by a constant
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static scale(header, output, inputs)
     {
@@ -292,8 +294,8 @@ class MatrixMath
     /**
      * Component-wise multiplication
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static compmult(header, output, inputs)
     {
@@ -313,9 +315,9 @@ class MatrixMath
 
     /**
      * Outer product (m x 1 vector by 1 x n vector)
-     * @param {object} header 
-     * @param {TypedArray} output 
-     * @param {TypedArray[]} inputs 
+     * @param {object} header
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      */
     static outer(header, output, inputs)
     {
@@ -335,12 +337,12 @@ class MatrixMath
     /**
      * QR decomposition
      * @param {object} header
-     * @param {TypedArray} output becomes [ Q | R ] or [ Q'x | R ] or [ Qx | R ]
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output becomes [ Q | R ] or [ Q'x | R ] or [ Qx | R ]
+     * @param {ArrayBufferView[]} inputs
      */
     static qr(header, output, inputs)
     {
-        const { stride, type } = header;
+        const { stride, dtype } = header;
         const [ orows, ocolumns ] = [ header.rows, header.columns ];
         const [ irows, xrows ] = header.rowsOfInputs;
         const [ icolumns, xcolumns ] = header.columnsOfInputs;
@@ -352,7 +354,7 @@ class MatrixMath
         let submatrices = [ null, null, null ];
 
         // create temporary storage
-        const storage = this._createTypedArray(2 * irows * icolumns + icolumns, type);
+        const storage = this._createTypedArray(dtype, 2 * irows * icolumns + icolumns);
         const reflect = storage.subarray(0, irows * icolumns);
         const tmprow = storage.subarray(irows * icolumns, irows * icolumns + icolumns);
         const tmp = storage.subarray(irows * icolumns + icolumns, 2 * irows * icolumns + icolumns);
@@ -615,8 +617,8 @@ class MatrixMath
      * Back-substitution: solve Rx = b for x,
      * where R is n x n upper triangular
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs a single input of the form [ b | R ]
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs a single input of the form [ b | R ]
      */
     static backsub(header, output, inputs)
     {
@@ -659,14 +661,14 @@ class MatrixMath
      * A is m x n, b is m x 1, output x is n x 1
      * (m equations, n unknowns, m >= n)
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs [ A, b [,tmp] ] where optional tmp is m x (n+1)
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs [ A, b [,tmp] ] where optional tmp is m x (n+1)
      */
     static lssolve(header, output, inputs)
     {
-        const { stride } = header;
+        const { stride, dtype } = header;
         const [ m, n ] = [ header.rowsOfInputs[0], header.columnsOfInputs[0] ];
-        const tmp = inputs[2] || this._createTypedArray(m * (n+1), header.type);
+        const tmp = inputs[2] || this._createTypedArray(dtype, m * (n+1));
         const lsHeader = Object.assign({ }, header);
 
         // find [ Q'b | R ] with reduced QR of A
@@ -699,20 +701,20 @@ class MatrixMath
     // ========================================================
 
     /**
-     * Create a new TypedArray with the specified length
-     * @param {number} length 
-     * @param {number} type 
-     * @returns {TypedArray}
+     * Create a new TypedArray with the specified type
+     * @param {MatrixDataType} dtype data type
+     * @param {any[]} args arguments to be passed to the Typed Array constructor
+     * @returns {ArrayBufferView}
      */
-    static _createTypedArray(length, type)
+    static _createTypedArray(dtype, ...args)
     {
-        const dataType = this.DataType[type];
-        return new dataType(length);
+        const M = self.MatrixType || MatrixType;
+        return M.createTypedArray(dtype, ...args);
     }
 
     /**
      * The 2-norm of a column vector
-     * @param {TypedArray} column 
+     * @param {ArrayBufferView} column
      * @param {number} [begin] first index
      * @param {number} [length]
      * @returns {number}
@@ -731,8 +733,8 @@ class MatrixMath
 
     /**
      * The dot product of two column vectors
-     * @param {TypedArray} u 
-     * @param {TypedArray} v 
+     * @param {ArrayBufferView} u
+     * @param {ArrayBufferView} v
      * @param {number} [uBegin] first index 
      * @param {number} [vBegin] first index 
      * @param {number} [length] 
@@ -752,8 +754,8 @@ class MatrixMath
      * compute the sum (alpha A + beta B). The output
      * array is allowed to be one of the input arrays
      * @param {object} header
-     * @param {TypedArray} output
-     * @param {TypedArray[]} inputs
+     * @param {ArrayBufferView} output
+     * @param {ArrayBufferView[]} inputs
      * @param {number} alpha
      * @param {number} beta
      */
@@ -774,8 +776,8 @@ class MatrixMath
      * Create submatrices / block-views with shared memory
      * Low-level stuff. Make sure you pass valid indices...
      * @param {object} header will be modified!
-     * @param {TypedArray} output contains data
-     * @param {TypedArray[]} inputs contains data
+     * @param {ArrayBufferView} output contains data
+     * @param {ArrayBufferView[]} inputs contains data
      * @param {number} stride of output
      * @param {number[]} strideOfInputs
      * @param {number[4]} outputIndices [firstRow, lastRow, firstColumn, lastColumn] inclusive
@@ -819,70 +821,8 @@ class MatrixMath
 
 
     // ========================================================
-    // Enums & utilities
+    // Operation codes
     // ========================================================
-
-    /**
-     * Types of matrices
-     * @returns {object} enum
-     */
-    static get MatrixType()
-    {
-        return this._MatrixType || (this._MatrixType = Object.freeze({
-            F32: 0x0,         // 32-bit float, 1 channel
-            //F32C1: 0x0 | 0x0, // 32-bit float, 1 channel
-            //F32C2: 0x0 | 0x1, // 32-bit float, 2 channels
-            //F32C3: 0x0 | 0x2, // 32-bit float, 3 channels
-            //F32C4: 0x0 | 0x3, // 32-bit float, 4 channels
-            F64: 0x4,         // 64-bit float, 1 channel
-            //F64C1: 0x4 | 0x0, // 64-bit float, 1 channel
-            //F64C2: 0x4 | 0x1, // 64-bit float, 2 channels
-            //F64C3: 0x4 | 0x2, // 64-bit float, 3 channels
-            //F64C4: 0x4 | 0x3, // 64-bit float, 4 channels
-            I32: 0x8,         // 32-bit signed integer, 1 channel
-            //I32C1: 0x8 | 0x0, // 32-bit signed integer, 1 channel
-            //I32C2: 0x8 | 0x1, // 32-bit signed integer, 2 channels
-            //I32C3: 0x8 | 0x2, // 32-bit signed integer, 3 channels
-            //I32C4: 0x8 | 0x3, // 32-bit signed integer, 4 channels
-            U8: 0xC,          // 8-bit unsigned integer, 1 channel
-            //U8C1: 0xC | 0x0,  // 8-bit unsigned integer, 1 channel
-            //U8C2: 0xC | 0x1,  // 8-bit unsigned integer, 2 channels
-            //U8C3: 0xC | 0x2,  // 8-bit unsigned integer, 3 channels
-            //U8C4: 0xC | 0x3,  // 8-bit unsigned integer, 4 channels
-        }));
-    }
-
-    /**
-     * A mapping between MatrixTypes and TypedArrays
-     * @returns {object}
-     */
-    static get DataType()
-    {
-        return this._DataType || (this._DataType = Object.freeze({
-            [this.MatrixType.F32]: Float32Array,
-            //[this.MatrixType.F32C1]: Float32Array,
-            //[this.MatrixType.F32C2]: Float32Array,
-            //[this.MatrixType.F32C3]: Float32Array,
-            //[this.MatrixType.F32C4]: Float32Array,
-            [this.MatrixType.F64]: Float64Array,
-            [this.MatrixType.I32]: Int32Array,
-            [this.MatrixType.U8]:  Uint8Array,
-        }));
-    }
-
-    /**
-     * A mapping between MatrixTypes and descriptive strings
-     * @returns {object}
-     */
-    static get DataTypeName()
-    {
-        return this._DataTypeName || (this._DataTypeName = Object.freeze({
-            [this.MatrixType.F32]: 'float32',
-            [this.MatrixType.F64]: 'float64',
-            [this.MatrixType.I32]: 'int32',
-            [this.MatrixType.U8]:  'uint8',
-        }));
-    }
 
     /**
      * Each operation is mapped to a unique number, called an operation code
