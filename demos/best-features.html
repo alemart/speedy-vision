@@ -49,7 +49,7 @@
             <div class="separator"></div>
             <div>
                 <label for="sensitivity">Sensitivity</label>
-                <input type="range" min="0" max="0.90" value="0.45" step="0.01" id="sensitivity">
+                <input type="range" min="0" max="0.96" value="0.5" step="0.01" id="sensitivity">
             </div>
             <div>
                 <label for="speed-slider">Video speed</label>
@@ -142,7 +142,7 @@ function createCanvas(width, height, title)
     return canvas;
 }
 
-function renderFeatures(canvas, features, size = 2, color = 'yellow')
+function renderFeatures(canvas, features, size = 1, color = 'yellow')
 {
     const context = canvas.getContext('2d');
 
