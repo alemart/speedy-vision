@@ -1,5 +1,16 @@
 # Release notes
 
+## 0.5.0 - February 14th, 2020
+
+* Created Speedy's own Matrix / Linear Algebra system
+* Improved the feature detection & description API
+* Improved the computation of image pyramids
+* Performance optimizations (keypoint encoder)
+* Created Speedy's own implementation of Promises for extra performance
+* Speedy's GLSL preprocessor can now unroll predefined for loops
+* Improved the code & made new demos
+* Removed Automatic Sensitivity
+
 ## 0.4.0 - October 8th, 2020
 
 * Added ORB feature descriptor
