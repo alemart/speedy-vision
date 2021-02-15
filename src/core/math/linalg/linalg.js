@@ -58,7 +58,7 @@ LinAlg.register = function(name, fn)
         throw new Error(`Not a function: ${name}`);
     else if(typeof name !== `string` || !name.match(/^[a-z_][0-9a-z_]*$/i))
         throw new Error(`Undesirable identifier: ${name}`);
-    else if(LinAlg.hasOperation(name))
+    else if(LinAlg.hasMethod(name))
         throw new Error(`Can't redefine method "${name}"`)
 
     // methods will be bound to LinAlg.lib
@@ -67,10 +67,11 @@ LinAlg.register = function(name, fn)
 };
 
 /**
- * Checks if a method has been registered
+ * Check if a method has been registered
  * @param {string} name method name
+ * @returns {boolean}
  */
-LinAlg.hasOperation = function(name)
+LinAlg.hasMethod = function(name)
 {
     return Object.prototype.hasOwnProperty.call(LinAlg.lib, name);
 }

@@ -90,7 +90,7 @@ export class MatrixOperation
         this._workloadOfInputs = inputMatrices.reduce((w, m) => w + this._workload(m), 0);
 
         // is it a valid operation?
-        if(!LinAlg.hasOperation(method))
+        if(!LinAlg.hasMethod(method))
             throw new IllegalArgumentError(`Invalid method: "${method}"`);
     }
 
