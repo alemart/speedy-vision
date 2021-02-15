@@ -19,14 +19,13 @@
  * Web Worker bridge
  */
 
-import { MatrixType } from './matrix-type';
-import { MatrixMath } from './matrix-math';
+import { LinAlg } from './linalg/linalg';
 import { IllegalOperationError } from '../../utils/errors';
 import { SpeedyPromise } from '../../utils/speedy-promise';
 
 // Constants
 const MAX_MESSAGE_ID = (1 << 30) - 1; // use the form 2^n - 1
-const NOP = MatrixMath.Opcode.NOP;
+const NOP = 'nop'; // no operation
 
 /**
  * A bridge between the main thread and a Web Worker
@@ -62,7 +61,7 @@ export class MatrixWorker
      */
     run(header, outputBuffer, inputBuffers)
     {
-        if(header.opcode === NOP) // save some time
+        if(header.method === NOP) // save some time
             return SpeedyPromise.resolve([outputBuffer, inputBuffers]);
 
         const id = (this._msgId = (this._msgId + 1) & MAX_MESSAGE_ID);
@@ -87,10 +86,10 @@ export class MatrixWorker
     _createWorker()
     {
         // setup the code
-        const js = 'self.MatrixType = ' + MatrixType.toString() + '\n' +
-                   'self.MatrixMath = ' + MatrixMath.toString() + '\n' +
-                   'self.onmessage = ' + onmessage.toString();
+        const js = 'self.LinAlg = ' + LinAlg.toString() + ';\n' +
+                   'self.onmessage = ' + onmessage.toString() + ';';
         const blob = new Blob([ js ], { type: 'application/javascript' });
+        //console.log(js);
 
         // setup the Worker
         const worker = new Worker(URL.createObjectURL(blob));
@@ -115,17 +114,16 @@ export class MatrixWorker
 function onmessage(ev)
 {
     const { id, header, outputBuffer, inputBuffers, transferables } = ev.data;
+    const LinAlg = self.LinAlg;
 
     // wrap the incoming buffers with the appropriate TypedArrays
-    const output = self.MatrixType.createTypedArray(header.dtype, outputBuffer, header.byteOffset, header.length);
+    const output = LinAlg.lib.createTypedArray(header.dtype, outputBuffer, header.byteOffset, header.length);
     const inputs = inputBuffers.map((inputBuffer, i) =>
-        self.MatrixType.createTypedArray(header.dtype, inputBuffer, header.byteOffsetOfInputs[i], header.lengthOfInputs[i])
+        LinAlg.lib.createTypedArray(header.dtype, inputBuffer, header.byteOffsetOfInputs[i], header.lengthOfInputs[i])
     );
 
     // perform the computation
-    const compute = self.MatrixMath.Opcode2fun[header.opcode];
-    //console.log('mensagem do worker', output, inputs);
-    compute.call(self.MatrixMath, header, output, inputs);
+    (LinAlg.lib[header.method])(header, output, inputs);
 
     // send the result of the computation back to the main thread
     const msg = { id, outputBuffer, inputBuffers };
