@@ -1,12 +1,12 @@
 /*!
- * speedy-vision.js v0.5.0-wip
+ * speedy-vision.js v0.5.0
  * GPU-accelerated Computer Vision for JavaScript
  * https://github.com/alemart/speedy-vision-js
  * 
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-02-14T03:46:08.442Z
+ * Date: 2021-02-15T01:47:28.423Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -9178,7 +9178,7 @@ class Speedy
      */
     static get version()
     {
-        return "0.5.0-wip";
+        return "0.5.0";
     }
 
     /**
