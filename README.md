@@ -925,9 +925,9 @@ Since matrix operations usually do not take place in the main thread, Speedy's M
 4. A WebWorker will do the number crunching as soon as possible.
 5. Finally, you will get the results you asked for, asynchronously.
 
-Because Speedy's Matrix API has been designed to not block the main thread, be aware that there is a little bit of overhead to make this work. This overhead does not depend on the size of the matrices, but it is impacted by the number of matrix operations. Therefore, it's generally preferable to work with a few "large" matrices than lots of "small" ones (e.g., 3x3).
+Because Speedy's Matrix API has been designed to not block the main thread, be aware that there is a little bit of overhead to make this work. Such overhead does not depend on the size of the matrices, but it is impacted by the number of matrix operations. That being said, JavaScript engines are highly optimized, so don't worry *too much* about it. Just keep in mind that it's preferable to work with a few "large" matrices than to work with lots of "tiny" ones (e.g., 3x3).
 
-If you intend to work with very "small" matrices, Speedy may perform the computations in the main thread in order to avoid the cost of transfering data to a WebWorker. If this is your case, then writing a closed algebraic expression to your problem - if at all possible - will likely give you the best performance.
+If you intend to work with tiny matrices, Speedy may perform the computations in the main thread in order to avoid the cost of transfering data to a WebWorker. If this is your case, then writing a closed algebraic expression to your problem - if at all possible - will likely give you the best possible performance.
 
 Finally, matrices in Speedy are stored in [column-major format](https://en.wikipedia.org/wiki/Row-_and_column-major_order), using Typed Arrays for extra performance.
 
