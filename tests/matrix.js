@@ -402,6 +402,34 @@ describe('Matrix', function() {
             expect(ab).toBeElementwiseEqual(_ab);
         });
 
+        it('multiplies large matrices', async function() {
+            let A = Speedy.Matrix.Zeros(100, 10);
+            let u = Speedy.Matrix.Zeros(100, 1);
+            let v = Speedy.Matrix.Ones(10, 1);
+            let w = Speedy.Matrix.Ones(100, 1);
+
+            for(let i = 0; i < A.rows; i++) {
+                await Speedy.Promise.all([
+                    A.row(i).fill(i),
+                    w.row(i).fill(i * A.columns)
+                ]);
+            }
+
+            await u.assign(A.times(v)); // u = A v = A [ 1 1 ... 1 ]^T
+            await printm(
+                'A:', A,
+                'v:', v,
+                'A v:', u
+            );
+
+            const _u = await u.read();
+            const _w = await w.read();
+            const result = [ ...(new Array(A.rows).keys()) ].map(i => A.columns * i);
+
+            expect(_u).toBeElementwiseEqual(_w);
+            expect(_u).toBeElementwiseEqual(result);
+        });
+
         it('transposes a matrix', async function() {
             let A = Speedy.Matrix(2, 3, [
                 1, 4,
