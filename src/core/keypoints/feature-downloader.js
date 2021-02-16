@@ -200,24 +200,30 @@ export class FeatureDownloader extends Observable
 
         return count;
     }
+
+    /**
+     * Flags accepted by the FeatureDownloader (bitwise)
+     * @typedef {number} FeatureDownloaderFlag
+     */
+
+    /**
+     * Flag: reset the state of the downloader
+     * @type {FeatureDownloaderFlag}
+     */
+    static get RESET_DOWNLOADER_STATE()
+    {
+        return 1;
+    }
+
+    /**
+     * Flag: use buffered downloads
+     * It's an optimization technique that implies a 1-frame delay
+     * in the downloads when using async transfers; it may or may
+     * not be acceptable, depending on what you're trying to do
+     * @type {FeatureDownloaderFlag}
+     */
+    static get USE_BUFFERED_DOWNLOADS()
+    {
+        return 2;
+    }
 }
-
-/**
- * Flags accepted by the FeatureDownloader (bitwise)
- * @typedef {number} FeatureDownloaderFlag
- */
-
-/**
- * Flag: reset the state of the downloader
- * @type {FeatureDownloaderFlag}
- */
-FeatureDownloader.RESET_DOWNLOADER_STATE = 1;
-
-/**
- * Flag: use buffered downloads
- * It's an optimization technique that implies a 1-frame delay
- * in the downloads when using async transfers; it may or may
- * not be acceptable, depending on what you're trying to do
- * @type {FeatureDownloaderFlag}
- */
-FeatureDownloader.USE_BUFFERED_DOWNLOADS = 2;
