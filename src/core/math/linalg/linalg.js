@@ -82,7 +82,7 @@ LinAlg.hasMethod = function(name)
  */
 LinAlg.toString = function()
 {
-    const decl = Object.keys(LinAlg.lib._src)
+    const methods = Object.keys(LinAlg.lib._src)
             .map(x => `LinAlg.lib.${x} = (${LinAlg.lib._src[x]}).bind(LinAlg.lib);`)
             .join('\n');
 
@@ -93,7 +93,7 @@ function LinAlg() { }
 LinAlg.lib = Object.create(null);
 LinAlg.lib.MatrixType = (${MatrixType.toString()});
 
-${decl}
+${methods}
 
 return Object.freeze(LinAlg);
 })()`;
