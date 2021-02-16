@@ -36,7 +36,7 @@ import {
 // We won't admit more than MAX_KEYPOINTS per media.
 // The larger this value is, the more data we need to transfer from the GPU.
 const MIN_PIXELS_PER_KEYPOINT = MIN_KEYPOINT_SIZE / 4; // encodes a keypoint header
-const MIN_ENCODER_LENGTH = 16; // storage for 16*16/MIN_PIXELS_PER_KEYPOINT <= 128 keypoints
+const MIN_ENCODER_LENGTH = 4; // storage for 16*16/MIN_PIXELS_PER_KEYPOINT <= 128 keypoints
 const MAX_ENCODER_LENGTH = 300; // in pixels (if too large, WebGL may lose context - so be careful!)
 const INITIAL_ENCODER_LENGTH = MIN_ENCODER_LENGTH; // pick a small number to reduce processing load and not crash things on mobile (WebGL lost context)
 const MAX_KEYPOINTS = 8192; // can't detect more than this number of keypoints per frame
@@ -115,7 +115,7 @@ export class GPUEncoders extends SpeedyProgramGroup
             .declare('_resizeEncodedKeypoints', resizeEncodedKeypoints, {
                 ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
             })
-            .declare('_downloadKeypoints', downloadKeypoints, {
+            .declare('_downloadEncodedKeypoints', downloadKeypoints, {
                 ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
             })
             .declare('_uploadKeypoints', uploadKeypoints, {
@@ -322,11 +322,11 @@ export class GPUEncoders extends SpeedyProgramGroup
     downloadEncodedKeypoints(encodedKeypoints, useBufferedDownloads = true)
     {
         // helper shader for reading the data
-        this._downloadKeypoints.resize(this._encoderLength, this._encoderLength);
-        this._downloadKeypoints(encodedKeypoints);
+        this._downloadEncodedKeypoints.resize(encodedKeypoints.width, encodedKeypoints.height);
+        this._downloadEncodedKeypoints(encodedKeypoints);
 
         // read data from the GPU
-        return this._downloadKeypoints.readPixelsAsync(useBufferedDownloads).catch(err => {
+        return this._downloadEncodedKeypoints.readPixelsAsync(useBufferedDownloads).catch(err => {
             return new IllegalOperationError(`Can't download encoded keypoint texture`, err);
         });
     }
@@ -383,7 +383,7 @@ export class GPUEncoders extends SpeedyProgramGroup
      * @param {number} keypointCount
      * @param {number} descriptorSize
      * @param {number} extraSize
-     * @returns {number} between 1 and MAX_ENCODER_LENGTH
+     * @returns {number}
      */
     _minimumEncoderLength(keypointCount, descriptorSize, extraSize)
     {
