@@ -44,9 +44,6 @@ LinAlg.lib = Object.create(null);
 /** @type {object} source code of methods */
 LinAlg.lib._src = Object.create(null);
 
-/** @type {MatrixType} types of matrices */
-LinAlg.lib.MatrixType = MatrixType;
-
 /**
  * Register a method
  * @param {string} name method name
@@ -54,16 +51,24 @@ LinAlg.lib.MatrixType = MatrixType;
  */
 LinAlg.register = function(name, fn)
 {
+    // validate
     if(typeof fn !== `function`)
         throw new Error(`Not a function: ${name}`);
     else if(typeof name !== `string` || !name.match(/^[a-z_][0-9a-z_]*$/i))
         throw new Error(`Undesirable identifier: ${name}`);
     else if(LinAlg.hasMethod(name))
-        throw new Error(`Can't redefine method "${name}"`)
+        throw new Error(`Can't redefine method ${name}`);
 
-    // methods will be bound to LinAlg.lib
-    LinAlg.lib[name] = fn.bind(LinAlg.lib);
-    LinAlg.lib._src[name] = fn.toString();
+    // register method
+    const readonly = { enumerable: true, writable: false, configurable: false };
+    Object.defineProperty(LinAlg.lib, name, {
+        value: fn.bind(LinAlg.lib), // methods will be bound to LinAlg.lib
+        ...readonly
+    });
+    Object.defineProperty(LinAlg.lib._src, name, {
+        value: fn.toString(),
+        ...readonly
+    });
 };
 
 /**
@@ -91,20 +96,30 @@ LinAlg.toString = function()
 'use strict';
 function LinAlg() { }
 LinAlg.lib = Object.create(null);
-LinAlg.lib.MatrixType = (${MatrixType.toString()});
+LinAlg.lib.MatrixType = (${MatrixType.toString()}).freeze();
 
 ${methods}
 
+Object.freeze(LinAlg.lib);
 return Object.freeze(LinAlg);
 })()`;
 };
 
-return Object.freeze(LinAlg);
-})();
+// Import MatrixType into the lib
+Object.defineProperty(LinAlg.lib, 'MatrixType', {
+    value: MatrixType.freeze(),
+    writable: false,
+    configurable: false,
+    enumerable: false,
+});
 
 // Plug in the Linear Algebra methods
 Object.keys(LinAlgLib).forEach(method => {
     LinAlg.register(method, LinAlgLib[method]);
 });
+
+// done!
+return Object.freeze(LinAlg);
+})();
 
 module.exports = { LinAlg };

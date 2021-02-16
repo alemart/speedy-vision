@@ -88,6 +88,16 @@ class MatrixType
 
         }));
     }
+
+    /**
+     * Freeze this class
+     * @returns {Function} this class
+     */
+    static freeze()
+    {
+        const target = (this._classOf, this);
+        return Object.freeze(target);
+    }
 }
 
-module.exports = { MatrixType };
+module.exports = { MatrixType: MatrixType.freeze() };
