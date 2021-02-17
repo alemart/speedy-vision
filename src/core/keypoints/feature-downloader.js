@@ -263,20 +263,13 @@ export class FeatureDownloader extends Observable
             score = pixels[i+6] / 255.0;
 
             // extra bytes
-            extraBytes = (extraSize > 0) ? new Uint8Array(
-                pixels.slice(8 + i, 8 + i + extraSize)
-            ) : null;
+            extraBytes = pixels.slice(8 + i, 8 + i + extraSize);
 
             // descriptor bytes
-            descriptorBytes = (descriptorSize > 0) ? new Uint8Array(
-                pixels.slice(8 + i + extraSize, 8 + i + extraSize + descriptorSize)
-            ) : null;
+            descriptorBytes = pixels.slice(8 + i + extraSize, 8 + i + extraSize + descriptorSize);
 
-            // something is off with the encoder length
-            if(
-                (descriptorSize > 0 && descriptorBytes.length < descriptorSize) ||
-                (extraSize > 0 && extraBytes.length < extraSize)
-            )
+            // something is off here
+            if(descriptorBytes.length < descriptorSize || extraBytes.length < extraSize)
                 continue; // discard
 
             // register keypoint
