@@ -147,6 +147,15 @@ export class GPUEncoders extends SpeedyProgramGroup
     }
 
     /**
+     * The maximum number of keypoints we can encode at the moment
+     * @returns {number}
+     */
+    get keypointCapacity()
+    {
+        return this._keypointCapacity;
+    }
+
+    /**
      * Optimizes the keypoint encoder for an expected number of keypoints
      * @param {number} maxKeypointCount expected maximum number of keypoints
      * @param {number} descriptorSize in bytes
@@ -156,7 +165,7 @@ export class GPUEncoders extends SpeedyProgramGroup
     optimize(maxKeypointCount, descriptorSize, extraSize)
     {
         const keypointCapacity = Math.ceil(maxKeypointCount); // ensure this is an integer
-        const newEncoderLength = this._minimumEncoderLength(keypointCapacity, descriptorSize, extraSize);
+        const newEncoderLength = this.minimumEncoderLength(keypointCapacity, descriptorSize, extraSize);
         const oldEncoderLength = this._encoderLength;
 
         this._encoderLength = newEncoderLength;
@@ -175,7 +184,7 @@ export class GPUEncoders extends SpeedyProgramGroup
     reserveSpace(keypointCapacity, descriptorSize, extraSize)
     {
         // resize if not enough space
-        if(this._minimumEncoderLength(keypointCapacity, descriptorSize, extraSize) > this._encoderLength)
+        if(this.minimumEncoderLength(keypointCapacity, descriptorSize, extraSize) > this._encoderLength)
             return this.optimize(keypointCapacity, descriptorSize, extraSize);
 
         return false;
@@ -296,7 +305,7 @@ export class GPUEncoders extends SpeedyProgramGroup
      * @param {number} extraSize
      * @returns {number}
      */
-    _minimumEncoderLength(keypointCount, descriptorSize, extraSize)
+    minimumEncoderLength(keypointCount, descriptorSize, extraSize)
     {
         const clampedKeypointCount = Math.max(0, Math.min(Math.ceil(keypointCount), MAX_KEYPOINTS));
         const pixelsPerKeypoint = Math.ceil((MIN_KEYPOINT_SIZE + descriptorSize + extraSize) / 4);
