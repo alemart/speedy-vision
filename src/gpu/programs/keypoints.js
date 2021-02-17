@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -111,8 +111,11 @@ const multiscaleSobel = importShader('filters/multiscale-sobel.glsl').withArgume
 
 // compute keypoint orientation
 const orientationViaCentroid = importShader('keypoints/orientation-via-centroid.glsl')
-                              .withArguments('pyramid', 'encodedKeypoints', 'patchRadius', 'descriptorSize', 'extraSize', 'encoderLength')
+                              .withArguments('pyramid', 'encodedKeypoints', 'patchRadius', 'descriptorSize', 'extraSize', 'encoderLength');
 
+// suppress feature descriptors
+const suppressDescriptors = importShader('keypoints/suppress-descriptors.glsl')
+                           .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'suppressedEncoderLength');
 
 
 
@@ -172,7 +175,10 @@ export class GPUKeypoints extends SpeedyProgramGroup
             }) // scale-space
 
             // Compute keypoint orientation
-            .declare('_orientationViaCentroid', orientationViaCentroid);
+            .declare('_orientationViaCentroid', orientationViaCentroid)
+
+            // Suppress feature descriptors
+            .declare('_suppressDescriptors', suppressDescriptors)
         ;
     }
 
@@ -207,5 +213,21 @@ export class GPUKeypoints extends SpeedyProgramGroup
     {
         this._orientationViaCentroid.resize(encoderLength, encoderLength);
         return this._orientationViaCentroid(pyramid, encodedKeypoints, patchRadius, descriptorSize, extraSize, encoderLength);
+    }
+
+    /**
+     * Suppress feature descriptors from a texture with encoded keypoints
+     * @param {SpeedyTexture} encodedKeypoints tiny texture
+     * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
+     * @param {number} encoderLength
+     * @param {number} suppressedEncoderLength equivalent to encoderLength, but without the descriptors
+     * @returns {SpeedyTexture}
+     */
+    suppressDescriptors(encodedKeypoints, descriptorSize, extraSize, encoderLength, suppressedEncoderLength)
+    {
+        Utils.assert(suppressedEncoderLength <= encoderLength);
+        this._suppressDescriptors.resize(suppressedEncoderLength, suppressedEncoderLength);
+        return this._suppressDescriptors(encodedKeypoints, descriptorSize, extraSize, encoderLength, suppressedEncoderLength);
     }
 }
