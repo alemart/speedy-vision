@@ -169,7 +169,8 @@ export class FeatureDownloader extends Observable
 
             // decode the keypoints
             const encoderLength = encodedKeypoints.width;
-            const keypoints = this._decodeKeypoints(data, descriptorSize, extraSize, encoderLength);
+            const multiplier = (flags & FeatureDownloader.SUPPRESS_DESCRIPTORS) != 0 ? 0 : 1;
+            const keypoints = this._decodeKeypoints(data, descriptorSize * multiplier, extraSize, encoderLength);
 
             // how many keypoints do we expect in the next frame?
             const discardedCount = this._countDiscardedKeypoints(keypoints);
@@ -295,7 +296,7 @@ export class FeatureDownloader extends Observable
 
     /**
      * Flag: reset the state of the downloader
-     * @type {FeatureDownloaderFlag}
+     * @returns {FeatureDownloaderFlag}
      */
     static get RESET_DOWNLOADER_STATE()
     {
@@ -307,10 +308,21 @@ export class FeatureDownloader extends Observable
      * It's an optimization technique that implies a 1-frame delay
      * in the downloads when using async transfers; it may or may
      * not be acceptable, depending on what you're trying to do
-     * @type {FeatureDownloaderFlag}
+     * @returns {FeatureDownloaderFlag}
      */
     static get USE_BUFFERED_DOWNLOADS()
     {
         return 2;
+    }
+
+    /**
+     * Flag: suppress feature descriptors
+     * This is meant to improve download times. Use if the
+     * descriptors are not needed by the end-user
+     * @returns {FeatureDownloaderFlag}
+     */
+    static get SUPPRESS_DESCRIPTORS()
+    {
+        return 4;
     }
 }
