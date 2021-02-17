@@ -24,7 +24,12 @@ import { Observable } from '../../utils/observable';
 import { SpeedyFeature } from '../speedy-feature';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
 import { SpeedyPromise } from '../../utils/speedy-promise';
-import { KPF_DISCARD } from '../../utils/globals';
+import {
+    MIN_KEYPOINT_SIZE,
+    FIX_RESOLUTION,
+    LOG2_PYRAMID_MAX_SCALE, PYRAMID_MAX_LEVELS,
+    KPF_DISCARD, KPF_ORIENTED
+} from '../../utils/globals';
 
 // constants
 const INITIAL_FILTER_GAIN = 0.85; // a number in [0,1]
@@ -163,7 +168,8 @@ export class FeatureDownloader extends Observable
         return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useBufferedDownloads).then(data => {
 
             // decode the keypoints
-            const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize, extraSize);
+            const encoderLength = encodedKeypoints.width;
+            const keypoints = this._decodeKeypoints(data, descriptorSize, extraSize, encoderLength);
 
             // how many keypoints do we expect in the next frame?
             const discardedCount = this._countDiscardedKeypoints(keypoints);
@@ -199,6 +205,87 @@ export class FeatureDownloader extends Observable
             count += ((keypoints[i].flags & KPF_DISCARD) != 0) | 0;
 
         return count;
+    }
+
+    /**
+     * Decodes the keypoints, given a flattened image of encoded pixels
+     * @param {Uint8Array[]} pixels pixels in the [r,g,b,a,...] format
+     * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
+     * @param {number} encoderLength
+     * @returns {SpeedyFeature[]} keypoints
+     */
+    _decodeKeypoints(pixels, descriptorSize, extraSize, encoderLength)
+    {
+        const pixelsPerKeypoint = (MIN_KEYPOINT_SIZE + descriptorSize + extraSize) / 4;
+        let x, y, lod, rotation, score, flags, extraBytes, descriptorBytes;
+        let hasLod, hasRotation;
+        const keypoints = [];
+
+        // how many bytes should we read?
+        const e = encoderLength;
+        const e2 = e * e * pixelsPerKeypoint * 4;
+        const size = Math.min(pixels.length, e2);
+
+        // for each encoded keypoint
+        for(let i = 0; i < size; i += 4 /* RGBA */ * pixelsPerKeypoint) {
+            // extract fixed-point coordinates
+            x = (pixels[i+1] << 8) | pixels[i];
+            y = (pixels[i+3] << 8) | pixels[i+2];
+            if(x >= 0xFFFF && y >= 0xFFFF) // if end of list
+                break;
+
+            // We've cleared the texture to black.
+            // Likely to be incorrect black pixels
+            // due to resize. Bad for encoderLength
+            if(x + y == 0 && pixels[i+6] == 0)
+                continue; // discard, it's noise
+
+            // convert from fixed-point
+            x /= FIX_RESOLUTION;
+            y /= FIX_RESOLUTION;
+
+            // extract flags
+            flags = pixels[i+7];
+
+            // extract LOD
+            hasLod = (pixels[i+4] < 255);
+            lod = !hasLod ? 0.0 :
+                -LOG2_PYRAMID_MAX_SCALE + (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS) * pixels[i+4] / 255.0;
+
+            // extract orientation
+            hasRotation = (flags & KPF_ORIENTED != 0);
+            rotation = !hasRotation ? 0.0 :
+                ((2 * pixels[i+5]) / 255.0 - 1.0) * Math.PI;
+
+            // extract score
+            score = pixels[i+6] / 255.0;
+
+            // extra bytes
+            extraBytes = (extraSize > 0) ? new Uint8Array(
+                pixels.slice(8 + i, 8 + i + extraSize)
+            ) : null;
+
+            // descriptor bytes
+            descriptorBytes = (descriptorSize > 0) ? new Uint8Array(
+                pixels.slice(8 + i + extraSize, 8 + i + extraSize + descriptorSize)
+            ) : null;
+
+            // something is off with the encoder length
+            if(
+                (descriptorSize > 0 && descriptorBytes.length < descriptorSize) ||
+                (extraSize > 0 && extraBytes.length < extraSize)
+            )
+                continue; // discard
+
+            // register keypoint
+            keypoints.push(
+                new SpeedyFeature(x, y, lod, rotation, score, flags, extraBytes, descriptorBytes)
+            );
+        }
+
+        // done!
+        return keypoints;
     }
 
     /**
