@@ -100,10 +100,14 @@ const int KPF_DISCARD = int(@KPF_DISCARD@); // the keypoint should be discarded 
  * Low-level routine for reading a pixel in an encoded keypoint texture
  * @param {sampler2D} encodedKeypoints texture sampler
  * @param {int} encoderLength encoded keypoint texture is encoderLength x encoderLength
- * @param {int} rasterIndex a VALID pixel index in raster order
+ * @param {KeypointAddress} address keypoint address
  * @returns {vec4} 32-bit encoded data
  */
-#define readKeypointData(encodedKeypoints, encoderLength, rasterIndex) texelFetch((encodedKeypoints), ivec2((rasterIndex) % (encoderLength), (rasterIndex) / (encoderLength)), 0)
+vec4 readKeypointData(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)
+{
+    int rasterIndex = address.base + address.offset; // must be a VALID pixel index in raster order
+    return pixelAt(encodedKeypoints, ivec2(rasterIndex % encoderLength, rasterIndex / encoderLength));
+}
 
 /**
  * The size of an encoded keypoint in bytes
@@ -162,8 +166,8 @@ Keypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointA
     Keypoint keypoint;
 
     // get addresses
-    int positionAddress = address.base;
-    int propertiesAddress = address.base + 1;
+    KeypointAddress positionAddress = KeypointAddress(address.base, 0);
+    KeypointAddress propertiesAddress = KeypointAddress(address.base, 1);
 
     // get keypoint position
     vec4 rawEncodedPosition = readKeypointData(encodedKeypoints, encoderLength, positionAddress);

@@ -58,7 +58,6 @@ void main()
 
     // copy the data or fill with zeros if we're not in a header pixel
     int head = MIN_KEYPOINT_SIZE / 4;
-    int rasterIndex = otherAddress.base + otherAddress.offset;
     color = (myAddress.offset >= head) ? vec4(0.0f) :
-        readKeypointData(inputTexture, inputEncoderLength, rasterIndex);
+        readKeypointData(inputTexture, inputEncoderLength, otherAddress);
 }
