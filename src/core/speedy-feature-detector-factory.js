@@ -26,8 +26,9 @@ import {
     HarrisFeatureDetector,
     MultiscaleHarrisFeatureDetector,
 } from './speedy-feature-detector';
-import { ORBFeatures } from './keypoints/descriptors/orb';
 import { SpeedyFeatureDescriptorFactory } from './speedy-feature-descriptor-factory';
+import { NotImplementedError } from '../utils/errors';
+
 
 /**
  * A collection of methods for instantiating SpeedyFeatureDetectors
@@ -90,6 +91,7 @@ export class SpeedyFeatureDetectorFactory extends SpeedyNamespace
      */
     static BRISK()
     {
-        return new BRISKFeatureDetector();
+        //return new BRISKFeatureDetector();
+        throw new NotImplementedError();
     }
 }
