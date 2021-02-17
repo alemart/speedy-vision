@@ -36,10 +36,8 @@ import {
 // We won't admit more than MAX_KEYPOINTS per media.
 // The larger this value is, the more data we need to transfer from the GPU.
 const MIN_PIXELS_PER_KEYPOINT = MIN_KEYPOINT_SIZE / 4; // encodes a keypoint header
-const MIN_ENCODER_LENGTH = 4; // storage for 16*16/MIN_PIXELS_PER_KEYPOINT <= 128 keypoints
-const MAX_ENCODER_LENGTH = 300; // in pixels (if too large, WebGL may lose context - so be careful!)
-const INITIAL_ENCODER_LENGTH = MIN_ENCODER_LENGTH; // pick a small number to reduce processing load and not crash things on mobile (WebGL lost context)
-const MAX_KEYPOINTS = 8192; // can't detect more than this number of keypoints per frame
+const INITIAL_ENCODER_LENGTH = 16; // pick a small number to reduce processing load and not crash things on mobile (WebGL lost context)
+const MAX_KEYPOINTS = 8192; // can't detect more than this number of keypoints per frame (if too many, WebGL may lose context - so be careful!)
 const UBO_MAX_BYTES = 16384; // UBOs can hold at least 16KB of data: gl.MAX_UNIFORM_BLOCK_SIZE >= 16384 according to the GL ES 3 reference
 const KEYPOINT_BUFFER_LENGTH = (UBO_MAX_BYTES / 16) | 0; // maximum number of keypoints that can be uploaded to the GPU via UBOs (each keypoint uses 16 bytes)
 const ENCODER_PASSES = 8; // number of passes of the keypoint encoder: directly impacts performance
@@ -222,7 +220,7 @@ export class GPUEncoders extends SpeedyProgramGroup
         // encode keypoints
         const numPasses = ENCODER_PASSES;
         const pixelsPerKeypointHeader = MIN_PIXELS_PER_KEYPOINT;
-        const headerEncoderLength = Math.max(MIN_ENCODER_LENGTH, Math.ceil(Math.sqrt(this._keypointCapacity * pixelsPerKeypointHeader)));
+        const headerEncoderLength = Math.max(1, Math.ceil(Math.sqrt(this._keypointCapacity * pixelsPerKeypointHeader)));
         this._encodeKeypoints.resize(headerEncoderLength, headerEncoderLength);
         let encodedKeypointHeaders = this._encodeKeypoints.clear(0, 0, 0, 0);
         for(let passId = 0; passId < numPasses; passId++)
@@ -311,6 +309,6 @@ export class GPUEncoders extends SpeedyProgramGroup
         const pixelsPerKeypoint = Math.ceil((MIN_KEYPOINT_SIZE + descriptorSize + extraSize) / 4);
         const len = Math.ceil(Math.sqrt(clampedKeypointCount * pixelsPerKeypoint));
 
-        return Math.max(MIN_ENCODER_LENGTH, Math.min(len, MAX_ENCODER_LENGTH));
+        return Math.max(1, len);
     }
 }
