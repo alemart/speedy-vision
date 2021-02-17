@@ -406,8 +406,11 @@ export class SpeedyProgram extends Function
         if(this._pixelBuffer[0] == null)
             this._reallocatePixelBuffers(this._width, this._height);
 
+        // last render target
+        const fbo = this._fbo[this._options.pingpong ? 1 - this._textureIndex : this._textureIndex];
+
         // read pixels
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo[this._textureIndex]);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
         gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, this._pixelBuffer[0]);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
@@ -447,9 +450,12 @@ export class SpeedyProgram extends Function
         if(this._pixelBuffer[0] == null)
             this._reallocatePixelBuffers(this._width, this._height);
 
+        // last render target
+        const fbo = this._fbo[this._options.pingpong ? 1 - this._textureIndex : this._textureIndex];
+
         // do not optimize?
         if(!useBufferedDownloads) {
-            return GLUtils.readPixelsViaPBO(gl, this._pixelBuffer[0], x, y, width, height, this._fbo[this._textureIndex]).then(() => {
+            return GLUtils.readPixelsViaPBO(gl, this._pixelBuffer[0], x, y, width, height, fbo).then(() => {
                 return this._pixelBuffer[0];
             });
         }
@@ -457,13 +463,13 @@ export class SpeedyProgram extends Function
         // GPU needs to produce data
         if(this._pboProducerQueue.length > 0) {
             const nextPBO = this._pboProducerQueue.shift();
-            GLUtils.readPixelsViaPBO(gl, this._pixelBuffer[nextPBO], x, y, width, height, this._fbo[this._textureIndex]).then(() => {
+            GLUtils.readPixelsViaPBO(gl, this._pixelBuffer[nextPBO], x, y, width, height, fbo).then(() => {
                 this._pboConsumerQueue.push(nextPBO);
             });
         }
         else this._waitForQueueNotEmpty(this._pboProducerQueue).then(() => {
             const nextPBO = this._pboProducerQueue.shift();
-            GLUtils.readPixelsViaPBO(gl, this._pixelBuffer[nextPBO], x, y, width, height, this._fbo[this._textureIndex]).then(() => {
+            GLUtils.readPixelsViaPBO(gl, this._pixelBuffer[nextPBO], x, y, width, height, fbo).then(() => {
                 this._pboConsumerQueue.push(nextPBO);
             });
         }).turbocharge();
