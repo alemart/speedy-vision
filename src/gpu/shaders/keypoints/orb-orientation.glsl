@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * orientation-via-centroid.glsl
+ * orb-orientation.glsl
  * Given an encoded keypoint texture, find the orientation of all keypoints
+ * (using the centroid method, as in ORB)
  */
 
 @include "keypoints.glsl"
@@ -98,14 +99,13 @@ void main()
 {
     vec4 pixel = threadPixel(encodedKeypoints);
     ivec2 thread = threadLocation();
-    KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);
 
-    // this is not the keypoint properties cell?
-    color = pixel;
-    if(address.offset != 1)
-        return;
+    // find the keypoint index we're dealing with
+    int keypointIndex = thread.x + thread.y * outputSize().x;
 
-    // get keypoint data
+    // read keypoint
+    int pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;
+    KeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);
     Keypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);
     float pot = exp2(keypoint.lod);
 
@@ -127,6 +127,7 @@ void main()
     float angle = fastAtan2(m.y, m.x);
 
     // done!
-    color.g = encodeOrientation(angle);
-    color.a = encodeKeypointFlags(keypoint.flags | KPF_ORIENTED);
+    float encodedOrientation = encodeOrientation(angle);
+    float encodedFlags = encodeKeypointFlags(keypoint.flags | KPF_ORIENTED);
+    color = vec4(0.0f, encodedOrientation, 0.0f, encodedFlags);
 }

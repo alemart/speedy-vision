@@ -22,6 +22,7 @@
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
 import { Utils } from '../../utils/utils';
+import { MIN_KEYPOINT_SIZE } from '../../utils/globals';
 
 
 
@@ -95,6 +96,10 @@ const brisk = importShader('keypoints/brisk.glsl')
 const orb = importShader('keypoints/orb-descriptor.glsl')
            .withArguments('pyramid', 'encodedCorners', 'extraSize', 'encoderLength');
 
+const orbOrientation = importShader('keypoints/orb-orientation.glsl')
+                      .withArguments('pyramid', 'encodedKeypoints', 'patchRadius', 'descriptorSize', 'extraSize', 'encoderLength');
+
+
 
 
 //
@@ -109,9 +114,9 @@ const samescaleSuppression = importShader('keypoints/samescale-suppression.glsl'
 // Sobel derivatives
 const multiscaleSobel = importShader('filters/multiscale-sobel.glsl').withArguments('pyramid', 'lod');
 
-// compute keypoint orientation
-const orientationViaCentroid = importShader('keypoints/orientation-via-centroid.glsl')
-                              .withArguments('pyramid', 'encodedKeypoints', 'patchRadius', 'descriptorSize', 'extraSize', 'encoderLength');
+// transfer keypoint orientation
+const transferOrientation = importShader('keypoints/transfer-orientation.glsl')
+                           .withArguments('encodedOrientations', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 // suppress feature descriptors
 const suppressDescriptors = importShader('keypoints/suppress-descriptors.glsl')
@@ -163,6 +168,7 @@ export class GPUKeypoints extends SpeedyProgramGroup
 
             // ORB
             .declare('_orb', orb)
+            .declare('_orbOrientation', orbOrientation)
 
             // Generic non-maximum suppression
             .declare('nonmaxSuppression', nonmaxSuppression)
@@ -174,8 +180,8 @@ export class GPUKeypoints extends SpeedyProgramGroup
                 ...this.program.doesNotRecycleTextures()
             }) // scale-space
 
-            // Compute keypoint orientation
-            .declare('_orientationViaCentroid', orientationViaCentroid)
+            // Transfer keypoint orientation
+            .declare('_transferOrientation', transferOrientation)
 
             // Suppress feature descriptors
             .declare('_suppressDescriptors', suppressDescriptors)
@@ -200,7 +206,7 @@ export class GPUKeypoints extends SpeedyProgramGroup
 
     /**
      * Finds the orientation of all keypoints given a texture with encoded keypoints
-     * (using the centroid method)
+     * (using the centroid method, as in ORB)
      * @param {SpeedyTexture} pyramid image pyramid
      * @param {SpeedyTexture} encodedKeypoints tiny texture
      * @param {number} patchRadius radius of a circular patch used to compute the radius when lod = 0 (e.g., 7)
@@ -209,10 +215,17 @@ export class GPUKeypoints extends SpeedyProgramGroup
      * @param {number} encoderLength
      * @returns {SpeedyTexture}
      */
-    orientationViaCentroid(pyramid, encodedKeypoints, patchRadius, descriptorSize, extraSize, encoderLength)
+    orbOrientation(pyramid, encodedKeypoints, patchRadius, descriptorSize, extraSize, encoderLength)
     {
-        this._orientationViaCentroid.resize(encoderLength, encoderLength);
-        return this._orientationViaCentroid(pyramid, encodedKeypoints, patchRadius, descriptorSize, extraSize, encoderLength);
+        const pixelsPerKeypoint = (MIN_KEYPOINT_SIZE + descriptorSize + extraSize) / 4;
+        const numberOfKeypoints = Math.ceil(encoderLength * encoderLength / pixelsPerKeypoint); // approximately
+        const orientationEncoderLength = Math.max(1, Math.ceil(Math.sqrt(numberOfKeypoints))); // 1 pixel per keypoint
+
+        this._orbOrientation.resize(orientationEncoderLength, orientationEncoderLength);
+        const encodedOrientations = this._orbOrientation(pyramid, encodedKeypoints, patchRadius, descriptorSize, extraSize, encoderLength);
+
+        this._transferOrientation.resize(encoderLength, encoderLength);
+        return this._transferOrientation(encodedOrientations, encodedKeypoints, descriptorSize, extraSize, encoderLength);
     }
 
     /**

@@ -86,7 +86,7 @@ export class ORBFeatures extends FeatureDescriptionAlgorithm
 
         // compute orientation
         const encoderLength = gpu.programs.encoders.encoderLength;
-        return gpu.programs.keypoints.orientationViaCentroid(pyramid, detectedKeypoints, orientationPatchRadius, descriptorSize, extraSize, encoderLength);
+        return gpu.programs.keypoints.orbOrientation(pyramid, detectedKeypoints, orientationPatchRadius, descriptorSize, extraSize, encoderLength);
     }
 
     /**
