@@ -70,7 +70,7 @@ export class FeatureDescriptionAlgorithm extends FeatureAlgorithmDecorator
      */
     download(gpu, encodedKeypoints, flags = 0)
     {
-        return this.decoratedAlgorithm.download(gpu, encodedKeypoints, flags).then(
+        return super.download(gpu, encodedKeypoints, flags).then(
             keypoints => this._postProcess(keypoints)
         );
     }
