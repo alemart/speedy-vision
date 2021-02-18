@@ -361,5 +361,5 @@ void main()
     }
 
     // done!
-    color = vec4(float(test[0]), float(test[1]), float(test[2]), float(test[3])) / 255.0f;
+    color = vec4(test[0], test[1], test[2], test[3]) / 255.0f;
 }

@@ -205,7 +205,7 @@ vec4 encodeKeypointPosition(vec2 position)
     fixed2_t lo = pos & 255;
     fixed2_t hi = pos >> 8;
 
-    return vec4(float(lo.x), float(hi.x), float(lo.y), float(hi.y)) / 255.0f;
+    return vec4(lo.x, hi.x, lo.y, hi.y) / 255.0f;
 }
 
 /**
@@ -236,7 +236,7 @@ vec4 encodeKeypointPosition(vec2 position)
  */
 bool isKeypointAtInfinity(Keypoint keypoint)
 {
-    const vec2 V2_MAX_TEXTURE_LENGTH = vec2(float(@MAX_TEXTURE_LENGTH@));
+    const vec2 V2_MAX_TEXTURE_LENGTH = vec2(@MAX_TEXTURE_LENGTH@);
     return any(greaterThan(keypoint.position, V2_MAX_TEXTURE_LENGTH));
 }
 
