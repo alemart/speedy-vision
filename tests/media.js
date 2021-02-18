@@ -59,7 +59,7 @@ describe('SpeedyMedia', function() {
     });
 
     it('has a valid source', async function() {
-        const image = await loadImage('paulista.jpg');
+        const image = await loadImage('peregrine-falcon.jpg');
         const media = await Speedy.load(image);
 
         expect(media.source).toBe(image);
@@ -69,9 +69,9 @@ describe('SpeedyMedia', function() {
 
     it('has a valid type', async function() {
         const assets = {
-            'paulista.jpg': {
+            'peregrine-falcon.jpg': {
                 type: 'image',
-                data: await loadImage('paulista.jpg'),
+                data: await loadImage('peregrine-falcon.jpg'),
             },
             'jelly.mp4': {
                 type: 'video',
@@ -79,7 +79,7 @@ describe('SpeedyMedia', function() {
             },
             'bitmap': {
                 type: 'bitmap',
-                data: await createImageBitmap(await loadImage('paulista.jpg')),
+                data: await createImageBitmap(await loadImage('peregrine-falcon.jpg')),
             },
         };
 
@@ -95,7 +95,7 @@ describe('SpeedyMedia', function() {
     });
 
     it('has valid dimensions', async function() {
-        const image = await loadImage('paulista.jpg');
+        const image = await loadImage('peregrine-falcon.jpg');
         const video = await loadVideo('jelly.mp4');
         const media = [
             await Speedy.load(image),
@@ -113,7 +113,7 @@ describe('SpeedyMedia', function() {
     });
 
     it('creates a clone with valid source, type and dimensions', async function() {
-        const image = await loadImage('paulista.jpg');
+        const image = await loadImage('peregrine-falcon.jpg');
         const media = await Speedy.load(image);
 
         display(media, 'Original');
