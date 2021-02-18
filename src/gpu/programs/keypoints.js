@@ -97,7 +97,7 @@ const orb = importShader('keypoints/orb-descriptor.glsl')
            .withArguments('pyramid', 'encodedCorners', 'extraSize', 'encoderLength');
 
 const orbOrientation = importShader('keypoints/orb-orientation.glsl')
-                      .withArguments('pyramid', 'encodedKeypoints', 'patchRadius', 'descriptorSize', 'extraSize', 'encoderLength');
+                      .withArguments('pyramid', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 
 
@@ -209,20 +209,19 @@ export class GPUKeypoints extends SpeedyProgramGroup
      * (using the centroid method, as in ORB)
      * @param {SpeedyTexture} pyramid image pyramid
      * @param {SpeedyTexture} encodedKeypoints tiny texture
-     * @param {number} patchRadius radius of a circular patch used to compute the radius when lod = 0 (e.g., 7)
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
      * @param {number} encoderLength
      * @returns {SpeedyTexture}
      */
-    orbOrientation(pyramid, encodedKeypoints, patchRadius, descriptorSize, extraSize, encoderLength)
+    orbOrientation(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength)
     {
         const pixelsPerKeypoint = (MIN_KEYPOINT_SIZE + descriptorSize + extraSize) / 4;
         const numberOfKeypoints = Math.ceil(encoderLength * encoderLength / pixelsPerKeypoint); // approximately
         const orientationEncoderLength = Math.max(1, Math.ceil(Math.sqrt(numberOfKeypoints))); // 1 pixel per keypoint
 
         this._orbOrientation.resize(orientationEncoderLength, orientationEncoderLength);
-        const encodedOrientations = this._orbOrientation(pyramid, encodedKeypoints, patchRadius, descriptorSize, extraSize, encoderLength);
+        const encodedOrientations = this._orbOrientation(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength);
 
         this._transferOrientation.resize(encoderLength, encoderLength);
         return this._transferOrientation(encodedOrientations, encodedKeypoints, descriptorSize, extraSize, encoderLength);

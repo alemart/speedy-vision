@@ -28,7 +28,6 @@ import { AbstractMethodError } from '../../../utils/errors';
 
 // constants
 const DESCRIPTOR_SIZE = 32; // 256 bits
-const DEFAULT_ORIENTATION_PATCH_RADIUS = 7; // for computing keypoint orientation
 
 /**
  * ORB features
@@ -79,14 +78,13 @@ export class ORBFeatures extends FeatureDescriptionAlgorithm
     {
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
-        const orientationPatchRadius = DEFAULT_ORIENTATION_PATCH_RADIUS;
 
         // generate pyramid
         const pyramid = inputTexture.generatePyramid(gpu);
 
         // compute orientation
         const encoderLength = gpu.programs.encoders.encoderLength;
-        return gpu.programs.keypoints.orbOrientation(pyramid, detectedKeypoints, orientationPatchRadius, descriptorSize, extraSize, encoderLength);
+        return gpu.programs.keypoints.orbOrientation(pyramid, detectedKeypoints, descriptorSize, extraSize, encoderLength);
     }
 
     /**
