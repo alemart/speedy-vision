@@ -24,7 +24,6 @@ import { FeatureDescriptionAlgorithm } from '../feature-description-algorithm';
 import { FeatureAlgorithm } from '../feature-algorithm';
 import { BinaryDescriptor } from '../../speedy-descriptor';
 import { SpeedyFeatureWithDescriptor } from '../../speedy-feature';
-import { AbstractMethodError } from '../../../utils/errors';
 
 // constants
 const DESCRIPTOR_SIZE = 32; // 256 bits
