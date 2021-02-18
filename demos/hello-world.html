@@ -1,7 +1,7 @@
 <!--
   speedy-vision.js
   GPU-accelerated Computer Vision for JavaScript
-  Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+  Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -31,7 +31,8 @@
     <body>
         <h1>Hello, Speedy!</h1>
         <p>Feature detection made easy:</p>
-        <img src="../assets/paulista.jpg" title="Free photo by Jonas Kakaroto (pexels.com)">
+        <div id="demo-frame"></div>
+        <img src="../assets/peregrine-falcon.jpg" title="Peregrine Falcon, the fastest animal on Earth. Credit: Andrew Kuhn/NPS (Arches National Park). Released under the Public Domain.">
         <script>
 window.onload = async function()
 {
@@ -41,7 +42,9 @@ window.onload = async function()
 
     // create a feature detector
     const featureDetector = Speedy.FeatureDetector.Harris();
-    featureDetector.sensitivity = 0.5;
+
+    // the higher the sensitivity, the more feature points you get
+    featureDetector.sensitivity = 0.7;
 
     // find the feature points
     const features = await featureDetector.detect(media);
@@ -60,7 +63,7 @@ function createCanvas(width, height, title)
     canvas.height = height;
     canvas.title = title;
 
-    document.body.appendChild(canvas);
+    document.querySelector('#demo-frame').appendChild(canvas);
     return canvas;
 }
 
