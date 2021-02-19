@@ -76,3 +76,14 @@ export const KPF_ORIENTED = 0x1;
 
 // Flag: should the keypoint be discarded? (in the next frame)
 export const KPF_DISCARD = 0x80;
+
+
+
+// -----------------------------------------------------------------
+// MISC
+// -----------------------------------------------------------------
+
+// Are we in a little-endian machine?
+export const LITTLE_ENDIAN = (function() {
+    return 0xCAFE === (new Uint16Array(new Uint8Array([0xFE, 0xCA]).buffer))[0];
+})();

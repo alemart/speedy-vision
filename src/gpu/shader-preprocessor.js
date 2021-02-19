@@ -24,7 +24,8 @@ import {
     MAX_TEXTURE_LENGTH,
     FIX_BITS, FIX_RESOLUTION,
     MAX_DESCRIPTOR_SIZE, MIN_KEYPOINT_SIZE,
-    KPF_NONE, KPF_ORIENTED, KPF_DISCARD
+    KPF_NONE, KPF_ORIENTED, KPF_DISCARD,
+    LITTLE_ENDIAN
 } from '../utils/globals';
 import { Utils } from '../utils/utils';
 import { PixelComponent } from '../utils/types';
@@ -43,6 +44,7 @@ const unrollRegex = [
 const constants = Object.freeze({
     // general
     'MAX_TEXTURE_LENGTH': MAX_TEXTURE_LENGTH,
+    'LITTLE_ENDIAN': LITTLE_ENDIAN ? 1 : 0,
 
     // pyramids
     'PYRAMID_MAX_LEVELS': PYRAMID_MAX_LEVELS,

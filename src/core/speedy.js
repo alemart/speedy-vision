@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,8 @@ import { SpeedyVector2 } from './math/speedy-vector';
 import { SpeedyMatrixExprFactory } from './math/matrix-expressions';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { IllegalArgumentError } from '../utils/errors';
+import { Utils } from '../utils/utils';
+import { LITTLE_ENDIAN } from '../utils/globals';
 
 // Constants
 const matrixExprFactory = new SpeedyMatrixExprFactory();
@@ -148,3 +150,7 @@ export class Speedy
 
 // Mix SpeedyFlags with Speedy
 Object.assign(Speedy.constructor.prototype, SpeedyFlags);
+
+// Big-endian machine? Currently untested.
+if(!LITTLE_ENDIAN)
+    Utils.warn('Running on a big-endian machine');
