@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,6 +40,9 @@ uniform int windowSize; // 1 (1x1 window), 3 (3x3 window), 5, ... up to 15 (posi
 uniform int numberOfOctaves; // each pyramid octave uses a scaling factor of sqrt(2)
 uniform float lodStep; // 0.5 for a scale factor of sqrt(2); 1 for a scale factor of 2
 uniform sampler2D sobelDerivatives[@PYRAMID_MAX_OCTAVES@]; // for each LOD sub-level (0, 0.5, 1, 1.5, 2...)
+
+// encode harris score
+#define encodeHarrisScore(x) (1.0f - exp2(-(x))) // assuming 0 <= score <= 4
 
 vec4 pickSobelDerivatives(int index, ivec2 offset)
 {
@@ -84,9 +87,9 @@ void main()
 {
     ivec2 thread = threadLocation();
     vec4 pixel = threadPixel(pyramid);
-    vec2 best = vec2(0.0f, pixel.a);
     int r = (windowSize - 1) / 2; // window radius
     float windowArea = float(windowSize * windowSize);
+    vec2 tmp = vec2(0.0f);
 
     // for each octave
     for(int octave = 0; octave < numberOfOctaves; octave++) {
@@ -109,19 +112,18 @@ void main()
         float normalizer = 9.0f / windowArea; // the default window size is 3x3
         float score = response * normalizer;
 
-        // compute corner scale
+        // compute the level-of-detail of the corner
         float lod = lodStep * float(octave);
-        float scale = encodeLod(lod);
 
-        // pick the best score
-        //best = (score > best.x) ? vec2(score, scale) : best;
-        best *= float(score <= best.x);
-        best += float(score > best.x) * vec2(score, scale);
+        // pick the corner with the best score
+        //tmp = (score > tmp.x) ? vec2(score, lod) : tmp;
+        tmp = mix(tmp, vec2(score, lod), bvec2(score > tmp.x));
     }
 
-    // encode score in [0,1]
-    float encodedScore = 1.0f - exp2(-best.x); // assuming 0 <= score <= 4
+    // encode score & scale in [0,1]
+    float encodedScore = encodeHarrisScore(tmp.x);
+    float encodedScale = encodeLod(tmp.y);
 
-    // done
-    color = vec4(encodedScore, pixel.g, best.xy);
+    // done!
+    color = vec4(encodedScore, pixel.g, encodedScore, encodedScale);
 }
