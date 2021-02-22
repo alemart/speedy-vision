@@ -44,39 +44,28 @@ uniform sampler2D sobelDerivatives[@PYRAMID_MAX_OCTAVES@]; // for each LOD sub-l
 
 vec4 pickSobelDerivatives(int index, ivec2 offset)
 {
-    #define MAX_OCTAVES @PYRAMID_MAX_OCTAVES@
+#define MAX_OCTAVES @PYRAMID_MAX_OCTAVES@
+#define CASE(k) case k: return textureLod(sobelDerivatives[k], texCoord + vec2(offset) / texSize, 0.0f)
 
-    #if MAX_OCTAVES < 7 || MAX_OCTAVES > 16 || MAX_OCTAVES % 2 == 0
-    #error MAX_OCTAVES cannot be @PYRAMID_MAX_OCTAVES@ // not supported
-    #endif
+#if MAX_OCTAVES < 7 || MAX_OCTAVES > 16 || MAX_OCTAVES % 2 == 0
+#error MAX_OCTAVES cannot be @PYRAMID_MAX_OCTAVES@ // not supported
+#endif
 
     // no dynamic indexing for samplers
     switch(index) {
-        case 0:  return textureLod(sobelDerivatives[0], texCoord + vec2(offset) / texSize, 0.0f); // LOD = 0
-        case 1:  return textureLod(sobelDerivatives[1], texCoord + vec2(offset) / texSize, 0.0f); // LOD = 0.5 if using sub-levels or LOD = 1 if not
-        case 2:  return textureLod(sobelDerivatives[2], texCoord + vec2(offset) / texSize, 0.0f); // LOD = 1 if using sub-levels or LOD = 2 if not
-        case 3:  return textureLod(sobelDerivatives[3], texCoord + vec2(offset) / texSize, 0.0f);
-        case 4:  return textureLod(sobelDerivatives[4], texCoord + vec2(offset) / texSize, 0.0f);
-        case 5:  return textureLod(sobelDerivatives[5], texCoord + vec2(offset) / texSize, 0.0f);
-        case 6:  return textureLod(sobelDerivatives[6], texCoord + vec2(offset) / texSize, 0.0f); // LOD = 3 if using sub-levels
-
-        // Reminder: MAX_OCTAVES is not an even number
-        #if MAX_OCTAVES > 15
-        case 15: return textureLod(sobelDerivatives[15], texCoord + vec2(offset) / texSize, 0.0f);
-        #elif MAX_OCTAVES > 13
-        case 14: return textureLod(sobelDerivatives[14], texCoord + vec2(offset) / texSize, 0.0f);
-        case 13: return textureLod(sobelDerivatives[13], texCoord + vec2(offset) / texSize, 0.0f);
-        #elif MAX_OCTAVES > 11
-        case 12: return textureLod(sobelDerivatives[12], texCoord + vec2(offset) / texSize, 0.0f);
-        case 11: return textureLod(sobelDerivatives[11], texCoord + vec2(offset) / texSize, 0.0f);
-        #elif MAX_OCTAVES > 9
-        case 10: return textureLod(sobelDerivatives[10], texCoord + vec2(offset) / texSize, 0.0f);
-        case 9:  return textureLod(sobelDerivatives[9], texCoord + vec2(offset) / texSize, 0.0f);
-        #elif MAX_OCTAVES > 7
-        case 8:  return textureLod(sobelDerivatives[8], texCoord + vec2(offset) / texSize, 0.0f);
-        case 7:  return textureLod(sobelDerivatives[7], texCoord + vec2(offset) / texSize, 0.0f);
-        #endif
-
+        // Reminder: MAX_OCTAVES is an odd number
+#if MAX_OCTAVES > 15
+        CASE(15);
+#elif MAX_OCTAVES > 13
+        CASE(14); CASE(13);
+#elif MAX_OCTAVES > 11
+        CASE(12); CASE(11);
+#elif MAX_OCTAVES > 9
+        CASE(10); CASE(9);
+#elif MAX_OCTAVES > 7
+        CASE(8); CASE(7);
+#endif
+        CASE(6); CASE(5); CASE(4); CASE(3); CASE(2); CASE(1); CASE(0);
         default: return vec4(0.0f);
     }
 }
@@ -95,10 +84,10 @@ void main()
         // compute Harris' autocorrelation matrix
         // M = [ a  b ]   <=>   m = (a, b, c)
         //     [ b  c ]
-        vec3 m = vec3(0.0f);
+        vec3 m = vec3(0.0f); vec2 df;
         for(int j = 0; j < windowSize; j++) {
             for(int i = 0; i < windowSize; i++) {
-                vec2 df = decodeSobel(pickSobelDerivatives(octave, ivec2(i-r, j-r)));
+                df = decodeSobel(pickSobelDerivatives(octave, ivec2(i-r, j-r)));
                 m += vec3(df.x * df.x, df.x * df.y, df.y * df.y);
             }
         }
