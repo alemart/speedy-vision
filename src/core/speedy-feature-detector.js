@@ -425,26 +425,6 @@ export class MultiscaleFASTFeatureDetector extends SpeedyFeatureDetector
     }
 
     /**
-     * Whether or not we're using an approximation of
-     * Harris corner responses for keypoint scores
-     * @returns {boolean}
-     */
-    get useHarrisScore()
-    {
-        return this._algorithm.useHarrisScore;
-    }
-
-    /**
-     * Should we use an approximation of Harris corner
-     * responses for keypoint scores?
-     * @param {boolean} useHarris
-     */
-    set useHarrisScore(useHarris)
-    {
-        this._algorithm.useHarrisScore = useHarris;
-    }
-
-    /**
      * Convert a normalized sensitivity to a FAST threshold
      * @param {number} sensitivity 
      */

@@ -59,13 +59,6 @@ const fastScore8 = importShader('keypoints/fast/fast-score8.glsl').withArguments
 const multiscaleFast = importShader('keypoints/fast/multiscale-fast.glsl')
                       .withArguments('pyramid', 'threshold', 'numberOfOctaves', 'lodStep');
 
-// FAST-9_16 on scale-space
-// with Harris scoring
-const multiscaleFastWithHarris = importShader('keypoints/fast/multiscale-fast.glsl')
-                                .withArguments('pyramid', 'threshold', 'numberOfOctaves', 'lodStep')
-                                .withDefines({
-                                    'USE_HARRIS_SCORE': 1
-                                });
 
 
 
@@ -172,7 +165,6 @@ export class GPUKeypoints extends SpeedyProgramGroup
 
             // FAST-9,16 (multi-scale)
             .declare('multiscaleFast', multiscaleFast)
-            .declare('multiscaleFastWithHarris', multiscaleFastWithHarris)
 
             // BRISK Scale-Space Non-Maximum Suppression & Interpolation
             .declare('brisk', brisk)

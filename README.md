@@ -495,7 +495,6 @@ When using the `MultiscaleFAST` detector, you may also specify:
 
 * `depth: number`. An integer between `1` and `7` that tells Speedy how "deep" it should go when searching for keypoints in scale-space. Defaults to `4`.
 * `scaleFactor: number`. The scale factor between two consecutive pyramid layers. Defaults to the square root of two.
-* `useHarrisScore: boolean`. Adopt a better scoring function (cornerness measure). It will give you slightly better features. Defaults to `false` (using the `MultiscaleHarris` detector is preferred).
 
 #### Harris corners
 

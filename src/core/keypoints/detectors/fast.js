@@ -139,7 +139,6 @@ export class MultiscaleFASTFeatures extends FeatureDetectionAlgorithm
         this._threshold = DEFAULT_FAST_THRESHOLD;
         this._depth = DEFAULT_DEPTH;
         this._scaleFactor = DEFAULT_SCALE_FACTOR;
-        this._useHarrisScore = false;
     }
 
     /**
@@ -218,24 +217,6 @@ export class MultiscaleFASTFeatures extends FeatureDetectionAlgorithm
     }
 
     /**
-     * Use Harris scoring function?
-     * @returns {boolean}
-     */
-    get useHarrisScore()
-    {
-        return this._useHarrisScore;
-    }
-
-    /**
-     * Use Harris scoring function?
-     * @param {boolean} value
-     */
-    set useHarrisScore(value)
-    {
-        this._useHarrisScore = !!value;
-    }
-
-    /**
      * Detect feature points
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} inputTexture pre-processed greyscale image
@@ -245,7 +226,6 @@ export class MultiscaleFASTFeatures extends FeatureDetectionAlgorithm
     {
         const threshold = this._threshold;
         const depth = this._depth;
-        const useHarrisScore = this._useHarrisScore;
         const normalizedThreshold = threshold / 255.0;
         const numberOfOctaves = 2 * depth - 1;
         const lodStep = Math.log2(this._scaleFactor);
@@ -256,11 +236,7 @@ export class MultiscaleFASTFeatures extends FeatureDetectionAlgorithm
         const pyramid = inputTexture.generatePyramid(gpu);
 
         // find corners
-        let corners = null;
-        if(!useHarrisScore)
-            corners = gpu.programs.keypoints.multiscaleFast(pyramid, normalizedThreshold, numberOfOctaves, lodStep);
-        else
-            corners = gpu.programs.keypoints.multiscaleFastWithHarris(pyramid, normalizedThreshold, numberOfOctaves, lodStep);
+        let corners = gpu.programs.keypoints.multiscaleFast(pyramid, normalizedThreshold, numberOfOctaves, lodStep);
 
         // non-maximum suppression
         corners = gpu.programs.keypoints.samescaleSuppression(corners);
