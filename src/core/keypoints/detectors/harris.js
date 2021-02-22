@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,16 +92,23 @@ export class HarrisFeatures extends FeatureDetectionAlgorithm
         df.release();
 
         // find the maximum corner response
-        const maxScore = gpu.programs.utils.scanMax(corners, PixelComponent.RED);
-
-        // non-maximum suppression
-        const suppressedCorners = gpu.programs.keypoints.nonmaxSuppression(corners);
+        const numIterations = Math.ceil(Math.log2(Math.max(corners.width, corners.height)));
+        let maxScore = corners;
+        for(let i = 0; i < numIterations; i++)
+            maxScore = gpu.programs.keypoints.maxHarrisScore(maxScore, i);
 
         // discard corners according to quality level
-        const filteredCorners = gpu.programs.keypoints.harrisCutoff(suppressedCorners, maxScore, quality);
+        //const filteredCorners = gpu.programs.keypoints.harrisCutoff(suppressedCorners, maxScore, quality);
+        const filteredCorners = gpu.programs.keypoints.harrisCutoff(corners, maxScore, quality);
+
+        // non-maximum suppression
+        const suppressedCorners = gpu.programs.keypoints.harrisNonMaxSuppression(filteredCorners, 0);
+
+        // convert score to 8-bit component
+        const finalCorners = gpu.programs.keypoints.encodeHarrisScore(suppressedCorners);
 
         // encode corners
-        return gpu.programs.encoders.encodeKeypoints(filteredCorners, descriptorSize, extraSize);
+        return gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize);
     }
 }
 
@@ -197,7 +204,7 @@ export class MultiscaleHarrisFeatures extends FeatureDetectionAlgorithm
         const pyramid = inputTexture.generatePyramid(gpu);
 
         // compute derivatives
-        const sobelDerivatives = Array(SOBEL_OCTAVE_COUNT);
+        const sobelDerivatives = new Array(SOBEL_OCTAVE_COUNT);
         for(let j = 0; j < numberOfOctaves; j++)
             sobelDerivatives[j] = gpu.programs.keypoints.multiscaleSobel(pyramid, j * lodStep);
         for(let k = numberOfOctaves; k < sobelDerivatives.length; k++)
@@ -211,17 +218,22 @@ export class MultiscaleHarrisFeatures extends FeatureDetectionAlgorithm
             sobelDerivatives[i].release();
 
         // find the maximum corner response
-        const maxScore = gpu.programs.utils.scanMax(corners, PixelComponent.RED);
-
-        // non-maximum suppression
-        const suppressed1 = gpu.programs.keypoints.samescaleSuppression(corners);
-        const suppressed2 = gpu.programs.keypoints.multiscaleSuppression(suppressed1, lodStep);
+        const numIterations = Math.ceil(Math.log2(Math.max(corners.width, corners.height)));
+        let maxScore = corners;
+        for(let i = 0; i < numIterations; i++)
+            maxScore = gpu.programs.keypoints.maxHarrisScore(maxScore, i);
 
         // discard corners according to the quality level
-        const filteredCorners = gpu.programs.keypoints.harrisCutoff(suppressed2, maxScore, quality);
+        const filteredCorners = gpu.programs.keypoints.harrisCutoff(corners, maxScore, quality);
+
+        // non-maximum suppression
+        const suppressedCorners = gpu.programs.keypoints.harrisMultiscaleNonMaxSuppression(filteredCorners, lodStep);
+
+        // convert score to 8-bit component
+        const finalCorners = gpu.programs.keypoints.encodeHarrisScore(suppressedCorners);
 
         // encode keypoints
-        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(filteredCorners, descriptorSize, extraSize);
+        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize);
 
         // done
         return detectedKeypoints;

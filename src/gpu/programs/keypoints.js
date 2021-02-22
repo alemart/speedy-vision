@@ -74,11 +74,26 @@ const multiscaleFastWithHarris = importShader('keypoints/multiscale-fast.glsl')
 //
 
 // compute corner responses (score map)
-const multiscaleHarris = importShader('keypoints/multiscale-harris.glsl')
+const multiscaleHarris = importShader('keypoints/harris/multiscale-harris.glsl')
                         .withArguments('pyramid', 'windowSize', 'numberOfOctaves', 'lodStep', 'sobelDerivatives');
 
 // discard corners below a specified quality level
-const harrisCutoff = importShader('keypoints/harris-cutoff.glsl').withArguments('corners', 'maxScore', 'quality');
+const harrisCutoff = importShader('keypoints/harris/harris-cutoff.glsl').withArguments('corners', 'maxScore', 'quality');
+
+// encode harris score in an 8-bit component
+const encodeHarrisScore = importShader('keypoints/harris/encode-harris-score.glsl').withArguments('image');
+
+// find the maximum harris score in an image
+const maxHarrisScore = importShader('keypoints/harris/max-harris-score.glsl').withArguments('self', 'iterationNumber');
+
+// non-maximum suppression
+const harrisNonMaxSuppression = importShader('keypoints/harris/nonmax-suppression.glsl')
+                               .withArguments('image', 'lodStep');
+const harrisMultiscaleNonMaxSuppression = importShader('keypoints/harris/nonmax-suppression.glsl')
+                                         .withArguments('image', 'lodStep')
+                                         .withDefines({
+                                             'MULTISCALE': 1
+                                         });
 
 
 
@@ -112,7 +127,7 @@ const multiscaleSuppression = importShader('keypoints/multiscale-suppression.gls
 const samescaleSuppression = importShader('keypoints/samescale-suppression.glsl').withArguments('image');
 
 // Sobel derivatives
-const multiscaleSobel = importShader('filters/multiscale-sobel.glsl').withArguments('pyramid', 'lod');
+const multiscaleSobel = importShader('keypoints/harris/multiscale-sobel.glsl').withArguments('pyramid', 'lod');
 
 // transfer keypoint orientation
 const transferOrientation = importShader('keypoints/transfer-orientation.glsl')
@@ -165,6 +180,12 @@ export class GPUKeypoints extends SpeedyProgramGroup
             // Harris-Shi-Tomasi corner detector
             .declare('multiscaleHarris', multiscaleHarris) // scale-space
             .declare('harrisCutoff', harrisCutoff)
+            .declare('encodeHarrisScore', encodeHarrisScore)
+            .declare('maxHarrisScore', maxHarrisScore, {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('harrisNonMaxSuppression', harrisNonMaxSuppression)
+            .declare('harrisMultiscaleNonMaxSuppression', harrisMultiscaleNonMaxSuppression)
 
             // ORB
             .declare('_orb', orb)

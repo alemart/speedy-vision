@@ -15,34 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * packf.glsl
- * Floating-point packing routines
+ * encode-harris-score.glsl
+ * Convert Harris score to an 8 bit component
  */
 
-#ifndef _PACKF_GLSL
-#define _PACKF_GLSL
+@include "packf.glsl"
 
-/**
- * Convert a float to a 16-bit half-float and pack
- * it into a uvec2 (a,b) such that 0 <= a,b <= 255
- * @param {float} x input
- * @returns {uvec2}
- */
-uvec2 packf16(/*highp*/ float x)
+uniform sampler2D image;
+
+void main()
 {
-    uint y = packHalf2x16(vec2(x, 0.0f));
-    return uvec2(y, y >> 8) & 0xFFu;
-}
+    // read 16-bit half-float score
+    vec4 pixel = threadPixel(image);
+    float score = unpackf16(uvec2(pixel.rb * 255.0f));
 
-/**
- * The inverse of packf16()
- * @param {uvec2} v an output returned by packf16()
- * @returns {float}
- */
-/*highp*/ float unpackf16(uvec2 v)
-{
-    v &= 0xFFu;
-    return unpackHalf2x16(v.x | (v.y << 8)).x;
-}
+    // convert to 8-bit, assuming 0 <= score <= 4
+    float score8 = 1.0f - exp2(-score);
 
-#endif
+    // done!
+    color = vec4(score8, pixel.g, 0.0f, pixel.a);
+}

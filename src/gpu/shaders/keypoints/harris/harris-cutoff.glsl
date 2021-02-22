@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,20 +19,23 @@
  * Discard corners below a specified quality level
  */
 
+@include "packf.glsl"
+
 uniform sampler2D corners;
-uniform sampler2D maxScore; // image such that pixel.red = max(corners.red) for all pixels of image
+uniform sampler2D maxScore; // image such that pixel.rb encodes the max corner score (for all pixels)
 uniform float quality; // in [0,1]
 
 void main()
 {
     vec4 pixel = threadPixel(corners);
-    float maxVal = threadPixel(maxScore).r;
-    float score = pixel.r;
+    float maxval = unpackf16(uvec2(threadPixel(maxScore).rb * 255.0f));
+    float score = unpackf16(uvec2(pixel.rb * 255.0f));
 
     // threshold
-    float threshold = maxVal * clamp(quality, 0.0f, 1.0f);
+    float threshold = maxval * clamp(quality, 0.0f, 1.0f);
     score *= step(threshold, score);
 
     // done!
-    color = vec4(score, pixel.gba);
+    color = pixel;
+    color.rb = vec2(packf16(score)) / 255.0f;
 }

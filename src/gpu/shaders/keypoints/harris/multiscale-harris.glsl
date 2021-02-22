@@ -34,15 +34,13 @@
 
 @include "sobel.glsl"
 @include "pyramids.glsl"
+@include "packf.glsl"
 
 uniform sampler2D pyramid;
 uniform int windowSize; // 1 (1x1 window), 3 (3x3 window), 5, ... up to 15 (positive odd number)
 uniform int numberOfOctaves; // each pyramid octave uses a scaling factor of sqrt(2)
 uniform float lodStep; // 0.5 for a scale factor of sqrt(2); 1 for a scale factor of 2
 uniform sampler2D sobelDerivatives[@PYRAMID_MAX_OCTAVES@]; // for each LOD sub-level (0, 0.5, 1, 1.5, 2...)
-
-// encode harris score
-#define encodeHarrisScore(x) (1.0f - exp2(-(x))) // assuming 0 <= score <= 4
 
 vec4 pickSobelDerivatives(int index, ivec2 offset)
 {
@@ -62,7 +60,7 @@ vec4 pickSobelDerivatives(int index, ivec2 offset)
         case 5:  return textureLod(sobelDerivatives[5], texCoord + vec2(offset) / texSize, 0.0f);
         case 6:  return textureLod(sobelDerivatives[6], texCoord + vec2(offset) / texSize, 0.0f); // LOD = 3 if using sub-levels
 
-        // MAX_OCTAVES is not an even number
+        // Reminder: MAX_OCTAVES is not an even number
         #if MAX_OCTAVES > 15
         case 15: return textureLod(sobelDerivatives[15], texCoord + vec2(offset) / texSize, 0.0f);
         #elif MAX_OCTAVES > 13
@@ -121,9 +119,10 @@ void main()
     }
 
     // encode score & scale in [0,1]
-    float encodedScore = encodeHarrisScore(tmp.x);
+    vec2 encodedScore = vec2(packf16(tmp.x)) / 255.0f;
     float encodedScale = encodeLod(tmp.y);
 
     // done!
-    color = vec4(encodedScore, pixel.g, encodedScore, encodedScale);
+    color = vec4(1.0f, pixel.g, 0.0f, encodedScale);
+    color.rb = encodedScore;
 }
