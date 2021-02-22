@@ -32,36 +32,36 @@ import { MIN_KEYPOINT_SIZE } from '../../utils/globals';
 
 // FAST-9_16: requires 9 contiguous pixels
 // on a circumference of 16 pixels
-const fast9 = importShader('keypoints/fast9lg.glsl').withArguments('image', 'threshold');
+const fast9 = importShader('keypoints/fast/fast9lg.glsl').withArguments('image', 'threshold');
 
 // FAST-7_12: requires 7 contiguous pixels
 // on a circumference of 12 pixels
-const fast7 = importShader('keypoints/fast7.glsl').withArguments('image', 'threshold');
+const fast7 = importShader('keypoints/fast/fast7.glsl').withArguments('image', 'threshold');
 
 // FAST-5_8: requires 5 contiguous pixels
 // on a circumference of 8 pixels
-const fast5 = importShader('keypoints/fast5.glsl').withArguments('image', 'threshold');
+const fast5 = importShader('keypoints/fast/fast5.glsl').withArguments('image', 'threshold');
 
 // compute corner score considering a
 // neighboring circumference of 16 pixels
-const fastScore16 = importShader('keypoints/fast-score16.glsl').withArguments('image', 'threshold');
+const fastScore16 = importShader('keypoints/fast/fast-score16.glsl').withArguments('image', 'threshold');
 
 // compute corner score considering a
 // neighboring circumference of 12 pixels
-const fastScore12 = importShader('keypoints/fast-score12.glsl').withArguments('image', 'threshold');
+const fastScore12 = importShader('keypoints/fast/fast-score12.glsl').withArguments('image', 'threshold');
 
 // compute corner score considering a
 // neighboring circumference of 8 pixels
-const fastScore8 = importShader('keypoints/fast-score8.glsl').withArguments('image', 'threshold');
+const fastScore8 = importShader('keypoints/fast/fast-score8.glsl').withArguments('image', 'threshold');
 
 // FAST-9_16 on scale-space
 // Requires image mipmap
-const multiscaleFast = importShader('keypoints/multiscale-fast.glsl')
+const multiscaleFast = importShader('keypoints/fast/multiscale-fast.glsl')
                       .withArguments('pyramid', 'threshold', 'numberOfOctaves', 'lodStep');
 
 // FAST-9_16 on scale-space
 // with Harris scoring
-const multiscaleFastWithHarris = importShader('keypoints/multiscale-fast.glsl')
+const multiscaleFastWithHarris = importShader('keypoints/fast/multiscale-fast.glsl')
                                 .withArguments('pyramid', 'threshold', 'numberOfOctaves', 'lodStep')
                                 .withDefines({
                                     'USE_HARRIS_SCORE': 1
