@@ -19,7 +19,7 @@
  * Scan the entire image and find the maximum Harris score
  */
 
-@include "packf.glsl"
+@include "float16.glsl"
 
 uniform sampler2D self; // input image
 uniform int iterationNumber; // 0, 1, 2, 3...
@@ -53,10 +53,10 @@ void main()
     vec4 p2 = texelFetch(self, min(next2, last), 0);
     vec4 p3 = texelFetch(self, min(next3, last), 0);
 
-    float s0 = unpackf16(uvec2(p0.rb * 255.0f));
-    float s1 = unpackf16(uvec2(p1.rb * 255.0f));
-    float s2 = unpackf16(uvec2(p2.rb * 255.0f));
-    float s3 = unpackf16(uvec2(p3.rb * 255.0f));
+    float s0 = decodeFloat16(p0.rb);
+    float s1 = decodeFloat16(p1.rb);
+    float s2 = decodeFloat16(p2.rb);
+    float s3 = decodeFloat16(p3.rb);
 
     bool b0 = s0 >= s1 && s0 >= s2 && s0 >= s3;
     bool b1 = s1 >= s0 && s1 >= s2 && s1 >= s3;

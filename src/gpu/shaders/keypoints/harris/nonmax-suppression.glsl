@@ -20,7 +20,7 @@
  */
 
 @include "pyramids.glsl"
-@include "packf.glsl"
+@include "float16.glsl"
 
 uniform sampler2D image;
 uniform float lodStep; // ignored if not using multiscale
@@ -30,15 +30,11 @@ uniform float lodStep; // ignored if not using multiscale
 # define ENABLE_INNER_RING
 # define ENABLE_MIDDLE_RING
 # define ENABLE_OUTER_RING
-# define LOD_STEP() (lodStep)
+# define LOD_STEP (lodStep)
 #else
 # define ENABLE_INNER_RING
-# define LOD_STEP() (0.0f)
+# define LOD_STEP (0.0f)
 #endif
-
-// helpers
-#define decodeScore16(pair) (unpackf16(uvec2(pair * 255.0f)))
-#define encodeScore16(score) (vec2(packf16(score)) / 255.0f)
 
 // non-maximum suppression on 8-neighborhood
 // based on the corner score and scale
@@ -46,7 +42,7 @@ void main()
 {
     vec4 pixel = threadPixel(image);
     float lod = decodeLod(pixel.a);
-    float score = decodeScore16(pixel.rb);
+    float score = decodeFloat16(pixel.rb);
 
     // not a corner?
     color = pixel;
@@ -117,57 +113,57 @@ void main()
 #endif
 
     // get scores in (lodPlus, lodMinus)-scaled neighborhood
-    float lodPlus = lod + LOD_STEP();
-    float lodMinus = lod - LOD_STEP();
+    float lodPlus = lod + LOD_STEP;
+    float lodMinus = lod - LOD_STEP;
     float alphaPlus = encodeLod(lodPlus);
     float alphaMinus = encodeLod(lodMinus);
     float alpha = encodeLod(lod);
     mat3 innerScore = mat3(
-        decodeScore16(p0.rb) * float(isSameEncodedLod(p0.a, alpha) || isSameEncodedLod(p0.a, alphaPlus) || isSameEncodedLod(p0.a, alphaMinus)),
-        decodeScore16(p1.rb) * float(isSameEncodedLod(p1.a, alpha) || isSameEncodedLod(p1.a, alphaPlus) || isSameEncodedLod(p1.a, alphaMinus)),
-        decodeScore16(p2.rb) * float(isSameEncodedLod(p2.a, alpha) || isSameEncodedLod(p2.a, alphaPlus) || isSameEncodedLod(p2.a, alphaMinus)),
-        decodeScore16(p3.rb) * float(isSameEncodedLod(p3.a, alpha) || isSameEncodedLod(p3.a, alphaPlus) || isSameEncodedLod(p3.a, alphaMinus)),
-        decodeScore16(p4.rb) * float(isSameEncodedLod(p4.a, alpha) || isSameEncodedLod(p4.a, alphaPlus) || isSameEncodedLod(p4.a, alphaMinus)),
-        decodeScore16(p5.rb) * float(isSameEncodedLod(p5.a, alpha) || isSameEncodedLod(p5.a, alphaPlus) || isSameEncodedLod(p5.a, alphaMinus)),
-        decodeScore16(p6.rb) * float(isSameEncodedLod(p6.a, alpha) || isSameEncodedLod(p6.a, alphaPlus) || isSameEncodedLod(p6.a, alphaMinus)),
-        decodeScore16(p7.rb) * float(isSameEncodedLod(p7.a, alpha) || isSameEncodedLod(p7.a, alphaPlus) || isSameEncodedLod(p7.a, alphaMinus)),
+        decodeFloat16(p0.rb) * float(isSameEncodedLod(p0.a, alpha) || isSameEncodedLod(p0.a, alphaPlus) || isSameEncodedLod(p0.a, alphaMinus)),
+        decodeFloat16(p1.rb) * float(isSameEncodedLod(p1.a, alpha) || isSameEncodedLod(p1.a, alphaPlus) || isSameEncodedLod(p1.a, alphaMinus)),
+        decodeFloat16(p2.rb) * float(isSameEncodedLod(p2.a, alpha) || isSameEncodedLod(p2.a, alphaPlus) || isSameEncodedLod(p2.a, alphaMinus)),
+        decodeFloat16(p3.rb) * float(isSameEncodedLod(p3.a, alpha) || isSameEncodedLod(p3.a, alphaPlus) || isSameEncodedLod(p3.a, alphaMinus)),
+        decodeFloat16(p4.rb) * float(isSameEncodedLod(p4.a, alpha) || isSameEncodedLod(p4.a, alphaPlus) || isSameEncodedLod(p4.a, alphaMinus)),
+        decodeFloat16(p5.rb) * float(isSameEncodedLod(p5.a, alpha) || isSameEncodedLod(p5.a, alphaPlus) || isSameEncodedLod(p5.a, alphaMinus)),
+        decodeFloat16(p6.rb) * float(isSameEncodedLod(p6.a, alpha) || isSameEncodedLod(p6.a, alphaPlus) || isSameEncodedLod(p6.a, alphaMinus)),
+        decodeFloat16(p7.rb) * float(isSameEncodedLod(p7.a, alpha) || isSameEncodedLod(p7.a, alphaPlus) || isSameEncodedLod(p7.a, alphaMinus)),
         0.0f
     );
     mat4 middleScore = mat4(
-        decodeScore16(q0.rb) * float(isSameEncodedLod(q0.a, alpha) || isSameEncodedLod(q0.a, alphaPlus) || isSameEncodedLod(q0.a, alphaMinus)),
-        decodeScore16(q1.rb) * float(isSameEncodedLod(q1.a, alpha) || isSameEncodedLod(q1.a, alphaPlus) || isSameEncodedLod(q1.a, alphaMinus)),
-        decodeScore16(q2.rb) * float(isSameEncodedLod(q2.a, alpha) || isSameEncodedLod(q2.a, alphaPlus) || isSameEncodedLod(q2.a, alphaMinus)),
-        decodeScore16(q3.rb) * float(isSameEncodedLod(q3.a, alpha) || isSameEncodedLod(q3.a, alphaPlus) || isSameEncodedLod(q3.a, alphaMinus)),
-        decodeScore16(q4.rb) * float(isSameEncodedLod(q4.a, alpha) || isSameEncodedLod(q4.a, alphaPlus) || isSameEncodedLod(q4.a, alphaMinus)),
-        decodeScore16(q5.rb) * float(isSameEncodedLod(q5.a, alpha) || isSameEncodedLod(q5.a, alphaPlus) || isSameEncodedLod(q5.a, alphaMinus)),
-        decodeScore16(q6.rb) * float(isSameEncodedLod(q6.a, alpha) || isSameEncodedLod(q6.a, alphaPlus) || isSameEncodedLod(q6.a, alphaMinus)),
-        decodeScore16(q7.rb) * float(isSameEncodedLod(q7.a, alpha) || isSameEncodedLod(q7.a, alphaPlus) || isSameEncodedLod(q7.a, alphaMinus)),
-        decodeScore16(q8.rb) * float(isSameEncodedLod(q8.a, alpha) || isSameEncodedLod(q8.a, alphaPlus) || isSameEncodedLod(q8.a, alphaMinus)),
-        decodeScore16(q9.rb) * float(isSameEncodedLod(q9.a, alpha) || isSameEncodedLod(q9.a, alphaPlus) || isSameEncodedLod(q9.a, alphaMinus)),
-        decodeScore16(q10.rb) * float(isSameEncodedLod(q10.a, alpha) || isSameEncodedLod(q10.a, alphaPlus) || isSameEncodedLod(q10.a, alphaMinus)),
-        decodeScore16(q11.rb) * float(isSameEncodedLod(q11.a, alpha) || isSameEncodedLod(q11.a, alphaPlus) || isSameEncodedLod(q11.a, alphaMinus)),
-        decodeScore16(q12.rb) * float(isSameEncodedLod(q12.a, alpha) || isSameEncodedLod(q12.a, alphaPlus) || isSameEncodedLod(q12.a, alphaMinus)),
-        decodeScore16(q13.rb) * float(isSameEncodedLod(q13.a, alpha) || isSameEncodedLod(q13.a, alphaPlus) || isSameEncodedLod(q13.a, alphaMinus)),
-        decodeScore16(q14.rb) * float(isSameEncodedLod(q14.a, alpha) || isSameEncodedLod(q14.a, alphaPlus) || isSameEncodedLod(q14.a, alphaMinus)),
-        decodeScore16(q15.rb) * float(isSameEncodedLod(q15.a, alpha) || isSameEncodedLod(q15.a, alphaPlus) || isSameEncodedLod(q15.a, alphaMinus))
+        decodeFloat16(q0.rb) * float(isSameEncodedLod(q0.a, alpha) || isSameEncodedLod(q0.a, alphaPlus) || isSameEncodedLod(q0.a, alphaMinus)),
+        decodeFloat16(q1.rb) * float(isSameEncodedLod(q1.a, alpha) || isSameEncodedLod(q1.a, alphaPlus) || isSameEncodedLod(q1.a, alphaMinus)),
+        decodeFloat16(q2.rb) * float(isSameEncodedLod(q2.a, alpha) || isSameEncodedLod(q2.a, alphaPlus) || isSameEncodedLod(q2.a, alphaMinus)),
+        decodeFloat16(q3.rb) * float(isSameEncodedLod(q3.a, alpha) || isSameEncodedLod(q3.a, alphaPlus) || isSameEncodedLod(q3.a, alphaMinus)),
+        decodeFloat16(q4.rb) * float(isSameEncodedLod(q4.a, alpha) || isSameEncodedLod(q4.a, alphaPlus) || isSameEncodedLod(q4.a, alphaMinus)),
+        decodeFloat16(q5.rb) * float(isSameEncodedLod(q5.a, alpha) || isSameEncodedLod(q5.a, alphaPlus) || isSameEncodedLod(q5.a, alphaMinus)),
+        decodeFloat16(q6.rb) * float(isSameEncodedLod(q6.a, alpha) || isSameEncodedLod(q6.a, alphaPlus) || isSameEncodedLod(q6.a, alphaMinus)),
+        decodeFloat16(q7.rb) * float(isSameEncodedLod(q7.a, alpha) || isSameEncodedLod(q7.a, alphaPlus) || isSameEncodedLod(q7.a, alphaMinus)),
+        decodeFloat16(q8.rb) * float(isSameEncodedLod(q8.a, alpha) || isSameEncodedLod(q8.a, alphaPlus) || isSameEncodedLod(q8.a, alphaMinus)),
+        decodeFloat16(q9.rb) * float(isSameEncodedLod(q9.a, alpha) || isSameEncodedLod(q9.a, alphaPlus) || isSameEncodedLod(q9.a, alphaMinus)),
+        decodeFloat16(q10.rb) * float(isSameEncodedLod(q10.a, alpha) || isSameEncodedLod(q10.a, alphaPlus) || isSameEncodedLod(q10.a, alphaMinus)),
+        decodeFloat16(q11.rb) * float(isSameEncodedLod(q11.a, alpha) || isSameEncodedLod(q11.a, alphaPlus) || isSameEncodedLod(q11.a, alphaMinus)),
+        decodeFloat16(q12.rb) * float(isSameEncodedLod(q12.a, alpha) || isSameEncodedLod(q12.a, alphaPlus) || isSameEncodedLod(q12.a, alphaMinus)),
+        decodeFloat16(q13.rb) * float(isSameEncodedLod(q13.a, alpha) || isSameEncodedLod(q13.a, alphaPlus) || isSameEncodedLod(q13.a, alphaMinus)),
+        decodeFloat16(q14.rb) * float(isSameEncodedLod(q14.a, alpha) || isSameEncodedLod(q14.a, alphaPlus) || isSameEncodedLod(q14.a, alphaMinus)),
+        decodeFloat16(q15.rb) * float(isSameEncodedLod(q15.a, alpha) || isSameEncodedLod(q15.a, alphaPlus) || isSameEncodedLod(q15.a, alphaMinus))
     );
     mat4 outerScore = mat4(
-        decodeScore16(r0.rb) * float(isSameEncodedLod(r0.a, alpha) || isSameEncodedLod(r0.a, alphaPlus) || isSameEncodedLod(r0.a, alphaMinus)),
-        decodeScore16(r1.rb) * float(isSameEncodedLod(r1.a, alpha) || isSameEncodedLod(r1.a, alphaPlus) || isSameEncodedLod(r1.a, alphaMinus)),
-        decodeScore16(r2.rb) * float(isSameEncodedLod(r2.a, alpha) || isSameEncodedLod(r2.a, alphaPlus) || isSameEncodedLod(r2.a, alphaMinus)),
-        decodeScore16(r3.rb) * float(isSameEncodedLod(r3.a, alpha) || isSameEncodedLod(r3.a, alphaPlus) || isSameEncodedLod(r3.a, alphaMinus)),
-        decodeScore16(r4.rb) * float(isSameEncodedLod(r4.a, alpha) || isSameEncodedLod(r4.a, alphaPlus) || isSameEncodedLod(r4.a, alphaMinus)),
-        decodeScore16(r5.rb) * float(isSameEncodedLod(r5.a, alpha) || isSameEncodedLod(r5.a, alphaPlus) || isSameEncodedLod(r5.a, alphaMinus)),
-        decodeScore16(r6.rb) * float(isSameEncodedLod(r6.a, alpha) || isSameEncodedLod(r6.a, alphaPlus) || isSameEncodedLod(r6.a, alphaMinus)),
-        decodeScore16(r7.rb) * float(isSameEncodedLod(r7.a, alpha) || isSameEncodedLod(r7.a, alphaPlus) || isSameEncodedLod(r7.a, alphaMinus)),
-        decodeScore16(r8.rb) * float(isSameEncodedLod(r8.a, alpha) || isSameEncodedLod(r8.a, alphaPlus) || isSameEncodedLod(r8.a, alphaMinus)),
-        decodeScore16(r9.rb) * float(isSameEncodedLod(r9.a, alpha) || isSameEncodedLod(r9.a, alphaPlus) || isSameEncodedLod(r9.a, alphaMinus)),
-        decodeScore16(r10.rb) * float(isSameEncodedLod(r10.a, alpha) || isSameEncodedLod(r10.a, alphaPlus) || isSameEncodedLod(r10.a, alphaMinus)),
-        decodeScore16(r11.rb) * float(isSameEncodedLod(r11.a, alpha) || isSameEncodedLod(r11.a, alphaPlus) || isSameEncodedLod(r11.a, alphaMinus)),
-        decodeScore16(r12.rb) * float(isSameEncodedLod(r12.a, alpha) || isSameEncodedLod(r12.a, alphaPlus) || isSameEncodedLod(r12.a, alphaMinus)),
-        decodeScore16(r13.rb) * float(isSameEncodedLod(r13.a, alpha) || isSameEncodedLod(r13.a, alphaPlus) || isSameEncodedLod(r13.a, alphaMinus)),
-        decodeScore16(r14.rb) * float(isSameEncodedLod(r14.a, alpha) || isSameEncodedLod(r14.a, alphaPlus) || isSameEncodedLod(r14.a, alphaMinus)),
-        decodeScore16(r15.rb) * float(isSameEncodedLod(r15.a, alpha) || isSameEncodedLod(r15.a, alphaPlus) || isSameEncodedLod(r15.a, alphaMinus))
+        decodeFloat16(r0.rb) * float(isSameEncodedLod(r0.a, alpha) || isSameEncodedLod(r0.a, alphaPlus) || isSameEncodedLod(r0.a, alphaMinus)),
+        decodeFloat16(r1.rb) * float(isSameEncodedLod(r1.a, alpha) || isSameEncodedLod(r1.a, alphaPlus) || isSameEncodedLod(r1.a, alphaMinus)),
+        decodeFloat16(r2.rb) * float(isSameEncodedLod(r2.a, alpha) || isSameEncodedLod(r2.a, alphaPlus) || isSameEncodedLod(r2.a, alphaMinus)),
+        decodeFloat16(r3.rb) * float(isSameEncodedLod(r3.a, alpha) || isSameEncodedLod(r3.a, alphaPlus) || isSameEncodedLod(r3.a, alphaMinus)),
+        decodeFloat16(r4.rb) * float(isSameEncodedLod(r4.a, alpha) || isSameEncodedLod(r4.a, alphaPlus) || isSameEncodedLod(r4.a, alphaMinus)),
+        decodeFloat16(r5.rb) * float(isSameEncodedLod(r5.a, alpha) || isSameEncodedLod(r5.a, alphaPlus) || isSameEncodedLod(r5.a, alphaMinus)),
+        decodeFloat16(r6.rb) * float(isSameEncodedLod(r6.a, alpha) || isSameEncodedLod(r6.a, alphaPlus) || isSameEncodedLod(r6.a, alphaMinus)),
+        decodeFloat16(r7.rb) * float(isSameEncodedLod(r7.a, alpha) || isSameEncodedLod(r7.a, alphaPlus) || isSameEncodedLod(r7.a, alphaMinus)),
+        decodeFloat16(r8.rb) * float(isSameEncodedLod(r8.a, alpha) || isSameEncodedLod(r8.a, alphaPlus) || isSameEncodedLod(r8.a, alphaMinus)),
+        decodeFloat16(r9.rb) * float(isSameEncodedLod(r9.a, alpha) || isSameEncodedLod(r9.a, alphaPlus) || isSameEncodedLod(r9.a, alphaMinus)),
+        decodeFloat16(r10.rb) * float(isSameEncodedLod(r10.a, alpha) || isSameEncodedLod(r10.a, alphaPlus) || isSameEncodedLod(r10.a, alphaMinus)),
+        decodeFloat16(r11.rb) * float(isSameEncodedLod(r11.a, alpha) || isSameEncodedLod(r11.a, alphaPlus) || isSameEncodedLod(r11.a, alphaMinus)),
+        decodeFloat16(r12.rb) * float(isSameEncodedLod(r12.a, alpha) || isSameEncodedLod(r12.a, alphaPlus) || isSameEncodedLod(r12.a, alphaMinus)),
+        decodeFloat16(r13.rb) * float(isSameEncodedLod(r13.a, alpha) || isSameEncodedLod(r13.a, alphaPlus) || isSameEncodedLod(r13.a, alphaMinus)),
+        decodeFloat16(r14.rb) * float(isSameEncodedLod(r14.a, alpha) || isSameEncodedLod(r14.a, alphaPlus) || isSameEncodedLod(r14.a, alphaMinus)),
+        decodeFloat16(r15.rb) * float(isSameEncodedLod(r15.a, alpha) || isSameEncodedLod(r15.a, alphaPlus) || isSameEncodedLod(r15.a, alphaMinus))
     );
 
     // find maximum score
@@ -181,5 +177,5 @@ void main()
 
     // non-maximum suppression
     float finalScore = step(maxScore, score) * score;
-    color.rb = encodeScore16(finalScore);
+    color.rb = encodeFloat16(finalScore);
 }

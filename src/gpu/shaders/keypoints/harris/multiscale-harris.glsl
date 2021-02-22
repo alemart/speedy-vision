@@ -34,7 +34,7 @@
 
 @include "sobel.glsl"
 @include "pyramids.glsl"
-@include "packf.glsl"
+@include "float16.glsl"
 
 uniform sampler2D pyramid;
 uniform int windowSize; // 1 (1x1 window), 3 (3x3 window), 5, ... up to 15 (positive odd number)
@@ -119,10 +119,10 @@ void main()
     }
 
     // encode score & scale in [0,1]
-    vec2 encodedScore = vec2(packf16(tmp.x)) / 255.0f;
+    vec2 encodedScore = encodeFloat16(tmp.x);
     float encodedScale = encodeLod(tmp.y);
 
     // done!
-    color = vec4(1.0f, pixel.g, 0.0f, encodedScale);
+    color = vec4(0.0f, pixel.g, 0.0f, encodedScale);
     color.rb = encodedScore;
 }

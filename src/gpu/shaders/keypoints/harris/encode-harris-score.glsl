@@ -19,7 +19,7 @@
  * Convert Harris score to an 8 bit component
  */
 
-@include "packf.glsl"
+@include "float16.glsl"
 
 uniform sampler2D image;
 
@@ -27,7 +27,7 @@ void main()
 {
     // read 16-bit half-float score
     vec4 pixel = threadPixel(image);
-    float score = unpackf16(uvec2(pixel.rb * 255.0f));
+    float score = decodeFloat16(pixel.rb);
 
     // convert to 8-bit, assuming 0 <= score <= 4
     float score8 = 1.0f - exp2(-score);

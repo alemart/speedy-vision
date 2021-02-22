@@ -15,22 +15,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * packf.glsl
- * Floating-point packing routines
+ * float16.glsl
+ * 16-bit half-float utilities
  */
 
-#ifndef _PACKF_GLSL
-#define _PACKF_GLSL
+#ifndef _FLOAT16_GLSL
+#define _FLOAT16_GLSL
+
+/**
+ * Convert a float to a 16-bit half-float and encode
+ * it into a (x,y) pair such that 0 <= x,y <= 1
+ * (suitable for storage in RGBA8 textures)
+ * @param {float} f input
+ * @returns {vec2}
+ */
+#define encodeFloat16(f) (vec2(packf16(f)) / 255.0f)
+
+/**
+ * The inverse of encodeFloat16()
+ * @param {vec2} v input in [0,1]^2
+ * @returns {float}
+ */
+#define decodeFloat16(v) unpackf16(uvec2((v) * 255.0f))
 
 /**
  * Convert a float to a 16-bit half-float and pack
  * it into a uvec2 (a,b) such that 0 <= a,b <= 255
- * @param {float} x input
+ * @param {float} f input
  * @returns {uvec2}
  */
-uvec2 packf16(/*highp*/ float x)
+uvec2 packf16(/*highp*/ float f)
 {
-    uint y = packHalf2x16(vec2(x, 0.0f));
+    uint y = packHalf2x16(vec2(f, 0.0f));
     return uvec2(y, y >> 8) & 0xFFu;
 }
 

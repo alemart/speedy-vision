@@ -19,7 +19,7 @@
  * Discard corners below a specified quality level
  */
 
-@include "packf.glsl"
+@include "float16.glsl"
 
 uniform sampler2D corners;
 uniform sampler2D maxScore; // image such that pixel.rb encodes the max corner score (for all pixels)
@@ -28,8 +28,8 @@ uniform float quality; // in [0,1]
 void main()
 {
     vec4 pixel = threadPixel(corners);
-    float maxval = unpackf16(uvec2(threadPixel(maxScore).rb * 255.0f));
-    float score = unpackf16(uvec2(pixel.rb * 255.0f));
+    float maxval = decodeFloat16(threadPixel(maxScore).rb);
+    float score = decodeFloat16(pixel.rb);
 
     // threshold
     float threshold = maxval * clamp(quality, 0.0f, 1.0f);
@@ -37,5 +37,5 @@ void main()
 
     // done!
     color = pixel;
-    color.rb = vec2(packf16(score)) / 255.0f;
+    color.rb = encodeFloat16(score);
 }
