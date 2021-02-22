@@ -28,18 +28,18 @@
  * @param {float} x input
  * @returns {uvec2}
  */
-uvec2 packf2x8(/*highp*/ float x)
+uvec2 packf16(/*highp*/ float x)
 {
     uint y = packHalf2x16(vec2(x, 0.0f));
     return uvec2(y, y >> 8) & 0xFF;
 }
 
 /**
- * The inverse of packf2x8()
- * @param {uvec2} v an output returned by packf2x8()
- * @returns {float} the original input given to packf2x8()
+ * The inverse of packf16()
+ * @param {uvec2} v an output returned by packf16()
+ * @returns {float}
  */
-/*highp*/ float unpackf2x8(uvec2 v)
+/*highp*/ float unpackf16(uvec2 v)
 {
     v &= 0xFF;
     return unpackHalf2x16(v.x | (v.y << 8)).x;
