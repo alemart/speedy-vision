@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@
  * fast-score8.glsl
  * FAST-5,8 corner detector: compute scores
  */
+
+@include "float16.glsl"
 
 uniform sampler2D image;
 uniform float threshold;
@@ -50,8 +52,12 @@ void main()
     scores += vec2(max(c_t - p5, 0.0f), max(p5 - ct, 0.0f));
     scores += vec2(max(c_t - p6, 0.0f), max(p6 - ct, 0.0f));
     scores += vec2(max(c_t - p7, 0.0f), max(p7 - ct, 0.0f));
+    scores /= 8.0f;
 
     // corner score
-    float score = max(scores.x, scores.y) / 8.0f;
-    color = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);
+    float score = max(scores.x, scores.y) * step(1.0f, pixel.r);
+
+    // done!
+    color = pixel;
+    color.rb = encodeFloat16(score);
 }

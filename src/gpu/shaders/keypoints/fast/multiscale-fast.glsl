@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
  */
 
 @include "pyramids.glsl"
+@include "float16.glsl"
 
 uniform sampler2D pyramid;
 uniform float threshold;
@@ -37,7 +38,7 @@ void main()
     ivec2 size = outputSize();
     float t = clamp(threshold, 0.0f, 1.0f);
     float ct = pixel.g + t, c_t = pixel.g - t;
-    vec2 best = vec2(0.0f, pixel.a);
+    vec2 best = vec2(0.0f);
 
     // assume it's not a corner
     color = vec4(0.0f, pixel.g, 0.0f, pixel.a);
@@ -123,22 +124,18 @@ void main()
         score *= float(isCorner);
 
         // discard possibly repeated corners when lod > 0
-        ivec2 remainder = thread % int(pot);
-        score *= float(remainder.x + remainder.y == 0);
-
-        // compute corner scale
-        float scale = encodeLod(lod);
+        //ivec2 remainder = thread % int(pot);
+        //score *= float(remainder.x + remainder.y == 0);
 
         // is it the best corner so far?
-        //best = (score > best.x) ? vec2(score, scale) : best;
-        best *= float(score <= best.x);
-        best += float(score > best.x) * vec2(score, scale);
+        best = (score > best.x) ? vec2(score, lod) : best;
 
         // update pot & lod
         lod += lodStep;
         pot = exp2(lod);
     }
 
-    // done
-    color.rba = best.xxy;
+    // encode score & scale
+    color.rb = encodeFloat16(best.x);
+    color.a = encodeLod(best.y);
 }

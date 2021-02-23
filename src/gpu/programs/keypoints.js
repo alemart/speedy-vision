@@ -32,7 +32,7 @@ import { MIN_KEYPOINT_SIZE } from '../../utils/globals';
 
 // FAST-9_16: requires 9 contiguous pixels
 // on a circumference of 16 pixels
-const fast9 = importShader('keypoints/fast/fast9lg.glsl').withArguments('image', 'threshold');
+const fast9 = importShader('keypoints/fast/fast9.glsl').withArguments('image', 'threshold');
 
 // FAST-7_12: requires 7 contiguous pixels
 // on a circumference of 12 pixels
@@ -59,6 +59,8 @@ const fastScore8 = importShader('keypoints/fast/fast-score8.glsl').withArguments
 const multiscaleFast = importShader('keypoints/fast/multiscale-fast.glsl')
                       .withArguments('pyramid', 'threshold', 'numberOfOctaves', 'lodStep');
 
+// encode FAST score in an 8-bit component
+const encodeFastScore = importShader('keypoints/fast/encode-fast-score.glsl').withArguments('image');
 
 
 
@@ -79,14 +81,8 @@ const encodeHarrisScore = importShader('keypoints/harris/encode-harris-score.gls
 // find the maximum harris score in an image
 const maxHarrisScore = importShader('keypoints/harris/max-harris-score.glsl').withArguments('self', 'iterationNumber');
 
-// non-maximum suppression
-const harrisNonMaxSuppression = importShader('keypoints/harris/nonmax-suppression.glsl')
-                               .withArguments('image', 'lodStep');
-const harrisMultiscaleNonMaxSuppression = importShader('keypoints/harris/nonmax-suppression.glsl')
-                                         .withArguments('image', 'lodStep')
-                                         .withDefines({
-                                             'MULTISCALE': 1
-                                         });
+// Sobel derivatives
+const multiscaleSobel = importShader('keypoints/harris/multiscale-sobel.glsl').withArguments('pyramid', 'lod');
 
 
 
@@ -115,12 +111,11 @@ const orbOrientation = importShader('keypoints/orb-orientation.glsl')
 //
 
 // non-maximum suppression
-const nonmaxSuppression = importShader('keypoints/nonmax-suppression.glsl').withArguments('image');
-const multiscaleSuppression = importShader('keypoints/multiscale-suppression.glsl').withArguments('image', 'lodStep');
-const samescaleSuppression = importShader('keypoints/samescale-suppression.glsl').withArguments('image');
-
-// Sobel derivatives
-const multiscaleSobel = importShader('keypoints/harris/multiscale-sobel.glsl').withArguments('pyramid', 'lod');
+const nonMaxSuppression = importShader('keypoints/nonmax-suppression.glsl')
+                         .withArguments('image', 'lodStep');
+const multiscaleNonMaxSuppression = importShader('keypoints/nonmax-suppression.glsl')
+                                   .withArguments('image', 'lodStep')
+                                   .withDefines({ 'MULTISCALE': 1 });
 
 // transfer keypoint orientation
 const transferOrientation = importShader('keypoints/transfer-orientation.glsl')
@@ -165,6 +160,7 @@ export class GPUKeypoints extends SpeedyProgramGroup
 
             // FAST-9,16 (multi-scale)
             .declare('multiscaleFast', multiscaleFast)
+            .declare('encodeFastScore', encodeFastScore)
 
             // BRISK Scale-Space Non-Maximum Suppression & Interpolation
             .declare('brisk', brisk)
@@ -176,19 +172,14 @@ export class GPUKeypoints extends SpeedyProgramGroup
             .declare('maxHarrisScore', maxHarrisScore, {
                 ...this.program.usesPingpongRendering()
             })
-            .declare('harrisNonMaxSuppression', harrisNonMaxSuppression)
-            .declare('harrisMultiscaleNonMaxSuppression', harrisMultiscaleNonMaxSuppression)
+
+            // Non-maximum suppression
+            .declare('_nonMaxSuppression', nonMaxSuppression)
+            .declare('_multiscaleNonMaxSuppression', multiscaleNonMaxSuppression)
 
             // ORB
             .declare('_orb', orb)
             .declare('_orbOrientation', orbOrientation)
-
-            // Generic non-maximum suppression
-            .declare('nonmaxSuppression', nonmaxSuppression)
-            .declare('multiscaleSuppression', multiscaleSuppression) // scale-space
-            .declare('samescaleSuppression', samescaleSuppression) // scale-space
-
-            // Sobel derivatives
             .declare('multiscaleSobel', multiscaleSobel, {
                 ...this.program.doesNotRecycleTextures()
             }) // scale-space
@@ -199,6 +190,20 @@ export class GPUKeypoints extends SpeedyProgramGroup
             // Suppress feature descriptors
             .declare('_suppressDescriptors', suppressDescriptors)
         ;
+    }
+
+    /**
+     * Non-maximum suppression
+     * @param {SpeedyTexture} corners scores are encoded as float16
+     * @param {number} [lodStep] log2(scaleFactor) - specify if multi-scale
+     * @returns {SpeedyTexture}
+     */
+    nonMaxSuppression(corners, lodStep = 0)
+    {
+        if(lodStep > 0)
+            return this._multiscaleNonMaxSuppression(corners, lodStep);
+        else
+            return this._nonMaxSuppression(corners, 0);
     }
 
     /**

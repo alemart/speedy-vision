@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -113,10 +113,13 @@ export class FASTFeatures extends FeatureDetectionAlgorithm
             throw new NotSupportedError();
 
         // non-maximum suppression
-        corners = gpu.programs.keypoints.nonmaxSuppression(corners);
+        const suppressedCorners = gpu.programs.keypoints.nonMaxSuppression(corners);
+
+        // convert scores to an 8-bit component
+        const finalCorners = gpu.programs.keypoints.encodeFastScore(suppressedCorners);
 
         // encode corners
-        return gpu.programs.encoders.encodeKeypoints(corners, descriptorSize, extraSize);
+        return gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize);
     }
 }
 
@@ -236,14 +239,16 @@ export class MultiscaleFASTFeatures extends FeatureDetectionAlgorithm
         const pyramid = inputTexture.generatePyramid(gpu);
 
         // find corners
-        let corners = gpu.programs.keypoints.multiscaleFast(pyramid, normalizedThreshold, numberOfOctaves, lodStep);
+        const corners = gpu.programs.keypoints.multiscaleFast(pyramid, normalizedThreshold, numberOfOctaves, lodStep);
 
         // non-maximum suppression
-        corners = gpu.programs.keypoints.samescaleSuppression(corners);
-        corners = gpu.programs.keypoints.multiscaleSuppression(corners, lodStep);
+        const suppressedCorners = gpu.programs.keypoints.nonMaxSuppression(corners, lodStep);
+
+        // convert scores to an 8-bit component
+        const finalCorners = gpu.programs.keypoints.encodeFastScore(suppressedCorners);
 
         // encode keypoints
-        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(corners, descriptorSize, extraSize);
+        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize);
 
         // done
         return detectedKeypoints;

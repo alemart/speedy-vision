@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@
  * FAST-7,12 corner detector
  */
 
+@include "pyramids.glsl"
+
 uniform sampler2D image;
 uniform float threshold;
 
@@ -31,7 +33,7 @@ void main()
     vec4 pixel = threadPixel(image);
 
     // assume it's not a corner
-    color = vec4(0.0f, pixel.gba);
+    color = vec4(0.0f, pixel.g, 0.0f, encodeLod(0.0f));
 
     if(
         thread.x >= 3 && thread.x < size.x - 3 &&
@@ -108,12 +110,12 @@ void main()
 
                 // got a corner!
                 if(bc >= 7 || dc >= 7)
-                    color = vec4(1.0f, pixel.gba);
+                    color.r = 1.0f;
 
             }
             else {
                 // got a corner!
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
             }
         }
     }

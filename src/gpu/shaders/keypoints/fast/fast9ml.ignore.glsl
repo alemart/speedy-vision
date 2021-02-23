@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,8 @@
  *
  */
 
+@include "pyramids.glsl"
+
 uniform sampler2D image;
 uniform float threshold;
 const ivec4 margin = ivec4(3, 3, 4, 4);
@@ -45,7 +47,7 @@ void main()
     ivec2 size = outputSize();
 
     // assume it's not a corner
-    color = vec4(0.0f, pixel.gba);
+    color = vec4(0.0f, pixel.g, 0.0f, encodeLod(0.0f));
 
     // outside bounds?
     //if(thread.x < 3 || thread.y < 3 || thread.x >= size.x - 3 || thread.y >= size.y - 3)
@@ -91,16 +93,16 @@ void main()
           if(p6 > ct)
            if(p7 > ct)
             if(p8 > ct)
-             color = vec4(1.0f, pixel.gba);
+             color.r = 1.0f;
             else
              if(p15 > ct)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               ;
            else if(p7 < c_t)
             if(p14 > ct)
              if(p15 > ct)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               ;
             else if(p14 < c_t)
@@ -111,7 +113,7 @@ void main()
                  if(p12 < c_t)
                   if(p13 < c_t)
                    if(p15 < c_t)
-                    color = vec4(1.0f, pixel.gba);
+                    color.r = 1.0f;
                    else
                     ;
                   else
@@ -131,7 +133,7 @@ void main()
            else
             if(p14 > ct)
              if(p15 > ct)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               ;
             else
@@ -140,7 +142,7 @@ void main()
            if(p15 > ct)
             if(p13 > ct)
              if(p14 > ct)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               ;
             else if(p13 < c_t)
@@ -151,7 +153,7 @@ void main()
                  if(p11 < c_t)
                   if(p12 < c_t)
                    if(p14 < c_t)
-                    color = vec4(1.0f, pixel.gba);
+                    color.r = 1.0f;
                    else
                     ;
                   else
@@ -177,7 +179,7 @@ void main()
                  if(p12 < c_t)
                   if(p13 < c_t)
                    if(p14 < c_t)
-                    color = vec4(1.0f, pixel.gba);
+                    color.r = 1.0f;
                    else
                     ;
                   else
@@ -198,7 +200,7 @@ void main()
            if(p13 > ct)
             if(p14 > ct)
              if(p15 > ct)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               ;
             else
@@ -212,7 +214,7 @@ void main()
                  if(p12 < c_t)
                   if(p14 < c_t)
                    if(p15 < c_t)
-                    color = vec4(1.0f, pixel.gba);
+                    color.r = 1.0f;
                    else
                     ;
                   else
@@ -236,7 +238,7 @@ void main()
            if(p12 > ct)
             if(p13 > ct)
              if(p15 > ct)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p6 > ct)
                if(p7 > ct)
@@ -244,7 +246,7 @@ void main()
                  if(p9 > ct)
                   if(p10 > ct)
                    if(p11 > ct)
-                    color = vec4(1.0f, pixel.gba);
+                    color.r = 1.0f;
                    else
                     ;
                   else
@@ -267,7 +269,7 @@ void main()
                 if(p10 < c_t)
                  if(p11 < c_t)
                   if(p13 < c_t)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    ;
                  else
@@ -293,10 +295,10 @@ void main()
                 if(p12 < c_t)
                  if(p13 < c_t)
                   if(p6 < c_t)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    if(p15 < c_t)
-                    color = vec4(1.0f, pixel.gba);
+                    color.r = 1.0f;
                    else
                     ;
                  else
@@ -322,7 +324,7 @@ void main()
                 if(p11 < c_t)
                  if(p12 < c_t)
                   if(p13 < c_t)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    ;
                  else
@@ -344,7 +346,7 @@ void main()
            if(p13 > ct)
             if(p14 > ct)
              if(p15 > ct)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p6 > ct)
                if(p7 > ct)
@@ -352,7 +354,7 @@ void main()
                  if(p9 > ct)
                   if(p10 > ct)
                    if(p11 > ct)
-                    color = vec4(1.0f, pixel.gba);
+                    color.r = 1.0f;
                    else
                     ;
                   else
@@ -378,10 +380,10 @@ void main()
                 if(p13 < c_t)
                  if(p14 < c_t)
                   if(p6 < c_t)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    if(p15 < c_t)
-                    color = vec4(1.0f, pixel.gba);
+                    color.r = 1.0f;
                    else
                     ;
                  else
@@ -406,14 +408,14 @@ void main()
            if(p12 > ct)
             if(p14 > ct)
              if(p15 > ct)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p6 > ct)
                if(p7 > ct)
                 if(p8 > ct)
                  if(p9 > ct)
                   if(p10 > ct)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    ;
                  else
@@ -431,7 +433,7 @@ void main()
                 if(p8 > ct)
                  if(p9 > ct)
                   if(p10 > ct)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    ;
                  else
@@ -454,7 +456,7 @@ void main()
                if(p9 < c_t)
                 if(p10 < c_t)
                  if(p12 < c_t)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -480,16 +482,16 @@ void main()
                if(p12 < c_t)
                 if(p6 < c_t)
                  if(p5 < c_t)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   if(p14 < c_t)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    ;
                 else
                  if(p14 < c_t)
                   if(p15 < c_t)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    ;
                  else
@@ -515,7 +517,7 @@ void main()
                if(p10 < c_t)
                 if(p11 < c_t)
                  if(p12 < c_t)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -538,14 +540,14 @@ void main()
            if(p13 > ct)
             if(p14 > ct)
              if(p15 > ct)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p6 > ct)
                if(p7 > ct)
                 if(p8 > ct)
                  if(p9 > ct)
                   if(p10 > ct)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    ;
                  else
@@ -563,7 +565,7 @@ void main()
                 if(p8 > ct)
                  if(p9 > ct)
                   if(p10 > ct)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    ;
                  else
@@ -589,16 +591,16 @@ void main()
                if(p13 < c_t)
                 if(p6 < c_t)
                  if(p5 < c_t)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   if(p14 < c_t)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    ;
                 else
                  if(p14 < c_t)
                   if(p15 < c_t)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    ;
                  else
@@ -624,13 +626,13 @@ void main()
            if(p13 > ct)
             if(p14 > ct)
              if(p15 > ct)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p6 > ct)
                if(p7 > ct)
                 if(p8 > ct)
                  if(p9 > ct)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -645,7 +647,7 @@ void main()
                if(p7 > ct)
                 if(p8 > ct)
                  if(p9 > ct)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -663,7 +665,7 @@ void main()
                if(p7 > ct)
                 if(p8 > ct)
                  if(p9 > ct)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -688,11 +690,11 @@ void main()
              if(p6 < c_t)
               if(p5 < c_t)
                if(p4 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 if(p12 < c_t)
                  if(p13 < c_t)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -701,7 +703,7 @@ void main()
                if(p12 < c_t)
                 if(p13 < c_t)
                  if(p14 < c_t)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -713,7 +715,7 @@ void main()
                if(p13 < c_t)
                 if(p14 < c_t)
                  if(p15 < c_t)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -739,13 +741,13 @@ void main()
            if(p13 > ct)
             if(p14 > ct)
              if(p15 > ct)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p6 > ct)
                if(p7 > ct)
                 if(p8 > ct)
                  if(p9 > ct)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -760,7 +762,7 @@ void main()
                if(p7 > ct)
                 if(p8 > ct)
                  if(p9 > ct)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -778,7 +780,7 @@ void main()
                if(p7 > ct)
                 if(p8 > ct)
                  if(p9 > ct)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -804,16 +806,16 @@ void main()
               if(p6 < c_t)
                if(p5 < c_t)
                 if(p4 < c_t)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  if(p13 < c_t)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                else
                 if(p13 < c_t)
                  if(p14 < c_t)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -822,7 +824,7 @@ void main()
                if(p13 < c_t)
                 if(p14 < c_t)
                  if(p15 < c_t)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -849,12 +851,12 @@ void main()
            if(p13 > ct)
             if(p14 > ct)
              if(p15 > ct)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p6 > ct)
                if(p7 > ct)
                 if(p8 > ct)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -866,7 +868,7 @@ void main()
               if(p6 > ct)
                if(p7 > ct)
                 if(p8 > ct)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -881,7 +883,7 @@ void main()
               if(p6 > ct)
                if(p7 > ct)
                 if(p8 > ct)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -899,7 +901,7 @@ void main()
               if(p6 > ct)
                if(p7 > ct)
                 if(p8 > ct)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -924,11 +926,11 @@ void main()
             if(p5 < c_t)
              if(p4 < c_t)
               if(p3 < c_t)
-               color = vec4(1.0f, pixel.gba);
+               color.r = 1.0f;
               else
                if(p11 < c_t)
                 if(p12 < c_t)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -937,7 +939,7 @@ void main()
               if(p11 < c_t)
                if(p12 < c_t)
                 if(p13 < c_t)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -949,7 +951,7 @@ void main()
               if(p12 < c_t)
                if(p13 < c_t)
                 if(p14 < c_t)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -964,7 +966,7 @@ void main()
               if(p13 < c_t)
                if(p14 < c_t)
                 if(p15 < c_t)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -991,12 +993,12 @@ void main()
            if(p13 > ct)
             if(p14 > ct)
              if(p15 > ct)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p6 > ct)
                if(p7 > ct)
                 if(p8 > ct)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -1008,7 +1010,7 @@ void main()
               if(p6 > ct)
                if(p7 > ct)
                 if(p8 > ct)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -1023,7 +1025,7 @@ void main()
               if(p6 > ct)
                if(p7 > ct)
                 if(p8 > ct)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -1041,7 +1043,7 @@ void main()
               if(p6 > ct)
                if(p7 > ct)
                 if(p8 > ct)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -1067,16 +1069,16 @@ void main()
              if(p5 < c_t)
               if(p4 < c_t)
                if(p3 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 if(p12 < c_t)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
               else
                if(p12 < c_t)
                 if(p13 < c_t)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -1085,7 +1087,7 @@ void main()
               if(p12 < c_t)
                if(p13 < c_t)
                 if(p14 < c_t)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -1097,7 +1099,7 @@ void main()
               if(p13 < c_t)
                if(p14 < c_t)
                 if(p15 < c_t)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -1125,11 +1127,11 @@ void main()
            if(p13 > ct)
             if(p14 > ct)
              if(p15 > ct)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p6 > ct)
                if(p7 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1138,7 +1140,7 @@ void main()
              if(p5 > ct)
               if(p6 > ct)
                if(p7 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1150,7 +1152,7 @@ void main()
              if(p5 > ct)
               if(p6 > ct)
                if(p7 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1165,7 +1167,7 @@ void main()
              if(p5 > ct)
               if(p6 > ct)
                if(p7 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1183,7 +1185,7 @@ void main()
              if(p5 > ct)
               if(p6 > ct)
                if(p7 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1208,11 +1210,11 @@ void main()
            if(p4 < c_t)
             if(p3 < c_t)
              if(p2 < c_t)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p10 < c_t)
                if(p11 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1221,7 +1223,7 @@ void main()
              if(p10 < c_t)
               if(p11 < c_t)
                if(p12 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1233,7 +1235,7 @@ void main()
              if(p11 < c_t)
               if(p12 < c_t)
                if(p13 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1248,7 +1250,7 @@ void main()
              if(p12 < c_t)
               if(p13 < c_t)
                if(p14 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1266,7 +1268,7 @@ void main()
              if(p13 < c_t)
               if(p14 < c_t)
                if(p15 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1294,11 +1296,11 @@ void main()
            if(p13 > ct)
             if(p14 > ct)
              if(p15 > ct)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p6 > ct)
                if(p7 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1307,7 +1309,7 @@ void main()
              if(p5 > ct)
               if(p6 > ct)
                if(p7 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1319,7 +1321,7 @@ void main()
              if(p5 > ct)
               if(p6 > ct)
                if(p7 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1334,7 +1336,7 @@ void main()
              if(p5 > ct)
               if(p6 > ct)
                if(p7 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1352,7 +1354,7 @@ void main()
              if(p5 > ct)
               if(p6 > ct)
                if(p7 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1378,16 +1380,16 @@ void main()
             if(p4 < c_t)
              if(p3 < c_t)
               if(p2 < c_t)
-               color = vec4(1.0f, pixel.gba);
+               color.r = 1.0f;
               else
                if(p11 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
              else
               if(p11 < c_t)
                if(p12 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1396,7 +1398,7 @@ void main()
              if(p11 < c_t)
               if(p12 < c_t)
                if(p13 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1408,7 +1410,7 @@ void main()
              if(p12 < c_t)
               if(p13 < c_t)
                if(p14 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1423,7 +1425,7 @@ void main()
              if(p13 < c_t)
               if(p14 < c_t)
                if(p15 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1452,11 +1454,11 @@ void main()
            if(p4 > ct)
             if(p3 > ct)
              if(p2 > ct)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p10 > ct)
                if(p11 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1465,7 +1467,7 @@ void main()
              if(p10 > ct)
               if(p11 > ct)
                if(p12 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1477,7 +1479,7 @@ void main()
              if(p11 > ct)
               if(p12 > ct)
                if(p13 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1492,7 +1494,7 @@ void main()
              if(p12 > ct)
               if(p13 > ct)
                if(p14 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1510,7 +1512,7 @@ void main()
              if(p13 > ct)
               if(p14 > ct)
                if(p15 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1535,11 +1537,11 @@ void main()
            if(p13 < c_t)
             if(p14 < c_t)
              if(p15 < c_t)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p6 < c_t)
                if(p7 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1548,7 +1550,7 @@ void main()
              if(p5 < c_t)
               if(p6 < c_t)
                if(p7 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1560,7 +1562,7 @@ void main()
              if(p5 < c_t)
               if(p6 < c_t)
                if(p7 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1575,7 +1577,7 @@ void main()
              if(p5 < c_t)
               if(p6 < c_t)
                if(p7 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1593,7 +1595,7 @@ void main()
              if(p5 < c_t)
               if(p6 < c_t)
                if(p7 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -1622,11 +1624,11 @@ void main()
             if(p5 > ct)
              if(p4 > ct)
               if(p3 > ct)
-               color = vec4(1.0f, pixel.gba);
+               color.r = 1.0f;
               else
                if(p11 > ct)
                 if(p12 > ct)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -1635,7 +1637,7 @@ void main()
               if(p11 > ct)
                if(p12 > ct)
                 if(p13 > ct)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -1647,7 +1649,7 @@ void main()
               if(p12 > ct)
                if(p13 > ct)
                 if(p14 > ct)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -1662,7 +1664,7 @@ void main()
               if(p13 > ct)
                if(p14 > ct)
                 if(p15 > ct)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -1686,12 +1688,12 @@ void main()
            if(p13 < c_t)
             if(p14 < c_t)
              if(p15 < c_t)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p6 < c_t)
                if(p7 < c_t)
                 if(p8 < c_t)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -1703,7 +1705,7 @@ void main()
               if(p6 < c_t)
                if(p7 < c_t)
                 if(p8 < c_t)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -1718,7 +1720,7 @@ void main()
               if(p6 < c_t)
                if(p7 < c_t)
                 if(p8 < c_t)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -1736,7 +1738,7 @@ void main()
               if(p6 < c_t)
                if(p7 < c_t)
                 if(p8 < c_t)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -1765,11 +1767,11 @@ void main()
              if(p6 > ct)
               if(p5 > ct)
                if(p4 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 if(p12 > ct)
                  if(p13 > ct)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -1778,7 +1780,7 @@ void main()
                if(p12 > ct)
                 if(p13 > ct)
                  if(p14 > ct)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -1790,7 +1792,7 @@ void main()
                if(p13 > ct)
                 if(p14 > ct)
                  if(p15 > ct)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -1813,13 +1815,13 @@ void main()
            if(p13 < c_t)
             if(p14 < c_t)
              if(p15 < c_t)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p6 < c_t)
                if(p7 < c_t)
                 if(p8 < c_t)
                  if(p9 < c_t)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -1834,7 +1836,7 @@ void main()
                if(p7 < c_t)
                 if(p8 < c_t)
                  if(p9 < c_t)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -1852,7 +1854,7 @@ void main()
                if(p7 < c_t)
                 if(p8 < c_t)
                  if(p9 < c_t)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -1882,16 +1884,16 @@ void main()
                if(p12 > ct)
                 if(p6 > ct)
                  if(p5 > ct)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   if(p14 > ct)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    ;
                 else
                  if(p14 > ct)
                   if(p15 > ct)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    ;
                  else
@@ -1917,7 +1919,7 @@ void main()
                if(p9 > ct)
                 if(p10 > ct)
                  if(p12 > ct)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -1936,14 +1938,14 @@ void main()
            if(p12 < c_t)
             if(p14 < c_t)
              if(p15 < c_t)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p6 < c_t)
                if(p7 < c_t)
                 if(p8 < c_t)
                  if(p9 < c_t)
                   if(p10 < c_t)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    ;
                  else
@@ -1961,7 +1963,7 @@ void main()
                 if(p8 < c_t)
                  if(p9 < c_t)
                   if(p10 < c_t)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    ;
                  else
@@ -1987,7 +1989,7 @@ void main()
                if(p10 > ct)
                 if(p11 > ct)
                  if(p12 > ct)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -2015,10 +2017,10 @@ void main()
                 if(p12 > ct)
                  if(p13 > ct)
                   if(p6 > ct)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    if(p15 > ct)
-                    color = vec4(1.0f, pixel.gba);
+                    color.r = 1.0f;
                    else
                     ;
                  else
@@ -2044,7 +2046,7 @@ void main()
                 if(p10 > ct)
                  if(p11 > ct)
                   if(p13 > ct)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    ;
                  else
@@ -2062,7 +2064,7 @@ void main()
            else if(p12 < c_t)
             if(p13 < c_t)
              if(p15 < c_t)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p6 < c_t)
                if(p7 < c_t)
@@ -2070,7 +2072,7 @@ void main()
                  if(p9 < c_t)
                   if(p10 < c_t)
                    if(p11 < c_t)
-                    color = vec4(1.0f, pixel.gba);
+                    color.r = 1.0f;
                    else
                     ;
                   else
@@ -2096,7 +2098,7 @@ void main()
                 if(p11 > ct)
                  if(p12 > ct)
                   if(p13 > ct)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    ;
                  else
@@ -2124,7 +2126,7 @@ void main()
                  if(p11 > ct)
                   if(p12 > ct)
                    if(p14 > ct)
-                    color = vec4(1.0f, pixel.gba);
+                    color.r = 1.0f;
                    else
                     ;
                   else
@@ -2141,7 +2143,7 @@ void main()
               ;
             else if(p13 < c_t)
              if(p14 < c_t)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               ;
             else
@@ -2155,7 +2157,7 @@ void main()
                  if(p12 > ct)
                   if(p13 > ct)
                    if(p14 > ct)
-                    color = vec4(1.0f, pixel.gba);
+                    color.r = 1.0f;
                    else
                     ;
                   else
@@ -2182,7 +2184,7 @@ void main()
                  if(p12 > ct)
                   if(p13 > ct)
                    if(p15 > ct)
-                    color = vec4(1.0f, pixel.gba);
+                    color.r = 1.0f;
                    else
                     ;
                   else
@@ -2199,23 +2201,23 @@ void main()
               ;
             else if(p14 < c_t)
              if(p15 < c_t)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               ;
             else
              ;
            else if(p7 < c_t)
             if(p8 < c_t)
-             color = vec4(1.0f, pixel.gba);
+             color.r = 1.0f;
             else
              if(p15 < c_t)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               ;
            else
             if(p14 < c_t)
              if(p15 < c_t)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               ;
             else
@@ -2230,7 +2232,7 @@ void main()
                  if(p12 > ct)
                   if(p14 > ct)
                    if(p15 > ct)
-                    color = vec4(1.0f, pixel.gba);
+                    color.r = 1.0f;
                    else
                     ;
                   else
@@ -2250,7 +2252,7 @@ void main()
            else if(p13 < c_t)
             if(p14 < c_t)
              if(p15 < c_t)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               ;
             else
@@ -2267,10 +2269,10 @@ void main()
                 if(p13 > ct)
                  if(p14 > ct)
                   if(p6 > ct)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    if(p15 > ct)
-                    color = vec4(1.0f, pixel.gba);
+                    color.r = 1.0f;
                    else
                     ;
                  else
@@ -2291,7 +2293,7 @@ void main()
            if(p13 < c_t)
             if(p14 < c_t)
              if(p15 < c_t)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p6 < c_t)
                if(p7 < c_t)
@@ -2299,7 +2301,7 @@ void main()
                  if(p9 < c_t)
                   if(p10 < c_t)
                    if(p11 < c_t)
-                    color = vec4(1.0f, pixel.gba);
+                    color.r = 1.0f;
                    else
                     ;
                   else
@@ -2328,16 +2330,16 @@ void main()
                if(p13 > ct)
                 if(p6 > ct)
                  if(p5 > ct)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   if(p14 > ct)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    ;
                 else
                  if(p14 > ct)
                   if(p15 > ct)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    ;
                  else
@@ -2359,14 +2361,14 @@ void main()
            if(p13 < c_t)
             if(p14 < c_t)
              if(p15 < c_t)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p6 < c_t)
                if(p7 < c_t)
                 if(p8 < c_t)
                  if(p9 < c_t)
                   if(p10 < c_t)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    ;
                  else
@@ -2384,7 +2386,7 @@ void main()
                 if(p8 < c_t)
                  if(p9 < c_t)
                   if(p10 < c_t)
-                   color = vec4(1.0f, pixel.gba);
+                   color.r = 1.0f;
                   else
                    ;
                  else
@@ -2413,16 +2415,16 @@ void main()
               if(p6 > ct)
                if(p5 > ct)
                 if(p4 > ct)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  if(p13 > ct)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                else
                 if(p13 > ct)
                  if(p14 > ct)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -2431,7 +2433,7 @@ void main()
                if(p13 > ct)
                 if(p14 > ct)
                  if(p15 > ct)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -2454,13 +2456,13 @@ void main()
            if(p13 < c_t)
             if(p14 < c_t)
              if(p15 < c_t)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p6 < c_t)
                if(p7 < c_t)
                 if(p8 < c_t)
                  if(p9 < c_t)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -2475,7 +2477,7 @@ void main()
                if(p7 < c_t)
                 if(p8 < c_t)
                  if(p9 < c_t)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -2493,7 +2495,7 @@ void main()
                if(p7 < c_t)
                 if(p8 < c_t)
                  if(p9 < c_t)
-                  color = vec4(1.0f, pixel.gba);
+                  color.r = 1.0f;
                  else
                   ;
                 else
@@ -2522,16 +2524,16 @@ void main()
              if(p5 > ct)
               if(p4 > ct)
                if(p3 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 if(p12 > ct)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
               else
                if(p12 > ct)
                 if(p13 > ct)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -2540,7 +2542,7 @@ void main()
               if(p12 > ct)
                if(p13 > ct)
                 if(p14 > ct)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -2552,7 +2554,7 @@ void main()
               if(p13 > ct)
                if(p14 > ct)
                 if(p15 > ct)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -2576,12 +2578,12 @@ void main()
            if(p13 < c_t)
             if(p14 < c_t)
              if(p15 < c_t)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p6 < c_t)
                if(p7 < c_t)
                 if(p8 < c_t)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -2593,7 +2595,7 @@ void main()
               if(p6 < c_t)
                if(p7 < c_t)
                 if(p8 < c_t)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -2608,7 +2610,7 @@ void main()
               if(p6 < c_t)
                if(p7 < c_t)
                 if(p8 < c_t)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -2626,7 +2628,7 @@ void main()
               if(p6 < c_t)
                if(p7 < c_t)
                 if(p8 < c_t)
-                 color = vec4(1.0f, pixel.gba);
+                 color.r = 1.0f;
                 else
                  ;
                else
@@ -2655,16 +2657,16 @@ void main()
             if(p4 > ct)
              if(p3 > ct)
               if(p2 > ct)
-               color = vec4(1.0f, pixel.gba);
+               color.r = 1.0f;
               else
                if(p11 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
              else
               if(p11 > ct)
                if(p12 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -2673,7 +2675,7 @@ void main()
              if(p11 > ct)
               if(p12 > ct)
                if(p13 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -2685,7 +2687,7 @@ void main()
              if(p12 > ct)
               if(p13 > ct)
                if(p14 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -2700,7 +2702,7 @@ void main()
              if(p13 > ct)
               if(p14 > ct)
                if(p15 > ct)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -2725,11 +2727,11 @@ void main()
            if(p13 < c_t)
             if(p14 < c_t)
              if(p15 < c_t)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p6 < c_t)
                if(p7 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -2738,7 +2740,7 @@ void main()
              if(p5 < c_t)
               if(p6 < c_t)
                if(p7 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -2750,7 +2752,7 @@ void main()
              if(p5 < c_t)
               if(p6 < c_t)
                if(p7 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -2765,7 +2767,7 @@ void main()
              if(p5 < c_t)
               if(p6 < c_t)
                if(p7 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -2783,7 +2785,7 @@ void main()
              if(p5 < c_t)
               if(p6 < c_t)
                if(p7 < c_t)
-                color = vec4(1.0f, pixel.gba);
+                color.r = 1.0f;
                else
                 ;
               else
@@ -2812,16 +2814,16 @@ void main()
            if(p3 > ct)
             if(p2 > ct)
              if(p1 > ct)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p10 > ct)
-               color = vec4(1.0f, pixel.gba);
+               color.r = 1.0f;
               else
                ;
             else
              if(p10 > ct)
               if(p11 > ct)
-               color = vec4(1.0f, pixel.gba);
+               color.r = 1.0f;
               else
                ;
              else
@@ -2830,7 +2832,7 @@ void main()
             if(p10 > ct)
              if(p11 > ct)
               if(p12 > ct)
-               color = vec4(1.0f, pixel.gba);
+               color.r = 1.0f;
               else
                ;
              else
@@ -2842,7 +2844,7 @@ void main()
             if(p11 > ct)
              if(p12 > ct)
               if(p13 > ct)
-               color = vec4(1.0f, pixel.gba);
+               color.r = 1.0f;
               else
                ;
              else
@@ -2857,7 +2859,7 @@ void main()
             if(p12 > ct)
              if(p13 > ct)
               if(p14 > ct)
-               color = vec4(1.0f, pixel.gba);
+               color.r = 1.0f;
               else
                ;
              else
@@ -2875,7 +2877,7 @@ void main()
             if(p13 > ct)
              if(p14 > ct)
               if(p15 > ct)
-               color = vec4(1.0f, pixel.gba);
+               color.r = 1.0f;
               else
                ;
              else
@@ -2901,16 +2903,16 @@ void main()
            if(p3 < c_t)
             if(p2 < c_t)
              if(p1 < c_t)
-              color = vec4(1.0f, pixel.gba);
+              color.r = 1.0f;
              else
               if(p10 < c_t)
-               color = vec4(1.0f, pixel.gba);
+               color.r = 1.0f;
               else
                ;
             else
              if(p10 < c_t)
               if(p11 < c_t)
-               color = vec4(1.0f, pixel.gba);
+               color.r = 1.0f;
               else
                ;
              else
@@ -2919,7 +2921,7 @@ void main()
             if(p10 < c_t)
              if(p11 < c_t)
               if(p12 < c_t)
-               color = vec4(1.0f, pixel.gba);
+               color.r = 1.0f;
               else
                ;
              else
@@ -2931,7 +2933,7 @@ void main()
             if(p11 < c_t)
              if(p12 < c_t)
               if(p13 < c_t)
-               color = vec4(1.0f, pixel.gba);
+               color.r = 1.0f;
               else
                ;
              else
@@ -2946,7 +2948,7 @@ void main()
             if(p12 < c_t)
              if(p13 < c_t)
               if(p14 < c_t)
-               color = vec4(1.0f, pixel.gba);
+               color.r = 1.0f;
               else
                ;
              else
@@ -2964,7 +2966,7 @@ void main()
             if(p13 < c_t)
              if(p14 < c_t)
               if(p15 < c_t)
-               color = vec4(1.0f, pixel.gba);
+               color.r = 1.0f;
               else
                ;
              else

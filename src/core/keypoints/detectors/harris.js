@@ -102,7 +102,7 @@ export class HarrisFeatures extends FeatureDetectionAlgorithm
         const filteredCorners = gpu.programs.keypoints.harrisCutoff(corners, maxScore, quality);
 
         // non-maximum suppression
-        const suppressedCorners = gpu.programs.keypoints.harrisNonMaxSuppression(filteredCorners, 0);
+        const suppressedCorners = gpu.programs.keypoints.nonMaxSuppression(filteredCorners);
 
         // convert score to 8-bit component
         const finalCorners = gpu.programs.keypoints.encodeHarrisScore(suppressedCorners);
@@ -227,7 +227,7 @@ export class MultiscaleHarrisFeatures extends FeatureDetectionAlgorithm
         const filteredCorners = gpu.programs.keypoints.harrisCutoff(corners, maxScore, quality);
 
         // non-maximum suppression
-        const suppressedCorners = gpu.programs.keypoints.harrisMultiscaleNonMaxSuppression(filteredCorners, lodStep);
+        const suppressedCorners = gpu.programs.keypoints.nonMaxSuppression(filteredCorners, lodStep);
 
         // convert score to 8-bit component
         const finalCorners = gpu.programs.keypoints.encodeHarrisScore(suppressedCorners);
