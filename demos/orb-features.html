@@ -39,6 +39,13 @@
                 <label for="speed-slider">Video speed</label>
                 <input type="range" id="speed-slider" min="0.10" max="2" value="1" step="0.01">
             </div>
+            <div>
+                <label for="method">Detector</label>
+                <select id="method">
+                    <option value="fast">FAST</option>
+                    <option value="harris" selected>Harris</option>
+                </select>
+            </div>
         </form>
         <div>
             <canvas id="canvas-demo"></canvas><br>
@@ -65,22 +72,31 @@ window.onload = async function()
 
     // elements
     const sensitivity = document.getElementById('sensitivity');
+    const method = document.getElementById('method');
 
-    // create the ORB feature detector
-    const featureDetector = Speedy.FeatureDetector.ORB();
+    // create the feature detector
+    const orb = Speedy.FeatureDescriptor.ORB();
+    const featureDetector = {
+        'fast': Speedy.FeatureDetector.MultiscaleFAST().link(orb),
+        'harris': Speedy.FeatureDetector.MultiscaleHarris().link(orb),
+    };
 
     // main loop
     async function loop()
     {
-        // set the sensitivity of the feature detector
-        featureDetector.sensitivity = sensitivity.value;
+        // pick a feature detector
+        const detector = featureDetector[method.value];
+
+        // configure the detector
+        detector.sensitivity = Number(sensitivity.value);
+        detector.scaleFactor = 1.19;
 
         // find features
-        const features = await featureDetector.detect(media);
+        const features = await detector.detect(media);
 
         // render features
         media.draw(canvas);
-        renderFeatures(canvas, features, 2, '#afa', 2);
+        renderFeatures(canvas, features, 2, '#0fa', 2);
         renderStatus(canvas, features);
 
         // loop
