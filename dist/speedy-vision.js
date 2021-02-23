@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-02-15T23:08:42.357Z
+ * Date: 2021-02-23T21:32:55.363Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -307,7 +307,6 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _feature_algorithm__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../feature-algorithm */ "./src/core/keypoints/feature-algorithm.js");
 /* harmony import */ var _speedy_descriptor__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../speedy-descriptor */ "./src/core/speedy-descriptor.js");
 /* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../speedy-feature */ "./src/core/speedy-feature.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -335,10 +334,8 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-
 // constants
 const DESCRIPTOR_SIZE = 32; // 256 bits
-const DEFAULT_ORIENTATION_PATCH_RADIUS = 7; // for computing keypoint orientation
 
 /**
  * ORB features
@@ -389,14 +386,13 @@ class ORBFeatures extends _feature_description_algorithm__WEBPACK_IMPORTED_MODUL
     {
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
-        const orientationPatchRadius = DEFAULT_ORIENTATION_PATCH_RADIUS;
 
         // generate pyramid
         const pyramid = inputTexture.generatePyramid(gpu);
 
         // compute orientation
         const encoderLength = gpu.programs.encoders.encoderLength;
-        return gpu.programs.keypoints.orientationViaCentroid(pyramid, detectedKeypoints, orientationPatchRadius, descriptorSize, extraSize, encoderLength);
+        return gpu.programs.keypoints.orbOrientation(pyramid, detectedKeypoints, descriptorSize, extraSize, encoderLength);
     }
 
     /**
@@ -437,7 +433,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -549,10 +545,13 @@ class FASTFeatures extends _feature_detection_algorithm__WEBPACK_IMPORTED_MODULE
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["NotSupportedError"]();
 
         // non-maximum suppression
-        corners = gpu.programs.keypoints.nonmaxSuppression(corners);
+        const suppressedCorners = gpu.programs.keypoints.nonMaxSuppression(corners);
+
+        // convert scores to an 8-bit component
+        const finalCorners = gpu.programs.keypoints.encodeFastScore(suppressedCorners);
 
         // encode corners
-        return gpu.programs.encoders.encodeKeypoints(corners, descriptorSize, extraSize);
+        return gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize);
     }
 }
 
@@ -575,7 +574,6 @@ class MultiscaleFASTFeatures extends _feature_detection_algorithm__WEBPACK_IMPOR
         this._threshold = DEFAULT_FAST_THRESHOLD;
         this._depth = DEFAULT_DEPTH;
         this._scaleFactor = DEFAULT_SCALE_FACTOR;
-        this._useHarrisScore = false;
     }
 
     /**
@@ -654,24 +652,6 @@ class MultiscaleFASTFeatures extends _feature_detection_algorithm__WEBPACK_IMPOR
     }
 
     /**
-     * Use Harris scoring function?
-     * @returns {boolean}
-     */
-    get useHarrisScore()
-    {
-        return this._useHarrisScore;
-    }
-
-    /**
-     * Use Harris scoring function?
-     * @param {boolean} value
-     */
-    set useHarrisScore(value)
-    {
-        this._useHarrisScore = !!value;
-    }
-
-    /**
      * Detect feature points
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} inputTexture pre-processed greyscale image
@@ -681,7 +661,6 @@ class MultiscaleFASTFeatures extends _feature_detection_algorithm__WEBPACK_IMPOR
     {
         const threshold = this._threshold;
         const depth = this._depth;
-        const useHarrisScore = this._useHarrisScore;
         const normalizedThreshold = threshold / 255.0;
         const numberOfOctaves = 2 * depth - 1;
         const lodStep = Math.log2(this._scaleFactor);
@@ -692,18 +671,16 @@ class MultiscaleFASTFeatures extends _feature_detection_algorithm__WEBPACK_IMPOR
         const pyramid = inputTexture.generatePyramid(gpu);
 
         // find corners
-        let corners = null;
-        if(!useHarrisScore)
-            corners = gpu.programs.keypoints.multiscaleFast(pyramid, normalizedThreshold, numberOfOctaves, lodStep);
-        else
-            corners = gpu.programs.keypoints.multiscaleFastWithHarris(pyramid, normalizedThreshold, numberOfOctaves, lodStep);
+        const corners = gpu.programs.keypoints.multiscaleFast(pyramid, normalizedThreshold, numberOfOctaves, lodStep);
 
         // non-maximum suppression
-        corners = gpu.programs.keypoints.samescaleSuppression(corners);
-        corners = gpu.programs.keypoints.multiscaleSuppression(corners, lodStep);
+        const suppressedCorners = gpu.programs.keypoints.nonMaxSuppression(corners, lodStep);
+
+        // convert scores to an 8-bit component
+        const finalCorners = gpu.programs.keypoints.encodeFastScore(suppressedCorners);
 
         // encode keypoints
-        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(corners, descriptorSize, extraSize);
+        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize);
 
         // done
         return detectedKeypoints;
@@ -731,7 +708,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -822,16 +799,23 @@ class HarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMPORTED_MODU
         df.release();
 
         // find the maximum corner response
-        const maxScore = gpu.programs.utils.scanMax(corners, _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].RED);
-
-        // non-maximum suppression
-        const suppressedCorners = gpu.programs.keypoints.nonmaxSuppression(corners);
+        const numIterations = Math.ceil(Math.log2(Math.max(corners.width, corners.height)));
+        let maxScore = corners;
+        for(let i = 0; i < numIterations; i++)
+            maxScore = gpu.programs.keypoints.maxHarrisScore(maxScore, i);
 
         // discard corners according to quality level
-        const filteredCorners = gpu.programs.keypoints.harrisCutoff(suppressedCorners, maxScore, quality);
+        //const filteredCorners = gpu.programs.keypoints.harrisCutoff(suppressedCorners, maxScore, quality);
+        const filteredCorners = gpu.programs.keypoints.harrisCutoff(corners, maxScore, quality);
+
+        // non-maximum suppression
+        const suppressedCorners = gpu.programs.keypoints.nonMaxSuppression(filteredCorners);
+
+        // convert score to 8-bit component
+        const finalCorners = gpu.programs.keypoints.encodeHarrisScore(suppressedCorners);
 
         // encode corners
-        return gpu.programs.encoders.encodeKeypoints(filteredCorners, descriptorSize, extraSize);
+        return gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize);
     }
 }
 
@@ -927,7 +911,7 @@ class MultiscaleHarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMP
         const pyramid = inputTexture.generatePyramid(gpu);
 
         // compute derivatives
-        const sobelDerivatives = Array(SOBEL_OCTAVE_COUNT);
+        const sobelDerivatives = new Array(SOBEL_OCTAVE_COUNT);
         for(let j = 0; j < numberOfOctaves; j++)
             sobelDerivatives[j] = gpu.programs.keypoints.multiscaleSobel(pyramid, j * lodStep);
         for(let k = numberOfOctaves; k < sobelDerivatives.length; k++)
@@ -941,17 +925,22 @@ class MultiscaleHarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMP
             sobelDerivatives[i].release();
 
         // find the maximum corner response
-        const maxScore = gpu.programs.utils.scanMax(corners, _utils_types__WEBPACK_IMPORTED_MODULE_2__["PixelComponent"].RED);
-
-        // non-maximum suppression
-        const suppressed1 = gpu.programs.keypoints.samescaleSuppression(corners);
-        const suppressed2 = gpu.programs.keypoints.multiscaleSuppression(suppressed1, lodStep);
+        const numIterations = Math.ceil(Math.log2(Math.max(corners.width, corners.height)));
+        let maxScore = corners;
+        for(let i = 0; i < numIterations; i++)
+            maxScore = gpu.programs.keypoints.maxHarrisScore(maxScore, i);
 
         // discard corners according to the quality level
-        const filteredCorners = gpu.programs.keypoints.harrisCutoff(suppressed2, maxScore, quality);
+        const filteredCorners = gpu.programs.keypoints.harrisCutoff(corners, maxScore, quality);
+
+        // non-maximum suppression
+        const suppressedCorners = gpu.programs.keypoints.nonMaxSuppression(filteredCorners, lodStep);
+
+        // convert score to 8-bit component
+        const finalCorners = gpu.programs.keypoints.encodeHarrisScore(suppressedCorners);
 
         // encode keypoints
-        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(filteredCorners, descriptorSize, extraSize);
+        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize);
 
         // done
         return detectedKeypoints;
@@ -1347,7 +1336,7 @@ class FeatureDescriptionAlgorithm extends _feature_algorithm_decorator__WEBPACK_
      */
     download(gpu, encodedKeypoints, flags = 0)
     {
-        return this.decoratedAlgorithm.download(gpu, encodedKeypoints, flags).then(
+        return super.download(gpu, encodedKeypoints, flags).then(
             keypoints => this._postProcess(keypoints)
         );
     }
@@ -1715,7 +1704,9 @@ class FeatureDownloader extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__["
         return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useBufferedDownloads).then(data => {
 
             // decode the keypoints
-            const keypoints = gpu.programs.encoders.decodeKeypoints(data, descriptorSize, extraSize);
+            const encoderLength = encodedKeypoints.width;
+            const multiplier = (flags & FeatureDownloader.SUPPRESS_DESCRIPTORS) != 0 ? 0 : 1;
+            const keypoints = this._decodeKeypoints(data, descriptorSize * multiplier, extraSize, encoderLength);
 
             // how many keypoints do we expect in the next frame?
             const discardedCount = this._countDiscardedKeypoints(keypoints);
@@ -1752,27 +1743,118 @@ class FeatureDownloader extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__["
 
         return count;
     }
+
+    /**
+     * Decodes the keypoints, given a flattened image of encoded pixels
+     * @param {Uint8Array[]} pixels pixels in the [r,g,b,a,...] format
+     * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
+     * @param {number} encoderLength
+     * @returns {SpeedyFeature[]} keypoints
+     */
+    _decodeKeypoints(pixels, descriptorSize, extraSize, encoderLength)
+    {
+        const pixelsPerKeypoint = (_utils_globals__WEBPACK_IMPORTED_MODULE_5__["MIN_KEYPOINT_SIZE"] + descriptorSize + extraSize) / 4;
+        let x, y, lod, rotation, score, flags, extraBytes, descriptorBytes;
+        let hasLod, hasRotation;
+        const keypoints = [];
+
+        // how many bytes should we read?
+        const e = encoderLength;
+        const e2 = e * e * pixelsPerKeypoint * 4;
+        const size = Math.min(pixels.length, e2);
+
+        // for each encoded keypoint
+        for(let i = 0; i < size; i += 4 /* RGBA */ * pixelsPerKeypoint) {
+            // extract fixed-point coordinates
+            x = (pixels[i+1] << 8) | pixels[i];
+            y = (pixels[i+3] << 8) | pixels[i+2];
+            if(x >= 0xFFFF && y >= 0xFFFF) // if end of list
+                break;
+
+            // We've cleared the texture to black.
+            // Likely to be incorrect black pixels
+            // due to resize. Bad for encoderLength
+            if(x + y == 0 && pixels[i+6] == 0)
+                continue; // discard, it's noise
+
+            // convert from fixed-point
+            x /= _utils_globals__WEBPACK_IMPORTED_MODULE_5__["FIX_RESOLUTION"];
+            y /= _utils_globals__WEBPACK_IMPORTED_MODULE_5__["FIX_RESOLUTION"];
+
+            // extract flags
+            flags = pixels[i+7];
+
+            // extract LOD
+            hasLod = (pixels[i+4] < 255);
+            lod = !hasLod ? 0.0 :
+                -_utils_globals__WEBPACK_IMPORTED_MODULE_5__["LOG2_PYRAMID_MAX_SCALE"] + (_utils_globals__WEBPACK_IMPORTED_MODULE_5__["LOG2_PYRAMID_MAX_SCALE"] + _utils_globals__WEBPACK_IMPORTED_MODULE_5__["PYRAMID_MAX_LEVELS"]) * pixels[i+4] / 255.0;
+
+            // extract orientation
+            hasRotation = (flags & _utils_globals__WEBPACK_IMPORTED_MODULE_5__["KPF_ORIENTED"] != 0);
+            rotation = !hasRotation ? 0.0 :
+                ((2 * pixels[i+5]) / 255.0 - 1.0) * Math.PI;
+
+            // extract score
+            score = pixels[i+6] / 255.0;
+
+            // extra bytes
+            extraBytes = pixels.slice(8 + i, 8 + i + extraSize);
+
+            // descriptor bytes
+            descriptorBytes = pixels.slice(8 + i + extraSize, 8 + i + extraSize + descriptorSize);
+
+            // something is off here
+            if(descriptorBytes.length < descriptorSize || extraBytes.length < extraSize)
+                continue; // discard
+
+            // register keypoint
+            keypoints.push(
+                new _speedy_feature__WEBPACK_IMPORTED_MODULE_2__["SpeedyFeature"](x, y, lod, rotation, score, flags, extraBytes, descriptorBytes)
+            );
+        }
+
+        // done!
+        return keypoints;
+    }
+
+    /**
+     * Flags accepted by the FeatureDownloader (bitwise)
+     * @typedef {number} FeatureDownloaderFlag
+     */
+
+    /**
+     * Flag: reset the state of the downloader
+     * @returns {FeatureDownloaderFlag}
+     */
+    static get RESET_DOWNLOADER_STATE()
+    {
+        return 1;
+    }
+
+    /**
+     * Flag: use buffered downloads
+     * It's an optimization technique that implies a 1-frame delay
+     * in the downloads when using async transfers; it may or may
+     * not be acceptable, depending on what you're trying to do
+     * @returns {FeatureDownloaderFlag}
+     */
+    static get USE_BUFFERED_DOWNLOADS()
+    {
+        return 2;
+    }
+
+    /**
+     * Flag: suppress feature descriptors
+     * This is meant to improve download times. Use if the
+     * descriptors are not needed by the end-user
+     * @returns {FeatureDownloaderFlag}
+     */
+    static get SUPPRESS_DESCRIPTORS()
+    {
+        return 4;
+    }
 }
-
-/**
- * Flags accepted by the FeatureDownloader (bitwise)
- * @typedef {number} FeatureDownloaderFlag
- */
-
-/**
- * Flag: reset the state of the downloader
- * @type {FeatureDownloaderFlag}
- */
-FeatureDownloader.RESET_DOWNLOADER_STATE = 1;
-
-/**
- * Flag: use buffered downloads
- * It's an optimization technique that implies a 1-frame delay
- * in the downloads when using async transfers; it may or may
- * not be acceptable, depending on what you're trying to do
- * @type {FeatureDownloaderFlag}
- */
-FeatureDownloader.USE_BUFFERED_DOWNLOADS = 2;
 
 /***/ }),
 
@@ -2468,9 +2550,6 @@ LinAlg.lib = Object.create(null);
 /** @type {object} source code of methods */
 LinAlg.lib._src = Object.create(null);
 
-/** @type {MatrixType} types of matrices */
-LinAlg.lib.MatrixType = MatrixType;
-
 /**
  * Register a method
  * @param {string} name method name
@@ -2478,23 +2557,32 @@ LinAlg.lib.MatrixType = MatrixType;
  */
 LinAlg.register = function(name, fn)
 {
+    // validate
     if(typeof fn !== `function`)
         throw new Error(`Not a function: ${name}`);
     else if(typeof name !== `string` || !name.match(/^[a-z_][0-9a-z_]*$/i))
         throw new Error(`Undesirable identifier: ${name}`);
-    else if(LinAlg.hasOperation(name))
-        throw new Error(`Can't redefine method "${name}"`)
+    else if(LinAlg.hasMethod(name))
+        throw new Error(`Can't redefine method ${name}`);
 
-    // methods will be bound to LinAlg.lib
-    LinAlg.lib[name] = fn.bind(LinAlg.lib);
-    LinAlg.lib._src[name] = fn.toString();
+    // register method
+    const readonly = { enumerable: true, writable: false, configurable: false };
+    Object.defineProperty(LinAlg.lib, name, {
+        value: fn.bind(LinAlg.lib), // methods will be bound to LinAlg.lib
+        ...readonly
+    });
+    Object.defineProperty(LinAlg.lib._src, name, {
+        value: fn.toString(),
+        ...readonly
+    });
 };
 
 /**
- * Checks if a method has been registered
+ * Check if a method has been registered
  * @param {string} name method name
+ * @returns {boolean}
  */
-LinAlg.hasOperation = function(name)
+LinAlg.hasMethod = function(name)
 {
     return Object.prototype.hasOwnProperty.call(LinAlg.lib, name);
 }
@@ -2505,7 +2593,7 @@ LinAlg.hasOperation = function(name)
  */
 LinAlg.toString = function()
 {
-    const decl = Object.keys(LinAlg.lib._src)
+    const methods = Object.keys(LinAlg.lib._src)
             .map(x => `LinAlg.lib.${x} = (${LinAlg.lib._src[x]}).bind(LinAlg.lib);`)
             .join('\n');
 
@@ -2514,21 +2602,31 @@ LinAlg.toString = function()
 'use strict';
 function LinAlg() { }
 LinAlg.lib = Object.create(null);
-LinAlg.lib.MatrixType = (${MatrixType.toString()});
+LinAlg.lib.MatrixType = (${MatrixType.toString()}).freeze();
 
-${decl}
+${methods}
 
+Object.freeze(LinAlg.lib);
 return Object.freeze(LinAlg);
 })()`;
 };
 
-return Object.freeze(LinAlg);
-})();
+// Import MatrixType into the lib
+Object.defineProperty(LinAlg.lib, 'MatrixType', {
+    value: MatrixType.freeze(),
+    writable: false,
+    configurable: false,
+    enumerable: false,
+});
 
 // Plug in the Linear Algebra methods
 Object.keys(LinAlgLib).forEach(method => {
     LinAlg.register(method, LinAlgLib[method]);
 });
+
+// done!
+return Object.freeze(LinAlg);
+})();
 
 module.exports = { LinAlg };
 
@@ -5128,7 +5226,7 @@ class MatrixOperation
         this._workloadOfInputs = inputMatrices.reduce((w, m) => w + this._workload(m), 0);
 
         // is it a valid operation?
-        if(!_linalg_linalg__WEBPACK_IMPORTED_MODULE_4__["LinAlg"].hasOperation(method))
+        if(!_linalg_linalg__WEBPACK_IMPORTED_MODULE_4__["LinAlg"].hasMethod(method))
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Invalid method: "${method}"`);
     }
 
@@ -5709,9 +5807,19 @@ class MatrixType
 
         }));
     }
+
+    /**
+     * Freeze this class
+     * @returns {Function} this class
+     */
+    static freeze()
+    {
+        const target = (this._classOf, this);
+        return Object.freeze(target);
+    }
 }
 
-module.exports = { MatrixType };
+module.exports = { MatrixType: MatrixType.freeze() };
 
 /***/ }),
 
@@ -6839,7 +6947,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -6869,7 +6977,7 @@ class SpeedyFeatureDecorator
     /**
      * Constructor
      * @param {Function} decorator a FeatureAlgorithmDecorator
-     * @param {...*} [args] additional arguments to be passed when instantiating the decorator
+     * @param {any[]} [args] additional arguments to be passed when instantiating the decorator
      */
     constructor(decorator, ...args)
     {
@@ -6884,10 +6992,7 @@ class SpeedyFeatureDecorator
      */
     decorate(algorithm)
     {
-        const args = this._args;
-        const decorator = this._decorator;
-        const decoratedAlgorithm = new decorator(algorithm, ...args);
-
+        const decoratedAlgorithm = Reflect.construct(this._decorator, [ algorithm ].concat(this._args));
         _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(decoratedAlgorithm instanceof _keypoints_feature_algorithm_decorator__WEBPACK_IMPORTED_MODULE_0__["FeatureAlgorithmDecorator"]);
 
         return decoratedAlgorithm;
@@ -6964,8 +7069,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyFeatureDetectorFactory", function() { return SpeedyFeatureDetectorFactory; });
 /* harmony import */ var _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-namespace */ "./src/core/speedy-namespace.js");
 /* harmony import */ var _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-feature-detector */ "./src/core/speedy-feature-detector.js");
-/* harmony import */ var _keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./keypoints/descriptors/orb */ "./src/core/keypoints/descriptors/orb.js");
-/* harmony import */ var _speedy_feature_descriptor_factory__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-feature-descriptor-factory */ "./src/core/speedy-feature-descriptor-factory.js");
+/* harmony import */ var _speedy_feature_descriptor_factory__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-feature-descriptor-factory */ "./src/core/speedy-feature-descriptor-factory.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -6986,6 +7091,7 @@ __webpack_require__.r(__webpack_exports__);
  * speedy-feature-detector-factory.js
  * A collection of methods for instantiating SpeedyFeatureDetectors
  */
+
 
 
 
@@ -7041,9 +7147,9 @@ class SpeedyFeatureDetectorFactory extends _speedy_namespace__WEBPACK_IMPORTED_M
      */
     static ORB()
     {
-        const orb = _speedy_feature_descriptor_factory__WEBPACK_IMPORTED_MODULE_3__["SpeedyFeatureDescriptorFactory"].ORB();
+        const orb = _speedy_feature_descriptor_factory__WEBPACK_IMPORTED_MODULE_2__["SpeedyFeatureDescriptorFactory"].ORB();
         const detector = (new _speedy_feature_detector__WEBPACK_IMPORTED_MODULE_1__["MultiscaleHarrisFeatureDetector"]()).link(orb);
-        detector.scaleFactor = 1.19;
+        detector.scaleFactor = 1.19; // approx. 2^0.25
         return detector;
     }
 
@@ -7053,7 +7159,8 @@ class SpeedyFeatureDetectorFactory extends _speedy_namespace__WEBPACK_IMPORTED_M
      */
     static BRISK()
     {
-        return new BRISKFeatureDetector();
+        //return new BRISKFeatureDetector();
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["NotImplementedError"]();
     }
 }
 
@@ -7510,26 +7617,6 @@ class MultiscaleFASTFeatureDetector extends SpeedyFeatureDetector
     set scaleFactor(value)
     {
         this._algorithm.scaleFactor = value;
-    }
-
-    /**
-     * Whether or not we're using an approximation of
-     * Harris corner responses for keypoint scores
-     * @returns {boolean}
-     */
-    get useHarrisScore()
-    {
-        return this._algorithm.useHarrisScore;
-    }
-
-    /**
-     * Should we use an approximation of Harris corner
-     * responses for keypoint scores?
-     * @param {boolean} useHarris
-     */
-    set useHarrisScore(useHarris)
-    {
-        this._algorithm.useHarrisScore = useHarris;
     }
 
     /**
@@ -9232,10 +9319,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _math_matrix_expressions__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./math/matrix-expressions */ "./src/core/math/matrix-expressions.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9252,6 +9341,8 @@ __webpack_require__.r(__webpack_exports__);
  * speedy.js
  * Speedy's main class
  */
+
+
 
 
 
@@ -9382,6 +9473,10 @@ class Speedy
 
 // Mix SpeedyFlags with Speedy
 Object.assign(Speedy.constructor.prototype, _speedy_flags__WEBPACK_IMPORTED_MODULE_6__["SpeedyFlags"]);
+
+// Big-endian machine? Currently untested.
+if(!_utils_globals__WEBPACK_IMPORTED_MODULE_12__["LITTLE_ENDIAN"])
+    _utils_utils__WEBPACK_IMPORTED_MODULE_11__["Utils"].warn('Running on a big-endian machine');
 
 /***/ }),
 
@@ -9974,10 +10069,8 @@ __webpack_require__.r(__webpack_exports__);
 // We won't admit more than MAX_KEYPOINTS per media.
 // The larger this value is, the more data we need to transfer from the GPU.
 const MIN_PIXELS_PER_KEYPOINT = _utils_globals__WEBPACK_IMPORTED_MODULE_7__["MIN_KEYPOINT_SIZE"] / 4; // encodes a keypoint header
-const MIN_ENCODER_LENGTH = 16; // storage for 16*16/MIN_PIXELS_PER_KEYPOINT <= 128 keypoints
-const MAX_ENCODER_LENGTH = 300; // in pixels (if too large, WebGL may lose context - so be careful!)
-const INITIAL_ENCODER_LENGTH = MIN_ENCODER_LENGTH; // pick a small number to reduce processing load and not crash things on mobile (WebGL lost context)
-const MAX_KEYPOINTS = 8192; // can't detect more than this number of keypoints per frame
+const INITIAL_ENCODER_LENGTH = 16; // pick a small number to reduce processing load and not crash things on mobile (WebGL lost context)
+const MAX_KEYPOINTS = 8192; // can't detect more than this number of keypoints per frame (if too many, WebGL may lose context - so be careful!)
 const UBO_MAX_BYTES = 16384; // UBOs can hold at least 16KB of data: gl.MAX_UNIFORM_BLOCK_SIZE >= 16384 according to the GL ES 3 reference
 const KEYPOINT_BUFFER_LENGTH = (UBO_MAX_BYTES / 16) | 0; // maximum number of keypoints that can be uploaded to the GPU via UBOs (each keypoint uses 16 bytes)
 const ENCODER_PASSES = 8; // number of passes of the keypoint encoder: directly impacts performance
@@ -10053,7 +10146,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
             .declare('_resizeEncodedKeypoints', resizeEncodedKeypoints, {
                 ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
             })
-            .declare('_downloadKeypoints', downloadKeypoints, {
+            .declare('_downloadEncodedKeypoints', downloadKeypoints, {
                 ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
             })
             .declare('_uploadKeypoints', uploadKeypoints, {
@@ -10085,6 +10178,15 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
     }
 
     /**
+     * The maximum number of keypoints we can encode at the moment
+     * @returns {number}
+     */
+    get keypointCapacity()
+    {
+        return this._keypointCapacity;
+    }
+
+    /**
      * Optimizes the keypoint encoder for an expected number of keypoints
      * @param {number} maxKeypointCount expected maximum number of keypoints
      * @param {number} descriptorSize in bytes
@@ -10094,7 +10196,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
     optimize(maxKeypointCount, descriptorSize, extraSize)
     {
         const keypointCapacity = Math.ceil(maxKeypointCount); // ensure this is an integer
-        const newEncoderLength = this._minimumEncoderLength(keypointCapacity, descriptorSize, extraSize);
+        const newEncoderLength = this.minimumEncoderLength(keypointCapacity, descriptorSize, extraSize);
         const oldEncoderLength = this._encoderLength;
 
         this._encoderLength = newEncoderLength;
@@ -10113,7 +10215,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
     reserveSpace(keypointCapacity, descriptorSize, extraSize)
     {
         // resize if not enough space
-        if(this._minimumEncoderLength(keypointCapacity, descriptorSize, extraSize) > this._encoderLength)
+        if(this.minimumEncoderLength(keypointCapacity, descriptorSize, extraSize) > this._encoderLength)
             return this.optimize(keypointCapacity, descriptorSize, extraSize);
 
         return false;
@@ -10151,7 +10253,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
         // encode keypoints
         const numPasses = ENCODER_PASSES;
         const pixelsPerKeypointHeader = MIN_PIXELS_PER_KEYPOINT;
-        const headerEncoderLength = Math.max(MIN_ENCODER_LENGTH, Math.ceil(Math.sqrt(this._keypointCapacity * pixelsPerKeypointHeader)));
+        const headerEncoderLength = Math.max(1, Math.ceil(Math.sqrt(this._keypointCapacity * pixelsPerKeypointHeader)));
         this._encodeKeypoints.resize(headerEncoderLength, headerEncoderLength);
         let encodedKeypointHeaders = this._encodeKeypoints.clear(0, 0, 0, 0);
         for(let passId = 0; passId < numPasses; passId++)
@@ -10163,95 +10265,6 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
     }
 
     /**
-     * Decodes the keypoints, given a flattened image of encoded pixels
-     * @param {Uint8Array[]} pixels pixels in the [r,g,b,a,...] format
-     * @param {number} descriptorSize in bytes
-     * @param {number} extraSize in bytes
-     * @returns {SpeedyFeature[]} keypoints
-     */
-    decodeKeypoints(pixels, descriptorSize, extraSize)
-    {
-        const pixelsPerKeypoint = (_utils_globals__WEBPACK_IMPORTED_MODULE_7__["MIN_KEYPOINT_SIZE"] + descriptorSize + extraSize) / 4;
-        let x, y, lod, rotation, score, flags, extraBytes, descriptorBytes;
-        let hasLod, hasRotation;
-        const keypoints = [];
-
-        // how many bytes should we read?
-        const e = this._encoderLength;
-        const e2 = e * e * pixelsPerKeypoint * 4;
-        const size = Math.min(pixels.length, e2);
-
-        // for each encoded keypoint
-        for(let i = 0; i < size; i += 4 /* RGBA */ * pixelsPerKeypoint) {
-            // extract fixed-point coordinates
-            x = (pixels[i+1] << 8) | pixels[i];
-            y = (pixels[i+3] << 8) | pixels[i+2];
-            if(x >= 0xFFFF && y >= 0xFFFF) // if end of list
-                break;
-
-            // We've cleared the texture to black.
-            // Likely to be incorrect black pixels
-            // due to resize. Bad for encoderLength
-            if(x + y == 0 && pixels[i+6] == 0)
-                continue; // discard, it's noise
-
-            // convert from fixed-point
-            x /= _utils_globals__WEBPACK_IMPORTED_MODULE_7__["FIX_RESOLUTION"];
-            y /= _utils_globals__WEBPACK_IMPORTED_MODULE_7__["FIX_RESOLUTION"];
-
-            // extract flags
-            flags = pixels[i+7];
-
-            // extract LOD
-            hasLod = (pixels[i+4] < 255);
-            lod = !hasLod ? 0.0 :
-                -_utils_globals__WEBPACK_IMPORTED_MODULE_7__["LOG2_PYRAMID_MAX_SCALE"] + (_utils_globals__WEBPACK_IMPORTED_MODULE_7__["LOG2_PYRAMID_MAX_SCALE"] + _utils_globals__WEBPACK_IMPORTED_MODULE_7__["PYRAMID_MAX_LEVELS"]) * pixels[i+4] / 255.0;
-
-            // extract orientation
-            hasRotation = (flags & _utils_globals__WEBPACK_IMPORTED_MODULE_7__["KPF_ORIENTED"] != 0);
-            rotation = !hasRotation ? 0.0 :
-                ((2 * pixels[i+5]) / 255.0 - 1.0) * Math.PI;
-
-            // extract score
-            score = pixels[i+6] / 255.0;
-
-            // extra bytes
-            extraBytes = (extraSize > 0) ? new Uint8Array(
-                pixels.slice(8 + i, 8 + i + extraSize)
-            ) : null;
-
-            // descriptor bytes
-            descriptorBytes = (descriptorSize > 0) ? new Uint8Array(
-                pixels.slice(8 + i + extraSize, 8 + i + extraSize + descriptorSize)
-            ) : null;
-
-            // something is off with the encoder length
-            if(
-                (descriptorSize > 0 && descriptorBytes.length < descriptorSize) ||
-                (extraSize > 0 && extraBytes.length < extraSize)
-            )
-                continue; // discard
-
-            // register keypoint
-            keypoints.push(
-                new _core_speedy_feature__WEBPACK_IMPORTED_MODULE_2__["SpeedyFeature"](x, y, lod, rotation, score, flags, extraBytes, descriptorBytes)
-            );
-        }
-
-        /*
-        // developer's secret ;)
-        // reset the tuner
-        if(keypoints.length == 0) {
-            if(this._tuner.finished())
-                this._tuner.reset();
-        }
-        */
-
-        // done!
-        return keypoints;
-    }
-
-    /**
      * Download RAW encoded keypoint data from the GPU - this is a bottleneck!
      * @param {SpeedyTexture} encodedKeypoints texture with keypoints that have already been encoded
      * @param {boolean} [useBufferedDownloads] download keypoints detected in the previous framestep (optimization)
@@ -10260,11 +10273,11 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
     downloadEncodedKeypoints(encodedKeypoints, useBufferedDownloads = true)
     {
         // helper shader for reading the data
-        this._downloadKeypoints.resize(this._encoderLength, this._encoderLength);
-        this._downloadKeypoints(encodedKeypoints);
+        this._downloadEncodedKeypoints.resize(encodedKeypoints.width, encodedKeypoints.height);
+        this._downloadEncodedKeypoints(encodedKeypoints);
 
         // read data from the GPU
-        return this._downloadKeypoints.readPixelsAsync(useBufferedDownloads).catch(err => {
+        return this._downloadEncodedKeypoints.readPixelsAsync(useBufferedDownloads).catch(err => {
             return new _utils_errors__WEBPACK_IMPORTED_MODULE_6__["IllegalOperationError"](`Can't download encoded keypoint texture`, err);
         });
     }
@@ -10321,15 +10334,15 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
      * @param {number} keypointCount
      * @param {number} descriptorSize
      * @param {number} extraSize
-     * @returns {number} between 1 and MAX_ENCODER_LENGTH
+     * @returns {number}
      */
-    _minimumEncoderLength(keypointCount, descriptorSize, extraSize)
+    minimumEncoderLength(keypointCount, descriptorSize, extraSize)
     {
         const clampedKeypointCount = Math.max(0, Math.min(Math.ceil(keypointCount), MAX_KEYPOINTS));
         const pixelsPerKeypoint = Math.ceil((_utils_globals__WEBPACK_IMPORTED_MODULE_7__["MIN_KEYPOINT_SIZE"] + descriptorSize + extraSize) / 4);
         const len = Math.ceil(Math.sqrt(clampedKeypointCount * pixelsPerKeypoint));
 
-        return Math.max(MIN_ENCODER_LENGTH, Math.min(len, MAX_ENCODER_LENGTH));
+        return Math.max(1, len);
     }
 }
 
@@ -10783,10 +10796,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-program-group */ "./src/gpu/speedy-program-group.js");
 /* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10810,46 +10824,42 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 //
 // FAST corner detector
 //
 
 // FAST-9_16: requires 9 contiguous pixels
 // on a circumference of 16 pixels
-const fast9 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast9lg.glsl').withArguments('image', 'threshold');
+const fast9 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast/fast9.glsl').withArguments('image', 'threshold');
 
 // FAST-7_12: requires 7 contiguous pixels
 // on a circumference of 12 pixels
-const fast7 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast7.glsl').withArguments('image', 'threshold');
+const fast7 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast/fast7.glsl').withArguments('image', 'threshold');
 
 // FAST-5_8: requires 5 contiguous pixels
 // on a circumference of 8 pixels
-const fast5 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast5.glsl').withArguments('image', 'threshold');
+const fast5 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast/fast5.glsl').withArguments('image', 'threshold');
 
 // compute corner score considering a
 // neighboring circumference of 16 pixels
-const fastScore16 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast-score16.glsl').withArguments('image', 'threshold');
+const fastScore16 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast/fast-score16.glsl').withArguments('image', 'threshold');
 
 // compute corner score considering a
 // neighboring circumference of 12 pixels
-const fastScore12 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast-score12.glsl').withArguments('image', 'threshold');
+const fastScore12 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast/fast-score12.glsl').withArguments('image', 'threshold');
 
 // compute corner score considering a
 // neighboring circumference of 8 pixels
-const fastScore8 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast-score8.glsl').withArguments('image', 'threshold');
+const fastScore8 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast/fast-score8.glsl').withArguments('image', 'threshold');
 
 // FAST-9_16 on scale-space
 // Requires image mipmap
-const multiscaleFast = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/multiscale-fast.glsl')
+const multiscaleFast = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast/multiscale-fast.glsl')
                       .withArguments('pyramid', 'threshold', 'numberOfOctaves', 'lodStep');
 
-// FAST-9_16 on scale-space
-// with Harris scoring
-const multiscaleFastWithHarris = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/multiscale-fast.glsl')
-                                .withArguments('pyramid', 'threshold', 'numberOfOctaves', 'lodStep')
-                                .withDefines({
-                                    'USE_HARRIS_SCORE': 1
-                                });
+// encode FAST score in an 8-bit component
+const encodeFastScore = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast/encode-fast-score.glsl').withArguments('image');
 
 
 
@@ -10858,11 +10868,20 @@ const multiscaleFastWithHarris = Object(_shader_declaration__WEBPACK_IMPORTED_MO
 //
 
 // compute corner responses (score map)
-const multiscaleHarris = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/multiscale-harris.glsl')
+const multiscaleHarris = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/harris/multiscale-harris.glsl')
                         .withArguments('pyramid', 'windowSize', 'numberOfOctaves', 'lodStep', 'sobelDerivatives');
 
 // discard corners below a specified quality level
-const harrisCutoff = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/harris-cutoff.glsl').withArguments('corners', 'maxScore', 'quality');
+const harrisCutoff = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/harris/harris-cutoff.glsl').withArguments('corners', 'maxScore', 'quality');
+
+// encode harris score in an 8-bit component
+const encodeHarrisScore = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/harris/encode-harris-score.glsl').withArguments('image');
+
+// find the maximum harris score in an image
+const maxHarrisScore = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/harris/max-harris-score.glsl').withArguments('self', 'iterationNumber');
+
+// Sobel derivatives
+const multiscaleSobel = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/harris/multiscale-sobel.glsl').withArguments('pyramid', 'lod');
 
 
 
@@ -10880,6 +10899,10 @@ const brisk = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importSha
 const orb = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/orb-descriptor.glsl')
            .withArguments('pyramid', 'encodedCorners', 'extraSize', 'encoderLength');
 
+const orbOrientation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/orb-orientation.glsl')
+                      .withArguments('pyramid', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
+
+
 
 
 //
@@ -10887,17 +10910,19 @@ const orb = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShade
 //
 
 // non-maximum suppression
-const nonmaxSuppression = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/nonmax-suppression.glsl').withArguments('image');
-const multiscaleSuppression = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/multiscale-suppression.glsl').withArguments('image', 'lodStep');
-const samescaleSuppression = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/samescale-suppression.glsl').withArguments('image');
+const nonMaxSuppression = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/nonmax-suppression.glsl')
+                         .withArguments('image', 'lodStep');
+const multiscaleNonMaxSuppression = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/nonmax-suppression.glsl')
+                                   .withArguments('image', 'lodStep')
+                                   .withDefines({ 'MULTISCALE': 1 });
 
-// Sobel derivatives
-const multiscaleSobel = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/multiscale-sobel.glsl').withArguments('pyramid', 'lod');
+// transfer keypoint orientation
+const transferOrientation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/transfer-orientation.glsl')
+                           .withArguments('encodedOrientations', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-// compute keypoint orientation
-const orientationViaCentroid = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/orientation-via-centroid.glsl')
-                              .withArguments('pyramid', 'encodedKeypoints', 'patchRadius', 'descriptorSize', 'extraSize', 'encoderLength')
-
+// suppress feature descriptors
+const suppressDescriptors = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/suppress-descriptors.glsl')
+                           .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'suppressedEncoderLength');
 
 
 
@@ -10934,7 +10959,7 @@ class GPUKeypoints extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["S
 
             // FAST-9,16 (multi-scale)
             .declare('multiscaleFast', multiscaleFast)
-            .declare('multiscaleFastWithHarris', multiscaleFastWithHarris)
+            .declare('encodeFastScore', encodeFastScore)
 
             // BRISK Scale-Space Non-Maximum Suppression & Interpolation
             .declare('brisk', brisk)
@@ -10942,23 +10967,42 @@ class GPUKeypoints extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["S
             // Harris-Shi-Tomasi corner detector
             .declare('multiscaleHarris', multiscaleHarris) // scale-space
             .declare('harrisCutoff', harrisCutoff)
+            .declare('encodeHarrisScore', encodeHarrisScore)
+            .declare('maxHarrisScore', maxHarrisScore, {
+                ...this.program.usesPingpongRendering()
+            })
+
+            // Non-maximum suppression
+            .declare('_nonMaxSuppression', nonMaxSuppression)
+            .declare('_multiscaleNonMaxSuppression', multiscaleNonMaxSuppression)
 
             // ORB
             .declare('_orb', orb)
-
-            // Generic non-maximum suppression
-            .declare('nonmaxSuppression', nonmaxSuppression)
-            .declare('multiscaleSuppression', multiscaleSuppression) // scale-space
-            .declare('samescaleSuppression', samescaleSuppression) // scale-space
-
-            // Sobel derivatives
+            .declare('_orbOrientation', orbOrientation)
             .declare('multiscaleSobel', multiscaleSobel, {
                 ...this.program.doesNotRecycleTextures()
             }) // scale-space
 
-            // Compute keypoint orientation
-            .declare('_orientationViaCentroid', orientationViaCentroid);
+            // Transfer keypoint orientation
+            .declare('_transferOrientation', transferOrientation)
+
+            // Suppress feature descriptors
+            .declare('_suppressDescriptors', suppressDescriptors)
         ;
+    }
+
+    /**
+     * Non-maximum suppression
+     * @param {SpeedyTexture} corners scores are encoded as float16
+     * @param {number} [lodStep] log2(scaleFactor) - specify if multi-scale
+     * @returns {SpeedyTexture}
+     */
+    nonMaxSuppression(corners, lodStep = 0)
+    {
+        if(lodStep > 0)
+            return this._multiscaleNonMaxSuppression(corners, lodStep);
+        else
+            return this._nonMaxSuppression(corners, 0);
     }
 
     /**
@@ -10979,19 +11023,41 @@ class GPUKeypoints extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["S
 
     /**
      * Finds the orientation of all keypoints given a texture with encoded keypoints
-     * (using the centroid method)
+     * (using the centroid method, as in ORB)
      * @param {SpeedyTexture} pyramid image pyramid
      * @param {SpeedyTexture} encodedKeypoints tiny texture
-     * @param {number} patchRadius radius of a circular patch used to compute the radius when lod = 0 (e.g., 7)
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
      * @param {number} encoderLength
      * @returns {SpeedyTexture}
      */
-    orientationViaCentroid(pyramid, encodedKeypoints, patchRadius, descriptorSize, extraSize, encoderLength)
+    orbOrientation(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength)
     {
-        this._orientationViaCentroid.resize(encoderLength, encoderLength);
-        return this._orientationViaCentroid(pyramid, encodedKeypoints, patchRadius, descriptorSize, extraSize, encoderLength);
+        const pixelsPerKeypoint = (_utils_globals__WEBPACK_IMPORTED_MODULE_3__["MIN_KEYPOINT_SIZE"] + descriptorSize + extraSize) / 4;
+        const numberOfKeypoints = Math.ceil(encoderLength * encoderLength / pixelsPerKeypoint); // approximately
+        const orientationEncoderLength = Math.max(1, Math.ceil(Math.sqrt(numberOfKeypoints))); // 1 pixel per keypoint
+
+        this._orbOrientation.resize(orientationEncoderLength, orientationEncoderLength);
+        const encodedOrientations = this._orbOrientation(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength);
+
+        this._transferOrientation.resize(encoderLength, encoderLength);
+        return this._transferOrientation(encodedOrientations, encodedKeypoints, descriptorSize, extraSize, encoderLength);
+    }
+
+    /**
+     * Suppress feature descriptors from a texture with encoded keypoints
+     * @param {SpeedyTexture} encodedKeypoints tiny texture
+     * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
+     * @param {number} encoderLength
+     * @param {number} suppressedEncoderLength equivalent to encoderLength, but without the descriptors
+     * @returns {SpeedyTexture}
+     */
+    suppressDescriptors(encodedKeypoints, descriptorSize, extraSize, encoderLength, suppressedEncoderLength)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(suppressedEncoderLength <= encoderLength);
+        this._suppressDescriptors.resize(suppressedEncoderLength, suppressedEncoderLength);
+        return this._suppressDescriptors(encodedKeypoints, descriptorSize, extraSize, encoderLength, suppressedEncoderLength);
     }
 }
 
@@ -11966,6 +12032,7 @@ const unrollRegex = [
 const constants = Object.freeze({
     // general
     'MAX_TEXTURE_LENGTH': _utils_globals__WEBPACK_IMPORTED_MODULE_0__["MAX_TEXTURE_LENGTH"],
+    'LITTLE_ENDIAN': _utils_globals__WEBPACK_IMPORTED_MODULE_0__["LITTLE_ENDIAN"] ? 1 : 0,
 
     // pyramids
     'PYRAMID_MAX_LEVELS': _utils_globals__WEBPACK_IMPORTED_MODULE_0__["PYRAMID_MAX_LEVELS"],
@@ -12150,9 +12217,9 @@ var map = {
 	"./filters/fast-median.glsl": "./src/gpu/shaders/filters/fast-median.glsl",
 	"./filters/median": "./src/gpu/shaders/filters/median.js",
 	"./filters/median.js": "./src/gpu/shaders/filters/median.js",
-	"./filters/multiscale-sobel.glsl": "./src/gpu/shaders/filters/multiscale-sobel.glsl",
 	"./include/colors.glsl": "./src/gpu/shaders/include/colors.glsl",
 	"./include/fixed-point.glsl": "./src/gpu/shaders/include/fixed-point.glsl",
+	"./include/float16.glsl": "./src/gpu/shaders/include/float16.glsl",
 	"./include/global.glsl": "./src/gpu/shaders/include/global.glsl",
 	"./include/keypoints.glsl": "./src/gpu/shaders/include/keypoints.glsl",
 	"./include/math.glsl": "./src/gpu/shaders/include/math.glsl",
@@ -12161,21 +12228,25 @@ var map = {
 	"./include/quickselect.glsl": "./src/gpu/shaders/include/quickselect.glsl",
 	"./include/sobel.glsl": "./src/gpu/shaders/include/sobel.glsl",
 	"./keypoints/brisk.glsl": "./src/gpu/shaders/keypoints/brisk.glsl",
-	"./keypoints/fast-score12.glsl": "./src/gpu/shaders/keypoints/fast-score12.glsl",
-	"./keypoints/fast-score16.glsl": "./src/gpu/shaders/keypoints/fast-score16.glsl",
-	"./keypoints/fast-score8.glsl": "./src/gpu/shaders/keypoints/fast-score8.glsl",
-	"./keypoints/fast5.glsl": "./src/gpu/shaders/keypoints/fast5.glsl",
-	"./keypoints/fast7.glsl": "./src/gpu/shaders/keypoints/fast7.glsl",
-	"./keypoints/fast9lg.glsl": "./src/gpu/shaders/keypoints/fast9lg.glsl",
-	"./keypoints/harris-cutoff.glsl": "./src/gpu/shaders/keypoints/harris-cutoff.glsl",
-	"./keypoints/multiscale-fast.glsl": "./src/gpu/shaders/keypoints/multiscale-fast.glsl",
-	"./keypoints/multiscale-harris.glsl": "./src/gpu/shaders/keypoints/multiscale-harris.glsl",
-	"./keypoints/multiscale-suppression.glsl": "./src/gpu/shaders/keypoints/multiscale-suppression.glsl",
+	"./keypoints/fast/encode-fast-score.glsl": "./src/gpu/shaders/keypoints/fast/encode-fast-score.glsl",
+	"./keypoints/fast/fast-score12.glsl": "./src/gpu/shaders/keypoints/fast/fast-score12.glsl",
+	"./keypoints/fast/fast-score16.glsl": "./src/gpu/shaders/keypoints/fast/fast-score16.glsl",
+	"./keypoints/fast/fast-score8.glsl": "./src/gpu/shaders/keypoints/fast/fast-score8.glsl",
+	"./keypoints/fast/fast5.glsl": "./src/gpu/shaders/keypoints/fast/fast5.glsl",
+	"./keypoints/fast/fast7.glsl": "./src/gpu/shaders/keypoints/fast/fast7.glsl",
+	"./keypoints/fast/fast9.glsl": "./src/gpu/shaders/keypoints/fast/fast9.glsl",
+	"./keypoints/fast/multiscale-fast.glsl": "./src/gpu/shaders/keypoints/fast/multiscale-fast.glsl",
+	"./keypoints/harris/encode-harris-score.glsl": "./src/gpu/shaders/keypoints/harris/encode-harris-score.glsl",
+	"./keypoints/harris/harris-cutoff.glsl": "./src/gpu/shaders/keypoints/harris/harris-cutoff.glsl",
+	"./keypoints/harris/max-harris-score.glsl": "./src/gpu/shaders/keypoints/harris/max-harris-score.glsl",
+	"./keypoints/harris/multiscale-harris.glsl": "./src/gpu/shaders/keypoints/harris/multiscale-harris.glsl",
+	"./keypoints/harris/multiscale-sobel.glsl": "./src/gpu/shaders/keypoints/harris/multiscale-sobel.glsl",
 	"./keypoints/nonmax-suppression.glsl": "./src/gpu/shaders/keypoints/nonmax-suppression.glsl",
 	"./keypoints/orb-descriptor.glsl": "./src/gpu/shaders/keypoints/orb-descriptor.glsl",
-	"./keypoints/orientation-via-centroid.glsl": "./src/gpu/shaders/keypoints/orientation-via-centroid.glsl",
-	"./keypoints/samescale-suppression.glsl": "./src/gpu/shaders/keypoints/samescale-suppression.glsl",
+	"./keypoints/orb-orientation.glsl": "./src/gpu/shaders/keypoints/orb-orientation.glsl",
 	"./keypoints/sort-by-score.glsl": "./src/gpu/shaders/keypoints/sort-by-score.glsl",
+	"./keypoints/suppress-descriptors.glsl": "./src/gpu/shaders/keypoints/suppress-descriptors.glsl",
+	"./keypoints/transfer-orientation.glsl": "./src/gpu/shaders/keypoints/transfer-orientation.glsl",
 	"./pyramids/downsample2.glsl": "./src/gpu/shaders/pyramids/downsample2.glsl",
 	"./pyramids/upsample2.glsl": "./src/gpu/shaders/pyramids/upsample2.glsl",
 	"./trackers/lk-discard.glsl": "./src/gpu/shaders/trackers/lk-discard.glsl",
@@ -12261,7 +12332,7 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D offsetsImage;\n
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D inputTexture;\nuniform int inputDescriptorSize;\nuniform int inputExtraSize;\nuniform int inputEncoderLength;\nuniform int outputDescriptorSize;\nuniform int outputExtraSize;\nuniform int outputEncoderLength;\nvoid main()\n{\nvec4 pixel = threadPixel(inputTexture);\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(\nthread,\noutputEncoderLength,\noutputDescriptorSize,\noutputExtraSize\n);\nint myIndex = findKeypointIndex(\nmyAddress,\noutputDescriptorSize,\noutputExtraSize\n);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(inputDescriptorSize, inputExtraSize) / 4;\nKeypointAddress otherAddress = KeypointAddress(\nmyIndex * pixelsPerKeypoint,\nmyAddress.offset\n);\nint head = MIN_KEYPOINT_SIZE / 4;\nint rasterIndex = otherAddress.base + otherAddress.offset;\ncolor = (myAddress.offset >= head) ? vec4(0.0f) :\nreadKeypointData(inputTexture, inputEncoderLength, rasterIndex);\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D inputTexture;\nuniform int inputDescriptorSize;\nuniform int inputExtraSize;\nuniform int inputEncoderLength;\nuniform int outputDescriptorSize;\nuniform int outputExtraSize;\nuniform int outputEncoderLength;\nvoid main()\n{\nvec4 pixel = threadPixel(inputTexture);\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(\nthread,\noutputEncoderLength,\noutputDescriptorSize,\noutputExtraSize\n);\nint myIndex = findKeypointIndex(\nmyAddress,\noutputDescriptorSize,\noutputExtraSize\n);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(inputDescriptorSize, inputExtraSize) / 4;\nKeypointAddress otherAddress = KeypointAddress(\nmyIndex * pixelsPerKeypoint,\nmyAddress.offset\n);\nint head = MIN_KEYPOINT_SIZE / 4;\ncolor = (myAddress.offset >= head) ? vec4(0.0f) :\nreadKeypointData(inputTexture, inputEncoderLength, otherAddress);\n}"
 
 /***/ }),
 
@@ -12850,17 +12921,6 @@ function median(windowSize)
 
 /***/ }),
 
-/***/ "./src/gpu/shaders/filters/multiscale-sobel.glsl":
-/*!*******************************************************!*\
-  !*** ./src/gpu/shaders/filters/multiscale-sobel.glsl ***!
-  \*******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "@include \"sobel.glsl\"\n@include \"pyramids.glsl\"\nuniform sampler2D pyramid;\nuniform float lod;\nconst mat3 horizontalKernel = mat3(\n-1.0f, 0.0f, 1.0f,\n-2.0f, 0.0f, 2.0f,\n-1.0f, 0.0f, 1.0f\n);\nconst mat3 verticalKernel = mat3(\n1.0f, 2.0f, 1.0f,\n0.0f, 0.0f, 0.0f,\n-1.0f,-2.0f,-1.0f\n);\nconst vec3 ones = vec3(1.0f, 1.0f, 1.0f);\nvoid main()\n{\nfloat pot = exp2(lod);\nmat3 neighbors = mat3(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 1)).g\n);\nmat3 sobelX = matrixCompMult(horizontalKernel, neighbors);\nmat3 sobelY = matrixCompMult(verticalKernel, neighbors);\nvec2 df = vec2(\ndot(sobelX[0] + sobelX[1] + sobelX[2], ones),\ndot(sobelY[0] + sobelY[1] + sobelY[2], ones)\n);\ncolor = encodeSobel(df);\n}"
-
-/***/ }),
-
 /***/ "./src/gpu/shaders/include sync recursive ^\\.\\/.*$":
 /*!***********************************************!*\
   !*** ./src/gpu/shaders/include sync ^\.\/.*$ ***!
@@ -12871,6 +12931,7 @@ module.exports = "@include \"sobel.glsl\"\n@include \"pyramids.glsl\"\nuniform s
 var map = {
 	"./colors.glsl": "./src/gpu/shaders/include/colors.glsl",
 	"./fixed-point.glsl": "./src/gpu/shaders/include/fixed-point.glsl",
+	"./float16.glsl": "./src/gpu/shaders/include/float16.glsl",
 	"./global.glsl": "./src/gpu/shaders/include/global.glsl",
 	"./keypoints.glsl": "./src/gpu/shaders/include/keypoints.glsl",
 	"./math.glsl": "./src/gpu/shaders/include/math.glsl",
@@ -12924,6 +12985,17 @@ module.exports = "#ifndef _FIXEDPOINT_GLSL\n#define _FIXEDPOINT_GLSL\n#define fi
 
 /***/ }),
 
+/***/ "./src/gpu/shaders/include/float16.glsl":
+/*!**********************************************!*\
+  !*** ./src/gpu/shaders/include/float16.glsl ***!
+  \**********************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "#ifndef _FLOAT16_GLSL\n#define _FLOAT16_GLSL\n#define encodeFloat16(f) (vec2(packf16(f)) / 255.0f)\n#define decodeFloat16(v) unpackf16(uvec2((v) * 255.0f))\nuvec2 packf16( float f)\n{\nuint y = packHalf2x16(vec2(f, 0.0f));\nreturn uvec2(y, y >> 8) & 0xFFu;\n}\nfloat unpackf16(uvec2 v)\n{\nv &= 0xFFu;\nreturn unpackHalf2x16(v.x | (v.y << 8)).x;\n}\n#endif"
+
+/***/ }),
+
 /***/ "./src/gpu/shaders/include/global.glsl":
 /*!*********************************************!*\
   !*** ./src/gpu/shaders/include/global.glsl ***!
@@ -12942,7 +13014,7 @@ module.exports = "#ifndef _GLOBAL_GLSL\n#define _GLOBAL_GLSL\n#define threadLoca
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "#ifndef _KEYPOINTS_GLSL\n#define _KEYPOINTS_GLSL\n@include \"pyramids.glsl\"\n@include \"orientation.glsl\"\n@include \"fixed-point.glsl\"\nstruct Keypoint\n{\nvec2 position;\nfloat orientation;\nfloat lod;\nfloat score;\nint flags;\n};\nstruct KeypointAddress\n{\nint base;\nint offset;\n};\nconst int MAX_DESCRIPTOR_SIZE = int(@MAX_DESCRIPTOR_SIZE@);\nconst int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@);\nconst int KPF_NONE = int(@KPF_NONE@);\nconst int KPF_ORIENTED = int(@KPF_ORIENTED@);\nconst int KPF_DISCARD = int(@KPF_DISCARD@);\n#define readKeypointData(encodedKeypoints, encoderLength, rasterIndex) texelFetch((encodedKeypoints), ivec2((rasterIndex) % (encoderLength), (rasterIndex) / (encoderLength)), 0)\n#define sizeofEncodedKeypoint(descriptorSize, extraSize) (MIN_KEYPOINT_SIZE + (descriptorSize) + (extraSize))\n#define findKeypointIndex(address, descriptorSize, extraSize) ((address).base / ((sizeofEncodedKeypoint((descriptorSize), (extraSize))) / 4))\nKeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descriptorSize, int extraSize)\n{\nint threadRaster = thread.y * encoderLength + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nint keypointIndex = int(threadRaster / pixelsPerKeypoint);\nKeypointAddress address = KeypointAddress(\nkeypointIndex * pixelsPerKeypoint,\nthreadRaster % pixelsPerKeypoint\n);\nreturn address;\n}\nKeypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nconst vec4 ones = vec4(1.0f);\nKeypoint keypoint;\nint positionAddress = address.base;\nint propertiesAddress = address.base + 1;\nvec4 rawEncodedPosition = readKeypointData(encodedKeypoints, encoderLength, positionAddress);\nivec4 encodedPosition = ivec4(rawEncodedPosition * 255.0f);\nkeypoint.position = fixtovec2(fixed2_t(\nencodedPosition.r | (encodedPosition.g << 8),\nencodedPosition.b | (encodedPosition.a << 8)\n));\nvec4 encodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);\nkeypoint.orientation = decodeOrientation(encodedProperties.g);\nkeypoint.lod = decodeLod(encodedProperties.r);\nkeypoint.score = encodedProperties.b;\nkeypoint.flags = int(encodedProperties.a * 255.0f);\nbool isNull = all(greaterThanEqual(rawEncodedPosition, ones));\nkeypoint.score = keypoint.score * float(!isNull) - float(isNull);\nkeypoint.score -= float(keypoint.score == 0.0f) * float(all(equal(keypoint.position, vec2(0.0f))));\nreturn keypoint;\n}\nvec4 encodeKeypointPosition(vec2 position)\n{\nconst vec2 zeros = vec2(0.0f);\nfixed2_t pos = vec2tofix(max(position, zeros));\nfixed2_t lo = pos & 255;\nfixed2_t hi = pos >> 8;\nreturn vec4(float(lo.x), float(hi.x), float(lo.y), float(hi.y)) / 255.0f;\n}\n#define encodeNullKeypoint() (vec4(1.0f))\n#define isBadKeypoint(keypoint) ((keypoint).score < 0.0f)\n#define encodeKeypointPositionAtInfinity() (vec4(254.0f / 255.0f, vec3(1.0f)))\nbool isKeypointAtInfinity(Keypoint keypoint)\n{\nconst vec2 V2_MAX_TEXTURE_LENGTH = vec2(float(@MAX_TEXTURE_LENGTH@));\nreturn any(greaterThan(keypoint.position, V2_MAX_TEXTURE_LENGTH));\n}\n#define encodeKeypointFlags(flags) (float(flags) / 255.0f)\n#endif"
+module.exports = "#ifndef _KEYPOINTS_GLSL\n#define _KEYPOINTS_GLSL\n@include \"pyramids.glsl\"\n@include \"orientation.glsl\"\n@include \"fixed-point.glsl\"\nstruct Keypoint\n{\nvec2 position;\nfloat orientation;\nfloat lod;\nfloat score;\nint flags;\n};\nstruct KeypointAddress\n{\nint base;\nint offset;\n};\nconst int MAX_DESCRIPTOR_SIZE = int(@MAX_DESCRIPTOR_SIZE@);\nconst int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@);\nconst int KPF_NONE = int(@KPF_NONE@);\nconst int KPF_ORIENTED = int(@KPF_ORIENTED@);\nconst int KPF_DISCARD = int(@KPF_DISCARD@);\nvec4 readKeypointData(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nint rasterIndex = address.base + address.offset;\nreturn pixelAt(encodedKeypoints, ivec2(rasterIndex % encoderLength, rasterIndex / encoderLength));\n}\n#define sizeofEncodedKeypoint(descriptorSize, extraSize) (MIN_KEYPOINT_SIZE + (descriptorSize) + (extraSize))\n#define findKeypointIndex(address, descriptorSize, extraSize) ((address).base / ((sizeofEncodedKeypoint((descriptorSize), (extraSize))) / 4))\nKeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descriptorSize, int extraSize)\n{\nint threadRaster = thread.y * encoderLength + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nint keypointIndex = int(threadRaster / pixelsPerKeypoint);\nKeypointAddress address = KeypointAddress(\nkeypointIndex * pixelsPerKeypoint,\nthreadRaster % pixelsPerKeypoint\n);\nreturn address;\n}\nKeypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nconst vec4 ones = vec4(1.0f);\nKeypoint keypoint;\nKeypointAddress positionAddress = KeypointAddress(address.base, 0);\nKeypointAddress propertiesAddress = KeypointAddress(address.base, 1);\nvec4 rawEncodedPosition = readKeypointData(encodedKeypoints, encoderLength, positionAddress);\nivec4 encodedPosition = ivec4(rawEncodedPosition * 255.0f);\nkeypoint.position = fixtovec2(fixed2_t(\nencodedPosition.r | (encodedPosition.g << 8),\nencodedPosition.b | (encodedPosition.a << 8)\n));\nvec4 encodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);\nkeypoint.orientation = decodeOrientation(encodedProperties.g);\nkeypoint.lod = decodeLod(encodedProperties.r);\nkeypoint.score = encodedProperties.b;\nkeypoint.flags = int(encodedProperties.a * 255.0f);\nbool isNull = all(greaterThanEqual(rawEncodedPosition, ones));\nkeypoint.score = keypoint.score * float(!isNull) - float(isNull);\nkeypoint.score -= float(keypoint.score == 0.0f) * float(all(equal(keypoint.position, vec2(0.0f))));\nreturn keypoint;\n}\nvec4 encodeKeypointPosition(vec2 position)\n{\nconst vec2 zeros = vec2(0.0f);\nfixed2_t pos = vec2tofix(max(position, zeros));\nfixed2_t lo = pos & 255;\nfixed2_t hi = pos >> 8;\nreturn vec4(lo.x, hi.x, lo.y, hi.y) / 255.0f;\n}\n#define encodeNullKeypoint() (vec4(1.0f))\n#define isBadKeypoint(keypoint) ((keypoint).score < 0.0f)\n#define encodeKeypointPositionAtInfinity() (vec4(254.0f / 255.0f, vec3(1.0f)))\nbool isKeypointAtInfinity(Keypoint keypoint)\n{\nconst vec2 V2_MAX_TEXTURE_LENGTH = vec2(@MAX_TEXTURE_LENGTH@);\nreturn any(greaterThan(keypoint.position, V2_MAX_TEXTURE_LENGTH));\n}\n#define encodeKeypointFlags(flags) (float(flags) / 255.0f)\n#endif"
 
 /***/ }),
 
@@ -13012,113 +13084,146 @@ module.exports = "uniform sampler2D image, layerA, layerB;\nuniform float scaleA
 
 /***/ }),
 
-/***/ "./src/gpu/shaders/keypoints/fast-score12.glsl":
-/*!*****************************************************!*\
-  !*** ./src/gpu/shaders/keypoints/fast-score12.glsl ***!
-  \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtShortOffset(image, ivec2(0, 2)).g;\nfloat p1 = pixelAtShortOffset(image, ivec2(1, 2)).g;\nfloat p2 = pixelAtShortOffset(image, ivec2(2, 1)).g;\nfloat p3 = pixelAtShortOffset(image, ivec2(2, 0)).g;\nfloat p4 = pixelAtShortOffset(image, ivec2(2, -1)).g;\nfloat p5 = pixelAtShortOffset(image, ivec2(1, -2)).g;\nfloat p6 = pixelAtShortOffset(image, ivec2(0, -2)).g;\nfloat p7 = pixelAtShortOffset(image, ivec2(-1, -2)).g;\nfloat p8 = pixelAtShortOffset(image, ivec2(-2, -1)).g;\nfloat p9 = pixelAtShortOffset(image, ivec2(-2, 0)).g;\nfloat p10 = pixelAtShortOffset(image, ivec2(-2, 1)).g;\nfloat p11 = pixelAtShortOffset(image, ivec2(-1, 2)).g;\nvec2 scores = vec2(0.0f, 0.0f);\nscores += vec2(max(c_t - p0, 0.0f), max(p0 - ct, 0.0f));\nscores += vec2(max(c_t - p1, 0.0f), max(p1 - ct, 0.0f));\nscores += vec2(max(c_t - p2, 0.0f), max(p2 - ct, 0.0f));\nscores += vec2(max(c_t - p3, 0.0f), max(p3 - ct, 0.0f));\nscores += vec2(max(c_t - p4, 0.0f), max(p4 - ct, 0.0f));\nscores += vec2(max(c_t - p5, 0.0f), max(p5 - ct, 0.0f));\nscores += vec2(max(c_t - p6, 0.0f), max(p6 - ct, 0.0f));\nscores += vec2(max(c_t - p7, 0.0f), max(p7 - ct, 0.0f));\nscores += vec2(max(c_t - p8, 0.0f), max(p8 - ct, 0.0f));\nscores += vec2(max(c_t - p9, 0.0f), max(p9 - ct, 0.0f));\nscores += vec2(max(c_t - p10, 0.0f), max(p10 - ct, 0.0f));\nscores += vec2(max(c_t - p11, 0.0f), max(p11 - ct, 0.0f));\nfloat score = max(scores.x, scores.y) / 12.0f;\ncolor = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/keypoints/fast-score16.glsl":
-/*!*****************************************************!*\
-  !*** ./src/gpu/shaders/keypoints/fast-score16.glsl ***!
-  \*****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nconst vec4 zeroes = vec4(0.0f, 0.0f, 0.0f, 0.0f);\nconst vec4 ones = vec4(1.0f, 1.0f, 1.0f, 1.0f);\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nmat4 mp = mat4(\npixelAtShortOffset(image, ivec2(0, 3)).g,\npixelAtShortOffset(image, ivec2(1, 3)).g,\npixelAtShortOffset(image, ivec2(2, 2)).g,\npixelAtShortOffset(image, ivec2(3, 1)).g,\npixelAtShortOffset(image, ivec2(3, 0)).g,\npixelAtShortOffset(image, ivec2(3, -1)).g,\npixelAtShortOffset(image, ivec2(2, -2)).g,\npixelAtShortOffset(image, ivec2(1, -3)).g,\npixelAtShortOffset(image, ivec2(0, -3)).g,\npixelAtShortOffset(image, ivec2(-1, -3)).g,\npixelAtShortOffset(image, ivec2(-2, -2)).g,\npixelAtShortOffset(image, ivec2(-3, -1)).g,\npixelAtShortOffset(image, ivec2(-3, 0)).g,\npixelAtShortOffset(image, ivec2(-3, 1)).g,\npixelAtShortOffset(image, ivec2(-2, 2)).g,\npixelAtShortOffset(image, ivec2(-1, 3)).g\n);\nmat4 mct = mp - mat4(\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct\n), mc_t = mat4(\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t\n) - mp;\nvec4 bs = max(mc_t[0], zeroes), ds = max(mct[0], zeroes);\nbs += max(mc_t[1], zeroes); ds += max(mct[1], zeroes);\nbs += max(mc_t[2], zeroes); ds += max(mct[2], zeroes);\nbs += max(mc_t[3], zeroes); ds += max(mct[3], zeroes);\nfloat score = max(dot(bs, ones), dot(ds, ones)) / 16.0f;\ncolor = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/keypoints/fast-score8.glsl":
-/*!****************************************************!*\
-  !*** ./src/gpu/shaders/keypoints/fast-score8.glsl ***!
-  \****************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtShortOffset(image, ivec2(0, 1)).g;\nfloat p1 = pixelAtShortOffset(image, ivec2(1, 1)).g;\nfloat p2 = pixelAtShortOffset(image, ivec2(1, 0)).g;\nfloat p3 = pixelAtShortOffset(image, ivec2(1, -1)).g;\nfloat p4 = pixelAtShortOffset(image, ivec2(0, -1)).g;\nfloat p5 = pixelAtShortOffset(image, ivec2(-1, -1)).g;\nfloat p6 = pixelAtShortOffset(image, ivec2(-1, 0)).g;\nfloat p7 = pixelAtShortOffset(image, ivec2(-1, 1)).g;\nvec2 scores = vec2(0.0f, 0.0f);\nscores += vec2(max(c_t - p0, 0.0f), max(p0 - ct, 0.0f));\nscores += vec2(max(c_t - p1, 0.0f), max(p1 - ct, 0.0f));\nscores += vec2(max(c_t - p2, 0.0f), max(p2 - ct, 0.0f));\nscores += vec2(max(c_t - p3, 0.0f), max(p3 - ct, 0.0f));\nscores += vec2(max(c_t - p4, 0.0f), max(p4 - ct, 0.0f));\nscores += vec2(max(c_t - p5, 0.0f), max(p5 - ct, 0.0f));\nscores += vec2(max(c_t - p6, 0.0f), max(p6 - ct, 0.0f));\nscores += vec2(max(c_t - p7, 0.0f), max(p7 - ct, 0.0f));\nfloat score = max(scores.x, scores.y) / 8.0f;\ncolor = vec4(score * step(1.0f, pixel.r), pixel.g, score, pixel.a);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/keypoints/fast5.glsl":
-/*!**********************************************!*\
-  !*** ./src/gpu/shaders/keypoints/fast5.glsl ***!
-  \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nvec4 pixel = threadPixel(image);\ncolor = vec4(0.0f, pixel.gba);\nif(\nthread.x >= 3 && thread.x < size.x - 3 &&\nthread.y >= 3 && thread.y < size.y - 3\n) {\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtShortOffset(image, ivec2(0, 1)).g;\nfloat p1 = pixelAtShortOffset(image, ivec2(1, 1)).g;\nfloat p2 = pixelAtShortOffset(image, ivec2(1, 0)).g;\nfloat p3 = pixelAtShortOffset(image, ivec2(1, -1)).g;\nfloat p4 = pixelAtShortOffset(image, ivec2(0, -1)).g;\nfloat p5 = pixelAtShortOffset(image, ivec2(-1, -1)).g;\nfloat p6 = pixelAtShortOffset(image, ivec2(-1, 0)).g;\nfloat p7 = pixelAtShortOffset(image, ivec2(-1, 1)).g;\nbool possibleCorner =\n((c_t > p1 || c_t > p5) && (c_t > p3 || c_t > p7)) ||\n((ct < p1  || ct < p5)  && (ct < p3  || ct < p7))  ;\nif(possibleCorner) {\nint bright = 0, dark = 0, bc = 0, dc = 0;\nif(c_t > p0) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p0) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p1) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p1) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p2) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p2) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p3) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p3) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p4) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p4) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p5) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p5) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p6) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p6) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p7) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p7) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(bright < 5 && dark < 5) {\nif(bc > 0 && bc < 5) do {\nif(c_t > p0)           bc += 1; else break;\nif(c_t > p1 && bc < 5) bc += 1; else break;\nif(c_t > p2 && bc < 5) bc += 1; else break;\nif(c_t > p3 && bc < 5) bc += 1; else break;\n} while(false);\nif(dc > 0 && dc < 5) do {\nif(ct < p0)           dc += 1; else break;\nif(ct < p1 && dc < 5) dc += 1; else break;\nif(ct < p2 && dc < 5) dc += 1; else break;\nif(ct < p3 && dc < 5) dc += 1; else break;\n} while(false);\nif(bc >= 5 || dc >= 5)\ncolor = vec4(1.0f, pixel.gba);\n}\nelse {\ncolor = vec4(1.0f, pixel.gba);\n}\n}\n}\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/keypoints/fast7.glsl":
-/*!**********************************************!*\
-  !*** ./src/gpu/shaders/keypoints/fast7.glsl ***!
-  \**********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nvec4 pixel = threadPixel(image);\ncolor = vec4(0.0f, pixel.gba);\nif(\nthread.x >= 3 && thread.x < size.x - 3 &&\nthread.y >= 3 && thread.y < size.y - 3\n) {\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtShortOffset(image, ivec2(0, 2)).g;\nfloat p1 = pixelAtShortOffset(image, ivec2(1, 2)).g;\nfloat p2 = pixelAtShortOffset(image, ivec2(2, 1)).g;\nfloat p3 = pixelAtShortOffset(image, ivec2(2, 0)).g;\nfloat p4 = pixelAtShortOffset(image, ivec2(2, -1)).g;\nfloat p5 = pixelAtShortOffset(image, ivec2(1, -2)).g;\nfloat p6 = pixelAtShortOffset(image, ivec2(0, -2)).g;\nfloat p7 = pixelAtShortOffset(image, ivec2(-1, -2)).g;\nfloat p8 = pixelAtShortOffset(image, ivec2(-2, -1)).g;\nfloat p9 = pixelAtShortOffset(image, ivec2(-2, 0)).g;\nfloat p10 = pixelAtShortOffset(image, ivec2(-2, 1)).g;\nfloat p11 = pixelAtShortOffset(image, ivec2(-1, 2)).g;\nbool possibleCorner =\n((c_t > p0 || c_t > p6) && (c_t > p3 || c_t > p9)) ||\n((ct < p0  || ct < p6)  && (ct < p3  || ct < p9))  ;\nif(possibleCorner) {\nint bright = 0, dark = 0, bc = 0, dc = 0;\nif(c_t > p0) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p0) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p1) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p1) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p2) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p2) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p3) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p3) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p4) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p4) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p5) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p5) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p6) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p6) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p7) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p7) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p8) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p8) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p9) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p9) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p10) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p10) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p11) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p11) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(bright < 7 && dark < 7) {\nif(bc > 0 && bc < 7) do {\nif(c_t > p0)           bc += 1; else break;\nif(c_t > p1 && bc < 7) bc += 1; else break;\nif(c_t > p2 && bc < 7) bc += 1; else break;\nif(c_t > p3 && bc < 7) bc += 1; else break;\nif(c_t > p4 && bc < 7) bc += 1; else break;\nif(c_t > p5 && bc < 7) bc += 1; else break;\n} while(false);\nif(dc > 0 && dc < 7) do {\nif(ct < p0)           dc += 1; else break;\nif(ct < p1 && dc < 7) dc += 1; else break;\nif(ct < p2 && dc < 7) dc += 1; else break;\nif(ct < p3 && dc < 7) dc += 1; else break;\nif(ct < p4 && dc < 7) dc += 1; else break;\nif(ct < p5 && dc < 7) dc += 1; else break;\n} while(false);\nif(bc >= 7 || dc >= 7)\ncolor = vec4(1.0f, pixel.gba);\n}\nelse {\ncolor = vec4(1.0f, pixel.gba);\n}\n}\n}\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/keypoints/fast9lg.glsl":
-/*!************************************************!*\
-  !*** ./src/gpu/shaders/keypoints/fast9lg.glsl ***!
-  \************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nuniform float threshold;\nconst ivec4 margin = ivec4(3, 3, 4, 4);\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 thread = threadLocation();\nivec2 size = outputSize();\ncolor = vec4(0.0f, pixel.gba);\nif(any(lessThan(ivec4(thread, size - thread), margin)))\nreturn;\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtShortOffset(image, ivec2(0, 3)).g;\nfloat p4 = pixelAtShortOffset(image, ivec2(3, 0)).g;\nfloat p8 = pixelAtShortOffset(image, ivec2(0, -3)).g;\nfloat p12 = pixelAtShortOffset(image, ivec2(-3, 0)).g;\nif(!(\n((c_t > p0 || c_t > p8) && (c_t > p4 || c_t > p12)) ||\n((ct < p0  || ct < p8)  && (ct < p4  || ct < p12))\n))\nreturn;\nfloat p1 = pixelAtShortOffset(image, ivec2(1, 3)).g;\nfloat p2 = pixelAtShortOffset(image, ivec2(2, 2)).g;\nfloat p3 = pixelAtShortOffset(image, ivec2(3, 1)).g;\nfloat p5 = pixelAtShortOffset(image, ivec2(3, -1)).g;\nfloat p6 = pixelAtShortOffset(image, ivec2(2, -2)).g;\nfloat p7 = pixelAtShortOffset(image, ivec2(1, -3)).g;\nfloat p9 = pixelAtShortOffset(image, ivec2(-1, -3)).g;\nfloat p10 = pixelAtShortOffset(image, ivec2(-2, -2)).g;\nfloat p11 = pixelAtShortOffset(image, ivec2(-3, -1)).g;\nfloat p13 = pixelAtShortOffset(image, ivec2(-3, 1)).g;\nfloat p14 = pixelAtShortOffset(image, ivec2(-2, 2)).g;\nfloat p15 = pixelAtShortOffset(image, ivec2(-1, 3)).g;\nbool A=(p0>ct),B=(p1>ct),C=(p2>ct),D=(p3>ct),E=(p4>ct),F=(p5>ct),G=(p6>ct),H=(p7>ct),I=(p8>ct),J=(p9>ct),K=(p10>ct),L=(p11>ct),M=(p12>ct),N=(p13>ct),O=(p14>ct),P=(p15>ct),a=(p0<c_t),b=(p1<c_t),c=(p2<c_t),d=(p3<c_t),e=(p4<c_t),f=(p5<c_t),g=(p6<c_t),h=(p7<c_t),i=(p8<c_t),j=(p9<c_t),k=(p10<c_t),l=(p11<c_t),m=(p12<c_t),n=(p13<c_t),o=(p14<c_t),p=(p15<c_t);\nbool isCorner=A&&(B&&(K&&L&&J&&(M&&N&&O&&P||G&&H&&I&&(M&&N&&O||F&&(M&&N||E&&(M||D))))||C&&(K&&L&&M&&(N&&O&&P||G&&H&&I&&J&&(N&&O||F&&(N||E)))||D&&(N&&(L&&M&&(K&&G&&H&&I&&J&&(O||F)||O&&P)||k&&l&&m&&e&&f&&g&&h&&i&&j)||E&&(O&&(M&&N&&(K&&L&&G&&H&&I&&J||P)||k&&l&&m&&n&&f&&g&&h&&i&&j)||F&&(P&&(N&&O||k&&l&&m&&n&&o&&g&&h&&i&&j)||G&&(O&&P||H&&(P||I)||k&&l&&m&&n&&o&&p&&h&&i&&j)||k&&l&&m&&n&&o&&h&&i&&j&&(p||g))||k&&l&&m&&n&&h&&i&&j&&(o&&(p||g)||f&&(o&&p||g)))||k&&l&&m&&h&&i&&j&&(n&&(o&&p||g&&(o||f))||e&&(n&&o&&p||g&&(n&&o||f))))||k&&l&&h&&i&&j&&(m&&(n&&o&&p||g&&(n&&o||f&&(n||e)))||d&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e)))))||k&&h&&i&&j&&(l&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d))))))||K&&I&&J&&(L&&M&&N&&O&&P||G&&H&&(L&&M&&N&&O||F&&(L&&M&&N||E&&(L&&M||D&&(L||C)))))||h&&i&&j&&(b&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c)))))||k&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c)))))))||B&&(H&&I&&J&&(K&&L&&M&&N&&O&&P&&a||G&&(K&&L&&M&&N&&O&&a||F&&(K&&L&&M&&N&&a||E&&(K&&L&&M&&a||D&&(K&&L&&a||C)))))||a&&k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||C&&(K&&H&&I&&J&&(L&&M&&N&&O&&P&&a&&b||G&&(L&&M&&N&&O&&a&&b||F&&(L&&M&&N&&a&&b||E&&(L&&M&&a&&b||D))))||a&&b&&k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d)))))||D&&(K&&L&&H&&I&&J&&(M&&N&&O&&P&&a&&b&&c||G&&(M&&N&&O&&a&&b&&c||F&&(M&&N&&a&&b&&c||E)))||a&&b&&k&&l&&m&&c&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e))))||E&&(K&&L&&M&&H&&I&&J&&(N&&O&&P&&a&&b&&c&&d||G&&(N&&O&&a&&b&&c&&d||F))||a&&b&&l&&m&&n&&c&&d&&(k&&g&&h&&i&&j&&(o||f)||o&&p))||F&&(K&&L&&M&&N&&H&&I&&J&&(O&&P&&a&&b&&c&&d&&e||G)||a&&b&&m&&n&&o&&c&&d&&e&&(k&&l&&g&&h&&i&&j||p))||G&&(K&&L&&M&&N&&O&&H&&I&&J||a&&b&&n&&o&&p&&c&&d&&e&&f)||H&&(K&&L&&M&&N&&O&&P&&I&&J||a&&b&&o&&p&&c&&d&&e&&f&&g)||a&&(b&&(k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(k&&l&&m&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e)))||d&&(l&&m&&n&&(k&&g&&h&&i&&j&&(o||f)||o&&p)||e&&(m&&n&&o&&(k&&l&&g&&h&&i&&j||p)||f&&(n&&o&&p||g&&(o&&p||h&&(p||i)))))))||k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||h&&i&&j&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c&&(b||k))))));\ncolor = vec4(float(isCorner), pixel.gba);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/keypoints/harris-cutoff.glsl":
-/*!******************************************************!*\
-  !*** ./src/gpu/shaders/keypoints/harris-cutoff.glsl ***!
-  \******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D corners;\nuniform sampler2D maxScore;\nuniform float quality;\nvoid main()\n{\nvec4 pixel = threadPixel(corners);\nfloat maxVal = threadPixel(maxScore).r;\nfloat score = pixel.r;\nfloat threshold = maxVal * clamp(quality, 0.0f, 1.0f);\nscore *= step(threshold, score);\ncolor = vec4(score, pixel.gba);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/keypoints/multiscale-fast.glsl":
-/*!********************************************************!*\
-  !*** ./src/gpu/shaders/keypoints/multiscale-fast.glsl ***!
-  \********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D pyramid;\nuniform float threshold;\nuniform int numberOfOctaves;\nuniform float lodStep;\nconst ivec4 margin = ivec4(3, 3, 4, 4);\nconst vec4 zeroes = vec4(0.0f, 0.0f, 0.0f, 0.0f);\nconst vec4 ones = vec4(1.0f, 1.0f, 1.0f, 1.0f);\nvoid main()\n{\nvec4 pixel = threadPixel(pyramid);\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nvec2 best = vec2(0.0f, pixel.a);\n#ifdef USE_HARRIS_SCORE\nvec2 dfmm[PYRAMID_MAX_OCTAVES], dfm0[PYRAMID_MAX_OCTAVES], dfm1[PYRAMID_MAX_OCTAVES],\ndf0m[PYRAMID_MAX_OCTAVES], df00[PYRAMID_MAX_OCTAVES], df01[PYRAMID_MAX_OCTAVES],\ndf1m[PYRAMID_MAX_OCTAVES], df10[PYRAMID_MAX_OCTAVES], df11[PYRAMID_MAX_OCTAVES];\nfloat pyrpix = 0.0f;\nfor(int l = 0; l < numberOfOctaves; l++) {\nfloat lod = float(l) * lodStep;\nfloat pot = exp2(lod);\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(-1,-1)).g;\ndfmm[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(-1,0)).g;\ndfm0[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(-1,1)).g;\ndfm1[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(0,-1)).g;\ndf0m[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(0,0)).g;\ndf00[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(0,1)).g;\ndf01[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(1,-1)).g;\ndf1m[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(1,0)).g;\ndf10[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\npyrpix = pyrPixelAtOffset(pyramid, lod, pot, ivec2(1,1)).g;\ndf11[l] = vec2(dFdx(pyrpix), dFdy(pyrpix));\n}\n#endif\ncolor = vec4(0.0f, pixel.g, 0.0f, pixel.a);\nfloat lod = 0.0f, pot = 1.0f;\nfor(int octave = 0; octave < numberOfOctaves; octave++) {\npixel = pyrPixel(pyramid, lod);\nct = pixel.g + t;\nc_t = pixel.g - t;\nvec4 p4k = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, 3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, 0)).g\n);\nmat4 mp = mat4(\np4k.x,\np4k.y,\np4k.z,\np4k.w,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, 2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, -2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, -2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, 2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 3)).g\n);\nbool A=(mp[0][0]>ct),B=(mp[1][0]>ct),C=(mp[2][0]>ct),D=(mp[3][0]>ct),E=(mp[0][1]>ct),F=(mp[1][1]>ct),G=(mp[2][1]>ct),H=(mp[3][1]>ct),I=(mp[0][2]>ct),J=(mp[1][2]>ct),K=(mp[2][2]>ct),L=(mp[3][2]>ct),M=(mp[0][3]>ct),N=(mp[1][3]>ct),O=(mp[2][3]>ct),P=(mp[3][3]>ct),a=(mp[0][0]<c_t),b=(mp[1][0]<c_t),c=(mp[2][0]<c_t),d=(mp[3][0]<c_t),e=(mp[0][1]<c_t),f=(mp[1][1]<c_t),g=(mp[2][1]<c_t),h=(mp[3][1]<c_t),i=(mp[0][2]<c_t),j=(mp[1][2]<c_t),k=(mp[2][2]<c_t),l=(mp[3][2]<c_t),m=(mp[0][3]<c_t),n=(mp[1][3]<c_t),o=(mp[2][3]<c_t),p=(mp[3][3]<c_t);\nbool isCorner=A&&(B&&(K&&L&&J&&(M&&N&&O&&P||G&&H&&I&&(M&&N&&O||F&&(M&&N||E&&(M||D))))||C&&(K&&L&&M&&(N&&O&&P||G&&H&&I&&J&&(N&&O||F&&(N||E)))||D&&(N&&(L&&M&&(K&&G&&H&&I&&J&&(O||F)||O&&P)||k&&l&&m&&e&&f&&g&&h&&i&&j)||E&&(O&&(M&&N&&(K&&L&&G&&H&&I&&J||P)||k&&l&&m&&n&&f&&g&&h&&i&&j)||F&&(P&&(N&&O||k&&l&&m&&n&&o&&g&&h&&i&&j)||G&&(O&&P||H&&(P||I)||k&&l&&m&&n&&o&&p&&h&&i&&j)||k&&l&&m&&n&&o&&h&&i&&j&&(p||g))||k&&l&&m&&n&&h&&i&&j&&(o&&(p||g)||f&&(o&&p||g)))||k&&l&&m&&h&&i&&j&&(n&&(o&&p||g&&(o||f))||e&&(n&&o&&p||g&&(n&&o||f))))||k&&l&&h&&i&&j&&(m&&(n&&o&&p||g&&(n&&o||f&&(n||e)))||d&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e)))))||k&&h&&i&&j&&(l&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d))))))||K&&I&&J&&(L&&M&&N&&O&&P||G&&H&&(L&&M&&N&&O||F&&(L&&M&&N||E&&(L&&M||D&&(L||C)))))||h&&i&&j&&(b&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c)))))||k&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c)))))))||B&&(H&&I&&J&&(K&&L&&M&&N&&O&&P&&a||G&&(K&&L&&M&&N&&O&&a||F&&(K&&L&&M&&N&&a||E&&(K&&L&&M&&a||D&&(K&&L&&a||C)))))||a&&k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||C&&(K&&H&&I&&J&&(L&&M&&N&&O&&P&&a&&b||G&&(L&&M&&N&&O&&a&&b||F&&(L&&M&&N&&a&&b||E&&(L&&M&&a&&b||D))))||a&&b&&k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d)))))||D&&(K&&L&&H&&I&&J&&(M&&N&&O&&P&&a&&b&&c||G&&(M&&N&&O&&a&&b&&c||F&&(M&&N&&a&&b&&c||E)))||a&&b&&k&&l&&m&&c&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e))))||E&&(K&&L&&M&&H&&I&&J&&(N&&O&&P&&a&&b&&c&&d||G&&(N&&O&&a&&b&&c&&d||F))||a&&b&&l&&m&&n&&c&&d&&(k&&g&&h&&i&&j&&(o||f)||o&&p))||F&&(K&&L&&M&&N&&H&&I&&J&&(O&&P&&a&&b&&c&&d&&e||G)||a&&b&&m&&n&&o&&c&&d&&e&&(k&&l&&g&&h&&i&&j||p))||G&&(K&&L&&M&&N&&O&&H&&I&&J||a&&b&&n&&o&&p&&c&&d&&e&&f)||H&&(K&&L&&M&&N&&O&&P&&I&&J||a&&b&&o&&p&&c&&d&&e&&f&&g)||a&&(b&&(k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(k&&l&&m&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e)))||d&&(l&&m&&n&&(k&&g&&h&&i&&j&&(o||f)||o&&p)||e&&(m&&n&&o&&(k&&l&&g&&h&&i&&j||p)||f&&(n&&o&&p||g&&(o&&p||h&&(p||i)))))))||k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||h&&i&&j&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c&&(b||k))))));\nfloat score = 0.0f;\n#ifdef USE_HARRIS_SCORE\nvec2 df0 = dfmm[octave], df1 = dfm0[octave], df2 = dfm1[octave],\ndf3 = df0m[octave], df4 = df00[octave], df5 = df01[octave],\ndf6 = df1m[octave], df7 = df10[octave], df8 = df11[octave];\nvec3 hm = vec3(0.0f);\nhm += vec3(df0.x * df0.x, df0.x * df0.y, df0.y * df0.y);\nhm += vec3(df1.x * df1.x, df1.x * df1.y, df1.y * df1.y);\nhm += vec3(df2.x * df2.x, df2.x * df2.y, df2.y * df2.y);\nhm += vec3(df3.x * df3.x, df3.x * df3.y, df3.y * df3.y);\nhm += vec3(df4.x * df4.x, df4.x * df4.y, df4.y * df4.y);\nhm += vec3(df5.x * df5.x, df5.x * df5.y, df5.y * df5.y);\nhm += vec3(df6.x * df6.x, df6.x * df6.y, df6.y * df6.y);\nhm += vec3(df7.x * df7.x, df7.x * df7.y, df7.y * df7.y);\nhm += vec3(df8.x * df8.x, df8.x * df8.y, df8.y * df8.y);\nfloat response = 0.5f * (hm.x + hm.z - sqrt((hm.x - hm.z) * (hm.x - hm.z) + 4.0f * hm.y * hm.y));\nconst float WINDOW_AREA = 9.0f;\nconst float EIGENVALUE_NORMALIZER = 9.0f / WINDOW_AREA;\nscore = response * EIGENVALUE_NORMALIZER;\nscore = 1.0f - exp2(-score);\n#else\nmat4 mct = mp - mat4(\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct\n), mc_t = mat4(\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t\n) - mp;\nvec4 bs = max(mc_t[0], zeroes), ds = max(mct[0], zeroes);\nbs += max(mc_t[1], zeroes); ds += max(mct[1], zeroes);\nbs += max(mc_t[2], zeroes); ds += max(mct[2], zeroes);\nbs += max(mc_t[3], zeroes); ds += max(mct[3], zeroes);\nscore = max(dot(bs, ones), dot(ds, ones)) / 16.0f;\n#endif\nscore *= float(isCorner);\nivec2 remainder = thread % int(pot);\nscore *= float(remainder.x + remainder.y == 0);\nfloat scale = encodeLod(lod);\nbest *= float(score <= best.x);\nbest += float(score > best.x) * vec2(score, scale);\nlod += lodStep;\npot = exp2(lod);\n}\ncolor.rba = best.xxy;\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/keypoints/multiscale-harris.glsl":
-/*!**********************************************************!*\
-  !*** ./src/gpu/shaders/keypoints/multiscale-harris.glsl ***!
-  \**********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "@include \"sobel.glsl\"\n@include \"pyramids.glsl\"\nuniform sampler2D pyramid;\nuniform int windowSize;\nuniform int numberOfOctaves;\nuniform float lodStep;\nuniform sampler2D sobelDerivatives[@PYRAMID_MAX_OCTAVES@];\nvec4 pickSobelDerivatives(int index, ivec2 offset)\n{\n#define MAX_OCTAVES @PYRAMID_MAX_OCTAVES@\n#if MAX_OCTAVES < 7 || MAX_OCTAVES > 16 || MAX_OCTAVES % 2 == 0\n#error MAX_OCTAVES cannot be @PYRAMID_MAX_OCTAVES@\n#endif\nswitch(index) {\ncase 0:  return textureLod(sobelDerivatives[0], texCoord + vec2(offset) / texSize, 0.0f);\ncase 1:  return textureLod(sobelDerivatives[1], texCoord + vec2(offset) / texSize, 0.0f);\ncase 2:  return textureLod(sobelDerivatives[2], texCoord + vec2(offset) / texSize, 0.0f);\ncase 3:  return textureLod(sobelDerivatives[3], texCoord + vec2(offset) / texSize, 0.0f);\ncase 4:  return textureLod(sobelDerivatives[4], texCoord + vec2(offset) / texSize, 0.0f);\ncase 5:  return textureLod(sobelDerivatives[5], texCoord + vec2(offset) / texSize, 0.0f);\ncase 6:  return textureLod(sobelDerivatives[6], texCoord + vec2(offset) / texSize, 0.0f);\n#if MAX_OCTAVES > 15\ncase 15: return textureLod(sobelDerivatives[15], texCoord + vec2(offset) / texSize, 0.0f);\n#elif MAX_OCTAVES > 13\ncase 14: return textureLod(sobelDerivatives[14], texCoord + vec2(offset) / texSize, 0.0f);\ncase 13: return textureLod(sobelDerivatives[13], texCoord + vec2(offset) / texSize, 0.0f);\n#elif MAX_OCTAVES > 11\ncase 12: return textureLod(sobelDerivatives[12], texCoord + vec2(offset) / texSize, 0.0f);\ncase 11: return textureLod(sobelDerivatives[11], texCoord + vec2(offset) / texSize, 0.0f);\n#elif MAX_OCTAVES > 9\ncase 10: return textureLod(sobelDerivatives[10], texCoord + vec2(offset) / texSize, 0.0f);\ncase 9:  return textureLod(sobelDerivatives[9], texCoord + vec2(offset) / texSize, 0.0f);\n#elif MAX_OCTAVES > 7\ncase 8:  return textureLod(sobelDerivatives[8], texCoord + vec2(offset) / texSize, 0.0f);\ncase 7:  return textureLod(sobelDerivatives[7], texCoord + vec2(offset) / texSize, 0.0f);\n#endif\ndefault: return vec4(0.0f);\n}\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(pyramid);\nvec2 best = vec2(0.0f, pixel.a);\nint r = (windowSize - 1) / 2;\nfloat windowArea = float(windowSize * windowSize);\nfor(int octave = 0; octave < numberOfOctaves; octave++) {\nvec3 m = vec3(0.0f);\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nvec2 df = decodeSobel(pickSobelDerivatives(octave, ivec2(i-r, j-r)));\nm += vec3(df.x * df.x, df.x * df.y, df.y * df.y);\n}\n}\nfloat response = 0.5f * (m.x + m.z - sqrt((m.x - m.z) * (m.x - m.z) + 4.0f * m.y * m.y));\nfloat normalizer = 9.0f / windowArea;\nfloat score = response * normalizer;\nfloat lod = lodStep * float(octave);\nfloat scale = encodeLod(lod);\nbest *= float(score <= best.x);\nbest += float(score > best.x) * vec2(score, scale);\n}\nfloat encodedScore = 1.0f - exp2(-best.x);\ncolor = vec4(encodedScore, pixel.g, best.xy);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/keypoints/multiscale-suppression.glsl":
+/***/ "./src/gpu/shaders/keypoints/fast/encode-fast-score.glsl":
 /*!***************************************************************!*\
-  !*** ./src/gpu/shaders/keypoints/multiscale-suppression.glsl ***!
+  !*** ./src/gpu/shaders/keypoints/fast/encode-fast-score.glsl ***!
   \***************************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\nuniform float lodStep;\n#define ENABLE_INNER_RING\n#define ENABLE_MIDDLE_RING\n#define ENABLE_OUTER_RING\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat lod = decodeLod(pixel.a);\ncolor = pixel;\nif(pixel.r == 0.0f)\nreturn;\n#ifdef ENABLE_INNER_RING\nvec4 p0 = pixelAtShortOffset(image, ivec2(0, 1));\nvec4 p1 = pixelAtShortOffset(image, ivec2(1, 1));\nvec4 p2 = pixelAtShortOffset(image, ivec2(1, 0));\nvec4 p3 = pixelAtShortOffset(image, ivec2(1, -1));\nvec4 p4 = pixelAtShortOffset(image, ivec2(0, -1));\nvec4 p5 = pixelAtShortOffset(image, ivec2(-1, -1));\nvec4 p6 = pixelAtShortOffset(image, ivec2(-1, 0));\nvec4 p7 = pixelAtShortOffset(image, ivec2(-1, 1));\n#else\nvec4 p0, p1, p2, p3, p4, p5, p6, p7;\np0 = p1 = p2 = p3 = p4 = p5 = p6 = p7 = vec4(0.0f);\n#endif\n#ifdef ENABLE_MIDDLE_RING\nvec4 q0 = pixelAtShortOffset(image, ivec2(0, 2));\nvec4 q1 = pixelAtShortOffset(image, ivec2(1, 2));\nvec4 q2 = pixelAtShortOffset(image, ivec2(2, 2));\nvec4 q3 = pixelAtShortOffset(image, ivec2(2, 1));\nvec4 q4 = pixelAtShortOffset(image, ivec2(2, 0));\nvec4 q5 = pixelAtShortOffset(image, ivec2(2, -1));\nvec4 q6 = pixelAtShortOffset(image, ivec2(2, -2));\nvec4 q7 = pixelAtShortOffset(image, ivec2(1, -2));\nvec4 q8 = pixelAtShortOffset(image, ivec2(0, -2));\nvec4 q9 = pixelAtShortOffset(image, ivec2(-1, -2));\nvec4 q10 = pixelAtShortOffset(image, ivec2(-2, -2));\nvec4 q11 = pixelAtShortOffset(image, ivec2(-2, -1));\nvec4 q12 = pixelAtShortOffset(image, ivec2(-2, 0));\nvec4 q13 = pixelAtShortOffset(image, ivec2(-2, 1));\nvec4 q14 = pixelAtShortOffset(image, ivec2(-2, 2));\nvec4 q15 = pixelAtShortOffset(image, ivec2(-1, 2));\n#else\nvec4 q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15;\nq0 = q1 = q2 = q3 = q4 = q5 = q6 = q7 = q8 = q9 = q10 =\nq11 = q12 = q13 = q14 = q15 = vec4(0.0f);\n#endif\n#ifdef ENABLE_OUTER_RING\nvec4 r0 = pixelAtShortOffset(image, ivec2(0, 3));\nvec4 r1 = pixelAtShortOffset(image, ivec2(1, 3));\nvec4 r2 = pixelAtShortOffset(image, ivec2(3, 1));\nvec4 r3 = pixelAtShortOffset(image, ivec2(3, 0));\nvec4 r4 = pixelAtShortOffset(image, ivec2(3, -1));\nvec4 r5 = pixelAtShortOffset(image, ivec2(1, -3));\nvec4 r6 = pixelAtShortOffset(image, ivec2(0, -3));\nvec4 r7 = pixelAtShortOffset(image, ivec2(-1, -3));\nvec4 r8 = pixelAtShortOffset(image, ivec2(-3, -1));\nvec4 r9 = pixelAtShortOffset(image, ivec2(-3, 0));\nvec4 r10 = pixelAtShortOffset(image, ivec2(-3, 1));\nvec4 r11 = pixelAtShortOffset(image, ivec2(-1, 3));\nvec4 r12 = pixelAtShortOffset(image, ivec2(0, 4));\nvec4 r13 = pixelAtShortOffset(image, ivec2(4, 0));\nvec4 r14 = pixelAtShortOffset(image, ivec2(0, -4));\nvec4 r15 = pixelAtShortOffset(image, ivec2(-4, 0));\n#else\nvec4 r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15;\nr0 = r1 = r2 = r3 = r4 = r5 = r6 = r7 = r8 = r9 = r10 =\nr11 = r12 = r13 = r14 = r15 = vec4(0.0f);\n#endif\nfloat lodPlus = lod + lodStep;\nfloat lodMinus = lod - lodStep;\nfloat alphaPlus = encodeLod(lodPlus);\nfloat alphaMinus = encodeLod(lodMinus);\nmat3 innerScore = mat3(\np0.r * float(isSameEncodedLod(p0.a, alphaPlus) || isSameEncodedLod(p0.a, alphaMinus)),\np1.r * float(isSameEncodedLod(p1.a, alphaPlus) || isSameEncodedLod(p1.a, alphaMinus)),\np2.r * float(isSameEncodedLod(p2.a, alphaPlus) || isSameEncodedLod(p2.a, alphaMinus)),\np3.r * float(isSameEncodedLod(p3.a, alphaPlus) || isSameEncodedLod(p3.a, alphaMinus)),\np4.r * float(isSameEncodedLod(p4.a, alphaPlus) || isSameEncodedLod(p4.a, alphaMinus)),\np5.r * float(isSameEncodedLod(p5.a, alphaPlus) || isSameEncodedLod(p5.a, alphaMinus)),\np6.r * float(isSameEncodedLod(p6.a, alphaPlus) || isSameEncodedLod(p6.a, alphaMinus)),\np7.r * float(isSameEncodedLod(p7.a, alphaPlus) || isSameEncodedLod(p7.a, alphaMinus)),\n0.0f\n);\nmat4 middleScore = mat4(\nq0.r * float(isSameEncodedLod(q0.a, alphaPlus) || isSameEncodedLod(q0.a, alphaMinus)),\nq1.r * float(isSameEncodedLod(q1.a, alphaPlus) || isSameEncodedLod(q1.a, alphaMinus)),\nq2.r * float(isSameEncodedLod(q2.a, alphaPlus) || isSameEncodedLod(q2.a, alphaMinus)),\nq3.r * float(isSameEncodedLod(q3.a, alphaPlus) || isSameEncodedLod(q3.a, alphaMinus)),\nq4.r * float(isSameEncodedLod(q4.a, alphaPlus) || isSameEncodedLod(q4.a, alphaMinus)),\nq5.r * float(isSameEncodedLod(q5.a, alphaPlus) || isSameEncodedLod(q5.a, alphaMinus)),\nq6.r * float(isSameEncodedLod(q6.a, alphaPlus) || isSameEncodedLod(q6.a, alphaMinus)),\nq7.r * float(isSameEncodedLod(q7.a, alphaPlus) || isSameEncodedLod(q7.a, alphaMinus)),\nq8.r * float(isSameEncodedLod(q8.a, alphaPlus) || isSameEncodedLod(q8.a, alphaMinus)),\nq9.r * float(isSameEncodedLod(q9.a, alphaPlus) || isSameEncodedLod(q9.a, alphaMinus)),\nq10.r * float(isSameEncodedLod(q10.a, alphaPlus) || isSameEncodedLod(q10.a, alphaMinus)),\nq11.r * float(isSameEncodedLod(q11.a, alphaPlus) || isSameEncodedLod(q11.a, alphaMinus)),\nq12.r * float(isSameEncodedLod(q12.a, alphaPlus) || isSameEncodedLod(q12.a, alphaMinus)),\nq13.r * float(isSameEncodedLod(q13.a, alphaPlus) || isSameEncodedLod(q13.a, alphaMinus)),\nq14.r * float(isSameEncodedLod(q14.a, alphaPlus) || isSameEncodedLod(q14.a, alphaMinus)),\nq15.r * float(isSameEncodedLod(q15.a, alphaPlus) || isSameEncodedLod(q15.a, alphaMinus))\n);\nmat4 outerScore = mat4(\nr0.r * float(isSameEncodedLod(r0.a, alphaPlus) || isSameEncodedLod(r0.a, alphaMinus)),\nr1.r * float(isSameEncodedLod(r1.a, alphaPlus) || isSameEncodedLod(r1.a, alphaMinus)),\nr2.r * float(isSameEncodedLod(r2.a, alphaPlus) || isSameEncodedLod(r2.a, alphaMinus)),\nr3.r * float(isSameEncodedLod(r3.a, alphaPlus) || isSameEncodedLod(r3.a, alphaMinus)),\nr4.r * float(isSameEncodedLod(r4.a, alphaPlus) || isSameEncodedLod(r4.a, alphaMinus)),\nr5.r * float(isSameEncodedLod(r5.a, alphaPlus) || isSameEncodedLod(r5.a, alphaMinus)),\nr6.r * float(isSameEncodedLod(r6.a, alphaPlus) || isSameEncodedLod(r6.a, alphaMinus)),\nr7.r * float(isSameEncodedLod(r7.a, alphaPlus) || isSameEncodedLod(r7.a, alphaMinus)),\nr8.r * float(isSameEncodedLod(r8.a, alphaPlus) || isSameEncodedLod(r8.a, alphaMinus)),\nr9.r * float(isSameEncodedLod(r9.a, alphaPlus) || isSameEncodedLod(r9.a, alphaMinus)),\nr10.r * float(isSameEncodedLod(r10.a, alphaPlus) || isSameEncodedLod(r10.a, alphaMinus)),\nr11.r * float(isSameEncodedLod(r11.a, alphaPlus) || isSameEncodedLod(r11.a, alphaMinus)),\nr12.r * float(isSameEncodedLod(r12.a, alphaPlus) || isSameEncodedLod(r12.a, alphaMinus)),\nr13.r * float(isSameEncodedLod(r13.a, alphaPlus) || isSameEncodedLod(r13.a, alphaMinus)),\nr14.r * float(isSameEncodedLod(r14.a, alphaPlus) || isSameEncodedLod(r14.a, alphaMinus)),\nr15.r * float(isSameEncodedLod(r15.a, alphaPlus) || isSameEncodedLod(r15.a, alphaMinus))\n);\nvec3 maxInnerScore3 = max(innerScore[0], max(innerScore[1], innerScore[2]));\nvec4 maxMiddleScore4 = max(max(middleScore[0], middleScore[1]), max(middleScore[2], middleScore[3]));\nvec4 maxOuterScore4 = max(max(outerScore[0], outerScore[1]), max(outerScore[2], outerScore[3]));\nfloat maxInnerScore = max(maxInnerScore3.x, max(maxInnerScore3.y, maxInnerScore3.z));\nfloat maxMiddleScore = max(max(maxMiddleScore4.x, maxMiddleScore4.y), max(maxMiddleScore4.z, maxMiddleScore4.w));\nfloat maxOuterScore = max(max(maxOuterScore4.x, maxOuterScore4.y), max(maxOuterScore4.z, maxOuterScore4.w));\nfloat maxScore = max(maxInnerScore, max(maxMiddleScore, maxOuterScore));\nfloat myScore = step(maxScore, pixel.r) * pixel.r;\ncolor = vec4(myScore, pixel.gba);\n}"
+module.exports = "@include \"float16.glsl\"\nuniform sampler2D image;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat score = decodeFloat16(pixel.rb);\nconst float mul = 6.0f;\nfloat score8 = clamp(score * mul, 0.0f, 1.0f);\ncolor = vec4(score8, pixel.g, 0.0f, pixel.a);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/fast/fast-score12.glsl":
+/*!**********************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/fast/fast-score12.glsl ***!
+  \**********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"float16.glsl\"\nuniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtShortOffset(image, ivec2(0, 2)).g;\nfloat p1 = pixelAtShortOffset(image, ivec2(1, 2)).g;\nfloat p2 = pixelAtShortOffset(image, ivec2(2, 1)).g;\nfloat p3 = pixelAtShortOffset(image, ivec2(2, 0)).g;\nfloat p4 = pixelAtShortOffset(image, ivec2(2, -1)).g;\nfloat p5 = pixelAtShortOffset(image, ivec2(1, -2)).g;\nfloat p6 = pixelAtShortOffset(image, ivec2(0, -2)).g;\nfloat p7 = pixelAtShortOffset(image, ivec2(-1, -2)).g;\nfloat p8 = pixelAtShortOffset(image, ivec2(-2, -1)).g;\nfloat p9 = pixelAtShortOffset(image, ivec2(-2, 0)).g;\nfloat p10 = pixelAtShortOffset(image, ivec2(-2, 1)).g;\nfloat p11 = pixelAtShortOffset(image, ivec2(-1, 2)).g;\nvec2 scores = vec2(0.0f, 0.0f);\nscores += vec2(max(c_t - p0, 0.0f), max(p0 - ct, 0.0f));\nscores += vec2(max(c_t - p1, 0.0f), max(p1 - ct, 0.0f));\nscores += vec2(max(c_t - p2, 0.0f), max(p2 - ct, 0.0f));\nscores += vec2(max(c_t - p3, 0.0f), max(p3 - ct, 0.0f));\nscores += vec2(max(c_t - p4, 0.0f), max(p4 - ct, 0.0f));\nscores += vec2(max(c_t - p5, 0.0f), max(p5 - ct, 0.0f));\nscores += vec2(max(c_t - p6, 0.0f), max(p6 - ct, 0.0f));\nscores += vec2(max(c_t - p7, 0.0f), max(p7 - ct, 0.0f));\nscores += vec2(max(c_t - p8, 0.0f), max(p8 - ct, 0.0f));\nscores += vec2(max(c_t - p9, 0.0f), max(p9 - ct, 0.0f));\nscores += vec2(max(c_t - p10, 0.0f), max(p10 - ct, 0.0f));\nscores += vec2(max(c_t - p11, 0.0f), max(p11 - ct, 0.0f));\nscores /= 12.0f;\nfloat score = max(scores.x, scores.y) * step(1.0f, pixel.r);\ncolor = pixel;\ncolor.rb = encodeFloat16(score);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/fast/fast-score16.glsl":
+/*!**********************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/fast/fast-score16.glsl ***!
+  \**********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"float16.glsl\"\nuniform sampler2D image;\nuniform float threshold;\nconst vec4 zeroes = vec4(0.0f, 0.0f, 0.0f, 0.0f);\nconst vec4 ones = vec4(1.0f, 1.0f, 1.0f, 1.0f);\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nmat4 mp = mat4(\npixelAtShortOffset(image, ivec2(0, 3)).g,\npixelAtShortOffset(image, ivec2(1, 3)).g,\npixelAtShortOffset(image, ivec2(2, 2)).g,\npixelAtShortOffset(image, ivec2(3, 1)).g,\npixelAtShortOffset(image, ivec2(3, 0)).g,\npixelAtShortOffset(image, ivec2(3, -1)).g,\npixelAtShortOffset(image, ivec2(2, -2)).g,\npixelAtShortOffset(image, ivec2(1, -3)).g,\npixelAtShortOffset(image, ivec2(0, -3)).g,\npixelAtShortOffset(image, ivec2(-1, -3)).g,\npixelAtShortOffset(image, ivec2(-2, -2)).g,\npixelAtShortOffset(image, ivec2(-3, -1)).g,\npixelAtShortOffset(image, ivec2(-3, 0)).g,\npixelAtShortOffset(image, ivec2(-3, 1)).g,\npixelAtShortOffset(image, ivec2(-2, 2)).g,\npixelAtShortOffset(image, ivec2(-1, 3)).g\n);\nmat4 mct = mp - mat4(\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct\n), mc_t = mat4(\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t\n) - mp;\nvec4 bs = max(mc_t[0], zeroes), ds = max(mct[0], zeroes);\nbs += max(mc_t[1], zeroes); ds += max(mct[1], zeroes);\nbs += max(mc_t[2], zeroes); ds += max(mct[2], zeroes);\nbs += max(mc_t[3], zeroes); ds += max(mct[3], zeroes);\nfloat score = max(dot(bs, ones), dot(ds, ones)) * step(1.0f, pixel.r);\nscore /= 16.0f;\ncolor = pixel;\ncolor.rb = encodeFloat16(score);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/fast/fast-score8.glsl":
+/*!*********************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/fast/fast-score8.glsl ***!
+  \*********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"float16.glsl\"\nuniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtShortOffset(image, ivec2(0, 1)).g;\nfloat p1 = pixelAtShortOffset(image, ivec2(1, 1)).g;\nfloat p2 = pixelAtShortOffset(image, ivec2(1, 0)).g;\nfloat p3 = pixelAtShortOffset(image, ivec2(1, -1)).g;\nfloat p4 = pixelAtShortOffset(image, ivec2(0, -1)).g;\nfloat p5 = pixelAtShortOffset(image, ivec2(-1, -1)).g;\nfloat p6 = pixelAtShortOffset(image, ivec2(-1, 0)).g;\nfloat p7 = pixelAtShortOffset(image, ivec2(-1, 1)).g;\nvec2 scores = vec2(0.0f, 0.0f);\nscores += vec2(max(c_t - p0, 0.0f), max(p0 - ct, 0.0f));\nscores += vec2(max(c_t - p1, 0.0f), max(p1 - ct, 0.0f));\nscores += vec2(max(c_t - p2, 0.0f), max(p2 - ct, 0.0f));\nscores += vec2(max(c_t - p3, 0.0f), max(p3 - ct, 0.0f));\nscores += vec2(max(c_t - p4, 0.0f), max(p4 - ct, 0.0f));\nscores += vec2(max(c_t - p5, 0.0f), max(p5 - ct, 0.0f));\nscores += vec2(max(c_t - p6, 0.0f), max(p6 - ct, 0.0f));\nscores += vec2(max(c_t - p7, 0.0f), max(p7 - ct, 0.0f));\nscores /= 8.0f;\nfloat score = max(scores.x, scores.y) * step(1.0f, pixel.r);\ncolor = pixel;\ncolor.rb = encodeFloat16(score);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/fast/fast5.glsl":
+/*!***************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/fast/fast5.glsl ***!
+  \***************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nvec4 pixel = threadPixel(image);\ncolor = vec4(0.0f, pixel.g, 0.0f, encodeLod(0.0f));\nif(\nthread.x >= 3 && thread.x < size.x - 3 &&\nthread.y >= 3 && thread.y < size.y - 3\n) {\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtShortOffset(image, ivec2(0, 1)).g;\nfloat p1 = pixelAtShortOffset(image, ivec2(1, 1)).g;\nfloat p2 = pixelAtShortOffset(image, ivec2(1, 0)).g;\nfloat p3 = pixelAtShortOffset(image, ivec2(1, -1)).g;\nfloat p4 = pixelAtShortOffset(image, ivec2(0, -1)).g;\nfloat p5 = pixelAtShortOffset(image, ivec2(-1, -1)).g;\nfloat p6 = pixelAtShortOffset(image, ivec2(-1, 0)).g;\nfloat p7 = pixelAtShortOffset(image, ivec2(-1, 1)).g;\nbool possibleCorner =\n((c_t > p1 || c_t > p5) && (c_t > p3 || c_t > p7)) ||\n((ct < p1  || ct < p5)  && (ct < p3  || ct < p7))  ;\nif(possibleCorner) {\nint bright = 0, dark = 0, bc = 0, dc = 0;\nif(c_t > p0) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p0) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p1) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p1) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p2) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p2) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p3) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p3) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p4) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p4) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p5) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p5) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p6) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p6) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p7) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p7) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(bright < 5 && dark < 5) {\nif(bc > 0 && bc < 5) do {\nif(c_t > p0)           bc += 1; else break;\nif(c_t > p1 && bc < 5) bc += 1; else break;\nif(c_t > p2 && bc < 5) bc += 1; else break;\nif(c_t > p3 && bc < 5) bc += 1; else break;\n} while(false);\nif(dc > 0 && dc < 5) do {\nif(ct < p0)           dc += 1; else break;\nif(ct < p1 && dc < 5) dc += 1; else break;\nif(ct < p2 && dc < 5) dc += 1; else break;\nif(ct < p3 && dc < 5) dc += 1; else break;\n} while(false);\nif(bc >= 5 || dc >= 5)\ncolor.r = 1.0f;\n}\nelse {\ncolor.r = 1.0f;\n}\n}\n}\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/fast/fast7.glsl":
+/*!***************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/fast/fast7.glsl ***!
+  \***************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\nuniform float threshold;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nvec4 pixel = threadPixel(image);\ncolor = vec4(0.0f, pixel.g, 0.0f, encodeLod(0.0f));\nif(\nthread.x >= 3 && thread.x < size.x - 3 &&\nthread.y >= 3 && thread.y < size.y - 3\n) {\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat c = pixel.g;\nfloat ct = c + t, c_t = c - t;\nfloat p0 = pixelAtShortOffset(image, ivec2(0, 2)).g;\nfloat p1 = pixelAtShortOffset(image, ivec2(1, 2)).g;\nfloat p2 = pixelAtShortOffset(image, ivec2(2, 1)).g;\nfloat p3 = pixelAtShortOffset(image, ivec2(2, 0)).g;\nfloat p4 = pixelAtShortOffset(image, ivec2(2, -1)).g;\nfloat p5 = pixelAtShortOffset(image, ivec2(1, -2)).g;\nfloat p6 = pixelAtShortOffset(image, ivec2(0, -2)).g;\nfloat p7 = pixelAtShortOffset(image, ivec2(-1, -2)).g;\nfloat p8 = pixelAtShortOffset(image, ivec2(-2, -1)).g;\nfloat p9 = pixelAtShortOffset(image, ivec2(-2, 0)).g;\nfloat p10 = pixelAtShortOffset(image, ivec2(-2, 1)).g;\nfloat p11 = pixelAtShortOffset(image, ivec2(-1, 2)).g;\nbool possibleCorner =\n((c_t > p0 || c_t > p6) && (c_t > p3 || c_t > p9)) ||\n((ct < p0  || ct < p6)  && (ct < p3  || ct < p9))  ;\nif(possibleCorner) {\nint bright = 0, dark = 0, bc = 0, dc = 0;\nif(c_t > p0) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p0) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p1) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p1) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p2) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p2) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p3) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p3) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p4) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p4) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p5) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p5) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p6) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p6) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p7) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p7) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p8) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p8) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p9) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p9) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p10) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p10) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(c_t > p11) { dc = 0; bc += 1; if(bc > bright) bright = bc; }\nelse { bc = 0; if(ct < p11) { dc += 1; if(dc > dark) dark = dc; } else dc = 0; }\nif(bright < 7 && dark < 7) {\nif(bc > 0 && bc < 7) do {\nif(c_t > p0)           bc += 1; else break;\nif(c_t > p1 && bc < 7) bc += 1; else break;\nif(c_t > p2 && bc < 7) bc += 1; else break;\nif(c_t > p3 && bc < 7) bc += 1; else break;\nif(c_t > p4 && bc < 7) bc += 1; else break;\nif(c_t > p5 && bc < 7) bc += 1; else break;\n} while(false);\nif(dc > 0 && dc < 7) do {\nif(ct < p0)           dc += 1; else break;\nif(ct < p1 && dc < 7) dc += 1; else break;\nif(ct < p2 && dc < 7) dc += 1; else break;\nif(ct < p3 && dc < 7) dc += 1; else break;\nif(ct < p4 && dc < 7) dc += 1; else break;\nif(ct < p5 && dc < 7) dc += 1; else break;\n} while(false);\nif(bc >= 7 || dc >= 7)\ncolor.r = 1.0f;\n}\nelse {\ncolor.r = 1.0f;\n}\n}\n}\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/fast/fast9.glsl":
+/*!***************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/fast/fast9.glsl ***!
+  \***************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\nuniform float threshold;\nconst ivec4 margin = ivec4(3, 3, 4, 4);\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 thread = threadLocation();\nivec2 size = outputSize();\ncolor = vec4(0.0f, pixel.g, 0.0f, encodeLod(0.0f));\nif(any(lessThan(ivec4(thread, size - thread), margin)))\nreturn;\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nfloat p0 = pixelAtShortOffset(image, ivec2(0, 3)).g;\nfloat p4 = pixelAtShortOffset(image, ivec2(3, 0)).g;\nfloat p8 = pixelAtShortOffset(image, ivec2(0, -3)).g;\nfloat p12 = pixelAtShortOffset(image, ivec2(-3, 0)).g;\nif(!(\n((c_t > p0 || c_t > p8) && (c_t > p4 || c_t > p12)) ||\n((ct < p0  || ct < p8)  && (ct < p4  || ct < p12))\n))\nreturn;\nfloat p1 = pixelAtShortOffset(image, ivec2(1, 3)).g;\nfloat p2 = pixelAtShortOffset(image, ivec2(2, 2)).g;\nfloat p3 = pixelAtShortOffset(image, ivec2(3, 1)).g;\nfloat p5 = pixelAtShortOffset(image, ivec2(3, -1)).g;\nfloat p6 = pixelAtShortOffset(image, ivec2(2, -2)).g;\nfloat p7 = pixelAtShortOffset(image, ivec2(1, -3)).g;\nfloat p9 = pixelAtShortOffset(image, ivec2(-1, -3)).g;\nfloat p10 = pixelAtShortOffset(image, ivec2(-2, -2)).g;\nfloat p11 = pixelAtShortOffset(image, ivec2(-3, -1)).g;\nfloat p13 = pixelAtShortOffset(image, ivec2(-3, 1)).g;\nfloat p14 = pixelAtShortOffset(image, ivec2(-2, 2)).g;\nfloat p15 = pixelAtShortOffset(image, ivec2(-1, 3)).g;\nbool A=(p0>ct),B=(p1>ct),C=(p2>ct),D=(p3>ct),E=(p4>ct),F=(p5>ct),G=(p6>ct),H=(p7>ct),I=(p8>ct),J=(p9>ct),K=(p10>ct),L=(p11>ct),M=(p12>ct),N=(p13>ct),O=(p14>ct),P=(p15>ct),a=(p0<c_t),b=(p1<c_t),c=(p2<c_t),d=(p3<c_t),e=(p4<c_t),f=(p5<c_t),g=(p6<c_t),h=(p7<c_t),i=(p8<c_t),j=(p9<c_t),k=(p10<c_t),l=(p11<c_t),m=(p12<c_t),n=(p13<c_t),o=(p14<c_t),p=(p15<c_t);\nbool isCorner=A&&(B&&(K&&L&&J&&(M&&N&&O&&P||G&&H&&I&&(M&&N&&O||F&&(M&&N||E&&(M||D))))||C&&(K&&L&&M&&(N&&O&&P||G&&H&&I&&J&&(N&&O||F&&(N||E)))||D&&(N&&(L&&M&&(K&&G&&H&&I&&J&&(O||F)||O&&P)||k&&l&&m&&e&&f&&g&&h&&i&&j)||E&&(O&&(M&&N&&(K&&L&&G&&H&&I&&J||P)||k&&l&&m&&n&&f&&g&&h&&i&&j)||F&&(P&&(N&&O||k&&l&&m&&n&&o&&g&&h&&i&&j)||G&&(O&&P||H&&(P||I)||k&&l&&m&&n&&o&&p&&h&&i&&j)||k&&l&&m&&n&&o&&h&&i&&j&&(p||g))||k&&l&&m&&n&&h&&i&&j&&(o&&(p||g)||f&&(o&&p||g)))||k&&l&&m&&h&&i&&j&&(n&&(o&&p||g&&(o||f))||e&&(n&&o&&p||g&&(n&&o||f))))||k&&l&&h&&i&&j&&(m&&(n&&o&&p||g&&(n&&o||f&&(n||e)))||d&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e)))))||k&&h&&i&&j&&(l&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d))))))||K&&I&&J&&(L&&M&&N&&O&&P||G&&H&&(L&&M&&N&&O||F&&(L&&M&&N||E&&(L&&M||D&&(L||C)))))||h&&i&&j&&(b&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c)))))||k&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c)))))))||B&&(H&&I&&J&&(K&&L&&M&&N&&O&&P&&a||G&&(K&&L&&M&&N&&O&&a||F&&(K&&L&&M&&N&&a||E&&(K&&L&&M&&a||D&&(K&&L&&a||C)))))||a&&k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||C&&(K&&H&&I&&J&&(L&&M&&N&&O&&P&&a&&b||G&&(L&&M&&N&&O&&a&&b||F&&(L&&M&&N&&a&&b||E&&(L&&M&&a&&b||D))))||a&&b&&k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d)))))||D&&(K&&L&&H&&I&&J&&(M&&N&&O&&P&&a&&b&&c||G&&(M&&N&&O&&a&&b&&c||F&&(M&&N&&a&&b&&c||E)))||a&&b&&k&&l&&m&&c&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e))))||E&&(K&&L&&M&&H&&I&&J&&(N&&O&&P&&a&&b&&c&&d||G&&(N&&O&&a&&b&&c&&d||F))||a&&b&&l&&m&&n&&c&&d&&(k&&g&&h&&i&&j&&(o||f)||o&&p))||F&&(K&&L&&M&&N&&H&&I&&J&&(O&&P&&a&&b&&c&&d&&e||G)||a&&b&&m&&n&&o&&c&&d&&e&&(k&&l&&g&&h&&i&&j||p))||G&&(K&&L&&M&&N&&O&&H&&I&&J||a&&b&&n&&o&&p&&c&&d&&e&&f)||H&&(K&&L&&M&&N&&O&&P&&I&&J||a&&b&&o&&p&&c&&d&&e&&f&&g)||a&&(b&&(k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(k&&l&&m&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e)))||d&&(l&&m&&n&&(k&&g&&h&&i&&j&&(o||f)||o&&p)||e&&(m&&n&&o&&(k&&l&&g&&h&&i&&j||p)||f&&(n&&o&&p||g&&(o&&p||h&&(p||i)))))))||k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||h&&i&&j&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c&&(b||k))))));\ncolor.r = float(isCorner);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/fast/multiscale-fast.glsl":
+/*!*************************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/fast/multiscale-fast.glsl ***!
+  \*************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D pyramid;\nuniform float threshold;\nuniform int numberOfOctaves;\nuniform float lodStep;\nconst ivec4 margin = ivec4(3, 3, 4, 4);\nconst vec4 zeroes = vec4(0.0f, 0.0f, 0.0f, 0.0f);\nconst vec4 ones = vec4(1.0f, 1.0f, 1.0f, 1.0f);\nvoid main()\n{\nvec4 pixel = threadPixel(pyramid);\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nfloat t = clamp(threshold, 0.0f, 1.0f);\nfloat ct = pixel.g + t, c_t = pixel.g - t;\nvec2 best = vec2(0.0f);\ncolor = vec4(0.0f, pixel.g, 0.0f, pixel.a);\nfloat lod = 0.0f, pot = 1.0f;\nfor(int octave = 0; octave < numberOfOctaves; octave++) {\npixel = pyrPixel(pyramid, lod);\nct = pixel.g + t;\nc_t = pixel.g - t;\nvec4 p4k = vec4(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, 3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, 0)).g\n);\nmat4 mp = mat4(\np4k.x,\np4k.y,\np4k.z,\np4k.w,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, 2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(2, -2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, -2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-2, 2)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(3, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, -3)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-3, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 3)).g\n);\nbool A=(mp[0][0]>ct),B=(mp[1][0]>ct),C=(mp[2][0]>ct),D=(mp[3][0]>ct),E=(mp[0][1]>ct),F=(mp[1][1]>ct),G=(mp[2][1]>ct),H=(mp[3][1]>ct),I=(mp[0][2]>ct),J=(mp[1][2]>ct),K=(mp[2][2]>ct),L=(mp[3][2]>ct),M=(mp[0][3]>ct),N=(mp[1][3]>ct),O=(mp[2][3]>ct),P=(mp[3][3]>ct),a=(mp[0][0]<c_t),b=(mp[1][0]<c_t),c=(mp[2][0]<c_t),d=(mp[3][0]<c_t),e=(mp[0][1]<c_t),f=(mp[1][1]<c_t),g=(mp[2][1]<c_t),h=(mp[3][1]<c_t),i=(mp[0][2]<c_t),j=(mp[1][2]<c_t),k=(mp[2][2]<c_t),l=(mp[3][2]<c_t),m=(mp[0][3]<c_t),n=(mp[1][3]<c_t),o=(mp[2][3]<c_t),p=(mp[3][3]<c_t);\nbool isCorner=A&&(B&&(K&&L&&J&&(M&&N&&O&&P||G&&H&&I&&(M&&N&&O||F&&(M&&N||E&&(M||D))))||C&&(K&&L&&M&&(N&&O&&P||G&&H&&I&&J&&(N&&O||F&&(N||E)))||D&&(N&&(L&&M&&(K&&G&&H&&I&&J&&(O||F)||O&&P)||k&&l&&m&&e&&f&&g&&h&&i&&j)||E&&(O&&(M&&N&&(K&&L&&G&&H&&I&&J||P)||k&&l&&m&&n&&f&&g&&h&&i&&j)||F&&(P&&(N&&O||k&&l&&m&&n&&o&&g&&h&&i&&j)||G&&(O&&P||H&&(P||I)||k&&l&&m&&n&&o&&p&&h&&i&&j)||k&&l&&m&&n&&o&&h&&i&&j&&(p||g))||k&&l&&m&&n&&h&&i&&j&&(o&&(p||g)||f&&(o&&p||g)))||k&&l&&m&&h&&i&&j&&(n&&(o&&p||g&&(o||f))||e&&(n&&o&&p||g&&(n&&o||f))))||k&&l&&h&&i&&j&&(m&&(n&&o&&p||g&&(n&&o||f&&(n||e)))||d&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e)))))||k&&h&&i&&j&&(l&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d))))))||K&&I&&J&&(L&&M&&N&&O&&P||G&&H&&(L&&M&&N&&O||F&&(L&&M&&N||E&&(L&&M||D&&(L||C)))))||h&&i&&j&&(b&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c)))))||k&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c)))))))||B&&(H&&I&&J&&(K&&L&&M&&N&&O&&P&&a||G&&(K&&L&&M&&N&&O&&a||F&&(K&&L&&M&&N&&a||E&&(K&&L&&M&&a||D&&(K&&L&&a||C)))))||a&&k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||C&&(K&&H&&I&&J&&(L&&M&&N&&O&&P&&a&&b||G&&(L&&M&&N&&O&&a&&b||F&&(L&&M&&N&&a&&b||E&&(L&&M&&a&&b||D))))||a&&b&&k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d)))))||D&&(K&&L&&H&&I&&J&&(M&&N&&O&&P&&a&&b&&c||G&&(M&&N&&O&&a&&b&&c||F&&(M&&N&&a&&b&&c||E)))||a&&b&&k&&l&&m&&c&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e))))||E&&(K&&L&&M&&H&&I&&J&&(N&&O&&P&&a&&b&&c&&d||G&&(N&&O&&a&&b&&c&&d||F))||a&&b&&l&&m&&n&&c&&d&&(k&&g&&h&&i&&j&&(o||f)||o&&p))||F&&(K&&L&&M&&N&&H&&I&&J&&(O&&P&&a&&b&&c&&d&&e||G)||a&&b&&m&&n&&o&&c&&d&&e&&(k&&l&&g&&h&&i&&j||p))||G&&(K&&L&&M&&N&&O&&H&&I&&J||a&&b&&n&&o&&p&&c&&d&&e&&f)||H&&(K&&L&&M&&N&&O&&P&&I&&J||a&&b&&o&&p&&c&&d&&e&&f&&g)||a&&(b&&(k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(k&&l&&m&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e)))||d&&(l&&m&&n&&(k&&g&&h&&i&&j&&(o||f)||o&&p)||e&&(m&&n&&o&&(k&&l&&g&&h&&i&&j||p)||f&&(n&&o&&p||g&&(o&&p||h&&(p||i)))))))||k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||h&&i&&j&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c&&(b||k))))));\nmat4 mct = mp - mat4(\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct,\nct, ct, ct, ct\n), mc_t = mat4(\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t,\nc_t, c_t, c_t, c_t\n) - mp;\nvec4 bs = max(mc_t[0], zeroes), ds = max(mct[0], zeroes);\nbs += max(mc_t[1], zeroes); ds += max(mct[1], zeroes);\nbs += max(mc_t[2], zeroes); ds += max(mct[2], zeroes);\nbs += max(mc_t[3], zeroes); ds += max(mct[3], zeroes);\nfloat score = max(dot(bs, ones), dot(ds, ones)) / 16.0f;\nscore *= float(isCorner);\nbest = (score > best.x) ? vec2(score, lod) : best;\nlod += lodStep;\npot = exp2(lod);\n}\ncolor.rb = encodeFloat16(best.x);\ncolor.a = encodeLod(best.y);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/harris/encode-harris-score.glsl":
+/*!*******************************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/harris/encode-harris-score.glsl ***!
+  \*******************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"float16.glsl\"\nuniform sampler2D image;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat score = decodeFloat16(pixel.rb);\nfloat score8 = 1.0f - exp2(-score);\ncolor = vec4(score8, pixel.g, 0.0f, pixel.a);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/harris/harris-cutoff.glsl":
+/*!*************************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/harris/harris-cutoff.glsl ***!
+  \*************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"float16.glsl\"\nuniform sampler2D corners;\nuniform sampler2D maxScore;\nuniform float quality;\nvoid main()\n{\nvec4 pixel = threadPixel(corners);\nfloat maxval = decodeFloat16(threadPixel(maxScore).rb);\nfloat score = decodeFloat16(pixel.rb);\nfloat threshold = maxval * clamp(quality, 0.0f, 1.0f);\nscore *= step(threshold, score);\ncolor = pixel;\ncolor.rb = encodeFloat16(score);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/harris/max-harris-score.glsl":
+/*!****************************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/harris/max-harris-score.glsl ***!
+  \****************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"float16.glsl\"\nuniform sampler2D self;\nuniform int iterationNumber;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 last = outputSize() - ivec2(1);\nint jump = (1 << iterationNumber);\nint clusterLength = jump << 1;\nint clusterMask = clusterLength - 1;\nivec2 clusterPos = ivec2(thread >> (1 + iterationNumber)) << (1 + iterationNumber);\nivec2 next1 = clusterPos + ((thread - clusterPos + ivec2(jump, 0)) & clusterMask);\nivec2 next2 = clusterPos + ((thread - clusterPos + ivec2(0, jump)) & clusterMask);\nivec2 next3 = clusterPos + ((thread - clusterPos + ivec2(jump, jump)) & clusterMask);\nvec4 p0 = texelFetch(self, thread, 0);\nvec4 p1 = texelFetch(self, min(next1, last), 0);\nvec4 p2 = texelFetch(self, min(next2, last), 0);\nvec4 p3 = texelFetch(self, min(next3, last), 0);\nfloat s0 = decodeFloat16(p0.rb);\nfloat s1 = decodeFloat16(p1.rb);\nfloat s2 = decodeFloat16(p2.rb);\nfloat s3 = decodeFloat16(p3.rb);\nbool b0 = s0 >= s1 && s0 >= s2 && s0 >= s3;\nbool b1 = s1 >= s0 && s1 >= s2 && s1 >= s3;\nbool b2 = s2 >= s0 && s2 >= s1 && s2 >= s3;\ncolor = vec4(0.0f);\ncolor.rb = b0 ? p0.rb : (\nb1 ? p1.rb : (\nb2 ? p2.rb : p3.rb\n)\n);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/harris/multiscale-harris.glsl":
+/*!*****************************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/harris/multiscale-harris.glsl ***!
+  \*****************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"sobel.glsl\"\n@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D pyramid;\nuniform int windowSize;\nuniform int numberOfOctaves;\nuniform float lodStep;\nuniform sampler2D sobelDerivatives[@PYRAMID_MAX_OCTAVES@];\nvec4 pickSobelDerivatives(int index, ivec2 offset)\n{\n#define MAX_OCTAVES @PYRAMID_MAX_OCTAVES@\n#define CASE(k) case k: return textureLod(sobelDerivatives[k], texCoord + vec2(offset) / texSize, 0.0f)\n#if MAX_OCTAVES < 7 || MAX_OCTAVES > 16 || MAX_OCTAVES % 2 == 0\n#error MAX_OCTAVES cannot be @PYRAMID_MAX_OCTAVES@\n#endif\nswitch(index) {\n#if MAX_OCTAVES > 15\nCASE(15);\n#elif MAX_OCTAVES > 13\nCASE(14); CASE(13);\n#elif MAX_OCTAVES > 11\nCASE(12); CASE(11);\n#elif MAX_OCTAVES > 9\nCASE(10); CASE(9);\n#elif MAX_OCTAVES > 7\nCASE(8); CASE(7);\n#endif\nCASE(6); CASE(5); CASE(4); CASE(3); CASE(2); CASE(1); CASE(0);\ndefault: return vec4(0.0f);\n}\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(pyramid);\nint r = (windowSize - 1) / 2;\nfloat windowArea = float(windowSize * windowSize);\nvec2 tmp = vec2(0.0f);\nfor(int octave = 0; octave < numberOfOctaves; octave++) {\nvec3 m = vec3(0.0f); vec2 df;\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\ndf = decodeSobel(pickSobelDerivatives(octave, ivec2(i-r, j-r)));\nm += vec3(df.x * df.x, df.x * df.y, df.y * df.y);\n}\n}\nfloat response = 0.5f * (m.x + m.z - sqrt((m.x - m.z) * (m.x - m.z) + 4.0f * m.y * m.y));\nfloat normalizer = 9.0f / windowArea;\nfloat score = response * normalizer;\nfloat lod = lodStep * float(octave);\ntmp = mix(tmp, vec2(score, lod), bvec2(score > tmp.x));\n}\nvec2 encodedScore = encodeFloat16(tmp.x);\nfloat encodedScale = encodeLod(tmp.y);\ncolor = vec4(0.0f, pixel.g, 0.0f, encodedScale);\ncolor.rb = encodedScore;\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/harris/multiscale-sobel.glsl":
+/*!****************************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/harris/multiscale-sobel.glsl ***!
+  \****************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"sobel.glsl\"\n@include \"pyramids.glsl\"\nuniform sampler2D pyramid;\nuniform float lod;\nconst mat3 horizontalKernel = mat3(\n-1.0f, 0.0f, 1.0f,\n-2.0f, 0.0f, 2.0f,\n-1.0f, 0.0f, 1.0f\n);\nconst mat3 verticalKernel = mat3(\n1.0f, 2.0f, 1.0f,\n0.0f, 0.0f, 0.0f,\n-1.0f,-2.0f,-1.0f\n);\nconst vec3 ones = vec3(1.0f, 1.0f, 1.0f);\nvoid main()\n{\nfloat pot = exp2(lod);\nmat3 neighbors = mat3(\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, -1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 0)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(-1, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(0, 1)).g,\npyrPixelAtOffset(pyramid, lod, pot, ivec2(1, 1)).g\n);\nmat3 sobelX = matrixCompMult(horizontalKernel, neighbors);\nmat3 sobelY = matrixCompMult(verticalKernel, neighbors);\nvec2 df = vec2(\ndot(sobelX[0] + sobelX[1] + sobelX[2], ones),\ndot(sobelY[0] + sobelY[1] + sobelY[2], ones)\n);\ncolor = encodeSobel(df);\n}"
 
 /***/ }),
 
@@ -13129,7 +13234,7 @@ module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\nuniform 
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nvoid main()\n{\nfloat p0 = pixelAtShortOffset(image, ivec2(0, 1)).r;\nfloat p1 = pixelAtShortOffset(image, ivec2(1, 1)).r;\nfloat p2 = pixelAtShortOffset(image, ivec2(1, 0)).r;\nfloat p3 = pixelAtShortOffset(image, ivec2(1, -1)).r;\nfloat p4 = pixelAtShortOffset(image, ivec2(0, -1)).r;\nfloat p5 = pixelAtShortOffset(image, ivec2(-1, -1)).r;\nfloat p6 = pixelAtShortOffset(image, ivec2(-1, 0)).r;\nfloat p7 = pixelAtShortOffset(image, ivec2(-1, 1)).r;\nfloat m = max(\nmax(max(p0, p1), max(p2, p3)),\nmax(max(p4, p5), max(p6, p7))\n);\nvec4 pixel = threadPixel(image);\nfloat score = step(m, pixel.r) * pixel.r;\ncolor = vec4(score, pixel.gba);\n}"
+module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D image;\nuniform float lodStep;\n#if defined(MULTISCALE) && MULTISCALE != 0\n# define ENABLE_INNER_RING\n# define ENABLE_MIDDLE_RING\n# define ENABLE_OUTER_RING\n# define LOD_STEP (lodStep)\n#else\n# define ENABLE_INNER_RING\n# define LOD_STEP (0.0f)\n#endif\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat lod = decodeLod(pixel.a);\nfloat score = decodeFloat16(pixel.rb);\ncolor = pixel;\nif(score == 0.0f)\nreturn;\n#ifdef ENABLE_INNER_RING\nvec4 p0 = pixelAtShortOffset(image, ivec2(0, 1));\nvec4 p1 = pixelAtShortOffset(image, ivec2(1, 1));\nvec4 p2 = pixelAtShortOffset(image, ivec2(1, 0));\nvec4 p3 = pixelAtShortOffset(image, ivec2(1, -1));\nvec4 p4 = pixelAtShortOffset(image, ivec2(0, -1));\nvec4 p5 = pixelAtShortOffset(image, ivec2(-1, -1));\nvec4 p6 = pixelAtShortOffset(image, ivec2(-1, 0));\nvec4 p7 = pixelAtShortOffset(image, ivec2(-1, 1));\n#else\nvec4 p0, p1, p2, p3, p4, p5, p6, p7;\np0 = p1 = p2 = p3 = p4 = p5 = p6 = p7 = vec4(0.0f);\n#endif\n#ifdef ENABLE_MIDDLE_RING\nvec4 q0 = pixelAtShortOffset(image, ivec2(0, 2));\nvec4 q1 = pixelAtShortOffset(image, ivec2(1, 2));\nvec4 q2 = pixelAtShortOffset(image, ivec2(2, 2));\nvec4 q3 = pixelAtShortOffset(image, ivec2(2, 1));\nvec4 q4 = pixelAtShortOffset(image, ivec2(2, 0));\nvec4 q5 = pixelAtShortOffset(image, ivec2(2, -1));\nvec4 q6 = pixelAtShortOffset(image, ivec2(2, -2));\nvec4 q7 = pixelAtShortOffset(image, ivec2(1, -2));\nvec4 q8 = pixelAtShortOffset(image, ivec2(0, -2));\nvec4 q9 = pixelAtShortOffset(image, ivec2(-1, -2));\nvec4 q10 = pixelAtShortOffset(image, ivec2(-2, -2));\nvec4 q11 = pixelAtShortOffset(image, ivec2(-2, -1));\nvec4 q12 = pixelAtShortOffset(image, ivec2(-2, 0));\nvec4 q13 = pixelAtShortOffset(image, ivec2(-2, 1));\nvec4 q14 = pixelAtShortOffset(image, ivec2(-2, 2));\nvec4 q15 = pixelAtShortOffset(image, ivec2(-1, 2));\n#else\nvec4 q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15;\nq0 = q1 = q2 = q3 = q4 = q5 = q6 = q7 = q8 = q9 = q10 =\nq11 = q12 = q13 = q14 = q15 = vec4(0.0f);\n#endif\n#ifdef ENABLE_OUTER_RING\nvec4 r0 = pixelAtShortOffset(image, ivec2(0, 3));\nvec4 r1 = pixelAtShortOffset(image, ivec2(1, 3));\nvec4 r2 = pixelAtShortOffset(image, ivec2(3, 1));\nvec4 r3 = pixelAtShortOffset(image, ivec2(3, 0));\nvec4 r4 = pixelAtShortOffset(image, ivec2(3, -1));\nvec4 r5 = pixelAtShortOffset(image, ivec2(1, -3));\nvec4 r6 = pixelAtShortOffset(image, ivec2(0, -3));\nvec4 r7 = pixelAtShortOffset(image, ivec2(-1, -3));\nvec4 r8 = pixelAtShortOffset(image, ivec2(-3, -1));\nvec4 r9 = pixelAtShortOffset(image, ivec2(-3, 0));\nvec4 r10 = pixelAtShortOffset(image, ivec2(-3, 1));\nvec4 r11 = pixelAtShortOffset(image, ivec2(-1, 3));\nvec4 r12 = pixelAtShortOffset(image, ivec2(0, 4));\nvec4 r13 = pixelAtShortOffset(image, ivec2(4, 0));\nvec4 r14 = pixelAtShortOffset(image, ivec2(0, -4));\nvec4 r15 = pixelAtShortOffset(image, ivec2(-4, 0));\n#else\nvec4 r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15;\nr0 = r1 = r2 = r3 = r4 = r5 = r6 = r7 = r8 = r9 = r10 =\nr11 = r12 = r13 = r14 = r15 = vec4(0.0f);\n#endif\nfloat lodPlus = lod + LOD_STEP;\nfloat lodMinus = lod - LOD_STEP;\nfloat alphaPlus = encodeLod(lodPlus);\nfloat alphaMinus = encodeLod(lodMinus);\nfloat alpha = encodeLod(lod);\nmat3 innerScore = mat3(\ndecodeFloat16(p0.rb) * float(isSameEncodedLod(p0.a, alpha) || isSameEncodedLod(p0.a, alphaPlus) || isSameEncodedLod(p0.a, alphaMinus)),\ndecodeFloat16(p1.rb) * float(isSameEncodedLod(p1.a, alpha) || isSameEncodedLod(p1.a, alphaPlus) || isSameEncodedLod(p1.a, alphaMinus)),\ndecodeFloat16(p2.rb) * float(isSameEncodedLod(p2.a, alpha) || isSameEncodedLod(p2.a, alphaPlus) || isSameEncodedLod(p2.a, alphaMinus)),\ndecodeFloat16(p3.rb) * float(isSameEncodedLod(p3.a, alpha) || isSameEncodedLod(p3.a, alphaPlus) || isSameEncodedLod(p3.a, alphaMinus)),\ndecodeFloat16(p4.rb) * float(isSameEncodedLod(p4.a, alpha) || isSameEncodedLod(p4.a, alphaPlus) || isSameEncodedLod(p4.a, alphaMinus)),\ndecodeFloat16(p5.rb) * float(isSameEncodedLod(p5.a, alpha) || isSameEncodedLod(p5.a, alphaPlus) || isSameEncodedLod(p5.a, alphaMinus)),\ndecodeFloat16(p6.rb) * float(isSameEncodedLod(p6.a, alpha) || isSameEncodedLod(p6.a, alphaPlus) || isSameEncodedLod(p6.a, alphaMinus)),\ndecodeFloat16(p7.rb) * float(isSameEncodedLod(p7.a, alpha) || isSameEncodedLod(p7.a, alphaPlus) || isSameEncodedLod(p7.a, alphaMinus)),\n0.0f\n);\nmat4 middleScore = mat4(\ndecodeFloat16(q0.rb) * float(isSameEncodedLod(q0.a, alphaPlus) || isSameEncodedLod(q0.a, alphaMinus)),\ndecodeFloat16(q1.rb) * float(isSameEncodedLod(q1.a, alphaPlus) || isSameEncodedLod(q1.a, alphaMinus)),\ndecodeFloat16(q2.rb) * float(isSameEncodedLod(q2.a, alphaPlus) || isSameEncodedLod(q2.a, alphaMinus)),\ndecodeFloat16(q3.rb) * float(isSameEncodedLod(q3.a, alphaPlus) || isSameEncodedLod(q3.a, alphaMinus)),\ndecodeFloat16(q4.rb) * float(isSameEncodedLod(q4.a, alphaPlus) || isSameEncodedLod(q4.a, alphaMinus)),\ndecodeFloat16(q5.rb) * float(isSameEncodedLod(q5.a, alphaPlus) || isSameEncodedLod(q5.a, alphaMinus)),\ndecodeFloat16(q6.rb) * float(isSameEncodedLod(q6.a, alphaPlus) || isSameEncodedLod(q6.a, alphaMinus)),\ndecodeFloat16(q7.rb) * float(isSameEncodedLod(q7.a, alphaPlus) || isSameEncodedLod(q7.a, alphaMinus)),\ndecodeFloat16(q8.rb) * float(isSameEncodedLod(q8.a, alphaPlus) || isSameEncodedLod(q8.a, alphaMinus)),\ndecodeFloat16(q9.rb) * float(isSameEncodedLod(q9.a, alphaPlus) || isSameEncodedLod(q9.a, alphaMinus)),\ndecodeFloat16(q10.rb) * float(isSameEncodedLod(q10.a, alphaPlus) || isSameEncodedLod(q10.a, alphaMinus)),\ndecodeFloat16(q11.rb) * float(isSameEncodedLod(q11.a, alphaPlus) || isSameEncodedLod(q11.a, alphaMinus)),\ndecodeFloat16(q12.rb) * float(isSameEncodedLod(q12.a, alphaPlus) || isSameEncodedLod(q12.a, alphaMinus)),\ndecodeFloat16(q13.rb) * float(isSameEncodedLod(q13.a, alphaPlus) || isSameEncodedLod(q13.a, alphaMinus)),\ndecodeFloat16(q14.rb) * float(isSameEncodedLod(q14.a, alphaPlus) || isSameEncodedLod(q14.a, alphaMinus)),\ndecodeFloat16(q15.rb) * float(isSameEncodedLod(q15.a, alphaPlus) || isSameEncodedLod(q15.a, alphaMinus))\n);\nmat4 outerScore = mat4(\ndecodeFloat16(r0.rb) * float(isSameEncodedLod(r0.a, alphaPlus) || isSameEncodedLod(r0.a, alphaMinus)),\ndecodeFloat16(r1.rb) * float(isSameEncodedLod(r1.a, alphaPlus) || isSameEncodedLod(r1.a, alphaMinus)),\ndecodeFloat16(r2.rb) * float(isSameEncodedLod(r2.a, alphaPlus) || isSameEncodedLod(r2.a, alphaMinus)),\ndecodeFloat16(r3.rb) * float(isSameEncodedLod(r3.a, alphaPlus) || isSameEncodedLod(r3.a, alphaMinus)),\ndecodeFloat16(r4.rb) * float(isSameEncodedLod(r4.a, alphaPlus) || isSameEncodedLod(r4.a, alphaMinus)),\ndecodeFloat16(r5.rb) * float(isSameEncodedLod(r5.a, alphaPlus) || isSameEncodedLod(r5.a, alphaMinus)),\ndecodeFloat16(r6.rb) * float(isSameEncodedLod(r6.a, alphaPlus) || isSameEncodedLod(r6.a, alphaMinus)),\ndecodeFloat16(r7.rb) * float(isSameEncodedLod(r7.a, alphaPlus) || isSameEncodedLod(r7.a, alphaMinus)),\ndecodeFloat16(r8.rb) * float(isSameEncodedLod(r8.a, alphaPlus) || isSameEncodedLod(r8.a, alphaMinus)),\ndecodeFloat16(r9.rb) * float(isSameEncodedLod(r9.a, alphaPlus) || isSameEncodedLod(r9.a, alphaMinus)),\ndecodeFloat16(r10.rb) * float(isSameEncodedLod(r10.a, alphaPlus) || isSameEncodedLod(r10.a, alphaMinus)),\ndecodeFloat16(r11.rb) * float(isSameEncodedLod(r11.a, alphaPlus) || isSameEncodedLod(r11.a, alphaMinus)),\ndecodeFloat16(r12.rb) * float(isSameEncodedLod(r12.a, alphaPlus) || isSameEncodedLod(r12.a, alphaMinus)),\ndecodeFloat16(r13.rb) * float(isSameEncodedLod(r13.a, alphaPlus) || isSameEncodedLod(r13.a, alphaMinus)),\ndecodeFloat16(r14.rb) * float(isSameEncodedLod(r14.a, alphaPlus) || isSameEncodedLod(r14.a, alphaMinus)),\ndecodeFloat16(r15.rb) * float(isSameEncodedLod(r15.a, alphaPlus) || isSameEncodedLod(r15.a, alphaMinus))\n);\nvec3 maxInnerScore3 = max(innerScore[0], max(innerScore[1], innerScore[2]));\nvec4 maxMiddleScore4 = max(max(middleScore[0], middleScore[1]), max(middleScore[2], middleScore[3]));\nvec4 maxOuterScore4 = max(max(outerScore[0], outerScore[1]), max(outerScore[2], outerScore[3]));\nfloat maxInnerScore = max(maxInnerScore3.x, max(maxInnerScore3.y, maxInnerScore3.z));\nfloat maxMiddleScore = max(max(maxMiddleScore4.x, maxMiddleScore4.y), max(maxMiddleScore4.z, maxMiddleScore4.w));\nfloat maxOuterScore = max(max(maxOuterScore4.x, maxOuterScore4.y), max(maxOuterScore4.z, maxOuterScore4.w));\nfloat maxScore = max(maxInnerScore, max(maxMiddleScore, maxOuterScore));\nfloat finalScore = step(maxScore, score) * score;\ncolor.rb = encodeFloat16(finalScore);\n}"
 
 /***/ }),
 
@@ -13140,29 +13245,18 @@ module.exports = "uniform sampler2D image;\nvoid main()\n{\nfloat p0 = pixelAtSh
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedCorners;\nuniform int encoderLength;\nuniform sampler2D pyramid;\nuniform int extraSize;\nconst int descriptorSize = 32;\nconst ivec4 pat31[256] = ivec4[256](\nivec4(8,-3,9,5),\nivec4(4,2,7,-12),\nivec4(-11,9,-8,2),\nivec4(7,-12,12,-13),\nivec4(2,-13,2,12),\nivec4(1,-7,1,6),\nivec4(-2,-10,-2,-4),\nivec4(-13,-13,-11,-8),\nivec4(-13,-3,-12,-9),\nivec4(10,4,11,9),\nivec4(-13,-8,-8,-9),\nivec4(-11,7,-9,12),\nivec4(7,7,12,6),\nivec4(-4,-5,-3,0),\nivec4(-13,2,-12,-3),\nivec4(-9,0,-7,5),\nivec4(12,-6,12,-1),\nivec4(-3,6,-2,12),\nivec4(-6,-13,-4,-8),\nivec4(11,-13,12,-8),\nivec4(4,7,5,1),\nivec4(5,-3,10,-3),\nivec4(3,-7,6,12),\nivec4(-8,-7,-6,-2),\nivec4(-2,11,-1,-10),\nivec4(-13,12,-8,10),\nivec4(-7,3,-5,-3),\nivec4(-4,2,-3,7),\nivec4(-10,-12,-6,11),\nivec4(5,-12,6,-7),\nivec4(5,-6,7,-1),\nivec4(1,0,4,-5),\nivec4(9,11,11,-13),\nivec4(4,7,4,12),\nivec4(2,-1,4,4),\nivec4(-4,-12,-2,7),\nivec4(-8,-5,-7,-10),\nivec4(4,11,9,12),\nivec4(0,-8,1,-13),\nivec4(-13,-2,-8,2),\nivec4(-3,-2,-2,3),\nivec4(-6,9,-4,-9),\nivec4(8,12,10,7),\nivec4(0,9,1,3),\nivec4(7,-5,11,-10),\nivec4(-13,-6,-11,0),\nivec4(10,7,12,1),\nivec4(-6,-3,-6,12),\nivec4(10,-9,12,-4),\nivec4(-13,8,-8,-12),\nivec4(-13,0,-8,-4),\nivec4(3,3,7,8),\nivec4(5,7,10,-7),\nivec4(-1,7,1,-12),\nivec4(3,-10,5,6),\nivec4(2,-4,3,-10),\nivec4(-13,0,-13,5),\nivec4(-13,-7,-12,12),\nivec4(-13,3,-11,8),\nivec4(-7,12,-4,7),\nivec4(6,-10,12,8),\nivec4(-9,-1,-7,-6),\nivec4(-2,-5,0,12),\nivec4(-12,5,-7,5),\nivec4(3,-10,8,-13),\nivec4(-7,-7,-4,5),\nivec4(-3,-2,-1,-7),\nivec4(2,9,5,-11),\nivec4(-11,-13,-5,-13),\nivec4(-1,6,0,-1),\nivec4(5,-3,5,2),\nivec4(-4,-13,-4,12),\nivec4(-9,-6,-9,6),\nivec4(-12,-10,-8,-4),\nivec4(10,2,12,-3),\nivec4(7,12,12,12),\nivec4(-7,-13,-6,5),\nivec4(-4,9,-3,4),\nivec4(7,-1,12,2),\nivec4(-7,6,-5,1),\nivec4(-13,11,-12,5),\nivec4(-3,7,-2,-6),\nivec4(7,-8,12,-7),\nivec4(-13,-7,-11,-12),\nivec4(1,-3,12,12),\nivec4(2,-6,3,0),\nivec4(-4,3,-2,-13),\nivec4(-1,-13,1,9),\nivec4(7,1,8,-6),\nivec4(1,-1,3,12),\nivec4(9,1,12,6),\nivec4(-1,-9,-1,3),\nivec4(-13,-13,-10,5),\nivec4(7,7,10,12),\nivec4(12,-5,12,9),\nivec4(6,3,7,11),\nivec4(5,-13,6,10),\nivec4(2,-12,2,3),\nivec4(3,8,4,-6),\nivec4(2,6,12,-13),\nivec4(9,-12,10,3),\nivec4(-8,4,-7,9),\nivec4(-11,12,-4,-6),\nivec4(1,12,2,-8),\nivec4(6,-9,7,-4),\nivec4(2,3,3,-2),\nivec4(6,3,11,0),\nivec4(3,-3,8,-8),\nivec4(7,8,9,3),\nivec4(-11,-5,-6,-4),\nivec4(-10,11,-5,10),\nivec4(-5,-8,-3,12),\nivec4(-10,5,-9,0),\nivec4(8,-1,12,-6),\nivec4(4,-6,6,-11),\nivec4(-10,12,-8,7),\nivec4(4,-2,6,7),\nivec4(-2,0,-2,12),\nivec4(-5,-8,-5,2),\nivec4(7,-6,10,12),\nivec4(-9,-13,-8,-8),\nivec4(-5,-13,-5,-2),\nivec4(8,-8,9,-13),\nivec4(-9,-11,-9,0),\nivec4(1,-8,1,-2),\nivec4(7,-4,9,1),\nivec4(-2,1,-1,-4),\nivec4(11,-6,12,-11),\nivec4(-12,-9,-6,4),\nivec4(3,7,7,12),\nivec4(5,5,10,8),\nivec4(0,-4,2,8),\nivec4(-9,12,-5,-13),\nivec4(0,7,2,12),\nivec4(-1,2,1,7),\nivec4(5,11,7,-9),\nivec4(3,5,6,-8),\nivec4(-13,-4,-8,9),\nivec4(-5,9,-3,-3),\nivec4(-4,-7,-3,-12),\nivec4(6,5,8,0),\nivec4(-7,6,-6,12),\nivec4(-13,6,-5,-2),\nivec4(1,-10,3,10),\nivec4(4,1,8,-4),\nivec4(-2,-2,2,-13),\nivec4(2,-12,12,12),\nivec4(-2,-13,0,-6),\nivec4(4,1,9,3),\nivec4(-6,-10,-3,-5),\nivec4(-3,-13,-1,1),\nivec4(7,5,12,-11),\nivec4(4,-2,5,-7),\nivec4(-13,9,-9,-5),\nivec4(7,1,8,6),\nivec4(7,-8,7,6),\nivec4(-7,-4,-7,1),\nivec4(-8,11,-7,-8),\nivec4(-13,6,-12,-8),\nivec4(2,4,3,9),\nivec4(10,-5,12,3),\nivec4(-6,-5,-6,7),\nivec4(8,-3,9,-8),\nivec4(2,-12,2,8),\nivec4(-11,-2,-10,3),\nivec4(-12,-13,-7,-9),\nivec4(-11,0,-10,-5),\nivec4(5,-3,11,8),\nivec4(-2,-13,-1,12),\nivec4(-1,-8,0,9),\nivec4(-13,-11,-12,-5),\nivec4(-10,-2,-10,11),\nivec4(-3,9,-2,-13),\nivec4(2,-3,3,2),\nivec4(-9,-13,-4,0),\nivec4(-4,6,-3,-10),\nivec4(-4,12,-2,-7),\nivec4(-6,-11,-4,9),\nivec4(6,-3,6,11),\nivec4(-13,11,-5,5),\nivec4(11,11,12,6),\nivec4(7,-5,12,-2),\nivec4(-1,12,0,7),\nivec4(-4,-8,-3,-2),\nivec4(-7,1,-6,7),\nivec4(-13,-12,-8,-13),\nivec4(-7,-2,-6,-8),\nivec4(-8,5,-6,-9),\nivec4(-5,-1,-4,5),\nivec4(-13,7,-8,10),\nivec4(1,5,5,-13),\nivec4(1,0,10,-13),\nivec4(9,12,10,-1),\nivec4(5,-8,10,-9),\nivec4(-1,11,1,-13),\nivec4(-9,-3,-6,2),\nivec4(-1,-10,1,12),\nivec4(-13,1,-8,-10),\nivec4(8,-11,10,-6),\nivec4(2,-13,3,-6),\nivec4(7,-13,12,-9),\nivec4(-10,-10,-5,-7),\nivec4(-10,-8,-8,-13),\nivec4(4,-6,8,5),\nivec4(3,12,8,-13),\nivec4(-4,2,-3,-3),\nivec4(5,-13,10,-12),\nivec4(4,-13,5,-1),\nivec4(-9,9,-4,3),\nivec4(0,3,3,-9),\nivec4(-12,1,-6,1),\nivec4(3,2,4,-8),\nivec4(-10,-10,-10,9),\nivec4(8,-13,12,12),\nivec4(-8,-12,-6,-5),\nivec4(2,2,3,7),\nivec4(10,6,11,-8),\nivec4(6,8,8,-12),\nivec4(-7,10,-6,5),\nivec4(-3,-9,-3,9),\nivec4(-1,-13,-1,5),\nivec4(-3,-7,-3,4),\nivec4(-8,-2,-8,3),\nivec4(4,2,12,12),\nivec4(2,-5,3,11),\nivec4(6,-9,11,-13),\nivec4(3,-1,7,12),\nivec4(11,-1,12,4),\nivec4(-3,0,-3,6),\nivec4(4,-11,4,12),\nivec4(2,-4,2,1),\nivec4(-10,-6,-8,1),\nivec4(-13,7,-11,1),\nivec4(-13,12,-11,-13),\nivec4(6,0,11,-13),\nivec4(0,-1,1,4),\nivec4(-13,3,-9,-2),\nivec4(-9,8,-6,-3),\nivec4(-13,-6,-8,-2),\nivec4(5,-9,8,10),\nivec4(2,7,3,-9),\nivec4(-1,-6,-1,-1),\nivec4(9,5,11,-2),\nivec4(11,-3,12,-8),\nivec4(3,0,3,5),\nivec4(-1,4,0,10),\nivec4(3,-6,4,5),\nivec4(-13,0,-10,5),\nivec4(5,8,12,11),\nivec4(8,9,9,-6),\nivec4(7,-4,8,-12),\nivec4(-10,4,-10,9),\nivec4(7,3,12,4),\nivec4(9,-7,10,-2),\nivec4(7,0,12,-2),\nivec4(-1,-6,0,-11)\n);\nvoid getPair(int index, float kcos, float ksin, out ivec2 p, out ivec2 q)\n{\nivec4 data = pat31[index];\nvec2 op = vec2(data.xy);\nvec2 oq = vec2(data.zw);\np = ivec2(round(op.x * kcos - op.y * ksin), round(op.x * ksin + op.y * kcos));\nq = ivec2(round(oq.x * kcos - oq.y * ksin), round(oq.x * ksin + oq.y * kcos));\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedCorners);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint descriptorCell = address.offset - sizeofEncodedKeypoint(0, extraSize) / 4;\ncolor = pixel;\nif(descriptorCell < 0)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedCorners, encoderLength, address);\nif(isBadKeypoint(keypoint))\nreturn;\nfloat pot = exp2(keypoint.lod);\nfloat kcos = cos(keypoint.orientation);\nfloat ksin = sin(keypoint.orientation);\nvec2 imageSize = vec2(textureSize(pyramid, 0));\nint patternStart = 32 * descriptorCell;\nuint test[4] = uint[4](0u, 0u, 0u, 0u);\nfor(int t = 0; t < 4; t++) {\nuint bits = 0u;\nivec2 p, q;\nvec4 a, b;\nint i = t * 8;\n@unroll\nfor(int j = 0; j < 8; j++) {\ngetPair(patternStart + i + j, kcos, ksin, p, q);\na = pyrPixelAtEx(pyramid, round(keypoint.position + pot * vec2(p)), keypoint.lod, imageSize);\nb = pyrPixelAtEx(pyramid, round(keypoint.position + pot * vec2(q)), keypoint.lod, imageSize);\nbits |= uint(a.g < b.g) << j;\n}\ntest[t] = bits;\n}\ncolor = vec4(float(test[0]), float(test[1]), float(test[2]), float(test[3])) / 255.0f;\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedCorners;\nuniform int encoderLength;\nuniform sampler2D pyramid;\nuniform int extraSize;\nconst int descriptorSize = 32;\nconst ivec4 pat31[256] = ivec4[256](\nivec4(8,-3,9,5),\nivec4(4,2,7,-12),\nivec4(-11,9,-8,2),\nivec4(7,-12,12,-13),\nivec4(2,-13,2,12),\nivec4(1,-7,1,6),\nivec4(-2,-10,-2,-4),\nivec4(-13,-13,-11,-8),\nivec4(-13,-3,-12,-9),\nivec4(10,4,11,9),\nivec4(-13,-8,-8,-9),\nivec4(-11,7,-9,12),\nivec4(7,7,12,6),\nivec4(-4,-5,-3,0),\nivec4(-13,2,-12,-3),\nivec4(-9,0,-7,5),\nivec4(12,-6,12,-1),\nivec4(-3,6,-2,12),\nivec4(-6,-13,-4,-8),\nivec4(11,-13,12,-8),\nivec4(4,7,5,1),\nivec4(5,-3,10,-3),\nivec4(3,-7,6,12),\nivec4(-8,-7,-6,-2),\nivec4(-2,11,-1,-10),\nivec4(-13,12,-8,10),\nivec4(-7,3,-5,-3),\nivec4(-4,2,-3,7),\nivec4(-10,-12,-6,11),\nivec4(5,-12,6,-7),\nivec4(5,-6,7,-1),\nivec4(1,0,4,-5),\nivec4(9,11,11,-13),\nivec4(4,7,4,12),\nivec4(2,-1,4,4),\nivec4(-4,-12,-2,7),\nivec4(-8,-5,-7,-10),\nivec4(4,11,9,12),\nivec4(0,-8,1,-13),\nivec4(-13,-2,-8,2),\nivec4(-3,-2,-2,3),\nivec4(-6,9,-4,-9),\nivec4(8,12,10,7),\nivec4(0,9,1,3),\nivec4(7,-5,11,-10),\nivec4(-13,-6,-11,0),\nivec4(10,7,12,1),\nivec4(-6,-3,-6,12),\nivec4(10,-9,12,-4),\nivec4(-13,8,-8,-12),\nivec4(-13,0,-8,-4),\nivec4(3,3,7,8),\nivec4(5,7,10,-7),\nivec4(-1,7,1,-12),\nivec4(3,-10,5,6),\nivec4(2,-4,3,-10),\nivec4(-13,0,-13,5),\nivec4(-13,-7,-12,12),\nivec4(-13,3,-11,8),\nivec4(-7,12,-4,7),\nivec4(6,-10,12,8),\nivec4(-9,-1,-7,-6),\nivec4(-2,-5,0,12),\nivec4(-12,5,-7,5),\nivec4(3,-10,8,-13),\nivec4(-7,-7,-4,5),\nivec4(-3,-2,-1,-7),\nivec4(2,9,5,-11),\nivec4(-11,-13,-5,-13),\nivec4(-1,6,0,-1),\nivec4(5,-3,5,2),\nivec4(-4,-13,-4,12),\nivec4(-9,-6,-9,6),\nivec4(-12,-10,-8,-4),\nivec4(10,2,12,-3),\nivec4(7,12,12,12),\nivec4(-7,-13,-6,5),\nivec4(-4,9,-3,4),\nivec4(7,-1,12,2),\nivec4(-7,6,-5,1),\nivec4(-13,11,-12,5),\nivec4(-3,7,-2,-6),\nivec4(7,-8,12,-7),\nivec4(-13,-7,-11,-12),\nivec4(1,-3,12,12),\nivec4(2,-6,3,0),\nivec4(-4,3,-2,-13),\nivec4(-1,-13,1,9),\nivec4(7,1,8,-6),\nivec4(1,-1,3,12),\nivec4(9,1,12,6),\nivec4(-1,-9,-1,3),\nivec4(-13,-13,-10,5),\nivec4(7,7,10,12),\nivec4(12,-5,12,9),\nivec4(6,3,7,11),\nivec4(5,-13,6,10),\nivec4(2,-12,2,3),\nivec4(3,8,4,-6),\nivec4(2,6,12,-13),\nivec4(9,-12,10,3),\nivec4(-8,4,-7,9),\nivec4(-11,12,-4,-6),\nivec4(1,12,2,-8),\nivec4(6,-9,7,-4),\nivec4(2,3,3,-2),\nivec4(6,3,11,0),\nivec4(3,-3,8,-8),\nivec4(7,8,9,3),\nivec4(-11,-5,-6,-4),\nivec4(-10,11,-5,10),\nivec4(-5,-8,-3,12),\nivec4(-10,5,-9,0),\nivec4(8,-1,12,-6),\nivec4(4,-6,6,-11),\nivec4(-10,12,-8,7),\nivec4(4,-2,6,7),\nivec4(-2,0,-2,12),\nivec4(-5,-8,-5,2),\nivec4(7,-6,10,12),\nivec4(-9,-13,-8,-8),\nivec4(-5,-13,-5,-2),\nivec4(8,-8,9,-13),\nivec4(-9,-11,-9,0),\nivec4(1,-8,1,-2),\nivec4(7,-4,9,1),\nivec4(-2,1,-1,-4),\nivec4(11,-6,12,-11),\nivec4(-12,-9,-6,4),\nivec4(3,7,7,12),\nivec4(5,5,10,8),\nivec4(0,-4,2,8),\nivec4(-9,12,-5,-13),\nivec4(0,7,2,12),\nivec4(-1,2,1,7),\nivec4(5,11,7,-9),\nivec4(3,5,6,-8),\nivec4(-13,-4,-8,9),\nivec4(-5,9,-3,-3),\nivec4(-4,-7,-3,-12),\nivec4(6,5,8,0),\nivec4(-7,6,-6,12),\nivec4(-13,6,-5,-2),\nivec4(1,-10,3,10),\nivec4(4,1,8,-4),\nivec4(-2,-2,2,-13),\nivec4(2,-12,12,12),\nivec4(-2,-13,0,-6),\nivec4(4,1,9,3),\nivec4(-6,-10,-3,-5),\nivec4(-3,-13,-1,1),\nivec4(7,5,12,-11),\nivec4(4,-2,5,-7),\nivec4(-13,9,-9,-5),\nivec4(7,1,8,6),\nivec4(7,-8,7,6),\nivec4(-7,-4,-7,1),\nivec4(-8,11,-7,-8),\nivec4(-13,6,-12,-8),\nivec4(2,4,3,9),\nivec4(10,-5,12,3),\nivec4(-6,-5,-6,7),\nivec4(8,-3,9,-8),\nivec4(2,-12,2,8),\nivec4(-11,-2,-10,3),\nivec4(-12,-13,-7,-9),\nivec4(-11,0,-10,-5),\nivec4(5,-3,11,8),\nivec4(-2,-13,-1,12),\nivec4(-1,-8,0,9),\nivec4(-13,-11,-12,-5),\nivec4(-10,-2,-10,11),\nivec4(-3,9,-2,-13),\nivec4(2,-3,3,2),\nivec4(-9,-13,-4,0),\nivec4(-4,6,-3,-10),\nivec4(-4,12,-2,-7),\nivec4(-6,-11,-4,9),\nivec4(6,-3,6,11),\nivec4(-13,11,-5,5),\nivec4(11,11,12,6),\nivec4(7,-5,12,-2),\nivec4(-1,12,0,7),\nivec4(-4,-8,-3,-2),\nivec4(-7,1,-6,7),\nivec4(-13,-12,-8,-13),\nivec4(-7,-2,-6,-8),\nivec4(-8,5,-6,-9),\nivec4(-5,-1,-4,5),\nivec4(-13,7,-8,10),\nivec4(1,5,5,-13),\nivec4(1,0,10,-13),\nivec4(9,12,10,-1),\nivec4(5,-8,10,-9),\nivec4(-1,11,1,-13),\nivec4(-9,-3,-6,2),\nivec4(-1,-10,1,12),\nivec4(-13,1,-8,-10),\nivec4(8,-11,10,-6),\nivec4(2,-13,3,-6),\nivec4(7,-13,12,-9),\nivec4(-10,-10,-5,-7),\nivec4(-10,-8,-8,-13),\nivec4(4,-6,8,5),\nivec4(3,12,8,-13),\nivec4(-4,2,-3,-3),\nivec4(5,-13,10,-12),\nivec4(4,-13,5,-1),\nivec4(-9,9,-4,3),\nivec4(0,3,3,-9),\nivec4(-12,1,-6,1),\nivec4(3,2,4,-8),\nivec4(-10,-10,-10,9),\nivec4(8,-13,12,12),\nivec4(-8,-12,-6,-5),\nivec4(2,2,3,7),\nivec4(10,6,11,-8),\nivec4(6,8,8,-12),\nivec4(-7,10,-6,5),\nivec4(-3,-9,-3,9),\nivec4(-1,-13,-1,5),\nivec4(-3,-7,-3,4),\nivec4(-8,-2,-8,3),\nivec4(4,2,12,12),\nivec4(2,-5,3,11),\nivec4(6,-9,11,-13),\nivec4(3,-1,7,12),\nivec4(11,-1,12,4),\nivec4(-3,0,-3,6),\nivec4(4,-11,4,12),\nivec4(2,-4,2,1),\nivec4(-10,-6,-8,1),\nivec4(-13,7,-11,1),\nivec4(-13,12,-11,-13),\nivec4(6,0,11,-13),\nivec4(0,-1,1,4),\nivec4(-13,3,-9,-2),\nivec4(-9,8,-6,-3),\nivec4(-13,-6,-8,-2),\nivec4(5,-9,8,10),\nivec4(2,7,3,-9),\nivec4(-1,-6,-1,-1),\nivec4(9,5,11,-2),\nivec4(11,-3,12,-8),\nivec4(3,0,3,5),\nivec4(-1,4,0,10),\nivec4(3,-6,4,5),\nivec4(-13,0,-10,5),\nivec4(5,8,12,11),\nivec4(8,9,9,-6),\nivec4(7,-4,8,-12),\nivec4(-10,4,-10,9),\nivec4(7,3,12,4),\nivec4(9,-7,10,-2),\nivec4(7,0,12,-2),\nivec4(-1,-6,0,-11)\n);\nvoid getPair(int index, float kcos, float ksin, out ivec2 p, out ivec2 q)\n{\nivec4 data = pat31[index];\nvec2 op = vec2(data.xy);\nvec2 oq = vec2(data.zw);\np = ivec2(round(op.x * kcos - op.y * ksin), round(op.x * ksin + op.y * kcos));\nq = ivec2(round(oq.x * kcos - oq.y * ksin), round(oq.x * ksin + oq.y * kcos));\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedCorners);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint descriptorCell = address.offset - sizeofEncodedKeypoint(0, extraSize) / 4;\ncolor = pixel;\nif(descriptorCell < 0)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedCorners, encoderLength, address);\nif(isBadKeypoint(keypoint))\nreturn;\nfloat pot = exp2(keypoint.lod);\nfloat kcos = cos(keypoint.orientation);\nfloat ksin = sin(keypoint.orientation);\nvec2 imageSize = vec2(textureSize(pyramid, 0));\nint patternStart = 32 * descriptorCell;\nuint test[4] = uint[4](0u, 0u, 0u, 0u);\nfor(int t = 0; t < 4; t++) {\nuint bits = 0u;\nivec2 p, q;\nvec4 a, b;\nint i = t * 8;\n@unroll\nfor(int j = 0; j < 8; j++) {\ngetPair(patternStart + i + j, kcos, ksin, p, q);\na = pyrPixelAtEx(pyramid, round(keypoint.position + pot * vec2(p)), keypoint.lod, imageSize);\nb = pyrPixelAtEx(pyramid, round(keypoint.position + pot * vec2(q)), keypoint.lod, imageSize);\nbits |= uint(a.g < b.g) << j;\n}\ntest[t] = bits;\n}\ncolor = vec4(test[0], test[1], test[2], test[3]) / 255.0f;\n}"
 
 /***/ }),
 
-/***/ "./src/gpu/shaders/keypoints/orientation-via-centroid.glsl":
-/*!*****************************************************************!*\
-  !*** ./src/gpu/shaders/keypoints/orientation-via-centroid.glsl ***!
-  \*****************************************************************/
+/***/ "./src/gpu/shaders/keypoints/orb-orientation.glsl":
+/*!********************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/orb-orientation.glsl ***!
+  \********************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D pyramid;\nuniform sampler2D encodedKeypoints;\nuniform int patchRadius;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nconst int patchStart[8] = int[8](0, 0, 8, 28, 64, 132, 228, 356);\nconst int patchPointCount[8] = int[8](0, 8, 20, 36, 68, 96, 128, 168);\nconst ivec2 patchData[524] = ivec2[524](\nivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(-1,0),ivec2(1,0),ivec2(-1,1),ivec2(0,1),ivec2(1,1),\nivec2(-1,-2),ivec2(0,-2),ivec2(1,-2),ivec2(-2,-1),ivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(2,-1),ivec2(-2,0),ivec2(-1,0),ivec2(1,0),ivec2(2,0),ivec2(-2,1),ivec2(-1,1),ivec2(0,1),ivec2(1,1),ivec2(2,1),ivec2(-1,2),ivec2(0,2),ivec2(1,2),\nivec2(-1,-3),ivec2(0,-3),ivec2(1,-3),ivec2(-2,-2),ivec2(-1,-2),ivec2(0,-2),ivec2(1,-2),ivec2(2,-2),ivec2(-3,-1),ivec2(-2,-1),ivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(2,-1),ivec2(3,-1),ivec2(-3,0),ivec2(-2,0),ivec2(-1,0),ivec2(1,0),ivec2(2,0),ivec2(3,0),ivec2(-3,1),ivec2(-2,1),ivec2(-1,1),ivec2(0,1),ivec2(1,1),ivec2(2,1),ivec2(3,1),ivec2(-2,2),ivec2(-1,2),ivec2(0,2),ivec2(1,2),ivec2(2,2),ivec2(-1,3),ivec2(0,3),ivec2(1,3),\nivec2(-2,-4),ivec2(-1,-4),ivec2(0,-4),ivec2(1,-4),ivec2(2,-4),ivec2(-3,-3),ivec2(-2,-3),ivec2(-1,-3),ivec2(0,-3),ivec2(1,-3),ivec2(2,-3),ivec2(3,-3),ivec2(-4,-2),ivec2(-3,-2),ivec2(-2,-2),ivec2(-1,-2),ivec2(0,-2),ivec2(1,-2),ivec2(2,-2),ivec2(3,-2),ivec2(4,-2),ivec2(-4,-1),ivec2(-3,-1),ivec2(-2,-1),ivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(2,-1),ivec2(3,-1),ivec2(4,-1),ivec2(-4,0),ivec2(-3,0),ivec2(-2,0),ivec2(-1,0),ivec2(1,0),ivec2(2,0),ivec2(3,0),ivec2(4,0),ivec2(-4,1),ivec2(-3,1),ivec2(-2,1),ivec2(-1,1),ivec2(0,1),ivec2(1,1),ivec2(2,1),ivec2(3,1),ivec2(4,1),ivec2(-4,2),ivec2(-3,2),ivec2(-2,2),ivec2(-1,2),ivec2(0,2),ivec2(1,2),ivec2(2,2),ivec2(3,2),ivec2(4,2),ivec2(-3,3),ivec2(-2,3),ivec2(-1,3),ivec2(0,3),ivec2(1,3),ivec2(2,3),ivec2(3,3),ivec2(-2,4),ivec2(-1,4),ivec2(0,4),ivec2(1,4),ivec2(2,4),\nivec2(-2,-5),ivec2(-1,-5),ivec2(0,-5),ivec2(1,-5),ivec2(2,-5),ivec2(-3,-4),ivec2(-2,-4),ivec2(-1,-4),ivec2(0,-4),ivec2(1,-4),ivec2(2,-4),ivec2(3,-4),ivec2(-4,-3),ivec2(-3,-3),ivec2(-2,-3),ivec2(-1,-3),ivec2(0,-3),ivec2(1,-3),ivec2(2,-3),ivec2(3,-3),ivec2(4,-3),ivec2(-5,-2),ivec2(-4,-2),ivec2(-3,-2),ivec2(-2,-2),ivec2(-1,-2),ivec2(0,-2),ivec2(1,-2),ivec2(2,-2),ivec2(3,-2),ivec2(4,-2),ivec2(5,-2),ivec2(-5,-1),ivec2(-4,-1),ivec2(-3,-1),ivec2(-2,-1),ivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(2,-1),ivec2(3,-1),ivec2(4,-1),ivec2(5,-1),ivec2(-5,0),ivec2(-4,0),ivec2(-3,0),ivec2(-2,0),ivec2(-1,0),ivec2(1,0),ivec2(2,0),ivec2(3,0),ivec2(4,0),ivec2(5,0),ivec2(-5,1),ivec2(-4,1),ivec2(-3,1),ivec2(-2,1),ivec2(-1,1),ivec2(0,1),ivec2(1,1),ivec2(2,1),ivec2(3,1),ivec2(4,1),ivec2(5,1),ivec2(-5,2),ivec2(-4,2),ivec2(-3,2),ivec2(-2,2),ivec2(-1,2),ivec2(0,2),ivec2(1,2),ivec2(2,2),ivec2(3,2),ivec2(4,2),ivec2(5,2),ivec2(-4,3),ivec2(-3,3),ivec2(-2,3),ivec2(-1,3),ivec2(0,3),ivec2(1,3),ivec2(2,3),ivec2(3,3),ivec2(4,3),ivec2(-3,4),ivec2(-2,4),ivec2(-1,4),ivec2(0,4),ivec2(1,4),ivec2(2,4),ivec2(3,4),ivec2(-2,5),ivec2(-1,5),ivec2(0,5),ivec2(1,5),ivec2(2,5),\nivec2(-2,-6),ivec2(-1,-6),ivec2(0,-6),ivec2(1,-6),ivec2(2,-6),ivec2(-3,-5),ivec2(-2,-5),ivec2(-1,-5),ivec2(0,-5),ivec2(1,-5),ivec2(2,-5),ivec2(3,-5),ivec2(-4,-4),ivec2(-3,-4),ivec2(-2,-4),ivec2(-1,-4),ivec2(0,-4),ivec2(1,-4),ivec2(2,-4),ivec2(3,-4),ivec2(4,-4),ivec2(-5,-3),ivec2(-4,-3),ivec2(-3,-3),ivec2(-2,-3),ivec2(-1,-3),ivec2(0,-3),ivec2(1,-3),ivec2(2,-3),ivec2(3,-3),ivec2(4,-3),ivec2(5,-3),ivec2(-6,-2),ivec2(-5,-2),ivec2(-4,-2),ivec2(-3,-2),ivec2(-2,-2),ivec2(-1,-2),ivec2(0,-2),ivec2(1,-2),ivec2(2,-2),ivec2(3,-2),ivec2(4,-2),ivec2(5,-2),ivec2(6,-2),ivec2(-6,-1),ivec2(-5,-1),ivec2(-4,-1),ivec2(-3,-1),ivec2(-2,-1),ivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(2,-1),ivec2(3,-1),ivec2(4,-1),ivec2(5,-1),ivec2(6,-1),ivec2(-6,0),ivec2(-5,0),ivec2(-4,0),ivec2(-3,0),ivec2(-2,0),ivec2(-1,0),ivec2(1,0),ivec2(2,0),ivec2(3,0),ivec2(4,0),ivec2(5,0),ivec2(6,0),ivec2(-6,1),ivec2(-5,1),ivec2(-4,1),ivec2(-3,1),ivec2(-2,1),ivec2(-1,1),ivec2(0,1),ivec2(1,1),ivec2(2,1),ivec2(3,1),ivec2(4,1),ivec2(5,1),ivec2(6,1),ivec2(-6,2),ivec2(-5,2),ivec2(-4,2),ivec2(-3,2),ivec2(-2,2),ivec2(-1,2),ivec2(0,2),ivec2(1,2),ivec2(2,2),ivec2(3,2),ivec2(4,2),ivec2(5,2),ivec2(6,2),ivec2(-5,3),ivec2(-4,3),ivec2(-3,3),ivec2(-2,3),ivec2(-1,3),ivec2(0,3),ivec2(1,3),ivec2(2,3),ivec2(3,3),ivec2(4,3),ivec2(5,3),ivec2(-4,4),ivec2(-3,4),ivec2(-2,4),ivec2(-1,4),ivec2(0,4),ivec2(1,4),ivec2(2,4),ivec2(3,4),ivec2(4,4),ivec2(-3,5),ivec2(-2,5),ivec2(-1,5),ivec2(0,5),ivec2(1,5),ivec2(2,5),ivec2(3,5),ivec2(-2,6),ivec2(-1,6),ivec2(0,6),ivec2(1,6),ivec2(2,6),\nivec2(-2,-7),ivec2(-1,-7),ivec2(0,-7),ivec2(1,-7),ivec2(2,-7),ivec2(-4,-6),ivec2(-3,-6),ivec2(-2,-6),ivec2(-1,-6),ivec2(0,-6),ivec2(1,-6),ivec2(2,-6),ivec2(3,-6),ivec2(4,-6),ivec2(-5,-5),ivec2(-3,-5),ivec2(-2,-5),ivec2(-1,-5),ivec2(0,-5),ivec2(1,-5),ivec2(2,-5),ivec2(3,-5),ivec2(5,-5),ivec2(-6,-4),ivec2(-4,-4),ivec2(-3,-4),ivec2(-2,-4),ivec2(-1,-4),ivec2(0,-4),ivec2(1,-4),ivec2(2,-4),ivec2(3,-4),ivec2(4,-4),ivec2(6,-4),ivec2(-6,-3),ivec2(-5,-3),ivec2(-4,-3),ivec2(-3,-3),ivec2(-2,-3),ivec2(-1,-3),ivec2(0,-3),ivec2(1,-3),ivec2(2,-3),ivec2(3,-3),ivec2(4,-3),ivec2(5,-3),ivec2(6,-3),ivec2(-7,-2),ivec2(-6,-2),ivec2(-5,-2),ivec2(-4,-2),ivec2(-3,-2),ivec2(-2,-2),ivec2(-1,-2),ivec2(0,-2),ivec2(1,-2),ivec2(2,-2),ivec2(3,-2),ivec2(4,-2),ivec2(5,-2),ivec2(6,-2),ivec2(7,-2),ivec2(-7,-1),ivec2(-6,-1),ivec2(-5,-1),ivec2(-4,-1),ivec2(-3,-1),ivec2(-2,-1),ivec2(-1,-1),ivec2(0,-1),ivec2(1,-1),ivec2(2,-1),ivec2(3,-1),ivec2(4,-1),ivec2(5,-1),ivec2(6,-1),ivec2(7,-1),ivec2(-7,0),ivec2(-6,0),ivec2(-5,0),ivec2(-4,0),ivec2(-3,0),ivec2(-2,0),ivec2(-1,0),ivec2(1,0),ivec2(2,0),ivec2(3,0),ivec2(4,0),ivec2(5,0),ivec2(6,0),ivec2(7,0),ivec2(-7,1),ivec2(-6,1),ivec2(-5,1),ivec2(-4,1),ivec2(-3,1),ivec2(-2,1),ivec2(-1,1),ivec2(0,1),ivec2(1,1),ivec2(2,1),ivec2(3,1),ivec2(4,1),ivec2(5,1),ivec2(6,1),ivec2(7,1),ivec2(-7,2),ivec2(-6,2),ivec2(-5,2),ivec2(-4,2),ivec2(-3,2),ivec2(-2,2),ivec2(-1,2),ivec2(0,2),ivec2(1,2),ivec2(2,2),ivec2(3,2),ivec2(4,2),ivec2(5,2),ivec2(6,2),ivec2(7,2),ivec2(-6,3),ivec2(-5,3),ivec2(-4,3),ivec2(-3,3),ivec2(-2,3),ivec2(-1,3),ivec2(0,3),ivec2(1,3),ivec2(2,3),ivec2(3,3),ivec2(4,3),ivec2(5,3),ivec2(6,3),ivec2(-6,4),ivec2(-4,4),ivec2(-3,4),ivec2(-2,4),ivec2(-1,4),ivec2(0,4),ivec2(1,4),ivec2(2,4),ivec2(3,4),ivec2(4,4),ivec2(6,4),ivec2(-5,5),ivec2(-3,5),ivec2(-2,5),ivec2(-1,5),ivec2(0,5),ivec2(1,5),ivec2(2,5),ivec2(3,5),ivec2(5,5),ivec2(-4,6),ivec2(-3,6),ivec2(-2,6),ivec2(-1,6),ivec2(0,6),ivec2(1,6),ivec2(2,6),ivec2(3,6),ivec2(4,6),ivec2(-2,7),ivec2(-1,7),ivec2(0,7),ivec2(1,7),ivec2(2,7)\n);\nconst int MIN_PATCH_RADIUS = 3;\nconst int MAX_PATCH_RADIUS = 7;\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\ncolor = pixel;\nif(address.offset != 1)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nfloat pot = exp2(keypoint.lod);\nvec2 m = vec2(0.0f);\nivec2 pyrBaseSize = textureSize(pyramid, 0);\nint scaledRadius = int(ceil(float(patchRadius) / pot));\nint radius = clamp(scaledRadius, MIN_PATCH_RADIUS, MAX_PATCH_RADIUS);\nint start = patchStart[radius];\nint count = patchPointCount[radius];\nfor(int j = 0; j < count; j++) {\nvec2 offset = vec2(patchData[start + j]);\nvec2 position = keypoint.position + round(pot * offset);\nvec4 patchPixel = pyrPixelAtEx(pyramid, position, keypoint.lod, pyrBaseSize);\nm += offset * patchPixel.g;\n}\nfloat angle = fastAtan2(m.y, m.x);\ncolor.g = encodeOrientation(angle);\ncolor.a = encodeKeypointFlags(keypoint.flags | KPF_ORIENTED);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/keypoints/samescale-suppression.glsl":
-/*!**************************************************************!*\
-  !*** ./src/gpu/shaders/keypoints/samescale-suppression.glsl ***!
-  \**************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 thread = threadLocation();\nfloat lod = decodeLod(pixel.a);\nfloat pot = exp2(lod);\ncolor = pixel;\nif(pixel.r == 0.0f)\nreturn;\nvec4 p0 = pixelAtShortOffset(image, ivec2(0, 1));\nvec4 p1 = pixelAtShortOffset(image, ivec2(1, 1));\nvec4 p2 = pixelAtShortOffset(image, ivec2(1, 0));\nvec4 p3 = pixelAtShortOffset(image, ivec2(1, -1));\nvec4 p4 = pixelAtShortOffset(image, ivec2(0, -1));\nvec4 p5 = pixelAtShortOffset(image, ivec2(-1, -1));\nvec4 p6 = pixelAtShortOffset(image, ivec2(-1, 0));\nvec4 p7 = pixelAtShortOffset(image, ivec2(-1, 1));\nmat3 score = mat3(\np0.r * float(isSameEncodedLod(p0.a, pixel.a)),\np1.r * float(isSameEncodedLod(p1.a, pixel.a)),\np2.r * float(isSameEncodedLod(p2.a, pixel.a)),\np3.r * float(isSameEncodedLod(p3.a, pixel.a)),\np4.r * float(isSameEncodedLod(p4.a, pixel.a)),\np5.r * float(isSameEncodedLod(p5.a, pixel.a)),\np6.r * float(isSameEncodedLod(p6.a, pixel.a)),\np7.r * float(isSameEncodedLod(p7.a, pixel.a)),\n0.0f\n);\nvec3 maxScore3 = max(score[0], max(score[1], score[2]));\nfloat maxScore = max(maxScore3.x, max(maxScore3.y, maxScore3.z));\nfloat myScore = step(maxScore, pixel.r) * pixel.r;\ncolor = vec4(myScore, pixel.gba);\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D pyramid;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nconst int diskPointCount[16] = int[16](0, 4, 12, 28, 48, 80, 112, 148, 196, 252, 316, 376, 440, 528, 612, 708);\nconst ivec2 diskPoint[708] = ivec2[708](\nivec2(0,-1),ivec2(-1,0),ivec2(1,0),ivec2(0,1),\nivec2(-1,-1),ivec2(1,-1),ivec2(-1,1),ivec2(1,1),ivec2(0,-2),ivec2(-2,0),ivec2(2,0),ivec2(0,2),\nivec2(-1,-2),ivec2(1,-2),ivec2(-2,-1),ivec2(2,-1),ivec2(-2,1),ivec2(2,1),ivec2(-1,2),ivec2(1,2),ivec2(-2,-2),ivec2(2,-2),ivec2(-2,2),ivec2(2,2),ivec2(0,-3),ivec2(-3,0),ivec2(3,0),ivec2(0,3),\nivec2(-1,-3),ivec2(1,-3),ivec2(-3,-1),ivec2(3,-1),ivec2(-3,1),ivec2(3,1),ivec2(-1,3),ivec2(1,3),ivec2(-2,-3),ivec2(2,-3),ivec2(-3,-2),ivec2(3,-2),ivec2(-3,2),ivec2(3,2),ivec2(-2,3),ivec2(2,3),ivec2(0,-4),ivec2(-4,0),ivec2(4,0),ivec2(0,4),\nivec2(-1,-4),ivec2(1,-4),ivec2(-4,-1),ivec2(4,-1),ivec2(-4,1),ivec2(4,1),ivec2(-1,4),ivec2(1,4),ivec2(-3,-3),ivec2(3,-3),ivec2(-3,3),ivec2(3,3),ivec2(-2,-4),ivec2(2,-4),ivec2(-4,-2),ivec2(4,-2),ivec2(-4,2),ivec2(4,2),ivec2(-2,4),ivec2(2,4),ivec2(0,-5),ivec2(-3,-4),ivec2(3,-4),ivec2(-4,-3),ivec2(4,-3),ivec2(-5,0),ivec2(5,0),ivec2(-4,3),ivec2(4,3),ivec2(-3,4),ivec2(3,4),ivec2(0,5),\nivec2(-1,-5),ivec2(1,-5),ivec2(-5,-1),ivec2(5,-1),ivec2(-5,1),ivec2(5,1),ivec2(-1,5),ivec2(1,5),ivec2(-2,-5),ivec2(2,-5),ivec2(-5,-2),ivec2(5,-2),ivec2(-5,2),ivec2(5,2),ivec2(-2,5),ivec2(2,5),ivec2(-4,-4),ivec2(4,-4),ivec2(-4,4),ivec2(4,4),ivec2(-3,-5),ivec2(3,-5),ivec2(-5,-3),ivec2(5,-3),ivec2(-5,3),ivec2(5,3),ivec2(-3,5),ivec2(3,5),ivec2(0,-6),ivec2(-6,0),ivec2(6,0),ivec2(0,6),\nivec2(-1,-6),ivec2(1,-6),ivec2(-6,-1),ivec2(6,-1),ivec2(-6,1),ivec2(6,1),ivec2(-1,6),ivec2(1,6),ivec2(-2,-6),ivec2(2,-6),ivec2(-6,-2),ivec2(6,-2),ivec2(-6,2),ivec2(6,2),ivec2(-2,6),ivec2(2,6),ivec2(-4,-5),ivec2(4,-5),ivec2(-5,-4),ivec2(5,-4),ivec2(-5,4),ivec2(5,4),ivec2(-4,5),ivec2(4,5),ivec2(-3,-6),ivec2(3,-6),ivec2(-6,-3),ivec2(6,-3),ivec2(-6,3),ivec2(6,3),ivec2(-3,6),ivec2(3,6),ivec2(0,-7),ivec2(-7,0),ivec2(7,0),ivec2(0,7),\nivec2(-1,-7),ivec2(1,-7),ivec2(-5,-5),ivec2(5,-5),ivec2(-7,-1),ivec2(7,-1),ivec2(-7,1),ivec2(7,1),ivec2(-5,5),ivec2(5,5),ivec2(-1,7),ivec2(1,7),ivec2(-4,-6),ivec2(4,-6),ivec2(-6,-4),ivec2(6,-4),ivec2(-6,4),ivec2(6,4),ivec2(-4,6),ivec2(4,6),ivec2(-2,-7),ivec2(2,-7),ivec2(-7,-2),ivec2(7,-2),ivec2(-7,2),ivec2(7,2),ivec2(-2,7),ivec2(2,7),ivec2(-3,-7),ivec2(3,-7),ivec2(-7,-3),ivec2(7,-3),ivec2(-7,3),ivec2(7,3),ivec2(-3,7),ivec2(3,7),ivec2(-5,-6),ivec2(5,-6),ivec2(-6,-5),ivec2(6,-5),ivec2(-6,5),ivec2(6,5),ivec2(-5,6),ivec2(5,6),ivec2(0,-8),ivec2(-8,0),ivec2(8,0),ivec2(0,8),\nivec2(-1,-8),ivec2(1,-8),ivec2(-4,-7),ivec2(4,-7),ivec2(-7,-4),ivec2(7,-4),ivec2(-8,-1),ivec2(8,-1),ivec2(-8,1),ivec2(8,1),ivec2(-7,4),ivec2(7,4),ivec2(-4,7),ivec2(4,7),ivec2(-1,8),ivec2(1,8),ivec2(-2,-8),ivec2(2,-8),ivec2(-8,-2),ivec2(8,-2),ivec2(-8,2),ivec2(8,2),ivec2(-2,8),ivec2(2,8),ivec2(-6,-6),ivec2(6,-6),ivec2(-6,6),ivec2(6,6),ivec2(-3,-8),ivec2(3,-8),ivec2(-8,-3),ivec2(8,-3),ivec2(-8,3),ivec2(8,3),ivec2(-3,8),ivec2(3,8),ivec2(-5,-7),ivec2(5,-7),ivec2(-7,-5),ivec2(7,-5),ivec2(-7,5),ivec2(7,5),ivec2(-5,7),ivec2(5,7),ivec2(-4,-8),ivec2(4,-8),ivec2(-8,-4),ivec2(8,-4),ivec2(-8,4),ivec2(8,4),ivec2(-4,8),ivec2(4,8),ivec2(0,-9),ivec2(-9,0),ivec2(9,0),ivec2(0,9),\nivec2(-1,-9),ivec2(1,-9),ivec2(-9,-1),ivec2(9,-1),ivec2(-9,1),ivec2(9,1),ivec2(-1,9),ivec2(1,9),ivec2(-2,-9),ivec2(2,-9),ivec2(-6,-7),ivec2(6,-7),ivec2(-7,-6),ivec2(7,-6),ivec2(-9,-2),ivec2(9,-2),ivec2(-9,2),ivec2(9,2),ivec2(-7,6),ivec2(7,6),ivec2(-6,7),ivec2(6,7),ivec2(-2,9),ivec2(2,9),ivec2(-5,-8),ivec2(5,-8),ivec2(-8,-5),ivec2(8,-5),ivec2(-8,5),ivec2(8,5),ivec2(-5,8),ivec2(5,8),ivec2(-3,-9),ivec2(3,-9),ivec2(-9,-3),ivec2(9,-3),ivec2(-9,3),ivec2(9,3),ivec2(-3,9),ivec2(3,9),ivec2(-4,-9),ivec2(4,-9),ivec2(-9,-4),ivec2(9,-4),ivec2(-9,4),ivec2(9,4),ivec2(-4,9),ivec2(4,9),ivec2(-7,-7),ivec2(7,-7),ivec2(-7,7),ivec2(7,7),ivec2(0,-10),ivec2(-6,-8),ivec2(6,-8),ivec2(-8,-6),ivec2(8,-6),ivec2(-10,0),ivec2(10,0),ivec2(-8,6),ivec2(8,6),ivec2(-6,8),ivec2(6,8),ivec2(0,10),\nivec2(-1,-10),ivec2(1,-10),ivec2(-10,-1),ivec2(10,-1),ivec2(-10,1),ivec2(10,1),ivec2(-1,10),ivec2(1,10),ivec2(-2,-10),ivec2(2,-10),ivec2(-10,-2),ivec2(10,-2),ivec2(-10,2),ivec2(10,2),ivec2(-2,10),ivec2(2,10),ivec2(-5,-9),ivec2(5,-9),ivec2(-9,-5),ivec2(9,-5),ivec2(-9,5),ivec2(9,5),ivec2(-5,9),ivec2(5,9),ivec2(-3,-10),ivec2(3,-10),ivec2(-10,-3),ivec2(10,-3),ivec2(-10,3),ivec2(10,3),ivec2(-3,10),ivec2(3,10),ivec2(-7,-8),ivec2(7,-8),ivec2(-8,-7),ivec2(8,-7),ivec2(-8,7),ivec2(8,7),ivec2(-7,8),ivec2(7,8),ivec2(-4,-10),ivec2(4,-10),ivec2(-10,-4),ivec2(10,-4),ivec2(-10,4),ivec2(10,4),ivec2(-4,10),ivec2(4,10),ivec2(-6,-9),ivec2(6,-9),ivec2(-9,-6),ivec2(9,-6),ivec2(-9,6),ivec2(9,6),ivec2(-6,9),ivec2(6,9),ivec2(0,-11),ivec2(-11,0),ivec2(11,0),ivec2(0,11),\nivec2(-1,-11),ivec2(1,-11),ivec2(-11,-1),ivec2(11,-1),ivec2(-11,1),ivec2(11,1),ivec2(-1,11),ivec2(1,11),ivec2(-2,-11),ivec2(2,-11),ivec2(-5,-10),ivec2(5,-10),ivec2(-10,-5),ivec2(10,-5),ivec2(-11,-2),ivec2(11,-2),ivec2(-11,2),ivec2(11,2),ivec2(-10,5),ivec2(10,5),ivec2(-5,10),ivec2(5,10),ivec2(-2,11),ivec2(2,11),ivec2(-8,-8),ivec2(8,-8),ivec2(-8,8),ivec2(8,8),ivec2(-3,-11),ivec2(3,-11),ivec2(-7,-9),ivec2(7,-9),ivec2(-9,-7),ivec2(9,-7),ivec2(-11,-3),ivec2(11,-3),ivec2(-11,3),ivec2(11,3),ivec2(-9,7),ivec2(9,7),ivec2(-7,9),ivec2(7,9),ivec2(-3,11),ivec2(3,11),ivec2(-6,-10),ivec2(6,-10),ivec2(-10,-6),ivec2(10,-6),ivec2(-10,6),ivec2(10,6),ivec2(-6,10),ivec2(6,10),ivec2(-4,-11),ivec2(4,-11),ivec2(-11,-4),ivec2(11,-4),ivec2(-11,4),ivec2(11,4),ivec2(-4,11),ivec2(4,11),ivec2(0,-12),ivec2(-12,0),ivec2(12,0),ivec2(0,12),\nivec2(-1,-12),ivec2(1,-12),ivec2(-8,-9),ivec2(8,-9),ivec2(-9,-8),ivec2(9,-8),ivec2(-12,-1),ivec2(12,-1),ivec2(-12,1),ivec2(12,1),ivec2(-9,8),ivec2(9,8),ivec2(-8,9),ivec2(8,9),ivec2(-1,12),ivec2(1,12),ivec2(-5,-11),ivec2(5,-11),ivec2(-11,-5),ivec2(11,-5),ivec2(-11,5),ivec2(11,5),ivec2(-5,11),ivec2(5,11),ivec2(-2,-12),ivec2(2,-12),ivec2(-12,-2),ivec2(12,-2),ivec2(-12,2),ivec2(12,2),ivec2(-2,12),ivec2(2,12),ivec2(-7,-10),ivec2(7,-10),ivec2(-10,-7),ivec2(10,-7),ivec2(-10,7),ivec2(10,7),ivec2(-7,10),ivec2(7,10),ivec2(-3,-12),ivec2(3,-12),ivec2(-12,-3),ivec2(12,-3),ivec2(-12,3),ivec2(12,3),ivec2(-3,12),ivec2(3,12),ivec2(-6,-11),ivec2(6,-11),ivec2(-11,-6),ivec2(11,-6),ivec2(-11,6),ivec2(11,6),ivec2(-6,11),ivec2(6,11),ivec2(-4,-12),ivec2(4,-12),ivec2(-12,-4),ivec2(12,-4),ivec2(-12,4),ivec2(12,4),ivec2(-4,12),ivec2(4,12),ivec2(-9,-9),ivec2(9,-9),ivec2(-9,9),ivec2(9,9),ivec2(-8,-10),ivec2(8,-10),ivec2(-10,-8),ivec2(10,-8),ivec2(-10,8),ivec2(10,8),ivec2(-8,10),ivec2(8,10),ivec2(0,-13),ivec2(-5,-12),ivec2(5,-12),ivec2(-12,-5),ivec2(12,-5),ivec2(-13,0),ivec2(13,0),ivec2(-12,5),ivec2(12,5),ivec2(-5,12),ivec2(5,12),ivec2(0,13),\nivec2(-1,-13),ivec2(1,-13),ivec2(-7,-11),ivec2(7,-11),ivec2(-11,-7),ivec2(11,-7),ivec2(-13,-1),ivec2(13,-1),ivec2(-13,1),ivec2(13,1),ivec2(-11,7),ivec2(11,7),ivec2(-7,11),ivec2(7,11),ivec2(-1,13),ivec2(1,13),ivec2(-2,-13),ivec2(2,-13),ivec2(-13,-2),ivec2(13,-2),ivec2(-13,2),ivec2(13,2),ivec2(-2,13),ivec2(2,13),ivec2(-3,-13),ivec2(3,-13),ivec2(-13,-3),ivec2(13,-3),ivec2(-13,3),ivec2(13,3),ivec2(-3,13),ivec2(3,13),ivec2(-6,-12),ivec2(6,-12),ivec2(-12,-6),ivec2(12,-6),ivec2(-12,6),ivec2(12,6),ivec2(-6,12),ivec2(6,12),ivec2(-9,-10),ivec2(9,-10),ivec2(-10,-9),ivec2(10,-9),ivec2(-10,9),ivec2(10,9),ivec2(-9,10),ivec2(9,10),ivec2(-4,-13),ivec2(4,-13),ivec2(-8,-11),ivec2(8,-11),ivec2(-11,-8),ivec2(11,-8),ivec2(-13,-4),ivec2(13,-4),ivec2(-13,4),ivec2(13,4),ivec2(-11,8),ivec2(11,8),ivec2(-8,11),ivec2(8,11),ivec2(-4,13),ivec2(4,13),ivec2(-7,-12),ivec2(7,-12),ivec2(-12,-7),ivec2(12,-7),ivec2(-12,7),ivec2(12,7),ivec2(-7,12),ivec2(7,12),ivec2(-5,-13),ivec2(5,-13),ivec2(-13,-5),ivec2(13,-5),ivec2(-13,5),ivec2(13,5),ivec2(-5,13),ivec2(5,13),ivec2(0,-14),ivec2(-14,0),ivec2(14,0),ivec2(0,14),\nivec2(-1,-14),ivec2(1,-14),ivec2(-14,-1),ivec2(14,-1),ivec2(-14,1),ivec2(14,1),ivec2(-1,14),ivec2(1,14),ivec2(-2,-14),ivec2(2,-14),ivec2(-10,-10),ivec2(10,-10),ivec2(-14,-2),ivec2(14,-2),ivec2(-14,2),ivec2(14,2),ivec2(-10,10),ivec2(10,10),ivec2(-2,14),ivec2(2,14),ivec2(-9,-11),ivec2(9,-11),ivec2(-11,-9),ivec2(11,-9),ivec2(-11,9),ivec2(11,9),ivec2(-9,11),ivec2(9,11),ivec2(-3,-14),ivec2(3,-14),ivec2(-6,-13),ivec2(6,-13),ivec2(-13,-6),ivec2(13,-6),ivec2(-14,-3),ivec2(14,-3),ivec2(-14,3),ivec2(14,3),ivec2(-13,6),ivec2(13,6),ivec2(-6,13),ivec2(6,13),ivec2(-3,14),ivec2(3,14),ivec2(-8,-12),ivec2(8,-12),ivec2(-12,-8),ivec2(12,-8),ivec2(-12,8),ivec2(12,8),ivec2(-8,12),ivec2(8,12),ivec2(-4,-14),ivec2(4,-14),ivec2(-14,-4),ivec2(14,-4),ivec2(-14,4),ivec2(14,4),ivec2(-4,14),ivec2(4,14),ivec2(-7,-13),ivec2(7,-13),ivec2(-13,-7),ivec2(13,-7),ivec2(-13,7),ivec2(13,7),ivec2(-7,13),ivec2(7,13),ivec2(-5,-14),ivec2(5,-14),ivec2(-10,-11),ivec2(10,-11),ivec2(-11,-10),ivec2(11,-10),ivec2(-14,-5),ivec2(14,-5),ivec2(-14,5),ivec2(14,5),ivec2(-11,10),ivec2(11,10),ivec2(-10,11),ivec2(10,11),ivec2(-5,14),ivec2(5,14),ivec2(0,-15),ivec2(-9,-12),ivec2(9,-12),ivec2(-12,-9),ivec2(12,-9),ivec2(-15,0),ivec2(15,0),ivec2(-12,9),ivec2(12,9),ivec2(-9,12),ivec2(9,12),ivec2(0,15)\n);\nconst int DEFAULT_PATCH_RADIUS = 15;\nconst int MIN_PATCH_RADIUS = 2;\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nint keypointIndex = thread.x + thread.y * outputSize().x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nvec2 m = vec2(0.0f);\nfloat pot = exp2(keypoint.lod);\nivec2 pyrBaseSize = textureSize(pyramid, 0);\nint scaledRadius = int(ceil(float(DEFAULT_PATCH_RADIUS) / pot));\nint radius = max(scaledRadius, MIN_PATCH_RADIUS);\nint count = diskPointCount[radius];\nfor(int j = 0; j < count; j++) {\nvec2 offset = vec2(diskPoint[j]);\nvec2 position = keypoint.position + round(pot * offset);\nvec4 patchPixel = pyrPixelAtEx(pyramid, position, keypoint.lod, pyrBaseSize);\nm += offset * patchPixel.g;\n}\nfloat angle = fastAtan2(m.y, m.x);\nfloat encodedOrientation = encodeOrientation(angle);\nfloat encodedFlags = encodeKeypointFlags(keypoint.flags | KPF_ORIENTED);\ncolor = vec4(0.0f, encodedOrientation, 0.0f, encodedFlags);\n}"
 
 /***/ }),
 
@@ -13173,7 +13267,29 @@ module.exports = "@include \"pyramids.glsl\"\nuniform sampler2D image;\nvoid mai
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int estimatedKeypointCount;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#if !defined(MAX_KEYPOINTS)\n#error Must define MAX_KEYPOINTS\n#elif MAX_KEYPOINTS >= 65536\n#error MAX_KEYPOINTS is too large!\n#endif\nuint tuple[1 + MAX_KEYPOINTS];\nuint encodeTuple(Keypoint keypoint, int index)\n{\nuint mask = uint(-int(!isBadKeypoint(keypoint)));\nuint score = uint(clamp(keypoint.score, 0.0f, 1.0f) * 65535.0f);\nuint data = (uint(index) & 65535u) | (score << 16u);\nreturn data & mask;\n}\n#define decodeTupleIndex(tuple) int((tuple) & 16777215u)\n#define QUICKSELECT_UNSIGNED\n#define QUICKSELECT_DESCENDING\n#define QUICKSELECT_ARRAY tuple\n@include \"quickselect.glsl\"\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\ncolor = pixel;\nif(myIndex >= estimatedKeypointCount)\nreturn;\nKeypoint keypoint;\nKeypointAddress address = KeypointAddress(0, 0);\nint actualKeypointCount = estimatedKeypointCount;\nfor(int i = 0; i < estimatedKeypointCount; i++) {\nkeypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\ntuple[min(i, MAX_KEYPOINTS)] = encodeTuple(keypoint, i);\nactualKeypointCount = isBadKeypoint(keypoint) ? min(actualKeypointCount, i) : actualKeypointCount;\naddress.base += pixelsPerKeypoint;\n}\nint desiredTuple = quickselect(0, min(MAX_KEYPOINTS, actualKeypointCount - 1), myIndex);\nint desiredIndex = decodeTupleIndex(desiredTuple);\nKeypointAddress desiredAddress = KeypointAddress(desiredIndex * pixelsPerKeypoint, myAddress.offset);\nint desiredRasterIndex = desiredAddress.base + desiredAddress.offset;\nvec4 desiredPixel = readKeypointData(encodedKeypoints, encoderLength, desiredRasterIndex);\ncolor = myIndex < actualKeypointCount ? desiredPixel : encodeNullKeypoint();\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int estimatedKeypointCount;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#if !defined(MAX_KEYPOINTS)\n#error Must define MAX_KEYPOINTS\n#elif MAX_KEYPOINTS >= 65536\n#error MAX_KEYPOINTS is too large!\n#endif\nuint tuple[1 + MAX_KEYPOINTS];\nuint encodeTuple(Keypoint keypoint, int index)\n{\nuint mask = uint(-int(!isBadKeypoint(keypoint)));\nuint score = uint(clamp(keypoint.score, 0.0f, 1.0f) * 65535.0f);\nuint data = (uint(index) & 65535u) | (score << 16u);\nreturn data & mask;\n}\n#define decodeTupleIndex(tuple) int((tuple) & 16777215u)\n#define QUICKSELECT_UNSIGNED\n#define QUICKSELECT_DESCENDING\n#define QUICKSELECT_ARRAY tuple\n@include \"quickselect.glsl\"\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\ncolor = pixel;\nif(myIndex >= estimatedKeypointCount)\nreturn;\nKeypoint keypoint;\nKeypointAddress address = KeypointAddress(0, 0);\nint actualKeypointCount = estimatedKeypointCount;\nfor(int i = 0; i < estimatedKeypointCount; i++) {\nkeypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\ntuple[min(i, MAX_KEYPOINTS)] = encodeTuple(keypoint, i);\nactualKeypointCount = isBadKeypoint(keypoint) ? min(actualKeypointCount, i) : actualKeypointCount;\naddress.base += pixelsPerKeypoint;\n}\nint desiredTuple = quickselect(0, min(MAX_KEYPOINTS, actualKeypointCount - 1), myIndex);\nint desiredIndex = decodeTupleIndex(desiredTuple);\nKeypointAddress desiredAddress = KeypointAddress(desiredIndex * pixelsPerKeypoint, myAddress.offset);\nvec4 desiredPixel = readKeypointData(encodedKeypoints, encoderLength, desiredAddress);\ncolor = myIndex < actualKeypointCount ? desiredPixel : encodeNullKeypoint();\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/suppress-descriptors.glsl":
+/*!*************************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/suppress-descriptors.glsl ***!
+  \*************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int suppressedEncoderLength;\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, suppressedEncoderLength, 0, extraSize);\nint myIndex = findKeypointIndex(myAddress, 0, extraSize);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress otherAddress = KeypointAddress(myIndex * pixelsPerKeypoint, myAddress.offset);\ncolor = readKeypointData(encodedKeypoints, encoderLength, otherAddress);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/transfer-orientation.glsl":
+/*!*************************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/transfer-orientation.glsl ***!
+  \*************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedOrientations;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nint orientationEncoderLength = textureSize(encodedOrientations, 0).x;\nivec2 location = ivec2(myIndex % orientationEncoderLength, myIndex / orientationEncoderLength);\nvec4 targetPixel = pixelAt(encodedOrientations, location);\nfloat encodedOrientation = targetPixel.g;\nfloat encodedFlags = targetPixel.a;\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);\nbool isValid = !isBadKeypoint(keypoint);\ncolor = isValid && myAddress.offset == 1 ? vec4(pixel.r, encodedOrientation, pixel.b, encodedFlags) : pixel;\n}"
 
 /***/ }),
 
@@ -14389,8 +14505,11 @@ class SpeedyProgram extends Function
         if(this._pixelBuffer[0] == null)
             this._reallocatePixelBuffers(this._width, this._height);
 
+        // last render target
+        const fbo = this._fbo[this._options.pingpong ? 1 - this._textureIndex : this._textureIndex];
+
         // read pixels
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo[this._textureIndex]);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
         gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, this._pixelBuffer[0]);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
@@ -14430,9 +14549,12 @@ class SpeedyProgram extends Function
         if(this._pixelBuffer[0] == null)
             this._reallocatePixelBuffers(this._width, this._height);
 
+        // last render target
+        const fbo = this._fbo[this._options.pingpong ? 1 - this._textureIndex : this._textureIndex];
+
         // do not optimize?
         if(!useBufferedDownloads) {
-            return _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].readPixelsViaPBO(gl, this._pixelBuffer[0], x, y, width, height, this._fbo[this._textureIndex]).then(() => {
+            return _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].readPixelsViaPBO(gl, this._pixelBuffer[0], x, y, width, height, fbo).then(() => {
                 return this._pixelBuffer[0];
             });
         }
@@ -14440,13 +14562,13 @@ class SpeedyProgram extends Function
         // GPU needs to produce data
         if(this._pboProducerQueue.length > 0) {
             const nextPBO = this._pboProducerQueue.shift();
-            _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].readPixelsViaPBO(gl, this._pixelBuffer[nextPBO], x, y, width, height, this._fbo[this._textureIndex]).then(() => {
+            _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].readPixelsViaPBO(gl, this._pixelBuffer[nextPBO], x, y, width, height, fbo).then(() => {
                 this._pboConsumerQueue.push(nextPBO);
             });
         }
         else this._waitForQueueNotEmpty(this._pboProducerQueue).then(() => {
             const nextPBO = this._pboProducerQueue.shift();
-            _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].readPixelsViaPBO(gl, this._pixelBuffer[nextPBO], x, y, width, height, this._fbo[this._textureIndex]).then(() => {
+            _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].readPixelsViaPBO(gl, this._pixelBuffer[nextPBO], x, y, width, height, fbo).then(() => {
                 this._pboConsumerQueue.push(nextPBO);
             });
         }).turbocharge();
@@ -15386,7 +15508,7 @@ class FPSCounter
 /*!******************************!*\
   !*** ./src/utils/globals.js ***!
   \******************************/
-/*! exports provided: PYRAMID_MAX_LEVELS, PYRAMID_MAX_OCTAVES, PYRAMID_MAX_SCALE, LOG2_PYRAMID_MAX_SCALE, FIX_BITS, FIX_RESOLUTION, MAX_TEXTURE_LENGTH, MAX_DESCRIPTOR_SIZE, MIN_KEYPOINT_SIZE, KPF_NONE, KPF_ORIENTED, KPF_DISCARD */
+/*! exports provided: PYRAMID_MAX_LEVELS, PYRAMID_MAX_OCTAVES, PYRAMID_MAX_SCALE, LOG2_PYRAMID_MAX_SCALE, FIX_BITS, FIX_RESOLUTION, MAX_TEXTURE_LENGTH, MAX_DESCRIPTOR_SIZE, MIN_KEYPOINT_SIZE, KPF_NONE, KPF_ORIENTED, KPF_DISCARD, LITTLE_ENDIAN */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -15403,6 +15525,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "KPF_NONE", function() { return KPF_NONE; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "KPF_ORIENTED", function() { return KPF_ORIENTED; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "KPF_DISCARD", function() { return KPF_DISCARD; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "LITTLE_ENDIAN", function() { return LITTLE_ENDIAN; });
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -15481,6 +15604,17 @@ const KPF_ORIENTED = 0x1;
 
 // Flag: should the keypoint be discarded? (in the next frame)
 const KPF_DISCARD = 0x80;
+
+
+
+// -----------------------------------------------------------------
+// MISC
+// -----------------------------------------------------------------
+
+// Are we in a little-endian machine?
+const LITTLE_ENDIAN = (function() {
+    return 0xCAFE === (new Uint16Array(new Uint8Array([0xFE, 0xCA]).buffer))[0];
+})();
 
 /***/ }),
 
@@ -16248,24 +16382,6 @@ class Utils
         }
         else
             return Object.create(null);
-    }
-
-    /**
-     * Are we in a little-endian platform?
-     * @returns {boolean}
-     */
-    static isLittleEndian()
-    {
-        if(Utils._isLittleEndian !== undefined)
-            return Utils._isLittleEndian;
-
-        const buf = new ArrayBuffer(2);
-        const u8 = new Uint8Array(buf);
-        const u16 = new Uint16Array(buf);
-
-        u8[1] = 0xCA; u8[0] = 0xFE;
-
-        return Utils._isLittleEndian = (u16[0] == 0xCAFE);
     }
 
     /**
