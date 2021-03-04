@@ -97,10 +97,10 @@ const brisk = importShader('keypoints/brisk.glsl')
 //
 // ORB feature description
 //
-const orb = importShader('keypoints/orb-descriptor.glsl')
+const orb = importShader('keypoints/orb/orb-descriptor.glsl')
            .withArguments('pyramid', 'encodedCorners', 'extraSize', 'encoderLength');
 
-const orbOrientation = importShader('keypoints/orb-orientation.glsl')
+const orbOrientation = importShader('keypoints/orb/orb-orientation.glsl')
                       .withArguments('pyramid', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 
