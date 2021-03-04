@@ -148,7 +148,7 @@ describe('Feature detection', function() {
                 let lastNumFeatures = 0;
 
                 for(const sensitivity of v) {
-                    const features = await repeat(3, () => {
+                    const features = await repeat(1, () => {
                         featureDetector.sensitivity = sensitivity;
                         return featureDetector.detect(media);
                     });
@@ -171,7 +171,7 @@ describe('Feature detection', function() {
                     it(`finds up to ${max} features`, async function() {
                         const v = [0.5, 1.0];
                         for(const sensitivity of v) {
-                            const features = await repeat(5, () => {
+                            const features = await repeat(1, () => {
                                 featureDetector.sensitivity = sensitivity;
                                 featureDetector.max = max;
                                 return featureDetector.detect(media);
@@ -209,8 +209,8 @@ describe('Feature detection', function() {
 
                 for(const depth of depths) {
                     const set = new Set();
-                    const features = await repeat(5, () => {
-                        featureDetector.sensitivity = 0.8;
+                    const features = await repeat(1, () => {
+                        featureDetector.sensitivity = 0.95;
                         featureDetector.depth = depth;
                         return featureDetector.detect(media);
                     });
@@ -258,7 +258,7 @@ describe('Feature detection', function() {
                 let lastNumFeatures = 0;
 
                 for(const threshold of v) {
-                    const features = await repeat(3, () => {
+                    const features = await repeat(1, () => {
                         featureDetector.threshold = threshold;
                         return featureDetector.detect(media);
                     });
@@ -296,7 +296,7 @@ describe('Feature detection', function() {
                 let lastNumFeatures = 0;
 
                 for(const quality of v) {
-                    const features = await repeat(3, () => {
+                    const features = await repeat(1, () => {
                         featureDetector.quality = quality;
                         return featureDetector.detect(media);
                     });
