@@ -81,8 +81,10 @@ void readWindow(vec2 center, float lod)
     ivec2 offset; int idx;
 
     // define macro to read pixels from both images
-    // (do all compilers support multi-line macros?)
-    #define readPixelsAt(ox, oy) offset = ivec2((ox), (oy)); idx = pixelIndex(offset.x, offset.y); nextPixel(idx) = pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g; prevPixel(idx) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g
+    #define readPixelsAt(ox, oy) offset = ivec2((ox), (oy)); \
+                                 idx = pixelIndex(offset.x, offset.y); \
+                                 nextPixel(idx) = pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g; \
+                                 prevPixel(idx) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g
 
     // use only uniform and constant values in the definition of
     // the loops, so that the compiler provided by the driver
