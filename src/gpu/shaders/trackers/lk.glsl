@@ -33,7 +33,7 @@ uniform int encoderLength;
 
 // iterative LK for improved accuracy
 #ifndef NUM_ITERATIONS
-#define NUM_ITERATIONS 5
+#error Must define NUM_ITERATIONS // default: 5
 #endif
 
 // maximum window size

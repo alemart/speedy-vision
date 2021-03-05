@@ -30,6 +30,7 @@ import { PYRAMID_MAX_LEVELS, MIN_KEYPOINT_SIZE } from '../../utils/globals';
 //
 
 // LK
+const LK_NUM_ITERATIONS = 5;
 const LK_MAX_WINDOW_SIZE = 21; // 21x21 window
 const LK_MAX_WINDOW_SIZE_SMALL = 15; // 15x15 window - the smaller the window, the easier it is on the GPU
 const LK_MAX_WINDOW_SIZE_SMALLER = 11; // 11x11 window - works best on mobile
@@ -40,7 +41,8 @@ const LK_MAX_KEYPOINTS_PER_PASS = 100;
 const lk = importShader('trackers/lk.glsl')
            .withArguments('nextPyramid', 'prevPyramid', 'prevKeypoints', 'windowSize', 'depth', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'extraSize', 'encoderLength')
            .withDefines({
-               'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE
+               'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE,
+               'NUM_ITERATIONS': LK_NUM_ITERATIONS
            });
 
 const lkDiscard = importShader('trackers/lk-discard.glsl')
@@ -52,7 +54,8 @@ const lkDiscard = importShader('trackers/lk-discard.glsl')
 const lkSmall = importShader('trackers/lk.glsl')
                 .withArguments('nextPyramid', 'prevPyramid', 'prevKeypoints', 'windowSize', 'depth', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'extraSize', 'encoderLength')
                 .withDefines({
-                    'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALL
+                    'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALL,
+                    'NUM_ITERATIONS': LK_NUM_ITERATIONS
                 });
 
 const lkDiscardSmall = importShader('trackers/lk-discard.glsl')
@@ -64,7 +67,8 @@ const lkDiscardSmall = importShader('trackers/lk-discard.glsl')
 const lkSmaller = importShader('trackers/lk.glsl')
                   .withArguments('nextPyramid', 'prevPyramid', 'prevKeypoints', 'windowSize', 'depth', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'extraSize', 'encoderLength')
                   .withDefines({
-                      'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALLER
+                      'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALLER,
+                      'NUM_ITERATIONS': LK_NUM_ITERATIONS
                   });
 
 const lkDiscardSmaller = importShader('trackers/lk-discard.glsl')
@@ -76,7 +80,8 @@ const lkDiscardSmaller = importShader('trackers/lk-discard.glsl')
 const lkSmallest = importShader('trackers/lk.glsl')
                    .withArguments('nextPyramid', 'prevPyramid', 'prevKeypoints', 'windowSize', 'depth', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'extraSize', 'encoderLength')
                    .withDefines({
-                       'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALLEST
+                       'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALLEST,
+                       'NUM_ITERATIONS': LK_NUM_ITERATIONS
                    });
 
 const lkDiscardSmallest = importShader('trackers/lk-discard.glsl')
