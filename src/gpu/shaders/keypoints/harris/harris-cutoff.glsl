@@ -33,9 +33,8 @@ void main()
 
     // threshold
     float threshold = maxval * clamp(quality, 0.0f, 1.0f);
-    score *= step(threshold, score);
 
     // done!
     color = pixel;
-    color.rb = encodeFloat16(score);
+    color.rb = score >= threshold ? color.rb : encodeFloat16(0.0f);
 }
