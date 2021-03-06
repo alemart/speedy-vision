@@ -1,7 +1,7 @@
 <!--
   speedy-vision.js
   GPU-accelerated Computer Vision for JavaScript
-  Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+  Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -61,12 +61,12 @@
             <button id="clear">Clear features</button>
         </div>
         <video
-            src="../assets/corridor.mp4"
+            src="../assets/people.mp4"
             poster="../assets/loading.jpg"
             width="640" height="360"
             preload="auto"
             muted hidden
-            title="Free video by Ricardo Esquivel (pexels.com)">
+            title="Free to use video by Free Videos, https://www.pexels.com/pt-br/foto/853889/">
         </video>
         <script>
 let userPoints = [];
@@ -87,8 +87,8 @@ window.onload = async function()
 
     // create a feature detector
     const featureDetector = Speedy.FeatureDetector.Harris();
-    featureDetector.quality = 0.5;
-    featureDetector.max = 600;
+    featureDetector.quality = 0.15;
+    featureDetector.max = 100;
 
     // create a feature tracker
     const featureTracker = Speedy.FeatureTracker.LK(media);
