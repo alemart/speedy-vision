@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -180,9 +180,10 @@ void main()
             harris += mat2(
                 derivatives.x * derivatives.x, derivatives.x * derivatives.y,
                 derivatives.x * derivatives.y, derivatives.y * derivatives.y
-            ) * DISCARD_SCALE;
+            );
         }
     }
+    harris *= DISCARD_SCALE;
 
     // compute the minimum eigenvalue of the matrix
     float delta = harris[0][0] - harris[1][1];
