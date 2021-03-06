@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,6 +55,7 @@ const int MAX_WINDOW_SIZE_PLUS = MAX_WINDOW_SIZE + 2; // add slack for the deriv
 const int MAX_WINDOW_SIZE_PLUS_SQUARED = MAX_WINDOW_SIZE_PLUS * MAX_WINDOW_SIZE_PLUS;
 const int DBL_MAX_WINDOW_SIZE_PLUS_SQUARED = 2 * MAX_WINDOW_SIZE_PLUS_SQUARED;
 const int MAX_WINDOW_RADIUS_PLUS = (MAX_WINDOW_SIZE_PLUS - 1) / 2;
+const float MIN_DETERMINANT = 0.00001f; // why? (we don't want instability when det ~ 0)
 
 // convert windowSize to windowRadius (size = 2 * radius + 1)
 #define windowRadius() ((windowSize - 1) / 2)
@@ -86,9 +87,8 @@ void readWindow(vec2 center, float lod)
                                  nextPixel(idx) = pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g; \
                                  prevPixel(idx) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g
 
-    // use only uniform and constant values in the definition of
-    // the loops, so that the compiler provided by the driver
-    // MAY unroll them
+    // We only use uniforms and constant values (i.e., zero) when
+    // defining the loops below, so that the compiler MAY unroll them
 
     // read pixels from a (2r + 1) x (2r + 1) window
     for(int j = 0; j < windowSize; j++) {
@@ -179,42 +179,35 @@ float readBufferedPixel(int imageCode, ivec2 offset)
 }
 
 /**
- * Read the pixel intensity at (center+offset)
- * with subpixel accuracy using the buffered values
+ * Read the pixel intensity at (center+offset) with subpixel accuracy
+ * using the buffered values
  * @param {int} imageCode NEXT_IMAGE or PREV_IMAGE
  * @param {vec2} offset such that max(|offset.x|, |offset.y|) <= windowRadius
  * @returns {float} subpixel intensity
  */
-/*
 float readBufferedSubpixel(int imageCode, vec2 offset)
 {
-    // Clamp offset
-    vec2 limit = vec2(windowRadius);
-    offset = clamp(offset, -limit, limit);
-
     // Split integer and fractional parts
-    ivec2 p = ivec2(offset);
+    ivec2 p = ivec2(floor(offset));
     vec2 frc = fract(offset);
     vec2 ifrc = vec2(1.0f) - frc;
 
-    // Read a 2x2 window around (center+offset)
-    int indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;
-    vec4 pix = vec4(
-        pixelBuffer[indexOffset + pixelIndex(p.x, p.y)],
-        pixelBuffer[indexOffset + pixelIndex(p.x, p.y+1)],
-        pixelBuffer[indexOffset + pixelIndex(p.x+1, p.y)],
-        pixelBuffer[indexOffset + pixelIndex(p.x+1, p.y+1)]
+    // Read 2x2 window around offset
+    vec4 pix4 = vec4(
+        readBufferedPixel(imageCode, p),
+        readBufferedPixel(imageCode, ivec2(p.x + 1, p.y)),
+        readBufferedPixel(imageCode, ivec2(p.x, p.y + 1)),
+        readBufferedPixel(imageCode, ivec2(p.x + 1, p.y + 1))
     );
 
-    // Perform bilinear interpolation
+    // Bilinear interpolation
     return dot(vec4(
-        pix[0] * ifrc.x * ifrc.y,
-        pix[1] * ifrc.x * frc.y,
-        pix[2] * frc.x  * ifrc.y,
-        pix[3] * frc.x  * frc.y
+        pix4.x * ifrc.x * ifrc.y,
+        pix4.y * frc.x * ifrc.y,
+        pix4.z * ifrc.x * frc.y,
+        pix4.w * frc.x * frc.y
     ), vec4(1.0f));
 }
-*/
 
 
 
@@ -247,9 +240,9 @@ void main()
 
         // read pixels surrounding the keypoint
         float lod = float(depth - 1 - d);
-        readWindow(keypoint.position, lod);
+        readWindow(keypoint.position, lod); // keypoint.position may actually point to a subpixel
 
-        // compute inverse autocorrelation matrix (transpose Harris)
+        // compute inverse autocorrelation matrix
         highp mat2 invHarris = mat2(0.0f, 0.0f, 0.0f, 0.0f);
         for(int j = 0; j < windowSize; j++) {
             for(int i = 0; i < windowSize; i++) {
@@ -260,12 +253,8 @@ void main()
                 );
             }
         }
-
-
-        // compute the determinant of the matrix
-        const float minDet = 0.00001f; // why?
-        highp float det = invHarris[0][0] * invHarris[1][1] - invHarris[0][1] * invHarris[1][0];
-        //float det = determinant(invHarris); // performance?
+        highp float det = invHarris[0][0] * invHarris[1][1] - invHarris[0][1] * invHarris[1][0]; // determinant
+        // the inverse matrix is (invHarris / det)
 
         // iterative LK
         highp vec2 localGuess = vec2(0.0f); // guess for this level of the pyramid
@@ -277,16 +266,16 @@ void main()
                     int x = _x - r; int y = _y - r;
 
                     vec2 spatialDerivative = computeDerivatives(PREV_IMAGE, ivec2(x, y));
-                    float timeDerivative = readBufferedPixel(NEXT_IMAGE,
-                        ivec2(round(vec2(x, y) + pyrGuess + localGuess))
+                    float timeDerivative = readBufferedSubpixel(NEXT_IMAGE,
+                        vec2(x, y) + pyrGuess + localGuess
                     ) - readBufferedPixel(PREV_IMAGE, ivec2(x, y));
 
                     spaceTime += spatialDerivative * timeDerivative;
                 }
             }
 
-            highp vec2 localOpticalFlow = float(abs(det) >= minDet) * (invHarris * spaceTime / det);
-            localGuess += localOpticalFlow;
+            highp vec2 localOpticalFlow = invHarris * spaceTime / det;
+            localGuess += step(MIN_DETERMINANT, abs(det)) * localOpticalFlow;
         }
 
         // update our guess of the optical flow for the next level of the pyramid
