@@ -130,8 +130,7 @@
  * scale = 0.5 means half the size (1/4 the area)
  * and so on...
  */
-const int PYRAMID_MAX_OCTAVES = int(@PYRAMID_MAX_OCTAVES@);   /* scaling factor: sqrt(2) */
-const int PYRAMID_MAX_LEVELS = int(@PYRAMID_MAX_LEVELS@);     /* scaling factor: 1 */
+const int PYRAMID_MAX_LEVELS = int(@PYRAMID_MAX_LEVELS@);
 const float F_PYRAMID_MAX_LEVELS = float(@PYRAMID_MAX_LEVELS@);
 const float LOG2_PYRAMID_MAX_SCALE = float(@LOG2_PYRAMID_MAX_SCALE@);
 

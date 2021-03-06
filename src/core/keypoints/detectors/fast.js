@@ -230,7 +230,7 @@ export class MultiscaleFASTFeatures extends FeatureDetectionAlgorithm
         const threshold = this._threshold;
         const depth = this._depth;
         const normalizedThreshold = threshold / 255.0;
-        const numberOfOctaves = 2 * depth - 1;
+        const numberOfLayers = 2 * depth - 1;
         const lodStep = Math.log2(this._scaleFactor);
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
@@ -239,7 +239,7 @@ export class MultiscaleFASTFeatures extends FeatureDetectionAlgorithm
         const pyramid = inputTexture.generatePyramid(gpu);
 
         // find corners
-        const corners = gpu.programs.keypoints.multiscaleFast(pyramid, normalizedThreshold, numberOfOctaves, lodStep);
+        const corners = gpu.programs.keypoints.multiscaleFast(pyramid, normalizedThreshold, numberOfLayers, lodStep);
 
         // non-maximum suppression
         const suppressedCorners = gpu.programs.keypoints.nonMaxSuppression(corners, lodStep);

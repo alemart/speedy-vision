@@ -24,7 +24,7 @@
 
 uniform sampler2D pyramid;
 uniform float threshold;
-uniform int numberOfOctaves;
+uniform int numberOfLayers;
 uniform float lodStep;
 
 const ivec4 margin = ivec4(3, 3, 4, 4);
@@ -51,7 +51,7 @@ void main()
 
     // for each level of the pyramid
     float lod = 0.0f, pot = 1.0f;
-    for(int octave = 0; octave < numberOfOctaves; octave++) {
+    for(int layer = 0; layer < numberOfLayers; layer++) {
 
         // update current pixel
         pixel = pyrPixel(pyramid, lod);

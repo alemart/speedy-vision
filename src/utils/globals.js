@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,14 +23,11 @@
 // IMAGE PYRAMIDS & SCALE-SPACE
 // -----------------------------------------------------------------
 
-// The maximum number of layers of the pyramid (not counting intra-layers)
-export const PYRAMID_MAX_LEVELS = 7; // scaling factor = 1
+// The maximum number of levels in a pyramid, considering a scale factor of 2x between levels
+export const PYRAMID_MAX_LEVELS = 8; // i.e., maximum number of octaves
 
-// The maximum number of layers of the pyramid (counting intra-layers)
-export const PYRAMID_MAX_OCTAVES = 2 * PYRAMID_MAX_LEVELS - 1; // default scaling factor = sqrt(2)
-
-// The maximum supported scale for a pyramid layer
-export const PYRAMID_MAX_SCALE = 2; // preferably a power of 2 (image scale can go up to this value)
+// The maximum supported scale for a pyramid level
+export const PYRAMID_MAX_SCALE = 1; // preferably a power of 2 (image scale can go up to this value)
 
 // The base-2 logarithm of PYRAMID_MAX_SCALE
 export const LOG2_PYRAMID_MAX_SCALE = Math.log2(PYRAMID_MAX_SCALE);

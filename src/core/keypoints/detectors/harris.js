@@ -32,7 +32,7 @@ const DEFAULT_WINDOW_SIZE = 3; // compute Harris autocorrelation matrix within a
 const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // scale factor between consecutive pyramid layers (sqrt(2))
 const MIN_WINDOW_SIZE = 0; // minimum window size when computing the autocorrelation matrix
 const MAX_WINDOW_SIZE = 7; // maximum window size when computing the autocorrelation matrix
-const SOBEL_OCTAVE_COUNT = 2 * PYRAMID_MAX_LEVELS - 1; // Sobel derivatives for each pyramid layer
+const MAX_LAYERS = 2 * PYRAMID_MAX_LEVELS - 1; // Sobel derivatives for each pyramid layer
 
 /**
  * Harris corner detector
@@ -79,14 +79,14 @@ export class HarrisFeatures extends FeatureDetectionAlgorithm
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
         const windowSize = DEFAULT_WINDOW_SIZE;
-        const lod = 0, lodStep = 1, numberOfOctaves = 1;
+        const lod = 0, lodStep = 1, numberOfLayers = 1;
 
         // compute derivatives
         const df = gpu.programs.keypoints.multiscaleSobel(inputTexture, lod);
-        const sobelDerivatives = new Array(SOBEL_OCTAVE_COUNT).fill(df);
+        const sobelDerivatives = new Array(MAX_LAYERS).fill(df);
 
         // corner detection
-        const corners = gpu.programs.keypoints.multiscaleHarris(inputTexture, windowSize, numberOfOctaves, lodStep, sobelDerivatives);
+        const corners = gpu.programs.keypoints.multiscaleHarris(inputTexture, windowSize, numberOfLayers, lodStep, sobelDerivatives);
 
         // release derivatives
         df.release();
@@ -197,24 +197,24 @@ export class MultiscaleHarrisFeatures extends FeatureDetectionAlgorithm
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
         const windowSize = DEFAULT_WINDOW_SIZE;
-        const numberOfOctaves = 2 * depth - 1;
+        const numberOfLayers = 2 * depth - 1;
         const lodStep = Math.log2(this._scaleFactor);
 
         // generate pyramid
         const pyramid = inputTexture.generatePyramid(gpu);
 
         // compute derivatives
-        const sobelDerivatives = new Array(SOBEL_OCTAVE_COUNT);
-        for(let j = 0; j < numberOfOctaves; j++)
+        const sobelDerivatives = new Array(MAX_LAYERS);
+        for(let j = 0; j < numberOfLayers; j++)
             sobelDerivatives[j] = gpu.programs.keypoints.multiscaleSobel(pyramid, j * lodStep);
-        for(let k = numberOfOctaves; k < sobelDerivatives.length; k++)
+        for(let k = numberOfLayers; k < sobelDerivatives.length; k++)
             sobelDerivatives[k] = sobelDerivatives[k-1]; // can't call shaders with null pointers
 
         // corner detection
-        const corners = gpu.programs.keypoints.multiscaleHarris(pyramid, windowSize, numberOfOctaves, lodStep, sobelDerivatives);
+        const corners = gpu.programs.keypoints.multiscaleHarris(pyramid, windowSize, numberOfLayers, lodStep, sobelDerivatives);
 
         // release derivatives
-        for(let i = 0; i < numberOfOctaves; i++)
+        for(let i = 0; i < numberOfLayers; i++)
             sobelDerivatives[i].release();
 
         // find the maximum corner response

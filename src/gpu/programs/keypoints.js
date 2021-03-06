@@ -22,7 +22,7 @@
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
 import { Utils } from '../../utils/utils';
-import { MIN_KEYPOINT_SIZE } from '../../utils/globals';
+import { MIN_KEYPOINT_SIZE, PYRAMID_MAX_LEVELS } from '../../utils/globals';
 
 
 
@@ -57,7 +57,7 @@ const fastScore8 = importShader('keypoints/fast/fast-score8.glsl').withArguments
 // FAST-9_16 on scale-space
 // Requires image mipmap
 const multiscaleFast = importShader('keypoints/fast/multiscale-fast.glsl')
-                      .withArguments('pyramid', 'threshold', 'numberOfOctaves', 'lodStep');
+                      .withArguments('pyramid', 'threshold', 'numberOfLayers', 'lodStep');
 
 // encode FAST score in an 8-bit component
 const encodeFastScore = importShader('keypoints/fast/encode-fast-score.glsl').withArguments('image');
@@ -70,7 +70,8 @@ const encodeFastScore = importShader('keypoints/fast/encode-fast-score.glsl').wi
 
 // compute corner responses (score map)
 const multiscaleHarris = importShader('keypoints/harris/multiscale-harris.glsl')
-                        .withArguments('pyramid', 'windowSize', 'numberOfOctaves', 'lodStep', 'sobelDerivatives');
+                        .withDefines({ 'MAX_LAYERS': 2 * PYRAMID_MAX_LEVELS - 1 })
+                        .withArguments('pyramid', 'windowSize', 'numberOfLayers', 'lodStep', 'sobelDerivatives');
 
 // discard corners below a specified quality level
 const harrisCutoff = importShader('keypoints/harris/harris-cutoff.glsl').withArguments('corners', 'maxScore', 'quality');
