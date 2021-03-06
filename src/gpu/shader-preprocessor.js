@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
  */
 
 import {
-    PYRAMID_MAX_LEVELS, PYRAMID_MAX_OCTAVES, LOG2_PYRAMID_MAX_SCALE,
+    PYRAMID_MAX_LEVELS, LOG2_PYRAMID_MAX_SCALE,
     MAX_TEXTURE_LENGTH,
     FIX_BITS, FIX_RESOLUTION,
     MAX_DESCRIPTOR_SIZE, MIN_KEYPOINT_SIZE,
@@ -49,7 +49,6 @@ const constants = Object.freeze({
     // pyramids
     'PYRAMID_MAX_LEVELS': PYRAMID_MAX_LEVELS,
     'LOG2_PYRAMID_MAX_SCALE': LOG2_PYRAMID_MAX_SCALE,
-    'PYRAMID_MAX_OCTAVES': PYRAMID_MAX_OCTAVES,
 
     // colors
     'PIXELCOMPONENT_RED': PixelComponent.RED,
@@ -82,6 +81,8 @@ export class ShaderPreprocessor
      */
     static run(code, defines = new Map())
     {
+        const errors = []; // compile-time errors
+
         //
         // The preprocessor will remove comments from GLSL code,
         // include requested GLSL files and import global constants
@@ -95,11 +96,16 @@ export class ShaderPreprocessor
                     // FIXME: no cycle detection for @include
                     ShaderPreprocessor.run(readfileSync(filename), defines)
                 )
-                .replace(constantRegex, (_, name) =>
-                    String(constants[name] !== undefined ? constants[name] : 'UNDEFINED_CONSTANT')
-                ),
+                .replace(constantRegex, (_, name) => String(
+                    // Find a global constant. If not possible, find a defined constant
+                    constants[name] !== undefined ? Number(constants[name]) : (
+                        defines.has(name) ? Number(defines.get(name)) : (
+                            errors.push(`Undefined constant: ${name}`), 0
+                        )
+                    )
+                )),
             defines
-        );
+        ) + (errors.length > 0 ? errors.map(msg => `\n#error ${msg}\n`).join('') : '');
     }
 }
 

@@ -46,7 +46,7 @@ out vec4 color;
 in vec2 texCoord;
 uniform vec2 texSize;
 
-@include "global.glsl"\n`;
+@include "global.glsl"\n\n`;
 
 /**
  * Shader Declaration
@@ -157,9 +157,10 @@ class ShaderDeclaration
             defs.push(`#define ${key} ${value}\n`);
         }
 
-        // update the fragment shader
+        // update the fragment shader & the uniforms
         const source = DEFAULT_FRAGMENT_SHADER_PREFIX + defs.join('') + this._userSource;
         this._fragmentSource = ShaderPreprocessor.run(source, this._defines);
+        this._uniforms = this._autodetectUniforms(this._fragmentSource);
 
         // done!
         return this;
@@ -262,8 +263,8 @@ class ShaderDeclaration
 
                     // read array name & size
                     const [ array, size ] = [ match[1], Number(match[2]) ];
-                    if(size == 0)
-                        throw new ParseError(`Array ${array} has size zero`);
+                    if(size < 0)
+                        throw new ParseError(`Array ${array} has invalid size: ${size}`);
 
                     // register uniforms
                     for(let i = 0; i < size; i++)
