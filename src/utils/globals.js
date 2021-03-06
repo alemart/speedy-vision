@@ -42,7 +42,7 @@ export const LOG2_PYRAMID_MAX_SCALE = Math.log2(PYRAMID_MAX_SCALE);
 // -----------------------------------------------------------------
 
 // How many bits do we use for storing the fractional data
-export const FIX_BITS = 3; // MAX_TEXTURE_LENGTH depends on this
+export const FIX_BITS = 4; // MAX_TEXTURE_LENGTH depends on this
 
 // Fixed-point resolution
 export const FIX_RESOLUTION = 1.0 * (1 << FIX_BITS); // float(2^(FIX_BITS))
