@@ -98,6 +98,9 @@ export class SpeedyTexture
         if(gaussian) {
             let layer = this, pyramid = null;
             for(let level = 1; level < PYRAMID_MAX_LEVELS; level++) {
+                if(Math.min(layer.width, layer.height) < 2)
+                    break;
+
                 pyramid = gpu.programs.pyramids(level-1);
                 layer = pyramid.reduce(layer);
                 pyramid.exportTo(this, level);
