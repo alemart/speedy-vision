@@ -19,6 +19,12 @@
  * Pyramidal Lucas-Kanade feature tracker
  */
 
+/*
+ * This is a GPU implementation of Lucas-Kanade. Reference:
+ * Bouguet, Jean-Yves. "Pyramidal Implementation of the Lucas Kanade Feature Tracker", 1999.
+ * (the OpenCV implementation is based on it)
+ */
+
 @include "keypoints.glsl"
 
 uniform sampler2D nextPyramid; // image pyramid at time t
@@ -51,11 +57,12 @@ uniform int encoderLength;
 #define PREV_IMAGE 0
 
 // constants
-const int MAX_WINDOW_SIZE_PLUS = MAX_WINDOW_SIZE + 2; // add slack for the derivatives (both sides)
+const int MAX_WINDOW_SIZE_SQUARED = (MAX_WINDOW_SIZE) * (MAX_WINDOW_SIZE);
+const int MAX_WINDOW_SIZE_PLUS = (MAX_WINDOW_SIZE) + 2; // add slack for the derivatives (both sides)
 const int MAX_WINDOW_SIZE_PLUS_SQUARED = MAX_WINDOW_SIZE_PLUS * MAX_WINDOW_SIZE_PLUS;
 const int DBL_MAX_WINDOW_SIZE_PLUS_SQUARED = 2 * MAX_WINDOW_SIZE_PLUS_SQUARED;
 const int MAX_WINDOW_RADIUS_PLUS = (MAX_WINDOW_SIZE_PLUS - 1) / 2;
-const float MIN_DETERMINANT = 0.00001f; // why? (we don't want instability when det ~ 0)
+const int MAX_WINDOW_RADIUS = ((MAX_WINDOW_SIZE) - 1) / 2;
 
 // convert windowSize to windowRadius (size = 2 * radius + 1)
 #define windowRadius() ((windowSize - 1) / 2)
@@ -67,6 +74,10 @@ float pixelBuffer[DBL_MAX_WINDOW_SIZE_PLUS_SQUARED];
 
 // convert offset to index: -MAX_WINDOW_RADIUS_PLUS <= i, j <= MAX_WINDOW_RADIUS_PLUS
 #define pixelIndex(i, j) (((j) + MAX_WINDOW_RADIUS_PLUS) * MAX_WINDOW_SIZE_PLUS + ((i) + MAX_WINDOW_RADIUS_PLUS))
+
+// storage for derivatives
+vec2 derivBuffer[MAX_WINDOW_SIZE_SQUARED];
+#define derivativesAt(x, y) derivBuffer[((y) + MAX_WINDOW_RADIUS) * MAX_WINDOW_SIZE + ((x) + MAX_WINDOW_RADIUS)]
 
 /**
  * Read neighborhood around center at a specific level-of-detail
@@ -209,6 +220,33 @@ float readBufferedSubpixel(int imageCode, vec2 offset)
     ), vec4(1.0f));
 }
 
+/**
+ * Compute image mismatch in a window
+ * @param {vec2} pyrGuess
+ * @param {vec2} localGuess for the iterative method
+ * @returns {vec2}
+ */
+highp vec2 computeMismatch(highp vec2 pyrGuess, highp vec2 localGuess)
+{
+    highp vec2 mismatch = vec2(0.0f);
+    highp float timeDerivative;
+    int x, y, r = windowRadius();
+
+    for(int _y = 0; _y < windowSize; _y++) {
+        for(int _x = 0; _x < windowSize; _x++) {
+            x = _x - r; y = _y - r;
+
+            timeDerivative = readBufferedSubpixel(NEXT_IMAGE,
+                vec2(x, y) + pyrGuess + localGuess
+            ) - readBufferedPixel(PREV_IMAGE, ivec2(x, y));
+
+            mismatch += derivativesAt(x, y) * timeDerivative;
+        }
+    }
+
+    return mismatch;
+}
+
 
 
 // main
@@ -235,47 +273,34 @@ void main()
         return;
 
     // for each LOD
-    vec2 pyrGuess = vec2(0.0f); // guessing the flow for each level of the pyramid
+    highp vec2 pyrGuess = vec2(0.0f); // guessing the flow for each level of the pyramid
     for(int d = 0; d < depth; d++) {
 
         // read pixels surrounding the keypoint
         float lod = float(depth - 1 - d);
         readWindow(keypoint.position, lod); // keypoint.position may actually point to a subpixel
 
-        // compute inverse autocorrelation matrix
-        highp mat2 invHarris = mat2(0.0f, 0.0f, 0.0f, 0.0f);
+        // compute matrix of derivatives
+        highp mat2 harris = mat2(0.0f, 0.0f, 0.0f, 0.0f);
+        highp vec2 derivatives;
         for(int j = 0; j < windowSize; j++) {
             for(int i = 0; i < windowSize; i++) {
-                vec2 derivatives = computeDerivatives(PREV_IMAGE, ivec2(i-r, j-r));
-                invHarris += mat2(
-                    derivatives.y * derivatives.y, -derivatives.x * derivatives.y,
-                    -derivatives.x * derivatives.y, derivatives.x * derivatives.x
+                derivatives = computeDerivatives(PREV_IMAGE, ivec2(i-r, j-r));
+                harris += mat2(
+                    derivatives.x * derivatives.x, derivatives.x * derivatives.y,
+                    derivatives.x * derivatives.y, derivatives.y * derivatives.y
                 );
+                derivativesAt(i-r, j-r) = derivatives;
             }
         }
-        highp float det = invHarris[0][0] * invHarris[1][1] - invHarris[0][1] * invHarris[1][0]; // determinant
-        // the inverse matrix is (invHarris / det)
+        highp float det = harris[0][0] * harris[1][1] - harris[0][1] * harris[1][0]; // determinant
+        highp mat2 invHarris = mat2(harris[1][1], -harris[1][0], -harris[0][1], harris[0][0]) / det; // inverse
 
         // iterative LK
         highp vec2 localGuess = vec2(0.0f); // guess for this level of the pyramid
+        @unroll
         for(int k = 0; k < NUM_ITERATIONS; k++) { // meant to reach convergence
-            highp vec2 spaceTime = vec2(0.0f);
-
-            for(int _y = 0; _y < windowSize; _y++) {
-                for(int _x = 0; _x < windowSize; _x++) {
-                    int x = _x - r; int y = _y - r;
-
-                    vec2 spatialDerivative = computeDerivatives(PREV_IMAGE, ivec2(x, y));
-                    float timeDerivative = readBufferedSubpixel(NEXT_IMAGE,
-                        vec2(x, y) + pyrGuess + localGuess
-                    ) - readBufferedPixel(PREV_IMAGE, ivec2(x, y));
-
-                    spaceTime += spatialDerivative * timeDerivative;
-                }
-            }
-
-            highp vec2 localOpticalFlow = invHarris * spaceTime / det;
-            localGuess += step(MIN_DETERMINANT, abs(det)) * localOpticalFlow;
+            localGuess += invHarris * computeMismatch(pyrGuess, localGuess);
         }
 
         // update our guess of the optical flow for the next level of the pyramid

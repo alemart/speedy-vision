@@ -23,10 +23,11 @@ import { SpeedyGPU } from '../../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../../gpu/speedy-texture';
 import { FeatureTrackingAlgorithm } from '../feature-tracking-algorithm';
 import { Utils } from '../../../utils/utils';
+import { PYRAMID_MAX_LEVELS } from '../../../utils/globals';
 
 // Constants
 const DEFAULT_WINDOW_SIZE = 15;
-const DEFAULT_DEPTH = 5;
+const DEFAULT_DEPTH = Math.min(8, PYRAMID_MAX_LEVELS);
 const DEFAULT_DISCARD_THRESHOLD = 0.0001;
 
 /**
@@ -80,7 +81,7 @@ export class LKFeatureTrackingAlgorithm extends FeatureTrackingAlgorithm
     set depth(value)
     {
         this._depth = value | 0;
-        Utils.assert(this._depth >= 1);
+        Utils.assert(this._depth >= 1 && this._depth <= PYRAMID_MAX_LEVELS);
     }
 
     /**

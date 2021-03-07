@@ -28,7 +28,7 @@ import { SpeedyTexture } from '../gpu/speedy-texture';
 import { SpeedyVector2 } from './math/speedy-vector';
 import { IllegalOperationError, IllegalArgumentError } from '../utils/errors';
 import { Utils } from '../utils/utils';
-import { KPF_DISCARD } from '../utils/globals';
+import { PYRAMID_MAX_LEVELS, KPF_DISCARD } from '../utils/globals';
 import { LKFeatureTrackingAlgorithm } from './keypoints/trackers/lk';
 import { SpeedyFeatureDecorator } from './speedy-feature-decorator';
 
@@ -211,7 +211,7 @@ export class LKFeatureTracker extends SpeedyFeatureTracker
      */
     set depth(newDepth)
     {
-        if(typeof newDepth !== 'number' || newDepth < 1)
+        if(typeof newDepth !== 'number' || newDepth < 1 || newDepth > PYRAMID_MAX_LEVELS)
             throw new IllegalArgumentError(`Invalid depth: ${newDepth}`);
 
         this._trackingAlgorithm.depth = newDepth;
