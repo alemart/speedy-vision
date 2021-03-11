@@ -311,7 +311,7 @@ void main()
         highp float invDet = 1.0f / det;
         highp mat2 invHarris = mat2(harris.z, -harris.y, -harris.y, harris.x); // inverse * det
         highp float minEigenvalue = 0.5f * ((harris.x + harris.z) - sqrt(
-            (harris.x + harris.z) * (harris.x + harris.z) - 4.0f * (harris.x * harris.z - harris.y * harris.y)
+            (harris.x - harris.z) * (harris.x - harris.z) + 4.0f * (harris.y * harris.y)
         ));
 
         // good keypoint? Will check when lod == 0
