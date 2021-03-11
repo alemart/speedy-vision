@@ -55,8 +55,7 @@ uniform int encoderLength;
 
 // threshold to stop iteration
 #ifndef IT_EPSILON
-#define IT_EPSILON 0.03f
-//#define IT_EPSILON 0.01f
+#define IT_EPSILON 0.01f
 #endif
 
 // image "enum"
@@ -72,6 +71,18 @@ const int MAX_WINDOW_RADIUS_PLUS = (MAX_WINDOW_SIZE_PLUS - 1) / 2;
 const int MAX_WINDOW_RADIUS = ((MAX_WINDOW_SIZE) - 1) / 2;
 const highp float FLT_SCALE = 0.00000095367431640625f; // this is 1 / 2^20, for numeric compatibility with OpenCV (discardThreshold)
 const highp float FLT_EPSILON = 0.00000011920929f;
+
+/*
+ * Note this:
+ * (2^8 * 2^8) / 2^20 = 2^(-4) = 1/16 = 0.0625
+ *
+ * so, for any 0 <= pix <= 255,
+ * 0 <= pix^2 <= 65025 and
+ * 0 <= pix^2 * FLT_SCALE <= 0.062012...
+ *
+ * additionally, 2^(-8) = 1/256 = 0.00390625 and
+ * 0 <= (pix^2 * FLT_SCALE)^2 <= 0.00384557...
+ */
 
 // convert windowSize to windowRadius (size = 2 * radius + 1)
 #define windowRadius() ((windowSize - 1) / 2)
@@ -323,8 +334,8 @@ void main()
         @unroll
         for(int k = 0; k < NUM_ITERATIONS; k++) { // meant to reach convergence
             mismatch = vec2(computeMismatch(pyrGuess, localGuess)) * FLT_SCALE;
-            niceNumbers &= int(step(IT_EPSILON * IT_EPSILON, dot(mismatch, mismatch))); // stop when ||.|| < eps
             delta = mismatch * invHarris * invDet;
+            niceNumbers &= int(step(IT_EPSILON * IT_EPSILON, dot(delta, delta))); // stop when ||.|| < eps
             localGuess += niceNumbers != 0 ? delta : vec2(0.0f);
         }
 
