@@ -323,7 +323,7 @@ void main()
         @unroll
         for(int k = 0; k < NUM_ITERATIONS; k++) { // meant to reach convergence
             mismatch = vec2(computeMismatch(pyrGuess, localGuess)) * FLT_SCALE;
-            niceNumbers &= int(step(IT_EPSILON * IT_EPSILON, dot(mismatch, mismatch))); // stop when ||.||^2 < eps
+            niceNumbers &= int(step(IT_EPSILON * IT_EPSILON, dot(mismatch, mismatch))); // stop when ||.|| < eps
             delta = mismatch * invHarris * invDet;
             localGuess += niceNumbers != 0 ? delta : vec2(0.0f);
         }
