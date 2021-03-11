@@ -31,6 +31,7 @@ uniform sampler2D nextPyramid; // image pyramid at time t
 uniform sampler2D prevPyramid; // image pyramid at time t-1
 uniform sampler2D prevKeypoints; // encoded keypoints at time t-1
 uniform int windowSize; // odd number - typical values: 5, 7, 11, ..., 21
+uniform float discardThreshold; // typical value: 10^(-4)
 uniform int depth; // how many pyramid layers to check (1, 2, 3, 4...)
 uniform int firstKeypointIndex, lastKeypointIndex; // process only these keypoints in this pass of the shader
 uniform int descriptorSize; // in bytes
@@ -52,6 +53,12 @@ uniform int encoderLength;
 #define DISCARD_MARGIN 20
 #endif
 
+// threshold to stop iteration
+#ifndef IT_EPSILON
+#define IT_EPSILON 0.03f
+//#define IT_EPSILON 0.01f
+#endif
+
 // image "enum"
 #define NEXT_IMAGE 1
 #define PREV_IMAGE 0
@@ -63,6 +70,8 @@ const int MAX_WINDOW_SIZE_PLUS_SQUARED = MAX_WINDOW_SIZE_PLUS * MAX_WINDOW_SIZE_
 const int DBL_MAX_WINDOW_SIZE_PLUS_SQUARED = 2 * MAX_WINDOW_SIZE_PLUS_SQUARED;
 const int MAX_WINDOW_RADIUS_PLUS = (MAX_WINDOW_SIZE_PLUS - 1) / 2;
 const int MAX_WINDOW_RADIUS = ((MAX_WINDOW_SIZE) - 1) / 2;
+const highp float FLT_SCALE = 0.00000095367431640625f; // this is 1 / 2^20, for numeric compatibility with OpenCV (discardThreshold)
+const highp float FLT_EPSILON = 0.00000011920929f;
 
 // convert windowSize to windowRadius (size = 2 * radius + 1)
 #define windowRadius() ((windowSize - 1) / 2)
@@ -76,7 +85,7 @@ float pixelBuffer[DBL_MAX_WINDOW_SIZE_PLUS_SQUARED];
 #define pixelIndex(i, j) (((j) + MAX_WINDOW_RADIUS_PLUS) * MAX_WINDOW_SIZE_PLUS + ((i) + MAX_WINDOW_RADIUS_PLUS))
 
 // storage for derivatives
-vec2 derivBuffer[MAX_WINDOW_SIZE_SQUARED];
+ivec2 derivBuffer[MAX_WINDOW_SIZE_SQUARED];
 #define derivativesAt(x, y) derivBuffer[((y) + MAX_WINDOW_RADIUS) * MAX_WINDOW_SIZE + ((x) + MAX_WINDOW_RADIUS)]
 
 /**
@@ -224,21 +233,22 @@ float readBufferedSubpixel(int imageCode, vec2 offset)
  * Compute image mismatch in a window
  * @param {vec2} pyrGuess
  * @param {vec2} localGuess for the iterative method
- * @returns {vec2}
+ * @returns {ivec2}
  */
-highp vec2 computeMismatch(highp vec2 pyrGuess, highp vec2 localGuess)
+ivec2 computeMismatch(highp vec2 pyrGuess, highp vec2 localGuess)
 {
-    highp vec2 mismatch = vec2(0.0f);
-    highp float timeDerivative;
+    int timeDerivative;
+    ivec2 mismatch = ivec2(0);
     int x, y, r = windowRadius();
 
     for(int _y = 0; _y < windowSize; _y++) {
         for(int _x = 0; _x < windowSize; _x++) {
             x = _x - r; y = _y - r;
 
-            timeDerivative = readBufferedSubpixel(NEXT_IMAGE,
-                vec2(x, y) + pyrGuess + localGuess
-            ) - readBufferedPixel(PREV_IMAGE, ivec2(x, y));
+            timeDerivative = int(round(255.0f * (
+                readBufferedSubpixel(NEXT_IMAGE, vec2(x, y) + pyrGuess + localGuess) -
+                readBufferedPixel(PREV_IMAGE, ivec2(x, y))
+            )));
 
             mismatch += derivativesAt(x, y) * timeDerivative;
         }
@@ -256,6 +266,8 @@ void main()
     ivec2 thread = threadLocation();
     KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);
     int r = windowRadius();
+    float windowArea = float(windowSize * windowSize);
+    int goodKeypoint = 1;
 
     // not a position cell?
     color = pixel;
@@ -281,26 +293,39 @@ void main()
         readWindow(keypoint.position, lod); // keypoint.position may actually point to a subpixel
 
         // compute matrix of derivatives
-        highp mat2 harris = mat2(0.0f, 0.0f, 0.0f, 0.0f);
-        highp vec2 derivatives;
+        ivec2 derivatives;
+        highp ivec3 harris3i = ivec3(0);
         for(int j = 0; j < windowSize; j++) {
             for(int i = 0; i < windowSize; i++) {
-                derivatives = computeDerivatives(PREV_IMAGE, ivec2(i-r, j-r));
-                harris += mat2(
-                    derivatives.x * derivatives.x, derivatives.x * derivatives.y,
-                    derivatives.x * derivatives.y, derivatives.y * derivatives.y
+                derivatives = ivec2(floor(255.0f * computeDerivatives(PREV_IMAGE, ivec2(i-r, j-r))));
+                harris3i += ivec3(
+                    derivatives.x * derivatives.x,
+                    derivatives.x * derivatives.y,
+                    derivatives.y * derivatives.y
                 );
                 derivativesAt(i-r, j-r) = derivatives;
             }
         }
-        highp float det = harris[0][0] * harris[1][1] - harris[0][1] * harris[1][0]; // determinant
-        highp mat2 invHarris = mat2(harris[1][1], -harris[1][0], -harris[0][1], harris[0][0]) / det; // inverse
+        highp vec3 harris = vec3(harris3i) * FLT_SCALE; // [0,255^2] scale to FLT_SCALE
+        highp float det = harris.x * harris.z - harris.y * harris.y; // determinant (>= 0)
+        highp float invDet = 1.0f / det;
+        highp mat2 invHarris = mat2(harris.z, -harris.y, -harris.y, harris.x); // inverse * det
+        highp float minEigenvalue = 0.5f * ((harris.x + harris.z) - sqrt(
+            (harris.x + harris.z) * (harris.x + harris.z) - 4.0f * (harris.x * harris.z - harris.y * harris.y)
+        ));
+
+        // good keypoint? Will check when lod == 0
+        int niceNumbers = int(det >= FLT_EPSILON) & int(minEigenvalue >= discardThreshold * windowArea);
+        goodKeypoint &= int(d < depth - 1) | niceNumbers;
 
         // iterative LK
-        highp vec2 localGuess = vec2(0.0f); // guess for this level of the pyramid
+        highp vec2 mismatch, delta, localGuess = vec2(0.0f); // guess for this level of the pyramid
         @unroll
         for(int k = 0; k < NUM_ITERATIONS; k++) { // meant to reach convergence
-            localGuess += invHarris * computeMismatch(pyrGuess, localGuess);
+            mismatch = vec2(computeMismatch(pyrGuess, localGuess)) * FLT_SCALE;
+            niceNumbers &= int(step(IT_EPSILON * IT_EPSILON, dot(mismatch, mismatch))); // stop when ||.||^2 < eps
+            delta = mismatch * invHarris * invDet;
+            localGuess += niceNumbers != 0 ? delta : vec2(0.0f);
         }
 
         // update our guess of the optical flow for the next level of the pyramid
@@ -314,13 +339,13 @@ void main()
     // check if the keypoint is within boundaries
     vec2 imageSize = vec2(textureSize(nextPyramid, 0));
     float margin = float(DISCARD_MARGIN);
-    bool isKeypointWithinBoundaries = (
+    goodKeypoint &= int(
         nextPosition.x >= margin &&
         nextPosition.y >= margin &&
         nextPosition.x <= imageSize.x - margin &&
         nextPosition.y <= imageSize.y - margin
     );
 
-    // discard keypoint if outside boundaries, otherwise update it
-    color = isKeypointWithinBoundaries ? encodeKeypointPosition(nextPosition) : encodeKeypointPositionAtInfinity();
+    // discard keypoint if necessary, otherwise update it
+    color = goodKeypoint != 0 ? encodeKeypointPosition(nextPosition) : encodeKeypointPositionAtInfinity();
 }
