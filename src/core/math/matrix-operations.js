@@ -201,13 +201,13 @@ export class MatrixOperation
         // save input metadata
         this._header.updateInputMetadata(this._inputMatrices);
         
-        // get input views (preserve the order of the input matrices)
-        const inputs = new Array(this._inputMatrices.length);
-        for(let i = inputs.length - 1; i >= 0; i--)
-            inputs[i] = this._inputMatrices[i].buffer.data;
+        // get input buffers (preserve the order of the input matrices)
+        const inputBuffers = new Array(this._inputMatrices.length);
+        for(let i = inputBuffers.length - 1; i >= 0; i--)
+            inputBuffers[i] = this._inputMatrices[i].buffer.data.buffer;
 
         // crunch numbers locally
-        (LinAlg.lib[this._header.method])(this._header, outputMatrix.buffer.data, inputs);
+        LinAlg.lib.execute(this._header, outputMatrix.buffer.data.buffer, inputBuffers);
         return SpeedyPromise.resolve();
     }
 

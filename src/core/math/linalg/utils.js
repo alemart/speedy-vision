@@ -20,6 +20,24 @@
  */
 
 /**
+ * Call a Linear Algebra routine
+ * @param {MatrixOperationHeader} header
+ * @param {ArrayBuffer} outputBuffer
+ * @param {ArrayBuffer[]} inputBuffers
+ */
+export function execute(header, outputBuffer, inputBuffers)
+{
+    // wrap the incoming buffers with the appropriate TypedArrays
+    const output = this.createTypedArray(header.dtype, outputBuffer, header.byteOffset, header.length);
+    const inputs = inputBuffers.map((inputBuffer, i) =>
+        this.createTypedArray(header.dtype, inputBuffer, header.byteOffsetOfInputs[i], header.lengthOfInputs[i])
+    );
+
+    // perform the computation
+    (this[header.method])(header, output, inputs);
+}
+
+/**
  * Create a TypedArray of the specified type
  * @param {MatrixDataType} dtype data type
  * @param {any[]} args will be passed to the constructor of the TypedArray

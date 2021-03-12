@@ -113,17 +113,11 @@ export class MatrixWorker
  */
 function onmessage(ev)
 {
+    // extract input
     const { id, header, outputBuffer, inputBuffers, transferables } = ev.data;
-    const LinAlg = self.LinAlg;
-
-    // wrap the incoming buffers with the appropriate TypedArrays
-    const output = LinAlg.lib.createTypedArray(header.dtype, outputBuffer, header.byteOffset, header.length);
-    const inputs = inputBuffers.map((inputBuffer, i) =>
-        LinAlg.lib.createTypedArray(header.dtype, inputBuffer, header.byteOffsetOfInputs[i], header.lengthOfInputs[i])
-    );
 
     // perform the computation
-    (LinAlg.lib[header.method])(header, output, inputs);
+    self.LinAlg.lib.execute(header, outputBuffer, inputBuffers);
 
     // send the result of the computation back to the main thread
     const msg = { id, outputBuffer, inputBuffers };
