@@ -23,6 +23,7 @@ import { IllegalArgumentError, IllegalOperationError, NotSupportedError } from '
 import { SpeedyPromise } from '../../utils/speedy-promise';
 import { SpeedyMatrix } from './matrix';
 import { MatrixWorker } from './matrix-worker';
+import { MatrixOperationHeader } from './matrix-operation-header';
 import { LinAlg } from './linalg/linalg';
 
 // Constants
@@ -30,7 +31,7 @@ const SMALL_WORKLOAD = 40; // what is "small"? further experimental testing is d
                            // a binary operation for 3x3 matrices, e.g. C = A + B, has "small" workload
 
 // Worker
-const matrixWorker = MatrixWorker.instance;
+const worker = MatrixWorker.instance;
 
 
 /**
@@ -50,48 +51,25 @@ export class MatrixOperation
      */
     constructor(method, requiredRows, requiredColumns, requiredDataType, inputMatrices = [], userData = null)
     {
-        // handy vars
-        const n = inputMatrices.length;
-        const hasInput = n > 0;
-
-        // obtain the shape of the input matrices
-        const rowsOfInputs = hasInput && inputMatrices.map(matrix => matrix.rows);
-        const columnsOfInputs = hasInput && inputMatrices.map(matrix => matrix.columns);
-        const strideOfInputs = hasInput && new Array(n);
-        const byteOffsetOfInputs = hasInput && new Array(n);
-        const lengthOfInputs = hasInput && new Array(n);
-
-        // the header stores metadata related to the operation
-        // (all fields are serializable)
-        this._header = {
-            method: method, // method name
-            dtype: requiredDataType, // type of the output matrix (the same as the input matrices)
-
-            rows: requiredRows, // number of rows of the output matrix
-            columns: requiredColumns, // number of columns of the output matrix
-            stride: null, // stride of the output matrix (unknown)
-            byteOffset: null, // used to recover the data view (unknown)
-            length: null, // used to recover the data view (unknown)
-
-            rowsOfInputs: rowsOfInputs, // number of rows of the input matrices
-            columnsOfInputs: columnsOfInputs, // number of columns of the input matrices
-            strideOfInputs: strideOfInputs, // strides of the input matrices
-            byteOffsetOfInputs: byteOffsetOfInputs, // used to recover the data view (to be determined later - buffer may be locked)
-            lengthOfInputs: lengthOfInputs, // used to recover the data view (to be determined layer - buffer may be locked)
-
-            custom: userData // custom user-data
-        };
-
-        // save the input matrices
-        this._inputMatrices = inputMatrices;
-        this._inputBuffers = new Array(n); // temporary storage
-
-        // compute a measure of (a fraction of) the workload of this operation
-        this._workloadOfInputs = inputMatrices.reduce((w, m) => w + this._workload(m), 0);
-
         // is it a valid operation?
         if(!LinAlg.hasMethod(method))
             throw new IllegalArgumentError(`Invalid method: "${method}"`);
+
+        /** @type {MatrixOperationHeader} metadata related to the operation */
+        this._header = new MatrixOperationHeader(
+            method,
+            requiredRows,
+            requiredColumns,
+            requiredDataType,
+            inputMatrices,
+            userData
+        );
+
+        /** @type {SpeedyMatrix[]} the input matrices */
+        this._inputMatrices = inputMatrices;
+
+        /** @type {number} a measure of (a fraction of) the workload of this operation */
+        this._workloadOfInputs = inputMatrices.reduce((w, m) => w + this._workload(m), 0);
     }
 
     /**
@@ -170,9 +148,6 @@ export class MatrixOperation
      */
     run(outputMatrix)
     {
-        const { rows, columns, stride, dtype } = outputMatrix;
-        const header = this._header;
-
         // run locally if the matrices are "small enough"
         const workload = this._workloadOfInputs + this._workload(outputMatrix);
         if(workload <= SMALL_WORKLOAD) {
@@ -184,38 +159,29 @@ export class MatrixOperation
         }
 
         // do we have a compatible output matrix?
-        this._assertCompatibility(rows, columns, dtype);
+        this._assertCompatibility(outputMatrix.rows, outputMatrix.columns, outputMatrix.dtype);
 
         // save output metadata
-        const output = outputMatrix.buffer.data;
-        header.stride = stride;
-        header.byteOffset = output.byteOffset;
-        header.length = output.length;
+        this._header.updateOutputMetadata(outputMatrix);
 
-        // save input metadata & buffers
-        const inputMatrices = this._inputMatrices;
-        const inputBuffers = this._inputBuffers; // new Array(inputMatrices.length);
-        for(let i = inputMatrices.length - 1; i >= 0; i--) {
-            const inputMatrix = inputMatrices[i];
-            const input = inputMatrix.buffer.data;
-
-            header.strideOfInputs[i] = inputMatrix.stride;
-            header.byteOffsetOfInputs[i] = input.byteOffset;
-            header.lengthOfInputs[i] = input.length;
-
-            inputBuffers[i] = input.buffer;
-        }
+        // save input metadata
+        this._header.updateInputMetadata(this._inputMatrices);
+        
+        // get input buffers (preserve the order of the input matrices)
+        const inputBuffers = new Array(this._inputMatrices.length);
+        for(let i = inputBuffers.length - 1; i >= 0; i--)
+            inputBuffers[i] = this._inputMatrices[i].buffer.data.buffer;
 
         // crunch numbers in a WebWorker
-        return matrixWorker.run(
-            header,
-            output.buffer,
+        return worker.run(
+            this._header,
+            outputMatrix.buffer.data.buffer,
             inputBuffers
         ).then(([newOutputBuffer, newInputBuffers]) => {
             // update the internal buffers with the new data
             outputMatrix.buffer.replace(newOutputBuffer);
-            for(let i = inputMatrices.length - 1; i >= 0; i--)
-                inputMatrices[i].buffer.replace(newInputBuffers[i]);
+            for(let i = this._inputMatrices.length - 1; i >= 0; i--)
+                this._inputMatrices[i].buffer.replace(newInputBuffers[i]);
         });
     }
 
@@ -226,35 +192,22 @@ export class MatrixOperation
      */
     _runLocally(outputMatrix)
     {
-        // obtain properties of the output matrix
-        const { rows, columns, stride, dtype } = outputMatrix;
-        const header = this._header;
-
         // do we have a compatible output matrix?
-        this._assertCompatibility(rows, columns, dtype);
+        this._assertCompatibility(outputMatrix.rows, outputMatrix.columns, outputMatrix.dtype);
 
         // save output metadata
-        const output = outputMatrix.buffer.data;
-        header.stride = stride;
-        header.byteOffset = output.byteOffset;
-        header.length = output.length;
+        this._header.updateOutputMetadata(outputMatrix);
 
-        // save input metadata & buffers
-        const inputMatrices = this._inputMatrices;
-        const inputs = this._inputBuffers; // new Array(inputMatrices.length);
-        for(let i = inputMatrices.length - 1; i >= 0; i--) {
-            const inputMatrix = inputMatrices[i];
-            const input = inputMatrix.buffer.data;
-
-            header.strideOfInputs[i] = inputMatrix.stride;
-            header.byteOffsetOfInputs[i] = input.byteOffset;
-            header.lengthOfInputs[i] = input.length;
-
-            inputs[i] = input;
-        }
+        // save input metadata
+        this._header.updateInputMetadata(this._inputMatrices);
+        
+        // get input views (preserve the order of the input matrices)
+        const inputs = new Array(this._inputMatrices.length);
+        for(let i = inputs.length - 1; i >= 0; i--)
+            inputs[i] = this._inputMatrices[i].buffer.data;
 
         // crunch numbers locally
-        (LinAlg.lib[header.method])(header, output, inputs);
+        (LinAlg.lib[this._header.method])(this._header, outputMatrix.buffer.data, inputs);
         return SpeedyPromise.resolve();
     }
 
