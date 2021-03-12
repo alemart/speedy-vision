@@ -79,7 +79,7 @@ export class MatrixOperationHeader
         this.lengthOfInputs = (new Array(n)).fill(0); // to be determined later - buffer may be locked
 
         /** @type {object} custom serializable user-data */
-        this.custom = userData;
+        this.custom = new Object(userData);
     }
 
     /**
