@@ -633,7 +633,7 @@ Pyramid-based LK optical-flow algorithm. The following properties are available:
 
 * `windowSize: number`. The size of the window to be used by the feature tracker. For a window of size *n*, the algorithm will read *n* x *n* neighboring pixels to determine the motion of a keypoint. Typical values for this property include: `21`, `15`, `11`, `7`. Defaults to `15`.
 * `discardThreshold: number`. A threshold used to discard keypoints that are not "good" candidates for tracking. Defaults to `0.0001`. The higher the value, the more keypoints will be discarded.
-* `depth: number`. Specifies how many pyramid levels will be used in the computation. You should generally leave this property as it is. Defaults to `5`.
+* `depth: number`. Specifies how many pyramid levels will be used in the computation. You should generally leave this property as it is.
 
 ### Feature matching
 
