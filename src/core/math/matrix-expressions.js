@@ -883,7 +883,7 @@ class SpeedyMatrixAssignmentExpr extends SpeedyMatrixLvalueExpr
  * An elementary expression representing a single matrix
  * (e.g., expression 'A' represents a single matrix)
  */
-class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
+export class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
 {
     /**
      * Constructor
@@ -1431,99 +1431,5 @@ class SpeedyMatrixLSSolveNodeExpr extends SpeedyMatrixBinaryExpr
             throw new IllegalArgumentError(`Expected a ${m} x 1 column-vector, but found a ${vectorB.rows} x ${vectorB.columns} matrix`);
 
         super(n, 1, matrixA, vectorB, MatrixOperationLSSolve);
-    }
-}
-
-
-
-
-// ================================================
-// MATRIX FACTORY
-// ================================================
-
-/**
- * A Factory of matrix expressions
- */
-export class SpeedyMatrixExprFactory extends Function
-{
-    /**
-     * Create a new SpeedyMatrixExpr that evaluates to a user-defined matrix
-     * (or to a matrix without data if its entries are not provided)
-     * @param {number} rows number of rows
-     * @param {number} [columns] number of columns (defaults to the number of rows)
-     * @param {number[]} [values] initial values in column-major format
-     * @param {MatrixDataType} [dtype] data type of the elements of the matrix
-     * @returns {SpeedyMatrixElementaryExpr}
-     */
-    _create(rows, columns = rows, values = null, dtype = MatrixType.default)
-    {
-        let matrix = null;
-
-        if(!MatrixType.isValid(dtype))
-            throw new IllegalArgumentError(`Invalid matrix type: "${dtype}"`);
-
-        if(values != null) {
-            if(!Array.isArray(values))
-                throw new IllegalArgumentError(`Can't initialize Matrix with values ${values}`);
-            if(values.length > 0)
-                matrix = new SpeedyMatrix(rows, columns, values, dtype);
-        }
-
-        return new SpeedyMatrixElementaryExpr(rows, columns, dtype, matrix);
-    }
-
-    /**
-     * Create a new matrix filled with zeroes
-     * @param {number} rows number of rows
-     * @param {number} [columns] number of columns (defaults to the number of rows)
-     * @param {number[]} [values] initial values in column-major format
-     * @param {MatrixDataType} [dtype] data type of the elements of the matrix
-     * @returns {SpeedyMatrixElementaryExpr}
-     */
-    Zeros(rows, columns = rows, dtype = MatrixType.default)
-    {
-        const values = (new Array(rows * columns)).fill(0);
-        return this._create(rows, columns, values, dtype);
-    }
-
-    /**
-     * Create a new matrix filled with ones
-     * @param {number} rows number of rows
-     * @param {number} [columns] number of columns (defaults to the number of rows)
-     * @param {number[]} [values] initial values in column-major format
-     * @param {MatrixDataType} [dtype] data type of the elements of the matrix
-     * @returns {SpeedyMatrixElementaryExpr}
-     */
-    Ones(rows, columns = rows, dtype = MatrixType.default)
-    {
-        const values = (new Array(rows * columns)).fill(1);
-        return this._create(rows, columns, values, dtype);
-    }
-
-    /**
-     * Create a new identity matrix
-     * @param {number} rows number of rows
-     * @param {number} [columns] number of columns (defaults to the number of rows)
-     * @param {number[]} [values] initial values in column-major format
-     * @param {MatrixDataType} [dtype] data type of the elements of the matrix
-     * @returns {SpeedyMatrixElementaryExpr}
-     */
-    Eye(rows, columns = rows, dtype = MatrixType.default)
-    {
-        const values = (new Array(rows * columns)).fill(0);
-        for(let j = Math.min(rows, columns) - 1; j >= 0; j--)
-            values[j * rows + j] = 1;
-
-        return this._create(rows, columns, values, dtype);
-    }
-
-    /**
-     * The factory can be invoked as a function
-     * This is an alias to SpeedyMatrixExprFactory._create()
-     */
-    constructor()
-    {
-        super('...args', 'return this._create(...args)');
-        return this.bind(this);
     }
 }
