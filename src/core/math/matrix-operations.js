@@ -100,6 +100,16 @@ export class MatrixOperation
     }
 
     /**
+     * The matrices that belong to the operation,
+     * with the exception of the output matrix
+     * @returns {SpeedyMatrix[]}
+     */
+    get inputMatrices()
+    {
+        return this._inputMatrices;
+    }
+
+    /**
      * Replace input matrices
      * @param {SpeedyMatrix[]} inputMatrices 
      * @returns {MatrixOperation} this
@@ -128,18 +138,6 @@ export class MatrixOperation
         return this;
     }
 
-
-
-
-
-
-    // =======================================================
-
-
-
-
-
-
     /**
      * Run the matrix operation in a Web Worker
      * The internal buffers of the input & the output matrices are assumed to be locked
@@ -167,16 +165,11 @@ export class MatrixOperation
         // save input metadata
         this._header.updateInputMetadata(this._inputMatrices);
         
-        // get input buffers (preserve the order of the input matrices)
-        const inputBuffers = new Array(this._inputMatrices.length);
-        for(let i = inputBuffers.length - 1; i >= 0; i--)
-            inputBuffers[i] = this._inputMatrices[i].buffer.data.buffer;
-
         // crunch numbers in a WebWorker
         return worker.run(
             this._header,
-            outputMatrix.buffer.data.buffer,
-            inputBuffers
+            this._arrayBufferOf(outputMatrix),
+            this._arrayBuffersOf(this._inputMatrices)
         ).then(([newOutputBuffer, newInputBuffers]) => {
             // update the internal buffers with the new data
             outputMatrix.buffer.replace(newOutputBuffer);
@@ -201,24 +194,13 @@ export class MatrixOperation
         // save input metadata
         this._header.updateInputMetadata(this._inputMatrices);
         
-        // get input buffers (preserve the order of the input matrices)
-        const inputBuffers = new Array(this._inputMatrices.length);
-        for(let i = inputBuffers.length - 1; i >= 0; i--)
-            inputBuffers[i] = this._inputMatrices[i].buffer.data.buffer;
-
         // crunch numbers locally
-        LinAlg.lib.execute(this._header, outputMatrix.buffer.data.buffer, inputBuffers);
+        LinAlg.lib.execute(
+            this._header,
+            this._arrayBufferOf(outputMatrix),
+            this._arrayBuffersOf(this._inputMatrices)
+        );
         return SpeedyPromise.resolve();
-    }
-
-    /**
-     * The matrices that belong to the operation,
-     * with the exception of the output matrix
-     * @returns {SpeedyMatrix[]}
-     */
-    get inputMatrices()
-    {
-        return this._inputMatrices;
     }
 
     /**
@@ -247,6 +229,32 @@ export class MatrixOperation
     _workload(matrix)
     {
         return matrix.rows * matrix.columns;
+    }
+
+    /**
+     * Get the internal buffers of the matrices passed as arguments
+     * Preserve the relative order of the matrices <-> buffers
+     * @param {SpeedyMatrix[]} matrices
+     * @return {ArrayBuffer[]}
+     */
+    _arrayBuffersOf(matrices)
+    {
+        const buffers = new Array(matrices.length);
+        for(let i = buffers.length - 1; i >= 0; i--)
+            buffers[i] = matrices[i].buffer.data.buffer;
+
+        return buffers;
+        //return matrices.map(this._arrayBufferOf);
+    }
+
+    /**
+     * Get the internal buffer of the matrix passed as argument
+     * @param {SpeedyMatrix} matrix
+     * @return {ArrayBuffer}
+     */
+    _arrayBufferOf(matrix)
+    {
+        return matrix.buffer.data.buffer;
     }
 }
 
