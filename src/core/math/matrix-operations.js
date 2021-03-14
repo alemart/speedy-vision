@@ -125,11 +125,8 @@ export class MatrixOperation
         // do we have a compatible output matrix?
         this._assertCompatibility(outputMatrix.rows, outputMatrix.columns, outputMatrix.dtype);
 
-        // save output metadata
-        this._header.updateOutputMetadata(outputMatrix);
-
-        // save input metadata
-        this._header.updateInputMetadata(inputMatrices);
+        // prepare the operation header
+        this._header.updateMetadata(outputMatrix, inputMatrices);
         
         // crunch numbers in a WebWorker
         return worker.run(
@@ -155,11 +152,8 @@ export class MatrixOperation
         // do we have a compatible output matrix?
         this._assertCompatibility(outputMatrix.rows, outputMatrix.columns, outputMatrix.dtype);
 
-        // save output metadata
-        this._header.updateOutputMetadata(outputMatrix);
-
-        // save input metadata
-        this._header.updateInputMetadata(inputMatrices);
+        // prepare the operation header
+        this._header.updateMetadata(outputMatrix, inputMatrices);
         
         // crunch numbers locally
         LinAlg.lib.execute(

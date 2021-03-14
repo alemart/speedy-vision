@@ -83,10 +83,22 @@ export class MatrixOperationHeader
     }
 
     /**
+     * Update fields (stride, byte offset, etc.)
+     * before executing an operation
+     * @param {SpeedyMatrix} outputMatrix 
+     * @param {SpeedyMatrix[]} inputMatrices 
+     */
+    updateMetadata(outputMatrix, inputMatrices)
+    {
+        this._updateOutputMetadata(outputMatrix);
+        this._updateInputMetadata(inputMatrices);
+    }
+
+    /**
      * Update fields related to the output matrix
      * @param {SpeedyMatrix} outputMatrix 
      */
-    updateOutputMetadata(outputMatrix)
+    _updateOutputMetadata(outputMatrix)
     {
         const output = outputMatrix.buffer.data;
 
@@ -103,7 +115,7 @@ export class MatrixOperationHeader
      * The order of the input matrices shall be preserved
      * @param {SpeedyMatrix[]} inputMatrices 
      */
-    updateInputMetadata(inputMatrices)
+    _updateInputMetadata(inputMatrices)
     {
         const n = inputMatrices.length;
         const firstIteration = this.rowsOfInputs.length == 0 || this.rowsOfInputs[0] == 0; // short-circuit
