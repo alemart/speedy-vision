@@ -65,6 +65,9 @@ export class MatrixOperation
             requiredDataType,
             userData
         );
+
+        /** @type {number} a measure of the "workload" of this operation */
+        this._workload = 0; // to be determined lazily
     }
 
     /**
@@ -112,9 +115,9 @@ export class MatrixOperation
      */
     run(inputMatrices, outputMatrix)
     {
-        // run locally if the matrices are "small enough"
-        const workload = this._workload(inputMatrices.concat(outputMatrix));
-        if(workload <= SMALL_WORKLOAD) {
+        // run locally if we have a "small workload"
+        this._workload = this._workload || this._computeWorkload(inputMatrices.concat(outputMatrix));
+        if(this._workload <= SMALL_WORKLOAD) {
             // there's an overhead for passing data
             // back and forth to the Web Worker, and
             // we don't want to pay it if we're
@@ -168,9 +171,9 @@ export class MatrixOperation
      * Assert matrix size and type
      * @param {number} requiredRows 
      * @param {number} requiredColumns 
-     * @param {MatrixDataType} [requiredDataType]
+     * @param {MatrixDataType} requiredDataType
      */
-    _assertCompatibility(requiredRows, requiredColumns, requiredDataType = this._header.dtype)
+    _assertCompatibility(requiredRows, requiredColumns, requiredDataType)
     {
         const { rows, columns, dtype } = this._header;
 
@@ -183,11 +186,11 @@ export class MatrixOperation
     }
 
     /**
-     * Compute a measure of the workload of an operation involving this matrix
-     * @param {SpeedyMatrix[]} matrices
+     * Compute a measure of the workload of an operation
+     * @param {SpeedyMatrix[]} matrices all matrices involved
      * @returns {number}
      */
-    _workload(matrices)
+    _computeWorkload(matrices)
     {
         let w = 0;
         for(let i = matrices.length - 1; i >= 0; i--)
