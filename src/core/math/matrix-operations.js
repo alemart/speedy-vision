@@ -19,7 +19,7 @@
  * Matrix operations
  */
 
-import { IllegalArgumentError, IllegalOperationError, NotSupportedError } from '../../utils/errors';
+import { IllegalArgumentError, IllegalOperationError } from '../../utils/errors';
 import { Utils } from '../../utils/utils';
 import { SpeedyPromise } from '../../utils/speedy-promise';
 import { SpeedyMatrix } from './matrix';
