@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,14 +49,15 @@ export class MatrixOperationsQueue
     /**
      * Enqueue matrix operation
      * @param {MatrixOperation} matrixOperation 
+     * @param {SpeedyMatrix[]} inputMatrices
      * @param {SpeedyMatrix} outputMatrix
      * @returns {SpeedyPromise<void>} a promise that resolves as soon as the operation is complete
      */
-    enqueue(matrixOperation, outputMatrix)
+    enqueue(matrixOperation, inputMatrices, outputMatrix)
     {
         // enqueue operation
         return new SpeedyPromise(resolve => {
-            this._queue.push([ matrixOperation, outputMatrix, resolve ]);
+            this._queue.push([ matrixOperation, inputMatrices, outputMatrix, resolve ]);
             if(!this._busy) {
                 this._busy = true;
                 this._resolveAll();
@@ -76,16 +77,16 @@ export class MatrixOperationsQueue
         }
 
         // obtain the next operation
-        const [ matrixOperation, outputMatrix, resolve ] = this._queue.shift();
+        const [ matrixOperation, inputMatrices, outputMatrix, resolve ] = this._queue.shift();
 
         // lock matrices
         outputMatrix.lock();
-        matrixOperation.inputMatrices.forEach(inputMatrix => inputMatrix.lock());
+        inputMatrices.forEach(inputMatrix => inputMatrix.lock());
 
         // run the next operation
-        matrixOperation.run(outputMatrix).then(() => {
+        matrixOperation.run(inputMatrices, outputMatrix).then(() => {
             // unlock matrices
-            matrixOperation.inputMatrices.forEach(inputMatrix => inputMatrix.unlock());
+            inputMatrices.forEach(inputMatrix => inputMatrix.unlock());
             outputMatrix.unlock();
 
             // this operation is done

@@ -24,6 +24,7 @@ import { MatrixType } from './matrix-type';
 import { MatrixOperationsQueue } from './matrix-operations-queue';
 import { AbstractMethodError, IllegalArgumentError, IllegalOperationError } from '../../utils/errors';
 import { SpeedyPromise } from '../../utils/speedy-promise';
+import { Utils } from '../../utils/utils';
 import {
     MatrixOperation,
     MatrixOperationNop,
@@ -116,22 +117,6 @@ class SpeedyMatrixExpr
     }
 
     /**
-     * Assert matrix shape and type
-     * @param {number} requiredRows
-     * @param {number} requiredColumns
-     * @param {MatrixDataType} [requiredDataType]
-     */
-    _assertCompatibility(requiredRows, requiredColumns, requiredDataType = this._dtype)
-    {
-        if(requiredRows === this._rows && requiredColumns === this._columns && requiredDataType === this._dtype)
-            return;
-        else if(requiredDataType !== this._dtype)
-            throw new IllegalOperationError(`Incompatible matrix type (expected "${requiredDataType}", found "${this._dtype}")`);
-        else
-            throw new IllegalOperationError(`Incompatible matrix shape (expected ${requiredRows} x ${requiredColumns}, found ${this._rows} x ${this._columns})`);
-    }
-
-    /**
      * Evaluate the expression
      * @returns {SpeedyPromise<SpeedyMatrixExpr>}
      */
@@ -158,6 +143,26 @@ class SpeedyMatrixExpr
     _assign(matrix)
     {
         throw new IllegalOperationError(`Can't assign matrix: not a l-value`);
+    }
+
+    /**
+     * Assert matrix shape and type
+     * @param {number} rows
+     * @param {number} columns
+     * @param {MatrixDataType} dtype
+     * @param {number} requiredRows
+     * @param {number} requiredColumns
+     * @param {MatrixDataType} [requiredDataType]
+     */
+    static _assertSameShape(rows, columns, dtype, requiredRows, requiredColumns, requiredDataType)
+    {
+        if(requiredRows === rows && requiredColumns === columns && requiredDataType === dtype)
+            return;
+
+        else if(requiredDataType !== dtype)
+            throw new IllegalOperationError(`Incompatible matrix type (expected "${requiredDataType}", found "${dtype}")`);
+        else
+            throw new IllegalOperationError(`Incompatible matrix shape (expected ${requiredRows} x ${requiredColumns}, found ${this._rows} x ${this._columns})`);
     }
 
 
@@ -489,27 +494,21 @@ class SpeedyMatrixUnaryExpr extends SpeedyMatrixTempExpr
 {
     /**
      * Constructor
-     * @param {number} rows number of rows of the resulting (output) matrix
-     * @param {number} columns number of columns of the resulting (output) matrix
      * @param {SpeedyMatrixExpr} expr input expression
-     * @param {Function} operationClass unary operation
-     * @param {any[]} [...args] will be used when instantiating the unary operation
+     * @param {MatrixOperation} operation unary operation
      */
-    constructor(rows, columns, expr, operationClass, ...args)
+    constructor(expr, operation)
     {
-        super(rows, columns, expr.dtype);
+        super(operation.rows, operation.columns, expr.dtype);
 
         /** @type {SpeedyMatrixExpr} input expression */
         this._expr = expr;
 
-        /** @type {Function} unary operation */
-        this._operationClass = operationClass;
+        /** @type {MatrixOperation} unary operation */
+        this._operation = operation;
 
-        /** @type {?MatrixOperation} we cache the MatrixOperation object */
-        this._operation = null;
-
-        /** @type {any[]} arguments to be used when instantiating the unary operation */
-        this._args = args;
+        // validate
+        Utils.assert(operation.numberOfInputMatrices() === 1); // must be unary
     }
 
     /**
@@ -519,13 +518,7 @@ class SpeedyMatrixUnaryExpr extends SpeedyMatrixTempExpr
     _evaluate()
     {
         return this._expr._evaluate().then(result =>
-            matrixOperationsQueue.enqueue(
-                (
-                    this._operation ? this._operation.update([ result._matrix ]) :
-                    (this._operation = new (this._operationClass)(result._matrix, ...(this._args)))
-                ),
-                this._matrix
-            )
+            matrixOperationsQueue.enqueue(this._operation, [ result._matrix ], this._matrix)
         ).then(() => this);
     }
 
@@ -547,16 +540,13 @@ class SpeedyMatrixBinaryExpr extends SpeedyMatrixTempExpr
 {
     /**
      * Constructor
-     * @param {number} rows number of rows of the resulting (output) matrix
-     * @param {number} columns number of columns of the resulting (output) matrix
      * @param {SpeedyMatrixExpr} leftExpr left operand/expression
      * @param {SpeedyMatrixExpr} rightExpr right operand/expression
-     * @param {Function} operationClass binary operation
-     * @param {any[]} [...args] will be used when instantiating the binary operation
+     * @param {MatrixOperation} operation binary operation
      */
-    constructor(rows, columns, leftExpr, rightExpr, operationClass, ...args)
+    constructor(leftExpr, rightExpr, operation)
     {
-        super(rows, columns, leftExpr.dtype);
+        super(operation.rows, operation.columns, leftExpr.dtype);
 
         /** @type {SpeedyMatrixExpr} left operand */
         this._leftExpr = leftExpr;
@@ -564,20 +554,13 @@ class SpeedyMatrixBinaryExpr extends SpeedyMatrixTempExpr
         /** @type {SpeedyMatrixExpr} right operand */
         this._rightExpr = rightExpr;
 
-        /** @type {Function} binary operation */
-        this._operationClass = operationClass;
-
-        /** @type {?MatrixOperation} we cache the MatrixOperation object */
-        this._operation = null;
-
-        /** @type {any[]} arguments to be used when instantiating the binary operation */
-        this._args = args;
-
-
+        /** @type {MatrixOperation} binary operation */
+        this._operation = operation;
 
         // validate
+        Utils.assert(operation.numberOfInputMatrices() === 2); // must be a binary operation
         if(rightExpr.dtype !== leftExpr.dtype) // just in case...
-            this._assertCompatibility(rows, columns, rightExpr.dtype);
+            throw new IllegalArgumentError(`Found a binary expression with different data types: "${leftExpr.dtype}" (left operand) x "${rightExpr.dtype}" (right operand)`);
     }
 
     /**
@@ -591,10 +574,8 @@ class SpeedyMatrixBinaryExpr extends SpeedyMatrixTempExpr
             this._rightExpr._evaluate().turbocharge()
         ]).then(([ leftResult, rightResult ]) =>
             matrixOperationsQueue.enqueue(
-                (
-                    this._operation ? this._operation.update([ leftResult._matrix, rightResult._matrix ]) :
-                    (this._operation = new (this._operationClass)(leftResult._matrix, rightResult._matrix, ...(this._args)))
-                ),
+                this._operation,
+                [ leftResult._matrix, rightResult._matrix ],
                 this._matrix
             )
         ).then(() => this);
@@ -845,13 +826,19 @@ class SpeedyMatrixAssignmentExpr extends SpeedyMatrixLvalueExpr
                 throw new IllegalArgumentError(`Can't assign matrix to ${rvalue}`)
         }
 
-        this._assertCompatibility(rvalue.rows, rvalue.columns, rvalue.dtype);
+        SpeedyMatrixExpr._assertSameShape(
+            lvalue.rows, lvalue.columns, lvalue.dtype,
+            rvalue.rows, rvalue.columns, rvalue.dtype
+        );
 
         /** @type {SpeedyMatrixLvalueExpr} */
         this._lvalue = lvalue;
 
         /** @type {SpeedyMatrixExpr} */
         this._rvalue = rvalue;
+
+        // validate
+        //Utils.assert(lvalue instanceof SpeedyMatrixLvalueExpr);
     }
 
     /**
@@ -890,15 +877,19 @@ export class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
      * @param {number} rows
      * @param {number} columns
      * @param {MatrixDataType} dtype
-     * @param {SpeedyMatrix} [matrix] user matrix
+     * @param {?SpeedyMatrix} [matrix] user matrix
      */
     constructor(rows, columns, dtype, matrix = null)
     {
-        super(rows, columns, dtype);
-
         // validate
-        if(matrix != null)
-            this._assertCompatibility(matrix.rows, matrix.columns, matrix.dtype);
+        if(matrix != null) {
+            SpeedyMatrixExpr._assertSameShape(
+                rows, columns, dtype,
+                matrix.rows, matrix.columns, matrix.dtype
+            );
+        }
+
+        super(rows, columns, dtype);
 
         /** @type {?SpeedyMatrix} the matrix associated with this expression */
         this._usermatrix = matrix;
@@ -977,8 +968,8 @@ class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
         /** @type {?SpeedyMatrix} used for caching */
         this._cachedMatrix = null;
 
-        /** @type {?MatrixOperation} cached operation */
-        this._operation = null;
+        /** @type {MatrixOperation} matrix operation */
+        this._operation = new MatrixOperationCopy(this.rows, this.columns, this.dtype);
     }
 
     /**
@@ -1019,10 +1010,8 @@ class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
     _assign(matrix)
     {
         return matrixOperationsQueue.enqueue(
-            (
-                this._operation ? this._operation.update([ matrix ]) :
-                (this._operation = new MatrixOperationCopy(matrix))
-            ),
+            this._operation,
+            [ matrix ],
             this._submatrix
         );
     }
@@ -1050,6 +1039,9 @@ class SpeedyMatrixReadwriteDiagonalExpr extends SpeedyMatrixLvalueExpr
 
         /** @type {?SpeedyMatrix} used for caching */
         this._cachedMatrix = null;
+
+        /** @type {MatrixOperation} copy operation */
+        this._operation = new MatrixOperationCopy(this.rows, this.columns, this.dtype);
     }
 
     /**
@@ -1090,10 +1082,8 @@ class SpeedyMatrixReadwriteDiagonalExpr extends SpeedyMatrixLvalueExpr
     _assign(matrix)
     {
         return matrixOperationsQueue.enqueue(
-            (
-                this._operation ? this._operation.update([ matrix ]) :
-                (this._operation = new MatrixOperationCopy(matrix))
-            ),
+            this._operation,
+            [ matrix ],
             this._diagonal
         );
     }
@@ -1120,8 +1110,8 @@ class SpeedyMatrixFillExpr extends SpeedyMatrixTempExpr
     {
         super(rows, columns, dtype);
 
-        /** @type {MatrixOperation} */
-        this._operation = new MatrixOperationFill(rows, columns, dtype, value);
+        /** @type {MatrixOperation} fill operation */
+        this._operation = new MatrixOperationFill(this.rows, this.columns, this.dtype, value);
     }
 
     /**
@@ -1132,6 +1122,7 @@ class SpeedyMatrixFillExpr extends SpeedyMatrixTempExpr
     {
         return matrixOperationsQueue.enqueue(
             this._operation,
+            [],
             this._matrix
         ).then(() => this);
     }
@@ -1149,7 +1140,7 @@ class SpeedyMatrixCloneExpr extends SpeedyMatrixUnaryExpr
      */
     constructor(expr)
     {
-        super(expr.rows, expr.columns, expr, MatrixOperationCopy);
+        super(expr, new MatrixOperationCopy(expr.rows, expr.columns, expr.dtype));
     }
 }
 
@@ -1172,7 +1163,7 @@ class SpeedyMatrixTransposeExpr extends SpeedyMatrixUnaryExpr
         }
 
         // regular transposition
-        super(expr.columns, expr.rows, expr, MatrixOperationTranspose);
+        super(expr, new MatrixOperationTranspose(expr.rows, expr.columns, expr.dtype));
     }
 }
 
@@ -1189,8 +1180,15 @@ class SpeedyMatrixAddExpr extends SpeedyMatrixBinaryExpr
      */
     constructor(leftExpr, rightExpr)
     {
-        super(leftExpr.rows, leftExpr.columns, leftExpr, rightExpr, MatrixOperationAdd);
-        this._assertCompatibility(rightExpr.rows, rightExpr.columns);
+        SpeedyMatrixExpr._assertSameShape(
+            leftExpr.rows, leftExpr.columns, leftExpr.dtype,
+            rightExpr.rows, rightExpr.columns, rightExpr.dtype
+        );
+
+        super(leftExpr, rightExpr, new MatrixOperationAdd(
+            leftExpr.rows, leftExpr.columns, leftExpr.dtype,
+            rightExpr.rows, rightExpr.columns, rightExpr.dtype
+        ));
     }
 }
 
@@ -1207,8 +1205,15 @@ class SpeedyMatrixSubtractExpr extends SpeedyMatrixBinaryExpr
      */
     constructor(leftExpr, rightExpr)
     {
-        super(leftExpr.rows, leftExpr.columns, leftExpr, rightExpr, MatrixOperationSubtract);
-        this._assertCompatibility(rightExpr.rows, rightExpr.columns);
+        SpeedyMatrixExpr._assertSameShape(
+            leftExpr.rows, leftExpr.columns, leftExpr.dtype,
+            rightExpr.rows, rightExpr.columns, rightExpr.dtype
+        );
+
+        super(leftExpr, rightExpr, new MatrixOperationSubtract(
+            leftExpr.rows, leftExpr.columns, leftExpr.dtype,
+            rightExpr.rows, rightExpr.columns, rightExpr.dtype
+        ));
     }
 }
 
@@ -1248,9 +1253,13 @@ class SpeedyMatrixMultiplyExpr extends SpeedyMatrixBinaryExpr
             return new SpeedyMatrixMultiplyVecExpr(leftExpr, rightExpr);
 
         // regular multiplication
-        super(leftExpr.rows, rightExpr.columns, leftExpr, rightExpr, MatrixOperationMultiply);
         if(leftExpr.columns !== rightExpr.rows)
             throw new IllegalArgumentError(`Can't multiply a ${leftExpr.rows} x ${leftExpr.columns} matrix by a ${rightExpr.rows} x ${rightExpr.columns} matrix`);
+
+        super(leftExpr, rightExpr, new MatrixOperationMultiply(
+            leftExpr.rows, leftExpr.columns, leftExpr.dtype,
+            rightExpr.rows, rightExpr.columns, rightExpr.dtype
+        ));
     }
 }
 
@@ -1267,9 +1276,13 @@ class SpeedyMatrixMultiplyLTExpr extends SpeedyMatrixBinaryExpr
      */
     constructor(leftExpr, rightExpr)
     {
-        super(leftExpr.columns, rightExpr.columns, leftExpr, rightExpr, MatrixOperationMultiplyLT);
         if(leftExpr.rows !== rightExpr.rows)
             throw new IllegalArgumentError(`Can't multiply a ${leftExpr.columns} x ${leftExpr.rows} (transposed) matrix by a ${rightExpr.rows} x ${rightExpr.columns} matrix`);
+
+        super(leftExpr, rightExpr, new MatrixOperationMultiplyLT(
+            leftExpr.rows, leftExpr.columns, leftExpr.dtype,
+            rightExpr.rows, rightExpr.columns, rightExpr.dtype
+        ));
     }
 }
 
@@ -1286,9 +1299,13 @@ class SpeedyMatrixMultiplyRTExpr extends SpeedyMatrixBinaryExpr
      */
     constructor(leftExpr, rightExpr)
     {
-        super(leftExpr.rows, rightExpr.rows, leftExpr, rightExpr, MatrixOperationMultiplyRT);
         if(leftExpr.columns !== rightExpr.columns)
             throw new IllegalArgumentError(`Can't multiply a ${leftExpr.rows} x ${leftExpr.columns} matrix by a ${rightExpr.columns} x ${rightExpr.rows} (transposed) matrix`);
+
+        super(leftExpr, rightExpr, new MatrixOperationMultiplyRT(
+            leftExpr.rows, leftExpr.columns, leftExpr.dtype,
+            rightExpr.rows, rightExpr.columns, rightExpr.dtype
+        ));
     }
 }
 
@@ -1305,9 +1322,13 @@ class SpeedyMatrixMultiplyVecExpr extends SpeedyMatrixBinaryExpr
      */
     constructor(leftExpr, rightExpr)
     {
-        super(leftExpr.rows, rightExpr.columns, leftExpr, rightExpr, MatrixOperationMultiplyVec);
         if(leftExpr.columns !== rightExpr.rows || rightExpr.columns !== 1)
             throw new IllegalArgumentError(`Can't multiply a ${leftExpr.rows} x ${leftExpr.columns} matrix by a ${rightExpr.rows} x ${rightExpr.columns} matrix / column-vector`);
+
+        super(leftExpr, rightExpr, new MatrixOperationMultiplyVec(
+            leftExpr.rows, leftExpr.columns, leftExpr.dtype,
+            rightExpr.rows, rightExpr.columns, rightExpr.dtype
+        ));
     }
 }
 
@@ -1319,12 +1340,12 @@ class SpeedyMatrixScaleExpr extends SpeedyMatrixUnaryExpr
 {
     /**
      * Constructor
-     * @param {SpeedyMatrixExpr} expr
+     * @param {SpeedyMatrixExpr} expr input expression
      * @param {number} scalar
      */
     constructor(expr, scalar)
     {
-        super(expr.rows, expr.columns, expr, MatrixOperationScale, scalar);
+        super(expr, new MatrixOperationScale(expr.rows, expr.columns, expr.dtype, scalar));
     }
 }
 
@@ -1340,8 +1361,15 @@ class SpeedyMatrixCompMultExpr extends SpeedyMatrixBinaryExpr
      */
     constructor(leftExpr, rightExpr)
     {
-        super(leftExpr.rows, leftExpr.columns, leftExpr, rightExpr, MatrixOperationCompMult);
-        this._assertCompatibility(rightExpr.rows, rightExpr.columns);
+        SpeedyMatrixExpr._assertSameShape(
+            leftExpr.rows, leftExpr.columns, leftExpr.dtype,
+            rightExpr.rows, rightExpr.columns, rightExpr.dtype
+        );
+
+        super(leftExpr, rightExpr, new MatrixOperationCompMult(
+            leftExpr.rows, leftExpr.columns, leftExpr.dtype,
+            rightExpr.rows, rightExpr.columns, rightExpr.dtype
+        ));
     }
 }
 
@@ -1357,11 +1385,10 @@ class SpeedyMatrixQRExpr extends SpeedyMatrixUnaryExpr
      */
     constructor(expr, mode)
     {
-        const columns = mode == 'full' ? expr.columns + expr.rows : 2 * expr.columns;
         if(expr.rows < expr.columns)
             throw new IllegalArgumentError(`Can't compute the QR decomposition of a ${expr.rows} x ${expr.columns} matrix`);
 
-        super(expr.rows, columns, expr, MatrixOperationQR, mode);
+        super(expr, new MatrixOperationQR(expr.rows, expr.columns, expr.dtype, mode));
     }
 }
 
@@ -1391,7 +1418,10 @@ class SpeedyMatrixQRSolverNodeExpr extends SpeedyMatrixBinaryExpr
         else if(vectorB.columns != 1 || vectorB.rows != matrixA.rows)
             throw new IllegalArgumentError(`Expected a ${matrixA.rows} x 1 column-vector, but found a ${vectorB.rows} x ${vectorB.columns} matrix`);
 
-        super(matrixA.rows, matrixA.columns + 1, matrixA, vectorB, MatrixOperationQRSolve);
+        super(matrixA, vectorB, new MatrixOperationQRSolve(
+            matrixA.rows, matrixA.columns, matrixA.dtype,
+            vectorB.rows, vectorB.columns, vectorB.dtype
+        ));
     }
 }
 
@@ -1410,7 +1440,7 @@ class SpeedyMatrixBackSubstitutionNodeExpr extends SpeedyMatrixUnaryExpr
         if(input.columns != input.rows + 1)
             throw new IllegalArgumentError(`Expected a ${input.rows} x ${input.rows + 1} matrix, but found a ${input.rows} x ${input.columns} matrix`);
 
-        super(input.rows, 1, input, MatrixOperationBackSubstitution);
+        super(input, new MatrixOperationBackSubstitution(input.rows, input.columns, input.dtype));
     }
 }
 
@@ -1430,6 +1460,9 @@ class SpeedyMatrixLSSolveNodeExpr extends SpeedyMatrixBinaryExpr
         else if(vectorB.rows != m || vectorB.columns != 1)
             throw new IllegalArgumentError(`Expected a ${m} x 1 column-vector, but found a ${vectorB.rows} x ${vectorB.columns} matrix`);
 
-        super(n, 1, matrixA, vectorB, MatrixOperationLSSolve);
+        super(matrixA, vectorB, new MatrixOperationLSSolve(
+            matrixA.rows, matrixA.columns, matrixA.dtype,
+            vectorB.rows, vectorB.columns, vectorB.dtype
+        ));
     }
 }

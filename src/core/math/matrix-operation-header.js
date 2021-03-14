@@ -30,17 +30,17 @@ export class MatrixOperationHeader
     /**
      * Constructor
      * @param {string} method method name
+     * @param {number} numberOfInputMatrices how many input matrices do we require?
      * @param {number} rows required number of rows of the output matrix
      * @param {number} columns required number of columns of the output matrix
      * @param {MatrixDataType} dtype type of all matrices
-     * @param {SpeedyMatrix[]} [inputMatrices] input matrices of the operation, if any
      * @param {?object} [userData] custom serializable user-data
      */
-    constructor(method, rows, columns, dtype, inputMatrices = [], userData = null)
+    constructor(method, numberOfInputMatrices, rows, columns, dtype, userData = null)
     {
-        const n = inputMatrices.length;
-
         // ALL FIELDS ARE SERIALIZABLE
+        const n = numberOfInputMatrices | 0;
+        Utils.assert(n >= 0);
 
         /** @type {string} method name */
         this.method = String(method);
@@ -64,13 +64,13 @@ export class MatrixOperationHeader
         this.length = 0; // initially unknown
 
         /** @type {number[]} number of rows of the input matrices */
-        this.rowsOfInputs = n > 0 ? inputMatrices.map(matrix => matrix.rows) : [];
+        this.rowsOfInputs = (new Array(n)).fill(0); // to be determined later
 
         /** @type {number[]} number of columns of the input matrices */
-        this.columnsOfInputs = n > 0 ? inputMatrices.map(matrix => matrix.columns) : [];
+        this.columnsOfInputs = (new Array(n)).fill(0); // to be determined layer
 
         /** @type {number[]} strides of the input matrices */
-        this.strideOfInputs = (new Array(n)).fill(0);
+        this.strideOfInputs = (new Array(n)).fill(0); // to be determined later - buffer may be locked
 
         /** @type {number[]} byte offsets used to recover the data view */
         this.byteOffsetOfInputs = (new Array(n)).fill(0); // to be determined later - buffer may be locked
@@ -93,6 +93,9 @@ export class MatrixOperationHeader
         this.stride = outputMatrix.stride;
         this.byteOffset = output.byteOffset;
         this.length = output.length;
+
+        // can't change the shape of the output matrix
+        Utils.assert(outputMatrix.rows === this.rows && outputMatrix.columns === this.columns && outputMatrix.dtype === this.dtype);
     }
 
     /**
@@ -103,7 +106,8 @@ export class MatrixOperationHeader
     updateInputMetadata(inputMatrices)
     {
         const n = inputMatrices.length;
-        Utils.assert(n === this.rowsOfInputs.length);
+        const firstIteration = this.rowsOfInputs.length == 0 || this.rowsOfInputs[0] == 0; // short-circuit
+        Utils.assert(this.rowsOfInputs.length === n);
 
         for(let i = 0; i < n; i++) {
             const inputMatrix = inputMatrices[i];
@@ -112,6 +116,15 @@ export class MatrixOperationHeader
             this.strideOfInputs[i] = inputMatrix.stride;
             this.byteOffsetOfInputs[i] = input.byteOffset;
             this.lengthOfInputs[i] = input.length;
+
+            if(firstIteration) {
+                this.rowsOfInputs[i] = inputMatrix.rows;
+                this.columnsOfInputs[i] = inputMatrix.columns;
+            }
+            else {
+                // can't change the shape of the input matrices
+                Utils.assert(inputMatrix.rows === this.rowsOfInputs[i] && inputMatrix.columns === this.columnsOfInputs[i] && inputMatrix.dtype === this.dtype);
+            }
         }
     }
 }

@@ -20,6 +20,7 @@
  */
 
 import { IllegalArgumentError, IllegalOperationError, NotSupportedError } from '../../utils/errors';
+import { Utils } from '../../utils/utils';
 import { SpeedyPromise } from '../../utils/speedy-promise';
 import { SpeedyMatrix } from './matrix';
 import { MatrixWorker } from './matrix-worker';
@@ -43,13 +44,13 @@ export class MatrixOperation
     /**
      * (protected) Class constructor
      * @param {string} method method name
+     * @param {number} requiredNumberOfInputMatrices how many input matrices do we require?
      * @param {number} requiredRows required number of rows of the output matrix
      * @param {number} requiredColumns required number of columns of the output matrix
      * @param {MatrixDataType} requiredDataType required type of the output matrix
-     * @param {SpeedyMatrix[]} [inputMatrices] input matrices, if any
      * @param {?object} [userData] custom user-data, serializable
      */
-    constructor(method, requiredRows, requiredColumns, requiredDataType, inputMatrices = [], userData = null)
+    constructor(method, requiredNumberOfInputMatrices, requiredRows, requiredColumns, requiredDataType, userData = null)
     {
         // is it a valid operation?
         if(!LinAlg.hasMethod(method))
@@ -58,18 +59,12 @@ export class MatrixOperation
         /** @type {MatrixOperationHeader} metadata related to the operation */
         this._header = new MatrixOperationHeader(
             method,
+            requiredNumberOfInputMatrices,
             requiredRows,
             requiredColumns,
             requiredDataType,
-            inputMatrices,
             userData
         );
-
-        /** @type {SpeedyMatrix[]} the input matrices */
-        this._inputMatrices = inputMatrices;
-
-        /** @type {number} a measure of (a fraction of) the workload of this operation */
-        this._workloadOfInputs = inputMatrices.reduce((w, m) => w + this._workload(m), 0);
     }
 
     /**
@@ -100,60 +95,31 @@ export class MatrixOperation
     }
 
     /**
-     * The matrices that belong to the operation,
-     * with the exception of the output matrix
-     * @returns {SpeedyMatrix[]}
+     * The expected number of input matrices
+     * @return {number} a non-negative integer
      */
-    get inputMatrices()
+    numberOfInputMatrices()
     {
-        return this._inputMatrices;
-    }
-
-    /**
-     * Replace input matrices
-     * @param {SpeedyMatrix[]} inputMatrices 
-     * @returns {MatrixOperation} this
-     */
-    update(inputMatrices)
-    {
-        if(this._inputMatrices.length !== inputMatrices.length)
-            throw new IllegalOperationError();
-
-        for(let i = inputMatrices.length - 1; i >= 0; i--) {
-            const inputMatrix = inputMatrices[i];
-            const prevInputMatrix = this._inputMatrices[i];
-
-            // i-th matrix didn't change
-            if(inputMatrix === prevInputMatrix)
-                continue;
-
-            // can't change shape
-            if(inputMatrix.rows !== prevInputMatrix.rows || inputMatrix.columns !== prevInputMatrix.columns || inputMatrix.dtype !== prevInputMatrix.dtype)
-                throw new IllegalOperationError(`Can't change the input matrix shape / type`);
-
-            // update input matrix
-            this._inputMatrices[i] = inputMatrix;
-        }
-
-        return this;
+        return this._header.rowsOfInputs.length;
     }
 
     /**
      * Run the matrix operation in a Web Worker
      * The internal buffers of the input & the output matrices are assumed to be locked
+     * @param {SpeedyMatrix[]} inputMatrices
      * @param {SpeedyMatrix} outputMatrix
      * @returns {SpeedyPromise<void>} a promise that resolves to outbuf as soon as the operation is completed
      */
-    run(outputMatrix)
+    run(inputMatrices, outputMatrix)
     {
         // run locally if the matrices are "small enough"
-        const workload = this._workloadOfInputs + this._workload(outputMatrix);
+        const workload = this._workload(inputMatrices.concat(outputMatrix));
         if(workload <= SMALL_WORKLOAD) {
             // there's an overhead for passing data
             // back and forth to the Web Worker, and
             // we don't want to pay it if we're
             // dealing with "small" matrices
-            return this._runLocally(outputMatrix);
+            return this._runLocally(inputMatrices, outputMatrix);
         }
 
         // do we have a compatible output matrix?
@@ -163,27 +129,28 @@ export class MatrixOperation
         this._header.updateOutputMetadata(outputMatrix);
 
         // save input metadata
-        this._header.updateInputMetadata(this._inputMatrices);
+        this._header.updateInputMetadata(inputMatrices);
         
         // crunch numbers in a WebWorker
         return worker.run(
             this._header,
             this._arrayBufferOf(outputMatrix),
-            this._arrayBuffersOf(this._inputMatrices)
+            this._arrayBuffersOf(inputMatrices)
         ).then(([newOutputBuffer, newInputBuffers]) => {
             // update the internal buffers with the new data
             outputMatrix.buffer.replace(newOutputBuffer);
-            for(let i = this._inputMatrices.length - 1; i >= 0; i--)
-                this._inputMatrices[i].buffer.replace(newInputBuffers[i]);
+            for(let i = inputMatrices.length - 1; i >= 0; i--)
+                inputMatrices[i].buffer.replace(newInputBuffers[i]);
         });
     }
 
     /**
      * Run matrix operation in the same thread
+     * @param {SpeedyMatrix[]} inputMatrices
      * @param {SpeedyMatrix} outputMatrix
      * @returns {SpeedyPromise<void>} a promise that resolves to outbuf as soon as the operation is completed
      */
-    _runLocally(outputMatrix)
+    _runLocally(inputMatrices, outputMatrix)
     {
         // do we have a compatible output matrix?
         this._assertCompatibility(outputMatrix.rows, outputMatrix.columns, outputMatrix.dtype);
@@ -192,13 +159,13 @@ export class MatrixOperation
         this._header.updateOutputMetadata(outputMatrix);
 
         // save input metadata
-        this._header.updateInputMetadata(this._inputMatrices);
+        this._header.updateInputMetadata(inputMatrices);
         
         // crunch numbers locally
         LinAlg.lib.execute(
             this._header,
             this._arrayBufferOf(outputMatrix),
-            this._arrayBuffersOf(this._inputMatrices)
+            this._arrayBuffersOf(inputMatrices)
         );
         return SpeedyPromise.resolve();
     }
@@ -223,12 +190,16 @@ export class MatrixOperation
 
     /**
      * Compute a measure of the workload of an operation involving this matrix
-     * @param {SpeedyMatrix} matrix
+     * @param {SpeedyMatrix[]} matrices
      * @returns {number}
      */
-    _workload(matrix)
+    _workload(matrices)
     {
-        return matrix.rows * matrix.columns;
+        let w = 0;
+        for(let i = matrices.length - 1; i >= 0; i--)
+            w += matrices[i].rows * matrices[i].columns;
+
+        return w;
     }
 
     /**
@@ -271,7 +242,7 @@ export class MatrixOperationNop extends MatrixOperation
      */
     constructor(requiredRows, requiredColumns, requiredDataType)
     {
-        super('nop', requiredRows, requiredColumns, requiredDataType);
+        super('nop', 0, requiredRows, requiredColumns, requiredDataType);
     }
 }
 
@@ -289,7 +260,7 @@ export class MatrixOperationFill extends MatrixOperation
      */
     constructor(requiredRows, requiredColumns, requiredDataType, value)
     {
-        super('fill', requiredRows, requiredColumns, requiredDataType, [], { value: +value });
+        super('fill', 0, requiredRows, requiredColumns, requiredDataType, { value: +value });
     }
 }
 
@@ -300,11 +271,13 @@ export class MatrixOperationCopy extends MatrixOperation
 {
     /**
      * Constructor
-     * @param {SpeedyMatrix} matrix 
+     * @param {number} inputRows number of rows of the input matrix
+     * @param {number} inputColumns number of columns of the input matrix
+     * @param {MatrixDataType} dtype required type of the input & output matrices
      */
-    constructor(matrix)
+    constructor(inputRows, inputColumns, dtype)
     {
-        super('copy', matrix.rows, matrix.columns, matrix.dtype, [ matrix ]);
+        super('copy', 1, inputRows, inputColumns, dtype);
     }
 }
 
@@ -315,11 +288,13 @@ export class MatrixOperationTranspose extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {SpeedyMatrix} matrix the matrix that we'll transpose
+     * @param {number} inputRows number of rows of the input matrix
+     * @param {number} inputColumns number of columns of the input matrix
+     * @param {MatrixDataType} dtype required type of the input & output matrices
      */
-    constructor(matrix)
+    constructor(inputRows, inputColumns, dtype)
     {
-        super('transpose', matrix.columns, matrix.rows, matrix.dtype, [ matrix ]);
+        super('transpose', 1, inputColumns, inputRows, dtype);
     }
 }
 
@@ -331,12 +306,17 @@ export class MatrixOperationAdd extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {SpeedyMatrix} matrixA
-     * @param {SpeedyMatrix} matrixB
+     * @param {number} leftRows number of rows of the left operand
+     * @param {number} leftColumns number of columns of the left operand
+     * @param {MatrixDataType} leftDtype data type of the left operand
+     * @param {number} rightRows number of rows of the right operand
+     * @param {number} rightColumns number of columns of the right operand
+     * @param {MatrixDataType} rightDtype data type of the right operand
      */
-    constructor(matrixA, matrixB)
+    constructor(leftRows, leftColumns, leftDtype, rightRows, rightColumns, rightDtype)
     {
-        super('add', matrixA.rows, matrixA.columns, matrixA.dtype, [ matrixA, matrixB ]);
+        Utils.assert(leftRows === rightRows && leftColumns === rightColumns && leftDtype === rightDtype);
+        super('add', 2, leftRows, leftColumns, leftDtype);
     }
 }
 
@@ -348,12 +328,17 @@ export class MatrixOperationSubtract extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {SpeedyMatrix} matrixA
-     * @param {SpeedyMatrix} matrixB
+     * @param {number} leftRows number of rows of the left operand
+     * @param {number} leftColumns number of columns of the left operand
+     * @param {MatrixDataType} leftDtype data type of the left operand
+     * @param {number} rightRows number of rows of the right operand
+     * @param {number} rightColumns number of columns of the right operand
+     * @param {MatrixDataType} rightDtype data type of the right operand
      */
-    constructor(matrixA, matrixB)
+    constructor(leftRows, leftColumns, leftDtype, rightRows, rightColumns, rightDtype)
     {
-        super('subtract', matrixA.rows, matrixA.columns, matrixA.dtype, [ matrixA, matrixB ]);
+        Utils.assert(leftRows === rightRows && leftColumns === rightColumns && leftDtype === rightDtype);
+        super('subtract', 2, leftRows, leftColumns, leftDtype);
     }
 }
 
@@ -365,12 +350,17 @@ export class MatrixOperationMultiply extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {SpeedyMatrix} matrixA left matrix
-     * @param {SpeedyMatrix} matrixB right matrix
+     * @param {number} leftRows number of rows of the left operand
+     * @param {number} leftColumns number of columns of the left operand
+     * @param {MatrixDataType} leftDtype data type of the left operand
+     * @param {number} rightRows number of rows of the right operand
+     * @param {number} rightColumns number of columns of the right operand
+     * @param {MatrixDataType} rightDtype data type of the right operand
      */
-    constructor(matrixA, matrixB)
+    constructor(leftRows, leftColumns, leftDtype, rightRows, rightColumns, rightDtype)
     {
-        super('multiply', matrixA.rows, matrixB.columns, matrixA.dtype, [ matrixA, matrixB ]);
+        Utils.assert(leftColumns === rightRows && leftDtype === rightDtype);
+        super('multiply', 2, leftRows, rightColumns, leftDtype);
     }
 }
 
@@ -382,12 +372,14 @@ export class MatrixOperationScale extends MatrixOperation
 {
     /**
      * Constructor
-     * @param {SpeedyMatrix} matrix
+     * @param {number} inputRows number of rows of the input matrix
+     * @param {number} inputColumns number of columns of the input matrix
+     * @param {MatrixDataType} dtype required type of the input & output matrices
      * @param {number} scalar
      */
-    constructor(matrix, scalar)
+    constructor(inputRows, inputColumns, dtype, scalar)
     {
-        super('scale', matrix.rows, matrix.columns, matrix.dtype, [ matrix ], { scalar: +scalar });
+        super('scale', 1, inputRows, inputColumns, dtype, { scalar: +scalar });
     }
 }
 
@@ -398,12 +390,17 @@ export class MatrixOperationCompMult extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {SpeedyMatrix} matrixA
-     * @param {SpeedyMatrix} matrixB
+     * @param {number} leftRows number of rows of the left operand
+     * @param {number} leftColumns number of columns of the left operand
+     * @param {MatrixDataType} leftDtype data type of the left operand
+     * @param {number} rightRows number of rows of the right operand
+     * @param {number} rightColumns number of columns of the right operand
+     * @param {MatrixDataType} rightDtype data type of the right operand
      */
-    constructor(matrixA, matrixB)
+    constructor(leftRows, leftColumns, leftDtype, rightRows, rightColumns, rightDtype)
     {
-        super('compmult', matrixA.rows, matrixA.columns, matrixA.dtype, [ matrixA, matrixB ]);
+        Utils.assert(leftRows === rightRows && leftColumns === rightColumns && leftDtype === rightDtype);
+        super('compmult', 2, leftRows, leftColumns, leftDtype);
     }
 }
 
@@ -415,12 +412,17 @@ export class MatrixOperationMultiplyLT extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {SpeedyMatrix} matrixA left matrix
-     * @param {SpeedyMatrix} matrixB right matrix
+     * @param {number} leftRows number of rows of the left operand
+     * @param {number} leftColumns number of columns of the left operand
+     * @param {MatrixDataType} leftDtype data type of the left operand
+     * @param {number} rightRows number of rows of the right operand
+     * @param {number} rightColumns number of columns of the right operand
+     * @param {MatrixDataType} rightDtype data type of the right operand
      */
-    constructor(matrixA, matrixB)
+    constructor(leftRows, leftColumns, leftDtype, rightRows, rightColumns, rightDtype)
     {
-        super('multiplylt', matrixA.columns, matrixB.columns, matrixA.dtype, [ matrixA, matrixB ]);
+        Utils.assert(leftRows === rightRows && leftDtype === rightDtype);
+        super('multiplylt', 2, leftColumns, rightColumns, leftDtype);
     }
 }
 
@@ -432,12 +434,17 @@ export class MatrixOperationMultiplyRT extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {SpeedyMatrix} matrixA left matrix
-     * @param {SpeedyMatrix} matrixB right matrix
+     * @param {number} leftRows number of rows of the left operand
+     * @param {number} leftColumns number of columns of the left operand
+     * @param {MatrixDataType} leftDtype data type of the left operand
+     * @param {number} rightRows number of rows of the right operand
+     * @param {number} rightColumns number of columns of the right operand
+     * @param {MatrixDataType} rightDtype data type of the right operand
      */
-    constructor(matrixA, matrixB)
+    constructor(leftRows, leftColumns, leftDtype, rightRows, rightColumns, rightDtype)
     {
-        super('multiplyrt', matrixA.rows, matrixB.rows, matrixA.dtype, [ matrixA, matrixB ]);
+        Utils.assert(leftColumns === rightColumns && leftDtype === rightDtype);
+        super('multiplyrt', 2, leftRows, rightRows, leftDtype);
     }
 }
 
@@ -449,12 +456,17 @@ export class MatrixOperationMultiplyVec extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {SpeedyMatrix} matrixA left matrix
-     * @param {SpeedyMatrix} vectorX column-vector
+     * @param {number} leftRows number of rows of the left operand
+     * @param {number} leftColumns number of columns of the left operand
+     * @param {MatrixDataType} leftDtype data type of the left operand
+     * @param {number} rightRows number of rows of the right operand
+     * @param {number} rightColumns number of columns of the right operand (must be 1)
+     * @param {MatrixDataType} rightDtype data type of the right operand
      */
-    constructor(matrixA, vectorX)
+    constructor(leftRows, leftColumns, leftDtype, rightRows, rightColumns, rightDtype)
     {
-        super('multiplyvec', matrixA.rows, 1, matrixA.dtype, [ matrixA, vectorX ]);
+        Utils.assert(leftColumns === rightRows && rightColumns === 1 && leftDtype === rightDtype);
+        super('multiplyvec', 2, leftRows, 1, leftDtype);
     }
 }
 
@@ -465,17 +477,20 @@ export class MatrixOperationQR extends MatrixOperation
 {
     /**
      * Constructor
-     * @param {SpeedyMatrix} matrix
+     * @param {number} inputRows number of rows of the input matrix (must be >= inputColumns)
+     * @param {number} inputColumns number of columns of the input matrix
+     * @param {MatrixDataType} dtype required type of the input & output matrices
      * @param {string} mode 'full' | 'reduced'
      */
-    constructor(matrix, mode)
+    constructor(inputRows, inputColumns, dtype, mode)
     {
         const m = ({ 'full': 'full-qr', 'reduced': 'reduced-qr' })[mode];
         if(m === undefined)
             throw new IllegalArgumentError(`QR decomposition: unknown mode "${mode}"`)
 
-        const columns = m == 'full-qr' ? matrix.columns + matrix.rows : 2 * matrix.columns;
-        super('qr', matrix.rows, columns, matrix.dtype, [ matrix ], { mode: m });
+        //Utils.assert(inputRows >= inputColumns);
+        const columns = m == 'full-qr' ? inputColumns + inputRows : 2 * inputColumns;
+        super('qr', 1, inputRows, columns, dtype, { mode: m });
     }
 }
 
@@ -494,12 +509,17 @@ export class MatrixOperationQRSolve extends MatrixOperation
 {
     /**
      * Constructor
-     * @param {SpeedyMatrix} matrixA
-     * @param {SpeedyMatrix} vectorB
+     * @param {number} rowsA required number of rows of the input matrix A
+     * @param {number} columnsA required number of columns of the input matrix A
+     * @param {MatrixDataType} dtypeA data type of the input matrix A
+     * @param {number} rowsB required number of rows of the input vector b
+     * @param {number} columnsB required number of columns of the input vector b (must be 1)
+     * @param {MatrixDataType} dtypeB data type of the input vector b
      */
-    constructor(matrixA, vectorB)
+    constructor(rowsA, columnsA, dtypeA, rowsB, columnsB, dtypeB)
     {
-        super('qr', matrixA.rows, matrixA.columns + 1, matrixA.dtype, [ matrixA, vectorB ], { mode: 'reduced-Q\'x' });
+        Utils.assert(rowsA === rowsB && columnsB === 1 && dtypeA === dtypeB);
+        super('qr', 2, rowsA, columnsA + 1, dtypeA, { mode: 'reduced-Q\'x' });
     }
 }
 
@@ -512,11 +532,14 @@ export class MatrixOperationBackSubstitution extends MatrixOperation
 {
     /**
      * Constructor
-     * @param {SpeedyMatrix} input
+     * @param {number} inputRows number of rows of the input matrix
+     * @param {number} inputColumns number of columns of the input matrix
+     * @param {MatrixDataType} dtype required type of the input & output matrices
      */
-    constructor(input)
+    constructor(inputRows, inputColumns, dtype)
     {
-        super('backsub', input.rows, 1, input.dtype, [ input ]);
+        Utils.assert(inputColumns === inputRows + 1);
+        super('backsub', 1, inputRows, 1, dtype);
     }
 }
 
@@ -527,8 +550,18 @@ export class MatrixOperationBackSubstitution extends MatrixOperation
  */
 export class MatrixOperationLSSolve extends MatrixOperation
 {
-    constructor(matrixA, vectorB)
+    /**
+     * Constructor
+     * @param {number} rowsA required number of rows of the input matrix A
+     * @param {number} columnsA required number of columns of the input matrix A
+     * @param {MatrixDataType} dtypeA data type of the input matrix A
+     * @param {number} rowsB required number of rows of the input vector b
+     * @param {number} columnsB required number of columns of the input vector b (must be 1)
+     * @param {MatrixDataType} dtypeB data type of the input vector b
+     */
+    constructor(rowsA, columnsA, dtypeA, rowsB, columnsB, dtypeB)
     {
-        super('lssolve', matrixA.columns, 1, matrixA.dtype, [ matrixA, vectorB ]);
+        Utils.assert(rowsA === rowsB && columnsB === 1 && dtypeA === dtypeB);
+        super('lssolve', 2, columnsA, 1, dtypeA);
     }
 }
