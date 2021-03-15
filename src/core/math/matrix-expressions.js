@@ -1380,6 +1380,11 @@ class SpeedyMatrixBackSubstitutionNodeExpr extends SpeedyMatrixUnaryExpr
  */
 class SpeedyMatrixLSSolveNodeExpr extends SpeedyMatrixBinaryExpr
 {
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} matrixA m x n matrix
+     * @param {SpeedyMatrixExpr} vectorB m x 1 vector
+     */
     constructor(matrixA, vectorB)
     {
         const [ m, n ] = [ matrixA.rows, matrixA.columns ];
