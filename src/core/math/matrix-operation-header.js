@@ -20,6 +20,7 @@
  */
 
 import { SpeedyMatrix } from './matrix';
+import { MatrixShape } from './matrix-shape';
 import { Utils } from '../../utils/utils';
 
 /**
@@ -31,12 +32,10 @@ export class MatrixOperationHeader
      * Constructor
      * @param {string} method method name
      * @param {number} numberOfInputMatrices how many input matrices do we require?
-     * @param {number} rows required number of rows of the output matrix
-     * @param {number} columns required number of columns of the output matrix
-     * @param {MatrixDataType} dtype type of all matrices
+     * @param {MatrixShape} outputShape shape of the output matrix
      * @param {?object} [userData] custom serializable user-data
      */
-    constructor(method, numberOfInputMatrices, rows, columns, dtype, userData = null)
+    constructor(method, numberOfInputMatrices, outputShape, userData = null)
     {
         // ALL FIELDS ARE SERIALIZABLE
         const n = numberOfInputMatrices | 0;
@@ -46,13 +45,13 @@ export class MatrixOperationHeader
         this.method = String(method);
 
         /** @type {MatrixDataType} type of all matrices (input & output) */
-        this.dtype = dtype;
+        this.dtype = outputShape.dtype;
 
         /** @type {number} number of rows of the output matrix */
-        this.rows = rows | 0;
+        this.rows = outputShape.rows;
 
         /** @type {number} number of columns of the output matrix */
-        this.columns = columns | 0;
+        this.columns = outputShape.columns;
 
         /** @type {number} stride of the output matrix */
         this.stride = 0; // initially unknown

@@ -21,6 +21,7 @@
 
 import { IllegalArgumentError, IllegalOperationError, NotSupportedError } from '../../utils/errors';
 import { MatrixType } from './matrix-type';
+import { MatrixShape } from './matrix-shape';
 import { MatrixBuffer } from './matrix-buffer';
 import { MatrixOperationsQueue } from './matrix-operations-queue';
 import { MatrixOperationNop } from './matrix-operations';
@@ -40,30 +41,30 @@ export class SpeedyMatrix
 {
     /**
      * Class constructor
-     * @param {number} rows number of rows
-     * @param {number} [columns] number of columns (defaults to the number of rows)
-     * @param {number[]} [values] initial values in column-major format
-     * @param {MatrixDataType} [dtype] data type: the type of the elements of the matrix
+     * @param {MatrixShape} shape shape of the matrix
+     * @param {?number[]} [values] initial values in column-major format
      * @param {number} [stride] custom stride
      * @param {MatrixBuffer} [buffer] custom buffer
      */
-    constructor(rows, columns = rows, values = null, dtype = MatrixType.default, stride = rows, buffer = null)
+    constructor(shape, values = null, stride = shape.rows, buffer = null)
     {
-        if(rows <= 0 || columns <= 0)
-            throw new IllegalArgumentError(`Invalid dimensions`);
-        else if(stride < rows)
-            throw new IllegalArgumentError(`Invalid stride`);
-        else if(!MatrixType.isValid(dtype))
-            throw new IllegalArgumentError(`Invalid data type: "${dtype}"`);
-        else if(Array.isArray(values) && values.length != rows * columns)
-            throw new IllegalArgumentError(`Incorrect number of matrix elements (expected ${rows * columns}, found ${values.length})`);
+        /** @type {MatrixShape} the shape of the matrix */
+        this._shape = shape;
 
-        this._rows = rows | 0;
-        this._columns = columns | 0;
+        /** @type {number} the number of entries, in the internal buffer, between the beginning of two columns */
         this._stride = stride | 0;
-        this._dtype = dtype;
-        this._buffer = buffer || new MatrixBuffer(this._stride * this._columns, values, this._dtype);
+
+        /** @type {MatrixBuffer} internal buffer */
+        this._buffer = buffer || new MatrixBuffer(this.stride * this.columns, values, this.dtype);
+
+        /** @type {MatrixOperationNop} no-op utility, spawned lazily */
         this._nop = null;
+
+        // validate
+        if(this.stride < this.rows)
+            throw new IllegalArgumentError(`Invalid stride (expected ${this.rows} or greater, found ${this.stride})`);
+        else if(Array.isArray(values) && values.length != this.rows * this.columns)
+            throw new IllegalArgumentError(`Incorrect number of matrix elements (expected ${this.rows * this.columns}, found ${values.length})`);
     }
 
 
@@ -78,7 +79,7 @@ export class SpeedyMatrix
      */
     get rows()
     {
-        return this._rows;
+        return this._shape.rows;
     }
 
     /**
@@ -87,7 +88,16 @@ export class SpeedyMatrix
      */
     get columns()
     {
-        return this._columns;
+        return this._shape.columns;
+    }
+
+    /**
+     * Data type
+     * @returns {MatrixDataType}
+     */
+    get dtype()
+    {
+        return this._shape.dtype;
     }
 
     /**
@@ -101,12 +111,12 @@ export class SpeedyMatrix
     }
 
     /**
-     * Data type (string)
-     * @returns {MatrixDataType}
+     * The shape of the matrix
+     * @returns {MatrixShape}
      */
-    get dtype()
+    get shape()
     {
-        return this._dtype;
+        return this._shape;
     }
 
 
@@ -130,8 +140,8 @@ export class SpeedyMatrix
      */
     read(entries = undefined, result = undefined)
     {
-        const rows = this._rows, cols = this._columns;
-        const stride = this._stride;
+        const rows = this.rows, cols = this.columns;
+        const stride = this.stride;
 
         // read the entire array
         if(entries === undefined)
@@ -244,7 +254,7 @@ export class SpeedyMatrix
      */
     block(firstRow, lastRow, firstColumn, lastColumn)
     {
-        const rows = this._rows, columns = this._columns;
+        const rows = this.rows, columns = this.columns;
 
         // validate range
         if(lastRow < firstRow || lastColumn < firstColumn)
@@ -255,20 +265,21 @@ export class SpeedyMatrix
         // compute the dimensions of the new submatrix
         const subRows = lastRow - firstRow + 1;
         const subColumns = lastColumn - firstColumn + 1;
+        const subShape = new MatrixShape(subRows, subColumns, this.dtype);
 
         // obtain the relevant portion of the data
-        const stride = this._stride;
+        const stride = this.stride;
         const begin = firstColumn * stride + firstRow;
         const length = (lastColumn - firstColumn) * stride + subRows;
 
         // create submatrix
         return this._buffer.createSharedBuffer(begin, length).then(sharedBuffer =>
-            new SpeedyMatrix(subRows, subColumns, undefined, this._dtype, stride, sharedBuffer)
+            new SpeedyMatrix(subShape, undefined, stride, sharedBuffer)
         ).turbocharge();
     }
 
     /**
-     * Creates a column-vector featuring the elements of the main diagonal
+     * Creates a vector featuring the elements of the main diagonal
      * of the matrix. The internal buffers of the column-vector and of the
      * matrix are shared, so if you change the data in one, you'll change
      * the data in the other.
@@ -276,12 +287,13 @@ export class SpeedyMatrix
      */
     diagonal()
     {
-        const rows = this._rows, stride = this._stride;
-        const diagonalLength = Math.min(rows, this._columns);
+        const rows = this.rows, stride = this.stride;
+        const diagonalLength = Math.min(rows, this.columns);
         const bufferLength = (diagonalLength - 1) * stride + rows;
+        const shape = new MatrixShape(1, diagonalLength, this.dtype);
 
         return this._buffer.createSharedBuffer(0, bufferLength).then(sharedBuffer =>
-            new SpeedyMatrix(1, diagonalLength, undefined, this._dtype, stride + 1, sharedBuffer)
+            new SpeedyMatrix(shape, undefined, stride + 1, sharedBuffer)
         ).turbocharge();
     }
 
@@ -336,7 +348,7 @@ export class SpeedyMatrix
      */
     sync()
     {
-        this._nop = this._nop || (this._nop = new MatrixOperationNop(this._rows, this._columns, this._dtype));
+        this._nop = this._nop || (this._nop = new MatrixOperationNop(this.shape));
         return matrixOperationsQueue.enqueue(this._nop, [], this);
     }
 }

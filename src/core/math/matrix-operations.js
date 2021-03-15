@@ -23,6 +23,7 @@ import { IllegalArgumentError, IllegalOperationError } from '../../utils/errors'
 import { Utils } from '../../utils/utils';
 import { SpeedyPromise } from '../../utils/speedy-promise';
 import { SpeedyMatrix } from './matrix';
+import { MatrixShape } from './matrix-shape';
 import { MatrixWorker } from './matrix-worker';
 import { MatrixOperationHeader } from './matrix-operation-header';
 import { LinAlg } from './linalg/linalg';
@@ -45,24 +46,23 @@ export class MatrixOperation
      * (protected) Class constructor
      * @param {string} method method name
      * @param {number} requiredNumberOfInputMatrices how many input matrices do we require?
-     * @param {number} requiredRows required number of rows of the output matrix
-     * @param {number} requiredColumns required number of columns of the output matrix
-     * @param {MatrixDataType} requiredDataType required type of the output matrix
+     * @param {MatrixShape} outputShape shape of the output matrix
      * @param {?object} [userData] custom user-data, serializable
      */
-    constructor(method, requiredNumberOfInputMatrices, requiredRows, requiredColumns, requiredDataType, userData = null)
+    constructor(method, requiredNumberOfInputMatrices, outputShape, userData = null)
     {
         // is it a valid operation?
         if(!LinAlg.hasMethod(method))
             throw new IllegalArgumentError(`Invalid method: "${method}"`);
 
+        /** @type {MatrixShape} shape of the output matrix */
+        this._shape = outputShape;
+
         /** @type {MatrixOperationHeader} metadata related to the operation */
         this._header = new MatrixOperationHeader(
             method,
             requiredNumberOfInputMatrices,
-            requiredRows,
-            requiredColumns,
-            requiredDataType,
+            outputShape,
             userData
         );
 
@@ -76,7 +76,7 @@ export class MatrixOperation
      */
     get rows()
     {
-        return this._header.rows;
+        return this._shape.rows;
     }
 
     /**
@@ -85,7 +85,7 @@ export class MatrixOperation
      */
     get columns()
     {
-        return this._header.columns;
+        return this._shape.columns;
     }
 
     /**
@@ -94,7 +94,16 @@ export class MatrixOperation
      */
     get dtype()
     {
-        return this._header.dtype;
+        return this._shape.dtype;
+    }
+
+    /**
+     * The required shape of the output matrix
+     * @returns {MatrixShape}
+     */
+    get shape()
+    {
+        return this._shape;
     }
 
     /**
@@ -126,7 +135,7 @@ export class MatrixOperation
         }
 
         // do we have a compatible output matrix?
-        this._assertCompatibility(outputMatrix.rows, outputMatrix.columns, outputMatrix.dtype);
+        this._assertCompatibility(outputMatrix.shape);
 
         // prepare the operation header
         this._header.updateMetadata(outputMatrix, inputMatrices);
@@ -153,7 +162,7 @@ export class MatrixOperation
     _runLocally(inputMatrices, outputMatrix)
     {
         // do we have a compatible output matrix?
-        this._assertCompatibility(outputMatrix.rows, outputMatrix.columns, outputMatrix.dtype);
+        this._assertCompatibility(outputMatrix.shape);
 
         // prepare the operation header
         this._header.updateMetadata(outputMatrix, inputMatrices);
@@ -169,20 +178,16 @@ export class MatrixOperation
 
     /**
      * Assert matrix size and type
-     * @param {number} requiredRows 
-     * @param {number} requiredColumns 
-     * @param {MatrixDataType} requiredDataType
+     * @param {MatrixShape} requiredShape will test the shape of the output matrix against requiredShape
      */
-    _assertCompatibility(requiredRows, requiredColumns, requiredDataType)
+    _assertCompatibility(requiredShape)
     {
-        const { rows, columns, dtype } = this._header;
-
-        if(requiredRows === rows && requiredColumns === columns && requiredDataType === dtype)
+        if(this._shape.equals(requiredShape))
             return;
-        else if(requiredDataType !== dtype)
-            throw new IllegalOperationError(`Incompatible matrix type: "${requiredDataType}" vs "${dtype}"`);
+        else if(this.dtype !== requiredShape.dtype)
+            throw new IllegalOperationError(`Incompatible matrix type: expected "${requiredShape.dtype}", found "${this.dtype}"`);
         else
-            throw new IllegalOperationError(`Invalid matrix size: ${rows} x ${columns} (expected ${requiredRows} x ${requiredColumns})`);
+            throw new IllegalOperationError(`Invalid matrix size: ${this.rows} x ${this.columns} (expected ${requiredShape.rows} x ${requiredShape.columns})`);
     }
 
     /**
@@ -233,13 +238,11 @@ export class MatrixOperationNop extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {number} requiredRows required number of rows of the output matrix
-     * @param {number} requiredColumns required number of columns of the output matrix
-     * @param {MatrixDataType} requiredDataType required type of the output matrix
+     * @param {MatrixShape} shape the shape of the output matrix
      */
-    constructor(requiredRows, requiredColumns, requiredDataType)
+    constructor(shape)
     {
-        super('nop', 0, requiredRows, requiredColumns, requiredDataType);
+        super('nop', 0, shape);
     }
 }
 
@@ -250,14 +253,12 @@ export class MatrixOperationFill extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {number} requiredRows required number of rows of the output matrix
-     * @param {number} requiredColumns required number of columns of the output matrix
-     * @param {MatrixDataType} requiredDataType required type of the output matrix
+     * @param {MatrixShape} shape the shape of the output matrix
      * @param {number} value the value we'll use to fill the matrix
      */
-    constructor(requiredRows, requiredColumns, requiredDataType, value)
+    constructor(shape, value)
     {
-        super('fill', 0, requiredRows, requiredColumns, requiredDataType, { value: +value });
+        super('fill', 0, shape, { value: +value });
     }
 }
 
@@ -268,13 +269,11 @@ export class MatrixOperationCopy extends MatrixOperation
 {
     /**
      * Constructor
-     * @param {number} inputRows number of rows of the input matrix
-     * @param {number} inputColumns number of columns of the input matrix
-     * @param {MatrixDataType} dtype required type of the input & output matrices
+     * @param {MatrixShape} shape the shape of the input & output matrices
      */
-    constructor(inputRows, inputColumns, dtype)
+    constructor(shape)
     {
-        super('copy', 1, inputRows, inputColumns, dtype);
+        super('copy', 1, shape);
     }
 }
 
@@ -285,13 +284,11 @@ export class MatrixOperationTranspose extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {number} inputRows number of rows of the input matrix
-     * @param {number} inputColumns number of columns of the input matrix
-     * @param {MatrixDataType} dtype required type of the input & output matrices
+     * @param {MatrixShape} shape the shape of the INPUT matrix
      */
-    constructor(inputRows, inputColumns, dtype)
+    constructor(shape)
     {
-        super('transpose', 1, inputColumns, inputRows, dtype);
+        super('transpose', 1, new MatrixShape(shape.columns, shape.rows, shape.dtype));
     }
 }
 
@@ -303,17 +300,13 @@ export class MatrixOperationAdd extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {number} leftRows number of rows of the left operand
-     * @param {number} leftColumns number of columns of the left operand
-     * @param {MatrixDataType} leftDtype data type of the left operand
-     * @param {number} rightRows number of rows of the right operand
-     * @param {number} rightColumns number of columns of the right operand
-     * @param {MatrixDataType} rightDtype data type of the right operand
+     * @param {MatrixShape} leftShape shape of the left operand
+     * @param {MatrixShape} rightShape shape of the right operand
      */
-    constructor(leftRows, leftColumns, leftDtype, rightRows, rightColumns, rightDtype)
+    constructor(leftShape, rightShape)
     {
-        Utils.assert(leftRows === rightRows && leftColumns === rightColumns && leftDtype === rightDtype);
-        super('add', 2, leftRows, leftColumns, leftDtype);
+        Utils.assert(leftShape.equals(rightShape));
+        super('add', 2, leftShape);
     }
 }
 
@@ -325,17 +318,13 @@ export class MatrixOperationSubtract extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {number} leftRows number of rows of the left operand
-     * @param {number} leftColumns number of columns of the left operand
-     * @param {MatrixDataType} leftDtype data type of the left operand
-     * @param {number} rightRows number of rows of the right operand
-     * @param {number} rightColumns number of columns of the right operand
-     * @param {MatrixDataType} rightDtype data type of the right operand
+     * @param {MatrixShape} leftShape shape of the left operand
+     * @param {MatrixShape} rightShape shape of the right operand
      */
-    constructor(leftRows, leftColumns, leftDtype, rightRows, rightColumns, rightDtype)
+    constructor(leftShape, rightShape)
     {
-        Utils.assert(leftRows === rightRows && leftColumns === rightColumns && leftDtype === rightDtype);
-        super('subtract', 2, leftRows, leftColumns, leftDtype);
+        Utils.assert(leftShape.equals(rightShape));
+        super('subtract', 2, leftShape);
     }
 }
 
@@ -347,17 +336,13 @@ export class MatrixOperationMultiply extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {number} leftRows number of rows of the left operand
-     * @param {number} leftColumns number of columns of the left operand
-     * @param {MatrixDataType} leftDtype data type of the left operand
-     * @param {number} rightRows number of rows of the right operand
-     * @param {number} rightColumns number of columns of the right operand
-     * @param {MatrixDataType} rightDtype data type of the right operand
+     * @param {MatrixShape} leftShape shape of the left operand
+     * @param {MatrixShape} rightShape shape of the right operand
      */
-    constructor(leftRows, leftColumns, leftDtype, rightRows, rightColumns, rightDtype)
+    constructor(leftShape, rightShape)
     {
-        Utils.assert(leftColumns === rightRows && leftDtype === rightDtype);
-        super('multiply', 2, leftRows, rightColumns, leftDtype);
+        Utils.assert(leftShape.columns === rightShape.rows && leftShape.dtype === rightShape.dtype);
+        super('multiply', 2, new MatrixShape(leftShape.rows, rightShape.columns, leftShape.dtype));
     }
 }
 
@@ -369,14 +354,12 @@ export class MatrixOperationScale extends MatrixOperation
 {
     /**
      * Constructor
-     * @param {number} inputRows number of rows of the input matrix
-     * @param {number} inputColumns number of columns of the input matrix
-     * @param {MatrixDataType} dtype required type of the input & output matrices
+     * @param {MatrixShape} shape the shape of the input & output matrices
      * @param {number} scalar
      */
-    constructor(inputRows, inputColumns, dtype, scalar)
+    constructor(shape, scalar)
     {
-        super('scale', 1, inputRows, inputColumns, dtype, { scalar: +scalar });
+        super('scale', 1, shape, { scalar: +scalar });
     }
 }
 
@@ -387,17 +370,13 @@ export class MatrixOperationCompMult extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {number} leftRows number of rows of the left operand
-     * @param {number} leftColumns number of columns of the left operand
-     * @param {MatrixDataType} leftDtype data type of the left operand
-     * @param {number} rightRows number of rows of the right operand
-     * @param {number} rightColumns number of columns of the right operand
-     * @param {MatrixDataType} rightDtype data type of the right operand
+     * @param {MatrixShape} leftShape shape of the left operand
+     * @param {MatrixShape} rightShape shape of the right operand
      */
-    constructor(leftRows, leftColumns, leftDtype, rightRows, rightColumns, rightDtype)
+    constructor(leftShape, rightShape)
     {
-        Utils.assert(leftRows === rightRows && leftColumns === rightColumns && leftDtype === rightDtype);
-        super('compmult', 2, leftRows, leftColumns, leftDtype);
+        Utils.assert(leftShape.equals(rightShape));
+        super('compmult', 2, leftShape);
     }
 }
 
@@ -409,17 +388,13 @@ export class MatrixOperationMultiplyLT extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {number} leftRows number of rows of the left operand
-     * @param {number} leftColumns number of columns of the left operand
-     * @param {MatrixDataType} leftDtype data type of the left operand
-     * @param {number} rightRows number of rows of the right operand
-     * @param {number} rightColumns number of columns of the right operand
-     * @param {MatrixDataType} rightDtype data type of the right operand
+     * @param {MatrixShape} leftShape shape of the left operand
+     * @param {MatrixShape} rightShape shape of the right operand
      */
-    constructor(leftRows, leftColumns, leftDtype, rightRows, rightColumns, rightDtype)
+    constructor(leftShape, rightShape)
     {
-        Utils.assert(leftRows === rightRows && leftDtype === rightDtype);
-        super('multiplylt', 2, leftColumns, rightColumns, leftDtype);
+        Utils.assert(leftShape.rows === rightShape.rows && leftShape.dtype === rightShape.dtype);
+        super('multiplylt', 2, new MatrixShape(leftShape.columns, rightShape.columns, leftShape.dtype));
     }
 }
 
@@ -431,17 +406,13 @@ export class MatrixOperationMultiplyRT extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {number} leftRows number of rows of the left operand
-     * @param {number} leftColumns number of columns of the left operand
-     * @param {MatrixDataType} leftDtype data type of the left operand
-     * @param {number} rightRows number of rows of the right operand
-     * @param {number} rightColumns number of columns of the right operand
-     * @param {MatrixDataType} rightDtype data type of the right operand
+     * @param {MatrixShape} leftShape shape of the left operand
+     * @param {MatrixShape} rightShape shape of the right operand
      */
-    constructor(leftRows, leftColumns, leftDtype, rightRows, rightColumns, rightDtype)
+    constructor(leftShape, rightShape)
     {
-        Utils.assert(leftColumns === rightColumns && leftDtype === rightDtype);
-        super('multiplyrt', 2, leftRows, rightRows, leftDtype);
+        Utils.assert(leftShape.columns === rightShape.columns && leftShape.dtype === rightShape.dtype);
+        super('multiplyrt', 2, new MatrixShape(leftShape.rows, rightShape.rows, leftShape.dtype));
     }
 }
 
@@ -453,17 +424,13 @@ export class MatrixOperationMultiplyVec extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {number} leftRows number of rows of the left operand
-     * @param {number} leftColumns number of columns of the left operand
-     * @param {MatrixDataType} leftDtype data type of the left operand
-     * @param {number} rightRows number of rows of the right operand
-     * @param {number} rightColumns number of columns of the right operand (must be 1)
-     * @param {MatrixDataType} rightDtype data type of the right operand
+     * @param {MatrixShape} leftShape shape of the left operand
+     * @param {MatrixShape} rightShape shape of the right operand (must be a column-vector)
      */
-    constructor(leftRows, leftColumns, leftDtype, rightRows, rightColumns, rightDtype)
+    constructor(leftShape, rightShape)
     {
-        Utils.assert(leftColumns === rightRows && rightColumns === 1 && leftDtype === rightDtype);
-        super('multiplyvec', 2, leftRows, 1, leftDtype);
+        Utils.assert(leftShape.columns === rightShape.rows && rightShape.columns === 1 && leftShape.dtype === rightShape.dtype);
+        super('multiplyvec', 2, new MatrixShape(leftShape.rows, 1, leftShape.dtype));
     }
 }
 
@@ -474,20 +441,18 @@ export class MatrixOperationQR extends MatrixOperation
 {
     /**
      * Constructor
-     * @param {number} inputRows number of rows of the input matrix (must be >= inputColumns)
-     * @param {number} inputColumns number of columns of the input matrix
-     * @param {MatrixDataType} dtype required type of the input & output matrices
+     * @param {MatrixShape} shape shape of the input matrix (must satisfy rows >= columns)
      * @param {string} mode 'full' | 'reduced'
      */
-    constructor(inputRows, inputColumns, dtype, mode)
+    constructor(shape, mode)
     {
         const m = ({ 'full': 'full-qr', 'reduced': 'reduced-qr' })[mode];
         if(m === undefined)
             throw new IllegalArgumentError(`QR decomposition: unknown mode "${mode}"`)
 
-        //Utils.assert(inputRows >= inputColumns);
-        const columns = m == 'full-qr' ? inputColumns + inputRows : 2 * inputColumns;
-        super('qr', 1, inputRows, columns, dtype, { mode: m });
+        //Utils.assert(shape.rows >= shape.columns);
+        const columns = m == 'full-qr' ? shape.columns + shape.rows : 2 * shape.columns;
+        super('qr', 1, new MatrixShape(shape.rows, columns, shape.dtype), { mode: m });
     }
 }
 
@@ -506,17 +471,13 @@ export class MatrixOperationQRSolve extends MatrixOperation
 {
     /**
      * Constructor
-     * @param {number} rowsA required number of rows of the input matrix A
-     * @param {number} columnsA required number of columns of the input matrix A
-     * @param {MatrixDataType} dtypeA data type of the input matrix A
-     * @param {number} rowsB required number of rows of the input vector b
-     * @param {number} columnsB required number of columns of the input vector b (must be 1)
-     * @param {MatrixDataType} dtypeB data type of the input vector b
+     * @param {MatrixShape} shapeA required shape of the input matrix A
+     * @param {MatrixShape} shapeB required shape of the input matrix B (must be a column-vector)
      */
-    constructor(rowsA, columnsA, dtypeA, rowsB, columnsB, dtypeB)
+    constructor(shapeA, shapeB)
     {
-        Utils.assert(rowsA === rowsB && columnsB === 1 && dtypeA === dtypeB);
-        super('qr', 2, rowsA, columnsA + 1, dtypeA, { mode: 'reduced-Q\'x' });
+        Utils.assert(shapeA.rows === shapeB.rows && shapeB.columns === 1 && shapeA.dtype === shapeB.dtype);
+        super('qr', 2, new MatrixShape(shapeA.rows, shapeA.columns + 1, shapeA.dtype), { mode: 'reduced-Q\'x' });
     }
 }
 
@@ -529,14 +490,12 @@ export class MatrixOperationBackSubstitution extends MatrixOperation
 {
     /**
      * Constructor
-     * @param {number} inputRows number of rows of the input matrix
-     * @param {number} inputColumns number of columns of the input matrix
-     * @param {MatrixDataType} dtype required type of the input & output matrices
+     * @param {MatrixShape} shape shape of the input matrix
      */
-    constructor(inputRows, inputColumns, dtype)
+    constructor(shape)
     {
-        Utils.assert(inputColumns === inputRows + 1);
-        super('backsub', 1, inputRows, 1, dtype);
+        Utils.assert(shape.columns === shape.rows + 1);
+        super('backsub', 1, new MatrixShape(shape.rows, 1, shape.dtype));
     }
 }
 
@@ -549,16 +508,12 @@ export class MatrixOperationLSSolve extends MatrixOperation
 {
     /**
      * Constructor
-     * @param {number} rowsA required number of rows of the input matrix A
-     * @param {number} columnsA required number of columns of the input matrix A
-     * @param {MatrixDataType} dtypeA data type of the input matrix A
-     * @param {number} rowsB required number of rows of the input vector b
-     * @param {number} columnsB required number of columns of the input vector b (must be 1)
-     * @param {MatrixDataType} dtypeB data type of the input vector b
+     * @param {MatrixShape} shapeA required shape of the input matrix A
+     * @param {MatrixShape} shapeB required shape of the input matrix B (must be a column-vector)
      */
-    constructor(rowsA, columnsA, dtypeA, rowsB, columnsB, dtypeB)
+    constructor(shapeA, shapeB)
     {
-        Utils.assert(rowsA === rowsB && columnsB === 1 && dtypeA === dtypeB);
-        super('lssolve', 2, columnsA, 1, dtypeA);
+        Utils.assert(shapeA.rows === shapeB.rows && shapeB.columns === 1 && shapeA.dtype === shapeB.dtype);
+        super('lssolve', 2, new MatrixShape(shapeA.columns, 1, shapeA.dtype));
     }
 }

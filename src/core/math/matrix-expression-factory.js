@@ -20,6 +20,7 @@
  */
 
 import { MatrixType } from './matrix-type';
+import { MatrixShape } from './matrix-shape';
 import { SpeedyMatrix } from './matrix';
 import { SpeedyMatrixElementaryExpr } from './matrix-expressions';
 import { IllegalArgumentError } from '../../utils/errors';
@@ -95,18 +96,15 @@ export class SpeedyMatrixExprFactory extends Function
      */
     _create(rows, columns = rows, values = null, dtype = MatrixType.default)
     {
-        let matrix = null;
-
-        if(!MatrixType.isValid(dtype))
-            throw new IllegalArgumentError(`Invalid matrix type: "${dtype}"`);
+        let shape = new MatrixShape(rows, columns, dtype), matrix = null;
 
         if(values != null) {
             if(!Array.isArray(values))
-                throw new IllegalArgumentError(`Can't initialize Matrix with values ${values}`);
+                throw new IllegalArgumentError(`Can't initialize SpeedyMatrix with values ${values}`);
             if(values.length > 0)
-                matrix = new SpeedyMatrix(rows, columns, values, dtype);
+                matrix = new SpeedyMatrix(shape, values);
         }
 
-        return new SpeedyMatrixElementaryExpr(rows, columns, dtype, matrix);
+        return new SpeedyMatrixElementaryExpr(shape, matrix);
     }
 }
