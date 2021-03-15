@@ -979,7 +979,7 @@ class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
         return matrixOperationsQueue.enqueue(
             this._operation,
             [ matrix ],
-            this._submatrix
+            this._matrix
         );
     }
 }
@@ -1051,7 +1051,7 @@ class SpeedyMatrixReadwriteDiagonalExpr extends SpeedyMatrixLvalueExpr
         return matrixOperationsQueue.enqueue(
             this._operation,
             [ matrix ],
-            this._diagonal
+            this._matrix
         );
     }
 }
