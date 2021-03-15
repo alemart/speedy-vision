@@ -800,7 +800,7 @@ class SpeedyMatrixAssignmentExpr extends SpeedyMatrixLvalueExpr
                 rvalue = new SpeedyMatrixElementaryExpr(lvalue._shape, matrix);
             }
             else
-                throw new IllegalArgumentError(`Can't assign matrix to ${rvalue}`)
+                throw new IllegalArgumentError(`Can't assign matrix to ${rvalue}`);
         }
 
         /** @type {SpeedyMatrixLvalueExpr} */
