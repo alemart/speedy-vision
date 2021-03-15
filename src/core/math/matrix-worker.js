@@ -24,7 +24,7 @@ import { IllegalOperationError } from '../../utils/errors';
 import { SpeedyPromise } from '../../utils/speedy-promise';
 
 // Constants
-const MAX_MESSAGE_ID = (1 << 30) - 1; // use the form 2^n - 1
+const MAX_MESSAGE_ID = 0x7FFFFFFF; // use the form 2^n - 1
 const NOP = 'nop'; // no operation
 
 /**
@@ -47,8 +47,13 @@ export class MatrixWorker
      */
     constructor()
     {
+        /** @type {number} message counter */
         this._msgId = 0;
+
+        /** @type {Map<number,Function>} callback table */
         this._callbackTable = new Map();
+
+        /** @type {Worker} WebWorker */
         this._worker = this._createWorker();
     }
 
@@ -65,7 +70,7 @@ export class MatrixWorker
             return SpeedyPromise.resolve([outputBuffer, inputBuffers]);
 
         const id = (this._msgId = (this._msgId + 1) & MAX_MESSAGE_ID);
-        const transferables = [ outputBuffer, ...inputBuffers ].filter(
+        const transferables = inputBuffers.concat(outputBuffer).filter(
             (x, i, arr) => arr.indexOf(x) === i // remove duplicates
         );
         const msg = { id, header, outputBuffer, inputBuffers, transferables };
