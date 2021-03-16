@@ -164,6 +164,22 @@ describe('Matrix', function() {
             }
         });
 
+        it('reads a diagonal', async function() {
+            const n = 5;
+            for(let i = 1; i <= n; i++) {
+                const matrix = Speedy.Matrix.Eye(i).times(i * i);
+                await printm(matrix);
+
+                const diag = matrix.diagonal();
+                expect(diag.rows).toEqual(1);
+                expect(diag.columns).toEqual(i);
+                await printm(diag);
+
+                const diagData = await diag.read();
+                expect(diagData).toBeElementwiseEqual(Array(i).fill(i * i));
+            }
+        });
+
     });
 
 
