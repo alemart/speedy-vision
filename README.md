@@ -37,7 +37,7 @@ There are plenty of [demos](#demos) available!
 
 If you appreciate my work, [make a donation](https://www.paypal.com/donate?hosted_button_id=JS6AR2WMLAJTY). I appreciate it!
 
-**Contact:** alemartf `at` gmail `.` com
+**Contact:** alemartf `at` gmail `dot` com
 
 -----
 
