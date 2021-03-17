@@ -20,7 +20,7 @@
  */
 
 import { SpeedyMatrix } from './matrix';
-import { MatrixType } from './matrix-type';
+import { BoundMatrixOperation, BoundMatrixOperationTree } from './bound-matrix-operation';
 import { MatrixShape } from './matrix-shape';
 import { MatrixOperationsQueue } from './matrix-operations-queue';
 import { AbstractMethodError, IllegalArgumentError, IllegalOperationError } from '../../utils/errors';
@@ -72,6 +72,9 @@ class SpeedyMatrixExpr
 
         /** @type {?number[]} internal buffer for reading matrix data */
         this._readbuf = null;
+
+        /** @type {BoundMatrixOperation} this expression, compiled */
+        this._compiledExpr = null; // to be computed lazily
     }
 
     /**
@@ -111,6 +114,37 @@ class SpeedyMatrixExpr
     }
 
     /**
+     * Compile this expression
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compile()
+    {
+        throw new AbstractMethodError();
+    }
+
+    /**
+     * Compile and evaluate this expression - it
+     * should be faster than a simple _evaluate()
+     * in most cases
+     * @returns {SpeedyPromise<SpeedyMatrix>}
+     */
+    _compileAndEvaluate()
+    {
+        // We can store an expression in compiled form
+        // as long as the pointers of the internal matrices,
+        // i.e., the matrices bound to the matrix operations,
+        // do not change in time. If they do change, we need
+        // to recompile.
+        if(this._compiledExpr === null) {
+            return this._compile().then(result =>
+                this._compiledExpr = result.pack() // store the compiled object
+            ).then(c => c.run()).turbocharge();
+        }
+        else
+            return this._compiledExpr.run().turbocharge();
+    }
+
+    /**
      * Get the matrix associated with the result of this expression
      * This matrix must be guaranteed to be available after evaluating this expression
      * @returns {SpeedyMatrix}
@@ -128,6 +162,26 @@ class SpeedyMatrixExpr
     _assign(matrix)
     {
         throw new IllegalOperationError(`Can't assign matrix: not a l-value`);
+    }
+
+    /**
+     * Compile an assignment operation
+     * @param {BoundMatrixOperationTree} value
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compileAssignment(value)
+    {
+        throw new IllegalOperationError(`Can't assign matrix: not a l-value`);
+    }
+
+    /**
+     * Creates an assignment expression (i.e., this := expr)
+     * @param {SpeedyMatrixExpr} expr
+     * @returns {SpeedyMatrixAssignmentExpr}
+     */
+    _set(expr)
+    {
+        throw new IllegalOperationError(`Can't create an assignment expression: not a l-value`);
     }
 
     /**
@@ -501,6 +555,21 @@ class SpeedyMatrixUnaryExpr extends SpeedyMatrixTempExpr
     }
 
     /**
+     * Compile this expression
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compile()
+    {
+        return this._expr._compile().then(node =>
+            new BoundMatrixOperationTree(
+                this._operation,
+                this._matrix,
+                [ node ]
+            )
+        );
+    }
+
+    /**
      * Input expression
      * @returns {SpeedyMatrixExpr}
      */
@@ -557,6 +626,24 @@ class SpeedyMatrixBinaryExpr extends SpeedyMatrixTempExpr
                 this._matrix
             )
         ).then(() => this);
+    }
+
+    /**
+     * Compile this expression
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compile()
+    {
+        return SpeedyPromise.all([
+            this._leftExpr._compile().turbocharge(),
+            this._rightExpr._compile().turbocharge()
+        ]).then(([ leftNode, rightNode ]) =>
+            new BoundMatrixOperationTree(
+                this._operation,
+                this._matrix,
+                [ leftNode, rightNode ]
+            )
+        );
     }
 
     /**
@@ -644,6 +731,35 @@ class SpeedyMatrixReadonlyBlockExpr extends SpeedyMatrixExpr
             return this;
         });
     }
+
+    /**
+     * Compile this expression
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compile()
+    {
+        return this._expr._compile().then(node => {
+            if(node.outputMatrix !== this._cachedMatrix || this._submatrix === null) {
+                this._cachedMatrix = node.outputMatrix;
+                return this._cachedMatrix.block(
+                    this._firstRow,
+                    this._lastRow,
+                    this._firstColumn,
+                    this._lastColumn
+                ).then(submatrix => {
+                    this._submatrix = submatrix;
+                    return node;
+                });
+            }
+            return node;
+        }).then(node =>
+            new BoundMatrixOperationTree(
+                null,
+                this._submatrix,
+                [ node ]
+            )
+        );
+    }
 }
 
 /**
@@ -697,8 +813,112 @@ class SpeedyMatrixReadonlyDiagonalExpr extends SpeedyMatrixExpr
             return this;
         });
     }
+
+    /**
+     * Compile this expression
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compile()
+    {
+        return this._expr._compile().then(node => {
+            if(node.outputMatrix !== this._cachedMatrix || this._diagonal === null) {
+                this._cachedMatrix = node.outputMatrix;
+                return this._cachedMatrix.diagonal().then(diagonal => {
+                    this._diagonal = diagonal;
+                    return node;
+                });
+            }
+            return node;
+        }).then(node =>
+            new BoundMatrixOperationTree(
+                null,
+                this._diagonal,
+                [ node ]
+            )
+        );
+    }
 }
 
+/**
+ * Assignment expression
+ * Assign rvalue to lvalue (i.e., lvalue := rvalue)
+ */
+class SpeedyMatrixAssignmentExpr extends SpeedyMatrixExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixLvalueExpr} lvalue
+     * @param {SpeedyMatrixExpr|number[]} rvalue matrix expression or array of numbers in column-major format
+     */
+    constructor(lvalue, rvalue)
+    {
+        super(lvalue._shape);
+
+        // convert rvalue to SpeedyMatrixExpr
+        if(!(rvalue instanceof SpeedyMatrixExpr)) {
+            if(Array.isArray(rvalue)) {
+                const matrix = new SpeedyMatrix(lvalue._shape, rvalue);
+                rvalue = new SpeedyMatrixElementaryExpr(lvalue._shape, matrix);
+            }
+            else
+                throw new IllegalArgumentError(`Can't assign matrix to ${rvalue}`);
+        }
+
+        /** @type {SpeedyMatrixLvalueExpr} */
+        this._lvalue = lvalue;
+
+        /** @type {SpeedyMatrixExpr} */
+        this._rvalue = rvalue;
+
+        // validate
+        SpeedyMatrixExpr._assertSameShape(lvalue._shape, rvalue._shape);
+        //Utils.assert(lvalue instanceof SpeedyMatrixLvalueExpr);
+    }
+
+    /**
+     * Get the matrix associated with this lvalue expression
+     * This matrix must be guaranteed to be available after evaluating this expression
+     * @returns {SpeedyMatrix}
+     */
+    get _matrix()
+    {
+        return this._lvalue._matrix;
+    }
+
+    /**
+     * Evaluate expression
+     * @returns {SpeedyPromise<SpeedyMatrixAssignmentExpr>}
+     */
+    _evaluate()
+    {
+        return SpeedyPromise.all([
+            this._lvalue._evaluate().turbocharge(),
+            this._rvalue._evaluate().turbocharge()
+        ]).then(([ lvalue, rvalue ]) =>
+            lvalue._assign(rvalue._matrix).turbocharge()
+        ).then(() => this);
+    }
+
+    /**
+     * Compile this expression
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compile()
+    {
+        return SpeedyPromise.all([
+            this._lvalue._compile().turbocharge(),
+            this._rvalue._compile().turbocharge()
+        ]).then(([ lvalue, rvalue ]) =>
+            this._lvalue._compileAssignment(rvalue).then(assignment =>
+                new BoundMatrixOperationTree(
+                    null,
+                    lvalue.outputMatrix,
+                    [ lvalue, assignment ]
+                )
+            )
+        );
+    }
+}
 
 
 
@@ -730,6 +950,26 @@ class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
     _assign(matrix)
     {
         throw new AbstractMethodError();
+    }
+
+    /**
+     * Compile an assignment operation
+     * @param {BoundMatrixOperationTree} value
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compileAssignment(value)
+    {
+        throw new AbstractMethodError();
+    }
+
+    /**
+     * Creates an assignment expression
+     * @param {SpeedyMatrixExpr} expr
+     * @returns {SpeedyMatrixAssignmentExpr}
+     */
+    _set(expr)
+    {
+        return new SpeedyMatrixAssignmentExpr(this, expr);
     }
 
     /**
@@ -779,67 +1019,6 @@ class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
 }
 
 /**
- * Assignment expression
- * Assign rvalue to lvalue (i.e., lvalue := rvalue)
- */
-class SpeedyMatrixAssignmentExpr extends SpeedyMatrixLvalueExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixLvalueExpr} lvalue
-     * @param {SpeedyMatrixExpr|number[]} rvalue matrix expression or array of numbers in column-major format
-     */
-    constructor(lvalue, rvalue)
-    {
-        super(lvalue._shape);
-
-        // convert rvalue to SpeedyMatrixExpr
-        if(!(rvalue instanceof SpeedyMatrixExpr)) {
-            if(Array.isArray(rvalue)) {
-                const matrix = new SpeedyMatrix(lvalue._shape, rvalue);
-                rvalue = new SpeedyMatrixElementaryExpr(lvalue._shape, matrix);
-            }
-            else
-                throw new IllegalArgumentError(`Can't assign matrix to ${rvalue}`);
-        }
-
-        /** @type {SpeedyMatrixLvalueExpr} */
-        this._lvalue = lvalue;
-
-        /** @type {SpeedyMatrixExpr} */
-        this._rvalue = rvalue;
-
-        // validate
-        SpeedyMatrixExpr._assertSameShape(lvalue._shape, rvalue._shape);
-        //Utils.assert(lvalue instanceof SpeedyMatrixLvalueExpr);
-    }
-
-    /**
-     * Evaluate expression
-     * @returns {SpeedyPromise<SpeedyMatrixAssignmentExpr>}
-     */
-    _evaluate()
-    {
-        return SpeedyPromise.all([
-            this._lvalue._evaluate().turbocharge(),
-            this._rvalue._evaluate().turbocharge()
-        ]).then(([ lvalue, rvalue ]) =>
-            lvalue._assign(rvalue._matrix).turbocharge()
-        ).then(() => this);
-    }
-
-    /**
-     * Get the matrix associated with this lvalue expression
-     * This matrix must be guaranteed to be available after evaluating this expression
-     * @returns {SpeedyMatrix}
-     */
-    get _matrix()
-    {
-        return this._lvalue._matrix;
-    }
-}
-
-/**
  * An elementary expression representing a single matrix
  * (e.g., expression 'A' represents a single matrix)
  */
@@ -857,6 +1036,12 @@ export class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
         /** @type {?SpeedyMatrix} the matrix associated with this expression */
         this._usermatrix = matrix;
 
+        /** @type {boolean} this is used to decide how the assignment is done */
+        this._compiledMode = false;
+
+        /** @type {MatrixOperation} copy operation, used in compiled mode */
+        this._operation = new MatrixOperationCopy(this._shape);
+
         // validate
         if(matrix != null)
             SpeedyMatrixExpr._assertSameShape(this._shape, matrix.shape);
@@ -869,8 +1054,12 @@ export class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
      */
     get _matrix()
     {
-        if(this._usermatrix == null)
-            throw new IllegalOperationError(`Matrix doesn't have any data. Make sure you assign data to it.`);
+        if(this._usermatrix == null) {
+            if(this._compiledMode)
+                this._usermatrix = new SpeedyMatrix(this._shape); // needed for _compile()
+            else
+                throw new IllegalOperationError(`Matrix doesn't have any data. Make sure you assign data to it.`);
+        }
 
         return this._usermatrix;
     }
@@ -886,14 +1075,52 @@ export class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
 
     /**
      * Assign a matrix
-     * We just change pointers; no actual copying of data takes place
      * @param {SpeedyMatrix} matrix
      * @returns {SpeedyPromise<void>} resolves as soon as the assignment is done
      */
     _assign(matrix)
     {
-        this._usermatrix = matrix;
-        return SpeedyPromise.resolve();
+        if(!this._compiledMode) {
+            // We just change pointers; no actual copying of data takes place
+            this._usermatrix = matrix;
+            return SpeedyPromise.resolve();
+        }
+
+        // actually copy the data
+        return matrixOperationsQueue.enqueue(
+            this._operation,
+            [ matrix ],
+            this._matrix
+        );
+    }
+
+    /**
+     * Compile this expression
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compile()
+    {
+        this._compiledMode = true;
+        return SpeedyPromise.resolve(new BoundMatrixOperationTree(
+            null,
+            this._matrix,
+            []
+        ));
+    }
+
+    /**
+     * Compile an assignment operation
+     * @param {BoundMatrixOperationTree} value
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compileAssignment(value)
+    {
+        this._compiledMode = true;
+        return SpeedyPromise.resolve(new BoundMatrixOperationTree(
+            this._operation, // copy
+            this._matrix,
+            [ value ]
+        ));
     }
 }
 
@@ -982,6 +1209,50 @@ class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
             this._matrix
         );
     }
+
+    /**
+     * Compile this expression
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compile()
+    {
+        return this._expr._compile().then(node => {
+            if(node.outputMatrix !== this._cachedMatrix || this._submatrix === null) {
+                this._cachedMatrix = node.outputMatrix;
+                return this._cachedMatrix.block(
+                    this._firstRow,
+                    this._lastRow,
+                    this._firstColumn,
+                    this._lastColumn
+                ).then(submatrix => {
+                    this._submatrix = submatrix;
+                    return node;
+                });
+            }
+            return node;
+        }).then(node =>
+            new BoundMatrixOperationTree(
+                null,
+                this._submatrix,
+                [ node ]
+            )
+        );
+    }
+
+    /**
+     * Compile an assignment operation
+     * @param {BoundMatrixOperationTree} value
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compileAssignment(value)
+    {
+        this._compiledMode = true;
+        return SpeedyPromise.resolve(new BoundMatrixOperationTree(
+            this._operation, // copy
+            this._matrix,
+            [ value ]
+        ));
+    }
 }
 
 /**
@@ -1054,6 +1325,45 @@ class SpeedyMatrixReadwriteDiagonalExpr extends SpeedyMatrixLvalueExpr
             this._matrix
         );
     }
+
+    /**
+     * Compile this expression
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compile()
+    {
+        return this._expr._compile().then(node => {
+            if(node.outputMatrix !== this._cachedMatrix || this._diagonal === null) {
+                this._cachedMatrix = node.outputMatrix;
+                return this._cachedMatrix.diagonal().then(diagonal => {
+                    this._diagonal = diagonal;
+                    return node;
+                });
+            }
+            return node;
+        }).then(node =>
+            new BoundMatrixOperationTree(
+                null,
+                this._diagonal,
+                [ node ]
+            )
+        );
+    }
+
+    /**
+     * Compile an assignment operation
+     * @param {BoundMatrixOperationTree} value
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compileAssignment(value)
+    {
+        this._compiledMode = true;
+        return SpeedyPromise.resolve(new BoundMatrixOperationTree(
+            this._operation, // copy
+            this._matrix,
+            [ value ]
+        ));
+    }
 }
 
 
@@ -1090,6 +1400,19 @@ class SpeedyMatrixFillExpr extends SpeedyMatrixTempExpr
             [],
             this._matrix
         ).then(() => this);
+    }
+
+    /**
+     * Compile this expression
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compile()
+    {
+        return SpeedyPromise.resolve(new BoundMatrixOperationTree(
+            this._operation,
+            this._matrix,
+            []
+        ));
     }
 }
 

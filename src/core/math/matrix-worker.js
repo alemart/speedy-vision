@@ -20,6 +20,7 @@
  */
 
 import { LinAlg } from './linalg/linalg';
+import { MatrixOperationHeader } from './matrix-operation-header';
 import { IllegalOperationError } from '../../utils/errors';
 import { SpeedyPromise } from '../../utils/speedy-promise';
 
@@ -59,7 +60,7 @@ export class MatrixWorker
 
     /**
      * Run computation in a Web Worker
-     * @param {object} header serializable
+     * @param {MatrixOperationHeader} header serializable data
      * @param {ArrayBuffer} outputBuffer data of the output matrix
      * @param {ArrayBuffer[]} inputBuffers data of the input matrices
      * @returns {SpeedyPromise<Array>} resolves as soon as the computation is complete

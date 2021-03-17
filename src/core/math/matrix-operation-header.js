@@ -39,7 +39,7 @@ export class MatrixOperationHeader
     {
         // ALL FIELDS ARE SERIALIZABLE
         const n = numberOfInputMatrices | 0;
-        Utils.assert(n >= 0);
+        //Utils.assert(n >= 0);
 
         /** @type {string} method name */
         this.method = String(method);

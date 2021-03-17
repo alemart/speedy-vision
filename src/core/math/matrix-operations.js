@@ -52,8 +52,8 @@ export class MatrixOperation
     constructor(method, requiredNumberOfInputMatrices, outputShape, userData = null)
     {
         // is it a valid operation?
-        if(!LinAlg.hasMethod(method))
-            throw new IllegalArgumentError(`Invalid method: "${method}"`);
+        //if(!LinAlg.hasMethod(method))
+        //    throw new IllegalArgumentError(`Invalid method: "${method}"`);
 
         /** @type {MatrixShape} shape of the output matrix */
         this._shape = outputShape;
@@ -65,9 +65,6 @@ export class MatrixOperation
             outputShape,
             userData
         );
-
-        /** @type {number} a measure of the "workload" of this operation */
-        this._workload = 0; // to be determined lazily
     }
 
     /**
@@ -120,19 +117,21 @@ export class MatrixOperation
      * The internal buffers of the input & the output matrices are assumed to be locked
      * @param {SpeedyMatrix[]} inputMatrices
      * @param {SpeedyMatrix} outputMatrix
-     * @returns {SpeedyPromise<void>} a promise that resolves to outbuf as soon as the operation is completed
+     * @returns {SpeedyPromise<void>} a promise that resolves as soon as the operation is complete
      */
     run(inputMatrices, outputMatrix)
     {
+        /*
         // run locally if we have a "small workload"
-        this._workload = this._workload || this._computeWorkload(inputMatrices.concat(outputMatrix));
-        if(this._workload <= SMALL_WORKLOAD) {
+        const workload = this._computeWorkload(inputMatrices.concat(outputMatrix));
+        if(workload <= SMALL_WORKLOAD) {
             // there's an overhead for passing data
             // back and forth to the Web Worker, and
             // we don't want to pay it if we're
             // dealing with "small" matrices
             return this._runLocally(inputMatrices, outputMatrix);
         }
+        */
 
         // do we have a compatible output matrix?
         this._assertCompatibility(outputMatrix.shape);
@@ -157,7 +156,7 @@ export class MatrixOperation
      * Run matrix operation in the same thread
      * @param {SpeedyMatrix[]} inputMatrices
      * @param {SpeedyMatrix} outputMatrix
-     * @returns {SpeedyPromise<void>} a promise that resolves to outbuf as soon as the operation is completed
+     * @returns {SpeedyPromise<void>} a promise that resolves as soon as the operation is complete
      */
     _runLocally(inputMatrices, outputMatrix)
     {
@@ -515,5 +514,35 @@ export class MatrixOperationLSSolve extends MatrixOperation
     {
         Utils.assert(shapeA.rows === shapeB.rows && shapeB.columns === 1 && shapeA.dtype === shapeB.dtype);
         super('lssolve', 2, new MatrixShape(shapeA.columns, 1, shapeA.dtype));
+    }
+}
+
+/**
+ * A sequence of MatrixOperations encapsulated into one
+ */
+export class MatrixOperationSequence extends MatrixOperation
+{
+    /**
+     * Constructor
+     * @param {MatrixShape} shape shape of the output matrix of the last step
+     * @param {number} n number of input matrices
+     * @param {object[]} steps steps to be performed, as returned by step()
+     */
+    constructor(shape, n, steps)
+    {
+        super('sequence', n, shape, steps);
+    }
+
+    /**
+     * Helper utility
+     * @param {MatrixOperation} operation
+     * @param {number} indexOfOutputMatrix
+     * @param {number[]} indicesOfInputMatrices
+     * @returns {object}
+     */
+    static step(operation, indexOfOutputMatrix, indicesOfInputMatrices)
+    {
+        const header = operation._header;
+        return { header, indexOfOutputMatrix, indicesOfInputMatrices };
     }
 }
