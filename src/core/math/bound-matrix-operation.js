@@ -53,18 +53,6 @@ export class BoundMatrixOperation
         // make it immutable
         return Object.freeze(this);
     }
-
-    /**
-     * Run the underlying MatrixOperation
-     * @returns {SpeedyPromise<void>} a promise that resolves as soon as the operation is complete
-     */
-    run()
-    {
-        if(this.operation !== null)
-            return this.operation.run(this.inputMatrices, this.outputMatrix);
-        else
-            return SpeedyPromise.resolve(); // nothing to do
-    }
 }
 
 /**
@@ -136,8 +124,8 @@ export class BoundMatrixOperationTree
         // bind the sequence of operations to the appropriate matrices
         return new BoundMatrixOperation(
             new MatrixOperationSequence(
-                this.outputMatrix.shape,
                 matrices.length,
+                this.outputMatrix.shape,
                 steps
             ),
             this.outputMatrix,

@@ -29,7 +29,7 @@ import { MatrixOperationHeader } from './matrix-operation-header';
 import { LinAlg } from './linalg/linalg';
 
 // Constants
-const SMALL_WORKLOAD = 40; // what is "small"? further experimental testing is desirable
+//const SMALL_WORKLOAD = 40; // what is "small"? further experimental testing is desirable
                            // a binary operation for 3x3 matrices, e.g. C = A + B, has "small" workload
 
 // Worker
@@ -524,11 +524,11 @@ export class MatrixOperationSequence extends MatrixOperation
 {
     /**
      * Constructor
-     * @param {MatrixShape} shape shape of the output matrix of the last step
      * @param {number} n number of input matrices
+     * @param {MatrixShape} shape shape of the output matrix of the last step
      * @param {object[]} steps steps to be performed, as returned by step()
      */
-    constructor(shape, n, steps)
+    constructor(n, shape, steps)
     {
         super('sequence', n, shape, steps);
     }
