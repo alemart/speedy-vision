@@ -115,9 +115,10 @@ export class BoundMatrixOperationTree
                 const { operation, outputMatrix, inputMatrices } = node._boundOperation;
                 const indexOfOutputMatrix = matrices.push(outputMatrix) - 1;
                 const indicesOfInputMatrices = inputMatrices.map(inputMatrix => matrices.push(inputMatrix) - 1);
-                steps.push(
-                    MatrixOperationSequence.step(operation, indexOfOutputMatrix, indicesOfInputMatrices)
-                );
+
+                const step = MatrixOperationSequence.step(operation, indexOfOutputMatrix, indicesOfInputMatrices)
+                step.header.updateMetadata(outputMatrix, inputMatrices);
+                steps.push(step);
             }
         }
 
