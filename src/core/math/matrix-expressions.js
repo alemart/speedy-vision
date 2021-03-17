@@ -138,10 +138,21 @@ class SpeedyMatrixExpr
         if(this._compiledExpr === null) {
             return this._compile().then(result =>
                 this._compiledExpr = result.pack() // store the compiled object
-            ).then(c => c.run()).turbocharge();
+            ).then(compiledExpr =>
+                matrixOperationsQueue.enqueue(
+                    compiledExpr.operation,
+                    compiledExpr.inputMatrices,
+                    compiledExpr.outputMatrix
+                )
+            ).turbocharge();
         }
-        else
-            return this._compiledExpr.run().turbocharge();
+        else {
+            return matrixOperationsQueue.enqueue(
+                this._compiledExpr.operation,
+                this._compiledExpr.inputMatrices,
+                this._compiledExpr.outputMatrix
+            ).turbocharge();
+        }
     }
 
     /**
