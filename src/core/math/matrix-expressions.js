@@ -1257,7 +1257,6 @@ class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
      */
     _compileAssignment(value)
     {
-        this._compiledMode = true;
         return SpeedyPromise.resolve(new BoundMatrixOperationTree(
             this._operation, // copy
             this._matrix,
@@ -1368,7 +1367,6 @@ class SpeedyMatrixReadwriteDiagonalExpr extends SpeedyMatrixLvalueExpr
      */
     _compileAssignment(value)
     {
-        this._compiledMode = true;
         return SpeedyPromise.resolve(new BoundMatrixOperationTree(
             this._operation, // copy
             this._matrix,
