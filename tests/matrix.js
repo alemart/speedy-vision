@@ -469,6 +469,89 @@ describe('Matrix', function() {
             expect(att).toBeElementwiseEqual(att_);
         });
 
+        it('evaluates expressions with multiple operations', async function() {
+            let Z = Speedy.Matrix.Zeros(3), I = Speedy.Matrix.Eye(3);
+            let T = Speedy.Matrix(3, 3, [
+                1, 0, 0,
+                0, 1, 0,
+                10, 5, 1,
+            ]);
+            let R = Speedy.Matrix(3, 3, [
+                0, -1, 0,
+                1, 0, 0,
+                0, 0, 1,
+            ]);
+            let S = Speedy.Matrix(3, 3, [
+                2, 0, 0,
+                0, 2, 0,
+                0, 0, 1,
+            ]);
+            let x = Speedy.Matrix(3, 1, [
+                1, 0, 1
+            ]);
+            let t = Speedy.Matrix(3, 1, [
+                10, 5, 0
+            ]);
+            let xPlusT = Speedy.Matrix(3, 1, [
+                1+10, 0+5, 1
+            ]);
+            let RtimesXplusT = Speedy.Matrix(3, 1, [
+                0+5, -(1+10), 1
+            ]);
+            let StimesRtimesXplusT = Speedy.Matrix(3, 1, [
+                2*5, 2*(-(1+10)), 1
+            ]);
+
+            await printm('S:', S, 'R:', R, 'T:', T, 'x:', x, 't:', t);
+
+            let y1 = S.times(R.times(T.times(x)));
+            let y2 = S.times(R).times(T.times(x));
+            let y3 = S.times(R).times(T).times(x);
+            let y4 = S.times(R).times(xPlusT);
+            let y5 = S.times(RtimesXplusT);
+            let y6 = ((Z.plus(Z.times(I))).plus(I)).times(StimesRtimesXplusT);
+            let y7 = StimesRtimesXplusT;
+            let y8 = R.times(T.times(x));
+            let y9 = (R.times(T)).times(x);
+            let y10 = R.times(x.plus(t));
+            let y11 = RtimesXplusT;
+
+            await printm('----------------');
+            await printm('R T x:', y11);
+            await printm('R (T x):', y8);
+            await printm('(R T) x:', y9);
+            await printm('R (x+t):', y10);
+            await printm('----------------');
+            await printm('S R T x:', y7);
+            await printm('S ( R ( Tx ) ):', y1);
+            await printm('(S R) (T x):', y2);
+            await printm('( (S R) T ) x:', y3);
+            await printm('(S R) (x + t):', y4);
+            await printm('S ( R(x+t) ):', y5);
+            await printm('SR(x+t):', y6);
+
+            let z1 = await y1.read();
+            let z2 = await y2.read();
+            let z3 = await y3.read();
+            let z4 = await y4.read();
+            let z5 = await y5.read();
+            let z6 = await y6.read();
+            let z7 = await y7.read();
+            let z8 = await y8.read();
+            let z9 = await y9.read();
+            let z10 = await y10.read();
+            let z11 = await y11.read();
+            expect(z1).toBeElementwiseEqual(z7);
+            expect(z2).toBeElementwiseEqual(z7);
+            expect(z3).toBeElementwiseEqual(z7);
+            expect(z4).toBeElementwiseEqual(z7);
+            expect(z5).toBeElementwiseEqual(z7);
+            expect(z6).toBeElementwiseEqual(z7);
+            expect(z8).toBeElementwiseEqual(z11);
+            expect(z9).toBeElementwiseEqual(z11);
+            expect(z10).toBeElementwiseEqual(z11);
+        })
+
     });
 
 
