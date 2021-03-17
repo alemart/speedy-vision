@@ -125,16 +125,19 @@ class SpeedyMatrixExpr
     /**
      * Compile and evaluate this expression - it
      * should be faster than a simple _evaluate()
-     * in most cases
+     * in most cases, because the WebWorker will
+     * be invoked ONCE for the entire expression
      * @returns {SpeedyPromise<SpeedyMatrixExpr>}
      */
     _compileAndEvaluate()
     {
-        // We can store an expression in compiled form
-        // as long as the pointers of the internal matrices,
-        // i.e., the matrices bound to the matrix operations,
-        // do not change in time. If they do change, we need
-        // to recompile the expression.
+        // We can store an expression in compiled form as long
+        // as the pointers of the internal matrices, i.e., the
+        // matrices bound to the matrix operations, do not change
+        // in time. If they do change, we need to recompile the
+        // expression. It is assumed that the structure of the
+        // expression tree does not change. This means that all
+        // descendents of this node remain the same.
         if(this._compiledExpr === null) {
             return this._compile().then(result =>
                 this._compiledExpr = result.pack() // store the compiled object
@@ -144,14 +147,14 @@ class SpeedyMatrixExpr
                     compiledExpr.outputMatrix, // should be === this._matrix
                     compiledExpr.inputMatrices
                 )
-            ).then(() => this).turbocharge();
+            ).then(() => this);
         }
         else {
             return matrixOperationsQueue.enqueue(
                 this._compiledExpr.operation,
                 this._compiledExpr.outputMatrix,
                 this._compiledExpr.inputMatrices
-            ).then(() => this).turbocharge();
+            ).then(() => this);
         }
     }
 
@@ -244,7 +247,8 @@ class SpeedyMatrixExpr
     read()
     {
         this._readbuf = this._readbuf || [];
-        return this._evaluate().then(expr => expr._matrix.read(undefined, this._readbuf)).turbocharge();
+        return this._compileAndEvaluate().then(expr => expr._matrix.read(undefined, this._readbuf)).turbocharge();
+        //return this._evaluate().then(expr => expr._matrix.read(undefined, this._readbuf)).turbocharge();
     }
 
     /**
@@ -255,7 +259,8 @@ class SpeedyMatrixExpr
      */
     print(decimals = undefined, printFunction = undefined)
     {
-        return this._evaluate().then(expr => expr._matrix.print(decimals, printFunction)).turbocharge();
+        return this._compileAndEvaluate().then(expr => expr._matrix.print(decimals, printFunction)).turbocharge();
+        //return this._evaluate().then(expr => expr._matrix.print(decimals, printFunction)).turbocharge();
     }
 
     /**
@@ -990,8 +995,8 @@ class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
      */
     assign(expr)
     {
-        const assignment = new SpeedyMatrixAssignmentExpr(this, expr);
-        return assignment._evaluate().turbocharge();
+        return this._set(expr)._compileAndEvaluate().turbocharge();
+        //return this._set(expr)._evaluate().turbocharge();
     }
 
     /**

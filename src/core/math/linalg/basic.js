@@ -52,6 +52,25 @@ export function fill(header, output, inputs)
 }
 
 /**
+ * A sequence of matrix operations encapsulated into one
+ * @param {object} header
+ * @param {ArrayBufferView} output
+ * @param {ArrayBufferView[]} inputs
+ */
+export function sequence(header, output, inputs)
+{
+    const steps = header.custom;
+
+    for(let i = 0, n = steps.length; i < n; i++) {
+        const step = steps[i];
+        const stepOutput = inputs[step.indexOfOutputMatrix];
+        const stepInputs = step.indicesOfInputMatrices.map(index => inputs[index]);
+
+        (this[step.header.method])(step.header, stepOutput, stepInputs);
+    }
+}
+
+/**
  * Copy matrix
  * @param {object} header
  * @param {ArrayBufferView} output
