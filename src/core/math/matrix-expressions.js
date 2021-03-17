@@ -1102,6 +1102,10 @@ export class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
             return SpeedyPromise.resolve();
         }
 
+        // if we compile a parent node (or this node), we must not
+        // change the matrix pointer to anything else, because it
+        // has been bound to a compiled expression
+
         // actually copy the data
         return matrixOperationsQueue.enqueue(
             this._operation,
