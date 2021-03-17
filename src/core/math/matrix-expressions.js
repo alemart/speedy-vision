@@ -137,7 +137,7 @@ class SpeedyMatrixExpr
         // in time. If they do change, we need to recompile the
         // expression. It is assumed that the structure of the
         // expression tree does not change. This means that all
-        // descendents of this node remain the same.
+        // descendants of this node remain the same.
         if(this._compiledExpr === null) {
             return this._compile().then(result =>
                 this._compiledExpr = result.pack() // store the compiled object
