@@ -349,6 +349,6 @@ export class SpeedyMatrix
     sync()
     {
         this._nop = this._nop || (this._nop = new MatrixOperationNop(this.shape));
-        return matrixOperationsQueue.enqueue(this._nop, [], this);
+        return matrixOperationsQueue.enqueue(this._nop, this, []);
     }
 }

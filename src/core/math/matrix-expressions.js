@@ -141,16 +141,16 @@ class SpeedyMatrixExpr
             ).then(compiledExpr =>
                 matrixOperationsQueue.enqueue(
                     compiledExpr.operation,
-                    compiledExpr.inputMatrices,
-                    compiledExpr.outputMatrix
+                    compiledExpr.outputMatrix,
+                    compiledExpr.inputMatrices
                 )
             ).turbocharge();
         }
         else {
             return matrixOperationsQueue.enqueue(
                 this._compiledExpr.operation,
-                this._compiledExpr.inputMatrices,
-                this._compiledExpr.outputMatrix
+                this._compiledExpr.outputMatrix,
+                this._compiledExpr.inputMatrices
             ).turbocharge();
         }
     }
@@ -561,7 +561,7 @@ class SpeedyMatrixUnaryExpr extends SpeedyMatrixTempExpr
     _evaluate()
     {
         return this._expr._evaluate().then(result =>
-            matrixOperationsQueue.enqueue(this._operation, [ result._matrix ], this._matrix)
+            matrixOperationsQueue.enqueue(this._operation, this._matrix, [ result._matrix ])
         ).then(() => this);
     }
 
@@ -633,8 +633,8 @@ class SpeedyMatrixBinaryExpr extends SpeedyMatrixTempExpr
         ]).then(([ leftResult, rightResult ]) =>
             matrixOperationsQueue.enqueue(
                 this._operation,
-                [ leftResult._matrix, rightResult._matrix ],
-                this._matrix
+                this._matrix,
+                [ leftResult._matrix, rightResult._matrix ]
             )
         ).then(() => this);
     }
@@ -1100,8 +1100,8 @@ export class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
         // actually copy the data
         return matrixOperationsQueue.enqueue(
             this._operation,
-            [ matrix ],
-            this._matrix
+            this._matrix,
+            [ matrix ]
         );
     }
 
@@ -1216,8 +1216,8 @@ class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
     {
         return matrixOperationsQueue.enqueue(
             this._operation,
-            [ matrix ],
-            this._matrix
+            this._matrix,
+            [ matrix ]
         );
     }
 
@@ -1332,8 +1332,8 @@ class SpeedyMatrixReadwriteDiagonalExpr extends SpeedyMatrixLvalueExpr
     {
         return matrixOperationsQueue.enqueue(
             this._operation,
-            [ matrix ],
-            this._matrix
+            this._matrix,
+            [ matrix ]
         );
     }
 
@@ -1408,8 +1408,8 @@ class SpeedyMatrixFillExpr extends SpeedyMatrixTempExpr
     {
         return matrixOperationsQueue.enqueue(
             this._operation,
-            [],
-            this._matrix
+            this._matrix,
+            []
         ).then(() => this);
     }
 

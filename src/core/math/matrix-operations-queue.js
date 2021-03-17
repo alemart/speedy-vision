@@ -49,11 +49,11 @@ export class MatrixOperationsQueue
     /**
      * Enqueue matrix operation
      * @param {MatrixOperation} matrixOperation 
-     * @param {SpeedyMatrix[]} inputMatrices
      * @param {SpeedyMatrix} outputMatrix
+     * @param {SpeedyMatrix[]} inputMatrices
      * @returns {SpeedyPromise<void>} a promise that resolves as soon as the operation is complete
      */
-    enqueue(matrixOperation, inputMatrices, outputMatrix)
+    enqueue(matrixOperation, outputMatrix, inputMatrices)
     {
         // enqueue operation
         return new SpeedyPromise(resolve => {
