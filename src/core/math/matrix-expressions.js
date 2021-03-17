@@ -126,7 +126,7 @@ class SpeedyMatrixExpr
      * Compile and evaluate this expression - it
      * should be faster than a simple _evaluate()
      * in most cases
-     * @returns {SpeedyPromise<SpeedyMatrix>}
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
      */
     _compileAndEvaluate()
     {
@@ -134,24 +134,24 @@ class SpeedyMatrixExpr
         // as long as the pointers of the internal matrices,
         // i.e., the matrices bound to the matrix operations,
         // do not change in time. If they do change, we need
-        // to recompile.
+        // to recompile the expression.
         if(this._compiledExpr === null) {
             return this._compile().then(result =>
                 this._compiledExpr = result.pack() // store the compiled object
             ).then(compiledExpr =>
                 matrixOperationsQueue.enqueue(
                     compiledExpr.operation,
-                    compiledExpr.outputMatrix,
+                    compiledExpr.outputMatrix, // should be === this._matrix
                     compiledExpr.inputMatrices
                 )
-            ).turbocharge();
+            ).then(() => this).turbocharge();
         }
         else {
             return matrixOperationsQueue.enqueue(
                 this._compiledExpr.operation,
                 this._compiledExpr.outputMatrix,
                 this._compiledExpr.inputMatrices
-            ).turbocharge();
+            ).then(() => this).turbocharge();
         }
     }
 
@@ -766,7 +766,7 @@ class SpeedyMatrixReadonlyBlockExpr extends SpeedyMatrixExpr
         }).then(node =>
             new BoundMatrixOperationTree(
                 null,
-                this._submatrix,
+                this._matrix,
                 [ node ]
             )
         );
@@ -843,7 +843,7 @@ class SpeedyMatrixReadonlyDiagonalExpr extends SpeedyMatrixExpr
         }).then(node =>
             new BoundMatrixOperationTree(
                 null,
-                this._diagonal,
+                this._matrix,
                 [ node ]
             )
         );
@@ -923,7 +923,7 @@ class SpeedyMatrixAssignmentExpr extends SpeedyMatrixExpr
             this._lvalue._compileAssignment(rvalue).then(assignment =>
                 new BoundMatrixOperationTree(
                     null,
-                    lvalue.outputMatrix,
+                    this._matrix, // this is lvalue.outputMatrix
                     [ lvalue, assignment ]
                 )
             )
@@ -1244,7 +1244,7 @@ class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
         }).then(node =>
             new BoundMatrixOperationTree(
                 null,
-                this._submatrix,
+                this._matrix,
                 [ node ]
             )
         );
@@ -1355,7 +1355,7 @@ class SpeedyMatrixReadwriteDiagonalExpr extends SpeedyMatrixLvalueExpr
         }).then(node =>
             new BoundMatrixOperationTree(
                 null,
-                this._diagonal,
+                this._matrix,
                 [ node ]
             )
         );
