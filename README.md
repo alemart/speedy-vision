@@ -23,6 +23,7 @@ Build real-time stuff with **speedy-vision.js**, a GPU-accelerated Computer Visi
   * Nightvision
 * Linear Algebra
   * Beautiful matrix algebra with fluent interfaces
+  * Efficient computations with Web Workers & Typed Arrays
   * Solve linear systems of equations
   * QR decomposition
 
