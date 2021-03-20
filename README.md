@@ -1588,7 +1588,7 @@ A `SpeedyMatrixExpr` representing the component-wise multiplication between the 
 
 `SpeedyMatrixExpr.map(blockRows: number, blockColumns: number, fn: Function, thisArg?: object): SpeedyMatrixExpr`
 
-This is a handy operation that lets you execute multiple computations at once. It is analogous to `Array.prototype.map()`. Given a function `fn` and a *m* x *n* matrix *A* split into *b* blocks *B1*, *B2*, ..., *Bb* of equal size:
+This is a handy operation that lets you execute multiple computations at once. It is analogous to `Array.prototype.map()`. Given a function `fn` and a *m* x *bn* matrix *A* split into *b* blocks *B1*, *B2*, ..., *Bb* of equal size:
 
 ```
 A = [ B1 | B2 | ... | Bj | ... | Bb ]
@@ -1600,7 +1600,7 @@ A = [ B1 | B2 | ... | Bj | ... | Bb ]
 [ fn(B1) | fn(B2) | ... | fn(Bj) | ... | fn(Bb) ]
 ```
 
-It is required that, for all blocks, `fn` outputs a matrix of the same size & type. Additionally, the number of rows of each input block *Bj*, 1 <= *j* <= *b*, must be exactly *m* and the number of columns of the input blocks must add up to *n*.
+It is required that, for all blocks, `fn` outputs a matrix of the same size & type. Additionally, the number of rows of each input block must be exactly *m* and the number of columns of each input block must be exactly *n*.
 
 ###### Arguments
 
