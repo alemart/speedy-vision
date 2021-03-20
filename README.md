@@ -77,6 +77,7 @@ If you appreciate my work, [make a donation](https://www.paypal.com/donate?hoste
     * [Writing to the matrices](#writing-to-the-matrices)
     * [Elementary operations](#elementary-operations)
     * [Access by block](#access-by-block)
+    * [Functional programming](#functional-programming)
     * [Linear Algebra](#linear-algebra)
   * [Extras](#extras)
     * [Promises](#promises)
@@ -1580,6 +1581,59 @@ Compute the component-wise multiplication between the matrix expression and `exp
 ###### Returns
 
 A `SpeedyMatrixExpr` representing the component-wise multiplication between the matrix expression and `expr`.
+
+#### Functional programming
+
+##### SpeedyMatrixExpr.map()
+
+`SpeedyMatrixExpr.map(blockRows: number, blockColumns: number, fn: Function, thisArg?: object): SpeedyMatrixExpr`
+
+This is a handy operation that lets you execute multiple computations at once. It is analogous to `Array.prototype.map()`. Given a function `fn` and a *m* x *n* matrix *A* split into *b* blocks *B1*, *B2*, ..., *Bb* of equal size:
+
+```
+A = [ B1 | B2 | ... | Bj | ... | Bb ]
+```
+
+*map* will evaluate function `fn` on each block. The output matrix will have the form:
+
+```
+[ fn(B1) | fn(B2) | ... | fn(Bj) | ... | fn(Bb) ]
+```
+
+It is required that, for all blocks, `fn` outputs a matrix of the same size & type. Additionally, the number of rows of each input block *Bj*, 1 <= *j* <= *b*, must be exactly *m* and the number of columns of the input blocks must add up to *n*.
+
+###### Arguments
+
+* `blockRows: number`. Number of rows of each block. This **must be** set to the number of rows of the input matrix. This parameter is required for clarity.
+* `blockColumns: number`. Number of columns of each block. The number of columns of the input matrix must be a multiple of this value.
+* `fn: Function`. A function returning a `SpeedyMatrixExpr` for each block of the input matrix. It receives three arguments:
+    * `block: SpeedyMatrixExpr`. A block of the input matrix.
+    * `index: number`. The index of the block. The left-most block has index 0. The block next to it has index 1, and so on.
+    * `matrix: SpeedyMatrixExpr`. The input matrix.
+* `thisArg: object, optional`. Will be used as `this` when evaluating `fn`. If not specified, `this` will be set to `undefined`.
+
+###### Returns
+
+A `SpeedyMatrixExpr` representing the result of the computations.
+
+###### Example
+
+```js
+//
+// Given a matrix A, we'll compute the squared
+// L2-norm of each column-vector of A
+//
+const A = Speedy.Matrix(3, 5, [
+    1, 0, 0, // 1st column-vector
+    0, 1, 1, // 2nd column-vector
+    1,-1,-1, // 3rd
+    0, 0,-2, // 4th
+    2, 1, 0, // 5th
+]);
+
+const norms = A.map(3, 1, v => v.transpose().times(v));
+await norms.print(); // [ 1, 2, 3, 4, 5 ]
+```
 
 #### Linear Algebra
 

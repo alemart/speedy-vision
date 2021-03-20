@@ -413,6 +413,52 @@ class SpeedyMatrixExpr
 
 
 
+
+    //
+    // Functional programming
+    //
+
+    /**
+     * Map function (applied per block)
+     * @param {number} blockRows number of rows of each block (must be the same as the number of rows of the input matrix expression)
+     * @param {number} blockColumns number of columns of each block (the number of columns of the input matrix expression must be a multiple of this)
+     * @param {Function} fn takes a blockRows x blockColumns must return a SpeedyMatrixExpr
+     * @param {object} [thisArg] optional this object
+     */
+    map(blockRows, blockColumns, fn, thisArg = undefined)
+    {
+        // validate arguments
+        if(typeof fn !== 'function')
+            throw new IllegalArgumentError(`map() expects a mapping function`);
+        if(blockRows !== this.rows)
+            throw new IllegalArgumentError(`map() expects blockRows to be the number of rows of the matrix (${this.rows}), but it is ${blockRows}`);
+        if(blockColumns <= 0 || this.columns % blockColumns !== 0)
+            throw new IllegalArgumentError(`map() expects that the number of columns of the matrix (${this.columns}) is divisible by blockColumns (${blockColumns})`);
+
+        // convert thisArg to object if it's not undefined
+        //if(thisArg !== undefined && typeof thisArg !== 'object')
+        //    thisArg = new Object(thisArg);
+
+        // for each block of the matrix, call fn(.)
+        const n = this.columns / blockColumns;
+        const mappedBlock = (new Array(n)).fill(null).map((_, index) => {
+            const block = this.block(0, blockRows - 1, blockColumns * index, blockColumns * (index + 1) - 1);
+            return fn.call(thisArg, block/*.clone()*/, index, this);
+        });
+        console.log(mappedBlock);
+
+        // compute the shape of the output matrix
+        const rows = mappedBlock[0].rows;
+        const columns = mappedBlock[0].columns * n;
+        const dtype = mappedBlock[0].dtype;
+        const shape = new MatrixShape(rows, columns, dtype);
+
+        // okay, we've got matrix expressions for all blocks and we're ready to evaluate them
+        return new SpeedyMatrixMapExpr(shape, mappedBlock);
+    }
+
+
+
     //
     // Linear Algebra
     //
@@ -1665,6 +1711,100 @@ class SpeedyMatrixQRExpr extends SpeedyMatrixUnaryExpr
     }
 }
 
+/**
+ * map(.) expression
+ */
+class SpeedyMatrixMapExpr extends SpeedyMatrixTempExpr
+{
+    /**
+     * Constructor
+     * @param {MatrixShape} shape shape of the output of map(.)
+     * @param {SpeedyMatrixExpr[]} blocks blocks to be "glued" together
+     */
+    constructor(shape, blocks)
+    {
+        const n = blocks.length;
+        Utils.assert(n > 0);
+
+        // check that all blocks are matrix expressions of the same shape
+        for(let i = 0; i < n; i++) {
+            if(!(blocks[i] instanceof SpeedyMatrixExpr))
+                throw new IllegalOperationError(`map() expects that the mapping function returns a matrix expression`);
+        }
+        for(let j = 1; j < n; j++) {
+            if(!blocks[j]._shape.equals(blocks[j-1]._shape))
+                throw new IllegalOperationError(`map() expects that the mapping function returns matrix expressions of the same shape for all blocks`);
+        }
+
+        super(shape);
+
+        /** @type {MatrixShape} shape of each output block */
+        this._blockShape = new MatrixShape(shape.rows, shape.columns / n, shape.dtype);
+
+        /** @type {SpeedyMatrixExpr[]} blocks */
+        this._expr = blocks;
+
+        /** @type {MatrixOperationCopy} copy operation: will help us glue things together */
+        this._copy = new MatrixOperationCopy(this._blockShape);
+    }
+
+    /**
+     * Evaluate expression
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
+     */
+    _evaluate()
+    {
+        const { rows, columns } = this._blockShape;
+
+        return SpeedyPromise.all(
+            // evaluate the input blocks
+            this._expr.map(expr => expr._evaluate().turbocharge())
+        ).then(expr => SpeedyPromise.all(
+            // for each output block
+            (new Array(expr.length)).fill(0).map((_, i) =>
+                // extract the corresponding block of the internal matrix
+                this._matrix.block(0, rows - 1, i * columns, (i+1) * columns - 1).then(block =>
+                    // copy the output blocks to the internal matrix
+                    matrixOperationsQueue.enqueue(
+                        this._copy,
+                        block,
+                        [ expr[i]._matrix ]
+                    )
+                )
+            )
+        )).then(() => this);
+    }
+
+    /**
+     * Compile this expression
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compile()
+    {
+        const { rows, columns } = this._blockShape;
+
+        return SpeedyPromise.all(
+            // compile the input blocks
+            this._expr.map(expr => expr._compile().turbocharge())
+        ).then(expr => SpeedyPromise.all(
+            // for each compiled input block
+            (new Array(expr.length)).fill(0).map((_, i) =>
+                // extract the corresponding block of the internal matrix
+                this._matrix.block(0, rows - 1, i * columns, (i+1) * columns - 1).then(block =>
+                    // copy the output blocks to the internal matrix
+                    new BoundMatrixOperationTree(
+                        this._copy,
+                        block,
+                        [ expr[i] ]
+                    )
+                )
+            )
+        )).then(nodes => {
+            // create a tree that includes all nodes
+            return new BoundMatrixOperationTree(null, this._matrix, nodes);
+        });
+    }
+}
 
 
 

@@ -555,6 +555,77 @@ describe('Matrix', function() {
     });
 
 
+    describe('Functional programming', function() {
+
+        describe('map()', function() {
+
+            it('computes the squared length of column-vectors', async function() {
+                const A = Speedy.Matrix(3, 5, [
+                    1, 0, 0,
+                    0, 1, 1,
+                    1,-1,-1,
+                    0, 0,-2,
+                    2, 1, 0,
+                ]);
+
+                const norms = A.map(3, 1, v => v.transpose().times(v));
+                const data = await norms.read();
+
+                await printm('A = ', A);
+                await printm('norms = ', norms);
+
+                expect(data).toBeElementwiseEqual([1, 2, 3, 4, 5]);
+            });
+
+            it('swaps odd and even columns of a matrix', async function() {
+                const A = Speedy.Matrix(3, 6, [
+                    0, 0, 0,
+                    1, 1, 1,
+                    2, 2, 2,
+                    3, 3, 3,
+                    4, 4, 4,
+                    5, 5, 5,
+                ]);
+                const S = Speedy.Matrix(2, 2, [
+                    0, 1,
+                    1, 0,
+                ]);
+                const B = Speedy.Matrix(A.rows, A.columns);
+
+                await B.assign(A.map(3, 2, M => M.times(S)));
+                await printm('A = ', A, 'B = ', B);
+
+                const data = await B.read();
+                expect(data).toBeElementwiseEqual([
+                    1, 1, 1,
+                    0, 0, 0,
+                    3, 3, 3,
+                    2, 2, 2,
+                    5, 5, 5,
+                    4, 4, 4,
+                ]);
+            });
+
+            it('fills the columns of a matrix with increasing values', async function() {
+                const A = Speedy.Matrix(3, 6, [
+                    0, 0, 0,
+                    1, 1, 1,
+                    2, 2, 2,
+                    3, 3, 3,
+                    4, 4, 4,
+                    5, 5, 5,
+                ]);
+                const B = Speedy.Matrix.Ones(3, 6).map(3, 1, (column, i) => column.times(i));
+
+                await printm(B);
+
+                const data = [ await A.read(), await B.read() ];
+                expect(data[0]).toBeElementwiseEqual(data[1]);
+            });
+
+        });
+
+    });
 
 
 
