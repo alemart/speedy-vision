@@ -918,19 +918,21 @@ A string representation of the vector.
 
 Matrix computations play a crucial role in computer vision applications. Speedy includes its own implementation of matrices. Matrix computations are specified using a fluent interface that has been crafted to be easy to use and to somewhat mirror how we write matrix algebra using pen-and-paper.
 
-Matrix computations may be computationally heavy. Speedy's Matrix system has been designed in such a way that the actual number crunching takes place in a WebWorker (with a few exceptions), so that the user interface will not be blocked during the computations.
+Matrix computations may be computationally heavy. Speedy's Matrix system has been designed in such a way that the actual number crunching takes place in a WebWorker, so that the user interface will not be blocked during the computations.
 
 Since matrix operations usually do not take place in the main thread, Speedy's Matrix API is asynchronous in nature. Here's a brief overview of how it works:
 
-1. First, you specify the operations you want.
-2. Next, your operations will be quickly examined, and perhaps simplified.
+1. First, you specify the operations you want in a matrix expression.
+2. Next, your expression will be quickly examined, and perhaps simplified.
 3. Your operations will be placed in a queue as soon as a result is required.
 4. A WebWorker will do the number crunching as soon as possible.
 5. Finally, you will get the results you asked for, asynchronously.
 
-Because Speedy's Matrix API has been designed to not block the main thread, be aware that there is a little bit of overhead to make this work. Such overhead does not depend on the size of the matrices, but it is impacted by the number of matrix operations. That being said, JavaScript engines are highly optimized, so don't worry *too much* about it. Just keep in mind that it's preferable to work with a few "large" matrices than to work with lots of "tiny" ones (e.g., 3x3).
+Because Speedy's Matrix API has been designed to not block the main thread, be aware that there is a little bit of overhead to make this work. Roughly speaking, the overhead depends mainly on the number of *await*s in your code (data is transferred to a WebWorker, and then a result is transferred back to the main thread). The less *await*s you have, the less time is spent transferring data back and forth.
 
-If you intend to work with tiny matrices, Speedy may perform the computations in the main thread in order to avoid the cost of transfering data to a WebWorker. If this is your case, then writing a closed algebraic expression to your problem - if at all possible - will likely give you the best possible performance.
+If you intend to do lots of computations, I suggest that you group your data into one large matrix composed of many [blocks](#access-by-block). Methods such as [map/reduce](#functional-programming) lets you perform multiple computations all at once, helping to minimize the number of *await*s.
+
+Don't worry too much about the overhead, though, because JavaScript engines are highly optimized. Just know that it exists, and that it makes the magic work.
 
 Finally, matrices in Speedy are stored in [column-major format](https://en.wikipedia.org/wiki/Row-_and_column-major_order), using Typed Arrays for extra performance.
 
