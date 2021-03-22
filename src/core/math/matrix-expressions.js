@@ -419,10 +419,10 @@ class SpeedyMatrixExpr
     //
 
     /**
-     * Map function (applied per block)
+     * Map function (applied per block), analogous to Array.prototype.map()
      * @param {number} blockRows number of rows of each block (must be the same as the number of rows of the input matrix expression)
      * @param {number} blockColumns number of columns of each block (the number of columns of the input matrix expression must be a multiple of this)
-     * @param {Function} fn takes a blockRows x blockColumns must return a SpeedyMatrixExpr
+     * @param {Function} fn mapping function: receives a blockRows x blockColumns matrix and must return a SpeedyMatrixExpr
      * @param {object} [thisArg] optional this object
      */
     map(blockRows, blockColumns, fn, thisArg = undefined)
@@ -443,9 +443,20 @@ class SpeedyMatrixExpr
         const n = this.columns / blockColumns;
         const mappedBlock = (new Array(n)).fill(null).map((_, index) => {
             const block = this.block(0, blockRows - 1, blockColumns * index, blockColumns * (index + 1) - 1);
-            return fn.call(thisArg, block/*.clone()*/, index, this);
+            const output = fn.call(thisArg, block/*.clone()*/, index, this);
+
+            // validate the output of the mapping function for all input blocks
+            if(!(output instanceof SpeedyMatrixExpr))
+                throw new IllegalOperationError(`map() expects that the mapping function returns a matrix expression for all input blocks`);
+
+            return output;
         });
-        console.log(mappedBlock);
+
+        // check that all output matrices are of the same shape
+        for(let j = 1; j < n; j++) {
+            if(!mappedBlock[j]._shape.equals(mappedBlock[j-1]._shape))
+                throw new IllegalOperationError(`map() expects that the mapping function returns matrix expressions of the same shape for all blocks`);
+        }
 
         // compute the shape of the output matrix
         const rows = mappedBlock[0].rows;
@@ -455,6 +466,44 @@ class SpeedyMatrixExpr
 
         // okay, we've got matrix expressions for all blocks and we're ready to evaluate them
         return new SpeedyMatrixMapExpr(shape, mappedBlock);
+    }
+
+    /**
+     * Reduce function (applied per block), analogous to Array.prototype.reduce()
+     * @param {number} blockRows number of rows of each block (must be the same as the number of rows of the input matrix expression)
+     * @param {number} blockColumns number of columns of each block (the number of columns of the input matrix expression must be a multiple of this)
+     * @param {Function} fn reducer function: receives a blockRows x blockColumns matrix and must return a SpeedyMatrixExpr
+     * @param {SpeedyMatrixExpr} initialMatrix initial matrix, used as the accumulator on the first invocation of fn
+     */
+    reduce(blockRows, blockColumns, fn, initialMatrix)
+    {
+        // validate arguments
+        if(typeof fn !== 'function')
+            throw new IllegalArgumentError(`reduce() expects a reducer function`);
+        if(blockRows !== this.rows)
+            throw new IllegalArgumentError(`reduce() expects blockRows to be the number of rows of the matrix (${this.rows}), but it is ${blockRows}`);
+        if(blockColumns <= 0 || this.columns % blockColumns !== 0)
+            throw new IllegalArgumentError(`reduce() expects that the number of columns of the matrix (${this.columns}) is divisible by blockColumns (${blockColumns})`);
+        if(!(initialMatrix instanceof SpeedyMatrixExpr))
+            throw new IllegalArgumentError(`reduce() expects initialMatrix to be a SpeedyMatrixExpr`);
+
+        // for each block of the matrix, call fn(.)
+        const n = this.columns / blockColumns;
+        const output = new Array(n + 1);
+        output[0] = initialMatrix;
+        for(let i = 0; i < n; i++) {
+            const currentBlock = this.block(0, blockRows - 1, blockColumns * i, blockColumns * (i + 1) - 1);
+            output[i+1] = fn.call(undefined, output[i], currentBlock, i, this);
+
+            // validate the output of the reducer function for the current block
+            if(!(output[i+1] instanceof SpeedyMatrixExpr))
+                throw new IllegalOperationError(`reduce() expects that the reducer function returns a SpeedyMatrixExpr for all input blocks`);
+            else if(!output[i+1]._shape.equals(output[i]._shape))
+                throw new IllegalOperationError(`reduce() expects that the reducer function returns matrices of the same shape for all input blocks`);
+        }
+
+        // okay, we've got matrix expressions for all blocks and we're ready to evaluate them
+        return new SpeedyMatrixReduceExpr(output);
     }
 
 
@@ -1712,7 +1761,7 @@ class SpeedyMatrixQRExpr extends SpeedyMatrixUnaryExpr
 }
 
 /**
- * map(.) expression
+ * map() expression
  */
 class SpeedyMatrixMapExpr extends SpeedyMatrixTempExpr
 {
@@ -1725,16 +1774,6 @@ class SpeedyMatrixMapExpr extends SpeedyMatrixTempExpr
     {
         const n = blocks.length;
         Utils.assert(n > 0);
-
-        // check that all blocks are matrix expressions of the same shape
-        for(let i = 0; i < n; i++) {
-            if(!(blocks[i] instanceof SpeedyMatrixExpr))
-                throw new IllegalOperationError(`map() expects that the mapping function returns a matrix expression`);
-        }
-        for(let j = 1; j < n; j++) {
-            if(!blocks[j]._shape.equals(blocks[j-1]._shape))
-                throw new IllegalOperationError(`map() expects that the mapping function returns matrix expressions of the same shape for all blocks`);
-        }
 
         super(shape);
 
@@ -1761,7 +1800,7 @@ class SpeedyMatrixMapExpr extends SpeedyMatrixTempExpr
             this._expr.map(expr => expr._evaluate().turbocharge())
         ).then(expr => SpeedyPromise.all(
             // for each output block
-            (new Array(expr.length)).fill(0).map((_, i) =>
+            (new Array(expr.length)).fill(null).map((_, i) =>
                 // extract the corresponding block of the internal matrix
                 this._matrix.block(0, rows - 1, i * columns, (i+1) * columns - 1).then(block =>
                     // copy the output blocks to the internal matrix
@@ -1788,7 +1827,7 @@ class SpeedyMatrixMapExpr extends SpeedyMatrixTempExpr
             this._expr.map(expr => expr._compile().turbocharge())
         ).then(expr => SpeedyPromise.all(
             // for each compiled input block
-            (new Array(expr.length)).fill(0).map((_, i) =>
+            (new Array(expr.length)).fill(null).map((_, i) =>
                 // extract the corresponding block of the internal matrix
                 this._matrix.block(0, rows - 1, i * columns, (i+1) * columns - 1).then(block =>
                     // copy the output blocks to the internal matrix
@@ -1802,6 +1841,73 @@ class SpeedyMatrixMapExpr extends SpeedyMatrixTempExpr
         )).then(nodes => {
             // create a tree that includes all nodes
             return new BoundMatrixOperationTree(null, this._matrix, nodes);
+        });
+    }
+}
+
+/**
+ * reduce() expression
+ */
+class SpeedyMatrixReduceExpr extends SpeedyMatrixTempExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr[]} reducedExpr
+     */
+    constructor(reducedExpr)
+    {
+        super(reducedExpr[reducedExpr.length - 1]._shape);
+
+        /** @type {SpeedyMatrixExpr[]} results of reduce() */
+        this._expr = reducedExpr;
+
+        /** @type {MatrixOperationCopy} copy operation */
+        this._copy = new MatrixOperationCopy(this._shape);
+    }
+
+    /**
+     * Evaluate expression
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
+     */
+    _evaluate()
+    {
+        // evaluate this._expr from 0 to n-1, in increasing order
+        function evaluateExpressions(expr, i = 0) {
+            return i < expr.length ?
+                expr[i]._evaluate().then(() => evaluateExpressions(expr, i + 1)) :
+                SpeedyPromise.resolve(expr[expr.length - 1]);
+        }
+
+        // evaluate all expressions and copy the result to the internal matrix
+        return evaluateExpressions(this._expr).then(result =>
+            matrixOperationsQueue.enqueue(
+                this._copy,
+                this._matrix,
+                [ result._matrix ]
+            )
+        ).then(() => this);
+    }
+
+    /**
+     * Compile this expression
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compile()
+    {
+        return SpeedyPromise.all(
+            // compile the input expressions
+            this._expr.map(expr => expr._compile().turbocharge())
+        ).then(expr => {
+            const n = expr.length;
+
+            // create a tree so that expressions are evaluated left-to-right (first-to-last)
+            //const node = new BoundMatrixOperationTree(null, expr[n-1].outputMatrix, expr);
+            let node = new BoundMatrixOperationTree(null, expr[0].outputMatrix, [ expr[0] ]); // deepest level
+            for(let i = 1; i < n; i++)
+                node = new BoundMatrixOperationTree(null, expr[i].outputMatrix, [ expr[i], node ]);
+
+            // copy the result (expr[n-1].outputMatrix) to the internal matrix
+            return new BoundMatrixOperationTree(this._copy, this._matrix, [ node ]);
         });
     }
 }

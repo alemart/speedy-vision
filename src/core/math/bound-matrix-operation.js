@@ -105,7 +105,7 @@ export class BoundMatrixOperationTree
         while(stack.length > 0) {
             const [ node, done ] = stack.pop();
             if(!done) {
-                // visit children
+                // visit children (in increasing order)
                 stack.push([ node, true ]);
                 for(let i = node._children.length - 1; i >= 0; i--)
                     stack.push([ node._children[i], false ]);

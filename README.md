@@ -1621,7 +1621,7 @@ A `SpeedyMatrixExpr` representing the result of the computations.
 ```js
 //
 // Given a matrix A, we'll compute the squared
-// L2-norm of each column-vector of A
+// Euclidean norm of each column-vector of A
 //
 const A = Speedy.Matrix(3, 5, [
     1, 0, 0, // 1st column-vector
@@ -1633,6 +1633,68 @@ const A = Speedy.Matrix(3, 5, [
 
 const norms = A.map(3, 1, v => v.transpose().times(v));
 await norms.print(); // [ 1, 2, 3, 4, 5 ]
+```
+
+##### SpeedyMatrixExpr.reduce()
+
+`SpeedyMatrixExpr.reduce(blockRows: number, blockColumns: number, fn: Function, initialMatrix: SpeedyMatrixExpr): SpeedyMatrixExpr`
+
+This operation is analogous to `Array.prototype.reduce()`. Given a reducer function `fn`, an `initialMatrix`, and a *m* x *bn* input matrix *M* split into *b* blocks *B1*, *B2*, ..., *Bb* of equal size:
+
+```
+M = [ B1 | B2 | ... | Bj | ... | Bb ]
+```
+
+*reduce* will evaluate function `fn` on each block, producing accumulators *A0*, *A1*, ..., *Ab* as follows:
+
+```
+A0 = initialMatrix
+A1 = fn(A0, B1)
+A2 = fn(A1, B2)
+...
+Ab = fn(Ab-1, Bb)
+```
+
+The result of the *reduce* operation will be *Ab*. It is required that, for all input blocks, `fn` outputs a matrix of the same size & type. The shape of `initialMatrix` must match those. Additionally, the number of rows of each input block must be exactly *m* and the number of columns of each input block must be exactly *n*.
+
+###### Arguments
+
+* `blockRows: number`. Number of rows of each block. This **must be** set to the number of rows of the input matrix. This parameter is required only for clarity.
+* `blockColumns: number`. Number of columns of each block. The number of columns of the input matrix must be a multiple of this value.
+* `fn: Function`. A function returning a `SpeedyMatrixExpr` for each block of the input matrix. It receives four arguments:
+    * `accumulator: SpeedyMatrixExpr`. The matrix returned on the previous invocation of `fn`. On the first invocation, this is set to `initialMatrix`.
+    * `currentBlock: SpeedyMatrixExpr`. A block of the input matrix. The left-most block is used on the first invocation of `fn`. The block next to it is used on the second invocation, and so on.
+    * `index: number`. The index of the block. The left-most block has index 0. The block next to it has index 1, and so on.
+    * `matrix: SpeedyMatrixExpr`. The input matrix.
+* `initialMatrix: SpeedyMatrixExpr`. A matrix used on the first invocation of `fn` as the `accumulator`.
+
+###### Returns
+
+A `SpeedyMatrixExpr` representing the result of the computations.
+
+###### Example
+
+```js
+//
+// Let's compute the Frobenius
+// norm of the input matrix M
+//
+const M = Speedy.Matrix(3, 3, [
+    0, 1, 0,
+    1, 1, 1,
+    2, 2, 2,
+]);
+const ones = Speedy.Matrix.Ones(1, 3);
+const zeros = Speedy.Matrix.Zeros(3, 1);
+
+// We add together the squared entries of M,
+// and then take the square root of the sum.
+const v = M.compMult(M).reduce(3, 1, (A, B) => A.plus(B), zeros);
+const dot = ones.times(v); // dot product
+const [ norm2 ] = await dot.read();
+const norm = Math.sqrt(norm2);
+
+console.log(norm); // 4
 ```
 
 #### Linear Algebra
