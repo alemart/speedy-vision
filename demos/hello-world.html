@@ -44,7 +44,7 @@ window.onload = async function()
     const featureDetector = Speedy.FeatureDetector.Harris();
 
     // the higher the sensitivity, the more feature points you get
-    featureDetector.sensitivity = 0.7;
+    featureDetector.sensitivity = 0.9;
 
     // find the feature points
     const features = await featureDetector.detect(media);
