@@ -1694,8 +1694,8 @@ const zeros = Speedy.Matrix.Zeros(3, 1);
 const v = M.compMult(M).reduce(3, 1, (A, B) => A.plus(B), zeros);
 const dot = ones.times(v); // dot product
 const [ norm2 ] = await dot.read();
-const norm = Math.sqrt(norm2);
 
+const norm = Math.sqrt(norm2);
 console.log(norm); // 4
 ```
 
