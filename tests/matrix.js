@@ -550,7 +550,27 @@ describe('Matrix', function() {
             expect(z8).toBeElementwiseEqual(z11);
             expect(z9).toBeElementwiseEqual(z11);
             expect(z10).toBeElementwiseEqual(z11);
-        })
+        });
+
+        it('evaluates one expression and discards the other', async function() {
+            const one = Speedy.Matrix.Eye(3);
+            const two = one.times(2);
+
+            const expr = [
+                two.followedBy(one),
+                one.followedBy(two),
+                one.followedBy(two).followedBy(one.plus(two)),
+                two.followedBy(one.followedBy(two.times(two).times(two.followedBy(one)))),
+                one.followedBy(one).followedBy(two).followedBy(two.times(two).plus(one)),
+            ];
+            printm(...expr);
+
+            for(let i = 0; i < expr.length; i++) {
+                const data = await expr[i].read();
+                for(let j = 0; j < data.length; j++)
+                    expect(data[j]).toBeElementwiseEqual(j % 4 == 0 ? i+1 : 0);
+            }
+        });
 
     });
 
