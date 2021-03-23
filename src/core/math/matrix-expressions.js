@@ -411,6 +411,16 @@ class SpeedyMatrixExpr
         return new SpeedyMatrixCompMultExpr(this, expr);
     }
 
+    /**
+     * Similar to the comma operator in C/++
+     * @param {SpeedyMatrixExpr} expr
+     * @returns {SpeedyMatrixExpr}
+     */
+    followedBy(expr)
+    {
+        return new SpeedyMatrixSequenceExpr(this, expr);
+    }
+
 
 
 
@@ -1026,6 +1036,68 @@ class SpeedyMatrixAssignmentExpr extends SpeedyMatrixExpr
                     this._matrix, // this is lvalue.outputMatrix
                     [ lvalue, assignment ]
                 )
+            )
+        );
+    }
+}
+
+/**
+ * A sequence expression, similar to the comma operator in C/C++ and JavaScript
+ * e.g., the (A, B) expression evaluates to B
+ */
+class SpeedyMatrixSequenceExpr extends SpeedyMatrixExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} first we'll discard this result
+     * @param {SpeedyMatrixExpr} second we'll use this as the result of this expression
+     */
+    constructor(first, second)
+    {
+        super(second._shape);
+
+        /** @type {SpeedyMatrixExpr} we'll discard this result */
+        this._first = first;
+
+        /** @type {SpeedyMatrixExpr} the result of this expression */
+        this._second = second;
+    }
+
+    /**
+     * Get the matrix associated with this expression
+     * This matrix must be guaranteed to be available after evaluating this expression
+     * @returns {SpeedyMatrix}
+     */
+    get _matrix()
+    {
+        return this._second._matrix;
+    }
+
+    /**
+     * Evaluate expression
+     * @returns {SpeedyPromise<SpeedyMatrixAssignmentExpr>}
+     */
+    _evaluate()
+    {
+        return this._first._evaluate().then(() =>
+            this._second._evaluate()
+        ).then(() => this);
+    }
+
+    /**
+     * Compile this expression
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compile()
+    {
+        return SpeedyPromise.all([
+            this._first._compile().turbocharge(),
+            this._second._compile().turbocharge(),
+        ]).then(([ first, second ]) =>
+            new BoundMatrixOperationTree(
+                null,
+                this._matrix,
+                [ first, second ]
             )
         );
     }

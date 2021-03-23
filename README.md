@@ -1584,6 +1584,20 @@ Compute the component-wise multiplication between the matrix expression and `exp
 
 A `SpeedyMatrixExpr` representing the component-wise multiplication between the matrix expression and `expr`.
 
+##### SpeedyMatrixExpr.followedBy()
+
+`SpeedyMatrixExpr.followedBy(expr: SpeedyMatrixExpr): SpeedyMatrixExpr`
+
+Create a sequence of two expressions that will be evaluated in a way that is similar to the comma operator in C/C++ and JavaScript. After evaluating the caller expression, `expr` will be evaluated. The result of the new expression will be `expr`. The result of the caller expression will be discarded.
+
+###### Arguments
+
+* `expr: SpeedyMatrixExpr`. Matrix expression.
+
+###### Returns
+
+A `SpeedyMatrixExpr` that evaluates both expressions and that has its result set to the result of `expr`.
+
 #### Functional programming
 
 ##### SpeedyMatrixExpr.map()
