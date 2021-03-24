@@ -575,7 +575,7 @@ describe('Matrix', function() {
                 two.followedBy(one.followedBy(two.times(two).times(two.followedBy(one)))),
                 one.followedBy(one).followedBy(two).followedBy(two.times(two).plus(one)),
             ];
-            printm(...expr);
+            await printm(...expr);
 
             for(let i = 0; i < expr.length; i++) {
                 const data = await expr[i].read();
@@ -599,7 +599,7 @@ describe('Matrix', function() {
 
                 for(let mat of mats) {
                     const inv = mat.inverse();
-                    printm('M:', mat, 'M^(-1):', inv, '--------------------');
+                    await printm('M:', mat, 'M^(-1):', inv, '--------------------');
 
                     const m1 = await mat.times(inv).read();
                     const m2 = await inv.times(mat).read();
@@ -760,7 +760,7 @@ describe('Matrix', function() {
                 const v = M.compMult(M).reduce(3, 1, (A, B) => A.plus(B), zeros);
                 const dot = ones.times(v);
 
-                printm('M:', M, '||M||_F ^ 2:', dot);
+                await printm('M:', M, '||M||_F ^ 2:', dot);
 
                 expect(await dot.read()).toBeElementwiseEqual([ 16 ]);
             });
@@ -778,7 +778,7 @@ describe('Matrix', function() {
                 const add = M.reduce(3, 3, (A, B) => A.plus(B), Z);
                 const mul = M.reduce(3, 3, (A, B) => A.times(B), I);
 
-                printm('M:', M, 'add:', add, 'mul:', mul);
+                await printm('M:', M, 'add:', add, 'mul:', mul);
 
                 const _A = Speedy.Matrix(3, 3, [
                     10, 0, 0, 0, 10, 0, 0, 0, 10,
@@ -800,7 +800,7 @@ describe('Matrix', function() {
 
                 const tr = M.diagonal().reduce(1, 1, (A, B) => A.plus(B), Z);
 
-                printm('M:', M, 'tr:', tr);
+                await printm('M:', M, 'tr:', tr);
 
                 expect(await tr.read()).toBeElementwiseEqual([ 15 ]);
             });
