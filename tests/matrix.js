@@ -645,6 +645,65 @@ describe('Matrix', function() {
 
         });
 
+        describe('reduce()', function() {
+            it('computes the squared Frobenius norm of a matrix', async function() {
+                const M = Speedy.Matrix(3, 3, [
+                    0, 1, 0,
+                    1, 1, 1,
+                    2, 2, 2,
+                ]);
+                const ones = Speedy.Matrix.Ones(1, 3);
+                const zeros = Speedy.Matrix.Zeros(3, 1);
+
+                const v = M.compMult(M).reduce(3, 1, (A, B) => A.plus(B), zeros);
+                const dot = ones.times(v);
+
+                printm('M:', M, '||M||_F ^ 2:', dot);
+
+                expect(await dot.read()).toBeElementwiseEqual([ 16 ]);
+            });
+
+            it('adds and multiplies blocks of matrices', async function() {
+                const M = Speedy.Matrix(3, 12, [
+                    1, 0, 0, 0, 1, 0, 0, 0, 1,
+                    2, 0, 0, 0, 2, 0, 0, 0, 2,
+                    3, 0, 0, 0, 3, 0, 0, 0, 3,
+                    4, 0, 0, 0, 4, 0, 0, 0, 4,
+                ]);
+                const Z = Speedy.Matrix.Zeros(3);
+                const I = Speedy.Matrix.Eye(3);
+
+                const add = M.reduce(3, 3, (A, B) => A.plus(B), Z);
+                const mul = M.reduce(3, 3, (A, B) => A.times(B), I);
+
+                printm('M:', M, 'add:', add, 'mul:', mul);
+
+                const _A = Speedy.Matrix(3, 3, [
+                    10, 0, 0, 0, 10, 0, 0, 0, 10,
+                ]);
+                const _M = Speedy.Matrix(3, 3, [
+                    24, 0, 0, 0, 24, 0, 0, 0, 24,
+                ]);
+
+                expect(await add.read()).toBeElementwiseEqual(await _A.read());
+                expect(await mul.read()).toBeElementwiseEqual(await _M.read());
+            });
+
+            it('computes the trace of a matrix', async function() {
+                const M = Speedy.Matrix(3, 3, [
+                    1, 2, 3,
+                    4, 5, 6,
+                    7, 8, 9,
+                ]), Z = Speedy.Matrix.Zeros(1, 1);
+
+                const tr = M.diagonal().reduce(1, 1, (A, B) => A.plus(B), Z);
+
+                printm('M:', M, 'tr:', tr);
+
+                expect(await tr.read()).toBeElementwiseEqual([ 15 ]);
+            });
+        });
+
     });
 
 
