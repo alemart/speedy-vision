@@ -1824,6 +1824,21 @@ Create a sequence of two expressions that will be evaluated in a way that is sim
 
 A `SpeedyMatrixExpr` that evaluates both expressions and that has its result set to the result of `expr`.
 
+###### Example
+
+```js
+//
+// This example is analogous to the following JavaScript statement:
+// a = (1, 2);
+//
+const A = Speedy.Matrix(3);
+const I = Speedy.Matrix.Eye(3);
+const T = I.times(2);
+
+await A.assign(I.followedBy(T)); // A = (I, T)
+await A.print();
+```
+
 ##### SpeedyMatrixLvalueExpr.setTo()
 
 `SpeedyMatrixLvalueExpr.setTo(expr: SpeedyMatrixExpr): SpeedyMatrixExpr`
@@ -1849,9 +1864,9 @@ A `SpeedyMatrixExpr` representing an assignment expression meant to modify the m
 // also written as:
 // a = (b = 1);
 //
-let A = Speedy.Matrix(3, 3);
-let B = Speedy.Matrix(3, 3);
-let I = Speedy.Matrix.Eye(3);
+const A = Speedy.Matrix(3);
+const B = Speedy.Matrix(3);
+const I = Speedy.Matrix.Eye(3);
 
 await A.assign(B.setTo(I));
 
