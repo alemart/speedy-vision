@@ -180,6 +180,18 @@ describe('Matrix', function() {
             }
         });
 
+        it('handles assignment expressions', async function() {
+            let A = Speedy.Matrix(3, 3);
+            let B = Speedy.Matrix(3, 3);
+            let I = Speedy.Matrix.Eye(3);
+
+            await A.assign(B.setTo(I));
+            await printm('A:', A, 'B:', B, 'I:', I);
+
+            expect(await A.read()).toBeElementwiseEqual(await I.read());
+            expect(await B.read()).toBeElementwiseEqual(await I.read());
+        });
+
     });
 
 

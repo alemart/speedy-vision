@@ -79,6 +79,7 @@ If you appreciate my work, [make a donation](https://www.paypal.com/donate?hoste
     * [Access by block](#access-by-block)
     * [Functional programming](#functional-programming)
     * [Linear Algebra](#linear-algebra)
+    * [Misc. Utilities](#misc-utilities)
   * [Extras](#extras)
     * [Promises](#promises)
     * [Utilities](#utilities)
@@ -1426,7 +1427,7 @@ await mat.block(0, 2, 0, 2).diagonal().fill(5);
 
 `SpeedyMatrixExpr.clone(): SpeedyMatrixExpr`
 
-Clone a matrix, so that when you call `lvalue.assign()`, no data will be shared between the matrices.
+Clone a matrix, so that when you call [SpeedyMatrixLvalueExpr.assign()](#speedymatrixlvalueexprassign), no data will be shared between the matrices.
 
 ###### Returns
 
@@ -1583,20 +1584,6 @@ Compute the component-wise multiplication between the matrix expression and `exp
 ###### Returns
 
 A `SpeedyMatrixExpr` representing the component-wise multiplication between the matrix expression and `expr`.
-
-##### SpeedyMatrixExpr.followedBy()
-
-`SpeedyMatrixExpr.followedBy(expr: SpeedyMatrixExpr): SpeedyMatrixExpr`
-
-Create a sequence of two expressions that will be evaluated in a way that is similar to the comma operator in C/C++ and JavaScript. After evaluating the caller expression, `expr` will be evaluated. The result of the new expression will be `expr`. The result of the caller expression will be discarded.
-
-###### Arguments
-
-* `expr: SpeedyMatrixExpr`. Matrix expression.
-
-###### Returns
-
-A `SpeedyMatrixExpr` that evaluates both expressions and that has its result set to the result of `expr`.
 
 #### Functional programming
 
@@ -1819,6 +1806,57 @@ await QR.assign(A.qr());
 // print the result
 await Q.print();
 await R.print();
+```
+
+#### Misc. Utilities
+
+##### SpeedyMatrixExpr.followedBy()
+
+`SpeedyMatrixExpr.followedBy(expr: SpeedyMatrixExpr): SpeedyMatrixExpr`
+
+Create a sequence of two expressions that will be evaluated in a way that is similar to the comma operator in C/C++ and JavaScript. After evaluating the caller expression, `expr` will be evaluated. The result of the new expression will be `expr`. The result of the caller expression will be discarded.
+
+###### Arguments
+
+* `expr: SpeedyMatrixExpr`. Matrix expression.
+
+###### Returns
+
+A `SpeedyMatrixExpr` that evaluates both expressions and that has its result set to the result of `expr`.
+
+##### SpeedyMatrixLvalueExpr.setTo()
+
+`SpeedyMatrixLvalueExpr.setTo(expr: SpeedyMatrixExpr): SpeedyMatrixExpr`
+`SpeedyMatrixLvalueExpr.setTo(entries: number[]): SpeedyMatrixExpr`
+
+Create an assignment expression. Unlike [SpeedyMatrixLvalue.assign()](#speedymatrixlvalueexprassign), setTo() does not actually change any data, nor perform any computations (note that it does not return a promise). It's just an assignment expression, which may be used as part of a larger expression. The result of this assignment expression is `expr` in the first form, and a new `SpeedyMatrixExpr` corresponding to the given `entries` in the second form.
+
+###### Arguments
+
+* `expr: SpeedyMatrixExpr`. A matrix expression.
+* `entries: number[]`. Numbers in column-major format. The length of this array must match the number of entries of the matrix.
+
+###### Returns
+
+A `SpeedyMatrixExpr` representing an assignment expression meant to modify the matrix on which it's called.
+
+###### Example
+
+```js
+//
+// This example is analogous to the following JavaScript statement:
+// a = b = 1;
+// also written as:
+// a = (b = 1);
+//
+let A = Speedy.Matrix(3, 3);
+let B = Speedy.Matrix(3, 3);
+let I = Speedy.Matrix.Eye(3);
+
+await A.assign(B.setTo(I));
+
+await A.print(); // identity matrix
+await B.print(); // identity matrix
 ```
 
 

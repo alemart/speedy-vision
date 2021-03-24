@@ -189,16 +189,6 @@ class SpeedyMatrixExpr
     }
 
     /**
-     * Creates an assignment expression (i.e., this := expr)
-     * @param {SpeedyMatrixExpr} expr
-     * @returns {SpeedyMatrixAssignmentExpr}
-     */
-    _set(expr)
-    {
-        throw new IllegalOperationError(`Can't create an assignment expression: not a l-value`);
-    }
-
-    /**
      * Assert matrix shape and type
      * @param {MatrixShape} actual
      * @param {MatrixShape} expected
@@ -411,6 +401,14 @@ class SpeedyMatrixExpr
         return new SpeedyMatrixCompMultExpr(this, expr);
     }
 
+
+
+
+
+    //
+    // Misc
+    //
+
     /**
      * Similar to the comma operator in C/++
      * @param {SpeedyMatrixExpr} expr
@@ -420,6 +418,21 @@ class SpeedyMatrixExpr
     {
         return new SpeedyMatrixSequenceExpr(this, expr);
     }
+
+    /**
+     * Creates an assignment expression (i.e., this := expr),
+     * without actually computing or changing any numbers
+     * @param {SpeedyMatrixExpr | number[]} expr
+     * @returns {SpeedyMatrixAssignmentExpr}
+     */
+    setTo(expr)
+    {
+        throw new IllegalOperationError(`Can't create an assignment expression: not a l-value`);
+    }
+
+
+
+
 
 
 
@@ -1146,24 +1159,14 @@ class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
     }
 
     /**
-     * Creates an assignment expression
-     * @param {SpeedyMatrixExpr} expr
-     * @returns {SpeedyMatrixAssignmentExpr}
-     */
-    _set(expr)
-    {
-        return new SpeedyMatrixAssignmentExpr(this, expr);
-    }
-
-    /**
      * Assign an expression to this lvalue
      * @param {SpeedyMatrixExpr|number[]} expr
      * @returns {SpeedyPromise<SpeedyMatrixAssignmentExpr>} resolves as soon as the assignment is done
      */
     assign(expr)
     {
-        return this._set(expr)._compileAndEvaluate().turbocharge();
-        //return this._set(expr)._evaluate().turbocharge();
+        return this.setTo(expr)._compileAndEvaluate().turbocharge();
+        //return this.setTo(expr)._evaluate().turbocharge();
     }
 
     /**
@@ -1174,6 +1177,17 @@ class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
     fill(value)
     {
         return this.assign(new SpeedyMatrixFillExpr(this._shape, +value));
+    }
+
+    /**
+     * Creates an assignment expression (i.e., this := expr),
+     * without actually computing or changing any numbers
+     * @param {SpeedyMatrixExpr | number[]} expr
+     * @returns {SpeedyMatrixAssignmentExpr}
+     */
+    setTo(expr)
+    {
+        return new SpeedyMatrixAssignmentExpr(this, expr);
     }
 
     /**
