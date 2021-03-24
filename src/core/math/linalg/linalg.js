@@ -22,6 +22,7 @@
 const { MatrixType } = require('../matrix-type');
 const LinAlgLib = {
     ...require('./basic'),
+    ...require('./inverse'),
     ...require('./solve'),
     ...require('./qr'),
     ...require('./utils'),

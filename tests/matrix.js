@@ -584,6 +584,96 @@ describe('Matrix', function() {
             }
         });
 
+        describe('Inverse matrix', function() {
+
+            it('computes the inverse of 1x1 matrices', async function() {
+                const eye = Speedy.Matrix.Eye(1);
+                const id = await eye.read();
+
+                const mats = [
+                    Speedy.Matrix(1, 1, [-5]),
+                    Speedy.Matrix(1, 1, [4]),
+                    Speedy.Matrix(1, 1, [2]),
+                    Speedy.Matrix(1, 1, [1]),
+                ];
+
+                for(let mat of mats) {
+                    const inv = mat.inverse();
+                    printm('M:', mat, 'M^(-1):', inv, '--------------------');
+
+                    const m1 = await mat.times(inv).read();
+                    const m2 = await inv.times(mat).read();
+
+                    expect(m1).toBeElementwiseNearlyEqual(id);
+                    expect(m2).toBeElementwiseNearlyEqual(id);
+                }
+            });
+
+            it('computes the inverse of 2x2 matrices', async function() {
+                const eye = Speedy.Matrix.Eye(2);
+                const id = await eye.read();
+
+                const mats = [
+                    Speedy.Matrix(2, 2, [5, -7, 2, -3]),
+                    Speedy.Matrix(2, 2, [-3, 5, 1, -2]),
+                    Speedy.Matrix(2, 2, [1, 3, 2, 4]),
+                    Speedy.Matrix(2, 2, [2, 1, 1, 1]),
+                ];
+
+                for(let mat of mats) {
+                    const inv = mat.inverse();
+                    await printm('M:', mat, 'M^(-1):', inv, '--------------------');
+
+                    const m1 = await mat.times(inv).read();
+                    const m2 = await inv.times(mat).read();
+
+                    expect(m1).toBeElementwiseNearlyEqual(id);
+                    expect(m2).toBeElementwiseNearlyEqual(id);
+                }
+            });
+
+            it('computes the inverse of 3x3 matrices', async function() {
+                const eye = Speedy.Matrix.Eye(3);
+                const id = await eye.read();
+
+                const mats = [
+                    Speedy.Matrix(3, 3, [1, 0, 5, 2, 1, 6, 3, 4, 0]),
+                    Speedy.Matrix(3, 3, [2, 3, 3, 3, 4, 7, 1, 1, 2]),
+                    Speedy.Matrix(3, 3, [3, 2, 0, 0, 0, 1, 2, -2, 1]),
+                ];
+
+                for(let mat of mats) {
+                    const inv = mat.inverse();
+                    await printm('M:', mat, 'M^(-1):', inv, '--------------------');
+
+                    const m1 = await mat.times(inv).read();
+                    const m2 = await inv.times(mat).read();
+
+                    expect(m1).toBeElementwiseNearlyEqual(id);
+                    expect(m2).toBeElementwiseNearlyEqual(id);
+                }
+            });
+
+            it('fails to compute the inverse of singular matrices', async function() {
+                const mats = [
+                    Speedy.Matrix(1, 1, [0]),
+                    Speedy.Matrix(2, 2, [8, 4, 2, 1]),
+                    Speedy.Matrix(3, 3, [1, 1, 2, 2, 2, 4, 0, 1, 0]),
+                ];
+
+                for(let mat of mats) {
+                    const inv = mat.inverse();
+                    await printm('M:', mat, 'M^(-1):', inv, '--------------------');
+
+                    const data = await inv.read();
+                    const finite = data.map(Number.isFinite).reduce((a, b) => a || b, false);
+
+                    expect(finite).toEqual(false);
+                }
+            });
+
+        });
+
     });
 
 

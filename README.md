@@ -1585,6 +1585,16 @@ Compute the component-wise multiplication between the matrix expression and `exp
 
 A `SpeedyMatrixExpr` representing the component-wise multiplication between the matrix expression and `expr`.
 
+##### SpeedyMatrixExpr.inverse()
+
+`SpeedyMatrixExpr.inverse(): SpeedyMatrixExpr`
+
+Compute the inverse of a matrix. Currently, only matrices up to 3x3 may be inverted.
+
+###### Returns
+
+A `SpeedyMatrixExpr` representing the inverse of the matrix.
+
 #### Functional programming
 
 ##### SpeedyMatrixExpr.map()

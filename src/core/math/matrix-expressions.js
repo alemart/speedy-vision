@@ -23,7 +23,7 @@ import { SpeedyMatrix } from './matrix';
 import { BoundMatrixOperation, BoundMatrixOperationTree } from './bound-matrix-operation';
 import { MatrixShape } from './matrix-shape';
 import { MatrixOperationsQueue } from './matrix-operations-queue';
-import { AbstractMethodError, IllegalArgumentError, IllegalOperationError } from '../../utils/errors';
+import { AbstractMethodError, IllegalArgumentError, IllegalOperationError, NotSupportedError } from '../../utils/errors';
 import { SpeedyPromise } from '../../utils/speedy-promise';
 import { Utils } from '../../utils/utils';
 import {
@@ -32,6 +32,7 @@ import {
     MatrixOperationFill,
     MatrixOperationCopy,
     MatrixOperationTranspose,
+    MatrixOperationInverse,
     MatrixOperationAdd,
     MatrixOperationSubtract,
     MatrixOperationMultiply,
@@ -399,6 +400,15 @@ class SpeedyMatrixExpr
     compMult(expr)
     {
         return new SpeedyMatrixCompMultExpr(this, expr);
+    }
+
+    /**
+     * Compute the inverse of this matrix
+     * @returns {SpeedyMatrixExpr}
+     */
+    inverse()
+    {
+        return new SpeedyMatrixInverseExpr(this);
     }
 
 
@@ -1633,7 +1643,7 @@ class SpeedyMatrixCloneExpr extends SpeedyMatrixUnaryExpr
 
 /**
  * Tranpose a matrix,
- * e.g., A = A^T
+ * e.g., A = B^T
  */
 class SpeedyMatrixTransposeExpr extends SpeedyMatrixUnaryExpr
 {
@@ -1651,6 +1661,27 @@ class SpeedyMatrixTransposeExpr extends SpeedyMatrixUnaryExpr
 
         // regular transposition
         super(expr, new MatrixOperationTranspose(expr._shape));
+    }
+}
+
+/**
+ * Compute the inverse of a matrix,
+ * e.g., A = B^(-1)
+ */
+class SpeedyMatrixInverseExpr extends SpeedyMatrixUnaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} expr
+     */
+    constructor(expr)
+    {
+        if(expr.rows !== expr.columns)
+            throw new IllegalOperationError(`Can't compute the inverse of a non-square matrix`);
+        if(expr.rows > 3)
+            throw new NotSupportedError(`Currently, only matrices up to 3x3 may be inverted`);
+
+        super(expr, new MatrixOperationInverse(expr._shape));
     }
 }
 

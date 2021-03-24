@@ -292,6 +292,22 @@ export class MatrixOperationTranspose extends MatrixOperation
 }
 
 /**
+ * Compute the inverse of a matrix
+ */
+export class MatrixOperationInverse extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {MatrixShape} shape the shape of the input matrix
+     */
+    constructor(shape)
+    {
+        Utils.assert(shape.rows === shape.columns && shape.rows <= 3);
+        super('inverse' + String(shape.rows), 1, shape);
+    }
+}
+
+/**
  * Add two matrices
  * e.g., A + B
  */
