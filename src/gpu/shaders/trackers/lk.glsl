@@ -29,6 +29,7 @@
 
 uniform sampler2D nextPyramid; // image pyramid at time t
 uniform sampler2D prevPyramid; // image pyramid at time t-1
+uniform sampler2D nextPositions; // encoded position of tracked keypoints at time t
 uniform sampler2D prevKeypoints; // encoded keypoints at time t-1
 uniform int windowSize; // odd number - typical values: 5, 7, 11, ..., 21
 uniform float discardThreshold; // typical value: 10^(-4)
@@ -273,29 +274,31 @@ ivec2 computeMismatch(highp vec2 pyrGuess, highp vec2 localGuess)
 // main
 void main()
 {
-    vec4 pixel = threadPixel(prevKeypoints);
+    vec4 pixel = threadPixel(nextPositions);
     ivec2 thread = threadLocation();
-    KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);
-    int r = windowRadius();
-    float windowArea = float(windowSize * windowSize);
-    int goodKeypoint = 1;
 
-    // not a position cell?
+    // don't change a thing just yet...!
     color = pixel;
-    if(address.offset > 0)
+
+    // we'll only compute optical-flow for a subset of all keypoints in this pass of the shader
+    int keypointIndex = thread.x + thread.y * outputSize().x;
+    if(keypointIndex < firstKeypointIndex || keypointIndex > lastKeypointIndex)
         return;
 
-    // decode keypoint
+    // find keypoint address & decode the keypoint
+    int pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;
+    KeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);
     Keypoint keypoint = decodeKeypoint(prevKeypoints, encoderLength, address);
+
+    // bad keypoint? don't track it
+    color = encodeKeypointPosition(keypoint.position);
     if(isBadKeypoint(keypoint))
         return;
 
-    // we'll only compute optical-flow for a subset of all keypoints in this pass of the shader
-    int idx = findKeypointIndex(address, descriptorSize, extraSize);
-    if(idx < firstKeypointIndex || idx > lastKeypointIndex)
-        return;
-
     // for each LOD
+    float windowArea = float(windowSize * windowSize);
+    int r = windowRadius();
+    int goodKeypoint = 1;
     highp vec2 pyrGuess = vec2(0.0f); // guessing the flow for each level of the pyramid
     for(int d = 0; d < depth; d++) {
 
