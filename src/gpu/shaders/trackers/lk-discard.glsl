@@ -26,13 +26,9 @@ uniform sampler2D pyramid; // image pyramid at time t
 uniform sampler2D encodedKeypoints; // encoded keypoints at time t
 uniform int windowSize; // odd number - typical values: 5, 7, 11, ..., 21
 uniform float discardThreshold; // typical value: 10^(-4)
-uniform int firstKeypointIndex, lastKeypointIndex; // process only these keypoints in this pass of the shader
 uniform int descriptorSize; // in bytes
 uniform int extraSize; // in bytes
 uniform int encoderLength;
-
-// convert windowSize to windowRadius (size = 2 * radius + 1)
-#define windowRadius() ((windowSize - 1) / 2)
 
 // main
 void main()
@@ -40,7 +36,6 @@ void main()
     vec4 pixel = threadPixel(encodedKeypoints);
     ivec2 thread = threadLocation();
     KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);
-    int r = windowRadius();
 
     // not a properties cell?
     color = pixel;
@@ -52,12 +47,7 @@ void main()
     if(isBadKeypoint(keypoint))
         return;
 
-    // we'll only compute optical-flow for a subset of all keypoints in this pass of the shader
-    int idx = findKeypointIndex(address, descriptorSize, extraSize);
-    if(idx < firstKeypointIndex || idx > lastKeypointIndex)
-        return;
-
     // should we discard the keypoint?
-    if(isKeypointAtInfinity(keypoint))
-        color = vec4(pixel.rgb, encodeKeypointFlags(keypoint.flags | KPF_DISCARD));
+    int newFlag = isKeypointAtInfinity(keypoint) ? KPF_DISCARD : 0;
+    color.a = encodeKeypointFlags(keypoint.flags | newFlag);
 }
