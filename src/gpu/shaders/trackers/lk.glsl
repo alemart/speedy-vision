@@ -49,11 +49,6 @@ uniform int encoderLength;
 #error Must define MAX_WINDOW_SIZE // typically 21 or 15 (odd number)
 #endif
 
-// keypoints inside this margin get discarded
-#ifndef DISCARD_MARGIN
-#define DISCARD_MARGIN 20
-#endif
-
 // threshold to stop iteration
 #ifndef IT_EPSILON
 #define IT_EPSILON 0.01f
@@ -349,16 +344,6 @@ void main()
     // track keypoint
     vec2 opticalFlow = pyrGuess;
     vec2 nextPosition = keypoint.position + opticalFlow;
-
-    // check if the keypoint is within boundaries
-    vec2 imageSize = vec2(textureSize(nextPyramid, 0));
-    float margin = float(DISCARD_MARGIN);
-    goodKeypoint &= int(
-        nextPosition.x >= margin &&
-        nextPosition.y >= margin &&
-        nextPosition.x <= imageSize.x - margin &&
-        nextPosition.y <= imageSize.y - margin
-    );
 
     // discard keypoint if necessary, otherwise update it
     color = goodKeypoint != 0 ? encodeKeypointPosition(nextPosition) : encodeKeypointPositionAtInfinity();
