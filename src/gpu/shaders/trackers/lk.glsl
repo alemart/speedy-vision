@@ -36,6 +36,7 @@ uniform sampler2D encodedFlow; // encoded flow vectors of tracked keypoints at t
 uniform sampler2D prevKeypoints; // encoded keypoints at time t-1
 uniform int windowSize; // odd number - typical values: 5, 7, 11, ..., 21
 uniform float discardThreshold; // typical value: 10^(-4)
+uniform float epsilon; // accuracy threshold to stop iterations - typical value: 0.01
 uniform int level; // current level (from depth-1 downto 0)
 uniform int depth; // how many pyramid layers to check (1, 2, 3, 4...)
 uniform int descriptorSize; // in bytes
@@ -50,11 +51,6 @@ uniform int encoderLength;
 // maximum window size
 #ifndef MAX_WINDOW_SIZE
 #error Must define MAX_WINDOW_SIZE // typically 21 or 15 (odd number)
-#endif
-
-// threshold to stop iteration
-#ifndef IT_EPSILON
-#define IT_EPSILON 0.01f
 #endif
 
 // image "enum"
@@ -154,12 +150,12 @@ void readWindow(vec2 center, float lod)
 vec2 computeDerivatives(int imageCode, ivec2 offset)
 {
     // Scharr filter
-    const mat3 derivX = mat3(
+    const mat3 dx = mat3(
         3, 0, -3,
         10, 0, -10,
         3, 0, -3
     );
-    const mat3 derivY = mat3(
+    const mat3 dy = mat3(
         3, 10, 3,
         0, 0, 0,
         -3, -10, -3
@@ -180,8 +176,8 @@ vec2 computeDerivatives(int imageCode, ivec2 offset)
     );
 
     // apply filter
-    mat3 fx = matrixCompMult(derivX, window);
-    mat3 fy = matrixCompMult(derivY, window);
+    mat3 fx = matrixCompMult(dx, window);
+    mat3 fy = matrixCompMult(dy, window);
 
     // compute derivatives: sum all elements of fx and fy
     const vec3 ones = vec3(1.0f);
@@ -316,7 +312,7 @@ void main()
     vec2 prevFlow = decodeFlow(pixel);
 
     // guessing the flow for each level of the pyramid
-    highp vec2 pyrGuess = (level < depth - 1) ? prevFlow : vec2(0.0f);
+    highp vec2 pyrGuess = (level < depth - 1) ? prevFlow : vec2(0.0f); // we start with zero
 
     // read pixels surrounding the keypoint
     readWindow(keypoint.position, float(level)); // keypoint.position may actually point to a subpixel
@@ -344,7 +340,7 @@ void main()
     ));
 
     // good keypoint? Will check when level == 0
-    int niceNumbers = int(det >= FLT_EPSILON) & int(minEigenvalue >= discardThreshold * windowArea);
+    int niceNumbers = int(det >= FLT_EPSILON && minEigenvalue >= discardThreshold * windowArea);
     bool goodKeypoint = (level > 0) || (niceNumbers != 0);
 
     // iterative LK
@@ -353,7 +349,7 @@ void main()
     for(int k = 0; k < NUM_ITERATIONS; k++) { // meant to reach convergence
         mismatch = vec2(computeMismatch(pyrGuess, localGuess)) * FLT_SCALE;
         delta = mismatch * invHarris * invDet;
-        niceNumbers &= int(step(IT_EPSILON * IT_EPSILON, dot(delta, delta))); // stop when ||.|| < eps
+        niceNumbers &= int(step(epsilon * epsilon, dot(delta, delta))); // stop when ||delta|| < epsilon
         localGuess += niceNumbers != 0 ? delta : vec2(0.0f);
     }
 
@@ -361,6 +357,6 @@ void main()
     pyrGuess = 2.0f * (pyrGuess + localGuess);
 
     // done!
-    vec2 opticalFlow = goodKeypoint ? pyrGuess : vec2(INFINITY);
+    vec2 opticalFlow = goodKeypoint ? pyrGuess : vec2(INFINITY); // discard "bad" keypoints
     color = encodeFlow(opticalFlow);
 }

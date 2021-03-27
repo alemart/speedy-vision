@@ -30,23 +30,19 @@ uniform int descriptorSize; // in bytes
 uniform int extraSize; // in bytes
 uniform int encoderLength;
 
-// keypoints inside this margin get discarded
-#ifndef DISCARD_MARGIN
-#define DISCARD_MARGIN 20
-#endif
-
 /**
- * Checks if a position is inside the image, considering a pre-defined margin
+ * Checks if a position is inside the image, considering a pre-defined border
  * @param {vec2} position
- * @param {float} margin in pixels
  * @return {bool}
  */
-bool isInsideImage(vec2 position, float margin)
+bool isInsideImage(vec2 position)
 {
     vec2 imageSize = vec2(textureSize(pyramid, 0));
+    float border = float(windowSize);
+
     return (
-        position.x >= margin && position.x < imageSize.x - margin &&
-        position.y >= margin && position.y < imageSize.y - margin
+        position.x > border && position.x < imageSize.x - border &&
+        position.y > border && position.y < imageSize.y - border
     );
 }
 
@@ -68,7 +64,7 @@ void main()
         return;
 
     // should we discard the keypoint?
-    bool shouldDiscard = isKeypointAtInfinity(keypoint) || !isInsideImage(keypoint.position, float(DISCARD_MARGIN));
+    bool shouldDiscard = isKeypointAtInfinity(keypoint) || !isInsideImage(keypoint.position);
     int newFlag = shouldDiscard ? KPF_DISCARD : 0;
     color.a = encodeKeypointFlags(keypoint.flags | newFlag);
 }

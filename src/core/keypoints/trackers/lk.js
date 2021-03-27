@@ -29,6 +29,7 @@ import { PYRAMID_MAX_LEVELS } from '../../../utils/globals';
 const DEFAULT_WINDOW_SIZE = 15;
 const DEFAULT_DEPTH = Math.min(6, PYRAMID_MAX_LEVELS);
 const DEFAULT_DISCARD_THRESHOLD = 0.0001;
+const DEFAULT_EPSILON = 0.01;
 
 /**
  * Lucas-Kanade feature tracker in a pyramid
@@ -44,6 +45,7 @@ export class LKFeatureTrackingAlgorithm extends FeatureTrackingAlgorithm
         this._windowSize = DEFAULT_WINDOW_SIZE;
         this._depth = DEFAULT_DEPTH;
         this._discardThreshold = DEFAULT_DISCARD_THRESHOLD;
+        this._epsilon = DEFAULT_EPSILON;
     }
 
     /**
@@ -103,6 +105,24 @@ export class LKFeatureTrackingAlgorithm extends FeatureTrackingAlgorithm
     }
 
     /**
+     * Get the accuracy threshold, used to stop LK iterations
+     * @returns {number}
+     */
+    get epsilon()
+    {
+        return this._epsilon;
+    }
+
+    /**
+     * Get the accuracy threshold, used to stop LK iterations
+     * @param {number} value typically 0.01
+     */
+    set epsilon(value)
+    {
+        this._epsilon = Math.max(0, +value);
+    }
+
+    /**
      * Track a set of feature points
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} nextImage next image (time: t)
@@ -117,6 +137,7 @@ export class LKFeatureTrackingAlgorithm extends FeatureTrackingAlgorithm
         const windowSize = this.windowSize;
         const depth = this.depth;
         const discardThreshold = this.discardThreshold;
+        const epsilon = this.epsilon;
 
         // create pyramids
         const nextPyramid = nextImage.generatePyramid(gpu);
@@ -124,6 +145,6 @@ export class LKFeatureTrackingAlgorithm extends FeatureTrackingAlgorithm
 
         // track feature points
         const encoderLength = gpu.programs.encoders.encoderLength;
-        return gpu.programs.trackers.lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, depth, discardThreshold, descriptorSize, extraSize, encoderLength);
+        return gpu.programs.trackers.lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, depth, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);
     }
 }
