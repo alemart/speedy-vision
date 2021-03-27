@@ -59,7 +59,7 @@ export class Speedy
      * @param {object} [mediaOptions] additional options for advanced configuration of the SpeedyMedia
      * @returns {Promise<SpeedyMedia>}
      */
-    static camera(width = 426, height = 240, cameraOptions = {}, mediaOptions = {})
+    static camera(width = 640, height = 360, cameraOptions = {}, mediaOptions = {})
     {
         return SpeedyMedia.loadCameraStream(width, height, cameraOptions, mediaOptions);
     }

@@ -109,13 +109,13 @@ export class SpeedyMedia
 
     /**
      * Loads a camera stream
-     * @param {number} [width] width of the stream
-     * @param {number} [height] height of the stream
+     * @param {number} width width of the stream
+     * @param {number} height height of the stream
      * @param {object} [cameraOptions] additional options to pass to getUserMedia()
      * @param {object} [mediaOptions] additional options for advanced configuration of the SpeedyMedia
      * @returns {SpeedyPromise<SpeedyMedia>}
      */
-    static loadCameraStream(width = 426, height = 240, cameraOptions = { }, mediaOptions = { })
+    static loadCameraStream(width, height, cameraOptions = { }, mediaOptions = { })
     {
         return Utils.requestCameraStream(width, height, cameraOptions).then(
             video => SpeedyMedia.load(video, mediaOptions)

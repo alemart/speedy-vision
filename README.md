@@ -183,8 +183,8 @@ Loads a camera stream into a new `SpeedyMedia` object. This is a wrapper around 
 
 ###### Arguments
 
-* `width: number, optional`. The width of the stream. Defaults to `426`.
-* `height: number, optional`. The height of the stream. Defaults to `240`.
+* `width: number, optional`. The width of the stream. Defaults to `640`.
+* `height: number, optional`. The height of the stream. Defaults to `360`.
 * `cameraOptions: object, optional`. Additional options to be passed to `navigator.mediaDevices.getUserMedia()`.
 * `options: object, optional`. Additional options for advanced configuration. See [SpeedyMedia.options](#speedymediaoptions) for details.
 
