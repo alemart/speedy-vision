@@ -292,6 +292,7 @@ void main()
     vec4 pixel = threadPixel(encodedFlow);
     ivec2 thread = threadLocation();
     float windowArea = float(windowSize * windowSize);
+    float eps2 = epsilon * epsilon;
     int r = windowRadius();
 
     // don't change a thing just yet...!
@@ -308,11 +309,8 @@ void main()
     if(isBadKeypoint(keypoint))
         return;
 
-    // in each pass of this shader, we analyze a level of the pyramid
-    vec2 prevFlow = decodeFlow(pixel);
-
-    // guessing the flow for each level of the pyramid
-    highp vec2 pyrGuess = (level < depth - 1) ? prevFlow : vec2(0.0f); // we start with zero
+    // in each pass of this shader, we guess the optical-flow in a particular level of the pyramid
+    highp vec2 pyrGuess = (level < depth - 1) ? decodeFlow(pixel) : vec2(0.0f); // we start with zero
 
     // read pixels surrounding the keypoint
     readWindow(keypoint.position, float(level)); // keypoint.position may actually point to a subpixel
@@ -349,7 +347,7 @@ void main()
     for(int k = 0; k < NUM_ITERATIONS; k++) { // meant to reach convergence
         mismatch = vec2(computeMismatch(pyrGuess, localGuess)) * FLT_SCALE;
         delta = mismatch * invHarris * invDet;
-        niceNumbers &= int(step(epsilon * epsilon, dot(delta, delta))); // stop when ||delta|| < epsilon
+        niceNumbers &= int(step(eps2, dot(delta, delta))); // stop when ||delta|| < epsilon
         localGuess += niceNumbers != 0 ? delta : vec2(0.0f);
     }
 
