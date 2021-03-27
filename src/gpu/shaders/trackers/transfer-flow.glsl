@@ -15,32 +15,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * transfer-positions.glsl
- * Transfer the tracked position of keypoints to an encodedKeypoints texture
+ * transfer-flow.glsl
+ * Transfer the optical-flow of keypoints to an encodedKeypoints texture
  */
 
 @include "keypoints.glsl"
+@include "float16.glsl"
 
-uniform sampler2D encodedPositions;
+uniform sampler2D encodedFlow;
 uniform sampler2D encodedKeypoints;
 uniform int descriptorSize;
 uniform int extraSize;
 uniform int encoderLength;
 
+/**
+ * Encode a flow vector from a RGBA pixel
+ * @param {vec4} pix
+ * @return {vec2}
+ */
+vec2 decodeFlow(vec4 pix)
+{
+    return vec2(decodeFloat16(pix.rg), decodeFloat16(pix.ba));
+}
+
+// main
 void main()
 {
     vec4 pixel = threadPixel(encodedKeypoints);
     ivec2 thread = threadLocation();
 
-    // find my index in raster order
+    // find my keypoint and its index in raster order
     KeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);
+    Keypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);
     int myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);
 
     // find the corresponding location in the encoded positions texture
-    int len = textureSize(encodedPositions, 0).x;
+    int len = textureSize(encodedFlow, 0).x;
     ivec2 location = ivec2(myIndex % len, myIndex / len);
-    vec4 targetPixel = pixelAt(encodedPositions, location);
+    vec4 targetPixel = pixelAt(encodedFlow, location);
+
+    // compute the new position of the keypoint
+    vec2 flow = decodeFlow(targetPixel);
+    vec4 encodedPosition = any(isinf(flow)) ? encodeKeypointPositionAtInfinity() : encodeKeypointPosition(
+        keypoint.position + flow
+    );
 
     // transfer the position
-    color = myAddress.offset == 0 ? targetPixel : pixel;
+    color = myAddress.offset == 0 ? encodedPosition : pixel;
 }

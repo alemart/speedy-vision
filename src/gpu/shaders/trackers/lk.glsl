@@ -26,10 +26,11 @@
  */
 
 @include "keypoints.glsl"
+@include "float16.glsl"
 
 uniform sampler2D nextPyramid; // image pyramid at time t
 uniform sampler2D prevPyramid; // image pyramid at time t-1
-uniform sampler2D nextPositions; // encoded position of tracked keypoints at time t
+uniform sampler2D encodedFlow; // encoded flow vectors of tracked keypoints at time t
 uniform sampler2D prevKeypoints; // encoded keypoints at time t-1
 uniform int windowSize; // odd number - typical values: 5, 7, 11, ..., 21
 uniform float discardThreshold; // typical value: 10^(-4)
@@ -67,6 +68,7 @@ const int MAX_WINDOW_RADIUS_PLUS = (MAX_WINDOW_SIZE_PLUS - 1) / 2;
 const int MAX_WINDOW_RADIUS = ((MAX_WINDOW_SIZE) - 1) / 2;
 const highp float FLT_SCALE = 0.00000095367431640625f; // this is 1 / 2^20, for numeric compatibility with OpenCV (discardThreshold)
 const highp float FLT_EPSILON = 0.00000011920929f;
+const highp float INFINITY = 1.0f / 0.0f; // this is +Inf according to the GLSL ES 3 Spec sec 4.5.1
 
 /*
  * Note this:
@@ -264,12 +266,22 @@ ivec2 computeMismatch(highp vec2 pyrGuess, highp vec2 localGuess)
     return mismatch;
 }
 
+/**
+ * Encode a flow vector into a RGBA pixel
+ * @param {vec2} flow
+ * @return {vec4} in [0,1]^4
+ */
+vec4 encodeFlow(vec2 flow)
+{
+    return vec4(encodeFloat16(flow.x), encodeFloat16(flow.y));
+}
+
 
 
 // main
 void main()
 {
-    vec4 pixel = threadPixel(nextPositions);
+    vec4 pixel = threadPixel(encodedFlow);
     ivec2 thread = threadLocation();
 
     // don't change a thing just yet...!
@@ -286,7 +298,7 @@ void main()
     Keypoint keypoint = decodeKeypoint(prevKeypoints, encoderLength, address);
 
     // bad keypoint? don't track it
-    color = encodeKeypointPosition(keypoint.position);
+    color = encodeFlow(vec2(0.0f));
     if(isBadKeypoint(keypoint))
         return;
 
@@ -341,10 +353,7 @@ void main()
         pyrGuess = 2.0f * (pyrGuess + localGuess);
     }
 
-    // track keypoint
-    vec2 opticalFlow = pyrGuess;
-    vec2 nextPosition = keypoint.position + opticalFlow;
-
-    // discard keypoint if necessary, otherwise update it
-    color = goodKeypoint != 0 ? encodeKeypointPosition(nextPosition) : encodeKeypointPositionAtInfinity();
+    // done!
+    highp vec2 opticalFlow = pyrGuess;
+    color = goodKeypoint != 0 ? encodeFlow(opticalFlow) : encodeFlow(vec2(INFINITY));
 }
