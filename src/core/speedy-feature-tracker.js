@@ -92,7 +92,7 @@ export class SpeedyFeatureTracker
             throw new IllegalArgumentError();
 
         // upload media to the GPU
-        const [ nextImage, prevImage ] = this._updatedImages(this._media, gpu, this._prevInputTexture);
+        const [ nextImage, prevImage ] = this._updatedImages(this._media, gpu, this._inputTexture);
         this._prevInputTexture = prevImage;
         this._inputTexture = nextImage;
 
