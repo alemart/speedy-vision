@@ -27,7 +27,7 @@ import { PYRAMID_MAX_LEVELS } from '../../../utils/globals';
 
 // Constants
 const DEFAULT_WINDOW_SIZE = 15;
-const DEFAULT_DEPTH = Math.min(8, PYRAMID_MAX_LEVELS);
+const DEFAULT_DEPTH = Math.min(6, PYRAMID_MAX_LEVELS);
 const DEFAULT_DISCARD_THRESHOLD = 0.0001;
 
 /**

@@ -308,7 +308,7 @@ void main()
 
         // compute matrix of derivatives
         ivec2 derivatives;
-        highp ivec3 harris3i = ivec3(0);
+        ivec3 harris3i = ivec3(0);
         for(int j = 0; j < windowSize; j++) {
             for(int i = 0; i < windowSize; i++) {
                 derivatives = ivec2(floor(255.0f * computeDerivatives(PREV_IMAGE, ivec2(i-r, j-r))));
