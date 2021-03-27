@@ -36,31 +36,30 @@ const LK_MAX_WINDOW_SIZE_SMALL = 15; // 15x15 window - the smaller the window, t
 const LK_MAX_WINDOW_SIZE_SMALLER = 11; // 11x11 window - works best on mobile
 const LK_MAX_WINDOW_SIZE_SMALLEST = 7; // 7x7 window
 const LK_MIN_WINDOW_SIZE = 5; // 5x5 window: (-2, -1, 0, 1, 2) x (-2, -1, 0, 1, 2)
-const LK_MAX_KEYPOINTS_PER_PASS = 100;
 
 const lk = importShader('trackers/lk.glsl')
-           .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'discardThreshold', 'depth', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'extraSize', 'encoderLength')
+           .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'discardThreshold', 'level', 'depth', 'descriptorSize', 'extraSize', 'encoderLength')
            .withDefines({
                'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE,
                'NUM_ITERATIONS': LK_NUM_ITERATIONS
            });
 
 const lkSmall = importShader('trackers/lk.glsl')
-                .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'discardThreshold', 'depth', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'extraSize', 'encoderLength')
+                .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'discardThreshold', 'level', 'depth', 'descriptorSize', 'extraSize', 'encoderLength')
                 .withDefines({
                     'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALL,
                     'NUM_ITERATIONS': LK_NUM_ITERATIONS
                 });
 
 const lkSmaller = importShader('trackers/lk.glsl')
-                  .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'discardThreshold', 'depth', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'extraSize', 'encoderLength')
+                  .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'discardThreshold', 'level', 'depth', 'descriptorSize', 'extraSize', 'encoderLength')
                   .withDefines({
                       'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALLER,
                       'NUM_ITERATIONS': LK_NUM_ITERATIONS
                   });
 
 const lkSmallest = importShader('trackers/lk.glsl')
-                   .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'discardThreshold', 'depth', 'firstKeypointIndex', 'lastKeypointIndex', 'descriptorSize', 'extraSize', 'encoderLength')
+                   .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'discardThreshold', 'level', 'depth', 'descriptorSize', 'extraSize', 'encoderLength')
                    .withDefines({
                        'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALLEST,
                        'NUM_ITERATIONS': LK_NUM_ITERATIONS
@@ -146,25 +145,18 @@ export class GPUTrackers extends SpeedyProgramGroup
         //
         // Optimization!
         // because this is such a demanding algorithm, we'll
-        // split the work into multiple passes of the shaders
+        // split the work into multiple passes of the shader
         // (so we don't get WebGL context loss on mobile)
         //
         const pixelsPerKeypoint = (MIN_KEYPOINT_SIZE + descriptorSize + extraSize) / 4;
         const numKeypoints = encoderLength * encoderLength / pixelsPerKeypoint; // approximately, upper bound
-        const numPasses = Math.ceil(Math.max(1, numKeypoints) / LK_MAX_KEYPOINTS_PER_PASS);
         const lkEncoderLength = Math.max(1, Math.ceil(Math.sqrt(numKeypoints)));
         lk.resize(lkEncoderLength, lkEncoderLength);
-        //console.log('num passes', numPasses, lk);
 
-        // for each pass
+        // compute optical-flow
         let flow = lk.clear(0, 0, 0, 0);
-        for(let i = 0; i < numPasses; i++) {
-            const firstKeypointIndex = i * LK_MAX_KEYPOINTS_PER_PASS;
-            const lastKeypointIndex = firstKeypointIndex + LK_MAX_KEYPOINTS_PER_PASS - 1;
-
-            // compute optical-flow
-            flow = lk(flow, prevKeypoints, nextPyramid, prevPyramid, windowSize, discardThreshold, depth, firstKeypointIndex, lastKeypointIndex, descriptorSize, extraSize, encoderLength);
-        }
+        for(let level = depth - 1; level >= 0; level--)
+            flow = lk(flow, prevKeypoints, nextPyramid, prevPyramid, windowSize, discardThreshold, level, depth, descriptorSize, extraSize, encoderLength);
 
         // transfer optical-flow to nextKeypoints
         this._transferFlow.resize(encoderLength, encoderLength);

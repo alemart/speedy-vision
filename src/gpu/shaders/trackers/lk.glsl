@@ -20,7 +20,9 @@
  */
 
 /*
- * This is a GPU implementation of Lucas-Kanade. Reference:
+ * This is a brand-new GPU implementation of Lucas-Kanade.
+ *
+ * The main reference for the algorithm is:
  * Bouguet, Jean-Yves. "Pyramidal Implementation of the Lucas Kanade Feature Tracker", 1999.
  * (the OpenCV implementation is based on it)
  */
@@ -34,8 +36,8 @@ uniform sampler2D encodedFlow; // encoded flow vectors of tracked keypoints at t
 uniform sampler2D prevKeypoints; // encoded keypoints at time t-1
 uniform int windowSize; // odd number - typical values: 5, 7, 11, ..., 21
 uniform float discardThreshold; // typical value: 10^(-4)
+uniform int level; // current level (from depth-1 downto 0)
 uniform int depth; // how many pyramid layers to check (1, 2, 3, 4...)
-uniform int firstKeypointIndex, lastKeypointIndex; // process only these keypoints in this pass of the shader
 uniform int descriptorSize; // in bytes
 uniform int extraSize; // in bytes
 uniform int encoderLength;
@@ -276,6 +278,16 @@ vec4 encodeFlow(vec2 flow)
     return vec4(encodeFloat16(flow.x), encodeFloat16(flow.y));
 }
 
+/**
+ * Decode a flow vector from a RGBA pixel
+ * @param {vec4} pix
+ * @return {vec2}
+ */
+vec2 decodeFlow(vec4 pix)
+{
+    return vec2(decodeFloat16(pix.rg), decodeFloat16(pix.ba));
+}
+
 
 
 // main
@@ -283,16 +295,14 @@ void main()
 {
     vec4 pixel = threadPixel(encodedFlow);
     ivec2 thread = threadLocation();
+    float windowArea = float(windowSize * windowSize);
+    int r = windowRadius();
 
     // don't change a thing just yet...!
     color = pixel;
 
-    // we'll only compute optical-flow for a subset of all keypoints in this pass of the shader
-    int keypointIndex = thread.x + thread.y * outputSize().x;
-    if(keypointIndex < firstKeypointIndex || keypointIndex > lastKeypointIndex)
-        return;
-
     // find keypoint address & decode the keypoint
+    int keypointIndex = thread.x + thread.y * outputSize().x;
     int pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;
     KeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);
     Keypoint keypoint = decodeKeypoint(prevKeypoints, encoderLength, address);
@@ -302,58 +312,55 @@ void main()
     if(isBadKeypoint(keypoint))
         return;
 
-    // for each LOD
-    float windowArea = float(windowSize * windowSize);
-    int r = windowRadius();
-    int goodKeypoint = 1;
-    highp vec2 pyrGuess = vec2(0.0f); // guessing the flow for each level of the pyramid
-    for(int d = 0; d < depth; d++) {
+    // in each pass of this shader, we analyze a level of the pyramid
+    vec2 prevFlow = decodeFlow(pixel);
 
-        // read pixels surrounding the keypoint
-        float lod = float(depth - 1 - d);
-        readWindow(keypoint.position, lod); // keypoint.position may actually point to a subpixel
+    // guessing the flow for each level of the pyramid
+    highp vec2 pyrGuess = (level < depth - 1) ? prevFlow : vec2(0.0f);
 
-        // compute matrix of derivatives
-        ivec2 derivatives;
-        ivec3 harris3i = ivec3(0);
-        for(int j = 0; j < windowSize; j++) {
-            for(int i = 0; i < windowSize; i++) {
-                derivatives = ivec2(floor(255.0f * computeDerivatives(PREV_IMAGE, ivec2(i-r, j-r))));
-                harris3i += ivec3(
-                    derivatives.x * derivatives.x,
-                    derivatives.x * derivatives.y,
-                    derivatives.y * derivatives.y
-                );
-                derivativesAt(i-r, j-r) = derivatives;
-            }
+    // read pixels surrounding the keypoint
+    readWindow(keypoint.position, float(level)); // keypoint.position may actually point to a subpixel
+
+    // compute matrix of derivatives
+    ivec2 derivatives;
+    ivec3 harris3i = ivec3(0);
+    for(int j = 0; j < windowSize; j++) {
+        for(int i = 0; i < windowSize; i++) {
+            derivatives = ivec2(floor(255.0f * computeDerivatives(PREV_IMAGE, ivec2(i-r, j-r))));
+            harris3i += ivec3(
+                derivatives.x * derivatives.x,
+                derivatives.x * derivatives.y,
+                derivatives.y * derivatives.y
+            );
+            derivativesAt(i-r, j-r) = derivatives;
         }
-        highp vec3 harris = vec3(harris3i) * FLT_SCALE; // [0,255^2] scale to FLT_SCALE
-        highp float det = harris.x * harris.z - harris.y * harris.y; // determinant (>= 0)
-        highp float invDet = 1.0f / det;
-        highp mat2 invHarris = mat2(harris.z, -harris.y, -harris.y, harris.x); // inverse * det
-        highp float minEigenvalue = 0.5f * ((harris.x + harris.z) - sqrt(
-            (harris.x - harris.z) * (harris.x - harris.z) + 4.0f * (harris.y * harris.y)
-        ));
+    }
+    highp vec3 harris = vec3(harris3i) * FLT_SCALE; // [0,255^2] scale to FLT_SCALE
+    highp float det = harris.x * harris.z - harris.y * harris.y; // determinant (>= 0)
+    highp float invDet = 1.0f / det;
+    highp mat2 invHarris = mat2(harris.z, -harris.y, -harris.y, harris.x); // inverse * det
+    highp float minEigenvalue = 0.5f * ((harris.x + harris.z) - sqrt(
+        (harris.x - harris.z) * (harris.x - harris.z) + 4.0f * (harris.y * harris.y)
+    ));
 
-        // good keypoint? Will check when lod == 0
-        int niceNumbers = int(det >= FLT_EPSILON) & int(minEigenvalue >= discardThreshold * windowArea);
-        goodKeypoint &= int(d < depth - 1) | niceNumbers;
+    // good keypoint? Will check when level == 0
+    int niceNumbers = int(det >= FLT_EPSILON) & int(minEigenvalue >= discardThreshold * windowArea);
+    bool goodKeypoint = (level > 0) || (niceNumbers != 0);
 
-        // iterative LK
-        highp vec2 mismatch, delta, localGuess = vec2(0.0f); // guess for this level of the pyramid
-        @unroll
-        for(int k = 0; k < NUM_ITERATIONS; k++) { // meant to reach convergence
-            mismatch = vec2(computeMismatch(pyrGuess, localGuess)) * FLT_SCALE;
-            delta = mismatch * invHarris * invDet;
-            niceNumbers &= int(step(IT_EPSILON * IT_EPSILON, dot(delta, delta))); // stop when ||.|| < eps
-            localGuess += niceNumbers != 0 ? delta : vec2(0.0f);
-        }
-
-        // update our guess of the optical flow for the next level of the pyramid
-        pyrGuess = 2.0f * (pyrGuess + localGuess);
+    // iterative LK
+    highp vec2 mismatch, delta, localGuess = vec2(0.0f); // guess for this level of the pyramid
+    @unroll
+    for(int k = 0; k < NUM_ITERATIONS; k++) { // meant to reach convergence
+        mismatch = vec2(computeMismatch(pyrGuess, localGuess)) * FLT_SCALE;
+        delta = mismatch * invHarris * invDet;
+        niceNumbers &= int(step(IT_EPSILON * IT_EPSILON, dot(delta, delta))); // stop when ||.|| < eps
+        localGuess += niceNumbers != 0 ? delta : vec2(0.0f);
     }
 
+    // update our guess of the optical flow for the next level of the pyramid
+    pyrGuess = 2.0f * (pyrGuess + localGuess);
+
     // done!
-    highp vec2 opticalFlow = pyrGuess;
-    color = goodKeypoint != 0 ? encodeFlow(opticalFlow) : encodeFlow(vec2(INFINITY));
+    vec2 opticalFlow = goodKeypoint ? pyrGuess : vec2(INFINITY);
+    color = encodeFlow(opticalFlow);
 }

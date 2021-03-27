@@ -29,7 +29,7 @@ uniform int extraSize;
 uniform int encoderLength;
 
 /**
- * Encode a flow vector from a RGBA pixel
+ * Decode a flow vector from a RGBA pixel
  * @param {vec4} pix
  * @return {vec2}
  */
