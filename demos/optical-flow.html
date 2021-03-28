@@ -35,10 +35,20 @@
             <div>
                 <label for="window-size">Window size</label>
                 <select id="window-size">
+                    <option value="7">7x7</option>
+                    <option value="11">11x11</option>
+                    <option value="15" selected>15x15</option>
+                    <option value="21">21x21</option>
+                </select>
+                <label for="depth">Depth</label>
+                <select id="depth">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6" selected>6</option>
                     <option value="7">7</option>
-                    <option value="11">11</option>
-                    <option value="15" selected>15</option>
-                    <option value="21">21</option>
                 </select>
                 <label for="discard-threshold">Discard threshold</label>
                 <select id="discard-threshold">
@@ -47,8 +57,27 @@
                     <option value="0.001">0.001</option>
                     <option value="0.01">0.01</option>
                 </select>
+            </div>
+            <div class="separator"></div>
+            <div>
+                <label for="number-of-iterations">Max. iterations</label>
+                <select id="number-of-iterations">
+                    <option value="3">3</option>
+                    <option value="5" selected>5</option>
+                    <option value="8">8</option>
+                    <option value="15">15</option>
+                    <option value="20">20</option>
+                    <option value="30">30</option>
+                </select>
+                <label for="epsilon">Epsilon</label>
+                <select id="epsilon">
+                    <option value="0">0</option>
+                    <option value="0.01" selected>0.01</option>
+                    <option value="0.03">0.03</option>
+                </select>
                 <label for="speed-slider">Video speed</label>
                 <input type="range" id="speed-slider" min="0.10" max="2" value="1" step="0.01">
+                <a href="javascript:reset()">Reset</a>
             </div>
         </form>
         <div>
@@ -84,6 +113,9 @@ window.onload = async function()
     // get DOM elements
     const windowSize = document.getElementById('window-size');
     const discardThreshold = document.getElementById('discard-threshold');
+    const depth = document.getElementById('depth');
+    const numberOfIterations = document.getElementById('number-of-iterations');
+    const epsilon = document.getElementById('epsilon');
 
     // create a feature detector
     const featureDetector = Speedy.FeatureDetector.Harris();
@@ -100,6 +132,9 @@ window.onload = async function()
         // update tracker parameters
         featureTracker.windowSize = Number(windowSize.value);
         featureTracker.discardThreshold = Number(discardThreshold.value);
+        featureTracker.depth = Number(depth.value);
+        featureTracker.numberOfIterations = Number(numberOfIterations.value);
+        featureTracker.epsilon = Number(epsilon.value);
 
         // track existing features
         features = await featureTracker.track(features);
@@ -226,6 +261,17 @@ function cursorPosition(canvas, event)
     const y = event.clientY - rect.top;
 
     return { x, y };
+}
+
+function reset()
+{
+    const options = document.querySelectorAll('select option');
+    for(const option of options)
+        option.selected = option.defaultSelected;
+
+    const slider = document.getElementById('speed-slider');
+    slider.value = slider.defaultValue;
+    slider.dispatchEvent(new Event('input'));
 }
         </script>
         <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>
