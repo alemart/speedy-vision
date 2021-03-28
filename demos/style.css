@@ -24,6 +24,7 @@ body {
   background: white;
   color: black;
   font-family: sans-serif;
+  margin: 16px;
 }
 
 a:any-link {
@@ -31,8 +32,10 @@ a:any-link {
 }
 
 h1 {
-  color: lightslategrey;
-  border-bottom: 1px dotted lightslategrey;
+  background-color: lightslategrey;
+  color: white;
+  margin: -16px -16px 16px -16px;
+  padding: 16px;
 }
 
 /* Form controls */
@@ -208,23 +211,16 @@ input[type=range]::-ms-track {
 
 /* Watermark */
 mark {
-  position: absolute;
-  top: 2em;
-  right: 1em;
-  background: none;
-}
-
-mark {
-    position: absolute;
-    top: 0;
-    right: 0;
-    background: lightslategrey;
-    color: white;
+    position: fixed;
+    bottom: 0px;
+    right: 0px;
     padding: 0.5em;
+    color: lightslategrey;
+    background: rgba(255, 255, 255, 0.8);
+    font-weight: bold;
 }
 
 mark a:any-link {
-    color: white;
-    font-weight: bold;
+    color: lightslategrey;
 }
 
