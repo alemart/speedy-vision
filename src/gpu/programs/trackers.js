@@ -30,7 +30,6 @@ import { PYRAMID_MAX_LEVELS, MIN_KEYPOINT_SIZE } from '../../utils/globals';
 //
 
 // LK
-const LK_NUM_ITERATIONS = 5;
 const LK_MAX_WINDOW_SIZE = 21; // 21x21 window
 const LK_MAX_WINDOW_SIZE_SMALL = 15; // 15x15 window - the smaller the window, the easier it is on the GPU
 const LK_MAX_WINDOW_SIZE_SMALLER = 11; // 11x11 window - works best on mobile
@@ -38,31 +37,27 @@ const LK_MAX_WINDOW_SIZE_SMALLEST = 7; // 7x7 window
 const LK_MIN_WINDOW_SIZE = 5; // 5x5 window: (-2, -1, 0, 1, 2) x (-2, -1, 0, 1, 2)
 
 const lk = importShader('trackers/lk.glsl')
-           .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'discardThreshold', 'epsilon', 'level', 'depth', 'descriptorSize', 'extraSize', 'encoderLength')
+           .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'level', 'depth', 'numberOfIterations', 'discardThreshold', 'epsilon', 'descriptorSize', 'extraSize', 'encoderLength')
            .withDefines({
                'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE,
-               'NUM_ITERATIONS': LK_NUM_ITERATIONS
            });
 
 const lkSmall = importShader('trackers/lk.glsl')
-                .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'discardThreshold', 'epsilon', 'level', 'depth', 'descriptorSize', 'extraSize', 'encoderLength')
+                .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'level', 'depth', 'numberOfIterations', 'discardThreshold', 'epsilon', 'descriptorSize', 'extraSize', 'encoderLength')
                 .withDefines({
                     'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALL,
-                    'NUM_ITERATIONS': LK_NUM_ITERATIONS
                 });
 
 const lkSmaller = importShader('trackers/lk.glsl')
-                  .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'discardThreshold', 'epsilon', 'level', 'depth', 'descriptorSize', 'extraSize', 'encoderLength')
+                  .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'level', 'depth', 'numberOfIterations', 'discardThreshold', 'epsilon', 'descriptorSize', 'extraSize', 'encoderLength')
                   .withDefines({
                       'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALLER,
-                      'NUM_ITERATIONS': LK_NUM_ITERATIONS
                   });
 
 const lkSmallest = importShader('trackers/lk.glsl')
-                   .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'discardThreshold', 'epsilon', 'level', 'depth', 'descriptorSize', 'extraSize', 'encoderLength')
+                   .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'level', 'depth', 'numberOfIterations', 'discardThreshold', 'epsilon', 'descriptorSize', 'extraSize', 'encoderLength')
                    .withDefines({
                        'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALLEST,
-                       'NUM_ITERATIONS': LK_NUM_ITERATIONS
                    });
 
 const lkDiscard = importShader('trackers/lk-discard.glsl')
@@ -115,6 +110,7 @@ export class GPUTrackers extends SpeedyProgramGroup
      * @param {SpeedyTexture} prevKeypoints tiny texture of encoded keypoints at time t-1
      * @param {number} windowSize neighborhood size, an odd number (5, 7, 9, 11...)
      * @param {number} depth how many pyramid layers will be scanned
+     * @param {number} numberOfIterations for iterative LK
      * @param {number} discardThreshold used to discard "bad" keypoints, typically 10^(-4)
      * @param {number} epsilon accuracy threshold to stop iterations, typically 0.01
      * @param {number} descriptorSize in bytes
@@ -122,7 +118,7 @@ export class GPUTrackers extends SpeedyProgramGroup
      * @param {number} encoderLength
      * @returns {SpeedyTexture}
      */
-    lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, depth, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength)
+    lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, depth, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength)
     {
         // make sure we get a proper depth
         const MIN_DEPTH = 1, MAX_DEPTH = PYRAMID_MAX_LEVELS;
@@ -131,6 +127,9 @@ export class GPUTrackers extends SpeedyProgramGroup
         // windowSize must be a positive odd number
         windowSize = windowSize + ((windowSize + 1) % 2);
         windowSize = Math.max(LK_MIN_WINDOW_SIZE, Math.min(windowSize, LK_MAX_WINDOW_SIZE));
+
+        // we want at least one iteration
+        numberOfIterations = Math.max(1, numberOfIterations);
 
         // select program
         let lk = null;
@@ -157,7 +156,7 @@ export class GPUTrackers extends SpeedyProgramGroup
         // compute optical-flow
         let flow = lk.clear(0, 0, 0, 0);
         for(let level = depth - 1; level >= 0; level--)
-            flow = lk(flow, prevKeypoints, nextPyramid, prevPyramid, windowSize, discardThreshold, epsilon, level, depth, descriptorSize, extraSize, encoderLength);
+            flow = lk(flow, prevKeypoints, nextPyramid, prevPyramid, windowSize, level, depth, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);
 
         // transfer optical-flow to nextKeypoints
         this._transferFlow.resize(encoderLength, encoderLength);

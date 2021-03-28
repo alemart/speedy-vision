@@ -28,6 +28,7 @@ import { PYRAMID_MAX_LEVELS } from '../../../utils/globals';
 // Constants
 const DEFAULT_WINDOW_SIZE = 15;
 const DEFAULT_DEPTH = Math.min(6, PYRAMID_MAX_LEVELS);
+const DEFAULT_NUMBER_OF_ITERATIONS = 5;
 const DEFAULT_DISCARD_THRESHOLD = 0.0001;
 const DEFAULT_EPSILON = 0.01;
 
@@ -44,6 +45,7 @@ export class LKFeatureTrackingAlgorithm extends FeatureTrackingAlgorithm
         super();
         this._windowSize = DEFAULT_WINDOW_SIZE;
         this._depth = DEFAULT_DEPTH;
+        this._numberOfIterations = DEFAULT_NUMBER_OF_ITERATIONS;
         this._discardThreshold = DEFAULT_DISCARD_THRESHOLD;
         this._epsilon = DEFAULT_EPSILON;
     }
@@ -87,6 +89,25 @@ export class LKFeatureTrackingAlgorithm extends FeatureTrackingAlgorithm
     }
 
     /**
+     * Get the maximum number of iterations of the pyramidal LK algorithm
+     * @returns {number}
+     */
+    get numberOfIterations()
+    {
+        return this._numberOfIterations;
+    }
+
+    /**
+     * Set the maximum number of iterations of the pyramidal LK algorithm
+     * @param {number} value
+     */
+    set numberOfIterations(value)
+    {
+        this._numberOfIterations = value | 0;
+        Utils.assert(this._numberOfIterations >= 1);
+    }
+
+    /**
      * Get the discard threshold, used to discard "bad" keypoints
      * @returns {number}
      */
@@ -101,7 +122,8 @@ export class LKFeatureTrackingAlgorithm extends FeatureTrackingAlgorithm
      */
     set discardThreshold(value)
     {
-        this._discardThreshold = Math.max(0, +value);
+        this._discardThreshold = +value;
+        Utils.assert(this._discardThreshold >= 0);
     }
 
     /**
@@ -119,7 +141,8 @@ export class LKFeatureTrackingAlgorithm extends FeatureTrackingAlgorithm
      */
     set epsilon(value)
     {
-        this._epsilon = Math.max(0, +value);
+        this._epsilon = +value;
+        Utils.assert(this._epsilon >= 0);
     }
 
     /**
@@ -136,6 +159,7 @@ export class LKFeatureTrackingAlgorithm extends FeatureTrackingAlgorithm
         const extraSize = this.extraSize;
         const windowSize = this.windowSize;
         const depth = this.depth;
+        const numberOfIterations = this.numberOfIterations;
         const discardThreshold = this.discardThreshold;
         const epsilon = this.epsilon;
 
@@ -145,6 +169,6 @@ export class LKFeatureTrackingAlgorithm extends FeatureTrackingAlgorithm
 
         // track feature points
         const encoderLength = gpu.programs.encoders.encoderLength;
-        return gpu.programs.trackers.lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, depth, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);
+        return gpu.programs.trackers.lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, depth, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);
     }
 }

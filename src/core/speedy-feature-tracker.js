@@ -186,14 +186,11 @@ export class LKFeatureTracker extends SpeedyFeatureTracker
 
     /**
      * Neighborhood size
-     * @param {number} newSize a positive odd number, typically 21 or 15
+     * @param {number} newSize a positive odd integer, typically 21 or 15
      */
     set windowSize(newSize)
     {
-        if(typeof newSize !== 'number' || newSize < 1 || newSize % 2 == 0)
-            throw new IllegalArgumentError(`Window size must be a positive odd number`);
-
-        this._trackingAlgorithm.windowSize = newSize;
+        this._trackingAlgorithm.windowSize = newSize | 0;
     }
 
     /**
@@ -211,10 +208,7 @@ export class LKFeatureTracker extends SpeedyFeatureTracker
      */
     set depth(newDepth)
     {
-        if(typeof newDepth !== 'number' || newDepth < 1 || newDepth > PYRAMID_MAX_LEVELS)
-            throw new IllegalArgumentError(`Invalid depth: ${newDepth}`);
-
-        this._trackingAlgorithm.depth = newDepth;
+        this._trackingAlgorithm.depth = newDepth | 0;
     }
 
     /**
@@ -232,9 +226,42 @@ export class LKFeatureTracker extends SpeedyFeatureTracker
      */
     set discardThreshold(threshold)
     {
-        if(typeof threshold !== 'number' || threshold < 0)
-            throw new IllegalArgumentError(`Invalid discardThreshold`);
+        this._trackingAlgorithm.discardThreshold = +threshold;
+    }
 
-        this._trackingAlgorithm.discardThreshold = threshold;
+    /**
+     * Get the maximum number of iterations of the pyramidal LK algorithm
+     * @returns {number}
+     */
+    get numberOfIterations()
+    {
+        return this._trackingAlgorithm.numberOfIterations;
+    }
+
+    /**
+     * Set the maximum number of iterations of the pyramidal LK algorithm
+     * @param {number} count
+     */
+    set numberOfIterations(count)
+    {
+        this._trackingAlgorithm.numberOfIterations = count | 0;
+    }
+
+    /**
+     * Get the accuracy threshold, used to stop LK iterations
+     * @returns {number}
+     */
+    get epsilon()
+    {
+        return this._trackingAlgorithm.epsilon;
+    }
+
+    /**
+     * Get the accuracy threshold, used to stop LK iterations
+     * @param {number} value
+     */
+    set epsilon(value)
+    {
+        this._trackingAlgorithm.epsilon = +value;
     }
 }

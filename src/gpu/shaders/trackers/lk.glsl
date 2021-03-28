@@ -35,18 +35,14 @@ uniform sampler2D prevPyramid; // image pyramid at time t-1
 uniform sampler2D encodedFlow; // encoded flow vectors of tracked keypoints at time t
 uniform sampler2D prevKeypoints; // encoded keypoints at time t-1
 uniform int windowSize; // odd number - typical values: 5, 7, 11, ..., 21
-uniform float discardThreshold; // typical value: 10^(-4)
-uniform float epsilon; // accuracy threshold to stop iterations - typical value: 0.01
 uniform int level; // current level (from depth-1 downto 0)
 uniform int depth; // how many pyramid layers to check (1, 2, 3, 4...)
+uniform int numberOfIterations; // maximum number of iterations - default: 5
+uniform float discardThreshold; // typical value: 10^(-4)
+uniform float epsilon; // accuracy threshold to stop iterations - typical value: 0.01
 uniform int descriptorSize; // in bytes
 uniform int extraSize; // in bytes
 uniform int encoderLength;
-
-// iterative LK for improved accuracy
-#ifndef NUM_ITERATIONS
-#error Must define NUM_ITERATIONS // default: 5
-#endif
 
 // maximum window size
 #ifndef MAX_WINDOW_SIZE
@@ -247,13 +243,14 @@ ivec2 computeMismatch(highp vec2 pyrGuess, highp vec2 localGuess)
     int timeDerivative;
     ivec2 mismatch = ivec2(0);
     int x, y, r = windowRadius();
+    highp vec2 d = pyrGuess + localGuess;
 
     for(int _y = 0; _y < windowSize; _y++) {
         for(int _x = 0; _x < windowSize; _x++) {
             x = _x - r; y = _y - r;
 
             timeDerivative = int(round(255.0f * (
-                readBufferedSubpixel(NEXT_IMAGE, vec2(x, y) + pyrGuess + localGuess) -
+                readBufferedSubpixel(NEXT_IMAGE, vec2(x, y) + d) -
                 readBufferedPixel(PREV_IMAGE, ivec2(x, y))
             )));
 
@@ -292,11 +289,7 @@ void main()
     vec4 pixel = threadPixel(encodedFlow);
     ivec2 thread = threadLocation();
     float windowArea = float(windowSize * windowSize);
-    float eps2 = epsilon * epsilon;
     int r = windowRadius();
-
-    // don't change a thing just yet...!
-    color = pixel;
 
     // find keypoint address & decode the keypoint
     int keypointIndex = thread.x + thread.y * outputSize().x;
@@ -342,9 +335,9 @@ void main()
     bool goodKeypoint = (level > 0) || (niceNumbers != 0);
 
     // iterative LK
+    highp float eps2 = epsilon * epsilon;
     highp vec2 mismatch, delta, localGuess = vec2(0.0f); // guess for this level of the pyramid
-    @unroll
-    for(int k = 0; k < NUM_ITERATIONS; k++) { // meant to reach convergence
+    for(int k = 0; k < numberOfIterations; k++) { // meant to reach convergence
         mismatch = vec2(computeMismatch(pyrGuess, localGuess)) * FLT_SCALE;
         delta = mismatch * invHarris * invDet;
         niceNumbers &= int(step(eps2, dot(delta, delta))); // stop when ||delta|| < epsilon

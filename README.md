@@ -635,9 +635,11 @@ The `SpeedyFeatureTracker` itself.
 
 Pyramid-based LK optical-flow algorithm. The following properties are available:
 
-* `windowSize: number`. The size of the window to be used by the feature tracker. For a window of size *n*, the algorithm will read *n* x *n* neighboring pixels to determine the motion of a keypoint. Typical values for this property include: `21`, `15`, `11`, `7`. Defaults to `15`.
-* `discardThreshold: number`. A threshold used to discard keypoints that are not "good" candidates for tracking. Defaults to `0.0001`. The higher the value, the more keypoints will be discarded.
+* `windowSize: number`. The size of the window to be used by the feature tracker. For a window of size *n*, the algorithm will read *n* x *n* neighboring pixels to determine the motion of a keypoint. Typical values for this property include: `21`, `15`, `11`, `7`. This must be a positive odd integer. Defaults to `15`.
 * `depth: number`. Specifies how many pyramid levels will be used in the computation. You should generally leave this property as it is.
+* `discardThreshold: number`. A threshold used to discard keypoints that are not "good" candidates for tracking. The higher the value, the more keypoints will be discarded. Defaults to `0.0001`.
+* `numberOfIterations: number`. Maximum number of iterations for computing the local optical-flow on each level of the pyramid. The larger this number, the more demanding the algorithm is on the GPU. Defaults to `5`.
+* `epsilon: number`. An accuracy threshold used to stop the computation of the local optical-flow of any level of the pyramid. The local optical-flow is computed iteratively and in small increments. If the length of an increment is too small, we discard it. This property defaults to `0.01`.
 
 ### Feature matching
 
