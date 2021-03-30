@@ -287,13 +287,11 @@ export class GPUEncoders extends SpeedyProgramGroup
             this._uploadBuffer[j+3] = +(keypoint.score) || 0;
         }
 
-        // Reserve space for the keypoints
-        this.reserveSpace(keypointCount, descriptorSize, extraSize);
-
         // Upload data
-        this._uploadKeypoints.resize(this._encoderLength, this._encoderLength);
+        const encoderLength = this.minimumEncoderLength(keypointCount, descriptorSize, extraSize);
+        this._uploadKeypoints.resize(encoderLength, encoderLength);
         this._uploadKeypoints.setUBO('KeypointBuffer', this._uploadBuffer);
-        return this._uploadKeypoints(keypointCount, this._encoderLength, descriptorSize, extraSize);
+        return this._uploadKeypoints(keypointCount, encoderLength, descriptorSize, extraSize);
     }
 
     /**
