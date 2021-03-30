@@ -79,17 +79,6 @@ export class FeatureAlgorithm
     }
 
     /**
-     * Upload feature points to the GPU
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyFeature[]} keypoints feature points
-     * @returns {SpeedyTexture} tiny texture
-     */
-    upload(gpu, keypoints)
-    {
-        return gpu.programs.encoders.uploadKeypoints(keypoints, this.descriptorSize, this.extraSize);
-    }
-
-    /**
      * Extra size of the headers of the encoded keypoint texture
      * By default, this is set to zero
      * @return {number} in bytes

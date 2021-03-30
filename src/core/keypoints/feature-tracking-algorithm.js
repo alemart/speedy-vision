@@ -116,6 +116,17 @@ export class FeatureTrackingAlgorithm extends FeatureAlgorithm
     }
 
     /**
+     * Upload feature points to the GPU
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyFeature[]} keypoints feature points
+     * @returns {SpeedyTexture} tiny texture
+     */
+    upload(gpu, keypoints)
+    {
+        return gpu.programs.encoders.uploadKeypoints(keypoints, this.descriptorSize, this.extraSize);
+    }
+
+    /**
      * Track a set of feature points
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} nextImage next image (time: t)
