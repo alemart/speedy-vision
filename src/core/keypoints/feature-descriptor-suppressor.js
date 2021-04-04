@@ -25,6 +25,7 @@ import { FeatureAlgorithmDecorator } from './feature-algorithm-decorator';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
 import { SpeedyFeature } from '../speedy-feature';
 import { SpeedyPromise } from '../../utils/speedy-promise';
+import { MIN_KEYPOINT_SIZE } from '../../utils/globals';
 
 /**
  * Suppress feature descriptors
@@ -74,9 +75,9 @@ export class FeatureDescriptorSuppressor extends FeatureAlgorithmDecorator
     {
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
-        const encoderLength = gpu.programs.encoders.encoderLength;
-        const capacity = gpu.programs.encoders.keypointCapacity;
-        const suppressedEncoderLength = gpu.programs.encoders.minimumEncoderLength(capacity, 0, extraSize);
+        const encoderLength = this.encoderLength;
+        const capacity = FeatureDownloader.encoderCapacity(descriptorSize, extraSize, encoderLength);
+        const suppressedEncoderLength = FeatureDownloader.minimumEncoderLength(capacity, 0, extraSize);
 
         return gpu.programs.keypoints.suppressDescriptors(encodedKeypoints, descriptorSize, extraSize, encoderLength, suppressedEncoderLength);
     }

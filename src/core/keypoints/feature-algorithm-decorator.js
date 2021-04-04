@@ -124,4 +124,13 @@ export class FeatureAlgorithmDecorator extends FeatureAlgorithm
         super.descriptorSize = bytes;
         this._decoratedAlgorithm.descriptorSize = bytes;
     }
+
+    /**
+     * Size of the keypoint encoder texture
+     * @returns {number}
+     */
+    get encoderLength()
+    {
+        return this._decoratedAlgorithm.encoderLength;
+    }
 }

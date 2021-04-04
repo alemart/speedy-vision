@@ -100,6 +100,7 @@ export class FASTFeatures extends FeatureDetectionAlgorithm
         const normalizedThreshold = threshold / 255.0;
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
+        const encoderLength = this.encoderLength;
 
         // find corners
         let corners = null;
@@ -119,7 +120,7 @@ export class FASTFeatures extends FeatureDetectionAlgorithm
         const finalCorners = gpu.programs.keypoints.encodeFastScore(suppressedCorners);
 
         // encode corners
-        return gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize);
+        return gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize, encoderLength);
     }
 }
 
@@ -234,6 +235,7 @@ export class MultiscaleFASTFeatures extends FeatureDetectionAlgorithm
         const lodStep = Math.log2(this._scaleFactor);
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
+        const encoderLength = this.encoderLength;
 
         // generate pyramid
         const pyramid = inputTexture.generatePyramid(gpu);
@@ -248,7 +250,7 @@ export class MultiscaleFASTFeatures extends FeatureDetectionAlgorithm
         const finalCorners = gpu.programs.keypoints.encodeFastScore(suppressedCorners);
 
         // encode keypoints
-        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize);
+        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize, encoderLength);
 
         // done
         return detectedKeypoints;

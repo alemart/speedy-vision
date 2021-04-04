@@ -78,6 +78,7 @@ export class HarrisFeatures extends FeatureDetectionAlgorithm
         const quality = this._quality;
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
+        const encoderLength = this.encoderLength;
         const windowSize = DEFAULT_WINDOW_SIZE;
         const lod = 0, lodStep = 1, numberOfLayers = 1;
 
@@ -108,7 +109,7 @@ export class HarrisFeatures extends FeatureDetectionAlgorithm
         const finalCorners = gpu.programs.keypoints.encodeHarrisScore(suppressedCorners);
 
         // encode corners
-        return gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize);
+        return gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize, encoderLength);
     }
 }
 
@@ -196,6 +197,7 @@ export class MultiscaleHarrisFeatures extends FeatureDetectionAlgorithm
         const depth = this._depth;
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
+        const encoderLength = this.encoderLength;
         const windowSize = DEFAULT_WINDOW_SIZE;
         const numberOfLayers = 2 * depth - 1;
         const lodStep = Math.log2(this._scaleFactor);
@@ -233,7 +235,7 @@ export class MultiscaleHarrisFeatures extends FeatureDetectionAlgorithm
         const finalCorners = gpu.programs.keypoints.encodeHarrisScore(suppressedCorners);
 
         // encode keypoints
-        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize);
+        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize, encoderLength);
 
         // done
         return detectedKeypoints;

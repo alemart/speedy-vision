@@ -20,22 +20,26 @@
  */
 
 import { IllegalOperationError } from '../../utils/errors';
-import { Observable } from '../../utils/observable';
 import { SpeedyFeature } from '../speedy-feature';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
 import { SpeedyPromise } from '../../utils/speedy-promise';
+import { Utils } from '../../utils/utils';
 import {
-    MIN_KEYPOINT_SIZE,
+    MIN_KEYPOINT_SIZE, INITIAL_ENCODER_LENGTH,
     FIX_RESOLUTION,
     LOG2_PYRAMID_MAX_SCALE, PYRAMID_MAX_LEVELS,
     KPF_DISCARD, KPF_ORIENTED
 } from '../../utils/globals';
 
 // constants
+const MIN_ENCODER_LENGTH = 2; // Minimum size of the keypoint encoder
+const MAX_ENCODER_LENGTH = 300; // Maximum size of the keypoint encoder - make it too large, and you may get a crash (WebGL context lost)
+const INITIAL_KEYPOINTS_GUESS = Math.floor((INITIAL_ENCODER_LENGTH * INITIAL_ENCODER_LENGTH) / (MIN_KEYPOINT_SIZE / 4)); // a guess about the initial number of keypoints
 const INITIAL_FILTER_GAIN = 0.85; // a number in [0,1]
-const INITIAL_KEYPOINTS_GUESS = 600; // a guess about the initial number of keypoints
 const MIN_KEYPOINTS = 32; // at any point in time, the encoder will have space for
                           // at least this number of keypoints
+
+
 
 
 /**
@@ -131,19 +135,17 @@ class FeatureCountEstimator
  * The FeatureDownloader receives a texture of encoded
  * keypoints and returns a corresponding array of keypoints
  */
-export class FeatureDownloader extends Observable
+export class FeatureDownloader
 {
     /**
      * Class constructor
      */
     constructor()
     {
-        super();
+        /** @type {number} size of the keypoint encoder texture */
+        this._encoderLength = INITIAL_ENCODER_LENGTH;
 
-        /**
-         * Used to estimate the future number of keypoints
-         * @type {FeatureCountEstimator}
-         */
+        /** @type {FeatureCountEstimator} used to estimate the future number of keypoints */
         this._estimator = new FeatureCountEstimator();
     }
 
@@ -158,12 +160,17 @@ export class FeatureDownloader extends Observable
      */
     download(gpu, encodedKeypoints, descriptorSize, extraSize, flags = 0)
     {
+        // validate the input texture
+        Utils.assert(encodedKeypoints.width === encodedKeypoints.height);
+        Utils.assert(encodedKeypoints.width === this._encoderLength);
+
         // reset the capacity of the downloader
-        if(flags & FeatureDownloader.RESET_DOWNLOADER_STATE != 0)
+        if(flags & FeatureDownloader.RESET_DOWNLOADER_STATE != 0) {
             this._estimator.reset();
+            //this._encoderLength = INITIAL_ENCODER_LENGTH; // no need
+        }
 
         // download keypoints
-        //console.log('downloading with encoderlength=', gpu.programs.encoders.encoderLength);
         const useBufferedDownloads = (flags & FeatureDownloader.USE_BUFFERED_DOWNLOADS) != 0;
         return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useBufferedDownloads).then(data => {
 
@@ -177,14 +184,10 @@ export class FeatureDownloader extends Observable
             const nextCount = this._estimator.estimate(keypoints.length - discardedCount);
 
             // optimize the keypoint encoder
-            // add slack (maxGrowth) to accomodate abrupt changes in the number of keypoints
+            // add slack (maxGrowth) to accomodate for abrupt changes in the number of keypoints
             const capacity = Math.max(nextCount, MIN_KEYPOINTS);
             const extraCapacity = this._estimator.maxGrowth * capacity;
-            gpu.programs.encoders.optimize(extraCapacity, descriptorSize, extraSize);
-            //console.log('Encoder Length', gpu.programs.encoders.encoderLength);
-
-            // notify observers
-            this._notify(keypoints);
+            this._encoderLength = FeatureDownloader.minimumEncoderLength(extraCapacity, descriptorSize, extraSize);
 
             // done!
             return keypoints;
@@ -195,17 +198,57 @@ export class FeatureDownloader extends Observable
     }
 
     /**
-     * Count keypoints that should be discarded
-     * @param {SpeedyFeature[]} keypoints
+     * Size of the keypoint encoder texture
+     * @returns {number}
      */
-    _countDiscardedKeypoints(keypoints)
+    get encoderLength()
     {
-        let i, count = 0;
+        return this._encoderLength;
+    }
 
-        for(i = keypoints.length - 1; i >= 0; i--)
-            count += ((keypoints[i].flags & KPF_DISCARD) != 0) | 0;
+    /**
+     * Ensures that encoderLength is large enough to handle a
+     * particular configuration of the keypoint encoder
+     * @param {number} keypointCount integer
+     * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
+     * @param {boolean} [tight] make it a tight fit (i.e., remove any slack)
+     */
+    reserveSpace(keypointCount, descriptorSize, extraSize, tight = false)
+    {
+        const e = FeatureDownloader.minimumEncoderLength(keypointCount, descriptorSize, extraSize);
+        this._encoderLength = tight ? e : Math.max(this._encoderLength, e);
+    }
 
-        return count;
+    /**
+     * The minimum encoder length for a set of keypoints
+     * @param {number} keypointCount integer
+     * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
+     * @returns {number}
+     */
+    static minimumEncoderLength(keypointCount, descriptorSize, extraSize)
+    {
+        const pixelsPerKeypoint = Math.ceil((MIN_KEYPOINT_SIZE + descriptorSize + extraSize) / 4);
+        const clampedKeypointCount = Math.max(0, Math.ceil(keypointCount));
+        const len = Math.ceil(Math.sqrt(clampedKeypointCount * pixelsPerKeypoint));
+
+        return Math.max(MIN_ENCODER_LENGTH, Math.min(len, MAX_ENCODER_LENGTH));
+    }
+
+    /**
+     * The maximum number of keypoints we can store using
+     * a particular configuration of a keypoint encoder
+     * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
+     * @param {number} encoderLength
+     */
+    static encoderCapacity(descriptorSize, extraSize, encoderLength)
+    {
+        const pixelsPerKeypoint = Math.ceil((MIN_KEYPOINT_SIZE + descriptorSize + extraSize) / 4);
+        const numberOfPixels = encoderLength * encoderLength;
+
+        return Math.floor(numberOfPixels / pixelsPerKeypoint);
     }
 
     /**
@@ -213,10 +256,10 @@ export class FeatureDownloader extends Observable
      * @param {Uint8Array[]} pixels pixels in the [r,g,b,a,...] format
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
-     * @param {number} encoderLength
+     * @param {number} [encoderLength]
      * @returns {SpeedyFeature[]} keypoints
      */
-    _decodeKeypoints(pixels, descriptorSize, extraSize, encoderLength)
+    _decodeKeypoints(pixels, descriptorSize, extraSize, encoderLength = this._encoderLength)
     {
         const pixelsPerKeypoint = (MIN_KEYPOINT_SIZE + descriptorSize + extraSize) / 4;
         let x, y, lod, rotation, score, flags, extraBytes, descriptorBytes;
@@ -281,6 +324,22 @@ export class FeatureDownloader extends Observable
         // done!
         return keypoints;
     }
+
+    /**
+     * Count keypoints that should be discarded
+     * @param {SpeedyFeature[]} keypoints
+     */
+    _countDiscardedKeypoints(keypoints)
+    {
+        let i, count = 0;
+
+        for(i = keypoints.length - 1; i >= 0; i--)
+            count += ((keypoints[i].flags & KPF_DISCARD) != 0) | 0;
+
+        return count;
+    }
+
+
 
     /**
      * Flags accepted by the FeatureDownloader (bitwise)

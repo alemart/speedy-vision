@@ -120,4 +120,13 @@ export class FeatureAlgorithm
         this._descriptorSize = Math.max(0, bytes | 0);
         Utils.assert(this._descriptorSize % 4 === 0); // multiple of 32 bits (RGBA pixel)
     }
+
+    /**
+     * Size of the keypoint encoder texture
+     * @returns {number}
+     */
+    get encoderLength()
+    {
+        throw new AbstractMethodError();
+    }
 }

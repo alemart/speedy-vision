@@ -65,6 +65,9 @@ export const MAX_DESCRIPTOR_SIZE = 64;
 // Size of a keypoint header, in bytes (must be divisible by 4)
 export const MIN_KEYPOINT_SIZE = 8;
 
+// Initial size of the keypoint encoder
+export const INITIAL_ENCODER_LENGTH = 32; // pick a small number to reduce processing load and not crash things on mobile
+
 // Flag: no special flags
 export const KPF_NONE = 0x0;
 

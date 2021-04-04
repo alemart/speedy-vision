@@ -21,8 +21,9 @@
 
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
+import { FeatureDownloader } from '../../core/keypoints/feature-downloader';
+import { PYRAMID_MAX_LEVELS } from '../../utils/globals';
 import { Utils } from '../../utils/utils';
-import { MIN_KEYPOINT_SIZE, PYRAMID_MAX_LEVELS } from '../../utils/globals';
 
 
 
@@ -235,8 +236,7 @@ export class GPUKeypoints extends SpeedyProgramGroup
      */
     orbOrientation(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength)
     {
-        const pixelsPerKeypoint = (MIN_KEYPOINT_SIZE + descriptorSize + extraSize) / 4;
-        const numberOfKeypoints = Math.ceil(encoderLength * encoderLength / pixelsPerKeypoint); // approximately
+        const numberOfKeypoints = FeatureDownloader.encoderCapacity(descriptorSize, extraSize, encoderLength);
         const orientationEncoderLength = Math.max(1, Math.ceil(Math.sqrt(numberOfKeypoints))); // 1 pixel per keypoint
 
         this._orbOrientation.resize(orientationEncoderLength, orientationEncoderLength);

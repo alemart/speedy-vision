@@ -53,6 +53,7 @@ export class ORBFeatures extends FeatureDescriptionAlgorithm
     {
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
+        const encoderLength = this.encoderLength;
 
         // get oriented keypoints
         const orientedKeypoints = this._computeOrientation(gpu, inputTexture, detectedKeypoints);
@@ -62,7 +63,6 @@ export class ORBFeatures extends FeatureDescriptionAlgorithm
         const smoothPyramid = smoothTexture.generatePyramid(gpu);
 
         // compute ORB feature descriptors
-        const encoderLength = gpu.programs.encoders.encoderLength;
         return gpu.programs.keypoints.orb(smoothPyramid, orientedKeypoints, descriptorSize, extraSize, encoderLength);
     }
 
@@ -77,12 +77,12 @@ export class ORBFeatures extends FeatureDescriptionAlgorithm
     {
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
+        const encoderLength = this.encoderLength;
 
         // generate pyramid
         const pyramid = inputTexture.generatePyramid(gpu);
 
         // compute orientation
-        const encoderLength = gpu.programs.encoders.encoderLength;
         return gpu.programs.keypoints.orbOrientation(pyramid, detectedKeypoints, descriptorSize, extraSize, encoderLength);
     }
 

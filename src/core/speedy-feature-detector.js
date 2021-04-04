@@ -102,7 +102,7 @@ export class SpeedyFeatureDetector
         if(isStaticMedia) {
             // Allocate encoder space for static media
             const MAX_KEYPOINT_GUESS = 8192; // hmmmmmmmm...
-            gpu.programs.encoders.reserveSpace(MAX_KEYPOINT_GUESS, descriptorSize, extraSize);
+            this._algorithm.downloader.reserveSpace(MAX_KEYPOINT_GUESS, descriptorSize, extraSize);
         }
         else {
             // Use buffered downloads for dynamic media
@@ -118,13 +118,13 @@ export class SpeedyFeatureDetector
             // of keypoints (between two consecutive frames).
             downloaderFlags |= FeatureDownloader.RESET_DOWNLOADER_STATE;
 
-            // reset the encoder capacity
-            const A_LOT_OF_KEYPOINTS = 2048; // hmmmm...
-            gpu.programs.encoders.reserveSpace(A_LOT_OF_KEYPOINTS, descriptorSize, extraSize);
-
             // since we're resizing the encoder, we can't use
             // buffered downloads in this framestep
             downloaderFlags &= ~(FeatureDownloader.USE_BUFFERED_DOWNLOADS);
+
+            // reset the encoder capacity
+            const A_LOT_OF_KEYPOINTS = 2048; // hmmmm...
+            this._algorithm.downloader.reserveSpace(A_LOT_OF_KEYPOINTS, descriptorSize, extraSize);
         }
 
         // Upload & preprocess media

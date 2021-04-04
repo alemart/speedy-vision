@@ -90,6 +90,24 @@ export class FeatureDetectionAlgorithm extends FeatureAlgorithm
     }
 
     /**
+     * Size of the keypoint encoder texture
+     * @returns {number}
+     */
+    get encoderLength()
+    {
+        return this._downloader.encoderLength;
+    }
+
+    /**
+     * The feature downloader
+     * @returns {FeatureDownloader}
+     */
+    get downloader()
+    {
+        return this._downloader;
+    }
+
+    /**
      * Setup enhancements to be applied when detecting features
      * @param {FeatureDetectionEnhancements|boolean} [enhancements] fix irregular lighting in the scene?
      */

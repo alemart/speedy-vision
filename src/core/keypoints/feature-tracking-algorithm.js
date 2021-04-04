@@ -116,6 +116,24 @@ export class FeatureTrackingAlgorithm extends FeatureAlgorithm
     }
 
     /**
+     * Size of the keypoint encoder texture
+     * @returns {number}
+     */
+    get encoderLength()
+    {
+        return this._downloader.encoderLength;
+    }
+
+    /**
+     * The feature downloader
+     * @returns {FeatureDownloader}
+     */
+    get downloader()
+    {
+        return this._downloader;
+    }
+
+    /**
      * Upload feature points to the GPU
      * @param {SpeedyGPU} gpu
      * @param {SpeedyFeature[]} keypoints feature points

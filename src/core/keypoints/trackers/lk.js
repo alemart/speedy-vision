@@ -157,6 +157,7 @@ export class LKFeatureTrackingAlgorithm extends FeatureTrackingAlgorithm
         const prevKeypoints = this.prevKeypoints;
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
+        const encoderLength = this.encoderLength;
         const windowSize = this.windowSize;
         const depth = this.depth;
         const numberOfIterations = this.numberOfIterations;
@@ -168,7 +169,6 @@ export class LKFeatureTrackingAlgorithm extends FeatureTrackingAlgorithm
         const prevPyramid = prevImage.generatePyramid(gpu);
 
         // track feature points
-        const encoderLength = gpu.programs.encoders.encoderLength;
         return gpu.programs.trackers.lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, depth, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);
     }
 }

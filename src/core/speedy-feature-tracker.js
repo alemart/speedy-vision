@@ -97,7 +97,7 @@ export class SpeedyFeatureTracker
         this._inputTexture = nextImage;
 
         // adjust the size of the encoder
-        gpu.programs.encoders.optimize(keypoints.length, descriptorSize, extraSize);
+        this._trackingAlgorithm.downloader.reserveSpace(keypoints.length, descriptorSize, extraSize, true);
 
         // upload & track keypoints
         this._trackingAlgorithm.prevImage = prevImage;
