@@ -22,10 +22,10 @@
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
 import { SpeedyFeature } from '../../core/speedy-feature';
-import { FeatureDownloader } from '../../core/keypoints/feature-downloader';
+import { FeatureEncoder } from '../../core/keypoints/feature-encoder';
 import { Utils } from '../../utils/utils'
 import { SpeedyPromise } from '../../utils/speedy-promise'
-import { IllegalOperationError, NotSupportedError } from '../../utils/errors';
+import { IllegalOperationError, IllegalArgumentError, NotSupportedError } from '../../utils/errors';
 import { MIN_KEYPOINT_SIZE, INITIAL_ENCODER_LENGTH } from '../../utils/globals';
 
 // Constants
@@ -153,7 +153,7 @@ export class GPUEncoders extends SpeedyProgramGroup
         // encode keypoints
         const numPasses = ENCODER_PASSES;
         const pixelsPerKeypointHeader = MIN_PIXELS_PER_KEYPOINT;
-        const keypointCapacity = FeatureDownloader.encoderCapacity(descriptorSize, extraSize, encoderLength);
+        const keypointCapacity = FeatureEncoder.capacity(descriptorSize, extraSize, encoderLength);
         const headerEncoderLength = Math.max(1, Math.ceil(Math.sqrt(keypointCapacity * pixelsPerKeypointHeader)));
         this._encodeKeypoints.resize(headerEncoderLength, headerEncoderLength);
         let encodedKeypointHeaders = this._encodeKeypoints.clear(0, 0, 0, 0);
@@ -190,9 +190,10 @@ export class GPUEncoders extends SpeedyProgramGroup
      * @param {SpeedyFeature[]} keypoints
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
+     * @param {number} encoderLength
      * @returns {SpeedyTexture} encodedKeypoints
      */
-    uploadKeypoints(keypoints, descriptorSize, extraSize)
+    uploadKeypoints(keypoints, descriptorSize, extraSize, encoderLength)
     {
         // Too many keypoints?
         const keypointCount = keypoints.length;
@@ -200,6 +201,10 @@ export class GPUEncoders extends SpeedyProgramGroup
             // TODO: multipass
             throw new NotSupportedError(`Can't upload ${keypointCount} keypoints: maximum is currently ${KEYPOINT_BUFFER_LENGTH}`);
         }
+
+        // Insufficient encoderLength?
+        if(encoderLength < FeatureEncoder.minLength(keypointCount, descriptorSize, extraSize))
+            throw new IllegalArgumentError(`Insufficient encoderLength (${encoderLength}) for ${keypoints.length} keypoints (descriptorSize: ${descriptorSize}, extraSize: ${extraSize})`);
 
         // Create a buffer for uploading the data
         if(this._uploadBuffer === null) {
@@ -222,7 +227,6 @@ export class GPUEncoders extends SpeedyProgramGroup
         }
 
         // Upload data
-        const encoderLength = FeatureDownloader.minimumEncoderLength(keypointCount, descriptorSize, extraSize);
         this._uploadKeypoints.resize(encoderLength, encoderLength);
         this._uploadKeypoints.setUBO('KeypointBuffer', this._uploadBuffer);
         return this._uploadKeypoints(keypointCount, encoderLength, descriptorSize, extraSize);

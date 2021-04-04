@@ -19,22 +19,19 @@
  * Download features from the GPU
  */
 
-import { IllegalOperationError } from '../../utils/errors';
+import { FeatureEncoder } from './feature-encoder';
 import { SpeedyFeature } from '../speedy-feature';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
 import { SpeedyPromise } from '../../utils/speedy-promise';
+import { IllegalOperationError } from '../../utils/errors';
 import { Utils } from '../../utils/utils';
 import {
-    MIN_KEYPOINT_SIZE, INITIAL_ENCODER_LENGTH,
-    FIX_RESOLUTION,
-    LOG2_PYRAMID_MAX_SCALE, PYRAMID_MAX_LEVELS,
-    KPF_DISCARD, KPF_ORIENTED
+    INITIAL_ENCODER_LENGTH,
+    KPF_DISCARD,
 } from '../../utils/globals';
 
 // constants
-const MIN_ENCODER_LENGTH = 2; // Minimum size of the keypoint encoder
-const MAX_ENCODER_LENGTH = 300; // Maximum size of the keypoint encoder - make it too large, and you may get a crash (WebGL context lost)
-const INITIAL_KEYPOINTS_GUESS = Math.floor((INITIAL_ENCODER_LENGTH * INITIAL_ENCODER_LENGTH) / (MIN_KEYPOINT_SIZE / 4)); // a guess about the initial number of keypoints
+const INITIAL_KEYPOINTS_GUESS = FeatureEncoder.capacity(0, 0, INITIAL_ENCODER_LENGTH); // a guess about the initial number of keypoints
 const INITIAL_FILTER_GAIN = 0.85; // a number in [0,1]
 const MIN_KEYPOINTS = 32; // at any point in time, the encoder will have space for
                           // at least this number of keypoints
@@ -177,7 +174,7 @@ export class FeatureDownloader
             // decode the keypoints
             const encoderLength = encodedKeypoints.width;
             const multiplier = (flags & FeatureDownloader.SUPPRESS_DESCRIPTORS) != 0 ? 0 : 1;
-            const keypoints = this._decodeKeypoints(data, descriptorSize * multiplier, extraSize, encoderLength);
+            const keypoints = FeatureEncoder.decode(data, descriptorSize * multiplier, extraSize, encoderLength);
 
             // how many keypoints do we expect in the next frame?
             const discardedCount = this._countDiscardedKeypoints(keypoints);
@@ -187,7 +184,7 @@ export class FeatureDownloader
             // add slack (maxGrowth) to accomodate for abrupt changes in the number of keypoints
             const capacity = Math.max(nextCount, MIN_KEYPOINTS);
             const extraCapacity = this._estimator.maxGrowth * capacity;
-            this._encoderLength = FeatureDownloader.minimumEncoderLength(extraCapacity, descriptorSize, extraSize);
+            this._encoderLength = FeatureEncoder.minLength(extraCapacity, descriptorSize, extraSize);
 
             // done!
             return keypoints;
@@ -216,113 +213,8 @@ export class FeatureDownloader
      */
     reserveSpace(keypointCount, descriptorSize, extraSize, tight = false)
     {
-        const e = FeatureDownloader.minimumEncoderLength(keypointCount, descriptorSize, extraSize);
+        const e = FeatureEncoder.minLength(keypointCount, descriptorSize, extraSize);
         this._encoderLength = tight ? e : Math.max(this._encoderLength, e);
-    }
-
-    /**
-     * The minimum encoder length for a set of keypoints
-     * @param {number} keypointCount integer
-     * @param {number} descriptorSize in bytes
-     * @param {number} extraSize in bytes
-     * @returns {number}
-     */
-    static minimumEncoderLength(keypointCount, descriptorSize, extraSize)
-    {
-        const pixelsPerKeypoint = Math.ceil((MIN_KEYPOINT_SIZE + descriptorSize + extraSize) / 4);
-        const clampedKeypointCount = Math.max(0, Math.ceil(keypointCount));
-        const len = Math.ceil(Math.sqrt(clampedKeypointCount * pixelsPerKeypoint));
-
-        return Math.max(MIN_ENCODER_LENGTH, Math.min(len, MAX_ENCODER_LENGTH));
-    }
-
-    /**
-     * The maximum number of keypoints we can store using
-     * a particular configuration of a keypoint encoder
-     * @param {number} descriptorSize in bytes
-     * @param {number} extraSize in bytes
-     * @param {number} encoderLength
-     */
-    static encoderCapacity(descriptorSize, extraSize, encoderLength)
-    {
-        const pixelsPerKeypoint = Math.ceil((MIN_KEYPOINT_SIZE + descriptorSize + extraSize) / 4);
-        const numberOfPixels = encoderLength * encoderLength;
-
-        return Math.floor(numberOfPixels / pixelsPerKeypoint);
-    }
-
-    /**
-     * Decodes the keypoints, given a flattened image of encoded pixels
-     * @param {Uint8Array[]} pixels pixels in the [r,g,b,a,...] format
-     * @param {number} descriptorSize in bytes
-     * @param {number} extraSize in bytes
-     * @param {number} [encoderLength]
-     * @returns {SpeedyFeature[]} keypoints
-     */
-    _decodeKeypoints(pixels, descriptorSize, extraSize, encoderLength = this._encoderLength)
-    {
-        const pixelsPerKeypoint = (MIN_KEYPOINT_SIZE + descriptorSize + extraSize) / 4;
-        let x, y, lod, rotation, score, flags, extraBytes, descriptorBytes;
-        let hasLod, hasRotation;
-        const keypoints = [];
-
-        // how many bytes should we read?
-        const e = encoderLength;
-        const e2 = e * e * pixelsPerKeypoint * 4;
-        const size = Math.min(pixels.length, e2);
-
-        // for each encoded keypoint
-        for(let i = 0; i < size; i += 4 /* RGBA */ * pixelsPerKeypoint) {
-            // extract fixed-point coordinates
-            x = (pixels[i+1] << 8) | pixels[i];
-            y = (pixels[i+3] << 8) | pixels[i+2];
-            if(x >= 0xFFFF && y >= 0xFFFF) // if end of list
-                break;
-
-            // We've cleared the texture to black.
-            // Likely to be incorrect black pixels
-            // due to resize. Bad for encoderLength
-            if(x + y == 0 && pixels[i+6] == 0)
-                continue; // discard, it's noise
-
-            // convert from fixed-point
-            x /= FIX_RESOLUTION;
-            y /= FIX_RESOLUTION;
-
-            // extract flags
-            flags = pixels[i+7];
-
-            // extract LOD
-            hasLod = (pixels[i+4] < 255);
-            lod = !hasLod ? 0.0 :
-                -LOG2_PYRAMID_MAX_SCALE + (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS) * pixels[i+4] / 255.0;
-
-            // extract orientation
-            hasRotation = (flags & KPF_ORIENTED != 0);
-            rotation = !hasRotation ? 0.0 :
-                ((2 * pixels[i+5]) / 255.0 - 1.0) * Math.PI;
-
-            // extract score
-            score = pixels[i+6] / 255.0;
-
-            // extra bytes
-            extraBytes = pixels.slice(8 + i, 8 + i + extraSize);
-
-            // descriptor bytes
-            descriptorBytes = pixels.slice(8 + i + extraSize, 8 + i + extraSize + descriptorSize);
-
-            // something is off here
-            if(descriptorBytes.length < descriptorSize || extraBytes.length < extraSize)
-                continue; // discard
-
-            // register keypoint
-            keypoints.push(
-                new SpeedyFeature(x, y, lod, rotation, score, flags, extraBytes, descriptorBytes)
-            );
-        }
-
-        // done!
-        return keypoints;
     }
 
     /**

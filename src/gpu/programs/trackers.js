@@ -22,7 +22,7 @@
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
 import { PYRAMID_MAX_LEVELS } from '../../utils/globals';
-import { FeatureDownloader } from '../../core/keypoints/feature-downloader';
+import { FeatureEncoder } from '../../core/keypoints/feature-encoder';
 
 
 
@@ -149,7 +149,7 @@ export class GPUTrackers extends SpeedyProgramGroup
         // split the work into multiple passes of the shader
         // (so we don't get WebGL context loss on mobile)
         //
-        const numKeypoints = FeatureDownloader.encoderCapacity(descriptorSize, extraSize, encoderLength);
+        const numKeypoints = FeatureEncoder.capacity(descriptorSize, extraSize, encoderLength);
         const lkEncoderLength = Math.max(1, Math.ceil(Math.sqrt(numKeypoints)));
         lk.resize(lkEncoderLength, lkEncoderLength);
 

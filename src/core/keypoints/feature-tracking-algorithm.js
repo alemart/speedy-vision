@@ -24,6 +24,7 @@ import { SpeedyTexture } from '../../gpu/speedy-texture';
 import { AbstractMethodError } from '../../utils/errors';
 import { FeatureAlgorithm } from './feature-algorithm';
 import { FeatureDownloader } from './feature-downloader';
+import { FeatureEncoder } from './feature-encoder';
 import { SpeedyFeature } from '../speedy-feature';
 import { SpeedyPromise } from '../../utils/speedy-promise';
 import { Utils } from '../../utils/utils';
@@ -141,7 +142,8 @@ export class FeatureTrackingAlgorithm extends FeatureAlgorithm
      */
     upload(gpu, keypoints)
     {
-        return gpu.programs.encoders.uploadKeypoints(keypoints, this.descriptorSize, this.extraSize);
+        const encoderLength = FeatureEncoder.minLength(keypoints.length, this.descriptorSize, this.extraSize);
+        return gpu.programs.encoders.uploadKeypoints(keypoints, this.descriptorSize, this.extraSize, encoderLength);
     }
 
     /**
