@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-03-28T02:57:34.517Z
+ * Date: 2021-04-04T22:21:12.442Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -362,6 +362,7 @@ class ORBFeatures extends _feature_description_algorithm__WEBPACK_IMPORTED_MODUL
     {
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
+        const encoderLength = this.encoderLength;
 
         // get oriented keypoints
         const orientedKeypoints = this._computeOrientation(gpu, inputTexture, detectedKeypoints);
@@ -371,7 +372,6 @@ class ORBFeatures extends _feature_description_algorithm__WEBPACK_IMPORTED_MODUL
         const smoothPyramid = smoothTexture.generatePyramid(gpu);
 
         // compute ORB feature descriptors
-        const encoderLength = gpu.programs.encoders.encoderLength;
         return gpu.programs.keypoints.orb(smoothPyramid, orientedKeypoints, descriptorSize, extraSize, encoderLength);
     }
 
@@ -386,12 +386,12 @@ class ORBFeatures extends _feature_description_algorithm__WEBPACK_IMPORTED_MODUL
     {
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
+        const encoderLength = this.encoderLength;
 
         // generate pyramid
         const pyramid = inputTexture.generatePyramid(gpu);
 
         // compute orientation
-        const encoderLength = gpu.programs.encoders.encoderLength;
         return gpu.programs.keypoints.orbOrientation(pyramid, detectedKeypoints, descriptorSize, extraSize, encoderLength);
     }
 
@@ -532,6 +532,7 @@ class FASTFeatures extends _feature_detection_algorithm__WEBPACK_IMPORTED_MODULE
         const normalizedThreshold = threshold / 255.0;
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
+        const encoderLength = this.encoderLength;
 
         // find corners
         let corners = null;
@@ -551,7 +552,7 @@ class FASTFeatures extends _feature_detection_algorithm__WEBPACK_IMPORTED_MODULE
         const finalCorners = gpu.programs.keypoints.encodeFastScore(suppressedCorners);
 
         // encode corners
-        return gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize);
+        return gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize, encoderLength);
     }
 }
 
@@ -666,6 +667,7 @@ class MultiscaleFASTFeatures extends _feature_detection_algorithm__WEBPACK_IMPOR
         const lodStep = Math.log2(this._scaleFactor);
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
+        const encoderLength = this.encoderLength;
 
         // generate pyramid
         const pyramid = inputTexture.generatePyramid(gpu);
@@ -680,7 +682,7 @@ class MultiscaleFASTFeatures extends _feature_detection_algorithm__WEBPACK_IMPOR
         const finalCorners = gpu.programs.keypoints.encodeFastScore(suppressedCorners);
 
         // encode keypoints
-        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize);
+        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize, encoderLength);
 
         // done
         return detectedKeypoints;
@@ -785,6 +787,7 @@ class HarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMPORTED_MODU
         const quality = this._quality;
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
+        const encoderLength = this.encoderLength;
         const windowSize = DEFAULT_WINDOW_SIZE;
         const lod = 0, lodStep = 1, numberOfLayers = 1;
 
@@ -815,7 +818,7 @@ class HarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMPORTED_MODU
         const finalCorners = gpu.programs.keypoints.encodeHarrisScore(suppressedCorners);
 
         // encode corners
-        return gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize);
+        return gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize, encoderLength);
     }
 }
 
@@ -903,6 +906,7 @@ class MultiscaleHarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMP
         const depth = this._depth;
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
+        const encoderLength = this.encoderLength;
         const windowSize = DEFAULT_WINDOW_SIZE;
         const numberOfLayers = 2 * depth - 1;
         const lodStep = Math.log2(this._scaleFactor);
@@ -940,7 +944,7 @@ class MultiscaleHarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMP
         const finalCorners = gpu.programs.keypoints.encodeHarrisScore(suppressedCorners);
 
         // encode keypoints
-        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize);
+        const detectedKeypoints = gpu.programs.encoders.encodeKeypoints(finalCorners, descriptorSize, extraSize, encoderLength);
 
         // done
         return detectedKeypoints;
@@ -1089,6 +1093,15 @@ class FeatureAlgorithmDecorator extends _feature_algorithm__WEBPACK_IMPORTED_MOD
         super.descriptorSize = bytes;
         this._decoratedAlgorithm.descriptorSize = bytes;
     }
+
+    /**
+     * Size of the keypoint encoder texture
+     * @returns {number}
+     */
+    get encoderLength()
+    {
+        return this._decoratedAlgorithm.encoderLength;
+    }
 }
 
 /***/ }),
@@ -1191,17 +1204,6 @@ class FeatureAlgorithm
     }
 
     /**
-     * Upload feature points to the GPU
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyFeature[]} keypoints feature points
-     * @returns {SpeedyTexture} tiny texture
-     */
-    upload(gpu, keypoints)
-    {
-        return gpu.programs.encoders.uploadKeypoints(keypoints, this.descriptorSize, this.extraSize);
-    }
-
-    /**
      * Extra size of the headers of the encoded keypoint texture
      * By default, this is set to zero
      * @return {number} in bytes
@@ -1242,6 +1244,15 @@ class FeatureAlgorithm
     {
         this._descriptorSize = Math.max(0, bytes | 0);
         _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(this._descriptorSize % 4 === 0); // multiple of 32 bits (RGBA pixel)
+    }
+
+    /**
+     * Size of the keypoint encoder texture
+     * @returns {number}
+     */
+    get encoderLength()
+    {
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["AbstractMethodError"]();
     }
 }
 
@@ -1476,6 +1487,24 @@ class FeatureDetectionAlgorithm extends _feature_algorithm__WEBPACK_IMPORTED_MOD
     }
 
     /**
+     * Size of the keypoint encoder texture
+     * @returns {number}
+     */
+    get encoderLength()
+    {
+        return this._downloader.encoderLength;
+    }
+
+    /**
+     * The feature downloader
+     * @returns {FeatureDownloader}
+     */
+    get downloader()
+    {
+        return this._downloader;
+    }
+
+    /**
      * Setup enhancements to be applied when detecting features
      * @param {FeatureDetectionEnhancements|boolean} [enhancements] fix irregular lighting in the scene?
      */
@@ -1533,12 +1562,13 @@ class FeatureDetectionAlgorithm extends _feature_algorithm__WEBPACK_IMPORTED_MOD
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FeatureDownloader", function() { return FeatureDownloader; });
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_observable__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/observable */ "./src/utils/observable.js");
-/* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../speedy-feature */ "./src/core/speedy-feature.js");
-/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _feature_encoder__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./feature-encoder */ "./src/core/keypoints/feature-encoder.js");
+/* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../speedy-feature */ "./src/core/speedy-feature.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -1567,11 +1597,14 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 // constants
+const INITIAL_KEYPOINTS_GUESS = _feature_encoder__WEBPACK_IMPORTED_MODULE_0__["FeatureEncoder"].capacity(0, 0, _utils_globals__WEBPACK_IMPORTED_MODULE_6__["INITIAL_ENCODER_LENGTH"]); // a guess about the initial number of keypoints
 const INITIAL_FILTER_GAIN = 0.85; // a number in [0,1]
-const INITIAL_KEYPOINTS_GUESS = 600; // a guess about the initial number of keypoints
 const MIN_KEYPOINTS = 32; // at any point in time, the encoder will have space for
                           // at least this number of keypoints
+
+
 
 
 /**
@@ -1667,19 +1700,17 @@ class FeatureCountEstimator
  * The FeatureDownloader receives a texture of encoded
  * keypoints and returns a corresponding array of keypoints
  */
-class FeatureDownloader extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__["Observable"]
+class FeatureDownloader
 {
     /**
      * Class constructor
      */
     constructor()
     {
-        super();
+        /** @type {number} size of the keypoint encoder texture */
+        this._encoderLength = _utils_globals__WEBPACK_IMPORTED_MODULE_6__["INITIAL_ENCODER_LENGTH"];
 
-        /**
-         * Used to estimate the future number of keypoints
-         * @type {FeatureCountEstimator}
-         */
+        /** @type {FeatureCountEstimator} used to estimate the future number of keypoints */
         this._estimator = new FeatureCountEstimator();
     }
 
@@ -1694,40 +1725,64 @@ class FeatureDownloader extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__["
      */
     download(gpu, encodedKeypoints, descriptorSize, extraSize, flags = 0)
     {
+        // validate the input texture
+        _utils_utils__WEBPACK_IMPORTED_MODULE_5__["Utils"].assert(encodedKeypoints.width === encodedKeypoints.height);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_5__["Utils"].assert(encodedKeypoints.width === this._encoderLength);
+
         // reset the capacity of the downloader
-        if(flags & FeatureDownloader.RESET_DOWNLOADER_STATE != 0)
+        if(flags & FeatureDownloader.RESET_DOWNLOADER_STATE != 0) {
             this._estimator.reset();
+            //this._encoderLength = INITIAL_ENCODER_LENGTH; // no need
+        }
 
         // download keypoints
-        //console.log('downloading with encoderlength=', gpu.programs.encoders.encoderLength);
         const useBufferedDownloads = (flags & FeatureDownloader.USE_BUFFERED_DOWNLOADS) != 0;
         return gpu.programs.encoders.downloadEncodedKeypoints(encodedKeypoints, useBufferedDownloads).then(data => {
 
             // decode the keypoints
             const encoderLength = encodedKeypoints.width;
             const multiplier = (flags & FeatureDownloader.SUPPRESS_DESCRIPTORS) != 0 ? 0 : 1;
-            const keypoints = this._decodeKeypoints(data, descriptorSize * multiplier, extraSize, encoderLength);
+            const keypoints = _feature_encoder__WEBPACK_IMPORTED_MODULE_0__["FeatureEncoder"].decode(data, descriptorSize * multiplier, extraSize, encoderLength);
 
             // how many keypoints do we expect in the next frame?
             const discardedCount = this._countDiscardedKeypoints(keypoints);
             const nextCount = this._estimator.estimate(keypoints.length - discardedCount);
 
             // optimize the keypoint encoder
-            // add slack (maxGrowth) to accomodate abrupt changes in the number of keypoints
+            // add slack (maxGrowth) to accomodate for abrupt changes in the number of keypoints
             const capacity = Math.max(nextCount, MIN_KEYPOINTS);
             const extraCapacity = this._estimator.maxGrowth * capacity;
-            gpu.programs.encoders.optimize(extraCapacity, descriptorSize, extraSize);
-            //console.log('Encoder Length', gpu.programs.encoders.encoderLength);
-
-            // notify observers
-            this._notify(keypoints);
+            this._encoderLength = _feature_encoder__WEBPACK_IMPORTED_MODULE_0__["FeatureEncoder"].minLength(extraCapacity, descriptorSize, extraSize);
 
             // done!
             return keypoints;
 
         }).catch(err => {
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalOperationError"](`Can't download keypoints`, err);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`Can't download keypoints`, err);
         });
+    }
+
+    /**
+     * Size of the keypoint encoder texture
+     * @returns {number}
+     */
+    get encoderLength()
+    {
+        return this._encoderLength;
+    }
+
+    /**
+     * Ensures that encoderLength is large enough to handle a
+     * particular configuration of the keypoint encoder
+     * @param {number} keypointCount integer
+     * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
+     * @param {boolean} [tight] make it a tight fit (i.e., remove any slack)
+     */
+    reserveSpace(keypointCount, descriptorSize, extraSize, tight = false)
+    {
+        const e = _feature_encoder__WEBPACK_IMPORTED_MODULE_0__["FeatureEncoder"].minLength(keypointCount, descriptorSize, extraSize);
+        this._encoderLength = tight ? e : Math.max(this._encoderLength, e);
     }
 
     /**
@@ -1739,84 +1794,12 @@ class FeatureDownloader extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__["
         let i, count = 0;
 
         for(i = keypoints.length - 1; i >= 0; i--)
-            count += ((keypoints[i].flags & _utils_globals__WEBPACK_IMPORTED_MODULE_5__["KPF_DISCARD"]) != 0) | 0;
+            count += ((keypoints[i].flags & _utils_globals__WEBPACK_IMPORTED_MODULE_6__["KPF_DISCARD"]) != 0) | 0;
 
         return count;
     }
 
-    /**
-     * Decodes the keypoints, given a flattened image of encoded pixels
-     * @param {Uint8Array[]} pixels pixels in the [r,g,b,a,...] format
-     * @param {number} descriptorSize in bytes
-     * @param {number} extraSize in bytes
-     * @param {number} encoderLength
-     * @returns {SpeedyFeature[]} keypoints
-     */
-    _decodeKeypoints(pixels, descriptorSize, extraSize, encoderLength)
-    {
-        const pixelsPerKeypoint = (_utils_globals__WEBPACK_IMPORTED_MODULE_5__["MIN_KEYPOINT_SIZE"] + descriptorSize + extraSize) / 4;
-        let x, y, lod, rotation, score, flags, extraBytes, descriptorBytes;
-        let hasLod, hasRotation;
-        const keypoints = [];
 
-        // how many bytes should we read?
-        const e = encoderLength;
-        const e2 = e * e * pixelsPerKeypoint * 4;
-        const size = Math.min(pixels.length, e2);
-
-        // for each encoded keypoint
-        for(let i = 0; i < size; i += 4 /* RGBA */ * pixelsPerKeypoint) {
-            // extract fixed-point coordinates
-            x = (pixels[i+1] << 8) | pixels[i];
-            y = (pixels[i+3] << 8) | pixels[i+2];
-            if(x >= 0xFFFF && y >= 0xFFFF) // if end of list
-                break;
-
-            // We've cleared the texture to black.
-            // Likely to be incorrect black pixels
-            // due to resize. Bad for encoderLength
-            if(x + y == 0 && pixels[i+6] == 0)
-                continue; // discard, it's noise
-
-            // convert from fixed-point
-            x /= _utils_globals__WEBPACK_IMPORTED_MODULE_5__["FIX_RESOLUTION"];
-            y /= _utils_globals__WEBPACK_IMPORTED_MODULE_5__["FIX_RESOLUTION"];
-
-            // extract flags
-            flags = pixels[i+7];
-
-            // extract LOD
-            hasLod = (pixels[i+4] < 255);
-            lod = !hasLod ? 0.0 :
-                -_utils_globals__WEBPACK_IMPORTED_MODULE_5__["LOG2_PYRAMID_MAX_SCALE"] + (_utils_globals__WEBPACK_IMPORTED_MODULE_5__["LOG2_PYRAMID_MAX_SCALE"] + _utils_globals__WEBPACK_IMPORTED_MODULE_5__["PYRAMID_MAX_LEVELS"]) * pixels[i+4] / 255.0;
-
-            // extract orientation
-            hasRotation = (flags & _utils_globals__WEBPACK_IMPORTED_MODULE_5__["KPF_ORIENTED"] != 0);
-            rotation = !hasRotation ? 0.0 :
-                ((2 * pixels[i+5]) / 255.0 - 1.0) * Math.PI;
-
-            // extract score
-            score = pixels[i+6] / 255.0;
-
-            // extra bytes
-            extraBytes = pixels.slice(8 + i, 8 + i + extraSize);
-
-            // descriptor bytes
-            descriptorBytes = pixels.slice(8 + i + extraSize, 8 + i + extraSize + descriptorSize);
-
-            // something is off here
-            if(descriptorBytes.length < descriptorSize || extraBytes.length < extraSize)
-                continue; // discard
-
-            // register keypoint
-            keypoints.push(
-                new _speedy_feature__WEBPACK_IMPORTED_MODULE_2__["SpeedyFeature"](x, y, lod, rotation, score, flags, extraBytes, descriptorBytes)
-            );
-        }
-
-        // done!
-        return keypoints;
-    }
 
     /**
      * Flags accepted by the FeatureDownloader (bitwise)
@@ -1858,6 +1841,160 @@ class FeatureDownloader extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__["
 
 /***/ }),
 
+/***/ "./src/core/keypoints/feature-encoder.js":
+/*!***********************************************!*\
+  !*** ./src/core/keypoints/feature-encoder.js ***!
+  \***********************************************/
+/*! exports provided: FeatureEncoder */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "FeatureEncoder", function() { return FeatureEncoder; });
+/* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-feature */ "./src/core/speedy-feature.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/globals */ "./src/utils/globals.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * feature-encoder.js
+ * Utilities related to the encoding of feature points in a texture
+ */
+
+
+
+
+// Constants
+const MIN_ENCODER_LENGTH = Math.ceil(Math.sqrt(_utils_globals__WEBPACK_IMPORTED_MODULE_1__["MIN_KEYPOINT_SIZE"] / 4)); // Minimum size of the keypoint encoder, in pixels
+const MAX_ENCODER_LENGTH = 300; // Maximum size of the keypoint encoder - make it too large, and you may get a crash (WebGL context lost)
+
+/**
+ * Utilities related to the encoding of feature points in a texture
+ */
+class FeatureEncoder
+{
+    /**
+     * The minimum encoder length for a set of keypoints
+     * @param {number} keypointCount integer
+     * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
+     * @returns {number}
+     */
+    static minLength(keypointCount, descriptorSize, extraSize)
+    {
+        const pixelsPerKeypoint = Math.ceil((_utils_globals__WEBPACK_IMPORTED_MODULE_1__["MIN_KEYPOINT_SIZE"] + descriptorSize + extraSize) / 4);
+        const clampedKeypointCount = Math.max(0, Math.ceil(keypointCount));
+        const len = Math.ceil(Math.sqrt(clampedKeypointCount * pixelsPerKeypoint));
+
+        return Math.max(MIN_ENCODER_LENGTH, Math.min(len, MAX_ENCODER_LENGTH));
+    }
+
+    /**
+     * The maximum number of keypoints we can store using
+     * a particular configuration of a keypoint encoder
+     * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
+     * @param {number} encoderLength
+     */
+    static capacity(descriptorSize, extraSize, encoderLength)
+    {
+        const pixelsPerKeypoint = Math.ceil((_utils_globals__WEBPACK_IMPORTED_MODULE_1__["MIN_KEYPOINT_SIZE"] + descriptorSize + extraSize) / 4);
+        const numberOfPixels = encoderLength * encoderLength;
+
+        return Math.floor(numberOfPixels / pixelsPerKeypoint);
+    }
+
+    /**
+     * Decode a sequence of keypoints, given a flattened
+     * image of encoded pixels
+     * @param {Uint8Array[]} pixels pixels in the [r,g,b,a,...] format
+     * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
+     * @param {number} encoderLength
+     * @returns {SpeedyFeature[]} keypoints
+     */
+    static decode(pixels, descriptorSize, extraSize, encoderLength)
+    {
+        const pixelsPerKeypoint = Math.ceil((_utils_globals__WEBPACK_IMPORTED_MODULE_1__["MIN_KEYPOINT_SIZE"] + descriptorSize + extraSize) / 4);
+        let x, y, lod, rotation, score, flags, extraBytes, descriptorBytes;
+        let hasLod, hasRotation;
+        const keypoints = [];
+
+        // how many bytes should we read?
+        const e = encoderLength;
+        const e2 = e * e * pixelsPerKeypoint * 4;
+        const size = Math.min(pixels.length, e2);
+
+        // for each encoded keypoint
+        for(let i = 0; i < size; i += 4 /* RGBA */ * pixelsPerKeypoint) {
+            // extract fixed-point coordinates
+            x = (pixels[i+1] << 8) | pixels[i];
+            y = (pixels[i+3] << 8) | pixels[i+2];
+            if(x >= 0xFFFF && y >= 0xFFFF) // if end of list
+                break;
+
+            // We've cleared the texture to black.
+            // Likely to be incorrect black pixels
+            // due to resize. Bad for encoderLength
+            if(x + y == 0 && pixels[i+6] == 0)
+                continue; // discard, it's noise
+
+            // convert from fixed-point
+            x /= _utils_globals__WEBPACK_IMPORTED_MODULE_1__["FIX_RESOLUTION"];
+            y /= _utils_globals__WEBPACK_IMPORTED_MODULE_1__["FIX_RESOLUTION"];
+
+            // extract flags
+            flags = pixels[i+7];
+
+            // extract LOD
+            hasLod = (pixels[i+4] < 255);
+            lod = !hasLod ? 0.0 :
+                -_utils_globals__WEBPACK_IMPORTED_MODULE_1__["LOG2_PYRAMID_MAX_SCALE"] + (_utils_globals__WEBPACK_IMPORTED_MODULE_1__["LOG2_PYRAMID_MAX_SCALE"] + _utils_globals__WEBPACK_IMPORTED_MODULE_1__["PYRAMID_MAX_LEVELS"]) * pixels[i+4] / 255.0;
+
+            // extract orientation
+            hasRotation = (flags & _utils_globals__WEBPACK_IMPORTED_MODULE_1__["KPF_ORIENTED"] != 0);
+            rotation = !hasRotation ? 0.0 :
+                ((2 * pixels[i+5]) / 255.0 - 1.0) * Math.PI;
+
+            // extract score
+            score = pixels[i+6] / 255.0;
+
+            // extra bytes
+            extraBytes = pixels.slice(8 + i, 8 + i + extraSize);
+
+            // descriptor bytes
+            descriptorBytes = pixels.slice(8 + i + extraSize, 8 + i + extraSize + descriptorSize);
+
+            // something is off here
+            if(descriptorBytes.length < descriptorSize || extraBytes.length < extraSize)
+                continue; // discard
+
+            // register keypoint
+            keypoints.push(
+                new _speedy_feature__WEBPACK_IMPORTED_MODULE_0__["SpeedyFeature"](x, y, lod, rotation, score, flags, extraBytes, descriptorBytes)
+            );
+        }
+
+        // done!
+        return keypoints;
+    }
+}
+
+/***/ }),
+
 /***/ "./src/core/keypoints/feature-tracking-algorithm.js":
 /*!**********************************************************!*\
   !*** ./src/core/keypoints/feature-tracking-algorithm.js ***!
@@ -1873,9 +2010,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _feature_algorithm__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./feature-algorithm */ "./src/core/keypoints/feature-algorithm.js");
 /* harmony import */ var _feature_downloader__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./feature-downloader */ "./src/core/keypoints/feature-downloader.js");
-/* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../speedy-feature */ "./src/core/speedy-feature.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _feature_encoder__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./feature-encoder */ "./src/core/keypoints/feature-encoder.js");
+/* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../speedy-feature */ "./src/core/speedy-feature.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -1896,6 +2034,7 @@ __webpack_require__.r(__webpack_exports__);
  * feature-tracking-algorithm.js
  * Abstract feature tracking algorithm
  */
+
 
 
 
@@ -1988,9 +2127,39 @@ class FeatureTrackingAlgorithm extends _feature_algorithm__WEBPACK_IMPORTED_MODU
     download(gpu, encodedKeypoints, flags = 0)
     {
         if(flags & _feature_downloader__WEBPACK_IMPORTED_MODULE_4__["FeatureDownloader"].USE_BUFFERED_DOWNLOADS != 0)
-            _utils_utils__WEBPACK_IMPORTED_MODULE_7__["Utils"].warning(`Feature trackers shouldn't use buffered downloads`);
+            _utils_utils__WEBPACK_IMPORTED_MODULE_8__["Utils"].warning(`Feature trackers shouldn't use buffered downloads`);
 
         return this._downloader.download(gpu, encodedKeypoints, this.descriptorSize, this.extraSize, flags);
+    }
+
+    /**
+     * Size of the keypoint encoder texture
+     * @returns {number}
+     */
+    get encoderLength()
+    {
+        return this._downloader.encoderLength;
+    }
+
+    /**
+     * The feature downloader
+     * @returns {FeatureDownloader}
+     */
+    get downloader()
+    {
+        return this._downloader;
+    }
+
+    /**
+     * Upload feature points to the GPU
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyFeature[]} keypoints feature points
+     * @returns {SpeedyTexture} tiny texture
+     */
+    upload(gpu, keypoints)
+    {
+        const encoderLength = _feature_encoder__WEBPACK_IMPORTED_MODULE_5__["FeatureEncoder"].minLength(keypoints.length, this.descriptorSize, this.extraSize);
+        return gpu.programs.encoders.uploadKeypoints(keypoints, this.descriptorSize, this.extraSize, encoderLength);
     }
 
     /**
@@ -2181,6 +2350,7 @@ class LKFeatureTrackingAlgorithm extends _feature_tracking_algorithm__WEBPACK_IM
         const prevKeypoints = this.prevKeypoints;
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
+        const encoderLength = this.encoderLength;
         const windowSize = this.windowSize;
         const depth = this.depth;
         const numberOfIterations = this.numberOfIterations;
@@ -2192,7 +2362,6 @@ class LKFeatureTrackingAlgorithm extends _feature_tracking_algorithm__WEBPACK_IM
         const prevPyramid = prevImage.generatePyramid(gpu);
 
         // track feature points
-        const encoderLength = gpu.programs.encoders.encoderLength;
         return gpu.programs.trackers.lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, depth, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);
     }
 }
@@ -8619,7 +8788,7 @@ class SpeedyFeatureDetector
         if(isStaticMedia) {
             // Allocate encoder space for static media
             const MAX_KEYPOINT_GUESS = 8192; // hmmmmmmmm...
-            gpu.programs.encoders.reserveSpace(MAX_KEYPOINT_GUESS, descriptorSize, extraSize);
+            this._algorithm.downloader.reserveSpace(MAX_KEYPOINT_GUESS, descriptorSize, extraSize);
         }
         else {
             // Use buffered downloads for dynamic media
@@ -8635,13 +8804,13 @@ class SpeedyFeatureDetector
             // of keypoints (between two consecutive frames).
             downloaderFlags |= _keypoints_feature_downloader__WEBPACK_IMPORTED_MODULE_9__["FeatureDownloader"].RESET_DOWNLOADER_STATE;
 
-            // reset the encoder capacity
-            const A_LOT_OF_KEYPOINTS = 2048; // hmmmm...
-            gpu.programs.encoders.reserveSpace(A_LOT_OF_KEYPOINTS, descriptorSize, extraSize);
-
             // since we're resizing the encoder, we can't use
             // buffered downloads in this framestep
             downloaderFlags &= ~(_keypoints_feature_downloader__WEBPACK_IMPORTED_MODULE_9__["FeatureDownloader"].USE_BUFFERED_DOWNLOADS);
+
+            // reset the encoder capacity
+            const A_LOT_OF_KEYPOINTS = 2048; // hmmmm...
+            this._algorithm.downloader.reserveSpace(A_LOT_OF_KEYPOINTS, descriptorSize, extraSize);
         }
 
         // Upload & preprocess media
@@ -9260,7 +9429,7 @@ class SpeedyFeatureTracker
         this._inputTexture = nextImage;
 
         // adjust the size of the encoder
-        gpu.programs.encoders.optimize(keypoints.length, descriptorSize, extraSize);
+        this._trackingAlgorithm.downloader.reserveSpace(keypoints.length, descriptorSize, extraSize, true);
 
         // upload & track keypoints
         this._trackingAlgorithm.prevImage = prevImage;
@@ -11378,7 +11547,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-program-group */ "./src/gpu/speedy-program-group.js");
 /* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
 /* harmony import */ var _core_speedy_feature__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../core/speedy-feature */ "./src/core/speedy-feature.js");
-/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _core_keypoints_feature_encoder__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../core/keypoints/feature-encoder */ "./src/core/keypoints/feature-encoder.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
@@ -11413,11 +11582,8 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-// We won't admit more than MAX_KEYPOINTS per media.
-// The larger this value is, the more data we need to transfer from the GPU.
+// Constants
 const MIN_PIXELS_PER_KEYPOINT = _utils_globals__WEBPACK_IMPORTED_MODULE_7__["MIN_KEYPOINT_SIZE"] / 4; // encodes a keypoint header
-const INITIAL_ENCODER_LENGTH = 16; // pick a small number to reduce processing load and not crash things on mobile (WebGL lost context)
-const MAX_KEYPOINTS = 8192; // can't detect more than this number of keypoints per frame (if too many, WebGL may lose context - so be careful!)
 const UBO_MAX_BYTES = 16384; // UBOs can hold at least 16KB of data: gl.MAX_UNIFORM_BLOCK_SIZE >= 16384 according to the GL ES 3 reference
 const KEYPOINT_BUFFER_LENGTH = (UBO_MAX_BYTES / 16) | 0; // maximum number of keypoints that can be uploaded to the GPU via UBOs (each keypoint uses 16 bytes)
 const ENCODER_PASSES = 8; // number of passes of the keypoint encoder: directly impacts performance
@@ -11487,17 +11653,17 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
 
             // tiny textures
             .declare('_encodeKeypoints', encodeKeypoints, {
-                ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH),
+                ...this.program.hasTextureSize(_utils_globals__WEBPACK_IMPORTED_MODULE_7__["INITIAL_ENCODER_LENGTH"], _utils_globals__WEBPACK_IMPORTED_MODULE_7__["INITIAL_ENCODER_LENGTH"]),
                 ...this.program.usesPingpongRendering()
             })
             .declare('_resizeEncodedKeypoints', resizeEncodedKeypoints, {
-                ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
+                ...this.program.hasTextureSize(_utils_globals__WEBPACK_IMPORTED_MODULE_7__["INITIAL_ENCODER_LENGTH"], _utils_globals__WEBPACK_IMPORTED_MODULE_7__["INITIAL_ENCODER_LENGTH"])
             })
             .declare('_downloadEncodedKeypoints', downloadKeypoints, {
-                ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
+                ...this.program.hasTextureSize(_utils_globals__WEBPACK_IMPORTED_MODULE_7__["INITIAL_ENCODER_LENGTH"], _utils_globals__WEBPACK_IMPORTED_MODULE_7__["INITIAL_ENCODER_LENGTH"])
             })
             .declare('_uploadKeypoints', uploadKeypoints, {
-                ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
+                ...this.program.hasTextureSize(_utils_globals__WEBPACK_IMPORTED_MODULE_7__["INITIAL_ENCODER_LENGTH"], _utils_globals__WEBPACK_IMPORTED_MODULE_7__["INITIAL_ENCODER_LENGTH"])
             })
         ;
 
@@ -11505,67 +11671,8 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
 
         // setup internal data
 
-        /** @type {number} length of the tiny encoding textures */
-        this._encoderLength = INITIAL_ENCODER_LENGTH;
-
-        /** @type {number} how many keypoints we can encode at the moment */
-        this._keypointCapacity = (INITIAL_ENCODER_LENGTH * INITIAL_ENCODER_LENGTH / _utils_globals__WEBPACK_IMPORTED_MODULE_7__["MIN_KEYPOINT_SIZE"]) | 0;
-
         /** @type {Float32Array} UBO stuff */
         this._uploadBuffer = null; // lazy spawn
-    }
-
-    /**
-     * Keypoint encoder length
-     * @returns {number}
-     */
-    get encoderLength()
-    {
-        return this._encoderLength;
-    }
-
-    /**
-     * The maximum number of keypoints we can encode at the moment
-     * @returns {number}
-     */
-    get keypointCapacity()
-    {
-        return this._keypointCapacity;
-    }
-
-    /**
-     * Optimizes the keypoint encoder for an expected number of keypoints
-     * @param {number} maxKeypointCount expected maximum number of keypoints
-     * @param {number} descriptorSize in bytes
-     * @param {number} extraSize in bytes
-     * @returns {boolean} true if the encoder has been optimized
-     */
-    optimize(maxKeypointCount, descriptorSize, extraSize)
-    {
-        const keypointCapacity = Math.ceil(maxKeypointCount); // ensure this is an integer
-        const newEncoderLength = this.minimumEncoderLength(keypointCapacity, descriptorSize, extraSize);
-        const oldEncoderLength = this._encoderLength;
-
-        this._encoderLength = newEncoderLength;
-        this._keypointCapacity = keypointCapacity;
-
-        return (newEncoderLength - oldEncoderLength) != 0;
-    }
-
-    /**
-     * Ensures that the encoder has enough capacity to deliver the specified number of keypoints
-     * @param {number} keypointCapacity the number of keypoints
-     * @param {number} descriptorSize in bytes
-     * @param {number} extraSize in bytes
-     * @returns {boolean} true if there was any change to the length of the encoder
-     */
-    reserveSpace(keypointCapacity, descriptorSize, extraSize)
-    {
-        // resize if not enough space
-        if(this.minimumEncoderLength(keypointCapacity, descriptorSize, extraSize) > this._encoderLength)
-            return this.optimize(keypointCapacity, descriptorSize, extraSize);
-
-        return false;
     }
 
     /**
@@ -11573,12 +11680,12 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
      * @param {SpeedyTexture} corners texture with corners
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
+     * @param {number} encoderLength
      * @returns {SpeedyTexture} texture with encoded keypoints
      */
-    encodeKeypoints(corners, descriptorSize, extraSize)
+    encodeKeypoints(corners, descriptorSize, extraSize, encoderLength)
     {
         // parameters
-        const encoderLength = this._encoderLength;
         const imageSize = [ this._width, this._height ];
 
         // encode skip offsets
@@ -11600,7 +11707,8 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
         // encode keypoints
         const numPasses = ENCODER_PASSES;
         const pixelsPerKeypointHeader = MIN_PIXELS_PER_KEYPOINT;
-        const headerEncoderLength = Math.max(1, Math.ceil(Math.sqrt(this._keypointCapacity * pixelsPerKeypointHeader)));
+        const keypointCapacity = _core_keypoints_feature_encoder__WEBPACK_IMPORTED_MODULE_3__["FeatureEncoder"].capacity(descriptorSize, extraSize, encoderLength);
+        const headerEncoderLength = Math.max(1, Math.ceil(Math.sqrt(keypointCapacity * pixelsPerKeypointHeader)));
         this._encodeKeypoints.resize(headerEncoderLength, headerEncoderLength);
         let encodedKeypointHeaders = this._encodeKeypoints.clear(0, 0, 0, 0);
         for(let passId = 0; passId < numPasses; passId++)
@@ -11636,9 +11744,10 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
      * @param {SpeedyFeature[]} keypoints
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
+     * @param {number} encoderLength
      * @returns {SpeedyTexture} encodedKeypoints
      */
-    uploadKeypoints(keypoints, descriptorSize, extraSize)
+    uploadKeypoints(keypoints, descriptorSize, extraSize, encoderLength)
     {
         // Too many keypoints?
         const keypointCount = keypoints.length;
@@ -11646,6 +11755,10 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
             // TODO: multipass
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_6__["NotSupportedError"](`Can't upload ${keypointCount} keypoints: maximum is currently ${KEYPOINT_BUFFER_LENGTH}`);
         }
+
+        // Insufficient encoderLength?
+        if(encoderLength < _core_keypoints_feature_encoder__WEBPACK_IMPORTED_MODULE_3__["FeatureEncoder"].minLength(keypointCount, descriptorSize, extraSize))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_6__["IllegalArgumentError"](`Insufficient encoderLength (${encoderLength}) for ${keypoints.length} keypoints (descriptorSize: ${descriptorSize}, extraSize: ${extraSize})`);
 
         // Create a buffer for uploading the data
         if(this._uploadBuffer === null) {
@@ -11667,29 +11780,10 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
             this._uploadBuffer[j+3] = +(keypoint.score) || 0;
         }
 
-        // Reserve space for the keypoints
-        this.reserveSpace(keypointCount, descriptorSize, extraSize);
-
         // Upload data
-        this._uploadKeypoints.resize(this._encoderLength, this._encoderLength);
+        this._uploadKeypoints.resize(encoderLength, encoderLength);
         this._uploadKeypoints.setUBO('KeypointBuffer', this._uploadBuffer);
-        return this._uploadKeypoints(keypointCount, this._encoderLength, descriptorSize, extraSize);
-    }
-
-    /**
-     * The minimum encoder length for a set of keypoints
-     * @param {number} keypointCount
-     * @param {number} descriptorSize
-     * @param {number} extraSize
-     * @returns {number}
-     */
-    minimumEncoderLength(keypointCount, descriptorSize, extraSize)
-    {
-        const clampedKeypointCount = Math.max(0, Math.min(Math.ceil(keypointCount), MAX_KEYPOINTS));
-        const pixelsPerKeypoint = Math.ceil((_utils_globals__WEBPACK_IMPORTED_MODULE_7__["MIN_KEYPOINT_SIZE"] + descriptorSize + extraSize) / 4);
-        const len = Math.ceil(Math.sqrt(clampedKeypointCount * pixelsPerKeypoint));
-
-        return Math.max(1, len);
+        return this._uploadKeypoints(keypointCount, encoderLength, descriptorSize, extraSize);
     }
 }
 
@@ -12142,8 +12236,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUKeypoints", function() { return GPUKeypoints; });
 /* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-program-group */ "./src/gpu/speedy-program-group.js");
 /* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _core_keypoints_feature_encoder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../core/keypoints/feature-encoder */ "./src/core/keypoints/feature-encoder.js");
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -12164,6 +12259,7 @@ __webpack_require__.r(__webpack_exports__);
  * keypoints.js
  * Facade for various keypoint detection algorithms
  */
+
 
 
 
@@ -12364,7 +12460,7 @@ class GPUKeypoints extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["S
      */
     orb(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(descriptorSize === 32);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(descriptorSize === 32);
         this._orb.resize(encoderLength, encoderLength);
         return this._orb(pyramid, encodedKeypoints, extraSize, encoderLength);
     }
@@ -12381,8 +12477,7 @@ class GPUKeypoints extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["S
      */
     orbOrientation(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength)
     {
-        const pixelsPerKeypoint = (_utils_globals__WEBPACK_IMPORTED_MODULE_3__["MIN_KEYPOINT_SIZE"] + descriptorSize + extraSize) / 4;
-        const numberOfKeypoints = Math.ceil(encoderLength * encoderLength / pixelsPerKeypoint); // approximately
+        const numberOfKeypoints = _core_keypoints_feature_encoder__WEBPACK_IMPORTED_MODULE_2__["FeatureEncoder"].capacity(descriptorSize, extraSize, encoderLength);
         const orientationEncoderLength = Math.max(1, Math.ceil(Math.sqrt(numberOfKeypoints))); // 1 pixel per keypoint
 
         this._orbOrientation.resize(orientationEncoderLength, orientationEncoderLength);
@@ -12403,7 +12498,7 @@ class GPUKeypoints extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["S
      */
     suppressDescriptors(encodedKeypoints, descriptorSize, extraSize, encoderLength, suppressedEncoderLength)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(suppressedEncoderLength <= encoderLength);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(suppressedEncoderLength <= encoderLength);
         this._suppressDescriptors.resize(suppressedEncoderLength, suppressedEncoderLength);
         return this._suppressDescriptors(encodedKeypoints, descriptorSize, extraSize, encoderLength, suppressedEncoderLength);
     }
@@ -12634,6 +12729,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-program-group */ "./src/gpu/speedy-program-group.js");
 /* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _core_keypoints_feature_encoder__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../core/keypoints/feature-encoder */ "./src/core/keypoints/feature-encoder.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -12654,6 +12750,7 @@ __webpack_require__.r(__webpack_exports__);
  * trackers.js
  * Feature trackers
  */
+
 
 
 
@@ -12784,8 +12881,7 @@ class GPUTrackers extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
         // split the work into multiple passes of the shader
         // (so we don't get WebGL context loss on mobile)
         //
-        const pixelsPerKeypoint = (_utils_globals__WEBPACK_IMPORTED_MODULE_2__["MIN_KEYPOINT_SIZE"] + descriptorSize + extraSize) / 4;
-        const numKeypoints = encoderLength * encoderLength / pixelsPerKeypoint; // approximately, upper bound
+        const numKeypoints = _core_keypoints_feature_encoder__WEBPACK_IMPORTED_MODULE_3__["FeatureEncoder"].capacity(descriptorSize, extraSize, encoderLength);
         const lkEncoderLength = Math.max(1, Math.ceil(Math.sqrt(numKeypoints)));
         lk.resize(lkEncoderLength, lkEncoderLength);
 
@@ -16868,7 +16964,7 @@ class FPSCounter
 /*!******************************!*\
   !*** ./src/utils/globals.js ***!
   \******************************/
-/*! exports provided: PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE, LOG2_PYRAMID_MAX_SCALE, FIX_BITS, FIX_RESOLUTION, MAX_TEXTURE_LENGTH, MAX_DESCRIPTOR_SIZE, MIN_KEYPOINT_SIZE, KPF_NONE, KPF_ORIENTED, KPF_DISCARD, LITTLE_ENDIAN */
+/*! exports provided: PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE, LOG2_PYRAMID_MAX_SCALE, FIX_BITS, FIX_RESOLUTION, MAX_TEXTURE_LENGTH, MAX_DESCRIPTOR_SIZE, MIN_KEYPOINT_SIZE, INITIAL_ENCODER_LENGTH, KPF_NONE, KPF_ORIENTED, KPF_DISCARD, LITTLE_ENDIAN */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -16881,6 +16977,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MAX_TEXTURE_LENGTH", function() { return MAX_TEXTURE_LENGTH; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MAX_DESCRIPTOR_SIZE", function() { return MAX_DESCRIPTOR_SIZE; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MIN_KEYPOINT_SIZE", function() { return MIN_KEYPOINT_SIZE; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "INITIAL_ENCODER_LENGTH", function() { return INITIAL_ENCODER_LENGTH; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "KPF_NONE", function() { return KPF_NONE; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "KPF_ORIENTED", function() { return KPF_ORIENTED; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "KPF_DISCARD", function() { return KPF_DISCARD; });
@@ -16952,6 +17049,9 @@ const MAX_DESCRIPTOR_SIZE = 64;
 // Size of a keypoint header, in bytes (must be divisible by 4)
 const MIN_KEYPOINT_SIZE = 8;
 
+// Initial size of the keypoint encoder
+const INITIAL_ENCODER_LENGTH = 32; // pick a small number to reduce processing load and not crash things on mobile
+
 // Flag: no special flags
 const KPF_NONE = 0x0;
 
@@ -16971,82 +17071,6 @@ const KPF_DISCARD = 0x80;
 const LITTLE_ENDIAN = (function() {
     return 0xCAFE === (new Uint16Array(new Uint8Array([0xFE, 0xCA]).buffer))[0];
 })();
-
-/***/ }),
-
-/***/ "./src/utils/observable.js":
-/*!*********************************!*\
-  !*** ./src/utils/observable.js ***!
-  \*********************************/
-/*! exports provided: Observable */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "Observable", function() { return Observable; });
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * observable.js
- * Observer design pattern
- */
-
-/**
- * Implementation of the Observer design pattern
- */
-class Observable
-{
-    /**
-     * Class constructor
-     */
-    constructor()
-    {
-        this._subscribers = [];
-    }
-
-    /**
-     * Add subscriber
-     * @param {Function} fn callback
-     */
-    subscribe(fn)
-    {
-        if(this._subscribers.indexOf(fn) < 0)
-            this._subscribers.push(fn);
-    }
-
-    /**
-     * Remove subscriber
-     * @param {Function} fn previously added callback
-     */
-    unsubscribe(fn)
-    {
-        this._subscribers = this._subscribers.filter(subscriber => subscriber !== fn);
-    }
-
-    /**
-     * Notify all subscribers about a state change
-     * @param {any} data generic data
-     */
-    /* protected */ _notify(data)
-    {
-        for(const fn of this._subscribers)
-            fn(data);
-    }
-}
 
 /***/ }),
 
