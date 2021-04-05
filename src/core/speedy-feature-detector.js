@@ -121,10 +121,6 @@ export class SpeedyFeatureDetector
             // since we're resizing the encoder, we can't use
             // buffered downloads in this framestep
             downloaderFlags &= ~(FeatureDownloader.USE_BUFFERED_DOWNLOADS);
-
-            // reset the encoder capacity
-            const A_LOT_OF_KEYPOINTS = 2048; // hmmmm...
-            this._algorithm.downloader.reserveSpace(A_LOT_OF_KEYPOINTS, descriptorSize, extraSize);
         }
 
         // Upload & preprocess media
