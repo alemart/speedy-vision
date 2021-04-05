@@ -683,7 +683,7 @@ const processedMedia = await media.run(pipeline);  // processedMedia is a new Sp
 
 ##### SpeedyPipeline.release()
 
-`SpeedyPipeline.release(): Promise<SpeedyPipeline>`
+`SpeedyPipeline.release(): SpeedyPromise<SpeedyPipeline>`
 
 Cleanup pipeline memory. The JavaScript engine has an automatic garbage collector, but this is still useful if you spawn lots of pipelines.
 
@@ -697,7 +697,7 @@ The number of operations of the pipeline.
 
 ##### SpeedyMedia.run()
 
-`SpeedyMedia.run(pipeline: SpeedyPipeline): Promise<SpeedyMedia>`
+`SpeedyMedia.run(pipeline: SpeedyPipeline): SpeedyPromise<SpeedyMedia>`
 
 Runs the provided `pipeline`, outputting a [lightweight clone](#speedymediaclone) of the media containing the result.
 
@@ -709,7 +709,7 @@ Runs the provided `pipeline`, outputting a [lightweight clone](#speedymediaclone
 
 ###### Returns
 
-A `Promise` that resolves to the resulting image: a new `SpeedyMedia` object.
+A `SpeedyPromise` that resolves to the resulting image: a new `SpeedyMedia` object.
 
 ###### Example
 

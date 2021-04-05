@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,8 @@
  */
 
 import { PipelineOperation } from './pipeline-operations';
-import { MediaType } from '../utils/types';
-import { IllegalOperationError } from '../utils/errors';
 import { IllegalArgumentError } from '../utils/errors';
+import { SpeedyPromise } from '../utils/speedy-promise';
 
 
 /**
@@ -54,11 +53,11 @@ export class SpeedyPipeline
 
     /**
      * Cleanup pipeline memory
-     * @returns {Promise<SpeedyPipeline>} resolves as soon as the memory is released
+     * @returns {SpeedyPromise<SpeedyPipeline>} resolves as soon as the memory is released
      */
     release()
     {
-        return new Promise((resolve, reject) => {
+        return new SpeedyPromise((resolve, reject) => {
             for(let i = this._operations.length - 1; i >= 0; i--)
                 this._operations[i].release();
             this._operations.length = 0;
