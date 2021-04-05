@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-04-04T22:21:12.442Z
+ * Date: 2021-04-05T04:17:07.476Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -8736,23 +8736,30 @@ class SpeedyFeatureDetector
      */
     constructor(algorithm)
     {
-        // Set the algorithm
+        /** @type {FeatureDetectionAlgorithm} the feature detection algorithm */
         this._algorithm = algorithm;
+
+        /** @type {FeatureDetectionAlgorithm} the decorated feature detection algorithm */
         this._decoratedAlgorithm = this._algorithm;
 
-        // sensitivity: the higher the value, the more feature points you get
+        /** @type {number} sensitivity: the higher the value, the more feature points you get */
         this._sensitivity = 0; // a value in [0,1]
 
-        // cap the number of keypoints?
+        /** @type {number|undefined} should we cap the number of keypoints? */
         this._max = undefined;
+
+        /** @type {Function} internal */
         this._capKeypoints = this._capKeypoints.bind(this);
 
-        // enhance the image in different ways before detecting the features
+        /** @type {object} enhance the image in different ways before detecting the features */
         this._enhancements = {
             denoise: true,
             illumination: false,
             nightvision: null,
         };
+
+        /** @type {boolean} optimize downloads when working with dynamic media? */
+        this._useBufferedDownloads = true;
     }
 
     /**
@@ -8769,10 +8776,9 @@ class SpeedyFeatureDetector
     /**
      * Detect & describe feature points
      * @param {SpeedyMedia} media
-     * @param {number} [flags]
      * @returns {Promise<SpeedyFeature[]>}
      */
-    detect(media, flags = 0)
+    detect(media)
     {
         const gpu = media._gpu;
         const isStaticMedia = (media.options.usage == 'static');
@@ -8790,28 +8796,26 @@ class SpeedyFeatureDetector
             const MAX_KEYPOINT_GUESS = 8192; // hmmmmmmmm...
             this._algorithm.downloader.reserveSpace(MAX_KEYPOINT_GUESS, descriptorSize, extraSize);
         }
-        else {
+        else if(this._useBufferedDownloads) {
             // Use buffered downloads for dynamic media
             downloaderFlags |= _keypoints_feature_downloader__WEBPACK_IMPORTED_MODULE_9__["FeatureDownloader"].USE_BUFFERED_DOWNLOADS;
         }
 
+        /* ----- REMOVED -----
         // Reset encoder capacity & downloader state
-        if(flags & _speedy_flags__WEBPACK_IMPORTED_MODULE_3__["SpeedyFlags"].FEATURE_DETECTOR_RESET_CAPACITY) {
+        if(flags & SpeedyFlags.FEATURE_DETECTOR_RESET_CAPACITY) {
             // Speedy performs optimizations behind the scenes,
             // specially when detecting features in videos.
             // This flag will undo some optimizations. Use it
             // when you expect a sudden increase in the number
             // of keypoints (between two consecutive frames).
-            downloaderFlags |= _keypoints_feature_downloader__WEBPACK_IMPORTED_MODULE_9__["FeatureDownloader"].RESET_DOWNLOADER_STATE;
+            downloaderFlags |= FeatureDownloader.RESET_DOWNLOADER_STATE;
 
             // since we're resizing the encoder, we can't use
             // buffered downloads in this framestep
-            downloaderFlags &= ~(_keypoints_feature_downloader__WEBPACK_IMPORTED_MODULE_9__["FeatureDownloader"].USE_BUFFERED_DOWNLOADS);
-
-            // reset the encoder capacity
-            const A_LOT_OF_KEYPOINTS = 2048; // hmmmm...
-            this._algorithm.downloader.reserveSpace(A_LOT_OF_KEYPOINTS, descriptorSize, extraSize);
+            downloaderFlags &= ~(FeatureDownloader.USE_BUFFERED_DOWNLOADS);
         }
+        */
 
         // Upload & preprocess media
         const texture = gpu.upload(media.source);
@@ -8894,6 +8898,26 @@ class SpeedyFeatureDetector
 
         // merge enhancements object
         this._enhancements = Object.assign(this._enhancements, enhancements);
+    }
+
+    /**
+     * Optimize downloads of data from the GPU
+     * when working with dynamic media
+     * @returns {boolean}
+     */
+    get useBufferedDownloads()
+    {
+        return this._useBufferedDownloads;
+    }
+
+    /**
+     * Optimize downloads of data from the GPU
+     * when working with dynamic media
+     * @param {boolean} value
+     */
+    set useBufferedDownloads(value)
+    {
+        this._useBufferedDownloads = Boolean(value);
     }
 
     /**
@@ -9820,7 +9844,7 @@ __webpack_require__.r(__webpack_exports__);
 const SpeedyFlags = Object.freeze({
 
     // Feature detectors
-    FEATURE_DETECTOR_RESET_CAPACITY: 0x1,
+    //FEATURE_DETECTOR_RESET_CAPACITY: 0x1, // removed
 
 });
 
@@ -10621,12 +10645,12 @@ class SpeedyNamespace
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipeline", function() { return SpeedyPipeline; });
 /* harmony import */ var _pipeline_operations__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./pipeline-operations */ "./src/core/pipeline-operations.js");
-/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10643,7 +10667,6 @@ __webpack_require__.r(__webpack_exports__);
  * speedy-pipeline.js
  * A pipeline is a sequence of operations that transform the image in some way
  */
-
 
 
 
@@ -10679,11 +10702,11 @@ class SpeedyPipeline
 
     /**
      * Cleanup pipeline memory
-     * @returns {Promise<SpeedyPipeline>} resolves as soon as the memory is released
+     * @returns {SpeedyPromise<SpeedyPipeline>} resolves as soon as the memory is released
      */
     release()
     {
-        return new Promise((resolve, reject) => {
+        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"]((resolve, reject) => {
             for(let i = this._operations.length - 1; i >= 0; i--)
                 this._operations[i].release();
             this._operations.length = 0;
@@ -10734,7 +10757,7 @@ class SpeedyPipeline
             return this;
         }
 
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Invalid argument "${pipeline}" given to SpeedyPipeline.concatenate()`);
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Invalid argument "${pipeline}" given to SpeedyPipeline.concatenate()`);
     }
 
 
@@ -10755,7 +10778,7 @@ class SpeedyPipeline
             );
         }
 
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Can't convert to unknown color space: "${colorSpace}"`);
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Can't convert to unknown color space: "${colorSpace}"`);
     }
 
 
@@ -11758,7 +11781,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
 
         // Insufficient encoderLength?
         if(encoderLength < _core_keypoints_feature_encoder__WEBPACK_IMPORTED_MODULE_3__["FeatureEncoder"].minLength(keypointCount, descriptorSize, extraSize))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_6__["IllegalArgumentError"](`Insufficient encoderLength (${encoderLength}) for ${keypoints.length} keypoints (descriptorSize: ${descriptorSize}, extraSize: ${extraSize})`);
+            _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].warning(`Insufficient encoderLength (${encoderLength}) for ${keypoints.length} keypoints (descriptorSize: ${descriptorSize}, extraSize: ${extraSize})`);
 
         // Create a buffer for uploading the data
         if(this._uploadBuffer === null) {
