@@ -1,6 +1,18 @@
 # Release notes
 
-## 0.5.0 - February 14th, 2020
+## 0.5.1 - April 5th, 2021
+
+* Matrix expressions are now compiled for better performance
+* Linear Algebra routines are now split into different files
+* Introduced `SpeedyMatrixExpr.map()` and `SpeedyMatrixExpr.reduce()`
+* Introduced `SpeedyMatrixExpr.inverse()`
+* Improved & optimized the LK feature tracker
+* ORB: using a larger patch when computing the orientation of a keypoint
+* Harris/FAST: using 16-bit half-floats to store the scores of keypoints
+* Improved the keypoint encoder
+* General improvements & fixes
+
+## 0.5.0 - February 14th, 2021
 
 * Created Speedy's own Matrix / Linear Algebra system
 * Improved the feature detection & description API
