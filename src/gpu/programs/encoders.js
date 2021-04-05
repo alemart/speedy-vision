@@ -25,7 +25,7 @@ import { SpeedyFeature } from '../../core/speedy-feature';
 import { FeatureEncoder } from '../../core/keypoints/feature-encoder';
 import { Utils } from '../../utils/utils'
 import { SpeedyPromise } from '../../utils/speedy-promise'
-import { IllegalOperationError, IllegalArgumentError, NotSupportedError } from '../../utils/errors';
+import { IllegalOperationError, NotSupportedError } from '../../utils/errors';
 import { MIN_KEYPOINT_SIZE, INITIAL_ENCODER_LENGTH } from '../../utils/globals';
 
 // Constants
@@ -204,7 +204,7 @@ export class GPUEncoders extends SpeedyProgramGroup
 
         // Insufficient encoderLength?
         if(encoderLength < FeatureEncoder.minLength(keypointCount, descriptorSize, extraSize))
-            throw new IllegalArgumentError(`Insufficient encoderLength (${encoderLength}) for ${keypoints.length} keypoints (descriptorSize: ${descriptorSize}, extraSize: ${extraSize})`);
+            Utils.warning(`Insufficient encoderLength (${encoderLength}) for ${keypoints.length} keypoints (descriptorSize: ${descriptorSize}, extraSize: ${extraSize})`);
 
         // Create a buffer for uploading the data
         if(this._uploadBuffer === null) {
