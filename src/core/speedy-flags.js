@@ -22,6 +22,6 @@
 export const SpeedyFlags = Object.freeze({
 
     // Feature detectors
-    FEATURE_DETECTOR_RESET_CAPACITY: 0x1,
+    //FEATURE_DETECTOR_RESET_CAPACITY: 0x1, // removed
 
 });

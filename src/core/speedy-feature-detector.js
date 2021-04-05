@@ -50,23 +50,30 @@ export class SpeedyFeatureDetector
      */
     constructor(algorithm)
     {
-        // Set the algorithm
+        /** @type {FeatureDetectionAlgorithm} the feature detection algorithm */
         this._algorithm = algorithm;
+
+        /** @type {FeatureDetectionAlgorithm} the decorated feature detection algorithm */
         this._decoratedAlgorithm = this._algorithm;
 
-        // sensitivity: the higher the value, the more feature points you get
+        /** @type {number} sensitivity: the higher the value, the more feature points you get */
         this._sensitivity = 0; // a value in [0,1]
 
-        // cap the number of keypoints?
+        /** @type {number|undefined} should we cap the number of keypoints? */
         this._max = undefined;
+
+        /** @type {Function} internal */
         this._capKeypoints = this._capKeypoints.bind(this);
 
-        // enhance the image in different ways before detecting the features
+        /** @type {object} enhance the image in different ways before detecting the features */
         this._enhancements = {
             denoise: true,
             illumination: false,
             nightvision: null,
         };
+
+        /** @type {boolean} optimize downloads when working with dynamic media? */
+        this._useBufferedDownloads = true;
     }
 
     /**
@@ -83,10 +90,9 @@ export class SpeedyFeatureDetector
     /**
      * Detect & describe feature points
      * @param {SpeedyMedia} media
-     * @param {number} [flags]
      * @returns {Promise<SpeedyFeature[]>}
      */
-    detect(media, flags = 0)
+    detect(media)
     {
         const gpu = media._gpu;
         const isStaticMedia = (media.options.usage == 'static');
@@ -104,11 +110,12 @@ export class SpeedyFeatureDetector
             const MAX_KEYPOINT_GUESS = 8192; // hmmmmmmmm...
             this._algorithm.downloader.reserveSpace(MAX_KEYPOINT_GUESS, descriptorSize, extraSize);
         }
-        else {
+        else if(this._useBufferedDownloads) {
             // Use buffered downloads for dynamic media
             downloaderFlags |= FeatureDownloader.USE_BUFFERED_DOWNLOADS;
         }
 
+        /* ----- REMOVED -----
         // Reset encoder capacity & downloader state
         if(flags & SpeedyFlags.FEATURE_DETECTOR_RESET_CAPACITY) {
             // Speedy performs optimizations behind the scenes,
@@ -122,6 +129,7 @@ export class SpeedyFeatureDetector
             // buffered downloads in this framestep
             downloaderFlags &= ~(FeatureDownloader.USE_BUFFERED_DOWNLOADS);
         }
+        */
 
         // Upload & preprocess media
         const texture = gpu.upload(media.source);
@@ -204,6 +212,26 @@ export class SpeedyFeatureDetector
 
         // merge enhancements object
         this._enhancements = Object.assign(this._enhancements, enhancements);
+    }
+
+    /**
+     * Optimize downloads of data from the GPU
+     * when working with dynamic media
+     * @returns {boolean}
+     */
+    get useBufferedDownloads()
+    {
+        return this._useBufferedDownloads;
+    }
+
+    /**
+     * Optimize downloads of data from the GPU
+     * when working with dynamic media
+     * @param {boolean} value
+     */
+    set useBufferedDownloads(value)
+    {
+        this._useBufferedDownloads = Boolean(value);
     }
 
     /**

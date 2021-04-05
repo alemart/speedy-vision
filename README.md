@@ -345,19 +345,17 @@ console.log(features);
 
 ##### SpeedyFeatureDetector.detect()
 
-`SpeedyFeatureDetector.detect(media: SpeedyMedia, flags?: number): Promise<SpeedyFeature[]>`
+`SpeedyFeatureDetector.detect(media: SpeedyMedia): SpeedyPromise<SpeedyFeature[]>`
 
 Detects feature points in a `SpeedyMedia`.
 
 ###### Arguments
 
 * `media: SpeedyMedia`. The media object (image, video, etc.)
-* `flags: number, optional`. You may specify a combination of the following flags with the bitwise or:
-  * `Speedy.FEATURE_DETECTOR_RESET_CAPACITY`. Speedy performs optimizations behind the scenes, specially when detecting features in videos. This flag will undo these optimizations. Use it when you expect a sudden increase in the number of keypoints (i.e., between two consecutive frames).
 
 ###### Returns
 
-A `Promise` that resolves to an array of `SpeedyFeature` objects.
+A `SpeedyPromise` that resolves to an array of `SpeedyFeature` objects.
 
 ###### Example
 
@@ -412,6 +410,12 @@ window.onload = () => {
 `SpeedyFeatureDetector.max: number | undefined`
 
 Used to cap the number of keypoints: Speedy will return the best keypoints (according to their scores) up to this number. If it's `undefined`, no such limit will be applied.
+
+##### SpeedyFeatureDetector.useBufferedDownloads
+
+`SpeedyFeatureDetector.useBufferedDownloads: boolean`
+
+Used to optimize the download of data from the GPU when working with dynamic media (e.g., videos). This saves you some time by returning the keypoints of the previous frame of the video, which are likely to be almost identical to the keypoints of the current frame (i.e., there is a 1-frame delay). This is set to `true` by default. You may set it to `false` when you don't intend to be calling the feature detector continuously. This option has no effect no static media.
 
 ##### SpeedyFeatureDetector.enhance()
 
@@ -581,7 +585,7 @@ Feature trackers are associated with a `SpeedyMedia`, so that consecutive frames
 
 ##### SpeedyFeatureTracker.track()
 
-`SpeedyFeatureTracker.track(features: SpeedyFeature[], flow?: SpeedyVector2[], found?: boolean[]): Promise<SpeedyFeature[]>`
+`SpeedyFeatureTracker.track(features: SpeedyFeature[], flow?: SpeedyVector2[], found?: boolean[]): SpeedyPromise<SpeedyFeature[]>`
 
 Track a collection of `features` between frames. You may optionally specify the `flow` array to get the flow vector for each of the tracked features. Additionally, `found[i]` will tell you whether the i-th feature point has been found in the next frame of the video/animation or not.
 
@@ -593,7 +597,7 @@ Track a collection of `features` between frames. You may optionally specify the 
 
 ###### Returns
 
-A `Promise` that resolves to an array of `SpeedyFeature` objects.
+A `SpeedyPromise` that resolves to an array of `SpeedyFeature` objects.
 
 ###### Example
 

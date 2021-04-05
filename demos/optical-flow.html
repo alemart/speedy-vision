@@ -124,6 +124,7 @@ window.onload = async function()
     const featureDetector = Speedy.FeatureDetector.Harris();
     featureDetector.quality = 0.15;
     featureDetector.max = 100;
+    featureDetector.useBufferedDownloads = false;
 
     // create a feature tracker
     const featureTracker = Speedy.FeatureTracker.LK(media);
@@ -145,7 +146,7 @@ window.onload = async function()
         // find new features
         if(detect) {
             if(features.length < featureDetector.max)
-                userPoints = await featureDetector.detect(media, Speedy.FEATURE_DETECTOR_RESET_CAPACITY);
+                userPoints = await featureDetector.detect(media);
             detect = false;
         }
 
