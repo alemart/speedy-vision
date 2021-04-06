@@ -335,8 +335,12 @@ void main()
 
     // get keypoint data
     float pot = exp2(keypoint.lod);
-    float kcos = cos(keypoint.orientation);
-    float ksin = sin(keypoint.orientation);
+    // discretize orientation into 12-degree steps
+    float degreesOrientation = round(360.0 + degrees(keypoint.orientation)) - 360.0;
+    float orientation = radians(degreesOrientation - mod(degreesOrientation, 12.0));
+
+    float kcos = cos(orientation);
+    float ksin = sin(orientation);
 
     // compute binary descriptor
     // need to run 32 intensity tests for each pixel (32 bits)
