@@ -45,20 +45,21 @@ points to/from the unit square centered at 0.5, i.e., [0,1] x [0,1].
 In fact, I can solve this equation using pen and paper and type in a
 closed formula, which I did!
 
-No Gaussian elimination, no loops, nothing! This should run very fast.
+No Gaussian elimination, no SVD, no loops, nothing! This should run
+very fast.
 
 Note: it's also possible to solve this equation directly (without the
 unit square). However, the algebra is quite messy and I'm not sure it
-will be any better, numerically speaking, than the approach I'm using.
+will be any better, numerically speaking, than the approach I'm taking.
 
 */
 
 /**
  * Find a homography using 4-point correspondences. We'll map
- * (u,v) to (x,y). The input matrix is expected to have the form:
+ * (u,v) to (x,y). The input matrices are expected to have the form:
  * 
- * [ u0  u1  u2  u3  x0  x1  x2  x3 ]
- * [ v0  v1  v2  v3  y0  y1  y2  y3 ]
+ * [ u0  u1  u2  u3 ] [ x0  x1  x2  x3 ]
+ * [ v0  v1  v2  v3 ] [ y0  y1  y2  y3 ]
  * 
  * @param {object} header
  * @param {ArrayBufferView} output
@@ -67,8 +68,9 @@ will be any better, numerically speaking, than the approach I'm using.
 export function homography4p(header, output, inputs)
 {
     const stride = header.stride;
-    const istride = header.strideOfInputs[0];
-    const input = inputs[0];
+    const sstride = header.strideOfInputs[0];
+    const dstride = header.strideOfInputs[1];
+    const src = inputs[0], dest = inputs[1];
 
     const eps = 1e-6; // avoid division by small numbers
     let u0, v0, u1, v1, u2, v2, u3, v3;
@@ -79,37 +81,38 @@ export function homography4p(header, output, inputs)
     let a2, b2, c2, d2, e2, f2, g2, h2, i2;
     let a, b, c, d, e, f, g, h, i;
 
+    //
+    // Initialization
+    //
+
+    // Read (ui, vi) - source
+    u0 = src[0];
+    v0 = src[1];
+    u1 = src[0 + sstride];
+    v1 = src[1 + sstride];
+    u2 = src[0 + 2 * sstride];
+    v2 = src[1 + 2 * sstride];
+    u3 = src[0 + 3 * sstride];
+    v3 = src[1 + 3 * sstride];
+
+    // Read (xi, yi) - destination
+    x0 = dest[0];
+    y0 = dest[1];
+    x1 = dest[0 + dstride];
+    y1 = dest[1 + dstride];
+    x2 = dest[0 + 2 * dstride];
+    y2 = dest[1 + 2 * dstride];
+    x3 = dest[0 + 3 * dstride];
+    y3 = dest[1 + 3 * dstride];
+
     // This is supposed to be executed many times.
     // Should we normalize the input/output points
     // at this stage? Let the user decide!
 
+    // Initialize homography H
+    a = b = c = d = e = f = g = h = i = Number.NaN;
+
     do {
-
-    //
-    // Read the correspondences
-    //
-
-    // Source
-    u0 = input[0];
-    v0 = input[1];
-    u1 = input[0 + istride];
-    v1 = input[1 + istride];
-    u2 = input[0 + 2 * istride];
-    v2 = input[1 + 2 * istride];
-    u3 = input[0 + 3 * istride];
-    v3 = input[1 + 3 * istride];
-
-    // Destination
-    x0 = input[0 + 4 * istride];
-    y0 = input[1 + 4 * istride];
-    x1 = input[0 + 5 * istride];
-    y1 = input[1 + 5 * istride];
-    x2 = input[0 + 6 * istride];
-    y2 = input[1 + 6 * istride];
-    x3 = input[0 + 7 * istride];
-    y3 = input[1 + 7 * istride];
-
-
 
     //
     // From source to unit square
@@ -129,7 +132,7 @@ export function homography4p(header, output, inputs)
         Math.abs(alpha) < eps || Math.abs(beta) < eps ||
         Math.abs(phi) < eps || Math.abs(chi) < eps
     )
-        break; // goto error;
+        break; // goto end;
 
     // Set up the first row of M and z
     if(Math.abs(u3 - u0) > Math.abs(v3 - v0)) {
@@ -185,8 +188,6 @@ export function homography4p(header, output, inputs)
     f1 = -d1 * u0 - e1 * v0;
     i1 = 1.0;
 
-
-
     //
     // From unit square to destination
     //
@@ -201,7 +202,7 @@ export function homography4p(header, output, inputs)
 
     // Solve M p = z for p = [ g  h ]^t
     det = m00 * m11 - m01 * m10;
-    if(Math.abs(det) < eps) break; // goto error;
+    if(Math.abs(det) < eps) break; // goto end;
     idet = 1.0 / det;
     g2 = (m11 * z0 - m01 * z1) * idet;
     h2 = (m00 * z1 - m10 * z0) * idet;
@@ -214,8 +215,6 @@ export function homography4p(header, output, inputs)
     e2 = h2 * y3 + (y3 - y0);
     f2 = y0;
     i2 = 1.0;
-
-
 
     //
     // From source to destination
@@ -232,7 +231,13 @@ export function homography4p(header, output, inputs)
     h = g2 * b1 + h2 * e1 + i2 * h1;
     i = g2 * c1 + h2 * f1 + i2 * i1;
 
+    } while(0);
+
+    //
     // Write the matrix
+    //
+
+    // end:
     output[0] = a;
     output[1] = d;
     output[2] = g;
@@ -242,18 +247,4 @@ export function homography4p(header, output, inputs)
     output[0 + 2 * stride] = c;
     output[1 + 2 * stride] = f;
     output[2 + 2 * stride] = i;
-    return;
-
-    } while(0);
-
-    // error:
-    output[0] = Number.NaN;
-    output[1] = Number.NaN;
-    output[2] = Number.NaN;
-    output[0 + stride] = Number.NaN;
-    output[1 + stride] = Number.NaN;
-    output[2 + stride] = Number.NaN;
-    output[0 + 2 * stride] = Number.NaN;
-    output[1 + 2 * stride] = Number.NaN;
-    output[2 + 2 * stride] = Number.NaN;
 }
