@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
  */
 
 /*
- * This is a brand new GPU implementation ORB [1],
+ * This is a brand new GPU implementation of ORB [1],
  * for fast keypoint description.
  * 
  * Reference:
@@ -304,15 +304,16 @@ const ivec4 pat31[256] = ivec4[256](
     ivec4(-1,-6,0,-11)
 );
 
-// grab & rotate rotate a pair of pattern points given a pattern index in [0,255]
-void getPair(int index, float kcos, float ksin, out ivec2 p, out ivec2 q)
+// grab & rotate rotate a pair of pattern points given
+// a pattern index in [0,255] and a rotation matrix
+void getPair(int index, mat2 rot, out vec2 p, out vec2 q)
 {
     ivec4 data = pat31[index];
     vec2 op = vec2(data.xy);
     vec2 oq = vec2(data.zw);
 
-    p = ivec2(round(op.x * kcos - op.y * ksin), round(op.x * ksin + op.y * kcos));
-    q = ivec2(round(oq.x * kcos - oq.y * ksin), round(oq.x * ksin + oq.y * kcos));
+    p = rot * op;
+    q = rot * oq;
 }
 
 // ORB
@@ -334,13 +335,13 @@ void main()
         return;
 
     // get keypoint data
-    float pot = exp2(keypoint.lod);
     // discretize orientation into 12-degree steps
-    float degreesOrientation = round(360.0 + degrees(keypoint.orientation)) - 360.0;
-    float orientation = radians(degreesOrientation - mod(degreesOrientation, 12.0));
-
+    float degreesOrientation = round(360.0f + degrees(keypoint.orientation));
+    float orientation = radians(degreesOrientation - mod(degreesOrientation, 12.0f));
     float kcos = cos(orientation);
     float ksin = sin(orientation);
+    mat2 rot = mat2(kcos, ksin, -ksin, kcos);
+    float pot = exp2(keypoint.lod);
 
     // compute binary descriptor
     // need to run 32 intensity tests for each pixel (32 bits)
@@ -349,15 +350,15 @@ void main()
     uint test[4] = uint[4](0u, 0u, 0u, 0u); // 8 bits each
     for(int t = 0; t < 4; t++) {
         uint bits = 0u;
-        ivec2 p, q;
+        vec2 p, q;
         vec4 a, b;
         int i = t * 8;
 
         @unroll
         for(int j = 0; j < 8; j++) {
-            getPair(patternStart + i + j, kcos, ksin, p, q);
-            a = pyrPixelAtEx(pyramid, round(keypoint.position + pot * vec2(p)), keypoint.lod, imageSize);
-            b = pyrPixelAtEx(pyramid, round(keypoint.position + pot * vec2(q)), keypoint.lod, imageSize);
+            getPair(patternStart + i + j, rot, p, q);
+            a = pyrPixelAtEx(pyramid, round(keypoint.position + pot * p), keypoint.lod, imageSize);
+            b = pyrPixelAtEx(pyramid, round(keypoint.position + pot * q), keypoint.lod, imageSize);
             bits |= uint(a.g < b.g) << j;
         }
 
