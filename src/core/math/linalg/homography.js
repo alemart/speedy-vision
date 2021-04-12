@@ -55,7 +55,7 @@ will be any better, numerically speaking, than the approach I'm taking.
 */
 
 /**
- * Find a homography using 4-point correspondences. We'll map
+ * Find a homography using 4 correspondences of points. We'll map
  * (u,v) to (x,y). The input matrices are expected to have the form:
  * 
  * [ u0  u1  u2  u3 ] [ x0  x1  x2  x3 ]
