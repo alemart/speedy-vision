@@ -23,8 +23,7 @@
 uniform sampler2D image;
 
 // sorting macro: given indices i,j, set p[i],p[j] such that p[i] <= p[j]
-#define SORT(i, j) t = p[i] + p[j]; p[i] = min(p[i], p[j]); p[j] = t - p[i];
-//#define SORT(i, j) v = vec2(min(p[i], p[j]), max(p[i], p[j])); p[i] = v.x; p[j] = v.y;
+#define SORT(i, j) t = max(p[i], p[j]); p[i] = min(p[i], p[j]); p[j] = t;
 
 // Median shader
 // (based on Nicolas Devillard's optimized sorting networks code)
@@ -209,9 +208,7 @@ void main()
     median = p[12];
 
 #else
-
 #error Unsupported window size
-
 #endif
 
     // output
