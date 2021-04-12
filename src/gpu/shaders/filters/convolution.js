@@ -64,7 +64,7 @@ export function conv2D(kernel, normalizationConstant = 1.0)
     void main()
     {
         float alpha = threadPixel(image).a;
-        vec4 result = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        vec4 result = vec4(0.0f);
 
         ${foreachKernelElement(generateCode)}
 
@@ -143,7 +143,7 @@ function conv1D(axis, kernel, normalizationConstant = 1.0)
     void main()
     {
         float alpha = threadPixel(image).a;
-        vec4 pixel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        vec4 pixel = vec4(0.0f);
 
         ${foreachKernelElement(generateCode)}
 
@@ -227,7 +227,7 @@ export function createKernel2D(kernelSize)
         float e2 = 256.0f * fract(e1);
         float e3 = 256.0f * fract(e2);
 
-        color = vec4(e0, floor(e1) / 256.0f, floor(e2) / 256.0f, floor(e3) / 256.0f);
+        color = vec4(e0, floor(vec3(e1, e2, e3)) / 256.0f);
     }
     `;
 
@@ -266,7 +266,7 @@ export function createKernel1D(kernelSize)
         float e2 = 256.0f * fract(e1);
         float e3 = 256.0f * fract(e2);
 
-        color = vec4(e0, floor(e1) / 256.0f, floor(e2) / 256.0f, floor(e3) / 256.0f);
+        color = vec4(e0, floor(vec3(e1, e2, e3)) / 256.0f);
     }
     `;
 
@@ -317,8 +317,8 @@ export function texConv2D(kernelSize)
 
     void main()
     {
-        vec4 kernel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-        vec4 result = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        vec4 kernel = vec4(0.0f);
+        vec4 result = vec4(0.0f);
         float alpha = threadPixel(image).a;
         float value = 0.0f;
 
@@ -394,8 +394,8 @@ function texConv1D(kernelSize, axis)
 
     void main()
     {
-        vec4 kernel = vec4(0.0f, 0.0f, 0.0f, 0.0f);
-        vec4 result = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+        vec4 kernel = vec4(0.0f);
+        vec4 result = vec4(0.0f);
         float alpha = threadPixel(image).a;
         float value = 0.0f;
 

@@ -82,7 +82,7 @@ export function median(windowSize)
         ${foreachVectorElement(selectMinimum)}
 
         // return the median
-        color = vec4(v[${med}], v[${med}], v[${med}], 1.0f);
+        color = vec4(vec3(v[${med}]), 1.0f);
     }
     `;
 
