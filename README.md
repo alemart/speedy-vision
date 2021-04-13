@@ -926,7 +926,7 @@ Matrix computations play a crucial role in computer vision applications. Speedy 
 
 Matrix computations may be computationally heavy. Speedy's Matrix system has been designed in such a way that the actual number crunching takes place in a WebWorker, so that the user interface will not be blocked during the computations.
 
-Since matrix operations usually do not take place in the main thread, Speedy's Matrix API is asynchronous in nature. Here's a brief overview of how it works:
+Since matrix operations do not take place in the main thread, Speedy's Matrix API is asynchronous in nature. Here's a brief overview of how it works:
 
 1. First, you specify the operations you want in a matrix expression.
 2. Next, your expression will be quickly examined, and perhaps simplified.
