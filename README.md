@@ -37,7 +37,9 @@ There are plenty of [demos](#demos) available!
 
 If you appreciate my work, [make a donation](https://www.paypal.com/donate?hosted_button_id=JS6AR2WMLAJTY). I appreciate it!
 
-**Contact:** alemartf `at` gmail `dot` com
+If you need specialized help, [contact me on Otechie](https://otechie.com/alemart). [![Otechie](https://api.otechie.com/alemart/badge.svg)](https://otechie.com/alemart)
+
+If you just want to reach out for non-technical enquiries, contact me at alemartf `at` gmail `dot` com.
 
 -----
 
