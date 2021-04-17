@@ -15,25 +15,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * sequence.js
- * Sequences of matrix operations
+ * sort.js
+ * Sort blocks of matrices
  */
 
 /**
- * A sequence of matrix operations encapsulated into one
+ * Exchange blocks A and B if cmp(A, B) > 0
  * @param {object} header
  * @param {ArrayBufferView} output
  * @param {ArrayBufferView[]} inputs
  */
-export function sequence(header, output, inputs)
+export function compareExchange(header, output, inputs)
 {
-    const steps = header.custom;
+    // no need to swap? cmp = inputs[2] is 1x1
+    if(inputs[2][0] <= 0)
+        return;
 
-    for(let i = 0, n = steps.length; i < n; i++) {
-        const step = steps[i];
-        const stepOutput = inputs[step.indexOfOutputMatrix];
-        const stepInputs = step.indicesOfInputMatrices.map(index => inputs[index]);
+    // blockA and blockB have the same shape and belong to the same matrix
+    const blockA = inputs[0], blockB = inputs[1];
+    const rows = header.rowsOfInputs[0];
+    const columns = header.columnsOfInputs[0];
+    const stride = header.strideOfInputs[0];
+    let i = 0, j = 0, s = 0, t = 0.0;
 
-        (this[step.header.method])(step.header, stepOutput, stepInputs);
+    // swap
+    for(s = j = 0; j < columns; j++, s += stride) {
+        for(i = 0; i < rows; i++) {
+            t = blockA[s + i];
+            blockA[s + i] = blockB[s + i];
+            blockB[s + i] = t;
+        }
     }
 }

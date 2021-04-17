@@ -562,3 +562,19 @@ export class MatrixOperationSequence extends MatrixOperation
         return { header, indexOfOutputMatrix, indicesOfInputMatrices };
     }
 }
+
+/**
+ * Compare-exchange (sorting networks)
+ */
+export class MatrixOperationCompareExchange extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {MatrixShape} shape shape of the comparator
+     */
+    constructor(shape)
+    {
+        Utils.assert(shape.rows === 1 && shape.columns === 1);
+        super('compareExchange', 3, shape);
+    }
+}

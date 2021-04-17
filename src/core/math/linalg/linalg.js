@@ -26,6 +26,7 @@ const LinAlgLib = {
     ...require('./solve'),
     ...require('./qr'),
     ...require('./sequence'),
+    ...require('./sort'),
     ...require('./utils'),
 };
 

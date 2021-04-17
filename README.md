@@ -1717,6 +1717,65 @@ const norm = Math.sqrt(norm2);
 console.log(norm); // 4
 ```
 
+##### SpeedyMatrixExpr.sort()
+
+`SpeedyMatrixExpr.sort(blockRows: number, blockColumns: number, cmp: Function): SpeedyMatrixExpr`
+
+This operation is analogous to `Array.prototype.sort()`. Given a comparison function `cmp` and a *m* x *bn* input matrix *M* split into *b* blocks *B1*, *B2*, ..., *Bb* of equal size:
+
+```
+M = [ B1 | B2 | ... | Bj | ... | Bb ]
+```
+
+*sort* will rearrange the blocks of the matrix according to the criteria established by `cmp`. Note that *sort* modifies the entries of the **input matrix** (i.e., no copy is made - the original arrangement is lost).
+
+###### Arguments
+
+* `blockRows: number`. Number of rows of each block. This **must** be set to the number of rows of the input matrix. This parameter is required only for clarity.
+* `blockColumns: number`. Number of columns of each block. The number of columns of the input matrix must be a multiple of this value.
+* `cmp: Function`. A function returning a 1x1 `SpeedyMatrixExpr` given two `SpeedyMatrixExpr` objects corresponding to distinct blocks `Bi` and `Bj` of the input matrix. `cmp` must always return the same result given the same pair of blocks. The entry of the output must be:
+    * negative if `Bi` must precede `Bj` (to precede means: to appear before when reading the matrix from left to right)
+    * positive if `Bj` must precede `Bi`
+    * zero if the relative order of `Bi` and `Bj` doesn't matter
+
+###### Returns
+
+The input matrix. Its data will be rearranged.
+
+###### Example
+
+```js
+//
+// Let's sort the column vectors of a
+// matrix according to their magnitude
+//
+const M = Speedy.Matrix(3, 5, [
+    0, 2, 0, // magnitude: 2
+    0, 0, 0, // magnitude: 0
+    1, 0, 0, // magnitude: 1
+    0, 4, 3, // magnitude: 5
+    0, 1, 0, // magnitude: 1
+]);
+
+const sorted = M.sort(3, 1, (u, v) => {
+    // u and v are distinct column vectors
+    const utu = u.transpose().times(u); // squared magnitude of u (1x1)
+    const vtv = v.transpose().times(v); // squared magnitude of v (1x1)
+
+    return utu.minus(vtv); // ascending
+    //return vtv.minus(utu); // descending
+});
+
+await sorted.print();
+
+//
+// Result:
+// [ 0, 1, 0, 0, 0 ]
+// [ 0, 0, 1, 2, 4 ]
+// [ 0, 0, 0, 0, 3 ]
+//
+```
+
 #### Linear Algebra
 
 ##### SpeedyMatrixExpr.solve()
