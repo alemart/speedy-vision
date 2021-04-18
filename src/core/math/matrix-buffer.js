@@ -53,6 +53,7 @@ export class MatrixBuffer
             values);
 
 
+
         // store data
 
         /** @type {MatrixDataType} data type */
@@ -66,7 +67,6 @@ export class MatrixBuffer
 
         /** @type {number} TypedArray length: assumed to be constant */
         this._length = data.length;
-
 
 
 
@@ -137,7 +137,7 @@ export class MatrixBuffer
         let my = this;
 
         // climb the tree
-        if(my._parent && ascend) {
+        if(ascend && my._parent) {
             do { my = my._parent; } while(my._parent);
         }
 
@@ -158,21 +158,22 @@ export class MatrixBuffer
         let my = this;
 
         // climb the tree
-        if(my._parent && ascend) {
+        if(ascend && my._parent) {
             do { my = my._parent; } while(my._parent);
         }
 
         // unlock this buffer
         if(--my._pendingOperations <= 0) {
             const callbackQueue = my._pendingAccessesQueue.slice(0); // fast clone
+            const n = callbackQueue.length;
 
             my._pendingOperations = 0;
             my._pendingAccessesQueue.length = 0;
 
-            for(let i = 0; i < callbackQueue.length; i++) {
+            for(let i = 0; i < n; i++) {
                 // if the buffer has been locked again, put the functions back in the queue
                 if(my._pendingOperations > 0) {
-                    for(let j = callbackQueue.length - 1; j >= i; j--) {
+                    for(let j = n - 1; j >= i; j--) {
                         my._pendingAccessesQueue.unshift(callbackQueue[j]);
                     }
                     break; // note: for each lock() we need an unlock()
@@ -191,27 +192,11 @@ export class MatrixBuffer
     /**
      * Replace the internal buffer of the TypedArray
      * @param {ArrayBuffer} arrayBuffer new internal buffer
-     * @param {boolean} [ascend] internal
      */
-    replace(arrayBuffer, ascend = true)
+    replace(arrayBuffer)
     {
-        let my = this;
-
-        // can we skip this?
-        if(this._data.buffer === arrayBuffer)
-            return;
-
-        // climb the tree
-        if(my._parent && ascend) {
-            do { my = my._parent; } while(my._parent);
-        }
-
-        // replace the internal buffer
-        my._data = MatrixType.createTypedArray(this._dtype, arrayBuffer, my._byteOffset, my._length);
-
-        // broadcast
-        for(let i = my._children.length - 1; i >= 0; i--)
-            my._children[i].replace(arrayBuffer, false);
+        if(this._data.buffer !== arrayBuffer)
+            this._replace(arrayBuffer, true);
     }
 
     /**
@@ -234,5 +219,27 @@ export class MatrixBuffer
             // done!
             return sharedBuffer;
         });
+    }
+
+    /**
+     * Replace the internal buffer of the TypedArray
+     * @param {ArrayBuffer} arrayBuffer new internal buffer
+     * @param {boolean} [ascend] internal
+     */
+    _replace(arrayBuffer, ascend = true)
+    {
+        let my = this;
+
+        // climb the tree
+        if(my._parent && ascend) {
+            do { my = my._parent; } while(my._parent);
+        }
+
+        // replace the internal buffer
+        my._data = MatrixType.createTypedArray(this._dtype, arrayBuffer, my._byteOffset, my._length);
+
+        // broadcast
+        for(let i = my._children.length - 1; i >= 0; i--)
+            my._children[i]._replace(arrayBuffer, false);
     }
 }
