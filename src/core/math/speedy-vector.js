@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,50 +33,15 @@ export class SpeedyVector2
      */
     constructor(x, y)
     {
-        this._data = new Float32Array([x, y]);
+        /** @type {number} x coordinate */
+        this.x = +x;
+
+        /** @type {number} y coordinate */
+        this.y = +y;
+
+        // make it immutable
+        return Object.freeze(this);
     }
-
-
-    //
-    // ===== PROPERTIES =====
-    //
-
-    /**
-     * Get x-coordinate
-     * @returns {number}
-     */
-    get x()
-    {
-        return this._data[0];
-    }
-
-    /**
-     * Set x-coordinate
-     * @param {number} value
-     */
-    set x(value)
-    {
-        this._data[0] = value;
-    }
-
-    /**
-     * Get y-coordinate
-     * @returns {number}
-     */
-    get y()
-    {
-        return this._data[1];
-    }
-
-    /**
-     * Set y-coordinate
-     * @param {number} value
-     */
-    set y(value)
-    {
-        this._data[1] = value;
-    }
-
 
 
 
@@ -90,17 +55,7 @@ export class SpeedyVector2
      */
     toString()
     {
-        return `SpeedyVector2(${this._data[0].toFixed(5)}, ${this._data[1].toFixed(5)})`;
-    }
-
-    /**
-     * Get vector coordinate
-     * @param {number} row 0 or 1
-     * @returns {number}
-     */
-    at(row)
-    {
-        return this._data[row];
+        return `SpeedyVector2(${this.x.toFixed(5)}, ${this.y.toFixed(5)})`;
     }
 
     /**
@@ -110,7 +65,7 @@ export class SpeedyVector2
      */
     dot(v)
     {
-        return this._data[0] * v._data[0] + this._data[1] * v._data[1];
+        return this.x * v.x + this.y * v.y;
     }
 
     /**
@@ -120,8 +75,8 @@ export class SpeedyVector2
      */
     distanceTo(v)
     {
-        const dx = this._data[0] - v._data[0];
-        const dy = this._data[1] - v._data[1];
+        const dx = this.x - v.x;
+        const dy = this.y - v.y;
 
         return Math.sqrt(dx * dx + dy * dy);
     }
@@ -132,7 +87,7 @@ export class SpeedyVector2
      */
     length()
     {
-        return Math.sqrt(this._data[0] * this._data[0] + this._data[1] * this._data[1]);
+        return Math.sqrt(this.x * this.x + this.y * this.y);
     }
 
     /**
@@ -141,16 +96,15 @@ export class SpeedyVector2
      */
     normalize()
     {
-        const l = this.length();
+        const len = this.length();
 
-        if(l == 0.0) {
-            this._data.fill(0.0);
+        if(len == 0.0) {
+            this.x = this.y = 0.0;
             return this;
         }
 
-        this._data[0] /= l;
-        this._data[1] /= l;
-
+        this.x /= len;
+        this.y /= len;
         return this;
     }
 }
