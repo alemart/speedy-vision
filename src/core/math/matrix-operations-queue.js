@@ -81,12 +81,14 @@ export class MatrixOperationsQueue
 
         // lock matrices
         outputMatrix.lock();
-        inputMatrices.forEach(inputMatrix => inputMatrix.lock());
+        for(let i = inputMatrices.length - 1; i >= 0; i--)
+            inputMatrices[i].lock();
 
         // run the next operation
         matrixOperation.run(inputMatrices, outputMatrix).then(() => {
             // unlock matrices
-            inputMatrices.forEach(inputMatrix => inputMatrix.unlock());
+            for(let j = inputMatrices.length - 1; j >= 0; j--)
+                inputMatrices[j].unlock();
             outputMatrix.unlock();
 
             // this operation is done

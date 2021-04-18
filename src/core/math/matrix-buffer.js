@@ -197,6 +197,10 @@ export class MatrixBuffer
     {
         let my = this;
 
+        // can we skip this?
+        if(this._data.buffer === arrayBuffer)
+            return;
+
         // climb the tree
         if(my._parent && ascend) {
             do { my = my._parent; } while(my._parent);

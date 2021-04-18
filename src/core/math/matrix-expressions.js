@@ -561,13 +561,16 @@ class SpeedyMatrixExpr
         const n = this.columns / blockColumns;
         const net = OddEvenMergesort.generate(n);
 
+        // extract all blocks of the matrix
+        const blocks = (new Array(n)).fill(null).map((_, i) =>
+            this.block(0, blockRows - 1, blockColumns * i, blockColumns * (i + 1) - 1)
+        );
+
         // for each comparator of the network, call cmp()
         const comparators = net.map(([a, b]) => {
-            const blockA = this.block(0, blockRows - 1, blockColumns * a, blockColumns * (a + 1) - 1);
-            const blockB = this.block(0, blockRows - 1, blockColumns * b, blockColumns * (b + 1) - 1);
-            const comparator = cmp(blockA, blockB);
+            const comparator = cmp(blocks[a], blocks[b]);
 
-            // comparator must be a 1x1 SpeedyMatrixExpr
+            // cmp() must return a 1x1 SpeedyMatrixExpr
             if(!(comparator instanceof SpeedyMatrixExpr && comparator._shape.rows === 1 && comparator._shape.columns === 1))
                 throw new IllegalOperationError(`sort() expects that the comparator function returns a 1x1 matrix expression for all comparison pairs`);
 
@@ -576,7 +579,7 @@ class SpeedyMatrixExpr
 
         // we're ready to sort the blocks
         const blockShape = new MatrixShape(blockRows, blockColumns, this.dtype);
-        return new SpeedyMatrixSortExpr(this._matrix, blockShape, comparators, net);
+        return new SpeedyMatrixSortExpr(this._matrix, blockShape, blocks, comparators, net);
     }
 
 
@@ -2078,10 +2081,11 @@ class SpeedyMatrixSortExpr extends SpeedyMatrixExpr
      * Constructor
      * @param {SpeedyMatrix} matrix the matrix to be sorted - its contents will be modified!
      * @param {MatrixShape} blockShape shape of the blocks that will be compared
+     * @param {SpeedyMatrixExpr[]} blocks all blocks of the matrix
      * @param {Array<SpeedyMatrixExpr[3]>} comparators comparators of the sorting network - given in the order they should be evaluated
      * @param {Array<number[2]>} net sorting network
      */
-    constructor(matrix, blockShape, comparators, net)
+    constructor(matrix, blockShape, blocks, comparators, net)
     {
         Utils.assert(net.length === comparators.length);
         super(matrix.shape);
@@ -2091,6 +2095,9 @@ class SpeedyMatrixSortExpr extends SpeedyMatrixExpr
 
         /** @type {MatrixShape} shape of the blocks */
         this._blockShape = blockShape;
+
+        /** @type {SpeedyMatrixExpr[]} all blocks of the matrix */
+        this._blocks = blocks;
 
         /** @type {SpeedyMatrixExpr[]} comparators: these are 1x1 matrix expressions */
         this._comparators = comparators;
@@ -2127,20 +2134,17 @@ class SpeedyMatrixSortExpr extends SpeedyMatrixExpr
      */
     _compile()
     {
-        const bcols = this._blockShape.columns;
-        const brows = this._blockShape.rows;
-
         return SpeedyPromise.all(
             // compile the comparators
             this._comparators.map(comparator => comparator._compile().turbocharge())
         ).then(comparators => {
             return SpeedyPromise.all(
+                // extract all blocks of the input matrix
+                this._blocks.map(block => block._compile().turbocharge())
+            ).then(compiledBlocks => {
                 // extract the blocks for each compare-exchange operation
-                this._net.map(([a, b]) => SpeedyPromise.all([
-                    this._matrix.block(0, brows - 1, a * bcols, (a+1) * bcols - 1),
-                    this._matrix.block(0, brows - 1, b * bcols, (b+1) * bcols - 1)
-                ]))
-            ).then(pairs => {
+                const blocks = compiledBlocks.map(x => x.outputMatrix);
+                const pairs = this._net.map(([a, b]) => [blocks[a], blocks[b]]);
                 const n = pairs.length;
 
                 // generate compare-exchange operations

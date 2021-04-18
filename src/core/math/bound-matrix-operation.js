@@ -113,8 +113,8 @@ export class BoundMatrixOperationTree
             else if(node._boundOperation.operation !== null) {
                 // visit this node (we skip it if the operation is null)
                 const { operation, outputMatrix, inputMatrices } = node._boundOperation;
-                const indexOfOutputMatrix = matrices.push(outputMatrix) - 1;
-                const indicesOfInputMatrices = inputMatrices.map(inputMatrix => matrices.push(inputMatrix) - 1);
+                const indexOfOutputMatrix = this._findOrAdd(matrices, outputMatrix);
+                const indicesOfInputMatrices = inputMatrices.map(inputMatrix => this._findOrAdd(matrices, inputMatrix));
 
                 const step = MatrixOperationSequence.step(operation, indexOfOutputMatrix, indicesOfInputMatrices)
                 step.header.updateMetadata(outputMatrix, inputMatrices);
@@ -132,5 +132,17 @@ export class BoundMatrixOperationTree
             this.outputMatrix,
             matrices
         );
+    }
+
+    /**
+     * Find an element in an array. If it doesn't exist, add it.
+     * @param {SpeedyMatrix[]} array
+     * @param {SpeedyMatrix} element
+     * @return {number} index of the element in the array
+     */
+    _findOrAdd(array, element)
+    {
+        const idx = array.lastIndexOf(element);
+        return idx >= 0 ? idx : array.push(element) - 1;
     }
 }
