@@ -806,6 +806,50 @@ describe('Matrix', function() {
             });
         });
 
+        describe('sort()', function() {
+            it('sorts the column vectors of a matrix according to their magnitude', async function() {
+                const M = Speedy.Matrix(3, 5, [
+                    0, 2, 0, // magnitude: 2
+                    0, 0, 0, // magnitude: 0
+                    1, 0, 0, // magnitude: 1
+                    0, 4, 3, // magnitude: 5
+                    1, 1, 0, // magnitude: sqrt(2)
+                ]);
+                const answer = [
+                    0, 0, 0,
+                    1, 0, 0,
+                    1, 1, 0,
+                    0, 2, 0,
+                    0, 4, 3,
+                ];
+
+                const sorted = M.sort(3, 1, (u, v) => {
+                    const utu = u.transpose().times(u);
+                    const vtv = v.transpose().times(v);
+
+                    return utu.minus(vtv);
+                });
+
+                await printm('M:', M, 'Sorted M:', sorted);
+                expect(await sorted.read()).toBeElementwiseEqual(answer);
+            });
+
+            it('sorts regular arrays', async function() {
+                const numTests = 5;
+                for(let i = 0; i < numTests; i++) {
+                    const arr = (new Array(20 * (i + 1))).fill(0).map(_ => Math.round(Math.random() * 100));
+                    const v = Speedy.Matrix(1, arr.length, arr);
+
+                    const answer = [ ...arr ].sort((a, b) => a - b);
+                    const sorted = v.sort(1, 1, (a, b) => a.minus(b));
+
+                    await printm('----- Array #' + (i+1) + ': -----');
+                    await printm('v:', v, 'Sorted v:', sorted);
+                    expect(await sorted.read()).toBeElementwiseEqual(answer);
+                }
+            });
+        });
+
     });
 
 
