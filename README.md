@@ -919,6 +919,69 @@ Get a string representation of the vector.
 
 A string representation of the vector.
 
+#### 2D Points
+
+##### Speedy.Point2()
+
+`Speedy.Point2(x: number, y: number): SpeedyPoint2`
+
+Creates a new 2D point with the given coordinates.
+
+###### Arguments
+
+* `x: number`. The x-coordinate of the point.
+* `y: number`. The y-coordinate of the point.
+
+###### Returns
+
+A new `SpeedyPoint2` instance.
+
+###### Example
+
+```js
+const p = Speedy.Point2(5, 10);
+```
+
+##### SpeedyPoint2.x
+
+`SpeedyPoint2.x: number`
+
+The x-coordinate of the point.
+
+##### SpeedyPoint2.y
+
+`SpeedyPoint2.y: number`
+
+The y-coordinate of the point.
+
+##### SpeedyPoint2.plus()
+
+`SpeedyPoint2.plus(v: SpeedyVector2): SpeedyPoint2`
+
+Adds a vector to this point.
+
+###### Arguments
+
+* `v: SpeedyVector2`. A 2D vector.
+
+###### Returns
+
+A new `SpeedyPoint2` instance corresponding to this point translated by `v`.
+
+##### SpeedyPoint2.minus()
+
+`SpeedyPoint2.minus(p: SpeedyPoint2): SpeedyVector2`
+
+Subtracts point `p` from this.
+
+###### Arguments
+
+* `p: SpeedyPoint2`. A 2D point.
+
+###### Returns
+
+A new `SpeedyVector2` instance such that `p` plus that vector equals this point.
+
 
 
 
