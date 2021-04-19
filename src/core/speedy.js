@@ -27,6 +27,7 @@ import { SpeedyFeatureTrackerFactory } from './speedy-feature-tracker-factory';
 import { SpeedyFeatureDescriptorFactory } from './speedy-feature-descriptor-factory';
 import { SpeedyFlags } from './speedy-flags';
 import { SpeedyVector2 } from './math/speedy-vector';
+import { SpeedyPoint2 } from './math/speedy-point';
 import { SpeedyMatrixExprFactory } from './math/matrix-expression-factory';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { Utils } from '../utils/utils';
@@ -121,11 +122,21 @@ export class Speedy
     /**
      * Create a 2D vector
      * @param {number} x
-     * @param {number} [y]
+     * @param {number} y
      */
-    static Vector2(x, y = x)
+    static Vector2(x, y)
     {
         return new SpeedyVector2(x, y);
+    }
+
+    /**
+     * Create a 2D point
+     * @param {number} x
+     * @param {number} y
+     */
+    static Point2(x, y)
+    {
+        return new SpeedyPoint2(x, y);
     }
 
     /**
