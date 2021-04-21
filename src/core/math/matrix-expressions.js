@@ -2107,7 +2107,7 @@ class SpeedyMatrixSortExpr extends SpeedyMatrixTempExpr
 
         /** @type {SpeedyMatrix} column vector of indices */
         this._permutation = new SpeedyMatrix(
-            new MatrixShape(numberOfBlocks, 1, this.dtype),//'int32'),
+            new MatrixShape(numberOfBlocks, 1, this.dtype), //'int32'),
             Utils.range(numberOfBlocks)
         );
     }
@@ -2129,12 +2129,11 @@ class SpeedyMatrixSortExpr extends SpeedyMatrixTempExpr
     {
         return this._inputMatrix._compile().then(inputMatrix => {
             return this._comparator._compile().then(comparator => {
-                let pair, n = this._net.length;
                 let permutation = new BoundMatrixOperationTree(null, this._permutation);
-                let firstBlock, secondBlock, cmpxchg;
+                let pair, firstBlock, secondBlock, cmpxchg;
                 let tree = permutation; // initial value
 
-                for(let i = n-1; i >= 0; i--) {
+                for(let i = this._net.length - 1; i >= 0; i--) {
                     pair = this._net[i];
 
                     firstBlock = new BoundMatrixOperationTree(
