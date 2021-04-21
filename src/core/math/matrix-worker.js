@@ -77,10 +77,7 @@ export class MatrixWorker
         const msg = { id, header, outputBuffer, inputBuffers, transferables };
 
         return new SpeedyPromise(resolve => {
-            this._callbackTable.set(id, (outputBuffer, inputBuffers) => {
-                resolve([outputBuffer, inputBuffers]);
-                this._callbackTable.delete(id);
-            });
+            this._callbackTable.set(id, resolve);
             this._worker.postMessage(msg, transferables);
         }, true);
     }
@@ -100,9 +97,10 @@ export class MatrixWorker
         // setup the Worker
         const worker = new Worker(URL.createObjectURL(blob));
         worker.onmessage = ev => {
-            const msg = ev.data;
-            const done = this._callbackTable.get(msg.id);
-            done(msg.outputBuffer, msg.inputBuffers);
+            const msg = ev.data, id = msg.id;
+            const resolve = this._callbackTable.get(id);
+            resolve([msg.outputBuffer, msg.inputBuffers]);
+            this._callbackTable.delete(id);
         };
         worker.onerror = ev => {
             throw new IllegalOperationError(`Worker error: ${ev.message}`);
