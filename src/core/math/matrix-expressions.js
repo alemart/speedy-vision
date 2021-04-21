@@ -47,6 +47,8 @@ import {
     MatrixOperationBackSubstitution,
     MatrixOperationLSSolve,
     MatrixOperationCompareExchange,
+    MatrixOperationExtractIndexedBlock,
+    MatrixOperationApplyPermutation,
 } from './matrix-operations';
 
 // constants
@@ -549,7 +551,7 @@ class SpeedyMatrixExpr
      */
     sort(blockRows, blockColumns, cmp)
     {
-        // validate arguments
+         // validate arguments
         if(typeof cmp !== 'function')
             throw new IllegalArgumentError(`sort() expects a comparison function`);
         if(blockRows !== this.rows)
@@ -557,29 +559,22 @@ class SpeedyMatrixExpr
         if(blockColumns <= 0 || this.columns % blockColumns !== 0)
             throw new IllegalArgumentError(`sort() expects the number of columns of the matrix (${this.columns}) to be divisible by blockColumns (${blockColumns})`);
 
+        // create input blocks for cmp()
+        const blockShape = new MatrixShape(blockRows, blockColumns, this.dtype);
+        const bi = new SpeedyMatrixElementaryExpr(blockShape, new SpeedyMatrix(blockShape));
+        const bj = new SpeedyMatrixElementaryExpr(blockShape, new SpeedyMatrix(blockShape));
+
+        // cmp() must return a 1x1 SpeedyMatrixExpr
+        const comparator = cmp(bi, bj);
+        if(!(comparator instanceof SpeedyMatrixExpr && comparator._shape.rows === 1 && comparator._shape.columns === 1))
+            throw new IllegalOperationError(`sort() expects that the comparator function returns a 1x1 matrix expression for all comparison pairs`);
+
         // generate a sorting network
-        const n = this.columns / blockColumns;
-        const net = OddEvenMergesort.generate(n);
-
-        // extract all blocks of the matrix
-        const blocks = (new Array(n)).fill(null).map((_, i) =>
-            this.block(0, blockRows - 1, blockColumns * i, blockColumns * (i + 1) - 1)
-        );
-
-        // for each comparator of the network, call cmp()
-        const comparators = net.map(([a, b]) => {
-            const comparator = cmp(blocks[a], blocks[b]);
-
-            // cmp() must return a 1x1 SpeedyMatrixExpr
-            if(!(comparator instanceof SpeedyMatrixExpr && comparator._shape.rows === 1 && comparator._shape.columns === 1))
-                throw new IllegalOperationError(`sort() expects that the comparator function returns a 1x1 matrix expression for all comparison pairs`);
-
-            return comparator;
-        });
+        const numberOfBlocks = this.columns / blockColumns;
+        const net = OddEvenMergesort.generate(numberOfBlocks);
 
         // we're ready to sort the blocks
-        const blockShape = new MatrixShape(blockRows, blockColumns, this.dtype);
-        return new SpeedyMatrixSortExpr(this._matrix, blockShape, blocks, comparators, net);
+        return new SpeedyMatrixSortExpr(this, comparator, bi._matrix, bj._matrix, net);
     }
 
 
@@ -2075,48 +2070,46 @@ class SpeedyMatrixReduceExpr extends SpeedyMatrixTempExpr
 /**
  * sort() expression
  */
-class SpeedyMatrixSortExpr extends SpeedyMatrixExpr
+class SpeedyMatrixSortExpr extends SpeedyMatrixTempExpr
 {
     /**
      * Constructor
-     * @param {SpeedyMatrix} matrix the matrix to be sorted - its contents will be modified!
-     * @param {MatrixShape} blockShape shape of the blocks that will be compared
-     * @param {SpeedyMatrixExpr[]} blocks all blocks of the matrix
-     * @param {Array<SpeedyMatrixExpr[3]>} comparators comparators of the sorting network - given in the order they should be evaluated
+     * @param {SpeedyMatrixExpr} inputMatrix data to be sorted
+     * @param {SpeedyMatrixExpr} comparator
+     * @param {SpeedyMatrix} bi
+     * @param {SpeedyMatrix} bj
      * @param {Array<number[2]>} net sorting network
      */
-    constructor(matrix, blockShape, blocks, comparators, net)
+    constructor(inputMatrix, comparator, bi, bj, net)
     {
-        Utils.assert(net.length === comparators.length);
-        super(matrix.shape);
+        super(inputMatrix._shape);
+        Utils.assert(bi.shape.equals(bj.shape));
+        Utils.assert(bi.rows === inputMatrix.rows && inputMatrix.columns % bi.columns === 0);
+        const numberOfBlocks = inputMatrix.columns / bi.columns;
 
-        /** @type {SpeedyMatrix} the matrix to be sorted */
-        this._mat = matrix;
+        /** @type {SpeedyMatrixExpr} data to be sorted */
+        this._inputMatrix = inputMatrix;
+
+        /** @type {SpeedyMatrixExpr} an expression comparing bi to bj */
+        this._comparator = comparator;
 
         /** @type {MatrixShape} shape of the blocks */
-        this._blockShape = blockShape;
+        this._blockShape = bi.shape;
 
-        /** @type {SpeedyMatrixExpr[]} all blocks of the matrix */
-        this._blocks = blocks;
+        /** @type {SpeedyMatrix} storage for block comparisons */
+        this._bi = bi;
 
-        /** @type {SpeedyMatrixExpr[]} comparators: these are 1x1 matrix expressions */
-        this._comparators = comparators;
+        /** @type {SpeedyMatrix} storage for block comparisons */
+        this._bj = bj;
 
-        /** @type {Array<number[2]>} sorting network */
+        /** @type {Array<number[2]>} the sorting network we'll use */
         this._net = net;
 
-        /** @type {MatrixOperation} compare exchange */
-        this._operation = new MatrixOperationCompareExchange(new MatrixShape(1, 1, matrix.dtype));
-    }
-
-    /**
-     * Get the matrix associated with this expression
-     * This matrix must be guaranteed to be available after evaluating this expression
-     * @returns {SpeedyMatrix}
-     */
-    get _matrix()
-    {
-        return this._mat;
+        /** @type {SpeedyMatrix} column vector of indices */
+        this._permutation = new SpeedyMatrix(
+            new MatrixShape(numberOfBlocks, 1, this.dtype),//'int32'),
+            Utils.range(numberOfBlocks)
+        );
     }
 
     /**
@@ -2134,43 +2127,61 @@ class SpeedyMatrixSortExpr extends SpeedyMatrixExpr
      */
     _compile()
     {
-        return SpeedyPromise.all(
-            // compile the comparators
-            this._comparators.map(comparator => comparator._compile().turbocharge())
-        ).then(comparators => {
-            return SpeedyPromise.all(
-                // extract all blocks of the input matrix
-                this._blocks.map(block => block._compile().turbocharge())
-            ).then(compiledBlocks => {
-                // extract the blocks for each compare-exchange operation
-                const blocks = compiledBlocks.map(x => x.outputMatrix);
-                const pairs = this._net.map(([a, b]) => [blocks[a], blocks[b]]);
-                const n = pairs.length;
+        return this._inputMatrix._compile().then(inputMatrix => {
+            return this._comparator._compile().then(comparator => {
+                let pair, n = this._net.length;
+                let permutation = new BoundMatrixOperationTree(null, this._permutation);
+                let firstBlock, secondBlock, cmpxchg;
+                let tree = permutation; // initial value
 
-                // generate compare-exchange operations
-                const cmpxchg = new Array(n);
-                for(let i = 0; i < n; i++) {
-                    cmpxchg[i] = new BoundMatrixOperationTree(
-                        this._operation, comparators[i].outputMatrix, [
-                            new BoundMatrixOperationTree(null, pairs[i][0]),
-                            new BoundMatrixOperationTree(null, pairs[i][1]),
-                            comparators[i]
+                for(let i = n-1; i >= 0; i--) {
+                    pair = this._net[i];
+
+                    firstBlock = new BoundMatrixOperationTree(
+                        new MatrixOperationExtractIndexedBlock(this._shape, this._blockShape, pair[0]),
+                        this._bi, [
+                            inputMatrix,
+                            permutation
+                        ]
+                    );
+
+                    secondBlock = new BoundMatrixOperationTree(
+                        new MatrixOperationExtractIndexedBlock(this._shape, this._blockShape, pair[1]),
+                        this._bj, [
+                            inputMatrix,
+                            permutation
+                        ]
+                    );
+
+                    cmpxchg = new BoundMatrixOperationTree(
+                        new MatrixOperationCompareExchange(this._permutation.shape, pair[0], pair[1]),
+                        this._permutation, [
+                            comparator
+                        ]
+                    );
+
+                    tree = new BoundMatrixOperationTree(
+                        null, this._permutation, [
+                            firstBlock,
+                            secondBlock,
+                            comparator,
+                            cmpxchg,
+                            tree
                         ]
                     );
                 }
 
-                // create a tree so that expressions are evaluated left-to-right (first-to-last)
-                let node = new BoundMatrixOperationTree(null, this._matrix, [ cmpxchg[0] ]);
-                for(let j = 1; j < n; j++)
-                    node = new BoundMatrixOperationTree(null, this._matrix, [ node, cmpxchg[j] ]);
-
-                // done!
-                return node;
+                return new BoundMatrixOperationTree(
+                    new MatrixOperationApplyPermutation(this._shape, this._blockShape),
+                    this._matrix, [
+                        inputMatrix,
+                        tree
+                    ]
+                );
             });
         });
     }
 }
-
 
 
 

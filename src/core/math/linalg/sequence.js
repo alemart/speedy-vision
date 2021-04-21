@@ -33,7 +33,8 @@ export function sequence(header, output, inputs)
         const step = steps[i];
         const stepOutput = inputs[step.indexOfOutputMatrix];
         const stepInputs = step.indicesOfInputMatrices.map(index => inputs[index]);
+        const stepMethod = this[step.header.method];
 
-        (this[step.header.method])(step.header, stepOutput, stepInputs);
+        stepMethod(step.header, stepOutput, stepInputs);
     }
 }
