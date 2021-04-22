@@ -116,6 +116,13 @@ export class BoundMatrixOperationTree
                 const indexOfOutputMatrix = this._findOrAdd(matrices, outputMatrix);
                 const indicesOfInputMatrices = inputMatrices.map(inputMatrix => this._findOrAdd(matrices, inputMatrix));
 
+                // the operation of this node is itself a sequence of operations
+                if(operation.__proto__ === MatrixOperationSequence.prototype) {
+                    const mapping = idx => this._findOrAdd(matrices, inputMatrices[idx]);
+                    operation.adjustIndices(mapping);
+                }
+
+                // this node becomes a step in a sequence of operations
                 const step = MatrixOperationSequence.step(operation, indexOfOutputMatrix, indicesOfInputMatrices)
                 step.header.updateMetadata(outputMatrix, inputMatrices);
                 steps.push(step);

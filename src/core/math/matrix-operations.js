@@ -561,6 +561,25 @@ export class MatrixOperationSequence extends MatrixOperation
         const header = operation._header;
         return { header, indexOfOutputMatrix, indicesOfInputMatrices };
     }
+
+    /**
+     * Adjust the indices of all steps according to a given function
+     * @param {Function} newIndexOf maps a matrix index to another matrix index
+     */
+    adjustIndices(newIndexOf)
+    {
+        const method = this._header.method;
+        (function adjustRecursively(steps) {
+            for(let i = 0, n = steps.length, step = null; i < n; i++) {
+                step = steps[i];
+                step.indexOfOutputMatrix = newIndexOf(step.indexOfOutputMatrix);
+                for(let j = step.indicesOfInputMatrices.length - 1; j >= 0; j--)
+                    step.indicesOfInputMatrices[j] = newIndexOf(step.indicesOfInputMatrices[j]);
+                if(step.header.method === method)
+                    adjustRecursively(step.header.custom);
+            }
+        })(this._header.custom);
+    }
 }
 
 /**
