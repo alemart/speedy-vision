@@ -97,10 +97,10 @@ export class MatrixWorker
         // setup the Worker
         const worker = new Worker(URL.createObjectURL(blob));
         worker.onmessage = ev => {
-            const msg = ev.data, id = msg.id;
-            const resolve = this._callbackTable.get(id);
+            const msg = ev.data;
+            const resolve = this._callbackTable.get(msg.id);
             resolve([msg.outputBuffer, msg.inputBuffers]);
-            this._callbackTable.delete(id);
+            this._callbackTable.delete(msg.id);
         };
         worker.onerror = ev => {
             throw new IllegalOperationError(`Worker error: ${ev.message}`);
