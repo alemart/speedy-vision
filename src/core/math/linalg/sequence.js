@@ -27,14 +27,5 @@
  */
 export function sequence(header, output, inputs)
 {
-    const steps = header.custom;
-
-    for(let i = 0, n = steps.length; i < n; i++) {
-        const step = steps[i];
-        const stepOutput = inputs[step.indexOfOutputMatrix];
-        const stepInputs = step.indicesOfInputMatrices.map(index => inputs[index]);
-        const stepMethod = this[step.header.method];
-
-        stepMethod(step.header, stepOutput, stepInputs);
-    }
+    this.subroutine('sequence', header, inputs);
 }

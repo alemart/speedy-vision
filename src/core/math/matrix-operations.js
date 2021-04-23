@@ -534,23 +534,41 @@ export class MatrixOperationLSSolve extends MatrixOperation
 }
 
 /**
- * A sequence of MatrixOperations encapsulated into one
+ * A matrix operation containing other matrix operations within it
+ * @abstract
  */
-export class MatrixOperationSequence extends MatrixOperation
+export class MatrixOperationWithSubroutine extends MatrixOperation
 {
     /**
      * Constructor
-     * @param {number} n number of input matrices
-     * @param {MatrixShape} shape shape of the output matrix of the last step
-     * @param {object[]} steps steps to be performed, as returned by step()
+     * @param {string} method method name
+     * @param {number} requiredNumberOfInputMatrices how many input matrices do we require?
+     * @param {MatrixShape} outputShape shape of the output matrix
+     * @param {object} subroutines dictionary of subroutines, as returned by subroutine()
+     * @param {object} [userData] custom user-data, serializable
      */
-    constructor(n, shape, steps)
+    constructor(method, requiredNumberOfInputMatrices, outputShape, subroutines, userData = {})
     {
-        super('sequence', n, shape, steps);
+        super(method, requiredNumberOfInputMatrices, outputShape, {
+            ...userData,
+            subroutine: subroutines
+        });
     }
 
     /**
-     * Helper utility
+     * New subroutine
+     * @param {string} name name of the subroutine
+     * @param {object[]} steps steps to be performed, as returned by step()
+     * @return {object}
+     */
+    static subroutine(name, steps)
+    {
+        Utils.assert(Array.isArray(steps));
+        return { [name]: steps };
+    }
+
+    /**
+     * New step of a subroutine
      * @param {MatrixOperation} operation
      * @param {number} indexOfOutputMatrix
      * @param {number[]} indicesOfInputMatrices
@@ -563,22 +581,45 @@ export class MatrixOperationSequence extends MatrixOperation
     }
 
     /**
-     * Adjust the indices of all steps according to a given function
+     * Adjust the indices of all steps of all subroutines according to a given function
      * @param {Function} newIndexOf maps a matrix index to another matrix index
      */
     adjustIndices(newIndexOf)
     {
-        const method = this._header.method;
-        (function adjustRecursively(steps) {
-            for(let i = 0, n = steps.length, step = null; i < n; i++) {
-                step = steps[i];
-                step.indexOfOutputMatrix = newIndexOf(step.indexOfOutputMatrix);
-                for(let j = step.indicesOfInputMatrices.length - 1; j >= 0; j--)
-                    step.indicesOfInputMatrices[j] = newIndexOf(step.indicesOfInputMatrices[j]);
-                if(step.header.method === method)
-                    adjustRecursively(step.header.custom);
+        (function adjustRecursively(subroutines) {
+            for(let sub in subroutines) {
+                if(Object.prototype.hasOwnProperty.call(subroutines, sub)) {
+                    const steps = subroutines[sub];
+                    for(let i = 0, n = steps.length, step = null; i < n; i++) {
+                        step = steps[i];
+                        step.indexOfOutputMatrix = newIndexOf(step.indexOfOutputMatrix);
+                        for(let j = step.indicesOfInputMatrices.length - 1; j >= 0; j--)
+                            step.indicesOfInputMatrices[j] = newIndexOf(step.indicesOfInputMatrices[j]);
+                        if(Object.prototype.hasOwnProperty.call(step.header.custom, 'subroutine'))
+                            adjustRecursively(step.header.custom.subroutine);
+                    }
+                }
             }
-        })(this._header.custom);
+        })(this._header.custom.subroutine);
+    }
+}
+
+/**
+ * A sequence of MatrixOperations encapsulated into one
+ */
+export class MatrixOperationSequence extends MatrixOperationWithSubroutine
+{
+    /**
+     * Constructor
+     * @param {number} n number of input matrices
+     * @param {MatrixShape} shape shape of the output matrix of the last step
+     * @param {object[]} steps steps to be performed, as returned by step()
+     */
+    constructor(n, shape, steps)
+    {
+        super('sequence', n, shape, {
+            ...MatrixOperationSequence.subroutine('sequence', steps)
+        });
     }
 }
 

@@ -19,7 +19,7 @@
  * Bound matrix operations
  */
 
-import { MatrixOperation, MatrixOperationSequence } from './matrix-operations';
+import { MatrixOperation, MatrixOperationWithSubroutine, MatrixOperationSequence } from './matrix-operations';
 import { SpeedyPromise } from '../../utils/speedy-promise';
 import { SpeedyMatrix } from './matrix';
 import { Utils } from '../../utils/utils';
@@ -116,9 +116,9 @@ export class BoundMatrixOperationTree
                 const indexOfOutputMatrix = this._findOrAdd(matrices, outputMatrix);
                 const indicesOfInputMatrices = inputMatrices.map(inputMatrix => this._findOrAdd(matrices, inputMatrix));
 
-                // the operation of this node is itself a sequence of operations
-                if(operation.__proto__ === MatrixOperationSequence.prototype) {
-                    const mapping = idx => this._findOrAdd(matrices, inputMatrices[idx]);
+                // the operation of this node contains other operations
+                if(operation instanceof MatrixOperationWithSubroutine) {
+                    const mapping = idx => this._findOrAdd(matrices, inputMatrices[idx]); //indicesOfInputMatrices[idx]
                     operation.adjustIndices(mapping);
                 }
 

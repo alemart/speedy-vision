@@ -38,6 +38,27 @@ export function execute(header, outputBuffer, inputBuffers)
 }
 
 /**
+ * Call a stored subroutine
+ * @param {string} subname
+ * @param {object} header
+ * @param {ArrayBufferView[]} inputs
+ */
+export function subroutine(subname, header, inputs)
+{
+    const steps = header.custom.subroutine[subname];
+
+    // run a sequence of operations
+    for(let i = 0, n = steps.length; i < n; i++) {
+        const step = steps[i];
+        const stepOutput = inputs[step.indexOfOutputMatrix];
+        const stepInputs = step.indicesOfInputMatrices.map(index => inputs[index]);
+        const stepMethod = this[step.header.method];
+
+        stepMethod(step.header, stepOutput, stepInputs);
+    }
+}
+
+/**
  * Create a TypedArray of the specified type
  * @param {MatrixDataType} dtype data type
  * @param {any[]} args will be passed to the constructor of the TypedArray
