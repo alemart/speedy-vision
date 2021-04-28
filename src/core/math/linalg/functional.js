@@ -164,8 +164,8 @@ export function map(header, output, inputs)
             for(i = 0; i < outputBlockRows; i++)
                 output[oj + i] = mapfn[ij + i];
         }
-
-        // restore pointer
-        inputs[biidx] = bi;
     }
+
+    // restore pointer
+    inputs[biidx] = bi;
 }
