@@ -658,8 +658,8 @@ export class MatrixOperationSort extends MatrixOperationWithSubroutine
 {
     /**
      * Constructor
-     * @param {MatrixShape} outputShape
-     * @param {MatrixShape} blockShape
+     * @param {MatrixShape} outputShape shape of the output matrix
+     * @param {MatrixShape} blockShape shape of the blocks of the input matrix
      */
     constructor(outputShape, blockShape)
     {
@@ -667,5 +667,20 @@ export class MatrixOperationSort extends MatrixOperationWithSubroutine
             blockRows: blockShape.rows,
             blockColumns: blockShape.columns
         });
+    }
+}
+
+/**
+ * Map blocks of a matrix
+ */
+export class MatrixOperationMap extends MatrixOperationWithSubroutine
+{
+    /**
+     * Constructor
+     * @param {MatrixShape} outputShape shape of the output matrix
+     */
+    constructor(outputShape)
+    {
+        super('map', 4, outputShape, ['mapfn']);
     }
 }

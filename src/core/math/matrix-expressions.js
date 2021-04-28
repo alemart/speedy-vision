@@ -51,6 +51,7 @@ import {
     MatrixOperationExtractIndexedBlock,
     MatrixOperationApplyPermutation,
     MatrixOperationSort,
+    MatrixOperationMap,
 } from './matrix-operations';
 
 // constants
@@ -462,9 +463,8 @@ class SpeedyMatrixExpr
      * @param {number} blockRows number of rows of each block (must be the same as the number of rows of the input matrix expression)
      * @param {number} blockColumns number of columns of each block (the number of columns of the input matrix expression must be a multiple of this)
      * @param {Function} fn mapping function: receives a blockRows x blockColumns matrix and must return a SpeedyMatrixExpr
-     * @param {object} [thisArg] optional this object
      */
-    map(blockRows, blockColumns, fn, thisArg = undefined)
+    map(blockRows, blockColumns, fn)
     {
         // validate arguments
         if(typeof fn !== 'function')
@@ -474,37 +474,17 @@ class SpeedyMatrixExpr
         if(blockColumns <= 0 || this.columns % blockColumns !== 0)
             throw new IllegalArgumentError(`map() expects the number of columns of the matrix (${this.columns}) to be divisible by blockColumns (${blockColumns})`);
 
-        // convert thisArg to object if it's not undefined
-        //if(thisArg !== undefined && typeof thisArg !== 'object')
-        //    thisArg = new Object(thisArg);
+        // What is the matrix expression returned by fn?
+        const blockShape = new MatrixShape(blockRows, blockColumns, this.dtype);
+        const indexShape = new MatrixShape(1, 1, this.dtype /*'int32'*/ );
+        const bi = new SpeedyMatrixElementaryExpr(blockShape, new SpeedyMatrix(blockShape));
+        const index = new SpeedyMatrixElementaryExpr(indexShape, new SpeedyMatrix(indexShape));
+        const mapfn = fn(bi, index, this);
+        if(!(mapfn instanceof SpeedyMatrixExpr))
+            throw new IllegalOperationError(`map() expects that the mapping function returns a matrix expression for all input blocks`);
 
-        // for each block of the matrix, call fn(.)
-        const n = this.columns / blockColumns;
-        const mappedBlock = (new Array(n)).fill(null).map((_, index) => {
-            const block = this.block(0, blockRows - 1, blockColumns * index, blockColumns * (index + 1) - 1);
-            const output = fn.call(thisArg, block/*.clone()*/, index, this);
-
-            // validate the output of the mapping function for all input blocks
-            if(!(output instanceof SpeedyMatrixExpr))
-                throw new IllegalOperationError(`map() expects that the mapping function returns a matrix expression for all input blocks`);
-
-            return output;
-        });
-
-        // check that all output matrices are of the same shape
-        for(let j = 1; j < n; j++) {
-            if(!mappedBlock[j]._shape.equals(mappedBlock[j-1]._shape))
-                throw new IllegalOperationError(`map() expects that the mapping function returns matrix expressions of the same shape for all blocks`);
-        }
-
-        // compute the shape of the output matrix
-        const rows = mappedBlock[0].rows;
-        const columns = mappedBlock[0].columns * n;
-        const dtype = mappedBlock[0].dtype;
-        const shape = new MatrixShape(rows, columns, dtype);
-
-        // okay, we've got matrix expressions for all blocks and we're ready to evaluate them
-        return new SpeedyMatrixMapExpr(shape, mappedBlock);
+        // create the map expression
+        return new SpeedyMatrixMapExpr(this, mapfn, bi._matrix, index._matrix);
     }
 
     /**
@@ -1918,91 +1898,6 @@ class SpeedyMatrixQRExpr extends SpeedyMatrixUnaryExpr
 }
 
 /**
- * map() expression
- */
-class SpeedyMatrixMapExpr extends SpeedyMatrixTempExpr
-{
-    /**
-     * Constructor
-     * @param {MatrixShape} shape shape of the output of map(.)
-     * @param {SpeedyMatrixExpr[]} blocks blocks to be "glued" together
-     */
-    constructor(shape, blocks)
-    {
-        const n = blocks.length;
-        Utils.assert(n > 0);
-
-        super(shape);
-
-        /** @type {MatrixShape} shape of each output block */
-        this._blockShape = new MatrixShape(shape.rows, shape.columns / n, shape.dtype);
-
-        /** @type {SpeedyMatrixExpr[]} blocks */
-        this._expr = blocks;
-
-        /** @type {MatrixOperationCopy} copy operation: will help us glue things together */
-        this._copy = new MatrixOperationCopy(this._blockShape);
-    }
-
-    /**
-     * Evaluate expression
-     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
-     */
-    _evaluate()
-    {
-        const { rows, columns } = this._blockShape;
-
-        return SpeedyPromise.all(
-            // evaluate the input blocks
-            this._expr.map(expr => expr._evaluate().turbocharge())
-        ).then(expr => SpeedyPromise.all(
-            // for each output block
-            (new Array(expr.length)).fill(null).map((_, i) =>
-                // extract the corresponding block of the internal matrix
-                this._matrix.block(0, rows - 1, i * columns, (i+1) * columns - 1).then(block =>
-                    // copy the output blocks to the internal matrix
-                    matrixOperationsQueue.enqueue(
-                        this._copy,
-                        block,
-                        [ expr[i]._matrix ]
-                    )
-                )
-            )
-        )).then(() => this);
-    }
-
-    /**
-     * Compile this expression
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compile()
-    {
-        const { rows, columns } = this._blockShape;
-
-        return SpeedyPromise.all(
-            // compile the input blocks
-            this._expr.map(expr => expr._compile().turbocharge())
-        ).then(expr => SpeedyPromise.all(
-            // for each compiled input block
-            (new Array(expr.length)).fill(null).map((_, i) =>
-                // extract the corresponding block of the internal matrix
-                this._matrix.block(0, rows - 1, i * columns, (i+1) * columns - 1).then(block =>
-                    // copy the output blocks to the internal matrix
-                    new BoundMatrixOperationTree(
-                        this._copy,
-                        block,
-                        [ expr[i] ]
-                    )
-                )
-            )
-        )).then(nodes => {
-            // create a tree that includes all nodes
-            return new BoundMatrixOperationTree(null, this._matrix, nodes);
-        });
-    }
-}
-
-/**
  * reduce() expression
  */
 class SpeedyMatrixReduceExpr extends SpeedyMatrixTempExpr
@@ -2066,6 +1961,72 @@ class SpeedyMatrixReduceExpr extends SpeedyMatrixTempExpr
             // copy the result (expr[n-1].outputMatrix) to the internal matrix
             return new BoundMatrixOperationTree(this._copy, this._matrix, [ node ]);
         });
+    }
+}
+
+/**
+ * map() expression
+ */
+class SpeedyMatrixMapExpr extends SpeedyMatrixTempExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} inputMatrix input data
+     * @param {SpeedyMatrixExpr} mapfn mapping function
+     * @param {SpeedyMatrix} bi input to the mapping function - it has the shape of a block of the input matrix
+     * @param {SpeedyMatrix} index input to the mapping function - 1x1 index (0, 1, 2, 3, ... numBlocks-1)
+     */
+    constructor(inputMatrix, mapfn, bi, index)
+    {
+        Utils.assert(bi.shape.rows === inputMatrix.rows && inputMatrix.columns % bi.shape.columns === 0);
+        Utils.assert(inputMatrix.dtype === mapfn.dtype);
+        const numBlocks = inputMatrix.columns / bi.shape.columns;
+        const outputShape = new MatrixShape(mapfn.rows, mapfn.columns * numBlocks, mapfn.dtype);
+        super(outputShape);
+
+        /** @type {SpeedyMatrixExpr} input data */
+        this._inputMatrix = inputMatrix;
+
+        /** @type {SpeedyMatrixExpr} mapping function to be applied to each block */
+        this._mapfn = mapfn;
+
+        /** @type {SpeedyMatrix} input to the mapping function */
+        this._bi = bi;
+
+        /** @type {SpeedyMatrix} 1x1 index (0 represents the left-most block, 1 the block next to it, and so on) */
+        this._index = index;
+    }
+
+    /**
+     * Evaluate expression
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
+     */
+    _evaluate()
+    {
+        throw new NotImplementedError();
+    }
+
+    /**
+     * Compile this expression
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compile()
+    {
+        return this._inputMatrix._compile().then(inputMatrix =>
+            this._mapfn._compile().then(mapfn =>
+                new BoundMatrixOperationTree(
+                    new MatrixOperationMap(this._shape),
+                    this._matrix, [
+                        inputMatrix,
+                        new BoundMatrixOperationTree(null, mapfn.outputMatrix),
+                        new BoundMatrixOperationTree(null, this._bi),
+                        new BoundMatrixOperationTree(null, this._index)
+                    ], [
+                        ['mapfn', mapfn]
+                    ]
+                )
+            )
+        );
     }
 }
 

@@ -32,7 +32,7 @@ export function sort(header, output, inputs)
     const [ istride, cmpstride, bistride, bjstride ] = header.strideOfInputs;
     const { blockRows, blockColumns } = header.custom;
     const n = columns / blockColumns;
-    const biidx = inputs.indexOf(bi), bjidx = inputs.indexOf(bj);
+    const biidx = 2, bjidx = 3; //const biidx = inputs.indexOf(bi), bjidx = inputs.indexOf(bj);
     const biopt = (bistride === istride), bjopt = (bjstride === istride); // note: bistride === bjstride
     const block = biopt && bjopt ? Array.from({ length: n }, (_, i) => input.subarray(i * istride * blockColumns, (i+1) * istride * blockColumns)) : null;
     const permutation = Array.from({ length: n }, (_, i) => i); // range(n)
@@ -56,7 +56,7 @@ export function sort(header, output, inputs)
         if(block != null)
             inputs[bjidx] = block[pivot]; // it's faster if we just set a reference
         else for(oj = 0, ij = pivot * istride * blockColumns, j = 0; j < blockColumns; j++, oj += bjstride, ij += istride) {
-            for(i = 0; i < rows; i++)
+            for(i = 0; i < blockRows; i++)
                 bj[oj + i] = input[ij + i];
         }
 
@@ -69,7 +69,7 @@ export function sort(header, output, inputs)
                 if(block != null)
                     inputs[biidx] = block[permutation[a]];
                 else for(oj = 0, ij = permutation[a] * istride * blockColumns, j = 0; j < blockColumns; j++, oj += bistride, ij += istride) {
-                    for(i = 0; i < rows; i++)
+                    for(i = 0; i < blockRows; i++)
                         bi[oj + i] = input[ij + i];
                 }
 
@@ -84,7 +84,7 @@ export function sort(header, output, inputs)
                 if(block != null)
                     inputs[biidx] = block[permutation[b]];
                 else for(oj = 0, ij = permutation[b] * istride * blockColumns, j = 0; j < blockColumns; j++, oj += bistride, ij += istride) {
-                    for(i = 0; i < rows; i++)
+                    for(i = 0; i < blockRows; i++)
                         bi[oj + i] = input[ij + i];
                 }
 
@@ -123,8 +123,49 @@ export function sort(header, output, inputs)
     }
 
     // restore pointers
-    if(block != null) {
+    inputs[biidx] = bi;
+    inputs[bjidx] = bj;
+}
+
+/**
+ * Map the blocks of a matrix
+ * @param {object} header
+ * @param {ArrayBufferView} output
+ * @param {ArrayBufferView[]} inputs
+ */
+export function map(header, output, inputs)
+{
+    const [ input, mapfn, bi, index ] = inputs;
+    const { rows, columns, stride } = header;
+    const [ istride, mstride, bistride ] = header.strideOfInputs;
+    const [ outputBlockRows, outputBlockColumns ] = [ header.rowsOfInputs[1], header.columnsOfInputs[1] ];
+    const [ blockRows, blockColumns ] = [ header.rowsOfInputs[2], header.columnsOfInputs[2] ];
+    const n = columns / blockColumns;
+    const biidx = 2; //inputs.indexOf(bi);
+    const block = bistride === istride ? Array.from({ length: n }, (_, i) => input.subarray(i * istride * blockColumns, (i+1) * istride * blockColumns)) : null;
+    let b, i, j, ij, oj;
+
+    // for each block
+    for(b = 0; b < n; b++) {
+        // copy block[b] to bi
+        if(block != null)
+            inputs[biidx] = block[b];
+        else for(oj = 0, ij = b * istride * blockColumns, j = 0; j < blockColumns; j++, oj += bistride, ij += istride) {
+            for(i = 0; i < blockRows; i++)
+                bi[oj + i] = input[ij + i];
+        }
+
+        // call mapfn(bi, index)
+        index[0] = b;
+        this.subroutine('mapfn', header, inputs);
+
+        // copy mapfn to outputBlock[b]
+        for(oj = b * outputBlockColumns * stride, ij = 0, j = 0; j < outputBlockColumns; j++, oj += stride, ij += mstride) {
+            for(i = 0; i < outputBlockRows; i++)
+                output[oj + i] = mapfn[ij + i];
+        }
+
+        // restore pointer
         inputs[biidx] = bi;
-        inputs[bjidx] = bj;
     }
 }

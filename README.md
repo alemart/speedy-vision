@@ -1669,7 +1669,7 @@ A `SpeedyMatrixExpr` representing the inverse of the matrix.
 
 ##### SpeedyMatrixExpr.map()
 
-`SpeedyMatrixExpr.map(blockRows: number, blockColumns: number, fn: Function, thisArg?: object): SpeedyMatrixExpr`
+`SpeedyMatrixExpr.map(blockRows: number, blockColumns: number, fn: Function): SpeedyMatrixExpr`
 
 This is a handy operation that lets you execute multiple computations at once. It is analogous to `Array.prototype.map()`. Given a function `fn` and a *m* x *bn* matrix *A* split into *b* blocks *B1*, *B2*, ..., *Bb* of equal size:
 
@@ -1691,9 +1691,8 @@ It is required that, for all blocks, `fn` outputs a matrix of the same size & ty
 * `blockColumns: number`. Number of columns of each block. The number of columns of the input matrix must be a multiple of this value.
 * `fn: Function`. A function returning a `SpeedyMatrixExpr` for each block of the input matrix. It receives three arguments:
     * `block: SpeedyMatrixExpr`. A block of the input matrix.
-    * `index: number`. The index of the block. The left-most block has index 0. The block next to it has index 1, and so on.
+    * `index: SpeedyMatrixExpr`. A 1x1 matrix whose entry is the index of `block`. The left-most block of the input matrix has index 0. The block next to it has index 1, and so on.
     * `matrix: SpeedyMatrixExpr`. The input matrix.
-* `thisArg: object, optional`. Will be used as `this` when evaluating `fn`. If not specified, `this` will be set to `undefined`.
 
 ###### Returns
 
