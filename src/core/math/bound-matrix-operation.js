@@ -65,8 +65,9 @@ export class BoundMatrixOperationTree
      * @param {?MatrixOperation} operation operation of this node
      * @param {SpeedyMatrix} outputMatrix output of this operation tree
      * @param {BoundMatrixOperationTree[]} [children] child nodes
+     * @param {BoundMatrixOperationTree[]} [subroutines] callbacks
      */
-    constructor(operation, outputMatrix, children = [])
+    constructor(operation, outputMatrix, children = [], subroutines = [])
     {
         /** @type {BoundMatrixOperation} operation of this node */
         this._boundOperation = new BoundMatrixOperation(
@@ -78,12 +79,24 @@ export class BoundMatrixOperationTree
         /** @type {BoundMatrixOperationTree[]} child nodes */
         this._children = children;
 
+        /** @type {Array<pair<string,BoundMatrixOperationTree>>} subroutines are packed within this node */
+        this._subroutines = subroutines;
+
         // make it immutable
         return Object.freeze(this);
     }
 
     /**
-     * The output matrix of the tree (of this node of the tree)
+     * The operation associated with this node of the tree
+     * @returns {MatrixOperation}
+     */
+    get operation()
+    {
+        return this._boundOperation.operation;
+    }
+
+    /**
+     * The output matrix of this node of the tree
      * @returns {SpeedyMatrix}
      */
     get outputMatrix()
@@ -117,9 +130,12 @@ export class BoundMatrixOperationTree
                 const indicesOfInputMatrices = inputMatrices.map(inputMatrix => this._findOrAdd(matrices, inputMatrix));
 
                 // the operation of this node contains other operations
-                if(operation instanceof MatrixOperationWithSubroutine) {
-                    const mapping = idx => this._findOrAdd(matrices, inputMatrices[idx]); //indicesOfInputMatrices[idx]
-                    operation.adjustIndices(mapping);
+                for(let i = node._subroutines.length - 1; i >= 0; i--) {
+                    const [ subname, subtree ] = node._subroutines[i];
+                    const sub = subtree.pack();
+                    const remap = mat => this._findOrAdd(indicesOfInputMatrices, this._findOrAdd(matrices, mat));
+                    sub.operation.adjustIndices(remap, sub.inputMatrices);
+                    operation.setStepsOf(subname, sub.operation.steps());
                 }
 
                 // this node becomes a step in a sequence of operations
@@ -143,12 +159,13 @@ export class BoundMatrixOperationTree
 
     /**
      * Find an element in an array. If it doesn't exist, add it.
-     * @param {SpeedyMatrix[]} array
-     * @param {SpeedyMatrix} element
+     * @param {Array} array
+     * @param {object|number} element
      * @return {number} index of the element in the array
      */
     _findOrAdd(array, element)
     {
+        Utils.assert(element !== undefined);
         const idx = array.lastIndexOf(element);
         return idx >= 0 ? idx : array.push(element) - 1;
     }

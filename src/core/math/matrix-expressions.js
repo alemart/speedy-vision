@@ -50,6 +50,7 @@ import {
     MatrixOperationCompareExchange,
     MatrixOperationExtractIndexedBlock,
     MatrixOperationApplyPermutation,
+    MatrixOperationSort,
 } from './matrix-operations';
 
 // constants
@@ -2076,17 +2077,15 @@ class SpeedyMatrixSortExpr extends SpeedyMatrixTempExpr
     /**
      * Constructor
      * @param {SpeedyMatrixExpr} inputMatrix data to be sorted
-     * @param {SpeedyMatrixExpr} comparator
+     * @param {SpeedyMatrixExpr} comparator compares bi to bj
      * @param {SpeedyMatrix} bi
      * @param {SpeedyMatrix} bj
-     * @param {Array<number[2]>} net sorting network
      */
-    constructor(inputMatrix, comparator, bi, bj, net)
+    constructor(inputMatrix, comparator, bi, bj)
     {
         super(inputMatrix._shape);
         Utils.assert(bi.shape.equals(bj.shape));
         Utils.assert(bi.rows === inputMatrix.rows && inputMatrix.columns % bi.columns === 0);
-        const numberOfBlocks = inputMatrix.columns / bi.columns;
 
         /** @type {SpeedyMatrixExpr} data to be sorted */
         this._inputMatrix = inputMatrix;
@@ -2102,15 +2101,6 @@ class SpeedyMatrixSortExpr extends SpeedyMatrixTempExpr
 
         /** @type {SpeedyMatrix} storage for block comparisons */
         this._bj = bj;
-
-        /** @type {Array<number[2]>} the sorting network we'll use */
-        this._net = net;
-
-        /** @type {SpeedyMatrix} column vector of indices */
-        this._permutation = new SpeedyMatrix(
-            new MatrixShape(numberOfBlocks, 1, this.dtype), //'int32'),
-            Utils.range(numberOfBlocks)
-        );
     }
 
     /**
@@ -2130,52 +2120,15 @@ class SpeedyMatrixSortExpr extends SpeedyMatrixTempExpr
     {
         return this._inputMatrix._compile().then(inputMatrix => {
             return this._comparator._compile().then(comparator => {
-                let permutation = new BoundMatrixOperationTree(null, this._permutation);
-                let pair, firstBlock, secondBlock, cmpxchg;
-                let tree = permutation; // initial value
-
-                for(let i = this._net.length - 1; i >= 0; i--) {
-                    pair = this._net[i];
-
-                    firstBlock = new BoundMatrixOperationTree(
-                        new MatrixOperationExtractIndexedBlock(this._shape, this._blockShape, pair[0]),
-                        this._bi, [
-                            inputMatrix,
-                            permutation
-                        ]
-                    );
-
-                    secondBlock = new BoundMatrixOperationTree(
-                        new MatrixOperationExtractIndexedBlock(this._shape, this._blockShape, pair[1]),
-                        this._bj, [
-                            inputMatrix,
-                            permutation
-                        ]
-                    );
-
-                    cmpxchg = new BoundMatrixOperationTree(
-                        new MatrixOperationCompareExchange(this._permutation.shape, pair[0], pair[1]),
-                        this._permutation, [
-                            comparator
-                        ]
-                    );
-
-                    tree = new BoundMatrixOperationTree(
-                        null, this._permutation, [
-                            firstBlock,
-                            secondBlock,
-                            comparator,
-                            cmpxchg,
-                            tree
-                        ]
-                    );
-                }
-
                 return new BoundMatrixOperationTree(
-                    new MatrixOperationApplyPermutation(this._shape, this._blockShape),
+                    new MatrixOperationSort(this._shape, this._blockShape),
                     this._matrix, [
                         inputMatrix,
-                        tree
+                        new BoundMatrixOperationTree(null, comparator.outputMatrix),
+                        new BoundMatrixOperationTree(null, this._bi),
+                        new BoundMatrixOperationTree(null, this._bj),
+                    ], [
+                        [ 'cmp', comparator ]
                     ]
                 );
             });

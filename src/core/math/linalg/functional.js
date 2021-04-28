@@ -20,89 +20,111 @@
  */
 
 /**
- * Exchange the indices of blocks A and B if cmp(A, B) > 0
- * @param {object} header { indexOfBlockA, indexOfBlockB }
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-export function compareExchange(header, output, inputs)
-{
-    // no need to swap? cmp is 1x1
-    if(inputs[0][0] <= 0)
-        return;
-
-    // swap the indices, i.e., the entries of a permutation
-    const indexOfBlockA = header.custom.indexOfBlockA;
-    const indexOfBlockB = header.custom.indexOfBlockB;
-    const permutation = output;
-
-    const t = permutation[indexOfBlockA];
-    permutation[indexOfBlockA] = permutation[indexOfBlockB];
-    permutation[indexOfBlockB] = t;
-}
-
-/**
- * Extract (copy) a block of a matrix
+ * Sort the blocks of a matrix
  * @param {object} header
  * @param {ArrayBufferView} output
  * @param {ArrayBufferView[]} inputs
  */
-export function extractBlock(header, output, inputs)
+export function sort(header, output, inputs)
 {
+    const [ input, cmp, bi, bj ] = inputs;
     const { rows, columns, stride } = header;
-    const [ istride ] = header.strideOfInputs;
-    const [ input ] = inputs;
-    const { row, column } = header.custom;
+    const [ istride, cmpstride, bistride, bjstride ] = header.strideOfInputs;
+    const { blockRows, blockColumns } = header.custom;
+    const n = columns / blockColumns;
+    const biopt = (bistride === istride), bjopt = (bjstride === istride); // note: bistride === bjstride
+    const biidx = inputs.indexOf(bi), bjidx = inputs.indexOf(bj);
+    const block = biopt && bjopt ? (new Array(n)).fill(null).map((_, i) => input.subarray(i * istride * blockColumns, (i+1) * istride * blockColumns)) : null;
+    const permutation = (new Array(n)).fill(0).map((_, i) => i); // range(n)
+    const stack = new Array(n);
+    let top = -1, l, r, p, pivot;
     let i, j, oj, ij;
+    let a, b, c, t;
 
-    for(oj = 0, ij = row + column * istride, j = 0; j < columns; j++, oj += stride, ij += istride) {
-        for(i = 0; i < rows - row; i++)
-            output[oj + i] = input[ij + i];
+    // quicksort on a permutation of indices of blocks
+    stack[++top] = 0;
+    stack[++top] = n - 1;
+    while(top >= 0) {
+        r = stack[top--];
+        l = stack[top--];
+
+        // partition
+        p = (l + r) >>> 1;
+        pivot = permutation[p];
+
+        // copy block[pivot] to bj
+        if(bjopt)
+            inputs[bjidx] = block[pivot];
+        else for(oj = 0, ij = pivot * istride * blockColumns, j = 0; j < blockColumns; j++, oj += bjstride, ij += istride) {
+            for(i = 0; i < rows; i++)
+                bj[oj + i] = input[ij + i];
+        }
+
+        a = l - 1; b = r + 1;
+        while(1) {
+            do {
+                a++;
+
+                // copy block[permutation[a]] to bi
+                if(biopt)
+                    inputs[biidx] = block[permutation[a]];
+                else for(oj = 0, ij = permutation[a] * istride * blockColumns, j = 0; j < blockColumns; j++, oj += bistride, ij += istride) {
+                    for(i = 0; i < rows; i++)
+                        bi[oj + i] = input[ij + i];
+                }
+
+                // is block[permutation[a]] < block[pivot] ?
+                this.subroutine('cmp', header, inputs);
+            } while(cmp[0] < 0 && a < r);
+
+            do {
+                b--;
+
+                // copy block[permutation[b]] to bi
+                if(biopt)
+                    inputs[biidx] = block[permutation[b]];
+                else for(oj = 0, ij = permutation[b] * istride * blockColumns, j = 0; j < blockColumns; j++, oj += bistride, ij += istride) {
+                    for(i = 0; i < rows; i++)
+                        bi[oj + i] = input[ij + i];
+                }
+
+                // is block[permutation[b]] > block[pivot] ?
+                this.subroutine('cmp', header, inputs);
+            } while(cmp[0] > 0 && b > l);
+
+            // swap elements
+            if(a < b) {
+                t = permutation[a];
+                permutation[a] = permutation[b];
+                permutation[b] = t;
+            }
+            else break;
+        }
+
+        // recursion
+        p = b;
+        if(l < p) {
+            stack[++top] = l;
+            stack[++top] = p;
+        }
+        if(r > p + 1) {
+            stack[++top] = p + 1;
+            stack[++top] = r;
+        }
     }
-}
 
-/**
- * Extract (copy) an indexed block (column span) of a matrix
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs [ inputMatrix, indices ]
- */
-export function extractIndexedBlock(header, output, inputs)
-{
-    const { rows, columns, stride } = header;
-    const [ istride ] = header.strideOfInputs;
-    const [ input, indices ] = inputs;
-    const { index } = header.custom;
-    const blockIndex = indices[index]; // indices is a column vector whose entries are in [0, numBlocks - 1]
-    const column = blockIndex * columns;
-    let i, j, oj, ij;
-
-    for(oj = 0, ij = column * istride, j = 0; j < columns; j++, oj += stride, ij += istride) {
-        for(i = 0; i < rows; i++)
-            output[oj + i] = input[ij + i];
-    }
-}
-
-/**
- * Apply a permutation (column vector of block indices) to the blocks (column spans) of a matrix
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs [ inputMatrix, permutation ]
- */
-export function applyPermutation(header, output, inputs)
-{
-    const { rows, columns, stride } = header;
-    const [ istride ] = header.strideOfInputs;
-    const [ input, permutation ] = inputs;
-    const { numberOfBlocks, blockRows, blockColumns } = header.custom;
-    let i, j, oj, ij, b, column;
-
-    // permutation is a column vector whose entries are in [0, numberOfBlocks - 1]
-    for(b = 0; b < numberOfBlocks; b++) { // for each block...
-        column = permutation[b] * blockColumns;
-        for(oj = b * blockColumns * stride, ij = column * istride, j = 0; j < blockColumns; j++, oj += stride, ij += istride) {
+    // apply permutation
+    for(b = 0; b < n; b++) { // for each block...
+        c = permutation[b] * blockColumns; // for each column...
+        for(oj = b * blockColumns * stride, ij = c * istride, j = 0; j < blockColumns; j++, oj += stride, ij += istride) {
             for(i = 0; i < blockRows; i++)
                 output[oj + i] = input[ij + i];
         }
+    }
+
+    // restore pointers
+    if(block != null) {
+        inputs[biidx] = bi;
+        inputs[bjidx] = bj;
     }
 }

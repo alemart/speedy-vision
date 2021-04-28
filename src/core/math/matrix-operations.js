@@ -557,14 +557,14 @@ export class MatrixOperationWithSubroutine extends MatrixOperation
 
     /**
      * New subroutine
-     * @param {string} name name of the subroutine
-     * @param {object[]} steps steps to be performed, as returned by step()
+     * @param {string} subname name of the subroutine
+     * @param {StepOfSubroutineOfMatrixOperation[]} [steps] steps to be performed, as returned by step()
      * @return {object}
      */
-    static subroutine(name, steps)
+    static subroutine(subname, steps = [])
     {
         Utils.assert(Array.isArray(steps));
-        return { [name]: steps };
+        return { [subname]: steps };
     }
 
     /**
@@ -572,35 +572,67 @@ export class MatrixOperationWithSubroutine extends MatrixOperation
      * @param {MatrixOperation} operation
      * @param {number} indexOfOutputMatrix
      * @param {number[]} indicesOfInputMatrices
-     * @returns {object}
+     * @returns {StepOfSubroutineOfMatrixOperation}
      */
     static step(operation, indexOfOutputMatrix, indicesOfInputMatrices)
     {
+        // The trick is to map the input & output matrices of each step of
+        // all subroutines to specific input matrices of the entire operation
         const header = operation._header;
+
+        /** @typedef {object} StepOfSubroutineOfMatrixOperation */
         return { header, indexOfOutputMatrix, indicesOfInputMatrices };
     }
 
     /**
-     * Adjust the indices of all steps of all subroutines according to a given function
-     * @param {Function} newIndexOf maps a matrix index to another matrix index
+     * The steps performed by a subroutine, as provided in the constructor
+     * @param {string} subname name of the subroutine
+     * @return {StepOfSubroutineOfMatrixOperation[]}
      */
-    adjustIndices(newIndexOf)
+    _stepsOf(subname)
     {
-        (function adjustRecursively(subroutines) {
-            for(let sub in subroutines) {
-                if(Object.prototype.hasOwnProperty.call(subroutines, sub)) {
-                    const steps = subroutines[sub];
-                    for(let i = 0, n = steps.length, step = null; i < n; i++) {
-                        step = steps[i];
-                        step.indexOfOutputMatrix = newIndexOf(step.indexOfOutputMatrix);
-                        for(let j = step.indicesOfInputMatrices.length - 1; j >= 0; j--)
-                            step.indicesOfInputMatrices[j] = newIndexOf(step.indicesOfInputMatrices[j]);
-                        if(Object.prototype.hasOwnProperty.call(step.header.custom, 'subroutine'))
-                            adjustRecursively(step.header.custom.subroutine);
-                    }
+        const subroutine = this._header.custom.subroutine;
+        Utils.assert(Object.prototype.hasOwnProperty.call(subroutine, subname));
+        return subroutine[subname];
+    }
+
+    /**
+     * Replace the steps of an existing subroutine
+     * @param {string} subname name of the subroutine
+     * @param {StepOfSubroutineOfMatrixOperation[]} steps
+     */
+    setStepsOf(subname, steps)
+    {
+        const subroutine = this._header.custom.subroutine;
+        Utils.assert(Object.prototype.hasOwnProperty.call(subroutine, subname));
+        Utils.assert(Array.isArray(steps));
+        subroutine[subname] = steps;
+    }
+
+    /**
+     * Adjust the indices of all steps of the subroutine according to a given function
+     * @param {Function} newIndexOf maps a matrix to new matrix index
+     * @param {SpeedyMatrix[]} mats matrices with original indexing
+     */
+    adjustIndices(newIndexOf, mats)
+    {
+        const subroutines = this._header.custom.subroutine;
+        //(function adjust(subroutines) {
+        for(let sub in subroutines) {
+            if(Object.prototype.hasOwnProperty.call(subroutines, sub)) {
+                const steps = subroutines[sub];
+                for(let i = 0, n = steps.length, step = null; i < n; i++) {
+                    step = steps[i];
+                    step.indexOfOutputMatrix = newIndexOf(mats[step.indexOfOutputMatrix]);
+                    for(let j = step.indicesOfInputMatrices.length - 1; j >= 0; j--)
+                        step.indicesOfInputMatrices[j] = newIndexOf(mats[step.indicesOfInputMatrices[j]]);
+                    /* // this is a no go when subroutines call other subroutines:
+                    if(Object.prototype.hasOwnProperty.call(step.header.custom, 'subroutine'))
+                        adjust(step.header.custom.subroutine); */
                 }
             }
-        })(this._header.custom.subroutine);
+        }
+        //})(this._header.custom.subroutine);
     }
 }
 
@@ -613,7 +645,7 @@ export class MatrixOperationSequence extends MatrixOperationWithSubroutine
      * Constructor
      * @param {number} n number of input matrices
      * @param {MatrixShape} shape shape of the output matrix of the last step
-     * @param {object[]} steps steps to be performed, as returned by step()
+     * @param {StepOfSubroutineOfMatrixOperation[]} steps steps to be performed, as returned by step() <static>
      */
     constructor(n, shape, steps)
     {
@@ -621,84 +653,34 @@ export class MatrixOperationSequence extends MatrixOperationWithSubroutine
             ...MatrixOperationSequence.subroutine('sequence', steps)
         });
     }
-}
 
-/**
- * Compare-exchange (sorting networks)
- */
-export class MatrixOperationCompareExchange extends MatrixOperation
-{
     /**
-     * Class constructor
-     * @param {MatrixShape} shape shape of a column vector of indices
-     * @param {number} indexOfBlockA
-     * @param {number} indexOfBlockB
+     * The steps performed by this sequence, as provided in the constructor
+     * @returns {StepOfSubroutineOfMatrixOperation[]}
      */
-    constructor(shape, indexOfBlockA, indexOfBlockB)
+    steps()
     {
-        const n = shape.rows; // number of blocks
-        Utils.assert(shape.columns === 1);
-        Utils.assert(indexOfBlockA >= 0 && indexOfBlockA < n && indexOfBlockB >= 0 && indexOfBlockB < n);
-        super('compareExchange', 1, shape, { indexOfBlockA, indexOfBlockB });
+        return this._stepsOf('sequence');
     }
 }
 
 /**
- * Extract (copy) a block of a matrix
+ * Sort blocks of a matrix
  */
-export class MatrixOperationExtractBlock extends MatrixOperation
+export class MatrixOperationSort extends MatrixOperationWithSubroutine
 {
     /**
      * Constructor
-     * @param {MatrixShape} inputShape the shape of the input matrix
-     * @param {MatrixShape} blockShape the shape of the block (output)
-     * @param {number} row index of the top-left row to be copied
-     * @param {number} column index of the top-left column to be copied
+     * @param {MatrixShape} outputShape
+     * @param {MatrixShape} blockShape
      */
-    constructor(inputShape, blockShape, row, column)
+    constructor(outputShape, blockShape)
     {
-        Utils.assert(blockShape.rows + row <= inputShape.rows && blockShape.columns + column <= inputShape.columns);
-        super('extractBlock', 1, blockShape, { row, column });
-    }
-}
-
-/**
- * Extract (copy) an indexed block (column span) of a matrix
- */
-export class MatrixOperationExtractIndexedBlock extends MatrixOperation
-{
-    /**
-     * Constructor
-     * @param {MatrixShape} inputShape the shape of the input matrix
-     * @param {MatrixShape} blockShape the shape of the block (output)
-     * @param {number} index 0 ... n-1
-     */
-    constructor(inputShape, blockShape, index)
-    {
-        Utils.assert(inputShape.columns % blockShape.columns === 0 && blockShape.rows === inputShape.rows);
-        const n = inputShape.columns / blockShape.columns;
-        Utils.assert(index >= 0 && index < n);
-
-        super('extractIndexedBlock', 2, blockShape, { index });
-    }
-}
-
-/**
- * Exchange the blocks of a matrix according to a permutation
- */
-export class MatrixOperationApplyPermutation extends MatrixOperation
-{
-    /**
-     * Constructor
-     * @param {MatrixShape} inputShape the shape of the input & output matrices
-     * @param {MatrixShape} blockShape the shape of each block
-     */
-    constructor(shape, blockShape)
-    {
-        Utils.assert(shape.columns % blockShape.columns === 0 && shape.rows === blockShape.rows);
-        const numberOfBlocks = shape.columns / blockShape.columns;
-        const blockRows = blockShape.rows, blockColumns = blockShape.columns;
-
-        super('applyPermutation', 2, shape, { numberOfBlocks, blockRows, blockColumns });
+        super('sort', 4, outputShape, {
+            ...MatrixOperationSort.subroutine('cmp')
+        }, {
+            blockRows: blockShape.rows,
+            blockColumns: blockShape.columns
+        });
     }
 }
