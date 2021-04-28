@@ -659,14 +659,10 @@ export class MatrixOperationSort extends MatrixOperationWithSubroutine
     /**
      * Constructor
      * @param {MatrixShape} outputShape shape of the output matrix
-     * @param {MatrixShape} blockShape shape of the blocks of the input matrix
      */
-    constructor(outputShape, blockShape)
+    constructor(outputShape)
     {
-        super('sort', 4, outputShape, ['cmp'], {
-            blockRows: blockShape.rows,
-            blockColumns: blockShape.columns
-        });
+        super('sort', 4, outputShape, ['cmp']);
     }
 }
 

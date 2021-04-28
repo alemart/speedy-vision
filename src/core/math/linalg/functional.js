@@ -30,7 +30,7 @@ export function sort(header, output, inputs)
     const [ input, cmp, bi, bj ] = inputs;
     const { rows, columns, stride } = header;
     const [ istride, cmpstride, bistride, bjstride ] = header.strideOfInputs;
-    const { blockRows, blockColumns } = header.custom;
+    const [ blockRows, blockColumns ] = [ header.rowsOfInputs[2], header.columnsOfInputs[2] ];
     const n = columns / blockColumns;
     const biidx = 2, bjidx = 3; //const biidx = inputs.indexOf(bi), bjidx = inputs.indexOf(bj);
     const biopt = (bistride === istride), bjopt = (bjstride === istride); // note: bistride === bjstride
