@@ -36,7 +36,7 @@ export function sort(header, output, inputs)
     const biidx = inputs.indexOf(bi), bjidx = inputs.indexOf(bj);
     const block = biopt && bjopt ? (new Array(n)).fill(null).map((_, i) => input.subarray(i * istride * blockColumns, (i+1) * istride * blockColumns)) : null;
     const permutation = (new Array(n)).fill(0).map((_, i) => i); // range(n)
-    const stack = new Array(n);
+    const stack = (new Array(n)).fill(0);
     let top = -1, l, r, p, pivot;
     let i, j, oj, ij;
     let a, b, c, t;
@@ -61,7 +61,7 @@ export function sort(header, output, inputs)
         }
 
         a = l - 1; b = r + 1;
-        while(1) {
+        for(;;) {
             do {
                 a++;
 
