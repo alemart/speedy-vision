@@ -544,27 +544,15 @@ export class MatrixOperationWithSubroutine extends MatrixOperation
      * @param {string} method method name
      * @param {number} requiredNumberOfInputMatrices how many input matrices do we require?
      * @param {MatrixShape} outputShape shape of the output matrix
-     * @param {object} subroutines dictionary of subroutines, as returned by subroutine()
+     * @param {string[]} [subroutines] names of the subroutines
      * @param {object} [userData] custom user-data, serializable
      */
     constructor(method, requiredNumberOfInputMatrices, outputShape, subroutines, userData = {})
     {
         super(method, requiredNumberOfInputMatrices, outputShape, {
             ...userData,
-            subroutine: subroutines
+            subroutine: subroutines.reduce((obj, sub) => Object.assign(obj, { [sub]: [] }), {})
         });
-    }
-
-    /**
-     * New subroutine
-     * @param {string} subname name of the subroutine
-     * @param {StepOfSubroutineOfMatrixOperation[]} [steps] steps to be performed, as returned by step()
-     * @return {object}
-     */
-    static subroutine(subname, steps = [])
-    {
-        Utils.assert(Array.isArray(steps));
-        return { [subname]: steps };
     }
 
     /**
@@ -597,14 +585,14 @@ export class MatrixOperationWithSubroutine extends MatrixOperation
     }
 
     /**
-     * Replace the steps of an existing subroutine
+     * Set the steps of a declared subroutine
      * @param {string} subname name of the subroutine
      * @param {StepOfSubroutineOfMatrixOperation[]} steps
      */
     setStepsOf(subname, steps)
     {
         const subroutine = this._header.custom.subroutine;
-        Utils.assert(Object.prototype.hasOwnProperty.call(subroutine, subname));
+        Utils.assert(Array.isArray(subroutine[subname]) && subroutine[subname].length == 0);
         Utils.assert(Array.isArray(steps));
         subroutine[subname] = steps;
     }
@@ -644,14 +632,13 @@ export class MatrixOperationSequence extends MatrixOperationWithSubroutine
     /**
      * Constructor
      * @param {number} n number of input matrices
-     * @param {MatrixShape} shape shape of the output matrix of the last step
+     * @param {MatrixShape} shape shape of the output matrix
      * @param {StepOfSubroutineOfMatrixOperation[]} steps steps to be performed, as returned by step() <static>
      */
     constructor(n, shape, steps)
     {
-        super('sequence', n, shape, {
-            ...MatrixOperationSequence.subroutine('sequence', steps)
-        });
+        super('sequence', n, shape, ['sequence']);
+        this.setStepsOf('sequence', steps);
     }
 
     /**
@@ -676,9 +663,7 @@ export class MatrixOperationSort extends MatrixOperationWithSubroutine
      */
     constructor(outputShape, blockShape)
     {
-        super('sort', 4, outputShape, {
-            ...MatrixOperationSort.subroutine('cmp')
-        }, {
+        super('sort', 4, outputShape, ['cmp'], {
             blockRows: blockShape.rows,
             blockColumns: blockShape.columns
         });
