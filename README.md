@@ -1790,7 +1790,7 @@ This operation is analogous to `Array.prototype.sort()`. Given a comparison func
 M = [ B1 | B2 | ... | Bj | ... | Bb ]
 ```
 
-*sort* will rearrange the blocks of the matrix according to the criteria established by `cmp`. Note that *sort* modifies the entries of the **input matrix** (i.e., no copy is made - the original arrangement is lost).
+*sort* will rearrange the blocks of the matrix according to the criteria established by `cmp`.
 
 ###### Arguments
 

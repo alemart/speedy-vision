@@ -32,12 +32,12 @@ export function sort(header, output, inputs)
     const [ istride, cmpstride, bistride, bjstride ] = header.strideOfInputs;
     const { blockRows, blockColumns } = header.custom;
     const n = columns / blockColumns;
-    const biopt = (bistride === istride), bjopt = (bjstride === istride); // note: bistride === bjstride
     const biidx = inputs.indexOf(bi), bjidx = inputs.indexOf(bj);
-    const block = biopt && bjopt ? (new Array(n)).fill(null).map((_, i) => input.subarray(i * istride * blockColumns, (i+1) * istride * blockColumns)) : null;
-    const permutation = (new Array(n)).fill(0).map((_, i) => i); // range(n)
+    const biopt = (bistride === istride), bjopt = (bjstride === istride); // note: bistride === bjstride
+    const block = biopt && bjopt ? Array.from({ length: n }, (_, i) => input.subarray(i * istride * blockColumns, (i+1) * istride * blockColumns)) : null;
+    const permutation = Array.from({ length: n }, (_, i) => i); // range(n)
     const stack = (new Array(n)).fill(0);
-    let top = -1, l, r, p, pivot;
+    let top = -1, l = 0, r = 0, p = 0, pivot = 0;
     let i, j, oj, ij;
     let a, b, c, t;
 
@@ -53,8 +53,8 @@ export function sort(header, output, inputs)
         pivot = permutation[p];
 
         // copy block[pivot] to bj
-        if(bjopt)
-            inputs[bjidx] = block[pivot];
+        if(block != null)
+            inputs[bjidx] = block[pivot]; // it's faster if we just set a reference
         else for(oj = 0, ij = pivot * istride * blockColumns, j = 0; j < blockColumns; j++, oj += bjstride, ij += istride) {
             for(i = 0; i < rows; i++)
                 bj[oj + i] = input[ij + i];
@@ -66,7 +66,7 @@ export function sort(header, output, inputs)
                 a++;
 
                 // copy block[permutation[a]] to bi
-                if(biopt)
+                if(block != null)
                     inputs[biidx] = block[permutation[a]];
                 else for(oj = 0, ij = permutation[a] * istride * blockColumns, j = 0; j < blockColumns; j++, oj += bistride, ij += istride) {
                     for(i = 0; i < rows; i++)
@@ -81,7 +81,7 @@ export function sort(header, output, inputs)
                 b--;
 
                 // copy block[permutation[b]] to bi
-                if(biopt)
+                if(block != null)
                     inputs[biidx] = block[permutation[b]];
                 else for(oj = 0, ij = permutation[b] * istride * blockColumns, j = 0; j < blockColumns; j++, oj += bistride, ij += istride) {
                     for(i = 0; i < rows; i++)
