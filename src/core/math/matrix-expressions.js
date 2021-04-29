@@ -480,7 +480,8 @@ class SpeedyMatrixExpr
         const indexShape = new MatrixShape(1, 1, this.dtype /*'int32'*/ );
         const bi = new SpeedyMatrixElementaryExpr(blockShape, new SpeedyMatrix(blockShape));
         const index = new SpeedyMatrixElementaryExpr(indexShape, new SpeedyMatrix(indexShape));
-        const mapfn = fn(bi, index, this);
+        const input = new SpeedyMatrixConstantExpr(this);
+        const mapfn = fn(bi, index, input);
         if(!(mapfn instanceof SpeedyMatrixExpr))
             throw new IllegalOperationError(`map() expects that the mapping function returns a matrix expression for all input blocks`);
 
@@ -513,7 +514,8 @@ class SpeedyMatrixExpr
         const bi = new SpeedyMatrixElementaryExpr(blockShape, new SpeedyMatrix(blockShape));
         const accumulator = new SpeedyMatrixElementaryExpr(initialMatrix._shape, new SpeedyMatrix(initialMatrix._shape));
         const index = new SpeedyMatrixElementaryExpr(indexShape, new SpeedyMatrix(indexShape));
-        const reducefn = fn(accumulator, bi, index, this);
+        const input = new SpeedyMatrixConstantExpr(this);
+        const reducefn = fn(accumulator, bi, index, input);
         if(!(reducefn instanceof SpeedyMatrixExpr))
             throw new IllegalOperationError(`reduce() expects that the reducer function returns a SpeedyMatrixExpr for all input blocks`);
         else if(!reducefn._shape.equals(initialMatrix._shape))
@@ -549,12 +551,8 @@ class SpeedyMatrixExpr
         if(!(comparator instanceof SpeedyMatrixExpr && comparator._shape.rows === 1 && comparator._shape.columns === 1))
             throw new IllegalOperationError(`sort() expects that the comparator function returns a 1x1 matrix expression for all comparison pairs`);
 
-        // generate a sorting network
-        const numberOfBlocks = this.columns / blockColumns;
-        const net = OddEvenMergesort.generate(numberOfBlocks);
-
         // we're ready to sort the blocks
-        return new SpeedyMatrixSortExpr(this, comparator, bi._matrix, bj._matrix, net);
+        return new SpeedyMatrixSortExpr(this, comparator, bi._matrix, bj._matrix);
     }
 
 
@@ -1597,6 +1595,52 @@ class SpeedyMatrixReadwriteDiagonalExpr extends SpeedyMatrixLvalueExpr
 // ================================================
 // BASIC OPERATIONS
 // ================================================
+
+/**
+ * Make an expression constant
+ */
+export class SpeedyMatrixConstantExpr extends SpeedyMatrixExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} expr the expression to be made constant
+     */
+    constructor(expr)
+    {
+        super(expr._shape);
+
+        /** @type {SpeedyMatrixExpr} the expression to be made constant */
+        this._expr = expr;
+    }
+
+    /**
+     * Get the matrix associated with this expression
+     * This matrix must be guaranteed to be available after evaluating this expression
+     * @returns {SpeedyMatrix}
+     */
+    get _matrix()
+    {
+        return this._expr._matrix;
+    }
+
+    /**
+     * Evaluate the expression
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
+     */
+    _evaluate()
+    {
+        return this._expr._evaluate();
+    }
+
+    /**
+     * Compile this expression
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compile()
+    {
+        return this._expr._compile();
+    }
+}
 
 /**
  * Fill the output matrix with a constant value
