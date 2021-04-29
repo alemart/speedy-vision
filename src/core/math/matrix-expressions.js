@@ -52,6 +52,7 @@ import {
     MatrixOperationApplyPermutation,
     MatrixOperationSort,
     MatrixOperationMap,
+    MatrixOperationReduce,
 } from './matrix-operations';
 
 // constants
@@ -506,23 +507,20 @@ class SpeedyMatrixExpr
         if(!(initialMatrix instanceof SpeedyMatrixExpr))
             throw new IllegalArgumentError(`reduce() expects initialMatrix to be a SpeedyMatrixExpr`);
 
-        // for each block of the matrix, call fn(.)
-        const n = this.columns / blockColumns;
-        const output = new Array(n + 1);
-        output[0] = initialMatrix;
-        for(let i = 0; i < n; i++) {
-            const currentBlock = this.block(0, blockRows - 1, blockColumns * i, blockColumns * (i + 1) - 1);
-            output[i+1] = fn.call(undefined, output[i], currentBlock, i, this);
+        // What is the matrix expression returned by fn?
+        const blockShape = new MatrixShape(blockRows, blockColumns, this.dtype);
+        const indexShape = new MatrixShape(1, 1, this.dtype /*'int32'*/ );
+        const bi = new SpeedyMatrixElementaryExpr(blockShape, new SpeedyMatrix(blockShape));
+        const accumulator = new SpeedyMatrixElementaryExpr(initialMatrix._shape, new SpeedyMatrix(initialMatrix._shape));
+        const index = new SpeedyMatrixElementaryExpr(indexShape, new SpeedyMatrix(indexShape));
+        const reducefn = fn(accumulator, bi, index, this);
+        if(!(reducefn instanceof SpeedyMatrixExpr))
+            throw new IllegalOperationError(`reduce() expects that the reducer function returns a SpeedyMatrixExpr for all input blocks`);
+        else if(!reducefn._shape.equals(initialMatrix._shape))
+            throw new IllegalOperationError(`reduce() expects that the reducer function returns matrices of the same shape as the initial matrix for all input blocks`);
 
-            // validate the output of the reducer function for the current block
-            if(!(output[i+1] instanceof SpeedyMatrixExpr))
-                throw new IllegalOperationError(`reduce() expects that the reducer function returns a SpeedyMatrixExpr for all input blocks`);
-            else if(!output[i+1]._shape.equals(output[i]._shape))
-                throw new IllegalOperationError(`reduce() expects that the reducer function returns matrices of the same shape for all input blocks`);
-        }
-
-        // okay, we've got matrix expressions for all blocks and we're ready to evaluate them
-        return new SpeedyMatrixReduceExpr(output);
+        // create the reduce expression
+        return new SpeedyMatrixReduceExpr(this, reducefn, accumulator._matrix, bi._matrix, index._matrix, initialMatrix);
     }
 
     /**
@@ -1898,73 +1896,6 @@ class SpeedyMatrixQRExpr extends SpeedyMatrixUnaryExpr
 }
 
 /**
- * reduce() expression
- */
-class SpeedyMatrixReduceExpr extends SpeedyMatrixTempExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr[]} reducedExpr
-     */
-    constructor(reducedExpr)
-    {
-        super(reducedExpr[reducedExpr.length - 1]._shape);
-
-        /** @type {SpeedyMatrixExpr[]} results of reduce() */
-        this._expr = reducedExpr;
-
-        /** @type {MatrixOperationCopy} copy operation */
-        this._copy = new MatrixOperationCopy(this._shape);
-    }
-
-    /**
-     * Evaluate expression
-     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
-     */
-    _evaluate()
-    {
-        // evaluate this._expr from 0 to n-1, in increasing order
-        function evaluateExpressions(expr, i = 0) {
-            return i < expr.length ?
-                expr[i]._evaluate().then(() => evaluateExpressions(expr, i + 1)) :
-                SpeedyPromise.resolve(expr[expr.length - 1]);
-        }
-
-        // evaluate all expressions and copy the result to the internal matrix
-        return evaluateExpressions(this._expr).then(result =>
-            matrixOperationsQueue.enqueue(
-                this._copy,
-                this._matrix,
-                [ result._matrix ]
-            )
-        ).then(() => this);
-    }
-
-    /**
-     * Compile this expression
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compile()
-    {
-        return SpeedyPromise.all(
-            // compile the input expressions
-            this._expr.map(expr => expr._compile().turbocharge())
-        ).then(expr => {
-            const n = expr.length;
-
-            // create a tree so that expressions are evaluated left-to-right (first-to-last)
-            //const node = new BoundMatrixOperationTree(null, expr[n-1].outputMatrix, expr);
-            let node = new BoundMatrixOperationTree(null, expr[0].outputMatrix, [ expr[0] ]); // deepest level
-            for(let i = 1; i < n; i++)
-                node = new BoundMatrixOperationTree(null, expr[i].outputMatrix, [ node, expr[i] ]);
-
-            // copy the result (expr[n-1].outputMatrix) to the internal matrix
-            return new BoundMatrixOperationTree(this._copy, this._matrix, [ node ]);
-        });
-    }
-}
-
-/**
  * map() expression
  */
 class SpeedyMatrixMapExpr extends SpeedyMatrixTempExpr
@@ -1990,7 +1921,7 @@ class SpeedyMatrixMapExpr extends SpeedyMatrixTempExpr
         /** @type {SpeedyMatrixExpr} mapping function to be applied to each block */
         this._mapfn = mapfn;
 
-        /** @type {SpeedyMatrix} input to the mapping function */
+        /** @type {SpeedyMatrix} input to the mapping function - a block of the input matrix */
         this._bi = bi;
 
         /** @type {SpeedyMatrix} 1x1 index (0 represents the left-most block, 1 the block next to it, and so on) */
@@ -2024,6 +1955,84 @@ class SpeedyMatrixMapExpr extends SpeedyMatrixTempExpr
                     ], [
                         ['mapfn', mapfn]
                     ]
+                )
+            )
+        );
+    }
+}
+
+/**
+ * reduce() expression
+ */
+class SpeedyMatrixReduceExpr extends SpeedyMatrixTempExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} inputMatrix input data
+     * @param {SpeedyMatrixExpr} reducefn reduce expression
+     * @param {SpeedyMatrix} accumulator partial output of reduce()
+     * @param {SpeedyMatrix} bi a block of the input matrix
+     * @param {SpeedyMatrix} index 1x1 matrix
+     * @param {SpeedyMatrixExpr} initialMatrix initial value to be used as the accumulator
+     */
+    constructor(inputMatrix, reducefn, accumulator, bi, index, initialMatrix)
+    {
+        Utils.assert(bi.shape.rows === inputMatrix.rows && inputMatrix.columns % bi.shape.columns === 0);
+        Utils.assert(inputMatrix.dtype === reducefn.dtype);
+        Utils.assert(reducefn._shape.equals(initialMatrix._shape));
+        Utils.assert(reducefn._shape.equals(accumulator.shape));
+        super(reducefn._shape);
+
+        /** @type {SpeedyMatrixExpr} input data */
+        this._inputMatrix = inputMatrix;
+
+        /** @type {SpeedyMatrixExpr} reduce expression */
+        this._reducefn = reducefn;
+
+        /** @type {SpeedyMatrix} input to the reduce function - accumulator matrix */
+        this._accumulator = accumulator;
+
+        /** @type {SpeedyMatrix} input to the reduce function - a block of the input matrix */
+        this._bi = bi;
+
+        /** @type {SpeedyMatrix} 1x1 index (0 represents the left-most block, 1 the block next to it, and so on) */
+        this._index = index;
+
+        /** @type {SpeedyMatrixExpr} initial value to be used as the accumulator */
+        this._initialMatrix = initialMatrix;
+    }
+
+    /**
+     * Evaluate expression
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
+     */
+    _evaluate()
+    {
+        throw new NotImplementedError();
+    }
+
+    /**
+     * Compile this expression
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compile()
+    {
+        return this._inputMatrix._compile().then(inputMatrix =>
+            this._initialMatrix._compile().then(initialMatrix =>
+                this._reducefn._compile().then(reducefn =>
+                    new BoundMatrixOperationTree(
+                        new MatrixOperationReduce(this._shape),
+                        this._matrix, [
+                            inputMatrix,
+                            new BoundMatrixOperationTree(null, reducefn.outputMatrix),
+                            new BoundMatrixOperationTree(null, this._accumulator),
+                            new BoundMatrixOperationTree(null, this._bi),
+                            new BoundMatrixOperationTree(null, this._index),
+                            initialMatrix
+                        ], [
+                            [ 'reducefn', reducefn ]
+                        ]
+                    )
                 )
             )
         );

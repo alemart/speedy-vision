@@ -680,3 +680,18 @@ export class MatrixOperationMap extends MatrixOperationWithSubroutine
         super('map', 4, outputShape, ['mapfn']);
     }
 }
+
+/**
+ * Reduce blocks of a matrix
+ */
+export class MatrixOperationReduce extends MatrixOperationWithSubroutine
+{
+    /**
+     * Constructor
+     * @param {MatrixShape} outputShape shape of the output matrix
+     */
+    constructor(outputShape)
+    {
+        super('reduce', 6, outputShape, ['reducefn']);
+    }
+}

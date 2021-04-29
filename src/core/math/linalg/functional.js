@@ -20,6 +20,116 @@
  */
 
 /**
+ * Map the blocks of a matrix
+ * @param {object} header
+ * @param {ArrayBufferView} output
+ * @param {ArrayBufferView[]} inputs
+ */
+export function map(header, output, inputs)
+{
+    const [ input, mapfn, bi, index ] = inputs;
+    const { rows, columns, stride } = header;
+    const [ istride, mstride, bistride ] = header.strideOfInputs;
+    const [ outputBlockRows, outputBlockColumns ] = [ header.rowsOfInputs[1], header.columnsOfInputs[1] ];
+    const [ blockRows, blockColumns ] = [ header.rowsOfInputs[2], header.columnsOfInputs[2] ];
+    const [ ilength, bilength ] = [ header.lengthOfInputs[0], header.lengthOfInputs[2] ];
+    const n = columns / blockColumns;
+    const biidx = 2; //inputs.indexOf(bi);
+    const blkopt = (bistride === istride && bilength === ilength);
+    const block = blkopt ? Array.from({ length: n }, (_, i) => input.subarray(i * istride * blockColumns, (i+1) * istride * blockColumns)) : null;
+    let b, i, j, ij, oj;
+
+    // for each block
+    for(b = 0; b < n; b++) {
+        // copy block[b] to bi
+        if(block != null)
+            inputs[biidx] = block[b];
+        else for(oj = 0, ij = b * istride * blockColumns, j = 0; j < blockColumns; j++, oj += bistride, ij += istride) {
+            for(i = 0; i < blockRows; i++)
+                bi[oj + i] = input[ij + i];
+        }
+
+        // call mapfn(bi, index)
+        index[0] = b;
+        this.subroutine('mapfn', header, inputs);
+
+        // copy mapfn to outputBlock[b]
+        for(oj = b * outputBlockColumns * stride, ij = 0, j = 0; j < outputBlockColumns; j++, oj += stride, ij += mstride) {
+            for(i = 0; i < outputBlockRows; i++)
+                output[oj + i] = mapfn[ij + i];
+        }
+    }
+
+    // restore pointer
+    inputs[biidx] = bi;
+}
+
+/**
+ * Reduce the blocks of a matrix
+ * @param {object} header
+ * @param {ArrayBufferView} output
+ * @param {ArrayBufferView[]} inputs
+ */
+export function reduce(header, output, inputs)
+{
+    const [ input, reducefn, accumulator, bi, index, initial ] = inputs;
+    const { rows, columns, stride, length } = header;
+    const [ istride, rstride, astride, bistride, indexstride, initialstride ] = header.strideOfInputs;
+    const [ ilength, rlength, alength, bilength, indexlength, initiallength ] = header.lengthOfInputs;
+    const [ blockRows, blockColumns ] = [ header.rowsOfInputs[3], header.columnsOfInputs[3] ];
+    const begopt = (astride === initialstride && alength === initiallength);
+    const midopt = (astride === rstride && alength === rlength);
+    const endopt = (astride === stride && alength === length);
+    const blkopt = (bistride === istride && bilength === ilength);
+    const n = header.columnsOfInputs[0] / blockColumns;
+    const biidx = 3; //inputs.indexOf(bi);
+    const block = blkopt ? Array.from({ length: n }, (_, i) => input.subarray(i * istride * blockColumns, (i+1) * istride * blockColumns)) : null;
+    let b, i, j, ij, oj;
+
+    // copy the initial matrix to the accumulator
+    if(begopt) // optimize copy
+        accumulator.set(initial); // memcpy()-like - is it required that dtype of accumulator === dtype of initial ?
+    else for(oj = 0, ij = 0, j = 0; j < columns; j++, ij += initialstride, oj += astride) {
+        for(i = 0; i < rows; i++)
+            accumulator[oj + i] = initial[ij + i];
+    }
+
+    // for each block
+    for(b = 0; b < n; b++) {
+        // copy block[b] to bi
+        if(block != null)
+            inputs[biidx] = block[b];
+        else for(oj = 0, ij = b * istride * blockColumns, j = 0; j < blockColumns; j++, oj += bistride, ij += istride) {
+            for(i = 0; i < blockRows; i++)
+                bi[oj + i] = input[ij + i];
+        }
+
+        // call reducefn(accumulator, bi, index)
+        index[0] = b;
+        this.subroutine('reducefn', header, inputs);
+
+        // copy reducefn to the accumulator
+        if(midopt)
+            accumulator.set(reducefn);
+        else for(oj = 0, ij = 0, j = 0; j < columns; j++, ij += rstride, oj += astride) {
+            for(i = 0; i < rows; i++)
+                accumulator[oj + i] = reducefn[ij + i];
+        }
+    }
+
+    // copy the accumulator to the output
+    if(endopt)
+        output.set(accumulator);
+    else for(oj = 0, ij = 0, j = 0; j < columns; j++, ij += astride, oj += stride) {
+        for(i = 0; i < rows; i++)
+            output[oj + i] = accumulator[ij + i];
+    }
+
+    // restore pointer
+    inputs[biidx] = bi;
+}
+
+/**
  * Sort the blocks of a matrix
  * @param {object} header
  * @param {ArrayBufferView} output
@@ -30,10 +140,11 @@ export function sort(header, output, inputs)
     const [ input, cmp, bi, bj ] = inputs;
     const { rows, columns, stride } = header;
     const [ istride, cmpstride, bistride, bjstride ] = header.strideOfInputs;
+    const [ ilength, cmplength, bilength, bjlength ] = header.lengthOfInputs;
     const [ blockRows, blockColumns ] = [ header.rowsOfInputs[2], header.columnsOfInputs[2] ];
     const n = columns / blockColumns;
     const biidx = 2, bjidx = 3; //const biidx = inputs.indexOf(bi), bjidx = inputs.indexOf(bj);
-    const biopt = (bistride === istride), bjopt = (bjstride === istride); // note: bistride === bjstride
+    const biopt = (bistride === istride && bilength === ilength), bjopt = (bjstride === istride && bjlength === ilength); // note: bistride === bjstride
     const block = biopt && bjopt ? Array.from({ length: n }, (_, i) => input.subarray(i * istride * blockColumns, (i+1) * istride * blockColumns)) : null;
     const permutation = Array.from({ length: n }, (_, i) => i); // range(n)
     const stack = (new Array(n)).fill(0);
@@ -125,47 +236,4 @@ export function sort(header, output, inputs)
     // restore pointers
     inputs[biidx] = bi;
     inputs[bjidx] = bj;
-}
-
-/**
- * Map the blocks of a matrix
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-export function map(header, output, inputs)
-{
-    const [ input, mapfn, bi, index ] = inputs;
-    const { rows, columns, stride } = header;
-    const [ istride, mstride, bistride ] = header.strideOfInputs;
-    const [ outputBlockRows, outputBlockColumns ] = [ header.rowsOfInputs[1], header.columnsOfInputs[1] ];
-    const [ blockRows, blockColumns ] = [ header.rowsOfInputs[2], header.columnsOfInputs[2] ];
-    const n = columns / blockColumns;
-    const biidx = 2; //inputs.indexOf(bi);
-    const block = bistride === istride ? Array.from({ length: n }, (_, i) => input.subarray(i * istride * blockColumns, (i+1) * istride * blockColumns)) : null;
-    let b, i, j, ij, oj;
-
-    // for each block
-    for(b = 0; b < n; b++) {
-        // copy block[b] to bi
-        if(block != null)
-            inputs[biidx] = block[b];
-        else for(oj = 0, ij = b * istride * blockColumns, j = 0; j < blockColumns; j++, oj += bistride, ij += istride) {
-            for(i = 0; i < blockRows; i++)
-                bi[oj + i] = input[ij + i];
-        }
-
-        // call mapfn(bi, index)
-        index[0] = b;
-        this.subroutine('mapfn', header, inputs);
-
-        // copy mapfn to outputBlock[b]
-        for(oj = b * outputBlockColumns * stride, ij = 0, j = 0; j < outputBlockColumns; j++, oj += stride, ij += mstride) {
-            for(i = 0; i < outputBlockRows; i++)
-                output[oj + i] = mapfn[ij + i];
-        }
-    }
-
-    // restore pointer
-    inputs[biidx] = bi;
 }

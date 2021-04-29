@@ -1746,7 +1746,7 @@ The result of the *reduce* operation will be *Ab*. It is required that, for all 
 * `fn: Function`. A function returning a `SpeedyMatrixExpr` for each block of the input matrix. It receives four arguments:
     * `accumulator: SpeedyMatrixExpr`. The matrix returned on the previous invocation of `fn`. On the first invocation, this is set to `initialMatrix`.
     * `currentBlock: SpeedyMatrixExpr`. A block of the input matrix. The left-most block is used on the first invocation of `fn`. The block next to it is used on the second invocation, and so on.
-    * `index: number`. The index of the current block. The left-most block has index 0. The block next to it has index 1, and so on.
+    * `index: SpeedyMatrixExpr`. A 1x1 matrix whose entry is the index of `currentBlock`. The left-most block of the input matrix has index 0. The block next to it has index 1, and so on.
     * `matrix: SpeedyMatrixExpr`. The input matrix.
 * `initialMatrix: SpeedyMatrixExpr`. A matrix used on the first invocation of `fn` as the `accumulator`.
 
