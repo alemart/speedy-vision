@@ -492,7 +492,7 @@ var speedyMatchers =
             let message = pass ?
                 `Arrays elements are expected not to be greater than or equal to, elementwise` :
                 `Arrays elements are expected to be greater than or equal to, elementwise, but ${(a.length > b.length ? a : b).filter((_, i) => a[i] < b[i]).length} elements are less than. ` +
-                `The maximum difference between these elements is ${(a.length > b.length ? a : b).map((_, i) => b[i] - a[i]).reduce((m, x) => Math.max(m, x), 0)}`
+                `The maximum difference between these elements is ${(a.length > b.length ? a : b).map((_, i) => b[i] - a[i]).reduce((m, x) => Math.max(m, x), 0)}`;
 
             return { pass, message };
         }
@@ -509,7 +509,7 @@ var speedyMatchers =
             let message = pass ?
                 `Arrays elements are expected not to be greater than, elementwise` :
                 `Arrays elements are expected to be greater than, elementwise, but ${(a.length > b.length ? a : b).filter((_, i) => a[i] <= b[i]).length} elements are less than or equal to. ` +
-                `The maximum difference between these elements is ${(a.length > b.length ? a : b).map((_, i) => b[i] - a[i]).reduce((m, x) => Math.max(m, x), 0)}`
+                `The maximum difference between these elements is ${(a.length > b.length ? a : b).map((_, i) => b[i] - a[i]).reduce((m, x) => Math.max(m, x), 0)}`;
 
             return { pass, message };
         }
@@ -526,7 +526,7 @@ var speedyMatchers =
             let message = pass ?
                 `Arrays elements are expected not to be less than or equal to, elementwise` :
                 `Arrays elements are expected to be less than or equal to, elementwise, but ${(a.length > b.length ? a : b).filter((_, i) => a[i] > b[i]).length} elements are greater than. ` +
-                `The maximum difference between these elements is ${(a.length > b.length ? a : b).map((_, i) => a[i] - b[i]).reduce((m, x) => Math.max(m, x), 0)}`
+                `The maximum difference between these elements is ${(a.length > b.length ? a : b).map((_, i) => a[i] - b[i]).reduce((m, x) => Math.max(m, x), 0)}`;
 
             return { pass, message };
         }
@@ -543,7 +543,23 @@ var speedyMatchers =
             let message = pass ?
                 `Arrays elements are expected not to be less than, elementwise` :
                 `Arrays elements are expected to be less than, elementwise, but ${(a.length > b.length ? a : b).filter((_, i) => a[i] >= b[i]).length} elements are greater than or equal to. ` +
-                `The maximum difference between these elements is ${(a.length > b.length ? a : b).map((_, i) => a[i] - b[i]).reduce((m, x) => Math.max(m, x), 0)}`
+                `The maximum difference between these elements is ${(a.length > b.length ? a : b).map((_, i) => a[i] - b[i]).reduce((m, x) => Math.max(m, x), 0)}`;
+
+            return { pass, message };
+        }
+    }),
+
+    toBeElementwiseNaN: util =>
+    ({
+        compare(a)
+        {
+            let pass = true;
+            for(let i = 0; i < a.length && pass; i++)
+                pass = pass && Number.isNaN(a[i]);
+
+            let message = pass ?
+                `Not all arrays elements are expected to be NaN, but ${a.filter(x => Number.isNaN(x)).length} elements are NaN.` :
+                `All arrays elements are expected to be NaN, but ${a.filter(x => !Number.isNaN(x)).length} elements are not NaN.`;
 
             return { pass, message };
         }

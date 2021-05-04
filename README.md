@@ -26,6 +26,8 @@ Build real-time stuff with **speedy-vision.js**, a GPU-accelerated Computer Visi
   * Efficient computations with Web Workers & Typed Arrays
   * Solve linear systems of equations
   * QR decomposition
+* Geometric transformations
+  * Homography matrix
 
 ... and more in development!
 
@@ -82,6 +84,7 @@ If you just want to reach out for non-technical enquiries, contact me at alemart
     * [Functional programming](#functional-programming)
     * [Linear Algebra](#linear-algebra)
     * [Misc. Utilities](#misc-utilities)
+  * [Geometric transformations](#geometric-transformations)
   * [Extras](#extras)
     * [Promises](#promises)
     * [Utilities](#utilities)
@@ -2010,6 +2013,55 @@ await A.assign(B.setTo(I));
 
 await A.print(); // identity matrix
 await B.print(); // identity matrix
+```
+
+
+### Geometric transformations
+
+##### Speedy.Matrix.Perspective()
+
+`Speedy.Matrix.Perspective(source: SpeedyPoint2[], destination: SpeedyPoint2[]): SpeedyMatrixExpr`
+`Speedy.Matrix.Perspective(source: SpeedyMatrixExpr, destination: SpeedyMatrixExpr): SpeedyMatrixExpr`
+
+Compute a perspective transform (homography matrix) from four correspondences of points.
+
+###### Arguments
+
+* `source: SpeedyPoint2[]`. An array of 4 points representing the corners of the source quadrilateral.
+* `source: SpeedyMatrixExpr`. A 2x4 matrix with the coordinates of 4 points (one per column) representing the corners of the source quadrilateral.
+* `destination: SpeedyPoint2[]`. An array of 4 points representing the corners of the destination quadrilateral.
+* `destination: SpeedyMatrixExpr`. A 2x4 matrix with the coordinates of 4 points (one per column) representing the corners of the destination quadrilateral.
+
+###### Returns
+
+A 3x3 homography matrix.
+
+###### Example
+
+```js
+const srcQuad = [
+    Speedy.Point2(0, 0),
+    Speedy.Point2(1, 0),
+    Speedy.Point2(1, 1),
+    Speedy.Point2(0, 1)
+];
+
+const dstQuad = [
+    Speedy.Point2(0, 0),
+    Speedy.Point2(3, 0),
+    Speedy.Point2(3, 2),
+    Speedy.Point2(0, 2)
+];
+
+const homography = Speedy.Matrix.Perspective(srcQuad, dstQuad);
+await homography.print();
+
+//
+// Result:
+// [ 3  0  0 ]
+// [ 0  2  0 ]
+// [ 0  0  1 ]
+//
 ```
 
 

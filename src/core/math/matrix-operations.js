@@ -695,3 +695,20 @@ export class MatrixOperationReduce extends MatrixOperationWithSubroutine
         super('reduce', 6, outputShape, ['reducefn']);
     }
 }
+
+/**
+ * Compute a homography matrix using 4 correspondences of points
+ */
+export class MatrixOperationHomography4p extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {MatrixShape} leftShape shape of the left operand
+     * @param {MatrixShape} rightShape shape of the right operand
+     */
+    constructor(leftShape, rightShape)
+    {
+        Utils.assert(leftShape.equals(rightShape));
+        super('homography4p', 2, new MatrixShape(3, 3, leftShape.dtype));
+    }
+}

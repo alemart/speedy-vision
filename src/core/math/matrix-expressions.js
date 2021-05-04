@@ -53,6 +53,7 @@ import {
     MatrixOperationSort,
     MatrixOperationMap,
     MatrixOperationReduce,
+    MatrixOperationHomography4p,
 } from './matrix-operations';
 
 // constants
@@ -68,7 +69,7 @@ const matrixOperationsQueue = MatrixOperationsQueue.instance;
  * All expressions must be immutable from the outside
  * @abstract
  */
-class SpeedyMatrixExpr
+export class SpeedyMatrixExpr
 {
     /**
      * Constructor
@@ -1603,13 +1604,13 @@ export class SpeedyMatrixConstantExpr extends SpeedyMatrixExpr
 {
     /**
      * Constructor
-     * @param {SpeedyMatrixExpr} expr the expression to be made constant
+     * @param {SpeedyMatrixExpr} expr the expression to be made constant, possibly a lvalue
      */
     constructor(expr)
     {
         super(expr._shape);
 
-        /** @type {SpeedyMatrixExpr} the expression to be made constant */
+        /** @type {SpeedyMatrixExpr} the expression to be made constant, possibly a lvalue */
         this._expr = expr;
     }
 
@@ -2147,6 +2148,30 @@ class SpeedyMatrixSortExpr extends SpeedyMatrixTempExpr
                 );
             });
         });
+    }
+}
+
+
+
+// ==============================================
+// EXTERNAL UTILITIES
+// ==============================================
+
+/**
+ * Compute a homography matrix using 4 correspondences of points
+ */
+export class SpeedyMatrixHomography4pExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} source 2x4 matrix: source points (ui, vi)
+     * @param {SpeedyMatrixExpr} destination 2x4 matrix: destination points (xi, vi)
+     */
+    constructor(source, destination)
+    {
+        Utils.assert(source._shape.rows === 2 && source._shape.columns === 4);
+        Utils.assert(source._shape.equals(destination._shape));
+        super(source, destination, new MatrixOperationHomography4p(source._shape, destination._shape));
     }
 }
 

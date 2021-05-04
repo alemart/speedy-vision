@@ -27,6 +27,7 @@ const LinAlgLib = {
     ...require('./qr'),
     ...require('./sequence'),
     ...require('./functional'),
+    ...require('./homography'),
     ...require('./utils'),
 };
 
