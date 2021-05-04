@@ -147,6 +147,9 @@ window.onload = async function()
     // create a canvas to display the features
     const canvas = createCanvas(media.width, media.height, video.title);
 
+    // input fields
+    const kernelElement = [...(new Array(9)).keys()].map(k => document.getElementById('kernel-' + k));
+
     // setup the <select> element
     const templateSelector = document.getElementById('template');
     for(let templateName in template) {
@@ -164,7 +167,6 @@ window.onload = async function()
     };
 
     // update the pipeline as soon as a text field is changed
-    const kernelElement = [...Array(9).keys()].map(k => document.getElementById('kernel-' + k));
     for(let inputField of kernelElement)
         inputField.oninput = updatePipeline;
 
