@@ -15,6 +15,8 @@ Build real-time stuff with **speedy-vision.js**, a GPU-accelerated Computer Visi
   * LK optical flow
 * Feature matching
   * Soon
+* Geometric transformations
+  * Perspective transform / homography matrix
 * Image processing
   * Greyscale
   * Gaussian blur & box blur
@@ -26,8 +28,6 @@ Build real-time stuff with **speedy-vision.js**, a GPU-accelerated Computer Visi
   * Efficient computations with Web Workers & Typed Arrays
   * Solve linear systems of equations
   * QR decomposition
-* Geometric transformations
-  * Homography matrix
 
 ... and more in development!
 
@@ -656,7 +656,7 @@ Coming soon!
 
 ### Image processing
 
-Image processing is vital in Computer Vision applications. Speedy lets you transform images in multiple ways using the `SpeedyPipeline` interface. A `SpeedyPipeline` encodes a sequence of operations that take an image (or video) as input and give you an image as output. These operations are executed on the GPU. Furthermore, a pipeline is described using method chaining (see the example below).
+Image processing is vital in Computer Vision applications. Speedy lets you transform images in multiple ways using the `SpeedyPipeline` interface. A `SpeedyPipeline` encodes a sequence of operations that take an image (or video) as input and give you an image as output. These operations are executed on the GPU. Furthermore, a pipeline is described using method chaining (see the examples below).
 
 #### Creating a pipeline
 
@@ -1786,7 +1786,7 @@ console.log(norm); // 4
 
 `SpeedyMatrixExpr.sort(blockRows: number, blockColumns: number, cmp: Function): SpeedyMatrixExpr`
 
-This operation is analogous to `Array.prototype.sort()`. Given a comparison function `cmp` and a *m* x *bn* input matrix *M* split into *b* blocks *B1*, *B2*, ..., *Bb* of equal size:
+This operation is analogous to `Array.prototype.sort()`. Given a comparison function `cmp` and a *m* x *bn* input matrix *M* split into *b* blocks *B1*, *B2*, ..., *Bb* of equal shape (*m* x *n*):
 
 ```
 M = [ B1 | B2 | ... | Bj | ... | Bb ]
@@ -1799,13 +1799,13 @@ M = [ B1 | B2 | ... | Bj | ... | Bb ]
 * `blockRows: number`. Number of rows of each block. This **must** be set to the number of rows of the input matrix. This parameter is required only for clarity.
 * `blockColumns: number`. Number of columns of each block. The number of columns of the input matrix must be a multiple of this value.
 * `cmp: Function`. A function returning a 1x1 `SpeedyMatrixExpr` given two `SpeedyMatrixExpr` objects corresponding to distinct blocks `Bi` and `Bj` of the input matrix. `cmp` must always return the same result given the same pair of blocks. The entry of the output must be:
-    * negative if `Bi` must precede `Bj` (to precede means: to appear before when reading the matrix from left to right)
+    * negative if `Bi` must precede `Bj` (i.e., if `Bi` must appear before `Bj` when reading the output matrix from left to right)
     * positive if `Bj` must precede `Bi`
     * zero if the relative order of `Bi` and `Bj` doesn't matter
 
 ###### Returns
 
-The input matrix. Its data will be rearranged.
+The sorted matrix.
 
 ###### Example
 
