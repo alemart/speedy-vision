@@ -30,6 +30,8 @@ import { SpeedyPromise } from '../utils/speedy-promise';
  * 
  * SpeedyPipeline's methods are chainable: use them to
  * create your own sequence of image operations
+ *
+ * @typedef {(object|()=>object)} PipelineOperationOptions
  */
 export class SpeedyPipeline
 {
@@ -81,14 +83,17 @@ export class SpeedyPipeline
      * @param {SpeedyTexture} texture input texture
      * @param {SpeedyGPU} gpu gpu attached to the media
      * @param {SpeedyMedia} media media object
-     * @returns {SpeedyTexture} output texutre
+     * @param {number} [cnt] loop counter
+     * @returns {SpeedyPromise<SpeedyTexture>} output texutre
      */
-    _run(texture, gpu, media)
+    _run(texture, gpu, media, cnt = 0)
     {
-        for(let i = 0; i < this._operations.length; i++)
-            texture = this._operations[i].run(texture, gpu, media);
+        if(cnt >= this._operations.length)
+            return SpeedyPromise.resolve(texture);
 
-        return texture;
+        return this._operations[cnt].run(texture, gpu, media).then(texture =>
+            this._run(texture, gpu, media, cnt + 1)
+        );
     }
 
 
@@ -140,7 +145,7 @@ export class SpeedyPipeline
 
     /**
      * Image smoothing
-     * @param {object} [options]
+     * @param {PipelineOperationOptions} [options]
      * @returns {SpeedyPipeline}
      */
     blur(options = {})
@@ -165,7 +170,7 @@ export class SpeedyPipeline
 
     /**
      * Image normalization
-     * @param {object} [options]
+     * @param {PipelineOperationOptions} [options]
      * @returns {SpeedyPipeline}
      */
     normalize(options = {})
@@ -177,7 +182,7 @@ export class SpeedyPipeline
 
     /**
      * Nightvision
-     * @param {object|Function<object>} [options]
+     * @param {PipelineOperationOptions} [options]
      * @returns {SpeedyPipeline}
      */
     nightvision(options = {})

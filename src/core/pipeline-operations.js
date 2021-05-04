@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,15 +21,16 @@
 
 import { ColorFormat } from '../utils/types';
 import { Utils } from '../utils/utils';
-import { GLUtils } from '../gpu/gl-utils';
+import { SpeedyPromise } from '../utils/speedy-promise';
 import { NotSupportedError, IllegalArgumentError } from '../utils/errors';
 
 export const PipelineOperation = { };
 
 /**
  * Abstract basic operation
+ * @abstract
  */
-/* abstract */ class SpeedyPipelineOperation
+class SpeedyPipelineOperation
 {
     /**
      * Class constructor
@@ -41,15 +42,15 @@ export const PipelineOperation = { };
     }
 
     /**
-     * Runs the pipeline operation
-     * @param {SpeedyTexture} texture
+     * Run the pipeline operation
+     * @param {SpeedyTexture} texture input texture
      * @param {SpeedyGPU} gpu
      * @param {SpeedyMedia} [media]
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyPromise<SpeedyTexture>}
      */
     run(texture, gpu, media)
     {
-        return texture;
+        return SpeedyPromise.resolve(texture);
     }
 
     /**
@@ -61,7 +62,7 @@ export const PipelineOperation = { };
 
     /**
      * Save an options object
-     * @param {object|()=>object} options user-passed parameter
+     * @param {PipelineOperationOptions} options user-passed parameter
      * @param {object} [defaultOptions]
      * @returns {()=>object}
      */
@@ -91,6 +92,13 @@ export const PipelineOperation = { };
  */
 PipelineOperation.ConvertToGreyscale = class extends SpeedyPipelineOperation
 {
+    /**
+     * Run the pipeline operation
+     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyMedia} [media]
+     * @returns {SpeedyPromise<SpeedyTexture>}
+     */
     run(texture, gpu, media)
     {
         if(media._colorFormat == ColorFormat.RGB)
@@ -99,7 +107,7 @@ PipelineOperation.ConvertToGreyscale = class extends SpeedyPipelineOperation
             throw new NotSupportedError(`Can't convert image to greyscale: unknown color format`);
 
         media._colorFormat = ColorFormat.Greyscale;
-        return texture;
+        return SpeedyPromise.resolve(texture);
     }
 }
 
@@ -116,7 +124,7 @@ PipelineOperation.Blur = class extends SpeedyPipelineOperation
 {
     /**
      * Blur operation
-     * @param {object|()=>object} [options]
+     * @param {PipelineOperationOptions} [options]
      */
     constructor(options = {})
     {
@@ -129,6 +137,13 @@ PipelineOperation.Blur = class extends SpeedyPipelineOperation
         });
     }
 
+    /**
+     * Run the pipeline operation
+     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyMedia} [media]
+     * @returns {SpeedyPromise<SpeedyTexture>}
+     */
     run(texture, gpu, media)
     {
         const { filter, size } = this._loadOptions();
@@ -140,8 +155,9 @@ PipelineOperation.Blur = class extends SpeedyPipelineOperation
             throw new IllegalArgumentError(`Invalid kernel size: ${size}`);
         
         // run filter
-        let fname = filter == 'gaussian' ? 'gauss' : 'box';
-        return gpu.programs.filters[fname + size](texture);
+        const fname = (filter == 'gaussian' ? 'gauss' : 'box') + size;
+        const output = gpu.programs.filters[fname](texture);
+        return SpeedyPromise.resolve(output);
     }
 }
 
@@ -190,6 +206,13 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
         this._gl = null;
     }
 
+    /**
+     * Run the pipeline operation
+     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyMedia} [media]
+     * @returns {SpeedyPromise<SpeedyTexture>}
+     */
     run(texture, gpu, media)
     {
         // lost context?
@@ -218,14 +241,18 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
         }
 
         // convolve
-        return gpu.programs.filters[this._method[1]](
+        const output = gpu.programs.filters[this._method[1]](
             texture,
             this._texKernel,
             this._scale,
             this._offset
         );
+        return SpeedyPromise.resolve(output);
     }
 
+    /**
+     * Cleanup
+     */
     release()
     {
         if(this._texKernel != null) {
@@ -244,7 +271,7 @@ PipelineOperation.Normalize = class extends SpeedyPipelineOperation
 {
     /**
      * Normalize operation
-     * @param {object|()=>object} [options]
+     * @param {PipelineOperationOptions} [options]
      */
     constructor(options = {})
     {
@@ -257,16 +284,26 @@ PipelineOperation.Normalize = class extends SpeedyPipelineOperation
         });
     }
 
+    /**
+     * Run the pipeline operation
+     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyMedia} [media]
+     * @returns {SpeedyPromise<SpeedyTexture>}
+     */
     run(texture, gpu, media)
     {
         const { min, max } = this._loadOptions();
+        let output;
 
         if(media._colorFormat == ColorFormat.RGB)
-            return gpu.programs.enhancements.normalizeColoredImage(texture, min, max);
+            output = gpu.programs.enhancements.normalizeColoredImage(texture, min, max);
         else if(media._colorFormat == ColorFormat.Greyscale)
-            return gpu.programs.enhancements.normalizeGreyscaleImage(texture, min, max);
+            output = gpu.programs.enhancements.normalizeGreyscaleImage(texture, min, max);
         else
             throw new NotSupportedError('Invalid color format');
+
+        return SpeedyPromise.resolve(output);
     }
 }
 
@@ -292,15 +329,25 @@ PipelineOperation.Nightvision = class extends SpeedyPipelineOperation
         });
     }
 
+    /**
+     * Run the pipeline operation
+     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyMedia} [media]
+     * @returns {SpeedyPromise<SpeedyTexture>}
+     */
     run(texture, gpu, media)
     {
         const { gain, offset, decay, quality } = this._loadOptions();
+        let output;
 
         if(media._colorFormat == ColorFormat.RGB)
-            return gpu.programs.enhancements.nightvision(texture, gain, offset, decay, quality, false);
+            output = gpu.programs.enhancements.nightvision(texture, gain, offset, decay, quality, false);
         else if(media._colorFormat == ColorFormat.Greyscale)
-            return gpu.programs.enhancements.nightvision(texture, gain, offset, decay, quality, true);
+            output = gpu.programs.enhancements.nightvision(texture, gain, offset, decay, quality, true);
         else
             throw new NotSupportedError('Invalid color format');
+
+        return SpeedyPromise.resolve(output);
     }
 }

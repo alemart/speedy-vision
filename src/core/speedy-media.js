@@ -253,17 +253,17 @@ export class SpeedyMedia
         // create a lightweight clone
         return this.clone({ lightweight: true }).then(media => {
             // upload the media to the GPU
-            let texture = media._gpu.upload(media._source.data);
+            const texture = media._gpu.upload(media._source.data);
 
             // run the pipeline
-            texture = pipeline._run(texture, media._gpu, media);
-
-            // convert to bitmap
-            media._gpu.programs.utils.output(texture);
-            return createImageBitmap(media._gpu.canvas, 0, 0, media.width, media.height).then(bitmap => {
-                return SpeedyMediaSource.load(bitmap).then(source => {
-                    media._source = source;
-                    return media;
+            return pipeline._run(texture, media._gpu, media).turbocharge().then(texture => {
+                // convert to bitmap
+                media._gpu.programs.utils.output(texture);
+                return createImageBitmap(media._gpu.canvas, 0, 0, media.width, media.height).then(bitmap => {
+                    return SpeedyMediaSource.load(bitmap).then(source => {
+                        media._source = source;
+                        return media;
+                    });
                 });
             });
         });
