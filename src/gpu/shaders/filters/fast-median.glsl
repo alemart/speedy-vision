@@ -107,7 +107,7 @@ void main()
     int i, j, k = 0;
     for(j = -3; j <= 3; j++) {
         for(i = -3; i <= 3; i++) {
-            p[k++] = pixelAtShortOffset(image, ivec2(i, j)).g;
+            p[k++] = pixelAtLongOffset(image, ivec2(i, j)).g; // i, j are not constant
         }
     }
 

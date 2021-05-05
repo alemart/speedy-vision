@@ -91,8 +91,8 @@ export class SpeedyPipeline
         if(cnt >= this._operations.length)
             return SpeedyPromise.resolve(texture);
 
-        return this._operations[cnt].run(texture, gpu, media).then(texture =>
-            this._run(texture, gpu, media, cnt + 1)
+        return this._operations[cnt].run(texture, gpu, media).then(nextTexture =>
+            this._run(nextTexture, gpu, media, cnt + 1)
         );
     }
 
@@ -152,6 +152,18 @@ export class SpeedyPipeline
     {
         return this._spawn(
             new PipelineOperation.Blur(options)
+        );
+    }
+
+    /**
+     * Median filter
+     * @param {PipelineOperationOptions} [options]
+     * @returns {SpeedyPipeline}
+     */
+    median(options = {})
+    {
+        return this._spawn(
+            new PipelineOperation.Median(options)
         );
     }
 

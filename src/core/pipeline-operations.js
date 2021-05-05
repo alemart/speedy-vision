@@ -162,6 +162,49 @@ PipelineOperation.Blur = class extends SpeedyPipelineOperation
 }
 
 /**
+ * Median filter
+ */
+PipelineOperation.Median = class extends SpeedyPipelineOperation
+{
+    /**
+     * Median filter
+     * @param {PipelineOperationOptions} [options]
+     */
+    constructor(options = {})
+    {
+        super();
+
+        // save options
+        this._saveOptions(options, {
+            size: 5 // 3 | 5 | 7
+        });
+    }
+
+    /**
+     * Run the pipeline operation
+     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyMedia} [media]
+     * @returns {SpeedyPromise<SpeedyTexture>}
+     */
+    run(texture, gpu, media)
+    {
+        const { size } = this._loadOptions();
+
+        // validate options
+        if(size != 3 && size != 5 && size != 7)
+            throw new IllegalArgumentError(`Invalid window size: ${size}`);
+        else if(media._colorFormat != ColorFormat.Greyscale)
+            throw new NotSupportedError(`The median filter requires a greyscale image as input`);
+
+        // run filter
+        const fname = 'median' + size;
+        const output = gpu.programs.filters[fname](texture);
+        return SpeedyPromise.resolve(output);
+    }
+}
+
+/**
  * Image convolution
  */
 PipelineOperation.Convolve = class extends SpeedyPipelineOperation

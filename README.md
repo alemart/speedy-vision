@@ -763,6 +763,14 @@ Blurs the media. Available options:
 * `filter: string`. Name of the smoothing filter. One of the following: `"gaussian"`, `"box"`. Defaults to `"gaussian"`.
 * `size: number`. Kernel size. One of the following: `3`, `5` or `7`. Defaults to `5`.
 
+###### .median
+
+`SpeedyPipeline.median(options?: PipelineOperationOptions): SpeedyPipeline`
+
+Blur using a median filter. The input image must be greyscale. Available options:
+
+* `size: number`. Window size. One of the following: `3`, `5` or `7`. Defaults to `5`.
+
 ###### .convolve
 
 `SpeedyPipeline.convolve(kernel: Array<number>, divisor?: number): SpeedyPipeline`
