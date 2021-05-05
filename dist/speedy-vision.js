@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-05-05T02:51:08.128Z
+ * Date: 2021-05-05T18:07:34.741Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -3161,12 +3161,13 @@ function sort(header, output, inputs)
 /*!********************************************!*\
   !*** ./src/core/math/linalg/homography.js ***!
   \********************************************/
-/*! exports provided: homography4p */
+/*! exports provided: homography4p, apply_homography */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "homography4p", function() { return homography4p; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "apply_homography", function() { return apply_homography; });
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -3416,6 +3417,42 @@ function homography4p(header, output, inputs)
     output[0 + 2 * stride] = c;
     output[1 + 2 * stride] = f;
     output[2 + 2 * stride] = i;
+}
+
+
+/**
+ * Apply a homography matrix to a set of 2D points
+ * @param {object} header
+ * @param {ArrayBufferView} output
+ * @param {ArrayBufferView[]} inputs
+ */
+function apply_homography(header, output, inputs)
+{
+    const { columns, stride } = header;
+    const [ hom, pts ] = inputs;
+    const [ hstride, pstride ] = header.strideOfInputs;
+
+    // read the entries of the homography
+    const h00 = hom[0];
+    const h10 = hom[1];
+    const h20 = hom[2];
+    const h01 = hom[0 + hstride];
+    const h11 = hom[1 + hstride];
+    const h21 = hom[2 + hstride];
+    const h02 = hom[0 + hstride + hstride];
+    const h12 = hom[1 + hstride + hstride];
+    const h22 = hom[2 + hstride + hstride];
+
+    // for each point (column of pts), apply the homography
+    // (we use homogeneous coordinates internally)
+    let j, ij, oj, x, y, d;
+    for(ij = oj = j = 0; j < columns; j++, ij += pstride, oj += stride) {
+        x = pts[ij];
+        y = pts[ij + 1];
+        d = h20 * x + h21 * y + h22;
+        output[oj] = (h00 * x + h01 * y + h02) / d;
+        output[oj + 1] = (h10 * x + h11 * y + h12) / d;
+    }
 }
 
 /***/ }),
@@ -4741,25 +4778,79 @@ class SpeedyMatrixExprFactory extends Function
     // ==============================================
 
     /**
+     * Convert an array of points to a matrix representation
+     * @param {SpeedyPoint2[]} points a non-empty array
+     * @param {MatrixDataType} [dtype] data type of the elements of the matrix
+     * @returns {SpeedyMatrixExpr} 2 x n matrix with the coordinates of the points
+     */
+    fromPoints(points, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_1__["MatrixType"].default)
+    {
+        if(!(Array.isArray(points) && points.length > 0))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't create matrix from points: ${points}`);
+
+        const entries = [], n = points.length;
+        for(let i = 0; i < n; i++) {
+            entries.push(points[i].x);
+            entries.push(points[i].y);
+        }
+
+        return this._create(2, n, entries, dtype);
+    }
+
+    /**
+     * Convert a 2 x n matrix to an array of points
+     * @param {SpeedyMatrixExpr} matrix
+     * @returns {SpeedyPromise<SpeedyPoint2[]>}
+     */
+    toPoints(matrix)
+    {
+        if(matrix.rows !== 2)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't convert ${matrix._shape.toString()} matrix to points`);
+
+        return matrix.read().then(entries => {
+            const points = [], n = entries.length;
+            for(let i = 0; i < n; i += 2)
+                points.push(new _speedy_point__WEBPACK_IMPORTED_MODULE_4__["SpeedyPoint2"](entries[i], entries[i+1]));
+
+            return points;
+        });
+    }
+
+
+
+
+    // ==============================================
+    // Perspective transformation
+    // ==============================================
+
+    /**
      * Compute a perspective transformation using 4 correspondences of points
-     * @param {SpeedyMatrixExpr|SpeedyPoint2[]} source 2x4 matrix or 4 points (ui, vi)
-     * @param {SpeedyMatrixExpr|SpeedyPoint2[]} destination 2x4 matrix or 4 points (xi, yi)
+     * @param {SpeedyMatrixExpr} source 2x4 matrix with coordinates of 4 points (ui, vi)
+     * @param {SpeedyMatrixExpr} destination 2x4 matrix with coordinates of 4 points (xi, yi)
      * @returns {SpeedyMatrixExpr} 3x3 matrix: perspective transformation
      */
     Perspective(source, destination)
     {
-        if(source.constructor === destination.constructor) {
-            if(Array.isArray(source) && source.length === 4 && source[0] instanceof _speedy_point__WEBPACK_IMPORTED_MODULE_4__["SpeedyPoint2"]) {
-                source = this._create(2, 4, [ source[0].x, source[0].y, source[1].x, source[1].y, source[2].x, source[2].y, source[3].x, source[3].y ]);
-                destination = this._create(2, 4, [ destination[0].x, destination[0].y, destination[1].x, destination[1].y, destination[2].x, destination[2].y, destination[3].x, destination[3].y ]);
-                return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixHomography4pExpr"](source, destination);
-            }
-            else if(source instanceof _matrix_expressions__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixExpr"])
-                return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixHomography4pExpr"](source, destination);
-        }
+        if(!(source.rows === 2 && source._shape.equals(destination._shape)))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't compute perspective transformation using ${source} and ${destination}. 4 correspondences of points are required`);
 
+        return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixHomography4pExpr"](source, destination);
+    }
 
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't compute perspective transformation using ${source} and ${destination}. 4 correspondences of points are required`);
+    /**
+     * Apply a homography matrix to a set of 2D points
+     * @param {SpeedyMatrixExpr} homography homography matrix (3x3)
+     * @param {SpeedyMatrixExpr} points a set of n 2D points (2xn)
+     * @returns {SpeedyMatrixExpr} a 2xn matrix
+     */
+    applyPerspective(homography, points)
+    {
+        if(homography.rows !== 3 || homography.columns !== 3)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't apply perspective transformation: invalid homography matrix (${homography._shape.toString()})`);
+        else if(points.rows !== 2)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't apply perspective transform: invalid set of points (${points._shape.toString()})`);
+
+        return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixApplyHomographyExpr"](homography, points);
     }
 }
 
@@ -4769,7 +4860,7 @@ class SpeedyMatrixExprFactory extends Function
 /*!*********************************************!*\
   !*** ./src/core/math/matrix-expressions.js ***!
   \*********************************************/
-/*! exports provided: SpeedyMatrixExpr, SpeedyMatrixElementaryExpr, SpeedyMatrixConstantExpr, SpeedyMatrixHomography4pExpr */
+/*! exports provided: SpeedyMatrixExpr, SpeedyMatrixElementaryExpr, SpeedyMatrixConstantExpr, SpeedyMatrixHomography4pExpr, SpeedyMatrixApplyHomographyExpr */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -4778,6 +4869,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixElementaryExpr", function() { return SpeedyMatrixElementaryExpr; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixConstantExpr", function() { return SpeedyMatrixConstantExpr; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixHomography4pExpr", function() { return SpeedyMatrixHomography4pExpr; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixApplyHomographyExpr", function() { return SpeedyMatrixApplyHomographyExpr; });
 /* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix */ "./src/core/math/matrix.js");
 /* harmony import */ var _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./bound-matrix-operation */ "./src/core/math/bound-matrix-operation.js");
 /* harmony import */ var _matrix_shape__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix-shape */ "./src/core/math/matrix-shape.js");
@@ -6937,6 +7029,24 @@ class SpeedyMatrixHomography4pExpr extends SpeedyMatrixBinaryExpr
     }
 }
 
+/**
+ * Apply a homography matrix to a set of 2D points
+ */
+class SpeedyMatrixApplyHomographyExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} hom homography matrix (3x3)
+     * @param {SpeedyMatrixExpr} pts set of n 2D points (2xn)
+     */
+    constructor(hom, pts)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(hom.rows === 3 && hom.columns === 3);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(pts.rows === 2);
+        super(hom, pts, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationApplyHomography"](hom._shape, pts._shape));
+    }
+}
+
 
 
 
@@ -7006,7 +7116,7 @@ class SpeedyMatrixLSSolveNodeExpr extends SpeedyMatrixBinaryExpr
         else if(vectorB.rows != m || vectorB.columns != 1)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Expected a ${m} x 1 column-vector, but found a ${vectorB.rows} x ${vectorB.columns} matrix`);
 
-        super(matrixA, vectorB, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationLSSolve"](matrixA._shape, vectorB._shape));
+        super(matrixA, vectorB, new MatrixOperationLSSolve(matrixA._shape, vectorB._shape));
     }
 }
 
@@ -7288,7 +7398,7 @@ class MatrixOperationsQueue
 /*!********************************************!*\
   !*** ./src/core/math/matrix-operations.js ***!
   \********************************************/
-/*! exports provided: MatrixOperation, MatrixOperationNop, MatrixOperationFill, MatrixOperationCopy, MatrixOperationTranspose, MatrixOperationInverse, MatrixOperationAdd, MatrixOperationSubtract, MatrixOperationMultiply, MatrixOperationScale, MatrixOperationCompMult, MatrixOperationMultiplyLT, MatrixOperationMultiplyRT, MatrixOperationMultiplyVec, MatrixOperationQR, MatrixOperationQRSolve, MatrixOperationBackSubstitution, MatrixOperationLSSolve, MatrixOperationWithSubroutine, MatrixOperationSequence, MatrixOperationSort, MatrixOperationMap, MatrixOperationReduce, MatrixOperationHomography4p */
+/*! exports provided: MatrixOperation, MatrixOperationNop, MatrixOperationFill, MatrixOperationCopy, MatrixOperationTranspose, MatrixOperationInverse, MatrixOperationAdd, MatrixOperationSubtract, MatrixOperationMultiply, MatrixOperationScale, MatrixOperationCompMult, MatrixOperationMultiplyLT, MatrixOperationMultiplyRT, MatrixOperationMultiplyVec, MatrixOperationQR, MatrixOperationQRSolve, MatrixOperationBackSubstitution, MatrixOperationLSSolve, MatrixOperationWithSubroutine, MatrixOperationSequence, MatrixOperationSort, MatrixOperationMap, MatrixOperationReduce, MatrixOperationHomography4p, MatrixOperationApplyHomography */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -7317,6 +7427,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationMap", function() { return MatrixOperationMap; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationReduce", function() { return MatrixOperationReduce; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationHomography4p", function() { return MatrixOperationHomography4p; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationApplyHomography", function() { return MatrixOperationApplyHomography; });
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
@@ -8038,6 +8149,23 @@ class MatrixOperationHomography4p extends MatrixOperation
     {
         _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(leftShape.equals(rightShape));
         super('homography4p', 2, new _matrix_shape__WEBPACK_IMPORTED_MODULE_4__["MatrixShape"](3, 3, leftShape.dtype));
+    }
+}
+
+/**
+ * Apply a homography matrix to a set of points
+ */
+class MatrixOperationApplyHomography extends MatrixOperation
+{
+    /**
+     * Constructor
+     * @param {MatrixShape} homShape shape of the homography matrix (must be 3x3)
+     * @param {MatrixShape} ptsShape shape of the matrix of the input points (must be 2xn)
+     */
+    constructor(homShape, ptsShape)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(ptsShape.dtype === homShape.dtype);
+        super('apply_homography', 2, ptsShape);
     }
 }
 
@@ -8858,6 +8986,16 @@ class SpeedyPoint2
     minus(p)
     {
         return new _speedy_vector__WEBPACK_IMPORTED_MODULE_0__["SpeedyVector2"](this.x - p.x, this.y - p.y);
+    }
+
+    /**
+     * Is this point equal to p?
+     * @param {SpeedyPoint2} p
+     * @returns {boolean}
+     */
+    equals(p)
+    {
+        return this.x === p.x && this.y === p.y;
     }
 }
 
