@@ -2081,11 +2081,11 @@ Apply a perspective transformation to a set of *n* points.
 ###### Arguments
 
 * `homography: SpeedyMatrixExpr`. A homography matrix (3x3).
-* `points: SpeedyMatrixExpr`. A set of *n* points, one per column (2x*n*).
+* `points: SpeedyMatrixExpr`. A set of *n* points, one per column (2 x *n*).
 
 ###### Returns
 
-A 2x*n* matrix.
+A 2 x *n* matrix.
 
 ###### Example
 
