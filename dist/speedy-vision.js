@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-04-29T20:08:49.204Z
+ * Date: 2021-05-05T02:51:08.128Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -3157,6 +3157,269 @@ function sort(header, output, inputs)
 
 /***/ }),
 
+/***/ "./src/core/math/linalg/homography.js":
+/*!********************************************!*\
+  !*** ./src/core/math/linalg/homography.js ***!
+  \********************************************/
+/*! exports provided: homography4p */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "homography4p", function() { return homography4p; });
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * homography.js
+ * Find homography matrix
+ */
+
+/*
+
+Suppose that we want to use 4 correspondences (uk, vk) <-> (xk, yk) to
+find a homography matrix H that maps (u,v) to (x,y):
+
+    [ a  b  c ]
+H = [ d  e  f ]
+    [ g  h  i ]
+
+One way to do it is to solve the equation below (we set i = 1):
+
+[ u0  v0  1   0   0   0  -u0*x0  -v0*x0 ] [ a ]   [ x0 ]
+[ u1  v1  1   0   0   0  -u1*x1  -v1*x1 ] [ b ]   [ x1 ]
+[ u2  v2  1   0   0   0  -u2*x2  -v2*x2 ] [ c ]   [ x2 ]
+[ u3  v3  1   0   0   0  -u3*x3  -v3*x3 ] [ d ] = [ x3 ]
+[ 0   0   0   u0  v0  1  -u0*y0  -v0*y0 ] [ e ]   [ y0 ]
+[ 0   0   0   u1  v1  1  -u1*y1  -v1*y1 ] [ f ]   [ y1 ]
+[ 0   0   0   u2  v2  1  -u2*y2  -v2*y2 ] [ g ]   [ y2 ]
+[ 0   0   0   u3  v3  1  -u3*y3  -v3*y3 ] [ h ]   [ y3 ]
+
+It turns out that this equation gets a bit simpler if we transform
+points to/from the unit square centered at 0.5, i.e., [0,1] x [0,1].
+
+In fact, I can solve this equation using pen and paper and type in a
+closed formula, which I did!
+
+No Gaussian elimination, no SVD, no loops, nothing! This should run
+very fast.
+
+Note: it's also possible to solve this equation directly (without the
+unit square). However, the algebra is quite messy and I'm not sure it
+will be any better, numerically speaking, than the approach I'm taking.
+
+*/
+
+/**
+ * Find a homography using 4 correspondences of points. We'll map
+ * (u,v) to (x,y). The input matrices are expected to have the form:
+ * 
+ * [ u0  u1  u2  u3 ] [ x0  x1  x2  x3 ]
+ * [ v0  v1  v2  v3 ] [ y0  y1  y2  y3 ]
+ * 
+ * @param {object} header
+ * @param {ArrayBufferView} output
+ * @param {ArrayBufferView[]} inputs
+ */
+function homography4p(header, output, inputs)
+{
+    const stride = header.stride;
+    const sstride = header.strideOfInputs[0];
+    const dstride = header.strideOfInputs[1];
+    const src = inputs[0], dest = inputs[1];
+
+    const eps = 1e-6; // avoid division by small numbers
+    let u0, v0, u1, v1, u2, v2, u3, v3;
+    let x0, y0, x1, y1, x2, y2, x3, y3;
+    let alpha, beta, phi, chi, theta;
+    let m00, m01, m10, m11, z0, z1, det, idet;
+    let a1, b1, c1, d1, e1, f1, g1, h1, i1;
+    let a2, b2, c2, d2, e2, f2, g2, h2, i2;
+    let a, b, c, d, e, f, g, h, i;
+
+    //
+    // Initialization
+    //
+
+    // Read (ui, vi) - source
+    u0 = src[0];
+    v0 = src[1];
+    u1 = src[0 + sstride];
+    v1 = src[1 + sstride];
+    u2 = src[0 + 2 * sstride];
+    v2 = src[1 + 2 * sstride];
+    u3 = src[0 + 3 * sstride];
+    v3 = src[1 + 3 * sstride];
+
+    // Read (xi, yi) - destination
+    x0 = dest[0];
+    y0 = dest[1];
+    x1 = dest[0 + dstride];
+    y1 = dest[1 + dstride];
+    x2 = dest[0 + 2 * dstride];
+    y2 = dest[1 + 2 * dstride];
+    x3 = dest[0 + 3 * dstride];
+    y3 = dest[1 + 3 * dstride];
+
+    // This is supposed to be executed many times.
+    // Should we normalize the input/output points
+    // at this stage? Let the user decide!
+
+    // Initialize homography H
+    a = b = c = d = e = f = g = h = i = Number.NaN;
+
+    do {
+
+    //
+    // From source to unit square
+    //
+
+    // Compute a few "cross products" (signed areas)
+    alpha = (u3 - u0) * (v1 - v0) - (v3 - v0) * (u1 - u0);
+    beta = (u3 - u0) * (v2 - v0) - (v3 - v0) * (u2 - u0);
+    phi = (u1 - u0) * (v2 - v0) - (v1 - v0) * (u2 - u0);
+    chi = (u3 - u1) * (v2 - v1) - (v3 - v1) * (u2 - u1);
+    theta = -alpha;
+
+    // We require a quadrilateral, not a triangle,
+    // nor a line, nor a single point! Are 3 or 4
+    // points colinear?
+    if(
+        Math.abs(alpha) < eps || Math.abs(beta) < eps ||
+        Math.abs(phi) < eps || Math.abs(chi) < eps
+    )
+        break; // goto end;
+
+    // Set up the first row of M and z
+    if(Math.abs(u3 - u0) > Math.abs(v3 - v0)) {
+        m00 = u2 * alpha - u1 * beta;
+        m01 = v2 * alpha - v1 * beta;
+        z0 = beta - alpha;
+    }
+    else {
+        m00 = -(u2 * alpha - u1 * beta);
+        m01 = -(v2 * alpha - v1 * beta);
+        z0 = -(beta - alpha);
+    }
+
+    // Set up the second row of M and z
+    if(Math.abs(u1 - u0) > Math.abs(v1 - v0)) {
+        m10 = u3 * phi - u2 * theta;
+        m11 = v3 * phi - v2 * theta;
+        z1 = theta - phi;
+    }
+    else {
+        m10 = -(u3 * phi - u2 * theta);
+        m11 = -(v3 * phi - v2 * theta);
+        z1 = -(theta - phi);
+    }
+
+    // Solve M p = z for p = [ g  h ]^t
+    det = m00 * m11 - m01 * m10;
+    if(Math.abs(det) < eps) break; // shouldn't happen
+    idet = 1.0 / det;
+    g1 = (m11 * z0 - m01 * z1) * idet;
+    h1 = (m00 * z1 - m10 * z0) * idet;
+
+    // Find the remaining entries of the homography
+    if(Math.abs(alpha) > Math.abs(beta)) {
+        a1 = (1.0 + g1 * u1 + h1 * v1) * (v3 - v0) / (-alpha);
+        b1 = (1.0 + g1 * u1 + h1 * v1) * (u3 - u0) / alpha;
+    }
+    else {
+        a1 = (1.0 + g1 * u2 + h1 * v2) * (v3 - v0) / (-beta);
+        b1 = (1.0 + g1 * u2 + h1 * v2) * (u3 - u0) / beta;
+    }
+
+    if(Math.abs(phi) > Math.abs(theta)) {
+        d1 = (1.0 + g1 * u2 + h1 * v2) * (v1 - v0) / (-phi);
+        e1 = (1.0 + g1 * u2 + h1 * v2) * (u1 - u0) / phi;
+    }
+    else {
+        d1 = (1.0 + g1 * u3 + h1 * v3) * (v1 - v0) / (-theta);
+        e1 = (1.0 + g1 * u3 + h1 * v3) * (u1 - u0) / theta;
+    }
+
+    c1 = -a1 * u0 - b1 * v0;
+    f1 = -d1 * u0 - e1 * v0;
+    i1 = 1.0;
+
+    //
+    // From unit square to destination
+    //
+
+    // Find M and z
+    m00 = x1 - x2;
+    m01 = x3 - x2;
+    m10 = y1 - y2;
+    m11 = y3 - y2;
+    z0 = (x0 - x1) + (x2 - x3);
+    z1 = (y0 - y1) + (y2 - y3);
+
+    // Solve M p = z for p = [ g  h ]^t
+    det = m00 * m11 - m01 * m10;
+    if(Math.abs(det) < eps) break; // goto end;
+    idet = 1.0 / det;
+    g2 = (m11 * z0 - m01 * z1) * idet;
+    h2 = (m00 * z1 - m10 * z0) * idet;
+
+    // Find the remaining entries of the homography
+    a2 = g2 * x1 + (x1 - x0);
+    b2 = h2 * x3 + (x3 - x0);
+    c2 = x0;
+    d2 = g2 * y1 + (y1 - y0);
+    e2 = h2 * y3 + (y3 - y0);
+    f2 = y0;
+    i2 = 1.0;
+
+    //
+    // From source to destination
+    //
+
+    // Find homography
+    a = a2 * a1 + b2 * d1 + c2 * g1;
+    b = a2 * b1 + b2 * e1 + c2 * h1;
+    c = a2 * c1 + b2 * f1 + c2 * i1;
+    d = d2 * a1 + e2 * d1 + f2 * g1;
+    e = d2 * b1 + e2 * e1 + f2 * h1;
+    f = d2 * c1 + e2 * f1 + f2 * i1;
+    g = g2 * a1 + h2 * d1 + i2 * g1;
+    h = g2 * b1 + h2 * e1 + i2 * h1;
+    i = g2 * c1 + h2 * f1 + i2 * i1;
+
+    } while(0);
+
+    //
+    // Write the matrix
+    //
+
+    // end:
+    output[0] = a;
+    output[1] = d;
+    output[2] = g;
+    output[0 + stride] = b;
+    output[1 + stride] = e;
+    output[2 + stride] = h;
+    output[0 + 2 * stride] = c;
+    output[1 + 2 * stride] = f;
+    output[2 + 2 * stride] = i;
+}
+
+/***/ }),
+
 /***/ "./src/core/math/linalg/inverse.js":
 /*!*****************************************!*\
   !*** ./src/core/math/linalg/inverse.js ***!
@@ -3312,6 +3575,7 @@ const LinAlgLib = {
     ...__webpack_require__(/*! ./qr */ "./src/core/math/linalg/qr.js"),
     ...__webpack_require__(/*! ./sequence */ "./src/core/math/linalg/sequence.js"),
     ...__webpack_require__(/*! ./functional */ "./src/core/math/linalg/functional.js"),
+    ...__webpack_require__(/*! ./homography */ "./src/core/math/linalg/homography.js"),
     ...__webpack_require__(/*! ./utils */ "./src/core/math/linalg/utils.js"),
 };
 
@@ -4347,12 +4611,13 @@ class MatrixBuffer
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixExprFactory", function() { return SpeedyMatrixExprFactory; });
-/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix-type */ "./src/core/math/matrix-type.js");
-/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_matrix_type__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _matrix_shape__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-shape */ "./src/core/math/matrix-shape.js");
-/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix */ "./src/core/math/matrix.js");
-/* harmony import */ var _matrix_expressions__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./matrix-expressions */ "./src/core/math/matrix-expressions.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-type */ "./src/core/math/matrix-type.js");
+/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_matrix_type__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _matrix_shape__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix-shape */ "./src/core/math/matrix-shape.js");
+/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./matrix */ "./src/core/math/matrix.js");
+/* harmony import */ var _speedy_point__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./speedy-point */ "./src/core/math/speedy-point.js");
+/* harmony import */ var _matrix_expressions__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./matrix-expressions */ "./src/core/math/matrix-expressions.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -4380,11 +4645,16 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /**
  * A factory of matrix expressions
  */
 class SpeedyMatrixExprFactory extends Function
 {
+    // ==============================================
+    // Matrices with known entries
+    // ==============================================
+
     /**
      * The factory can be invoked as a function
      * This is an alias to SpeedyMatrixExprFactory._create()
@@ -4403,7 +4673,7 @@ class SpeedyMatrixExprFactory extends Function
      * @param {MatrixDataType} [dtype] data type of the elements of the matrix
      * @returns {SpeedyMatrixElementaryExpr}
      */
-    Zeros(rows, columns = rows, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_0__["MatrixType"].default)
+    Zeros(rows, columns = rows, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_1__["MatrixType"].default)
     {
         const values = (new Array(rows * columns)).fill(0);
         return this._create(rows, columns, values, dtype);
@@ -4417,7 +4687,7 @@ class SpeedyMatrixExprFactory extends Function
      * @param {MatrixDataType} [dtype] data type of the elements of the matrix
      * @returns {SpeedyMatrixElementaryExpr}
      */
-    Ones(rows, columns = rows, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_0__["MatrixType"].default)
+    Ones(rows, columns = rows, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_1__["MatrixType"].default)
     {
         const values = (new Array(rows * columns)).fill(1);
         return this._create(rows, columns, values, dtype);
@@ -4431,7 +4701,7 @@ class SpeedyMatrixExprFactory extends Function
      * @param {MatrixDataType} [dtype] data type of the elements of the matrix
      * @returns {SpeedyMatrixElementaryExpr}
      */
-    Eye(rows, columns = rows, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_0__["MatrixType"].default)
+    Eye(rows, columns = rows, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_1__["MatrixType"].default)
     {
         const values = (new Array(rows * columns)).fill(0);
         for(let j = Math.min(rows, columns) - 1; j >= 0; j--)
@@ -4449,18 +4719,47 @@ class SpeedyMatrixExprFactory extends Function
      * @param {MatrixDataType} [dtype] data type of the elements of the matrix
      * @returns {SpeedyMatrixElementaryExpr}
      */
-    _create(rows, columns = rows, values = null, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_0__["MatrixType"].default)
+    _create(rows, columns = rows, values = null, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_1__["MatrixType"].default)
     {
-        let shape = new _matrix_shape__WEBPACK_IMPORTED_MODULE_1__["MatrixShape"](rows, columns, dtype), matrix = null;
+        let shape = new _matrix_shape__WEBPACK_IMPORTED_MODULE_2__["MatrixShape"](rows, columns, dtype), matrix = null;
 
         if(values != null) {
             if(!Array.isArray(values))
-                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Can't initialize SpeedyMatrix with values ${values}`);
+                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't initialize SpeedyMatrix with values ${values}`);
             if(values.length > 0)
-                matrix = new _matrix__WEBPACK_IMPORTED_MODULE_2__["SpeedyMatrix"](shape, values);
+                matrix = new _matrix__WEBPACK_IMPORTED_MODULE_3__["SpeedyMatrix"](shape, values);
         }
 
-        return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_3__["SpeedyMatrixElementaryExpr"](shape, matrix);
+        return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixElementaryExpr"](shape, matrix);
+    }
+
+
+
+
+    // ==============================================
+    // General Utilities
+    // ==============================================
+
+    /**
+     * Compute a perspective transformation using 4 correspondences of points
+     * @param {SpeedyMatrixExpr|SpeedyPoint2[]} source 2x4 matrix or 4 points (ui, vi)
+     * @param {SpeedyMatrixExpr|SpeedyPoint2[]} destination 2x4 matrix or 4 points (xi, yi)
+     * @returns {SpeedyMatrixExpr} 3x3 matrix: perspective transformation
+     */
+    Perspective(source, destination)
+    {
+        if(source.constructor === destination.constructor) {
+            if(Array.isArray(source) && source.length === 4 && source[0] instanceof _speedy_point__WEBPACK_IMPORTED_MODULE_4__["SpeedyPoint2"]) {
+                source = this._create(2, 4, [ source[0].x, source[0].y, source[1].x, source[1].y, source[2].x, source[2].y, source[3].x, source[3].y ]);
+                destination = this._create(2, 4, [ destination[0].x, destination[0].y, destination[1].x, destination[1].y, destination[2].x, destination[2].y, destination[3].x, destination[3].y ]);
+                return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixHomography4pExpr"](source, destination);
+            }
+            else if(source instanceof _matrix_expressions__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixExpr"])
+                return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixHomography4pExpr"](source, destination);
+        }
+
+
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't compute perspective transformation using ${source} and ${destination}. 4 correspondences of points are required`);
     }
 }
 
@@ -4470,13 +4769,15 @@ class SpeedyMatrixExprFactory extends Function
 /*!*********************************************!*\
   !*** ./src/core/math/matrix-expressions.js ***!
   \*********************************************/
-/*! exports provided: SpeedyMatrixElementaryExpr, SpeedyMatrixConstantExpr */
+/*! exports provided: SpeedyMatrixExpr, SpeedyMatrixElementaryExpr, SpeedyMatrixConstantExpr, SpeedyMatrixHomography4pExpr */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixExpr", function() { return SpeedyMatrixExpr; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixElementaryExpr", function() { return SpeedyMatrixElementaryExpr; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixConstantExpr", function() { return SpeedyMatrixConstantExpr; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixHomography4pExpr", function() { return SpeedyMatrixHomography4pExpr; });
 /* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix */ "./src/core/math/matrix.js");
 /* harmony import */ var _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./bound-matrix-operation */ "./src/core/math/bound-matrix-operation.js");
 /* harmony import */ var _matrix_shape__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix-shape */ "./src/core/math/matrix-shape.js");
@@ -6065,13 +6366,13 @@ class SpeedyMatrixConstantExpr extends SpeedyMatrixExpr
 {
     /**
      * Constructor
-     * @param {SpeedyMatrixExpr} expr the expression to be made constant
+     * @param {SpeedyMatrixExpr} expr the expression to be made constant, possibly a lvalue
      */
     constructor(expr)
     {
         super(expr._shape);
 
-        /** @type {SpeedyMatrixExpr} the expression to be made constant */
+        /** @type {SpeedyMatrixExpr} the expression to be made constant, possibly a lvalue */
         this._expr = expr;
     }
 
@@ -6614,6 +6915,30 @@ class SpeedyMatrixSortExpr extends SpeedyMatrixTempExpr
 
 
 
+// ==============================================
+// EXTERNAL UTILITIES
+// ==============================================
+
+/**
+ * Compute a homography matrix using 4 correspondences of points
+ */
+class SpeedyMatrixHomography4pExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} source 2x4 matrix: source points (ui, vi)
+     * @param {SpeedyMatrixExpr} destination 2x4 matrix: destination points (xi, vi)
+     */
+    constructor(source, destination)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(source._shape.rows === 2 && source._shape.columns === 4);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(source._shape.equals(destination._shape));
+        super(source, destination, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationHomography4p"](source._shape, destination._shape));
+    }
+}
+
+
+
 
 
 // ==============================================
@@ -6963,7 +7288,7 @@ class MatrixOperationsQueue
 /*!********************************************!*\
   !*** ./src/core/math/matrix-operations.js ***!
   \********************************************/
-/*! exports provided: MatrixOperation, MatrixOperationNop, MatrixOperationFill, MatrixOperationCopy, MatrixOperationTranspose, MatrixOperationInverse, MatrixOperationAdd, MatrixOperationSubtract, MatrixOperationMultiply, MatrixOperationScale, MatrixOperationCompMult, MatrixOperationMultiplyLT, MatrixOperationMultiplyRT, MatrixOperationMultiplyVec, MatrixOperationQR, MatrixOperationQRSolve, MatrixOperationBackSubstitution, MatrixOperationLSSolve, MatrixOperationWithSubroutine, MatrixOperationSequence, MatrixOperationSort, MatrixOperationMap, MatrixOperationReduce */
+/*! exports provided: MatrixOperation, MatrixOperationNop, MatrixOperationFill, MatrixOperationCopy, MatrixOperationTranspose, MatrixOperationInverse, MatrixOperationAdd, MatrixOperationSubtract, MatrixOperationMultiply, MatrixOperationScale, MatrixOperationCompMult, MatrixOperationMultiplyLT, MatrixOperationMultiplyRT, MatrixOperationMultiplyVec, MatrixOperationQR, MatrixOperationQRSolve, MatrixOperationBackSubstitution, MatrixOperationLSSolve, MatrixOperationWithSubroutine, MatrixOperationSequence, MatrixOperationSort, MatrixOperationMap, MatrixOperationReduce, MatrixOperationHomography4p */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -6991,6 +7316,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationSort", function() { return MatrixOperationSort; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationMap", function() { return MatrixOperationMap; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationReduce", function() { return MatrixOperationReduce; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationHomography4p", function() { return MatrixOperationHomography4p; });
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
@@ -7695,6 +8021,23 @@ class MatrixOperationReduce extends MatrixOperationWithSubroutine
     constructor(outputShape)
     {
         super('reduce', 6, outputShape, ['reducefn']);
+    }
+}
+
+/**
+ * Compute a homography matrix using 4 correspondences of points
+ */
+class MatrixOperationHomography4p extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {MatrixShape} leftShape shape of the left operand
+     * @param {MatrixShape} rightShape shape of the right operand
+     */
+    constructor(leftShape, rightShape)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(leftShape.equals(rightShape));
+        super('homography4p', 2, new _matrix_shape__WEBPACK_IMPORTED_MODULE_4__["MatrixShape"](3, 3, leftShape.dtype));
     }
 }
 
@@ -8656,12 +8999,12 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "PipelineOperation", function() { return PipelineOperation; });
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _gpu_gl_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../gpu/gl-utils */ "./src/gpu/gl-utils.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -8688,8 +9031,9 @@ const PipelineOperation = { };
 
 /**
  * Abstract basic operation
+ * @abstract
  */
-/* abstract */ class SpeedyPipelineOperation
+class SpeedyPipelineOperation
 {
     /**
      * Class constructor
@@ -8701,15 +9045,15 @@ const PipelineOperation = { };
     }
 
     /**
-     * Runs the pipeline operation
-     * @param {SpeedyTexture} texture
+     * Run the pipeline operation
+     * @param {SpeedyTexture} texture input texture
      * @param {SpeedyGPU} gpu
      * @param {SpeedyMedia} [media]
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyPromise<SpeedyTexture>}
      */
     run(texture, gpu, media)
     {
-        return texture;
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(texture);
     }
 
     /**
@@ -8721,7 +9065,7 @@ const PipelineOperation = { };
 
     /**
      * Save an options object
-     * @param {object|()=>object} options user-passed parameter
+     * @param {PipelineOperationOptions} options user-passed parameter
      * @param {object} [defaultOptions]
      * @returns {()=>object}
      */
@@ -8751,6 +9095,13 @@ const PipelineOperation = { };
  */
 PipelineOperation.ConvertToGreyscale = class extends SpeedyPipelineOperation
 {
+    /**
+     * Run the pipeline operation
+     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyMedia} [media]
+     * @returns {SpeedyPromise<SpeedyTexture>}
+     */
     run(texture, gpu, media)
     {
         if(media._colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].RGB)
@@ -8759,7 +9110,7 @@ PipelineOperation.ConvertToGreyscale = class extends SpeedyPipelineOperation
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["NotSupportedError"](`Can't convert image to greyscale: unknown color format`);
 
         media._colorFormat = _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale;
-        return texture;
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(texture);
     }
 }
 
@@ -8776,7 +9127,7 @@ PipelineOperation.Blur = class extends SpeedyPipelineOperation
 {
     /**
      * Blur operation
-     * @param {object|()=>object} [options]
+     * @param {PipelineOperationOptions} [options]
      */
     constructor(options = {})
     {
@@ -8789,6 +9140,13 @@ PipelineOperation.Blur = class extends SpeedyPipelineOperation
         });
     }
 
+    /**
+     * Run the pipeline operation
+     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyMedia} [media]
+     * @returns {SpeedyPromise<SpeedyTexture>}
+     */
     run(texture, gpu, media)
     {
         const { filter, size } = this._loadOptions();
@@ -8800,8 +9158,52 @@ PipelineOperation.Blur = class extends SpeedyPipelineOperation
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Invalid kernel size: ${size}`);
         
         // run filter
-        let fname = filter == 'gaussian' ? 'gauss' : 'box';
-        return gpu.programs.filters[fname + size](texture);
+        const fname = (filter == 'gaussian' ? 'gauss' : 'box') + size;
+        const output = gpu.programs.filters[fname](texture);
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(output);
+    }
+}
+
+/**
+ * Median filter
+ */
+PipelineOperation.Median = class extends SpeedyPipelineOperation
+{
+    /**
+     * Median filter
+     * @param {PipelineOperationOptions} [options]
+     */
+    constructor(options = {})
+    {
+        super();
+
+        // save options
+        this._saveOptions(options, {
+            size: 5 // 3 | 5 | 7
+        });
+    }
+
+    /**
+     * Run the pipeline operation
+     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyMedia} [media]
+     * @returns {SpeedyPromise<SpeedyTexture>}
+     */
+    run(texture, gpu, media)
+    {
+        const { size } = this._loadOptions();
+
+        // validate options
+        if(size != 3 && size != 5 && size != 7)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Invalid window size: ${size}`);
+        else if(media._colorFormat != _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["NotSupportedError"](`The median filter requires a greyscale image as input`);
+
+        // run filter
+        const fname = 'median' + size;
+        const output = gpu.programs.filters[fname](texture);
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(output);
     }
 }
 
@@ -8850,6 +9252,13 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
         this._gl = null;
     }
 
+    /**
+     * Run the pipeline operation
+     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyMedia} [media]
+     * @returns {SpeedyPromise<SpeedyTexture>}
+     */
     run(texture, gpu, media)
     {
         // lost context?
@@ -8878,14 +9287,18 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
         }
 
         // convolve
-        return gpu.programs.filters[this._method[1]](
+        const output = gpu.programs.filters[this._method[1]](
             texture,
             this._texKernel,
             this._scale,
             this._offset
         );
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(output);
     }
 
+    /**
+     * Cleanup
+     */
     release()
     {
         if(this._texKernel != null) {
@@ -8904,7 +9317,7 @@ PipelineOperation.Normalize = class extends SpeedyPipelineOperation
 {
     /**
      * Normalize operation
-     * @param {object|()=>object} [options]
+     * @param {PipelineOperationOptions} [options]
      */
     constructor(options = {})
     {
@@ -8917,16 +9330,26 @@ PipelineOperation.Normalize = class extends SpeedyPipelineOperation
         });
     }
 
+    /**
+     * Run the pipeline operation
+     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyMedia} [media]
+     * @returns {SpeedyPromise<SpeedyTexture>}
+     */
     run(texture, gpu, media)
     {
         const { min, max } = this._loadOptions();
+        let output;
 
         if(media._colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].RGB)
-            return gpu.programs.enhancements.normalizeColoredImage(texture, min, max);
+            output = gpu.programs.enhancements.normalizeColoredImage(texture, min, max);
         else if(media._colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
-            return gpu.programs.enhancements.normalizeGreyscaleImage(texture, min, max);
+            output = gpu.programs.enhancements.normalizeGreyscaleImage(texture, min, max);
         else
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["NotSupportedError"]('Invalid color format');
+
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(output);
     }
 }
 
@@ -8952,16 +9375,26 @@ PipelineOperation.Nightvision = class extends SpeedyPipelineOperation
         });
     }
 
+    /**
+     * Run the pipeline operation
+     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyMedia} [media]
+     * @returns {SpeedyPromise<SpeedyTexture>}
+     */
     run(texture, gpu, media)
     {
         const { gain, offset, decay, quality } = this._loadOptions();
+        let output;
 
         if(media._colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].RGB)
-            return gpu.programs.enhancements.nightvision(texture, gain, offset, decay, quality, false);
+            output = gpu.programs.enhancements.nightvision(texture, gain, offset, decay, quality, false);
         else if(media._colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
-            return gpu.programs.enhancements.nightvision(texture, gain, offset, decay, quality, true);
+            output = gpu.programs.enhancements.nightvision(texture, gain, offset, decay, quality, true);
         else
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["NotSupportedError"]('Invalid color format');
+
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(output);
     }
 }
 
@@ -11151,17 +11584,17 @@ class SpeedyMedia
         // create a lightweight clone
         return this.clone({ lightweight: true }).then(media => {
             // upload the media to the GPU
-            let texture = media._gpu.upload(media._source.data);
+            const texture = media._gpu.upload(media._source.data);
 
             // run the pipeline
-            texture = pipeline._run(texture, media._gpu, media);
-
-            // convert to bitmap
-            media._gpu.programs.utils.output(texture);
-            return createImageBitmap(media._gpu.canvas, 0, 0, media.width, media.height).then(bitmap => {
-                return _speedy_media_source__WEBPACK_IMPORTED_MODULE_5__["SpeedyMediaSource"].load(bitmap).then(source => {
-                    media._source = source;
-                    return media;
+            return pipeline._run(texture, media._gpu, media).turbocharge().then(texture => {
+                // convert to bitmap
+                media._gpu.programs.utils.output(texture);
+                return createImageBitmap(media._gpu.canvas, 0, 0, media.width, media.height).then(bitmap => {
+                    return _speedy_media_source__WEBPACK_IMPORTED_MODULE_5__["SpeedyMediaSource"].load(bitmap).then(source => {
+                        media._source = source;
+                        return media;
+                    });
                 });
             });
         });
@@ -11329,6 +11762,8 @@ __webpack_require__.r(__webpack_exports__);
  * 
  * SpeedyPipeline's methods are chainable: use them to
  * create your own sequence of image operations
+ *
+ * @typedef {(object|()=>object)} PipelineOperationOptions
  */
 class SpeedyPipeline
 {
@@ -11380,14 +11815,17 @@ class SpeedyPipeline
      * @param {SpeedyTexture} texture input texture
      * @param {SpeedyGPU} gpu gpu attached to the media
      * @param {SpeedyMedia} media media object
-     * @returns {SpeedyTexture} output texutre
+     * @param {number} [cnt] loop counter
+     * @returns {SpeedyPromise<SpeedyTexture>} output texutre
      */
-    _run(texture, gpu, media)
+    _run(texture, gpu, media, cnt = 0)
     {
-        for(let i = 0; i < this._operations.length; i++)
-            texture = this._operations[i].run(texture, gpu, media);
+        if(cnt >= this._operations.length)
+            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(texture);
 
-        return texture;
+        return this._operations[cnt].run(texture, gpu, media).then(nextTexture =>
+            this._run(nextTexture, gpu, media, cnt + 1)
+        );
     }
 
 
@@ -11439,13 +11877,25 @@ class SpeedyPipeline
 
     /**
      * Image smoothing
-     * @param {object} [options]
+     * @param {PipelineOperationOptions} [options]
      * @returns {SpeedyPipeline}
      */
     blur(options = {})
     {
         return this._spawn(
             new _pipeline_operations__WEBPACK_IMPORTED_MODULE_0__["PipelineOperation"].Blur(options)
+        );
+    }
+
+    /**
+     * Median filter
+     * @param {PipelineOperationOptions} [options]
+     * @returns {SpeedyPipeline}
+     */
+    median(options = {})
+    {
+        return this._spawn(
+            new _pipeline_operations__WEBPACK_IMPORTED_MODULE_0__["PipelineOperation"].Median(options)
         );
     }
 
@@ -11464,7 +11914,7 @@ class SpeedyPipeline
 
     /**
      * Image normalization
-     * @param {object} [options]
+     * @param {PipelineOperationOptions} [options]
      * @returns {SpeedyPipeline}
      */
     normalize(options = {})
@@ -11476,7 +11926,7 @@ class SpeedyPipeline
 
     /**
      * Nightvision
-     * @param {object|Function<object>} [options]
+     * @param {PipelineOperationOptions} [options]
      * @returns {SpeedyPipeline}
      */
     nightvision(options = {})
@@ -12661,8 +13111,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-program-group */ "./src/gpu/speedy-program-group.js");
 /* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
 /* harmony import */ var _shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../shaders/filters/convolution */ "./src/gpu/shaders/filters/convolution.js");
-/* harmony import */ var _shaders_filters_median__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../shaders/filters/median */ "./src/gpu/shaders/filters/median.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -12691,21 +13140,24 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-
 //
 // Fast median filters
 //
 
-// Fast median filter: 3x3 window
-const fastMedian3 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/fast-median.glsl')
-                   .withArguments('image')
-                   .withDefines({ 'WINDOW_SIZE': 3 });
+// Median filter for a 3x3 window
+const median3 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/fast-median.glsl')
+               .withArguments('image')
+               .withDefines({ 'WINDOW_SIZE': 3 });
 
-// Fast median filter: 5x5 window
-const fastMedian5 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/fast-median.glsl')
-                   .withArguments('image')
-                   .withDefines({ 'WINDOW_SIZE': 5 });
+// Median filter for a 5x5 window
+const median5 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/fast-median.glsl')
+               .withArguments('image')
+               .withDefines({ 'WINDOW_SIZE': 5 });
 
+// Median filter for a 7x7 window
+const median7 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/fast-median.glsl')
+               .withArguments('image')
+               .withDefines({ 'WINDOW_SIZE': 7 });
 
 
 //
@@ -12746,9 +13198,9 @@ class GPUFilters extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Spe
             .compose('box11', '_box11x', '_box11y') // size: 11x11
 
             // median filters
-            .declare('median3', fastMedian3) // 3x3 window
-            .declare('median5', fastMedian5) // 5x5 window
-            .declare('median7', Object(_shaders_filters_median__WEBPACK_IMPORTED_MODULE_3__["median"])(7)) // 7x7 window
+            .declare('median3', median3) // 3x3 window
+            .declare('median5', median5) // 5x5 window
+            .declare('median7', median7) // 7x7 window
 
             // difference of gaussians
             .compose('dog16_1', '_dog16_1x', '_dog16_1y') // sigma_2 / sigma_1 = 1.6 (approx. laplacian with sigma = 1)
@@ -12851,12 +13303,12 @@ class GPUFilters extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Spe
                 4, 16, 26, 16, 4,
                 1, 4, 7, 4, 1,
             ], 1 / 237))*/
-            .declare('_gauss7x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])(_utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].gaussianKernel(ksize2sigma(7), 7)))
-            .declare('_gauss7y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])(_utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].gaussianKernel(ksize2sigma(7), 7)))
-            .declare('_gauss9x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])(_utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].gaussianKernel(ksize2sigma(9), 9)))
-            .declare('_gauss9y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])(_utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].gaussianKernel(ksize2sigma(9), 9)))
-            .declare('_gauss11x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])(_utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].gaussianKernel(ksize2sigma(11), 11)))
-            .declare('_gauss11y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])(_utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].gaussianKernel(ksize2sigma(11), 11)))
+            .declare('_gauss7x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])(_utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].gaussianKernel(ksize2sigma(7), 7)))
+            .declare('_gauss7y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])(_utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].gaussianKernel(ksize2sigma(7), 7)))
+            .declare('_gauss9x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])(_utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].gaussianKernel(ksize2sigma(9), 9)))
+            .declare('_gauss9y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])(_utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].gaussianKernel(ksize2sigma(9), 9)))
+            .declare('_gauss11x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])(_utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].gaussianKernel(ksize2sigma(11), 11)))
+            .declare('_gauss11y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])(_utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].gaussianKernel(ksize2sigma(11), 11)))
 
 
 
@@ -14341,8 +14793,6 @@ var map = {
 	"./filters/convolution": "./src/gpu/shaders/filters/convolution.js",
 	"./filters/convolution.js": "./src/gpu/shaders/filters/convolution.js",
 	"./filters/fast-median.glsl": "./src/gpu/shaders/filters/fast-median.glsl",
-	"./filters/median": "./src/gpu/shaders/filters/median.js",
-	"./filters/median.js": "./src/gpu/shaders/filters/median.js",
 	"./include/colors.glsl": "./src/gpu/shaders/include/colors.glsl",
 	"./include/fixed-point.glsl": "./src/gpu/shaders/include/fixed-point.glsl",
 	"./include/float16.glsl": "./src/gpu/shaders/include/float16.glsl",
@@ -14937,114 +15387,7 @@ function texConv1D(kernelSize, axis)
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\n#define SORT(i, j) t = max(p[i], p[j]); p[i] = min(p[i], p[j]); p[j] = t;\nvoid main()\n{\nfloat median, t;\n#if WINDOW_SIZE == 3\nfloat p[9];\np[0] = pixelAtShortOffset(image, ivec2(-1,-1)).g;\np[1] = pixelAtShortOffset(image, ivec2(0,-1)).g;\np[2] = pixelAtShortOffset(image, ivec2(1,-1)).g;\np[3] = pixelAtShortOffset(image, ivec2(-1,0)).g;\np[4] = pixelAtShortOffset(image, ivec2(0,0)).g;\np[5] = pixelAtShortOffset(image, ivec2(1,0)).g;\np[6] = pixelAtShortOffset(image, ivec2(-1,1)).g;\np[7] = pixelAtShortOffset(image, ivec2(0,1)).g;\np[8] = pixelAtShortOffset(image, ivec2(1,1)).g;\nSORT(1,2);\nSORT(4,5);\nSORT(7,8);\nSORT(0,1);\nSORT(3,4);\nSORT(6,7);\nSORT(1,2);\nSORT(4,5);\nSORT(7,8);\nSORT(0,3);\nSORT(5,8);\nSORT(4,7);\nSORT(3,6);\nSORT(1,4);\nSORT(2,5);\nSORT(4,7);\nSORT(4,2);\nSORT(6,4);\nSORT(4,2);\nmedian = p[4];\n#elif WINDOW_SIZE == 5\nfloat p[25];\np[0] = pixelAtShortOffset(image, ivec2(-2,-2)).g;\np[1] = pixelAtShortOffset(image, ivec2(-1,-2)).g;\np[2] = pixelAtShortOffset(image, ivec2(0,-2)).g;\np[3] = pixelAtShortOffset(image, ivec2(1,-2)).g;\np[4] = pixelAtShortOffset(image, ivec2(2,-2)).g;\np[5] = pixelAtShortOffset(image, ivec2(-2,-1)).g;\np[6] = pixelAtShortOffset(image, ivec2(-1,-1)).g;\np[7] = pixelAtShortOffset(image, ivec2(0,-1)).g;\np[8] = pixelAtShortOffset(image, ivec2(1,-1)).g;\np[9] = pixelAtShortOffset(image, ivec2(2,-1)).g;\np[10] = pixelAtShortOffset(image, ivec2(-2,0)).g;\np[11] = pixelAtShortOffset(image, ivec2(-1,0)).g;\np[12] = pixelAtShortOffset(image, ivec2(0,0)).g;\np[13] = pixelAtShortOffset(image, ivec2(1,0)).g;\np[14] = pixelAtShortOffset(image, ivec2(2,0)).g;\np[15] = pixelAtShortOffset(image, ivec2(-2,1)).g;\np[16] = pixelAtShortOffset(image, ivec2(-1,1)).g;\np[17] = pixelAtShortOffset(image, ivec2(0,1)).g;\np[18] = pixelAtShortOffset(image, ivec2(1,1)).g;\np[19] = pixelAtShortOffset(image, ivec2(2,1)).g;\np[20] = pixelAtShortOffset(image, ivec2(-2,2)).g;\np[21] = pixelAtShortOffset(image, ivec2(-1,2)).g;\np[22] = pixelAtShortOffset(image, ivec2(0,2)).g;\np[23] = pixelAtShortOffset(image, ivec2(1,2)).g;\np[24] = pixelAtShortOffset(image, ivec2(2,2)).g;\nSORT(0,1);\nSORT(3,4);\nSORT(2,4);\nSORT(2,3);\nSORT(6,7);\nSORT(5,7);\nSORT(5,6);\nSORT(9,10);\nSORT(8,10);\nSORT(8,9);\nSORT(12,13);\nSORT(11,13);\nSORT(11,12);\nSORT(15,16);\nSORT(14,16);\nSORT(14,15);\nSORT(18,19);\nSORT(17,19);\nSORT(17,18);\nSORT(21,22);\nSORT(20,22);\nSORT(20,21);\nSORT(23,24);\nSORT(2,5);\nSORT(3,6);\nSORT(0,6);\nSORT(0,3);\nSORT(4,7);\nSORT(1,7);\nSORT(1,4);\nSORT(11,14);\nSORT(8,14);\nSORT(8,11);\nSORT(12,15);\nSORT(9,15);\nSORT(9,12);\nSORT(13,16);\nSORT(10,16);\nSORT(10,13);\nSORT(20,23);\nSORT(17,23);\nSORT(17,20);\nSORT(21,24);\nSORT(18,24);\nSORT(18,21);\nSORT(19,22);\nSORT(8,17);\nSORT(9,18);\nSORT(0,18);\nSORT(0,9);\nSORT(10,19);\nSORT(1,19);\nSORT(1,10);\nSORT(11,20);\nSORT(2,20);\nSORT(2,11);\nSORT(12,21);\nSORT(3,21);\nSORT(3,12);\nSORT(13,22);\nSORT(4,22);\nSORT(4,13);\nSORT(14,23);\nSORT(5,23);\nSORT(5,14);\nSORT(15,24);\nSORT(6,24);\nSORT(6,15);\nSORT(7,16);\nSORT(7,19);\nSORT(13,21);\nSORT(15,23);\nSORT(7,13);\nSORT(7,15);\nSORT(1,9);\nSORT(3,11);\nSORT(5,17);\nSORT(11,17);\nSORT(9,17);\nSORT(4,10);\nSORT(6,12);\nSORT(7,14);\nSORT(4,6);\nSORT(4,7);\nSORT(12,14);\nSORT(10,14);\nSORT(6,7);\nSORT(10,12);\nSORT(6,10);\nSORT(6,17);\nSORT(12,17);\nSORT(7,17);\nSORT(7,10);\nSORT(12,18);\nSORT(7,12);\nSORT(10,18);\nSORT(12,20);\nSORT(10,20);\nSORT(10,12);\nmedian = p[12];\n#else\n#error Unsupported window size\n#endif\ncolor = vec4(median, median, median, 1.0f);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/filters/median.js":
-/*!*******************************************!*\
-  !*** ./src/gpu/shaders/filters/median.js ***!
-  \*******************************************/
-/*! exports provided: median */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "median", function() { return median; });
-/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../shader-declaration */ "./src/gpu/shader-declaration.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../utils/errors */ "./src/utils/errors.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * median.js
- * Median filter generator
- */
-
-
-
-
-
-/**
- * Generate a median filter with a
- * (windowSize x windowSize) window
- * (for greyscale images only)
- * @param {number} windowSize 3, 5, 7, ...
- */
-function median(windowSize)
-{
-    // validate argument
-    windowSize |= 0;
-    if(windowSize <= 1 || windowSize % 2 == 0)
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Can't create median filter with a ${windowSize}x${windowSize} window`);
-
-    // prepare data
-    const maxOffset = windowSize >> 1;
-    const pixelAtOffset = maxOffset <= 7 ? 'pixelAtShortOffset' : 'pixelAtLongOffset';
-    const n = windowSize * windowSize;
-    const med = n >> 1;
-
-    // code generator
-    const foreachWindowElement = fn => _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].cartesian(
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].symmetricRange(maxOffset), _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].symmetricRange(maxOffset)
-    ).map(
-        (pair, idx) => fn(idx, pair[0], pair[1])
-    ).join('\n');
-    const readPixel = (k, j, i) => `
-        v[${k}] = ${pixelAtOffset}(image, ivec2(${i}, ${j})).g;
-    `;
-
-    // selection sort: unrolled & branchless
-    // TODO implement a faster selection algorithm
-    const foreachVectorElement = fn => _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].range(med + 1).map(fn).join('\n');
-    const findMinimum = j => _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].range(n - (j + 1)).map(x => x + j + 1).map(i => `
-        m += int(v[${i}] >= v[m]) * (${i} - m);
-    `).join('\n');
-    const selectMinimum = j => `
-        m = ${j};
-        ${findMinimum(j)}
-        swpv = v[${j}];
-        v[${j}] = v[m];
-        v[m] = swpv;
-    `;
-
-    // shader
-    const source = `
-    uniform sampler2D image;
-
-    void main()
-    {
-        float v[${n}], swpv;
-        int m;
-
-        // read pixels
-        ${foreachWindowElement(readPixel)}
-
-        // sort v[0..med]
-        ${foreachVectorElement(selectMinimum)}
-
-        // return the median
-        color = vec4(vec3(v[${med}]), 1.0f);
-    }
-    `;
-
-    // done!
-    return Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_0__["createShader"])(source).withArguments('image');
-}
+module.exports = "uniform sampler2D image;\n#ifndef WINDOW_SIZE\n#define Must define WINDOW_SIZE\n#endif\n#define X(i,j) t = vec2(p[i], p[j]); p[i] = min(t.x, t.y); p[j] = max(t.x, t.y);\nvoid main()\n{\nfloat median;\nvec2 t;\n#if WINDOW_SIZE == 3\nfloat p[9];\np[0] = pixelAtShortOffset(image, ivec2(-1,-1)).g;\np[1] = pixelAtShortOffset(image, ivec2(0,-1)).g;\np[2] = pixelAtShortOffset(image, ivec2(1,-1)).g;\np[3] = pixelAtShortOffset(image, ivec2(-1,0)).g;\np[4] = pixelAtShortOffset(image, ivec2(0,0)).g;\np[5] = pixelAtShortOffset(image, ivec2(1,0)).g;\np[6] = pixelAtShortOffset(image, ivec2(-1,1)).g;\np[7] = pixelAtShortOffset(image, ivec2(0,1)).g;\np[8] = pixelAtShortOffset(image, ivec2(1,1)).g;\nX(1,2);X(4,5);X(7,8);X(0,1);X(3,4);X(6,7);X(1,2);X(4,5);X(7,8);X(0,3);X(5,8);X(4,7);X(3,6);X(1,4);X(2,5);X(4,7);X(4,2);X(6,4);X(4,2);\nmedian = p[4];\n#elif WINDOW_SIZE == 5\nfloat p[25];\np[0] = pixelAtShortOffset(image, ivec2(-2,-2)).g;\np[1] = pixelAtShortOffset(image, ivec2(-1,-2)).g;\np[2] = pixelAtShortOffset(image, ivec2(0,-2)).g;\np[3] = pixelAtShortOffset(image, ivec2(1,-2)).g;\np[4] = pixelAtShortOffset(image, ivec2(2,-2)).g;\np[5] = pixelAtShortOffset(image, ivec2(-2,-1)).g;\np[6] = pixelAtShortOffset(image, ivec2(-1,-1)).g;\np[7] = pixelAtShortOffset(image, ivec2(0,-1)).g;\np[8] = pixelAtShortOffset(image, ivec2(1,-1)).g;\np[9] = pixelAtShortOffset(image, ivec2(2,-1)).g;\np[10] = pixelAtShortOffset(image, ivec2(-2,0)).g;\np[11] = pixelAtShortOffset(image, ivec2(-1,0)).g;\np[12] = pixelAtShortOffset(image, ivec2(0,0)).g;\np[13] = pixelAtShortOffset(image, ivec2(1,0)).g;\np[14] = pixelAtShortOffset(image, ivec2(2,0)).g;\np[15] = pixelAtShortOffset(image, ivec2(-2,1)).g;\np[16] = pixelAtShortOffset(image, ivec2(-1,1)).g;\np[17] = pixelAtShortOffset(image, ivec2(0,1)).g;\np[18] = pixelAtShortOffset(image, ivec2(1,1)).g;\np[19] = pixelAtShortOffset(image, ivec2(2,1)).g;\np[20] = pixelAtShortOffset(image, ivec2(-2,2)).g;\np[21] = pixelAtShortOffset(image, ivec2(-1,2)).g;\np[22] = pixelAtShortOffset(image, ivec2(0,2)).g;\np[23] = pixelAtShortOffset(image, ivec2(1,2)).g;\np[24] = pixelAtShortOffset(image, ivec2(2,2)).g;\nX(0,1);X(3,4);X(2,4);X(2,3);X(6,7);X(5,7);X(5,6);X(9,10);X(8,10);X(8,9);X(12,13);X(11,13);X(11,12);X(15,16);X(14,16);X(14,15);X(18,19);X(17,19);X(17,18);X(21,22);X(20,22);X(20,21);X(23,24);X(2,5);X(3,6);X(0,6);X(0,3);X(4,7);X(1,7);X(1,4);X(11,14);X(8,14);X(8,11);X(12,15);X(9,15);X(9,12);X(13,16);X(10,16);X(10,13);X(20,23);X(17,23);X(17,20);X(21,24);X(18,24);X(18,21);X(19,22);X(8,17);X(9,18);X(0,18);X(0,9);X(10,19);X(1,19);X(1,10);X(11,20);X(2,20);X(2,11);X(12,21);X(3,21);X(3,12);X(13,22);X(4,22);X(4,13);X(14,23);X(5,23);X(5,14);X(15,24);X(6,24);X(6,15);X(7,16);X(7,19);X(13,21);X(15,23);X(7,13);X(7,15);X(1,9);X(3,11);X(5,17);X(11,17);X(9,17);X(4,10);X(6,12);X(7,14);X(4,6);X(4,7);X(12,14);X(10,14);X(6,7);X(10,12);X(6,10);X(6,17);X(12,17);X(7,17);X(7,10);X(12,18);X(7,12);X(10,18);X(12,20);X(10,20);X(10,12);\nmedian = p[12];\n#elif WINDOW_SIZE == 7\nfloat p[49];\nint i, j, k = 0;\nfor(j = -3; j <= 3; j++) {\nfor(i = -3; i <= 3; i++) {\np[k++] = pixelAtLongOffset(image, ivec2(i, j)).g;\n}\n}\nX(0,1);X(2,3);X(0,2);X(1,3);X(1,2);X(4,5);X(6,7);X(4,6);X(5,7);X(5,6);X(0,4);X(2,6);X(2,4);X(1,5);X(3,7);X(3,5);X(1,2);X(3,4);X(5,6);X(8,9);X(10,11);X(8,10);X(9,11);X(9,10);X(12,13);X(14,15);X(12,14);X(13,15);X(13,14);X(8,12);X(10,14);X(10,12);X(9,13);X(11,15);X(11,13);X(9,10);X(11,12);X(13,14);X(0,8);X(4,12);X(4,8);X(2,10);X(6,14);X(6,10);X(2,4);X(6,8);X(10,12);X(1,9);X(5,13);X(5,9);X(3,11);X(7,15);X(7,11);X(3,5);X(7,9);X(11,13);X(1,2);X(3,4);X(5,6);X(7,8);X(9,10);X(11,12);X(13,14);X(16,17);X(18,19);X(16,18);X(17,19);X(17,18);X(20,21);X(22,23);X(20,22);X(21,23);X(21,22);X(16,20);X(18,22);X(18,20);X(17,21);X(19,23);X(19,21);X(17,18);X(19,20);X(21,22);X(24,25);X(26,27);X(24,26);X(25,27);X(25,26);X(28,29);X(30,31);X(28,30);X(29,31);X(29,30);X(24,28);X(26,30);X(26,28);X(25,29);X(27,31);X(27,29);X(25,26);X(27,28);X(29,30);X(16,24);X(20,28);X(20,24);X(18,26);X(22,30);X(22,26);X(18,20);X(22,24);X(26,28);X(17,25);X(21,29);X(21,25);X(19,27);X(23,31);X(23,27);X(19,21);X(23,25);X(27,29);X(17,18);X(19,20);X(21,22);X(23,24);X(25,26);X(27,28);X(29,30);X(0,16);X(8,24);X(8,16);X(4,20);X(12,28);X(12,20);X(4,8);X(12,16);X(20,24);X(2,18);X(10,26);X(10,18);X(6,22);X(14,30);X(14,22);X(6,10);X(14,18);X(22,26);X(2,4);X(6,8);X(10,12);X(14,16);X(18,20);X(22,24);X(26,28);X(1,17);X(9,25);X(9,17);X(5,21);X(13,29);X(13,21);X(5,9);X(13,17);X(21,25);X(3,19);X(11,27);X(11,19);X(7,23);X(15,31);X(15,23);X(7,11);X(15,19);X(23,27);X(3,5);X(7,9);X(11,13);X(15,17);X(19,21);X(23,25);X(27,29);X(1,2);X(3,4);X(5,6);X(7,8);X(9,10);X(11,12);X(13,14);X(15,16);X(17,18);X(19,20);X(21,22);X(23,24);X(25,26);X(27,28);X(29,30);X(32,33);X(34,35);X(32,34);X(33,35);X(33,34);X(36,37);X(38,39);X(36,38);X(37,39);X(37,38);X(32,36);X(34,38);X(34,36);X(33,37);X(35,39);X(35,37);X(33,34);X(35,36);X(37,38);X(40,41);X(42,43);X(40,42);X(41,43);X(41,42);X(44,45);X(46,47);X(44,46);X(45,47);X(45,46);X(40,44);X(42,46);X(42,44);X(41,45);X(43,47);X(43,45);X(41,42);X(43,44);X(45,46);X(32,40);X(36,44);X(36,40);X(34,42);X(38,46);X(38,42);X(34,36);X(38,40);X(42,44);X(33,41);X(37,45);X(37,41);X(35,43);X(39,47);X(39,43);X(35,37);X(39,41);X(43,45);X(33,34);X(35,36);X(37,38);X(39,40);X(41,42);X(43,44);X(45,46);X(32,48);X(40,48);X(36,40);X(44,48);X(38,42);X(34,36);X(38,40);X(42,44);X(46,48);X(37,41);X(39,43);X(35,37);X(39,41);X(43,45);X(33,34);X(35,36);X(37,38);X(39,40);X(41,42);X(43,44);X(45,46);X(47,48);X(0,32);X(16,48);X(16,32);X(8,40);X(24,40);X(8,16);X(24,32);X(40,48);X(4,36);X(20,36);X(12,44);X(28,44);X(12,20);X(28,36);X(4,8);X(12,16);X(20,24);X(28,32);X(36,40);X(44,48);X(2,34);X(18,34);X(10,42);X(26,42);X(10,18);X(26,34);X(6,38);X(22,38);X(14,46);X(30,46);X(14,22);X(30,38);X(6,10);X(14,18);X(22,26);X(30,34);X(38,42);X(2,4);X(6,8);X(10,12);X(14,16);X(18,20);X(22,24);X(26,28);X(30,32);X(34,36);X(38,40);X(42,44);X(46,48);X(1,33);X(17,33);X(9,41);X(25,41);X(9,17);X(25,33);X(5,37);X(21,37);X(13,45);X(29,45);X(13,21);X(29,37);X(5,9);X(13,17);X(21,25);X(29,33);X(37,41);X(3,35);X(19,35);X(11,43);X(27,43);X(11,19);X(27,35);X(7,39);X(23,39);X(15,47);X(31,47);X(15,23);X(31,39);X(7,11);X(15,19);X(23,27);X(31,35);X(39,43);X(3,5);X(7,9);X(11,13);X(15,17);X(19,21);X(23,25);X(27,29);X(31,33);X(35,37);X(39,41);X(43,45);X(1,2);X(3,4);X(5,6);X(7,8);X(9,10);X(11,12);X(13,14);X(15,16);X(17,18);X(19,20);X(21,22);X(23,24);\nmedian = p[24];\n#else\n#error Unsupported window size\n#endif\ncolor = vec4(median, median, median, 1.0f);\n}"
 
 /***/ }),
 
