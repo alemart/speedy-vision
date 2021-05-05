@@ -54,24 +54,70 @@ describe('Geometric transformations', function() {
         }
     }
 
+    describe('Point conversion', function() {
+
+        it('converts an array of points to a matrix', async function() {
+            const P = Speedy.Matrix.fromPoints([
+                Speedy.Point2(0, 1),
+                Speedy.Point2(2, 3),
+                Speedy.Point2(4, 5),
+                Speedy.Point2(6, 7),
+                Speedy.Point2(8, 9),
+            ]);
+
+            const M = Speedy.Matrix(2, 5, [
+                0, 1,
+                2, 3,
+                4, 5,
+                6, 7,
+                8, 9
+            ]);
+
+            const zeros = (new Array(M.rows * M.columns)).fill(0);
+            const data = await M.minus(P).read();
+            expect(data).toBeElementwiseEqual(zeros);
+        });
+
+        it('converts a matrix to an array of points', async function() {
+            const p = [
+                Speedy.Point2(0, 1),
+                Speedy.Point2(2, 3),
+                Speedy.Point2(4, 5),
+                Speedy.Point2(6, 7),
+                Speedy.Point2(8, 9),
+            ];
+
+            const q = await Speedy.Matrix.toPoints(Speedy.Matrix(2, 5, [
+                0, 1,
+                2, 3,
+                4, 5,
+                6, 7,
+                8, 9
+            ]));
+
+            for(let i = 0; i < p.length; i++)
+                expect(p[i].equals(q[i])).toEqual(true);
+        });
+
+    })
 
     describe('Perspective transform', function() {
 
         it('computes a perspective transform from four correspondences of points', async function() {
 
-            const srcQuad = [
+            const srcQuad = Speedy.Matrix.fromPoints([
                 Speedy.Point2(0, 0),
                 Speedy.Point2(1, 0),
                 Speedy.Point2(1, 1),
                 Speedy.Point2(0, 1)
-            ];
+            ]);
 
-            const dstQuad = [
+            const dstQuad = Speedy.Matrix.fromPoints([
                 Speedy.Point2(0, 0),
                 Speedy.Point2(3, 0),
                 Speedy.Point2(3, 2),
                 Speedy.Point2(0, 2)
-            ];
+            ]);
 
             const homography = Speedy.Matrix.Perspective(srcQuad, dstQuad);
             printp('From:', srcQuad);
@@ -85,19 +131,19 @@ describe('Geometric transformations', function() {
 
         it('computes another perspective transform from four correspondences of points', async function() {
 
-            const srcQuad = [
+            const srcQuad = Speedy.Matrix.fromPoints([
                 Speedy.Point2(0, 0),
                 Speedy.Point2(3, 0),
                 Speedy.Point2(3, 2),
                 Speedy.Point2(0, 2)
-            ];
+            ]);
 
-            const dstQuad = [
+            const dstQuad = Speedy.Matrix.fromPoints([
                 Speedy.Point2(0, 0),
                 Speedy.Point2(1, 0),
                 Speedy.Point2(1, 1),
                 Speedy.Point2(0, 1)
-            ];
+            ]);
 
             const homography = Speedy.Matrix.Perspective(srcQuad, dstQuad);
             printp('From:', srcQuad);
@@ -111,19 +157,19 @@ describe('Geometric transformations', function() {
 
         it('computes yet another perspective transform from four correspondences of points', async function() {
 
-            const srcQuad = [
+            const srcQuad = Speedy.Matrix.fromPoints([
                 Speedy.Point2(0, 0),
                 Speedy.Point2(1, 0),
                 Speedy.Point2(1, 1),
                 Speedy.Point2(0, 1)
-            ];
+            ]);
 
-            const dstQuad = [
+            const dstQuad = Speedy.Matrix.fromPoints([
                 Speedy.Point2(1, 0),
                 Speedy.Point2(4, 0),
                 Speedy.Point2(4, 2),
                 Speedy.Point2(1, 2)
-            ];
+            ]);
 
             const homography = Speedy.Matrix.Perspective(srcQuad, dstQuad);
             printp('From:', srcQuad);
@@ -137,19 +183,19 @@ describe('Geometric transformations', function() {
 
         it('computes an identity matrix from four non-distinct correspondences of points', async function() {
 
-            const srcQuad = [
+            const srcQuad = Speedy.Matrix.fromPoints([
                 Speedy.Point2(0, 0),
                 Speedy.Point2(3, 0),
                 Speedy.Point2(3, 2),
                 Speedy.Point2(0, 2)
-            ];
+            ]);
 
-            const dstQuad = [
+            const dstQuad = Speedy.Matrix.fromPoints([
                 Speedy.Point2(0, 0),
                 Speedy.Point2(3, 0),
                 Speedy.Point2(3, 2),
                 Speedy.Point2(0, 2)
-            ];
+            ]);
 
             const homography = Speedy.Matrix.Perspective(srcQuad, dstQuad);
             printp('From:', srcQuad);
@@ -163,19 +209,19 @@ describe('Geometric transformations', function() {
 
         it('fails to compute the transform if 3 or more points are collinear', async function() {
 
-            const srcQuad = [
+            const srcQuad = Speedy.Matrix.fromPoints([
                 Speedy.Point2(0, 0),
                 Speedy.Point2(2, 0),
                 Speedy.Point2(1, 1),
                 Speedy.Point2(0, 2)
-            ];
+            ]);
 
-            const dstQuad = [
+            const dstQuad = Speedy.Matrix.fromPoints([
                 Speedy.Point2(0, 0),
                 Speedy.Point2(3, 0),
                 Speedy.Point2(3, 2),
                 Speedy.Point2(0, 2)
-            ];
+            ]);
 
             const homography = Speedy.Matrix.Perspective(srcQuad, dstQuad);
             printp('From:', srcQuad);
@@ -246,25 +292,25 @@ describe('Geometric transformations', function() {
 
         it('fails to compute a perspective transform using incorrect input', async function() {
 
-            const srcQuad = [
+            const srcQuad = Speedy.Matrix.fromPoints([
                 Speedy.Point2(0, 0),
                 Speedy.Point2(2, 0),
                 Speedy.Point2(1, 1),
-            ];
+            ]);
 
-            const dstQuad = [
+            const dstQuad = Speedy.Matrix.fromPoints([
                 Speedy.Point2(0, 0),
                 Speedy.Point2(3, 0),
                 Speedy.Point2(3, 2),
                 Speedy.Point2(0, 2)
-            ];
+            ]);
 
-            const fooQuad = [
+            const fooQuad = Speedy.Matrix.fromPoints([
                 0, 0,
                 2, 0,
                 1, 1,
                 0, 2,
-            ];
+            ]);
 
             expect(() => Speedy.Matrix.Perspective(srcQuad, dstQuad)).toThrow();
             expect(() => Speedy.Matrix.Perspective(dstQuad, srcQuad)).toThrow();

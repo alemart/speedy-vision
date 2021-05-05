@@ -2029,16 +2029,13 @@ await B.print(); // identity matrix
 
 ##### Speedy.Matrix.Perspective()
 
-`Speedy.Matrix.Perspective(source: SpeedyPoint2[], destination: SpeedyPoint2[]): SpeedyMatrixExpr`
 `Speedy.Matrix.Perspective(source: SpeedyMatrixExpr, destination: SpeedyMatrixExpr): SpeedyMatrixExpr`
 
 Compute a perspective transform (homography matrix) from four correspondences of points.
 
 ###### Arguments
 
-* `source: SpeedyPoint2[]`. An array of 4 points representing the corners of the source quadrilateral.
 * `source: SpeedyMatrixExpr`. A 2x4 matrix with the coordinates of 4 points (one per column) representing the corners of the source quadrilateral.
-* `destination: SpeedyPoint2[]`. An array of 4 points representing the corners of the destination quadrilateral.
 * `destination: SpeedyMatrixExpr`. A 2x4 matrix with the coordinates of 4 points (one per column) representing the corners of the destination quadrilateral.
 
 ###### Returns
@@ -2048,19 +2045,19 @@ A 3x3 homography matrix.
 ###### Example
 
 ```js
-const srcQuad = [
+const srcQuad = Speedy.Matrix.fromPoints([
     Speedy.Point2(0, 0),
     Speedy.Point2(1, 0),
     Speedy.Point2(1, 1),
     Speedy.Point2(0, 1)
-];
+]);
 
-const dstQuad = [
+const dstQuad = Speedy.Matrix.fromPoints([
     Speedy.Point2(0, 0),
     Speedy.Point2(3, 0),
     Speedy.Point2(3, 2),
     Speedy.Point2(0, 2)
-];
+]);
 
 const homography = Speedy.Matrix.Perspective(srcQuad, dstQuad);
 await homography.print();
@@ -2071,6 +2068,47 @@ await homography.print();
 // [ 0  2  0 ]
 // [ 0  0  1 ]
 //
+```
+
+##### Speedy.Matrix.fromPoints()
+
+`Speedy.Matrix.fromPoints(points: SpeedyPoint2[]): SpeedyMatrixExpr`
+
+Convert a non-empty array of points to a matrix in which each column encodes the coordinates of a point.
+
+###### Arguments
+
+* `points: SpeedyPoint2[]`. A non-empty array of points.
+
+###### Returns
+
+A 2 x *n* matrix, where *n* is the number of points that are provided.
+
+##### Speedy.Matrix.toPoints()
+
+`Speedy.Matrix.toPoints(matrix: SpeedyMatrixExpr): SpeedyPromise<SpeedyPoint2[]>`
+
+Convert a matrix in which each column encodes the coordinates of a point to an array of points.
+
+###### Arguments
+
+* `matrix: SpeedyMatrixExpr`. A matrix with 2 rows.
+
+###### Returns
+
+A non-empty array of points.
+
+###### Example
+
+```js
+const M = Speedy.Matrix(2, 3, [
+    1, 0, // coordinates of the first point
+    0, 1, // coordinates of the second point
+    1, 1, // coordinates of the third point
+]);
+
+const points = await Speedy.Matrix.toPoints(M);
+console.log(points);
 ```
 
 

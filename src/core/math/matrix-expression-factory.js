@@ -125,6 +125,45 @@ export class SpeedyMatrixExprFactory extends Function
     // ==============================================
 
     /**
+     * Convert an array of points to a matrix representation
+     * @param {SpeedyPoint2[]} points a non-empty array
+     * @param {MatrixDataType} [dtype] data type of the elements of the matrix
+     * @returns {SpeedyMatrixExpr} 2 x n matrix with the coordinates of the points
+     */
+    fromPoints(points, dtype = MatrixType.default)
+    {
+        if(!(Array.isArray(points) && points.length > 0))
+            throw new IllegalArgumentError(`Can't create matrix from points: ${points}`);
+
+        const entries = [], n = points.length;
+        for(let i = 0; i < n; i++) {
+            entries.push(points[i].x);
+            entries.push(points[i].y);
+        }
+
+        return this._create(2, n, entries, dtype);
+    }
+
+    /**
+     * Convert a 2 x n matrix to an array of points
+     * @param {SpeedyMatrixExpr} matrix
+     * @returns {SpeedyPromise<SpeedyPoint2[]>}
+     */
+    toPoints(matrix)
+    {
+        if(matrix.rows !== 2)
+            throw new IllegalArgumentError(`Can't convert ${matrix._shape.toString()} matrix to points`);
+
+        return matrix.read().then(entries => {
+            const points = [], n = entries.length;
+            for(let i = 0; i < n; i += 2)
+                points.push(new SpeedyPoint2(entries[i], entries[i+1]));
+
+            return points;
+        });
+    }
+
+    /**
      * Compute a perspective transformation using 4 correspondences of points
      * @param {SpeedyMatrixExpr|SpeedyPoint2[]} source 2x4 matrix or 4 points (ui, vi)
      * @param {SpeedyMatrixExpr|SpeedyPoint2[]} destination 2x4 matrix or 4 points (xi, yi)
@@ -132,17 +171,9 @@ export class SpeedyMatrixExprFactory extends Function
      */
     Perspective(source, destination)
     {
-        if(source.constructor === destination.constructor) {
-            if(Array.isArray(source) && source.length === 4 && source[0] instanceof SpeedyPoint2) {
-                source = this._create(2, 4, [ source[0].x, source[0].y, source[1].x, source[1].y, source[2].x, source[2].y, source[3].x, source[3].y ]);
-                destination = this._create(2, 4, [ destination[0].x, destination[0].y, destination[1].x, destination[1].y, destination[2].x, destination[2].y, destination[3].x, destination[3].y ]);
-                return new SpeedyMatrixHomography4pExpr(source, destination);
-            }
-            else if(source instanceof SpeedyMatrixExpr)
-                return new SpeedyMatrixHomography4pExpr(source, destination);
-        }
+        if(!(source.rows === 2 && source._shape.equals(destination._shape)))
+            throw new IllegalArgumentError(`Can't compute perspective transformation using ${source} and ${destination}. 4 correspondences of points are required`);
 
-
-        throw new IllegalArgumentError(`Can't compute perspective transformation using ${source} and ${destination}. 4 correspondences of points are required`);
+        return new SpeedyMatrixHomography4pExpr(source, destination);
     }
 }
