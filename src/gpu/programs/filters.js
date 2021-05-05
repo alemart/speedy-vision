@@ -22,7 +22,6 @@
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
 import { convX, convY, texConvX, texConvY, texConv2D, createKernel2D, createKernel1D } from '../shaders/filters/convolution';
-import { median } from '../shaders/filters/median';
 import { Utils } from '../../utils/utils';
 
 
@@ -31,16 +30,20 @@ import { Utils } from '../../utils/utils';
 // Fast median filters
 //
 
-// Fast median filter: 3x3 window
-const fastMedian3 = importShader('filters/fast-median.glsl')
-                   .withArguments('image')
-                   .withDefines({ 'WINDOW_SIZE': 3 });
+// Median filter for a 3x3 window
+const median3 = importShader('filters/fast-median.glsl')
+               .withArguments('image')
+               .withDefines({ 'WINDOW_SIZE': 3 });
 
-// Fast median filter: 5x5 window
-const fastMedian5 = importShader('filters/fast-median.glsl')
-                   .withArguments('image')
-                   .withDefines({ 'WINDOW_SIZE': 5 });
+// Median filter for a 5x5 window
+const median5 = importShader('filters/fast-median.glsl')
+               .withArguments('image')
+               .withDefines({ 'WINDOW_SIZE': 5 });
 
+// Median filter for a 7x7 window
+const median7 = importShader('filters/fast-median.glsl')
+               .withArguments('image')
+               .withDefines({ 'WINDOW_SIZE': 7 });
 
 
 //
@@ -81,9 +84,9 @@ export class GPUFilters extends SpeedyProgramGroup
             .compose('box11', '_box11x', '_box11y') // size: 11x11
 
             // median filters
-            .declare('median3', fastMedian3) // 3x3 window
-            .declare('median5', fastMedian5) // 5x5 window
-            .declare('median7', median(7)) // 7x7 window
+            .declare('median3', median3) // 3x3 window
+            .declare('median5', median5) // 5x5 window
+            .declare('median7', median7) // 7x7 window
 
             // difference of gaussians
             .compose('dog16_1', '_dog16_1x', '_dog16_1y') // sigma_2 / sigma_1 = 1.6 (approx. laplacian with sigma = 1)
