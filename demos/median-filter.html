@@ -1,0 +1,126 @@
+<!--
+  speedy-vision.js
+  GPU-accelerated Computer Vision for JavaScript
+  Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  median-filter.html
+  Blurring a video with a median filter
+-->
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
+        <meta name="author" content="Alexandre Martins">
+        <title>Blurring a video with a median filter</title>
+        <script src="../dist/speedy-vision.js"></script>
+        <link href="style.css" rel="stylesheet">
+    </head>
+    <body>
+        <h1>Median filter</h1>
+        <form autocomplete="off">
+            <div>
+                <label for="window-size">Window size:</label>
+                <select id="window-size">
+                    <option value="1" selected>none</option>
+                    <option value="3">3x3</option>
+                    <option value="5">5x5</option>
+                    <option value="7">7x7</option>
+                </select>
+            </div>
+            &nbsp;&nbsp;&nbsp;
+            <div>
+                <label for="speed-slider">Video speed</label>
+                <input type="range" id="speed-slider" min="0.10" max="2" value="1" step="0.01">
+            </div>
+        </form>
+        <video
+            src="../assets/bird-walking.mp4"
+            poster="../assets/loading.jpg"
+            width="480" height="270"
+            preload="auto"
+            loop muted hidden
+            title="Free video by Wendy Laplume, https://www.pexels.com/pt-br/video/passaro-ave-passarinho-concreto-4168986/">
+        </video>
+        <script>
+window.onload = async function()
+{
+    // create pipelines that applies the median filter
+    const pipeline = {
+        '1': Speedy.pipeline().convertTo('greyscale'),
+        '3': Speedy.pipeline().convertTo('greyscale').median({ size: 3 }),
+        '5': Speedy.pipeline().convertTo('greyscale').median({ size: 5 }),
+        '7': Speedy.pipeline().convertTo('greyscale').median({ size: 7 })
+    };
+
+    // tell Speedy to load the video
+    const video = document.querySelector('video');
+    const media = await Speedy.load(video);
+    video.play();
+
+    // create a canvas for rendering
+    const canvas = createCanvas(media.width, media.height, video.title);
+
+    // input controls & video speed
+    const windowSize = document.getElementById('window-size');
+    const speedSlider = document.getElementById('speed-slider');
+    speedSlider.oninput = () => video.playbackRate = speedSlider.value;
+
+    // render the greyscale video
+    async function render()
+    {
+        const transformedMedia = await media.run(pipeline[windowSize.value]);
+        transformedMedia.draw(canvas);
+        renderStatus(canvas);
+        requestAnimationFrame(render);
+    }
+    render();
+}
+
+function createCanvas(width, height, title)
+{
+    const canvas = document.getElementById('canvas-demo') || document.createElement('canvas');
+
+    canvas.width = width;
+    canvas.height = height;
+    canvas.title = title;
+
+    if(!document.body.contains(canvas))
+        document.body.appendChild(canvas);
+
+    return canvas;
+}
+
+function renderStatus(canvas, color = 'white', size = 18)
+{
+    const context = canvas.getContext('2d');
+
+    context.font = `bold ${size}px sans-serif`;
+    context.fillStyle = color;
+    context.textBaseline = 'top';
+
+    context.shadowOffsetX = 2;
+    context.shadowOffsetY = 2;
+    context.shadowBlur = 2;
+    context.shadowColor = 'rgba(0, 0, 0, 0.5)';
+
+    context.fillText(`FPS: ${Speedy.fps}`, 8, 8);
+
+    context.shadowColor = 'rgba(0, 0, 0, 0)';
+}
+        </script>
+        <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>
+    </body>
+</html>
