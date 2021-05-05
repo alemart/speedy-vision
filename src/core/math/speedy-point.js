@@ -77,4 +77,14 @@ export class SpeedyPoint2
     {
         return new SpeedyVector2(this.x - p.x, this.y - p.y);
     }
+
+    /**
+     * Is this point equal to p?
+     * @param {SpeedyPoint2} p
+     * @returns {boolean}
+     */
+    equals(p)
+    {
+        return this.x === p.x && this.y === p.y;
+    }
 }
