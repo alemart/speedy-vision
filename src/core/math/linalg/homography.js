@@ -248,3 +248,39 @@ export function homography4p(header, output, inputs)
     output[1 + 2 * stride] = f;
     output[2 + 2 * stride] = i;
 }
+
+
+/**
+ * Apply a homography matrix to a set of 2D points
+ * @param {object} header
+ * @param {ArrayBufferView} output
+ * @param {ArrayBufferView[]} inputs
+ */
+export function apply_homography(header, output, inputs)
+{
+    const { columns, stride } = header;
+    const [ hom, pts ] = inputs;
+    const [ hstride, pstride ] = header.strideOfInputs;
+
+    // read the entries of the homography
+    const h00 = hom[0];
+    const h10 = hom[1];
+    const h20 = hom[2];
+    const h01 = hom[0 + hstride];
+    const h11 = hom[1 + hstride];
+    const h21 = hom[2 + hstride];
+    const h02 = hom[0 + hstride + hstride];
+    const h12 = hom[1 + hstride + hstride];
+    const h22 = hom[2 + hstride + hstride];
+
+    // for each point (column of pts), apply the homography
+    // (we use homogeneous coordinates internally)
+    let j, ij, oj, x, y, d;
+    for(ij = oj = j = 0; j < columns; j++, ij += pstride, oj += stride) {
+        x = pts[ij];
+        y = pts[ij + 1];
+        d = h20 * x + h21 * y + h22;
+        output[oj] = (h00 * x + h01 * y + h02) / d;
+        output[oj + 1] = (h10 * x + h11 * y + h12) / d;
+    }
+}

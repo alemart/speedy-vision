@@ -45,15 +45,11 @@ import {
     MatrixOperationQR,
     MatrixOperationQRSolve,
     MatrixOperationBackSubstitution,
-    MatrixOperationLSSolve,
-    MatrixOperationSequence,
-    MatrixOperationCompareExchange,
-    MatrixOperationExtractIndexedBlock,
-    MatrixOperationApplyPermutation,
     MatrixOperationSort,
     MatrixOperationMap,
     MatrixOperationReduce,
     MatrixOperationHomography4p,
+    MatrixOperationApplyHomography,
 } from './matrix-operations';
 
 // constants
@@ -2172,6 +2168,24 @@ export class SpeedyMatrixHomography4pExpr extends SpeedyMatrixBinaryExpr
         Utils.assert(source._shape.rows === 2 && source._shape.columns === 4);
         Utils.assert(source._shape.equals(destination._shape));
         super(source, destination, new MatrixOperationHomography4p(source._shape, destination._shape));
+    }
+}
+
+/**
+ * Apply a homography matrix to a set of 2D points
+ */
+export class SpeedyMatrixApplyHomographyExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} hom homography matrix (3x3)
+     * @param {SpeedyMatrixExpr} pts set of n 2D points (2xn)
+     */
+    constructor(hom, pts)
+    {
+        Utils.assert(hom.rows === 3 && hom.columns === 3);
+        Utils.assert(pts.rows === 2);
+        super(hom, pts, new MatrixOperationApplyHomography(hom._shape, pts._shape));
     }
 }
 

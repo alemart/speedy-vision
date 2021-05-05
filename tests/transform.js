@@ -99,7 +99,7 @@ describe('Geometric transformations', function() {
                 expect(p[i].equals(q[i])).toEqual(true);
         });
 
-    })
+    });
 
     describe('Perspective transform', function() {
 
@@ -318,6 +318,28 @@ describe('Geometric transformations', function() {
             expect(() => Speedy.Matrix.Perspective(srcQuad, fooQuad)).toThrow();
             expect(() => Speedy.Matrix.Perspective(fooQuad, srcQuad)).toThrow();
 
+        });
+
+        it('applies a perspective transform to a set of points', async function() {
+            const homography = Speedy.Matrix(3, 3, [
+                3, 0, 0,
+                0, 2, 0,
+                2, 1, 1,
+            ]);
+
+            const srcQuad = Speedy.Matrix(2, 4, [
+                0, 0,
+                1, 0,
+                1, 1,
+                0, 1,
+            ]);
+
+            const dstQuad = Speedy.Matrix.applyPerspective(homography, srcQuad);
+            await printm('homography:', homography, 'srcQuad:', srcQuad, 'dstQuad:', dstQuad);
+
+            const actual = await dstQuad.read();
+            const expected = [2, 1, 5, 1, 5, 3, 2, 3];
+            expect(actual).toBeElementwiseEqual(expected);
         });
 
     });

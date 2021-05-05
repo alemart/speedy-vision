@@ -2027,6 +2027,8 @@ await B.print(); // identity matrix
 
 ### Geometric transformations
 
+#### Perspective transformation
+
 ##### Speedy.Matrix.Perspective()
 
 `Speedy.Matrix.Perspective(source: SpeedyMatrixExpr, destination: SpeedyMatrixExpr): SpeedyMatrixExpr`
@@ -2069,6 +2071,51 @@ await homography.print();
 // [ 0  0  1 ]
 //
 ```
+
+##### Speedy.Matrix.applyPerspective()
+
+`Speedy.Matrix.applyPerspective(homography: SpeedyMatrixExpr, points: SpeedyMatrixExpr): SpeedyMatrixExpr`
+
+Apply a perspective transformation to a set of *n* points.
+
+###### Arguments
+
+* `homography: SpeedyMatrixExpr`. A homography matrix (3x3).
+* `points: SpeedyMatrixExpr`. A set of *n* points, one per column (2x*n*).
+
+###### Returns
+
+A 2x*n* matrix.
+
+###### Example
+
+```js
+const homography = Speedy.Matrix(3, 3, [
+    3, 0, 0,
+    0, 2, 0,
+    2, 1, 1,
+]);
+
+const srcQuad = Speedy.Matrix(2, 4, [
+    0, 0,
+    1, 0,
+    1, 1,
+    0, 1,
+]);
+
+const dstQuad = Speedy.Matrix.applyPerspective(homography, srcQuad);
+await dstQuad.print();
+
+//
+// Result:
+// [ 2  5  5  2 ]
+// [ 1  1  3  3 ]
+//
+```
+
+
+
+#### Utilities
 
 ##### Speedy.Matrix.fromPoints()
 

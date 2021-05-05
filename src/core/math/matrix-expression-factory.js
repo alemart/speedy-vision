@@ -28,6 +28,7 @@ import {
     SpeedyMatrixExpr,
     SpeedyMatrixElementaryExpr,
     SpeedyMatrixHomography4pExpr,
+    SpeedyMatrixApplyHomographyExpr,
 } from './matrix-expressions';
 
 /**
@@ -163,10 +164,17 @@ export class SpeedyMatrixExprFactory extends Function
         });
     }
 
+
+
+
+    // ==============================================
+    // Perspective transformation
+    // ==============================================
+
     /**
      * Compute a perspective transformation using 4 correspondences of points
-     * @param {SpeedyMatrixExpr|SpeedyPoint2[]} source 2x4 matrix or 4 points (ui, vi)
-     * @param {SpeedyMatrixExpr|SpeedyPoint2[]} destination 2x4 matrix or 4 points (xi, yi)
+     * @param {SpeedyMatrixExpr} source 2x4 matrix with coordinates of 4 points (ui, vi)
+     * @param {SpeedyMatrixExpr} destination 2x4 matrix with coordinates of 4 points (xi, yi)
      * @returns {SpeedyMatrixExpr} 3x3 matrix: perspective transformation
      */
     Perspective(source, destination)
@@ -175,5 +183,21 @@ export class SpeedyMatrixExprFactory extends Function
             throw new IllegalArgumentError(`Can't compute perspective transformation using ${source} and ${destination}. 4 correspondences of points are required`);
 
         return new SpeedyMatrixHomography4pExpr(source, destination);
+    }
+
+    /**
+     * Apply a homography matrix to a set of 2D points
+     * @param {SpeedyMatrixExpr} homography homography matrix (3x3)
+     * @param {SpeedyMatrixExpr} points a set of n 2D points (2xn)
+     * @returns {SpeedyMatrixExpr} a 2xn matrix
+     */
+    applyPerspective(homography, points)
+    {
+        if(homography.rows !== 3 || homography.columns !== 3)
+            throw new IllegalArgumentError(`Can't apply perspective transformation: invalid homography matrix (${homography._shape.toString()})`);
+        else if(points.rows !== 2)
+            throw new IllegalArgumentError(`Can't apply perspective transform: invalid set of points (${points._shape.toString()})`);
+
+        return new SpeedyMatrixApplyHomographyExpr(homography, points);
     }
 }

@@ -712,3 +712,20 @@ export class MatrixOperationHomography4p extends MatrixOperation
         super('homography4p', 2, new MatrixShape(3, 3, leftShape.dtype));
     }
 }
+
+/**
+ * Apply a homography matrix to a set of points
+ */
+export class MatrixOperationApplyHomography extends MatrixOperation
+{
+    /**
+     * Constructor
+     * @param {MatrixShape} homShape shape of the homography matrix (must be 3x3)
+     * @param {MatrixShape} ptsShape shape of the matrix of the input points (must be 2xn)
+     */
+    constructor(homShape, ptsShape)
+    {
+        Utils.assert(ptsShape.dtype === homShape.dtype);
+        super('apply_homography', 2, ptsShape);
+    }
+}
