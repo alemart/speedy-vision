@@ -44,6 +44,7 @@ import {
     MatrixOperationCompMult,
     MatrixOperationQR,
     MatrixOperationQRSolve,
+    MatrixOperationLSSolve,
     MatrixOperationBackSubstitution,
     MatrixOperationSort,
     MatrixOperationMap,
