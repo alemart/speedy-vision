@@ -47,7 +47,7 @@ function LinAlg() { }
 LinAlg.lib = Object.create(null);
 
 /** @type {object} source code of methods */
-LinAlg.lib._src = Object.create(null);
+const _src = Object.create(null);
 
 /**
  * Register a method
@@ -70,7 +70,7 @@ LinAlg.register = function(name, fn)
         value: fn.bind(LinAlg.lib), // methods will be bound to LinAlg.lib
         ...readonly
     });
-    Object.defineProperty(LinAlg.lib._src, name, {
+    Object.defineProperty(_src, name, {
         value: fn.toString(),
         ...readonly
     });
@@ -92,8 +92,8 @@ LinAlg.hasMethod = function(name)
  */
 LinAlg.toString = function()
 {
-    const methods = Object.keys(LinAlg.lib._src)
-            .map(x => `LinAlg.lib.${x} = (${LinAlg.lib._src[x]}).bind(LinAlg.lib);`)
+    const methods = Object.keys(_src)
+            .map(x => `LinAlg.lib.${x} = (${_src[x]}).bind(LinAlg.lib);`)
             .join('\n');
 
     return `` + // IIFE
