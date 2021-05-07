@@ -171,3 +171,20 @@ export function submatrices(header, output, inputs, stride, strideOfInputs, outp
 
     return [ header, output, inputs ];
 }
+
+/**
+ * Fisher-Yates shuffle
+ * @param {Array} array
+ * @returns {Array} the input array, shuffled
+ */
+export function shuffle(array)
+{
+    for(let t, j, i = array.length - 1; i > 0; i--) {
+        j = (Math.random() * (i+1)) | 0;
+        t = array[i];
+        array[i] = array[j];
+        array[j] = t;
+    }
+
+    return array;
+}
