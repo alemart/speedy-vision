@@ -28,6 +28,7 @@ const LinAlgLib = {
     ...require('./sequence'),
     ...require('./functional'),
     ...require('./homography'),
+    ...require('./transform'),
     ...require('./utils'),
 };
 
