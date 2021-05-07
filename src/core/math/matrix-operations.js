@@ -714,7 +714,7 @@ export class MatrixOperationHomography4p extends MatrixOperation
 }
 
 /**
- * Apply a homography matrix to a set of points
+ * Apply a homography matrix to a set of 2D points
  */
 export class MatrixOperationApplyHomography extends MatrixOperation
 {
@@ -727,5 +727,39 @@ export class MatrixOperationApplyHomography extends MatrixOperation
     {
         Utils.assert(ptsShape.dtype === homShape.dtype);
         super('apply_homography', 2, ptsShape);
+    }
+}
+
+/**
+ * Apply an affine transformation to a set of 2D points
+ */
+export class MatrixOperationApplyAffine extends MatrixOperation
+{
+    /**
+     * Constructor
+     * @param {MatrixShape} matShape shape of the transformation matrix (must be 2x3)
+     * @param {MatrixShape} ptsShape shape of the matrix of the input points (must be 2xn)
+     */
+    constructor(matShape, ptsShape)
+    {
+        Utils.assert(ptsShape.dtype === matShape.dtype);
+        super('apply_affine', 2, ptsShape);
+    }
+}
+
+/**
+ * Apply a linear transformation to a set of 2D points
+ */
+export class MatrixOperationApplyLinear2d extends MatrixOperation
+{
+    /**
+     * Constructor
+     * @param {MatrixShape} matShape shape of the transformation matrix (must be 2x2)
+     * @param {MatrixShape} ptsShape shape of the matrix of the input points (must be 2xn)
+     */
+    constructor(matShape, ptsShape)
+    {
+        Utils.assert(ptsShape.dtype === matShape.dtype);
+        super('apply_linear2d', 2, ptsShape);
     }
 }

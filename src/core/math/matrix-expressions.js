@@ -50,6 +50,8 @@ import {
     MatrixOperationReduce,
     MatrixOperationHomography4p,
     MatrixOperationApplyHomography,
+    MatrixOperationApplyAffine,
+    MatrixOperationApplyLinear2d,
 } from './matrix-operations';
 
 // constants
@@ -2150,7 +2152,7 @@ class SpeedyMatrixSortExpr extends SpeedyMatrixTempExpr
 
 
 // ==============================================
-// EXTERNAL UTILITIES
+// GEOMETRIC TRANSFORMATIONS
 // ==============================================
 
 /**
@@ -2186,6 +2188,43 @@ export class SpeedyMatrixApplyHomographyExpr extends SpeedyMatrixBinaryExpr
         Utils.assert(hom.rows === 3 && hom.columns === 3);
         Utils.assert(pts.rows === 2);
         super(hom, pts, new MatrixOperationApplyHomography(hom._shape, pts._shape));
+    }
+}
+
+/**
+ * Apply an affine transformation to a set of 2D points
+ */
+export class SpeedyMatrixApplyAffineExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} mat transformation matrix (2x3)
+     * @param {SpeedyMatrixExpr} pts set of n 2D points (2xn)
+     */
+    constructor(mat, pts)
+    {
+        Utils.assert(mat.rows === 2 && mat.columns === 3);
+        Utils.assert(pts.rows === 2);
+        super(mat, pts, new MatrixOperationApplyAffine(mat._shape, pts._shape));
+    }
+}
+
+/**
+ * Apply a linear transformation to a set of 2D points
+ * (this is basically matrix multiplication)
+ */
+export class SpeedyMatrixApplyLinear2dExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} mat transformation matrix (2x2)
+     * @param {SpeedyMatrixExpr} pts set of n 2D points (2xn)
+     */
+    constructor(mat, pts)
+    {
+        Utils.assert(mat.rows === 2 && mat.columns === 2);
+        Utils.assert(pts.rows === 2);
+        super(mat, pts, new MatrixOperationApplyLinear2d(mat._shape, pts._shape));
     }
 }
 

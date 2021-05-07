@@ -207,7 +207,7 @@ describe('Geometric transformations', function() {
 
         });
 
-        it('fails to compute the transform if 3 or more points are collinear', async function() {
+        it('fails to compute a homography if 3 or more points are collinear', async function() {
 
             const srcQuad = Speedy.Matrix.fromPoints([
                 Speedy.Point2(0, 0),
@@ -334,11 +334,54 @@ describe('Geometric transformations', function() {
                 0, 1,
             ]);
 
-            const dstQuad = Speedy.Matrix.applyPerspective(homography, srcQuad);
+            const dstQuad = Speedy.Matrix.transform(homography, srcQuad);
             await printm('homography:', homography, 'srcQuad:', srcQuad, 'dstQuad:', dstQuad);
 
             const actual = await dstQuad.read();
             const expected = [2, 1, 5, 1, 5, 3, 2, 3];
+            expect(actual).toBeElementwiseEqual(expected);
+        });
+
+        it('applies an affine transform to a set of points', async function() {
+            const mat = Speedy.Matrix(2, 3, [
+                3, 0,
+                0, 2,
+                2, 1,
+            ]);
+
+            const srcQuad = Speedy.Matrix(2, 4, [
+                0, 0,
+                1, 0,
+                1, 1,
+                0, 1,
+            ]);
+
+            const dstQuad = Speedy.Matrix.transform(mat, srcQuad);
+            await printm('affine transform:', mat, 'srcQuad:', srcQuad, 'dstQuad:', dstQuad);
+
+            const actual = await dstQuad.read();
+            const expected = [2, 1, 5, 1, 5, 3, 2, 3];
+            expect(actual).toBeElementwiseEqual(expected);
+        });
+
+        it('applies a linear transform to a set of points', async function() {
+            const mat = Speedy.Matrix(2, 2, [
+                3, 0,
+                0, 2,
+            ]);
+
+            const srcQuad = Speedy.Matrix(2, 4, [
+                0, 0,
+                1, 0,
+                1, 1,
+                0, 1,
+            ]);
+
+            const dstQuad = Speedy.Matrix.transform(mat, srcQuad);
+            await printm('linear transform:', mat, 'srcQuad:', srcQuad, 'dstQuad:', dstQuad);
+
+            const actual = await dstQuad.read();
+            const expected = [0, 0, 3, 0, 3, 2, 0, 2];
             expect(actual).toBeElementwiseEqual(expected);
         });
 

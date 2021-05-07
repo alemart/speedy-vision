@@ -29,6 +29,8 @@ import {
     SpeedyMatrixElementaryExpr,
     SpeedyMatrixHomography4pExpr,
     SpeedyMatrixApplyHomographyExpr,
+    SpeedyMatrixApplyAffineExpr,
+    SpeedyMatrixApplyLinear2dExpr,
 } from './matrix-expressions';
 
 /**
@@ -168,8 +170,31 @@ export class SpeedyMatrixExprFactory extends Function
 
 
     // ==============================================
-    // Perspective transformation
+    // Geometric transformations
     // ==============================================
+
+    /**
+     * Apply a transformation matrix to a set of 2D points
+     * @param {SpeedyMatrixExpr} mat homography (3x3) or affine (2x3) or linear (2x2)
+     * @param {SpeedyMatrixExpr} points a set of n 2D points (2xn)
+     * @returns {SpeedyMatrixExpr} a 2xn matrix
+     */
+    transform(mat, points)
+    {
+        if(points.rows !== 2)
+            throw new IllegalArgumentError(`Can't apply transform: invalid set of points (${points._shape.toString()})`);
+
+        if(mat.columns === 3) {
+            if(mat.rows === 3)
+                return new SpeedyMatrixApplyHomographyExpr(mat, points);
+            else if(mat.rows === 2)
+                return new SpeedyMatrixApplyAffineExpr(mat, points);
+        }
+        else if(mat.columns === 2 && mat.rows === 2)
+            return new SpeedyMatrixApplyLinear2dExpr(mat, points);
+
+        throw new IllegalArgumentError(`Can't apply transformation: invalid transformation matrix (${mat._shape.toString()})`);
+    }
 
     /**
      * Compute a perspective transformation using 4 correspondences of points
@@ -183,21 +208,5 @@ export class SpeedyMatrixExprFactory extends Function
             throw new IllegalArgumentError(`Can't compute perspective transformation using ${source} and ${destination}. 4 correspondences of points are required`);
 
         return new SpeedyMatrixHomography4pExpr(source, destination);
-    }
-
-    /**
-     * Apply a homography matrix to a set of 2D points
-     * @param {SpeedyMatrixExpr} homography homography matrix (3x3)
-     * @param {SpeedyMatrixExpr} points a set of n 2D points (2xn)
-     * @returns {SpeedyMatrixExpr} a 2xn matrix
-     */
-    applyPerspective(homography, points)
-    {
-        if(homography.rows !== 3 || homography.columns !== 3)
-            throw new IllegalArgumentError(`Can't apply perspective transformation: invalid homography matrix (${homography._shape.toString()})`);
-        else if(points.rows !== 2)
-            throw new IllegalArgumentError(`Can't apply perspective transform: invalid set of points (${points._shape.toString()})`);
-
-        return new SpeedyMatrixApplyHomographyExpr(homography, points);
     }
 }

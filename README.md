@@ -2072,16 +2072,20 @@ await homography.print();
 //
 ```
 
-##### Speedy.Matrix.applyPerspective()
 
-`Speedy.Matrix.applyPerspective(homography: SpeedyMatrixExpr, points: SpeedyMatrixExpr): SpeedyMatrixExpr`
 
-Apply a perspective transformation to a set of *n* points.
+#### Utilities
+
+##### Speedy.Matrix.transform()
+
+`Speedy.Matrix.transform(mat: SpeedyMatrixExpr, points: SpeedyMatrixExpr): SpeedyMatrixExpr`
+
+Apply a transformation matrix to a set of *n* points.
 
 ###### Arguments
 
-* `homography: SpeedyMatrixExpr`. A homography matrix (3x3).
-* `points: SpeedyMatrixExpr`. A set of *n* points, one per column (2 x *n*).
+* `mat: SpeedyMatrixExpr`. A transformation matrix: homography (3x3), affine (2x3) or linear (2x2).
+* `points: SpeedyMatrixExpr`. A 2 x *n* matrix encoding a set of *n* points, one per column.
 
 ###### Returns
 
@@ -2090,7 +2094,7 @@ A 2 x *n* matrix.
 ###### Example
 
 ```js
-const homography = Speedy.Matrix(3, 3, [
+const mat = Speedy.Matrix(3, 3, [
     3, 0, 0,
     0, 2, 0,
     2, 1, 1,
@@ -2103,7 +2107,7 @@ const srcQuad = Speedy.Matrix(2, 4, [
     0, 1,
 ]);
 
-const dstQuad = Speedy.Matrix.applyPerspective(homography, srcQuad);
+const dstQuad = Speedy.Matrix.transform(mat, srcQuad);
 await dstQuad.print();
 
 //
@@ -2112,10 +2116,6 @@ await dstQuad.print();
 // [ 1  1  3  3 ]
 //
 ```
-
-
-
-#### Utilities
 
 ##### Speedy.Matrix.fromPoints()
 
