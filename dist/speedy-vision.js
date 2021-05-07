@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-05-05T18:07:34.741Z
+ * Date: 2021-05-07T19:24:05.662Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -3161,13 +3161,12 @@ function sort(header, output, inputs)
 /*!********************************************!*\
   !*** ./src/core/math/linalg/homography.js ***!
   \********************************************/
-/*! exports provided: homography4p, apply_homography */
+/*! exports provided: homography4p */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "homography4p", function() { return homography4p; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "apply_homography", function() { return apply_homography; });
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -3419,42 +3418,6 @@ function homography4p(header, output, inputs)
     output[2 + 2 * stride] = i;
 }
 
-
-/**
- * Apply a homography matrix to a set of 2D points
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function apply_homography(header, output, inputs)
-{
-    const { columns, stride } = header;
-    const [ hom, pts ] = inputs;
-    const [ hstride, pstride ] = header.strideOfInputs;
-
-    // read the entries of the homography
-    const h00 = hom[0];
-    const h10 = hom[1];
-    const h20 = hom[2];
-    const h01 = hom[0 + hstride];
-    const h11 = hom[1 + hstride];
-    const h21 = hom[2 + hstride];
-    const h02 = hom[0 + hstride + hstride];
-    const h12 = hom[1 + hstride + hstride];
-    const h22 = hom[2 + hstride + hstride];
-
-    // for each point (column of pts), apply the homography
-    // (we use homogeneous coordinates internally)
-    let j, ij, oj, x, y, d;
-    for(ij = oj = j = 0; j < columns; j++, ij += pstride, oj += stride) {
-        x = pts[ij];
-        y = pts[ij + 1];
-        d = h20 * x + h21 * y + h22;
-        output[oj] = (h00 * x + h01 * y + h02) / d;
-        output[oj + 1] = (h10 * x + h11 * y + h12) / d;
-    }
-}
-
 /***/ }),
 
 /***/ "./src/core/math/linalg/inverse.js":
@@ -3613,6 +3576,7 @@ const LinAlgLib = {
     ...__webpack_require__(/*! ./sequence */ "./src/core/math/linalg/sequence.js"),
     ...__webpack_require__(/*! ./functional */ "./src/core/math/linalg/functional.js"),
     ...__webpack_require__(/*! ./homography */ "./src/core/math/linalg/homography.js"),
+    ...__webpack_require__(/*! ./transform */ "./src/core/math/linalg/transform.js"),
     ...__webpack_require__(/*! ./utils */ "./src/core/math/linalg/utils.js"),
 };
 
@@ -3631,7 +3595,7 @@ function LinAlg() { }
 LinAlg.lib = Object.create(null);
 
 /** @type {object} source code of methods */
-LinAlg.lib._src = Object.create(null);
+const _src = Object.create(null);
 
 /**
  * Register a method
@@ -3654,7 +3618,7 @@ LinAlg.register = function(name, fn)
         value: fn.bind(LinAlg.lib), // methods will be bound to LinAlg.lib
         ...readonly
     });
-    Object.defineProperty(LinAlg.lib._src, name, {
+    Object.defineProperty(_src, name, {
         value: fn.toString(),
         ...readonly
     });
@@ -3676,8 +3640,8 @@ LinAlg.hasMethod = function(name)
  */
 LinAlg.toString = function()
 {
-    const methods = Object.keys(LinAlg.lib._src)
-            .map(x => `LinAlg.lib.${x} = (${LinAlg.lib._src[x]}).bind(LinAlg.lib);`)
+    const methods = Object.keys(_src)
+            .map(x => `LinAlg.lib.${x} = (${_src[x]}).bind(LinAlg.lib);`)
             .join('\n');
 
     return `` + // IIFE
@@ -4180,6 +4144,192 @@ function lssolve(header, output, inputs)
 
     // solve R x = Q'b for x
     this.backsub(triangsys[0], triangsys[1], triangsys[2]);
+}
+
+/***/ }),
+
+/***/ "./src/core/math/linalg/transform.js":
+/*!*******************************************!*\
+  !*** ./src/core/math/linalg/transform.js ***!
+  \*******************************************/
+/*! exports provided: apply_homography, apply_affine, apply_linear2d, dltnorm2d */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "apply_homography", function() { return apply_homography; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "apply_affine", function() { return apply_affine; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "apply_linear2d", function() { return apply_linear2d; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "dltnorm2d", function() { return dltnorm2d; });
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * transform.js
+ * Geometric transformations
+ */
+
+/**
+ * Apply a homography matrix to a set of 2D points
+ * @param {object} header
+ * @param {ArrayBufferView} output
+ * @param {ArrayBufferView[]} inputs
+ */
+function apply_homography(header, output, inputs)
+{
+    const { columns, stride } = header;
+    const [ hom, pts ] = inputs;
+    const [ hstride, pstride ] = header.strideOfInputs;
+    const hstride2 = hstride + hstride;
+
+    // read the entries of the homography
+    const h00 = hom[0];
+    const h10 = hom[1];
+    const h20 = hom[2];
+    const h01 = hom[0 + hstride];
+    const h11 = hom[1 + hstride];
+    const h21 = hom[2 + hstride];
+    const h02 = hom[0 + hstride2];
+    const h12 = hom[1 + hstride2];
+    const h22 = hom[2 + hstride2];
+
+    // for each point (column of pts), apply the homography
+    // (we use homogeneous coordinates internally)
+    let j, ij, oj, x, y, d;
+    for(ij = oj = j = 0; j < columns; j++, ij += pstride, oj += stride) {
+        x = pts[ij];
+        y = pts[ij + 1];
+        d = h20 * x + h21 * y + h22;
+        output[oj] = (h00 * x + h01 * y + h02) / d;
+        output[oj + 1] = (h10 * x + h11 * y + h12) / d;
+    }
+}
+
+/**
+ * Apply an affine transformation to a set of 2D points
+ * @param {object} header
+ * @param {ArrayBufferView} output
+ * @param {ArrayBufferView[]} inputs
+ */
+function apply_affine(header, output, inputs)
+{
+    const { columns, stride } = header;
+    const [ mat, pts ] = inputs;
+    const [ mstride, pstride ] = header.strideOfInputs;
+    const mstride2 = mstride + mstride;
+
+    // read the entries of the transformation
+    const m00 = mat[0];
+    const m10 = mat[1];
+    const m01 = mat[0 + mstride];
+    const m11 = mat[1 + mstride];
+    const m02 = mat[0 + mstride2];
+    const m12 = mat[1 + mstride2];
+
+    // for each point (column of pts), apply the transformation
+    let j, ij, oj, x, y;
+    for(ij = oj = j = 0; j < columns; j++, ij += pstride, oj += stride) {
+        x = pts[ij];
+        y = pts[ij + 1];
+        output[oj] = m00 * x + m01 * y + m02;
+        output[oj + 1] = m10 * x + m11 * y + m12;
+    }
+}
+
+/**
+ * Apply a 2x2 linear transformation to a set of 2D points
+ * @param {object} header
+ * @param {ArrayBufferView} output
+ * @param {ArrayBufferView[]} inputs
+ */
+function apply_linear2d(header, output, inputs)
+{
+    const { columns, stride } = header;
+    const [ mat, pts ] = inputs;
+    const [ mstride, pstride ] = header.strideOfInputs;
+
+    // read the entries of the transformation
+    const m00 = mat[0];
+    const m10 = mat[1];
+    const m01 = mat[0 + mstride];
+    const m11 = mat[1 + mstride];
+
+    // for each point (column of pts), apply the transformation
+    let j, ij, oj, x, y;
+    for(ij = oj = j = 0; j < columns; j++, ij += pstride, oj += stride) {
+        x = pts[ij];
+        y = pts[ij + 1];
+        output[oj] = m00 * x + m01 * y;
+        output[oj + 1] = m10 * x + m11 * y;
+    }
+}
+
+/**
+ * Given a set of n points (xi, yi) encoded in a 2 x n matrix,
+ * find normalization and denormalization matrices (3x3) so that
+ * the average distance of the normalized points to the origin
+ * becomes a small constant. The output is a 3x6 matrix with two
+ * 3x3 blocks featuring both norm & denorm matrices.
+ * @param {object} header
+ * @param {ArrayBufferView} output
+ * @param {ArrayBufferView[]} inputs
+ */
+function dltnorm2d(header, output, inputs)
+{
+    const stride = header.stride;
+    const pstride = header.strideOfInputs[0];
+    const n = header.columnsOfInputs[0];
+    const pts = inputs[0];
+    let cx = 0.0, cy = 0.0, dx = 0.0, dy = 0.0, d = 0.0, s = 0.0, z = 0.0;
+    let i = 0, ip = 0;
+
+    // find the center of mass (cx, cy)
+    for(ip = i = 0; i < n; i++, ip += pstride) {
+        cx += pts[ip];
+        cy += pts[ip + 1];
+    }
+    cx /= n;
+    cy /= n;
+
+    // find the RMS distance to the center of mass
+    for(ip = i = 0; i < n; i++, ip += pstride) {
+        dx = pts[ip] - cx;
+        dy = pts[ip + 1] - cy;
+        d += dx * dx + dy * dy;
+    }
+    d = Math.sqrt(d / n);
+
+    // find the scale factor
+    const SQRT2 = 1.4142135623730951;
+    s = SQRT2 / d;
+    z = d / SQRT2; // = 1/s
+
+    // write the normalization matrix
+    // given a point p, set p_normalized := s(p - c)
+    const stride2 = 2 * stride;
+    output[0] = s; output[0 + stride] = 0; output[0 + stride2] = -s * cx;
+    output[1] = 0; output[1 + stride] = s; output[1 + stride2] = -s * cy;
+    output[2] = 0; output[2 + stride] = 0; output[2 + stride2] = 1;
+
+    // write the denormalization matrix
+    // given a normalized point q, set q_denormalized := q/s + c
+    const stride3 = 3 * stride, stride4 = 4 * stride, stride5 = 5 * stride;
+    output[0 + stride3] = z; output[0 + stride4] = 0; output[0 + stride5] = cx;
+    output[1 + stride3] = 0; output[1 + stride4] = z; output[1 + stride5] = cy;
+    output[2 + stride3] = 0; output[2 + stride4] = 0; output[2 + stride5] = 1;
 }
 
 /***/ }),
@@ -4820,8 +4970,31 @@ class SpeedyMatrixExprFactory extends Function
 
 
     // ==============================================
-    // Perspective transformation
+    // Geometric transformations
     // ==============================================
+
+    /**
+     * Apply a transformation matrix to a set of 2D points
+     * @param {SpeedyMatrixExpr} mat homography (3x3) or affine (2x3) or linear (2x2)
+     * @param {SpeedyMatrixExpr} points a set of n 2D points (2xn)
+     * @returns {SpeedyMatrixExpr} a 2xn matrix
+     */
+    transform(mat, points)
+    {
+        if(points.rows !== 2)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't apply transform: invalid set of points (${points._shape.toString()})`);
+
+        if(mat.columns === 3) {
+            if(mat.rows === 3)
+                return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixApplyHomographyExpr"](mat, points);
+            else if(mat.rows === 2)
+                return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixApplyAffineExpr"](mat, points);
+        }
+        else if(mat.columns === 2 && mat.rows === 2)
+            return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixApplyLinear2dExpr"](mat, points);
+
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't apply transformation: invalid transformation matrix (${mat._shape.toString()})`);
+    }
 
     /**
      * Compute a perspective transformation using 4 correspondences of points
@@ -4836,22 +5009,6 @@ class SpeedyMatrixExprFactory extends Function
 
         return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixHomography4pExpr"](source, destination);
     }
-
-    /**
-     * Apply a homography matrix to a set of 2D points
-     * @param {SpeedyMatrixExpr} homography homography matrix (3x3)
-     * @param {SpeedyMatrixExpr} points a set of n 2D points (2xn)
-     * @returns {SpeedyMatrixExpr} a 2xn matrix
-     */
-    applyPerspective(homography, points)
-    {
-        if(homography.rows !== 3 || homography.columns !== 3)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't apply perspective transformation: invalid homography matrix (${homography._shape.toString()})`);
-        else if(points.rows !== 2)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't apply perspective transform: invalid set of points (${points._shape.toString()})`);
-
-        return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixApplyHomographyExpr"](homography, points);
-    }
 }
 
 /***/ }),
@@ -4860,7 +5017,7 @@ class SpeedyMatrixExprFactory extends Function
 /*!*********************************************!*\
   !*** ./src/core/math/matrix-expressions.js ***!
   \*********************************************/
-/*! exports provided: SpeedyMatrixExpr, SpeedyMatrixElementaryExpr, SpeedyMatrixConstantExpr, SpeedyMatrixHomography4pExpr, SpeedyMatrixApplyHomographyExpr */
+/*! exports provided: SpeedyMatrixExpr, SpeedyMatrixElementaryExpr, SpeedyMatrixConstantExpr, SpeedyMatrixHomography4pExpr, SpeedyMatrixApplyHomographyExpr, SpeedyMatrixApplyAffineExpr, SpeedyMatrixApplyLinear2dExpr */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -4870,6 +5027,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixConstantExpr", function() { return SpeedyMatrixConstantExpr; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixHomography4pExpr", function() { return SpeedyMatrixHomography4pExpr; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixApplyHomographyExpr", function() { return SpeedyMatrixApplyHomographyExpr; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixApplyAffineExpr", function() { return SpeedyMatrixApplyAffineExpr; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixApplyLinear2dExpr", function() { return SpeedyMatrixApplyLinear2dExpr; });
 /* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix */ "./src/core/math/matrix.js");
 /* harmony import */ var _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./bound-matrix-operation */ "./src/core/math/bound-matrix-operation.js");
 /* harmony import */ var _matrix_shape__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix-shape */ "./src/core/math/matrix-shape.js");
@@ -7008,7 +7167,7 @@ class SpeedyMatrixSortExpr extends SpeedyMatrixTempExpr
 
 
 // ==============================================
-// EXTERNAL UTILITIES
+// GEOMETRIC TRANSFORMATIONS
 // ==============================================
 
 /**
@@ -7044,6 +7203,43 @@ class SpeedyMatrixApplyHomographyExpr extends SpeedyMatrixBinaryExpr
         _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(hom.rows === 3 && hom.columns === 3);
         _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(pts.rows === 2);
         super(hom, pts, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationApplyHomography"](hom._shape, pts._shape));
+    }
+}
+
+/**
+ * Apply an affine transformation to a set of 2D points
+ */
+class SpeedyMatrixApplyAffineExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} mat transformation matrix (2x3)
+     * @param {SpeedyMatrixExpr} pts set of n 2D points (2xn)
+     */
+    constructor(mat, pts)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(mat.rows === 2 && mat.columns === 3);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(pts.rows === 2);
+        super(mat, pts, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationApplyAffine"](mat._shape, pts._shape));
+    }
+}
+
+/**
+ * Apply a linear transformation to a set of 2D points
+ * (this is basically matrix multiplication)
+ */
+class SpeedyMatrixApplyLinear2dExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} mat transformation matrix (2x2)
+     * @param {SpeedyMatrixExpr} pts set of n 2D points (2xn)
+     */
+    constructor(mat, pts)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(mat.rows === 2 && mat.columns === 2);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(pts.rows === 2);
+        super(mat, pts, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationApplyLinear2d"](mat._shape, pts._shape));
     }
 }
 
@@ -7116,7 +7312,7 @@ class SpeedyMatrixLSSolveNodeExpr extends SpeedyMatrixBinaryExpr
         else if(vectorB.rows != m || vectorB.columns != 1)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Expected a ${m} x 1 column-vector, but found a ${vectorB.rows} x ${vectorB.columns} matrix`);
 
-        super(matrixA, vectorB, new MatrixOperationLSSolve(matrixA._shape, vectorB._shape));
+        super(matrixA, vectorB, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationLSSolve"](matrixA._shape, vectorB._shape));
     }
 }
 
@@ -7398,7 +7594,7 @@ class MatrixOperationsQueue
 /*!********************************************!*\
   !*** ./src/core/math/matrix-operations.js ***!
   \********************************************/
-/*! exports provided: MatrixOperation, MatrixOperationNop, MatrixOperationFill, MatrixOperationCopy, MatrixOperationTranspose, MatrixOperationInverse, MatrixOperationAdd, MatrixOperationSubtract, MatrixOperationMultiply, MatrixOperationScale, MatrixOperationCompMult, MatrixOperationMultiplyLT, MatrixOperationMultiplyRT, MatrixOperationMultiplyVec, MatrixOperationQR, MatrixOperationQRSolve, MatrixOperationBackSubstitution, MatrixOperationLSSolve, MatrixOperationWithSubroutine, MatrixOperationSequence, MatrixOperationSort, MatrixOperationMap, MatrixOperationReduce, MatrixOperationHomography4p, MatrixOperationApplyHomography */
+/*! exports provided: MatrixOperation, MatrixOperationNop, MatrixOperationFill, MatrixOperationCopy, MatrixOperationTranspose, MatrixOperationInverse, MatrixOperationAdd, MatrixOperationSubtract, MatrixOperationMultiply, MatrixOperationScale, MatrixOperationCompMult, MatrixOperationMultiplyLT, MatrixOperationMultiplyRT, MatrixOperationMultiplyVec, MatrixOperationQR, MatrixOperationQRSolve, MatrixOperationBackSubstitution, MatrixOperationLSSolve, MatrixOperationWithSubroutine, MatrixOperationSequence, MatrixOperationSort, MatrixOperationMap, MatrixOperationReduce, MatrixOperationHomography4p, MatrixOperationApplyHomography, MatrixOperationApplyAffine, MatrixOperationApplyLinear2d */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -7428,6 +7624,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationReduce", function() { return MatrixOperationReduce; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationHomography4p", function() { return MatrixOperationHomography4p; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationApplyHomography", function() { return MatrixOperationApplyHomography; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationApplyAffine", function() { return MatrixOperationApplyAffine; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationApplyLinear2d", function() { return MatrixOperationApplyLinear2d; });
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
@@ -8153,7 +8351,7 @@ class MatrixOperationHomography4p extends MatrixOperation
 }
 
 /**
- * Apply a homography matrix to a set of points
+ * Apply a homography matrix to a set of 2D points
  */
 class MatrixOperationApplyHomography extends MatrixOperation
 {
@@ -8166,6 +8364,40 @@ class MatrixOperationApplyHomography extends MatrixOperation
     {
         _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(ptsShape.dtype === homShape.dtype);
         super('apply_homography', 2, ptsShape);
+    }
+}
+
+/**
+ * Apply an affine transformation to a set of 2D points
+ */
+class MatrixOperationApplyAffine extends MatrixOperation
+{
+    /**
+     * Constructor
+     * @param {MatrixShape} matShape shape of the transformation matrix (must be 2x3)
+     * @param {MatrixShape} ptsShape shape of the matrix of the input points (must be 2xn)
+     */
+    constructor(matShape, ptsShape)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(ptsShape.dtype === matShape.dtype);
+        super('apply_affine', 2, ptsShape);
+    }
+}
+
+/**
+ * Apply a linear transformation to a set of 2D points
+ */
+class MatrixOperationApplyLinear2d extends MatrixOperation
+{
+    /**
+     * Constructor
+     * @param {MatrixShape} matShape shape of the transformation matrix (must be 2x2)
+     * @param {MatrixShape} ptsShape shape of the matrix of the input points (must be 2xn)
+     */
+    constructor(matShape, ptsShape)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(ptsShape.dtype === matShape.dtype);
+        super('apply_linear2d', 2, ptsShape);
     }
 }
 
