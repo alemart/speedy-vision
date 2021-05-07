@@ -133,7 +133,7 @@ export function dltnorm2d(header, output, inputs)
     let cx = 0.0, cy = 0.0, dx = 0.0, dy = 0.0, d = 0.0, s = 0.0, z = 0.0;
     let i = 0, ip = 0;
 
-    // find the center of mass (cx, cy)
+    // find the center of mass (cx, cy) = c
     for(ip = i = 0; i < n; i++, ip += pstride) {
         cx += pts[ip];
         cy += pts[ip + 1];
@@ -149,7 +149,7 @@ export function dltnorm2d(header, output, inputs)
     }
     d = Math.sqrt(d / n);
 
-    // find the scale factor
+    // find the scale factor s
     const SQRT2 = 1.4142135623730951;
     s = SQRT2 / d;
     z = d / SQRT2; // = 1/s
