@@ -248,3 +248,81 @@ export function homography4p(header, output, inputs)
     output[1 + 2 * stride] = f;
     output[2 + 2 * stride] = i;
 }
+
+/**
+ * Find a homography using n >= 4 correspondences of points (u,v) to (x,y)
+ * using Direct Linear Transform (DLT). It's recommended to normalize the
+ * input before calling this function. The input matrices are expected to
+ * be 2 x n.
+ * @param {object} header
+ * @param {ArrayBufferView} output 3x3 homography matrix
+ * @param {ArrayBufferView[]} inputs [ src, dest ]
+ */
+export function homographydlt(header, output, inputs)
+{
+    const dtype = header.dtype;
+    const n = header.columnsOfInputs[0]; // number of correspondences
+    const src = inputs[0], dest = inputs[1];
+    const stride = header.stride;
+    const sstride = header.strideOfInputs[0];
+    const dstride = header.strideOfInputs[1];
+    const astride = 2 * n;
+    const matA = this.createTypedArray(dtype, 16 * n).fill(0.0); // 2n x 8 matrix
+    const vecB = this.createTypedArray(dtype, 2 * n); // 2n x 1 matrix
+    const vecH = this.createTypedArray(dtype, 8); // 8x1 matrix
+    const dltheader = {
+        method: '', dtype: dtype, custom: {},
+        rows: 8, columns: 1, stride: 8,
+        rowsOfInputs: [ 2*n, 2*n ], columnsOfInputs: [8, 1], strideOfInputs: [ 2*n, 2*n ],
+        byteOffset: vecH.byteOffset, length: vecH.length,
+        byteOffsetOfInputs: [ matA.byteOffset, vecB.byteOffset ], lengthOfInputs: [ matA.length, vecB.length ],
+    };
+    let u, v, x, y, i, j, ij, iij;
+
+    /*
+    // create system of linear equations
+    [ uj  vj  1   0   0   0  -uj*xj  -vj*xj ] h  =  [ xj ]
+    [ 0   0   0   uj  vj  1  -uj*yj  -vj*yj ]       [ yj ]
+    */
+    for(ij = 0, iij = 0, j = i = 0; i < n; i++, j += 2, ij += sstride, iij += dstride) {
+        u = src[ij + 0];
+        v = src[ij + 1];
+        x = dest[iij + 0];
+        y = dest[iij + 1];
+
+        matA[0 + j] = u;
+        //matA[1 + j] = 0;
+        matA[astride + 0 + j] = v;
+        //matA[astride + 1 + j] = 0.0;
+        matA[2 * astride + 0 + j] = 1.0;
+        //matA[2 * astride + 1 + j] = 0.0;
+        //matA[3 * astride + 0 + j] = 0.0;
+        matA[3 * astride + 1 + j] = u;
+        //matA[4 * astride + 0 + j] = 0.0;
+        matA[4 * astride + 1 + j] = v;
+        //matA[5 * astride + 0 + j] = 0.0;
+        matA[5 * astride + 1 + j] = 1.0;
+        matA[6 * astride + 0 + j] = -u*x;
+        matA[6 * astride + 1 + j] = -u*y;
+        matA[7 * astride + 0 + j] = -v*x;
+        matA[7 * astride + 1 + j] = -v*y;
+
+        vecB[0 + j] = x;
+        vecB[1 + j] = y;
+    }
+
+    // solve Ah = b for h
+    this.lssolve(dltheader, vecH, [ matA, vecB ]);
+
+    // write to the output (3x3)
+    const stride2 = stride + stride;
+    output[0] = vecH[0];
+    output[1] = vecH[1];
+    output[2] = vecH[2];
+    output[stride + 0] = vecH[3];
+    output[stride + 1] = vecH[4];
+    output[stride + 2] = vecH[5];
+    output[stride2 + 0] = vecH[6];
+    output[stride2 + 1] = vecH[7];
+    output[stride2 + 2] = 1.0;
+}
