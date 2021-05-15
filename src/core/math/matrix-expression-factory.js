@@ -26,11 +26,13 @@ import { SpeedyMatrix } from './matrix';
 import { SpeedyPoint2 } from './speedy-point';
 import {
     SpeedyMatrixExpr,
+    SpeedyMatrixLvalueExpr,
     SpeedyMatrixElementaryExpr,
     SpeedyMatrixHomography4pExpr,
     SpeedyMatrixApplyHomographyExpr,
     SpeedyMatrixApplyAffineExpr,
     SpeedyMatrixApplyLinear2dExpr,
+    SpeedyMatrixPransacHomographyExpr,
 } from './matrix-expressions';
 
 /**
@@ -204,9 +206,77 @@ export class SpeedyMatrixExprFactory extends Function
      */
     Perspective(source, destination)
     {
-        if(!(source.rows === 2 && source._shape.equals(destination._shape)))
+        if(!(source.rows === 2 && source.columns === 4 && source._shape.equals(destination._shape)))
             throw new IllegalArgumentError(`Can't compute perspective transformation using ${source} and ${destination}. 4 correspondences of points are required`);
 
         return new SpeedyMatrixHomography4pExpr(source, destination);
+    }
+
+    /**
+     * Find a homography matrix using 4 or more correspondences of points
+     * @param {SpeedyMatrixExpr} source 2 x n matrix with coordinates of n points (n >= 4)
+     * @param {SpeedyMatrixExpr} destination 2 x n matrix with coordinates of n points
+     * @param {FindHomographyOptions} [options]
+     *
+     * @typedef {object} FindHomographyOptions
+     * @property {string} method One of the following: "p-ransac"
+     * @property {FindHomographyMethodParameters} [parameters]
+     *
+     * @typedef {object} FindHomographyMethodParameters
+     * @property {?SpeedyMatrixLvalueExpr} [mask] 1 x n output matrix to separate inliers (1) from outliers (0)
+     * @property {number} [reprojectionError] threshold in pixels to separate inliers from outliers (RANSAC variants)
+     * @property {number} [numberOfHypotheses] for p-ransac only
+     * @property {number} [chunkSize] for p-ransac only
+     */
+    findHomography(source, destination, options = {})
+    {
+        // default options
+        options.method = options.method || 'p-ransac';
+        options.parameters = Object.assign({
+            mask: null,
+            numberOfHypotheses: 500,
+            chunkSize: 100,
+            reprojectionError: 3
+        }, options.parameters || {});
+        console.log(options);
+
+        // validate shapes
+        if(!(source.rows === 2 && source.columns >= 4 && source._shape.equals(destination._shape)))
+            throw new IllegalArgumentError(`Can't compute homography matrix using ${source} and ${destination}. 4 or more correspondences of points are required`);
+
+        // TODO dltnorm2d
+
+        // returns a node according to the method
+        const parameters = options.parameters;
+        if(options.method === 'p-ransac') {
+            // create an output inlier-outlier mask if one is not supplied
+            const maskShape = new MatrixShape(1, source.columns, source.dtype); // expected shape
+            const mask = parameters.mask || new SpeedyMatrixElementaryExpr(maskShape, new SpeedyMatrix(maskShape));
+
+            // cast to number
+            const numberOfHypotheses = parameters.numberOfHypotheses | 0;
+            const chunkSize = parameters.chunkSize | 0;
+            const reprojectionError = +(parameters.reprojectionError);
+
+            // validate
+            if(!(mask instanceof SpeedyMatrixLvalueExpr && mask._shape.equals(maskShape)))
+                throw new IllegalArgumentError(`Can't compute homography matrix: invalid mask`);
+            else if(numberOfHypotheses <= 0 || chunkSize <= 0 || reprojectionError < 0)
+                throw new IllegalArgumentError(`Can't compute homography matrix: invalid parameters for "${options.method}"`);
+
+            // done!
+            return new SpeedyMatrixPransacHomographyExpr(
+                source,
+                destination,
+                numberOfHypotheses,
+                chunkSize,
+                reprojectionError,
+                mask,
+            );
+        }
+        else {
+            // invalid method
+            throw new IllegalArgumentError(`Can't compute homography matrix using method "${options.method}"`);
+        }
     }
 }

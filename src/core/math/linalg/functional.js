@@ -146,7 +146,7 @@ export function sort(header, output, inputs)
     const biidx = 2, bjidx = 3; //const biidx = inputs.indexOf(bi), bjidx = inputs.indexOf(bj);
     const biopt = (bistride === istride && bilength === ilength), bjopt = (bjstride === istride && bjlength === ilength); // note: bistride === bjstride
     const block = biopt && bjopt ? Array.from({ length: n }, (_, i) => input.subarray(i * istride * blockColumns, (i+1) * istride * blockColumns)) : null;
-    const permutation = Array.from({ length: n }, (_, i) => i); // range(n)
+    const permutation = this.range(n);
     const stack = (new Array(n)).fill(0);
     let top = -1, l = 0, r = 0, p = 0, pivot = 0;
     let i, j, oj, ij;

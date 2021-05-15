@@ -29,6 +29,7 @@ const LinAlgLib = {
     ...require('./functional'),
     ...require('./homography'),
     ...require('./transform'),
+    ...require('./ransac'),
     ...require('./utils'),
 };
 

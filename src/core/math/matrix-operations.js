@@ -703,8 +703,8 @@ export class MatrixOperationHomography4p extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {MatrixShape} leftShape shape of the left operand
-     * @param {MatrixShape} rightShape shape of the right operand
+     * @param {MatrixShape} leftShape shape of the left operand (must be 2x4)
+     * @param {MatrixShape} rightShape shape of the right operand (must be 2x4)
      */
     constructor(leftShape, rightShape)
     {
@@ -761,5 +761,29 @@ export class MatrixOperationApplyLinear2d extends MatrixOperation
     {
         Utils.assert(ptsShape.dtype === matShape.dtype);
         super('apply_linear2d', 2, ptsShape);
+    }
+}
+
+/**
+ * Compute a homography matrix using P-RANSAC
+ */
+export class MatrixOperationPransacHomography extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {MatrixShape} srcShape source coordinates: must be 2 x n (n >= 4)
+     * @param {MatrixShape} dstShape destination coordinates: must be 2 x n
+     * @param {number} numberOfHypotheses positive integer
+     * @param {number} chunkSize positive integer
+     * @param {number} reprojectionError in pixels
+     * @param {MatrixShape} maskShape inlier-outlier output mask: must be 1 x n
+     */
+    constructor(srcShape, dstShape, numberOfHypotheses, chunkSize, reprojectionError, maskShape)
+    {
+        Utils.assert(srcShape.equals(dstShape));
+        Utils.assert(srcShape.columns === maskShape.columns);
+        super('pransacHomography', 3, new MatrixShape(3, 3, srcShape.dtype), {
+            numberOfHypotheses, chunkSize, reprojectionError
+        });
     }
 }

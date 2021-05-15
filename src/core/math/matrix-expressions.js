@@ -53,6 +53,7 @@ import {
     MatrixOperationApplyHomography,
     MatrixOperationApplyAffine,
     MatrixOperationApplyLinear2d,
+    MatrixOperationPransacHomography,
 } from './matrix-operations';
 
 // constants
@@ -826,6 +827,107 @@ class SpeedyMatrixBinaryExpr extends SpeedyMatrixTempExpr
 }
 
 /**
+ * Ternary expression
+ * @abstract
+ */
+class SpeedyMatrixTernaryExpr extends SpeedyMatrixTempExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} firstExpr
+     * @param {SpeedyMatrixExpr} secondExpr
+     * @param {SpeedyMatrixExpr} thirdExpr
+     * @param {MatrixOperation} operation ternary operation
+     */
+    constructor(firstExpr, secondExpr, thirdExpr, operation)
+    {
+        super(operation.shape);
+
+        /** @type {SpeedyMatrixExpr} first operand */
+        this._firstExpr = firstExpr;
+
+        /** @type {SpeedyMatrixExpr} second operand */
+        this._secondExpr = secondExpr;
+
+        /** @type {SpeedyMatrixExpr} third operand */
+        this._thirdExpr = thirdExpr;
+
+        /** @type {MatrixOperation} ternary operation */
+        this._operation = operation;
+
+        // validate
+        Utils.assert(operation.numberOfInputMatrices() === 3); // must be a ternary operation
+        if(firstExpr.dtype !== secondExpr.dtype || firstExpr.dtype !== thirdExpr.dtype)
+            throw new IllegalArgumentError(`Found a ternary expression with different data types: "${firstExpr.dtype}" (first operand) x "${secondExpr.dtype}" (second operand) x "${thirdExpr.dtype}" (third operand)`);
+    }
+
+    /**
+     * Evaluate expression
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
+     */
+    _evaluate()
+    {
+        return SpeedyPromise.all([
+            this._firstExpr._evaluate().turbocharge(),
+            this._secondExpr._evaluate().turbocharge(),
+            this._thirdExpr._evaluate().turbocharge()
+        ]).then(([ firstResult, secondResult, thirdResult ]) =>
+            matrixOperationsQueue.enqueue(
+                this._operation,
+                this._matrix,
+                [ firstResult._matrix, secondResult._matrix, thirdResult._matrix ]
+            )
+        ).then(() => this);
+    }
+
+    /**
+     * Compile this expression
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compile()
+    {
+        return SpeedyPromise.all([
+            this._firstExpr._compile().turbocharge(),
+            this._secondExpr._compile().turbocharge(),
+            this._thirdExpr._compile().turbocharge()
+        ]).then(([ firstNode, secondNode, thirdNode ]) =>
+            new BoundMatrixOperationTree(
+                this._operation,
+                this._matrix,
+                [ firstNode, secondNode, thirdNode ]
+            )
+        );
+    }
+
+    /**
+     * First operand
+     * @returns {SpeedyMatrixExpr}
+     */
+    get firstChild()
+    {
+        return this._firstExpr;
+    }
+
+    /**
+     * Second operand
+     * @returns {SpeedyMatrixExpr}
+     */
+    get secondChild()
+    {
+        return this._secondExpr;
+    }
+
+    /**
+     * Third operand
+     * @returns {SpeedyMatrixExpr}
+     */
+    get thirdChild()
+    {
+        return this._thirdExpr;
+    }
+}
+
+/**
  * Extract a read-only block submatrix from a matrix expression
  */
 class SpeedyMatrixReadonlyBlockExpr extends SpeedyMatrixExpr
@@ -1152,7 +1254,7 @@ class SpeedyMatrixSequenceExpr extends SpeedyMatrixExpr
  * An lvalue (locator value) expression represents a user-owned object stored in memory
  * @abstract
  */
-class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
+export class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
 {
     /**
      * Get the matrix associated with this lvalue expression
@@ -2226,6 +2328,37 @@ export class SpeedyMatrixApplyLinear2dExpr extends SpeedyMatrixBinaryExpr
         Utils.assert(mat.rows === 2 && mat.columns === 2);
         Utils.assert(pts.rows === 2);
         super(mat, pts, new MatrixOperationApplyLinear2d(mat._shape, pts._shape));
+    }
+}
+
+/**
+ * Compute a homography matrix using P-RANSAC
+ */
+export class SpeedyMatrixPransacHomographyExpr extends SpeedyMatrixTernaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} source 2 x n matrix: source points (ui, vi), n >= 4
+     * @param {SpeedyMatrixExpr} destination 2 x n matrix: destination points (xi, vi)
+     * @param {number} numberOfHypotheses positive integer
+     * @param {number} chunkSize positive integer
+     * @param {number} reprojectionError in pixels
+     * @param {SpeedyMatrixLvalueExpr} mask 1 x n output inlier-outlier mask
+     */
+    constructor(source, destination, numberOfHypotheses, chunkSize, reprojectionError, mask)
+    {
+        Utils.assert(source._shape.rows === 2 && source._shape.columns >= 4);
+        Utils.assert(source._shape.equals(destination._shape));
+        Utils.assert(mask._shape.rows === 1 && mask._shape.columns === source._shape.columns);
+        Utils.assert(mask._shape.dtype === source._shape.dtype);
+        Utils.assert(mask instanceof SpeedyMatrixLvalueExpr);
+        Utils.assert(numberOfHypotheses > 0 && chunkSize > 0 && reprojectionError >= 0);
+
+        super(source, destination, mask, new MatrixOperationPransacHomography(
+            source._shape, destination._shape,
+            numberOfHypotheses, chunkSize,
+            reprojectionError, mask._shape
+        ));
     }
 }
 

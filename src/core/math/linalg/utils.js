@@ -188,3 +188,13 @@ export function shuffle(array)
 
     return array;
 }
+
+/**
+ * Range from 0 to n-1
+ * @param {number} n
+ * @returns {number[]} array of length n
+ */
+export function range(n)
+{
+    return Array.from({ length: n }, (_, i) => i);
+}
