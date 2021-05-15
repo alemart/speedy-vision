@@ -238,7 +238,6 @@ export class SpeedyMatrixExprFactory extends Function
             chunkSize: 100,
             reprojectionError: 3
         }, options.parameters || {});
-        console.log(options);
 
         // validate shapes
         if(!(source.rows === 2 && source.columns >= 4 && source._shape.equals(destination._shape)))
