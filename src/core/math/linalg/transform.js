@@ -122,7 +122,7 @@ export function apply_linear2d(header, output, inputs)
  * 3x3 blocks featuring both norm & denorm matrices.
  * @param {object} header
  * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
+ * @param {ArrayBufferView[]} inputs [ pts ] WILL BE MODIFIED!
  */
 export function dltnorm2d(header, output, inputs)
 {
@@ -153,6 +153,13 @@ export function dltnorm2d(header, output, inputs)
     const SQRT2 = 1.4142135623730951;
     s = SQRT2 / d;
     z = d / SQRT2; // = 1/s
+
+    // normalize the data
+    // THIS WILL MODIFY THE INPUT MATRIX (for performance)
+    for(ip = i = 0; i < n; i++, ip += pstride) {
+        pts[ip] = s * (pts[ip] - cx);
+        pts[ip + 1] = s * (pts[ip + 1] - cy);
+    }
 
     // write the normalization matrix
     // given a point p, set p_normalized := s(p - c)
