@@ -80,6 +80,7 @@ export function homography4p(header, output, inputs)
     let a1, b1, c1, d1, e1, f1, g1, h1, i1;
     let a2, b2, c2, d2, e2, f2, g2, h2, i2;
     let a, b, c, d, e, f, g, h, i;
+    let inorm;
 
     //
     // Initialization
@@ -231,13 +232,17 @@ export function homography4p(header, output, inputs)
     h = g2 * b1 + h2 * e1 + i2 * h1;
     i = g2 * c1 + h2 * f1 + i2 * i1;
 
+    // Normalize the entries
+    inorm = 1.0 / Math.sqrt(a*a + b*b + c*c + d*d + e*e + f*f + g*g + h*h + i*i);
+    a *= inorm; b *= inorm; c *= inorm;
+    d *= inorm; e *= inorm; f *= inorm;
+    g *= inorm; h *= inorm; i *= inorm;
+
     } while(0);
 
-    //
-    // Write the matrix
-    //
-
     // end:
+
+    // Write the matrix to the output
     output[0] = a;
     output[1] = d;
     output[2] = g;
