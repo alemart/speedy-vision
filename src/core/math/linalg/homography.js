@@ -317,12 +317,12 @@ export function homographydlt(header, output, inputs)
     // write to the output (3x3)
     const stride2 = stride + stride;
     output[0] = vecH[0];
-    output[1] = vecH[1];
-    output[2] = vecH[2];
-    output[stride + 0] = vecH[3];
+    output[1] = vecH[3];
+    output[2] = vecH[6];
+    output[stride + 0] = vecH[1];
     output[stride + 1] = vecH[4];
-    output[stride + 2] = vecH[5];
-    output[stride2 + 0] = vecH[6];
-    output[stride2 + 1] = vecH[7];
+    output[stride + 2] = vecH[7];
+    output[stride2 + 0] = vecH[2];
+    output[stride2 + 1] = vecH[5];
     output[stride2 + 2] = 1.0;
 }
