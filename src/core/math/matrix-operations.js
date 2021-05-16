@@ -136,6 +136,11 @@ export class MatrixOperation
         // do we have a compatible output matrix?
         this._assertCompatibility(outputMatrix.shape);
 
+        // optimization: drop if this is a sequence with no
+        // operations, such as a compiled constant expression
+        if(inputMatrices.length == 0)
+            return SpeedyPromise.resolve();
+
         // prepare the operation header
         this._header.updateMetadata(outputMatrix, inputMatrices);
         
@@ -162,6 +167,11 @@ export class MatrixOperation
     {
         // do we have a compatible output matrix?
         this._assertCompatibility(outputMatrix.shape);
+
+        // optimization: drop if this is a sequence with no
+        // operations, such as a compiled constant expression
+        if(inputMatrices.length == 0)
+            return SpeedyPromise.resolve();
 
         // prepare the operation header
         this._header.updateMetadata(outputMatrix, inputMatrices);
