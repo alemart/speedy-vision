@@ -549,6 +549,46 @@ var speedyMatchers =
         }
     }),
 
+    toBeElementwiseZero: util =>
+    ({
+        compare(a)
+        {
+            let pass = (a.length > 0);
+            for(let i = 0; i < a.length && pass; i++)
+                pass = pass && a[i] === 0.0;
+
+            const zeros = (new Array(a.length)).fill(0.0);
+            let message = pass ?
+                `Array is expected not to be filled with zeros` :
+                `Array is expected to be filled with zeros, but ${a.filter((_, i) => a[i] !== 0.0).length} elements are not zero. ` +
+                `Elements differ by at most ${errmax(a, zeros, 0)}\n` +
+                `Mean average error: ${mae(a, zeros)}`;
+
+            return { pass, message };
+        }
+    }),
+
+    toBeElementwiseNearlyZero: util =>
+    ({
+        compare(a, eps = 1e-6)
+        {
+            let pass = (a.length > 0);
+            for(let i = 0; i < a.length && pass; i++)
+                pass = pass && Math.abs(a[i]) <= eps;
+
+            const zeros = (new Array(a.length)).fill(0.0);
+            let message = pass ?
+                `Array elements are expected not to be nearly zero` :
+                `Array elements are expected to be nearly zero, but ${errcnt(a, zeros, eps)} elements aren't so. ` +
+                `The elements differ by at most ${errmax(a, zeros, eps)}, ` +
+                `whereas the test tolerance is ${eps}\n` +
+                `Relative error count: ${relerrcnt(a, zeros, eps)}\n` +
+                `Mean average error: ${mae(a, zeros)}`;
+
+            return { pass, message };
+        }
+    }),
+
     toBeElementwiseNaN: util =>
     ({
         compare(a)
