@@ -175,12 +175,17 @@ export function submatrices(header, output, inputs, stride, strideOfInputs, outp
 /**
  * Fisher-Yates shuffle
  * @param {Array} array
+ * @param {number} [begin] the index of the beginning of the subarray, inclusive
+ * @param {number} [end] last index of the subarray, exclusive
  * @returns {Array} the input array, shuffled
  */
-export function shuffle(array)
+export function shuffle(array, begin = 0, end = array.length)
 {
-    for(let t, j, i = array.length - 1; i > 0; i--) {
-        j = (Math.random() * (i+1)) | 0;
+    begin = Math.max(begin, 0);
+    end = Math.min(end, array.length);
+
+    for(let t, j, i = end - 1; i > begin; i--) {
+        j = ((Math.random() * (i+1 - begin)) | 0) + begin;
         t = array[i];
         array[i] = array[j];
         array[j] = t;
