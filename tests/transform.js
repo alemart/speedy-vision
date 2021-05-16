@@ -124,8 +124,8 @@ describe('Geometric transformations', function() {
             printp('To:', dstQuad);
             await printm('Homography:', homography);
 
-            const homdata = await homography.read();
-            expect(homdata).toBeElementwiseEqual([3, 0, 0, 0, 2, 0, 0, 0, 1]);
+            const tstQuad = Speedy.Matrix.transform(homography, srcQuad);
+            expect(await tstQuad.read()).toBeElementwiseNearlyEqual(await dstQuad.read());
 
         });
 
@@ -150,8 +150,8 @@ describe('Geometric transformations', function() {
             printp('To:', dstQuad);
             await printm('Homography:', homography);
 
-            const homdata = await homography.read();
-            expect(homdata).toBeElementwiseNearlyEqual([1/3, 0, 0, 0, 1/2, 0, 0, 0, 1]);
+            const tstQuad = Speedy.Matrix.transform(homography, srcQuad);
+            expect(await tstQuad.read()).toBeElementwiseNearlyEqual(await dstQuad.read());
 
         });
 
@@ -176,8 +176,8 @@ describe('Geometric transformations', function() {
             printp('To:', dstQuad);
             await printm('Homography:', homography);
 
-            const homdata = await homography.read();
-            expect(homdata).toBeElementwiseEqual([3, 0, 0, 0, 2, 0, 1, 0, 1]);
+            const tstQuad = Speedy.Matrix.transform(homography, srcQuad);
+            expect(await tstQuad.read()).toBeElementwiseNearlyEqual(await dstQuad.read());
 
         });
 
@@ -202,8 +202,8 @@ describe('Geometric transformations', function() {
             printp('To:', dstQuad);
             await printm('Homography:', homography);
 
-            const homdata = await homography.read();
-            expect(homdata).toBeElementwiseNearlyEqual([1, 0, 0, 0, 1, 0, 0, 0, 1]);
+            const tstQuad = Speedy.Matrix.transform(homography, srcQuad);
+            expect(await tstQuad.read()).toBeElementwiseNearlyEqual(await dstQuad.read());
 
         });
 
@@ -264,8 +264,8 @@ describe('Geometric transformations', function() {
             await printm('To:', dstQuad);
             await printm('Homography:', homography);
 
-            const homdata = await homography.read();
-            expect(homdata).toBeElementwiseEqual([3, 0, 0, 0, 2, 0, 0, 0, 1]);
+            const tstQuad = Speedy.Matrix.transform(homography, srcQuad);
+            expect(await tstQuad.read()).toBeElementwiseNearlyEqual(await dstQuad.read());
 
         });
 
