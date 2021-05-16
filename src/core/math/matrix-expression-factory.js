@@ -29,6 +29,7 @@ import {
     SpeedyMatrixLvalueExpr,
     SpeedyMatrixElementaryExpr,
     SpeedyMatrixHomography4pExpr,
+    SpeedyMatrixHomographyDLTExpr,
     SpeedyMatrixApplyHomographyExpr,
     SpeedyMatrixApplyAffineExpr,
     SpeedyMatrixApplyLinear2dExpr,
@@ -271,6 +272,12 @@ export class SpeedyMatrixExprFactory extends Function
                 chunkSize,
                 reprojectionError,
                 mask,
+            );
+        }
+        else if(options.method === 'dlt') {
+            return new SpeedyMatrixHomographyDLTExpr(
+                source,
+                destination
             );
         }
         else {

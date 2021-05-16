@@ -50,6 +50,7 @@ import {
     MatrixOperationMap,
     MatrixOperationReduce,
     MatrixOperationHomography4p,
+    MatrixOperationHomographyDLT,
     MatrixOperationApplyHomography,
     MatrixOperationApplyAffine,
     MatrixOperationApplyLinear2d,
@@ -2273,6 +2274,24 @@ export class SpeedyMatrixHomography4pExpr extends SpeedyMatrixBinaryExpr
         Utils.assert(source._shape.rows === 2 && source._shape.columns === 4);
         Utils.assert(source._shape.equals(destination._shape));
         super(source, destination, new MatrixOperationHomography4p(source._shape, destination._shape));
+    }
+}
+
+/**
+ * Compute a homography matrix using n >= 4 correspondences of points via DLT
+ */
+export class SpeedyMatrixHomographyDLTExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} source 2 x n matrix: source points (ui, vi)
+     * @param {SpeedyMatrixExpr} destination 2 x n matrix: destination points (xi, vi)
+     */
+    constructor(source, destination)
+    {
+        Utils.assert(source._shape.rows === 2 && source._shape.columns >= 4);
+        Utils.assert(source._shape.equals(destination._shape));
+        super(source, destination, new MatrixOperationHomographyDLT(source._shape, destination._shape));
     }
 }
 

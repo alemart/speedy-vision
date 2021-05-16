@@ -703,13 +703,30 @@ export class MatrixOperationHomography4p extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {MatrixShape} leftShape shape of the left operand (must be 2x4)
-     * @param {MatrixShape} rightShape shape of the right operand (must be 2x4)
+     * @param {MatrixShape} srcShape shape of the src operand (must be 2x4)
+     * @param {MatrixShape} dstShape shape of the dst operand (must be 2x4)
      */
-    constructor(leftShape, rightShape)
+    constructor(srcShape, dstShape)
     {
-        Utils.assert(leftShape.equals(rightShape));
-        super('homography4p', 2, new MatrixShape(3, 3, leftShape.dtype));
+        Utils.assert(srcShape.equals(dstShape));
+        super('homography4p', 2, new MatrixShape(3, 3, srcShape.dtype));
+    }
+}
+
+/**
+ * Compute a homography matrix using n >= 4 correspondences of points via DLT
+ */
+export class MatrixOperationHomographyDLT extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {MatrixShape} srcShape shape of the src operand (must be 2 x n, n >= 4)
+     * @param {MatrixShape} dstShape shape of the dst operand (must be 2 x n)
+     */
+    constructor(srcShape, dstShape)
+    {
+        Utils.assert(srcShape.equals(dstShape));
+        super('homographydlt', 2, new MatrixShape(3, 3, srcShape.dtype));
     }
 }
 
