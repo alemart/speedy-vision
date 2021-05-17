@@ -411,7 +411,7 @@ export function homographynormdlt(header, output, inputs)
     ], [ hommat, srcnormpts, dstnormpts ]);
 
     // Compute normalized DLT using matrix multiplications
-    this.run(this.multiply, dtype, [
+    this.run(this.multiply3, dtype, [
         // output
         3, 3, 3,
 
@@ -420,7 +420,7 @@ export function homographynormdlt(header, output, inputs)
         3, 3, 3,
     ], [ tmpmat, hommat, srcnormmat ]);
 
-    this.run(this.multiply, dtype, [
+    this.run(this.multiply3, dtype, [
         // output
         rows, columns, stride,
 

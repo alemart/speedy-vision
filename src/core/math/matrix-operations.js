@@ -367,7 +367,10 @@ export class MatrixOperationMultiply extends MatrixOperation
     constructor(leftShape, rightShape)
     {
         Utils.assert(leftShape.columns === rightShape.rows && leftShape.dtype === rightShape.dtype);
-        super('multiply', 2, new MatrixShape(leftShape.rows, rightShape.columns, leftShape.dtype));
+        const opt3 = (leftShape.rows === 3 && leftShape.columns === 3 && rightShape.columns === 3);
+        const method = opt3 ? 'multiply3' : 'multiply'; // optimize for two 3x3 matrices
+
+        super(method, 2, new MatrixShape(leftShape.rows, rightShape.columns, leftShape.dtype));
     }
 }
 

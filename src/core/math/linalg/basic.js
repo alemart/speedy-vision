@@ -233,6 +233,39 @@ export function multiplyrt(header, output, inputs)
 }
 
 /**
+ * Fast multiplication of two 3x3 matrices (A * B)
+ * @param {object} header
+ * @param {ArrayBufferView} output
+ * @param {ArrayBufferView[]} inputs
+ */
+export function multiply3(header, output, inputs)
+{
+    const { stride } = header;
+    const [ matA, matB ] = inputs;
+    const [ sa, sb ] = header.strideOfInputs;
+    const sa2 = sa + sa, sb2 = sb + sb;
+    const stride2 = stride + stride;
+    const a = matA[0], b = matA[0 + sa], c = matA[0 + sa2],
+          d = matA[1], e = matA[1 + sa], f = matA[1 + sa2],
+          g = matA[2], h = matA[2 + sa], i = matA[2 + sa2],
+          j = matB[0], k = matB[0 + sb], l = matB[0 + sb2],
+          m = matB[1], n = matB[1 + sb], o = matB[1 + sb2],
+          p = matB[2], q = matB[2 + sb], r = matB[2 + sb2];
+
+    output[0] = a*j + b*m + c*p;
+    output[1] = d*j + e*m + f*p;
+    output[2] = g*j + h*m + i*p;
+
+    output[0 + stride] = a*k + b*n + c*q;
+    output[1 + stride] = d*k + e*n + f*q;
+    output[2 + stride] = g*k + h*n + i*q;
+
+    output[0 + stride2] = a*l + b*o + c*r;
+    output[1 + stride2] = d*l + e*o + f*r;
+    output[2 + stride2] = g*l + h*o + i*r;
+}
+
+/**
  * Multiply by a column-vector
  * (i.e., y = A x)
  * @param {object} header
