@@ -429,6 +429,7 @@ export function homographynormdlt(header, output, inputs)
         3, 3, 3,
     ], [ output, dstdenormmat, tmpmat ]);
 
+    /*
     // Normalize the entries of the resulting matrix
     let i = 0;
     let norm2 = 0.0, inorm = 0.0;
@@ -446,4 +447,5 @@ export function homographynormdlt(header, output, inputs)
         output[i + stride] *= inorm;
         output[i + stride2] *= inorm;
     }
+    */
 }
