@@ -189,6 +189,10 @@ export function homography4p(header, output, inputs)
     f1 = -d1 * u0 - e1 * v0;
     i1 = 1.0;
 
+    // Bad homography?
+    det = a1*e1*i1 + b1*f1*g1 + c1*d1*h1 - b1*d1*i1 - a1*f1*h1 - c1*e1*g1;
+    if(Math.abs(det) < eps) break; // goto end;
+
     //
     // From unit square to destination
     //
@@ -216,6 +220,10 @@ export function homography4p(header, output, inputs)
     e2 = h2 * y3 + (y3 - y0);
     f2 = y0;
     i2 = 1.0;
+
+    // Bad homography?
+    det = a2*e2*i2 + b2*f2*g2 + c2*d2*h2 - b2*d2*i2 - a2*f2*h2 - c2*e2*g2;
+    if(Math.abs(det) < eps) break; // goto end;
 
     //
     // From source to destination
@@ -282,14 +290,16 @@ export function homographydlt(header, output, inputs)
         byteOffset: vecH.byteOffset, length: vecH.length,
         byteOffsetOfInputs: [ matA.byteOffset, vecB.byteOffset ], lengthOfInputs: [ matA.length, vecB.length ],
     };
-    let u, v, x, y, i, j, ij, iij;
+    const eps = 1e-6;
+    let u, v, x, y, k, j, ij, iij;
+    let a, b, c, d, e, f, g, h, i, det;
 
     /*
     // create system of linear equations
     [ uj  vj  1   0   0   0  -uj*xj  -vj*xj ] h  =  [ xj ]
     [ 0   0   0   uj  vj  1  -uj*yj  -vj*yj ]       [ yj ]
     */
-    for(ij = 0, iij = 0, j = i = 0; i < n; i++, j += 2, ij += sstride, iij += dstride) {
+    for(ij = 0, iij = 0, j = 0, k = 0; k < n; k++, j += 2, ij += sstride, iij += dstride) {
         u = src[ij + 0];
         v = src[ij + 1];
         x = dest[iij + 0];
@@ -319,15 +329,25 @@ export function homographydlt(header, output, inputs)
     // solve Ah = b for h
     this.lssolve(dltheader, vecH, [ matA, vecB ]);
 
-    // write to the output (3x3)
+    // read homography
+    a = vecH[0]; b = vecH[1]; c = vecH[2];
+    d = vecH[3]; e = vecH[4]; f = vecH[5];
+    g = vecH[6]; h = vecH[7]; i = 1.0;
+
+    // bad homography?
+    det = a*e*i + b*f*g + c*d*h - b*d*i - a*f*h - c*e*g;
+    if(Math.abs(det) < eps)
+        a = b = c = d = e = f = g = h = i = Number.NaN;
+
+    // write homography to the output
     const stride2 = stride + stride;
-    output[0] = vecH[0];
-    output[1] = vecH[3];
-    output[2] = vecH[6];
-    output[stride + 0] = vecH[1];
-    output[stride + 1] = vecH[4];
-    output[stride + 2] = vecH[7];
-    output[stride2 + 0] = vecH[2];
-    output[stride2 + 1] = vecH[5];
-    output[stride2 + 2] = 1.0;
+    output[0] = a;
+    output[1] = d;
+    output[2] = g;
+    output[stride + 0] = b;
+    output[stride + 1] = e;
+    output[stride + 2] = h;
+    output[stride2 + 0] = c;
+    output[stride2 + 1] = f;
+    output[stride2 + 2] = i;
 }
