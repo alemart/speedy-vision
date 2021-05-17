@@ -336,7 +336,7 @@ export function homographydlt(header, output, inputs)
 
     // bad homography?
     det = a*e*i + b*f*g + c*d*h - b*d*i - a*f*h - c*e*g;
-    if(Math.abs(det) < eps)
+    if(Number.isNaN(det) || Math.abs(det) < eps)
         a = b = c = d = e = f = g = h = i = Number.NaN;
 
     // write homography to the output
