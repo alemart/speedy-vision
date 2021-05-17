@@ -118,20 +118,22 @@ export function applyLinear2d(header, output, inputs)
  * Given a set of n points (xi, yi) encoded in a 2 x n matrix,
  * find normalization and denormalization matrices (3x3) so that
  * the average distance of the normalized points to the origin
- * becomes a small constant. The output is a 3x6 matrix with two
- * 3x3 blocks featuring both norm & denorm matrices.
+ * becomes a small constant. Returns the transformed points as
+ * the output.
  * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs [ pts ] WILL BE MODIFIED!
+ * @param {ArrayBufferView} output normalized points (2xn)
+ * @param {ArrayBufferView[]} inputs [ input points (2xn), out norm matrix (3x3), out denorm matrix (3x3) ]
  */
 export function dltnorm2d(header, output, inputs)
 {
     const stride = header.stride;
     const pstride = header.strideOfInputs[0];
+    const nstride = header.strideOfInputs[1];
+    const dstride = header.strideOfInputs[2];
     const n = header.columnsOfInputs[0];
-    const pts = inputs[0];
+    const pts = inputs[0], normmat = inputs[1], denormmat = inputs[2];
     let cx = 0.0, cy = 0.0, dx = 0.0, dy = 0.0, d = 0.0, s = 0.0, z = 0.0;
-    let i = 0, ip = 0;
+    let i = 0, ip = 0, io = 0;
 
     // find the center of mass (cx, cy) = c
     for(ip = i = 0; i < n; i++, ip += pstride) {
@@ -154,24 +156,23 @@ export function dltnorm2d(header, output, inputs)
     s = SQRT2 / d;
     z = d / SQRT2; // = 1/s
 
-    // normalize the data
-    // THIS WILL MODIFY THE INPUT MATRIX (for performance)
-    for(ip = i = 0; i < n; i++, ip += pstride) {
-        pts[ip] = s * (pts[ip] - cx);
-        pts[ip + 1] = s * (pts[ip + 1] - cy);
-    }
-
     // write the normalization matrix
     // given a point p, set p_normalized := s(p - c)
-    const stride2 = 2 * stride;
-    output[0] = s; output[0 + stride] = 0; output[0 + stride2] = -s * cx;
-    output[1] = 0; output[1 + stride] = s; output[1 + stride2] = -s * cy;
-    output[2] = 0; output[2 + stride] = 0; output[2 + stride2] = 1;
+    const nstride2 = nstride + nstride;
+    normmat[0] = s; normmat[0 + nstride] = 0; normmat[0 + nstride2] = -s * cx;
+    normmat[1] = 0; normmat[1 + nstride] = s; normmat[1 + nstride2] = -s * cy;
+    normmat[2] = 0; normmat[2 + nstride] = 0; normmat[2 + nstride2] = 1;
 
     // write the denormalization matrix
     // given a normalized point q, set q_denormalized := q/s + c
-    const stride3 = 3 * stride, stride4 = 4 * stride, stride5 = 5 * stride;
-    output[0 + stride3] = z; output[0 + stride4] = 0; output[0 + stride5] = cx;
-    output[1 + stride3] = 0; output[1 + stride4] = z; output[1 + stride5] = cy;
-    output[2 + stride3] = 0; output[2 + stride4] = 0; output[2 + stride5] = 1;
+    const dstride2 = dstride + dstride;
+    denormmat[0] = z; denormmat[0 + dstride] = 0; denormmat[0 + dstride2] = cx;
+    denormmat[1] = 0; denormmat[1 + dstride] = z; denormmat[1 + dstride2] = cy;
+    denormmat[2] = 0; denormmat[2 + dstride] = 0; denormmat[2 + dstride2] = 1;
+
+    // normalize the points
+    for(io = 0, ip = 0, i = 0; i < n; i++, ip += pstride, io += stride) {
+        output[io] = s * (pts[ip] - cx);
+        output[io + 1] = s * (pts[ip + 1] - cy);
+    }
 }
