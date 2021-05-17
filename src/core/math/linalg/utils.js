@@ -38,6 +38,58 @@ export function execute(header, outputBuffer, inputBuffers)
 }
 
 /**
+ * Fast & handy wrapper to run a Linear Algebra routine from another one
+ * @param {Function} fn the function that you wish to call
+ * @param {string} dtypes data types
+ * @param {number[]} shapes flattened triples (rows, columns, stride) of output, input1, input2, input3...
+ * @param {ArrayBufferView[]} data flattened array containing output array, input1 array, input2 array...
+ * @param {object} [custom] user-data
+ * @returns {void}
+ */
+export function run(fn, dtypes, shapes, data, custom = {})
+{
+    const n = data.length - 1; // number of input matrices
+    if(3 * n + 3 !== shapes.length || n < 0)
+        throw new Error(`Can't run() routine with invalid input`);
+
+    const inputs = new Array(n);
+    const rowsOfInputs = new Array(n);
+    const columnsOfInputs = new Array(n);
+    const strideOfInputs = new Array(n);
+    /*const lengthOfInputs = new Array(n);
+    const byteOffsetOfInputs = new Array(n);*/
+
+    for(let j = 3, i = 0; i < n; i++, j += 3) {
+        inputs[i] = data[i+1];
+        rowsOfInputs[i] = shapes[j];
+        columnsOfInputs[i] = shapes[j+1];
+        strideOfInputs[i] = shapes[j+2];
+        /*lengthOfInputs[i] = data[i+1].length;
+        byteOffsetOfInputs[i] = data[i+1].byteOffset;*/
+    }
+
+    const header = {
+        method: '', dtype: dtypes, custom: custom,
+
+        rows: shapes[0],
+        columns: shapes[1],
+        stride: shapes[2],
+
+        rowsOfInputs: rowsOfInputs,
+        columnsOfInputs: columnsOfInputs,
+        strideOfInputs: strideOfInputs,
+
+        /*length: data[0].length,
+        byteOffset: data[0].byteOffset,
+        lengthOfInputs: lengthOfInputs,
+        byteOffsetOfInputs: byteOffsetOfInputs,*/
+        length: 0, byteOffset: 0, lengthOfInputs: [], byteOffsetOfInputs: [],
+    };
+
+    fn.call(this, header, data[0], inputs);
+}
+
+/**
  * Call a stored subroutine
  * @param {string} subname
  * @param {object} header
