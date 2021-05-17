@@ -131,6 +131,17 @@ export class SpeedyMatrixExprFactory extends Function
     // ==============================================
 
     /**
+     * Evaluate the expression and store the result in a new matrix
+     * @param {SpeedyMatrixExpr} expr matrix expression
+     * @returns {SpeedyPromise<SpeedyMatrixLvalueExpr>}
+     */
+    evaluate(expr)
+    {
+        const mat = new SpeedyMatrixElementaryExpr(expr._shape);
+        return mat.assign(expr).then(() => mat);
+    }
+
+    /**
      * Convert an array of points to a matrix representation
      * @param {SpeedyPoint2[]} points a non-empty array
      * @param {MatrixDataType} [dtype] data type of the elements of the matrix

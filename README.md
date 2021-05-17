@@ -1139,6 +1139,41 @@ const eye = Speedy.Matrix.Eye(3);
 await eye.print();
 ```
 
+##### Speedy.Matrix.evaluate()
+
+`Speedy.Matrix.evaluate(expr: SpeedyMatrixExpr): SpeedyPromise<SpeedyMatrixLvalueExpr>`
+
+Evaluates `expr` and copies the result to a new matrix.
+
+###### Arguments
+
+* `expr: SpeedyMatrixExpr`. The matrix expression to be evaluated.
+
+###### Returns
+
+A `SpeedyPromise` that resolves to a new matrix storing the contents of the evaluated expression.
+
+###### Example
+
+```js
+// Speedy does NOT evaluate matrix expressions unless a result is required. By using
+// Speedy.Matrix.evaluate(), you're asking Speedy to perform the number crunching right away.
+
+const matA = Speedy.Matrix.Eye(5); // create some matrix
+const dblA = matA.times(2); // this is just an expression - the actual result is unknown at this line
+
+const matB = await Speedy.Matrix.evaluate(dblA); // B stores the actual result of the expression A * 2.
+                                                 // Number crunching takes place here! (look at the await)
+
+await dblA.print(); // A * 2 will be evaluated again. You're asking Speedy to print a matrix expression.
+                    // This means that the number crunching will happen twice. This is like writing:
+                    // print(A * 2);
+
+await matB.print(); // A * 2 will NOT be evaluated, because B already stores that result.
+                    // There's no number crunching at this time. This is like writing:
+                    // print(B);
+```
+
 
 #### Matrix properties
 
@@ -1254,8 +1289,6 @@ Assignment expression.
 In the first form: a `SpeedyPromise` that resolves to a `SpeedyMatrixLvalueExpr` featuring a matrix with the same entries as the evaluation of `expr`.
 
 In the second form: a `SpeedyPromise` that resolves to a `SpeedyMatrixLvalueExpr` featuring a matrix with the same entries as `entries`.
-
-*Note:* in an assignment operation, no data is copied. Only an internal pointer is changed (for performance). This is enough for most cases, but if you need to copy the data, take a look at [SpeedyMatrixExpr.clone()](#speedymatrixexprclone).
 
 ###### Example
 
