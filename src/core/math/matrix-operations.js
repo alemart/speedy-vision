@@ -736,7 +736,7 @@ export class MatrixOperationHomographyDLT extends MatrixOperation
     constructor(srcShape, dstShape)
     {
         Utils.assert(srcShape.equals(dstShape));
-        super('homographydlt', 2, new MatrixShape(3, 3, srcShape.dtype));
+        super('homographynormdlt', 2, new MatrixShape(3, 3, srcShape.dtype));
     }
 }
 

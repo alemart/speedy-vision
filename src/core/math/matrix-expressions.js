@@ -2366,10 +2366,10 @@ export class SpeedyMatrixPransacHomographyExpr extends SpeedyMatrixTernaryExpr
      */
     constructor(source, destination, numberOfHypotheses, bundleSize, reprojectionError, mask)
     {
-        Utils.assert(source._shape.rows === 2 && source._shape.columns >= 4);
+        Utils.assert(source.rows === 2 && source.columns >= 4);
         Utils.assert(source._shape.equals(destination._shape));
-        Utils.assert(mask._shape.rows === 1 && mask._shape.columns === source._shape.columns);
-        Utils.assert(mask._shape.dtype === source._shape.dtype);
+        Utils.assert(mask.rows === 1 && mask.columns === source.columns);
+        Utils.assert(mask.dtype === source.dtype);
         Utils.assert(mask instanceof SpeedyMatrixLvalueExpr);
         Utils.assert(numberOfHypotheses > 0 && bundleSize > 0 && reprojectionError >= 0);
 

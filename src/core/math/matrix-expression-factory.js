@@ -244,8 +244,6 @@ export class SpeedyMatrixExprFactory extends Function
         if(!(source.rows === 2 && source.columns >= 4 && source._shape.equals(destination._shape)))
             throw new IllegalArgumentError(`Can't compute homography matrix using ${source} and ${destination}. 4 or more correspondences of points are required`);
 
-        // TODO dltnorm2d
-
         // returns a node according to the method
         const parameters = options.parameters;
         if(options.method === 'p-ransac') {

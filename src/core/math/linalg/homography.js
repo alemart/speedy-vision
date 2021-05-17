@@ -265,8 +265,8 @@ export function homography4p(header, output, inputs)
 /**
  * Find a homography using n >= 4 correspondences of points (u,v) to (x,y)
  * using Direct Linear Transform (DLT). It's recommended to normalize the
- * input before calling this function. The input matrices are expected to
- * be 2 x n.
+ * input before calling this function (see homographynormdlt() below).
+ * The input matrices are expected to be 2 x n.
  * @param {object} header
  * @param {ArrayBufferView} output 3x3 homography matrix
  * @param {ArrayBufferView[]} inputs [ src, dest ]
@@ -283,13 +283,6 @@ export function homographydlt(header, output, inputs)
     const matA = this.createTypedArray(dtype, 16 * n).fill(0.0); // 2n x 8 matrix
     const vecB = this.createTypedArray(dtype, 2 * n); // 2n x 1 matrix
     const vecH = this.createTypedArray(dtype, 8); // 8x1 matrix
-    const dltheader = {
-        method: '', dtype: dtype, custom: {},
-        rows: 8, columns: 1, stride: 8,
-        rowsOfInputs: [ 2*n, 2*n ], columnsOfInputs: [8, 1], strideOfInputs: [ 2*n, 2*n ],
-        byteOffset: vecH.byteOffset, length: vecH.length,
-        byteOffsetOfInputs: [ matA.byteOffset, vecB.byteOffset ], lengthOfInputs: [ matA.length, vecB.length ],
-    };
     const eps = 1e-6;
     let u, v, x, y, k, j, ij, iij;
     let a, b, c, d, e, f, g, h, i, det;
@@ -327,7 +320,14 @@ export function homographydlt(header, output, inputs)
     }
 
     // solve Ah = b for h
-    this.lssolve(dltheader, vecH, [ matA, vecB ]);
+    this.run(this.lssolve, dtype, [
+        // output
+        8, 1, 8,
+
+        // inputs
+        2*n, 8, 2*n,
+        2*n, 1, 2*n,
+    ], [ vecH, matA, vecB ]);
 
     // read homography
     a = vecH[0]; b = vecH[1]; c = vecH[2];
@@ -350,4 +350,100 @@ export function homographydlt(header, output, inputs)
     output[stride2 + 0] = c;
     output[stride2 + 1] = f;
     output[stride2 + 2] = i;
+}
+
+/**
+ * Find a homography using n >= 4 correspondences of points (u,v) to (x,y)
+ * using the normalized Direct Linear Transform (nDLT). The input matrices
+ * are expected to be 2 x n.
+ * @param {object} header
+ * @param {ArrayBufferView} output 3x3 homography matrix
+ * @param {ArrayBufferView[]} inputs [ src, dest ]
+ */
+export function homographynormdlt(header, output, inputs)
+{
+    const { dtype, stride, rows, columns } = header;
+    const n = header.columnsOfInputs[0];
+    const sstride = header.strideOfInputs[0];
+    const dstride = header.strideOfInputs[1];
+    const src = inputs[0], dst = inputs[1];
+    const ptsbuf = this.createTypedArray(dtype, 4 * n); // two 2 x n matrices
+    const matbuf = this.createTypedArray(dtype, 9 * 4); // four 3 x 3 matrices
+    const srcnormpts = ptsbuf.subarray(0, 2 * n);
+    const dstnormpts = ptsbuf.subarray(2 * n, 4 * n);
+    const srcnormmat = matbuf.subarray(0, 9);
+    const srcdenormmat = matbuf.subarray(9, 18); // unused results
+    const dstnormmat = matbuf.subarray(18, 27); // unused results
+    const dstdenormmat = matbuf.subarray(27, 36);
+    const hommat = dstnormmat;
+    const tmpmat = srcdenormmat;
+
+    // Normalize source points
+    this.run(this.dltnorm2d, dtype, [
+        // output
+        2, n, 2,
+
+        // inputs
+        2, n, sstride,
+        3, 3, 3,
+        3, 3, 3,
+    ], [ srcnormpts, src, srcnormmat, srcdenormmat ]);
+
+    // Normalize destination points
+    this.run(this.dltnorm2d, dtype, [
+        // output
+        2, n, 2,
+
+        // inputs
+        2, n, dstride,
+        3, 3, 3,
+        3, 3, 3,
+    ], [ dstnormpts, dst, dstnormmat, dstdenormmat ]);
+
+    // DLT using the normalized points
+    this.run(this.homographydlt, dtype, [
+        // output
+        3, 3, 3,
+
+        // inputs
+        2, n, 2,
+        2, n, 2,
+    ], [ hommat, srcnormpts, dstnormpts ]);
+
+    // Compute normalized DLT using matrix multiplications
+    this.run(this.multiply, dtype, [
+        // output
+        3, 3, 3,
+
+        // inputs
+        3, 3, 3,
+        3, 3, 3,
+    ], [ tmpmat, hommat, srcnormmat ]);
+
+    this.run(this.multiply, dtype, [
+        // output
+        rows, columns, stride,
+
+        // inputs
+        3, 3, 3,
+        3, 3, 3,
+    ], [ output, dstdenormmat, tmpmat ]);
+
+    // Normalize the entries of the resulting matrix
+    let i = 0;
+    let norm2 = 0.0, inorm = 0.0;
+    const stride2 = stride + stride;
+
+    for(i = 0; i < 3; i++) {
+        norm2 += output[i] * output[i];
+        norm2 += output[i + stride] * output[i + stride];
+        norm2 += output[i + stride2] * output[i + stride2];
+    }
+
+    inorm = 1.0 / Math.sqrt(norm2);
+    for(i = 0; i < 3; i++) {
+        output[i] *= inorm;
+        output[i + stride] *= inorm;
+        output[i + stride2] *= inorm;
+    }
 }

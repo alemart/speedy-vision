@@ -28,7 +28,7 @@
  */
 export function pransacHomography(header, output, inputs)
 {
-    const dtype = header.dtype, stride = header.stride;
+    const { dtype, rows, columns, stride } = header;
     const src = inputs[0], dst = inputs[1]; // 2 x n matrices featuring source & destination points
     const mask = inputs[2]; // 1 x n matrix
     const n = header.columnsOfInputs[0]; // number of points
@@ -47,14 +47,7 @@ export function pransacHomography(header, output, inputs)
         (_, i) => new Hypothesis(hypbuf.subarray(9 * i, 9 * (i+1)))
     );
     const hompts = [ this.createTypedArray(dtype, 8), this.createTypedArray(dtype, 8) ];
-    const homheader = { // binary operation; used to compute an homography
-        rows: 3, columns: 3, stride: 3,
-        rowsOfInputs: [2, 2], columnsOfInputs: [4, 4], strideOfInputs: [2, 2],
-        byteOffset: hypothesis[0].mat.byteOffset, length: hypothesis[0].mat.length,
-        byteOffsetOfInputs: [hompts[0].byteOffset, hompts[1].byteOffset],
-        lengthOfInputs: [hompts[0].length, hompts[1].length],
-        dtype: dtype, method: '', custom: {},
-    };
+    const homheader = this.run(null, [ 3, 3, 3, 2, 4, 2, 2, 4, 2 ], [ hypothesis[0].mat, hompts[0], hompts[1] ]);
     const hstride = homheader.stride;
     const b = bundleSize;
     let m = numberOfHypotheses;
@@ -188,13 +181,6 @@ export function pransacHomography(header, output, inputs)
         const buf = this.createTypedArray(dtype, 4 * cnt);
         const isrc = buf.subarray(0, 2 * cnt);
         const idst = buf.subarray(2 * cnt, 4 * cnt);
-        const homdltheader = {
-            dtype: dtype, method: '', custom: {},
-            rows: header.rows, columns: header.columns, stride: header.stride,
-            length: header.length, byteOffset: header.byteOffset,
-            rowsOfInputs: [ 2, 2 ], columnsOfInputs: [ cnt, cnt ], strideOfInputs: [ 2, 2 ],
-            lengthOfInputs: [ isrc.length, idst.length ], byteOffsetOfInputs: [ isrc.byteOffset, idst.byteOffset ],
-        };
 
         // copy the inliers to isrc and idst
         for(i = j = 0; j < cnt; j++, i += 2) {
@@ -205,8 +191,15 @@ export function pransacHomography(header, output, inputs)
             idst[i + 1] = dst[dstride * p0 + 1];
         }
 
-        // DLT using inliers only
-        this.homographydlt(homdltheader, output, [ isrc, idst ]);
+        // normalized DLT using inliers only
+        this.run(this.homographynormdlt, dtype, [
+            // output
+            rows, columns, stride,
+
+            // inputs
+            2, cnt, 2,
+            2, cnt, 2,
+        ], [ output, isrc, idst ]);
     }
 
     // bad homography!
