@@ -35,7 +35,7 @@ export function pransacHomography(header, output, inputs)
     const sstride = header.strideOfInputs[0];
     const dstride = header.strideOfInputs[1];
     const mstride = header.strideOfInputs[2];
-    const { numberOfHypotheses, chunkSize, reprojectionError } = header.custom;
+    const { numberOfHypotheses, bundleSize, reprojectionError } = header.custom;
     const reprojErr2 = reprojectionError * reprojectionError;
     const ptsPerHyp = 4 * numberOfHypotheses; // need 4 points per hypothesis
     const len = ptsPerHyp + n - (ptsPerHyp % n); // pick a multiple of n that is >= ptsPerHyp
@@ -56,7 +56,7 @@ export function pransacHomography(header, output, inputs)
         dtype: dtype, method: '', custom: {},
     };
     const hstride = homheader.stride;
-    const b = chunkSize;
+    const b = bundleSize;
     let m = numberOfHypotheses;
     let h = 0, i = 0, j = 0, ij = 0, iij = 0, oj = 0;
     let p0 = 0, p1 = 0, p2 = 0, p3 = 0;

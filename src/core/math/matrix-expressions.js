@@ -2360,22 +2360,22 @@ export class SpeedyMatrixPransacHomographyExpr extends SpeedyMatrixTernaryExpr
      * @param {SpeedyMatrixExpr} source 2 x n matrix: source points (ui, vi), n >= 4
      * @param {SpeedyMatrixExpr} destination 2 x n matrix: destination points (xi, vi)
      * @param {number} numberOfHypotheses positive integer
-     * @param {number} chunkSize positive integer
+     * @param {number} bundleSize positive integer
      * @param {number} reprojectionError in pixels
      * @param {SpeedyMatrixLvalueExpr} mask 1 x n output inlier-outlier mask
      */
-    constructor(source, destination, numberOfHypotheses, chunkSize, reprojectionError, mask)
+    constructor(source, destination, numberOfHypotheses, bundleSize, reprojectionError, mask)
     {
         Utils.assert(source._shape.rows === 2 && source._shape.columns >= 4);
         Utils.assert(source._shape.equals(destination._shape));
         Utils.assert(mask._shape.rows === 1 && mask._shape.columns === source._shape.columns);
         Utils.assert(mask._shape.dtype === source._shape.dtype);
         Utils.assert(mask instanceof SpeedyMatrixLvalueExpr);
-        Utils.assert(numberOfHypotheses > 0 && chunkSize > 0 && reprojectionError >= 0);
+        Utils.assert(numberOfHypotheses > 0 && bundleSize > 0 && reprojectionError >= 0);
 
         super(source, destination, mask, new MatrixOperationPransacHomography(
             source._shape, destination._shape,
-            numberOfHypotheses, chunkSize,
+            numberOfHypotheses, bundleSize,
             reprojectionError, mask._shape
         ));
     }

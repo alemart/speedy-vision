@@ -227,7 +227,7 @@ export class SpeedyMatrixExprFactory extends Function
      * @property {?SpeedyMatrixLvalueExpr} [mask] 1 x n output matrix to separate inliers (1) from outliers (0)
      * @property {number} [reprojectionError] threshold in pixels to separate inliers from outliers (RANSAC variants)
      * @property {number} [numberOfHypotheses] for p-ransac only
-     * @property {number} [chunkSize] for p-ransac only
+     * @property {number} [bundleSize] for p-ransac only
      */
     findHomography(source, destination, options = {})
     {
@@ -236,7 +236,7 @@ export class SpeedyMatrixExprFactory extends Function
         options.parameters = Object.assign({
             mask: null,
             numberOfHypotheses: 500,
-            chunkSize: 100,
+            bundleSize: 100,
             reprojectionError: 3
         }, options.parameters || {});
 
@@ -255,13 +255,13 @@ export class SpeedyMatrixExprFactory extends Function
 
             // cast to number
             const numberOfHypotheses = parameters.numberOfHypotheses | 0;
-            const chunkSize = parameters.chunkSize | 0;
+            const bundleSize = parameters.bundleSize | 0;
             const reprojectionError = +(parameters.reprojectionError);
 
             // validate
             if(!(mask instanceof SpeedyMatrixLvalueExpr && mask._shape.equals(maskShape)))
                 throw new IllegalArgumentError(`Can't compute homography matrix: invalid mask`);
-            else if(numberOfHypotheses <= 0 || chunkSize <= 0 || reprojectionError < 0)
+            else if(numberOfHypotheses <= 0 || bundleSize <= 0 || reprojectionError < 0)
                 throw new IllegalArgumentError(`Can't compute homography matrix: invalid parameters for "${options.method}"`);
 
             // done!
@@ -269,7 +269,7 @@ export class SpeedyMatrixExprFactory extends Function
                 source,
                 destination,
                 numberOfHypotheses,
-                chunkSize,
+                bundleSize,
                 reprojectionError,
                 mask,
             );

@@ -801,16 +801,16 @@ export class MatrixOperationPransacHomography extends MatrixOperation
      * @param {MatrixShape} srcShape source coordinates: must be 2 x n (n >= 4)
      * @param {MatrixShape} dstShape destination coordinates: must be 2 x n
      * @param {number} numberOfHypotheses positive integer
-     * @param {number} chunkSize positive integer
+     * @param {number} bundleSize positive integer
      * @param {number} reprojectionError in pixels
      * @param {MatrixShape} maskShape inlier-outlier output mask: must be 1 x n
      */
-    constructor(srcShape, dstShape, numberOfHypotheses, chunkSize, reprojectionError, maskShape)
+    constructor(srcShape, dstShape, numberOfHypotheses, bundleSize, reprojectionError, maskShape)
     {
         Utils.assert(srcShape.equals(dstShape));
         Utils.assert(srcShape.columns === maskShape.columns);
         super('pransacHomography', 3, new MatrixShape(3, 3, srcShape.dtype), {
-            numberOfHypotheses, chunkSize, reprojectionError
+            numberOfHypotheses, bundleSize, reprojectionError
         });
     }
 }
