@@ -387,10 +387,11 @@ describe('Geometric transformations', function() {
 
     });
 
-    describe('Planar homography with RANSAC', function() {
+    describe('Planar homography with P-RANSAC', function() {
 
         const countInliers = maskdata => maskdata.reduce((sum, val) => sum + val, 0);
         const countOutliers = maskdata => maskdata.length - countInliers(maskdata);
+        const noise = (w = 1.0) => (Math.random() - 0.5) * w;
 
         it('computes a planar homography using only 4 inliers without noise', async function() {
 
@@ -746,6 +747,75 @@ describe('Geometric transformations', function() {
 
         });
 
+        describe('computes a correct homography despite random noise', function() {
+            const noiseTable = {
+                'easy for rookies': 1.5,
+                'medium': 2,
+                'bad': 3,
+                'really bad!': 4,
+                'outrageous!!!!!': 7
+            };
+
+            for(const difficulty in noiseTable) {
+                it(`computes a correct homography with noise level: ${difficulty}`, async function() {
+                    const numPoints = 50;
+                    const reprojErrTolerance = 1;
+                    const noiseLevel = noiseTable[difficulty];
+
+                    // map [0,100]x[0,100] to [200,400]x[200,400]
+                    const entries = Array.from({ length: numPoints * 2 }, () => 100 * Math.random());
+                    const srcQuad = Speedy.Matrix(2, numPoints, entries);
+                    const dstQuad = Speedy.Matrix(2, numPoints, entries.map(x => 200 + 2 * x + noise(noiseLevel)));
+                    const mask = Speedy.Matrix(1, numPoints);
+
+                    // compute homography
+                    const homography = await Speedy.Matrix.evaluate(
+                        Speedy.Matrix.findHomography(srcQuad, dstQuad, {
+                            method: 'p-ransac',
+                            parameters: {
+                                mask: mask,
+                                reprojectionError: reprojErrTolerance
+                            },
+                        })
+                    );
+
+                    await printm('From:', srcQuad);
+                    await printm('To:', dstQuad);
+                    await printm('Inliers mask:', mask);
+                    await printm('Homography:', homography);
+
+                    const tstQuad = await Speedy.Matrix.evaluate(
+                        Speedy.Matrix.transform(homography, srcQuad)
+                    );
+                    const difQuad = await Speedy.Matrix.evaluate(
+                        tstQuad.minus(dstQuad)
+                    );
+
+                    const zero = Speedy.Matrix.Zeros(1, 1); // [0]
+                    const zeros = Speedy.Matrix.Zeros(2, 1); // column vector [ 0  0 ]^T
+                    const ones = Speedy.Matrix.Ones(1, 2); // row vector [ 1  1 ]
+
+                    const [ reprojectionError2 ] = await ones.times(
+                        difQuad
+                        .compMult(difQuad)
+                        .reduce(2, 1, (A, B) => A.plus(B), zeros)
+                    ).read();
+                    const reprojectionError = Math.sqrt(reprojectionError2);
+
+                    const [ numberOfInliers ] = await (
+                        mask
+                        .reduce(1, 1, (A, B) => A.plus(B), zero)
+                    ).read();
+                    const percentageOfInliers = 100.0 * numberOfInliers / numPoints;
+
+                    await printm('Percentage of inliers:', percentageOfInliers + '%');
+                    await printm('Reprojection error:', reprojectionError);
+
+                    expect(reprojectionError).toBeLessThan(numPoints * reprojErrTolerance);
+                });
+            }
+        });
+
     });
 
     describe('Planar homography with DLT', function() {
@@ -870,7 +940,7 @@ describe('Geometric transformations', function() {
 
         });
 
-        it('fails to compute a planar homography using a degenerate configuration', async function() {
+        xit('fails to compute a planar homography using a degenerate configuration', async function() {
 
             const srcQuad = Speedy.Matrix.fromPoints([
                 Speedy.Point2(0, 0),
