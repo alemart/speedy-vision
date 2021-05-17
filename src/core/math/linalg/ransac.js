@@ -47,7 +47,7 @@ export function pransacHomography(header, output, inputs)
         (_, i) => new Hypothesis(hypbuf.subarray(9 * i, 9 * (i+1)))
     );
     const hompts = [ this.createTypedArray(dtype, 8), this.createTypedArray(dtype, 8) ];
-    const homheader = this.run(null, [ 3, 3, 3, 2, 4, 2, 2, 4, 2 ], [ hypothesis[0].mat, hompts[0], hompts[1] ]);
+    const homheader = this.run(null, dtype, [ 3, 3, 3, 2, 4, 2, 2, 4, 2 ], [ hypothesis[0].mat, hompts[0], hompts[1] ]);
     const hstride = homheader.stride;
     const b = bundleSize;
     let m = numberOfHypotheses;
