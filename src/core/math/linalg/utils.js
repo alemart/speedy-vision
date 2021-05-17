@@ -56,16 +56,16 @@ export function run(fn, dtypes, shapes, data, custom = {})
     const rowsOfInputs = new Array(n);
     const columnsOfInputs = new Array(n);
     const strideOfInputs = new Array(n);
-    /*const lengthOfInputs = new Array(n);
-    const byteOffsetOfInputs = new Array(n);*/
+    const lengthOfInputs = new Array(n);
+    //const byteOffsetOfInputs = new Array(n);
 
     for(let j = 3, i = 0; i < n; i++, j += 3) {
         inputs[i] = data[i+1];
         rowsOfInputs[i] = shapes[j];
         columnsOfInputs[i] = shapes[j+1];
         strideOfInputs[i] = shapes[j+2];
-        /*lengthOfInputs[i] = data[i+1].length;
-        byteOffsetOfInputs[i] = data[i+1].byteOffset;*/
+        lengthOfInputs[i] = data[i+1].length;
+        //byteOffsetOfInputs[i] = data[i+1].byteOffset;
     }
 
     const header = {
@@ -79,11 +79,11 @@ export function run(fn, dtypes, shapes, data, custom = {})
         columnsOfInputs: columnsOfInputs,
         strideOfInputs: strideOfInputs,
 
-        /*length: data[0].length,
-        byteOffset: data[0].byteOffset,
+        length: data[0].length,
         lengthOfInputs: lengthOfInputs,
-        byteOffsetOfInputs: byteOffsetOfInputs,*/
-        length: 0, byteOffset: 0, lengthOfInputs: [], byteOffsetOfInputs: [],
+        //byteOffset: data[0].byteOffset,
+        //byteOffsetOfInputs: byteOffsetOfInputs,
+        byteOffset: 0, byteOffsetOfInputs: [],
     };
 
     if(fn != null)
