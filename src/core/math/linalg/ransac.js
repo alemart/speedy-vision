@@ -21,7 +21,7 @@
 
 /**
  * P-RANSAC for homography estimation
- * This implementation is based on Nister's preemptive RANSAC idea
+ * This is a new JavaScript implementation based on Nister's preemptive RANSAC idea
  * @param {object} header
  * @param {ArrayBufferView} output
  * @param {ArrayBufferView[]} inputs
@@ -38,12 +38,13 @@ export function pransacHomography(header, output, inputs)
     const { numberOfHypotheses, chunkSize, reprojectionError } = header.custom;
     const reprojErr2 = reprojectionError * reprojectionError;
     const ptsPerHyp = 4 * numberOfHypotheses; // need 4 points per hypothesis
-    const len = ptsPerHyp + n - (ptsPerHyp % n); // pick a multiple of n >= ptsPerHyp
+    const len = ptsPerHyp + n - (ptsPerHyp % n); // pick a multiple of n that is >= ptsPerHyp
     const ptidx = Array.from({ length: len }, (_, i) => i % n); // indices of points
     const permutation = this.shuffle(this.range(n));
-    function Hypothesis(mat) { this.mat = mat; this.err = 0.0; }
+    const hypbuf = this.createTypedArray(dtype, 9 * numberOfHypotheses);
+    function Hypothesis(mat) { this.mat = mat; this.err = 0; }
     const hypothesis = Array.from({ length: numberOfHypotheses },
-        () => new Hypothesis(this.createTypedArray(dtype, 9))
+        (_, i) => new Hypothesis(hypbuf.subarray(9 * i, 9 * (i+1)))
     );
     const hompts = [ this.createTypedArray(dtype, 8), this.createTypedArray(dtype, 8) ];
     const homheader = { // binary operation; used to compute an homography
@@ -62,10 +63,13 @@ export function pransacHomography(header, output, inputs)
     let x = 0.0, y = 0.0, z = 0.0, dx = 0.0, dy = 0.0, sx = 0.0, sy = 0.0, hx = 0.0, hy = 0.0;
     let hom, smat, dmat;
 
+    // Shuffle input
+    for(i = 0; i < len; i += n)
+        this.shuffle(ptidx, i, i+n);
+
     // Generate m hypotheses
-    this.shuffle(ptidx);
     for(h = 0; h < m; h++) {
-        // pick 4 distinct points at random
+        // pick 4 points at random
         j = 4 * h;
         p0 = ptidx[j]
         p1 = ptidx[j + 1];
@@ -130,10 +134,10 @@ export function pransacHomography(header, output, inputs)
                 x = (hom[0] * sx + hom[3] * sy + hom[6]) / z;
                 y = (hom[1] * sx + hom[4] * sy + hom[7]) / z;
                 dx = x - hx; dy = y - hy;
-                hypothesis[h].err += dx * dx + dy * dy;
+                hypothesis[h].err += (dx * dx + dy * dy > reprojErr2) | 0;
             }
             else
-                hypothesis[h].err = Number.POSITIVE_INFINITY;
+                hypothesis[h].err = Number.MAX_SAFE_INTEGER;
         }
     }
 
@@ -166,11 +170,6 @@ export function pransacHomography(header, output, inputs)
             inliers.push(j);
     }
 
-    // compute a new homography using all inliers
-    if(inliers.length > 4) {
-        // TODO
-    }
-
     // write the best homography to the output
     const stride2 = stride + stride;
     output[0] = h00;
@@ -182,4 +181,37 @@ export function pransacHomography(header, output, inputs)
     output[0 + stride2] = h02;
     output[1 + stride2] = h12;
     output[2 + stride2] = h22;
+
+    // refine the homography by using only the inliers
+    if(inliers.length > 4) {
+        const cnt = inliers.length;
+        const buf = this.createTypedArray(dtype, 4 * cnt);
+        const isrc = buf.subarray(0, 2 * cnt);
+        const idst = buf.subarray(2 * cnt, 4 * cnt);
+        const homdltheader = {
+            dtype: dtype, method: '', custom: {},
+            rows: header.rows, columns: header.columns, stride: header.stride,
+            length: header.length, byteOffset: header.byteOffset,
+            rowsOfInputs: [ 2, 2 ], columnsOfInputs: [ cnt, cnt ], strideOfInputs: [ 2, 2 ],
+            lengthOfInputs: [ isrc.length, idst.length ], byteOffsetOfInputs: [ isrc.byteOffset, idst.byteOffset ],
+        };
+
+        // copy the inliers to isrc and idst
+        for(i = j = 0; j < cnt; j++, i += 2) {
+            p0 = inliers[j];
+            isrc[i + 0] = src[sstride * p0 + 0];
+            isrc[i + 1] = src[sstride * p0 + 1];
+            idst[i + 0] = dst[dstride * p0 + 0];
+            idst[i + 1] = dst[dstride * p0 + 1];
+        }
+
+        // DLT using inliers only
+        this.homographydlt(homdltheader, output, [ isrc, idst ]);
+    }
+
+    // bad homography!
+    else if(inliers.length < 4) {
+        for(i = 0; i < 3; i++)
+            output[i] = output[i + stride] = output[i + stride2] = Number.NaN;
+    }
 }
