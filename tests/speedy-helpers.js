@@ -617,6 +617,19 @@ var speedyMatchers =
             return { pass };
         }
     }),
+
+    //
+    // Misc
+    //
+
+    toBeNearlyZero: util =>
+    ({
+        compare(x, eps = 1e-6)
+        {
+            const pass = Math.abs(x) < eps;
+            return { pass };
+        }
+    })
 };
 
 // add jasmine.currentTest
