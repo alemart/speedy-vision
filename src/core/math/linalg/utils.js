@@ -39,12 +39,12 @@ export function execute(header, outputBuffer, inputBuffers)
 
 /**
  * Fast & handy wrapper to run a Linear Algebra routine from another one
- * @param {Function} fn the function that you wish to call
+ * @param {?Function} fn the function that you wish to call
  * @param {string} dtypes data types
  * @param {number[]} shapes flattened triples (rows, columns, stride) of output, input1, input2, input3...
  * @param {ArrayBufferView[]} data flattened array containing output array, input1 array, input2 array...
  * @param {object} [custom] user-data
- * @returns {void}
+ * @returns {object} the header object that was used to call the routine
  */
 export function run(fn, dtypes, shapes, data, custom = {})
 {
@@ -86,7 +86,10 @@ export function run(fn, dtypes, shapes, data, custom = {})
         length: 0, byteOffset: 0, lengthOfInputs: [], byteOffsetOfInputs: [],
     };
 
-    fn.call(this, header, data[0], inputs);
+    if(fn != null)
+        fn.call(this, header, data[0], inputs);
+
+    return header;
 }
 
 /**
