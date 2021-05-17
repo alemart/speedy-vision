@@ -753,7 +753,7 @@ export class MatrixOperationApplyHomography extends MatrixOperation
     constructor(homShape, ptsShape)
     {
         Utils.assert(ptsShape.dtype === homShape.dtype);
-        super('apply_homography', 2, ptsShape);
+        super('applyHomography', 2, ptsShape);
     }
 }
 
@@ -770,7 +770,7 @@ export class MatrixOperationApplyAffine extends MatrixOperation
     constructor(matShape, ptsShape)
     {
         Utils.assert(ptsShape.dtype === matShape.dtype);
-        super('apply_affine', 2, ptsShape);
+        super('applyAffine', 2, ptsShape);
     }
 }
 
@@ -787,7 +787,7 @@ export class MatrixOperationApplyLinear2d extends MatrixOperation
     constructor(matShape, ptsShape)
     {
         Utils.assert(ptsShape.dtype === matShape.dtype);
-        super('apply_linear2d', 2, ptsShape);
+        super('applyLinear2d', 2, ptsShape);
     }
 }
 

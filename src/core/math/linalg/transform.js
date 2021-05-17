@@ -25,7 +25,7 @@
  * @param {ArrayBufferView} output
  * @param {ArrayBufferView[]} inputs
  */
-export function apply_homography(header, output, inputs)
+export function applyHomography(header, output, inputs)
 {
     const { columns, stride } = header;
     const [ hom, pts ] = inputs;
@@ -61,7 +61,7 @@ export function apply_homography(header, output, inputs)
  * @param {ArrayBufferView} output
  * @param {ArrayBufferView[]} inputs
  */
-export function apply_affine(header, output, inputs)
+export function applyAffine(header, output, inputs)
 {
     const { columns, stride } = header;
     const [ mat, pts ] = inputs;
@@ -92,7 +92,7 @@ export function apply_affine(header, output, inputs)
  * @param {ArrayBufferView} output
  * @param {ArrayBufferView[]} inputs
  */
-export function apply_linear2d(header, output, inputs)
+export function applyLinear2d(header, output, inputs)
 {
     const { columns, stride } = header;
     const [ mat, pts ] = inputs;
