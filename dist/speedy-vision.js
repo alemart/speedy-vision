@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-05-07T19:24:05.662Z
+ * Date: 2021-05-18T01:37:50.705Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -2562,7 +2562,7 @@ class BoundMatrixOperationTree
 /*!***************************************!*\
   !*** ./src/core/math/linalg/basic.js ***!
   \***************************************/
-/*! exports provided: nop, fill, copy, transpose, add, subtract, multiply, multiplylt, multiplyrt, multiplyvec, scale, compmult, outer */
+/*! exports provided: nop, fill, copy, transpose, add, subtract, multiply, multiplylt, multiplyrt, multiply3, multiplyvec, scale, compmult, outer */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -2576,6 +2576,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "multiply", function() { return multiply; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "multiplylt", function() { return multiplylt; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "multiplyrt", function() { return multiplyrt; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "multiply3", function() { return multiply3; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "multiplyvec", function() { return multiplyvec; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "scale", function() { return scale; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "compmult", function() { return compmult; });
@@ -2812,6 +2813,39 @@ function multiplyrt(header, output, inputs)
                 output[ok + i] += a[aj + i] * bkj;
         }
     }
+}
+
+/**
+ * Fast multiplication of two 3x3 matrices (A * B)
+ * @param {object} header
+ * @param {ArrayBufferView} output
+ * @param {ArrayBufferView[]} inputs
+ */
+function multiply3(header, output, inputs)
+{
+    const { stride } = header;
+    const [ matA, matB ] = inputs;
+    const [ sa, sb ] = header.strideOfInputs;
+    const sa2 = sa + sa, sb2 = sb + sb;
+    const stride2 = stride + stride;
+    const a = matA[0], b = matA[0 + sa], c = matA[0 + sa2],
+          d = matA[1], e = matA[1 + sa], f = matA[1 + sa2],
+          g = matA[2], h = matA[2 + sa], i = matA[2 + sa2],
+          j = matB[0], k = matB[0 + sb], l = matB[0 + sb2],
+          m = matB[1], n = matB[1 + sb], o = matB[1 + sb2],
+          p = matB[2], q = matB[2 + sb], r = matB[2 + sb2];
+
+    output[0] = a*j + b*m + c*p;
+    output[1] = d*j + e*m + f*p;
+    output[2] = g*j + h*m + i*p;
+
+    output[0 + stride] = a*k + b*n + c*q;
+    output[1 + stride] = d*k + e*n + f*q;
+    output[2 + stride] = g*k + h*n + i*q;
+
+    output[0 + stride2] = a*l + b*o + c*r;
+    output[1 + stride2] = d*l + e*o + f*r;
+    output[2 + stride2] = g*l + h*o + i*r;
 }
 
 /**
@@ -3063,7 +3097,7 @@ function sort(header, output, inputs)
     const biidx = 2, bjidx = 3; //const biidx = inputs.indexOf(bi), bjidx = inputs.indexOf(bj);
     const biopt = (bistride === istride && bilength === ilength), bjopt = (bjstride === istride && bjlength === ilength); // note: bistride === bjstride
     const block = biopt && bjopt ? Array.from({ length: n }, (_, i) => input.subarray(i * istride * blockColumns, (i+1) * istride * blockColumns)) : null;
-    const permutation = Array.from({ length: n }, (_, i) => i); // range(n)
+    const permutation = this.range(n);
     const stack = (new Array(n)).fill(0);
     let top = -1, l = 0, r = 0, p = 0, pivot = 0;
     let i, j, oj, ij;
@@ -3161,12 +3195,14 @@ function sort(header, output, inputs)
 /*!********************************************!*\
   !*** ./src/core/math/linalg/homography.js ***!
   \********************************************/
-/*! exports provided: homography4p */
+/*! exports provided: homography4p, homographydlt, homographynormdlt */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "homography4p", function() { return homography4p; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "homographydlt", function() { return homographydlt; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "homographynormdlt", function() { return homographynormdlt; });
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -3249,6 +3285,7 @@ function homography4p(header, output, inputs)
     let a1, b1, c1, d1, e1, f1, g1, h1, i1;
     let a2, b2, c2, d2, e2, f2, g2, h2, i2;
     let a, b, c, d, e, f, g, h, i;
+    let inorm;
 
     //
     // Initialization
@@ -3357,6 +3394,10 @@ function homography4p(header, output, inputs)
     f1 = -d1 * u0 - e1 * v0;
     i1 = 1.0;
 
+    // Bad homography?
+    det = a1*e1*i1 + b1*f1*g1 + c1*d1*h1 - b1*d1*i1 - a1*f1*h1 - c1*e1*g1;
+    if(Math.abs(det) < eps) break; // goto end;
+
     //
     // From unit square to destination
     //
@@ -3385,6 +3426,10 @@ function homography4p(header, output, inputs)
     f2 = y0;
     i2 = 1.0;
 
+    // Bad homography?
+    det = a2*e2*i2 + b2*f2*g2 + c2*d2*h2 - b2*d2*i2 - a2*f2*h2 - c2*e2*g2;
+    if(Math.abs(det) < eps) break; // goto end;
+
     //
     // From source to destination
     //
@@ -3400,13 +3445,17 @@ function homography4p(header, output, inputs)
     h = g2 * b1 + h2 * e1 + i2 * h1;
     i = g2 * c1 + h2 * f1 + i2 * i1;
 
+    // Normalize the entries
+    inorm = 1.0 / Math.sqrt(a*a + b*b + c*c + d*d + e*e + f*f + g*g + h*h + i*i);
+    a *= inorm; b *= inorm; c *= inorm;
+    d *= inorm; e *= inorm; f *= inorm;
+    g *= inorm; h *= inorm; i *= inorm;
+
     } while(0);
 
-    //
-    // Write the matrix
-    //
-
     // end:
+
+    // Write the matrix to the output
     output[0] = a;
     output[1] = d;
     output[2] = g;
@@ -3416,6 +3465,194 @@ function homography4p(header, output, inputs)
     output[0 + 2 * stride] = c;
     output[1 + 2 * stride] = f;
     output[2 + 2 * stride] = i;
+}
+
+/**
+ * Find a homography using n >= 4 correspondences of points (u,v) to (x,y)
+ * using Direct Linear Transform (DLT). It's recommended to normalize the
+ * input before calling this function (see homographynormdlt() below).
+ * The input matrices are expected to be 2 x n.
+ * @param {object} header
+ * @param {ArrayBufferView} output 3x3 homography matrix
+ * @param {ArrayBufferView[]} inputs [ src, dest ]
+ */
+function homographydlt(header, output, inputs)
+{
+    const dtype = header.dtype;
+    const n = header.columnsOfInputs[0]; // number of correspondences
+    const src = inputs[0], dest = inputs[1];
+    const stride = header.stride;
+    const sstride = header.strideOfInputs[0];
+    const dstride = header.strideOfInputs[1];
+    const astride = 2 * n;
+    const matA = this.createTypedArray(dtype, 16 * n).fill(0.0); // 2n x 8 matrix
+    const vecB = this.createTypedArray(dtype, 2 * n); // 2n x 1 matrix
+    const vecH = this.createTypedArray(dtype, 8); // 8x1 matrix
+    const eps = 1e-6;
+    let u, v, x, y, k, j, ij, iij;
+    let a, b, c, d, e, f, g, h, i, det;
+
+    /*
+    // create system of linear equations
+    [ uj  vj  1   0   0   0  -uj*xj  -vj*xj ] h  =  [ xj ]
+    [ 0   0   0   uj  vj  1  -uj*yj  -vj*yj ]       [ yj ]
+    */
+    for(ij = 0, iij = 0, j = 0, k = 0; k < n; k++, j += 2, ij += sstride, iij += dstride) {
+        u = src[ij + 0];
+        v = src[ij + 1];
+        x = dest[iij + 0];
+        y = dest[iij + 1];
+
+        matA[0 + j] = u;
+        //matA[1 + j] = 0;
+        matA[astride + 0 + j] = v;
+        //matA[astride + 1 + j] = 0.0;
+        matA[2 * astride + 0 + j] = 1.0;
+        //matA[2 * astride + 1 + j] = 0.0;
+        //matA[3 * astride + 0 + j] = 0.0;
+        matA[3 * astride + 1 + j] = u;
+        //matA[4 * astride + 0 + j] = 0.0;
+        matA[4 * astride + 1 + j] = v;
+        //matA[5 * astride + 0 + j] = 0.0;
+        matA[5 * astride + 1 + j] = 1.0;
+        matA[6 * astride + 0 + j] = -u*x;
+        matA[6 * astride + 1 + j] = -u*y;
+        matA[7 * astride + 0 + j] = -v*x;
+        matA[7 * astride + 1 + j] = -v*y;
+
+        vecB[0 + j] = x;
+        vecB[1 + j] = y;
+    }
+
+    // solve Ah = b for h
+    this.run(this.lssolve, dtype, [
+        // output
+        8, 1, 8,
+
+        // inputs
+        2*n, 8, 2*n,
+        2*n, 1, 2*n,
+    ], [ vecH, matA, vecB ]);
+
+    // read homography
+    a = vecH[0]; b = vecH[1]; c = vecH[2];
+    d = vecH[3]; e = vecH[4]; f = vecH[5];
+    g = vecH[6]; h = vecH[7]; i = 1.0;
+
+    // bad homography?
+    det = a*e*i + b*f*g + c*d*h - b*d*i - a*f*h - c*e*g;
+    if(Number.isNaN(det) || Math.abs(det) < eps)
+        a = b = c = d = e = f = g = h = i = Number.NaN;
+
+    // write homography to the output
+    const stride2 = stride + stride;
+    output[0] = a;
+    output[1] = d;
+    output[2] = g;
+    output[stride + 0] = b;
+    output[stride + 1] = e;
+    output[stride + 2] = h;
+    output[stride2 + 0] = c;
+    output[stride2 + 1] = f;
+    output[stride2 + 2] = i;
+}
+
+/**
+ * Find a homography using n >= 4 correspondences of points (u,v) to (x,y)
+ * using the normalized Direct Linear Transform (nDLT). The input matrices
+ * are expected to be 2 x n.
+ * @param {object} header
+ * @param {ArrayBufferView} output 3x3 homography matrix
+ * @param {ArrayBufferView[]} inputs [ src, dest ]
+ */
+function homographynormdlt(header, output, inputs)
+{
+    const { dtype, stride, rows, columns } = header;
+    const n = header.columnsOfInputs[0];
+    const sstride = header.strideOfInputs[0];
+    const dstride = header.strideOfInputs[1];
+    const src = inputs[0], dst = inputs[1];
+    const ptsbuf = this.createTypedArray(dtype, 4 * n); // two 2 x n matrices
+    const matbuf = this.createTypedArray(dtype, 9 * 4); // four 3 x 3 matrices
+    const srcnormpts = ptsbuf.subarray(0, 2 * n);
+    const dstnormpts = ptsbuf.subarray(2 * n, 4 * n);
+    const srcnormmat = matbuf.subarray(0, 9);
+    const srcdenormmat = matbuf.subarray(9, 18); // unused results
+    const dstnormmat = matbuf.subarray(18, 27); // unused results
+    const dstdenormmat = matbuf.subarray(27, 36);
+    const hommat = dstnormmat;
+    const tmpmat = srcdenormmat;
+
+    // Normalize source points
+    this.run(this.dltnorm2d, dtype, [
+        // output
+        2, n, 2,
+
+        // inputs
+        2, n, sstride,
+        3, 3, 3,
+        3, 3, 3,
+    ], [ srcnormpts, src, srcnormmat, srcdenormmat ]);
+
+    // Normalize destination points
+    this.run(this.dltnorm2d, dtype, [
+        // output
+        2, n, 2,
+
+        // inputs
+        2, n, dstride,
+        3, 3, 3,
+        3, 3, 3,
+    ], [ dstnormpts, dst, dstnormmat, dstdenormmat ]);
+
+    // DLT using the normalized points
+    this.run(this.homographydlt, dtype, [
+        // output
+        3, 3, 3,
+
+        // inputs
+        2, n, 2,
+        2, n, 2,
+    ], [ hommat, srcnormpts, dstnormpts ]);
+
+    // Compute normalized DLT using matrix multiplications
+    this.run(this.multiply3, dtype, [
+        // output
+        3, 3, 3,
+
+        // inputs
+        3, 3, 3,
+        3, 3, 3,
+    ], [ tmpmat, hommat, srcnormmat ]);
+
+    this.run(this.multiply3, dtype, [
+        // output
+        rows, columns, stride,
+
+        // inputs
+        3, 3, 3,
+        3, 3, 3,
+    ], [ output, dstdenormmat, tmpmat ]);
+
+    /*
+    // Normalize the entries of the resulting matrix
+    let i = 0;
+    let norm2 = 0.0, inorm = 0.0;
+    const stride2 = stride + stride;
+
+    for(i = 0; i < 3; i++) {
+        norm2 += output[i] * output[i];
+        norm2 += output[i + stride] * output[i + stride];
+        norm2 += output[i + stride2] * output[i + stride2];
+    }
+
+    inorm = 1.0 / Math.sqrt(norm2);
+    for(i = 0; i < 3; i++) {
+        output[i] *= inorm;
+        output[i + stride] *= inorm;
+        output[i + stride2] *= inorm;
+    }
+    */
 }
 
 /***/ }),
@@ -3577,6 +3814,7 @@ const LinAlgLib = {
     ...__webpack_require__(/*! ./functional */ "./src/core/math/linalg/functional.js"),
     ...__webpack_require__(/*! ./homography */ "./src/core/math/linalg/homography.js"),
     ...__webpack_require__(/*! ./transform */ "./src/core/math/linalg/transform.js"),
+    ...__webpack_require__(/*! ./ransac */ "./src/core/math/linalg/ransac.js"),
     ...__webpack_require__(/*! ./utils */ "./src/core/math/linalg/utils.js"),
 };
 
@@ -3990,6 +4228,229 @@ function qr(header, output, inputs)
 
 /***/ }),
 
+/***/ "./src/core/math/linalg/ransac.js":
+/*!****************************************!*\
+  !*** ./src/core/math/linalg/ransac.js ***!
+  \****************************************/
+/*! exports provided: pransacHomography */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "pransacHomography", function() { return pransacHomography; });
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * ransac.js
+ * Variants of RANSAC
+ */
+
+/**
+ * P-RANSAC for homography estimation
+ * This is a new JavaScript implementation based on Nister's preemptive RANSAC idea
+ * @param {object} header
+ * @param {ArrayBufferView} output
+ * @param {ArrayBufferView[]} inputs
+ */
+function pransacHomography(header, output, inputs)
+{
+    const { dtype, rows, columns, stride } = header;
+    const src = inputs[0], dst = inputs[1]; // 2 x n matrices featuring source & destination points
+    const mask = inputs[2]; // 1 x n matrix
+    const n = header.columnsOfInputs[0]; // number of points
+    const sstride = header.strideOfInputs[0];
+    const dstride = header.strideOfInputs[1];
+    const mstride = header.strideOfInputs[2];
+    const { numberOfHypotheses, bundleSize, reprojectionError } = header.custom;
+    const reprojErr2 = reprojectionError * reprojectionError;
+    const ptsPerHyp = 4 * numberOfHypotheses; // need 4 points per hypothesis
+    const len = ptsPerHyp + n - (ptsPerHyp % n); // pick a multiple of n that is >= ptsPerHyp
+    const ptidx = Array.from({ length: len }, (_, i) => i % n); // indices of points
+    const permutation = this.shuffle(this.range(n));
+    const hypbuf = this.createTypedArray(dtype, 9 * numberOfHypotheses);
+    function Hypothesis(mat) { this.mat = mat; this.err = 0; }
+    const hypothesis = Array.from({ length: numberOfHypotheses },
+        (_, i) => new Hypothesis(hypbuf.subarray(9 * i, 9 * (i+1)))
+    );
+    const hompts = [ this.createTypedArray(dtype, 8), this.createTypedArray(dtype, 8) ];
+    const homheader = this.run(null, dtype, [ 3, 3, 3, 2, 4, 2, 2, 4, 2 ], [ hypothesis[0].mat, hompts[0], hompts[1] ]);
+    const hstride = homheader.stride;
+    const b = bundleSize;
+    let m = numberOfHypotheses;
+    let h = 0, i = 0, j = 0, ij = 0, iij = 0, oj = 0;
+    let p0 = 0, p1 = 0, p2 = 0, p3 = 0;
+    let x = 0.0, y = 0.0, z = 0.0, dx = 0.0, dy = 0.0, sx = 0.0, sy = 0.0, hx = 0.0, hy = 0.0;
+    let hom, smat, dmat;
+
+    // Shuffle input
+    for(i = 0; i < len; i += n)
+        this.shuffle(ptidx, i, i+n);
+
+    // Generate m hypotheses
+    for(h = 0; h < m; h++) {
+        // pick 4 points at random
+        j = 4 * h;
+        p0 = ptidx[j]
+        p1 = ptidx[j + 1];
+        p2 = ptidx[j + 2];
+        p3 = ptidx[j + 3];
+
+        // set references
+        smat = hompts[0];
+        dmat = hompts[1];
+        hom = hypothesis[h].mat;
+
+        // grab source points
+        smat[0] = src[sstride * p0 + 0];
+        smat[1] = src[sstride * p0 + 1];
+        smat[2] = src[sstride * p1 + 0];
+        smat[3] = src[sstride * p1 + 1];
+        smat[4] = src[sstride * p2 + 0];
+        smat[5] = src[sstride * p2 + 1];
+        smat[6] = src[sstride * p3 + 0];
+        smat[7] = src[sstride * p3 + 1];
+
+        // grab destination points
+        dmat[0] = dst[dstride * p0 + 0];
+        dmat[1] = dst[dstride * p0 + 1];
+        dmat[2] = dst[dstride * p1 + 0];
+        dmat[3] = dst[dstride * p1 + 1];
+        dmat[4] = dst[dstride * p2 + 0];
+        dmat[5] = dst[dstride * p2 + 1];
+        dmat[6] = dst[dstride * p3 + 0];
+        dmat[7] = dst[dstride * p3 + 1];
+
+        // generate hypothesis
+        this.homography4p(homheader, hom, hompts);
+    }
+
+    // For each correspondence
+    for(i = 0; i < n ; i++) {
+        // cut the number of hypotheses in half (every b iterations)
+        if(i % b == 0 && m > 1) {
+            hypothesis.sort((hi, hj) => hi.err - hj.err); // keep the best ones
+            m = m >>> 1; // m div 2
+            hypothesis.length = m;
+        }
+
+        // we've got only 1 hypothesis left
+        if(m == 1)
+            break;
+
+        // pick a correspondence of points
+        //p0 = (Math.random() * n) | 0; // pick a random correspondence with replacement
+        p0 = permutation[i]; // pick a random correspondence without replacement
+        sx = src[sstride * p0 + 0]; // src_x
+        sy = src[sstride * p0 + 1]; // src_y
+        hx = dst[dstride * p0 + 0]; // dst_x
+        hy = dst[dstride * p0 + 1]; // dst_y
+
+        // evaluate the m best hypotheses so far using the p0-th correspondence
+        for(h = 0; h < m; h++) {
+            hom = hypothesis[h].mat;
+            if(!Number.isNaN(hom[0])) {
+                z = hom[2] * sx + hom[5] * sy + hom[8];
+                x = (hom[0] * sx + hom[3] * sy + hom[6]) / z;
+                y = (hom[1] * sx + hom[4] * sy + hom[7]) / z;
+                dx = x - hx; dy = y - hy;
+                hypothesis[h].err += (dx * dx + dy * dy > reprojErr2) | 0;
+            }
+            else
+                hypothesis[h].err = Number.MAX_SAFE_INTEGER;
+        }
+    }
+
+    // pick the best hypothesis j
+    for(j = 0, h = 1; h < m; h++) {
+        if(hypothesis[h].err < hypothesis[j].err)
+            j = h;
+    }
+    hom = hypothesis[j].mat;
+
+    // read the entries of the best homography
+    const hstride2 = hstride + hstride;
+    const h00 = hom[0], h01 = hom[hstride + 0], h02 = hom[hstride2 + 0],
+          h10 = hom[1], h11 = hom[hstride + 1], h12 = hom[hstride2 + 1],
+          h20 = hom[2], h21 = hom[hstride + 2], h22 = hom[hstride2 + 2];
+
+    // separate inliers from outliers
+    const inliers = [];
+    for(ij = 0, iij = 0, oj = 0, j = 0; j < n; j++, ij += sstride, iij += dstride, oj += mstride) {
+        sx = src[ij + 0];
+        sy = src[ij + 1];
+
+        z = h20 * sx + h21 * sy + h22;
+        x = (h00 * sx + h01 * sy + h02) / z;
+        y = (h10 * sx + h11 * sy + h12) / z;
+
+        dx = x - dst[iij + 0];
+        dy = y - dst[iij + 1];
+        if((mask[oj] = (dx * dx + dy * dy <= reprojErr2) | 0))
+            inliers.push(j);
+    }
+
+    // write the best homography to the output
+    const stride2 = stride + stride;
+    output[0] = h00;
+    output[1] = h10;
+    output[2] = h20;
+    output[0 + stride] = h01;
+    output[1 + stride] = h11;
+    output[2 + stride] = h21;
+    output[0 + stride2] = h02;
+    output[1 + stride2] = h12;
+    output[2 + stride2] = h22;
+
+    // refine the homography by using only the inliers
+    if(inliers.length > 4) {
+        const cnt = inliers.length;
+        const buf = this.createTypedArray(dtype, 4 * cnt);
+        const isrc = buf.subarray(0, 2 * cnt);
+        const idst = buf.subarray(2 * cnt, 4 * cnt);
+
+        // copy the inliers to isrc and idst
+        for(i = j = 0; j < cnt; j++, i += 2) {
+            p0 = inliers[j];
+            isrc[i + 0] = src[sstride * p0 + 0];
+            isrc[i + 1] = src[sstride * p0 + 1];
+            idst[i + 0] = dst[dstride * p0 + 0];
+            idst[i + 1] = dst[dstride * p0 + 1];
+        }
+
+        // normalized DLT using inliers only
+        this.run(this.homographynormdlt, dtype, [
+            // output
+            rows, columns, stride,
+
+            // inputs
+            2, cnt, 2,
+            2, cnt, 2,
+        ], [ output, isrc, idst ]);
+    }
+
+    // bad homography!
+    else if(inliers.length < 4) {
+        for(i = 0; i < 3; i++)
+            output[i] = output[i + stride] = output[i + stride2] = Number.NaN;
+    }
+}
+
+/***/ }),
+
 /***/ "./src/core/math/linalg/sequence.js":
 /*!******************************************!*\
   !*** ./src/core/math/linalg/sequence.js ***!
@@ -4152,14 +4613,14 @@ function lssolve(header, output, inputs)
 /*!*******************************************!*\
   !*** ./src/core/math/linalg/transform.js ***!
   \*******************************************/
-/*! exports provided: apply_homography, apply_affine, apply_linear2d, dltnorm2d */
+/*! exports provided: applyHomography, applyAffine, applyLinear2d, dltnorm2d */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "apply_homography", function() { return apply_homography; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "apply_affine", function() { return apply_affine; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "apply_linear2d", function() { return apply_linear2d; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "applyHomography", function() { return applyHomography; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "applyAffine", function() { return applyAffine; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "applyLinear2d", function() { return applyLinear2d; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "dltnorm2d", function() { return dltnorm2d; });
 /*
  * speedy-vision.js
@@ -4188,7 +4649,7 @@ __webpack_require__.r(__webpack_exports__);
  * @param {ArrayBufferView} output
  * @param {ArrayBufferView[]} inputs
  */
-function apply_homography(header, output, inputs)
+function applyHomography(header, output, inputs)
 {
     const { columns, stride } = header;
     const [ hom, pts ] = inputs;
@@ -4224,7 +4685,7 @@ function apply_homography(header, output, inputs)
  * @param {ArrayBufferView} output
  * @param {ArrayBufferView[]} inputs
  */
-function apply_affine(header, output, inputs)
+function applyAffine(header, output, inputs)
 {
     const { columns, stride } = header;
     const [ mat, pts ] = inputs;
@@ -4255,7 +4716,7 @@ function apply_affine(header, output, inputs)
  * @param {ArrayBufferView} output
  * @param {ArrayBufferView[]} inputs
  */
-function apply_linear2d(header, output, inputs)
+function applyLinear2d(header, output, inputs)
 {
     const { columns, stride } = header;
     const [ mat, pts ] = inputs;
@@ -4281,22 +4742,24 @@ function apply_linear2d(header, output, inputs)
  * Given a set of n points (xi, yi) encoded in a 2 x n matrix,
  * find normalization and denormalization matrices (3x3) so that
  * the average distance of the normalized points to the origin
- * becomes a small constant. The output is a 3x6 matrix with two
- * 3x3 blocks featuring both norm & denorm matrices.
+ * becomes a small constant. Returns the transformed points as
+ * the output.
  * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
+ * @param {ArrayBufferView} output normalized points (2xn)
+ * @param {ArrayBufferView[]} inputs [ input points (2xn), out norm matrix (3x3), out denorm matrix (3x3) ]
  */
 function dltnorm2d(header, output, inputs)
 {
     const stride = header.stride;
     const pstride = header.strideOfInputs[0];
+    const nstride = header.strideOfInputs[1];
+    const dstride = header.strideOfInputs[2];
     const n = header.columnsOfInputs[0];
-    const pts = inputs[0];
+    const pts = inputs[0], normmat = inputs[1], denormmat = inputs[2];
     let cx = 0.0, cy = 0.0, dx = 0.0, dy = 0.0, d = 0.0, s = 0.0, z = 0.0;
-    let i = 0, ip = 0;
+    let i = 0, ip = 0, io = 0;
 
-    // find the center of mass (cx, cy)
+    // find the center of mass (cx, cy) = c
     for(ip = i = 0; i < n; i++, ip += pstride) {
         cx += pts[ip];
         cy += pts[ip + 1];
@@ -4312,24 +4775,30 @@ function dltnorm2d(header, output, inputs)
     }
     d = Math.sqrt(d / n);
 
-    // find the scale factor
+    // find the scale factor s
     const SQRT2 = 1.4142135623730951;
     s = SQRT2 / d;
     z = d / SQRT2; // = 1/s
 
     // write the normalization matrix
     // given a point p, set p_normalized := s(p - c)
-    const stride2 = 2 * stride;
-    output[0] = s; output[0 + stride] = 0; output[0 + stride2] = -s * cx;
-    output[1] = 0; output[1 + stride] = s; output[1 + stride2] = -s * cy;
-    output[2] = 0; output[2 + stride] = 0; output[2 + stride2] = 1;
+    const nstride2 = nstride + nstride;
+    normmat[0] = s; normmat[0 + nstride] = 0; normmat[0 + nstride2] = -s * cx;
+    normmat[1] = 0; normmat[1 + nstride] = s; normmat[1 + nstride2] = -s * cy;
+    normmat[2] = 0; normmat[2 + nstride] = 0; normmat[2 + nstride2] = 1;
 
     // write the denormalization matrix
     // given a normalized point q, set q_denormalized := q/s + c
-    const stride3 = 3 * stride, stride4 = 4 * stride, stride5 = 5 * stride;
-    output[0 + stride3] = z; output[0 + stride4] = 0; output[0 + stride5] = cx;
-    output[1 + stride3] = 0; output[1 + stride4] = z; output[1 + stride5] = cy;
-    output[2 + stride3] = 0; output[2 + stride4] = 0; output[2 + stride5] = 1;
+    const dstride2 = dstride + dstride;
+    denormmat[0] = z; denormmat[0 + dstride] = 0; denormmat[0 + dstride2] = cx;
+    denormmat[1] = 0; denormmat[1 + dstride] = z; denormmat[1 + dstride2] = cy;
+    denormmat[2] = 0; denormmat[2 + dstride] = 0; denormmat[2 + dstride2] = 1;
+
+    // normalize the points
+    for(io = 0, ip = 0, i = 0; i < n; i++, ip += pstride, io += stride) {
+        output[io] = s * (pts[ip] - cx);
+        output[io + 1] = s * (pts[ip + 1] - cy);
+    }
 }
 
 /***/ }),
@@ -4338,18 +4807,21 @@ function dltnorm2d(header, output, inputs)
 /*!***************************************!*\
   !*** ./src/core/math/linalg/utils.js ***!
   \***************************************/
-/*! exports provided: execute, subroutine, createTypedArray, norm2, dot, addInPlace, submatrices */
+/*! exports provided: execute, run, subroutine, createTypedArray, norm2, dot, addInPlace, submatrices, shuffle, range */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "execute", function() { return execute; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "run", function() { return run; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "subroutine", function() { return subroutine; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createTypedArray", function() { return createTypedArray; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "norm2", function() { return norm2; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "dot", function() { return dot; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "addInPlace", function() { return addInPlace; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "submatrices", function() { return submatrices; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "shuffle", function() { return shuffle; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "range", function() { return range; });
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -4387,6 +4859,61 @@ function execute(header, outputBuffer, inputBuffers)
 
     // perform the computation
     (this[header.method])(header, output, inputs);
+}
+
+/**
+ * Fast & handy wrapper to run a Linear Algebra routine from another one
+ * @param {?Function} fn the function that you wish to call
+ * @param {string} dtypes data types
+ * @param {number[]} shapes flattened triples (rows, columns, stride) of output, input1, input2, input3...
+ * @param {ArrayBufferView[]} data flattened array containing output array, input1 array, input2 array...
+ * @param {object} [custom] user-data
+ * @returns {object} the header object that was used to call the routine
+ */
+function run(fn, dtypes, shapes, data, custom = {})
+{
+    const n = data.length - 1; // number of input matrices
+    if(3 * n + 3 !== shapes.length || n < 0)
+        throw new Error(`Can't run() routine with invalid input`);
+
+    const inputs = new Array(n);
+    const rowsOfInputs = new Array(n);
+    const columnsOfInputs = new Array(n);
+    const strideOfInputs = new Array(n);
+    const lengthOfInputs = new Array(n);
+    //const byteOffsetOfInputs = new Array(n);
+
+    for(let j = 3, i = 0; i < n; i++, j += 3) {
+        inputs[i] = data[i+1];
+        rowsOfInputs[i] = shapes[j];
+        columnsOfInputs[i] = shapes[j+1];
+        strideOfInputs[i] = shapes[j+2];
+        lengthOfInputs[i] = data[i+1].length;
+        //byteOffsetOfInputs[i] = data[i+1].byteOffset;
+    }
+
+    const header = {
+        method: '', dtype: dtypes, custom: custom,
+
+        rows: shapes[0],
+        columns: shapes[1],
+        stride: shapes[2],
+
+        rowsOfInputs: rowsOfInputs,
+        columnsOfInputs: columnsOfInputs,
+        strideOfInputs: strideOfInputs,
+
+        length: data[0].length,
+        lengthOfInputs: lengthOfInputs,
+        //byteOffset: data[0].byteOffset,
+        //byteOffsetOfInputs: byteOffsetOfInputs,
+        byteOffset: 0, byteOffsetOfInputs: [],
+    };
+
+    if(fn != null)
+        fn.call(this, header, data[0], inputs);
+
+    return header;
 }
 
 /**
@@ -4523,6 +5050,39 @@ function submatrices(header, output, inputs, stride, strideOfInputs, outputIndic
 
     return [ header, output, inputs ];
 }
+
+/**
+ * Fisher-Yates shuffle
+ * @param {Array} array
+ * @param {number} [begin] the index of the beginning of the subarray, inclusive
+ * @param {number} [end] last index of the subarray, exclusive
+ * @returns {Array} the input array, shuffled
+ */
+function shuffle(array, begin = 0, end = array.length)
+{
+    begin = Math.max(begin, 0);
+    end = Math.min(end, array.length);
+
+    for(let t, j, i = end - 1; i > begin; i--) {
+        j = ((Math.random() * (i+1 - begin)) | 0) + begin;
+        t = array[i];
+        array[i] = array[j];
+        array[j] = t;
+    }
+
+    return array;
+}
+
+/**
+ * Range from 0 to n-1
+ * @param {number} n
+ * @returns {number[]} array of length n
+ */
+function range(n)
+{
+    return Array.from({ length: n }, (_, i) => i);
+}
+
 
 /***/ }),
 
@@ -4928,6 +5488,17 @@ class SpeedyMatrixExprFactory extends Function
     // ==============================================
 
     /**
+     * Evaluate the expression and store the result in a new matrix
+     * @param {SpeedyMatrixExpr} expr matrix expression
+     * @returns {SpeedyPromise<SpeedyMatrixLvalueExpr>}
+     */
+    evaluate(expr)
+    {
+        const mat = new _matrix_expressions__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixElementaryExpr"](expr._shape);
+        return mat.assign(expr).then(() => mat);
+    }
+
+    /**
      * Convert an array of points to a matrix representation
      * @param {SpeedyPoint2[]} points a non-empty array
      * @param {MatrixDataType} [dtype] data type of the elements of the matrix
@@ -5004,10 +5575,81 @@ class SpeedyMatrixExprFactory extends Function
      */
     Perspective(source, destination)
     {
-        if(!(source.rows === 2 && source._shape.equals(destination._shape)))
+        if(!(source.rows === 2 && source.columns === 4 && source._shape.equals(destination._shape)))
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't compute perspective transformation using ${source} and ${destination}. 4 correspondences of points are required`);
 
         return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixHomography4pExpr"](source, destination);
+    }
+
+    /**
+     * Find a homography matrix using 4 or more correspondences of points
+     * @param {SpeedyMatrixExpr} source 2 x n matrix with coordinates of n points (n >= 4)
+     * @param {SpeedyMatrixExpr} destination 2 x n matrix with coordinates of n points
+     * @param {FindHomographyOptions} [options]
+     *
+     * @typedef {object} FindHomographyOptions
+     * @property {string} method One of the following: "p-ransac"
+     * @property {FindHomographyMethodParameters} [parameters]
+     *
+     * @typedef {object} FindHomographyMethodParameters
+     * @property {?SpeedyMatrixLvalueExpr} [mask] 1 x n output matrix to separate inliers (1) from outliers (0)
+     * @property {number} [reprojectionError] threshold in pixels to separate inliers from outliers (RANSAC variants)
+     * @property {number} [numberOfHypotheses] for p-ransac only
+     * @property {number} [bundleSize] for p-ransac only
+     */
+    findHomography(source, destination, options = {})
+    {
+        // default options
+        options.method = options.method || 'p-ransac';
+        options.parameters = Object.assign({
+            mask: null,
+            numberOfHypotheses: 500,
+            bundleSize: 100,
+            reprojectionError: 3
+        }, options.parameters || {});
+
+        // validate shapes
+        if(!(source.rows === 2 && source.columns >= 4 && source._shape.equals(destination._shape)))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't compute homography matrix using ${source} and ${destination}. 4 or more correspondences of points are required`);
+
+        // returns a node according to the method
+        const parameters = options.parameters;
+        if(options.method === 'p-ransac') {
+            // create an output inlier-outlier mask if one is not supplied
+            const maskShape = new _matrix_shape__WEBPACK_IMPORTED_MODULE_2__["MatrixShape"](1, source.columns, source.dtype); // expected shape
+            const mask = parameters.mask || new _matrix_expressions__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixElementaryExpr"](maskShape, new _matrix__WEBPACK_IMPORTED_MODULE_3__["SpeedyMatrix"](maskShape));
+
+            // cast to number
+            const numberOfHypotheses = parameters.numberOfHypotheses | 0;
+            const bundleSize = parameters.bundleSize | 0;
+            const reprojectionError = +(parameters.reprojectionError);
+
+            // validate
+            if(!(mask instanceof _matrix_expressions__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixLvalueExpr"] && mask._shape.equals(maskShape)))
+                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't compute homography matrix: invalid mask`);
+            else if(numberOfHypotheses <= 0 || bundleSize <= 0 || reprojectionError < 0)
+                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't compute homography matrix: invalid parameters for "${options.method}"`);
+
+            // done!
+            return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixPransacHomographyExpr"](
+                source,
+                destination,
+                numberOfHypotheses,
+                bundleSize,
+                reprojectionError,
+                mask,
+            );
+        }
+        else if(options.method === 'dlt') {
+            return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixHomographyDLTExpr"](
+                source,
+                destination
+            );
+        }
+        else {
+            // invalid method
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't compute homography matrix using method "${options.method}"`);
+        }
     }
 }
 
@@ -5017,18 +5659,21 @@ class SpeedyMatrixExprFactory extends Function
 /*!*********************************************!*\
   !*** ./src/core/math/matrix-expressions.js ***!
   \*********************************************/
-/*! exports provided: SpeedyMatrixExpr, SpeedyMatrixElementaryExpr, SpeedyMatrixConstantExpr, SpeedyMatrixHomography4pExpr, SpeedyMatrixApplyHomographyExpr, SpeedyMatrixApplyAffineExpr, SpeedyMatrixApplyLinear2dExpr */
+/*! exports provided: SpeedyMatrixExpr, SpeedyMatrixLvalueExpr, SpeedyMatrixElementaryExpr, SpeedyMatrixConstantExpr, SpeedyMatrixHomography4pExpr, SpeedyMatrixHomographyDLTExpr, SpeedyMatrixApplyHomographyExpr, SpeedyMatrixApplyAffineExpr, SpeedyMatrixApplyLinear2dExpr, SpeedyMatrixPransacHomographyExpr */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixExpr", function() { return SpeedyMatrixExpr; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixLvalueExpr", function() { return SpeedyMatrixLvalueExpr; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixElementaryExpr", function() { return SpeedyMatrixElementaryExpr; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixConstantExpr", function() { return SpeedyMatrixConstantExpr; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixHomography4pExpr", function() { return SpeedyMatrixHomography4pExpr; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixHomographyDLTExpr", function() { return SpeedyMatrixHomographyDLTExpr; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixApplyHomographyExpr", function() { return SpeedyMatrixApplyHomographyExpr; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixApplyAffineExpr", function() { return SpeedyMatrixApplyAffineExpr; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixApplyLinear2dExpr", function() { return SpeedyMatrixApplyLinear2dExpr; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixPransacHomographyExpr", function() { return SpeedyMatrixPransacHomographyExpr; });
 /* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix */ "./src/core/math/matrix.js");
 /* harmony import */ var _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./bound-matrix-operation */ "./src/core/math/bound-matrix-operation.js");
 /* harmony import */ var _matrix_shape__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix-shape */ "./src/core/math/matrix-shape.js");
@@ -5840,6 +6485,107 @@ class SpeedyMatrixBinaryExpr extends SpeedyMatrixTempExpr
 }
 
 /**
+ * Ternary expression
+ * @abstract
+ */
+class SpeedyMatrixTernaryExpr extends SpeedyMatrixTempExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} firstExpr
+     * @param {SpeedyMatrixExpr} secondExpr
+     * @param {SpeedyMatrixExpr} thirdExpr
+     * @param {MatrixOperation} operation ternary operation
+     */
+    constructor(firstExpr, secondExpr, thirdExpr, operation)
+    {
+        super(operation.shape);
+
+        /** @type {SpeedyMatrixExpr} first operand */
+        this._firstExpr = firstExpr;
+
+        /** @type {SpeedyMatrixExpr} second operand */
+        this._secondExpr = secondExpr;
+
+        /** @type {SpeedyMatrixExpr} third operand */
+        this._thirdExpr = thirdExpr;
+
+        /** @type {MatrixOperation} ternary operation */
+        this._operation = operation;
+
+        // validate
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(operation.numberOfInputMatrices() === 3); // must be a ternary operation
+        if(firstExpr.dtype !== secondExpr.dtype || firstExpr.dtype !== thirdExpr.dtype)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Found a ternary expression with different data types: "${firstExpr.dtype}" (first operand) x "${secondExpr.dtype}" (second operand) x "${thirdExpr.dtype}" (third operand)`);
+    }
+
+    /**
+     * Evaluate expression
+     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
+     */
+    _evaluate()
+    {
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__["SpeedyPromise"].all([
+            this._firstExpr._evaluate().turbocharge(),
+            this._secondExpr._evaluate().turbocharge(),
+            this._thirdExpr._evaluate().turbocharge()
+        ]).then(([ firstResult, secondResult, thirdResult ]) =>
+            matrixOperationsQueue.enqueue(
+                this._operation,
+                this._matrix,
+                [ firstResult._matrix, secondResult._matrix, thirdResult._matrix ]
+            )
+        ).then(() => this);
+    }
+
+    /**
+     * Compile this expression
+     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
+     */
+    _compile()
+    {
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__["SpeedyPromise"].all([
+            this._firstExpr._compile().turbocharge(),
+            this._secondExpr._compile().turbocharge(),
+            this._thirdExpr._compile().turbocharge()
+        ]).then(([ firstNode, secondNode, thirdNode ]) =>
+            new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](
+                this._operation,
+                this._matrix,
+                [ firstNode, secondNode, thirdNode ]
+            )
+        );
+    }
+
+    /**
+     * First operand
+     * @returns {SpeedyMatrixExpr}
+     */
+    get firstChild()
+    {
+        return this._firstExpr;
+    }
+
+    /**
+     * Second operand
+     * @returns {SpeedyMatrixExpr}
+     */
+    get secondChild()
+    {
+        return this._secondExpr;
+    }
+
+    /**
+     * Third operand
+     * @returns {SpeedyMatrixExpr}
+     */
+    get thirdChild()
+    {
+        return this._thirdExpr;
+    }
+}
+
+/**
  * Extract a read-only block submatrix from a matrix expression
  */
 class SpeedyMatrixReadonlyBlockExpr extends SpeedyMatrixExpr
@@ -6022,21 +6768,11 @@ class SpeedyMatrixAssignmentExpr extends SpeedyMatrixExpr
     /**
      * Constructor
      * @param {SpeedyMatrixLvalueExpr} lvalue
-     * @param {SpeedyMatrixExpr|number[]} rvalue matrix expression or array of numbers in column-major format
+     * @param {SpeedyMatrixExpr} rvalue
      */
     constructor(lvalue, rvalue)
     {
         super(lvalue._shape);
-
-        // convert rvalue to SpeedyMatrixExpr
-        if(!(rvalue instanceof SpeedyMatrixExpr)) {
-            if(Array.isArray(rvalue)) {
-                const matrix = new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](lvalue._shape, rvalue);
-                rvalue = new SpeedyMatrixElementaryExpr(lvalue._shape, matrix);
-            }
-            else
-                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Can't assign matrix to ${rvalue}`);
-        }
 
         /** @type {SpeedyMatrixLvalueExpr} */
         this._lvalue = lvalue;
@@ -6201,32 +6937,48 @@ class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
     /**
      * Assign an expression to this lvalue
      * @param {SpeedyMatrixExpr|number[]} expr
-     * @returns {SpeedyPromise<SpeedyMatrixAssignmentExpr>} resolves as soon as the assignment is done
+     * @returns {SpeedyPromise<SpeedyMatrixLvalueExpr>} resolves as soon as the assignment is done
      */
     assign(expr)
     {
-        return this.setTo(expr)._compileAndEvaluate().turbocharge();
-        //return this.setTo(expr)._evaluate().turbocharge();
+        // got an array of numbers?
+        if(Array.isArray(expr)) {
+            const mat = new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](this._shape, expr);
+            return this._evaluate().then(lvalue => lvalue._assign(mat));
+        }
+
+        // compile expr and get the data
+        return expr._compileAndEvaluate().then(result =>
+            this._evaluate().then(lvalue => lvalue._assign(result._matrix))
+        ).then(() => this);
     }
 
     /**
      * Fill the matrix with a constant value
      * @param {number} value
-     * @returns {SpeedyPromise<SpeedyMatrixAssignmentExpr>}
+     * @returns {SpeedyPromise<SpeedyMatrixLvalueExpr>}
      */
     fill(value)
     {
+        // FIXME: currently inefficient (compiles new fill expr multiple times)
         return this.assign(new SpeedyMatrixFillExpr(this._shape, +value));
     }
 
     /**
      * Creates an assignment expression (i.e., this := expr),
      * without actually computing or changing any numbers
-     * @param {SpeedyMatrixExpr | number[]} expr
+     * @param {SpeedyMatrixExpr|number[]} expr matrix expression or an array of numbers in column-major format
      * @returns {SpeedyMatrixAssignmentExpr}
      */
     setTo(expr)
     {
+        // got an array of numbers?
+        if(Array.isArray(expr)) {
+            const mat = new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](this._shape, expr);
+            expr = new SpeedyMatrixElementaryExpr(mat.shape, mat);
+        }
+
+        // return assignment expression
         return new SpeedyMatrixAssignmentExpr(this, expr);
     }
 
@@ -7189,6 +7941,24 @@ class SpeedyMatrixHomography4pExpr extends SpeedyMatrixBinaryExpr
 }
 
 /**
+ * Compute a homography matrix using n >= 4 correspondences of points via DLT
+ */
+class SpeedyMatrixHomographyDLTExpr extends SpeedyMatrixBinaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} source 2 x n matrix: source points (ui, vi)
+     * @param {SpeedyMatrixExpr} destination 2 x n matrix: destination points (xi, vi)
+     */
+    constructor(source, destination)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(source._shape.rows === 2 && source._shape.columns >= 4);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(source._shape.equals(destination._shape));
+        super(source, destination, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationHomographyDLT"](source._shape, destination._shape));
+    }
+}
+
+/**
  * Apply a homography matrix to a set of 2D points
  */
 class SpeedyMatrixApplyHomographyExpr extends SpeedyMatrixBinaryExpr
@@ -7240,6 +8010,37 @@ class SpeedyMatrixApplyLinear2dExpr extends SpeedyMatrixBinaryExpr
         _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(mat.rows === 2 && mat.columns === 2);
         _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(pts.rows === 2);
         super(mat, pts, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationApplyLinear2d"](mat._shape, pts._shape));
+    }
+}
+
+/**
+ * Compute a homography matrix using P-RANSAC
+ */
+class SpeedyMatrixPransacHomographyExpr extends SpeedyMatrixTernaryExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} source 2 x n matrix: source points (ui, vi), n >= 4
+     * @param {SpeedyMatrixExpr} destination 2 x n matrix: destination points (xi, vi)
+     * @param {number} numberOfHypotheses positive integer
+     * @param {number} bundleSize positive integer
+     * @param {number} reprojectionError in pixels
+     * @param {SpeedyMatrixLvalueExpr} mask 1 x n output inlier-outlier mask
+     */
+    constructor(source, destination, numberOfHypotheses, bundleSize, reprojectionError, mask)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(source.rows === 2 && source.columns >= 4);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(source._shape.equals(destination._shape));
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(mask.rows === 1 && mask.columns === source.columns);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(mask.dtype === source.dtype);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(mask instanceof SpeedyMatrixLvalueExpr);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(numberOfHypotheses > 0 && bundleSize > 0 && reprojectionError >= 0);
+
+        super(source, destination, mask, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationPransacHomography"](
+            source._shape, destination._shape,
+            numberOfHypotheses, bundleSize,
+            reprojectionError, mask._shape
+        ));
     }
 }
 
@@ -7594,7 +8395,7 @@ class MatrixOperationsQueue
 /*!********************************************!*\
   !*** ./src/core/math/matrix-operations.js ***!
   \********************************************/
-/*! exports provided: MatrixOperation, MatrixOperationNop, MatrixOperationFill, MatrixOperationCopy, MatrixOperationTranspose, MatrixOperationInverse, MatrixOperationAdd, MatrixOperationSubtract, MatrixOperationMultiply, MatrixOperationScale, MatrixOperationCompMult, MatrixOperationMultiplyLT, MatrixOperationMultiplyRT, MatrixOperationMultiplyVec, MatrixOperationQR, MatrixOperationQRSolve, MatrixOperationBackSubstitution, MatrixOperationLSSolve, MatrixOperationWithSubroutine, MatrixOperationSequence, MatrixOperationSort, MatrixOperationMap, MatrixOperationReduce, MatrixOperationHomography4p, MatrixOperationApplyHomography, MatrixOperationApplyAffine, MatrixOperationApplyLinear2d */
+/*! exports provided: MatrixOperation, MatrixOperationNop, MatrixOperationFill, MatrixOperationCopy, MatrixOperationTranspose, MatrixOperationInverse, MatrixOperationAdd, MatrixOperationSubtract, MatrixOperationMultiply, MatrixOperationScale, MatrixOperationCompMult, MatrixOperationMultiplyLT, MatrixOperationMultiplyRT, MatrixOperationMultiplyVec, MatrixOperationQR, MatrixOperationQRSolve, MatrixOperationBackSubstitution, MatrixOperationLSSolve, MatrixOperationWithSubroutine, MatrixOperationSequence, MatrixOperationSort, MatrixOperationMap, MatrixOperationReduce, MatrixOperationHomography4p, MatrixOperationHomographyDLT, MatrixOperationApplyHomography, MatrixOperationApplyAffine, MatrixOperationApplyLinear2d, MatrixOperationPransacHomography */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -7623,9 +8424,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationMap", function() { return MatrixOperationMap; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationReduce", function() { return MatrixOperationReduce; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationHomography4p", function() { return MatrixOperationHomography4p; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationHomographyDLT", function() { return MatrixOperationHomographyDLT; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationApplyHomography", function() { return MatrixOperationApplyHomography; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationApplyAffine", function() { return MatrixOperationApplyAffine; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationApplyLinear2d", function() { return MatrixOperationApplyLinear2d; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationPransacHomography", function() { return MatrixOperationPransacHomography; });
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
@@ -7773,6 +8576,11 @@ class MatrixOperation
         // do we have a compatible output matrix?
         this._assertCompatibility(outputMatrix.shape);
 
+        // optimization: drop if this is a sequence with no
+        // operations, such as a compiled constant expression
+        if(inputMatrices.length == 0)
+            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve();
+
         // prepare the operation header
         this._header.updateMetadata(outputMatrix, inputMatrices);
         
@@ -7799,6 +8607,11 @@ class MatrixOperation
     {
         // do we have a compatible output matrix?
         this._assertCompatibility(outputMatrix.shape);
+
+        // optimization: drop if this is a sequence with no
+        // operations, such as a compiled constant expression
+        if(inputMatrices.length == 0)
+            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve();
 
         // prepare the operation header
         this._header.updateMetadata(outputMatrix, inputMatrices);
@@ -7994,7 +8807,10 @@ class MatrixOperationMultiply extends MatrixOperation
     constructor(leftShape, rightShape)
     {
         _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(leftShape.columns === rightShape.rows && leftShape.dtype === rightShape.dtype);
-        super('multiply', 2, new _matrix_shape__WEBPACK_IMPORTED_MODULE_4__["MatrixShape"](leftShape.rows, rightShape.columns, leftShape.dtype));
+        const opt3 = (leftShape.rows === 3 && leftShape.columns === 3 && rightShape.columns === 3);
+        const method = opt3 ? 'multiply3' : 'multiply'; // optimize for two 3x3 matrices
+
+        super(method, 2, new _matrix_shape__WEBPACK_IMPORTED_MODULE_4__["MatrixShape"](leftShape.rows, rightShape.columns, leftShape.dtype));
     }
 }
 
@@ -8340,13 +9156,30 @@ class MatrixOperationHomography4p extends MatrixOperation
 {
     /**
      * Class constructor
-     * @param {MatrixShape} leftShape shape of the left operand
-     * @param {MatrixShape} rightShape shape of the right operand
+     * @param {MatrixShape} srcShape shape of the src operand (must be 2x4)
+     * @param {MatrixShape} dstShape shape of the dst operand (must be 2x4)
      */
-    constructor(leftShape, rightShape)
+    constructor(srcShape, dstShape)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(leftShape.equals(rightShape));
-        super('homography4p', 2, new _matrix_shape__WEBPACK_IMPORTED_MODULE_4__["MatrixShape"](3, 3, leftShape.dtype));
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(srcShape.equals(dstShape));
+        super('homography4p', 2, new _matrix_shape__WEBPACK_IMPORTED_MODULE_4__["MatrixShape"](3, 3, srcShape.dtype));
+    }
+}
+
+/**
+ * Compute a homography matrix using n >= 4 correspondences of points via DLT
+ */
+class MatrixOperationHomographyDLT extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {MatrixShape} srcShape shape of the src operand (must be 2 x n, n >= 4)
+     * @param {MatrixShape} dstShape shape of the dst operand (must be 2 x n)
+     */
+    constructor(srcShape, dstShape)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(srcShape.equals(dstShape));
+        super('homographynormdlt', 2, new _matrix_shape__WEBPACK_IMPORTED_MODULE_4__["MatrixShape"](3, 3, srcShape.dtype));
     }
 }
 
@@ -8363,7 +9196,7 @@ class MatrixOperationApplyHomography extends MatrixOperation
     constructor(homShape, ptsShape)
     {
         _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(ptsShape.dtype === homShape.dtype);
-        super('apply_homography', 2, ptsShape);
+        super('applyHomography', 2, ptsShape);
     }
 }
 
@@ -8380,7 +9213,7 @@ class MatrixOperationApplyAffine extends MatrixOperation
     constructor(matShape, ptsShape)
     {
         _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(ptsShape.dtype === matShape.dtype);
-        super('apply_affine', 2, ptsShape);
+        super('applyAffine', 2, ptsShape);
     }
 }
 
@@ -8397,7 +9230,31 @@ class MatrixOperationApplyLinear2d extends MatrixOperation
     constructor(matShape, ptsShape)
     {
         _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(ptsShape.dtype === matShape.dtype);
-        super('apply_linear2d', 2, ptsShape);
+        super('applyLinear2d', 2, ptsShape);
+    }
+}
+
+/**
+ * Compute a homography matrix using P-RANSAC
+ */
+class MatrixOperationPransacHomography extends MatrixOperation
+{
+    /**
+     * Class constructor
+     * @param {MatrixShape} srcShape source coordinates: must be 2 x n (n >= 4)
+     * @param {MatrixShape} dstShape destination coordinates: must be 2 x n
+     * @param {number} numberOfHypotheses positive integer
+     * @param {number} bundleSize positive integer
+     * @param {number} reprojectionError in pixels
+     * @param {MatrixShape} maskShape inlier-outlier output mask: must be 1 x n
+     */
+    constructor(srcShape, dstShape, numberOfHypotheses, bundleSize, reprojectionError, maskShape)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(srcShape.equals(dstShape));
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(srcShape.columns === maskShape.columns);
+        super('pransacHomography', 3, new _matrix_shape__WEBPACK_IMPORTED_MODULE_4__["MatrixShape"](3, 3, srcShape.dtype), {
+            numberOfHypotheses, bundleSize, reprojectionError
+        });
     }
 }
 
