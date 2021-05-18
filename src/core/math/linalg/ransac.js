@@ -50,7 +50,6 @@ export function pransacHomography(header, output, inputs)
     const hompts = [ smat, dmat ];
     const homheader = this.run(null, dtype, [ 3, 3, 3, 2, 4, 2, 2, 4, 2 ], [ hypothesis[0].mat, smat, dmat ]);
     const cmp = (hi, hj) => hi.err - hj.err;
-    const hstride = homheader.stride;
     const b = bundleSize;
     let m = numberOfHypotheses;
     let h = 0, i = 0, j = 0, ij = 0, iij = 0, oj = 0;
@@ -150,10 +149,9 @@ export function pransacHomography(header, output, inputs)
     hom = hypothesis[j].mat;
 
     // read the entries of the best homography
-    const hstride2 = hstride + hstride;
-    const h00 = hom[0], h01 = hom[hstride + 0], h02 = hom[hstride2 + 0],
-          h10 = hom[1], h11 = hom[hstride + 1], h12 = hom[hstride2 + 1],
-          h20 = hom[2], h21 = hom[hstride + 2], h22 = hom[hstride2 + 2];
+    const h00 = hom[0], h01 = hom[3], h02 = hom[6],
+          h10 = hom[1], h11 = hom[4], h12 = hom[7],
+          h20 = hom[2], h21 = hom[5], h22 = hom[8];
 
     // separate inliers from outliers
     const inliers = [];
@@ -186,7 +184,7 @@ export function pransacHomography(header, output, inputs)
     // refine the homography: use only inliers
     if(inliers.length > 4) {
         const cnt = inliers.length;
-        const buf = this.createTypedArray(dtype, 4 * cnt);
+        const buf = this.createTypedArray(dtype, 4 * cnt); // two 2 x cnt matrices
         const isrc = buf.subarray(0, 2 * cnt);
         const idst = buf.subarray(2 * cnt, 4 * cnt);
 
