@@ -1290,21 +1290,23 @@ export class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
     /**
      * Assign an expression to this lvalue
      * @param {SpeedyMatrixExpr|number[]} expr
-     * @returns {SpeedyPromise<SpeedyMatrixAssignmentExpr>} resolves as soon as the assignment is done
+     * @returns {SpeedyPromise<SpeedyMatrixLvalueExpr>} resolves as soon as the assignment is done
      */
     assign(expr)
     {
-        return this.setTo(expr)._compileAndEvaluate().turbocharge();
-        //return this.setTo(expr)._evaluate().turbocharge();
+        return expr._compileAndEvaluate().then(result =>
+            this._assign(result._matrix)
+        ).then(() => this);
     }
 
     /**
      * Fill the matrix with a constant value
      * @param {number} value
-     * @returns {SpeedyPromise<SpeedyMatrixAssignmentExpr>}
+     * @returns {SpeedyPromise<SpeedyMatrixLvalueExpr>}
      */
     fill(value)
     {
+        // FIXME: currently inefficient (compiles new fill expr multiple times)
         return this.assign(new SpeedyMatrixFillExpr(this._shape, +value));
     }
 
