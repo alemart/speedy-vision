@@ -85,6 +85,7 @@ If you just want to reach out for non-technical enquiries, contact me at alemart
     * [Linear Algebra](#linear-algebra)
     * [Misc. Utilities](#misc-utilities)
   * [Geometric transformations](#geometric-transformations)
+    * [Homography](#perspective-transformation)
   * [Extras](#extras)
     * [Promises](#promises)
     * [Utilities](#utilities)
@@ -2062,42 +2063,6 @@ await B.print(); // identity matrix
 
 #### Perspective transformation
 
-##### Speedy.Matrix.Perspective()
-
-`Speedy.Matrix.Perspective(source: SpeedyMatrixExpr, destination: SpeedyMatrixExpr): SpeedyMatrixExpr`
-
-Compute a perspective transform (homography matrix) from four correspondences of points.
-
-###### Arguments
-
-* `source: SpeedyMatrixExpr`. A 2x4 matrix with the coordinates of 4 points (one per column) representing the corners of the source quadrilateral.
-* `destination: SpeedyMatrixExpr`. A 2x4 matrix with the coordinates of 4 points (one per column) representing the corners of the destination quadrilateral.
-
-###### Returns
-
-A 3x3 homography matrix.
-
-###### Example
-
-```js
-const srcQuad = Speedy.Matrix.fromPoints([
-    Speedy.Point2(0, 0),
-    Speedy.Point2(1, 0),
-    Speedy.Point2(1, 1),
-    Speedy.Point2(0, 1)
-]);
-
-const dstQuad = Speedy.Matrix.fromPoints([
-    Speedy.Point2(0, 0),
-    Speedy.Point2(3, 0),
-    Speedy.Point2(3, 2),
-    Speedy.Point2(0, 2)
-]);
-
-const homography = Speedy.Matrix.Perspective(srcQuad, dstQuad);
-await homography.print();
-```
-
 ##### Speedy.Matrix.findHomography()
 
 `Speedy.Matrix.findHomography(source: SpeedyMatrixExpr, destination: SpeedyMatrixExpr, options?: object): SpeedyMatrixExpr`
@@ -2134,11 +2099,12 @@ A 3x3 homography matrix.
 const numPoints = 50;
 const noiseLevel = 2.5;
 
+const transform = x => 4*x + 200; // simulated model
 const randCoord = () => 100 * Math.random(); // in [0, 100)
 const randNoise = () => (Math.random() - 0.5) * noiseLevel;
 
 const srcCoords = new Array(numPoints * 2).fill(0).map(() => randCoord());
-const dstCoords = srcCoords.map(x => 4*x + 200 + randNoise());
+const dstCoords = srcCoords.map(x => transform(x) + randNoise());
 
 const src = Speedy.Matrix(2, numPoints, srcCoords);
 const dst = Speedy.Matrix(2, numPoints, dstCoords);
@@ -2157,6 +2123,43 @@ const homography = await Speedy.Matrix.evaluate(
 await homography.print();
 await mask.print();
 ```
+
+##### Speedy.Matrix.Perspective()
+
+`Speedy.Matrix.Perspective(source: SpeedyMatrixExpr, destination: SpeedyMatrixExpr): SpeedyMatrixExpr`
+
+Compute a perspective transform (homography matrix) from four correspondences of points.
+
+###### Arguments
+
+* `source: SpeedyMatrixExpr`. A 2x4 matrix with the coordinates of 4 points (one per column) representing the corners of the source quadrilateral.
+* `destination: SpeedyMatrixExpr`. A 2x4 matrix with the coordinates of 4 points (one per column) representing the corners of the destination quadrilateral.
+
+###### Returns
+
+A 3x3 homography matrix.
+
+###### Example
+
+```js
+const srcQuad = Speedy.Matrix.fromPoints([
+    Speedy.Point2(0, 0),
+    Speedy.Point2(1, 0),
+    Speedy.Point2(1, 1),
+    Speedy.Point2(0, 1)
+]);
+
+const dstQuad = Speedy.Matrix.fromPoints([
+    Speedy.Point2(0, 0),
+    Speedy.Point2(3, 0),
+    Speedy.Point2(3, 2),
+    Speedy.Point2(0, 2)
+]);
+
+const homography = Speedy.Matrix.Perspective(srcQuad, dstQuad);
+await homography.print();
+```
+
 
 
 #### Utilities
