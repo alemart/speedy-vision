@@ -2106,7 +2106,7 @@ A 3x3 homography matrix.
 // to [200,600] x [200,600]
 //
 const numPoints = 50;
-const noiseLevel = 2.5;
+const noiseLevel = 2;
 
 const transform = x => 4*x + 200; // simulated model
 const randCoord = () => 100 * Math.random(); // in [0, 100)
@@ -2131,6 +2131,18 @@ const homography = await Speedy.Matrix.evaluate(
 
 await homography.print();
 await mask.print();
+
+// Now let's test the homography using a few test points.
+// The points need to be mapped according to our simulated model (see above)
+const tstCoords = Speedy.Matrix(2, 5, [
+    0, 0,
+    100, 0,
+    100, 100,
+    0, 100,
+    50, 50,
+]);
+const chkCoords = Speedy.Matrix.transform(homography, tstCoords);
+await chkCoords.print();
 ```
 
 ##### Speedy.Matrix.Perspective()
