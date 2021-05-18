@@ -111,10 +111,7 @@ export function add(header, output, inputs)
     const [ a, b ] = inputs;
 
     let i, j, oj, aj, bj;
-    for(j = 0; j < columns; j++) {
-        oj = j * stride;
-        aj = j * strideA;
-        bj = j * strideB;
+    for(aj = bj = oj = j = 0; j < columns; j++, oj += stride, bj += strideB, aj += strideA) {
         for(i = 0; i < rows; i++)
             output[oj + i] = a[aj + i] + b[bj + i];
     }
@@ -133,10 +130,7 @@ export function subtract(header, output, inputs)
     const [ a, b ] = inputs;
 
     let i, j, oj, aj, bj;
-    for(j = 0; j < columns; j++) {
-        oj = j * stride;
-        aj = j * strideA;
-        bj = j * strideB;
+    for(aj = bj = oj = j = 0; j < columns; j++, oj += stride, bj += strideB, aj += strideA) {
         for(i = 0; i < rows; i++)
             output[oj + i] = a[aj + i] - b[bj + i];
     }
@@ -326,10 +320,7 @@ export function compmult(header, output, inputs)
     const [ a, b ] = inputs;
 
     let i, j, oj, aj, bj;
-    for(j = 0; j < columns; j++) {
-        oj = j * stride;
-        aj = j * strideA;
-        bj = j * strideB;
+    for(aj = bj = oj = j = 0; j < columns; j++, oj += stride, aj += strideA, bj += strideB) {
         for(i = 0; i < rows; i++)
             output[oj + i] = a[aj + i] * b[bj + i];
     }
@@ -347,10 +338,9 @@ export function outer(header, output, inputs)
     const [ strideA, strideB ] = header.strideOfInputs;
     const [ a, b ] = inputs;       
 
-    let i, j, bj, oj;
-    for(j = 0; j < columns; j++) {
-        bj = b[j * strideB];
-        oj = j * stride;
+    let i, j, bj, oj, obj;
+    for(obj = oj = j = 0; j < columns; j++, oj += stride, obj += strideB) {
+        bj = b[obj]; //b[j * strideB];
         for(i = 0; i < rows; i++)
             output[oj + i] = a[i] * bj;
     }
