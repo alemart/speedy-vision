@@ -46,15 +46,18 @@ export function pransacHomography(header, output, inputs)
     const hypothesis = Array.from({ length: numberOfHypotheses },
         (_, i) => new Hypothesis(hypbuf.subarray(9 * i, 9 * (i+1)))
     );
-    const hompts = [ this.createTypedArray(dtype, 8), this.createTypedArray(dtype, 8) ];
-    const homheader = this.run(null, dtype, [ 3, 3, 3, 2, 4, 2, 2, 4, 2 ], [ hypothesis[0].mat, hompts[0], hompts[1] ]);
+    const smat = this.createTypedArray(dtype, 8), dmat = this.createTypedArray(dtype, 8);
+    const hompts = [ smat, dmat ];
+    const homheader = this.run(null, dtype, [ 3, 3, 3, 2, 4, 2, 2, 4, 2 ], [ hypothesis[0].mat, smat, dmat ]);
+    const cmp = (hi, hj) => hi.err - hj.err;
     const hstride = homheader.stride;
     const b = bundleSize;
     let m = numberOfHypotheses;
     let h = 0, i = 0, j = 0, ij = 0, iij = 0, oj = 0;
     let p0 = 0, p1 = 0, p2 = 0, p3 = 0;
     let x = 0.0, y = 0.0, z = 0.0, dx = 0.0, dy = 0.0, sx = 0.0, sy = 0.0, hx = 0.0, hy = 0.0;
-    let hom, smat, dmat;
+    let hom = hypothesis[0].mat;
+    let badcnt = 0;
 
     // Shuffle input
     for(i = 0; i < len; i += n)
@@ -69,9 +72,7 @@ export function pransacHomography(header, output, inputs)
         p2 = ptidx[j + 2];
         p3 = ptidx[j + 3];
 
-        // set references
-        smat = hompts[0];
-        dmat = hompts[1];
+        // set reference
         hom = hypothesis[h].mat;
 
         // grab source points
@@ -96,13 +97,24 @@ export function pransacHomography(header, output, inputs)
 
         // generate hypothesis
         this.homography4p(homheader, hom, hompts);
+
+        // bad homography?
+        if(Number.isNaN(hom[0])) {
+            hypothesis[h].err = n; // all points are outliers
+            badcnt++;
+        }
     }
+
+    // Remove bad homographies
+    badcnt = badcnt < m ? badcnt : m - 1;
+    hypothesis.sort(cmp);
+    hypothesis.length = (m -= badcnt);
 
     // For each correspondence
     for(i = 0; i < n ; i++) {
         // cut the number of hypotheses in half (every b iterations)
         if(i % b == 0 && m > 1) {
-            hypothesis.sort((hi, hj) => hi.err - hj.err); // keep the best ones
+            hypothesis.sort(cmp); // keep the best ones
             m = m >>> 1; // m div 2
             hypothesis.length = m;
         }
@@ -122,15 +134,11 @@ export function pransacHomography(header, output, inputs)
         // evaluate the m best hypotheses so far using the p0-th correspondence
         for(h = 0; h < m; h++) {
             hom = hypothesis[h].mat;
-            if(!Number.isNaN(hom[0])) {
-                z = hom[2] * sx + hom[5] * sy + hom[8];
-                x = (hom[0] * sx + hom[3] * sy + hom[6]) / z;
-                y = (hom[1] * sx + hom[4] * sy + hom[7]) / z;
-                dx = x - hx; dy = y - hy;
-                hypothesis[h].err += (dx * dx + dy * dy > reprojErr2) | 0;
-            }
-            else
-                hypothesis[h].err = n; // infinity;
+            z = hom[2] * sx + hom[5] * sy + hom[8];
+            x = (hom[0] * sx + hom[3] * sy + hom[6]) / z;
+            y = (hom[1] * sx + hom[4] * sy + hom[7]) / z;
+            dx = x - hx; dy = y - hy;
+            hypothesis[h].err += (dx * dx + dy * dy > reprojErr2) | 0;
         }
     }
 
