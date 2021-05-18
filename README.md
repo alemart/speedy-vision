@@ -16,7 +16,7 @@ Build real-time stuff with **speedy-vision.js**, a GPU-accelerated Computer Visi
 * Feature matching
   * Soon
 * Geometric transformations
-  * Perspective transform / homography matrix
+  * Homography matrix
 * Image processing
   * Greyscale
   * Gaussian blur & box blur
@@ -39,9 +39,9 @@ There are plenty of [demos](#demos) available!
 
 If you appreciate my work, [make a donation](https://www.paypal.com/donate?hosted_button_id=JS6AR2WMLAJTY). I appreciate it!
 
-If you need specialized help, [contact me on Otechie](https://otechie.com/alemart). [![Otechie](https://api.otechie.com/alemart/badge.svg)](https://otechie.com/alemart)
+Need specialized help? [Contact me on Otechie](https://otechie.com/alemart). [![Otechie](https://api.otechie.com/alemart/badge.svg)](https://otechie.com/alemart)
 
-If you just want to reach out for non-technical enquiries, contact me at alemartf `at` gmail `dot` com.
+For general enquiries, contact me at alemartf `at` gmail `dot` com.
 
 -----
 
@@ -2071,18 +2071,27 @@ Compute a homography matrix using a set of *n* >= 4 correspondences of points, p
 
 ###### Arguments
 
-* `source: SpeedyMatrixExpr`. A 2 x *n* matrix with the coordinates of *n* points (one per column).
-* `destination: SpeedyMatrixExpr`. A 2 x *n* matrix with the coordinates of *n* points (one per column).
+* `source: SpeedyMatrixExpr`. A 2 x *n* matrix with the coordinates of *n* points (one point per column).
+* `destination: SpeedyMatrixExpr`. A 2 x *n* matrix with the coordinates of *n* points (one point per column).
 * `options: object, optional`. A configuration object. It accepts two keys:
-    * `method: string`. The method to be employed to compute the homography. The following methods are available:
-        * `"p-ransac"`: use P-RANSAC, a variant of RANSAC with bounded runtime that is designed for real-time tasks. It is able to reject outliers in the data set. This is the default method.
-        * `"dlt"`: use the Normalized Direct Linear Transform (DLT). You should only use this method if your data set isn't polluted with outliers.
-    * `parameters: object`. A dictionary of parameters. The exact parameters depend on the method to be employed.
-        * The following parameters are available for method `"p-ransac"`:
-            * `reprojectionError: number`. A threshold, measured in pixels, that lets Speedy decide whether a data point is an inlier or an outlier for a given model. A data point is an inlier for a given model if the model projects its `source` coordinates near its `destination` coordinates (i.e., if the Euclidean distance is not greater than the threshold). A data point is an outlier if it's not an inlier.
-            * `mask: SpeedyMatrixLvalueExpr`. An optional output matrix of shape 1 x *n*. Its i-th entry will be set to 1 if the i-th data point is an inlier for the best model found by the method, or 0 if it's an outlier.
-            * `numberOfHypotheses: number`. A positive integer specifying the number of models that will be generated and tested. The best model found by the method will be refined and then returned. If your inlier ratio is "high", this parameter can be set to a "low" number, making the algorithm run even faster. Defaults to 500.
-            * `bundleSize: number`. A positive integer specifying the number of data points to be tested against all viable models before the set of viable models gets cut in half, over and over again. Defaults to 100.
+    * `method: string`. The method to be employed to compute the homography (see the table of methods below).
+    * `parameters: object`. A dictionary of parameters. The available parameters depend on the chosen method (see the table of parameters below).
+
+Table of methods:
+
+| Method            | Description |
+|-------------------|-------------|
+| `"p-ransac"` | P-RANSAC is a variant of RANSAC with bounded runtime that is designed for real-time tasks. It is able to reject outliers in the data set. This is the default method. |
+| `"dlt"` | Normalized Direct Linear Transform (DLT). You should only use this method if your data set isn't polluted with outliers. |
+
+Table of parameters:
+
+| Parameter | Supported methods | Description |
+|-----------|-------------------|-------------|
+| `reprojectionError: number` | `"p-ransac"` | A threshold, measured in pixels, that lets Speedy decide whether a data point is an inlier or an outlier for a given model. A data point is an inlier for a given model if the model maps its `source` coordinates near its `destination` coordinates (i.e., if the Euclidean distance is not greater than the threshold). A data point is an outlier if it's not an inlier. |
+| `mask: SpeedyMatrixLvalueExpr` | `"p-ransac"` | An optional output matrix of shape 1 x *n*. Its i-th entry will be set to 1 if the i-th data point is an inlier for the best model found by the method, or 0 if it's an outlier. |
+| `numberOfHypotheses: number` | `"p-ransac"` | A positive integer specifying the number of models that will be generated and tested. The best model found by the method will be refined and then returned. If your inlier ratio is "high", this parameter can be set to a "low" number, making the algorithm run even faster. Defaults to 500. |
+| `bundleSize: number` | `"p-ransac"` | A positive integer specifying the number of data points to be tested against all viable models before the set of viable models gets cut in half, over and over again. Defaults to 100. |
 
 ###### Returns
 
