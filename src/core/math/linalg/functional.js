@@ -32,7 +32,7 @@ export function map(header, output, inputs)
     const [ istride, mstride, bistride ] = header.strideOfInputs;
     const [ outputBlockRows, outputBlockColumns ] = [ header.rowsOfInputs[1], header.columnsOfInputs[1] ];
     const [ blockRows, blockColumns ] = [ header.rowsOfInputs[2], header.columnsOfInputs[2] ];
-    const [ ilength, bilength ] = [ header.lengthOfInputs[0], header.lengthOfInputs[2] ];
+    const [ ilength, bilength ] = [ inputs[0].length, inputs[2].length ];
     const n = columns / blockColumns;
     const biidx = 2; //inputs.indexOf(bi);
     const blkopt = (bistride === istride && bilength === ilength);
@@ -73,10 +73,11 @@ export function map(header, output, inputs)
 export function reduce(header, output, inputs)
 {
     const [ input, reducefn, accumulator, bi, index, initial ] = inputs;
-    const { rows, columns, stride, length } = header;
+    const { rows, columns, stride } = header;
     const [ istride, rstride, astride, bistride, indexstride, initialstride ] = header.strideOfInputs;
-    const [ ilength, rlength, alength, bilength, indexlength, initiallength ] = header.lengthOfInputs;
+    const [ ilength, rlength, alength, bilength, indexlength, initiallength ] = inputs.map(m => m.length);
     const [ blockRows, blockColumns ] = [ header.rowsOfInputs[3], header.columnsOfInputs[3] ];
+    const length = output.length;
     const begopt = (astride === initialstride && alength === initiallength);
     const midopt = (astride === rstride && alength === rlength);
     const endopt = (astride === stride && alength === length);
@@ -140,7 +141,7 @@ export function sort(header, output, inputs)
     const [ input, cmp, bi, bj ] = inputs;
     const { rows, columns, stride } = header;
     const [ istride, cmpstride, bistride, bjstride ] = header.strideOfInputs;
-    const [ ilength, cmplength, bilength, bjlength ] = header.lengthOfInputs;
+    const [ ilength, cmplength, bilength, bjlength ] = inputs.map(m => m.length);
     const [ blockRows, blockColumns ] = [ header.rowsOfInputs[2], header.columnsOfInputs[2] ];
     const n = columns / blockColumns;
     const biidx = 2, bjidx = 3; //const biidx = inputs.indexOf(bi), bjidx = inputs.indexOf(bj);

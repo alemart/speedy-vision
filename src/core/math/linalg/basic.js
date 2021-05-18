@@ -37,8 +37,9 @@ export function nop(header, output, inputs)
  */
 export function fill(header, output, inputs)
 {
-    const { rows, columns, stride, length } = header;
+    const { rows, columns, stride } = header;
     const { value } = header.custom;
+    const length = output.length;
 
     // use a memset-like operation if possible
     if(rows * columns == length) {
@@ -59,9 +60,10 @@ export function fill(header, output, inputs)
  */
 export function copy(header, output, inputs)
 {
-    const { rows, columns, stride, length } = header;
+    const { rows, columns, stride } = header;
     const [ istride ] = header.strideOfInputs;
     const [ input ] = inputs;
+    const length = output.length;
 
     // use a memcpy-like operation if possible
     if(length == header.lengthOfInputs[0] && rows * columns == length) {
@@ -148,10 +150,11 @@ export function subtract(header, output, inputs)
  */
 export function multiply(header, output, inputs)
 {
-    const { rows, columns, stride, length } = header;
+    const { rows, columns, stride } = header;
     const [ columnsA, columnsB ] = header.columnsOfInputs;
     const [ strideA, strideB ] = header.strideOfInputs;
     const [ a, b ] = inputs;
+    const length = output.length;
 
     // clear matrix
     if(rows * columns != length) {
@@ -181,7 +184,7 @@ export function multiply(header, output, inputs)
  */
 export function multiplylt(header, output, inputs)
 {
-    const { rows, columns, stride, length } = header;
+    const { rows, columns, stride } = header;
     const [ columnsA, columnsB ] = header.columnsOfInputs;
     const [ rowsA, rowsB ] = header.rowsOfInputs;
     const [ strideA, strideB ] = header.strideOfInputs;
@@ -207,11 +210,12 @@ export function multiplylt(header, output, inputs)
  */
 export function multiplyrt(header, output, inputs)
 {
-    const { rows, columns, stride, length } = header;
+    const { rows, columns, stride } = header;
     const [ columnsA, columnsB ] = header.columnsOfInputs;
     const [ rowsA, rowsB ] = header.rowsOfInputs;
     const [ strideA, strideB ] = header.strideOfInputs;
     const [ a, b ] = inputs;
+    const length = output.length;
 
     // clear matrix
     if(rows * columns != length) {
