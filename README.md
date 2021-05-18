@@ -2096,15 +2096,67 @@ const dstQuad = Speedy.Matrix.fromPoints([
 
 const homography = Speedy.Matrix.Perspective(srcQuad, dstQuad);
 await homography.print();
-
-//
-// Result:
-// [ 3  0  0 ]
-// [ 0  2  0 ]
-// [ 0  0  1 ]
-//
 ```
 
+##### Speedy.Matrix.findHomography()
+
+`Speedy.Matrix.findHomography(source: SpeedyMatrixExpr, destination: SpeedyMatrixExpr, options?: object): SpeedyMatrixExpr`
+
+Compute a homography matrix using a set of *n* >= 4 correspondences of points, possibly with noise.
+
+###### Arguments
+
+* `source: SpeedyMatrixExpr`. A 2 x *n* matrix with the coordinates of *n* points (one per column).
+* `destination: SpeedyMatrixExpr`. A 2 x *n* matrix with the coordinates of *n* points (one per column).
+* `options: object, optional`. A configuration object. It accepts two keys:
+    * `method: string`. The method to be employed to compute the homography. The following methods are available:
+        * `"p-ransac"`: use P-RANSAC, a variant of RANSAC with bounded runtime that is designed for real-time tasks. It is able to reject outliers in the data set. This is the default method.
+        * `"dlt"`: use the Normalized Direct Linear Transform (DLT). You should only use this method if your data set isn't polluted with outliers.
+    * `parameters: object`. A dictionary of parameters. The exact parameters depend on the method to be employed.
+        * The following parameters are available for method `"p-ransac"`:
+            * `reprojectionError: number`. A threshold, measured in pixels, that lets Speedy decide whether a data point is an inlier or an outlier for a given model. A data point is an inlier for a given model if the model projects its `source` coordinates near its `destination` coordinates (i.e., if the Euclidean distance is not greater than the threshold). A data point is an outlier if it's not an inlier.
+            * `mask: SpeedyMatrixLvalueExpr`. An optional output matrix of shape 1 x *n*. Its i-th entry will be set to 1 if the i-th data point is an inlier for the best model found by the method, or 0 if it's an outlier.
+            * `numberOfHypotheses: number`. A positive integer specifying the number of models that will be generated and tested. The best model found by the method will be refined and then returned. If your inlier ratio is "high", this parameter can be set to a "low" number, making the algorithm run even faster. Defaults to 500.
+            * `bundleSize: number`. A positive integer specifying the number of data points to be tested against all viable models before the set of viable models gets cut in half, over and over again. Defaults to 100.
+
+###### Returns
+
+A 3x3 homography matrix.
+
+###### Example
+
+```js
+//
+// Map random points
+// from [0,100] x [0,100]
+// to [200,600] x [200,600]
+//
+const numPoints = 50;
+const noiseLevel = 2.5;
+
+const randCoord = () => 100 * Math.random(); // in [0, 100)
+const randNoise = () => (Math.random() - 0.5) * noiseLevel;
+
+const srcCoords = new Array(numPoints * 2).fill(0).map(() => randCoord());
+const dstCoords = srcCoords.map(x => 4*x + 200 + randNoise());
+
+const src = Speedy.Matrix(2, numPoints, srcCoords);
+const dst = Speedy.Matrix(2, numPoints, dstCoords);
+const mask = Speedy.Matrix(1, numPoints);
+
+const homography = await Speedy.Matrix.evaluate(
+    Speedy.Matrix.findHomography(src, dst, {
+        method: "p-ransac",
+        parameters: {
+            mask: mask,
+            reprojectionError: 1
+        },
+    })
+);
+
+await homography.print();
+await mask.print();
+```
 
 
 #### Utilities
@@ -2128,9 +2180,9 @@ A 2 x *n* matrix.
 
 ```js
 const mat = Speedy.Matrix(3, 3, [
-    3, 0, 0,
-    0, 2, 0,
-    2, 1, 1,
+    3, 0, 0, // 1st column
+    0, 2, 0, // 2nd column
+    2, 1, 1, // 3rd column
 ]);
 
 const srcQuad = Speedy.Matrix(2, 4, [
