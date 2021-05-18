@@ -1111,21 +1111,11 @@ class SpeedyMatrixAssignmentExpr extends SpeedyMatrixExpr
     /**
      * Constructor
      * @param {SpeedyMatrixLvalueExpr} lvalue
-     * @param {SpeedyMatrixExpr|number[]} rvalue matrix expression or array of numbers in column-major format
+     * @param {SpeedyMatrixExpr} rvalue
      */
     constructor(lvalue, rvalue)
     {
         super(lvalue._shape);
-
-        // convert rvalue to SpeedyMatrixExpr
-        if(!(rvalue instanceof SpeedyMatrixExpr)) {
-            if(Array.isArray(rvalue)) {
-                const matrix = new SpeedyMatrix(lvalue._shape, rvalue);
-                rvalue = new SpeedyMatrixElementaryExpr(lvalue._shape, matrix);
-            }
-            else
-                throw new IllegalArgumentError(`Can't assign matrix to ${rvalue}`);
-        }
 
         /** @type {SpeedyMatrixLvalueExpr} */
         this._lvalue = lvalue;
@@ -1320,11 +1310,18 @@ export class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
     /**
      * Creates an assignment expression (i.e., this := expr),
      * without actually computing or changing any numbers
-     * @param {SpeedyMatrixExpr | number[]} expr
+     * @param {SpeedyMatrixExpr|number[]} expr matrix expression or an array of numbers in column-major format
      * @returns {SpeedyMatrixAssignmentExpr}
      */
     setTo(expr)
     {
+        // got an array of numbers?
+        if(Array.isArray(expr)) {
+            const mat = new SpeedyMatrix(this._shape, expr);
+            expr = new SpeedyMatrixElementaryExpr(mat.shape, mat);
+        }
+
+        // return assignment expression
         return new SpeedyMatrixAssignmentExpr(this, expr);
     }
 
