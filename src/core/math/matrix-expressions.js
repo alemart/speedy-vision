@@ -1287,7 +1287,7 @@ export class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
         // got an array of numbers?
         if(Array.isArray(expr)) {
             const mat = new SpeedyMatrix(this._shape, expr);
-            return this._evaluate().then(lvalue => lvalue._assign(mat));
+            return this._evaluate().then(lvalue => lvalue._assign(mat)); // TODO: _evaluateLvalue() ...
         }
 
         // compile expr and get the data
@@ -1467,7 +1467,7 @@ class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
 {
     /**
      * Constructor
-     * @param {SpeedyMatrixExpr} expr originating matrix expression
+     * @param {SpeedyMatrixLvalueExpr} expr originating matrix expression
      * @param {number} firstRow indexed by 0
      * @param {number} lastRow
      * @param {number} firstColumn
@@ -1477,7 +1477,7 @@ class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
     {
         super(new MatrixShape(lastRow - firstRow + 1, lastColumn - firstColumn + 1, expr.dtype));
 
-        /** @type {SpeedyMatrixExpr} originating matrix expression */
+        /** @type {SpeedyMatrixLvalueExpr} originating matrix expression */
         this._expr = expr;
 
         /** @type {number} index of the top-most row (starts at zero) */
@@ -1597,14 +1597,14 @@ class SpeedyMatrixReadwriteDiagonalExpr extends SpeedyMatrixLvalueExpr
 {
     /**
      * Constructor
-     * @param {SpeedyMatrixExpr} expr originating matrix expression
+     * @param {SpeedyMatrixLvalueExpr} expr originating matrix expression
      */
     constructor(expr)
     {
         const diagonalLength = Math.min(expr.rows, expr.columns);
         super(new MatrixShape(1, diagonalLength, expr.dtype));
 
-        /** @type {SpeedyMatrixExpr} originating matrix expression */
+        /** @type {SpeedyMatrixLvalueExpr} originating matrix expression */
         this._expr = expr;
 
         /** @type {?SpeedyMatrix} the matrix associated with this expression */
