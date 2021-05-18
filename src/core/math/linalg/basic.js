@@ -345,3 +345,25 @@ export function outer(header, output, inputs)
             output[oj + i] = a[i] * bj;
     }
 }
+
+/**
+ * Given matrices A and B, scalars alpha and beta,
+ * compute the sum (alpha A + beta B). The output
+ * array can be one of the input arrays
+ * @param {object} header
+ * @param {ArrayBufferView} output
+ * @param {ArrayBufferView[]} inputs
+ */
+export function addInPlace(header, output, inputs)
+{
+    const { rows, columns, stride } = header;
+    const [ strideA, strideB ] = header.strideOfInputs;
+    const { alpha, beta } = header.custom;
+    const [ a, b ] = inputs;
+
+    let i, j, oj, aj, bj;
+    for(aj = bj = oj = j = 0; j < columns; j++, oj += stride, aj += strideA, bj += strideB) {
+        for(i = 0; i < rows; i++)
+            output[oj + i] = alpha * a[aj + i] + beta * b[bj + i];
+    }
+}
