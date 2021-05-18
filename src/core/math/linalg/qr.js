@@ -122,7 +122,8 @@ export function qr(header, output, inputs)
         );
 
         // apply Householder reflector to set the column vector triangular[k+1:irows-1,k] to zero
-        this.addInPlace(submatrices[0], submatrices[1], submatrices[2], 1, -2);
+        submatrices[0].custom = { alpha: 1, beta: -2 };
+        this.addInPlace(submatrices[0], submatrices[1], submatrices[2]);
     }
 
     // Compute the unitary matrix Q

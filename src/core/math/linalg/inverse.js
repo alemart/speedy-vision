@@ -92,13 +92,14 @@ export function inverse3(header, output, inputs)
     const d = 1.0 / det;
 
     // set up the inverse
+    const stride2 = stride + stride;
     output[0] = b1 * d;
     output[1] = -(a33 * a21 - a31 * a23) * d;
     output[2] = (a32 * a21 - a31 * a22) * d;
     output[0 + stride] = -b2 * d;
     output[1 + stride] = (a33 * a11 - a31 * a13) * d;
     output[2 + stride] = -(a32 * a11 - a31 * a12) * d;
-    output[0 + stride + stride] = b3 * d;
-    output[1 + stride + stride] = -(a23 * a11 - a21 * a13) * d;
-    output[2 + stride + stride] = (a22 * a11 - a21 * a12) * d;
+    output[0 + stride2] = b3 * d;
+    output[1 + stride2] = -(a23 * a11 - a21 * a13) * d;
+    output[2 + stride2] = (a22 * a11 - a21 * a12) * d;
 }

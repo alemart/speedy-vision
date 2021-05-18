@@ -56,7 +56,7 @@ export function run(fn, dtypes, shapes, data, custom = {})
     const rowsOfInputs = new Array(n);
     const columnsOfInputs = new Array(n);
     const strideOfInputs = new Array(n);
-    const lengthOfInputs = new Array(n);
+    //const lengthOfInputs = new Array(n);
     //const byteOffsetOfInputs = new Array(n);
 
     for(let j = 3, i = 0; i < n; i++, j += 3) {
@@ -64,7 +64,7 @@ export function run(fn, dtypes, shapes, data, custom = {})
         rowsOfInputs[i] = shapes[j];
         columnsOfInputs[i] = shapes[j+1];
         strideOfInputs[i] = shapes[j+2];
-        lengthOfInputs[i] = data[i+1].length;
+        //lengthOfInputs[i] = data[i+1].length;
         //byteOffsetOfInputs[i] = data[i+1].byteOffset;
     }
 
@@ -79,10 +79,11 @@ export function run(fn, dtypes, shapes, data, custom = {})
         columnsOfInputs: columnsOfInputs,
         strideOfInputs: strideOfInputs,
 
-        length: data[0].length,
+        /*length: data[0].length,
         lengthOfInputs: lengthOfInputs,
-        //byteOffset: data[0].byteOffset,
-        //byteOffsetOfInputs: byteOffsetOfInputs,
+        byteOffset: data[0].byteOffset,
+        byteOffsetOfInputs: byteOffsetOfInputs,*/
+        length: 0, lengthOfInputs: [],
         byteOffset: 0, byteOffsetOfInputs: [],
     };
 
@@ -164,17 +165,16 @@ export function dot(u, v, uBegin = 0, vBegin = 0, length = u.length)
 /**
  * Given matrices A and B, scalars alpha and beta,
  * compute the sum (alpha A + beta B). The output
- * array is allowed to be one of the input arrays
+ * array can be one of the input arrays
  * @param {object} header
  * @param {ArrayBufferView} output
  * @param {ArrayBufferView[]} inputs
- * @param {number} alpha
- * @param {number} beta
  */
-export function addInPlace(header, output, inputs, alpha, beta)
+export function addInPlace(header, output, inputs)
 {
     const { rows, columns, stride } = header;
     const [ strideA, strideB ] = header.strideOfInputs;
+    const { alpha, beta } = header.custom;
     const [ a, b ] = inputs;
 
     let i, j, oj, aj, bj;
