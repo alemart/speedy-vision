@@ -34,9 +34,7 @@ export function qr(header, output, inputs)
     const [ istride ] = header.strideOfInputs;
     const [ input, x ] = inputs;
     const { mode } = header.custom;
-    const subheader = Object.assign({ }, header, { custom: null });
     const wantMatrices = (mode == 'full-qr' || mode == 'reduced-qr');
-    let submatrices = [ null, null, null ];
 
     // create temporary storage
     const storage = this.createTypedArray(dtype, 2 * irows * icolumns + icolumns);
@@ -59,11 +57,13 @@ export function qr(header, output, inputs)
 
     // copy input[:,:] to triangular[:,:]
     if(input.length != triangular.length) {
-        submatrices = this.submatrices(subheader, triangular, [ input ], rstride, [ istride ],
-            [ 0, irows-1, 0, icolumns-1 ],
-            [[ 0, irows-1, 0, icolumns-1 ]]
-        );
-        this.copy(submatrices[0], submatrices[1], submatrices[2]);
+        this.runWithBlocks(this.copy, dtype, [
+            // output: 1st row, last row, 1st col, last col, stride
+            0, irows-1, 0, icolumns-1, rstride,
+
+            // inputs
+            0, irows-1, 0, icolumns-1, istride,
+        ], [ triangular, input ]);
     }
     else
         triangular.set(input, 0, input.length);
@@ -88,42 +88,36 @@ export function qr(header, output, inputs)
         for(i = fkk + n - 1; i >= fkk; i--)
             reflect[i] /= norm;
 
-        // extract reflect[k:irows-1,k], triangular[k:irows-1,k:icolumns-1] and tmprow[0,0:icolumns-k-1]
-        submatrices = this.submatrices(subheader, tmprow, [ reflect, triangular ], 1, [ irows, rstride ],
-            [ 0, 0, 0, icolumns-k-1 ], // row vector tmprow[0,0:icolumns-k-1]
-            [
-                [ k, irows-1, k, k ], // reflect[k:irows-1,k]
-                [ k, irows-1, k, icolumns-1 ] // triangular[k:irows-1,k:icolumns-1]
-            ]
-        );
-
         // compute tmprow[0,0:icolumns-k-1] = reflect[k:irows-1,k]^T * triangular[k:irows-1,k:icolumns-1]
-        this.multiplylt(submatrices[0], submatrices[1], submatrices[2]);
+        this.runWithBlocks(this.multiplylt, dtype, [
+            // output: 1st row, last row, 1st col, last col, stride
+            0, 0, 0, icolumns-k-1, 1, // row vector tmprow[0,0:icolumns-k-1]
 
-        // extract reflect[k:irows-1,k], tmprow[0,0:icolumns-k-1] and tmp[0:irows-k-1,0:icolumns-k-1]
-        submatrices = this.submatrices(subheader, tmp, [ reflect, tmprow ], irows, [ irows, 1 ],
-            [ 0, irows-k-1, 0, icolumns-k-1 ], // tmp[0:irows-k-1,0:icolumns-k-1]
-            [
-                [ k, irows-1, k, k ], // reflect[k:irows-1,k]
-                [ 0, 0, 0, icolumns-k-1] // tmprow[0,0:icolumns-k-1], the result of the previous calculation
-            ]
-        );
+            // inputs
+            k, irows-1, k, k, irows, // reflect[k:irows-1,k]
+            k, irows-1, k, icolumns-1, rstride, // triangular[k:irows-1,k:icolumns-1]
+        ], [ tmprow, reflect, triangular ]);
 
         // compute tmp[0:irows-k-1,0:icolumns-k-1] = reflect[k:irows-1,k] * tmprow[0,0:icolumns-k-1]
-        this.outer(submatrices[0], submatrices[1], submatrices[2]);
+        this.runWithBlocks(this.outer, dtype, [
+            // output: 1st row, last row, 1st col, last col, stride
+            0, irows-k-1, 0, icolumns-k-1, irows, // tmp[0:irows-k-1,0:icolumns-k-1]
 
-        // extract tmp[0:irows-k-1,0:icolumns-k-1] and triangular[k:irows-1,k:icolumns-1] (compute in-place)
-        submatrices = this.submatrices(subheader, triangular, [ triangular, tmp ], rstride, [ rstride, irows ],
-            [ k, irows-1, k, icolumns-1 ], // triangular[k:irows-1,k:icolumns-1]
-            [
-                [ k, irows-1, k, icolumns-1 ], // triangular[k:irows-1,k:icolumns-1]
-                [ 0, irows-k-1, 0, icolumns-k-1 ] // tmp[0:irows-k-1,0:icolumns-k-1], the result of the previous calculation
-            ]
-        );
+            // inputs
+            k, irows-1, k, k, irows, // reflect[k:irows-1,k]
+            0, 0, 0, icolumns-k-1, 1, // tmprow[0,0:icolumns-k-1], the result of the previous calculation
+        ], [ tmp, reflect, tmprow ]);
 
         // apply Householder reflector to set the column vector triangular[k+1:irows-1,k] to zero
-        submatrices[0].custom = { alpha: 1, beta: -2 };
-        this.addInPlace(submatrices[0], submatrices[1], submatrices[2]);
+        // i.e., run triangular[k:irows-1,k:icolumns-1] -= 2 * tmp[0:irows-k-1,0:icolumns-k-1]
+        this.runWithBlocks(this.addInPlace, dtype, [
+            // output: 1st row, last row, 1st col, last col, stride
+            k, irows-1, k, icolumns-1, rstride, // triangular[k:irows-1,k:icolumns-1]
+
+            // inputs
+            k, irows-1, k, icolumns-1, rstride, // triangular[k:irows-1,k:icolumns-1]
+            0, irows-k-1, 0, icolumns-k-1, irows, // tmp[0:irows-k-1,0:icolumns-k-1], the result of the previous calculation
+        ], [ triangular, triangular, tmp ], { alpha: 1, beta: -2 });
     }
 
     // Compute the unitary matrix Q

@@ -68,33 +68,33 @@ export function backsub(header, output, inputs)
  * (m equations, n unknowns, m >= n)
  * @param {object} header
  * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs [ A, b [,tmp] ] where optional tmp is m x (n+1)
+ * @param {ArrayBufferView[]} inputs [ A, b ]
  */
 export function lssolve(header, output, inputs)
 {
     const { stride, dtype } = header;
     const [ m, n ] = [ header.rowsOfInputs[0], header.columnsOfInputs[0] ];
-    const tmp = inputs[2] || this.createTypedArray(dtype, m * (n+1));
-    const lsHeader = Object.assign({ }, header);
+    const [ matA, vecB ] = inputs;
+    const [ strideA, strideB ] = header.strideOfInputs;
+    const tmp = this.createTypedArray(dtype, m * (n+1));
 
-    // find [ Q'b | R ] with reduced QR of A
-    lsHeader.rows = m;
-    lsHeader.columns = n+1;
-    lsHeader.stride = m;
-    lsHeader.custom = { mode: 'reduced-Q\'x' };
-    lsHeader.byteOffset = 0;
-    lsHeader.length = tmp.length;
-    this.qr(lsHeader, tmp, [ inputs[0], inputs[1] ]);
+    // find [ Q'b | R ] with a reduced QR of A
+    this.run(this.qr, dtype, [
+        // output: rows, columns, stride
+        m, n+1, m,
+
+        // inputs
+        m, n, strideA,
+        m, 1, strideB,
+    ], [ tmp, matA, vecB ], { mode: "reduced-Q'x" });
 
     // extract the top n x (n+1) submatrix of [ Q'b | R ]
-    // (the bottom rows are zeros)
-    const triangsys = this.submatrices(lsHeader, output, [ tmp ], stride, [ m ],
-        [ 0, n-1, 0, 0 ],
-        [
-            [ 0, n-1, 0, n ]
-        ]
-    );
+    // (the bottom rows are zeros) to solve R x = Q'b for x
+    this.runWithBlocks(this.backsub, dtype, [
+        // output: 1st row, last row, 1st col, last col, stride
+        0, n-1, 0, 0, stride, // output[0:n-1,0]
 
-    // solve R x = Q'b for x
-    this.backsub(triangsys[0], triangsys[1], triangsys[2]);
+        // inputs
+        0, n-1, 0, n, m, // tmp[0:n-1,0:n]
+    ], [ output, tmp ]);
 }

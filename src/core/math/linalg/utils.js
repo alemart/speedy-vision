@@ -94,6 +94,41 @@ export function run(fn, dtypes, shapes, data, custom = {})
 }
 
 /**
+ * Similar to run(), but this function extracts blocks of the matrices
+ * Make sure you get the indices right, because they won't be checked!
+ * @param {?Function} fn the function that you wish to call
+ * @param {string} dtypes data types
+ * @param {number[]} shapesOfBlocks flattened tuples (firstRow, lastRow, firstCol, lastCol, stride) of output, input1...
+ * @param {ArrayBufferView[]} originalData flattened array containing output array, input1 array, input2 array...
+ * @param {object} [custom] user-data
+ * @returns {object} the header object that was used to call the routine
+ */
+export function runWithBlocks(fn, dtypes, shapesOfBlocks, originalData, custom = {})
+{
+    const n = originalData.length;
+    if(shapesOfBlocks.length !== 5 * n)
+        throw new Error(`Can't runWithBlocks() with invalid input`);
+
+    const newShapes = new Array(3 * n);
+    const newArrays = new Array(n);
+
+    for(let baseAddr = 0, stride = 0, j = 0, i = 0; i < n; i++, j += 3, baseAddr += 5) {
+        // compute the shape of the block
+        newShapes[j+0] = shapesOfBlocks[baseAddr+1] - shapesOfBlocks[baseAddr+0] + 1; // number of rows
+        newShapes[j+1] = shapesOfBlocks[baseAddr+3] - shapesOfBlocks[baseAddr+2] + 1; // number of columns
+        newShapes[j+2] = stride = shapesOfBlocks[baseAddr+4]; // stride
+
+        // extract subarray
+        newArrays[i] = originalData[i].subarray(
+            shapesOfBlocks[baseAddr+2] * stride + shapesOfBlocks[baseAddr+0], // 1st col * stride + 1st row
+            shapesOfBlocks[baseAddr+3] * stride + shapesOfBlocks[baseAddr+1] + 1
+        );
+    }
+
+    return this.run(fn, dtypes, newShapes, newArrays, custom);
+}
+
+/**
  * Call a stored subroutine
  * @param {string} subname
  * @param {object} header
@@ -182,49 +217,6 @@ export function addInPlace(header, output, inputs)
         for(i = 0; i < rows; i++)
             output[oj + i] = alpha * a[aj + i] + beta * b[bj + i];
     }
-}
-
-/**
- * Create submatrices / block-views with shared memory
- * Low-level stuff. Make sure you pass valid indices...
- * @param {object} header will be modified!
- * @param {ArrayBufferView} output contains data
- * @param {ArrayBufferView[]} inputs contains data
- * @param {number} stride of output
- * @param {number[]} strideOfInputs
- * @param {number[4]} outputIndices [firstRow, lastRow, firstColumn, lastColumn] inclusive
- * @param {Array<number[4]>} inputsIndices for each input matrix
- * @returns {Array} a triple [ header, output, inputs ]
- */
-export function submatrices(header, output, inputs, stride, strideOfInputs, outputIndices, inputsIndices)
-{
-    let i, inputIndices;
-
-    header.rows = outputIndices[1] - outputIndices[0] + 1;
-    header.columns = outputIndices[3] - outputIndices[2] + 1;
-    header.stride = stride;
-    output = output.subarray(
-        outputIndices[2] * stride + outputIndices[0],
-        outputIndices[3] * stride + outputIndices[1] + 1
-    );
-    header.length = output.length;
-    header.byteOffset = output.byteOffset;
-
-    for(i = inputs.length - 1; i >= 0; i--) {
-        inputIndices = inputsIndices[i];
-
-        header.rowsOfInputs[i] = inputIndices[1] - inputIndices[0] + 1;
-        header.columnsOfInputs[i] = inputIndices[3] - inputIndices[2] + 1;
-        header.strideOfInputs[i] = strideOfInputs[i];
-        inputs[i] = inputs[i].subarray(
-            inputIndices[2] * strideOfInputs[i] + inputIndices[0],
-            inputIndices[3] * strideOfInputs[i] + inputIndices[1] + 1
-        );
-        header.lengthOfInputs[i] = inputs[i].length;
-        header.byteOffsetOfInputs[i] = inputs[i].byteOffset;
-    }
-
-    return [ header, output, inputs ];
 }
 
 /**
