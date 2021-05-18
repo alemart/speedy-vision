@@ -362,7 +362,7 @@ export function homographydlt(header, output, inputs)
  */
 export function homographynormdlt(header, output, inputs)
 {
-    const { dtype, stride, rows, columns } = header;
+    const { dtype, stride } = header;
     const n = header.columnsOfInputs[0];
     const sstride = header.strideOfInputs[0];
     const dstride = header.strideOfInputs[1];
@@ -422,7 +422,7 @@ export function homographynormdlt(header, output, inputs)
 
     this.run(this.multiply3, dtype, [
         // output
-        rows, columns, stride,
+        3, 3, stride,
 
         // inputs
         3, 3, 3,
