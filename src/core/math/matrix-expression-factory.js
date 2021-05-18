@@ -248,7 +248,7 @@ export class SpeedyMatrixExprFactory extends Function
             mask: null,
             numberOfHypotheses: 500,
             bundleSize: 100,
-            reprojectionError: 3
+            reprojectionError: 2
         }, options.parameters || {});
 
         // validate shapes

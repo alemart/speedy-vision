@@ -130,7 +130,7 @@ export function pransacHomography(header, output, inputs)
                 hypothesis[h].err += (dx * dx + dy * dy > reprojErr2) | 0;
             }
             else
-                hypothesis[h].err = Number.MAX_SAFE_INTEGER;
+                hypothesis[h].err = n; // infinity;
         }
     }
 
@@ -175,7 +175,7 @@ export function pransacHomography(header, output, inputs)
     output[1 + stride2] = h12;
     output[2 + stride2] = h22;
 
-    // refine the homography by using only the inliers
+    // refine the homography: use only inliers
     if(inliers.length > 4) {
         const cnt = inliers.length;
         const buf = this.createTypedArray(dtype, 4 * cnt);
@@ -200,6 +200,8 @@ export function pransacHomography(header, output, inputs)
             2, cnt, 2,
             2, cnt, 2,
         ], [ output, isrc, idst ]);
+
+        // Note: should we recompute the inliers mask?
     }
 
     // bad homography!
