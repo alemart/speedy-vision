@@ -1171,12 +1171,14 @@ export class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
         // got an array of numbers?
         if(Array.isArray(expr)) {
             const mat = new SpeedyMatrix(this._shape, expr);
-            return this._evaluateLvalue().then(lvalue => lvalue._assign(mat));
+            return this._evaluateLvalue().then(lvalue =>
+                lvalue._assign(mat)
+            ).then(() => this);
         }
 
         // compile expr and get the data
-        return expr._compileAndEvaluate().then(result =>
-            this._evaluateLvalue().then(lvalue => lvalue._assign(result._matrix))
+        return this._evaluateLvalue().then(lvalue =>
+            expr._compileAndEvaluate().then(result => lvalue._assign(result._matrix))
         ).then(() => this);
     }
 
