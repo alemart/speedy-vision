@@ -158,7 +158,7 @@ export class SpeedyMatrixExpr
 
     /**
      * Get the matrix associated with the result of this expression
-     * This matrix must be guaranteed to be available after evaluating this expression
+     * This matrix must be guaranteed to be available after compiling this expression
      * @returns {SpeedyMatrix}
      */
     get _matrix()
@@ -261,6 +261,7 @@ export class SpeedyMatrixExpr
 
 
 
+
     //
     // ACCESS BY BLOCK
     //
@@ -334,15 +335,6 @@ export class SpeedyMatrixExpr
     // GENERAL OPERATIONS
     //
 
-
-    /**
-     * Clone matrix
-     * @returns {SpeedyMatrixExpr}
-     */
-    clone()
-    {
-        return new SpeedyMatrixCloneExpr(this);
-    }
 
     /**
      * Transpose matrix
@@ -655,7 +647,7 @@ class SpeedyMatrixTempExpr extends SpeedyMatrixExpr
 
     /**
      * Get the matrix associated with this expression
-     * This matrix must be guaranteed to be available after evaluating this expression
+     * This matrix must be guaranteed to be available after compiling this expression
      * @returns {SpeedyMatrix}
      */
     get _matrix()
@@ -905,7 +897,7 @@ class SpeedyMatrixReadonlyBlockExpr extends SpeedyMatrixExpr
 
     /**
      * Get the matrix associated with this expression
-     * This matrix must be guaranteed to be available after evaluating this expression
+     * This matrix must be guaranteed to be available after compiling this expression
      * @returns {SpeedyMatrix}
      */
     get _matrix()
@@ -969,7 +961,7 @@ class SpeedyMatrixReadonlyDiagonalExpr extends SpeedyMatrixExpr
 
     /**
      * Get the matrix associated with this expression
-     * This matrix must be guaranteed to be available after evaluating this expression
+     * This matrix must be guaranteed to be available after compiling this expression
      * @returns {SpeedyMatrix}
      */
     get _matrix()
@@ -1030,7 +1022,7 @@ class SpeedyMatrixAssignmentExpr extends SpeedyMatrixExpr
 
     /**
      * Get the matrix associated with this lvalue expression
-     * This matrix must be guaranteed to be available after evaluating this expression
+     * This matrix must be guaranteed to be available after compiling this expression
      * @returns {SpeedyMatrix}
      */
     get _matrix()
@@ -1083,7 +1075,7 @@ class SpeedyMatrixSequenceExpr extends SpeedyMatrixExpr
 
     /**
      * Get the matrix associated with this expression
-     * This matrix must be guaranteed to be available after evaluating this expression
+     * This matrix must be guaranteed to be available after compiling this expression
      * @returns {SpeedyMatrix}
      */
     get _matrix()
@@ -1124,7 +1116,7 @@ export class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
 {
     /**
      * Get the matrix associated with this lvalue expression
-     * This matrix must be guaranteed to be available after evaluating this expression
+     * This matrix must be guaranteed to be available after compiling this expression
      * @returns {SpeedyMatrix}
      */
     get _matrix()
@@ -1251,11 +1243,8 @@ export class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
     {
         super(shape);
 
-        /** @type {?SpeedyMatrix} the matrix associated with this expression */
-        this._usermatrix = matrix;
-
-        /** @type {boolean} this is used to decide how the assignment is done */
-        this._compiledMode = false;
+        /** @type {SpeedyMatrix} the matrix associated with this expression */
+        this._usermatrix = matrix || new SpeedyMatrix(this._shape);
 
         /** @type {MatrixOperation} copy operation, used in compiled mode */
         this._copy = new MatrixOperationCopy(this._shape);
@@ -1267,18 +1256,11 @@ export class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
 
     /**
      * Get the matrix associated with this lvalue expression
-     * This matrix must be guaranteed to be available after evaluating this expression
+     * This matrix must be guaranteed to be available after compiling this expression
      * @returns {SpeedyMatrix}
      */
     get _matrix()
     {
-        if(this._usermatrix == null) {
-            if(this._compiledMode)
-                this._usermatrix = new SpeedyMatrix(this._shape); // needed for _compile()
-            else
-                throw new IllegalOperationError(`Matrix doesn't have any data. Make sure you assign data to it.`);
-        }
-
         return this._usermatrix;
     }
 
@@ -1298,17 +1280,6 @@ export class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
      */
     _assign(matrix)
     {
-        if(!this._compiledMode) {
-            // We just change pointers; no actual copying of data takes place
-            this._usermatrix = matrix;
-            return SpeedyPromise.resolve();
-        }
-
-        // if we compile a parent node (or this node), we must not
-        // change the matrix pointer to anything else, because it
-        // has been bound to a compiled expression
-
-        // actually copy the data
         return matrixOperationsQueue.enqueue(
             this._copy,
             this._matrix,
@@ -1322,7 +1293,6 @@ export class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
      */
     _compile()
     {
-        this._compiledMode = true;
         return SpeedyPromise.resolve(new BoundMatrixOperationTree(
             null,
             this._matrix,
@@ -1337,7 +1307,6 @@ export class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
      */
     _compileAssignment(value)
     {
-        this._compiledMode = true;
         return SpeedyPromise.resolve(new BoundMatrixOperationTree(
             this._copy,
             this._matrix,
@@ -1385,12 +1354,12 @@ class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
         this._cachedMatrix = null;
 
         /** @type {MatrixOperation} matrix operation */
-        this._operation = new MatrixOperationCopy(this._shape);
+        this._copy = new MatrixOperationCopy(this._shape);
     }
 
     /**
      * Get the matrix associated with this lvalue expression
-     * This matrix must be guaranteed to be available after evaluating this expression
+     * This matrix must be guaranteed to be available after compiling this expression
      * @returns {SpeedyMatrix}
      */
     get _matrix()
@@ -1426,7 +1395,7 @@ class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
     _assign(matrix)
     {
         return matrixOperationsQueue.enqueue(
-            this._operation,
+            this._copy,
             this._matrix,
             [ matrix ]
         );
@@ -1469,7 +1438,7 @@ class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
     _compileAssignment(value)
     {
         return SpeedyPromise.resolve(new BoundMatrixOperationTree(
-            this._operation, // copy
+            this._copy,
             this._matrix,
             [ value ]
         ));
@@ -1500,12 +1469,12 @@ class SpeedyMatrixReadwriteDiagonalExpr extends SpeedyMatrixLvalueExpr
         this._cachedMatrix = null;
 
         /** @type {MatrixOperation} copy operation */
-        this._operation = new MatrixOperationCopy(this._shape);
+        this._copy = new MatrixOperationCopy(this._shape);
     }
 
     /**
      * Get the matrix associated with this expression
-     * This matrix must be guaranteed to be available after evaluating this expression
+     * This matrix must be guaranteed to be available after compiling this expression
      * @returns {SpeedyMatrix}
      */
     get _matrix()
@@ -1541,7 +1510,7 @@ class SpeedyMatrixReadwriteDiagonalExpr extends SpeedyMatrixLvalueExpr
     _assign(matrix)
     {
         return matrixOperationsQueue.enqueue(
-            this._operation,
+            this._copy,
             this._matrix,
             [ matrix ]
         );
@@ -1579,7 +1548,7 @@ class SpeedyMatrixReadwriteDiagonalExpr extends SpeedyMatrixLvalueExpr
     _compileAssignment(value)
     {
         return SpeedyPromise.resolve(new BoundMatrixOperationTree(
-            this._operation, // copy
+            this._copy,
             this._matrix,
             [ value ]
         ));
@@ -1610,7 +1579,7 @@ export class SpeedyMatrixConstantExpr extends SpeedyMatrixExpr
 
     /**
      * Get the matrix associated with this expression
-     * This matrix must be guaranteed to be available after evaluating this expression
+     * This matrix must be guaranteed to be available after compiling this expression
      * @returns {SpeedyMatrix}
      */
     get _matrix()
@@ -1657,22 +1626,6 @@ class SpeedyMatrixFillExpr extends SpeedyMatrixTempExpr
             this._matrix,
             []
         ));
-    }
-}
-
-/**
- * Clone a matrix, copying individual entries
- * e.g., A = B.clone()
- */
-class SpeedyMatrixCloneExpr extends SpeedyMatrixUnaryExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} expr
-     */
-    constructor(expr)
-    {
-        super(expr, new MatrixOperationCopy(expr._shape));
     }
 }
 
