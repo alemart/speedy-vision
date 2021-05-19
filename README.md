@@ -82,7 +82,8 @@ For general enquiries, contact me at alemartf `at` gmail `dot` com.
     * [Elementary operations](#elementary-operations)
     * [Access by block](#access-by-block)
     * [Functional programming](#functional-programming)
-    * [Linear Algebra](#linear-algebra)
+    * [Systems of equations](#systems-of-equations)
+    * [Matrix factorization](#matrix-factorization)
     * [Misc. Utilities](#misc-utilities)
   * [Geometric transformations](#geometric-transformations)
     * [Homography](#perspective-transformation)
@@ -1858,7 +1859,7 @@ await sorted.print();
 //
 ```
 
-#### Linear Algebra
+#### Systems of equations
 
 ##### SpeedyMatrixExpr.solve()
 
@@ -1924,11 +1925,51 @@ To "solve" an overdetermined linear system of equations *Ax = b* for *x* using l
 
 A `SpeedyMatrixExpr` featuring the "solution" of the overdetermined linear system of equations, if such a solution exists.
 
+
+
+#### Matrix factorization
+
+##### Speedy.Matrix.QR()
+
+`Speedy.Matrix.QR(mat: SpeedyMatrixExpr, options?: object): SpeedyPromise<SpeedyMatrixExpr[]>`
+
+Compute a QR decomposition of `mat` using Householder reflectors.
+
+*Note:* it is expected that the number of rows *m* of the input matrix *A* is greater than or equal to its number of columns *n* (i.e., *m* >= *n*).
+
+###### Arguments
+
+* `mat: SpeedyMatrixExpr`. The matrix to be decomposed.
+* `options: object, optional`. A configuration object that accepts the following keys:
+    * `mode: string`. Either `"full"` or `"reduced"`. Defaults to `"reduced"`.
+
+###### Returns
+
+Returns a `SpeedyPromise` that resolves to a pair `[Q, R]` such that `Q` * `R` = `mat`. `Q` is orthogonal and `R` is upper-triangular.
+
+###### Example
+
+```js
+// Create a matrix
+const A = Speedy.Matrix(3, 3, [
+    0, 1, 0,
+    1, 1, 0,
+    1, 2, 3,
+]);
+
+// Compute a QR decomposition of A
+const [Q, R] = await Speedy.Matrix.QR(A);
+
+// Print the result
+await Q.print();
+await R.print();
+```
+
 ##### SpeedyMatrixExpr.qr()
 
 `SpeedyMatrixExpr.qr(mode?: string): SpeedyMatrixExpr`
 
-Compute a QR decomposition using Householder reflectors.
+Compute a QR decomposition using Householder reflectors. Check [Speedy.Matrix.QR()](#speedymatrixqr) for an easier to use version.
 
 *Note:* it is expected that the number of rows *m* of the input matrix *A* is greater than or equal to its number of columns *n* (i.e., *m* >= *n*).
 
@@ -1943,29 +1984,7 @@ A `SpeedyMatrixExpr` representing a matrix with two blocks, *Q* and *R*, such th
 * If `mode` is `"reduced"`, then its first *m* rows and its first *n* columns store *Q*, whereas its last *n* rows and its last *n* columns store *R*. Its shape is *m* x *2n*.
 * If `mode` is `"full"`, then its first *m* rows and its first *m* columns store *Q*, whereas its last *m* rows and its last *n* columns store *R* (*R* is a non-square matrix filled with zeros at the bottom). Its shape is *m* x *(m + n)*.
 
-###### Example
 
-```js
-//
-// Compute a QR decomposition of A
-//
-const A = Speedy.Matrix(3, 3, [
-    0, 1, 0,
-    1, 1, 0,
-    1, 2, 3,
-]);
-
-// the shape of the output is m x 2n
-const QR = await Speedy.Matrix.evaluate(A.qr());
-
-// extract blocks
-const Q = QR.columnSpan(0, 2);
-const R = QR.columnSpan(3, 5);
-
-// print the result
-await Q.print();
-await R.print();
-```
 
 #### Misc. Utilities
 
@@ -2064,7 +2083,7 @@ Table of parameters:
 
 | Parameter | Supported methods | Description |
 |-----------|-------------------|-------------|
-| `reprojectionError: number` | `"p-ransac"` | A threshold, measured in pixels, that lets Speedy decide whether a data point is an inlier or an outlier for a given model. A data point is an inlier for a given model if the model maps its `source` coordinates near its `destination` coordinates (i.e., if the Euclidean distance is not greater than the threshold). A data point is an outlier if it's not an inlier. |
+| `reprojectionError: number` | `"p-ransac"` | A threshold, measured in pixels, that lets Speedy decide if a data point is an inlier or an outlier for a given model. A data point is an inlier for a given model if the model maps its `source` coordinates near its `destination` coordinates (i.e., if the Euclidean distance is not greater than the threshold). A data point is an outlier if it's not an inlier. |
 | `mask: SpeedyMatrixLvalueExpr` | `"p-ransac"` | An optional output matrix of shape 1 x *n*. Its i-th entry will be set to 1 if the i-th data point is an inlier for the best model found by the method, or 0 if it's an outlier. |
 | `numberOfHypotheses: number` | `"p-ransac"` | A positive integer specifying the number of models that will be generated and tested. The best model found by the method will be refined and then returned. If your inlier ratio is "high", this parameter can be set to a "low" number, making the algorithm run even faster. Defaults to 500. |
 | `bundleSize: number` | `"p-ransac"` | A positive integer specifying the number of data points to be tested against all viable models before the set of viable models gets cut in half, over and over again. Defaults to 100. |
@@ -2109,7 +2128,7 @@ await homography.print();
 await mask.print();
 
 // Now let's test the homography using a few test points.
-// The points need to be mapped according to our simulated model (see above)
+// The points need to be mapped in line with our simulated model (see above)
 const tstCoords = Speedy.Matrix(2, 5, [
     0, 0,
     100, 0,
