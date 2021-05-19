@@ -85,18 +85,14 @@
                     output.innerText = '';
                 }
 
-                // compute a QR decomposition
+                // compute and print QR
                 async function qr()
                 {
+                    // read the matrix from the input fields
                     const A = Speedy.Matrix(3, 3, input.a.map(field => Number(field.value)), 'float64');
-                    const QR = Speedy.Matrix.Zeros(3, 6, 'float64');
 
-                    // create two "views" of the QR matrix
-                    const Q = QR.block(0, 2, 0, 2);
-                    const R = QR.block(0, 2, 3, 5);
-                    
                     // compute QR
-                    await QR.assign(A.qr());
+                    const [Q, R] = await Speedy.Matrix.QR(A);
                     
                     // print the factorization
                     clear();

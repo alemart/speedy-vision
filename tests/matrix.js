@@ -867,8 +867,8 @@ describe('Matrix', function() {
                     1, 2, 3,
                 ]);
                 let QR = Speedy.Matrix(3, 6);
-                let Q = await QR.columnSpan(0, 2);
-                let R = await QR.columnSpan(3, 5);
+                let Q = QR.columnSpan(0, 2);
+                let R = QR.columnSpan(3, 5);
 
                 await QR.assign(A.qr());
 
@@ -915,8 +915,8 @@ describe('Matrix', function() {
             it('computes a full QR decomposition of a non-square matrix', async function() {
                 let A = RandomMatrix(4, 3, 'float64'); // m x n
                 let QR = Speedy.Matrix.Zeros(4, 7, 'float64'); // m x (m+n)
-                let Q = await QR.block(0, 3, 0, 3); // m x m
-                let R = await QR.block(0, 3, 4, 6); // m x n
+                let Q = QR.block(0, 3, 0, 3); // m x m
+                let R = QR.block(0, 3, 4, 6); // m x n
 
                 await QR.assign(A.qr('full'));
 
@@ -963,8 +963,8 @@ describe('Matrix', function() {
             it('computes a reduced QR decomposition of a non-square matrix', async function() {
                 let A = RandomMatrix(4, 3, 'float64'); // m x n
                 let QR = Speedy.Matrix.Zeros(4, 6, 'float64'); // m x 2n
-                let Q = await QR.block(0, 3, 0, 2); // m x n
-                let R = await QR.block(0, 2, 3, 5); // n x n
+                let Q = QR.block(0, 3, 0, 2); // m x n
+                let R = QR.block(0, 2, 3, 5); // n x n
 
                 await QR.assign(A.qr('reduced'));
 
@@ -1018,13 +1018,13 @@ describe('Matrix', function() {
                 ]);
 
                 let QR = Speedy.Matrix.Zeros(4, 6); // m x 2n
-                let Q = await QR.block(0, 3, 0, 2); // m x n
-                let R = await QR.block(0, 2, 3, 5); // n x n
+                let Q = QR.block(0, 3, 0, 2); // m x n
+                let R = QR.block(0, 2, 3, 5); // n x n
                 let Qtb = Speedy.Matrix.Zeros(3, 1); // n x 1
 
                 let QtbR = Speedy.Matrix.Zeros(4, 4); // m x (1+n) [Q'b | R]
-                let Qtb_ = await QtbR.column(0).rowSpan(0, 2); // n x 1
-                let R_ = await QtbR.block(0, 2, 1, 3); // n x n
+                let Qtb_ = QtbR.column(0).rowSpan(0, 2); // n x 1
+                let R_ = QtbR.block(0, 2, 1, 3); // n x n
 
                 await QR.assign(A.qr('reduced'));
                 await Qtb.assign(Q.transpose().times(b));

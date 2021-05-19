@@ -105,8 +105,8 @@ export class SpeedyMatrixExprFactory extends Function
      * (or to a matrix without data if its entries are not provided)
      * @param {number} rows number of rows
      * @param {number} [columns] number of columns (defaults to the number of rows)
-     * @param {number[]} [values] initial values in column-major format
      * @param {MatrixDataType} [dtype] data type of the elements of the matrix
+     * @param {number[]} [values] initial values in column-major format
      * @returns {SpeedyMatrixElementaryExpr}
      */
     _create(rows, columns = rows, values = null, dtype = MatrixType.default)
@@ -179,6 +179,36 @@ export class SpeedyMatrixExprFactory extends Function
             return points;
         });
     }
+
+
+
+    // ==============================================
+    // Matrix decompositions
+    // ==============================================
+
+    /**
+     * QR decomposition
+     * @param {SpeedyMatrixExpr} mat m x n matrix to be decomposed (m >= n)
+     * @param {QROptions} [options] configuration object
+     * @returns {SpeedyPromise<SpeedyMatrixExpr[]>} two matrices: [Q, R]
+     * 
+     * @typedef {object} QROptions
+     * @property {string} [mode] "reduced" | "full"
+     */
+    QR(mat, options = {})
+    {
+        const m = mat.rows, n = mat.columns, dtype = mat.dtype;
+
+        // if full, Q is m x m and R is m x n
+        // if reduced, Q is m x n and R is n x n
+        const full = (options.mode == 'full');
+        const matQR = full ? this._create(m, m+n, null, dtype) : this._create(m, n+n, null, dtype);
+        const matQ = full ? matQR.block(0, m-1, 0, m-1) : matQR.block(0, m-1, 0, n-1);
+        const matR = full ? matQR.block(0, m-1, m, m+n-1) : matQR.block(0, n-1, n, n+n-1);
+
+        return matQR.assign(mat.qr(options.mode)).then(() => [ matQ, matR ]).turbocharge();
+    }
+
 
 
 
