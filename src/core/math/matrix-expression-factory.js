@@ -138,7 +138,7 @@ export class SpeedyMatrixExprFactory extends Function
     evaluate(expr)
     {
         const mat = new SpeedyMatrixElementaryExpr(expr._shape);
-        return mat.assign(expr).then(() => mat);
+        return mat.assign(expr);
     }
 
     /**

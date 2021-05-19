@@ -1255,6 +1255,17 @@ export class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
     }
 
     /**
+     * Read the entries of this matrix
+     * Results are given in column-major format
+     * @returns {SpeedyPromise<number[]>}
+     */
+    read()
+    {
+        // this is an elementary expression, so we've got the data
+        return this._usermatrix.read(undefined, []).turbocharge();
+    }
+
+    /**
      * Get the matrix associated with this lvalue expression
      * This matrix must be guaranteed to be available after compiling this expression
      * @returns {SpeedyMatrix}
