@@ -275,7 +275,7 @@ export class SpeedyMatrix
         // create submatrix
         return this._buffer.createSharedBuffer(begin, length).then(sharedBuffer =>
             new SpeedyMatrix(subShape, undefined, stride, sharedBuffer)
-        ).turbocharge();
+        );
     }
 
     /**
@@ -294,7 +294,7 @@ export class SpeedyMatrix
 
         return this._buffer.createSharedBuffer(0, bufferLength).then(sharedBuffer =>
             new SpeedyMatrix(shape, undefined, stride + 1, sharedBuffer)
-        ).turbocharge();
+        );
     }
 
 
