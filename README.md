@@ -1012,11 +1012,11 @@ Since matrix operations do not take place in the main thread, Speedy's Matrix AP
 4. A WebWorker will do the number crunching as soon as possible.
 5. Finally, you will get the results you asked for, asynchronously.
 
-Because Speedy's Matrix API has been designed to not block the main thread, be aware that there is a little bit of overhead to make this work. Roughly speaking, the overhead depends mainly on the number of *await*s in your code (data is transferred to a WebWorker, and then a result is transferred back to the main thread). The less *await*s you have, the less time is spent transferring data back and forth.
+Since Speedy's Matrix API has been designed not to block the main thread, there is a little bit of overhead to make things work. Roughly speaking, the overhead depends mainly on the number of *await*s in your code (data is transferred to a WebWorker, and then a result is transferred back to the main thread). The less *await*s you have, the less time is spent transferring data back and forth.
 
-If you intend to do lots of computations, I suggest that you group your data into one large matrix composed of many [blocks](#access-by-block). Methods such as [map/reduce](#functional-programming) lets you perform multiple computations all at once, helping to minimize the number of *await*s.
+If you intend to do lots of computations, I suggest that you group your data into one large matrix composed of many [blocks](#access-by-block). Methods such as [map/reduce](#functional-programming) let you perform multiple computations all at once, helping to minimize the number of *await*s.
 
-Don't worry too much about the overhead, though, because JavaScript engines are highly optimized. Just know that it exists, and that it makes the magic work.
+If your computations are cheap, I suggest that you perform them [in the main thread](#speedymatrixevaluate). If you're unsure, profile both ways.
 
 Finally, matrices in Speedy are stored in [column-major format](https://en.wikipedia.org/wiki/Row-_and_column-major_order), using Typed Arrays for extra performance.
 
@@ -1539,40 +1539,6 @@ await mat.block(0, 2, 0, 2).diagonal().fill(5);
 
 #### Elementary operations
 
-##### SpeedyMatrixExpr.clone()
-
-`SpeedyMatrixExpr.clone(): SpeedyMatrixExpr`
-
-Clone a matrix, so that when you call [SpeedyMatrixLvalueExpr.assign()](#speedymatrixlvalueexprassign), no data will be shared between the matrices.
-
-###### Returns
-
-A `SpeedyMatrixExpr` representing a clone of the input expression.
-
-###### Example
-
-```js
-const matA = Speedy.Matrix(2);
-const matB = Speedy.Matrix(2, 2, [
-    1, 2,
-    3, 4
-]);
-
-// matA and matB will share the same buffer
-// (the same underlying data), so if you
-// change the contents of matB, you'll
-// change the contents of matA as well
-await matA.assign(matB);
-
-// matA and matB will NOT share the same buffer,
-// meaning that you'll be able to change matB
-// without matA being affected
-await matA.assign(matB.clone());
-
-// print
-await matA.print();
-```
-
 ##### SpeedyMatrixExpr.transpose()
 
 `SpeedyMatrixExpr.transpose(): SpeedyMatrixExpr`
@@ -1759,7 +1725,9 @@ const A = Speedy.Matrix(3, 5, [
     2, 1, 0, // 5th
 ]);
 
-const norms = A.map(3, 1, v => v.transpose().times(v));
+const norms = await Speedy.Matrix.evaluate(
+    A.map(3, 1, v => v.transpose().times(v))
+);
 await norms.print(); // [ 1, 2, 3, 4, 5 ]
 ```
 
@@ -1817,9 +1785,13 @@ const zeros = Speedy.Matrix.Zeros(3, 1);
 
 // We add together the squared entries of M,
 // and then take the square root of the sum.
-const v = M.compMult(M).reduce(3, 1, (A, B) => A.plus(B), zeros);
-const dot = ones.times(v); // dot product
-const [ norm2 ] = await dot.read();
+const result = await Speedy.Matrix.evaluate(
+    ones.times( // dot product
+        M.compMult(M) // squared entries of M
+            .reduce(3, 1, (A, B) => A.plus(B), zeros) // sum of the columns of the squared entries of M
+    )
+);
+const [ norm2 ] = await result.read();
 
 const norm = Math.sqrt(norm2);
 console.log(norm); // 4
@@ -1865,14 +1837,16 @@ const M = Speedy.Matrix(3, 5, [
     0, 1, 0, // magnitude: 1
 ]);
 
-const sorted = M.sort(3, 1, (u, v) => {
-    // u and v are distinct column vectors
-    const utu = u.transpose().times(u); // squared magnitude of u (1x1)
-    const vtv = v.transpose().times(v); // squared magnitude of v (1x1)
+const sorted = await Speedy.Matrix.evaluate(
+    M.sort(3, 1, (u, v) => {
+        // u and v are distinct column vectors
+        const utu = u.transpose().times(u); // squared magnitude of u (1x1)
+        const vtv = v.transpose().times(v); // squared magnitude of v (1x1)
 
-    return utu.minus(vtv); // ascending
-    //return vtv.minus(utu); // descending
-});
+        return utu.minus(vtv); // ascending
+        //return vtv.minus(utu); // descending
+    })
+);
 
 await sorted.print();
 
@@ -1925,7 +1899,11 @@ const b = Speedy.Matrix(2, 1, [
 ]);
 
 // Solve Ax = b for x
-const x = A.solve(b);
+const x = await Speedy.Matrix.evaluate(
+    A.solve(b)
+);
+
+// get the result
 const soln = await x.read();
 console.log(soln); // [ 7.5, -1.5 ]
 ```
@@ -1978,14 +1956,11 @@ const A = Speedy.Matrix(3, 3, [
 ]);
 
 // the shape of the output is m x 2n
-const QR = Speedy.Matrix(3, 6);
+const QR = await Speedy.Matrix.evaluate(A.qr());
 
 // extract blocks
 const Q = QR.columnSpan(0, 2);
 const R = QR.columnSpan(3, 5);
-
-// compute QR
-await QR.assign(A.qr());
 
 // print the result
 await Q.print();
@@ -2026,6 +2001,7 @@ await A.print();
 ##### SpeedyMatrixLvalueExpr.setTo()
 
 `SpeedyMatrixLvalueExpr.setTo(expr: SpeedyMatrixExpr): SpeedyMatrixExpr`
+
 `SpeedyMatrixLvalueExpr.setTo(entries: number[]): SpeedyMatrixExpr`
 
 Create an assignment expression. Unlike [SpeedyMatrixLvalue.assign()](#speedymatrixlvalueexprassign), setTo() does not actually change any data, nor perform any computations (note that it does not return a promise). It's just an assignment expression, which may be used as part of a larger expression. The result of this assignment expression is `expr` in the first form, and a new `SpeedyMatrixExpr` corresponding to the given `entries` in the second form.
@@ -2141,7 +2117,9 @@ const tstCoords = Speedy.Matrix(2, 5, [
     0, 100,
     50, 50,
 ]);
-const chkCoords = Speedy.Matrix.transform(homography, tstCoords);
+const chkCoords = await Speedy.Matrix.evaluate(
+    Speedy.Matrix.transform(homography, tstCoords)
+);
 await chkCoords.print();
 ```
 
@@ -2177,7 +2155,9 @@ const dstQuad = Speedy.Matrix.fromPoints([
     Speedy.Point2(0, 2)
 ]);
 
-const homography = Speedy.Matrix.Perspective(srcQuad, dstQuad);
+const homography = await Speedy.Matrix.evaluate(
+    Speedy.Matrix.Perspective(srcQuad, dstQuad)
+);
 await homography.print();
 ```
 
@@ -2216,7 +2196,9 @@ const srcQuad = Speedy.Matrix(2, 4, [
     0, 1,
 ]);
 
-const dstQuad = Speedy.Matrix.transform(mat, srcQuad);
+const dstQuad = await Speedy.Matrix.evaluate(
+    Speedy.Matrix.transform(mat, srcQuad)
+);
 await dstQuad.print();
 
 //
