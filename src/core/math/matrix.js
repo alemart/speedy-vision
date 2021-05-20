@@ -129,82 +129,29 @@ export class SpeedyMatrix
      * Read entries of the matrix. Note that this method is asynchronous.
      * It will read the data as soon as all relevant calculations have been
      * completed. Make sure you await.
-     *
-     * If the entries parameter is left unspecified, the entire matrix will
-     * be read and its contents will be returned as a flattened array in
-     * column-major format.
-     *
-     * @param {number[]} [entries] a flattened array of (row,col) indices, indexed by zero
-     * @param {number[]} [result] pre-allocated array where we'll store the results
+     * The entries of the matrix will be returned as a flattened array of
+     * numbers in column-major format.
      * @returns {SpeedyPromise<number[]>} a promise that resolves to the requested entries
      */
-    read(entries = undefined, result = undefined)
+    read()
     {
-        const rows = this.rows, cols = this.columns;
-        const stride = this.stride;
-
-        // read the entire array
-        if(entries === undefined)
-        {
-            return this.sync().then(() => this._buffer.ready().turbocharge()).then(buffer => {
-                const data = buffer.data;
-                const n = rows * cols;
-
-                // resize result array
-                result = result || new Array(n);
-                if(result.length != n)
-                    result.length = n;
-
-                // write entries in column-major format
-                let i, j, k = 0;
-                for(j = 0; j < cols; j++) {
-                    for(i = 0; i < rows; i++)
-                        result[k++] = data[j * stride + i];
-                }
-
-                // done!
-                return result;
-            }).turbocharge();
-        }
-
-        // read specific entries
-        if(entries.length % 2 > 0)
-            throw new IllegalArgumentError(`Can't read matrix entries: missing index`);
+        const rows = this.rows, cols = this.columns, stride = this.stride;
 
         return this.sync().then(() => this._buffer.ready().turbocharge()).then(buffer => {
             const data = buffer.data;
-            const n = entries.length >> 1;
+            const n = rows * cols;
+            const result = new Array(n);
 
-            // resize result array
-            result = result || new Array(n);
-            if(result.length != n)
-                result.length = n;
-
-            // read entries
-            let row, col;
-            for(let i = 0; i < n; i++) {
-                row = entries[i << 1] | 0;
-                col = entries[1 + (i << 1)] | 0;
-                result[i] = ((row >= 0 && row < rows && col >= 0 && col < cols) &&
-                    data[col * stride + row]
-                ) || undefined;
+            // write entries in column-major format
+            let i, j, k = 0;
+            for(j = 0; j < cols; j++) {
+                for(i = 0; i < rows; i++)
+                    result[k++] = data[j * stride + i];
             }
 
             // done!
             return result;
         }).turbocharge();
-    }
-
-    /**
-     * Read a single entry of the matrix. This is provided for your convenience.
-     * It's much faster to use read() if you need to read multiple entries
-     * @param {number} row the row you want to read, indexed by zero
-     * @param {number} column the column you want to read, indexed by zero
-     * @returns {SpeedyPromise<number>} a promise that resolves to the requested entry
-     */
-    at(row, column)
-    {
-        return this.read([ row, column ]).then(nums => nums[0]).turbocharge();
     }
 
     /**

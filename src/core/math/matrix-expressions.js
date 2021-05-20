@@ -234,7 +234,7 @@ export class SpeedyMatrixExpr
      */
     read()
     {
-        return this._compileAndEvaluate().then(expr => expr._matrix.read(undefined, [])).turbocharge();
+        return this._compileAndEvaluate().then(expr => expr._matrix.read()).turbocharge();
     }
 
     /**
@@ -1262,7 +1262,7 @@ export class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
     read()
     {
         // this is an elementary expression, so we've got the data
-        return this._usermatrix.read(undefined, []).turbocharge();
+        return this._usermatrix.read().turbocharge();
     }
 
     /**
