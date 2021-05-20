@@ -828,7 +828,7 @@ Nightvision enhances the illumination of the scene. It improves local contrast a
 
 `Speedy.Vector2(x: number, y: number): SpeedyVector2`
 
-Creates a new 2D vector with the given coordinates.
+Creates a new immutable 2D vector with the given coordinates.
 
 ###### Arguments
 
@@ -857,6 +857,36 @@ The x-coordinate of the vector.
 
 The y-coordinate of the vector.
 
+##### SpeedyVector2.plus()
+
+`SpeedyVector2.plus(offset: SpeedyVector2): SpeedyVector2`
+
+Vector addition.
+
+###### Returns
+
+A new vector corresponding to `this` + `offset`.
+
+##### SpeedyVector2.minus()
+
+`SpeedyVector2.minus(offset: SpeedyVector2): SpeedyVector2`
+
+Vector subtraction.
+
+###### Returns
+
+A new vector corresponding to `this` - `offset`.
+
+##### SpeedyVector2.times()
+
+`SpeedyVector2.times(scalar: number): SpeedyVector2`
+
+Multiply a vector by a scalar.
+
+###### Returns
+
+A new vector corresponding to `this` * `scalar`.
+
 ##### SpeedyVector2.length()
 
 `SpeedyVector2.length(): number`
@@ -876,15 +906,29 @@ console.log('Coordinates', v.x, v.y);
 console.log('Length', v.length()); // 5
 ```
 
-##### SpeedyVector2.normalize()
+##### SpeedyVector2.normalized()
 
-`SpeedyVector2.normalize(): SpeedyVector2`
+`SpeedyVector2.normalized(): SpeedyVector2`
 
-Normalizes the vector, so that its length becomes one.
+Returns a normalized version of this vector.
 
 ###### Returns
 
-The vector itself.
+A new vector with the same direction as the original one and with length equal to one.
+
+##### SpeedyVector2.dot()
+
+`SpeedyVector2.dot(v: SpeedyVector2): number`
+
+Dot product.
+
+###### Arguments
+
+* `v: SpeedyVector2`. A vector.
+
+###### Returns
+
+The dot product between the two vectors.
 
 ##### SpeedyVector2.distanceTo()
 
@@ -909,20 +953,6 @@ const v = Speedy.Vector2(5, 0);
 console.log(u.distanceTo(v)); // 4
 ```
 
-##### SpeedyVector2.dot()
-
-`SpeedyVector2.dot(v: SpeedyVector2): number`
-
-Dot product.
-
-###### Arguments
-
-* `v: SpeedyVector2`. A vector.
-
-###### Returns
-
-The dot product between the two vectors.
-
 ##### SpeedyVector2.toString()
 
 `SpeedyVector2.toString(): string`
@@ -933,13 +963,23 @@ Get a string representation of the vector.
 
 A string representation of the vector.
 
+##### SpeedyVector2.equals()
+
+`SpeedyVector2.equals(v: SpeedyVector2): boolean`
+
+Equality comparison.
+
+###### Returns
+
+Returns `true` if the coordinates of `this` are equal to the coordinates of `v`, or `false` otherwise.
+
 #### 2D Points
 
 ##### Speedy.Point2()
 
 `Speedy.Point2(x: number, y: number): SpeedyPoint2`
 
-Creates a new 2D point with the given coordinates.
+Creates a new immutable 2D point with the given coordinates.
 
 ###### Arguments
 
@@ -996,6 +1036,15 @@ Subtracts point `p` from this.
 
 A new `SpeedyVector2` instance such that `p` plus that vector equals this point.
 
+##### SpeedyPoint2.equals()
+
+`SpeedyPoint2.equals(p: SpeedyPoint2): boolean`
+
+Equality comparison.
+
+###### Returns
+
+Returns `true` if the coordinates of `this` are equal to the coordinates of `p`, or `false` otherwise.
 
 
 

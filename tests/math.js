@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,27 +68,22 @@ describe('Math', function() {
         });
 
         it('supports translations', function() {
-            const v = Speedy.Vector2(zero.x + 5, zero.y + 5);
-            const w = Speedy.Vector2(2, 3);
-
-            w.x += v.x;
-            w.y += v.y;
+            const v = Speedy.Vector2(5, 5).plus(zero);
+            const w = v.plus(Speedy.Vector2(2, 3));
+            const z = v.minus(Speedy.Vector2(2, 3));
 
             expect(v.x).toEqual(5);
             expect(v.y).toEqual(5);
             expect(w.x).toEqual(7);
             expect(w.y).toEqual(8);
+            expect(z.x).toEqual(3);
+            expect(z.y).toEqual(2);
         });
 
         it('supports scaling', function() {
-            const v = Speedy.Vector2(3 * 2, 4 * 2);
-            const w = Speedy.Vector2(v.x, v.y);
+            const v = Speedy.Vector2(6, 8);
+            const w = v.times(0.5);
 
-            w.x /= 2;
-            w.y /= 2;
-
-            expect(v.x).toEqual(6);
-            expect(v.y).toEqual(8);
             expect(w.x).toEqual(3);
             expect(w.y).toEqual(4);
         });
@@ -102,9 +97,9 @@ describe('Math', function() {
         });
 
         it('normalizes vectors', function() {
-            const v = Speedy.Vector2(4, 0).normalize();
-            const u = Speedy.Vector2(0, 5).normalize().normalize();
-            const z = zero.normalize();
+            const v = Speedy.Vector2(4, 0).normalized();
+            const u = Speedy.Vector2(0, 5).normalized().normalized();
+            const z = zero.normalized();
 
             expect(v.x).toEqual(1);
             expect(v.y).toEqual(0);
@@ -114,8 +109,7 @@ describe('Math', function() {
             expect(u.y).toEqual(1);
             expect(u.length()).toEqual(1);
 
-            expect(z.x).toEqual(0);
-            expect(z.y).toEqual(0);
+            expect(z.equals(zero)).toBeTrue();
             expect(z.length()).toEqual(0);
         });
 
@@ -125,6 +119,40 @@ describe('Math', function() {
 
             expect(v.dot(w)).toEqual(7);
             expect(zero.dot(v)).toEqual(0);
+        });
+
+    });
+
+    describe('Point2', function() {
+
+        let zero;
+        let origin;
+
+        beforeEach(function() {
+            zero = Speedy.Vector2(0, 0);
+            origin = Speedy.Point2(0, 0);
+        });
+
+        it('creates a point', function() {
+            expect(Speedy.Point2(1, 1)).toBeDefined();
+            expect(origin).toBeDefined();
+        });
+
+        it('adds a vector to a point', function() {
+            const v = Speedy.Vector2(5, 5);
+            const p = Speedy.Point2(1, 0).plus(zero);
+            const q = Speedy.Point2(6, 5);
+
+            expect(p.plus(v).equals(q)).toBeTrue();
+        });
+
+        it('gets the direction from a point to another', function() {
+            const p = Speedy.Point2(10, 5);
+            const q = Speedy.Point2(2, 3);
+            const v = Speedy.Vector2(8, 2);
+
+            expect(p.minus(q).equals(v)).toBeTrue();
+            expect(q.minus(p).equals(zero.minus(v))).toBeTrue();
         });
 
     });

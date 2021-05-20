@@ -59,6 +59,16 @@ export class SpeedyVector2
     }
 
     /**
+     * Is this vector equal to v?
+     * @param {SpeedyVector2} v
+     * @returns {boolean}
+     */
+    equals(v)
+    {
+        return this.x === v.x && this.y === v.y;
+    }
+
+    /**
      * Dot product between this vector and another vector
      * @param {SpeedyVector2} v another vector
      * @returns {number}
@@ -91,20 +101,46 @@ export class SpeedyVector2
     }
 
     /**
-     * Normalizes this vector
-     * @returns {SpeedyVector2} this vector, normalized
+     * Returns a normalized version of this vector
+     * @returns {SpeedyVector2}
      */
-    normalize()
+    normalized()
     {
         const len = this.length();
 
-        if(len == 0.0) {
-            this.x = this.y = 0.0;
-            return this;
-        }
+        if(len > 0.0)
+            return new SpeedyVector2(this.x / len, this.y / len);
+        else
+            return new SpeedyVector2(0.0, 0.0);
+    }
 
-        this.x /= len;
-        this.y /= len;
-        return this;
+    /**
+     * Returns a copy of this vector translated by offset
+     * @param {SpeedyVector2} offset
+     * @returns {SpeedyVector2}
+     */
+    plus(offset)
+    {
+        return new SpeedyVector2(this.x + offset.x, this.y + offset.y);
+    }
+
+    /**
+     * Returns a copy of this vector translated by -offset
+     * @param {SpeedyVector2} offset
+     * @returns {SpeedyVector2}
+     */
+    minus(offset)
+    {
+        return new SpeedyVector2(this.x - offset.x, this.y - offset.y);
+    }
+
+    /**
+     * Returns a copy of this vector scaled by a scalar
+     * @param {number} scalar
+     * @returns {SpeedyVector2}
+     */
+    times(scalar)
+    {
+        return new SpeedyVector2(this.x * scalar, this.y * scalar);
     }
 }
