@@ -132,29 +132,13 @@ export function homography4p(header, output, inputs)
     )
         break; // goto end;
 
-    // Set up the first row of M and z
-    if(Math.abs(u3 - u0) > Math.abs(v3 - v0)) {
-        m00 = u2 * alpha - u1 * beta;
-        m01 = v2 * alpha - v1 * beta;
-        z0 = beta - alpha;
-    }
-    else {
-        m00 = -(u2 * alpha - u1 * beta);
-        m01 = -(v2 * alpha - v1 * beta);
-        z0 = -(beta - alpha);
-    }
-
-    // Set up the second row of M and z
-    if(Math.abs(u1 - u0) > Math.abs(v1 - v0)) {
-        m10 = u3 * phi - u2 * theta;
-        m11 = v3 * phi - v2 * theta;
-        z1 = theta - phi;
-    }
-    else {
-        m10 = -(u3 * phi - u2 * theta);
-        m11 = -(v3 * phi - v2 * theta);
-        z1 = -(theta - phi);
-    }
+    // Find M and Z
+    m00 = u2 * alpha - u1 * beta;
+    m01 = v2 * alpha - v1 * beta;
+    m10 = u3 * phi - u2 * theta;
+    m11 = v3 * phi - v2 * theta;
+    z0 = beta - alpha;
+    z1 = theta - phi;
 
     // Solve M p = z for p = [ g  h ]^t
     det = m00 * m11 - m01 * m10;
