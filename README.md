@@ -1017,7 +1017,7 @@ Since Speedy's Matrix API has been designed not to block the main thread, there 
 
 If you intend to do lots of computations, I suggest that you group your data into one large matrix composed of many [blocks](#access-by-block). Methods such as [map/reduce](#functional-programming) let you perform multiple computations all at once, helping to minimize the number of *await*s.
 
-If your computations are cheap, I suggest that you perform them [in the main thread](#speedymatrixevaluate). If you're unsure, profile both ways.
+If your computations are cheap, I suggest that you perform them [in the main thread](#speedymatrixsettings). If you're unsure, profile both ways.
 
 Finally, matrices in Speedy are stored in [column-major format](https://en.wikipedia.org/wiki/Row-_and_column-major_order), using Typed Arrays for extra performance.
 
@@ -2180,10 +2180,6 @@ const homography = await Speedy.Matrix.evaluate(
 await homography.print();
 ```
 
-
-
-#### Utilities
-
 ##### Speedy.Matrix.transform()
 
 `Speedy.Matrix.transform(mat: SpeedyMatrixExpr, points: SpeedyMatrixExpr): SpeedyMatrixExpr`
@@ -2226,6 +2222,19 @@ await dstQuad.print();
 // [ 1  1  3  3 ]
 //
 ```
+
+
+
+
+#### Utilities
+
+##### Speedy.Matrix.Settings
+
+`Speedy.Matrix.Settings: object`
+
+Settings object. It accepts the following keys:
+
+* `useWorker: boolean`. Should the matrix computations be performed in a Web Worker? Using a Web Worker may or may not be faster than using the main thread, depending on various factors. Different web browsers, machines and applications may perform differently. Profile and see. Defaults to `true`.
 
 ##### Speedy.Matrix.fromPoints()
 

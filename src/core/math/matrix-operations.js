@@ -28,13 +28,8 @@ import { MatrixWorker } from './matrix-worker';
 import { MatrixOperationHeader } from './matrix-operation-header';
 import { LinAlg } from './linalg/linalg';
 
-// Constants
-//const SMALL_WORKLOAD = 40; // what is "small"? further experimental testing is desirable
-                           // a binary operation for 3x3 matrices, e.g. C = A + B, has "small" workload
-
 // Worker
 const worker = MatrixWorker.instance;
-
 
 /**
  * Abstract matrix operation
@@ -113,26 +108,29 @@ export class MatrixOperation
     }
 
     /**
+     * Run the matrix operation
+     * @param {SpeedyMatrix[]} inputMatrices
+     * @param {SpeedyMatrix} outputMatrix
+     * @param {boolean} [useWorker] should we do the number crunching in a Web Worker?
+     * @returns {SpeedyPromise<void>} a promise that resolves as soon as the operation is complete
+     */
+    run(inputMatrices, outputMatrix, useWorker = true)
+    {
+        if(useWorker)
+            return this._runInWorker(inputMatrices, outputMatrix);
+        else
+            return this._runLocally(inputMatrices, outputMatrix);
+    }
+
+    /**
      * Run the matrix operation in a Web Worker
      * The internal buffers of the input & the output matrices are assumed to be locked
      * @param {SpeedyMatrix[]} inputMatrices
      * @param {SpeedyMatrix} outputMatrix
      * @returns {SpeedyPromise<void>} a promise that resolves as soon as the operation is complete
      */
-    run(inputMatrices, outputMatrix)
+    _runInWorker(inputMatrices, outputMatrix)
     {
-        /*
-        // run locally if we have a "small workload"
-        const workload = this._computeWorkload(inputMatrices.concat(outputMatrix));
-        if(workload <= SMALL_WORKLOAD) {
-            // there's an overhead for passing data
-            // back and forth to the Web Worker, and
-            // we don't want to pay it if we're
-            // dealing with "small" matrices
-            return this._runLocally(inputMatrices, outputMatrix);
-        }
-        */
-
         // do we have a compatible output matrix?
         this._assertCompatibility(outputMatrix.shape);
 

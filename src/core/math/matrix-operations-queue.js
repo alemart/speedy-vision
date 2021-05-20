@@ -23,6 +23,8 @@ import { SpeedyMatrix } from './matrix';
 import { MatrixOperation } from './matrix-operations';
 import { SpeedyPromise } from '../../utils/speedy-promise';
 
+let instance = null;
+
 /**
  * Used to run matrix operations in a FIFO fashion
  */
@@ -33,8 +35,14 @@ export class MatrixOperationsQueue
      */
     constructor()
     {
+        /** @type {Array<Array>} queue of operations */
         this._queue = [];
+
+        /** @type {boolean} whether we have a calculation taking place */
         this._busy = false;
+
+        /** @type {boolean} should we run the operations in a Web Worker? */
+        this._useWorker = true;
     }
 
     /**
@@ -43,7 +51,25 @@ export class MatrixOperationsQueue
      */
     static get instance()
     {
-        return this._instance || (this._instance = new MatrixOperationsQueue());
+        return instance || (instance = new MatrixOperationsQueue());
+    }
+
+    /**
+     * Should we run the operations in a Web Worker?
+     * @param {boolean} value
+     */
+    set useWorker(value)
+    {
+        this._useWorker = Boolean(value);
+    }
+
+    /**
+     * Should we run the operations in a Web Worker?
+     * @returns {boolean}
+     */
+    get useWorker()
+    {
+        return this._useWorker;
     }
 
     /**
@@ -85,7 +111,7 @@ export class MatrixOperationsQueue
             inputMatrices[i].lock();
 
         // run the next operation
-        matrixOperation.run(inputMatrices, outputMatrix).then(() => {
+        matrixOperation.run(inputMatrices, outputMatrix, this._useWorker).then(() => {
             // unlock matrices
             for(let j = inputMatrices.length - 1; j >= 0; j--)
                 inputMatrices[j].unlock();
@@ -95,5 +121,6 @@ export class MatrixOperationsQueue
             resolve();
             this._resolveAll();
         }).turbocharge();
+
     }
 }
