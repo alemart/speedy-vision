@@ -71,44 +71,41 @@ export function homography4p(header, output, inputs)
     const sstride = header.strideOfInputs[0];
     const dstride = header.strideOfInputs[1];
     const src = inputs[0], dest = inputs[1];
-
     const eps = 1e-6; // avoid division by small numbers
-    let u0, v0, u1, v1, u2, v2, u3, v3;
-    let x0, y0, x1, y1, x2, y2, x3, y3;
-    let alpha, beta, phi, chi, theta;
+
     let m00, m01, m10, m11, z0, z1, det, idet;
     let a1, b1, c1, d1, e1, f1, g1, h1, i1;
     let a2, b2, c2, d2, e2, f2, g2, h2, i2;
     let a, b, c, d, e, f, g, h, i;
-    let inorm;
 
     //
     // Initialization
     //
 
     // Read (ui, vi) - source
-    u0 = src[0];
-    v0 = src[1];
-    u1 = src[0 + sstride];
-    v1 = src[1 + sstride];
-    u2 = src[0 + 2 * sstride];
-    v2 = src[1 + 2 * sstride];
-    u3 = src[0 + 3 * sstride];
-    v3 = src[1 + 3 * sstride];
+    const u0 = src[0],
+          v0 = src[1],
+          u1 = src[0 + sstride],
+          v1 = src[1 + sstride],
+          u2 = src[0 + 2 * sstride],
+          v2 = src[1 + 2 * sstride],
+          u3 = src[0 + 3 * sstride],
+          v3 = src[1 + 3 * sstride];
 
     // Read (xi, yi) - destination
-    x0 = dest[0];
-    y0 = dest[1];
-    x1 = dest[0 + dstride];
-    y1 = dest[1 + dstride];
-    x2 = dest[0 + 2 * dstride];
-    y2 = dest[1 + 2 * dstride];
-    x3 = dest[0 + 3 * dstride];
-    y3 = dest[1 + 3 * dstride];
+    const x0 = dest[0],
+          y0 = dest[1],
+          x1 = dest[0 + dstride],
+          y1 = dest[1 + dstride],
+          x2 = dest[0 + 2 * dstride],
+          y2 = dest[1 + 2 * dstride],
+          x3 = dest[0 + 3 * dstride],
+          y3 = dest[1 + 3 * dstride];
 
     // This is supposed to be executed many times.
     // Should we normalize the input/output points
-    // at this stage? Let the user decide!
+    // at this stage? Let the user decide! See
+    // function homographynorm4p() below.
 
     // Initialize homography H
     a = b = c = d = e = f = g = h = i = Number.NaN;
@@ -120,11 +117,11 @@ export function homography4p(header, output, inputs)
     //
 
     // Compute a few "cross products" (signed areas)
-    alpha = (u3 - u0) * (v1 - v0) - (v3 - v0) * (u1 - u0);
-    beta = (u3 - u0) * (v2 - v0) - (v3 - v0) * (u2 - u0);
-    phi = (u1 - u0) * (v2 - v0) - (v1 - v0) * (u2 - u0);
-    chi = (u3 - u1) * (v2 - v1) - (v3 - v1) * (u2 - u1);
-    theta = -alpha;
+    const alpha = (u3 - u0) * (v1 - v0) - (v3 - v0) * (u1 - u0);
+    const beta = (u3 - u0) * (v2 - v0) - (v3 - v0) * (u2 - u0);
+    const phi = (u1 - u0) * (v2 - v0) - (v1 - v0) * (u2 - u0);
+    const chi = (u3 - u1) * (v2 - v1) - (v3 - v1) * (u2 - u1);
+    const theta = -alpha;
 
     // We require a quadrilateral, not a triangle,
     // nor a line, nor a single point! Are 3 or 4
@@ -239,12 +236,6 @@ export function homography4p(header, output, inputs)
     g = g2 * a1 + h2 * d1 + i2 * g1;
     h = g2 * b1 + h2 * e1 + i2 * h1;
     i = g2 * c1 + h2 * f1 + i2 * i1;
-
-    // Normalize the entries
-    inorm = 1.0 / Math.sqrt(a*a + b*b + c*c + d*d + e*e + f*f + g*g + h*h + i*i);
-    a *= inorm; b *= inorm; c *= inorm;
-    d *= inorm; e *= inorm; f *= inorm;
-    g *= inorm; h *= inorm; i *= inorm;
 
     } while(0);
 
@@ -448,4 +439,115 @@ export function homographynormdlt(header, output, inputs)
         output[i + stride2] *= inorm;
     }
     */
+}
+
+/**
+ * Find a homography using 4 correspondences of points, given as
+ * two 2 x 4 matrices. The points will be normalized FAST!
+ * @param {object} header
+ * @param {ArrayBufferView} output 3x3
+ * @param {ArrayBufferView[]} inputs [src, dst] 2x4
+ */
+export function homographynorm4p(header, output, inputs)
+{
+    const stride = header.stride;
+    const sstride = header.strideOfInputs[0];
+    const dstride = header.strideOfInputs[1];
+    const stride2 = stride * 2;
+    const sstride2 = sstride * 2, sstride3 = sstride * 3;
+    const dstride2 = dstride * 2, dstride3 = dstride * 3;
+    const src = inputs[0], dst = inputs[1];
+
+    // store the points
+    const u0 = src[0],
+          v0 = src[1],
+          u1 = src[0 + sstride],
+          v1 = src[1 + sstride],
+          u2 = src[0 + sstride2],
+          v2 = src[1 + sstride2],
+          u3 = src[0 + sstride3],
+          v3 = src[1 + sstride3],
+          x0 = dst[0],
+          y0 = dst[1],
+          x1 = dst[0 + dstride],
+          y1 = dst[1 + dstride],
+          x2 = dst[0 + dstride2],
+          y2 = dst[1 + dstride2],
+          x3 = dst[0 + dstride3],
+          y3 = dst[1 + dstride3];
+
+    // find the centers of mass (scx, scy) and (dcx, dcy)
+    const scx = (u0 + u1 + u2 + u3) * 0.25,
+          scy = (v0 + v1 + v2 + v3) * 0.25,
+          dcx = (x0 + x1 + x2 + x3) * 0.25,
+          dcy = (y0 + y1 + y2 + y3) * 0.25;
+
+    // find suitable scale factors (via RMS distance)
+    const sdist = (u0 - scx) * (u0 - scx) + (v0 - scy) * (v0 - scy) +
+                  (u1 - scx) * (u1 - scx) + (v1 - scy) * (v1 - scy) +
+                  (u2 - scx) * (u2 - scx) + (v2 - scy) * (v2 - scy) +
+                  (u3 - scx) * (u3 - scx) + (v3 - scy) * (v3 - scy);
+    const ddist = (x0 - dcx) * (x0 - dcx) + (y0 - dcy) * (y0 - dcy) +
+                  (x1 - dcx) * (x1 - dcx) + (y1 - dcy) * (y1 - dcy) +
+                  (x2 - dcx) * (x2 - dcx) + (y2 - dcy) * (y2 - dcy) +
+                  (x3 - dcx) * (x3 - dcx) + (y3 - dcy) * (y3 - dcy);
+    const sscale = Math.sqrt(8.0 / sdist),
+          dscale = Math.sqrt(8.0 / ddist);
+
+    // normalize the points
+    src[0] = sscale * (u0 - scx);
+    src[1] = sscale * (v0 - scy);
+    src[0 + sstride] = sscale * (u1 - scx);
+    src[1 + sstride] = sscale * (v1 - scy);
+    src[0 + sstride2] = sscale * (u2 - scx);
+    src[1 + sstride2] = sscale * (v2 - scy);
+    src[0 + sstride3] = sscale * (u3 - scx);
+    src[1 + sstride3] = sscale * (v3 - scy);
+    dst[0] = dscale * (x0 - dcx);
+    dst[1] = dscale * (y0 - dcy);
+    dst[0 + dstride] = dscale * (x1 - dcx);
+    dst[1 + dstride] = dscale * (y1 - dcy);
+    dst[0 + dstride2] = dscale * (x2 - dcx);
+    dst[1 + dstride2] = dscale * (y2 - dcy);
+    dst[0 + dstride3] = dscale * (x3 - dcx);
+    dst[1 + dstride3] = dscale * (y3 - dcy);
+
+    // find a homography using the normalized points
+    this.homography4p(header, output, inputs);
+
+    // denormalize the points
+    src[0] = u0;
+    src[1] = v0;
+    src[0 + sstride] = u1;
+    src[1 + sstride] = v1;
+    src[0 + sstride2] = u2;
+    src[1 + sstride2] = v2;
+    src[0 + sstride3] = u3;
+    src[1 + sstride3] = v3;
+    dst[0] = x0;
+    dst[1] = y0;
+    dst[0 + dstride] = x1;
+    dst[1 + dstride] = y1;
+    dst[0 + dstride2] = x2;
+    dst[1 + dstride2] = y2;
+    dst[0 + dstride3] = x3;
+    dst[1 + dstride3] = y3;
+
+    // embed normalization and denormalization in the homography, i.e.,
+    // normalize (src space) -> apply homography -> denormalize (dst space)
+    const h00 = output[0], h01 = output[0 + stride], h02 = output[0 + stride2],
+          h10 = output[1], h11 = output[1 + stride], h12 = output[1 + stride2],
+          h20 = output[2], h21 = output[2 + stride], h22 = output[2 + stride2];
+    const s = sscale, z = 1.0 / dscale;
+    const tmp = h22 - s * (scx * h20 + scy * h21);
+
+    output[0] = s * (z * h00 + dcx * h20);
+    output[1] = s * (z * h10 + dcy * h20);
+    output[2] = s * h20;
+    output[0 + stride] = s * (z * h01 + dcx * h21);
+    output[1 + stride] = s * (z * h11 + dcy * h21);
+    output[2 + stride] = s * h21;
+    output[0 + stride2] = dcx * tmp + z * (h02 - s * (scx * h00 + scy * h01));
+    output[1 + stride2] = dcy * tmp + z * (h12 - s * (scx * h10 + scy * h11));
+    output[2 + stride2] = tmp;
 }

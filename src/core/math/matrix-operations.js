@@ -722,7 +722,7 @@ export class MatrixOperationHomography4p extends MatrixOperation
     constructor(srcShape, dstShape)
     {
         Utils.assert(srcShape.equals(dstShape));
-        super('homography4p', 2, new MatrixShape(3, 3, srcShape.dtype));
+        super('homographynorm4p', 2, new MatrixShape(3, 3, srcShape.dtype));
     }
 }
 

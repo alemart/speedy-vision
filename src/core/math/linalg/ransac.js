@@ -95,7 +95,8 @@ export function pransacHomography(header, output, inputs)
         dmat[7] = dst[dstride * p3 + 1];
 
         // generate hypothesis
-        this.homography4p(homheader, hom, hompts);
+        this.homographynorm4p(homheader, hom, hompts);
+        //this.homography4p(homheader, hom, hompts);
 
         // bad homography?
         if(Number.isNaN(hom[0])) {

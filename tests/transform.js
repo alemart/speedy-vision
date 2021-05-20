@@ -753,7 +753,7 @@ describe('Geometric transformations', function() {
                 'medium': 2,
                 'bad': 3,
                 'really bad!': 4,
-                'outrageous!!!!!': 7
+                'outrageous!!!!!': 5
             };
 
             for(const difficulty in noiseTable) {
