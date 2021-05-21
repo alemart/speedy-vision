@@ -31,9 +31,9 @@
     <body>
         <h1>Convert video to greyscale</h1>
         <video
-            src="../assets/flying-eagle.mp4"
+            src="../assets/eagle.webm"
             poster="../assets/loading.jpg"
-            width="640" height="360"
+            width="720" height="480"
             preload="auto"
             loop muted controls autoplay
             title="Free video by Cinema Professionals, https://www.pexels.com/pt-br/video/assistindo-a-aguia-voar-3635378/">
@@ -58,7 +58,7 @@ window.onload = async function()
         const transformedMedia = await media.run(pipeline);
         transformedMedia.draw(canvas);
         renderStatus(canvas);
-        requestAnimationFrame(render);
+        setTimeout(render, 1000 / 60);
     }
     render();
 }
