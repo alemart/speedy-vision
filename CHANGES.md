@@ -1,5 +1,13 @@
 # Release notes
 
+## 0.6.0 - May 20th, 2021
+
+* Introduced efficient methods for homography estimation
+* Matrix computations can now be performed in a WebWorker or in the main thread
+* Introduced `SpeedyMatrixExpr.sort()` to sort blocks of matrices
+* Introduced median filter in the pipeline API
+* Improvements to the code
+
 ## 0.5.1 - April 5th, 2021
 
 * Matrix expressions are now compiled for better performance
