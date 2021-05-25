@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@
 import { GLUtils } from './gl-utils.js';
 import { SpeedyTexture } from './speedy-texture';
 import { SpeedyPromise } from '../utils/speedy-promise';
+import { ShaderDeclaration } from './shader-declaration';
 import { Utils } from '../utils/utils';
 import { NotSupportedError, IllegalArgumentError, IllegalOperationError } from '../utils/errors';
 
@@ -48,6 +49,9 @@ const UNIFORM_SETTERS = Object.freeze({
     'bvec2':    'uniform2i',
     'bvec3':    'uniform3i',
     'bvec4':    'uniform4i',
+    'mat2':     'uniformMatrix2fv',
+    'mat3':     'uniformMatrix3fv',
+    'mat4':     'uniformMatrix4fv',
 });
 
 // number of pixel buffer objects
@@ -561,7 +565,7 @@ export class SpeedyProgram extends Function
     /**
      * Set the value of a uniform variable
      * @param {ProgramUniform} uniform
-     * @param {SpeedyTexture|number|number[]|boolean|boolean[]} value
+     * @param {SpeedyTexture|number|boolean|number[]|boolean[]} value use column-major format for matrices
      * @param {number} texNo current texture index
      * @returns {number} new texture index
      */
@@ -583,15 +587,23 @@ export class SpeedyProgram extends Function
             gl.uniform1i(uniform.location, texNo);
             texNo++;
         }
-        else {
-            // set value
-            if(typeof value == 'number' || typeof value == 'boolean')
-                (gl[uniform.setter])(uniform.location, value);
-            else if(Array.isArray(value) && value.length === uniform.length)
-                (gl[uniform.setter])(uniform.location, ...value);
-            else
-                throw new IllegalArgumentError(`Can't run shader: unrecognized argument "${value}"`);
+        else if(typeof value == 'number' || typeof value == 'boolean') {
+            // set scalar value
+            (gl[uniform.setter])(uniform.location, value);
         }
+        else if(Array.isArray(value)) {
+            // set vector or matrix
+            if(value.length === uniform.length) {
+                if(uniform.dim == 2)
+                    (gl[uniform.setter])(uniform.location, false, value); // matrix
+                else
+                    (gl[uniform.setter])(uniform.location, ...value); // vector
+            }
+            else
+                throw new IllegalArgumentError(`Can't run shader: incorrect number of values for ${uniform.type}: "${value}"`);
+        }
+        else
+            throw new IllegalArgumentError(`Can't run shader: unrecognized argument "${value}"`);
 
         return texNo;
     }
@@ -750,8 +762,12 @@ function ProgramUniform(type, location)
     /** @type {string} setter function */
     this.setter = UNIFORM_SETTERS[this.type];
 
-    /** @type {number} vector size */
-    this.length = ((this.setter.match(/^uniform(\d)/))[1]) | 0;
+    /** @type {number} is the uniform a scalar (0), a vector (1) or a matrix (2)? */
+    this.dim = this.type.startsWith('mat') ? 2 : ((this.type.indexOf('vec') >= 0) | 0);
+
+    /** @type {number} required number of scalars */
+    const n = Number((this.setter.match(/^uniform(Matrix)?(\d)/))[2]) | 0;
+    this.length = (this.dim == 2) ? n * n : n;
 
     // done!
     return Object.freeze(this);

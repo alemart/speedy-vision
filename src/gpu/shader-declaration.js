@@ -51,7 +51,7 @@ uniform vec2 texSize;
 /**
  * Shader Declaration
  */
-class ShaderDeclaration
+export class ShaderDeclaration
 {
     /**
      * @private Constructor
