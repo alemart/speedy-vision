@@ -27,10 +27,11 @@ import { Utils } from '../../../utils/utils';
 import { PYRAMID_MAX_LEVELS } from '../../../utils/globals';
 
 // constants
+const SQRT_2 = 1.4142135623730951;
 const DEFAULT_FAST_VARIANT = 9;
 const DEFAULT_FAST_THRESHOLD = 20;
 const DEFAULT_DEPTH = 4;
-const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // scale factor between consecutive pyramid layers (sqrt(2))
+const DEFAULT_SCALE_FACTOR = SQRT_2; // scale factor between consecutive pyramid layers
 
 
 
@@ -45,7 +46,11 @@ export class FASTFeatures extends FeatureDetectionAlgorithm
     constructor()
     {
         super();
+
+        /** @type {number} FAST variant */
         this._n = DEFAULT_FAST_VARIANT;
+
+        /** @type {number} FAST threshold in [0,255] */
         this._threshold = DEFAULT_FAST_THRESHOLD;
     }
 
@@ -139,9 +144,17 @@ export class MultiscaleFASTFeatures extends FeatureDetectionAlgorithm
     constructor()
     {
         super();
+
+        /** @type {number} FAST variant */
         this._n = DEFAULT_FAST_VARIANT;
+
+        /** @type {number} FAST threshold in [0,255] */
         this._threshold = DEFAULT_FAST_THRESHOLD;
+
+        /** @type {number} how many pyramid levels we'll scan */
         this._depth = DEFAULT_DEPTH;
+
+        /** @type {number} scale factor between consecutive pyramid levels */
         this._scaleFactor = DEFAULT_SCALE_FACTOR;
     }
 
