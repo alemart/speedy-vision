@@ -106,8 +106,9 @@ Try the demos and take a look at their source code:
 * Feature tracking
   * [Optical flow](https://alemart.github.io/speedy-vision-js/demos/optical-flow.html)
 * Image processing
+  * [Image convolution](https://alemart.github.io/speedy-vision-js/demos/convolution.html)
+  * [Image warping](https://alemart.github.io/speedy-vision-js/demos/warping.html)
   * [Nightvision camera](https://alemart.github.io/speedy-vision-js/demos/nightvision-camera.html)
-  * [Cool effects with image convolutions](https://alemart.github.io/speedy-vision-js/demos/convolution.html)
   * [Convert image to greyscale](https://alemart.github.io/speedy-vision-js/demos/greyscale-image.html)
   * [Convert video to greyscale](https://alemart.github.io/speedy-vision-js/demos/greyscale-video.html)
   * [Blurring an image](https://alemart.github.io/speedy-vision-js/demos/image-blurring.html)
@@ -819,6 +820,16 @@ Nightvision enhances the illumination of the scene. It improves local contrast a
 * `offset: number`. A value used to adjust the brightness, typically between `0` and `1`.
 * `decay: number`. A value between `0` (no decay, default) and `1` (full decay) that modifies the gain from the center of the image to its corners. Used to get high contrast at the center and low contrast at the corners. Defaults to `0`.
 * `quality: string`. One of the following: `"high"`, `"medium"`, `"low"`. Defaults to `"medium"`.
+
+##### Geometric transformations
+
+`SpeedyPipeline.warpPerspective(options?: PipelineOperationOptions): SpeedyPipeline`
+
+Warp the image according to a perspective matrix. Available options:
+
+* `homography: number[]`. A 3x3 homography matrix in column-major format.
+
+
 
 ### Maths
 
