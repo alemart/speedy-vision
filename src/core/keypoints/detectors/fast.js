@@ -251,7 +251,7 @@ export class MultiscaleFASTFeatures extends FeatureDetectionAlgorithm
         const encoderLength = this.encoderLength;
 
         // generate pyramid
-        const pyramid = inputTexture.generatePyramid(gpu);
+        const pyramid = inputTexture.generateMipmaps(gpu);
 
         // find corners
         const corners = gpu.programs.keypoints.multiscaleFast(pyramid, normalizedThreshold, numberOfLayers, lodStep);

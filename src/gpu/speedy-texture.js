@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,16 +32,25 @@ export class SpeedyTexture
 {
     /**
      * Creates a new texture with the specified dimensions
-     * @param {WebGL2RenderingContext} gl 
-     * @param {number} width 
-     * @param {number} height 
+     * @param {WebGL2RenderingContext} gl
+     * @param {number} width
+     * @param {number} height
      */
     constructor(gl, width, height)
     {
+        /** @type {WebGL2RenderingContext} */
         this._gl = gl;
+
+        /** @type {number} width of the texture */
         this._width = Math.max(1, width | 0);
+
+        /** @type {number} height of the texture */
         this._height = Math.max(1, height | 0);
+
+        /** @type {WebGLTexture} internal texture object */
         this._glTexture = GLUtils.createTexture(this._gl, this._width, this._height);
+
+        /** @type {boolean} have we generated mipmaps for this texture? */
         this._hasMipmaps = false;
     }
 
@@ -80,7 +89,7 @@ export class SpeedyTexture
      * @param {boolean} [gaussian] should we compute a Gaussian pyramid? Recommended!
      * @returns {SpeedyTexture} this
      */
-    generatePyramid(gpu, gaussian = true)
+    generateMipmaps(gpu, gaussian = true)
     {
         // nothing to do
         if(this._hasMipmaps)
@@ -112,11 +121,20 @@ export class SpeedyTexture
     }
 
     /**
-     * Invalidates previously generated pyramid (if any)
+     * Invalidates previously generated mipmaps, if any
      */
-    discardPyramid()
+    discardMipmaps()
     {
         this._hasMipmaps = false;
+    }
+
+    /**
+     * Does this texture have mipmaps?
+     * @returns {boolean}
+     */
+    get hasMipmaps()
+    {
+        return this._hasMipmaps;
     }
 
     /**

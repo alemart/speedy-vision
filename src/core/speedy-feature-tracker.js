@@ -150,7 +150,7 @@ export class SpeedyFeatureTracker
             throw new IllegalOperationError(`The media has been released`);
 
         // upload the media
-        const nextImage = gpu.upload(media.source);
+        const nextImage = gpu.upload(media.source, media.width, media.height);
         if(nextImage == null)
             throw new IllegalOperationError(`Tracking error: can't upload image to the GPU ${media.source}`);
 

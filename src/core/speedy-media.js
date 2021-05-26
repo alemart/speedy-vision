@@ -253,7 +253,7 @@ export class SpeedyMedia
         // create a lightweight clone
         return this.clone({ lightweight: true }).then(media => {
             // upload the media to the GPU
-            const texture = media._gpu.upload(media._source.data);
+            const texture = media._gpu.upload(media._source.data, media.width, media.height);
 
             // run the pipeline
             return pipeline._run(texture, media._gpu, media).turbocharge().then(texture => {

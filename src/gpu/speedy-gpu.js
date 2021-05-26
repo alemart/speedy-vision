@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,22 +42,37 @@ export class SpeedyGPU
      */
     constructor(width, height)
     {
-        // initialize properties
+        /** @type {WebGL2RenderingContext?} */
         this._gl = null;
+
+        /** @type {number} width of the canvas */
+        this._width = Math.max(1, width | 0);
+
+        /** @type {number} height of the canvas */
+        this._height = Math.max(1, height | 0);
+
+        /** @type {HTMLCanvasElement?} */
         this._canvas = null;
-        this._width = 0;
-        this._height = 0;
+
+        /** @type {SpeedyProgramCenter?} */
         this._programs = null;
-        this._inputTexture = null;
+
+        /** @type {SpeedyTexture[]} upload buffer */
+        this._inputTexture = [];
+
+        /** @type {number} */
         this._inputTextureIndex = 0;
+
+        /** @type {boolean} */
         this._omitGLContextWarning = false;
 
+
+
         // does the browser support WebGL2?
-        checkWebGL2Availability();
+        if(typeof WebGL2RenderingContext === 'undefined')
+            throw new NotSupportedError('WebGL2 is required by this application, but it\'s not available in your browser. Please use a different browser.');
 
         // read & validate texture size
-        this._width = Math.max(1, width | 0);
-        this._height = Math.max(1, height | 0);
         if(this._width > MAX_TEXTURE_LENGTH || this._height > MAX_TEXTURE_LENGTH) {
             Utils.warning(`Maximum texture size exceeded (using ${this._width} x ${this._height}).`);
             this._width = Math.min(this._width, MAX_TEXTURE_LENGTH);
@@ -65,7 +80,7 @@ export class SpeedyGPU
         }
 
         // setup WebGL
-        this._setupWebGL();
+        this._setupWebGL(this._width, this._height);
     }
 
     /**
@@ -98,44 +113,37 @@ export class SpeedyGPU
 
     /**
      * Upload data to the GPU
-     * We reuse textures by means of an internal buffer of size UPLOAD_BUFFER_SIZE
+     * We reuse textures by means of an internal buffer
      * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} data 
-     * @param {number} [width]
-     * @param {number} [height] 
+     * @param {number} width
+     * @param {number} height
      * @returns {SpeedyTexture}
      */
-    upload(data, width = -1, height = -1)
+    upload(data, width, height)
     {
         const gl = this._gl;
 
         // lost GL context?
         if(gl.isContextLost()) {
             Utils.warning(`Can't upload texture without a WebGL context`);
-            return (this._inputTexture = null);
+            return (this._inputTexture.length = 0);
         }
-
-        // default values
-        if(width < 0)
-            width = gl.canvas.width;
-        if(height < 0)
-            height = gl.canvas.height;
 
         // invalid dimensions?
         if(width == 0 || height == 0)
-            throw new IllegalArgumentError(`Can't upload an image of area 0`);
+            throw new IllegalArgumentError(`Can't upload a texture of area 0`);
 
         // create (or recreate) internal textures
-        if(this._inputTexture === null) {
+        if(this._inputTexture.length == 0) {
             gl.canvas.width = Math.max(gl.canvas.width, width);
             gl.canvas.height = Math.max(gl.canvas.height, height);
-            this._inputTexture = Array(UPLOAD_BUFFER_SIZE).fill(null).map(_ =>
+            this._inputTexture = Array.from({ length: UPLOAD_BUFFER_SIZE }, () =>
                 new SpeedyTexture(gl, gl.canvas.width, gl.canvas.height));
         }
         else if(width > gl.canvas.width || height > gl.canvas.height) {
-            Utils.log(`Resizing input texture to ${width} x ${height}`);
-            this._inputTexture.forEach(inputTexture =>
-                inputTexture.release());
-            this._inputTexture = null;
+            Utils.warning(`Resizing WebGL canvas to ${width} x ${height}`);
+            this._inputTexture.forEach(inputTexture => inputTexture.release());
+            this._inputTexture.length = 0;
             return this.upload(data, width, height);
         }
 
@@ -219,22 +227,22 @@ export class SpeedyGPU
         return this.loseAndRestoreWebGLContext(Infinity);
     }
 
-    // setup WebGL
-    _setupWebGL()
+    /**
+     * Setup WebGL
+     * @param {number} width
+     * @param {number} height
+     */
+    _setupWebGL(width, height)
     {
-        const width = this._width;
-        const height = this._height;
-
         // initializing
-        this._programs = null;
-        this._inputTexture = null;
+        this._width = width;
+        this._height = height;
         this._inputTextureIndex = 0;
+        this._inputTexture.length = 0;
         this._omitGLContextWarning = false;
-        if(this._canvas !== undefined)
-            delete this._canvas;
 
         // create canvas
-        this._canvas = createCanvas(width, height);
+        this._canvas = Utils.createCanvas(this._width, this._height);
         this._canvas.addEventListener('webglcontextlost', ev => {
             if(!this._omitGLContextWarning)
                 Utils.warning('Lost WebGL context');
@@ -243,17 +251,41 @@ export class SpeedyGPU
         this._canvas.addEventListener('webglcontextrestored', ev => {
             if(!this._omitGLContextWarning)
                 Utils.warning('Restoring WebGL context...');
-            this._setupWebGL();
+            this._setupWebGL(this._width, this._height);
         }, false);
 
         // create WebGL context
-        this._gl = createWebGLContext(this._canvas);
+        this._gl = this._createWebGLContext(this._canvas);
 
         // spawn program groups
-        this._programs = new SpeedyProgramCenter(this, width, height);
+        this._programs = new SpeedyProgramCenter(this, this._width, this._height);
+    }
+
+    /**
+     * Create a WebGL2 context
+     * @param {HTMLCanvasElement} canvas
+     * @returns {WebGL2RenderingContext}
+     */
+    _createWebGLContext(canvas)
+    {
+        const gl = canvas.getContext('webgl2', {
+            premultipliedAlpha: false,
+            preserveDrawingBuffer: false,
+            //preferLowPowerToHighPerformance: false, // TODO user option?
+            alpha: true,
+            antialias: false,
+            depth: false,
+            stencil: false,
+        });
+
+        if(!gl)
+            throw new NotSupportedError('Can\'t create WebGL2 context. Try in a different browser.');
+
+        return gl;
     }
 }
 
+/*
 // Create a canvas
 function createCanvas(width, height)
 {
@@ -268,29 +300,4 @@ function createCanvas(width, height)
 
     return Utils.createCanvas(width, height);
 }
-
-// Checks if the browser supports WebGL2
-function checkWebGL2Availability()
-{
-    if(typeof WebGL2RenderingContext === 'undefined')
-        throw new NotSupportedError('WebGL2 is required by this application, but it\'s not available in your browser. Please use a different browser.');
-}
-
-// Create a WebGL2 context
-function createWebGLContext(canvas)
-{
-    const gl = canvas.getContext('webgl2', {
-        premultipliedAlpha: false,
-        preserveDrawingBuffer: false,
-        //preferLowPowerToHighPerformance: false, // TODO user option?
-        alpha: true,
-        antialias: false,
-        depth: false,
-        stencil: false,
-    });
-
-    if(!gl)
-        throw new NotSupportedError('Can\'t create WebGL2 context. Try in a different browser.');
-
-    return gl;
-}
+*/

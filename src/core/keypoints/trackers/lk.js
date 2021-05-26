@@ -165,8 +165,8 @@ export class LKFeatureTrackingAlgorithm extends FeatureTrackingAlgorithm
         const epsilon = this.epsilon;
 
         // create pyramids
-        const nextPyramid = nextImage.generatePyramid(gpu);
-        const prevPyramid = prevImage.generatePyramid(gpu);
+        const nextPyramid = nextImage.generateMipmaps(gpu);
+        const prevPyramid = prevImage.generateMipmaps(gpu);
 
         // track feature points
         return gpu.programs.trackers.lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, depth, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);

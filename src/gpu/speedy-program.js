@@ -263,7 +263,7 @@ export class SpeedyProgram extends Function
             const texture = this._texture[this._textureIndex];
 
             // we've just changed the contents of the internal texture
-            texture.discardPyramid(); // discard its pyramid
+            texture.discardMipmaps(); // discard its pyramid
 
             // should we return the internal texture?
             let outputTexture = texture;
