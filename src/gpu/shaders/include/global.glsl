@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,12 +37,6 @@
  * @returns {ivec2}
  */
 #define outputSize() ivec2(texSize)
-
-/**
- * Debug macro
- * @param {float} scalar in [0,1]
- */
-#define DEBUG(scalar) do { color = vec4(float(scalar), 0.0f, 0.0f, 1.0f); return; } while(false)
 
 
 
@@ -82,13 +76,5 @@
  * @returns {vec4} pixel data
  */
 #define pixelAtLongOffset(img, offset) textureLod((img), texCoord + vec2(offset) / texSize, 0.0f)
-
-/**
- * Subpixel access in texel space
- * @param {sampler2D} img
- * @param {vec2} pos
- * @returns {vec4} pixel data
- */
-#define subpixelAt(img, pos) textureLod((img), ((pos) + vec2(0.5f)) / texSize, 0.0f)
 
 #endif
