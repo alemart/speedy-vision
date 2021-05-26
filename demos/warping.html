@@ -1,0 +1,345 @@
+<!--
+  speedy-vision.js
+  GPU-accelerated Computer Vision for JavaScript
+  Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  warping.html
+  Image warping demo
+-->
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
+        <meta name="author" content="Alexandre Martins">
+        <title>Image warping</title>
+        <script src="../dist/speedy-vision.js"></script>
+        <link href="style.css" rel="stylesheet">
+    </head>
+    <body>
+        <h1>Image warping</h1>
+        <form>
+            <div>
+                Select the
+                <select id="template"></select>
+                template, drag the circles or edit the homography matrix below:
+            </div>
+            <div class="separator"></div>
+            <div>
+                <table>
+                    <tr>
+                        <td><input type="number" step="0.1" id="homography-0" value="1"></td>
+                        <td><input type="number" step="0.1" id="homography-3" value="0"></td>
+                        <td><input type="number" step="0.1" id="homography-6" value="0"></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" step="0.1" id="homography-1" value="0"></td>
+                        <td><input type="number" step="0.1" id="homography-4" value="1"></td>
+                        <td><input type="number" step="0.1" id="homography-7" value="0"></td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" step="0.1" id="homography-2" value="0"></td>
+                        <td><input type="number" step="0.1" id="homography-5" value="0"></td>
+                        <td><input type="number" step="0.1" id="homography-8" value="1"></td>
+                    </tr>
+                </table>
+            </div>
+        </form>
+        <div>
+            <canvas id="canvas-demo"></canvas>
+        </div>
+        <div>
+            <button id="play">Play / pause</button>
+        </div>
+        <video
+            src="../assets/flying-eagle.mp4"
+            poster="../assets/loading.jpg"
+            preload="auto"
+            loop muted hidden
+            title="Free video by Cinema Professionals, https://www.pexels.com/pt-br/video/assistindo-a-aguia-voar-3635378/">
+        </video>
+        <script>
+const VERTEX_RADIUS = 5;
+const vertices = [
+    { x: 0, y: 0, drag: false },
+    { x: 0, y: 0, drag: false },
+    { x: 0, y: 0, drag: false },
+    { x: 0, y: 0, drag: false }
+];
+const mouse = { x: 0, y: 0, drag: false };
+const template = {
+    // matrices are specified in column-major format
+
+    "Identity":
+    [
+        1, 0, 0, // 1st column
+        0, 1, 0, // 2nd column
+        0, 0, 1, // 3rd column
+    ],
+
+    "Flip":
+    [
+        -1, 0, 0,
+        0, 1, 0,
+        639, 0, 1,
+    ],
+
+    "Scale":
+    [
+        0.5, 0, 0,
+        0, 0.5, 0,
+        0, 0, 1,
+    ],
+
+    "Translation":
+    [
+        0.5, 0, 0,
+        0, 0.5, 0,
+        200, 100, 1,
+    ],
+
+    "Rotation":
+    [
+        0.86, 0.5, 0,
+        -0.5, 0.86, 0,
+        400, 50, 2,
+    ],
+
+    "Shear":
+    [
+        0.5, 0, 0,
+        -0.5, 0.5, 0,
+        250, 100, 1,
+    ],
+
+    "Perspective":
+    [
+        0.2, 0, 0,
+        -0.5, -0.15, -0.0015,
+        280, 180, 1,
+    ],
+};
+
+window.onload = async function()
+{
+    // tell Speedy to load the video
+    const video = document.querySelector('video');
+    const media = await Speedy.load(video);
+    video.play();
+
+    // create a canvas
+    const canvas = createCanvas(media.width, media.height, video.title);
+    const context = canvas.getContext('2d');
+
+    // input fields
+    const homographyElement = [...(new Array(9)).keys()].map(k => document.getElementById('homography-' + k));
+
+    // setup the <select> element
+    const templateSelector = document.getElementById('template');
+    for(let templateName in template) {
+        const option = document.createElement('option');
+        const text = document.createTextNode(templateName);
+        option.value = templateName;
+        option.selected = (option.value == 'Identity');
+        option.appendChild(text);
+        templateSelector.appendChild(option);
+    }
+    templateSelector.onchange = () => {
+        const name = templateSelector.value;
+        homographyElement.forEach((inputField, i) => inputField.value = template[name][i]);
+        syncVertices();
+    };
+
+    // sync the vertices
+    async function syncVertices()
+    {
+        const homography = Speedy.Matrix(3, 3, homographyElement.map(k => +k.value));
+        const src = Speedy.Matrix(2, 4, [
+            0, 0,
+            canvas.width, 0,
+            canvas.width, canvas.height,
+            0, canvas.height
+        ])
+        const dst = await Speedy.Matrix.evaluate(
+            Speedy.Matrix.transform(homography, src)
+        );
+        const newVertices = await Speedy.Matrix.toPoints(dst);
+        for(let i = 0; i < newVertices.length; i++) {
+            vertices[i].x = newVertices[i].x;
+            vertices[i].y = newVertices[i].y;
+        }
+    }
+    homographyElement.map(el => el.oninput = syncVertices);
+    syncVertices(); // initialize vertices
+
+    // update logic
+    let pipeline = Speedy.pipeline();
+    async function update()
+    {
+        // drag the vertices
+        const r2 = VERTEX_RADIUS * VERTEX_RADIUS;
+        let anydrag = vertices.reduce((d, v) => d || v.drag, false);
+        let anyhover = false;
+        for(const vertex of vertices) {
+            const dx = mouse.x - vertex.x;
+            const dy = mouse.y - vertex.y;
+            const nearby = (dx * dx + dy * dy <= r2);
+
+            if(!anydrag && mouse.drag && nearby)
+                anydrag = vertex.drag = true;
+            anyhover = anyhover || nearby;
+
+            if(vertex.drag) {
+                if((vertex.drag = mouse.drag)) {
+                    vertex.x = mouse.x;
+                    vertex.y = mouse.y;
+                }
+            }
+        }
+        canvas.style.cursor = anydrag || anyhover ? 'pointer' : 'auto';
+
+        // if we're dragging the vertices,
+        // compute a new homography
+        if(anydrag) {
+            const src = Speedy.Matrix(2, 4, [
+                0, 0,
+                canvas.width, 0,
+                canvas.width, canvas.height,
+                0, canvas.height
+            ]);
+            const dst = Speedy.Matrix.fromPoints(
+                vertices.map(v => Speedy.Point2(v.x, v.y))
+            );
+            const homography = await Speedy.Matrix.evaluate(
+                Speedy.Matrix.Perspective(src, dst)
+            );
+            const entries = await homography.read();
+            for(let i = 0; i < entries.length; i++)
+                homographyElement[i].value = entries[i];
+        }
+
+        // update the pipeline
+        const homography = homographyElement.map(k => +k.value);
+        pipeline.release(); // cleanup memory
+        pipeline = Speedy.pipeline()
+                         .warpPerspective({ homography });
+
+        // cycle
+        setTimeout(update, 1000 / 60);
+    }
+    update();
+
+    // render video
+    async function render()
+    {
+        // perspective warp
+        const transformedMedia = await media.run(pipeline);
+        transformedMedia.draw(canvas);
+
+        // render the vertices
+        const TWO_PI = Math.PI * 2;
+        context.beginPath();
+        for(const vertex of vertices) {
+            context.moveTo(vertex.x + VERTEX_RADIUS, vertex.y);
+            context.arc(vertex.x, vertex.y, VERTEX_RADIUS, 0, TWO_PI);
+        }
+        context.fillStyle = '#ff0';
+        context.strokeStyle = '#f00';
+        context.lineWidth = 2;
+        context.fill();
+        context.stroke();
+
+        // render the status
+        renderStatus(canvas);
+        requestAnimationFrame(render);
+    }
+    render();
+
+    // play/pause
+    const playButton = document.getElementById('play');
+    playButton.onclick = () => video.paused ? video.play() : video.pause();
+}
+
+function createCanvas(width, height, title)
+{
+    const canvas = document.getElementById('canvas-demo') || document.createElement('canvas');
+
+    canvas.width = width;
+    canvas.height = height;
+    canvas.title = title;
+
+    if(!document.body.contains(canvas))
+        document.body.appendChild(canvas);
+
+    canvas.addEventListener('mousedown', ev => {
+        const position = cursorPosition(canvas, ev);
+        mousedrag(position.x, position.y, width, height, true);
+    });
+
+    canvas.addEventListener('mouseup', ev => {
+        const position = cursorPosition(canvas, ev);
+        mousedrag(position.x, position.y, width, height, false);
+    });
+
+    canvas.addEventListener('mousemove', ev => {
+        const position = cursorPosition(canvas, ev);
+        mousedrag(position.x, position.y, width, height);
+    });
+
+    return canvas;
+}
+
+function renderStatus(canvas, color = 'white', size = 18)
+{
+    const context = canvas.getContext('2d');
+
+    context.font = `bold ${size}px sans-serif`;
+    context.fillStyle = color;
+    context.textBaseline = 'top';
+
+    context.shadowOffsetX = 2;
+    context.shadowOffsetY = 2;
+    context.shadowBlur = 2;
+    context.shadowColor = 'rgba(0, 0, 0, 0.5)';
+
+    context.fillText(`FPS: ${Speedy.fps}`, 8, 8);
+
+    context.shadowColor = 'rgba(0, 0, 0, 0)';
+}
+
+function cursorPosition(canvas, event)
+{
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    return { x, y };
+}
+
+function mousedrag(x, y, width, height, drag)
+{
+    if(drag !== undefined)
+        mouse.drag = drag;
+
+    if(x >= 0 && x < width)
+        mouse.x = x;
+
+    if(y >= 0 && y < height)
+        mouse.y = y;
+}
+        </script>
+        <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>
+    </body>
+</html>
