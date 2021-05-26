@@ -212,7 +212,7 @@ export class SpeedyProgram extends Function
 
         // matching arguments?
         if(args.length != argnames.length)
-            throw new IllegalArgumentError(`Can't run shader: incorrect number of arguments`);
+            throw new IllegalArgumentError(`Can't run shader: incorrect number of arguments (expected ${argnames.length}, got ${args.length})`);
 
         // skip things
         if(gl.isContextLost())

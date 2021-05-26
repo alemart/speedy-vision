@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import { GPUEncoders } from './programs/encoders';
 import { GPUPyramids } from './programs/pyramids';
 import { GPUEnhancements } from './programs/enhancements';
 import { GPUTrackers } from './programs/trackers';
+import { GPUTransforms } from './programs/transforms';
 import { IllegalArgumentError } from '../utils/errors';
 import { PYRAMID_MAX_LEVELS } from '../utils/globals';
 
@@ -59,6 +60,7 @@ export class SpeedyProgramCenter
         this._descriptors = null;
         this._enhancements = null;
         this._trackers = null;
+        this._transforms = null;
         this._pyramids = (new Array(PYRAMID_MAX_LEVELS)).fill(null);
     }
 
@@ -141,6 +143,15 @@ export class SpeedyProgramCenter
     get enhancements()
     {
         return this._enhancements || (this._enhancements = new GPUEnhancements(this._gpu, this._width, this._height));
+    }
+
+    /**
+     * Geometric transformations
+     * @returns {GPUTransforms}
+     */
+    get transforms()
+    {
+        return this._transforms || (this._transforms = new GPUTransforms(this._gpu, this._width, this._height));
     }
 
     /**

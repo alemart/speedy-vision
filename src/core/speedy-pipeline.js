@@ -203,4 +203,21 @@ export class SpeedyPipeline
             new PipelineOperation.Nightvision(options)
         );
     }
+
+
+    // =====================================================
+    //             GEOMETRIC TRANSFORMATIONS
+    // =====================================================
+
+    /**
+     * Dense perspective transform
+     * @param {PipelineOperationOptions} [options]
+     * @returns {SpeedyPipeline}
+     */
+    warpPerspective(options = {})
+    {
+        return this._spawn(
+            new PipelineOperation.WarpPerspective(options)
+        );
+    }
 }

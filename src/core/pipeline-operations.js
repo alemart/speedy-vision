@@ -394,3 +394,50 @@ PipelineOperation.Nightvision = class extends SpeedyPipelineOperation
         return SpeedyPromise.resolve(output);
     }
 }
+
+
+
+
+// =====================================================
+// GEOMETRIC TRANSFORMATIONS
+// =====================================================
+
+/**
+ * Dense perspective transform
+ */
+PipelineOperation.WarpPerspective = class extends SpeedyPipelineOperation
+{
+    /**
+     * Constructor
+     * @param {PipelineOperationOptions} [options]
+     */
+    constructor(options = {})
+    {
+        super();
+
+        // save options
+        this._saveOptions(options, {
+            homography: [ 1, 0, 0, 0, 1, 0, 0, 0, 1 ] // identity matrix
+        });
+    }
+
+    /**
+     * Run the pipeline operation
+     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyMedia} [media]
+     * @returns {SpeedyPromise<SpeedyTexture>}
+     */
+    run(texture, gpu, media)
+    {
+        const { homography } = this._loadOptions();
+
+        // validate options
+        if(!(Array.isArray(homography) && homography.length == 9))
+            throw new IllegalArgumentError(`Invalid homography: ${homography}`);
+
+        // transform
+        const output = gpu.programs.transforms.warpPerspective(texture, homography);
+        return SpeedyPromise.resolve(output);
+    }
+}
