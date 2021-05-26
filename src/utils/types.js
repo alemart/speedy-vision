@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,10 @@
 
 import { Utils } from './utils';
 
+/**
+ * Media types
+ * @enum {MediaType}
+ */
 export const MediaType = Utils.enum(
     'Image',
     'Video',
@@ -28,12 +32,19 @@ export const MediaType = Utils.enum(
     'Bitmap'
 );
 
+/**
+ * Color formats
+ * @enum {ColorFormat}
+ */
 export const ColorFormat = Utils.enum(
     'RGB',
     'Greyscale',
     'Binary'
 );
 
+/**
+ * Pixel component (bitwise flags)
+ */
 export const PixelComponent = Object.freeze({
     RED:   1,
     GREEN: 2,
@@ -42,6 +53,9 @@ export const PixelComponent = Object.freeze({
     ALL:   15 // = RED | GREEN | BLUE | ALPHA
 });
 
+/**
+ * Component ID utility
+ */
 export const ColorComponentId = Object.freeze({
     [PixelComponent.RED]:   0,
     [PixelComponent.GREEN]: 1,
