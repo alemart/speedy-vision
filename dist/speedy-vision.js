@@ -1,12 +1,12 @@
 /*!
- * speedy-vision.js v0.6.0
+ * speedy-vision.js v0.6.1-wip
  * GPU-accelerated Computer Vision for JavaScript
  * https://github.com/alemart/speedy-vision-js
  * 
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-05-21T02:23:50.427Z
+ * Date: 2021-05-26T00:21:09.309Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -459,10 +459,11 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // constants
+const SQRT_2 = 1.4142135623730951;
 const DEFAULT_FAST_VARIANT = 9;
 const DEFAULT_FAST_THRESHOLD = 20;
 const DEFAULT_DEPTH = 4;
-const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // scale factor between consecutive pyramid layers (sqrt(2))
+const DEFAULT_SCALE_FACTOR = SQRT_2; // scale factor between consecutive pyramid layers
 
 
 
@@ -477,7 +478,11 @@ class FASTFeatures extends _feature_detection_algorithm__WEBPACK_IMPORTED_MODULE
     constructor()
     {
         super();
+
+        /** @type {number} FAST variant */
         this._n = DEFAULT_FAST_VARIANT;
+
+        /** @type {number} FAST threshold in [0,255] */
         this._threshold = DEFAULT_FAST_THRESHOLD;
     }
 
@@ -571,9 +576,17 @@ class MultiscaleFASTFeatures extends _feature_detection_algorithm__WEBPACK_IMPOR
     constructor()
     {
         super();
+
+        /** @type {number} FAST variant */
         this._n = DEFAULT_FAST_VARIANT;
+
+        /** @type {number} FAST threshold in [0,255] */
         this._threshold = DEFAULT_FAST_THRESHOLD;
+
+        /** @type {number} how many pyramid levels we'll scan */
         this._depth = DEFAULT_DEPTH;
+
+        /** @type {number} scale factor between consecutive pyramid levels */
         this._scaleFactor = DEFAULT_SCALE_FACTOR;
     }
 
@@ -10625,6 +10638,53 @@ PipelineOperation.Nightvision = class extends SpeedyPipelineOperation
     }
 }
 
+
+
+
+// =====================================================
+// GEOMETRIC TRANSFORMATIONS
+// =====================================================
+
+/**
+ * Dense perspective transform
+ */
+PipelineOperation.WarpPerspective = class extends SpeedyPipelineOperation
+{
+    /**
+     * Constructor
+     * @param {PipelineOperationOptions} [options]
+     */
+    constructor(options = {})
+    {
+        super();
+
+        // save options
+        this._saveOptions(options, {
+            homography: [ 1, 0, 0, 0, 1, 0, 0, 0, 1 ] // identity matrix
+        });
+    }
+
+    /**
+     * Run the pipeline operation
+     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyMedia} [media]
+     * @returns {SpeedyPromise<SpeedyTexture>}
+     */
+    run(texture, gpu, media)
+    {
+        const { homography } = this._loadOptions();
+
+        // validate options
+        if(!(Array.isArray(homography) && homography.length == 9))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Invalid homography: ${homography}`);
+
+        // transform
+        const output = gpu.programs.transforms.warpPerspective(texture, homography);
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(output);
+    }
+}
+
 /***/ }),
 
 /***/ "./src/core/speedy-descriptor.js":
@@ -13162,6 +13222,23 @@ class SpeedyPipeline
             new _pipeline_operations__WEBPACK_IMPORTED_MODULE_0__["PipelineOperation"].Nightvision(options)
         );
     }
+
+
+    // =====================================================
+    //             GEOMETRIC TRANSFORMATIONS
+    // =====================================================
+
+    /**
+     * Dense perspective transform
+     * @param {PipelineOperationOptions} [options]
+     * @returns {SpeedyPipeline}
+     */
+    warpPerspective(options = {})
+    {
+        return this._spawn(
+            new _pipeline_operations__WEBPACK_IMPORTED_MODULE_0__["PipelineOperation"].WarpPerspective(options)
+        );
+    }
 }
 
 /***/ }),
@@ -13271,7 +13348,7 @@ class Speedy
      */
     static get version()
     {
-        return "0.6.0";
+        return "0.6.1-wip";
     }
 
     /**
@@ -15269,6 +15346,144 @@ class GPUTrackers extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
 
 /***/ }),
 
+/***/ "./src/gpu/programs/transforms.js":
+/*!****************************************!*\
+  !*** ./src/gpu/programs/transforms.js ***!
+  \****************************************/
+/*! exports provided: GPUTransforms */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUTransforms", function() { return GPUTransforms; });
+/* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-program-group */ "./src/gpu/speedy-program-group.js");
+/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * transforms.js
+ * Geometric transformations
+ */
+
+
+
+
+
+
+
+//
+// Shaders
+//
+
+// Perspective warp
+const warpPerspective = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('transforms/warp-perspective.glsl').withArguments('image', 'inverseHomography');
+
+
+
+
+/**
+ * GPUTransforms
+ * Geometric transformations
+ */
+class GPUTransforms extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["SpeedyProgramGroup"]
+{
+    /**
+     * Class constructor
+     * @param {SpeedyGPU} gpu
+     * @param {number} width
+     * @param {number} height
+     */
+    constructor(gpu, width, height)
+    {
+        super(gpu, width, height);
+        this
+            .declare('_warpPerspective', warpPerspective)
+        ;
+    }
+
+    /**
+     * Dense perspective transform
+     * @param {SpeedyTexture} image
+     * @param {number[]} homography 3x3 homography matrix in column-major format
+     * @returns {SpeedyTexture}
+     */
+    warpPerspective(image, homography)
+    {
+        if(!(Array.isArray(homography) && homography.length == 9))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Not a homography: ${homography}`);
+
+        const inverseHomography = this._inverse3(homography);
+        if(!Number.isNaN(inverseHomography[0]))
+            return this._warpPerspective(image, inverseHomography);
+        else
+            return this._warpPerspective(image, [0,0,0,0,0,0,0,0,1]); // singular matrix
+    }
+
+    /**
+     * Compute the inverse of a 3x3 matrix
+     * @param {number[]} mat 3x3 matrix in column-major format
+     * @returns {number[]} 3x3 inverse matrix in column-major format
+     */
+    _inverse3(mat)
+    {
+        const nan = Number.NaN, eps = 1e-6;
+        const inv = [ nan, nan, nan, nan, nan, nan, nan, nan, nan ];
+
+        // read the entries of the matrix
+        const a11 = mat[0];
+        const a21 = mat[1];
+        const a31 = mat[2];
+        const a12 = mat[3];
+        const a22 = mat[4];
+        const a32 = mat[5];
+        const a13 = mat[6];
+        const a23 = mat[7];
+        const a33 = mat[8];
+
+        // compute cofactors
+        const b1 = a33 * a22 - a32 * a23; // b11
+        const b2 = a33 * a12 - a32 * a13; // b21
+        const b3 = a23 * a12 - a22 * a13; // b31
+
+        // compute the determinant
+        const det = a11 * b1 - a21 * b2 + a31 * b3;
+
+        // set up the inverse
+        if(!(Math.abs(det) < eps)) {
+            const d = 1.0 / det;
+            inv[0] = b1 * d;
+            inv[1] = -(a33 * a21 - a31 * a23) * d;
+            inv[2] = (a32 * a21 - a31 * a22) * d;
+            inv[3] = -b2 * d;
+            inv[4] = (a33 * a11 - a31 * a13) * d;
+            inv[5] = -(a32 * a11 - a31 * a12) * d;
+            inv[6] = b3 * d;
+            inv[7] = -(a23 * a11 - a21 * a13) * d;
+            inv[8] = (a22 * a11 - a21 * a12) * d;
+        }
+
+        // done!
+        return inv;
+    }
+}
+
+/***/ }),
+
 /***/ "./src/gpu/programs/utils.js":
 /*!***********************************!*\
   !*** ./src/gpu/programs/utils.js ***!
@@ -15464,11 +15679,12 @@ class GPUUtils extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Speed
 /*!***************************************!*\
   !*** ./src/gpu/shader-declaration.js ***!
   \***************************************/
-/*! exports provided: importShader, createShader */
+/*! exports provided: ShaderDeclaration, importShader, createShader */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ShaderDeclaration", function() { return ShaderDeclaration; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "importShader", function() { return importShader; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createShader", function() { return createShader; });
 /* harmony import */ var _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./shader-preprocessor */ "./src/gpu/shader-preprocessor.js");
@@ -16030,6 +16246,7 @@ var map = {
 	"./include/pyramids.glsl": "./src/gpu/shaders/include/pyramids.glsl",
 	"./include/quickselect.glsl": "./src/gpu/shaders/include/quickselect.glsl",
 	"./include/sobel.glsl": "./src/gpu/shaders/include/sobel.glsl",
+	"./include/subpixel.glsl": "./src/gpu/shaders/include/subpixel.glsl",
 	"./keypoints/brisk.glsl": "./src/gpu/shaders/keypoints/brisk.glsl",
 	"./keypoints/fast/encode-fast-score.glsl": "./src/gpu/shaders/keypoints/fast/encode-fast-score.glsl",
 	"./keypoints/fast/fast-score12.glsl": "./src/gpu/shaders/keypoints/fast/fast-score12.glsl",
@@ -16055,6 +16272,7 @@ var map = {
 	"./trackers/lk-discard.glsl": "./src/gpu/shaders/trackers/lk-discard.glsl",
 	"./trackers/lk.glsl": "./src/gpu/shaders/trackers/lk.glsl",
 	"./trackers/transfer-flow.glsl": "./src/gpu/shaders/trackers/transfer-flow.glsl",
+	"./transforms/warp-perspective.glsl": "./src/gpu/shaders/transforms/warp-perspective.glsl",
 	"./utils/copy-components.glsl": "./src/gpu/shaders/utils/copy-components.glsl",
 	"./utils/fill-components.glsl": "./src/gpu/shaders/utils/fill-components.glsl",
 	"./utils/fill.glsl": "./src/gpu/shaders/utils/fill.glsl",
@@ -16635,7 +16853,8 @@ var map = {
 	"./orientation.glsl": "./src/gpu/shaders/include/orientation.glsl",
 	"./pyramids.glsl": "./src/gpu/shaders/include/pyramids.glsl",
 	"./quickselect.glsl": "./src/gpu/shaders/include/quickselect.glsl",
-	"./sobel.glsl": "./src/gpu/shaders/include/sobel.glsl"
+	"./sobel.glsl": "./src/gpu/shaders/include/sobel.glsl",
+	"./subpixel.glsl": "./src/gpu/shaders/include/subpixel.glsl"
 };
 
 
@@ -16700,7 +16919,7 @@ module.exports = "#ifndef _FLOAT16_GLSL\n#define _FLOAT16_GLSL\n#define encodeFl
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "#ifndef _GLOBAL_GLSL\n#define _GLOBAL_GLSL\n#define threadLocation() ivec2(texCoord * texSize)\n#define outputSize() ivec2(texSize)\n#define DEBUG(scalar) do { color = vec4(float(scalar), 0.0f, 0.0f, 1.0f); return; } while(false)\n#define threadPixel(img) textureLod((img), texCoord, 0.0f)\n#define pixelAt(img, pos) texelFetch((img), (pos), 0)\n#define pixelAtShortOffset(img, offset) textureLodOffset((img), texCoord, 0.0f, (offset))\n#define pixelAtLongOffset(img, offset) textureLod((img), texCoord + vec2(offset) / texSize, 0.0f)\n#define subpixelAt(img, pos) textureLod((img), ((pos) + vec2(0.5f)) / texSize, 0.0f)\n#endif"
+module.exports = "#ifndef _GLOBAL_GLSL\n#define _GLOBAL_GLSL\n#define threadLocation() ivec2(texCoord * texSize)\n#define outputSize() ivec2(texSize)\n#define threadPixel(img) textureLod((img), texCoord, 0.0f)\n#define pixelAt(img, pos) texelFetch((img), (pos), 0)\n#define pixelAtShortOffset(img, offset) textureLodOffset((img), texCoord, 0.0f, (offset))\n#define pixelAtLongOffset(img, offset) textureLod((img), texCoord + vec2(offset) / texSize, 0.0f)\n#endif"
 
 /***/ }),
 
@@ -16767,6 +16986,17 @@ module.exports = "#ifndef _QUICKSELECT_GLSL\n#define _QUICKSELECT_GLSL\n#if defi
 /***/ (function(module, exports) {
 
 module.exports = "#ifndef _SOBEL_GLSL\n#define _SOBEL_GLSL\nvec4 encodeSobel(vec2 df)\n{\n#ifdef SOBEL_USE_LOG\nconst vec2 zero = vec2(0.0f);\nvec2 dmax = -max(df, zero);\nvec2 dmin = min(df, zero);\nreturn exp2(vec4(dmax, dmin));\n#else\nuint data = packHalf2x16(df);\nuvec4 bytes = uvec4(data, data >> 8, data >> 16, data >> 24) & 255u;\nreturn vec4(bytes) / 255.0f;\n#endif\n}\nvec2 decodeSobel(vec4 encodedSobel)\n{\n#ifdef SOBEL_USE_LOG\nvec4 lg = log2(encodedSobel);\nreturn vec2(lg.b - lg.r, lg.a - lg.g);\n#else\nuvec4 bytes = uvec4(encodedSobel * 255.0f);\nuint data = bytes.r | (bytes.g << 8) | (bytes.b << 16) | (bytes.a << 24);\nreturn unpackHalf2x16(data);\n#endif\n}\n#endif"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/include/subpixel.glsl":
+/*!***********************************************!*\
+  !*** ./src/gpu/shaders/include/subpixel.glsl ***!
+  \***********************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "#ifndef _SUBPIXEL_GLSL\n#define _SUBPIXEL_GLSL\n#define subpixelAtHW(image, pos) textureLod((image), ((pos) + vec2(0.5f)) / texSize, 0.0f)\nvec4 subpixelAtBI(sampler2D image, vec2 pos)\n{\nvec2 frc = fract(pos);\nvec2 ifrc = vec2(1.0f) - frc;\nvec2 p = (floor(pos) + vec2(0.5f)) / vec2(textureSize(image, 0));\nvec4 pix00 = textureLod(image, p, 0.0f);\nvec4 pix10 = textureLodOffset(image, p, 0.0f, ivec2(1,0));\nvec4 pix01 = textureLodOffset(image, p, 0.0f, ivec2(0,1));\nvec4 pix11 = textureLodOffset(image, p, 0.0f, ivec2(1,1));\nmat4 pix = mat4(pix00, pix10, pix01, pix11);\nvec4 mul = vec4(ifrc.x * ifrc.y, frc.x * ifrc.y, ifrc.x * frc.y, frc.x * frc.y);\nreturn pix * mul;\n}\n#endif"
 
 /***/ }),
 
@@ -17042,6 +17272,17 @@ module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nunifor
 /***/ (function(module, exports) {
 
 module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D encodedFlow;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvec2 decodeFlow(vec4 pix)\n{\nreturn vec2(decodeFloat16(pix.rg), decodeFloat16(pix.ba));\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nint len = textureSize(encodedFlow, 0).x;\nivec2 location = ivec2(myIndex % len, myIndex / len);\nvec4 targetPixel = pixelAt(encodedFlow, location);\nvec2 flow = decodeFlow(targetPixel);\nvec4 encodedPosition = any(isinf(flow)) ? encodeKeypointPositionAtInfinity() : encodeKeypointPosition(\nkeypoint.position + flow\n);\ncolor = myAddress.offset == 0 ? encodedPosition : pixel;\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/transforms/warp-perspective.glsl":
+/*!**********************************************************!*\
+  !*** ./src/gpu/shaders/transforms/warp-perspective.glsl ***!
+  \**********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"subpixel.glsl\"\nuniform sampler2D image;\nuniform mat3 inverseHomography;\nconst vec4 emptyColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);\nvec2 perspectiveWarp(mat3 homography, vec2 p)\n{\nvec3 q = homography * vec3(p, 1.0f);\nreturn q.xy / q.z;\n}\nvoid main()\n{\nivec2 location = threadLocation();\nivec2 size = outputSize();\nconst vec2 zero = vec2(0.0f);\nvec2 target = perspectiveWarp(inverseHomography, vec2(location));\nbool withinBounds = all(bvec4(greaterThanEqual(target, zero), lessThan(target, vec2(size))));\ncolor = withinBounds ? subpixelAtBI(image, target) : emptyColor;\n}"
 
 /***/ }),
 
@@ -17444,12 +17685,13 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _programs_pyramids__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./programs/pyramids */ "./src/gpu/programs/pyramids.js");
 /* harmony import */ var _programs_enhancements__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./programs/enhancements */ "./src/gpu/programs/enhancements.js");
 /* harmony import */ var _programs_trackers__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./programs/trackers */ "./src/gpu/programs/trackers.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _programs_transforms__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./programs/transforms */ "./src/gpu/programs/transforms.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17466,6 +17708,7 @@ __webpack_require__.r(__webpack_exports__);
  * speedy-program-center.js
  * An access point to all programs that run on the GPU
  */
+
 
 
 
@@ -17507,7 +17750,8 @@ class SpeedyProgramCenter
         this._descriptors = null;
         this._enhancements = null;
         this._trackers = null;
-        this._pyramids = (new Array(_utils_globals__WEBPACK_IMPORTED_MODULE_9__["PYRAMID_MAX_LEVELS"])).fill(null);
+        this._transforms = null;
+        this._pyramids = (new Array(_utils_globals__WEBPACK_IMPORTED_MODULE_10__["PYRAMID_MAX_LEVELS"])).fill(null);
     }
 
     /**
@@ -17592,6 +17836,15 @@ class SpeedyProgramCenter
     }
 
     /**
+     * Geometric transformations
+     * @returns {GPUTransforms}
+     */
+    get transforms()
+    {
+        return this._transforms || (this._transforms = new _programs_transforms__WEBPACK_IMPORTED_MODULE_8__["GPUTransforms"](this._gpu, this._width, this._height));
+    }
+
+    /**
      * Image pyramids & scale-space
      * @param {number} [level] level-of-detail: 0, 1, 2, ... (PYRAMID_MAX_LEVELS - 1)
      * @returns {GPUPyramids}
@@ -17601,8 +17854,8 @@ class SpeedyProgramCenter
         const lod = level | 0;
         const pot = 1 << lod;
 
-        if(lod < 0 || lod >= _utils_globals__WEBPACK_IMPORTED_MODULE_9__["PYRAMID_MAX_LEVELS"])
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["IllegalArgumentError"](`Invalid pyramid level: ${lod} (outside of range [0,${_utils_globals__WEBPACK_IMPORTED_MODULE_9__["PYRAMID_MAX_LEVELS"]-1}])`);
+        if(lod < 0 || lod >= _utils_globals__WEBPACK_IMPORTED_MODULE_10__["PYRAMID_MAX_LEVELS"])
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__["IllegalArgumentError"](`Invalid pyramid level: ${lod} (outside of range [0,${_utils_globals__WEBPACK_IMPORTED_MODULE_10__["PYRAMID_MAX_LEVELS"]-1}])`);
 
         // use max(1, floor(size / 2^lod)), in accordance to the OpenGL ES 3.0 spec sec 3.8.10.4 (Mipmapping)
         return this._pyramids[lod] || (this._pyramids[lod] = new _programs_pyramids__WEBPACK_IMPORTED_MODULE_5__["GPUPyramids"](this._gpu,
@@ -17803,12 +18056,13 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gl-utils.js */ "./src/gpu/gl-utils.js");
 /* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./shader-declaration */ "./src/gpu/shader-declaration.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17825,6 +18079,7 @@ __webpack_require__.r(__webpack_exports__);
  * speedy-program.js
  * SpeedyProgram class
  */
+
 
 
 
@@ -17855,6 +18110,9 @@ const UNIFORM_SETTERS = Object.freeze({
     'bvec2':    'uniform2i',
     'bvec3':    'uniform3i',
     'bvec4':    'uniform4i',
+    'mat2':     'uniformMatrix2fv',
+    'mat3':     'uniformMatrix3fv',
+    'mat4':     'uniformMatrix4fv',
 });
 
 // number of pixel buffer objects
@@ -17960,11 +18218,11 @@ class SpeedyProgram extends Function
 
         // validate options
         if(this._options.pingpong && !this._options.renderToTexture)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`Pingpong rendering can only be used when rendering to textures`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalOperationError"](`Pingpong rendering can only be used when rendering to textures`);
 
         // not a valid context?
         if(gl.isContextLost())
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`Can't initialize SpeedyProgram: lost context`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalOperationError"](`Can't initialize SpeedyProgram: lost context`);
 
         // need to resize the canvas?
         const canvas = gl.canvas;
@@ -17997,7 +18255,7 @@ class SpeedyProgram extends Function
             if(!this._uniform.has(argname)) {
                 this._argIsArray[j] = this._uniform.has(argname + '[0]');
                 if(!this._argIsArray[j])
-                    throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`Expected uniform "${argname}", as declared in the argument list`);
+                    throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalOperationError"](`Expected uniform "${argname}", as declared in the argument list`);
             }
         }
     }
@@ -18015,7 +18273,7 @@ class SpeedyProgram extends Function
 
         // matching arguments?
         if(args.length != argnames.length)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Can't run shader: incorrect number of arguments`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't run shader: incorrect number of arguments (expected ${argnames.length}, got ${args.length})`);
 
         // skip things
         if(gl.isContextLost())
@@ -18044,7 +18302,7 @@ class SpeedyProgram extends Function
                 // uniform array matches argument name
                 const array = args[i];
                 if(this._uniform.has(`${argname}[${array.length}]`))
-                    throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Can't run shader: too few elements in the "${argname}" array`);
+                    throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't run shader: too few elements in the "${argname}" array`);
                 for(let j = 0, uniform = undefined; (uniform = this._uniform.get(`${argname}[${j}]`)) !== undefined; j++)
                     texNo = this._setUniform(uniform, array[j], texNo);
             }
@@ -18197,7 +18455,7 @@ class SpeedyProgram extends Function
 
         // can't read pixels if we're not rendering to a texture (i.e., no framebuffer)
         if(!this._options.renderToTexture)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`Can't read pixels from a SpeedyProgram that doesn't render to an internal texture`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalOperationError"](`Can't read pixels from a SpeedyProgram that doesn't render to an internal texture`);
 
         // lost context?
         if(gl.isContextLost())
@@ -18241,7 +18499,7 @@ class SpeedyProgram extends Function
 
         // can't read pixels if we're not rendering to a texture (i.e., no framebuffer)
         if(!this._options.renderToTexture)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`Can't read pixels from a SpeedyProgram that doesn't render to an internal texture`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalOperationError"](`Can't read pixels from a SpeedyProgram that doesn't render to an internal texture`);
 
         // lost context?
         if(gl.isContextLost())
@@ -18329,9 +18587,9 @@ class SpeedyProgram extends Function
         const expectedHeight = Math.max(1, Math.floor(texture.height / pot));
 
         // validate
-        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(this._width === expectedWidth && this._height === expectedHeight);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(this._width === expectedWidth && this._height === expectedHeight);
         if(this._options.pingpong)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["NotSupportedError"](`Can't copy the output of a pingpong-enabled SpeedyProgram`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["NotSupportedError"](`Can't copy the output of a pingpong-enabled SpeedyProgram`);
 
         // copy to texture
         _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].copyToTexture(gl, fbo, texture.glTexture, 0, 0, this._width, this._height, lod);
@@ -18368,7 +18626,7 @@ class SpeedyProgram extends Function
     /**
      * Set the value of a uniform variable
      * @param {ProgramUniform} uniform
-     * @param {SpeedyTexture|number|number[]|boolean|boolean[]} value
+     * @param {SpeedyTexture|number|boolean|number[]|boolean[]} value use column-major format for matrices
      * @param {number} texNo current texture index
      * @returns {number} new texture index
      */
@@ -18379,26 +18637,34 @@ class SpeedyProgram extends Function
         if(uniform.type == 'sampler2D') {
             // set texture
             if(texNo > gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
-                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["NotSupportedError"](`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
+                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["NotSupportedError"](`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
             else if(value === this._texture[this._textureIndex])
-                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["NotSupportedError"](`Can't run shader: cannot use its output texture as an input to itself`);
+                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["NotSupportedError"](`Can't run shader: cannot use its output texture as an input to itself`);
             else if(value == null)
-                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Can't run shader: cannot use null as an input texture`);
+                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't run shader: cannot use null as an input texture`);
 
             gl.activeTexture(gl.TEXTURE0 + texNo);
             gl.bindTexture(gl.TEXTURE_2D, value.glTexture);
             gl.uniform1i(uniform.location, texNo);
             texNo++;
         }
-        else {
-            // set value
-            if(typeof value == 'number' || typeof value == 'boolean')
-                (gl[uniform.setter])(uniform.location, value);
-            else if(Array.isArray(value) && value.length === uniform.length)
-                (gl[uniform.setter])(uniform.location, ...value);
-            else
-                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Can't run shader: unrecognized argument "${value}"`);
+        else if(typeof value == 'number' || typeof value == 'boolean') {
+            // set scalar value
+            (gl[uniform.setter])(uniform.location, value);
         }
+        else if(Array.isArray(value)) {
+            // set vector or matrix
+            if(value.length === uniform.length) {
+                if(uniform.dim == 2)
+                    (gl[uniform.setter])(uniform.location, false, value); // matrix
+                else
+                    (gl[uniform.setter])(uniform.location, ...value); // vector
+            }
+            else
+                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't run shader: incorrect number of values for ${uniform.type}: "${value}"`);
+        }
+        else
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't run shader: unrecognized argument "${value}"`);
 
         return texNo;
     }
@@ -18549,7 +18815,7 @@ function ProgramUniform(type, location)
     /** @type {string} GLSL data type */
     this.type = String(type);
     if(!Object.prototype.hasOwnProperty.call(UNIFORM_SETTERS, this.type))
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["NotSupportedError"](`Unsupported uniform type: ${this.type}`);
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["NotSupportedError"](`Unsupported uniform type: ${this.type}`);
 
     /** @type {WebGLUniformLocation} uniform location in a WebGL program */
     this.location = location;
@@ -18557,8 +18823,12 @@ function ProgramUniform(type, location)
     /** @type {string} setter function */
     this.setter = UNIFORM_SETTERS[this.type];
 
-    /** @type {number} vector size */
-    this.length = ((this.setter.match(/^uniform(\d)/))[1]) | 0;
+    /** @type {number} is the uniform a scalar (0), a vector (1) or a matrix (2)? */
+    this.dim = this.type.startsWith('mat') ? 2 : ((this.type.indexOf('vec') >= 0) | 0);
+
+    /** @type {number} required number of scalars */
+    const n = Number((this.setter.match(/^uniform(Matrix)?(\d)/))[2]) | 0;
+    this.length = (this.dim == 2) ? n * n : n;
 
     // done!
     return Object.freeze(this);
