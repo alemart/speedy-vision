@@ -65,10 +65,10 @@ export class SpeedyPipelineNode
 {
     /**
      * Constructor
-     * @param {SpeedyPipelinePortBuilder[]} portBuilders port builders
      * @param {string} [name] the name of this node
+     * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
      */
-    constructor(portBuilders, name = generateRandomName())
+    constructor(name = generateRandomName(), portBuilders = [])
     {
         /** @type {number} the ID of this node (unique) */
         this._id = generateUniqueID(); // node names may be the same...
@@ -169,7 +169,7 @@ export class SpeedyPipelineNode
     }
 
     /**
-     * Do specifically what this node is supposed to do
+     * Run the specific task of this node
      * @returns {SpeedyPromise<void>}
      */
     _run()
@@ -204,21 +204,20 @@ export class SpeedyPipelineSourceNode extends SpeedyPipelineNode
 {
     /**
      * Constructor
-     * @param {SpeedyPipelinePortBuilder[]} portBuilders port builders
      * @param {string} [name] the name of this node
+     * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
      */
-    constructor(portBuilders, name = undefined)
+    constructor(name = undefined, portBuilders = undefined)
     {
-        super(portBuilders, name);
+        super(name, portBuilders);
         Utils.assert(this.isSource());
     }
 
     /**
      * Import user data to this node
-     * @param {any} data
      * @returns {SpeedyPromise<void>}
      */
-    import(data)
+    import()
     {
         throw new AbstractMethodError();
     }
@@ -232,12 +231,12 @@ export class SpeedyPipelineSinkNode extends SpeedyPipelineNode
 {
     /**
      * Constructor
-     * @param {SpeedyPipelinePortBuilder[]} portBuilders port builders
      * @param {string} [name] the name of this node
+     * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
      */
-    constructor(portBuilders, name = undefined)
+    constructor(name = undefined, portBuilders = undefined)
     {
-        super(portBuilders, name);
+        super(name, portBuilders);
         Utils.assert(this.isSink());
     }
 
