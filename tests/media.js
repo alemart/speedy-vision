@@ -117,7 +117,7 @@ describe('SpeedyMedia', function() {
         const media = await Speedy.load(image);
 
         display(media, 'Original');
-        for(const lightweight of [true, false]) {
+        for(const lightweight of [false, true]) {
             const clone = await media.clone({ lightweight });
 
             expect(clone.type).toBe(media.type);
