@@ -33,7 +33,7 @@ in vec2 ${DEFAULT_ATTRIBUTES.texCoord};
 out vec2 texCoord;
 
 void main() {
-    gl_Position = vec4(${DEFAULT_ATTRIBUTES.position}, 0.0, 1.0);
+    gl_Position = vec4(${DEFAULT_ATTRIBUTES.position}, 0.0f, 1.0f);
     texCoord = ${DEFAULT_ATTRIBUTES.texCoord};
 }`;
 

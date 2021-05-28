@@ -255,7 +255,7 @@ export class SpeedyProgram extends Function
         const fbo = options.renderToTexture ? this._fbo[this._textureIndex] : null;
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
         gl.viewport(0, 0, this._width, this._height);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); // mode, offset, count
+        gl.drawArrays(gl.TRIANGLES, 0, 6); // mode, offset, count
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
         // are we rendering to a texture?
@@ -629,10 +629,13 @@ export class SpeedyProgram extends Function
         // using the current vbo
         gl.bindBuffer(gl.ARRAY_BUFFER, vbo[0]);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            // clip coordinates
+            // clip coordinates (CCW)
             -1, -1,
             1, -1,
             -1, 1,
+
+            -1, 1,
+            1, -1,
             1, 1,
         ]), gl.STATIC_DRAW);
         gl.enableVertexAttribArray(ATTRIBUTE_LOCATIONS.position);
@@ -647,10 +650,13 @@ export class SpeedyProgram extends Function
         // using the current vbo
         gl.bindBuffer(gl.ARRAY_BUFFER, vbo[1]);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            // texture coordinates
+            // texture coordinates (CCW)
             0, 0,
             1, 0,
             0, 1,
+
+            0, 1,
+            1, 0,
             1, 1,
         ]), gl.STATIC_DRAW);
         gl.enableVertexAttribArray(ATTRIBUTE_LOCATIONS.texCoord);
@@ -761,12 +767,12 @@ function ProgramUniform(type, location)
 
     /** @type {string} setter function */
     this.setter = UNIFORM_SETTERS[this.type];
+    const n = Number((this.setter.match(/^uniform(Matrix)?(\d)/))[2]) | 0;
 
     /** @type {number} is the uniform a scalar (0), a vector (1) or a matrix (2)? */
     this.dim = this.type.startsWith('mat') ? 2 : ((this.type.indexOf('vec') >= 0) | 0);
 
     /** @type {number} required number of scalars */
-    const n = Number((this.setter.match(/^uniform(Matrix)?(\d)/))[2]) | 0;
     this.length = (this.dim == 2) ? n * n : n;
 
     // done!
