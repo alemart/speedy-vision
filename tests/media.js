@@ -115,23 +115,18 @@ describe('SpeedyMedia', function() {
     it('creates a clone with valid source, type and dimensions', async function() {
         const image = await loadImage('peregrine-falcon.jpg');
         const media = await Speedy.load(image);
-
         display(media, 'Original');
-        for(const lightweight of [false, true]) {
-            const clone = await media.clone({ lightweight });
 
-            expect(clone.type).toBe(media.type);
-            expect(clone.width).toBe(media.width);
-            expect(clone.height).toBe(media.height);
+        const clone = await media.clone();
+        expect(clone.type).toBe(media.type);
+        expect(clone.width).toBe(media.width);
+        expect(clone.height).toBe(media.height);
+        display(clone, 'Clone');
 
-            display(clone, lightweight ? 'Lightweight clone' : 'Deep clone');
+        const error = imerr(media.source, clone.source);
+        expect(error).toBeAnAcceptableImageError();
 
-            const error = imerr(media.source, clone.source);
-            expect(error).toBeAnAcceptableImageError();
-
-            await clone.release();
-        }
-        
+        await clone.release();
         await media.release();
     });
 

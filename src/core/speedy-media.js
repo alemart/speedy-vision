@@ -40,35 +40,14 @@ const UPLOAD_BUFFER_SIZE = 2; // how many textures we allocate for uploading dat
 export class SpeedyMedia
 {
     /**
-     * Class constructor
-     * It receives A VALID media source that is already loaded
+     * Constructor. It receives a VALID media source that is ALREADY LOADED.
      * @private
-     * @param {SpeedyMediaSource|SpeedyMedia} sourceOrMedia
+     * @param {SpeedyMediaSource} source
      * @param {object} [options] options object
      */
-    constructor(sourceOrMedia, options = { })
+    constructor(source, options = {})
     {
-        // Copy constructor (shallow copy)
-        if(sourceOrMedia.constructor.name == 'SpeedyMedia') {
-            const media = sourceOrMedia;
-
-            this._source = media._source;
-            this._options = media._options;
-            this._colorFormat = media._colorFormat;
-            this._gpu = media._gpu;
-            this._texture = media._texture;
-            this._textureIndex = media._textureIndex;
-
-            return this;
-        }
-
-
-
-        // Create using a SpeedyMediaSource
-        const source = sourceOrMedia;
         Utils.assert(source.isLoaded());
-
-
 
         /** @type {SpeedyMediaSource} media source */
         this._source = source;
@@ -84,7 +63,7 @@ export class SpeedyMedia
         /** @type {SpeedyGPU} GPU-accelerated routines */
         this._gpu = new SpeedyGPU(this._source.width, this._source.height);
 
-        /** @type {SpeedyTexture[]} upload buffers (lazy instantiation) */
+        /** @type {SpeedyTexture[]} upload textures (lazy instantiation) */
         this._texture = (new Array(UPLOAD_BUFFER_SIZE)).fill(null);
 
         /** @type {number} index of the texture that was just uploaded to the GPU */
@@ -92,7 +71,7 @@ export class SpeedyMedia
 
 
 
-        // reset the upload buffers if necessary
+        // reset the upload textures if necessary
         this._gpu.onWebGLContextReset(() => this._texture.fill(null));
 
         // warning: loading a canvas without an explicit usage flag
@@ -196,8 +175,8 @@ export class SpeedyMedia
     }
 
     /**
-     * Releases resources associated with this media.
-     * You will no longer be able to use it, nor any of its lightweight clones.
+     * Releases the resources associated with this media:
+     * WebGL textures, framebuffers, programs, etc.
      * @returns {SpeedyPromise<void>} resolves as soon as the resources are released
      */
     release()
@@ -205,7 +184,7 @@ export class SpeedyMedia
         if(!this.isReleased()) {
             Utils.log('Releasing SpeedyMedia object...');
 
-            // release the upload buffers
+            // release the upload textures
             for(let i = 0; i < this._texture.length; i++) {
                 if(this._texture[i] != null)
                     this._texture[i] = this._texture[i].release();
@@ -229,32 +208,20 @@ export class SpeedyMedia
 
     /**
      * Clones the SpeedyMedia object
-     * @param {object} options options object
      * @returns {SpeedyPromise<SpeedyMedia>} a clone object
      */
-    clone(options = {})
+    clone()
     {
-        // Default settings
-        options = {
-            lightweight: false,
-            ...(options)
-        };
-
         // has the media been released?
         if(this.isReleased())
-            throw new IllegalOperationError('Can\'t clone a SpeedyMedia that has been released');
+            throw new IllegalOperationError(`Can't clone a SpeedyMedia that has been released`);
 
         // clone the object
-        if(options.lightweight) {
-            // shallow copy
-            return SpeedyPromise.resolve(new SpeedyMedia(this, this._options));
-        }
-        else {
-            // deep copy
-            return this._source.clone().then(
-                newSource => new SpeedyMedia(newSource, this._options)
-            );
-        }
+        const clone = new SpeedyMedia(this._source, this.options);
+        clone._colorFormat = this._colorFormat;
+
+        // done!
+        return SpeedyPromise.resolve(clone);
     }
 
     /**
@@ -266,10 +233,10 @@ export class SpeedyMedia
     {
         // has the media been released?
         if(this.isReleased())
-            throw new IllegalOperationError('Can\'t run pipeline: SpeedyMedia has been released');
+            throw new IllegalOperationError(`Can't run pipeline: the SpeedyMedia has been released`);
 
-        // create a lightweight clone
-        return this.clone({ lightweight: true }).then(media => {
+        // create a clone
+        return this.clone().then(media => {
             // upload the media to the GPU
             const texture = this._upload();
 
@@ -355,7 +322,7 @@ export class SpeedyMedia
     {
         const data = this._source.data;
 
-        // create upload buffers lazily
+        // create upload textures lazily
         if(this._texture[0] == null) {
             for(let i = 0; i < this._texture.length; i++)
                 this._texture[i] = new SpeedyTexture(this._gpu.gl, this._source.width, this._source.height);

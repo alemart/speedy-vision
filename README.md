@@ -282,14 +282,9 @@ Draws the media to a canvas.
 
 ##### SpeedyMedia.clone()
 
-`SpeedyMedia.clone(options?: object): SpeedyPromise<SpeedyMedia>`
+`SpeedyMedia.clone(): SpeedyPromise<SpeedyMedia>`
 
 Clones the `SpeedyMedia` object.
-
-###### Arguments
-
-* `options: object, optional`. Configuration object. The following keys may be specified:
-  * `lightweight: boolean`. Create a lightweight clone of the `SpeedyMedia`. A lightweight clone shares its internal resources with the original media. Although faster to generate, lightweight clones of the same media are linked to each other. Change one, and you'll most likely change the other. This option defaults to `false`.
 
 ###### Returns
 
@@ -315,7 +310,7 @@ A Promise that resolves to an `ImageBitmap`.
 
 `SpeedyMedia.release(): SpeedyPromise`
 
-Releases internal resources associated with this `SpeedyMedia`. You will no longer be able to use it, nor any of its [lightweight clones](#speedymediaclone).
+Releases internal resources associated with this `SpeedyMedia` (textures, framebuffers, etc.)
 
 ###### Returns
 
@@ -708,9 +703,7 @@ The number of operations of the pipeline.
 
 `SpeedyMedia.run(pipeline: SpeedyPipeline): SpeedyPromise<SpeedyMedia>`
 
-Runs the provided `pipeline`, outputting a [lightweight clone](#speedymediaclone) of the media containing the result.
-
-**Note:** while faster to generate, lightweight clones are linked to each other. If you intend to run two or more pipelines with the same content, either use a duplicate `SpeedyMedia` or [clone your media](#speedymediaclone).
+Runs the provided `pipeline`, outputting a `SpeedyMedia` representing the result.
 
 ###### Arguments
 
