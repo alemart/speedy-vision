@@ -206,7 +206,7 @@ export class SpeedyMedia
     /**
      * Releases resources associated with this media.
      * You will no longer be able to use it, nor any of its lightweight clones.
-     * @returns {SpeedyPromise} resolves as soon as the resources are released
+     * @returns {SpeedyPromise<void>} resolves as soon as the resources are released
      */
     release()
     {
@@ -222,12 +222,12 @@ export class SpeedyMedia
     }
 
     /**
-     * Is this SpeedyMedia released?
-     * @returns {bool}
+     * Has this media been released?
+     * @returns {boolean}
      */
     isReleased()
     {
-        return this._gpu == null;
+        return this._texture[0] == null;
     }
 
     /**

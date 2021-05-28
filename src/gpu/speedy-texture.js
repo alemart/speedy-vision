@@ -132,9 +132,18 @@ export class SpeedyTexture
      * Does this texture have mipmaps?
      * @returns {boolean}
      */
-    get hasMipmaps()
+    hasMipmaps()
     {
         return this._hasMipmaps;
+    }
+
+    /**
+     * Has this texture been released?
+     * @returns {boolean}
+     */
+    isReleased()
+    {
+        return this._glTexture == null;
     }
 
     /**
