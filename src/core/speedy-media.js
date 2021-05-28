@@ -308,8 +308,7 @@ export class SpeedyMedia
             // run the pipeline
             return pipeline._run(texture, media._gpu, media).turbocharge().then(texture => {
                 // convert to bitmap
-                const canvas = media._gpu.canvas;
-                media._gpu.programs.utils.output(texture);
+                const canvas = media._gpu.renderToCanvas(texture);
                 return createImageBitmap(canvas, 0, canvas.height - media.height, media.width, media.height).then(bitmap => {
                     return SpeedyMediaSource.load(bitmap).then(source => {
                         media._source = source;

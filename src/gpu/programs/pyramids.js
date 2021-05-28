@@ -74,17 +74,17 @@ export class GPUPyramids extends SpeedyProgramGroup
             // utilities for debugging
             .declare('output1', flipY, {
                 ...this.program.hasTextureSize(this._width, this._height),
-                ...this.program.displaysGraphics()
+                ...this.program.rendersToCanvas()
             })
 
             .declare('outputHalf', flipY, {
                 ...this.program.hasTextureSize(Math.floor(this._width / 2), Math.floor(this._height / 2)),
-                ...this.program.displaysGraphics()
+                ...this.program.rendersToCanvas()
             })
 
             .declare('output2', flipY, {
                 ...this.program.hasTextureSize(2 * this._width, 2 * this._height),
-                ...this.program.displaysGraphics()
+                ...this.program.rendersToCanvas()
             })
             */
             

@@ -93,6 +93,16 @@ export class SpeedyGPU
     }
 
     /**
+     * Renders a texture to the canvas
+     * @param {SpeedyTexture} texture
+     * @returns {HTMLCanvasElement} returned for convenience
+     */
+    renderToCanvas(texture)
+    {
+        return this.programs.utils.renderToCanvas(texture);
+    }
+
+    /**
      * Lose & restore the WebGL context (useful for testing purposes)
      * @return {SpeedyPromise<void>} resolves as soon as the context is restored
      */

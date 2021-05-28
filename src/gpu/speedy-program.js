@@ -159,13 +159,6 @@ export class SpeedyProgram extends Function
         if(gl.isContextLost())
             throw new IllegalOperationError(`Can't initialize SpeedyProgram: lost context`);
 
-        // need to resize the canvas?
-        const canvas = gl.canvas;
-        if(this._width > canvas.width)
-            canvas.width = this._width;
-        if(this._height > canvas.height)
-            canvas.height = this._height;
-
         // create framebuffer(s)
         for(let i = 0; i < this._texture.length; i++) {
             this._texture[i] = new SpeedyTexture(gl, this._width, this._height);

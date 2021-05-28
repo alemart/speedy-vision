@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,36 +20,44 @@
  */
 
 import { SpeedyProgram } from './speedy-program';
+import { SpeedyGPU } from './speedy-gpu';
 
 /**
  * SpeedyProgramGroup
  * A semantically correlated group
  * of programs that run on the GPU
+ * @abstract
  */
-
-export /* abstract */ class SpeedyProgramGroup
+export class SpeedyProgramGroup
 {
     /**
      * Class constructor
+     * @protected
      * @param {SpeedyGPU} gpu
      * @param {number} width Texture width (depends on the pyramid layer)
      * @param {number} height Texture height (depends on the pyramid layer)
      */
-    /* protected */ constructor(gpu, width, height)
+    constructor(gpu, width, height)
     {
+        /** @type {SpeedyGPU} GPU-accelerated routines */
         this._gpu = gpu;
+
+        /** @type {number} width of the output textures of the programs */
         this._width = width;
+
+        /** @type {number} height of the output textures of the programs */
         this._height = height;
     }
 
     /**
      * Declare a program
+     * @protected
      * @param {string} name Program name
      * @param {ShaderDeclaration} shaderdecl Shader declaration
      * @param {object} settings Program settings
      * @returns {SpeedyProgramGroup} This object
      */
-    /* protected */ declare(name, shaderdecl, settings = { })
+    declare(name, shaderdecl, settings = {})
     {
         // lazy instantiation of kernels
         Object.defineProperty(this, name, {
@@ -66,11 +74,12 @@ export /* abstract */ class SpeedyProgramGroup
 
     /**
      * Multi-pass composition
+     * @protected
      * @param {string} name Program name
      * @param {string} fn Other programs
      * @returns {SpeedyProgramGroup} This object
      */
-    /* protected */ compose(name, ...fn)
+    compose(name, ...fn)
     {
         // function composition: functions are called in the order they are specified
         // e.g., compose('h', 'f', 'g') means h(x) = g(f(x))
@@ -109,6 +118,7 @@ export /* abstract */ class SpeedyProgramGroup
     /**
      * Neat helpers to be used
      * when defining programs
+     * @returns {object}
      */
     get program()
     {
@@ -124,7 +134,7 @@ export /* abstract */ class SpeedyProgramGroup
 
             // Render to canvas
             // Use it when we're supposed to see the texture
-            displaysGraphics() {
+            rendersToCanvas() {
                 return {
                     renderToTexture: false
                 };
@@ -151,7 +161,12 @@ export /* abstract */ class SpeedyProgramGroup
         });
     }
 
-    /* private */ _createProgram(shaderdecl, settings = { })
+    /**
+     * Spawn a SpeedyProgram
+     * @param {ShaderDeclaration} shaderdecl Shader declaration
+     * @param {object} [settings] Program settings
+     */
+    _createProgram(shaderdecl, settings = {})
     {
         return new SpeedyProgram(this._gpu.gl, shaderdecl, {
             // default settings
