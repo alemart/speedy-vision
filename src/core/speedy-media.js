@@ -85,19 +85,15 @@ export class SpeedyMedia
         this._gpu = new SpeedyGPU(this._source.width, this._source.height);
 
         /** @type {SpeedyTexture[]} upload buffers */
-        this._texture = Array.from({ length: UPLOAD_BUFFER_SIZE }, () =>
-            new SpeedyTexture(this._gpu.gl, this._source.width, this._source.height));
+        this._texture = (new Array(UPLOAD_BUFFER_SIZE)).fill(null);
 
         /** @type {number} index of the texture that was just uploaded to the GPU */
         this._textureIndex = 0;
 
 
 
-        // recreate the upload buffers if necessary
-        this._gpu.onWebGLContextReset(() => {
-            for(let i = 0; i < this._texture.length; i++)
-                this._texture[i] = new SpeedyTexture(this._gpu.gl, this._source.width, this._source.height);
-        });
+        // reset the upload buffers if necessary
+        this._gpu.onWebGLContextReset(() => this._texture.fill(null));
 
         // warning: loading a canvas without an explicit usage flag
         if(this._source.type == MediaType.Canvas && this._options.usage === undefined)
@@ -257,35 +253,6 @@ export class SpeedyMedia
     }
 
     /**
-     * Upload the media to the GPU
-     * @returns {SpeedyTexture}
-     */
-    _upload()
-    {
-        const data = this._source.data;
-
-        // bugfix: if the media is a video, we can't really
-        // upload it to the GPU unless it's ready
-        if(data.constructor.name == 'HTMLVideoElement') {
-            if(data.readyState < 2) {
-                // this may happen when the video loops (Firefox)
-                // return the previously uploaded texture
-                if(this._texture[this._textureIndex] != null)
-                    return this._texture[this._textureIndex];
-                else
-                    Utils.warning(`Trying to process a video that isn't ready yet`);
-            }
-        }
-
-        // use round-robin to mitigate WebGL's implicit synchronization
-        // and maybe minimize texture upload times
-        this._textureIndex = (this._textureIndex + 1) % UPLOAD_BUFFER_SIZE;
-
-        // upload the media
-        return this._texture[this._textureIndex].upload(data);
-    }
-
-    /**
      * Runs a pipeline
      * @param {SpeedyPipeline} pipeline
      * @returns {SpeedyPromise<SpeedyMedia>} a promise that resolves to A CLONE of this SpeedyMedia
@@ -373,5 +340,40 @@ export class SpeedyMedia
 
         // done!
         return Object.freeze(options); // must be read-only
+    }
+
+    /**
+     * Upload the media to the GPU
+     * @returns {SpeedyTexture}
+     */
+    _upload()
+    {
+        const data = this._source.data;
+
+        // create upload buffers lazily
+        if(this._texture[0] == null) {
+            for(let i = 0; i < this._texture.length; i++)
+                this._texture[i] = new SpeedyTexture(this._gpu.gl, this._source.width, this._source.height);
+        }
+
+        // bugfix: if the media is a video, we can't really
+        // upload it to the GPU unless it's ready
+        if(data.constructor.name == 'HTMLVideoElement') {
+            if(data.readyState < 2) {
+                // this may happen when the video loops (Firefox)
+                // return the previously uploaded texture
+                if(this._texture[this._textureIndex] != null)
+                    return this._texture[this._textureIndex];
+                else
+                    Utils.warning(`Trying to process a video that isn't ready yet`);
+            }
+        }
+
+        // use round-robin to mitigate WebGL's implicit synchronization
+        // and maybe minimize texture upload times
+        this._textureIndex = (this._textureIndex + 1) % UPLOAD_BUFFER_SIZE;
+
+        // upload the media
+        return this._texture[this._textureIndex].upload(data);
     }
 }
