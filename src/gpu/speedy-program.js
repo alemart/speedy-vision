@@ -26,11 +26,7 @@ import { ShaderDeclaration } from './shader-declaration';
 import { Utils } from '../utils/utils';
 import { NotSupportedError, IllegalArgumentError, IllegalOperationError } from '../utils/errors';
 
-const ATTRIBUTE_LOCATIONS = Object.freeze({
-    position: 0,
-    texCoord: 1,
-});
-
+// Map uniform type to a gl function
 const UNIFORM_SETTERS = Object.freeze({
     'sampler2D':'uniform1i',
     'float':    'uniform1f',
@@ -98,7 +94,7 @@ export class SpeedyProgram extends Function
         this._program = GLUtils.createProgram(gl, shaderdecl.vertexSource, shaderdecl.fragmentSource);
 
         /** @type {ProgramGeometry} this is a quad */
-        this._geometry = this._createGeometry(gl);
+        this._geometry = this._createGeometry(gl, shaderdecl);
 
         /** @type {string[]} names of the arguments of the SpeedyProgram */
         this._argnames = shaderdecl.arguments;
@@ -169,10 +165,6 @@ export class SpeedyProgram extends Function
             canvas.width = this._width;
         if(this._height > canvas.height)
             canvas.height = this._height;
-
-        // setup attributes of the vertex shader
-        gl.bindAttribLocation(this._program, ATTRIBUTE_LOCATIONS.position, shaderdecl.attributes.position);
-        gl.bindAttribLocation(this._program, ATTRIBUTE_LOCATIONS.texCoord, shaderdecl.attributes.texCoord);
 
         // create framebuffer(s)
         for(let i = 0; i < this._texture.length; i++) {
@@ -612,10 +604,15 @@ export class SpeedyProgram extends Function
      * Create a quad to be passed to the vertex shader
      * (this is crafted for image processing)
      * @param {WebGL2RenderingContext} gl
+     * @param {ShaderDeclaration} shaderdecl
      * @returns {ProgramGeometry}
      */
-    _createGeometry(gl)
+    _createGeometry(gl, shaderdecl)
     {
+        // We assume that the geometry and the locations of the attributes of the
+        // vertex shaders are CONSTANT throughout time and the same for all shaders.
+        // That's why we cache the VAO and the VBO (is this really necessary?!)
+
         // got cached values for this WebGL context?
         if(geometryCache.has(gl))
             return geometryCache.get(gl);
@@ -638,8 +635,8 @@ export class SpeedyProgram extends Function
             1, -1,
             1, 1,
         ]), gl.STATIC_DRAW);
-        gl.enableVertexAttribArray(ATTRIBUTE_LOCATIONS.position);
-        gl.vertexAttribPointer(ATTRIBUTE_LOCATIONS.position, // attribute location
+        gl.enableVertexAttribArray(shaderdecl.locationOfAttributes.position);
+        gl.vertexAttribPointer(shaderdecl.locationOfAttributes.position, // attribute location
                                2,          // 2 components per vertex (x,y)
                                gl.FLOAT,   // type
                                false,      // don't normalize
@@ -659,8 +656,8 @@ export class SpeedyProgram extends Function
             1, 0,
             1, 1,
         ]), gl.STATIC_DRAW);
-        gl.enableVertexAttribArray(ATTRIBUTE_LOCATIONS.texCoord);
-        gl.vertexAttribPointer(ATTRIBUTE_LOCATIONS.texCoord, // attribute location
+        gl.enableVertexAttribArray(shaderdecl.locationOfAttributes.texCoord);
+        gl.vertexAttribPointer(shaderdecl.locationOfAttributes.texCoord, // attribute location
                                2,          // 2 components per vertex (x,y)
                                gl.FLOAT,   // type
                                false,      // don't normalize

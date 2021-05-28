@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,15 +27,20 @@ const DEFAULT_ATTRIBUTES = Object.freeze({
     texCoord: 'a_texCoord'
 });
 
+const DEFAULT_ATTRIBUTES_LOCATION = Object.freeze({
+    position: 0,
+    texCoord: 1,
+});
+
 const DEFAULT_VERTEX_SHADER = `#version 300 es
-in vec2 ${DEFAULT_ATTRIBUTES.position};
-in vec2 ${DEFAULT_ATTRIBUTES.texCoord};
+layout (location=${DEFAULT_ATTRIBUTES_LOCATION.position}) in vec2 ${DEFAULT_ATTRIBUTES.position};
+layout (location=${DEFAULT_ATTRIBUTES_LOCATION.texCoord}) in vec2 ${DEFAULT_ATTRIBUTES.texCoord};
 out vec2 texCoord;
 
 void main() {
     gl_Position = vec4(${DEFAULT_ATTRIBUTES.position}, 0.0f, 1.0f);
     texCoord = ${DEFAULT_ATTRIBUTES.texCoord};
-}`;
+}\n`;
 
 const DEFAULT_FRAGMENT_SHADER_PREFIX = `#version 300 es
 precision highp int;
@@ -186,11 +191,20 @@ export class ShaderDeclaration
 
     /**
      * Get the names of the vertex shader attributes
-     * @returns {object}
+     * @returns {Object.<string,string>}
      */
     get attributes()
     {
         return DEFAULT_ATTRIBUTES;
+    }
+
+    /**
+     * Get the pre-defined locations of the vertex shader attributes
+     * @returns {Object.<string,number>}
+     */
+    get locationOfAttributes()
+    {
+        return DEFAULT_ATTRIBUTES_LOCATION;
     }
 
     /**
