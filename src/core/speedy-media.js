@@ -24,7 +24,6 @@ import { SpeedyTexture } from '../gpu/speedy-texture';
 import { MediaType, ColorFormat } from '../utils/types'
 import { IllegalArgumentError, IllegalOperationError } from '../utils/errors';
 import { Utils } from '../utils/utils';
-import { SpeedyFeatureDetectorFactory } from './speedy-feature-detector-factory';
 import { SpeedyMediaSource } from './speedy-media-source';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { SpeedyPipeline } from './speedy-pipeline';
@@ -43,56 +42,47 @@ export class SpeedyMedia
     /**
      * Class constructor
      * It receives A VALID media source that is already loaded
-     * @param {SpeedyMediaSource|SpeedyMedia} source
+     * @private
+     * @param {SpeedyMediaSource|SpeedyMedia} sourceOrMedia
      * @param {object} [options] options object
      */
-    /* private */ constructor(source, options = { })
+    constructor(sourceOrMedia, options = { })
     {
+        // Copy constructor (shallow copy)
+        if(sourceOrMedia.constructor.name == 'SpeedyMedia') {
+            const media = sourceOrMedia;
+
+            this._source = media._source;
+            this._options = media._options;
+            this._colorFormat = media._colorFormat;
+            this._gpu = media._gpu;
+            this._texture = media._texture;
+            this._textureIndex = media._textureIndex;
+
+            return this;
+        }
+
+
+
+        // Create using a SpeedyMediaSource
+        const source = sourceOrMedia;
+        Utils.assert(source.isLoaded());
+
+
+
         /** @type {SpeedyMediaSource} media source */
-        this._source = null;
-
-        /** @type {SpeedyGPU} GPU */
-        this._gpu = null;
-
-        /** @type {Symbol} ColorFormat enum */
-        this._colorFormat = ColorFormat.RGB;
+        this._source = source;
 
         /** @type {object} options */
-        this._options = null;
+        this._options = this._buildOptions(options, {
+            usage: (this._source.type == MediaType.Video) ? 'dynamic' : 'static',
+        });
 
+        /** @type {ColorFormat} color format */
+        this._colorFormat = ColorFormat.RGB;
 
-
-
-        // Setup the new SpeedyMedia
-        const constructor = source.constructor.name;
-        if(constructor == 'SpeedyMedia') {
-            // copy constructor (shallow copy)
-            const media = source;
-            this._source = media._source;
-            this._colorFormat = media._colorFormat;
-            this._options = media._options;
-            this._gpu = media._gpu;
-        }
-        else {
-            // store the media source
-            Utils.assert(source.isLoaded());
-            this._source = source;
-
-            // warning: loading canvas without explicit usage option
-            if(this._source.type == MediaType.Canvas && options.usage === undefined)
-                Utils.warning('Loading a canvas without an explicit usage flag. I will set the usage to "static". This will result in suboptimal performance if the canvas is animated');
-
-            // set the color format
-            //this._colorFormat = ColorFormat.RGB;
-
-            // set options
-            this._options = this._buildOptions(options, {
-                usage: (this._source.type == MediaType.Video) ? 'dynamic' : 'static',
-            });
-
-            // spawn relevant components
-            this._gpu = new SpeedyGPU(this._source.width, this._source.height);
-        }
+        /** @type {SpeedyGPU} GPU-accelerated routines */
+        this._gpu = new SpeedyGPU(this._source.width, this._source.height);
 
         /** @type {SpeedyTexture[]} upload buffers */
         this._texture = Array.from({ length: UPLOAD_BUFFER_SIZE }, () =>
@@ -101,11 +91,17 @@ export class SpeedyMedia
         /** @type {number} index of the texture that was just uploaded to the GPU */
         this._textureIndex = 0;
 
+
+
         // recreate the upload buffers if necessary
         this._gpu.onWebGLContextReset(() => {
             for(let i = 0; i < this._texture.length; i++)
                 this._texture[i] = new SpeedyTexture(this._gpu.gl, this._source.width, this._source.height);
         });
+
+        // warning: loading a canvas without an explicit usage flag
+        if(this._source.type == MediaType.Canvas && this._options.usage === undefined)
+            Utils.warning('Loading a canvas without an explicit usage flag. I will set the usage to "static". This will result in suboptimal performance if the canvas is animated');
     }
 
     /**
@@ -206,7 +202,7 @@ export class SpeedyMedia
     /**
      * Releases resources associated with this media.
      * You will no longer be able to use it, nor any of its lightweight clones.
-     * @returns {SpeedyPromise} resolves as soon as the resources are released
+     * @returns {SpeedyPromise<void>} resolves as soon as the resources are released
      */
     release()
     {
@@ -222,12 +218,12 @@ export class SpeedyMedia
     }
 
     /**
-     * Is this SpeedyMedia released?
-     * @returns {bool}
+     * Has this media been released?
+     * @returns {boolean}
      */
     isReleased()
     {
-        return this._gpu == null;
+        return this._texture[0] == null;
     }
 
     /**
@@ -261,7 +257,7 @@ export class SpeedyMedia
     }
 
     /**
-     * Upload media to the GPU
+     * Upload the media to the GPU
      * @returns {SpeedyTexture}
      */
     _upload()
