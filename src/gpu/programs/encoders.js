@@ -145,7 +145,7 @@ export class GPUEncoders extends SpeedyProgramGroup
         cornerview = this._gpu.programs.utils.fillComponents(cornerview, PixelComponent.GREEN, 0);
         cornerview = this._gpu.programs.utils.identity(cornerview);
         cornerview = this._gpu.programs.utils.fillComponents(cornerview, PixelComponent.ALPHA, 1);
-        this._gpu.programs.utils.output(cornerview);
+        this._gpu.renderToCanvas(cornerview);
         if(!window._ww) document.body.appendChild(this._gpu.canvas);
         window._ww = 1;
         */

@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +20,11 @@
  */
 
 import { SpeedyProgramGroup } from '../speedy-program-group';
+import { SpeedyTexture } from '../speedy-texture';
 import { importShader } from '../shader-declaration';
-import { GLUtils } from '../gl-utils';
 import { PixelComponent, ColorComponentId } from '../../utils/types';
 import { IllegalArgumentError } from '../../utils/errors';
+import { Utils } from '../../utils/utils';
 
 
 
@@ -73,9 +74,9 @@ export class GPUUtils extends SpeedyProgramGroup
             // no-operation
             .declare('identity', identity)
 
-            // output a texture from a pipeline
-            .declare('output', flipY, {
-                ...this.program.displaysGraphics()
+            // render to the canvas
+            .declare('_renderToCanvas', flipY, {
+                ...this.program.rendersToCanvas()
             })
                 
             // clone a texture (release it afterwards)
@@ -105,6 +106,35 @@ export class GPUUtils extends SpeedyProgramGroup
                 ...this.program.usesPingpongRendering()
             })
         ;
+    }
+
+    /**
+     * Renders an image to (the bottom-left of) the canvas
+     * @param {SpeedyTexture} image
+     * @returns {HTMLCanvasElement} returned for convenience
+     */
+    renderToCanvas(image)
+    {
+        const width = image.width;
+        const height = image.height;
+        const canvas = this._gpu.canvas;
+
+        // do we need to resize the program?
+        if(width != this._renderToCanvas.width || height != this._renderToCanvas.height)
+            this._renderToCanvas.resize(width, height);
+
+        // do we need to resize the canvas?
+        if(width > canvas.width || height > canvas.height) {
+            Utils.warning(`Resizing the canvas to ${width} x ${height}`);
+            canvas.width = width;
+            canvas.height = height;
+        }
+
+        // render
+        this._renderToCanvas(image);
+
+        // done!
+        return canvas;
     }
 
     /**

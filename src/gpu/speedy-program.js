@@ -26,11 +26,7 @@ import { ShaderDeclaration } from './shader-declaration';
 import { Utils } from '../utils/utils';
 import { NotSupportedError, IllegalArgumentError, IllegalOperationError } from '../utils/errors';
 
-const ATTRIBUTE_LOCATIONS = Object.freeze({
-    position: 0,
-    texCoord: 1,
-});
-
+// Map uniform type to a gl function
 const UNIFORM_SETTERS = Object.freeze({
     'sampler2D':'uniform1i',
     'float':    'uniform1f',
@@ -97,8 +93,8 @@ export class SpeedyProgram extends Function
         /** @type {WebGLProgram} */
         this._program = GLUtils.createProgram(gl, shaderdecl.vertexSource, shaderdecl.fragmentSource);
 
-        /** @type {ProgramGeometry} this is a quad */
-        this._geometry = this._createGeometry(gl);
+        /** @type {StoredGeometry} this is a quad */
+        this._geometry = this._createGeometry(gl, shaderdecl);
 
         /** @type {string[]} names of the arguments of the SpeedyProgram */
         this._argnames = shaderdecl.arguments;
@@ -124,7 +120,7 @@ export class SpeedyProgram extends Function
         /** @type {boolean} flag indicating the need to update the texSize uniform */
         this._dirtySize = true;
 
-        /** @type {Map<string,ProgramUniform>} uniform variables */
+        /** @type {Map<string,UniformVariable>} uniform variables */
         this._uniform = new Map();
 
         /** @type {UBOHelper} UBO helper */
@@ -163,17 +159,6 @@ export class SpeedyProgram extends Function
         if(gl.isContextLost())
             throw new IllegalOperationError(`Can't initialize SpeedyProgram: lost context`);
 
-        // need to resize the canvas?
-        const canvas = gl.canvas;
-        if(this._width > canvas.width)
-            canvas.width = this._width;
-        if(this._height > canvas.height)
-            canvas.height = this._height;
-
-        // setup attributes of the vertex shader
-        gl.bindAttribLocation(this._program, ATTRIBUTE_LOCATIONS.position, shaderdecl.attributes.position);
-        gl.bindAttribLocation(this._program, ATTRIBUTE_LOCATIONS.texCoord, shaderdecl.attributes.texCoord);
-
         // create framebuffer(s)
         for(let i = 0; i < this._texture.length; i++) {
             this._texture[i] = new SpeedyTexture(gl, this._width, this._height);
@@ -185,7 +170,7 @@ export class SpeedyProgram extends Function
         for(const name of shaderdecl.uniforms) {
             const type = shaderdecl.uniformType(name);
             const location = gl.getUniformLocation(this._program, name);
-            this._uniform.set(name, new ProgramUniform(type, location));
+            this._uniform.set(name, new UniformVariable(type, location));
         }
 
         // match arguments & uniforms
@@ -201,7 +186,7 @@ export class SpeedyProgram extends Function
 
     /**
      * Run the SpeedyProgram
-     * @param  {...number} args
+     * @param  {...(number|number[]|SpeedyTexture|SpeedyTexture[])} args
      * @returns {SpeedyTexture}
      */
     _call(...args)
@@ -213,6 +198,13 @@ export class SpeedyProgram extends Function
         // matching arguments?
         if(args.length != argnames.length)
             throw new IllegalArgumentError(`Can't run shader: incorrect number of arguments (expected ${argnames.length}, got ${args.length})`);
+
+        // can't use the output texture as an input
+        const flatArgs = args.flat(); // args.reduce((arr, val) => arr.concat(val), []);
+        for(let j = flatArgs.length - 1; j >= 0; j--) {
+            if(flatArgs[j] === this._texture[this._textureIndex])
+                throw new NotSupportedError(`Can't run shader: don't use its output texture as an input to itself. Consider using pingpong rendering!`);
+        }
 
         // skip things
         if(gl.isContextLost())
@@ -235,7 +227,7 @@ export class SpeedyProgram extends Function
             if(!this._argIsArray[i]) {
                 // uniform variable matches argument name
                 const uniform = this._uniform.get(argname);
-                texNo = this._setUniform(uniform, args[i], texNo);
+                texNo = uniform.setValue(gl, args[i], texNo);
             }
             else {
                 // uniform array matches argument name
@@ -243,7 +235,7 @@ export class SpeedyProgram extends Function
                 if(this._uniform.has(`${argname}[${array.length}]`))
                     throw new IllegalArgumentError(`Can't run shader: too few elements in the "${argname}" array`);
                 for(let j = 0, uniform = undefined; (uniform = this._uniform.get(`${argname}[${j}]`)) !== undefined; j++)
-                    texNo = this._setUniform(uniform, array[j], texNo);
+                    texNo = uniform.setValue(gl, array[j], texNo);
             }
         }
 
@@ -255,7 +247,7 @@ export class SpeedyProgram extends Function
         const fbo = options.renderToTexture ? this._fbo[this._textureIndex] : null;
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
         gl.viewport(0, 0, this._width, this._height);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); // mode, offset, count
+        gl.drawArrays(gl.TRIANGLES, 0, 6); // mode, offset, count
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
         // are we rendering to a texture?
@@ -563,59 +555,18 @@ export class SpeedyProgram extends Function
     }
 
     /**
-     * Set the value of a uniform variable
-     * @param {ProgramUniform} uniform
-     * @param {SpeedyTexture|number|boolean|number[]|boolean[]} value use column-major format for matrices
-     * @param {number} texNo current texture index
-     * @returns {number} new texture index
-     */
-    _setUniform(uniform, value, texNo)
-    {
-        const gl = this._gl;
-
-        if(uniform.type == 'sampler2D') {
-            // set texture
-            if(texNo > gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
-                throw new NotSupportedError(`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
-            else if(value === this._texture[this._textureIndex])
-                throw new NotSupportedError(`Can't run shader: cannot use its output texture as an input to itself`);
-            else if(value == null)
-                throw new IllegalArgumentError(`Can't run shader: cannot use null as an input texture`);
-
-            gl.activeTexture(gl.TEXTURE0 + texNo);
-            gl.bindTexture(gl.TEXTURE_2D, value.glTexture);
-            gl.uniform1i(uniform.location, texNo);
-            texNo++;
-        }
-        else if(typeof value == 'number' || typeof value == 'boolean') {
-            // set scalar value
-            (gl[uniform.setter])(uniform.location, value);
-        }
-        else if(Array.isArray(value)) {
-            // set vector or matrix
-            if(value.length === uniform.length) {
-                if(uniform.dim == 2)
-                    (gl[uniform.setter])(uniform.location, false, value); // matrix
-                else
-                    (gl[uniform.setter])(uniform.location, ...value); // vector
-            }
-            else
-                throw new IllegalArgumentError(`Can't run shader: incorrect number of values for ${uniform.type}: "${value}"`);
-        }
-        else
-            throw new IllegalArgumentError(`Can't run shader: unrecognized argument "${value}"`);
-
-        return texNo;
-    }
-
-    /**
      * Create a quad to be passed to the vertex shader
      * (this is crafted for image processing)
      * @param {WebGL2RenderingContext} gl
-     * @returns {ProgramGeometry}
+     * @param {ShaderDeclaration} shaderdecl
+     * @returns {StoredGeometry}
      */
-    _createGeometry(gl)
+    _createGeometry(gl, shaderdecl)
     {
+        // We assume that the geometry and the locations of the attributes of the
+        // vertex shaders are CONSTANT throughout time and the same for all shaders.
+        // That's why we cache the VAO and the VBO (is this really necessary?!)
+
         // got cached values for this WebGL context?
         if(geometryCache.has(gl))
             return geometryCache.get(gl);
@@ -629,14 +580,17 @@ export class SpeedyProgram extends Function
         // using the current vbo
         gl.bindBuffer(gl.ARRAY_BUFFER, vbo[0]);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            // clip coordinates
+            // clip coordinates (CCW)
             -1, -1,
             1, -1,
             -1, 1,
+
+            -1, 1,
+            1, -1,
             1, 1,
         ]), gl.STATIC_DRAW);
-        gl.enableVertexAttribArray(ATTRIBUTE_LOCATIONS.position);
-        gl.vertexAttribPointer(ATTRIBUTE_LOCATIONS.position, // attribute location
+        gl.enableVertexAttribArray(shaderdecl.locationOfAttributes.position);
+        gl.vertexAttribPointer(shaderdecl.locationOfAttributes.position, // attribute location
                                2,          // 2 components per vertex (x,y)
                                gl.FLOAT,   // type
                                false,      // don't normalize
@@ -647,14 +601,17 @@ export class SpeedyProgram extends Function
         // using the current vbo
         gl.bindBuffer(gl.ARRAY_BUFFER, vbo[1]);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            // texture coordinates
+            // texture coordinates (CCW)
             0, 0,
             1, 0,
             0, 1,
+
+            0, 1,
+            1, 0,
             1, 1,
         ]), gl.STATIC_DRAW);
-        gl.enableVertexAttribArray(ATTRIBUTE_LOCATIONS.texCoord);
-        gl.vertexAttribPointer(ATTRIBUTE_LOCATIONS.texCoord, // attribute location
+        gl.enableVertexAttribArray(shaderdecl.locationOfAttributes.texCoord);
+        gl.vertexAttribPointer(shaderdecl.locationOfAttributes.texCoord, // attribute location
                                2,          // 2 components per vertex (x,y)
                                gl.FLOAT,   // type
                                false,      // don't normalize
@@ -665,7 +622,7 @@ export class SpeedyProgram extends Function
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
         // cache & return
-        const result = new ProgramGeometry(vao, vbo[0], vbo[1]);
+        const result = new StoredGeometry(vao, vbo[0], vbo[1]);
         geometryCache.set(gl, result);
         return result;
     }
@@ -733,9 +690,10 @@ export class SpeedyProgram extends Function
  * @param {WebGLBuffer} vboPosition buffer associated with the position attribute
  * @param {WebGLBuffer} vboTexCoord buffer associated with the texCoord attribute
  */
-function ProgramGeometry(vao, vboPosition, vboTexCoord)
+function StoredGeometry(vao, vboPosition, vboTexCoord)
 {
     this.vao = vao;
+
     this.vbo = Object.freeze({
         position: vboPosition,
         texCoord: vboTexCoord
@@ -749,7 +707,7 @@ function ProgramGeometry(vao, vboPosition, vboTexCoord)
  * @param {string} type
  * @param {WebGLUniformLocation} location
  */
-function ProgramUniform(type, location)
+function UniformVariable(type, location)
 {
     /** @type {string} GLSL data type */
     this.type = String(type);
@@ -761,16 +719,62 @@ function ProgramUniform(type, location)
 
     /** @type {string} setter function */
     this.setter = UNIFORM_SETTERS[this.type];
+    const n = Number((this.setter.match(/^uniform(Matrix)?(\d)/))[2]) | 0;
 
     /** @type {number} is the uniform a scalar (0), a vector (1) or a matrix (2)? */
     this.dim = this.type.startsWith('mat') ? 2 : ((this.type.indexOf('vec') >= 0) | 0);
 
     /** @type {number} required number of scalars */
-    const n = Number((this.setter.match(/^uniform(Matrix)?(\d)/))[2]) | 0;
     this.length = (this.dim == 2) ? n * n : n;
 
     // done!
     return Object.freeze(this);
+}
+
+/**
+ * Set the value of a uniform variable
+ * @param {WebGL2RenderingContext} gl
+ * @param {SpeedyTexture|number|boolean|number[]|boolean[]} value use column-major format for matrices
+ * @param {number} texNo current texture index
+ * @returns {number} new texture index
+ */
+UniformVariable.prototype.setValue = function(gl, value, texNo)
+{
+    const setValue = gl[this.setter];
+
+    // check uniform type
+    if(this.type == 'sampler2D') {
+        // set texture
+        if(texNo > gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
+            throw new NotSupportedError(`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
+        else if(value == null)
+            throw new IllegalArgumentError(`Can't run shader: cannot use null as an input texture`);
+
+        gl.activeTexture(gl.TEXTURE0 + texNo);
+        gl.bindTexture(gl.TEXTURE_2D, value.glTexture);
+        gl.uniform1i(this.location, texNo);
+        texNo++;
+    }
+    else if(typeof value == 'number' || typeof value == 'boolean') {
+        // set scalar value
+        setValue.call(gl, this.location, value);
+    }
+    else if(Array.isArray(value)) {
+        // set vector or matrix
+        if(value.length === this.length) {
+            if(this.dim == 2)
+                setValue.call(gl, this.location, false, value); // matrix
+            else
+                setValue.call(gl, this.location, ...value); // vector
+        }
+        else
+            throw new IllegalArgumentError(`Can't run shader: incorrect number of values for ${this.type}: "${value}"`);
+    }
+    else
+        throw new IllegalArgumentError(`Can't run shader: unrecognized argument "${value}"`);
+
+    // done
+    return texNo;
 }
 
 /**

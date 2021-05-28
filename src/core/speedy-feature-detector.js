@@ -132,7 +132,7 @@ export class SpeedyFeatureDetector
         */
 
         // Upload & preprocess media
-        const texture = gpu.upload(media.source, media.width, media.height);
+        const texture = media._upload();
         const preprocessedTexture = this._preprocessTexture(
             gpu,
             texture,

@@ -154,11 +154,11 @@ export class GPUFilters extends SpeedyProgramGroup
             })
             /*.declare('_readKernel3x3', identity, { // for testing
                 ...(this.program.hasTextureSize(3, 3)),
-                ...(this.program.displaysGraphics())
+                ...(this.program.rendersToCanvas())
             })
             .declare('_readKernel3x1', identity, {
                 ...(this.program.hasTextureSize(3, 1)),
-                ...(this.program.displaysGraphics())
+                ...(this.program.rendersToCanvas())
             })*/
 
 
