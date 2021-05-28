@@ -23,6 +23,7 @@ import { SpeedyGL } from './speedy-gl';
 import { SpeedyProgramCenter } from './speedy-program-center';
 import { NotSupportedError, IllegalArgumentError } from '../utils/errors';
 import { MAX_TEXTURE_LENGTH } from '../utils/globals';
+import { Utils } from '../utils/utils';
 
 /**
  * GPU-accelerated routines for Computer Vision
@@ -60,7 +61,8 @@ export class SpeedyGPU
 
         // recreate the programs if necessary
         this.onWebGLContextReset(() => {
-            this._programs = new SpeedyProgramCenter(this, this._width, this._height);
+            if(!this.isReleased())
+                this._programs = new SpeedyProgramCenter(this, this._width, this._height);
         });
     }
 
@@ -100,6 +102,26 @@ export class SpeedyGPU
     renderToCanvas(texture)
     {
         return this.programs.utils.renderToCanvas(texture);
+    }
+
+    /**
+     * Releases all programs and textures associated with this SpeedyGPU
+     * @returns {null}
+     */
+    release()
+    {
+        Utils.assert(!this.isReleased());
+        this._programs = this._programs.release();
+        return null;
+    }
+
+    /**
+     * Has this SpeedyGPU been released?
+     * @returns {boolean}
+     */
+    isReleased()
+    {
+        return this._programs == null;
     }
 
     /**

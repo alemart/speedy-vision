@@ -60,41 +60,33 @@ export class GLUtils
     }
 
     /**
-     * Create a shader
+     * Create a WebGL program
      * @param {WebGL2RenderingContext} gl
-     * @param {number} type
-     * @param {string} source
-     * @returns {WebGLShader}
-     */
-    static createShader(gl, type, source)
-    {
-        const shader = gl.createShader(type);
-
-        gl.shaderSource(shader, source);
-        gl.compileShader(shader);
-
-        return shader;
-    }
-
-    /**
-     * Create a vertex-shader + fragment-shader program
-     * @param {WebGL2RenderingContext} gl
-     * @param {string} vertexShaderSource
-     * @param {string} fragmentShaderSource
+     * @param {string} vertexShaderSource vertex shader (GLSL code)
+     * @param {string} fragmentShaderSource fragment shader (GLSL code)
      * @returns {WebGLProgram}
      */
     static createProgram(gl, vertexShaderSource, fragmentShaderSource)
     {
         const program = gl.createProgram();
-        const vertexShader = GLUtils.createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
-        const fragmentShader = GLUtils.createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 
+        // compile vertex shader
+        gl.shaderSource(vertexShader, vertexShaderSource);
+        gl.compileShader(vertexShader);
         gl.attachShader(program, vertexShader);
+
+        // compile fragment shader
+        gl.shaderSource(fragmentShader, fragmentShaderSource);
+        gl.compileShader(fragmentShader);
         gl.attachShader(program, fragmentShader);
+
+        // link program
         gl.linkProgram(program);
         gl.validateProgram(program);
 
-        // error?
+        // got an error?
         if(!gl.getProgramParameter(program, gl.LINK_STATUS) && !gl.isContextLost()) {
             const errors = [
                 gl.getShaderInfoLog(fragmentShader),
@@ -122,7 +114,25 @@ export class GLUtils
             );
         }
 
+        // done!
         return program;
+    }
+
+    /**
+     * Destroy a WebGL program
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLProgram} program
+     * @returns {null}
+     */
+    static destroyProgram(gl, program)
+    {
+        gl.deleteProgram(program);
+        return null;
+
+        // Need to delete shaders as well? In sec 5.14.9 Programs and shaders
+        // of the WebGL 1.0 spec, it is mentioned that the underlying GL object
+        // will automatically be marked for deletion when the JS object is
+        // destroyed (i.e., garbage collected)
     }
 
     /**

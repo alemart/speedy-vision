@@ -527,6 +527,24 @@ export class SpeedyProgram extends Function
     }
 
     /**
+     * Release resources associated with this SpeedyProgram
+     * @returns {null}
+     */
+    release()
+    {
+        const gl = this._gl;
+
+        for(let i = 0; i < this._texture.length; i++) {
+            this._texture[i] = this._texture[i].release();
+            this._fbo[i] = GLUtils.destroyFramebuffer(gl, this._fbo[i]);
+        }
+
+        this._program = GLUtils.destroyProgram(gl, this._program);
+
+        return null;
+    }
+
+    /**
      * Width of the internal texture, in pixels
      * @returns {number}
      */

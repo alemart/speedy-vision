@@ -84,7 +84,7 @@ export class SpeedyMedia
         /** @type {SpeedyGPU} GPU-accelerated routines */
         this._gpu = new SpeedyGPU(this._source.width, this._source.height);
 
-        /** @type {SpeedyTexture[]} upload buffers */
+        /** @type {SpeedyTexture[]} upload buffers (lazy instantiation) */
         this._texture = (new Array(UPLOAD_BUFFER_SIZE)).fill(null);
 
         /** @type {number} index of the texture that was just uploaded to the GPU */
@@ -206,8 +206,13 @@ export class SpeedyMedia
             Utils.log('Releasing SpeedyMedia object...');
 
             // release the upload buffers
-            for(let i = 0; i < this._texture.length; i++)
-                this._texture[i] = this._texture[i].release();
+            for(let i = 0; i < this._texture.length; i++) {
+                if(this._texture[i] != null)
+                    this._texture[i] = this._texture[i].release();
+            }
+
+            // release the GPU
+            this._gpu = this._gpu.release();
         }
 
         return SpeedyPromise.resolve();
@@ -219,7 +224,7 @@ export class SpeedyMedia
      */
     isReleased()
     {
-        return this._texture[0] == null;
+        return this._gpu == null;
     }
 
     /**
@@ -362,10 +367,8 @@ export class SpeedyMedia
             if(data.readyState < 2) {
                 // this may happen when the video loops (Firefox)
                 // return the previously uploaded texture
-                if(this._texture[this._textureIndex] != null)
-                    return this._texture[this._textureIndex];
-                else
-                    Utils.warning(`Trying to process a video that isn't ready yet`);
+                Utils.warning(`Trying to process a video that isn't ready yet`);
+                return this._texture[this._textureIndex];
             }
         }
 

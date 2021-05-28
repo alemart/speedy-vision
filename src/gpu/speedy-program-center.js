@@ -28,8 +28,9 @@ import { GPUPyramids } from './programs/pyramids';
 import { GPUEnhancements } from './programs/enhancements';
 import { GPUTrackers } from './programs/trackers';
 import { GPUTransforms } from './programs/transforms';
-import { IllegalArgumentError } from '../utils/errors';
+import { SpeedyProgramGroup } from './speedy-program-group';
 import { PYRAMID_MAX_LEVELS } from '../utils/globals';
+import { IllegalArgumentError } from '../utils/errors';
 
 /**
  * An access point to all programs that run on the CPU
@@ -39,15 +40,19 @@ export class SpeedyProgramCenter
 {
     /**
      * Class constructor
-     * @param {SpeedyGPU} gpu 
+     * @param {SpeedyGPU} gpu reference to SpeedyGPU
      * @param {number} width default width for output textures
      * @param {number} height default height for output textures
      */
     constructor(gpu, width, height)
     {
-        // properties
+        /** @type {SpeedyGPU} reference to SpeedyGPU */
         this._gpu = gpu;
+
+        /** @type {number} default width for output textures */
         this._width = width;
+
+        /** @type {number} default height for output textures */
         this._height = height;
 
         // program groups
@@ -172,5 +177,27 @@ export class SpeedyProgramCenter
             Math.max(1, Math.floor(this._width / pot)),
             Math.max(1, Math.floor(this._height / pot))
         ));
+    }
+
+    /**
+     * Release all programs from all groups. You'll
+     * no longer be able to use any of them.
+     * @returns {null}
+     */
+    release()
+    {
+        for(const key in this) {
+            if(Object.prototype.hasOwnProperty.call(this, key)) {
+                if(this[key] instanceof SpeedyProgramGroup)
+                    this[key].release();
+            }
+        }
+
+        for(let i = 0; i < this._pyramids.length; i++) {
+            if(this._pyramids[i] != null)
+                this._pyramids[i].release();
+        }
+
+        return null;
     }
 }
