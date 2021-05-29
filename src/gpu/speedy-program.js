@@ -213,6 +213,9 @@ export class SpeedyProgram extends Function
         // use program
         gl.useProgram(this._program);
 
+        // bind the VAO
+        gl.bindVertexArray(this._geometry.vao);
+
         // we need to update the texSize uniform (e.g., if the program was resized)
         if(this._dirtySize) {
             const texSize = this._uniform.get('texSize');
