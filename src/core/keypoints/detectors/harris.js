@@ -83,7 +83,7 @@ export class HarrisFeatures extends FeatureDetectionAlgorithm
         const lod = 0, lodStep = 1, numberOfLayers = 1;
 
         // compute derivatives
-        const df = gpu.programs.keypoints.multiscaleSobel(inputTexture, lod).nonDrawableClone();
+        const df = gpu.programs.keypoints.multiscaleSobel(inputTexture, lod).clone();
         const sobelDerivatives = new Array(MAX_LAYERS).fill(df);
 
         // corner detection
@@ -208,7 +208,7 @@ export class MultiscaleHarrisFeatures extends FeatureDetectionAlgorithm
         // compute derivatives
         const sobelDerivatives = new Array(MAX_LAYERS);
         for(let j = 0; j < numberOfLayers; j++)
-            sobelDerivatives[j] = gpu.programs.keypoints.multiscaleSobel(pyramid, j * lodStep).nonDrawableClone();
+            sobelDerivatives[j] = gpu.programs.keypoints.multiscaleSobel(pyramid, j * lodStep).clone();
         for(let k = numberOfLayers; k < sobelDerivatives.length; k++)
             sobelDerivatives[k] = sobelDerivatives[k-1]; // can't call shaders with null pointers
 

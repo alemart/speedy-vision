@@ -252,22 +252,24 @@ export class SpeedyDrawableTexture extends SpeedyTexture
         GLUtils.copyToTexture(gl, this._glFbo, texture.glTexture, 0, 0, this._width, this._height, lod);
     }
 
-    /**
+    /*
+     **
      * Clone this texture
      * @returns {SpeedyDrawableTexture}
-     */
+     *
     drawableClone()
     {
         const clone = new SpeedyDrawableTexture(this._gl, this._width, this._height);
         this.copyTo(clone);
         return clone;
     }
+    */
 
     /**
-     * Clone this texture, but don't include a framebuffer
-     * @returns {SpeedyTexture}
+     * Clone this texture. Note that the clone doesn't include a framebuffer
+     * @returns {SpeedyTexture} non-drawable
      */
-    nonDrawableClone()
+    clone()
     {
         const clone = new SpeedyTexture(this._gl, this._width, this._height);
         this.copyTo(clone);
