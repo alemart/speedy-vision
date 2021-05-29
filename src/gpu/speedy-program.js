@@ -51,8 +51,6 @@ const UNIFORM_SETTERS = Object.freeze({
     'mat4':     'uniformMatrix4fv',
 });
 
-// cache program geometry
-const geometryCache = new WeakMap();
 
 
 /**
@@ -95,8 +93,11 @@ export class SpeedyProgram extends Function
         /** @type {WebGLProgram} */
         this._program = GLUtils.createProgram(gl, shaderdecl.vertexSource, shaderdecl.fragmentSource);
 
-        /** @type {StoredGeometry} this is a quad */
-        this._geometry = this._createGeometry(gl, shaderdecl);
+        /** @type {ProgramGeometry} this is a quad */
+        this._geometry = new ProgramGeometry(gl, {
+            position: shaderdecl.locationOfAttributes.position,
+            texCoord: shaderdecl.locationOfAttributes.texCoord
+        });
 
         /** @type {string[]} names of the arguments of the SpeedyProgram */
         this._argnames = shaderdecl.arguments;
@@ -230,6 +231,9 @@ export class SpeedyProgram extends Function
         gl.viewport(0, 0, this._width, this._height);
         gl.drawArrays(gl.TRIANGLES, 0, 6); // mode, offset, count
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        // unbind the VAO
+        gl.bindVertexArray(null);
 
         // finish things
         if(options.renderToTexture) {
@@ -380,6 +384,9 @@ export class SpeedyProgram extends Function
         for(let i = 0; i < this._texture.length; i++)
             this._texture[i] = this._texture[i].release();
 
+        // Release geometry
+        this._geometry = this._geometry.release();
+
         // Release program
         this._program = GLUtils.destroyProgram(gl, this._program);
 
@@ -414,79 +421,6 @@ export class SpeedyProgram extends Function
         if(this._options.pingpong)
             this._textureIndex = 1 - this._textureIndex;
     }
-
-    /**
-     * Create a quad to be passed to the vertex shader
-     * (this is crafted for image processing)
-     * @param {WebGL2RenderingContext} gl
-     * @param {ShaderDeclaration} shaderdecl
-     * @returns {StoredGeometry}
-     */
-    _createGeometry(gl, shaderdecl)
-    {
-        // We assume that the geometry and the locations of the attributes of the
-        // vertex shaders are CONSTANT throughout time and the same for all shaders.
-        // That's why we cache the VAO and the VBO (is this really necessary?!)
-
-        // got cached values for this WebGL context?
-        if(geometryCache.has(gl))
-            return geometryCache.get(gl);
-
-        // configure the attributes of the vertex shader
-        const vao = gl.createVertexArray(); // vertex array object
-        const vbo = [ gl.createBuffer(), gl.createBuffer() ]; // vertex buffer objects
-        gl.bindVertexArray(vao);
-
-        // set the a_position attribute
-        // using the current vbo
-        gl.bindBuffer(gl.ARRAY_BUFFER, vbo[0]);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            // clip coordinates (CCW)
-            -1, -1,
-            1, -1,
-            -1, 1,
-
-            -1, 1,
-            1, -1,
-            1, 1,
-        ]), gl.STATIC_DRAW);
-        gl.enableVertexAttribArray(shaderdecl.locationOfAttributes.position);
-        gl.vertexAttribPointer(shaderdecl.locationOfAttributes.position, // attribute location
-                               2,          // 2 components per vertex (x,y)
-                               gl.FLOAT,   // type
-                               false,      // don't normalize
-                               0,          // default stride (tightly packed)
-                               0);         // offset
-
-        // set the a_texCoord attribute
-        // using the current vbo
-        gl.bindBuffer(gl.ARRAY_BUFFER, vbo[1]);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            // texture coordinates (CCW)
-            0, 0,
-            1, 0,
-            0, 1,
-
-            0, 1,
-            1, 0,
-            1, 1,
-        ]), gl.STATIC_DRAW);
-        gl.enableVertexAttribArray(shaderdecl.locationOfAttributes.texCoord);
-        gl.vertexAttribPointer(shaderdecl.locationOfAttributes.texCoord, // attribute location
-                               2,          // 2 components per vertex (x,y)
-                               gl.FLOAT,   // type
-                               false,      // don't normalize
-                               0,          // default stride (tightly packed)
-                               0);         // offset
-
-        // unbind
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
-
-        // cache & return
-        const result = new StoredGeometry(vao, vbo[0], vbo[1]);
-        geometryCache.set(gl, result);
-        return result;
-    }
 }
 
 
@@ -496,25 +430,107 @@ export class SpeedyProgram extends Function
 //
 
 /**
- * Storage for VAO & VBOs (vertex shader)
- * @param {WebGLVertexArrayObject} vao vertex array object
- * @param {WebGLBuffer} vboPosition buffer associated with the position attribute
- * @param {WebGLBuffer} vboTexCoord buffer associated with the texCoord attribute
+ * Configure and store the VAO and the VBOs
+ * @param {WebGL2RenderingContext} gl
+ * @param {LocationOfAttributes} location
+ * @returns {ProgramGeometry}
+ *
+ * @typedef {Object} LocationOfAttributes
+ * @property {number} position
+ * @property {number} texCoord
+ *
+ * @typedef {Object} BufferOfAttributes
+ * @property {WebGLBuffer} position
+ * @property {WebGLBuffer} texCoord
  */
-function StoredGeometry(vao, vboPosition, vboTexCoord)
+function ProgramGeometry(gl, location)
 {
-    this.vao = vao;
+    /** @type {WebGLVertexArrayObject} Vertex Array Object */
+    this.vao = gl.createVertexArray();
 
+    /** @type {BufferOfAttributes} Vertex Buffer Objects */
     this.vbo = Object.freeze({
-        position: vboPosition,
-        texCoord: vboTexCoord
+        position: gl.createBuffer(),
+        texCoord: gl.createBuffer()
     });
 
+    /** @type {WebGL2RenderingContext} */
+    this._gl = gl;
+
+
+
+    // bind the VAO
+    gl.bindVertexArray(this.vao);
+
+    // set the position attribute
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo.position);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        // clip coordinates (CCW)
+        -1, -1,
+        1, -1,
+        -1, 1,
+
+        -1, 1,
+        1, -1,
+        1, 1,
+    ]), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(location.position);
+    gl.vertexAttribPointer(location.position, // attribute location
+                            2,                // 2 components per vertex (x,y)
+                            gl.FLOAT,         // type
+                            false,            // don't normalize
+                            0,                // default stride (tightly packed)
+                            0);               // offset
+
+    // set the texCoord attribute
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo.texCoord);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        // texture coordinates (CCW)
+        0, 0,
+        1, 0,
+        0, 1,
+
+        0, 1,
+        1, 0,
+        1, 1,
+    ]), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(location.texCoord);
+    gl.vertexAttribPointer(location.texCoord, // attribute location
+                            2,                // 2 components per vertex (x,y)
+                            gl.FLOAT,         // type
+                            false,            // don't normalize
+                            0,                // default stride (tightly packed)
+                            0);               // offset
+
+    // unbind
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    gl.bindVertexArray(null);
+
+    // done!
     return Object.freeze(this);
 }
 
 /**
- * Helper class for storing data related to GLSL uniform variables
+ * Releases the internal resources
+ * @returns {null}
+ */
+ProgramGeometry.prototype.release = function()
+{
+    const gl = this._gl;
+
+    gl.deleteVertexArray(this.vao);
+    gl.deleteBuffer(this.vbo.position);
+    gl.deleteBuffer(this.vbo.texCoord);
+
+    return null;
+}
+
+
+
+
+
+/**
+ * Helper class for storing data in GLSL uniform variables
  * @param {string} type
  * @param {WebGLUniformLocation} location
  */
@@ -587,6 +603,11 @@ UniformVariable.prototype.setValue = function(gl, value, texNo)
     // done
     return texNo;
 }
+
+
+
+
+
 
 /**
  * A helper class for handling Uniform Buffer Objects (UBOs)
