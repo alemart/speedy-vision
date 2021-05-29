@@ -269,26 +269,6 @@ export class GLUtils
         gl.bindTexture(gl.TEXTURE_2D, null);
     }
 
-    // bind the textures and assign their numbers
-    // textureMap: { 'textureName': <texture> , ... }
-    // locationMap: { 'textureName': <uniformLocation> , ... }
-    static bindTextures(gl, textureMap, locationMap)
-    {
-        const names = Object.keys(textureMap);
-
-        if(gl.isContextLost())
-            return;
-
-        if(names.length > gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
-            throw new GLError(`Can't bind ${names.length} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
-
-        for(let i = 0; i < names.length; i++) {
-            gl.activeTexture(gl.TEXTURE0 + i);
-            gl.bindTexture(gl.TEXTURE_2D, textureMap[names[i]]);
-            gl.uniform1i(locationMap[names[i]], i);
-        }
-    }
-
     /**
      * Creates a framebuffer object (FBO) associated with an existing texture
      * @param {WebGL2RenderingContext} gl 

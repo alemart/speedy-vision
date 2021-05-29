@@ -546,13 +546,14 @@ export class SpeedyProgram extends Function
 
         // Release internal textures & framebuffers
         for(let i = 0; i < this._texture.length; i++) {
-            this._texture[i] = this._texture[i].release();
             this._fbo[i] = GLUtils.destroyFramebuffer(gl, this._fbo[i]);
+            this._texture[i] = this._texture[i].release();
         }
 
         // Release program
         this._program = GLUtils.destroyProgram(gl, this._program);
 
+        // done!
         return null;
     }
 

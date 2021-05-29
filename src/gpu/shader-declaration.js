@@ -277,7 +277,7 @@ export class ShaderDeclaration
 
                     // read array name & size
                     const [ array, size ] = [ match[1], Number(match[2]) ];
-                    if(size < 0)
+                    if(size == 0)
                         throw new ParseError(`Array ${array} has invalid size: ${size}`);
 
                     // register uniforms
