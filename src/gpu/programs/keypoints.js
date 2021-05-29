@@ -20,6 +20,7 @@
  */
 
 import { SpeedyProgramGroup } from '../speedy-program-group';
+import { SpeedyTexture, SpeedyDrawableTexture } from '../speedy-texture';
 import { importShader } from '../shader-declaration';
 import { FeatureEncoder } from '../../core/keypoints/feature-encoder';
 import { PYRAMID_MAX_LEVELS } from '../../utils/globals';
@@ -182,9 +183,7 @@ export class GPUKeypoints extends SpeedyProgramGroup
             // ORB
             .declare('_orb', orb)
             .declare('_orbOrientation', orbOrientation)
-            .declare('multiscaleSobel', multiscaleSobel, {
-                ...this.program.doesNotRecycleTextures()
-            }) // scale-space
+            .declare('multiscaleSobel', multiscaleSobel) // scale-space
 
             // Transfer keypoint orientation
             .declare('_transferOrientation', transferOrientation)
@@ -198,7 +197,7 @@ export class GPUKeypoints extends SpeedyProgramGroup
      * Non-maximum suppression
      * @param {SpeedyTexture} corners scores are encoded as float16
      * @param {number} [lodStep] log2(scaleFactor) - specify if multi-scale
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyDrawableTexture}
      */
     nonMaxSuppression(corners, lodStep = 0)
     {
@@ -215,7 +214,7 @@ export class GPUKeypoints extends SpeedyProgramGroup
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
      * @param {number} encoderLength
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyDrawableTexture}
      */
     orb(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength)
     {
@@ -232,7 +231,7 @@ export class GPUKeypoints extends SpeedyProgramGroup
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
      * @param {number} encoderLength
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyDrawableTexture}
      */
     orbOrientation(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength)
     {
@@ -253,7 +252,7 @@ export class GPUKeypoints extends SpeedyProgramGroup
      * @param {number} extraSize in bytes
      * @param {number} encoderLength
      * @param {number} suppressedEncoderLength equivalent to encoderLength, but without the descriptors
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyDrawableTexture}
      */
     suppressDescriptors(encodedKeypoints, descriptorSize, extraSize, encoderLength, suppressedEncoderLength)
     {

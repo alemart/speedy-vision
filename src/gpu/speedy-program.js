@@ -108,7 +108,6 @@ export class SpeedyProgram extends Function
         this._options = Object.freeze({
             output: [ gl.drawingBufferWidth, gl.drawingBufferHeight ], // size of the output texture
             renderToTexture: true, // render results to a texture?
-            recycleTexture: true, // recycle output texture? If false, you must manually destroy the output texture
             pingpong: false, // alternate output texture between calls
             ...options // user-defined options
         });
@@ -166,7 +165,7 @@ export class SpeedyProgram extends Function
     /**
      * Run the SpeedyProgram
      * @param  {...(number|number[]|SpeedyTexture|SpeedyTexture[])} args
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyDrawableTexture}
      */
     _call(...args)
     {
@@ -226,36 +225,32 @@ export class SpeedyProgram extends Function
             this._ubo.update();
 
         // draw call
-        const tex = this._texture[this._textureIndex];
-        const fbo = options.renderToTexture ? tex.glFbo : null;
+        const fbo = options.renderToTexture ? this._texture[this._textureIndex].glFbo : null;
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
         gl.viewport(0, 0, this._width, this._height);
         gl.drawArrays(gl.TRIANGLES, 0, 6); // mode, offset, count
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-        // are we rendering to a texture?
-        if(fbo !== null) {
-            // we've just changed the contents of the internal texture
-            tex.discardMipmaps(); // discard its pyramid
+        // finish things
+        if(options.renderToTexture) {
+            // we'll return the texture we've just rendered to
+            const tex = this._texture[this._textureIndex];
 
-            // should we return the internal texture or a clone?
-            const outputTexture = options.recycleTexture ? tex : tex.nonDrawableClone();
+            tex.discardMipmaps(); // we've changed it; discard the pyramid
+            this._pingpong(); // ping-pong rendering
 
-            // ping-pong rendering
-            this._pingpong();
-
-            // done!
-            return outputTexture;
+            return tex; // done!
         }
-
-        // we're not rendering to a texture
-        return null;
+        else {
+            // nothing to return
+            return null;
+        }
     }
 
     /**
-     * Resize the output texture
-     * @param {number} width 
-     * @param {number} height 
+     * Resize the output texture(s)
+     * @param {number} width new width, in pixels
+     * @param {number} height new height, in pixels
      */
     resize(width, height)
     {
@@ -272,7 +267,7 @@ export class SpeedyProgram extends Function
         this._height = height;
         this._dirtySize = true;
 
-        // resize the internal texture(s)
+        // resize the output texture(s)
         for(let i = 0; i < this._texture.length; i++)
             this._texture[i].resize(width, height, true);
 

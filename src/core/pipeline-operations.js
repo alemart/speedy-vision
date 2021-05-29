@@ -289,7 +289,8 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
                 this._texKernel.release();
             }
 
-            this._texKernel = gpu.programs.filters[this._method[0]](this._kernel);
+            const texKernel = gpu.programs.filters[this._method[0]](this._kernel);
+            this._texKernel = texKernel.nonDrawableClone();
             this._gl = gpu.gl;
         }
 

@@ -112,8 +112,8 @@ export class GPUEnhancements extends SpeedyProgramGroup
         
         // TODO: normalize on a luminance channel instead (e.g., use HSL color space)
         const minmax2d = new Array(3);
-        minmax2d[0] = gpu.programs.utils.clone(gpu.programs.utils._scanMinMax(image, PixelComponent.RED));
-        minmax2d[1] = gpu.programs.utils.clone(gpu.programs.utils._scanMinMax(image, PixelComponent.GREEN));
+        minmax2d[0] = gpu.programs.utils._scanMinMax(image, PixelComponent.RED).nonDrawableClone();
+        minmax2d[1] = gpu.programs.utils._scanMinMax(image, PixelComponent.GREEN).nonDrawableClone();
         minmax2d[2] = gpu.programs.utils._scanMinMax(image, PixelComponent.BLUE);
 
         const normalized = this._normalizeColoredImage(minmax2d, Math.min(minValue, maxValue), Math.max(minValue, maxValue));
