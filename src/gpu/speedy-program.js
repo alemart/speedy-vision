@@ -20,7 +20,7 @@
  */
 
 import { GLUtils } from './gl-utils.js';
-import { SpeedyTexture } from './speedy-texture';
+import { SpeedyTexture, SpeedyDrawableTexture } from './speedy-texture';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { ShaderDeclaration } from './shader-declaration';
 import { Utils } from '../utils/utils';
@@ -87,6 +87,12 @@ export class SpeedyProgram extends Function
      */
     _init(gl, shaderdecl, options)
     {
+        // not a valid context?
+        if(gl.isContextLost())
+            throw new IllegalOperationError(`Can't initialize SpeedyProgram: lost context`);
+
+
+
         /** @type {WebGL2RenderingContext} */
         this._gl = gl;
 
@@ -126,13 +132,10 @@ export class SpeedyProgram extends Function
         /** @type {UBOHelper} UBO helper (lazy instantiation) */
         this._ubo = null;
 
-        /** @type {SpeedyTexture[]} output texture(s) */
+        /** @type {SpeedyDrawableTexture[]} output texture(s) */
         this._texture = !this._options.renderToTexture ? [] :
-            (new Array(this._options.pingpong ? 2 : 1)).fill(null);
-
-        /** @type {WebGLFramebuffer[]} framebuffer object(s) */
-        this._fbo = !this._options.renderToTexture ? [] :
-            (new Array(this._options.pingpong ? 2 : 1)).fill(null);
+            Array.from({ length: this._options.pingpong ? 2 : 1 },
+                () => new SpeedyDrawableTexture(gl, this._width, this._height));
 
         /** @type {number} used for pingpong rendering */
         this._textureIndex = 0;
@@ -154,16 +157,6 @@ export class SpeedyProgram extends Function
         // validate options
         if(this._options.pingpong && !this._options.renderToTexture)
             throw new IllegalOperationError(`Pingpong rendering can only be used when rendering to textures`);
-
-        // not a valid context?
-        if(gl.isContextLost())
-            throw new IllegalOperationError(`Can't initialize SpeedyProgram: lost context`);
-
-        // create framebuffer(s)
-        for(let i = 0; i < this._texture.length; i++) {
-            this._texture[i] = new SpeedyTexture(gl, this._width, this._height);
-            this._fbo[i] = GLUtils.createFramebuffer(gl, this._texture[i].glTexture);
-        }
 
         // autodetect uniforms
         gl.useProgram(this._program);
@@ -206,7 +199,7 @@ export class SpeedyProgram extends Function
                 throw new NotSupportedError(`Can't run shader: don't use its output texture as an input to itself. Consider using pingpong rendering!`);
         }
 
-        // skip things
+        // context loss?
         if(gl.isContextLost())
             return this._texture[this._textureIndex];
 
@@ -247,7 +240,8 @@ export class SpeedyProgram extends Function
             this._ubo.update();
 
         // draw call
-        const fbo = options.renderToTexture ? this._fbo[this._textureIndex] : null;
+        const tex = this._texture[this._textureIndex];
+        const fbo = options.renderToTexture ? tex.glFbo : null;
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
         gl.viewport(0, 0, this._width, this._height);
         gl.drawArrays(gl.TRIANGLES, 0, 6); // mode, offset, count
@@ -255,18 +249,11 @@ export class SpeedyProgram extends Function
 
         // are we rendering to a texture?
         if(fbo !== null) {
-            const texture = this._texture[this._textureIndex];
-
             // we've just changed the contents of the internal texture
-            texture.discardMipmaps(); // discard its pyramid
+            tex.discardMipmaps(); // discard its pyramid
 
-            // should we return the internal texture?
-            let outputTexture = texture;
-            if(!options.recycleTexture) {
-                // no; we must clone the intenal texture
-                outputTexture = new SpeedyTexture(gl, this._width, this._height);
-                GLUtils.copyToTexture(gl, fbo, outputTexture.glTexture, 0, 0, this._width, this._height);
-            }
+            // should we return the internal texture or a clone?
+            const outputTexture = options.recycleTexture ? tex : tex.nonDrawableClone();
 
             // ping-pong rendering
             this._pingpong();
@@ -286,14 +273,6 @@ export class SpeedyProgram extends Function
      */
     resize(width, height)
     {
-        const gl = this._gl;
-        const oldWidth = this._width;
-        const oldHeight = this._height;
-
-        // lost context?
-        if(gl.isContextLost())
-            return;
-
         // get size
         width = Math.max(1, width | 0);
         height = Math.max(1, height | 0);
@@ -311,32 +290,8 @@ export class SpeedyProgram extends Function
         this._reallocatePixelBuffers(width, height);
 
         // resize the internal texture(s)
-        const n = this._texture.length;
-        const zeros = n > 0 ? new Uint8Array(width * height * 4) : null;
-        for(let i = 0; i < n; i++) {
-            // create new texture
-            const newTexture = new SpeedyTexture(gl, width, height);
-
-            // initialize the new texture with zeros to avoid a
-            // warning when calling copyTexSubImage2D() on Firefox
-            newTexture.upload(zeros); // may not be very efficient?
-
-            // copy old content
-            GLUtils.copyToTexture(gl, this._fbo[i], newTexture.glTexture, 0, 0, Math.min(width, oldWidth), Math.min(height, oldHeight));
-
-            // attach the new texture to the existing framebuffer
-            gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo[i]);
-            gl.framebufferTexture2D(gl.FRAMEBUFFER,         // target
-                                    gl.COLOR_ATTACHMENT0,   // color buffer
-                                    gl.TEXTURE_2D,          // tex target
-                                    newTexture.glTexture,   // texture
-                                    0);                     // mipmap level
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-            // release old texture & replace it
-            this._texture[i].release();
-            this._texture[i] = newTexture;
-        }
+        for(let i = 0; i < this._texture.length; i++)
+            this._texture[i].resize(width, height, true);
 
         //console.log(`Resized SpeedyProgram to ${width} x ${height}`);
     }
@@ -347,25 +302,15 @@ export class SpeedyProgram extends Function
      * @param {number} [g] in [0,1]
      * @param {number} [b] in [0,1]
      * @param {number} [a] in [0,1]
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyDrawableTexture}
      */
     clear(r = 0, g = 0, b = 0, a = 0)
     {
-        const gl = this._gl;
         const texture = this._texture[this._textureIndex];
 
-        // skip things
-        if(gl.isContextLost())
-            return texture;
-
         // clear internal textures
-        for(let i = 0; i < this._fbo.length; i++) {
-            gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo[i]);
-            gl.viewport(0, 0, this._width, this._height);
-            gl.clearColor(r, g, b, a);
-            gl.clear(gl.COLOR_BUFFER_BIT);
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        }
+        for(let i = 0; i < this._texture.length; i++)
+            this._texture[i].clear(r, g, b, a);
 
         // ping-pong rendering
         this._pingpong();
@@ -406,7 +351,8 @@ export class SpeedyProgram extends Function
             this._reallocatePixelBuffers(this._width, this._height);
 
         // last render target
-        const fbo = this._fbo[this._options.pingpong ? 1 - this._textureIndex : this._textureIndex];
+        const idx = this._options.pingpong ? 1 - this._textureIndex : this._textureIndex;
+        const fbo = this._texture[idx].glFbo;
 
         // read pixels
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
@@ -450,7 +396,8 @@ export class SpeedyProgram extends Function
             this._reallocatePixelBuffers(this._width, this._height);
 
         // last render target
-        const fbo = this._fbo[this._options.pingpong ? 1 - this._textureIndex : this._textureIndex];
+        const idx = this._options.pingpong ? 1 - this._textureIndex : this._textureIndex;
+        const fbo = this._texture[idx].glFbo;
 
         // do not optimize?
         if(!useBufferedDownloads) {
@@ -510,23 +457,10 @@ export class SpeedyProgram extends Function
      */
     exportTo(texture, lod = 0)
     {
-        const gl = this._gl;
-        const fbo = this._fbo[this._textureIndex];
-
-        // compute texture size as max(1, floor(size / 2^lod)),
-        // in accordance to the OpenGL ES 3.0 spec sec 3.8.10.4
-        // (Mipmapping)
-        const pot = 1 << (lod |= 0);
-        const expectedWidth = Math.max(1, Math.floor(texture.width / pot));
-        const expectedHeight = Math.max(1, Math.floor(texture.height / pot));
-
-        // validate
-        Utils.assert(this._width === expectedWidth && this._height === expectedHeight);
         if(this._options.pingpong)
             throw new NotSupportedError(`Can't copy the output of a pingpong-enabled SpeedyProgram`);
 
-        // copy to texture
-        GLUtils.copyToTexture(gl, fbo, texture.glTexture, 0, 0, this._width, this._height, lod);
+        this._texture[this._textureIndex].copyTo(texture, lod);
     }
 
     /**
@@ -544,11 +478,9 @@ export class SpeedyProgram extends Function
         // Release pixel buffers
         this._pixelBuffer.fill(null);
 
-        // Release internal textures & framebuffers
-        for(let i = 0; i < this._texture.length; i++) {
-            this._fbo[i] = GLUtils.destroyFramebuffer(gl, this._fbo[i]);
+        // Release internal textures
+        for(let i = 0; i < this._texture.length; i++)
             this._texture[i] = this._texture[i].release();
-        }
 
         // Release program
         this._program = GLUtils.destroyProgram(gl, this._program);

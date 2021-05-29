@@ -22,7 +22,7 @@
 import { SpeedyGPU } from './speedy-gpu';
 import { GLUtils } from './gl-utils';
 import { Utils } from '../utils/utils';
-import { IllegalOperationError } from '../utils/errors';
+import { IllegalOperationError, NotSupportedError } from '../utils/errors';
 import { PYRAMID_MAX_LEVELS } from '../utils/globals';
 
 /**
@@ -31,10 +31,10 @@ import { PYRAMID_MAX_LEVELS } from '../utils/globals';
 export class SpeedyTexture
 {
     /**
-     * Creates a new texture with the specified dimensions
+     * Constructor
      * @param {WebGL2RenderingContext} gl
-     * @param {number} width
-     * @param {number} height
+     * @param {number} width texture width in pixels
+     * @param {number} height texture height in pixels
      */
     constructor(gl, width, height)
     {
@@ -94,9 +94,6 @@ export class SpeedyTexture
         // nothing to do
         if(this._hasMipmaps)
             return this;
-
-        // validate gpu
-        Utils.assert(gpu.gl === this._gl);
 
         // let the hardware compute the all levels of the pyramid, up to 1x1
         // this might be a simple box filter...
@@ -180,5 +177,189 @@ export class SpeedyTexture
     get gl()
     {
         return this._gl;
+    }
+}
+
+/**
+ * A SpeedyTexture with a framebuffer
+ */
+export class SpeedyDrawableTexture extends SpeedyTexture
+{
+    /**
+     * Constructor
+     * @param {WebGL2RenderingContext} gl
+     * @param {number} width texture width in pixels
+     * @param {number} height texture height in pixels
+     */
+    constructor(gl, width, height)
+    {
+        super(gl, width, height);
+
+        /** @type {WebGLFramebuffer} framebuffer */
+        this._glFbo = GLUtils.createFramebuffer(gl, this._glTexture);
+    }
+
+    /**
+     * Releases the texture
+     * @returns {null}
+     */
+    release()
+    {
+        if(this._glFbo !== null)
+            this._glFbo = GLUtils.destroyFramebuffer(this._gl, this._glFbo);
+        else
+            throw new IllegalOperationError(`The SpeedyDrawableTexture has already been released`);
+
+        return super.release();
+    }
+
+    /**
+     * The internal WebGLFramebuffer
+     * @returns {WebGLFramebuffer}
+     */
+    get glFbo()
+    {
+        return this._glFbo;
+    }
+
+    /**
+     * Copy this texture into another
+     * @param {SpeedyTexture} texture target texture
+     * @param {number} [lod] level-of-detail of the target texture
+     */
+    copyTo(texture, lod = 0)
+    {
+        const gl = this._gl;
+
+        // context loss?
+        if(gl.isContextLost())
+            return;
+
+        // compute texture size as max(1, floor(size / 2^lod)),
+        // in accordance to the OpenGL ES 3.0 spec sec 3.8.10.4
+        // (Mipmapping)
+        const pot = 1 << (lod |= 0);
+        const expectedWidth = Math.max(1, Math.floor(texture.width / pot));
+        const expectedHeight = Math.max(1, Math.floor(texture.height / pot));
+
+        // validate
+        Utils.assert(this._width === expectedWidth && this._height === expectedHeight);
+
+        // discard mipmaps, if any
+        texture.discardMipmaps();
+
+        // copy to texture
+        GLUtils.copyToTexture(gl, this._glFbo, texture.glTexture, 0, 0, this._width, this._height, lod);
+    }
+
+    /**
+     * Clone this texture
+     * @returns {SpeedyDrawableTexture}
+     */
+    drawableClone()
+    {
+        const clone = new SpeedyDrawableTexture(this._gl, this._width, this._height);
+        this.copyTo(clone);
+        return clone;
+    }
+
+    /**
+     * Clone this texture, but don't include a framebuffer
+     * @returns {SpeedyTexture}
+     */
+    nonDrawableClone()
+    {
+        const clone = new SpeedyTexture(this._gl, this._width, this._height);
+        this.copyTo(clone);
+        return clone;
+    }
+
+    /**
+     * Resize this texture
+     * @param {number} width new width, in pixels
+     * @param {number} height new height, in pixels
+     * @param {boolean} [preserveContent] should we preserve the content of the texture?
+     */
+    resize(width, height, preserveContent = false)
+    {
+        const gl = this._gl;
+
+        // no need to resize?
+        if(this._width === width && this._height === height)
+            return;
+
+        // validate size
+        width |= 0; height |= 0;
+        Utils.assert(width > 0 && height > 0);
+
+        // context loss?
+        if(gl.isContextLost())
+            return;
+
+        // allocate new texture
+        const newTexture = GLUtils.createTexture(gl, width, height);
+
+        // copy old content
+        if(preserveContent) {
+            // initialize the new texture with zeros to avoid a
+            // warning when calling copyTexSubImage2D() on Firefox
+            // this may not be very efficient?
+            const zeros = new Uint8Array(width * height * 4); // RGBA: 4 bytes per pixel
+            GLUtils.uploadToTexture(gl, newTexture, width, height, zeros);
+
+            // copy the old texture to the new one
+            const oldWidth = this._width, oldHeight = this._height;
+            GLUtils.copyToTexture(gl, this._glFbo, newTexture, 0, 0, Math.min(width, oldWidth), Math.min(height, oldHeight));
+        }
+
+        // update dimensions & discard mipmaps
+        this.discardMipmaps();
+        this._width = width;
+        this._height = height;
+
+        // attach the new texture to the existing framebuffer
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this._glFbo);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER,         // target
+                                gl.COLOR_ATTACHMENT0,   // color buffer
+                                gl.TEXTURE_2D,          // tex target
+                                newTexture,             // texture
+                                0);                     // mipmap level
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        // release the old texture and replace it
+        this._glTexture = GLUtils.destroyTexture(gl, this._glTexture);
+        this._glTexture = newTexture;
+    }
+
+    /**
+     * Clear the texture to a color
+     * @param {number} [r] red component, a value in [0,1]
+     * @param {number} [g] green component, a value in [0,1]
+     * @param {number} [b] blue component, a value in [0,1]
+     * @param {number} [a] alpha component, a value in [0,1]
+     */
+    clear(r = 0, g = 0, b = 0, a = 0)
+    {
+        const gl = this._gl;
+
+        // context loss?
+        if(gl.isContextLost())
+            return;
+
+        // clamp parameters
+        r = Math.max(0.0, Math.min(+r, 1.0));
+        g = Math.max(0.0, Math.min(+g, 1.0));
+        b = Math.max(0.0, Math.min(+b, 1.0));
+        a = Math.max(0.0, Math.min(+a, 1.0));
+
+        // discard mipmaps, if any
+        this.discardMipmaps();
+
+        // clear the texture
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this._glFbo);
+        gl.viewport(0, 0, this._width, this._height);
+        gl.clearColor(r, g, b, a);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 }
