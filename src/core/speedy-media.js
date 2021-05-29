@@ -28,11 +28,6 @@ import { SpeedyMediaSource } from './speedy-media-source';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { SpeedyPipeline } from './speedy-pipeline';
 
-// Constants
-const UPLOAD_BUFFER_SIZE = 2; // how many textures we allocate for uploading data
-
-
-
 /**
  * SpeedyMedia encapsulates a media element
  * (e.g., image, video, canvas)
@@ -62,17 +57,6 @@ export class SpeedyMedia
 
         /** @type {SpeedyGPU} GPU-accelerated routines */
         this._gpu = new SpeedyGPU(this._source.width, this._source.height);
-
-        /** @type {SpeedyTexture[]} upload textures (lazy instantiation) */
-        this._texture = (new Array(UPLOAD_BUFFER_SIZE)).fill(null);
-
-        /** @type {number} index of the texture that was just uploaded to the GPU */
-        this._textureIndex = 0;
-
-
-
-        // reset the upload textures if necessary
-        this._gpu.onWebGLContextReset(() => this._texture.fill(null));
 
         // warning: loading a canvas without an explicit usage flag
         if(this._source.type == MediaType.Canvas && this._options.usage === undefined)
@@ -183,14 +167,6 @@ export class SpeedyMedia
     {
         if(!this.isReleased()) {
             Utils.log('Releasing SpeedyMedia object...');
-
-            // release the upload textures
-            for(let i = 0; i < this._texture.length; i++) {
-                if(this._texture[i] != null)
-                    this._texture[i] = this._texture[i].release();
-            }
-
-            // release the GPU
             this._gpu = this._gpu.release();
         }
 
@@ -235,20 +211,16 @@ export class SpeedyMedia
         if(this.isReleased())
             throw new IllegalOperationError(`Can't run pipeline: the SpeedyMedia has been released`);
 
-        // create a clone
-        return this.clone().then(media => {
-            // upload the media to the GPU
-            const texture = this._upload();
+        // upload the media to the GPU
+        const texture = this._upload();
 
-            // run the pipeline
-            return pipeline._run(texture, media._gpu, media).turbocharge().then(texture => {
-                // convert to bitmap
-                const canvas = media._gpu.renderToCanvas(texture);
-                return createImageBitmap(canvas, 0, canvas.height - media.height, media.width, media.height).then(bitmap => {
-                    return SpeedyMediaSource.load(bitmap).then(source => {
-                        media._source = source;
-                        return media;
-                    });
+        // run the pipeline
+        return pipeline._run(texture, this._gpu, this).turbocharge().then(texture => {
+            // convert to bitmap
+            const canvas = this._gpu.renderToCanvas(texture);
+            return createImageBitmap(canvas, 0, canvas.height - this.height, this.width, this.height).then(bitmap => {
+                return SpeedyMediaSource.load(bitmap).then(source => {
+                    return new SpeedyMedia(source); // colorFormat?!
                 });
             });
         });
@@ -320,30 +292,6 @@ export class SpeedyMedia
      */
     _upload()
     {
-        const data = this._source.data;
-
-        // create upload textures lazily
-        if(this._texture[0] == null) {
-            for(let i = 0; i < this._texture.length; i++)
-                this._texture[i] = new SpeedyTexture(this._gpu.gl, this._source.width, this._source.height);
-        }
-
-        // bugfix: if the media is a video, we can't really
-        // upload it to the GPU unless it's ready
-        if(data.constructor.name == 'HTMLVideoElement') {
-            if(data.readyState < 2) {
-                // this may happen when the video loops (Firefox)
-                // return the previously uploaded texture
-                Utils.warning(`Trying to process a video that isn't ready yet`);
-                return this._texture[this._textureIndex];
-            }
-        }
-
-        // use round-robin to mitigate WebGL's implicit synchronization
-        // and maybe minimize texture upload times
-        this._textureIndex = (this._textureIndex + 1) % UPLOAD_BUFFER_SIZE;
-
-        // upload the media
-        return this._texture[this._textureIndex].upload(data);
+        return this._gpu.upload(this._source);
     }
 }

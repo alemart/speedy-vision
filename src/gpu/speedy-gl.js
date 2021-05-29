@@ -206,14 +206,4 @@ export class SpeedyGL extends Observable
             }, ms);
         });
     }
-
-    /**
-     * Register a callback to be invoked as soon as the WebGL
-     * context is recreated after being lost
-     * @param {function(WebGL2RenderingContext): void} fn callback
-     */
-    onContextReset(fn)
-    {
-        this.subscribe(fn);
-    }
 }
