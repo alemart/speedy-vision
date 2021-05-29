@@ -21,10 +21,15 @@
 
 import { ColorFormat } from '../utils/types';
 import { Utils } from '../utils/utils';
+import { SpeedyTexture } from '../gpu/speedy-texture';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { NotSupportedError, IllegalArgumentError } from '../utils/errors';
 
 export const PipelineOperation = { };
+
+/**
+ * @typedef {[SpeedyTexture,ColorFormat]} SpeedyTextureWithColorFormat
+ */
 
 /**
  * Abstract basic operation
@@ -43,14 +48,14 @@ class SpeedyPipelineOperation
 
     /**
      * Run the pipeline operation
-     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyTextureWithColorFormat} input input texture
      * @param {SpeedyGPU} gpu
      * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTexture>}
+     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
      */
-    run(texture, gpu, media)
+    run(input, gpu, media)
     {
-        return SpeedyPromise.resolve(texture);
+        return SpeedyPromise.resolve(input);
     }
 
     /**
@@ -94,20 +99,21 @@ PipelineOperation.ConvertToGreyscale = class extends SpeedyPipelineOperation
 {
     /**
      * Run the pipeline operation
-     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyTextureWithColorFormat} input input texture
      * @param {SpeedyGPU} gpu
      * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTexture>}
+     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
      */
-    run(texture, gpu, media)
+    run(input, gpu, media)
     {
-        if(media._colorFormat == ColorFormat.RGB)
+        let [ texture, colorFormat ] = input;
+
+        if(colorFormat == ColorFormat.RGB)
             texture = gpu.programs.colors.rgb2grey(texture);
-        else if(media._colorFormat != ColorFormat.Greyscale)
+        else if(colorFormat != ColorFormat.Greyscale)
             throw new NotSupportedError(`Can't convert image to greyscale: unknown color format`);
 
-        media._colorFormat = ColorFormat.Greyscale;
-        return SpeedyPromise.resolve(texture);
+        return SpeedyPromise.resolve([ texture, ColorFormat.Greyscale ]);
     }
 }
 
@@ -139,14 +145,15 @@ PipelineOperation.Blur = class extends SpeedyPipelineOperation
 
     /**
      * Run the pipeline operation
-     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyTextureWithColorFormat} input input texture
      * @param {SpeedyGPU} gpu
      * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTexture>}
+     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
      */
-    run(texture, gpu, media)
+    run(input, gpu, media)
     {
         const { filter, size } = this._loadOptions();
+        let [ texture, colorFormat ] = input;
 
         // validate options
         if(filter != 'gaussian' && filter != 'box')
@@ -157,7 +164,7 @@ PipelineOperation.Blur = class extends SpeedyPipelineOperation
         // run filter
         const fname = (filter == 'gaussian' ? 'gauss' : 'box') + size;
         const output = gpu.programs.filters[fname](texture);
-        return SpeedyPromise.resolve(output);
+        return SpeedyPromise.resolve([ output, colorFormat ]);
     }
 }
 
@@ -182,14 +189,15 @@ PipelineOperation.Median = class extends SpeedyPipelineOperation
 
     /**
      * Run the pipeline operation
-     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyTextureWithColorFormat} input input texture
      * @param {SpeedyGPU} gpu
      * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTexture>}
+     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
      */
-    run(texture, gpu, media)
+    run(input, gpu, media)
     {
         const { size } = this._loadOptions();
+        let [ texture, colorFormat ] = input;
 
         // validate options
         if(size != 3 && size != 5 && size != 7)
@@ -200,7 +208,7 @@ PipelineOperation.Median = class extends SpeedyPipelineOperation
         // run filter
         const fname = 'median' + size;
         const output = gpu.programs.filters[fname](texture);
-        return SpeedyPromise.resolve(output);
+        return SpeedyPromise.resolve([ output, colorFormat ]);
     }
 }
 
@@ -251,13 +259,15 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
 
     /**
      * Run the pipeline operation
-     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyTextureWithColorFormat} input input texture
      * @param {SpeedyGPU} gpu
      * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTexture>}
+     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
      */
-    run(texture, gpu, media)
+    run(input, gpu, media)
     {
+        let [ texture, colorFormat ] = input;
+
         // lost context?
         if(gpu.gl.isContextLost()) {
             this._texKernel = null;
@@ -290,7 +300,7 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
             this._scale,
             this._offset
         );
-        return SpeedyPromise.resolve(output);
+        return SpeedyPromise.resolve([ output, colorFormat ]);
     }
 
     /**
@@ -329,13 +339,14 @@ PipelineOperation.Normalize = class extends SpeedyPipelineOperation
 
     /**
      * Run the pipeline operation
-     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyTextureWithColorFormat} input input texture
      * @param {SpeedyGPU} gpu
      * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTexture>}
+     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
      */
-    run(texture, gpu, media)
+    run(input, gpu, media)
     {
+        let [ texture, colorFormat ] = input;
         const { min, max } = this._loadOptions();
         let output;
 
@@ -346,7 +357,7 @@ PipelineOperation.Normalize = class extends SpeedyPipelineOperation
         else
             throw new NotSupportedError('Invalid color format');
 
-        return SpeedyPromise.resolve(output);
+        return SpeedyPromise.resolve([ output, colorFormat ]);
     }
 }
 
@@ -374,13 +385,14 @@ PipelineOperation.Nightvision = class extends SpeedyPipelineOperation
 
     /**
      * Run the pipeline operation
-     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyTextureWithColorFormat} input input texture
      * @param {SpeedyGPU} gpu
      * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTexture>}
+     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
      */
-    run(texture, gpu, media)
+    run(input, gpu, media)
     {
+        let [ texture, colorFormat ] = input;
         const { gain, offset, decay, quality } = this._loadOptions();
         let output;
 
@@ -391,7 +403,7 @@ PipelineOperation.Nightvision = class extends SpeedyPipelineOperation
         else
             throw new NotSupportedError('Invalid color format');
 
-        return SpeedyPromise.resolve(output);
+        return SpeedyPromise.resolve([ output, colorFormat ]);
     }
 }
 
@@ -423,13 +435,14 @@ PipelineOperation.WarpPerspective = class extends SpeedyPipelineOperation
 
     /**
      * Run the pipeline operation
-     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyTextureWithColorFormat} input input texture
      * @param {SpeedyGPU} gpu
      * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTexture>}
+     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
      */
-    run(texture, gpu, media)
+    run(input, gpu, media)
     {
+        let [ texture, colorFormat ] = input;
         const { homography } = this._loadOptions();
 
         // validate options
@@ -438,6 +451,6 @@ PipelineOperation.WarpPerspective = class extends SpeedyPipelineOperation
 
         // transform
         const output = gpu.programs.transforms.warpPerspective(texture, homography);
-        return SpeedyPromise.resolve(output);
+        return SpeedyPromise.resolve([ output, colorFormat ]);
     }
 }

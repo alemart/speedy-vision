@@ -80,19 +80,19 @@ export class SpeedyPipeline
 
     /**
      * Runs the pipeline
-     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyTextureWithColorFormat} input input texture
      * @param {SpeedyGPU} gpu gpu attached to the media
      * @param {SpeedyMedia} media media object
      * @param {number} [cnt] loop counter
-     * @returns {SpeedyPromise<SpeedyTexture>} output texutre
+     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>} output texutre
      */
-    _run(texture, gpu, media, cnt = 0)
+    _run(input, gpu, media, cnt = 0)
     {
         if(cnt >= this._operations.length)
-            return SpeedyPromise.resolve(texture);
+            return SpeedyPromise.resolve(input);
 
-        return this._operations[cnt].run(texture, gpu, media).then(nextTexture =>
-            this._run(nextTexture, gpu, media, cnt + 1)
+        return this._operations[cnt].run(input, gpu, media).then(output =>
+            this._run(output, gpu, media, cnt + 1)
         );
     }
 

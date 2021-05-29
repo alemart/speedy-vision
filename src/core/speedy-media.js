@@ -39,8 +39,9 @@ export class SpeedyMedia
      * @private
      * @param {SpeedyMediaSource} source
      * @param {object} [options] options object
+     * @param {ColorFormat} [colorFormat]
      */
-    constructor(source, options = {})
+    constructor(source, options = {}, colorFormat = ColorFormat.RGB)
     {
         Utils.assert(source.isLoaded());
 
@@ -53,7 +54,7 @@ export class SpeedyMedia
         });
 
         /** @type {ColorFormat} color format */
-        this._colorFormat = ColorFormat.RGB;
+        this._colorFormat = colorFormat;
 
         /** @type {SpeedyGPU} GPU-accelerated routines */
         this._gpu = new SpeedyGPU(this._source.width, this._source.height);
@@ -193,8 +194,7 @@ export class SpeedyMedia
             throw new IllegalOperationError(`Can't clone a SpeedyMedia that has been released`);
 
         // clone the object
-        const clone = new SpeedyMedia(this._source, this.options);
-        clone._colorFormat = this._colorFormat;
+        const clone = new SpeedyMedia(this._source, this.options, this._colorFormat);
 
         // done!
         return SpeedyPromise.resolve(clone);
@@ -215,12 +215,12 @@ export class SpeedyMedia
         const texture = this._upload();
 
         // run the pipeline
-        return pipeline._run(texture, this._gpu, this).turbocharge().then(texture => {
+        return pipeline._run([ texture, this._colorFormat ], this._gpu, this).turbocharge().then(([ texture, colorFormat ]) => {
             // convert to bitmap
             const canvas = this._gpu.renderToCanvas(texture);
             return createImageBitmap(canvas, 0, canvas.height - this.height, this.width, this.height).then(bitmap => {
                 return SpeedyMediaSource.load(bitmap).then(source => {
-                    return new SpeedyMedia(source); // colorFormat?!
+                    return new SpeedyMedia(source, {}, colorFormat);
                 });
             });
         });
@@ -241,13 +241,12 @@ export class SpeedyMedia
             return;
 
         // validate parameters
-        x = Math.max(+x, 0); y = Math.max(+y, 0);
         width = Math.max(+width, 0);
         height = Math.max(+height, 0);
 
         // draw
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(this._source.data, x, y, width, height);
+        ctx.drawImage(this._source.data, +x, +y, width, height);
     }
 
     /**
