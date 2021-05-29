@@ -73,8 +73,7 @@ export class SpeedyGPU
 
 
         // recreate the state if necessary
-        this._reset = this._reset.bind(this);
-        this._speedyGL.subscribe(this._reset);
+        this._speedyGL.subscribe(this._reset = this._reset.bind(this));
     }
 
     /**
