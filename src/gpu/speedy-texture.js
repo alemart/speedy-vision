@@ -281,6 +281,7 @@ export class SpeedyDrawableTexture extends SpeedyTexture
      * @param {number} width new width, in pixels
      * @param {number} height new height, in pixels
      * @param {boolean} [preserveContent] should we preserve the content of the texture?
+     * @returns {SpeedyDrawableTexture} this texture
      */
     resize(width, height, preserveContent = false)
     {
@@ -331,6 +332,9 @@ export class SpeedyDrawableTexture extends SpeedyTexture
         // release the old texture and replace it
         this._glTexture = GLUtils.destroyTexture(gl, this._glTexture);
         this._glTexture = newTexture;
+
+        // done!
+        return this;
     }
 
     /**
@@ -339,6 +343,7 @@ export class SpeedyDrawableTexture extends SpeedyTexture
      * @param {number} [g] green component, a value in [0,1]
      * @param {number} [b] blue component, a value in [0,1]
      * @param {number} [a] alpha component, a value in [0,1]
+     * @returns {SpeedyDrawableTexture} this texture
      */
     clear(r = 0, g = 0, b = 0, a = 0)
     {
@@ -363,5 +368,8 @@ export class SpeedyDrawableTexture extends SpeedyTexture
         gl.clearColor(r, g, b, a);
         gl.clear(gl.COLOR_BUFFER_BIT);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        // done!
+        return this;
     }
 }
