@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-05-26T00:21:09.309Z
+ * Date: 2021-05-29T00:03:23.514Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -369,7 +369,7 @@ class ORBFeatures extends _feature_description_algorithm__WEBPACK_IMPORTED_MODUL
 
         // smooth the image before computing the descriptors
         const smoothTexture = gpu.programs.filters.gauss7(inputTexture);
-        const smoothPyramid = smoothTexture.generatePyramid(gpu);
+        const smoothPyramid = smoothTexture.generateMipmaps(gpu);
 
         // compute ORB feature descriptors
         return gpu.programs.keypoints.orb(smoothPyramid, orientedKeypoints, descriptorSize, extraSize, encoderLength);
@@ -389,7 +389,7 @@ class ORBFeatures extends _feature_description_algorithm__WEBPACK_IMPORTED_MODUL
         const encoderLength = this.encoderLength;
 
         // generate pyramid
-        const pyramid = inputTexture.generatePyramid(gpu);
+        const pyramid = inputTexture.generateMipmaps(gpu);
 
         // compute orientation
         return gpu.programs.keypoints.orbOrientation(pyramid, detectedKeypoints, descriptorSize, extraSize, encoderLength);
@@ -683,7 +683,7 @@ class MultiscaleFASTFeatures extends _feature_detection_algorithm__WEBPACK_IMPOR
         const encoderLength = this.encoderLength;
 
         // generate pyramid
-        const pyramid = inputTexture.generatePyramid(gpu);
+        const pyramid = inputTexture.generateMipmaps(gpu);
 
         // find corners
         const corners = gpu.programs.keypoints.multiscaleFast(pyramid, normalizedThreshold, numberOfLayers, lodStep);
@@ -925,7 +925,7 @@ class MultiscaleHarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMP
         const lodStep = Math.log2(this._scaleFactor);
 
         // generate pyramid
-        const pyramid = inputTexture.generatePyramid(gpu);
+        const pyramid = inputTexture.generateMipmaps(gpu);
 
         // compute derivatives
         const sobelDerivatives = new Array(MAX_LAYERS);
@@ -2371,8 +2371,8 @@ class LKFeatureTrackingAlgorithm extends _feature_tracking_algorithm__WEBPACK_IM
         const epsilon = this.epsilon;
 
         // create pyramids
-        const nextPyramid = nextImage.generatePyramid(gpu);
-        const prevPyramid = prevImage.generatePyramid(gpu);
+        const nextPyramid = nextImage.generateMipmaps(gpu);
+        const prevPyramid = prevImage.generateMipmaps(gpu);
 
         // track feature points
         return gpu.programs.trackers.lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, depth, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);
@@ -11188,7 +11188,7 @@ class SpeedyFeatureDetector
         */
 
         // Upload & preprocess media
-        const texture = gpu.upload(media.source);
+        const texture = media._upload();
         const preprocessedTexture = this._preprocessTexture(
             gpu,
             texture,
@@ -11876,7 +11876,7 @@ class SpeedyFeatureTracker
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__["IllegalOperationError"](`The media has been released`);
 
         // upload the media
-        const nextImage = gpu.upload(media.source);
+        const nextImage = media._upload();
         if(nextImage == null)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__["IllegalOperationError"](`Tracking error: can't upload image to the GPU ${media.source}`);
 
@@ -12609,10 +12609,10 @@ class SpeedyBitmapMediaSource extends SpeedyMediaSource
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMedia", function() { return SpeedyMedia; });
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
-/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./speedy-feature-detector-factory */ "./src/core/speedy-feature-detector-factory.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _speedy_media_source__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./speedy-media-source */ "./src/core/speedy-media-source.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /* harmony import */ var _speedy_pipeline__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./speedy-pipeline */ "./src/core/speedy-pipeline.js");
@@ -12653,57 +12653,32 @@ __webpack_require__.r(__webpack_exports__);
 class SpeedyMedia
 {
     /**
-     * Class constructor
-     * It receives A VALID media source that is already loaded
-     * @param {SpeedyMediaSource|SpeedyMedia} source
+     * Constructor. It receives a VALID media source that is ALREADY LOADED.
+     * @private
+     * @param {SpeedyMediaSource} source
      * @param {object} [options] options object
      */
-    /* private */ constructor(source, options = { })
+    constructor(source, options = {})
     {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(source.isLoaded());
+
         /** @type {SpeedyMediaSource} media source */
-        this._source = null;
-
-        /** @type {SpeedyGPU} GPU routines */
-        this._gpu = null;
-
-        /** @type {Symbol} ColorFormat enum */
-        this._colorFormat = _utils_types__WEBPACK_IMPORTED_MODULE_1__["ColorFormat"].RGB;
+        this._source = source;
 
         /** @type {object} options */
-        this._options = null;
+        this._options = this._buildOptions(options, {
+            usage: (this._source.type == _utils_types__WEBPACK_IMPORTED_MODULE_2__["MediaType"].Video) ? 'dynamic' : 'static',
+        });
 
+        /** @type {ColorFormat} color format */
+        this._colorFormat = _utils_types__WEBPACK_IMPORTED_MODULE_2__["ColorFormat"].RGB;
 
+        /** @type {SpeedyGPU} GPU-accelerated routines */
+        this._gpu = new _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_0__["SpeedyGPU"](this._source.width, this._source.height);
 
-        // Setup the new SpeedyMedia
-        const constructor = source.constructor.name;
-        if(constructor == 'SpeedyMedia') {
-            // copy constructor (shallow copy)
-            const media = source;
-            this._source = media._source;
-            this._colorFormat = media._colorFormat;
-            this._options = media._options;
-            this._gpu = media._gpu;
-        }
-        else {
-            // store the media source
-            _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(source.isLoaded());
-            this._source = source;
-
-            // warning: loading canvas without explicit usage option
-            if(this._source.type == _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Canvas && options.usage === undefined)
-                _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].warning('Loading a canvas without an explicit usage flag. I will set the usage to "static". This will result in suboptimal performance if the canvas is animated');
-
-            // set the color format
-            //this._colorFormat = ColorFormat.RGB;
-
-            // set options
-            this._options = this._buildOptions(options, {
-                usage: (this._source.type == _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Video) ? 'dynamic' : 'static',
-            });
-
-            // spawn relevant components
-            this._gpu = new _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_0__["SpeedyGPU"](this._source.width, this._source.height);
-        }
+        // warning: loading a canvas without an explicit usage flag
+        if(this._source.type == _utils_types__WEBPACK_IMPORTED_MODULE_2__["MediaType"].Canvas && this._options.usage === undefined)
+            _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].warning('Loading a canvas without an explicit usage flag. I will set the usage to "static". This will result in suboptimal performance if the canvas is animated');
     }
 
     /**
@@ -12716,10 +12691,10 @@ class SpeedyMedia
     static load(mediaSource, options = { })
     {
         return _speedy_media_source__WEBPACK_IMPORTED_MODULE_5__["SpeedyMediaSource"].load(mediaSource).then(source => {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(source.width !== 0 && source.height !== 0);
+            _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(source.width !== 0 && source.height !== 0);
 
             const media = new SpeedyMedia(source, options);
-            _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].log(`Loaded SpeedyMedia with a ${mediaSource}.`);
+            _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].log(`Loaded SpeedyMedia with a ${mediaSource}.`);
 
             return media;
         });
@@ -12735,7 +12710,7 @@ class SpeedyMedia
      */
     static loadCameraStream(width, height, cameraOptions = { }, mediaOptions = { })
     {
-        return _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].requestCameraStream(width, height, cameraOptions).then(
+        return _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].requestCameraStream(width, height, cameraOptions).then(
             video => SpeedyMedia.load(video, mediaOptions)
         );
     }
@@ -12774,16 +12749,16 @@ class SpeedyMedia
     get type()
     {
         switch(this._source.type) {
-            case _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Image:
+            case _utils_types__WEBPACK_IMPORTED_MODULE_2__["MediaType"].Image:
                 return 'image';
 
-            case _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Video:
+            case _utils_types__WEBPACK_IMPORTED_MODULE_2__["MediaType"].Video:
                 return 'video';
 
-            case _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Canvas:
+            case _utils_types__WEBPACK_IMPORTED_MODULE_2__["MediaType"].Canvas:
                 return 'canvas';
 
-            case _utils_types__WEBPACK_IMPORTED_MODULE_1__["MediaType"].Bitmap:
+            case _utils_types__WEBPACK_IMPORTED_MODULE_2__["MediaType"].Bitmap:
                 return 'bitmap';
 
             default: // this shouldn't happen
@@ -12802,25 +12777,23 @@ class SpeedyMedia
     }
 
     /**
-     * Releases resources associated with this media.
-     * You will no longer be able to use it, nor any of its lightweight clones.
-     * @returns {SpeedyPromise} resolves as soon as the resources are released
+     * Releases the resources associated with this media:
+     * WebGL textures, framebuffers, programs, etc.
+     * @returns {SpeedyPromise<void>} resolves as soon as the resources are released
      */
     release()
     {
         if(!this.isReleased()) {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].log('Releasing SpeedyMedia object...');
-            this._gpu.loseWebGLContext();
-            this._gpu = null;
-            this._source = null;
+            _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].log('Releasing SpeedyMedia object...');
+            this._gpu = this._gpu.release();
         }
 
         return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__["SpeedyPromise"].resolve();
     }
 
     /**
-     * Is this SpeedyMedia released?
-     * @returns {bool}
+     * Has this media been released?
+     * @returns {boolean}
      */
     isReleased()
     {
@@ -12829,32 +12802,20 @@ class SpeedyMedia
 
     /**
      * Clones the SpeedyMedia object
-     * @param {object} options options object
      * @returns {SpeedyPromise<SpeedyMedia>} a clone object
      */
-    clone(options = {})
+    clone()
     {
-        // Default settings
-        options = {
-            lightweight: false,
-            ...(options)
-        };
-
         // has the media been released?
         if(this.isReleased())
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"]('Can\'t clone a SpeedyMedia that has been released');
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`Can't clone a SpeedyMedia that has been released`);
 
         // clone the object
-        if(options.lightweight) {
-            // shallow copy
-            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__["SpeedyPromise"].resolve(new SpeedyMedia(this, this._options));
-        }
-        else {
-            // deep copy
-            return this._source.clone().then(
-                newSource => new SpeedyMedia(newSource, this._options)
-            );
-        }
+        const clone = new SpeedyMedia(this._source, this.options);
+        clone._colorFormat = this._colorFormat;
+
+        // done!
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__["SpeedyPromise"].resolve(clone);
     }
 
     /**
@@ -12866,22 +12827,18 @@ class SpeedyMedia
     {
         // has the media been released?
         if(this.isReleased())
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"]('Can\'t run pipeline: SpeedyMedia has been released');
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`Can't run pipeline: the SpeedyMedia has been released`);
 
-        // create a lightweight clone
-        return this.clone({ lightweight: true }).then(media => {
-            // upload the media to the GPU
-            const texture = media._gpu.upload(media._source.data);
+        // upload the media to the GPU
+        const texture = this._upload();
 
-            // run the pipeline
-            return pipeline._run(texture, media._gpu, media).turbocharge().then(texture => {
-                // convert to bitmap
-                media._gpu.programs.utils.output(texture);
-                return createImageBitmap(media._gpu.canvas, 0, 0, media.width, media.height).then(bitmap => {
-                    return _speedy_media_source__WEBPACK_IMPORTED_MODULE_5__["SpeedyMediaSource"].load(bitmap).then(source => {
-                        media._source = source;
-                        return media;
-                    });
+        // run the pipeline
+        return pipeline._run(texture, this._gpu, this).turbocharge().then(texture => {
+            // convert to bitmap
+            const canvas = this._gpu.renderToCanvas(texture);
+            return createImageBitmap(canvas, 0, canvas.height - this.height, this.width, this.height).then(bitmap => {
+                return _speedy_media_source__WEBPACK_IMPORTED_MODULE_5__["SpeedyMediaSource"].load(bitmap).then(source => {
+                    return new SpeedyMedia(source); // colorFormat?!
                 });
             });
         });
@@ -12918,9 +12875,9 @@ class SpeedyMedia
     toBitmap()
     {
         if(this.isReleased())
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"]('Can\'t convert SpeedyMedia to ImageBitmap: the media has been released');
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"]('Can\'t convert SpeedyMedia to ImageBitmap: the media has been released');
         else if(!this._source.isLoaded())
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"]('Can\'t convert SpeedyMedia to bitmap: the media hasn\'t been loaded');
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"]('Can\'t convert SpeedyMedia to bitmap: the media hasn\'t been loaded');
 
         return createImageBitmap(this._source.data);
     }
@@ -12938,13 +12895,22 @@ class SpeedyMedia
 
         // validate
         if(options.usage != 'dynamic' && options.usage != 'static') {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].warning(`Can't load media. Unrecognized usage option: "${options.usage}"`);
+            _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].warning(`Can't load media. Unrecognized usage option: "${options.usage}"`);
             options.usage = defaultOptions.usage;
-            _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(options.usage == 'dynamic' || options.usage == 'static');
+            _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(options.usage == 'dynamic' || options.usage == 'static');
         }
 
         // done!
         return Object.freeze(options); // must be read-only
+    }
+
+    /**
+     * Upload the media to the GPU
+     * @returns {SpeedyTexture}
+     */
+    _upload()
+    {
+        return this._gpu.upload(this._source);
     }
 }
 
@@ -13510,41 +13476,33 @@ class GLUtils
     }
 
     /**
-     * Create a shader
+     * Create a WebGL program
      * @param {WebGL2RenderingContext} gl
-     * @param {number} type
-     * @param {string} source
-     * @returns {WebGLShader}
-     */
-    static createShader(gl, type, source)
-    {
-        const shader = gl.createShader(type);
-
-        gl.shaderSource(shader, source);
-        gl.compileShader(shader);
-
-        return shader;
-    }
-
-    /**
-     * Create a vertex-shader + fragment-shader program
-     * @param {WebGL2RenderingContext} gl
-     * @param {string} vertexShaderSource
-     * @param {string} fragmentShaderSource
+     * @param {string} vertexShaderSource vertex shader (GLSL code)
+     * @param {string} fragmentShaderSource fragment shader (GLSL code)
      * @returns {WebGLProgram}
      */
     static createProgram(gl, vertexShaderSource, fragmentShaderSource)
     {
         const program = gl.createProgram();
-        const vertexShader = GLUtils.createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
-        const fragmentShader = GLUtils.createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 
+        // compile vertex shader
+        gl.shaderSource(vertexShader, vertexShaderSource);
+        gl.compileShader(vertexShader);
         gl.attachShader(program, vertexShader);
+
+        // compile fragment shader
+        gl.shaderSource(fragmentShader, fragmentShaderSource);
+        gl.compileShader(fragmentShader);
         gl.attachShader(program, fragmentShader);
+
+        // link program
         gl.linkProgram(program);
         gl.validateProgram(program);
 
-        // error?
+        // got an error?
         if(!gl.getProgramParameter(program, gl.LINK_STATUS) && !gl.isContextLost()) {
             const errors = [
                 gl.getShaderInfoLog(fragmentShader),
@@ -13572,7 +13530,25 @@ class GLUtils
             );
         }
 
+        // done!
         return program;
+    }
+
+    /**
+     * Destroy a WebGL program
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLProgram} program
+     * @returns {null}
+     */
+    static destroyProgram(gl, program)
+    {
+        gl.deleteProgram(program);
+        return null;
+
+        // Need to delete shaders as well? In sec 5.14.9 Programs and shaders
+        // of the WebGL 1.0 spec, it is mentioned that the underlying GL object
+        // will automatically be marked for deletion when the JS object is
+        // destroyed (i.e., garbage collected)
     }
 
     /**
@@ -14138,7 +14114,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
         cornerview = this._gpu.programs.utils.fillComponents(cornerview, PixelComponent.GREEN, 0);
         cornerview = this._gpu.programs.utils.identity(cornerview);
         cornerview = this._gpu.programs.utils.fillComponents(cornerview, PixelComponent.ALPHA, 1);
-        this._gpu.programs.utils.output(cornerview);
+        this._gpu.renderToCanvas(cornerview);
         if(!window._ww) document.body.appendChild(this._gpu.canvas);
         window._ww = 1;
         */
@@ -14572,11 +14548,11 @@ class GPUFilters extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Spe
             })
             /*.declare('_readKernel3x3', identity, { // for testing
                 ...(this.program.hasTextureSize(3, 3)),
-                ...(this.program.displaysGraphics())
+                ...(this.program.rendersToCanvas())
             })
             .declare('_readKernel3x1', identity, {
                 ...(this.program.hasTextureSize(3, 1)),
-                ...(this.program.displaysGraphics())
+                ...(this.program.rendersToCanvas())
             })*/
 
 
@@ -15040,17 +15016,17 @@ class GPUPyramids extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
             // utilities for debugging
             .declare('output1', flipY, {
                 ...this.program.hasTextureSize(this._width, this._height),
-                ...this.program.displaysGraphics()
+                ...this.program.rendersToCanvas()
             })
 
             .declare('outputHalf', flipY, {
                 ...this.program.hasTextureSize(Math.floor(this._width / 2), Math.floor(this._height / 2)),
-                ...this.program.displaysGraphics()
+                ...this.program.rendersToCanvas()
             })
 
             .declare('output2', flipY, {
                 ...this.program.hasTextureSize(2 * this._width, 2 * this._height),
-                ...this.program.displaysGraphics()
+                ...this.program.rendersToCanvas()
             })
             */
             
@@ -15495,14 +15471,15 @@ class GPUTransforms extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUUtils", function() { return GPUUtils; });
 /* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-program-group */ "./src/gpu/speedy-program-group.js");
-/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
-/* harmony import */ var _gl_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../gl-utils */ "./src/gpu/gl-utils.js");
+/* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15528,30 +15505,31 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 //
 // Shaders
 //
 
 // Identity shader: no-operation
-const identity = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('utils/identity.glsl').withArguments('image');
+const identity = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('utils/identity.glsl').withArguments('image');
 
 // Flip y-axis for output
-const flipY = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('utils/flip-y.glsl').withArguments('image');
+const flipY = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('utils/flip-y.glsl').withArguments('image');
 
 // Fill image with a constant
-const fill = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('utils/fill.glsl').withArguments('value');
+const fill = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('utils/fill.glsl').withArguments('value');
 
 // Fill zero or more color components of the input image with a constant value
-const fillComponents = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('utils/fill-components.glsl').withArguments('image', 'pixelComponents', 'value');
+const fillComponents = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('utils/fill-components.glsl').withArguments('image', 'pixelComponents', 'value');
 
 // Copy the src component of src to zero or more color components of a copy of dest
-const copyComponents = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('utils/copy-components.glsl').withArguments('dest', 'src', 'destComponents', 'srcComponentId');
+const copyComponents = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('utils/copy-components.glsl').withArguments('dest', 'src', 'destComponents', 'srcComponentId');
 
 // Scan the entire image and find the minimum & maximum pixel intensity for each row and column
 //const scanMinMax1D = importShader('utils/scan-minmax1d.glsl').withArguments('image', 'iterationNumber');
 
 // Scan the entire image and find the minimum & maximum pixel intensity
-const scanMinMax2D = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('utils/scan-minmax2d.glsl').withArguments('image', 'iterationNumber');
+const scanMinMax2D = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('utils/scan-minmax2d.glsl').withArguments('image', 'iterationNumber');
 
 
 
@@ -15574,9 +15552,9 @@ class GPUUtils extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Speed
             // no-operation
             .declare('identity', identity)
 
-            // output a texture from a pipeline
-            .declare('output', flipY, {
-                ...this.program.displaysGraphics()
+            // render to the canvas
+            .declare('_renderToCanvas', flipY, {
+                ...this.program.rendersToCanvas()
             })
                 
             // clone a texture (release it afterwards)
@@ -15606,6 +15584,35 @@ class GPUUtils extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Speed
                 ...this.program.usesPingpongRendering()
             })
         ;
+    }
+
+    /**
+     * Renders an image to (the bottom-left of) the canvas
+     * @param {SpeedyTexture} image
+     * @returns {HTMLCanvasElement} returned for convenience
+     */
+    renderToCanvas(image)
+    {
+        const width = image.width;
+        const height = image.height;
+        const canvas = this._gpu.canvas;
+
+        // do we need to resize the program?
+        if(width != this._renderToCanvas.width || height != this._renderToCanvas.height)
+            this._renderToCanvas.resize(width, height);
+
+        // do we need to resize the canvas?
+        if(width > canvas.width || height > canvas.height) {
+            _utils_utils__WEBPACK_IMPORTED_MODULE_5__["Utils"].warning(`Resizing the canvas to ${width} x ${height}`);
+            canvas.width = width;
+            canvas.height = height;
+        }
+
+        // render
+        this._renderToCanvas(image);
+
+        // done!
+        return canvas;
     }
 
     /**
@@ -15692,7 +15699,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15718,15 +15725,20 @@ const DEFAULT_ATTRIBUTES = Object.freeze({
     texCoord: 'a_texCoord'
 });
 
+const DEFAULT_ATTRIBUTES_LOCATION = Object.freeze({
+    position: 0,
+    texCoord: 1,
+});
+
 const DEFAULT_VERTEX_SHADER = `#version 300 es
-in vec2 ${DEFAULT_ATTRIBUTES.position};
-in vec2 ${DEFAULT_ATTRIBUTES.texCoord};
+layout (location=${DEFAULT_ATTRIBUTES_LOCATION.position}) in vec2 ${DEFAULT_ATTRIBUTES.position};
+layout (location=${DEFAULT_ATTRIBUTES_LOCATION.texCoord}) in vec2 ${DEFAULT_ATTRIBUTES.texCoord};
 out vec2 texCoord;
 
 void main() {
-    gl_Position = vec4(${DEFAULT_ATTRIBUTES.position}, 0.0, 1.0);
+    gl_Position = vec4(${DEFAULT_ATTRIBUTES.position}, 0.0f, 1.0f);
     texCoord = ${DEFAULT_ATTRIBUTES.texCoord};
-}`;
+}\n`;
 
 const DEFAULT_FRAGMENT_SHADER_PREFIX = `#version 300 es
 precision highp int;
@@ -15877,11 +15889,20 @@ class ShaderDeclaration
 
     /**
      * Get the names of the vertex shader attributes
-     * @returns {object}
+     * @returns {Object.<string,string>}
      */
     get attributes()
     {
         return DEFAULT_ATTRIBUTES;
+    }
+
+    /**
+     * Get the pre-defined locations of the vertex shader attributes
+     * @returns {Object.<string,number>}
+     */
+    get locationOfAttributes()
+    {
+        return DEFAULT_ATTRIBUTES_LOCATION;
     }
 
     /**
@@ -17352,6 +17373,232 @@ module.exports = "uniform sampler2D image;\nuniform int iterationNumber;\nvoid m
 
 /***/ }),
 
+/***/ "./src/gpu/speedy-gl.js":
+/*!******************************!*\
+  !*** ./src/gpu/speedy-gl.js ***!
+  \******************************/
+/*! exports provided: SpeedyGL */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyGL", function() { return SpeedyGL; });
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_observable__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/observable */ "./src/utils/observable.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-gl.js
+ * A wrapper around the WebGL Rendering Context
+ */
+
+
+
+
+
+
+// Constants
+const CANVAS_WIDTH = 2048; // this size should be compatible with everything...
+const CANVAS_HEIGHT = 2048;
+const SINGLETON_KEY = Symbol();
+
+/** @type {SpeedyGL} Singleton */
+let instance = null;
+
+/**
+ * A wrapper around the WebGL Rendering Context
+ */
+class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__["Observable"]
+{
+    /**
+     * Constructor
+     * @param {Symbol} key
+     * @private
+     */
+    constructor(key)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(key === SINGLETON_KEY);
+        super();
+
+        // does the browser support WebGL2?
+        if(typeof WebGL2RenderingContext === 'undefined')
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["NotSupportedError"](`This application requires WebGL2. Please use a different browser.`);
+
+        /** @type {HTMLCanvasElement} canvas */
+        this._canvas = this._createCanvas(this._reinitialize.bind(this));
+
+        /** @type {WebGL2RenderingContext} WebGL rendering context */
+        this._gl = this._createContext(this._canvas);
+
+        /** @type {boolean} internal flag */
+        this._reinitializeOnContextLoss = true;
+    }
+
+    /**
+     * Get Singleton
+     * @returns {SpeedyGL}
+     */
+    static get instance()
+    {
+        return instance || (instance = new SpeedyGL(SINGLETON_KEY));
+    }
+
+    /**
+     * The WebGL Rendering Context
+     * Be careful not to cache this, as the WebGL Rendering Context may be lost!
+     * @returns {WebGL2RenderingContext}
+     */
+    get gl()
+    {
+        return this._gl;
+    }
+
+    /**
+     * The canvas
+     * @returns {HTMLCanvasElement}
+     */
+    get canvas()
+    {
+        return this._canvas;
+    }
+
+    /**
+     * Create a WebGL-capable canvas
+     * @param {Function} reinitialize to be called if we get a WebGL context loss event
+     * @returns {HTMLCanvasElement}
+     */
+    _createCanvas(reinitialize)
+    {
+        const canvas = _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        canvas.addEventListener('webglcontextlost', ev => {
+            _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].warning(`Lost WebGL2 context`);
+            setTimeout(reinitialize, 0);
+            ev.preventDefault();
+        }, false);
+
+        /*canvas.addEventListener('webglcontextrestored', ev => {
+            Utils.warning(`Restored WebGL2 context`);
+            ev.preventDefault();
+        }, false);*/
+
+        return canvas;
+    }
+
+    /**
+     * Create a WebGL2 Rendering Context
+     * @param {HTMLCanvasElement} canvas
+     * @returns {WebGL2RenderingContext}
+     */
+    _createContext(canvas)
+    {
+         const gl = canvas.getContext('webgl2', {
+            premultipliedAlpha: false,
+            preserveDrawingBuffer: false,
+            //preferLowPowerToHighPerformance: false, // TODO user option?
+            alpha: true,
+            antialias: false,
+            depth: false,
+            stencil: false,
+        });
+
+        if(!gl)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["NotSupportedError"](`Can't create a WebGL2 Rendering Context. Try a different browser!`);       
+
+        return gl;
+    }
+
+    /**
+     * Reinitialize WebGL
+     */
+    _reinitialize()
+    {
+        // disable reinitialization?
+        if(!this._reinitializeOnContextLoss)
+            return;
+
+        // warning
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].warning(`Reinitializing WebGL2...`);
+
+        // create new canvas
+        this._canvas.remove();
+        this._canvas = this._createCanvas(this._reinitialize.bind(this));
+
+        // create new context
+        this._gl = this._createContext(this._canvas);
+
+        // notify observers: we have a new context!
+        // we need to recreate all textures...
+        this._notify(this._gl);
+    }
+
+    /**
+     * Lose the WebGL context. This is used to manually
+     * free resources, and also for purposes of testing
+     * @returns {WEBGL_lose_context}
+     */
+    loseContext()
+    {
+        const gl = this._gl;
+
+        // nothing to do?
+        if(gl.isContextLost())
+            return;
+
+        // find the appropriate extension
+        const ext = gl.getExtension('WEBGL_lose_context');
+        if(!ext)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["NotSupportedError"]('WEBGL_lose_context extension is unavailable');
+
+        // disable reinitialization
+        this._reinitializeOnContextLoss = false;
+
+        // lose context
+        ext.loseContext();
+
+        // done!
+        return ext;
+    }
+
+    /**
+     * Lose & restore the WebGL context
+     * @param {number} [secondsToRestore]
+     * @return {SpeedyPromise<WEBGL_lose_context>} resolves as soon as the context is restored
+     */
+    loseAndRestoreContext(secondsToRestore = 1)
+    {
+        const ms = Math.max(secondsToRestore, 0) * 1000;
+        const ext = this.loseContext();
+
+        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"](resolve => {
+            setTimeout(() => {
+                //ext.restoreContext();
+                this._reinitializeOnContextLoss = true;
+                this._reinitialize();
+                setTimeout(() => resolve(ext), 0); // next frame
+            }, ms);
+        });
+    }
+}
+
+/***/ }),
+
 /***/ "./src/gpu/speedy-gpu.js":
 /*!*******************************!*\
   !*** ./src/gpu/speedy-gpu.js ***!
@@ -17362,16 +17609,17 @@ module.exports = "uniform sampler2D image;\nuniform int iterationNumber;\nvoid m
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyGPU", function() { return SpeedyGPU; });
-/* harmony import */ var _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gl-utils.js */ "./src/gpu/gl-utils.js");
+/* harmony import */ var _speedy_gl__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-gl */ "./src/gpu/speedy-gl.js");
 /* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _speedy_program_center__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-program-center */ "./src/gpu/speedy-program-center.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _speedy_program_center__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-program-center */ "./src/gpu/speedy-program-center.js");
+/* harmony import */ var _core_speedy_media_source__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../core/speedy-media-source */ "./src/core/speedy-media-source.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17386,8 +17634,10 @@ __webpack_require__.r(__webpack_exports__);
  * limitations under the License.
  *
  * speedy-gpu.js
- * GPU routines for accelerated computer vision
+ * GPU-accelerated routines for Computer Vision
  */
+
+
 
 
 
@@ -17397,64 +17647,52 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // Constants
-const UPLOAD_BUFFER_SIZE = 4; // how many textures we allocate for uploading data
+const UPLOAD_BUFFER_SIZE = 2; // how many textures we allocate for uploading data
+
 
 /**
- * GPU routines for
- * accelerated computer vision
+ * GPU-accelerated routines for Computer Vision
  */
 class SpeedyGPU
 {
     /**
-     * Class constructor
-     * @param {number} width Texture width
-     * @param {number} height Texture height
+     * Constructor
+     * @param {number} width width of the image you're working with
+     * @param {number} height height of the image you're working with
      */
     constructor(width, height)
     {
-        // initialize properties
-        this._gl = null;
-        this._canvas = null;
-        this._width = 0;
-        this._height = 0;
-        this._programs = null;
-        this._inputTexture = null;
-        this._inputTextureIndex = 0;
-        this._omitGLContextWarning = false;
+        // validate texture size
+        if(width > _utils_globals__WEBPACK_IMPORTED_MODULE_5__["MAX_TEXTURE_LENGTH"] || height > _utils_globals__WEBPACK_IMPORTED_MODULE_5__["MAX_TEXTURE_LENGTH"])
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["NotSupportedError"](`Maximum texture size exceeded. Using ${width} x ${height}, expected up to ${_utils_globals__WEBPACK_IMPORTED_MODULE_5__["MAX_TEXTURE_LENGTH"]} x ${_utils_globals__WEBPACK_IMPORTED_MODULE_5__["MAX_TEXTURE_LENGTH"]}.`);
+        else if(width < 1 || height < 1)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Invalid texture size: ${width} x ${height}`);
 
-        // does the browser support WebGL2?
-        checkWebGL2Availability();
 
-        // read & validate texture size
-        this._width = Math.max(1, width | 0);
-        this._height = Math.max(1, height | 0);
-        if(this._width > _utils_globals__WEBPACK_IMPORTED_MODULE_4__["MAX_TEXTURE_LENGTH"] || this._height > _utils_globals__WEBPACK_IMPORTED_MODULE_4__["MAX_TEXTURE_LENGTH"]) {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning(`Maximum texture size exceeded (using ${this._width} x ${this._height}).`);
-            this._width = Math.min(this._width, _utils_globals__WEBPACK_IMPORTED_MODULE_4__["MAX_TEXTURE_LENGTH"]);
-            this._height = Math.min(this._height, _utils_globals__WEBPACK_IMPORTED_MODULE_4__["MAX_TEXTURE_LENGTH"]);
-        }
 
-        // setup WebGL
-        this._setupWebGL();
-    }
+        /** @type {SpeedyGL} cached reference */
+        this._speedyGL = _speedy_gl__WEBPACK_IMPORTED_MODULE_0__["SpeedyGL"].instance;
 
-    /**
-     * WebGL context
-     * Be careful when caching this, as the context may be lost!
-     * @returns {WebGL2RenderingContext}
-     */
-    get gl()
-    {
-        return this._gl;
-    }
+        /** @type {number} width of the textures */
+        this._width = width | 0;
 
-    /**
-     * Internal canvas
-     * @returns {HTMLCanvasElement|OffscreenCanvas}
-     */
-    get canvas()
-    {
-        return this._canvas;
+        /** @type {number} height of the textures */
+        this._height = height | 0;
+
+        /** @type {SpeedyProgramCenter} GPU-accelerated routines */
+        this._programs = new _speedy_program_center__WEBPACK_IMPORTED_MODULE_2__["SpeedyProgramCenter"](this, this._width, this._height);
+
+        /** @type {SpeedyTexture[]} upload textures (lazy instantiation) */
+        this._texture = (new Array(UPLOAD_BUFFER_SIZE)).fill(null);
+
+        /** @type {number} index of the texture that was just uploaded to the GPU */
+        this._textureIndex = 0;
+
+
+
+        // recreate the state if necessary
+        this._reset = this._reset.bind(this);
+        this._speedyGL.subscribe(this._reset);
     }
 
     /**
@@ -17467,46 +17705,54 @@ class SpeedyGPU
     }
 
     /**
-     * Upload data to the GPU
-     * We reuse textures by means of an internal buffer of size UPLOAD_BUFFER_SIZE
-     * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} data 
-     * @param {number} [width]
-     * @param {number} [height] 
-     * @returns {SpeedyTexture}
+     * The WebGL Rendering Context
+     * Be careful not to cache this, as the WebGL Rendering Context may be lost!
+     * @returns {WebGL2RenderingContext}
      */
-    upload(data, width = -1, height = -1)
+    get gl()
     {
-        const gl = this._gl;
+        return this._speedyGL.gl;
+    }
 
-        // lost GL context?
-        if(gl.isContextLost()) {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning(`Can't upload texture without a WebGL context`);
-            return (this._inputTexture = null);
-        }
+    /**
+     * Internal canvas
+     * @returns {HTMLCanvasElement}
+     */
+    get canvas()
+    {
+        return this._speedyGL.canvas;
+    }
 
-        // default values
-        if(width < 0)
-            width = gl.canvas.width;
-        if(height < 0)
-            height = gl.canvas.height;
+    /**
+     * Renders a texture to the canvas
+     * @param {SpeedyTexture} texture
+     * @returns {HTMLCanvasElement} returned for convenience
+     */
+    renderToCanvas(texture)
+    {
+        return this.programs.utils.renderToCanvas(texture);
+    }
 
-        // invalid dimensions?
-        if(width == 0 || height == 0)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't upload an image of area 0`);
+    /**
+     * Upload an image to the GPU
+     * @param {SpeedyMediaSource} source
+     * @returns {SpeedyTexture} an internal upload texture
+     */
+    upload(source)
+    {
+        const data = source.data;
 
-        // create (or recreate) internal textures
-        if(this._inputTexture === null) {
-            gl.canvas.width = Math.max(gl.canvas.width, width);
-            gl.canvas.height = Math.max(gl.canvas.height, height);
-            this._inputTexture = Array(UPLOAD_BUFFER_SIZE).fill(null).map(_ =>
-                new _speedy_texture__WEBPACK_IMPORTED_MODULE_1__["SpeedyTexture"](gl, gl.canvas.width, gl.canvas.height));
-        }
-        else if(width > gl.canvas.width || height > gl.canvas.height) {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].log(`Resizing input texture to ${width} x ${height}`);
-            this._inputTexture.forEach(inputTexture =>
-                inputTexture.release());
-            this._inputTexture = null;
-            return this.upload(data, width, height);
+        // validate media source
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(
+            source.width === this._width && source.height === this._height,
+            `Unexpected dimensions for media source: ${source.width} x ${source.height} ` +
+            `(expected ${this._width} x ${this._height})`
+        );
+
+        // create upload textures lazily
+        if(this._texture[0] == null) {
+            for(let i = 0; i < this._texture.length; i++)
+                this._texture[i] = new _speedy_texture__WEBPACK_IMPORTED_MODULE_1__["SpeedyTexture"](this.gl, this._width, this._height);
         }
 
         // bugfix: if the media is a video, we can't really
@@ -17515,154 +17761,63 @@ class SpeedyGPU
             if(data.readyState < 2) {
                 // this may happen when the video loops (Firefox)
                 // return the previously uploaded texture
-                if(this._inputTexture[this._inputTextureIndex] != null)
-                    return this._inputTexture[this._inputTextureIndex];
-                else
-                    _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning(`Trying to process a video that isn't ready yet`);
+                //Utils.warning(`Trying to process a video that isn't ready yet`);
+                return this._texture[this._textureIndex];
             }
         }
 
         // use round-robin to mitigate WebGL's implicit synchronization
         // and maybe minimize texture upload times
-        this._inputTextureIndex = (1 + this._inputTextureIndex) % UPLOAD_BUFFER_SIZE;
+        this._textureIndex = (this._textureIndex + 1) % UPLOAD_BUFFER_SIZE;
 
-        // done! note: the input texture is upside-down, i.e.,
-        // flipped on the y-axis. We need to unflip it on the
-        // output, so that (0,0) becomes the top-left corner
-        const texture = this._inputTexture[this._inputTextureIndex];
-        texture.upload(data);
-        return texture;
+        // upload the media
+        return this._texture[this._textureIndex].upload(data);
     }
 
     /**
-     * Clear the internal canvas
+     * Releases all programs and textures associated with this SpeedyGPU
+     * @returns {null}
      */
-    /*clearCanvas()
+    release()
     {
-        const gl = this._gl;
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(!this.isReleased());
 
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-        gl.clearColor(0, 0, 0, 1);
-        gl.clear(gl.COLOR_BUFFER_BIT);
-    }*/
+        this._programs = this._programs.release();
+        this._speedyGL.unsubscribe(this._reset);
 
-    /**
-     * Lose & restore the WebGL context
-     * @param {number} [timeToRestore] in seconds
-     * @return {Promise} resolves as soon as the context is restored,
-     *                   or as soon as it is lost if timeToRestore is Infinity
-     */
-    loseAndRestoreWebGLContext(timeToRestore = 1.0)
-    {
-        const gl = this._gl;
-
-        if(gl.isContextLost())
-            return Promise.reject('Context already lost');
-
-        const ext = gl.getExtension('WEBGL_lose_context');
-
-        if(ext) {
-            ext.loseContext();
-            return new Promise(resolve => {
-                if(isFinite(timeToRestore)) {
-                    setTimeout(() => {
-                        ext.restoreContext();
-                        setTimeout(() => resolve(), 0); // next frame
-                    }, Math.max(timeToRestore, 0) * 1000.0);
-                }
-                else
-                    resolve(); // won't restore
-            });
-        }
-        else
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["NotSupportedError"]('WEBGL_lose_context is unavailable');
+        return null;
     }
 
     /**
-     * Lose the WebGL context.
-     * This is a way to manually free resources.
+     * Has this SpeedyGPU been released?
+     * @returns {boolean}
      */
-    loseWebGLContext()
+    isReleased()
     {
-        this._omitGLContextWarning = true;
-        return this.loseAndRestoreWebGLContext(Infinity);
+        return this._programs == null;
     }
 
-    // setup WebGL
-    _setupWebGL()
+    /**
+     * Lose & restore the WebGL context (useful for testing purposes)
+     * @return {SpeedyPromise<void>} resolves as soon as the context is restored
+     */
+    loseAndRestoreWebGLContext()
     {
-        const width = this._width;
-        const height = this._height;
-
-        // initializing
-        this._programs = null;
-        this._inputTexture = null;
-        this._inputTextureIndex = 0;
-        this._omitGLContextWarning = false;
-        if(this._canvas !== undefined)
-            delete this._canvas;
-
-        // create canvas
-        this._canvas = createCanvas(width, height);
-        this._canvas.addEventListener('webglcontextlost', ev => {
-            if(!this._omitGLContextWarning)
-                _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning('Lost WebGL context');
-            ev.preventDefault();
-        }, false);
-        this._canvas.addEventListener('webglcontextrestored', ev => {
-            if(!this._omitGLContextWarning)
-                _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].warning('Restoring WebGL context...');
-            this._setupWebGL();
-        }, false);
-
-        // create WebGL context
-        this._gl = createWebGLContext(this._canvas);
-
-        // spawn program groups
-        this._programs = new _speedy_program_center__WEBPACK_IMPORTED_MODULE_3__["SpeedyProgramCenter"](this, width, height);
-    }
-}
-
-// Create a canvas
-function createCanvas(width, height)
-{
-    const inWorker = (typeof importScripts === 'function') && (typeof WorkerGlobalScope !== 'undefined');
-
-    if(inWorker) {
-        if(typeof OffscreenCanvas !== 'function')
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["NotSupportedError"]('OffscreenCanvas is not available in your browser. Please upgrade.');
-
-        return new OffscreenCanvas(width, height);
+        return this._speedyGL.loseAndRestoreContext().then(() => void(0));
     }
 
-    return _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].createCanvas(width, height);
-}
+    /**
+     * Reset the internal state
+     * (called on context reset)
+     */
+    _reset()
+    {
+        if(this.isReleased())
+            return;
 
-// Checks if the browser supports WebGL2
-function checkWebGL2Availability()
-{
-    if(typeof WebGL2RenderingContext === 'undefined')
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["NotSupportedError"]('WebGL2 is required by this application, but it\'s not available in your browser. Please use a different browser.');
-}
-
-// Create a WebGL2 context
-function createWebGLContext(canvas)
-{
-    const gl = canvas.getContext('webgl2', {
-        premultipliedAlpha: false,
-        preserveDrawingBuffer: false,
-        //preferLowPowerToHighPerformance: false, // TODO user option?
-        alpha: true,
-        antialias: false,
-        depth: false,
-        stencil: false,
-    });
-
-    if(!gl)
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["NotSupportedError"]('Can\'t create WebGL2 context. Try in a different browser.');
-
-    return gl;
+        this._programs = new _speedy_program_center__WEBPACK_IMPORTED_MODULE_2__["SpeedyProgramCenter"](this, this._width, this._height);
+        this._texture.fill(null);
+    }
 }
 
 /***/ }),
@@ -17686,8 +17841,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _programs_enhancements__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./programs/enhancements */ "./src/gpu/programs/enhancements.js");
 /* harmony import */ var _programs_trackers__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./programs/trackers */ "./src/gpu/programs/trackers.js");
 /* harmony import */ var _programs_transforms__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./programs/transforms */ "./src/gpu/programs/transforms.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./speedy-program-group */ "./src/gpu/speedy-program-group.js");
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -17721,6 +17877,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /**
  * An access point to all programs that run on the CPU
  * All program groups can be accessed via this class
@@ -17729,15 +17886,19 @@ class SpeedyProgramCenter
 {
     /**
      * Class constructor
-     * @param {SpeedyGPU} gpu 
+     * @param {SpeedyGPU} gpu reference to SpeedyGPU
      * @param {number} width default width for output textures
      * @param {number} height default height for output textures
      */
     constructor(gpu, width, height)
     {
-        // properties
+        /** @type {SpeedyGPU} reference to SpeedyGPU */
         this._gpu = gpu;
+
+        /** @type {number} default width for output textures */
         this._width = width;
+
+        /** @type {number} default height for output textures */
         this._height = height;
 
         // program groups
@@ -17855,13 +18016,35 @@ class SpeedyProgramCenter
         const pot = 1 << lod;
 
         if(lod < 0 || lod >= _utils_globals__WEBPACK_IMPORTED_MODULE_10__["PYRAMID_MAX_LEVELS"])
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__["IllegalArgumentError"](`Invalid pyramid level: ${lod} (outside of range [0,${_utils_globals__WEBPACK_IMPORTED_MODULE_10__["PYRAMID_MAX_LEVELS"]-1}])`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_11__["IllegalArgumentError"](`Invalid pyramid level: ${lod} (outside of range [0,${_utils_globals__WEBPACK_IMPORTED_MODULE_10__["PYRAMID_MAX_LEVELS"]-1}])`);
 
         // use max(1, floor(size / 2^lod)), in accordance to the OpenGL ES 3.0 spec sec 3.8.10.4 (Mipmapping)
         return this._pyramids[lod] || (this._pyramids[lod] = new _programs_pyramids__WEBPACK_IMPORTED_MODULE_5__["GPUPyramids"](this._gpu,
             Math.max(1, Math.floor(this._width / pot)),
             Math.max(1, Math.floor(this._height / pot))
         ));
+    }
+
+    /**
+     * Release all programs from all groups. You'll
+     * no longer be able to use any of them.
+     * @returns {null}
+     */
+    release()
+    {
+        for(const key in this) {
+            if(Object.prototype.hasOwnProperty.call(this, key)) {
+                if(this[key] != null && (this[key] instanceof _speedy_program_group__WEBPACK_IMPORTED_MODULE_9__["SpeedyProgramGroup"]))
+                    this[key].release();
+            }
+        }
+
+        for(let i = 0; i < this._pyramids.length; i++) {
+            if(this._pyramids[i] != null)
+                this._pyramids[i].release();
+        }
+
+        return null;
     }
 }
 
@@ -17878,10 +18061,11 @@ class SpeedyProgramCenter
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyProgramGroup", function() { return SpeedyProgramGroup; });
 /* harmony import */ var _speedy_program__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-program */ "./src/gpu/speedy-program.js");
+/* harmony import */ var _speedy_gpu__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17901,35 +18085,49 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /**
  * SpeedyProgramGroup
  * A semantically correlated group
  * of programs that run on the GPU
+ * @abstract
  */
-
 class SpeedyProgramGroup
 {
     /**
      * Class constructor
+     * @protected
      * @param {SpeedyGPU} gpu
      * @param {number} width Texture width (depends on the pyramid layer)
      * @param {number} height Texture height (depends on the pyramid layer)
      */
-    /* protected */ constructor(gpu, width, height)
+    constructor(gpu, width, height)
     {
+        /** @type {SpeedyGPU} GPU-accelerated routines */
         this._gpu = gpu;
+
+        /** @type {number} width of the output textures of the programs */
         this._width = width;
+
+        /** @type {number} height of the output textures of the programs */
         this._height = height;
+
+        /** @type {object?} helpers for declaring programs */
+        this._helpers = null;
+
+        /** @type {SpeedyProgram[]} the list of all programs that belong to this group */
+        this._programs = [];
     }
 
     /**
      * Declare a program
+     * @protected
      * @param {string} name Program name
      * @param {ShaderDeclaration} shaderdecl Shader declaration
      * @param {object} settings Program settings
      * @returns {SpeedyProgramGroup} This object
      */
-    /* protected */ declare(name, shaderdecl, settings = { })
+    declare(name, shaderdecl, settings = {})
     {
         // lazy instantiation of kernels
         Object.defineProperty(this, name, {
@@ -17946,11 +18144,12 @@ class SpeedyProgramGroup
 
     /**
      * Multi-pass composition
+     * @protected
      * @param {string} name Program name
      * @param {string} fn Other programs
      * @returns {SpeedyProgramGroup} This object
      */
-    /* protected */ compose(name, ...fn)
+    compose(name, ...fn)
     {
         // function composition: functions are called in the order they are specified
         // e.g., compose('h', 'f', 'g') means h(x) = g(f(x))
@@ -17987,8 +18186,8 @@ class SpeedyProgramGroup
     }
 
     /**
-     * Neat helpers to be used
-     * when defining programs
+     * Neat helpers to be used when declaring programs
+     * @returns {object}
      */
     get program()
     {
@@ -18004,7 +18203,7 @@ class SpeedyProgramGroup
 
             // Render to canvas
             // Use it when we're supposed to see the texture
-            displaysGraphics() {
+            rendersToCanvas() {
                 return {
                     renderToTexture: false
                 };
@@ -18031,13 +18230,33 @@ class SpeedyProgramGroup
         });
     }
 
-    /* private */ _createProgram(shaderdecl, settings = { })
+    /**
+     * Releases all programs from this group
+     * @returns {null}
+     */
+    release()
     {
-        return new _speedy_program__WEBPACK_IMPORTED_MODULE_0__["SpeedyProgram"](this._gpu.gl, shaderdecl, {
-            // default settings
-            output: [ this._width, this._height ],
+        for(let i = 0; i < this._programs.length; i++)
+            this._programs[i].release();
+
+        return null;
+    }
+
+    /**
+     * Spawn a SpeedyProgram
+     * @param {ShaderDeclaration} shaderdecl Shader declaration
+     * @param {object} [settings] Program settings
+     * @returns {SpeedyProgram}
+     */
+    _createProgram(shaderdecl, settings = {})
+    {
+        const program = new _speedy_program__WEBPACK_IMPORTED_MODULE_0__["SpeedyProgram"](this._gpu.gl, shaderdecl, {
+            output: [ this._width, this._height ], // default settings
             ...settings
         });
+
+        this._programs.push(program);
+        return program;
     }
 }
 
@@ -18087,11 +18306,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-const ATTRIBUTE_LOCATIONS = Object.freeze({
-    position: 0,
-    texCoord: 1,
-});
-
+// Map uniform type to a gl function
 const UNIFORM_SETTERS = Object.freeze({
     'sampler2D':'uniform1i',
     'float':    'uniform1f',
@@ -18158,8 +18373,8 @@ class SpeedyProgram extends Function
         /** @type {WebGLProgram} */
         this._program = _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].createProgram(gl, shaderdecl.vertexSource, shaderdecl.fragmentSource);
 
-        /** @type {ProgramGeometry} this is a quad */
-        this._geometry = this._createGeometry(gl);
+        /** @type {StoredGeometry} this is a quad */
+        this._geometry = this._createGeometry(gl, shaderdecl);
 
         /** @type {string[]} names of the arguments of the SpeedyProgram */
         this._argnames = shaderdecl.arguments;
@@ -18185,7 +18400,7 @@ class SpeedyProgram extends Function
         /** @type {boolean} flag indicating the need to update the texSize uniform */
         this._dirtySize = true;
 
-        /** @type {Map<string,ProgramUniform>} uniform variables */
+        /** @type {Map<string,UniformVariable>} uniform variables */
         this._uniform = new Map();
 
         /** @type {UBOHelper} UBO helper */
@@ -18224,17 +18439,6 @@ class SpeedyProgram extends Function
         if(gl.isContextLost())
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalOperationError"](`Can't initialize SpeedyProgram: lost context`);
 
-        // need to resize the canvas?
-        const canvas = gl.canvas;
-        if(this._width > canvas.width)
-            canvas.width = this._width;
-        if(this._height > canvas.height)
-            canvas.height = this._height;
-
-        // setup attributes of the vertex shader
-        gl.bindAttribLocation(this._program, ATTRIBUTE_LOCATIONS.position, shaderdecl.attributes.position);
-        gl.bindAttribLocation(this._program, ATTRIBUTE_LOCATIONS.texCoord, shaderdecl.attributes.texCoord);
-
         // create framebuffer(s)
         for(let i = 0; i < this._texture.length; i++) {
             this._texture[i] = new _speedy_texture__WEBPACK_IMPORTED_MODULE_1__["SpeedyTexture"](gl, this._width, this._height);
@@ -18246,7 +18450,7 @@ class SpeedyProgram extends Function
         for(const name of shaderdecl.uniforms) {
             const type = shaderdecl.uniformType(name);
             const location = gl.getUniformLocation(this._program, name);
-            this._uniform.set(name, new ProgramUniform(type, location));
+            this._uniform.set(name, new UniformVariable(type, location));
         }
 
         // match arguments & uniforms
@@ -18262,7 +18466,7 @@ class SpeedyProgram extends Function
 
     /**
      * Run the SpeedyProgram
-     * @param  {...number} args
+     * @param  {...(number|number[]|SpeedyTexture|SpeedyTexture[])} args
      * @returns {SpeedyTexture}
      */
     _call(...args)
@@ -18274,6 +18478,13 @@ class SpeedyProgram extends Function
         // matching arguments?
         if(args.length != argnames.length)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't run shader: incorrect number of arguments (expected ${argnames.length}, got ${args.length})`);
+
+        // can't use the output texture as an input
+        const flatArgs = args.flat(); // args.reduce((arr, val) => arr.concat(val), []);
+        for(let j = flatArgs.length - 1; j >= 0; j--) {
+            if(flatArgs[j] === this._texture[this._textureIndex])
+                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["NotSupportedError"](`Can't run shader: don't use its output texture as an input to itself. Consider using pingpong rendering!`);
+        }
 
         // skip things
         if(gl.isContextLost())
@@ -18296,7 +18507,7 @@ class SpeedyProgram extends Function
             if(!this._argIsArray[i]) {
                 // uniform variable matches argument name
                 const uniform = this._uniform.get(argname);
-                texNo = this._setUniform(uniform, args[i], texNo);
+                texNo = uniform.setValue(gl, args[i], texNo);
             }
             else {
                 // uniform array matches argument name
@@ -18304,7 +18515,7 @@ class SpeedyProgram extends Function
                 if(this._uniform.has(`${argname}[${array.length}]`))
                     throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't run shader: too few elements in the "${argname}" array`);
                 for(let j = 0, uniform = undefined; (uniform = this._uniform.get(`${argname}[${j}]`)) !== undefined; j++)
-                    texNo = this._setUniform(uniform, array[j], texNo);
+                    texNo = uniform.setValue(gl, array[j], texNo);
             }
         }
 
@@ -18316,7 +18527,7 @@ class SpeedyProgram extends Function
         const fbo = options.renderToTexture ? this._fbo[this._textureIndex] : null;
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
         gl.viewport(0, 0, this._width, this._height);
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); // mode, offset, count
+        gl.drawArrays(gl.TRIANGLES, 0, 6); // mode, offset, count
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
         // are we rendering to a texture?
@@ -18324,7 +18535,7 @@ class SpeedyProgram extends Function
             const texture = this._texture[this._textureIndex];
 
             // we've just changed the contents of the internal texture
-            texture.discardPyramid(); // discard its pyramid
+            texture.discardMipmaps(); // discard its pyramid
 
             // should we return the internal texture?
             let outputTexture = texture;
@@ -18596,6 +18807,24 @@ class SpeedyProgram extends Function
     }
 
     /**
+     * Release resources associated with this SpeedyProgram
+     * @returns {null}
+     */
+    release()
+    {
+        const gl = this._gl;
+
+        for(let i = 0; i < this._texture.length; i++) {
+            this._texture[i] = this._texture[i].release();
+            this._fbo[i] = _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].destroyFramebuffer(gl, this._fbo[i]);
+        }
+
+        this._program = _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].destroyProgram(gl, this._program);
+
+        return null;
+    }
+
+    /**
      * Width of the internal texture, in pixels
      * @returns {number}
      */
@@ -18624,59 +18853,18 @@ class SpeedyProgram extends Function
     }
 
     /**
-     * Set the value of a uniform variable
-     * @param {ProgramUniform} uniform
-     * @param {SpeedyTexture|number|boolean|number[]|boolean[]} value use column-major format for matrices
-     * @param {number} texNo current texture index
-     * @returns {number} new texture index
-     */
-    _setUniform(uniform, value, texNo)
-    {
-        const gl = this._gl;
-
-        if(uniform.type == 'sampler2D') {
-            // set texture
-            if(texNo > gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
-                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["NotSupportedError"](`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
-            else if(value === this._texture[this._textureIndex])
-                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["NotSupportedError"](`Can't run shader: cannot use its output texture as an input to itself`);
-            else if(value == null)
-                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't run shader: cannot use null as an input texture`);
-
-            gl.activeTexture(gl.TEXTURE0 + texNo);
-            gl.bindTexture(gl.TEXTURE_2D, value.glTexture);
-            gl.uniform1i(uniform.location, texNo);
-            texNo++;
-        }
-        else if(typeof value == 'number' || typeof value == 'boolean') {
-            // set scalar value
-            (gl[uniform.setter])(uniform.location, value);
-        }
-        else if(Array.isArray(value)) {
-            // set vector or matrix
-            if(value.length === uniform.length) {
-                if(uniform.dim == 2)
-                    (gl[uniform.setter])(uniform.location, false, value); // matrix
-                else
-                    (gl[uniform.setter])(uniform.location, ...value); // vector
-            }
-            else
-                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't run shader: incorrect number of values for ${uniform.type}: "${value}"`);
-        }
-        else
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't run shader: unrecognized argument "${value}"`);
-
-        return texNo;
-    }
-
-    /**
      * Create a quad to be passed to the vertex shader
      * (this is crafted for image processing)
      * @param {WebGL2RenderingContext} gl
-     * @returns {ProgramGeometry}
+     * @param {ShaderDeclaration} shaderdecl
+     * @returns {StoredGeometry}
      */
-    _createGeometry(gl)
+    _createGeometry(gl, shaderdecl)
     {
+        // We assume that the geometry and the locations of the attributes of the
+        // vertex shaders are CONSTANT throughout time and the same for all shaders.
+        // That's why we cache the VAO and the VBO (is this really necessary?!)
+
         // got cached values for this WebGL context?
         if(geometryCache.has(gl))
             return geometryCache.get(gl);
@@ -18690,14 +18878,17 @@ class SpeedyProgram extends Function
         // using the current vbo
         gl.bindBuffer(gl.ARRAY_BUFFER, vbo[0]);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            // clip coordinates
+            // clip coordinates (CCW)
             -1, -1,
             1, -1,
             -1, 1,
+
+            -1, 1,
+            1, -1,
             1, 1,
         ]), gl.STATIC_DRAW);
-        gl.enableVertexAttribArray(ATTRIBUTE_LOCATIONS.position);
-        gl.vertexAttribPointer(ATTRIBUTE_LOCATIONS.position, // attribute location
+        gl.enableVertexAttribArray(shaderdecl.locationOfAttributes.position);
+        gl.vertexAttribPointer(shaderdecl.locationOfAttributes.position, // attribute location
                                2,          // 2 components per vertex (x,y)
                                gl.FLOAT,   // type
                                false,      // don't normalize
@@ -18708,14 +18899,17 @@ class SpeedyProgram extends Function
         // using the current vbo
         gl.bindBuffer(gl.ARRAY_BUFFER, vbo[1]);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            // texture coordinates
+            // texture coordinates (CCW)
             0, 0,
             1, 0,
             0, 1,
+
+            0, 1,
+            1, 0,
             1, 1,
         ]), gl.STATIC_DRAW);
-        gl.enableVertexAttribArray(ATTRIBUTE_LOCATIONS.texCoord);
-        gl.vertexAttribPointer(ATTRIBUTE_LOCATIONS.texCoord, // attribute location
+        gl.enableVertexAttribArray(shaderdecl.locationOfAttributes.texCoord);
+        gl.vertexAttribPointer(shaderdecl.locationOfAttributes.texCoord, // attribute location
                                2,          // 2 components per vertex (x,y)
                                gl.FLOAT,   // type
                                false,      // don't normalize
@@ -18726,7 +18920,7 @@ class SpeedyProgram extends Function
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
 
         // cache & return
-        const result = new ProgramGeometry(vao, vbo[0], vbo[1]);
+        const result = new StoredGeometry(vao, vbo[0], vbo[1]);
         geometryCache.set(gl, result);
         return result;
     }
@@ -18794,9 +18988,10 @@ class SpeedyProgram extends Function
  * @param {WebGLBuffer} vboPosition buffer associated with the position attribute
  * @param {WebGLBuffer} vboTexCoord buffer associated with the texCoord attribute
  */
-function ProgramGeometry(vao, vboPosition, vboTexCoord)
+function StoredGeometry(vao, vboPosition, vboTexCoord)
 {
     this.vao = vao;
+
     this.vbo = Object.freeze({
         position: vboPosition,
         texCoord: vboTexCoord
@@ -18810,7 +19005,7 @@ function ProgramGeometry(vao, vboPosition, vboTexCoord)
  * @param {string} type
  * @param {WebGLUniformLocation} location
  */
-function ProgramUniform(type, location)
+function UniformVariable(type, location)
 {
     /** @type {string} GLSL data type */
     this.type = String(type);
@@ -18822,16 +19017,62 @@ function ProgramUniform(type, location)
 
     /** @type {string} setter function */
     this.setter = UNIFORM_SETTERS[this.type];
+    const n = Number((this.setter.match(/^uniform(Matrix)?(\d)/))[2]) | 0;
 
     /** @type {number} is the uniform a scalar (0), a vector (1) or a matrix (2)? */
     this.dim = this.type.startsWith('mat') ? 2 : ((this.type.indexOf('vec') >= 0) | 0);
 
     /** @type {number} required number of scalars */
-    const n = Number((this.setter.match(/^uniform(Matrix)?(\d)/))[2]) | 0;
     this.length = (this.dim == 2) ? n * n : n;
 
     // done!
     return Object.freeze(this);
+}
+
+/**
+ * Set the value of a uniform variable
+ * @param {WebGL2RenderingContext} gl
+ * @param {SpeedyTexture|number|boolean|number[]|boolean[]} value use column-major format for matrices
+ * @param {number} texNo current texture index
+ * @returns {number} new texture index
+ */
+UniformVariable.prototype.setValue = function(gl, value, texNo)
+{
+    const setValue = gl[this.setter];
+
+    // check uniform type
+    if(this.type == 'sampler2D') {
+        // set texture
+        if(texNo > gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["NotSupportedError"](`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
+        else if(value == null)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't run shader: cannot use null as an input texture`);
+
+        gl.activeTexture(gl.TEXTURE0 + texNo);
+        gl.bindTexture(gl.TEXTURE_2D, value.glTexture);
+        gl.uniform1i(this.location, texNo);
+        texNo++;
+    }
+    else if(typeof value == 'number' || typeof value == 'boolean') {
+        // set scalar value
+        setValue.call(gl, this.location, value);
+    }
+    else if(Array.isArray(value)) {
+        // set vector or matrix
+        if(value.length === this.length) {
+            if(this.dim == 2)
+                setValue.call(gl, this.location, false, value); // matrix
+            else
+                setValue.call(gl, this.location, ...value); // vector
+        }
+        else
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't run shader: incorrect number of values for ${this.type}: "${value}"`);
+    }
+    else
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't run shader: unrecognized argument "${value}"`);
+
+    // done
+    return texNo;
 }
 
 /**
@@ -18920,7 +19161,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18951,16 +19192,25 @@ class SpeedyTexture
 {
     /**
      * Creates a new texture with the specified dimensions
-     * @param {WebGL2RenderingContext} gl 
-     * @param {number} width 
-     * @param {number} height 
+     * @param {WebGL2RenderingContext} gl
+     * @param {number} width
+     * @param {number} height
      */
     constructor(gl, width, height)
     {
+        /** @type {WebGL2RenderingContext} */
         this._gl = gl;
+
+        /** @type {number} width of the texture */
         this._width = Math.max(1, width | 0);
+
+        /** @type {number} height of the texture */
         this._height = Math.max(1, height | 0);
+
+        /** @type {WebGLTexture} internal texture object */
         this._glTexture = _gl_utils__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].createTexture(this._gl, this._width, this._height);
+
+        /** @type {boolean} have we generated mipmaps for this texture? */
         this._hasMipmaps = false;
     }
 
@@ -18999,7 +19249,7 @@ class SpeedyTexture
      * @param {boolean} [gaussian] should we compute a Gaussian pyramid? Recommended!
      * @returns {SpeedyTexture} this
      */
-    generatePyramid(gpu, gaussian = true)
+    generateMipmaps(gpu, gaussian = true)
     {
         // nothing to do
         if(this._hasMipmaps)
@@ -19031,11 +19281,29 @@ class SpeedyTexture
     }
 
     /**
-     * Invalidates previously generated pyramid (if any)
+     * Invalidates previously generated mipmaps, if any
      */
-    discardPyramid()
+    discardMipmaps()
     {
         this._hasMipmaps = false;
+    }
+
+    /**
+     * Does this texture have mipmaps?
+     * @returns {boolean}
+     */
+    hasMipmaps()
+    {
+        return this._hasMipmaps;
+    }
+
+    /**
+     * Has this texture been released?
+     * @returns {boolean}
+     */
+    isReleased()
+    {
+        return this._glTexture == null;
     }
 
     /**
@@ -19596,6 +19864,85 @@ const KPF_DISCARD = 0x80;
 const LITTLE_ENDIAN = (function() {
     return 0xCAFE === (new Uint16Array(new Uint8Array([0xFE, 0xCA]).buffer))[0];
 })();
+
+/***/ }),
+
+/***/ "./src/utils/observable.js":
+/*!*********************************!*\
+  !*** ./src/utils/observable.js ***!
+  \*********************************/
+/*! exports provided: Observable */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "Observable", function() { return Observable; });
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * observable.js
+ * Observer design pattern
+ */
+
+/**
+ * Implementation of the Observer design pattern
+ * @abstract
+ */
+class Observable
+{
+    /**
+     * Constructor
+     */
+    constructor()
+    {
+        /** @type {Function[]} subscribers / callbacks */
+        this._subscribers = [];
+    }
+
+    /**
+     * Add subscriber
+     * @param {Function} fn callback
+     */
+    subscribe(fn)
+    {
+        if(this._subscribers.indexOf(fn) < 0)
+            this._subscribers.push(fn);
+    }
+
+    /**
+     * Remove subscriber
+     * @param {Function} fn previously added callback
+     */
+    unsubscribe(fn)
+    {
+        this._subscribers = this._subscribers.filter(subscriber => subscriber !== fn);
+    }
+
+    /**
+     * Notify all subscribers about a state change
+     * @param {any} data generic data
+     * @protected
+     */
+    _notify(data)
+    {
+        for(const fn of this._subscribers)
+            fn(data);
+    }
+}
 
 /***/ }),
 
@@ -20221,7 +20568,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20241,6 +20588,10 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+/**
+ * Media types
+ * @enum {MediaType}
+ */
 const MediaType = _utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].enum(
     'Image',
     'Video',
@@ -20248,12 +20599,19 @@ const MediaType = _utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].enum(
     'Bitmap'
 );
 
+/**
+ * Color formats
+ * @enum {ColorFormat}
+ */
 const ColorFormat = _utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].enum(
     'RGB',
     'Greyscale',
     'Binary'
 );
 
+/**
+ * Pixel component (bitwise flags)
+ */
 const PixelComponent = Object.freeze({
     RED:   1,
     GREEN: 2,
@@ -20262,6 +20620,9 @@ const PixelComponent = Object.freeze({
     ALL:   15 // = RED | GREEN | BLUE | ALPHA
 });
 
+/**
+ * Component ID utility
+ */
 const ColorComponentId = Object.freeze({
     [PixelComponent.RED]:   0,
     [PixelComponent.GREEN]: 1,

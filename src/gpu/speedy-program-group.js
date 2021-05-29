@@ -47,6 +47,12 @@ export class SpeedyProgramGroup
 
         /** @type {number} height of the output textures of the programs */
         this._height = height;
+
+        /** @type {object?} helpers for declaring programs */
+        this._helpers = null;
+
+        /** @type {SpeedyProgram[]} the list of all programs that belong to this group */
+        this._programs = [];
     }
 
     /**
@@ -116,8 +122,7 @@ export class SpeedyProgramGroup
     }
 
     /**
-     * Neat helpers to be used
-     * when defining programs
+     * Neat helpers to be used when declaring programs
      * @returns {object}
      */
     get program()
@@ -162,16 +167,31 @@ export class SpeedyProgramGroup
     }
 
     /**
+     * Releases all programs from this group
+     * @returns {null}
+     */
+    release()
+    {
+        for(let i = 0; i < this._programs.length; i++)
+            this._programs[i].release();
+
+        return null;
+    }
+
+    /**
      * Spawn a SpeedyProgram
      * @param {ShaderDeclaration} shaderdecl Shader declaration
      * @param {object} [settings] Program settings
+     * @returns {SpeedyProgram}
      */
     _createProgram(shaderdecl, settings = {})
     {
-        return new SpeedyProgram(this._gpu.gl, shaderdecl, {
-            // default settings
-            output: [ this._width, this._height ],
+        const program = new SpeedyProgram(this._gpu.gl, shaderdecl, {
+            output: [ this._width, this._height ], // default settings
             ...settings
         });
+
+        this._programs.push(program);
+        return program;
     }
 }

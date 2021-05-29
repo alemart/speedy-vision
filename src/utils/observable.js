@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,16 @@
 
 /**
  * Implementation of the Observer design pattern
+ * @abstract
  */
-export /* abstract */ class Observable
+export class Observable
 {
     /**
-     * Class constructor
+     * Constructor
      */
     constructor()
     {
+        /** @type {Function[]} subscribers / callbacks */
         this._subscribers = [];
     }
 
@@ -54,8 +56,9 @@ export /* abstract */ class Observable
     /**
      * Notify all subscribers about a state change
      * @param {any} data generic data
+     * @protected
      */
-    /* protected */ _notify(data)
+    _notify(data)
     {
         for(const fn of this._subscribers)
             fn(data);

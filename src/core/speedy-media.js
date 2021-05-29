@@ -28,11 +28,6 @@ import { SpeedyMediaSource } from './speedy-media-source';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { SpeedyPipeline } from './speedy-pipeline';
 
-// Constants
-const UPLOAD_BUFFER_SIZE = 2; // how many textures we allocate for uploading data
-
-
-
 /**
  * SpeedyMedia encapsulates a media element
  * (e.g., image, video, canvas)
@@ -40,35 +35,14 @@ const UPLOAD_BUFFER_SIZE = 2; // how many textures we allocate for uploading dat
 export class SpeedyMedia
 {
     /**
-     * Class constructor
-     * It receives A VALID media source that is already loaded
+     * Constructor. It receives a VALID media source that is ALREADY LOADED.
      * @private
-     * @param {SpeedyMediaSource|SpeedyMedia} sourceOrMedia
+     * @param {SpeedyMediaSource} source
      * @param {object} [options] options object
      */
-    constructor(sourceOrMedia, options = { })
+    constructor(source, options = {})
     {
-        // Copy constructor (shallow copy)
-        if(sourceOrMedia.constructor.name == 'SpeedyMedia') {
-            const media = sourceOrMedia;
-
-            this._source = media._source;
-            this._options = media._options;
-            this._colorFormat = media._colorFormat;
-            this._gpu = media._gpu;
-            this._texture = media._texture;
-            this._textureIndex = media._textureIndex;
-
-            return this;
-        }
-
-
-
-        // Create using a SpeedyMediaSource
-        const source = sourceOrMedia;
         Utils.assert(source.isLoaded());
-
-
 
         /** @type {SpeedyMediaSource} media source */
         this._source = source;
@@ -83,21 +57,6 @@ export class SpeedyMedia
 
         /** @type {SpeedyGPU} GPU-accelerated routines */
         this._gpu = new SpeedyGPU(this._source.width, this._source.height);
-
-        /** @type {SpeedyTexture[]} upload buffers */
-        this._texture = Array.from({ length: UPLOAD_BUFFER_SIZE }, () =>
-            new SpeedyTexture(this._gpu.gl, this._source.width, this._source.height));
-
-        /** @type {number} index of the texture that was just uploaded to the GPU */
-        this._textureIndex = 0;
-
-
-
-        // recreate the upload buffers if necessary
-        this._gpu.onWebGLContextReset(() => {
-            for(let i = 0; i < this._texture.length; i++)
-                this._texture[i] = new SpeedyTexture(this._gpu.gl, this._source.width, this._source.height);
-        });
 
         // warning: loading a canvas without an explicit usage flag
         if(this._source.type == MediaType.Canvas && this._options.usage === undefined)
@@ -200,18 +159,15 @@ export class SpeedyMedia
     }
 
     /**
-     * Releases resources associated with this media.
-     * You will no longer be able to use it, nor any of its lightweight clones.
+     * Releases the resources associated with this media:
+     * WebGL textures, framebuffers, programs, etc.
      * @returns {SpeedyPromise<void>} resolves as soon as the resources are released
      */
     release()
     {
         if(!this.isReleased()) {
             Utils.log('Releasing SpeedyMedia object...');
-
-            // release the upload buffers
-            for(let i = 0; i < this._texture.length; i++)
-                this._texture[i] = this._texture[i].release();
+            this._gpu = this._gpu.release();
         }
 
         return SpeedyPromise.resolve();
@@ -223,66 +179,25 @@ export class SpeedyMedia
      */
     isReleased()
     {
-        return this._texture[0] == null;
+        return this._gpu == null;
     }
 
     /**
      * Clones the SpeedyMedia object
-     * @param {object} options options object
      * @returns {SpeedyPromise<SpeedyMedia>} a clone object
      */
-    clone(options = {})
+    clone()
     {
-        // Default settings
-        options = {
-            lightweight: false,
-            ...(options)
-        };
-
         // has the media been released?
         if(this.isReleased())
-            throw new IllegalOperationError('Can\'t clone a SpeedyMedia that has been released');
+            throw new IllegalOperationError(`Can't clone a SpeedyMedia that has been released`);
 
         // clone the object
-        if(options.lightweight) {
-            // shallow copy
-            return SpeedyPromise.resolve(new SpeedyMedia(this, this._options));
-        }
-        else {
-            // deep copy
-            return this._source.clone().then(
-                newSource => new SpeedyMedia(newSource, this._options)
-            );
-        }
-    }
+        const clone = new SpeedyMedia(this._source, this.options);
+        clone._colorFormat = this._colorFormat;
 
-    /**
-     * Upload the media to the GPU
-     * @returns {SpeedyTexture}
-     */
-    _upload()
-    {
-        const data = this._source.data;
-
-        // bugfix: if the media is a video, we can't really
-        // upload it to the GPU unless it's ready
-        if(data.constructor.name == 'HTMLVideoElement') {
-            if(data.readyState < 2) {
-                // this may happen when the video loops (Firefox)
-                // return the previously uploaded texture
-                if(this._texture[this._textureIndex] != null)
-                    return this._texture[this._textureIndex];
-                else
-                    Utils.warning(`Trying to process a video that isn't ready yet`);
-            }
-        }
-
-        // use round-robin to mitigate WebGL's implicit synchronization
-        // and maybe minimize texture upload times
-        this._textureIndex = (this._textureIndex + 1) % UPLOAD_BUFFER_SIZE;
-
-        // upload the media
-        return this._texture[this._textureIndex].upload(data);
+        // done!
+        return SpeedyPromise.resolve(clone);
     }
 
     /**
@@ -294,22 +209,18 @@ export class SpeedyMedia
     {
         // has the media been released?
         if(this.isReleased())
-            throw new IllegalOperationError('Can\'t run pipeline: SpeedyMedia has been released');
+            throw new IllegalOperationError(`Can't run pipeline: the SpeedyMedia has been released`);
 
-        // create a lightweight clone
-        return this.clone({ lightweight: true }).then(media => {
-            // upload the media to the GPU
-            const texture = this._upload();
+        // upload the media to the GPU
+        const texture = this._upload();
 
-            // run the pipeline
-            return pipeline._run(texture, media._gpu, media).turbocharge().then(texture => {
-                // convert to bitmap
-                const canvas = media._gpu.renderToCanvas(texture);
-                return createImageBitmap(canvas, 0, canvas.height - media.height, media.width, media.height).then(bitmap => {
-                    return SpeedyMediaSource.load(bitmap).then(source => {
-                        media._source = source;
-                        return media;
-                    });
+        // run the pipeline
+        return pipeline._run(texture, this._gpu, this).turbocharge().then(texture => {
+            // convert to bitmap
+            const canvas = this._gpu.renderToCanvas(texture);
+            return createImageBitmap(canvas, 0, canvas.height - this.height, this.width, this.height).then(bitmap => {
+                return SpeedyMediaSource.load(bitmap).then(source => {
+                    return new SpeedyMedia(source); // colorFormat?!
                 });
             });
         });
@@ -373,5 +284,14 @@ export class SpeedyMedia
 
         // done!
         return Object.freeze(options); // must be read-only
+    }
+
+    /**
+     * Upload the media to the GPU
+     * @returns {SpeedyTexture}
+     */
+    _upload()
+    {
+        return this._gpu.upload(this._source);
     }
 }
