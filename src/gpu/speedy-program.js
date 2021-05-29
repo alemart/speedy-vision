@@ -123,7 +123,7 @@ export class SpeedyProgram extends Function
         /** @type {Map<string,UniformVariable>} uniform variables */
         this._uniform = new Map();
 
-        /** @type {UBOHelper} UBO helper */
+        /** @type {UBOHelper} UBO helper (lazy instantiation) */
         this._ubo = null;
 
         /** @type {SpeedyTexture[]} output texture(s) */
@@ -537,11 +537,20 @@ export class SpeedyProgram extends Function
     {
         const gl = this._gl;
 
+        // Release UBOs (if any)
+        if(this._ubo != null)
+            this._ubo = this._ubo.release();
+
+        // Release pixel buffers
+        this._pixelBuffer.fill(null);
+
+        // Release internal textures & framebuffers
         for(let i = 0; i < this._texture.length; i++) {
             this._texture[i] = this._texture[i].release();
             this._fbo[i] = GLUtils.destroyFramebuffer(gl, this._fbo[i]);
         }
 
+        // Release program
         this._program = GLUtils.destroyProgram(gl, this._program);
 
         return null;
@@ -862,4 +871,22 @@ UBOHelper.prototype.update = function()
         gl.bindBufferBase(gl.UNIFORM_BUFFER, ubo.blockBindingIndex, ubo.buffer);
         gl.bindBuffer(gl.UNIFORM_BUFFER, null);
     }
+}
+
+/**
+ * Release allocated buffers
+ * @returns {null}
+ */
+UBOHelper.prototype.release = function()
+{
+    const gl = this._gl;
+
+    for(const name in this._ubo) {
+        const ubo = this._ubo[name];
+
+        gl.deleteBuffer(ubo.buffer);
+        ubo.data = null;
+    }
+
+    return null;
 }
