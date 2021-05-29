@@ -21,6 +21,7 @@
 
 import { GLUtils } from './gl-utils.js';
 import { SpeedyTexture, SpeedyDrawableTexture } from './speedy-texture';
+import { SpeedyTextureReader } from './speedy-texture-reader';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { ShaderDeclaration } from './shader-declaration';
 import { Utils } from '../utils/utils';
@@ -49,11 +50,6 @@ const UNIFORM_SETTERS = Object.freeze({
     'mat3':     'uniformMatrix3fv',
     'mat4':     'uniformMatrix4fv',
 });
-
-// number of pixel buffer objects
-// used to get a performance boost in gl.readPixels()
-// (1 seems to perform better on mobile, 2 on the PC?)
-const PBO_COUNT = 1;
 
 // cache program geometry
 const geometryCache = new WeakMap();
@@ -140,18 +136,8 @@ export class SpeedyProgram extends Function
         /** @type {number} used for pingpong rendering */
         this._textureIndex = 0;
 
-        /** @type {Uint8Array[]} pixel buffers for data transfers */
-        this._pixelBuffer = (new Array(PBO_COUNT)).fill(null);
-
-        /** @type {number[]} [width, height] of the pixel buffers */
-        this._pixelBufferSize = [0, 0];
-
-        /** @type {number[]} for async data transfers */
-        this._pboConsumerQueue = (new Array(PBO_COUNT)).fill(0).map((_, i) => i);
-
-        /** @type {number[]} for async data transfers */
-        this._pboProducerQueue = [];
-
+        /** @type {SpeedyTextureReader} texture reader */
+        this._textureReader = new SpeedyTextureReader();
 
 
         // validate options
@@ -286,9 +272,6 @@ export class SpeedyProgram extends Function
         this._height = height;
         this._dirtySize = true;
 
-        // reallocate buffers for reading pixels
-        this._reallocatePixelBuffers(width, height);
-
         // resize the internal texture(s)
         for(let i = 0; i < this._texture.length; i++)
             this._texture[i].resize(width, height, true);
@@ -330,37 +313,13 @@ export class SpeedyProgram extends Function
      */
     readPixelsSync(x = 0, y = 0, width = this._width, height = this._height)
     {
-        const gl = this._gl;
-
         // can't read pixels if we're not rendering to a texture (i.e., no framebuffer)
         if(!this._options.renderToTexture)
             throw new IllegalOperationError(`Can't read pixels from a SpeedyProgram that doesn't render to an internal texture`);
 
-        // lost context?
-        if(gl.isContextLost())
-            return this._pixelBuffer[0];
-
-        // clamp values
-        width = Math.max(0, Math.min(width, this._width));
-        height = Math.max(0, Math.min(height, this._height));
-        x = Math.max(0, Math.min(x, width - 1));
-        y = Math.max(0, Math.min(y, height - 1));
-
-        // allocate the pixel buffers
-        if(this._pixelBuffer[0] == null)
-            this._reallocatePixelBuffers(this._width, this._height);
-
-        // last render target
+        // read the last render target
         const idx = this._options.pingpong ? 1 - this._textureIndex : this._textureIndex;
-        const fbo = this._texture[idx].glFbo;
-
-        // read pixels
-        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-        gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, this._pixelBuffer[0]);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-        // done!
-        return this._pixelBuffer[0];
+        return this._textureReader.readPixelsSync(this._texture[idx], x, y, width, height);
     }
 
     /**
@@ -373,68 +332,15 @@ export class SpeedyProgram extends Function
      * @param {number} [height]
      * @returns {SpeedyPromise<Uint8Array>} resolves to an array of pixels in the RGBA format
      */
-    readPixelsAsync(useBufferedDownloads = true, x = 0, y = 0, width = this._width, height = this._height)
+    readPixelsAsync(useBufferedDownloads = false, x = 0, y = 0, width = this._width, height = this._height)
     {
-        const gl = this._gl;
-
         // can't read pixels if we're not rendering to a texture (i.e., no framebuffer)
         if(!this._options.renderToTexture)
             throw new IllegalOperationError(`Can't read pixels from a SpeedyProgram that doesn't render to an internal texture`);
 
-        // lost context?
-        if(gl.isContextLost())
-            return SpeedyPromise.resolve(this._pixelBuffer[0]);
-
-        // clamp values
-        width = Math.max(0, Math.min(width, this._width));
-        height = Math.max(0, Math.min(height, this._height));
-        x = Math.max(0, Math.min(x, width - 1));
-        y = Math.max(0, Math.min(y, height - 1));
-
-        // allocate the pixel buffers
-        if(this._pixelBuffer[0] == null)
-            this._reallocatePixelBuffers(this._width, this._height);
-
-        // last render target
+        // read the last render target
         const idx = this._options.pingpong ? 1 - this._textureIndex : this._textureIndex;
-        const fbo = this._texture[idx].glFbo;
-
-        // do not optimize?
-        if(!useBufferedDownloads) {
-            return GLUtils.readPixelsViaPBO(gl, this._pixelBuffer[0], x, y, width, height, fbo).then(() => {
-                return this._pixelBuffer[0];
-            });
-        }
-
-        // GPU needs to produce data
-        if(this._pboProducerQueue.length > 0) {
-            const nextPBO = this._pboProducerQueue.shift();
-            GLUtils.readPixelsViaPBO(gl, this._pixelBuffer[nextPBO], x, y, width, height, fbo).then(() => {
-                this._pboConsumerQueue.push(nextPBO);
-            });
-        }
-        else this._waitForQueueNotEmpty(this._pboProducerQueue).then(() => {
-            const nextPBO = this._pboProducerQueue.shift();
-            GLUtils.readPixelsViaPBO(gl, this._pixelBuffer[nextPBO], x, y, width, height, fbo).then(() => {
-                this._pboConsumerQueue.push(nextPBO);
-            });
-        }).turbocharge();
-
-        // CPU needs to consume data
-        if(this._pboConsumerQueue.length > 0) {
-            const readyPBO = this._pboConsumerQueue.shift();
-            return new SpeedyPromise(resolve => {
-                resolve(this._pixelBuffer[readyPBO]);
-                this._pboProducerQueue.push(readyPBO); // enqueue AFTER resolve()
-            });
-        }
-        else return new SpeedyPromise(resolve => {
-            this._waitForQueueNotEmpty(this._pboConsumerQueue).then(() => {
-                const readyPBO = this._pboConsumerQueue.shift();
-                resolve(this._pixelBuffer[readyPBO]);
-                this._pboProducerQueue.push(readyPBO); // enqueue AFTER resolve()
-            }).turbocharge();
-        });
+        return this._textureReader.readPixelsAsync(this._texture[idx], useBufferedDownloads, x, y, width, height);
     }
 
     /**
@@ -474,9 +380,6 @@ export class SpeedyProgram extends Function
         // Release UBOs (if any)
         if(this._ubo != null)
             this._ubo = this._ubo.release();
-
-        // Release pixel buffers
-        this._pixelBuffer.fill(null);
 
         // Release internal textures
         for(let i = 0; i < this._texture.length; i++)
@@ -588,56 +491,6 @@ export class SpeedyProgram extends Function
         const result = new StoredGeometry(vao, vbo[0], vbo[1]);
         geometryCache.set(gl, result);
         return result;
-    }
-
-    /**
-     * Reallocate pixel buffers, so that they can hold width x height RGBA pixels
-     * @param {number} width
-     * @param {number} height
-     */
-    _reallocatePixelBuffers(width, height)
-    {
-        // skip realloc
-        if(width * height <= this._pixelBufferSize[0] * this._pixelBufferSize[1])
-            return;
-
-        // update size
-        this._pixelBufferSize[0] = width;
-        this._pixelBufferSize[1] = height;
-
-        // reallocate pixels array
-        for(let i = 0; i < PBO_COUNT; i++) {
-            const oldBuffer = this._pixelBuffer[i];
-            this._pixelBuffer[i] = new Uint8Array(width * height * 4);
-            this._pixelBuffer[i].fill(255, 0, 4); // will be recognized as empty... needed?
-
-            if(oldBuffer) {
-                if(oldBuffer.length > this._pixelBuffer[i].length)
-                    this._pixelBuffer[i].set(oldBuffer.slice(0, this._pixelBuffer[i].length));
-                else
-                    this._pixelBuffer[i].set(oldBuffer);
-            }
-        }
-    }
-
-    /**
-     * Wait for a queue to be not empty
-     * @param {Array} queue
-     * @returns {SpeedyPromise}
-     */
-    _waitForQueueNotEmpty(queue)
-    {
-        return new SpeedyPromise(resolve => {
-            //const start = performance.now();
-            function wait() {
-                if(queue.length > 0)
-                    resolve(); //resolve(performance.now() - start);
-                else
-                    setTimeout(wait, 0); // Utils.setZeroTimeout may hinder performance (GLUtils already calls it)
-                    //Utils.setZeroTimeout(wait);
-            }
-            wait();
-        });
     }
 }
 
