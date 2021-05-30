@@ -24,7 +24,7 @@ import { SpeedyTexture, SpeedyDrawableTexture } from './speedy-texture';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { ShaderDeclaration } from './shader-declaration';
 import { Utils } from '../utils/utils';
-import { NotSupportedError, IllegalArgumentError, IllegalOperationError } from '../utils/errors';
+import { NotSupportedError, IllegalArgumentError, IllegalOperationError, GLError } from '../utils/errors';
 
 // Map uniform type to a gl function
 const UNIFORM_SETTERS = Object.freeze({
@@ -84,13 +84,21 @@ export class SpeedyProgram extends Function
         if(gl.isContextLost())
             throw new IllegalOperationError(`Can't initialize SpeedyProgram: lost context`);
 
+        // options object
+        options = Object.assign({
+            // default options
+            output: [ 1, 1 ], // size of the output texture
+            renderToTexture: true, // render results to a texture?
+            pingpong: false, // alternate output texture between calls
+        }, options);
+
 
 
         /** @type {WebGL2RenderingContext} */
         this._gl = gl;
 
-        /** @type {WebGLProgram} */
-        this._program = GLUtils.createProgram(gl, shaderdecl.vertexSource, shaderdecl.fragmentSource);
+        /** @type {WebGLProgram} vertex shader + fragment shader */
+        this._program = compileProgram(gl, shaderdecl.vertexSource, shaderdecl.fragmentSource);
 
         /** @type {ProgramGeometry} this is a quad */
         this._geometry = new ProgramGeometry(gl, {
@@ -104,26 +112,15 @@ export class SpeedyProgram extends Function
         /** @type {boolean[]} tells whether the i-th argument of the SpeedyProgram is an array or not */
         this._argIsArray = (new Array(this._argnames.length)).fill(false);
 
-        /** @type {object} user options */
-        this._options = Object.freeze({
-            output: [ gl.drawingBufferWidth, gl.drawingBufferHeight ], // size of the output texture
-            renderToTexture: true, // render results to a texture?
-            pingpong: false, // alternate output texture between calls
-            ...options // user-defined options
-        });
-
-        /** @type {number} width of the output texture */
-        this._width = Math.max(1, this._options.output[0] | 0);
-
-        /** @type {number} height of the output texture */
-        this._height = Math.max(1, this._options.output[1] | 0);
-
         /** @type {UBOHelper} UBO helper (lazy instantiation) */
         this._ubo = null;
 
+        /** @type {boolean} should we render to a texture? If false, we render to the canvas */
+        this._renderToTexture = Boolean(options.renderToTexture);
+
         /** @type {SpeedyDrawableTexture[]} output texture(s) */
-        this._texture = Array.from({ length: this._options.pingpong ? 2 : 1 },
-            () => new SpeedyDrawableTexture(gl, this._width, this._height));
+        this._texture = Array.from({ length: options.pingpong ? 2 : 1 },
+            () => new SpeedyDrawableTexture(gl, options.output[0] | 0, options.output[1] | 0));
 
         /** @type {number} used for pingpong rendering */
         this._textureIndex = 0;
@@ -162,7 +159,6 @@ export class SpeedyProgram extends Function
     _call(...args)
     {
         const gl = this._gl;
-        const options = this._options;
         const argnames = this._argnames;
 
         // matching arguments?
@@ -189,7 +185,7 @@ export class SpeedyProgram extends Function
         // we need to update the texSize uniform (e.g., if the program was resized)
         if(this._dirtySize) {
             const texSize = this._uniform.get('texSize');
-            gl.uniform2f(texSize.location, this._width, this._height);
+            gl.uniform2f(texSize.location, this.width, this.height);
             this._dirtySize = false;
         }
 
@@ -218,13 +214,13 @@ export class SpeedyProgram extends Function
 
         // select the render target
         const texture = this._texture[this._textureIndex];
-        const fbo = options.renderToTexture ? texture.glFbo : null;
+        const fbo = this._renderToTexture ? texture.glFbo : null;
 
         // bind the FBO
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
 
         // draw call
-        gl.viewport(0, 0, this._width, this._height);
+        gl.viewport(0, 0, this.width, this.height);
         gl.drawArrays(gl.TRIANGLES, 0, 6); // mode, offset, count
 
         // unbind the FBO
@@ -255,12 +251,10 @@ export class SpeedyProgram extends Function
         height = Math.max(1, height | 0);
 
         // no need to resize?
-        if(width === this._width && height === this._height)
+        if(width === this.width && height === this.height)
             return;
 
-        // update size
-        this._width = width;
-        this._height = height;
+        // mark the texSize dirty flag
         this._dirtySize = true;
 
         // resize the output texture(s)
@@ -326,7 +320,13 @@ export class SpeedyProgram extends Function
         this._geometry = this._geometry.release();
 
         // Release program
-        this._program = GLUtils.destroyProgram(gl, this._program);
+        gl.deleteProgram(this._program);
+        this._program = null;
+
+        // Need to delete the shaders as well? In sec 5.14.9 Programs and shaders
+        // of the WebGL 1.0 spec, it is mentioned that the underlying GL object
+        // will automatically be marked for deletion when the JS object is
+        // destroyed (i.e., garbage collected)
 
         // done!
         return null;
@@ -338,7 +338,7 @@ export class SpeedyProgram extends Function
      */
     get width()
     {
-        return this._width;
+        return this._texture[0].width;
     }
 
     /**
@@ -347,7 +347,7 @@ export class SpeedyProgram extends Function
      */
     get height()
     {
-        return this._height;
+        return this._texture[0].height;
     }
 
     /**
@@ -363,9 +363,76 @@ export class SpeedyProgram extends Function
 
 
 
-//
-// Helpers
-//
+
+
+// ============================================================================
+//                                  HELPERS
+// ============================================================================
+
+
+
+
+/**
+ * Compile and link GLSL shaders
+ * @param {WebGL2RenderingContext} gl
+ * @param {string} vertexShaderSource GLSL code of the vertex shader
+ * @param {string} fragmentShaderSource GLSL code of the fragment shader
+ * @returns {WebGLProgram}
+ */
+function compileProgram(gl, vertexShaderSource, fragmentShaderSource)
+{
+    const program = gl.createProgram();
+    const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+
+    // compile vertex shader
+    gl.shaderSource(vertexShader, vertexShaderSource);
+    gl.compileShader(vertexShader);
+    gl.attachShader(program, vertexShader);
+
+    // compile fragment shader
+    gl.shaderSource(fragmentShader, fragmentShaderSource);
+    gl.compileShader(fragmentShader);
+    gl.attachShader(program, fragmentShader);
+
+    // link program
+    gl.linkProgram(program);
+    gl.validateProgram(program);
+
+    // got an error?
+    if(!gl.getProgramParameter(program, gl.LINK_STATUS) && !gl.isContextLost()) {
+        const errors = [
+            gl.getShaderInfoLog(fragmentShader),
+            gl.getShaderInfoLog(vertexShader),
+            gl.getProgramInfoLog(program),
+        ];
+
+        gl.deleteProgram(program);
+        gl.deleteShader(fragmentShader);
+        gl.deleteShader(vertexShader);
+
+        // display error
+        const spaces = i => Math.max(0, 2 - Math.floor(Math.log10(i)));
+        const col = k => Array(spaces(k)).fill(' ').join('') + k + '. ';
+        const formattedSource = fragmentShaderSource.split('\n')
+            .map((line, no) => col(1+no) + line)
+            .join('\n');
+
+        throw new GLError(
+            `Can't create shader.\n\n` +
+            `---------- ERROR ----------\n` +
+            errors.join('\n') + '\n\n' +
+            `---------- SOURCE CODE ----------\n` +
+            formattedSource
+        );
+    }
+
+    // done!
+    return program;
+}
+
+
+
 
 /**
  * Configure and store the VAO and the VBOs
