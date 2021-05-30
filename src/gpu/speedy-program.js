@@ -19,7 +19,6 @@
  * SpeedyProgram class
  */
 
-import { GLUtils } from './gl-utils.js';
 import { SpeedyTexture, SpeedyDrawableTexture } from './speedy-texture';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { ShaderDeclaration } from './shader-declaration';

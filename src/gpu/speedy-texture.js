@@ -20,7 +20,6 @@
  */
 
 import { SpeedyGPU } from './speedy-gpu';
-import { GLUtils } from './gl-utils';
 import { Utils } from '../utils/utils';
 import { IllegalOperationError, GLError } from '../utils/errors';
 import { PYRAMID_MAX_LEVELS } from '../utils/globals';
