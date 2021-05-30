@@ -378,7 +378,7 @@ export class SpeedyDrawableTexture extends SpeedyTexture
      * Resize this texture
      * @param {number} width new width, in pixels
      * @param {number} height new height, in pixels
-     * @param {boolean} [preserveContent] should we preserve the content of the texture?
+     * @param {boolean} [preserveContent] should we preserve the content of the texture? EXPENSIVE!
      * @returns {SpeedyDrawableTexture} this texture
      */
     resize(width, height, preserveContent = false)
@@ -387,7 +387,7 @@ export class SpeedyDrawableTexture extends SpeedyTexture
 
         // no need to resize?
         if(this._width === width && this._height === height)
-            return;
+            return this;
 
         // validate size
         width |= 0; height |= 0;
@@ -395,13 +395,19 @@ export class SpeedyDrawableTexture extends SpeedyTexture
 
         // context loss?
         if(gl.isContextLost())
-            return;
+            return this;
 
-        // allocate new texture
-        const newTexture = SpeedyTexture._createTexture(gl, width, height);
+        // do we need to copy the old content?
+        if(!preserveContent) {
+            // no; do a cheap resize
+            gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+            gl.bindTexture(gl.TEXTURE_2D, null);
+        }
+        else {
+            // allocate new texture
+            const newTexture = SpeedyTexture._createTexture(gl, width, height);
 
-        // copy old content
-        if(preserveContent) {
             // initialize the new texture with zeros to avoid a
             // warning when calling copyTexSubImage2D() on Firefox
             // this may not be very efficient?
@@ -411,25 +417,32 @@ export class SpeedyDrawableTexture extends SpeedyTexture
             // copy the old texture to the new one
             const oldWidth = this._width, oldHeight = this._height;
             SpeedyDrawableTexture._copyToTexture(gl, this._glFbo, newTexture, 0, 0, Math.min(width, oldWidth), Math.min(height, oldHeight));
+
+            // bind FBO
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this._glFbo);
+
+            // invalidate old data (is this needed?)
+            gl.invalidateFramebuffer(gl.FRAMEBUFFER, [gl.COLOR_ATTACHMENT0]);
+
+            // attach the new texture to the existing framebuffer
+            gl.framebufferTexture2D(gl.FRAMEBUFFER,         // target
+                                    gl.COLOR_ATTACHMENT0,   // color buffer
+                                    gl.TEXTURE_2D,          // tex target
+                                    newTexture,             // texture
+                                    0);                     // mipmap level
+
+            // unbind FBO
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+            // release the old texture and replace it
+            gl.deleteTexture(this._glTexture);
+            this._glTexture = newTexture;
         }
 
         // update dimensions & discard mipmaps
         this.discardMipmaps();
         this._width = width;
         this._height = height;
-
-        // attach the new texture to the existing framebuffer
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this._glFbo);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER,         // target
-                                gl.COLOR_ATTACHMENT0,   // color buffer
-                                gl.TEXTURE_2D,          // tex target
-                                newTexture,             // texture
-                                0);                     // mipmap level
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-        // release the old texture and replace it
-        gl.deleteTexture(this._glTexture);
-        this._glTexture = newTexture;
 
         // done!
         return this;
@@ -449,7 +462,7 @@ export class SpeedyDrawableTexture extends SpeedyTexture
 
         // context loss?
         if(gl.isContextLost())
-            return;
+            return this;
 
         // clamp parameters
         r = Math.max(0.0, Math.min(+r, 1.0));

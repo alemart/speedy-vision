@@ -258,7 +258,7 @@ export class SpeedyProgram extends Function
 
         // resize the output texture(s)
         for(let i = 0; i < this._texture.length; i++)
-            this._texture[i].resize(width, height, true);
+            this._texture[i].resize(width, height);
 
         //console.log(`Resized SpeedyProgram to ${width} x ${height}`);
     }
