@@ -21,7 +21,6 @@
 
 import { GLUtils } from './gl-utils.js';
 import { SpeedyTexture, SpeedyDrawableTexture } from './speedy-texture';
-import { SpeedyTextureReader } from './speedy-texture-reader';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { ShaderDeclaration } from './shader-declaration';
 import { Utils } from '../utils/utils';
@@ -128,9 +127,6 @@ export class SpeedyProgram extends Function
 
         /** @type {number} used for pingpong rendering */
         this._textureIndex = 0;
-
-        /** @type {SpeedyTextureReader} texture reader */
-        this._textureReader = new SpeedyTextureReader();
 
         /** @type {boolean} flag indicating the need to update the texSize uniform */
         this._dirtySize = true;
@@ -295,47 +291,6 @@ export class SpeedyProgram extends Function
 
         // done!
         return texture;
-    }
-
-    /**
-     * Read pixels from the output texture synchronously.
-     * You may optionally specify a (x,y,width,height) sub-rectangle.
-     * @param {number} [x]
-     * @param {number} [y] 
-     * @param {number} [width]
-     * @param {number} [height]
-     * @returns {Uint8Array} pixels in the RGBA format
-     */
-    readPixelsSync(x = 0, y = 0, width = this._width, height = this._height)
-    {
-        // can't read pixels if we're not rendering to a texture
-        if(!this._options.renderToTexture)
-            throw new IllegalOperationError(`Can't read pixels from a SpeedyProgram that doesn't render to an internal texture`);
-
-        // read the last render target
-        const idx = this._texture.length > 1 ? 1 - this._textureIndex : this._textureIndex;
-        return this._textureReader.readPixelsSync(this._texture[idx], x, y, width, height);
-    }
-
-    /**
-     * Read pixels from the output texture asynchronously with PBOs.
-     * You may optionally specify a (x,y,width,height) sub-rectangle.
-     * @param {boolean} [useBufferedDownloads] optimize downloads?
-     * @param {number} [x]
-     * @param {number} [y] 
-     * @param {number} [width]
-     * @param {number} [height]
-     * @returns {SpeedyPromise<Uint8Array>} resolves to an array of pixels in the RGBA format
-     */
-    readPixelsAsync(useBufferedDownloads = false, x = 0, y = 0, width = this._width, height = this._height)
-    {
-        // can't read pixels if we're not rendering to a texture
-        if(!this._options.renderToTexture)
-            throw new IllegalOperationError(`Can't read pixels from a SpeedyProgram that doesn't render to an internal texture`);
-
-        // read the last render target
-        const idx = this._texture.length > 1 ? 1 - this._textureIndex : this._textureIndex;
-        return this._textureReader.readPixelsAsync(this._texture[idx], useBufferedDownloads, x, y, width, height);
     }
 
     /**
