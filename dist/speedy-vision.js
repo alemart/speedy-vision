@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-05-29T00:03:23.514Z
+ * Date: 2021-05-30T01:07:48.045Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -805,7 +805,7 @@ class HarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMPORTED_MODU
         const lod = 0, lodStep = 1, numberOfLayers = 1;
 
         // compute derivatives
-        const df = gpu.programs.keypoints.multiscaleSobel(inputTexture, lod);
+        const df = gpu.programs.keypoints.multiscaleSobel(inputTexture, lod).clone();
         const sobelDerivatives = new Array(MAX_LAYERS).fill(df);
 
         // corner detection
@@ -930,7 +930,7 @@ class MultiscaleHarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMP
         // compute derivatives
         const sobelDerivatives = new Array(MAX_LAYERS);
         for(let j = 0; j < numberOfLayers; j++)
-            sobelDerivatives[j] = gpu.programs.keypoints.multiscaleSobel(pyramid, j * lodStep);
+            sobelDerivatives[j] = gpu.programs.keypoints.multiscaleSobel(pyramid, j * lodStep).clone();
         for(let k = numberOfLayers; k < sobelDerivatives.length; k++)
             sobelDerivatives[k] = sobelDerivatives[k-1]; // can't call shaders with null pointers
 
@@ -10239,8 +10239,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "PipelineOperation", function() { return PipelineOperation; });
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -10267,7 +10268,12 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 const PipelineOperation = { };
+
+/**
+ * @typedef {[SpeedyTexture,ColorFormat]} SpeedyTextureWithColorFormat
+ */
 
 /**
  * Abstract basic operation
@@ -10286,14 +10292,14 @@ class SpeedyPipelineOperation
 
     /**
      * Run the pipeline operation
-     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyTextureWithColorFormat} input input texture
      * @param {SpeedyGPU} gpu
      * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTexture>}
+     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
      */
-    run(texture, gpu, media)
+    run(input, gpu, media)
     {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(texture);
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"].resolve(input);
     }
 
     /**
@@ -10321,7 +10327,7 @@ class SpeedyPipelineOperation
             this._loadOptions = () => Object.assign(defaultOptions, options());
         }
         else
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Expected an options object | function`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Expected an options object | function`);
     }
 }
 
@@ -10337,20 +10343,21 @@ PipelineOperation.ConvertToGreyscale = class extends SpeedyPipelineOperation
 {
     /**
      * Run the pipeline operation
-     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyTextureWithColorFormat} input input texture
      * @param {SpeedyGPU} gpu
      * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTexture>}
+     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
      */
-    run(texture, gpu, media)
+    run(input, gpu, media)
     {
-        if(media._colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].RGB)
-            texture = gpu.programs.colors.rgb2grey(texture);
-        else if(media._colorFormat != _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["NotSupportedError"](`Can't convert image to greyscale: unknown color format`);
+        let [ texture, colorFormat ] = input;
 
-        media._colorFormat = _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale;
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(texture);
+        if(colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].RGB)
+            texture = gpu.programs.colors.rgb2grey(texture);
+        else if(colorFormat != _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["NotSupportedError"](`Can't convert image to greyscale: unknown color format`);
+
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"].resolve([ texture, _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale ]);
     }
 }
 
@@ -10382,25 +10389,26 @@ PipelineOperation.Blur = class extends SpeedyPipelineOperation
 
     /**
      * Run the pipeline operation
-     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyTextureWithColorFormat} input input texture
      * @param {SpeedyGPU} gpu
      * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTexture>}
+     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
      */
-    run(texture, gpu, media)
+    run(input, gpu, media)
     {
         const { filter, size } = this._loadOptions();
+        let [ texture, colorFormat ] = input;
 
         // validate options
         if(filter != 'gaussian' && filter != 'box')
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Invalid filter: "${filter}"`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Invalid filter: "${filter}"`);
         else if(size != 3 && size != 5 && size != 7)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Invalid kernel size: ${size}`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Invalid kernel size: ${size}`);
         
         // run filter
         const fname = (filter == 'gaussian' ? 'gauss' : 'box') + size;
         const output = gpu.programs.filters[fname](texture);
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(output);
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"].resolve([ output, colorFormat ]);
     }
 }
 
@@ -10425,25 +10433,26 @@ PipelineOperation.Median = class extends SpeedyPipelineOperation
 
     /**
      * Run the pipeline operation
-     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyTextureWithColorFormat} input input texture
      * @param {SpeedyGPU} gpu
      * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTexture>}
+     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
      */
-    run(texture, gpu, media)
+    run(input, gpu, media)
     {
         const { size } = this._loadOptions();
+        let [ texture, colorFormat ] = input;
 
         // validate options
         if(size != 3 && size != 5 && size != 7)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Invalid window size: ${size}`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Invalid window size: ${size}`);
         else if(media._colorFormat != _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["NotSupportedError"](`The median filter requires a greyscale image as input`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["NotSupportedError"](`The median filter requires a greyscale image as input`);
 
         // run filter
         const fname = 'median' + size;
         const output = gpu.programs.filters[fname](texture);
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(output);
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"].resolve([ output, colorFormat ]);
     }
 }
 
@@ -10472,9 +10481,9 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
 
         // validate kernel
         if(len == 1)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Cannot convolve with a kernel containing a single element`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Cannot convolve with a kernel containing a single element`);
         else if(size * size != len || !method)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Cannot convolve with a non-square kernel of ${len} elements`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Cannot convolve with a non-square kernel of ${len} elements`);
 
         // normalize kernel entries to [0,1]
         const min = Math.min(...kern), max = Math.max(...kern);
@@ -10494,13 +10503,15 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
 
     /**
      * Run the pipeline operation
-     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyTextureWithColorFormat} input input texture
      * @param {SpeedyGPU} gpu
      * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTexture>}
+     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
      */
-    run(texture, gpu, media)
+    run(input, gpu, media)
     {
+        let [ texture, colorFormat ] = input;
+
         // lost context?
         if(gpu.gl.isContextLost()) {
             this._texKernel = null;
@@ -10522,7 +10533,8 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
                 this._texKernel.release();
             }
 
-            this._texKernel = gpu.programs.filters[this._method[0]](this._kernel);
+            const texKernel = gpu.programs.filters[this._method[0]](this._kernel);
+            this._texKernel = texKernel.clone();
             this._gl = gpu.gl;
         }
 
@@ -10533,7 +10545,7 @@ PipelineOperation.Convolve = class extends SpeedyPipelineOperation
             this._scale,
             this._offset
         );
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(output);
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"].resolve([ output, colorFormat ]);
     }
 
     /**
@@ -10572,13 +10584,14 @@ PipelineOperation.Normalize = class extends SpeedyPipelineOperation
 
     /**
      * Run the pipeline operation
-     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyTextureWithColorFormat} input input texture
      * @param {SpeedyGPU} gpu
      * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTexture>}
+     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
      */
-    run(texture, gpu, media)
+    run(input, gpu, media)
     {
+        let [ texture, colorFormat ] = input;
         const { min, max } = this._loadOptions();
         let output;
 
@@ -10587,9 +10600,9 @@ PipelineOperation.Normalize = class extends SpeedyPipelineOperation
         else if(media._colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
             output = gpu.programs.enhancements.normalizeGreyscaleImage(texture, min, max);
         else
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["NotSupportedError"]('Invalid color format');
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["NotSupportedError"]('Invalid color format');
 
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(output);
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"].resolve([ output, colorFormat ]);
     }
 }
 
@@ -10617,13 +10630,14 @@ PipelineOperation.Nightvision = class extends SpeedyPipelineOperation
 
     /**
      * Run the pipeline operation
-     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyTextureWithColorFormat} input input texture
      * @param {SpeedyGPU} gpu
      * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTexture>}
+     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
      */
-    run(texture, gpu, media)
+    run(input, gpu, media)
     {
+        let [ texture, colorFormat ] = input;
         const { gain, offset, decay, quality } = this._loadOptions();
         let output;
 
@@ -10632,9 +10646,9 @@ PipelineOperation.Nightvision = class extends SpeedyPipelineOperation
         else if(media._colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
             output = gpu.programs.enhancements.nightvision(texture, gain, offset, decay, quality, true);
         else
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["NotSupportedError"]('Invalid color format');
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["NotSupportedError"]('Invalid color format');
 
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(output);
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"].resolve([ output, colorFormat ]);
     }
 }
 
@@ -10666,22 +10680,23 @@ PipelineOperation.WarpPerspective = class extends SpeedyPipelineOperation
 
     /**
      * Run the pipeline operation
-     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyTextureWithColorFormat} input input texture
      * @param {SpeedyGPU} gpu
      * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTexture>}
+     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
      */
-    run(texture, gpu, media)
+    run(input, gpu, media)
     {
+        let [ texture, colorFormat ] = input;
         const { homography } = this._loadOptions();
 
         // validate options
         if(!(Array.isArray(homography) && homography.length == 9))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`Invalid homography: ${homography}`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Invalid homography: ${homography}`);
 
         // transform
         const output = gpu.programs.transforms.warpPerspective(texture, homography);
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(output);
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"].resolve([ output, colorFormat ]);
     }
 }
 
@@ -12657,8 +12672,9 @@ class SpeedyMedia
      * @private
      * @param {SpeedyMediaSource} source
      * @param {object} [options] options object
+     * @param {ColorFormat} [colorFormat]
      */
-    constructor(source, options = {})
+    constructor(source, options = {}, colorFormat = _utils_types__WEBPACK_IMPORTED_MODULE_2__["ColorFormat"].RGB)
     {
         _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(source.isLoaded());
 
@@ -12671,7 +12687,7 @@ class SpeedyMedia
         });
 
         /** @type {ColorFormat} color format */
-        this._colorFormat = _utils_types__WEBPACK_IMPORTED_MODULE_2__["ColorFormat"].RGB;
+        this._colorFormat = colorFormat;
 
         /** @type {SpeedyGPU} GPU-accelerated routines */
         this._gpu = new _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_0__["SpeedyGPU"](this._source.width, this._source.height);
@@ -12811,8 +12827,7 @@ class SpeedyMedia
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`Can't clone a SpeedyMedia that has been released`);
 
         // clone the object
-        const clone = new SpeedyMedia(this._source, this.options);
-        clone._colorFormat = this._colorFormat;
+        const clone = new SpeedyMedia(this._source, this.options, this._colorFormat);
 
         // done!
         return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__["SpeedyPromise"].resolve(clone);
@@ -12833,12 +12848,12 @@ class SpeedyMedia
         const texture = this._upload();
 
         // run the pipeline
-        return pipeline._run(texture, this._gpu, this).turbocharge().then(texture => {
+        return pipeline._run([ texture, this._colorFormat ], this._gpu, this).turbocharge().then(([ texture, colorFormat ]) => {
             // convert to bitmap
             const canvas = this._gpu.renderToCanvas(texture);
             return createImageBitmap(canvas, 0, canvas.height - this.height, this.width, this.height).then(bitmap => {
                 return _speedy_media_source__WEBPACK_IMPORTED_MODULE_5__["SpeedyMediaSource"].load(bitmap).then(source => {
-                    return new SpeedyMedia(source); // colorFormat?!
+                    return new SpeedyMedia(source, {}, colorFormat);
                 });
             });
         });
@@ -12859,13 +12874,12 @@ class SpeedyMedia
             return;
 
         // validate parameters
-        x = Math.max(+x, 0); y = Math.max(+y, 0);
         width = Math.max(+width, 0);
         height = Math.max(+height, 0);
 
         // draw
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(this._source.data, x, y, width, height);
+        ctx.drawImage(this._source.data, +x, +y, width, height);
     }
 
     /**
@@ -13065,19 +13079,19 @@ class SpeedyPipeline
 
     /**
      * Runs the pipeline
-     * @param {SpeedyTexture} texture input texture
+     * @param {SpeedyTextureWithColorFormat} input input texture
      * @param {SpeedyGPU} gpu gpu attached to the media
      * @param {SpeedyMedia} media media object
      * @param {number} [cnt] loop counter
-     * @returns {SpeedyPromise<SpeedyTexture>} output texutre
+     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>} output texutre
      */
-    _run(texture, gpu, media, cnt = 0)
+    _run(input, gpu, media, cnt = 0)
     {
         if(cnt >= this._operations.length)
-            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(texture);
+            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(input);
 
-        return this._operations[cnt].run(texture, gpu, media).then(nextTexture =>
-            this._run(nextTexture, gpu, media, cnt + 1)
+        return this._operations[cnt].run(input, gpu, media).then(output =>
+            this._run(output, gpu, media, cnt + 1)
         );
     }
 
@@ -13476,284 +13490,6 @@ class GLUtils
     }
 
     /**
-     * Create a WebGL program
-     * @param {WebGL2RenderingContext} gl
-     * @param {string} vertexShaderSource vertex shader (GLSL code)
-     * @param {string} fragmentShaderSource fragment shader (GLSL code)
-     * @returns {WebGLProgram}
-     */
-    static createProgram(gl, vertexShaderSource, fragmentShaderSource)
-    {
-        const program = gl.createProgram();
-        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-
-        // compile vertex shader
-        gl.shaderSource(vertexShader, vertexShaderSource);
-        gl.compileShader(vertexShader);
-        gl.attachShader(program, vertexShader);
-
-        // compile fragment shader
-        gl.shaderSource(fragmentShader, fragmentShaderSource);
-        gl.compileShader(fragmentShader);
-        gl.attachShader(program, fragmentShader);
-
-        // link program
-        gl.linkProgram(program);
-        gl.validateProgram(program);
-
-        // got an error?
-        if(!gl.getProgramParameter(program, gl.LINK_STATUS) && !gl.isContextLost()) {
-            const errors = [
-                gl.getShaderInfoLog(fragmentShader),
-                gl.getShaderInfoLog(vertexShader),
-                gl.getProgramInfoLog(program),
-            ];
-
-            gl.deleteProgram(program);
-            gl.deleteShader(fragmentShader);
-            gl.deleteShader(vertexShader);
-
-            // display error
-            const spaces = i => Math.max(0, 2 - Math.floor(Math.log10(i)));
-            const col = k => Array(spaces(k)).fill(' ').join('') + k + '. ';
-            const formattedSource = fragmentShaderSource.split('\n')
-                .map((line, no) => col(1+no) + line)
-                .join('\n');
-
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["GLError"](
-                `Can't create shader.\n\n` +
-                `---------- ERROR ----------\n` +
-                errors.join('\n') + '\n\n' +
-                `---------- SOURCE CODE ----------\n` +
-                formattedSource
-            );
-        }
-
-        // done!
-        return program;
-    }
-
-    /**
-     * Destroy a WebGL program
-     * @param {WebGL2RenderingContext} gl
-     * @param {WebGLProgram} program
-     * @returns {null}
-     */
-    static destroyProgram(gl, program)
-    {
-        gl.deleteProgram(program);
-        return null;
-
-        // Need to delete shaders as well? In sec 5.14.9 Programs and shaders
-        // of the WebGL 1.0 spec, it is mentioned that the underlying GL object
-        // will automatically be marked for deletion when the JS object is
-        // destroyed (i.e., garbage collected)
-    }
-
-    /**
-     * Create a WebGL texture
-     * @param {WebGL2RenderingContext} gl 
-     * @param {number} width in pixels
-     * @param {number} height in pixels
-     * @returns {WebGLTexture}
-     */
-    static createTexture(gl, width, height)
-    {
-        // validate dimensions
-        if(width <= 0 || height <= 0)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Invalid dimensions given to createTexture()`);
-
-        // create texture
-        const texture = gl.createTexture();
-
-        // setup texture
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
-        //gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, width, height);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-
-        // unbind & return
-        gl.bindTexture(gl.TEXTURE_2D, null);
-        return texture;
-    }
-
-    /**
-     * Destroys a WebGL texture
-     * @param {WebGL2RenderingContext} gl 
-     * @param {WebGLTexture} texture 
-     * @returns {null}
-     */
-    static destroyTexture(gl, texture)
-    {
-        gl.deleteTexture(texture);
-        return null;
-    }
-
-    /**
-     * Upload pixel data to a WebGL texture
-     * @param {WebGL2RenderingContext} gl 
-     * @param {WebGLTexture} texture 
-     * @param {GLsizei} width texture width
-     * @param {GLsizei} height texture height
-     * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} pixels 
-     * @param {GLint} [lod] mipmap level-of-detail
-     * @returns {WebGLTexture} texture
-     */
-    static uploadToTexture(gl, texture, width, height, pixels, lod = 0)
-    {
-        // Prefer calling uploadToTexture() before gl.useProgram() to avoid the
-        // needless switching of GL programs internally. See also:
-        // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-
-        /*
-        // slower than texImage2D, unlike the spec?
-        gl.texSubImage2D(gl.TEXTURE_2D,     // target
-                         lod,               // mip level
-                         0,                 // x-offset
-                         0,                 // y-offset
-                         width,             // texture width
-                         height,            // texture height
-                         gl.RGBA,           // source format
-                         gl.UNSIGNED_BYTE,  // source type
-                         pixels);           // source data
-        */
-
-        gl.texImage2D(gl.TEXTURE_2D,        // target
-                      lod,                  // mip level
-                      gl.RGBA8,             // internal format
-                      width,              // texture width
-                      height,             // texture height
-                      0,                  // border
-                      gl.RGBA,              // source format
-                      gl.UNSIGNED_BYTE,     // source type
-                      pixels);              // source data
-
-        gl.bindTexture(gl.TEXTURE_2D, null);
-        return texture;
-    }
-
-    /**
-     * Copy data from a framebuffer into a texture
-     * @param {WebGL2RenderingContext} gl
-     * @param {WebGLFramebuffer} fbo we'll read the data from this
-     * @param {WebGLTexture} texture destination texture
-     * @param {GLint} x xpos (where to start copying)
-     * @param {GLint} y ypos (where to start copying)
-     * @param {GLsizei} width width of the texture
-     * @param {GLsizei} height height of the texture
-     * @param {GLint} [lod] mipmap level-of-detail
-     * @returns {WebGLTexture} texture
-     */
-    static copyToTexture(gl, fbo, texture, x, y, width, height, lod = 0)
-    {
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-
-        gl.copyTexSubImage2D(
-            gl.TEXTURE_2D, // target
-            lod, // mipmap level
-            0, // xoffset
-            0, // yoffset
-            x, // xpos (where to start copying)
-            y, // ypos (where to start copying)
-            width, // width of the texture
-            height // height of the texture
-        );
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.bindTexture(gl.TEXTURE_2D, null);
-
-        return texture;
-    }
-
-    /**
-     * Generate texture mipmap with bilinear interpolation
-     * @param {WebGL2RenderingContext} gl 
-     * @param {WebGLTexture} texture 
-     */
-    static generateMipmap(gl, texture)
-    {
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
-        gl.generateMipmap(gl.TEXTURE_2D);
-        gl.bindTexture(gl.TEXTURE_2D, null);
-    }
-
-    // bind the textures and assign their numbers
-    // textureMap: { 'textureName': <texture> , ... }
-    // locationMap: { 'textureName': <uniformLocation> , ... }
-    static bindTextures(gl, textureMap, locationMap)
-    {
-        const names = Object.keys(textureMap);
-
-        if(gl.isContextLost())
-            return;
-
-        if(names.length > gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["GLError"](`Can't bind ${names.length} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
-
-        for(let i = 0; i < names.length; i++) {
-            gl.activeTexture(gl.TEXTURE0 + i);
-            gl.bindTexture(gl.TEXTURE_2D, textureMap[names[i]]);
-            gl.uniform1i(locationMap[names[i]], i);
-        }
-    }
-
-    /**
-     * Creates a framebuffer object (FBO) associated with an existing texture
-     * @param {WebGL2RenderingContext} gl 
-     * @param {WebGLTexture} texture 
-     * @returns {WebGLFramebuffer}
-     */
-    static createFramebuffer(gl, texture)
-    {
-        const fbo = gl.createFramebuffer();
-
-        // setup framebuffer
-        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER,         // target
-                                gl.COLOR_ATTACHMENT0,   // color buffer
-                                gl.TEXTURE_2D,          // tex target
-                                texture,                // texture
-                                0);                     // mipmap level
-
-        // check for errors
-        const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-        if(status != gl.FRAMEBUFFER_COMPLETE) {
-            const error = (() => (([
-                'FRAMEBUFFER_UNSUPPORTED',
-                'FRAMEBUFFER_INCOMPLETE_ATTACHMENT',
-                'FRAMEBUFFER_INCOMPLETE_DIMENSIONS',
-                'FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT',
-                'FRAMEBUFFER_INCOMPLETE_MULTISAMPLE'
-            ].filter(err => gl[err] === status))[0] || 'unknown error'))();
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["GLError"](`Can't create framebuffer: ${error} (${status})`);
-        }
-
-        // unbind & return
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        return fbo;
-    }
-
-    /**
-     * Destroys a framebuffer object (FBO)
-     * @param {WebGL2RenderingContext} gl
-     * @param {WebGLFramebuffer} fbo 
-     * @returns {null}
-     */
-    static destroyFramebuffer(gl, fbo)
-    {
-        gl.deleteFramebuffer(fbo);
-        return null;
-    }
-
-    /**
      * Waits for a sync object to become signaled
      * @param {WebGL2RenderingContext} gl
      * @param {WebGLSync} sync sync object
@@ -13817,60 +13553,6 @@ class GLUtils
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`Can't getBufferSubDataAsync(): error in clientWaitAsync()`, err);
         }).finally(() => {
             gl.deleteSync(sync);
-        });
-    }
-
-    /**
-     * Read pixels to a Uint8Array using a Pixel Buffer Object (PBO)
-     * You may optionally specify a FBO to read pixels from a texture
-     * @param {WebGL2RenderingContext} gl
-     * @param {Uint8Array} arrayBuffer with size >= width * height * 4
-     * @param {GLint} x
-     * @param {GLint} y
-     * @param {GLsizei} width
-     * @param {GLsizei} height
-     * @param {WebGLFramebuffer} [fbo]
-     * @returns {SpeedyPromise<number>} a promise that resolves to the time it took to read the data (in ms)
-     */
-    static readPixelsViaPBO(gl, arrayBuffer, x, y, width, height, fbo = null)
-    {
-        // create temp buffer
-        const pbo = gl.createBuffer();
-
-        // validate arrayBuffer
-        if(!(arrayBuffer.byteLength >= width * height * 4))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Can't read pixels: invalid buffer size`);
-
-        // bind the PBO
-        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
-        gl.bufferData(gl.PIXEL_PACK_BUFFER, arrayBuffer.byteLength, gl.STREAM_READ);
-
-        // read pixels into the PBO
-        if(fbo) {
-            gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-            gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        }
-        else {
-            gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
-        }
-
-        // unbind the PBO
-        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-
-        // wait for DMA transfer
-        return GLUtils.getBufferSubDataAsync(gl, pbo,
-            gl.PIXEL_PACK_BUFFER,
-            0,
-            arrayBuffer,
-            0,
-            0
-        ).then(timeInMs => {
-            return timeInMs;
-        }).catch(err => {
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`Can't read pixels`, err);
-        }).finally(() => {
-            gl.deleteBuffer(pbo);
         });
     }
 }
@@ -13960,13 +13642,15 @@ class GPUColors extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Spee
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUEncoders", function() { return GPUEncoders; });
 /* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-program-group */ "./src/gpu/speedy-program-group.js");
-/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
-/* harmony import */ var _core_speedy_feature__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../core/speedy-feature */ "./src/core/speedy-feature.js");
-/* harmony import */ var _core_keypoints_feature_encoder__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../core/keypoints/feature-encoder */ "./src/core/keypoints/feature-encoder.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _speedy_texture_reader__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../speedy-texture-reader */ "./src/gpu/speedy-texture-reader.js");
+/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
+/* harmony import */ var _core_speedy_feature__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../core/speedy-feature */ "./src/core/speedy-feature.js");
+/* harmony import */ var _core_keypoints_feature_encoder__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../core/keypoints/feature-encoder */ "./src/core/keypoints/feature-encoder.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -13997,8 +13681,10 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
 // Constants
-const MIN_PIXELS_PER_KEYPOINT = _utils_globals__WEBPACK_IMPORTED_MODULE_7__["MIN_KEYPOINT_SIZE"] / 4; // encodes a keypoint header
+const MIN_PIXELS_PER_KEYPOINT = _utils_globals__WEBPACK_IMPORTED_MODULE_9__["MIN_KEYPOINT_SIZE"] / 4; // encodes a keypoint header
 const UBO_MAX_BYTES = 16384; // UBOs can hold at least 16KB of data: gl.MAX_UNIFORM_BLOCK_SIZE >= 16384 according to the GL ES 3 reference
 const KEYPOINT_BUFFER_LENGTH = (UBO_MAX_BYTES / 16) | 0; // maximum number of keypoints that can be uploaded to the GPU via UBOs (each keypoint uses 16 bytes)
 const ENCODER_PASSES = 8; // number of passes of the keypoint encoder: directly impacts performance
@@ -14013,29 +13699,29 @@ const MAX_SKIP_OFFSET_ITERATIONS = [ 32, 32 ]; // used when computing skip offse
 //
 
 // encode keypoint offsets: maxIterations is an experimentally determined integer
-const encodeKeypointSkipOffsets = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('encoders/encode-keypoint-offsets.glsl')
+const encodeKeypointSkipOffsets = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_3__["importShader"])('encoders/encode-keypoint-offsets.glsl')
                                  .withArguments('image', 'imageSize')
                                  .withDefines({ 'MAX_ITERATIONS': MAX_SKIP_OFFSET_ITERATIONS[0] });
 
 // encode long offsets for improved performance
-const encodeKeypointLongSkipOffsets = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('encoders/encode-keypoint-long-offsets.glsl')
+const encodeKeypointLongSkipOffsets = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_3__["importShader"])('encoders/encode-keypoint-long-offsets.glsl')
                                      .withArguments('offsetsImage', 'imageSize')
                                      .withDefines({ 'MAX_ITERATIONS': MAX_SKIP_OFFSET_ITERATIONS[1] });
 
 // encode keypoints
-const encodeKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('encoders/encode-keypoints.glsl')
+const encodeKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_3__["importShader"])('encoders/encode-keypoints.glsl')
                        .withArguments('offsetsImage', 'encodedKeypoints', 'imageSize', 'passId', 'numPasses', 'descriptorSize', 'extraSize', 'encoderLength');
 
 // resize encoded keypoints
-const resizeEncodedKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('encoders/resize-encoded-keypoints.glsl')
+const resizeEncodedKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_3__["importShader"])('encoders/resize-encoded-keypoints.glsl')
                               .withArguments('inputTexture', 'inputDescriptorSize', 'inputExtraSize', 'inputEncoderLength', 'outputDescriptorSize', 'outputExtraSize', 'outputEncoderLength');
 
 // helper for downloading the keypoints
-const downloadKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('utils/identity.glsl')
+const downloadKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_3__["importShader"])('utils/identity.glsl')
                          .withArguments('image');
 
 // upload keypoints via UBO
-const uploadKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('encoders/upload-keypoints.glsl')
+const uploadKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_3__["importShader"])('encoders/upload-keypoints.glsl')
                        .withArguments('keypointCount', 'encoderLength', 'descriptorSize', 'extraSize')
                        .withDefines({
                            'KEYPOINT_BUFFER_LENGTH': KEYPOINT_BUFFER_LENGTH
@@ -14068,23 +13754,26 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
 
             // tiny textures
             .declare('_encodeKeypoints', encodeKeypoints, {
-                ...this.program.hasTextureSize(_utils_globals__WEBPACK_IMPORTED_MODULE_7__["INITIAL_ENCODER_LENGTH"], _utils_globals__WEBPACK_IMPORTED_MODULE_7__["INITIAL_ENCODER_LENGTH"]),
+                ...this.program.hasTextureSize(_utils_globals__WEBPACK_IMPORTED_MODULE_9__["INITIAL_ENCODER_LENGTH"], _utils_globals__WEBPACK_IMPORTED_MODULE_9__["INITIAL_ENCODER_LENGTH"]),
                 ...this.program.usesPingpongRendering()
             })
             .declare('_resizeEncodedKeypoints', resizeEncodedKeypoints, {
-                ...this.program.hasTextureSize(_utils_globals__WEBPACK_IMPORTED_MODULE_7__["INITIAL_ENCODER_LENGTH"], _utils_globals__WEBPACK_IMPORTED_MODULE_7__["INITIAL_ENCODER_LENGTH"])
+                ...this.program.hasTextureSize(_utils_globals__WEBPACK_IMPORTED_MODULE_9__["INITIAL_ENCODER_LENGTH"], _utils_globals__WEBPACK_IMPORTED_MODULE_9__["INITIAL_ENCODER_LENGTH"])
             })
             .declare('_downloadEncodedKeypoints', downloadKeypoints, {
-                ...this.program.hasTextureSize(_utils_globals__WEBPACK_IMPORTED_MODULE_7__["INITIAL_ENCODER_LENGTH"], _utils_globals__WEBPACK_IMPORTED_MODULE_7__["INITIAL_ENCODER_LENGTH"])
+                ...this.program.hasTextureSize(_utils_globals__WEBPACK_IMPORTED_MODULE_9__["INITIAL_ENCODER_LENGTH"], _utils_globals__WEBPACK_IMPORTED_MODULE_9__["INITIAL_ENCODER_LENGTH"])
             })
             .declare('_uploadKeypoints', uploadKeypoints, {
-                ...this.program.hasTextureSize(_utils_globals__WEBPACK_IMPORTED_MODULE_7__["INITIAL_ENCODER_LENGTH"], _utils_globals__WEBPACK_IMPORTED_MODULE_7__["INITIAL_ENCODER_LENGTH"])
+                ...this.program.hasTextureSize(_utils_globals__WEBPACK_IMPORTED_MODULE_9__["INITIAL_ENCODER_LENGTH"], _utils_globals__WEBPACK_IMPORTED_MODULE_9__["INITIAL_ENCODER_LENGTH"])
             })
         ;
 
 
 
         // setup internal data
+
+        /** @type {SpeedyTextureReader} Texture Reader */
+        this._textureReader = new _speedy_texture_reader__WEBPACK_IMPORTED_MODULE_2__["SpeedyTextureReader"]();
 
         /** @type {Float32Array} UBO stuff */
         this._uploadBuffer = null; // lazy spawn
@@ -14096,7 +13785,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
      * @param {number} encoderLength
-     * @returns {SpeedyTexture} texture with encoded keypoints
+     * @returns {SpeedyDrawableTexture} texture with encoded keypoints
      */
     encodeKeypoints(corners, descriptorSize, extraSize, encoderLength)
     {
@@ -14122,7 +13811,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
         // encode keypoints
         const numPasses = ENCODER_PASSES;
         const pixelsPerKeypointHeader = MIN_PIXELS_PER_KEYPOINT;
-        const keypointCapacity = _core_keypoints_feature_encoder__WEBPACK_IMPORTED_MODULE_3__["FeatureEncoder"].capacity(descriptorSize, extraSize, encoderLength);
+        const keypointCapacity = _core_keypoints_feature_encoder__WEBPACK_IMPORTED_MODULE_5__["FeatureEncoder"].capacity(descriptorSize, extraSize, encoderLength);
         const headerEncoderLength = Math.max(1, Math.ceil(Math.sqrt(keypointCapacity * pixelsPerKeypointHeader)));
         this._encodeKeypoints.resize(headerEncoderLength, headerEncoderLength);
         let encodedKeypointHeaders = this._encodeKeypoints.clear(0, 0, 0, 0);
@@ -14142,14 +13831,16 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
      */
     downloadEncodedKeypoints(encodedKeypoints, useBufferedDownloads = true)
     {
-        // helper shader for reading the data
-        this._downloadEncodedKeypoints.resize(encodedKeypoints.width, encodedKeypoints.height);
-        this._downloadEncodedKeypoints(encodedKeypoints);
+        // helper shader
+        if(!(encodedKeypoints instanceof _speedy_texture__WEBPACK_IMPORTED_MODULE_1__["SpeedyDrawableTexture"])) {
+            this._downloadEncodedKeypoints.resize(encodedKeypoints.width, encodedKeypoints.height);
+            encodedKeypoints = this._downloadEncodedKeypoints(encodedKeypoints);
+        }
 
         // read data from the GPU
-        return this._downloadEncodedKeypoints.readPixelsAsync(useBufferedDownloads).catch(err => {
-            return new _utils_errors__WEBPACK_IMPORTED_MODULE_6__["IllegalOperationError"](`Can't download encoded keypoint texture`, err);
-        });
+        return this._textureReader.readPixelsAsync(encodedKeypoints, useBufferedDownloads).catch(err =>
+            new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["IllegalOperationError"](`Can't download the encoded keypoint texture`, err)
+        );
     }
 
     /**
@@ -14160,7 +13851,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
      * @param {number} encoderLength
-     * @returns {SpeedyTexture} encodedKeypoints
+     * @returns {SpeedyDrawableTexture} encodedKeypoints
      */
     uploadKeypoints(keypoints, descriptorSize, extraSize, encoderLength)
     {
@@ -14168,18 +13859,18 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
         const keypointCount = keypoints.length;
         if(keypointCount > KEYPOINT_BUFFER_LENGTH) {
             // TODO: multipass
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_6__["NotSupportedError"](`Can't upload ${keypointCount} keypoints: maximum is currently ${KEYPOINT_BUFFER_LENGTH}`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["NotSupportedError"](`Can't upload ${keypointCount} keypoints: maximum is currently ${KEYPOINT_BUFFER_LENGTH}`);
         }
 
         // Insufficient encoderLength?
-        if(encoderLength < _core_keypoints_feature_encoder__WEBPACK_IMPORTED_MODULE_3__["FeatureEncoder"].minLength(keypointCount, descriptorSize, extraSize))
-            _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].warning(`Insufficient encoderLength (${encoderLength}) for ${keypoints.length} keypoints (descriptorSize: ${descriptorSize}, extraSize: ${extraSize})`);
+        if(encoderLength < _core_keypoints_feature_encoder__WEBPACK_IMPORTED_MODULE_5__["FeatureEncoder"].minLength(keypointCount, descriptorSize, extraSize))
+            _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].warning(`Insufficient encoderLength (${encoderLength}) for ${keypoints.length} keypoints (descriptorSize: ${descriptorSize}, extraSize: ${extraSize})`);
 
         // Create a buffer for uploading the data
         if(this._uploadBuffer === null) {
             const sizeofVec4 = Float32Array.BYTES_PER_ELEMENT * 4; // 16
             const internalBuffer = new ArrayBuffer(sizeofVec4 * KEYPOINT_BUFFER_LENGTH);
-            _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(internalBuffer.byteLength <= UBO_MAX_BYTES);
+            _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(internalBuffer.byteLength <= UBO_MAX_BYTES);
             this._uploadBuffer = new Float32Array(internalBuffer);
         }
 
@@ -14334,8 +14025,8 @@ class GPUEnhancements extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__
         
         // TODO: normalize on a luminance channel instead (e.g., use HSL color space)
         const minmax2d = new Array(3);
-        minmax2d[0] = gpu.programs.utils.clone(gpu.programs.utils._scanMinMax(image, _utils_types__WEBPACK_IMPORTED_MODULE_3__["PixelComponent"].RED));
-        minmax2d[1] = gpu.programs.utils.clone(gpu.programs.utils._scanMinMax(image, _utils_types__WEBPACK_IMPORTED_MODULE_3__["PixelComponent"].GREEN));
+        minmax2d[0] = gpu.programs.utils._scanMinMax(image, _utils_types__WEBPACK_IMPORTED_MODULE_3__["PixelComponent"].RED).clone();
+        minmax2d[1] = gpu.programs.utils._scanMinMax(image, _utils_types__WEBPACK_IMPORTED_MODULE_3__["PixelComponent"].GREEN).clone();
         minmax2d[2] = gpu.programs.utils._scanMinMax(image, _utils_types__WEBPACK_IMPORTED_MODULE_3__["PixelComponent"].BLUE);
 
         const normalized = this._normalizeColoredImage(minmax2d, Math.min(minValue, maxValue), Math.max(minValue, maxValue));
@@ -14516,35 +14207,27 @@ class GPUFilters extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Spe
             // create custom convolution kernels
             .declare('createKernel3x3', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["createKernel2D"])(3), { // 3x3 texture kernel
                 ...(this.program.hasTextureSize(3, 3)),
-                ...(this.program.doesNotRecycleTextures())
             })
             .declare('createKernel5x5', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["createKernel2D"])(5), { // 5x5 texture kernel
                 ...(this.program.hasTextureSize(5, 5)),
-                ...(this.program.doesNotRecycleTextures())
             })
             .declare('createKernel7x7', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["createKernel2D"])(7), { // 7x7 texture kernel
                 ...(this.program.hasTextureSize(7, 7)),
-                ...(this.program.doesNotRecycleTextures())
             })
             .declare('createKernel3x1', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["createKernel1D"])(3), { // 3x1 texture kernel
                 ...(this.program.hasTextureSize(3, 1)),
-                ...(this.program.doesNotRecycleTextures())
             })
             .declare('createKernel5x1', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["createKernel1D"])(5), { // 5x1 texture kernel
                 ...(this.program.hasTextureSize(5, 1)),
-                ...(this.program.doesNotRecycleTextures())
             })
             .declare('createKernel7x1', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["createKernel1D"])(7), { // 7x1 texture kernel
                 ...(this.program.hasTextureSize(7, 1)),
-                ...(this.program.doesNotRecycleTextures())
             })
             .declare('createKernel9x1', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["createKernel1D"])(9), { // 9x1 texture kernel
                 ...(this.program.hasTextureSize(9, 1)),
-                ...(this.program.doesNotRecycleTextures())
             })
             .declare('createKernel11x1', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["createKernel1D"])(11), { // 11x1 texture kernel
                 ...(this.program.hasTextureSize(11, 1)),
-                ...(this.program.doesNotRecycleTextures())
             })
             /*.declare('_readKernel3x3', identity, { // for testing
                 ...(this.program.hasTextureSize(3, 3)),
@@ -14652,10 +14335,11 @@ class GPUFilters extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Spe
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "GPUKeypoints", function() { return GPUKeypoints; });
 /* harmony import */ var _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../speedy-program-group */ "./src/gpu/speedy-program-group.js");
-/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
-/* harmony import */ var _core_keypoints_feature_encoder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../core/keypoints/feature-encoder */ "./src/core/keypoints/feature-encoder.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/globals */ "./src/utils/globals.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../shader-declaration */ "./src/gpu/shader-declaration.js");
+/* harmony import */ var _core_keypoints_feature_encoder__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../core/keypoints/feature-encoder */ "./src/core/keypoints/feature-encoder.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -14685,41 +14369,42 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 //
 // FAST corner detector
 //
 
 // FAST-9_16: requires 9 contiguous pixels
 // on a circumference of 16 pixels
-const fast9 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast/fast9.glsl').withArguments('image', 'threshold');
+const fast9 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/fast/fast9.glsl').withArguments('image', 'threshold');
 
 // FAST-7_12: requires 7 contiguous pixels
 // on a circumference of 12 pixels
-const fast7 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast/fast7.glsl').withArguments('image', 'threshold');
+const fast7 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/fast/fast7.glsl').withArguments('image', 'threshold');
 
 // FAST-5_8: requires 5 contiguous pixels
 // on a circumference of 8 pixels
-const fast5 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast/fast5.glsl').withArguments('image', 'threshold');
+const fast5 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/fast/fast5.glsl').withArguments('image', 'threshold');
 
 // compute corner score considering a
 // neighboring circumference of 16 pixels
-const fastScore16 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast/fast-score16.glsl').withArguments('image', 'threshold');
+const fastScore16 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/fast/fast-score16.glsl').withArguments('image', 'threshold');
 
 // compute corner score considering a
 // neighboring circumference of 12 pixels
-const fastScore12 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast/fast-score12.glsl').withArguments('image', 'threshold');
+const fastScore12 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/fast/fast-score12.glsl').withArguments('image', 'threshold');
 
 // compute corner score considering a
 // neighboring circumference of 8 pixels
-const fastScore8 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast/fast-score8.glsl').withArguments('image', 'threshold');
+const fastScore8 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/fast/fast-score8.glsl').withArguments('image', 'threshold');
 
 // FAST-9_16 on scale-space
 // Requires image mipmap
-const multiscaleFast = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast/multiscale-fast.glsl')
+const multiscaleFast = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/fast/multiscale-fast.glsl')
                       .withArguments('pyramid', 'threshold', 'numberOfLayers', 'lodStep');
 
 // encode FAST score in an 8-bit component
-const encodeFastScore = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/fast/encode-fast-score.glsl').withArguments('image');
+const encodeFastScore = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/fast/encode-fast-score.glsl').withArguments('image');
 
 
 
@@ -14728,28 +14413,28 @@ const encodeFastScore = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__[
 //
 
 // compute corner responses (score map)
-const multiscaleHarris = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/harris/multiscale-harris.glsl')
-                        .withDefines({ 'MAX_LAYERS': 2 * _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_LEVELS"] - 1 })
+const multiscaleHarris = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/harris/multiscale-harris.glsl')
+                        .withDefines({ 'MAX_LAYERS': 2 * _utils_globals__WEBPACK_IMPORTED_MODULE_4__["PYRAMID_MAX_LEVELS"] - 1 })
                         .withArguments('pyramid', 'windowSize', 'numberOfLayers', 'lodStep', 'sobelDerivatives');
 
 // discard corners below a specified quality level
-const harrisCutoff = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/harris/harris-cutoff.glsl').withArguments('corners', 'maxScore', 'quality');
+const harrisCutoff = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/harris/harris-cutoff.glsl').withArguments('corners', 'maxScore', 'quality');
 
 // encode harris score in an 8-bit component
-const encodeHarrisScore = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/harris/encode-harris-score.glsl').withArguments('image');
+const encodeHarrisScore = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/harris/encode-harris-score.glsl').withArguments('image');
 
 // find the maximum harris score in an image
-const maxHarrisScore = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/harris/max-harris-score.glsl').withArguments('self', 'iterationNumber');
+const maxHarrisScore = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/harris/max-harris-score.glsl').withArguments('self', 'iterationNumber');
 
 // Sobel derivatives
-const multiscaleSobel = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/harris/multiscale-sobel.glsl').withArguments('pyramid', 'lod');
+const multiscaleSobel = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/harris/multiscale-sobel.glsl').withArguments('pyramid', 'lod');
 
 
 
 //
 // BRISK feature detection
 //
-const brisk = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/brisk.glsl')
+const brisk = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/brisk.glsl')
              .withArguments('image', 'layerA', 'layerB', 'scaleA', 'scaleB', 'lgM', 'h');
 
 
@@ -14757,10 +14442,10 @@ const brisk = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importSha
 //
 // ORB feature description
 //
-const orb = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/orb/orb-descriptor.glsl')
+const orb = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/orb/orb-descriptor.glsl')
            .withArguments('pyramid', 'encodedCorners', 'extraSize', 'encoderLength');
 
-const orbOrientation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/orb/orb-orientation.glsl')
+const orbOrientation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/orb/orb-orientation.glsl')
                       .withArguments('pyramid', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 
@@ -14771,18 +14456,18 @@ const orbOrientation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["
 //
 
 // non-maximum suppression
-const nonMaxSuppression = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/nonmax-suppression.glsl')
+const nonMaxSuppression = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/nonmax-suppression.glsl')
                          .withArguments('image', 'lodStep');
-const multiscaleNonMaxSuppression = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/nonmax-suppression.glsl')
+const multiscaleNonMaxSuppression = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/nonmax-suppression.glsl')
                                    .withArguments('image', 'lodStep')
                                    .withDefines({ 'MULTISCALE': 1 });
 
 // transfer keypoint orientation
-const transferOrientation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/transfer-orientation.glsl')
+const transferOrientation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/transfer-orientation.glsl')
                            .withArguments('encodedOrientations', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 // suppress feature descriptors
-const suppressDescriptors = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('keypoints/suppress-descriptors.glsl')
+const suppressDescriptors = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/suppress-descriptors.glsl')
                            .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'suppressedEncoderLength');
 
 
@@ -14840,9 +14525,7 @@ class GPUKeypoints extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["S
             // ORB
             .declare('_orb', orb)
             .declare('_orbOrientation', orbOrientation)
-            .declare('multiscaleSobel', multiscaleSobel, {
-                ...this.program.doesNotRecycleTextures()
-            }) // scale-space
+            .declare('multiscaleSobel', multiscaleSobel) // scale-space
 
             // Transfer keypoint orientation
             .declare('_transferOrientation', transferOrientation)
@@ -14856,7 +14539,7 @@ class GPUKeypoints extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["S
      * Non-maximum suppression
      * @param {SpeedyTexture} corners scores are encoded as float16
      * @param {number} [lodStep] log2(scaleFactor) - specify if multi-scale
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyDrawableTexture}
      */
     nonMaxSuppression(corners, lodStep = 0)
     {
@@ -14873,11 +14556,11 @@ class GPUKeypoints extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["S
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
      * @param {number} encoderLength
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyDrawableTexture}
      */
     orb(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(descriptorSize === 32);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_5__["Utils"].assert(descriptorSize === 32);
         this._orb.resize(encoderLength, encoderLength);
         return this._orb(pyramid, encodedKeypoints, extraSize, encoderLength);
     }
@@ -14890,11 +14573,11 @@ class GPUKeypoints extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["S
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
      * @param {number} encoderLength
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyDrawableTexture}
      */
     orbOrientation(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength)
     {
-        const numberOfKeypoints = _core_keypoints_feature_encoder__WEBPACK_IMPORTED_MODULE_2__["FeatureEncoder"].capacity(descriptorSize, extraSize, encoderLength);
+        const numberOfKeypoints = _core_keypoints_feature_encoder__WEBPACK_IMPORTED_MODULE_3__["FeatureEncoder"].capacity(descriptorSize, extraSize, encoderLength);
         const orientationEncoderLength = Math.max(1, Math.ceil(Math.sqrt(numberOfKeypoints))); // 1 pixel per keypoint
 
         this._orbOrientation.resize(orientationEncoderLength, orientationEncoderLength);
@@ -14911,11 +14594,11 @@ class GPUKeypoints extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["S
      * @param {number} extraSize in bytes
      * @param {number} encoderLength
      * @param {number} suppressedEncoderLength equivalent to encoderLength, but without the descriptors
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyDrawableTexture}
      */
     suppressDescriptors(encodedKeypoints, descriptorSize, extraSize, encoderLength, suppressedEncoderLength)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(suppressedEncoderLength <= encoderLength);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_5__["Utils"].assert(suppressedEncoderLength <= encoderLength);
         this._suppressDescriptors.resize(suppressedEncoderLength, suppressedEncoderLength);
         return this._suppressDescriptors(encodedKeypoints, descriptorSize, extraSize, encoderLength, suppressedEncoderLength);
     }
@@ -14943,7 +14626,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15002,11 +14685,11 @@ class GPUPyramids extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
     {
         super(gpu, width, height);
         this
-            /*
             // pyramid operations (scale = 2)
             .compose('_reduce', '_smoothX', '_smoothY', '_downsample2')
             .compose('_expand', '_upsample2', '_smoothX2', '_smoothY2')
            
+            /*
             // intra-pyramid operations (scale = 1.5)
             .compose('_intraReduce', '_upsample2', '_smoothX2', '_smoothY2', '_downsample3/2')
             .compose('_intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3')
@@ -15044,11 +14727,15 @@ class GPUPyramids extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
             // same rules as above with sum(k) = 2
             .declare('_smoothX2', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_5__["convX"])([
                 0.1, 0.5, 0.8, 0.5, 0.1 // NOTE: this would saturate the image, but we apply it on a 2x upsampled version with lots of zero pixels
-            ]), this.program.hasTextureSize(2 * this._width, 2 * this._height))
+            ]), {
+                ...(this.program.hasTextureSize(2 * this._width, 2 * this._height))
+            })
 
             .declare('_smoothY2', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_5__["convY"])([
                 0.1, 0.5, 0.8, 0.5, 0.1
-            ], 1.0 / 2.0), this.program.hasTextureSize(2 * this._width, 2 * this._height))
+            ], 1.0 / 2.0), {
+                ...(this.program.hasTextureSize(2 * this._width, 2 * this._height))
+            })
 
             /*
             // smoothing for 3x image
@@ -15063,11 +14750,13 @@ class GPUPyramids extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
             */
 
             // upsampling & downsampling
-            .declare('_upsample2', upsample2,
-                this.program.hasTextureSize(2 * this._width, 2 * this._height))
+            .declare('_upsample2', upsample2, {
+                ...(this.program.hasTextureSize(2 * this._width, 2 * this._height))
+            })
 
-            .declare('_downsample2', downsample2,
-                this.program.hasTextureSize(Math.max(1, Math.floor(this._width / 2)), Math.max(1, Math.floor(this._height / 2))))
+            .declare('_downsample2', downsample2, {
+                ...(this.program.hasTextureSize(Math.max(1, Math.floor(this._width / 2)), Math.max(1, Math.floor(this._height / 2))))
+            })
 
             /*
             .declare('_upsample3', upsample3,
@@ -15083,51 +14772,26 @@ class GPUPyramids extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
                 this.program.hasTextureSize(Math.floor(2 * this._width / 3), Math.floor(2 * this._height / 3)))
             */
         ;
-
-        /** @type {SpeedyProgram} */
-        this._lastOperation = null;
     }
 
     /**
      * Reduce the image (0.5x)
      * @param {SpeedyTexture} image
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyDrawableTexture}
      */
     reduce(image)
     {
-        const smoothImage = this._smoothY(this._smoothX(image));
-        const downsampledImage = this._downsample2(smoothImage);
-
-        this._lastOperation = this._downsample2;
-        return downsampledImage;
+        return this._reduce(image);
     }
 
     /**
      * Expand the image (2x)
      * @param {SpeedyTexture} image
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyDrawableTexture}
      */
     expand(image)
     {
-        const upsampledImage = this._upsample2(image);
-        const smoothImage = this._smoothY2(this._smoothX2(upsampledImage));
-
-        this._lastOperation = this._smoothY2;
-        return smoothImage;
-    }
-
-    /**
-     * Export the result of the last operation to
-     * a specific level of detail of a texture
-     * @param {SpeedyTexture} texture
-     * @param {number} lod level-of-detail
-     */
-    exportTo(texture, lod)
-    {
-        if(this._lastOperation !== null)
-            this._lastOperation.exportTo(texture, lod);
-        else
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_6__["IllegalOperationError"](`Can't export pyramid level before generating it`);
+        return this._expand(image);
     }
 }
 
@@ -15557,11 +15221,6 @@ class GPUUtils extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Speed
                 ...this.program.rendersToCanvas()
             })
                 
-            // clone a texture (release it afterwards)
-            .declare('clone', identity, {
-                ...this.program.doesNotRecycleTextures()
-            })
-
             // flip y-axis
             .declare('flipY', flipY)
 
@@ -15619,7 +15278,7 @@ class GPUUtils extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Speed
      * Scan a single component in all pixels of the image and find the maximum intensity
      * @param {SpeedyTexture} image 
      * @param {number} pixelComponent a single PixelComponent flag
-     * @returns {SpeedyTexture} such that pixel[component] = max(image_pixel[component])
+     * @returns {SpeedyDrawableTexture} such that pixel[component] = max(image_pixel[component])
      *                                                           for all image_pixels
      */
     scanMax(image, pixelComponent)
@@ -15632,7 +15291,7 @@ class GPUUtils extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Speed
      * Scan a single component in all pixels of the image and find the minimum intensity
      * @param {SpeedyTexture} image 
      * @param {number} pixelComponent a single PixelComponent flag
-     * @returns {SpeedyTexture} such that pixel[component] = min(image_pixel[component])
+     * @returns {SpeedyDrawableTexture} such that pixel[component] = min(image_pixel[component])
      *                                                           for all image_pixels
      */
     scanMin(image, pixelComponent)
@@ -15647,11 +15306,11 @@ class GPUUtils extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Speed
      * @param {SpeedyTexture} src 
      * @param {number} destComponents one or more PixelComponent flags
      * @param {number} srcComponent a single PixelComponent flag
-     * @returns {SpeedyTexture} a copy of dest with its destComponents replaced by the srcComponent of src
+     * @returns {SpeedyDrawableTexture} a copy of dest with its destComponents replaced by the srcComponent of src
      */
     copyComponents(dest, src, destComponents, srcComponent)
     {
-        if(!_utils_types__WEBPACK_IMPORTED_MODULE_3__["ColorComponentId"].hasOwnProperty(srcComponent))
+        if(!Object.prototype.hasOwnProperty.call(_utils_types__WEBPACK_IMPORTED_MODULE_3__["ColorComponentId"], srcComponent))
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Invalid srcComponent: ${srcComponent}`)
 
         const srcComponentId = _utils_types__WEBPACK_IMPORTED_MODULE_3__["ColorComponentId"][srcComponent];
@@ -15662,7 +15321,7 @@ class GPUUtils extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Speed
      * Scan a single component in all pixels of the image and find the min & max intensities
      * @param {SpeedyTexture} image 
      * @param {number} pixelComponent a single PixelComponent flag
-     * @returns {SpeedyTexture} RGBA = (max, min, max - min, original_pixel)
+     * @returns {SpeedyDrawableTexture} RGBA = (max, min, max - min, original_pixel)
      */
     _scanMinMax(image, pixelComponent)
     {
@@ -15975,8 +15634,6 @@ class ShaderDeclaration
 
                     // read array name & size
                     const [ array, size ] = [ match[1], Number(match[2]) ];
-                    if(size < 0)
-                        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["ParseError"](`Array ${array} has invalid size: ${size}`);
 
                     // register uniforms
                     for(let i = 0; i < size; i++)
@@ -17691,8 +17348,7 @@ class SpeedyGPU
 
 
         // recreate the state if necessary
-        this._reset = this._reset.bind(this);
-        this._speedyGL.subscribe(this._reset);
+        this._speedyGL.subscribe(this._reset = this._reset.bind(this));
     }
 
     /**
@@ -18209,15 +17865,6 @@ class SpeedyProgramGroup
                 };
             },
 
-            // Calling the program will return a new
-            // instance of the output texture every time
-            // The returned texture must be released manually
-            doesNotRecycleTextures() {
-                return {
-                    recycleTexture: false
-                };
-            },
-
             // Pingpong Rendering: the output texture of a
             // program cannot be used as an input to itself.
             // This is a convenient helper in these situations
@@ -18330,13 +17977,6 @@ const UNIFORM_SETTERS = Object.freeze({
     'mat4':     'uniformMatrix4fv',
 });
 
-// number of pixel buffer objects
-// used to get a performance boost in gl.readPixels()
-// (1 seems to perform better on mobile, 2 on the PC?)
-const PBO_COUNT = 1;
-
-// cache program geometry
-const geometryCache = new WeakMap();
 
 
 /**
@@ -18367,14 +18007,31 @@ class SpeedyProgram extends Function
      */
     _init(gl, shaderdecl, options)
     {
+        // not a valid context?
+        if(gl.isContextLost())
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalOperationError"](`Can't initialize SpeedyProgram: lost context`);
+
+        // options object
+        options = Object.assign({
+            // default options
+            output: [ 1, 1 ], // size of the output texture
+            renderToTexture: true, // render results to a texture?
+            pingpong: false, // alternate output texture between calls
+        }, options);
+
+
+
         /** @type {WebGL2RenderingContext} */
         this._gl = gl;
 
-        /** @type {WebGLProgram} */
-        this._program = _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].createProgram(gl, shaderdecl.vertexSource, shaderdecl.fragmentSource);
+        /** @type {WebGLProgram} vertex shader + fragment shader */
+        this._program = SpeedyProgram._compile(gl, shaderdecl.vertexSource, shaderdecl.fragmentSource);
 
-        /** @type {StoredGeometry} this is a quad */
-        this._geometry = this._createGeometry(gl, shaderdecl);
+        /** @type {ProgramGeometry} this is a quad */
+        this._geometry = new ProgramGeometry(gl, {
+            position: shaderdecl.locationOfAttributes.position,
+            texCoord: shaderdecl.locationOfAttributes.texCoord
+        });
 
         /** @type {string[]} names of the arguments of the SpeedyProgram */
         this._argnames = shaderdecl.arguments;
@@ -18382,20 +18039,18 @@ class SpeedyProgram extends Function
         /** @type {boolean[]} tells whether the i-th argument of the SpeedyProgram is an array or not */
         this._argIsArray = (new Array(this._argnames.length)).fill(false);
 
-        /** @type {object} user options */
-        this._options = Object.freeze({
-            output: [ gl.drawingBufferWidth, gl.drawingBufferHeight ], // size of the output texture
-            renderToTexture: true, // render results to a texture?
-            recycleTexture: true, // recycle output texture? If false, you must manually destroy the output texture
-            pingpong: false, // alternate output texture between calls
-            ...options // user-defined options
-        });
+        /** @type {UBOHelper} UBO helper (lazy instantiation) */
+        this._ubo = null;
 
-        /** @type {number} width of the output texture */
-        this._width = Math.max(1, this._options.output[0] | 0);
+        /** @type {boolean} should we render to a texture? If false, we render to the canvas */
+        this._renderToTexture = Boolean(options.renderToTexture);
 
-        /** @type {number} height of the output texture */
-        this._height = Math.max(1, this._options.output[1] | 0);
+        /** @type {SpeedyDrawableTexture[]} output texture(s) */
+        this._texture = Array.from({ length: options.pingpong ? 2 : 1 },
+            () => new _speedy_texture__WEBPACK_IMPORTED_MODULE_1__["SpeedyDrawableTexture"](gl, options.output[0] | 0, options.output[1] | 0));
+
+        /** @type {number} used for pingpong rendering */
+        this._textureIndex = 0;
 
         /** @type {boolean} flag indicating the need to update the texSize uniform */
         this._dirtySize = true;
@@ -18403,47 +18058,6 @@ class SpeedyProgram extends Function
         /** @type {Map<string,UniformVariable>} uniform variables */
         this._uniform = new Map();
 
-        /** @type {UBOHelper} UBO helper */
-        this._ubo = null;
-
-        /** @type {SpeedyTexture[]} output texture(s) */
-        this._texture = !this._options.renderToTexture ? [] :
-            (new Array(this._options.pingpong ? 2 : 1)).fill(null);
-
-        /** @type {WebGLFramebuffer[]} framebuffer object(s) */
-        this._fbo = !this._options.renderToTexture ? [] :
-            (new Array(this._options.pingpong ? 2 : 1)).fill(null);
-
-        /** @type {number} used for pingpong rendering */
-        this._textureIndex = 0;
-
-        /** @type {Uint8Array[]} pixel buffers for data transfers */
-        this._pixelBuffer = (new Array(PBO_COUNT)).fill(null);
-
-        /** @type {number[]} [width, height] of the pixel buffers */
-        this._pixelBufferSize = [0, 0];
-
-        /** @type {number[]} for async data transfers */
-        this._pboConsumerQueue = (new Array(PBO_COUNT)).fill(0).map((_, i) => i);
-
-        /** @type {number[]} for async data transfers */
-        this._pboProducerQueue = [];
-
-
-
-        // validate options
-        if(this._options.pingpong && !this._options.renderToTexture)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalOperationError"](`Pingpong rendering can only be used when rendering to textures`);
-
-        // not a valid context?
-        if(gl.isContextLost())
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalOperationError"](`Can't initialize SpeedyProgram: lost context`);
-
-        // create framebuffer(s)
-        for(let i = 0; i < this._texture.length; i++) {
-            this._texture[i] = new _speedy_texture__WEBPACK_IMPORTED_MODULE_1__["SpeedyTexture"](gl, this._width, this._height);
-            this._fbo[i] = _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].createFramebuffer(gl, this._texture[i].glTexture);
-        }
 
         // autodetect uniforms
         gl.useProgram(this._program);
@@ -18467,12 +18081,11 @@ class SpeedyProgram extends Function
     /**
      * Run the SpeedyProgram
      * @param  {...(number|number[]|SpeedyTexture|SpeedyTexture[])} args
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyDrawableTexture}
      */
     _call(...args)
     {
         const gl = this._gl;
-        const options = this._options;
         const argnames = this._argnames;
 
         // matching arguments?
@@ -18486,17 +18099,20 @@ class SpeedyProgram extends Function
                 throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["NotSupportedError"](`Can't run shader: don't use its output texture as an input to itself. Consider using pingpong rendering!`);
         }
 
-        // skip things
+        // context loss?
         if(gl.isContextLost())
             return this._texture[this._textureIndex];
 
         // use program
         gl.useProgram(this._program);
 
+        // bind the VAO
+        gl.bindVertexArray(this._geometry.vao);
+
         // we need to update the texSize uniform (e.g., if the program was resized)
         if(this._dirtySize) {
             const texSize = this._uniform.get('texSize');
-            gl.uniform2f(texSize.location, this._width, this._height);
+            gl.uniform2f(texSize.location, this.width, this.height);
             this._dirtySize = false;
         }
 
@@ -18523,97 +18139,54 @@ class SpeedyProgram extends Function
         if(this._ubo !== null)
             this._ubo.update();
 
-        // draw call
-        const fbo = options.renderToTexture ? this._fbo[this._textureIndex] : null;
+        // select the render target
+        const texture = this._texture[this._textureIndex];
+        const fbo = this._renderToTexture ? texture.glFbo : null;
+
+        // bind the FBO
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-        gl.viewport(0, 0, this._width, this._height);
+
+        // draw call
+        gl.viewport(0, 0, this.width, this.height);
         gl.drawArrays(gl.TRIANGLES, 0, 6); // mode, offset, count
+
+        // unbind the FBO
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-        // are we rendering to a texture?
-        if(fbo !== null) {
-            const texture = this._texture[this._textureIndex];
+        // unbind the VAO
+        gl.bindVertexArray(null);
 
-            // we've just changed the contents of the internal texture
-            texture.discardMipmaps(); // discard its pyramid
+        // we've just changed the texture! discard the pyramid, if any
+        texture.discardMipmaps();
 
-            // should we return the internal texture?
-            let outputTexture = texture;
-            if(!options.recycleTexture) {
-                // no; we must clone the intenal texture
-                outputTexture = new _speedy_texture__WEBPACK_IMPORTED_MODULE_1__["SpeedyTexture"](gl, this._width, this._height);
-                _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].copyToTexture(gl, fbo, outputTexture.glTexture, 0, 0, this._width, this._height);
-            }
+        // ping-pong rendering
+        this._pingpong();
 
-            // ping-pong rendering
-            this._pingpong();
-
-            // done!
-            return outputTexture;
-        }
-
-        // we're not rendering to a texture
-        return null;
+        // done!
+        return texture;
     }
 
     /**
-     * Resize the output texture
-     * @param {number} width 
-     * @param {number} height 
+     * Resize the output texture(s)
+     * @param {number} width new width, in pixels
+     * @param {number} height new height, in pixels
      */
     resize(width, height)
     {
-        const gl = this._gl;
-        const oldWidth = this._width;
-        const oldHeight = this._height;
-
-        // lost context?
-        if(gl.isContextLost())
-            return;
-
         // get size
         width = Math.max(1, width | 0);
         height = Math.max(1, height | 0);
 
         // no need to resize?
-        if(width === this._width && height === this._height)
+        if(width === this.width && height === this.height)
             return;
 
-        // update size
-        this._width = width;
-        this._height = height;
+        // mark the texSize dirty flag
         this._dirtySize = true;
 
-        // reallocate buffers for reading pixels
-        this._reallocatePixelBuffers(width, height);
-
-        // resize the internal texture(s)
-        const n = this._texture.length;
-        const zeros = n > 0 ? new Uint8Array(width * height * 4) : null;
-        for(let i = 0; i < n; i++) {
-            // create new texture
-            const newTexture = new _speedy_texture__WEBPACK_IMPORTED_MODULE_1__["SpeedyTexture"](gl, width, height);
-
-            // initialize the new texture with zeros to avoid a
-            // warning when calling copyTexSubImage2D() on Firefox
-            newTexture.upload(zeros); // may not be very efficient?
-
-            // copy old content
-            _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].copyToTexture(gl, this._fbo[i], newTexture.glTexture, 0, 0, Math.min(width, oldWidth), Math.min(height, oldHeight));
-
-            // attach the new texture to the existing framebuffer
-            gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo[i]);
-            gl.framebufferTexture2D(gl.FRAMEBUFFER,         // target
-                                    gl.COLOR_ATTACHMENT0,   // color buffer
-                                    gl.TEXTURE_2D,          // tex target
-                                    newTexture.glTexture,   // texture
-                                    0);                     // mipmap level
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-            // release old texture & replace it
-            this._texture[i].release();
-            this._texture[i] = newTexture;
-        }
+        // resize the output texture(s)
+        for(let i = 0; i < this._texture.length; i++)
+            this._texture[i].resize(width, height, true);
 
         //console.log(`Resized SpeedyProgram to ${width} x ${height}`);
     }
@@ -18624,147 +18197,21 @@ class SpeedyProgram extends Function
      * @param {number} [g] in [0,1]
      * @param {number} [b] in [0,1]
      * @param {number} [a] in [0,1]
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyDrawableTexture}
      */
     clear(r = 0, g = 0, b = 0, a = 0)
     {
-        const gl = this._gl;
         const texture = this._texture[this._textureIndex];
 
-        // skip things
-        if(gl.isContextLost())
-            return texture;
-
         // clear internal textures
-        for(let i = 0; i < this._fbo.length; i++) {
-            gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo[i]);
-            gl.viewport(0, 0, this._width, this._height);
-            gl.clearColor(r, g, b, a);
-            gl.clear(gl.COLOR_BUFFER_BIT);
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        }
+        for(let i = 0; i < this._texture.length; i++)
+            this._texture[i].clear(r, g, b, a);
 
         // ping-pong rendering
         this._pingpong();
 
         // done!
         return texture;
-    }
-
-    /**
-     * Read pixels from the output texture synchronously.
-     * You may optionally specify a (x,y,width,height) sub-rectangle.
-     * @param {number} [x]
-     * @param {number} [y] 
-     * @param {number} [width]
-     * @param {number} [height]
-     * @returns {Uint8Array} pixels in the RGBA format
-     */
-    readPixelsSync(x = 0, y = 0, width = this._width, height = this._height)
-    {
-        const gl = this._gl;
-
-        // can't read pixels if we're not rendering to a texture (i.e., no framebuffer)
-        if(!this._options.renderToTexture)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalOperationError"](`Can't read pixels from a SpeedyProgram that doesn't render to an internal texture`);
-
-        // lost context?
-        if(gl.isContextLost())
-            return this._pixelBuffer[0];
-
-        // clamp values
-        width = Math.max(0, Math.min(width, this._width));
-        height = Math.max(0, Math.min(height, this._height));
-        x = Math.max(0, Math.min(x, width - 1));
-        y = Math.max(0, Math.min(y, height - 1));
-
-        // allocate the pixel buffers
-        if(this._pixelBuffer[0] == null)
-            this._reallocatePixelBuffers(this._width, this._height);
-
-        // last render target
-        const fbo = this._fbo[this._options.pingpong ? 1 - this._textureIndex : this._textureIndex];
-
-        // read pixels
-        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-        gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, this._pixelBuffer[0]);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-        // done!
-        return this._pixelBuffer[0];
-    }
-
-    /**
-     * Read pixels from the output texture asynchronously with PBOs.
-     * You may optionally specify a (x,y,width,height) sub-rectangle.
-     * @param {boolean} [useBufferedDownloads] optimize downloads?
-     * @param {number} [x]
-     * @param {number} [y] 
-     * @param {number} [width]
-     * @param {number} [height]
-     * @returns {SpeedyPromise<Uint8Array>} resolves to an array of pixels in the RGBA format
-     */
-    readPixelsAsync(useBufferedDownloads = true, x = 0, y = 0, width = this._width, height = this._height)
-    {
-        const gl = this._gl;
-
-        // can't read pixels if we're not rendering to a texture (i.e., no framebuffer)
-        if(!this._options.renderToTexture)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalOperationError"](`Can't read pixels from a SpeedyProgram that doesn't render to an internal texture`);
-
-        // lost context?
-        if(gl.isContextLost())
-            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(this._pixelBuffer[0]);
-
-        // clamp values
-        width = Math.max(0, Math.min(width, this._width));
-        height = Math.max(0, Math.min(height, this._height));
-        x = Math.max(0, Math.min(x, width - 1));
-        y = Math.max(0, Math.min(y, height - 1));
-
-        // allocate the pixel buffers
-        if(this._pixelBuffer[0] == null)
-            this._reallocatePixelBuffers(this._width, this._height);
-
-        // last render target
-        const fbo = this._fbo[this._options.pingpong ? 1 - this._textureIndex : this._textureIndex];
-
-        // do not optimize?
-        if(!useBufferedDownloads) {
-            return _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].readPixelsViaPBO(gl, this._pixelBuffer[0], x, y, width, height, fbo).then(() => {
-                return this._pixelBuffer[0];
-            });
-        }
-
-        // GPU needs to produce data
-        if(this._pboProducerQueue.length > 0) {
-            const nextPBO = this._pboProducerQueue.shift();
-            _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].readPixelsViaPBO(gl, this._pixelBuffer[nextPBO], x, y, width, height, fbo).then(() => {
-                this._pboConsumerQueue.push(nextPBO);
-            });
-        }
-        else this._waitForQueueNotEmpty(this._pboProducerQueue).then(() => {
-            const nextPBO = this._pboProducerQueue.shift();
-            _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].readPixelsViaPBO(gl, this._pixelBuffer[nextPBO], x, y, width, height, fbo).then(() => {
-                this._pboConsumerQueue.push(nextPBO);
-            });
-        }).turbocharge();
-
-        // CPU needs to consume data
-        if(this._pboConsumerQueue.length > 0) {
-            const readyPBO = this._pboConsumerQueue.shift();
-            return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"](resolve => {
-                resolve(this._pixelBuffer[readyPBO]);
-                this._pboProducerQueue.push(readyPBO); // enqueue AFTER resolve()
-            });
-        }
-        else return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"](resolve => {
-            this._waitForQueueNotEmpty(this._pboConsumerQueue).then(() => {
-                const readyPBO = this._pboConsumerQueue.shift();
-                resolve(this._pixelBuffer[readyPBO]);
-                this._pboProducerQueue.push(readyPBO); // enqueue AFTER resolve()
-            }).turbocharge();
-        });
     }
 
     /**
@@ -18781,32 +18228,6 @@ class SpeedyProgram extends Function
     }
 
     /**
-     * Copy the output of this program to a texture
-     * @param {SpeedyTexture} texture target texture
-     * @param {number} [lod] level-of-detail of the target texture
-     */
-    exportTo(texture, lod = 0)
-    {
-        const gl = this._gl;
-        const fbo = this._fbo[this._textureIndex];
-
-        // compute texture size as max(1, floor(size / 2^lod)),
-        // in accordance to the OpenGL ES 3.0 spec sec 3.8.10.4
-        // (Mipmapping)
-        const pot = 1 << (lod |= 0);
-        const expectedWidth = Math.max(1, Math.floor(texture.width / pot));
-        const expectedHeight = Math.max(1, Math.floor(texture.height / pot));
-
-        // validate
-        _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(this._width === expectedWidth && this._height === expectedHeight);
-        if(this._options.pingpong)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["NotSupportedError"](`Can't copy the output of a pingpong-enabled SpeedyProgram`);
-
-        // copy to texture
-        _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].copyToTexture(gl, fbo, texture.glTexture, 0, 0, this._width, this._height, lod);
-    }
-
-    /**
      * Release resources associated with this SpeedyProgram
      * @returns {null}
      */
@@ -18814,13 +18235,27 @@ class SpeedyProgram extends Function
     {
         const gl = this._gl;
 
-        for(let i = 0; i < this._texture.length; i++) {
+        // Release UBOs (if any)
+        if(this._ubo != null)
+            this._ubo = this._ubo.release();
+
+        // Release internal textures
+        for(let i = 0; i < this._texture.length; i++)
             this._texture[i] = this._texture[i].release();
-            this._fbo[i] = _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].destroyFramebuffer(gl, this._fbo[i]);
-        }
 
-        this._program = _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__["GLUtils"].destroyProgram(gl, this._program);
+        // Release geometry
+        this._geometry = this._geometry.release();
 
+        // Release program
+        gl.deleteProgram(this._program);
+        this._program = null;
+
+        // Need to delete the shaders as well? In sec 5.14.9 Programs and shaders
+        // of the WebGL 1.0 spec, it is mentioned that the underlying GL object
+        // will automatically be marked for deletion when the JS object is
+        // destroyed (i.e., garbage collected)
+
+        // done!
         return null;
     }
 
@@ -18830,7 +18265,7 @@ class SpeedyProgram extends Function
      */
     get width()
     {
-        return this._width;
+        return this._texture[0].width;
     }
 
     /**
@@ -18839,7 +18274,7 @@ class SpeedyProgram extends Function
      */
     get height()
     {
-        return this._height;
+        return this._texture[0].height;
     }
 
     /**
@@ -18848,160 +18283,185 @@ class SpeedyProgram extends Function
      */
     _pingpong()
     {
-        if(this._options.pingpong)
+        if(this._texture.length > 1)
             this._textureIndex = 1 - this._textureIndex;
     }
 
     /**
-     * Create a quad to be passed to the vertex shader
-     * (this is crafted for image processing)
+     * Compile and link GLSL shaders
      * @param {WebGL2RenderingContext} gl
-     * @param {ShaderDeclaration} shaderdecl
-     * @returns {StoredGeometry}
+     * @param {string} vertexShaderSource GLSL code of the vertex shader
+     * @param {string} fragmentShaderSource GLSL code of the fragment shader
+     * @returns {WebGLProgram}
      */
-    _createGeometry(gl, shaderdecl)
+    static _compile(gl, vertexShaderSource, fragmentShaderSource)
     {
-        // We assume that the geometry and the locations of the attributes of the
-        // vertex shaders are CONSTANT throughout time and the same for all shaders.
-        // That's why we cache the VAO and the VBO (is this really necessary?!)
+        const program = gl.createProgram();
+        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 
-        // got cached values for this WebGL context?
-        if(geometryCache.has(gl))
-            return geometryCache.get(gl);
+        // compile vertex shader
+        gl.shaderSource(vertexShader, vertexShaderSource);
+        gl.compileShader(vertexShader);
+        gl.attachShader(program, vertexShader);
 
-        // configure the attributes of the vertex shader
-        const vao = gl.createVertexArray(); // vertex array object
-        const vbo = [ gl.createBuffer(), gl.createBuffer() ]; // vertex buffer objects
-        gl.bindVertexArray(vao);
+        // compile fragment shader
+        gl.shaderSource(fragmentShader, fragmentShaderSource);
+        gl.compileShader(fragmentShader);
+        gl.attachShader(program, fragmentShader);
 
-        // set the a_position attribute
-        // using the current vbo
-        gl.bindBuffer(gl.ARRAY_BUFFER, vbo[0]);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            // clip coordinates (CCW)
-            -1, -1,
-            1, -1,
-            -1, 1,
+        // link program
+        gl.linkProgram(program);
+        gl.validateProgram(program);
 
-            -1, 1,
-            1, -1,
-            1, 1,
-        ]), gl.STATIC_DRAW);
-        gl.enableVertexAttribArray(shaderdecl.locationOfAttributes.position);
-        gl.vertexAttribPointer(shaderdecl.locationOfAttributes.position, // attribute location
-                               2,          // 2 components per vertex (x,y)
-                               gl.FLOAT,   // type
-                               false,      // don't normalize
-                               0,          // default stride (tightly packed)
-                               0);         // offset
+        // got an error?
+        if(!gl.getProgramParameter(program, gl.LINK_STATUS) && !gl.isContextLost()) {
+            const errors = [
+                gl.getShaderInfoLog(fragmentShader),
+                gl.getShaderInfoLog(vertexShader),
+                gl.getProgramInfoLog(program),
+            ];
 
-        // set the a_texCoord attribute
-        // using the current vbo
-        gl.bindBuffer(gl.ARRAY_BUFFER, vbo[1]);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            // texture coordinates (CCW)
-            0, 0,
-            1, 0,
-            0, 1,
+            gl.deleteProgram(program);
+            gl.deleteShader(fragmentShader);
+            gl.deleteShader(vertexShader);
 
-            0, 1,
-            1, 0,
-            1, 1,
-        ]), gl.STATIC_DRAW);
-        gl.enableVertexAttribArray(shaderdecl.locationOfAttributes.texCoord);
-        gl.vertexAttribPointer(shaderdecl.locationOfAttributes.texCoord, // attribute location
-                               2,          // 2 components per vertex (x,y)
-                               gl.FLOAT,   // type
-                               false,      // don't normalize
-                               0,          // default stride (tightly packed)
-                               0);         // offset
+            // display error
+            const spaces = i => Math.max(0, 2 - Math.floor(Math.log10(i)));
+            const col = k => Array(spaces(k)).fill(' ').join('') + k + '. ';
+            const formattedSource = fragmentShaderSource.split('\n')
+                .map((line, no) => col(1+no) + line)
+                .join('\n');
 
-        // unbind
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
-
-        // cache & return
-        const result = new StoredGeometry(vao, vbo[0], vbo[1]);
-        geometryCache.set(gl, result);
-        return result;
-    }
-
-    /**
-     * Reallocate pixel buffers, so that they can hold width x height RGBA pixels
-     * @param {number} width
-     * @param {number} height
-     */
-    _reallocatePixelBuffers(width, height)
-    {
-        // skip realloc
-        if(width * height <= this._pixelBufferSize[0] * this._pixelBufferSize[1])
-            return;
-
-        // update size
-        this._pixelBufferSize[0] = width;
-        this._pixelBufferSize[1] = height;
-
-        // reallocate pixels array
-        for(let i = 0; i < PBO_COUNT; i++) {
-            const oldBuffer = this._pixelBuffer[i];
-            this._pixelBuffer[i] = new Uint8Array(width * height * 4);
-            this._pixelBuffer[i].fill(255, 0, 4); // will be recognized as empty... needed?
-
-            if(oldBuffer) {
-                if(oldBuffer.length > this._pixelBuffer[i].length)
-                    this._pixelBuffer[i].set(oldBuffer.slice(0, this._pixelBuffer[i].length));
-                else
-                    this._pixelBuffer[i].set(oldBuffer);
-            }
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["GLError"](
+                `Can't create shader.\n\n` +
+                `---------- ERROR ----------\n` +
+                errors.join('\n') + '\n\n' +
+                `---------- SOURCE CODE ----------\n` +
+                formattedSource
+            );
         }
-    }
 
-    /**
-     * Wait for a queue to be not empty
-     * @param {Array} queue
-     * @returns {SpeedyPromise}
-     */
-    _waitForQueueNotEmpty(queue)
-    {
-        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"](resolve => {
-            //const start = performance.now();
-            function wait() {
-                if(queue.length > 0)
-                    resolve(); //resolve(performance.now() - start);
-                else
-                    setTimeout(wait, 0); // Utils.setZeroTimeout may hinder performance (GLUtils already calls it)
-                    //Utils.setZeroTimeout(wait);
-            }
-            wait();
-        });
+        // done!
+        return program;
     }
 }
 
 
 
-//
-// Helpers
-//
+
+
+// ============================================================================
+//                                  HELPERS
+// ============================================================================
+
+
+
+
+
 
 /**
- * Storage for VAO & VBOs (vertex shader)
- * @param {WebGLVertexArrayObject} vao vertex array object
- * @param {WebGLBuffer} vboPosition buffer associated with the position attribute
- * @param {WebGLBuffer} vboTexCoord buffer associated with the texCoord attribute
+ * Configure and store the VAO and the VBOs
+ * @param {WebGL2RenderingContext} gl
+ * @param {LocationOfAttributes} location
+ * @returns {ProgramGeometry}
+ *
+ * @typedef {Object} LocationOfAttributes
+ * @property {number} position
+ * @property {number} texCoord
+ *
+ * @typedef {Object} BufferOfAttributes
+ * @property {WebGLBuffer} position
+ * @property {WebGLBuffer} texCoord
  */
-function StoredGeometry(vao, vboPosition, vboTexCoord)
+function ProgramGeometry(gl, location)
 {
-    this.vao = vao;
+    /** @type {WebGLVertexArrayObject} Vertex Array Object */
+    this.vao = gl.createVertexArray();
 
+    /** @type {BufferOfAttributes} Vertex Buffer Objects */
     this.vbo = Object.freeze({
-        position: vboPosition,
-        texCoord: vboTexCoord
+        position: gl.createBuffer(),
+        texCoord: gl.createBuffer()
     });
 
+    /** @type {WebGL2RenderingContext} */
+    this._gl = gl;
+
+
+
+    // bind the VAO
+    gl.bindVertexArray(this.vao);
+
+    // set the position attribute
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo.position);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        // clip coordinates (CCW)
+        -1, -1,
+        1, -1,
+        -1, 1,
+
+        -1, 1,
+        1, -1,
+        1, 1,
+    ]), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(location.position);
+    gl.vertexAttribPointer(location.position, // attribute location
+                            2,                // 2 components per vertex (x,y)
+                            gl.FLOAT,         // type
+                            false,            // don't normalize
+                            0,                // default stride (tightly packed)
+                            0);               // offset
+
+    // set the texCoord attribute
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo.texCoord);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        // texture coordinates (CCW)
+        0, 0,
+        1, 0,
+        0, 1,
+
+        0, 1,
+        1, 0,
+        1, 1,
+    ]), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(location.texCoord);
+    gl.vertexAttribPointer(location.texCoord, // attribute location
+                            2,                // 2 components per vertex (x,y)
+                            gl.FLOAT,         // type
+                            false,            // don't normalize
+                            0,                // default stride (tightly packed)
+                            0);               // offset
+
+    // unbind
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    gl.bindVertexArray(null);
+
+    // done!
     return Object.freeze(this);
 }
 
 /**
- * Helper class for storing data related to GLSL uniform variables
+ * Releases the internal resources
+ * @returns {null}
+ */
+ProgramGeometry.prototype.release = function()
+{
+    const gl = this._gl;
+
+    gl.deleteVertexArray(this.vao);
+    gl.deleteBuffer(this.vbo.position);
+    gl.deleteBuffer(this.vbo.texCoord);
+
+    return null;
+}
+
+
+
+
+
+/**
+ * Helper class for storing data in GLSL uniform variables
  * @param {string} type
  * @param {WebGLUniformLocation} location
  */
@@ -19075,6 +18535,11 @@ UniformVariable.prototype.setValue = function(gl, value, texNo)
     return texNo;
 }
 
+
+
+
+
+
 /**
  * A helper class for handling Uniform Buffer Objects (UBOs)
  * @param {WebGL2RenderingContext} gl
@@ -19141,18 +18606,301 @@ UBOHelper.prototype.update = function()
     }
 }
 
+/**
+ * Release allocated buffers
+ * @returns {null}
+ */
+UBOHelper.prototype.release = function()
+{
+    const gl = this._gl;
+
+    for(const name in this._ubo) {
+        const ubo = this._ubo[name];
+
+        gl.deleteBuffer(ubo.buffer);
+        ubo.data = null;
+    }
+
+    return null;
+}
+
+/***/ }),
+
+/***/ "./src/gpu/speedy-texture-reader.js":
+/*!******************************************!*\
+  !*** ./src/gpu/speedy-texture-reader.js ***!
+  \******************************************/
+/*! exports provided: SpeedyTextureReader */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyTextureReader", function() { return SpeedyTextureReader; });
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _gl_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./gl-utils */ "./src/gpu/gl-utils.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-texture-reader.js
+ * Reads data from textures
+ */
+
+
+
+
+
+
+
+// number of pixel buffer objects
+// used to get a performance boost in gl.readPixels()
+// (1 seems to perform better on mobile, 2 on the PC?)
+const DEFAULT_NUMBER_OF_BUFFERS = 1; //2;
+
+
+/**
+ * Reads data from textures
+ */
+class SpeedyTextureReader
+{
+    /**
+     * Constructor
+     * @param {number} [numberOfBuffers]
+     */
+    constructor(numberOfBuffers = DEFAULT_NUMBER_OF_BUFFERS)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(numberOfBuffers > 0);
+
+        /** @type {Uint8Array[]} pixel buffers for data transfers (each stores RGBA data) */
+        this._pixelBuffer = (new Array(numberOfBuffers)).fill(null).map(() => new Uint8Array(0));
+
+        /** @type {number[]} for async data transfers (stores buffer indices) */
+        this._consumerQueue = (new Array(numberOfBuffers)).fill(0).map((_, i) => i);
+
+        /** @type {number[]} for async data transfers (stores buffer indices) */
+        this._producerQueue = [];
+    }
+
+    /**
+     * Read pixels from a texture, synchronously.
+     * You may optionally specify a (x,y,width,height) sub-rectangle.
+     * @param {SpeedyDrawableTexture} texture a texture with a FBO
+     * @param {number} [x]
+     * @param {number} [y] 
+     * @param {number} [width]
+     * @param {number} [height]
+     * @returns {Uint8Array} pixels in the RGBA format
+     */
+    readPixelsSync(texture, x = 0, y = 0, width = texture.width, height = texture.height)
+    {
+        const gl = texture.gl;
+        const fbo = texture.glFbo;
+
+        // clamp values
+        width = Math.max(0, Math.min(width, texture.width));
+        height = Math.max(0, Math.min(height, texture.height));
+        x = Math.max(0, Math.min(x, texture.width - width));
+        y = Math.max(0, Math.min(y, texture.height - height));
+
+        // buffer allocation
+        const sizeofBuffer = width * height * 4; // 4 bytes per pixel (RGBA)
+        this._reallocate(sizeofBuffer);
+
+        // lost context?
+        if(gl.isContextLost())
+            return this._pixelBuffer[0].slice(0, sizeofBuffer);
+
+        // read pixels
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, this._pixelBuffer[0]);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        // done!
+        return this._pixelBuffer[0].slice(0, sizeofBuffer);
+    }
+
+    /**
+     * Read pixels from a texture, asynchronously, with PBOs.
+     * You may optionally specify a (x,y,width,height) sub-rectangle.
+     * @param {SpeedyDrawableTexture} texture a texture with a FBO
+     * @param {boolean} [useBufferedDownloads] accelerate downloads by returning pixels from the texture of the previous call (useful for streaming)
+     * @param {number} [x]
+     * @param {number} [y] 
+     * @param {number} [width]
+     * @param {number} [height]
+     * @returns {SpeedyPromise<Uint8Array>} resolves to an array of pixels in the RGBA format
+     */
+    readPixelsAsync(texture, useBufferedDownloads = false, x = 0, y = 0, width = texture.width, height = texture.height)
+    {
+        const gl = texture.gl;
+        const fbo = texture.glFbo;
+
+        // clamp values
+        width = Math.max(0, Math.min(width, texture.width));
+        height = Math.max(0, Math.min(height, texture.height));
+        x = Math.max(0, Math.min(x, texture.width - width));
+        y = Math.max(0, Math.min(y, texture.height - height));
+
+        // buffer allocation
+        const sizeofBuffer = width * height * 4; // 4 bytes per pixel (RGBA)
+        this._reallocate(sizeofBuffer);
+
+        // lost context?
+        if(gl.isContextLost())
+            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(this._pixelBuffer[0].slice(0, sizeofBuffer));
+
+        // do not optimize?
+        if(!useBufferedDownloads) {
+            return SpeedyTextureReader._readPixelsViaPBO(gl, this._pixelBuffer[0], fbo, x, y, width, height).then(() =>
+                this._pixelBuffer[0].slice(0, sizeofBuffer)
+            );
+        }
+
+        // GPU needs to produce data
+        if(this._producerQueue.length > 0) {
+            const nextBufferIndex = this._producerQueue.shift();
+            SpeedyTextureReader._readPixelsViaPBO(gl, this._pixelBuffer[nextBufferIndex], fbo, x, y, width, height).then(() => {
+                this._consumerQueue.push(nextBufferIndex);
+            });
+        }
+        else this._waitForQueueNotEmpty(this._producerQueue).then(() => {
+            const nextBufferIndex = this._producerQueue.shift();
+            SpeedyTextureReader._readPixelsViaPBO(gl, this._pixelBuffer[nextBufferIndex], fbo, x, y, width, height).then(() => {
+                this._consumerQueue.push(nextBufferIndex);
+            });
+        }).turbocharge();
+
+        // CPU needs to consume data
+        if(this._consumerQueue.length > 0) {
+            const readyBufferIndex = this._consumerQueue.shift();
+            return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"](resolve => {
+                resolve(this._pixelBuffer[readyBufferIndex].slice(0, sizeofBuffer));
+                this._producerQueue.push(readyBufferIndex); // enqueue AFTER resolve()
+            });
+        }
+        else return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"](resolve => {
+            this._waitForQueueNotEmpty(this._consumerQueue).then(() => {
+                const readyBufferIndex = this._consumerQueue.shift();
+                resolve(this._pixelBuffer[readyBufferIndex].slice(0, sizeofBuffer));
+                this._producerQueue.push(readyBufferIndex); // enqueue AFTER resolve()
+            }).turbocharge();
+        });
+    }
+
+    /**
+     * Reallocate the pixel buffers, so that they can hold the required number of bytes
+     * If the pixel buffers already have the required capacity, then nothing is done
+     * @param {number} size in bytes
+     */
+    _reallocate(size)
+    {
+        // no need to reallocate
+        if(size <= this._pixelBuffer[0].byteLength)
+            return;
+
+        // reallocate
+        for(let i = 0; i < this._pixelBuffer.length; i++) {
+            const newBuffer = new Uint8Array(size);
+            newBuffer.set(this._pixelBuffer[i]); // make this optional?
+            this._pixelBuffer[i] = newBuffer;
+        }
+    }
+
+    /**
+     * Wait for a queue to be not empty
+     * @param {Array} queue
+     * @returns {SpeedyPromise<void>}
+     */
+    _waitForQueueNotEmpty(queue)
+    {
+        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"](resolve => {
+            (function wait() {
+                if(queue.length > 0)
+                    resolve();
+                else
+                    setTimeout(wait, 0); // Utils.setZeroTimeout may hinder performance (GLUtils already calls it)
+                    //Utils.setZeroTimeout(wait);
+            })();
+        });
+    }
+
+    /**
+     * Read pixels to a Uint8Array, asynchronously, using a Pixel Buffer Object (PBO)
+     * It's assumed that the target texture is in the RGBA8 format
+     * @param {WebGL2RenderingContext} gl
+     * @param {Uint8Array} outputBuffer with size >= width * height * 4
+     * @param {WebGLFramebuffer} fbo
+     * @param {GLint} x
+     * @param {GLint} y
+     * @param {GLsizei} width
+     * @param {GLsizei} height
+     * @returns {SpeedyPromise}
+     */
+    static _readPixelsViaPBO(gl, outputBuffer, fbo, x, y, width, height)
+    {
+        // create temp buffer
+        const pbo = gl.createBuffer();
+
+        // validate outputBuffer
+        if(!(outputBuffer.byteLength >= width * height * 4))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Can't read pixels: invalid buffer size`);
+
+        // bind the PBO
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
+        gl.bufferData(gl.PIXEL_PACK_BUFFER, outputBuffer.byteLength, gl.STREAM_READ);
+
+        // read pixels into the PBO
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        // unbind the PBO
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+
+        // wait for DMA transfer
+        return _gl_utils__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].getBufferSubDataAsync(gl, pbo,
+            gl.PIXEL_PACK_BUFFER,
+            0,
+            outputBuffer,
+            0,
+            0
+        ).catch(err => {
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`Can't read pixels`, err);
+        }).finally(() => {
+            gl.deleteBuffer(pbo);
+        });
+    }
+}
+
 /***/ }),
 
 /***/ "./src/gpu/speedy-texture.js":
 /*!***********************************!*\
   !*** ./src/gpu/speedy-texture.js ***!
   \***********************************/
-/*! exports provided: SpeedyTexture */
+/*! exports provided: SpeedyTexture, SpeedyDrawableTexture */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyTexture", function() { return SpeedyTexture; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyDrawableTexture", function() { return SpeedyDrawableTexture; });
 /* harmony import */ var _speedy_gpu__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /* harmony import */ var _gl_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./gl-utils */ "./src/gpu/gl-utils.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
@@ -19191,10 +18939,10 @@ __webpack_require__.r(__webpack_exports__);
 class SpeedyTexture
 {
     /**
-     * Creates a new texture with the specified dimensions
+     * Constructor
      * @param {WebGL2RenderingContext} gl
-     * @param {number} width
-     * @param {number} height
+     * @param {number} width texture width in pixels
+     * @param {number} height texture height in pixels
      */
     constructor(gl, width, height)
     {
@@ -19208,7 +18956,7 @@ class SpeedyTexture
         this._height = Math.max(1, height | 0);
 
         /** @type {WebGLTexture} internal texture object */
-        this._glTexture = _gl_utils__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].createTexture(this._gl, this._width, this._height);
+        this._glTexture = SpeedyTexture._createTexture(this._gl, this._width, this._height);
 
         /** @type {boolean} have we generated mipmaps for this texture? */
         this._hasMipmaps = false;
@@ -19220,14 +18968,19 @@ class SpeedyTexture
      */
     release()
     {
-        if(this._glTexture !== null) {
-            this._glTexture = _gl_utils__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].destroyTexture(this._gl, this._glTexture);
-            this._width = this._height = 0;
-            this._hasMipmaps = false;
-        }
-        else
+        const gl = this._gl;
+
+        // already released?
+        if(this._glTexture == null)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`The SpeedyTexture has already been released`);
 
+        // release resources
+        gl.deleteTexture(this._glTexture);
+        this._glTexture = null;
+        this._width = this._height = 0;
+        this._hasMipmaps = false;
+
+        // done!
         return null;
     }
 
@@ -19239,7 +18992,7 @@ class SpeedyTexture
     upload(pixels)
     {
         this._hasMipmaps = false;
-        _gl_utils__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].uploadToTexture(this._gl, this._glTexture, this._width, this._height, pixels, 0);
+        SpeedyTexture._upload(this._gl, this._glTexture, this._width, this._height, pixels, 0);
         return this;
     }
 
@@ -19255,12 +19008,9 @@ class SpeedyTexture
         if(this._hasMipmaps)
             return this;
 
-        // validate gpu
-        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(gpu.gl === this._gl);
-
         // let the hardware compute the all levels of the pyramid, up to 1x1
         // this might be a simple box filter...
-        _gl_utils__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].generateMipmap(this._gl, this._glTexture);
+        SpeedyTexture._generateDefaultMipmaps(this._gl, this._glTexture);
         this._hasMipmaps = true;
 
         // compute a few layers of a Gaussian pyramid for better results
@@ -19270,9 +19020,9 @@ class SpeedyTexture
                 if(Math.min(layer.width, layer.height) < 2)
                     break;
 
-                pyramid = gpu.programs.pyramids(level-1);
+                pyramid = gpu.programs.pyramids(level - 1);
                 layer = pyramid.reduce(layer);
-                pyramid.exportTo(this, level);
+                layer.copyTo(this, level);
             }
         }
 
@@ -19340,6 +19090,365 @@ class SpeedyTexture
     get gl()
     {
         return this._gl;
+    }
+
+    /**
+     * Create a WebGL texture
+     * @param {WebGL2RenderingContext} gl
+     * @param {number} width in pixels
+     * @param {number} height in pixels
+     * @returns {WebGLTexture}
+     */
+    static _createTexture(gl, width, height)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(width > 0 && height > 0);
+
+        // create & bind texture
+        const texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+
+        // setup
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+        //gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, width, height);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+
+        // unbind & return
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        return texture;
+    }
+
+    /**
+     * Upload pixel data to a WebGL texture
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLTexture} texture
+     * @param {GLsizei} width texture width
+     * @param {GLsizei} height texture height
+     * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} pixels 
+     * @param {GLint} [lod] mipmap level-of-detail
+     * @returns {WebGLTexture} texture
+     */
+    static _upload(gl, texture, width, height, pixels, lod = 0)
+    {
+        // Prefer calling _upload() before gl.useProgram() to avoid the
+        // needless switching of GL programs internally. See also:
+        // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+
+        /*
+        // slower than texImage2D, unlike the spec?
+        gl.texSubImage2D(gl.TEXTURE_2D,     // target
+                         lod,               // mip level
+                         0,                 // x-offset
+                         0,                 // y-offset
+                         width,             // texture width
+                         height,            // texture height
+                         gl.RGBA,           // source format
+                         gl.UNSIGNED_BYTE,  // source type
+                         pixels);           // source data
+        */
+
+        gl.texImage2D(gl.TEXTURE_2D,        // target
+                      lod,                  // mip level
+                      gl.RGBA8,             // internal format
+                      width,              // texture width
+                      height,             // texture height
+                      0,                  // border
+                      gl.RGBA,              // source format
+                      gl.UNSIGNED_BYTE,     // source type
+                      pixels);              // source data
+
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        return texture;
+    }
+
+    /**
+     * Generate texture mipmap via hardware
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLTexture} texture
+     * @returns {WebGLTexture} the input texture
+     */
+    static _generateDefaultMipmaps(gl, texture)
+    {
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
+        return texture;
+    }
+}
+
+/**
+ * A SpeedyTexture with a framebuffer
+ */
+class SpeedyDrawableTexture extends SpeedyTexture
+{
+    /**
+     * Constructor
+     * @param {WebGL2RenderingContext} gl
+     * @param {number} width texture width in pixels
+     * @param {number} height texture height in pixels
+     */
+    constructor(gl, width, height)
+    {
+        super(gl, width, height);
+
+        /** @type {WebGLFramebuffer} framebuffer */
+        this._glFbo = SpeedyDrawableTexture._createFramebuffer(gl, this._glTexture);
+    }
+
+    /**
+     * Releases the texture
+     * @returns {null}
+     */
+    release()
+    {
+        const gl = this._gl;
+
+        // already released?
+        if(this._glFbo == null)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`The SpeedyDrawableTexture has already been released`);
+
+        // release the framebuffer
+        gl.deleteFramebuffer(this._glFbo);
+        this._glFbo = null;
+
+        // release the SpeedyTexture
+        return super.release();
+    }
+
+    /**
+     * The internal WebGLFramebuffer
+     * @returns {WebGLFramebuffer}
+     */
+    get glFbo()
+    {
+        return this._glFbo;
+    }
+
+    /**
+     * Copy this texture into another
+     * @param {SpeedyTexture} texture target texture
+     * @param {number} [lod] level-of-detail of the target texture
+     */
+    copyTo(texture, lod = 0)
+    {
+        const gl = this._gl;
+
+        // context loss?
+        if(gl.isContextLost())
+            return;
+
+        // compute texture size as max(1, floor(size / 2^lod)),
+        // in accordance to the OpenGL ES 3.0 spec sec 3.8.10.4
+        // (Mipmapping)
+        const pot = 1 << (lod |= 0);
+        const expectedWidth = Math.max(1, Math.floor(texture.width / pot));
+        const expectedHeight = Math.max(1, Math.floor(texture.height / pot));
+
+        // validate
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(this._width === expectedWidth && this._height === expectedHeight);
+
+        // discard mipmaps, if any
+        texture.discardMipmaps();
+
+        // copy to texture
+        SpeedyDrawableTexture._copyToTexture(gl, this._glFbo, texture.glTexture, 0, 0, this._width, this._height, lod);
+    }
+
+    /*
+     **
+     * Clone this texture
+     * @returns {SpeedyDrawableTexture}
+     *
+    drawableClone()
+    {
+        const clone = new SpeedyDrawableTexture(this._gl, this._width, this._height);
+        this.copyTo(clone);
+        return clone;
+    }
+    */
+
+    /**
+     * Clone this texture. Note that the clone doesn't include a framebuffer
+     * @returns {SpeedyTexture} non-drawable
+     */
+    clone()
+    {
+        const clone = new SpeedyTexture(this._gl, this._width, this._height);
+        this.copyTo(clone);
+        return clone;
+    }
+
+    /**
+     * Resize this texture
+     * @param {number} width new width, in pixels
+     * @param {number} height new height, in pixels
+     * @param {boolean} [preserveContent] should we preserve the content of the texture?
+     * @returns {SpeedyDrawableTexture} this texture
+     */
+    resize(width, height, preserveContent = false)
+    {
+        const gl = this._gl;
+
+        // no need to resize?
+        if(this._width === width && this._height === height)
+            return;
+
+        // validate size
+        width |= 0; height |= 0;
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(width > 0 && height > 0);
+
+        // context loss?
+        if(gl.isContextLost())
+            return;
+
+        // allocate new texture
+        const newTexture = SpeedyTexture._createTexture(gl, width, height);
+
+        // copy old content
+        if(preserveContent) {
+            // initialize the new texture with zeros to avoid a
+            // warning when calling copyTexSubImage2D() on Firefox
+            // this may not be very efficient?
+            const zeros = new Uint8Array(width * height * 4); // RGBA: 4 bytes per pixel
+            SpeedyTexture._upload(gl, newTexture, width, height, zeros);
+
+            // copy the old texture to the new one
+            const oldWidth = this._width, oldHeight = this._height;
+            SpeedyDrawableTexture._copyToTexture(gl, this._glFbo, newTexture, 0, 0, Math.min(width, oldWidth), Math.min(height, oldHeight));
+        }
+
+        // update dimensions & discard mipmaps
+        this.discardMipmaps();
+        this._width = width;
+        this._height = height;
+
+        // attach the new texture to the existing framebuffer
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this._glFbo);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER,         // target
+                                gl.COLOR_ATTACHMENT0,   // color buffer
+                                gl.TEXTURE_2D,          // tex target
+                                newTexture,             // texture
+                                0);                     // mipmap level
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        // release the old texture and replace it
+        gl.deleteTexture(this._glTexture);
+        this._glTexture = newTexture;
+
+        // done!
+        return this;
+    }
+
+    /**
+     * Clear the texture to a color
+     * @param {number} [r] red component, a value in [0,1]
+     * @param {number} [g] green component, a value in [0,1]
+     * @param {number} [b] blue component, a value in [0,1]
+     * @param {number} [a] alpha component, a value in [0,1]
+     * @returns {SpeedyDrawableTexture} this texture
+     */
+    clear(r = 0, g = 0, b = 0, a = 0)
+    {
+        const gl = this._gl;
+
+        // context loss?
+        if(gl.isContextLost())
+            return;
+
+        // clamp parameters
+        r = Math.max(0.0, Math.min(+r, 1.0));
+        g = Math.max(0.0, Math.min(+g, 1.0));
+        b = Math.max(0.0, Math.min(+b, 1.0));
+        a = Math.max(0.0, Math.min(+a, 1.0));
+
+        // discard mipmaps, if any
+        this.discardMipmaps();
+
+        // clear the texture
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this._glFbo);
+        gl.viewport(0, 0, this._width, this._height);
+        gl.clearColor(r, g, b, a);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        // done!
+        return this;
+    }
+
+    /**
+     * Create a FBO associated with an existing texture
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLTexture} texture
+     * @returns {WebGLFramebuffer}
+     */
+    static _createFramebuffer(gl, texture)
+    {
+        const fbo = gl.createFramebuffer();
+
+        // setup framebuffer
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER,         // target
+                                gl.COLOR_ATTACHMENT0,   // color buffer
+                                gl.TEXTURE_2D,          // tex target
+                                texture,                // texture
+                                0);                     // mipmap level
+
+        // check for errors
+        const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+        if(status != gl.FRAMEBUFFER_COMPLETE) {
+            const error = (() => (([
+                'FRAMEBUFFER_UNSUPPORTED',
+                'FRAMEBUFFER_INCOMPLETE_ATTACHMENT',
+                'FRAMEBUFFER_INCOMPLETE_DIMENSIONS',
+                'FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT',
+                'FRAMEBUFFER_INCOMPLETE_MULTISAMPLE'
+            ].filter(err => gl[err] === status))[0] || 'unknown error'))();
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["GLError"](`Can't create framebuffer: ${error} (${status})`);
+        }
+
+        // unbind & return
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        return fbo;
+    }
+
+    /**
+     * Copy data from a framebuffer into a texture
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLFramebuffer} fbo we'll read the data from this
+     * @param {WebGLTexture} texture destination texture
+     * @param {GLint} x xpos (where to start copying)
+     * @param {GLint} y ypos (where to start copying)
+     * @param {GLsizei} width width of the texture
+     * @param {GLsizei} height height of the texture
+     * @param {GLint} [lod] mipmap level-of-detail
+     * @returns {WebGLTexture} texture
+     */
+    static _copyToTexture(gl, fbo, texture, x, y, width, height, lod = 0)
+    {
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+
+        gl.copyTexSubImage2D(
+            gl.TEXTURE_2D, // target
+            lod, // mipmap level
+            0, // xoffset
+            0, // yoffset
+            x, // xpos (where to start copying)
+            y, // ypos (where to start copying)
+            width, // width of the texture
+            height // height of the texture
+        );
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
+        return texture;
     }
 }
 
