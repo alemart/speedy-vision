@@ -88,6 +88,9 @@ export class FeatureEncoder
         const e2 = e * e * pixelsPerKeypoint * 4;
         const size = Math.min(pixels.length, e2);
 
+        // copy the data (we use shared buffers when receiving pixels[])
+        pixels = new Uint8Array(pixels);
+
         // for each encoded keypoint
         for(let i = 0; i < size; i += 4 /* RGBA */ * pixelsPerKeypoint) {
             // extract fixed-point coordinates
@@ -123,10 +126,10 @@ export class FeatureEncoder
             score = pixels[i+6] / 255.0;
 
             // extra bytes
-            extraBytes = pixels.slice(8 + i, 8 + i + extraSize);
+            extraBytes = pixels.subarray(8 + i, 8 + i + extraSize);
 
             // descriptor bytes
-            descriptorBytes = pixels.slice(8 + i + extraSize, 8 + i + extraSize + descriptorSize);
+            descriptorBytes = pixels.subarray(8 + i + extraSize, 8 + i + extraSize + descriptorSize);
 
             // something is off here
             if(descriptorBytes.length < descriptorSize || extraBytes.length < extraSize)
