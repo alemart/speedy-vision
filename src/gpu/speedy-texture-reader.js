@@ -81,7 +81,7 @@ export class SpeedyTextureReader
 
         // lost context?
         if(gl.isContextLost())
-            return this._pixelBuffer[0].slice(0, sizeofBuffer);
+            return this._pixelBuffer[0].subarray(0, sizeofBuffer);
 
         // read pixels
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
@@ -89,7 +89,7 @@ export class SpeedyTextureReader
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
         // done!
-        return this._pixelBuffer[0].slice(0, sizeofBuffer);
+        return this._pixelBuffer[0].subarray(0, sizeofBuffer);
     }
 
     /**
@@ -120,12 +120,12 @@ export class SpeedyTextureReader
 
         // lost context?
         if(gl.isContextLost())
-            return SpeedyPromise.resolve(this._pixelBuffer[0].slice(0, sizeofBuffer));
+            return SpeedyPromise.resolve(this._pixelBuffer[0].subarray(0, sizeofBuffer));
 
         // do not optimize?
         if(!useBufferedDownloads) {
             return SpeedyTextureReader._readPixelsViaPBO(gl, this._pixelBuffer[0], fbo, x, y, width, height).then(() =>
-                this._pixelBuffer[0].slice(0, sizeofBuffer)
+                this._pixelBuffer[0].subarray(0, sizeofBuffer)
             );
         }
 
@@ -147,14 +147,14 @@ export class SpeedyTextureReader
         if(this._consumerQueue.length > 0) {
             const readyBufferIndex = this._consumerQueue.shift();
             return new SpeedyPromise(resolve => {
-                resolve(this._pixelBuffer[readyBufferIndex].slice(0, sizeofBuffer));
+                resolve(this._pixelBuffer[readyBufferIndex].subarray(0, sizeofBuffer));
                 this._producerQueue.push(readyBufferIndex); // enqueue AFTER resolve()
             });
         }
         else return new SpeedyPromise(resolve => {
             this._waitForQueueNotEmpty(this._consumerQueue).then(() => {
                 const readyBufferIndex = this._consumerQueue.shift();
-                resolve(this._pixelBuffer[readyBufferIndex].slice(0, sizeofBuffer));
+                resolve(this._pixelBuffer[readyBufferIndex].subarray(0, sizeofBuffer));
                 this._producerQueue.push(readyBufferIndex); // enqueue AFTER resolve()
             }).turbocharge();
         });
