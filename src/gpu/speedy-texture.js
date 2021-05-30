@@ -22,7 +22,7 @@
 import { SpeedyGPU } from './speedy-gpu';
 import { GLUtils } from './gl-utils';
 import { Utils } from '../utils/utils';
-import { IllegalOperationError, NotSupportedError } from '../utils/errors';
+import { IllegalOperationError, GLError } from '../utils/errors';
 import { PYRAMID_MAX_LEVELS } from '../utils/globals';
 
 /**
@@ -48,7 +48,7 @@ export class SpeedyTexture
         this._height = Math.max(1, height | 0);
 
         /** @type {WebGLTexture} internal texture object */
-        this._glTexture = GLUtils.createTexture(this._gl, this._width, this._height);
+        this._glTexture = SpeedyTexture._createTexture(this._gl, this._width, this._height);
 
         /** @type {boolean} have we generated mipmaps for this texture? */
         this._hasMipmaps = false;
@@ -60,14 +60,19 @@ export class SpeedyTexture
      */
     release()
     {
-        if(this._glTexture !== null) {
-            this._glTexture = GLUtils.destroyTexture(this._gl, this._glTexture);
-            this._width = this._height = 0;
-            this._hasMipmaps = false;
-        }
-        else
+        const gl = this._gl;
+
+        // already released?
+        if(this._glTexture == null)
             throw new IllegalOperationError(`The SpeedyTexture has already been released`);
 
+        // release resources
+        gl.deleteTexture(this._glTexture);
+        this._glTexture = null;
+        this._width = this._height = 0;
+        this._hasMipmaps = false;
+
+        // done!
         return null;
     }
 
@@ -79,7 +84,7 @@ export class SpeedyTexture
     upload(pixels)
     {
         this._hasMipmaps = false;
-        GLUtils.uploadToTexture(this._gl, this._glTexture, this._width, this._height, pixels, 0);
+        SpeedyTexture._upload(this._gl, this._glTexture, this._width, this._height, pixels, 0);
         return this;
     }
 
@@ -97,7 +102,7 @@ export class SpeedyTexture
 
         // let the hardware compute the all levels of the pyramid, up to 1x1
         // this might be a simple box filter...
-        GLUtils.generateMipmap(this._gl, this._glTexture);
+        SpeedyTexture._generateDefaultMipmaps(this._gl, this._glTexture);
         this._hasMipmaps = true;
 
         // compute a few layers of a Gaussian pyramid for better results
@@ -178,6 +183,94 @@ export class SpeedyTexture
     {
         return this._gl;
     }
+
+    /**
+     * Create a WebGL texture
+     * @param {WebGL2RenderingContext} gl
+     * @param {number} width in pixels
+     * @param {number} height in pixels
+     * @returns {WebGLTexture}
+     */
+    static _createTexture(gl, width, height)
+    {
+        Utils.assert(width > 0 && height > 0);
+
+        // create & bind texture
+        const texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+
+        // setup
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+        //gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, width, height);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+
+        // unbind & return
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        return texture;
+    }
+
+    /**
+     * Upload pixel data to a WebGL texture
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLTexture} texture
+     * @param {GLsizei} width texture width
+     * @param {GLsizei} height texture height
+     * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} pixels 
+     * @param {GLint} [lod] mipmap level-of-detail
+     * @returns {WebGLTexture} texture
+     */
+    static _upload(gl, texture, width, height, pixels, lod = 0)
+    {
+        // Prefer calling _upload() before gl.useProgram() to avoid the
+        // needless switching of GL programs internally. See also:
+        // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+
+        /*
+        // slower than texImage2D, unlike the spec?
+        gl.texSubImage2D(gl.TEXTURE_2D,     // target
+                         lod,               // mip level
+                         0,                 // x-offset
+                         0,                 // y-offset
+                         width,             // texture width
+                         height,            // texture height
+                         gl.RGBA,           // source format
+                         gl.UNSIGNED_BYTE,  // source type
+                         pixels);           // source data
+        */
+
+        gl.texImage2D(gl.TEXTURE_2D,        // target
+                      lod,                  // mip level
+                      gl.RGBA8,             // internal format
+                      width,              // texture width
+                      height,             // texture height
+                      0,                  // border
+                      gl.RGBA,              // source format
+                      gl.UNSIGNED_BYTE,     // source type
+                      pixels);              // source data
+
+        gl.bindTexture(gl.TEXTURE_2D, null);
+        return texture;
+    }
+
+    /**
+     * Generate texture mipmap via hardware
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLTexture} texture
+     * @returns {WebGLTexture} the input texture
+     */
+    static _generateDefaultMipmaps(gl, texture)
+    {
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
+        return texture;
+    }
 }
 
 /**
@@ -196,7 +289,7 @@ export class SpeedyDrawableTexture extends SpeedyTexture
         super(gl, width, height);
 
         /** @type {WebGLFramebuffer} framebuffer */
-        this._glFbo = GLUtils.createFramebuffer(gl, this._glTexture);
+        this._glFbo = SpeedyDrawableTexture._createFramebuffer(gl, this._glTexture);
     }
 
     /**
@@ -205,11 +298,17 @@ export class SpeedyDrawableTexture extends SpeedyTexture
      */
     release()
     {
-        if(this._glFbo !== null)
-            this._glFbo = GLUtils.destroyFramebuffer(this._gl, this._glFbo);
-        else
+        const gl = this._gl;
+
+        // already released?
+        if(this._glFbo == null)
             throw new IllegalOperationError(`The SpeedyDrawableTexture has already been released`);
 
+        // release the framebuffer
+        gl.deleteFramebuffer(this._glFbo);
+        this._glFbo = null;
+
+        // release the SpeedyTexture
         return super.release();
     }
 
@@ -249,7 +348,7 @@ export class SpeedyDrawableTexture extends SpeedyTexture
         texture.discardMipmaps();
 
         // copy to texture
-        GLUtils.copyToTexture(gl, this._glFbo, texture.glTexture, 0, 0, this._width, this._height, lod);
+        SpeedyDrawableTexture._copyToTexture(gl, this._glFbo, texture.glTexture, 0, 0, this._width, this._height, lod);
     }
 
     /*
@@ -300,7 +399,7 @@ export class SpeedyDrawableTexture extends SpeedyTexture
             return;
 
         // allocate new texture
-        const newTexture = GLUtils.createTexture(gl, width, height);
+        const newTexture = SpeedyTexture._createTexture(gl, width, height);
 
         // copy old content
         if(preserveContent) {
@@ -308,11 +407,11 @@ export class SpeedyDrawableTexture extends SpeedyTexture
             // warning when calling copyTexSubImage2D() on Firefox
             // this may not be very efficient?
             const zeros = new Uint8Array(width * height * 4); // RGBA: 4 bytes per pixel
-            GLUtils.uploadToTexture(gl, newTexture, width, height, zeros);
+            SpeedyTexture._upload(gl, newTexture, width, height, zeros);
 
             // copy the old texture to the new one
             const oldWidth = this._width, oldHeight = this._height;
-            GLUtils.copyToTexture(gl, this._glFbo, newTexture, 0, 0, Math.min(width, oldWidth), Math.min(height, oldHeight));
+            SpeedyDrawableTexture._copyToTexture(gl, this._glFbo, newTexture, 0, 0, Math.min(width, oldWidth), Math.min(height, oldHeight));
         }
 
         // update dimensions & discard mipmaps
@@ -330,7 +429,7 @@ export class SpeedyDrawableTexture extends SpeedyTexture
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
         // release the old texture and replace it
-        this._glTexture = GLUtils.destroyTexture(gl, this._glTexture);
+        gl.deleteTexture(this._glTexture);
         this._glTexture = newTexture;
 
         // done!
@@ -371,5 +470,76 @@ export class SpeedyDrawableTexture extends SpeedyTexture
 
         // done!
         return this;
+    }
+
+    /**
+     * Create a FBO associated with an existing texture
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLTexture} texture
+     * @returns {WebGLFramebuffer}
+     */
+    static _createFramebuffer(gl, texture)
+    {
+        const fbo = gl.createFramebuffer();
+
+        // setup framebuffer
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER,         // target
+                                gl.COLOR_ATTACHMENT0,   // color buffer
+                                gl.TEXTURE_2D,          // tex target
+                                texture,                // texture
+                                0);                     // mipmap level
+
+        // check for errors
+        const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+        if(status != gl.FRAMEBUFFER_COMPLETE) {
+            const error = (() => (([
+                'FRAMEBUFFER_UNSUPPORTED',
+                'FRAMEBUFFER_INCOMPLETE_ATTACHMENT',
+                'FRAMEBUFFER_INCOMPLETE_DIMENSIONS',
+                'FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT',
+                'FRAMEBUFFER_INCOMPLETE_MULTISAMPLE'
+            ].filter(err => gl[err] === status))[0] || 'unknown error'))();
+            throw new GLError(`Can't create framebuffer: ${error} (${status})`);
+        }
+
+        // unbind & return
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        return fbo;
+    }
+
+    /**
+     * Copy data from a framebuffer into a texture
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLFramebuffer} fbo we'll read the data from this
+     * @param {WebGLTexture} texture destination texture
+     * @param {GLint} x xpos (where to start copying)
+     * @param {GLint} y ypos (where to start copying)
+     * @param {GLsizei} width width of the texture
+     * @param {GLsizei} height height of the texture
+     * @param {GLint} [lod] mipmap level-of-detail
+     * @returns {WebGLTexture} texture
+     */
+    static _copyToTexture(gl, fbo, texture, x, y, width, height, lod = 0)
+    {
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+
+        gl.copyTexSubImage2D(
+            gl.TEXTURE_2D, // target
+            lod, // mipmap level
+            0, // xoffset
+            0, // yoffset
+            x, // xpos (where to start copying)
+            y, // ypos (where to start copying)
+            width, // width of the texture
+            height // height of the texture
+        );
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
+        return texture;
     }
 }

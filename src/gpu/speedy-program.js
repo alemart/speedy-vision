@@ -98,7 +98,7 @@ export class SpeedyProgram extends Function
         this._gl = gl;
 
         /** @type {WebGLProgram} vertex shader + fragment shader */
-        this._program = compileProgram(gl, shaderdecl.vertexSource, shaderdecl.fragmentSource);
+        this._program = SpeedyProgram._compile(gl, shaderdecl.vertexSource, shaderdecl.fragmentSource);
 
         /** @type {ProgramGeometry} this is a quad */
         this._geometry = new ProgramGeometry(gl, {
@@ -359,6 +359,65 @@ export class SpeedyProgram extends Function
         if(this._texture.length > 1)
             this._textureIndex = 1 - this._textureIndex;
     }
+
+    /**
+     * Compile and link GLSL shaders
+     * @param {WebGL2RenderingContext} gl
+     * @param {string} vertexShaderSource GLSL code of the vertex shader
+     * @param {string} fragmentShaderSource GLSL code of the fragment shader
+     * @returns {WebGLProgram}
+     */
+    static _compile(gl, vertexShaderSource, fragmentShaderSource)
+    {
+        const program = gl.createProgram();
+        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+
+        // compile vertex shader
+        gl.shaderSource(vertexShader, vertexShaderSource);
+        gl.compileShader(vertexShader);
+        gl.attachShader(program, vertexShader);
+
+        // compile fragment shader
+        gl.shaderSource(fragmentShader, fragmentShaderSource);
+        gl.compileShader(fragmentShader);
+        gl.attachShader(program, fragmentShader);
+
+        // link program
+        gl.linkProgram(program);
+        gl.validateProgram(program);
+
+        // got an error?
+        if(!gl.getProgramParameter(program, gl.LINK_STATUS) && !gl.isContextLost()) {
+            const errors = [
+                gl.getShaderInfoLog(fragmentShader),
+                gl.getShaderInfoLog(vertexShader),
+                gl.getProgramInfoLog(program),
+            ];
+
+            gl.deleteProgram(program);
+            gl.deleteShader(fragmentShader);
+            gl.deleteShader(vertexShader);
+
+            // display error
+            const spaces = i => Math.max(0, 2 - Math.floor(Math.log10(i)));
+            const col = k => Array(spaces(k)).fill(' ').join('') + k + '. ';
+            const formattedSource = fragmentShaderSource.split('\n')
+                .map((line, no) => col(1+no) + line)
+                .join('\n');
+
+            throw new GLError(
+                `Can't create shader.\n\n` +
+                `---------- ERROR ----------\n` +
+                errors.join('\n') + '\n\n' +
+                `---------- SOURCE CODE ----------\n` +
+                formattedSource
+            );
+        }
+
+        // done!
+        return program;
+    }
 }
 
 
@@ -370,66 +429,6 @@ export class SpeedyProgram extends Function
 // ============================================================================
 
 
-
-
-/**
- * Compile and link GLSL shaders
- * @param {WebGL2RenderingContext} gl
- * @param {string} vertexShaderSource GLSL code of the vertex shader
- * @param {string} fragmentShaderSource GLSL code of the fragment shader
- * @returns {WebGLProgram}
- */
-function compileProgram(gl, vertexShaderSource, fragmentShaderSource)
-{
-    const program = gl.createProgram();
-    const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-
-    // compile vertex shader
-    gl.shaderSource(vertexShader, vertexShaderSource);
-    gl.compileShader(vertexShader);
-    gl.attachShader(program, vertexShader);
-
-    // compile fragment shader
-    gl.shaderSource(fragmentShader, fragmentShaderSource);
-    gl.compileShader(fragmentShader);
-    gl.attachShader(program, fragmentShader);
-
-    // link program
-    gl.linkProgram(program);
-    gl.validateProgram(program);
-
-    // got an error?
-    if(!gl.getProgramParameter(program, gl.LINK_STATUS) && !gl.isContextLost()) {
-        const errors = [
-            gl.getShaderInfoLog(fragmentShader),
-            gl.getShaderInfoLog(vertexShader),
-            gl.getProgramInfoLog(program),
-        ];
-
-        gl.deleteProgram(program);
-        gl.deleteShader(fragmentShader);
-        gl.deleteShader(vertexShader);
-
-        // display error
-        const spaces = i => Math.max(0, 2 - Math.floor(Math.log10(i)));
-        const col = k => Array(spaces(k)).fill(' ').join('') + k + '. ';
-        const formattedSource = fragmentShaderSource.split('\n')
-            .map((line, no) => col(1+no) + line)
-            .join('\n');
-
-        throw new GLError(
-            `Can't create shader.\n\n` +
-            `---------- ERROR ----------\n` +
-            errors.join('\n') + '\n\n' +
-            `---------- SOURCE CODE ----------\n` +
-            formattedSource
-        );
-    }
-
-    // done!
-    return program;
-}
 
 
 
