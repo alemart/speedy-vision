@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-05-30T01:07:48.045Z
+ * Date: 2021-05-30T02:11:41.449Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -17919,12 +17919,11 @@ class SpeedyProgramGroup
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyProgram", function() { return SpeedyProgram; });
-/* harmony import */ var _gl_utils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./gl-utils.js */ "./src/gpu/gl-utils.js");
-/* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./shader-declaration */ "./src/gpu/shader-declaration.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./shader-declaration */ "./src/gpu/shader-declaration.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -17945,7 +17944,6 @@ __webpack_require__.r(__webpack_exports__);
  * speedy-program.js
  * SpeedyProgram class
  */
-
 
 
 
@@ -18009,7 +18007,7 @@ class SpeedyProgram extends Function
     {
         // not a valid context?
         if(gl.isContextLost())
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalOperationError"](`Can't initialize SpeedyProgram: lost context`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`Can't initialize SpeedyProgram: lost context`);
 
         // options object
         options = Object.assign({
@@ -18047,7 +18045,7 @@ class SpeedyProgram extends Function
 
         /** @type {SpeedyDrawableTexture[]} output texture(s) */
         this._texture = Array.from({ length: options.pingpong ? 2 : 1 },
-            () => new _speedy_texture__WEBPACK_IMPORTED_MODULE_1__["SpeedyDrawableTexture"](gl, options.output[0] | 0, options.output[1] | 0));
+            () => new _speedy_texture__WEBPACK_IMPORTED_MODULE_0__["SpeedyDrawableTexture"](gl, options.output[0] | 0, options.output[1] | 0));
 
         /** @type {number} used for pingpong rendering */
         this._textureIndex = 0;
@@ -18073,7 +18071,7 @@ class SpeedyProgram extends Function
             if(!this._uniform.has(argname)) {
                 this._argIsArray[j] = this._uniform.has(argname + '[0]');
                 if(!this._argIsArray[j])
-                    throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalOperationError"](`Expected uniform "${argname}", as declared in the argument list`);
+                    throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`Expected uniform "${argname}", as declared in the argument list`);
             }
         }
     }
@@ -18090,13 +18088,13 @@ class SpeedyProgram extends Function
 
         // matching arguments?
         if(args.length != argnames.length)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't run shader: incorrect number of arguments (expected ${argnames.length}, got ${args.length})`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Can't run shader: incorrect number of arguments (expected ${argnames.length}, got ${args.length})`);
 
         // can't use the output texture as an input
         const flatArgs = args.flat(); // args.reduce((arr, val) => arr.concat(val), []);
         for(let j = flatArgs.length - 1; j >= 0; j--) {
             if(flatArgs[j] === this._texture[this._textureIndex])
-                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["NotSupportedError"](`Can't run shader: don't use its output texture as an input to itself. Consider using pingpong rendering!`);
+                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["NotSupportedError"](`Can't run shader: don't use its output texture as an input to itself. Consider using pingpong rendering!`);
         }
 
         // context loss?
@@ -18129,7 +18127,7 @@ class SpeedyProgram extends Function
                 // uniform array matches argument name
                 const array = args[i];
                 if(this._uniform.has(`${argname}[${array.length}]`))
-                    throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't run shader: too few elements in the "${argname}" array`);
+                    throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Can't run shader: too few elements in the "${argname}" array`);
                 for(let j = 0, uniform = undefined; (uniform = this._uniform.get(`${argname}[${j}]`)) !== undefined; j++)
                     texNo = uniform.setValue(gl, array[j], texNo);
             }
@@ -18333,7 +18331,7 @@ class SpeedyProgram extends Function
                 .map((line, no) => col(1+no) + line)
                 .join('\n');
 
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["GLError"](
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["GLError"](
                 `Can't create shader.\n\n` +
                 `---------- ERROR ----------\n` +
                 errors.join('\n') + '\n\n' +
@@ -18470,7 +18468,7 @@ function UniformVariable(type, location)
     /** @type {string} GLSL data type */
     this.type = String(type);
     if(!Object.prototype.hasOwnProperty.call(UNIFORM_SETTERS, this.type))
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["NotSupportedError"](`Unsupported uniform type: ${this.type}`);
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["NotSupportedError"](`Unsupported uniform type: ${this.type}`);
 
     /** @type {WebGLUniformLocation} uniform location in a WebGL program */
     this.location = location;
@@ -18504,9 +18502,9 @@ UniformVariable.prototype.setValue = function(gl, value, texNo)
     if(this.type == 'sampler2D') {
         // set texture
         if(texNo > gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["NotSupportedError"](`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["NotSupportedError"](`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
         else if(value == null)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't run shader: cannot use null as an input texture`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Can't run shader: cannot use null as an input texture`);
 
         gl.activeTexture(gl.TEXTURE0 + texNo);
         gl.bindTexture(gl.TEXTURE_2D, value.glTexture);
@@ -18526,10 +18524,10 @@ UniformVariable.prototype.setValue = function(gl, value, texNo)
                 setValue.call(gl, this.location, ...value); // vector
         }
         else
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't run shader: incorrect number of values for ${this.type}: "${value}"`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Can't run shader: incorrect number of values for ${this.type}: "${value}"`);
     }
     else
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't run shader: unrecognized argument "${value}"`);
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Can't run shader: unrecognized argument "${value}"`);
 
     // done
     return texNo;
@@ -18724,7 +18722,7 @@ class SpeedyTextureReader
 
         // lost context?
         if(gl.isContextLost())
-            return this._pixelBuffer[0].slice(0, sizeofBuffer);
+            return this._pixelBuffer[0].subarray(0, sizeofBuffer);
 
         // read pixels
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
@@ -18732,7 +18730,7 @@ class SpeedyTextureReader
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
         // done!
-        return this._pixelBuffer[0].slice(0, sizeofBuffer);
+        return this._pixelBuffer[0].subarray(0, sizeofBuffer);
     }
 
     /**
@@ -18763,12 +18761,12 @@ class SpeedyTextureReader
 
         // lost context?
         if(gl.isContextLost())
-            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(this._pixelBuffer[0].slice(0, sizeofBuffer));
+            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(this._pixelBuffer[0].subarray(0, sizeofBuffer));
 
         // do not optimize?
         if(!useBufferedDownloads) {
             return SpeedyTextureReader._readPixelsViaPBO(gl, this._pixelBuffer[0], fbo, x, y, width, height).then(() =>
-                this._pixelBuffer[0].slice(0, sizeofBuffer)
+                this._pixelBuffer[0].subarray(0, sizeofBuffer)
             );
         }
 
@@ -18790,14 +18788,14 @@ class SpeedyTextureReader
         if(this._consumerQueue.length > 0) {
             const readyBufferIndex = this._consumerQueue.shift();
             return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"](resolve => {
-                resolve(this._pixelBuffer[readyBufferIndex].slice(0, sizeofBuffer));
+                resolve(this._pixelBuffer[readyBufferIndex].subarray(0, sizeofBuffer));
                 this._producerQueue.push(readyBufferIndex); // enqueue AFTER resolve()
             });
         }
         else return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"](resolve => {
             this._waitForQueueNotEmpty(this._consumerQueue).then(() => {
                 const readyBufferIndex = this._consumerQueue.shift();
-                resolve(this._pixelBuffer[readyBufferIndex].slice(0, sizeofBuffer));
+                resolve(this._pixelBuffer[readyBufferIndex].subarray(0, sizeofBuffer));
                 this._producerQueue.push(readyBufferIndex); // enqueue AFTER resolve()
             }).turbocharge();
         });
@@ -18902,10 +18900,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyTexture", function() { return SpeedyTexture; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyDrawableTexture", function() { return SpeedyDrawableTexture; });
 /* harmony import */ var _speedy_gpu__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-gpu */ "./src/gpu/speedy-gpu.js");
-/* harmony import */ var _gl_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./gl-utils */ "./src/gpu/gl-utils.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -18926,7 +18923,6 @@ __webpack_require__.r(__webpack_exports__);
  * speedy-texture.js
  * A wrapper around WebGLTexture
  */
-
 
 
 
@@ -18972,7 +18968,7 @@ class SpeedyTexture
 
         // already released?
         if(this._glTexture == null)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`The SpeedyTexture has already been released`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`The SpeedyTexture has already been released`);
 
         // release resources
         gl.deleteTexture(this._glTexture);
@@ -19016,7 +19012,7 @@ class SpeedyTexture
         // compute a few layers of a Gaussian pyramid for better results
         if(gaussian) {
             let layer = this, pyramid = null;
-            for(let level = 1; level < _utils_globals__WEBPACK_IMPORTED_MODULE_4__["PYRAMID_MAX_LEVELS"]; level++) {
+            for(let level = 1; level < _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_LEVELS"]; level++) {
                 if(Math.min(layer.width, layer.height) < 2)
                     break;
 
@@ -19101,7 +19097,7 @@ class SpeedyTexture
      */
     static _createTexture(gl, width, height)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(width > 0 && height > 0);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(width > 0 && height > 0);
 
         // create & bind texture
         const texture = gl.createTexture();
@@ -19210,7 +19206,7 @@ class SpeedyDrawableTexture extends SpeedyTexture
 
         // already released?
         if(this._glFbo == null)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`The SpeedyDrawableTexture has already been released`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`The SpeedyDrawableTexture has already been released`);
 
         // release the framebuffer
         gl.deleteFramebuffer(this._glFbo);
@@ -19250,7 +19246,7 @@ class SpeedyDrawableTexture extends SpeedyTexture
         const expectedHeight = Math.max(1, Math.floor(texture.height / pot));
 
         // validate
-        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(this._width === expectedWidth && this._height === expectedHeight);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(this._width === expectedWidth && this._height === expectedHeight);
 
         // discard mipmaps, if any
         texture.discardMipmaps();
@@ -19300,7 +19296,7 @@ class SpeedyDrawableTexture extends SpeedyTexture
 
         // validate size
         width |= 0; height |= 0;
-        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(width > 0 && height > 0);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(width > 0 && height > 0);
 
         // context loss?
         if(gl.isContextLost())
@@ -19408,7 +19404,7 @@ class SpeedyDrawableTexture extends SpeedyTexture
                 'FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT',
                 'FRAMEBUFFER_INCOMPLETE_MULTISAMPLE'
             ].filter(err => gl[err] === status))[0] || 'unknown error'))();
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["GLError"](`Can't create framebuffer: ${error} (${status})`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["GLError"](`Can't create framebuffer: ${error} (${status})`);
         }
 
         // unbind & return
