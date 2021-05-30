@@ -129,7 +129,7 @@ export class GLUtils
         gl.deleteProgram(program);
         return null;
 
-        // Need to delete shaders as well? In sec 5.14.9 Programs and shaders
+        // Need to delete the shaders as well? In sec 5.14.9 Programs and shaders
         // of the WebGL 1.0 spec, it is mentioned that the underlying GL object
         // will automatically be marked for deletion when the JS object is
         // destroyed (i.e., garbage collected)

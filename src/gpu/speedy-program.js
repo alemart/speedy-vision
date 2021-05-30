@@ -119,19 +119,12 @@ export class SpeedyProgram extends Function
         /** @type {number} height of the output texture */
         this._height = Math.max(1, this._options.output[1] | 0);
 
-        /** @type {boolean} flag indicating the need to update the texSize uniform */
-        this._dirtySize = true;
-
-        /** @type {Map<string,UniformVariable>} uniform variables */
-        this._uniform = new Map();
-
         /** @type {UBOHelper} UBO helper (lazy instantiation) */
         this._ubo = null;
 
         /** @type {SpeedyDrawableTexture[]} output texture(s) */
-        this._texture = !this._options.renderToTexture ? [] :
-            Array.from({ length: this._options.pingpong ? 2 : 1 },
-                () => new SpeedyDrawableTexture(gl, this._width, this._height));
+        this._texture = Array.from({ length: this._options.pingpong ? 2 : 1 },
+            () => new SpeedyDrawableTexture(gl, this._width, this._height));
 
         /** @type {number} used for pingpong rendering */
         this._textureIndex = 0;
@@ -139,10 +132,12 @@ export class SpeedyProgram extends Function
         /** @type {SpeedyTextureReader} texture reader */
         this._textureReader = new SpeedyTextureReader();
 
+        /** @type {boolean} flag indicating the need to update the texSize uniform */
+        this._dirtySize = true;
 
-        // validate options
-        if(this._options.pingpong && !this._options.renderToTexture)
-            throw new IllegalOperationError(`Pingpong rendering can only be used when rendering to textures`);
+        /** @type {Map<string,UniformVariable>} uniform variables */
+        this._uniform = new Map();
+
 
         // autodetect uniforms
         gl.useProgram(this._program);
@@ -225,30 +220,31 @@ export class SpeedyProgram extends Function
         if(this._ubo !== null)
             this._ubo.update();
 
-        // draw call
-        const fbo = options.renderToTexture ? this._texture[this._textureIndex].glFbo : null;
+        // select the render target
+        const texture = this._texture[this._textureIndex];
+        const fbo = options.renderToTexture ? texture.glFbo : null;
+
+        // bind the FBO
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+
+        // draw call
         gl.viewport(0, 0, this._width, this._height);
         gl.drawArrays(gl.TRIANGLES, 0, 6); // mode, offset, count
+
+        // unbind the FBO
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
         // unbind the VAO
         gl.bindVertexArray(null);
 
-        // finish things
-        if(options.renderToTexture) {
-            // we'll return the texture we've just rendered to
-            const tex = this._texture[this._textureIndex];
+        // we've just changed the texture! discard the pyramid, if any
+        texture.discardMipmaps();
 
-            tex.discardMipmaps(); // we've changed it; discard the pyramid
-            this._pingpong(); // ping-pong rendering
+        // ping-pong rendering
+        this._pingpong();
 
-            return tex; // done!
-        }
-        else {
-            // nothing to return
-            return null;
-        }
+        // done!
+        return texture;
     }
 
     /**
@@ -312,12 +308,12 @@ export class SpeedyProgram extends Function
      */
     readPixelsSync(x = 0, y = 0, width = this._width, height = this._height)
     {
-        // can't read pixels if we're not rendering to a texture (i.e., no framebuffer)
+        // can't read pixels if we're not rendering to a texture
         if(!this._options.renderToTexture)
             throw new IllegalOperationError(`Can't read pixels from a SpeedyProgram that doesn't render to an internal texture`);
 
         // read the last render target
-        const idx = this._options.pingpong ? 1 - this._textureIndex : this._textureIndex;
+        const idx = this._texture.length > 1 ? 1 - this._textureIndex : this._textureIndex;
         return this._textureReader.readPixelsSync(this._texture[idx], x, y, width, height);
     }
 
@@ -333,12 +329,12 @@ export class SpeedyProgram extends Function
      */
     readPixelsAsync(useBufferedDownloads = false, x = 0, y = 0, width = this._width, height = this._height)
     {
-        // can't read pixels if we're not rendering to a texture (i.e., no framebuffer)
+        // can't read pixels if we're not rendering to a texture
         if(!this._options.renderToTexture)
             throw new IllegalOperationError(`Can't read pixels from a SpeedyProgram that doesn't render to an internal texture`);
 
         // read the last render target
-        const idx = this._options.pingpong ? 1 - this._textureIndex : this._textureIndex;
+        const idx = this._texture.length > 1 ? 1 - this._textureIndex : this._textureIndex;
         return this._textureReader.readPixelsAsync(this._texture[idx], useBufferedDownloads, x, y, width, height);
     }
 
@@ -353,19 +349,6 @@ export class SpeedyProgram extends Function
             this._ubo = new UBOHelper(this._gl, this._program);
 
         this._ubo.set(blockName, data);
-    }
-
-    /**
-     * Copy the output of this program to a texture
-     * @param {SpeedyTexture} texture target texture
-     * @param {number} [lod] level-of-detail of the target texture
-     */
-    exportTo(texture, lod = 0)
-    {
-        if(this._options.pingpong)
-            throw new NotSupportedError(`Can't copy the output of a pingpong-enabled SpeedyProgram`);
-
-        this._texture[this._textureIndex].copyTo(texture, lod);
     }
 
     /**
@@ -418,7 +401,7 @@ export class SpeedyProgram extends Function
      */
     _pingpong()
     {
-        if(this._options.pingpong)
+        if(this._texture.length > 1)
             this._textureIndex = 1 - this._textureIndex;
     }
 }

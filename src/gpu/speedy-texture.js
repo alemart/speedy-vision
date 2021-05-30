@@ -107,9 +107,9 @@ export class SpeedyTexture
                 if(Math.min(layer.width, layer.height) < 2)
                     break;
 
-                pyramid = gpu.programs.pyramids(level-1);
+                pyramid = gpu.programs.pyramids(level - 1);
                 layer = pyramid.reduce(layer);
-                pyramid.exportTo(this, level);
+                layer.copyTo(this, level);
             }
         }
 

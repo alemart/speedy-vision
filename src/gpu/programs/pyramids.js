@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { SpeedyGPU } from '../speedy-gpu';
 import { SpeedyProgram } from '../speedy-program';
-import { SpeedyTexture } from '../speedy-texture';
+import { SpeedyTexture, SpeedyDrawableTexture } from '../speedy-texture';
 import { importShader } from '../shader-declaration';
 import { convX, convY } from '../shaders/filters/convolution';
 import { IllegalOperationError } from '../../utils/errors';
@@ -102,11 +102,15 @@ export class GPUPyramids extends SpeedyProgramGroup
             // same rules as above with sum(k) = 2
             .declare('_smoothX2', convX([
                 0.1, 0.5, 0.8, 0.5, 0.1 // NOTE: this would saturate the image, but we apply it on a 2x upsampled version with lots of zero pixels
-            ]), this.program.hasTextureSize(2 * this._width, 2 * this._height))
+            ]), {
+                ...(this.program.hasTextureSize(2 * this._width, 2 * this._height))
+            })
 
             .declare('_smoothY2', convY([
                 0.1, 0.5, 0.8, 0.5, 0.1
-            ], 1.0 / 2.0), this.program.hasTextureSize(2 * this._width, 2 * this._height))
+            ], 1.0 / 2.0), {
+                ...(this.program.hasTextureSize(2 * this._width, 2 * this._height))
+            })
 
             /*
             // smoothing for 3x image
@@ -121,11 +125,13 @@ export class GPUPyramids extends SpeedyProgramGroup
             */
 
             // upsampling & downsampling
-            .declare('_upsample2', upsample2,
-                this.program.hasTextureSize(2 * this._width, 2 * this._height))
+            .declare('_upsample2', upsample2, {
+                ...(this.program.hasTextureSize(2 * this._width, 2 * this._height))
+            })
 
-            .declare('_downsample2', downsample2,
-                this.program.hasTextureSize(Math.max(1, Math.floor(this._width / 2)), Math.max(1, Math.floor(this._height / 2))))
+            .declare('_downsample2', downsample2, {
+                ...(this.program.hasTextureSize(Math.max(1, Math.floor(this._width / 2)), Math.max(1, Math.floor(this._height / 2))))
+            })
 
             /*
             .declare('_upsample3', upsample3,
@@ -141,50 +147,31 @@ export class GPUPyramids extends SpeedyProgramGroup
                 this.program.hasTextureSize(Math.floor(2 * this._width / 3), Math.floor(2 * this._height / 3)))
             */
         ;
-
-        /** @type {SpeedyProgram} */
-        this._lastOperation = null;
     }
 
     /**
      * Reduce the image (0.5x)
      * @param {SpeedyTexture} image
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyDrawableTexture}
      */
     reduce(image)
     {
         const smoothImage = this._smoothY(this._smoothX(image));
         const downsampledImage = this._downsample2(smoothImage);
 
-        this._lastOperation = this._downsample2;
         return downsampledImage;
     }
 
     /**
      * Expand the image (2x)
      * @param {SpeedyTexture} image
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyDrawableTexture}
      */
     expand(image)
     {
         const upsampledImage = this._upsample2(image);
         const smoothImage = this._smoothY2(this._smoothX2(upsampledImage));
 
-        this._lastOperation = this._smoothY2;
         return smoothImage;
-    }
-
-    /**
-     * Export the result of the last operation to
-     * a specific level of detail of a texture
-     * @param {SpeedyTexture} texture
-     * @param {number} lod level-of-detail
-     */
-    exportTo(texture, lod)
-    {
-        if(this._lastOperation !== null)
-            this._lastOperation.exportTo(texture, lod);
-        else
-            throw new IllegalOperationError(`Can't export pyramid level before generating it`);
     }
 }
