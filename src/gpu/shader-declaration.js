@@ -28,7 +28,7 @@ const DEFAULT_ATTRIBUTES = Object.freeze({
 });
 
 const DEFAULT_ATTRIBUTES_LOCATION = Object.freeze({
-    position: 0,
+    position: 0, // use location 0; see https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices
     texCoord: 1,
 });
 
@@ -43,8 +43,8 @@ void main() {
 }\n`;
 
 const DEFAULT_FRAGMENT_SHADER_PREFIX = `#version 300 es
-precision highp int;
-precision mediump float;
+precision highp int; // int32
+precision mediump float; // ~float16
 precision mediump sampler2D;
 
 out vec4 color;
