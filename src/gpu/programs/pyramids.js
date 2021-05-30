@@ -60,11 +60,11 @@ export class GPUPyramids extends SpeedyProgramGroup
     {
         super(gpu, width, height);
         this
-            /*
             // pyramid operations (scale = 2)
             .compose('_reduce', '_smoothX', '_smoothY', '_downsample2')
             .compose('_expand', '_upsample2', '_smoothX2', '_smoothY2')
            
+            /*
             // intra-pyramid operations (scale = 1.5)
             .compose('_intraReduce', '_upsample2', '_smoothX2', '_smoothY2', '_downsample3/2')
             .compose('_intraExpand', '_upsample3', '_smoothX3', '_smoothY3', '_downsample2/3')
@@ -156,10 +156,7 @@ export class GPUPyramids extends SpeedyProgramGroup
      */
     reduce(image)
     {
-        const smoothImage = this._smoothY(this._smoothX(image));
-        const downsampledImage = this._downsample2(smoothImage);
-
-        return downsampledImage;
+        return this._reduce(image);
     }
 
     /**
@@ -169,9 +166,6 @@ export class GPUPyramids extends SpeedyProgramGroup
      */
     expand(image)
     {
-        const upsampledImage = this._upsample2(image);
-        const smoothImage = this._smoothY2(this._smoothX2(upsampledImage));
-
-        return smoothImage;
+        return this._expand(image);
     }
 }
