@@ -66,10 +66,10 @@ export class SpeedyTexture
             throw new IllegalOperationError(`The SpeedyTexture has already been released`);
 
         // release resources
+        this.discardMipmaps();
         gl.deleteTexture(this._glTexture);
         this._glTexture = null;
         this._width = this._height = 0;
-        this._hasMipmaps = false;
 
         // done!
         return null;
@@ -82,7 +82,7 @@ export class SpeedyTexture
      */
     upload(pixels)
     {
-        this._hasMipmaps = false;
+        this.discardMipmaps();
         SpeedyTexture._upload(this._gl, this._glTexture, this._width, this._height, pixels, 0);
         return this;
     }
@@ -137,6 +137,9 @@ export class SpeedyTexture
         gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, this._width, this._height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
         gl.bindTexture(gl.TEXTURE_2D, null);
+
+        // no mipmaps
+        this.discardMipmaps();
 
         // done!
         return this;
