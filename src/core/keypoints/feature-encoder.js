@@ -89,7 +89,8 @@ export class FeatureEncoder
         const size = Math.min(pixels.length, e2);
 
         // copy the data (we use shared buffers when receiving pixels[])
-        pixels = new Uint8Array(pixels);
+        if(descriptorSize + extraSize > 0)
+            pixels = new Uint8Array(pixels);
 
         // for each encoded keypoint
         for(let i = 0; i < size; i += 4 /* RGBA */ * pixelsPerKeypoint) {
