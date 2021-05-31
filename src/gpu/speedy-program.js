@@ -117,9 +117,12 @@ export class SpeedyProgram extends Function
         /** @type {boolean} should we render to a texture? If false, we render to the canvas */
         this._renderToTexture = Boolean(options.renderToTexture);
 
-        /** @type {SpeedyDrawableTexture[]} output texture(s) */
-        this._texture = Array.from({ length: options.pingpong ? 2 : 1 },
+        /** @type {SpeedyDrawableTexture[]} internal texture(s) */
+        this._ownTexture = Array.from({ length: options.pingpong ? 2 : 1 },
             () => new SpeedyDrawableTexture(gl, options.output[0] | 0, options.output[1] | 0));
+
+        /** @type {SpeedyDrawableTexture[]} output texture(s) */
+        this._texture = [].concat(this._ownTexture);
 
         /** @type {number} used for pingpong rendering */
         this._textureIndex = 0;
@@ -178,7 +181,7 @@ export class SpeedyProgram extends Function
         // bind the VAO
         gl.bindVertexArray(this._geometry.vao);
 
-        // update texSize uniform
+        // update texSize uniform (available in all fragment shaders)
         const texSize = this._uniform.get('texSize');
         gl.uniform2f(texSize.location, this.width, this.height);
 
@@ -279,7 +282,7 @@ export class SpeedyProgram extends Function
     }
 
     /**
-     * Release resources associated with this SpeedyProgram
+     * Release the resources associated with this SpeedyProgram
      * @returns {null}
      */
     release()
@@ -291,8 +294,9 @@ export class SpeedyProgram extends Function
             this._ubo = this._ubo.release();
 
         // Release internal textures
-        for(let i = 0; i < this._texture.length; i++)
-            this._texture[i] = this._texture[i].release();
+        for(let i = 0; i < this._ownTexture.length; i++)
+            this._ownTexture[i] = this._ownTexture[i].release();
+        this._texture.fill(null);
 
         // Release geometry
         this._geometry = this._geometry.release();
@@ -308,6 +312,28 @@ export class SpeedyProgram extends Function
 
         // done!
         return null;
+    }
+
+    /**
+     * Use the provided texture(s) as output
+     * @param {SpeedyDrawableTexture[]} texture set to null to use the internal texture(s)
+     */
+    use(...texture)
+    {
+        const expectedTextures = this._ownTexture.length;
+        Utils.assert(texture.length === expectedTextures, `Incorrect number of textures (expected ${expectedTextures})`);
+
+        // we need to keep the current size
+        const width = this.width;
+        const height = this.height;
+
+        // update output texture(s)
+        const useInternal = texture.every(tex => tex === null);
+        this._texture = !useInternal ? [].concat(texture) : this._ownTexture;
+        this._textureIndex = 0;
+
+        // restore previous size
+        this.resize(width, height);
     }
 
     /**

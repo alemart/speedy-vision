@@ -19,7 +19,9 @@
  * Harris corner detector
  */
 
+import { SpeedyGL } from '../../../gpu/speedy-gl';
 import { SpeedyGPU } from '../../../gpu/speedy-gpu';
+import { SpeedyDrawableTexture } from '../../../gpu/speedy-texture';
 import { FeatureDetectionAlgorithm } from '../feature-detection-algorithm';
 import { PixelComponent } from '../../../utils/types';
 import { PYRAMID_MAX_LEVELS } from '../../../utils/globals';
@@ -83,14 +85,12 @@ export class HarrisFeatures extends FeatureDetectionAlgorithm
         const lod = 0, lodStep = 1, numberOfLayers = 1;
 
         // compute derivatives
-        const df = gpu.programs.keypoints.multiscaleSobel(inputTexture, lod).clone();
+        gpu.programs.keypoints.multiscaleSobel.use(null);
+        const df = gpu.programs.keypoints.multiscaleSobel(inputTexture, lod);
         const sobelDerivatives = new Array(MAX_LAYERS).fill(df);
 
         // corner detection
         const corners = gpu.programs.keypoints.multiscaleHarris(inputTexture, windowSize, numberOfLayers, lodStep, sobelDerivatives);
-
-        // release derivatives
-        df.release();
 
         // find the maximum corner response
         const numIterations = Math.ceil(Math.log2(Math.max(corners.width, corners.height)));
@@ -127,6 +127,8 @@ export class MultiscaleHarrisFeatures extends FeatureDetectionAlgorithm
         this._quality = DEFAULT_QUALITY;
         this._depth = DEFAULT_DEPTH;
         this._scaleFactor = DEFAULT_SCALE_FACTOR;
+        this._derivativesTexture = Array.from({ length : MAX_LAYERS }, () =>
+            new SpeedyDrawableTexture(SpeedyGL.instance.gl, 1, 1));
     }
 
     /**
@@ -207,17 +209,16 @@ export class MultiscaleHarrisFeatures extends FeatureDetectionAlgorithm
 
         // compute derivatives
         const sobelDerivatives = new Array(MAX_LAYERS);
-        for(let j = 0; j < numberOfLayers; j++)
-            sobelDerivatives[j] = gpu.programs.keypoints.multiscaleSobel(pyramid, j * lodStep).clone();
+        for(let j = 0; j < numberOfLayers; j++) {
+            gpu.programs.keypoints.multiscaleSobel.use(this._derivativesTexture[j]);
+            sobelDerivatives[j] = gpu.programs.keypoints.multiscaleSobel(pyramid, j * lodStep);
+            gpu.programs.keypoints.multiscaleSobel.use(null);
+        }
         for(let k = numberOfLayers; k < sobelDerivatives.length; k++)
             sobelDerivatives[k] = sobelDerivatives[k-1]; // can't call shaders with null pointers
 
         // corner detection
         const corners = gpu.programs.keypoints.multiscaleHarris(pyramid, windowSize, numberOfLayers, lodStep, sobelDerivatives);
-
-        // release derivatives
-        for(let i = 0; i < numberOfLayers; i++)
-            sobelDerivatives[i].release();
 
         // find the maximum corner response
         const numIterations = Math.ceil(Math.log2(Math.max(corners.width, corners.height)));
