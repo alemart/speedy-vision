@@ -295,7 +295,9 @@ export class SpeedyFeatureDetector
             return keypoints;
 
         // cap the number of keypoints
-        return keypoints.sort(this._compareKeypoints).slice(0, this._max);
+        keypoints.sort(this._compareKeypoints);
+        keypoints.length = Math.min(keypoints.length, this._max);
+        return keypoints;
     }
 }
 

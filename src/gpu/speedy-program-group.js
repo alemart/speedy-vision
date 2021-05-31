@@ -145,15 +145,6 @@ export class SpeedyProgramGroup
                 };
             },
 
-            // Calling the program will return a new
-            // instance of the output texture every time
-            // The returned texture must be released manually
-            doesNotRecycleTextures() {
-                return {
-                    recycleTexture: false
-                };
-            },
-
             // Pingpong Rendering: the output texture of a
             // program cannot be used as an input to itself.
             // This is a convenient helper in these situations

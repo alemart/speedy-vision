@@ -20,7 +20,7 @@
  */
 
 import { SpeedyProgramGroup } from '../speedy-program-group';
-import { SpeedyTexture } from '../speedy-texture';
+import { SpeedyTexture, SpeedyDrawableTexture } from '../speedy-texture';
 import { importShader } from '../shader-declaration';
 import { PixelComponent, ColorComponentId } from '../../utils/types';
 import { IllegalArgumentError } from '../../utils/errors';
@@ -79,11 +79,6 @@ export class GPUUtils extends SpeedyProgramGroup
                 ...this.program.rendersToCanvas()
             })
                 
-            // clone a texture (release it afterwards)
-            .declare('clone', identity, {
-                ...this.program.doesNotRecycleTextures()
-            })
-
             // flip y-axis
             .declare('flipY', flipY)
 
@@ -141,7 +136,7 @@ export class GPUUtils extends SpeedyProgramGroup
      * Scan a single component in all pixels of the image and find the maximum intensity
      * @param {SpeedyTexture} image 
      * @param {number} pixelComponent a single PixelComponent flag
-     * @returns {SpeedyTexture} such that pixel[component] = max(image_pixel[component])
+     * @returns {SpeedyDrawableTexture} such that pixel[component] = max(image_pixel[component])
      *                                                           for all image_pixels
      */
     scanMax(image, pixelComponent)
@@ -154,7 +149,7 @@ export class GPUUtils extends SpeedyProgramGroup
      * Scan a single component in all pixels of the image and find the minimum intensity
      * @param {SpeedyTexture} image 
      * @param {number} pixelComponent a single PixelComponent flag
-     * @returns {SpeedyTexture} such that pixel[component] = min(image_pixel[component])
+     * @returns {SpeedyDrawableTexture} such that pixel[component] = min(image_pixel[component])
      *                                                           for all image_pixels
      */
     scanMin(image, pixelComponent)
@@ -169,11 +164,11 @@ export class GPUUtils extends SpeedyProgramGroup
      * @param {SpeedyTexture} src 
      * @param {number} destComponents one or more PixelComponent flags
      * @param {number} srcComponent a single PixelComponent flag
-     * @returns {SpeedyTexture} a copy of dest with its destComponents replaced by the srcComponent of src
+     * @returns {SpeedyDrawableTexture} a copy of dest with its destComponents replaced by the srcComponent of src
      */
     copyComponents(dest, src, destComponents, srcComponent)
     {
-        if(!ColorComponentId.hasOwnProperty(srcComponent))
+        if(!Object.prototype.hasOwnProperty.call(ColorComponentId, srcComponent))
             throw new IllegalArgumentError(`Invalid srcComponent: ${srcComponent}`)
 
         const srcComponentId = ColorComponentId[srcComponent];
@@ -184,7 +179,7 @@ export class GPUUtils extends SpeedyProgramGroup
      * Scan a single component in all pixels of the image and find the min & max intensities
      * @param {SpeedyTexture} image 
      * @param {number} pixelComponent a single PixelComponent flag
-     * @returns {SpeedyTexture} RGBA = (max, min, max - min, original_pixel)
+     * @returns {SpeedyDrawableTexture} RGBA = (max, min, max - min, original_pixel)
      */
     _scanMinMax(image, pixelComponent)
     {

@@ -20,6 +20,8 @@
  */
 
 import { SpeedyProgramGroup } from '../speedy-program-group';
+import { SpeedyTexture, SpeedyDrawableTexture } from '../speedy-texture';
+import { SpeedyTextureReader } from '../speedy-texture-reader';
 import { importShader } from '../shader-declaration';
 import { SpeedyFeature } from '../../core/speedy-feature';
 import { FeatureEncoder } from '../../core/keypoints/feature-encoder';
@@ -117,6 +119,9 @@ export class GPUEncoders extends SpeedyProgramGroup
 
         // setup internal data
 
+        /** @type {SpeedyTextureReader} Texture Reader */
+        this._textureReader = new SpeedyTextureReader();
+
         /** @type {Float32Array} UBO stuff */
         this._uploadBuffer = null; // lazy spawn
     }
@@ -127,7 +132,7 @@ export class GPUEncoders extends SpeedyProgramGroup
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
      * @param {number} encoderLength
-     * @returns {SpeedyTexture} texture with encoded keypoints
+     * @returns {SpeedyDrawableTexture} texture with encoded keypoints
      */
     encodeKeypoints(corners, descriptorSize, extraSize, encoderLength)
     {
@@ -156,7 +161,7 @@ export class GPUEncoders extends SpeedyProgramGroup
         const keypointCapacity = FeatureEncoder.capacity(descriptorSize, extraSize, encoderLength);
         const headerEncoderLength = Math.max(1, Math.ceil(Math.sqrt(keypointCapacity * pixelsPerKeypointHeader)));
         this._encodeKeypoints.resize(headerEncoderLength, headerEncoderLength);
-        let encodedKeypointHeaders = this._encodeKeypoints.clear(0, 0, 0, 0);
+        let encodedKeypointHeaders = this._encodeKeypoints.clear();
         for(let passId = 0; passId < numPasses; passId++)
             encodedKeypointHeaders = this._encodeKeypoints(offsets, encodedKeypointHeaders, imageSize, passId, numPasses, 0, 0, headerEncoderLength);
 
@@ -173,14 +178,16 @@ export class GPUEncoders extends SpeedyProgramGroup
      */
     downloadEncodedKeypoints(encodedKeypoints, useBufferedDownloads = true)
     {
-        // helper shader for reading the data
-        this._downloadEncodedKeypoints.resize(encodedKeypoints.width, encodedKeypoints.height);
-        this._downloadEncodedKeypoints(encodedKeypoints);
+        // helper shader
+        if(!(encodedKeypoints instanceof SpeedyDrawableTexture)) {
+            this._downloadEncodedKeypoints.resize(encodedKeypoints.width, encodedKeypoints.height);
+            encodedKeypoints = this._downloadEncodedKeypoints(encodedKeypoints);
+        }
 
         // read data from the GPU
-        return this._downloadEncodedKeypoints.readPixelsAsync(useBufferedDownloads).catch(err => {
-            return new IllegalOperationError(`Can't download encoded keypoint texture`, err);
-        });
+        return this._textureReader.readPixelsAsync(encodedKeypoints, useBufferedDownloads).catch(err =>
+            new IllegalOperationError(`Can't download the encoded keypoint texture`, err)
+        );
     }
 
     /**
@@ -191,7 +198,7 @@ export class GPUEncoders extends SpeedyProgramGroup
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
      * @param {number} encoderLength
-     * @returns {SpeedyTexture} encodedKeypoints
+     * @returns {SpeedyDrawableTexture} encodedKeypoints
      */
     uploadKeypoints(keypoints, descriptorSize, extraSize, encoderLength)
     {

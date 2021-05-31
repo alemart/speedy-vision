@@ -28,7 +28,7 @@ const DEFAULT_ATTRIBUTES = Object.freeze({
 });
 
 const DEFAULT_ATTRIBUTES_LOCATION = Object.freeze({
-    position: 0,
+    position: 0, // use location 0; see https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices
     texCoord: 1,
 });
 
@@ -43,8 +43,8 @@ void main() {
 }\n`;
 
 const DEFAULT_FRAGMENT_SHADER_PREFIX = `#version 300 es
-precision highp int;
-precision mediump float;
+precision highp int; // int32
+precision mediump float; // ~float16
 precision mediump sampler2D;
 
 out vec4 color;
@@ -277,8 +277,6 @@ export class ShaderDeclaration
 
                     // read array name & size
                     const [ array, size ] = [ match[1], Number(match[2]) ];
-                    if(size < 0)
-                        throw new ParseError(`Array ${array} has invalid size: ${size}`);
 
                     // register uniforms
                     for(let i = 0; i < size; i++)

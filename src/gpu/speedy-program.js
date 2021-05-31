@@ -19,12 +19,11 @@
  * SpeedyProgram class
  */
 
-import { GLUtils } from './gl-utils.js';
-import { SpeedyTexture } from './speedy-texture';
+import { SpeedyTexture, SpeedyDrawableTexture } from './speedy-texture';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { ShaderDeclaration } from './shader-declaration';
 import { Utils } from '../utils/utils';
-import { NotSupportedError, IllegalArgumentError, IllegalOperationError } from '../utils/errors';
+import { NotSupportedError, IllegalArgumentError, IllegalOperationError, GLError } from '../utils/errors';
 
 // Map uniform type to a gl function
 const UNIFORM_SETTERS = Object.freeze({
@@ -50,13 +49,6 @@ const UNIFORM_SETTERS = Object.freeze({
     'mat4':     'uniformMatrix4fv',
 });
 
-// number of pixel buffer objects
-// used to get a performance boost in gl.readPixels()
-// (1 seems to perform better on mobile, 2 on the PC?)
-const PBO_COUNT = 1;
-
-// cache program geometry
-const geometryCache = new WeakMap();
 
 
 /**
@@ -87,14 +79,31 @@ export class SpeedyProgram extends Function
      */
     _init(gl, shaderdecl, options)
     {
+        // not a valid context?
+        if(gl.isContextLost())
+            throw new IllegalOperationError(`Can't initialize SpeedyProgram: lost context`);
+
+        // options object
+        options = Object.assign({
+            // default options
+            output: [ 1, 1 ], // size of the output texture
+            renderToTexture: true, // render results to a texture?
+            pingpong: false, // alternate output texture between calls
+        }, options);
+
+
+
         /** @type {WebGL2RenderingContext} */
         this._gl = gl;
 
-        /** @type {WebGLProgram} */
-        this._program = GLUtils.createProgram(gl, shaderdecl.vertexSource, shaderdecl.fragmentSource);
+        /** @type {WebGLProgram} vertex shader + fragment shader */
+        this._program = SpeedyProgram._compile(gl, shaderdecl.vertexSource, shaderdecl.fragmentSource);
 
-        /** @type {StoredGeometry} this is a quad */
-        this._geometry = this._createGeometry(gl, shaderdecl);
+        /** @type {ProgramGeometry} this is a quad */
+        this._geometry = new ProgramGeometry(gl, {
+            position: shaderdecl.locationOfAttributes.position,
+            texCoord: shaderdecl.locationOfAttributes.texCoord
+        });
 
         /** @type {string[]} names of the arguments of the SpeedyProgram */
         this._argnames = shaderdecl.arguments;
@@ -102,68 +111,25 @@ export class SpeedyProgram extends Function
         /** @type {boolean[]} tells whether the i-th argument of the SpeedyProgram is an array or not */
         this._argIsArray = (new Array(this._argnames.length)).fill(false);
 
-        /** @type {object} user options */
-        this._options = Object.freeze({
-            output: [ gl.drawingBufferWidth, gl.drawingBufferHeight ], // size of the output texture
-            renderToTexture: true, // render results to a texture?
-            recycleTexture: true, // recycle output texture? If false, you must manually destroy the output texture
-            pingpong: false, // alternate output texture between calls
-            ...options // user-defined options
-        });
-
-        /** @type {number} width of the output texture */
-        this._width = Math.max(1, this._options.output[0] | 0);
-
-        /** @type {number} height of the output texture */
-        this._height = Math.max(1, this._options.output[1] | 0);
-
-        /** @type {boolean} flag indicating the need to update the texSize uniform */
-        this._dirtySize = true;
-
-        /** @type {Map<string,UniformVariable>} uniform variables */
-        this._uniform = new Map();
-
-        /** @type {UBOHelper} UBO helper */
+        /** @type {UBOHelper} UBO helper (lazy instantiation) */
         this._ubo = null;
 
-        /** @type {SpeedyTexture[]} output texture(s) */
-        this._texture = !this._options.renderToTexture ? [] :
-            (new Array(this._options.pingpong ? 2 : 1)).fill(null);
+        /** @type {boolean} should we render to a texture? If false, we render to the canvas */
+        this._renderToTexture = Boolean(options.renderToTexture);
 
-        /** @type {WebGLFramebuffer[]} framebuffer object(s) */
-        this._fbo = !this._options.renderToTexture ? [] :
-            (new Array(this._options.pingpong ? 2 : 1)).fill(null);
+        /** @type {SpeedyDrawableTexture[]} internal texture(s) */
+        this._ownTexture = Array.from({ length: options.pingpong ? 2 : 1 },
+            () => new SpeedyDrawableTexture(gl, options.output[0] | 0, options.output[1] | 0));
+
+        /** @type {SpeedyDrawableTexture[]} output texture(s) */
+        this._texture = [].concat(this._ownTexture);
 
         /** @type {number} used for pingpong rendering */
         this._textureIndex = 0;
 
-        /** @type {Uint8Array[]} pixel buffers for data transfers */
-        this._pixelBuffer = (new Array(PBO_COUNT)).fill(null);
+        /** @type {Map<string,UniformVariable>} uniform variables */
+        this._uniform = new Map();
 
-        /** @type {number[]} [width, height] of the pixel buffers */
-        this._pixelBufferSize = [0, 0];
-
-        /** @type {number[]} for async data transfers */
-        this._pboConsumerQueue = (new Array(PBO_COUNT)).fill(0).map((_, i) => i);
-
-        /** @type {number[]} for async data transfers */
-        this._pboProducerQueue = [];
-
-
-
-        // validate options
-        if(this._options.pingpong && !this._options.renderToTexture)
-            throw new IllegalOperationError(`Pingpong rendering can only be used when rendering to textures`);
-
-        // not a valid context?
-        if(gl.isContextLost())
-            throw new IllegalOperationError(`Can't initialize SpeedyProgram: lost context`);
-
-        // create framebuffer(s)
-        for(let i = 0; i < this._texture.length; i++) {
-            this._texture[i] = new SpeedyTexture(gl, this._width, this._height);
-            this._fbo[i] = GLUtils.createFramebuffer(gl, this._texture[i].glTexture);
-        }
 
         // autodetect uniforms
         gl.useProgram(this._program);
@@ -187,12 +153,11 @@ export class SpeedyProgram extends Function
     /**
      * Run the SpeedyProgram
      * @param  {...(number|number[]|SpeedyTexture|SpeedyTexture[])} args
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyDrawableTexture}
      */
     _call(...args)
     {
         const gl = this._gl;
-        const options = this._options;
         const argnames = this._argnames;
 
         // matching arguments?
@@ -206,19 +171,19 @@ export class SpeedyProgram extends Function
                 throw new NotSupportedError(`Can't run shader: don't use its output texture as an input to itself. Consider using pingpong rendering!`);
         }
 
-        // skip things
+        // context loss?
         if(gl.isContextLost())
             return this._texture[this._textureIndex];
 
         // use program
         gl.useProgram(this._program);
 
-        // we need to update the texSize uniform (e.g., if the program was resized)
-        if(this._dirtySize) {
-            const texSize = this._uniform.get('texSize');
-            gl.uniform2f(texSize.location, this._width, this._height);
-            this._dirtySize = false;
-        }
+        // bind the VAO
+        gl.bindVertexArray(this._geometry.vao);
+
+        // update texSize uniform (available in all fragment shaders)
+        const texSize = this._uniform.get('texSize');
+        gl.uniform2f(texSize.location, this.width, this.height);
 
         // set uniforms[i] to args[i]
         for(let i = 0, texNo = 0; i < args.length; i++) {
@@ -243,126 +208,25 @@ export class SpeedyProgram extends Function
         if(this._ubo !== null)
             this._ubo.update();
 
-        // draw call
-        const fbo = options.renderToTexture ? this._fbo[this._textureIndex] : null;
+        // select the render target
+        const texture = this._texture[this._textureIndex];
+        const fbo = this._renderToTexture ? texture.glFbo : null;
+
+        // bind the FBO
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-        gl.viewport(0, 0, this._width, this._height);
+
+        // draw call
+        gl.viewport(0, 0, this.width, this.height);
         gl.drawArrays(gl.TRIANGLES, 0, 6); // mode, offset, count
+
+        // unbind the FBO
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-        // are we rendering to a texture?
-        if(fbo !== null) {
-            const texture = this._texture[this._textureIndex];
+        // unbind the VAO
+        gl.bindVertexArray(null);
 
-            // we've just changed the contents of the internal texture
-            texture.discardMipmaps(); // discard its pyramid
-
-            // should we return the internal texture?
-            let outputTexture = texture;
-            if(!options.recycleTexture) {
-                // no; we must clone the intenal texture
-                outputTexture = new SpeedyTexture(gl, this._width, this._height);
-                GLUtils.copyToTexture(gl, fbo, outputTexture.glTexture, 0, 0, this._width, this._height);
-            }
-
-            // ping-pong rendering
-            this._pingpong();
-
-            // done!
-            return outputTexture;
-        }
-
-        // we're not rendering to a texture
-        return null;
-    }
-
-    /**
-     * Resize the output texture
-     * @param {number} width 
-     * @param {number} height 
-     */
-    resize(width, height)
-    {
-        const gl = this._gl;
-        const oldWidth = this._width;
-        const oldHeight = this._height;
-
-        // lost context?
-        if(gl.isContextLost())
-            return;
-
-        // get size
-        width = Math.max(1, width | 0);
-        height = Math.max(1, height | 0);
-
-        // no need to resize?
-        if(width === this._width && height === this._height)
-            return;
-
-        // update size
-        this._width = width;
-        this._height = height;
-        this._dirtySize = true;
-
-        // reallocate buffers for reading pixels
-        this._reallocatePixelBuffers(width, height);
-
-        // resize the internal texture(s)
-        const n = this._texture.length;
-        const zeros = n > 0 ? new Uint8Array(width * height * 4) : null;
-        for(let i = 0; i < n; i++) {
-            // create new texture
-            const newTexture = new SpeedyTexture(gl, width, height);
-
-            // initialize the new texture with zeros to avoid a
-            // warning when calling copyTexSubImage2D() on Firefox
-            newTexture.upload(zeros); // may not be very efficient?
-
-            // copy old content
-            GLUtils.copyToTexture(gl, this._fbo[i], newTexture.glTexture, 0, 0, Math.min(width, oldWidth), Math.min(height, oldHeight));
-
-            // attach the new texture to the existing framebuffer
-            gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo[i]);
-            gl.framebufferTexture2D(gl.FRAMEBUFFER,         // target
-                                    gl.COLOR_ATTACHMENT0,   // color buffer
-                                    gl.TEXTURE_2D,          // tex target
-                                    newTexture.glTexture,   // texture
-                                    0);                     // mipmap level
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-            // release old texture & replace it
-            this._texture[i].release();
-            this._texture[i] = newTexture;
-        }
-
-        //console.log(`Resized SpeedyProgram to ${width} x ${height}`);
-    }
-
-    /**
-     * Clear the internal textures to a color
-     * @param {number} [r] in [0,1]
-     * @param {number} [g] in [0,1]
-     * @param {number} [b] in [0,1]
-     * @param {number} [a] in [0,1]
-     * @returns {SpeedyTexture}
-     */
-    clear(r = 0, g = 0, b = 0, a = 0)
-    {
-        const gl = this._gl;
-        const texture = this._texture[this._textureIndex];
-
-        // skip things
-        if(gl.isContextLost())
-            return texture;
-
-        // clear internal textures
-        for(let i = 0; i < this._fbo.length; i++) {
-            gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo[i]);
-            gl.viewport(0, 0, this._width, this._height);
-            gl.clearColor(r, g, b, a);
-            gl.clear(gl.COLOR_BUFFER_BIT);
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        }
+        // we've just changed the texture! discard the pyramid, if any
+        texture.discardMipmaps();
 
         // ping-pong rendering
         this._pingpong();
@@ -372,119 +236,36 @@ export class SpeedyProgram extends Function
     }
 
     /**
-     * Read pixels from the output texture synchronously.
-     * You may optionally specify a (x,y,width,height) sub-rectangle.
-     * @param {number} [x]
-     * @param {number} [y] 
-     * @param {number} [width]
-     * @param {number} [height]
-     * @returns {Uint8Array} pixels in the RGBA format
+     * Resize the output texture(s)
+     * @param {number} width new width, in pixels
+     * @param {number} height new height, in pixels
      */
-    readPixelsSync(x = 0, y = 0, width = this._width, height = this._height)
+    resize(width, height)
     {
-        const gl = this._gl;
+        // resize the output texture(s)
+        for(let i = 0; i < this._texture.length; i++)
+            this._texture[i].resize(width, height);
 
-        // can't read pixels if we're not rendering to a texture (i.e., no framebuffer)
-        if(!this._options.renderToTexture)
-            throw new IllegalOperationError(`Can't read pixels from a SpeedyProgram that doesn't render to an internal texture`);
-
-        // lost context?
-        if(gl.isContextLost())
-            return this._pixelBuffer[0];
-
-        // clamp values
-        width = Math.max(0, Math.min(width, this._width));
-        height = Math.max(0, Math.min(height, this._height));
-        x = Math.max(0, Math.min(x, width - 1));
-        y = Math.max(0, Math.min(y, height - 1));
-
-        // allocate the pixel buffers
-        if(this._pixelBuffer[0] == null)
-            this._reallocatePixelBuffers(this._width, this._height);
-
-        // last render target
-        const fbo = this._fbo[this._options.pingpong ? 1 - this._textureIndex : this._textureIndex];
-
-        // read pixels
-        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-        gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, this._pixelBuffer[0]);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-        // done!
-        return this._pixelBuffer[0];
+        //console.log(`Resized SpeedyProgram to ${width} x ${height}`);
     }
 
     /**
-     * Read pixels from the output texture asynchronously with PBOs.
-     * You may optionally specify a (x,y,width,height) sub-rectangle.
-     * @param {boolean} [useBufferedDownloads] optimize downloads?
-     * @param {number} [x]
-     * @param {number} [y] 
-     * @param {number} [width]
-     * @param {number} [height]
-     * @returns {SpeedyPromise<Uint8Array>} resolves to an array of pixels in the RGBA format
+     * Clear the internal textures
+     * @returns {SpeedyDrawableTexture}
      */
-    readPixelsAsync(useBufferedDownloads = true, x = 0, y = 0, width = this._width, height = this._height)
+    clear()
     {
-        const gl = this._gl;
+        const texture = this._texture[this._textureIndex];
 
-        // can't read pixels if we're not rendering to a texture (i.e., no framebuffer)
-        if(!this._options.renderToTexture)
-            throw new IllegalOperationError(`Can't read pixels from a SpeedyProgram that doesn't render to an internal texture`);
+        // clear internal textures
+        for(let i = 0; i < this._texture.length; i++)
+            this._texture[i].clear();
 
-        // lost context?
-        if(gl.isContextLost())
-            return SpeedyPromise.resolve(this._pixelBuffer[0]);
+        // ping-pong rendering
+        this._pingpong();
 
-        // clamp values
-        width = Math.max(0, Math.min(width, this._width));
-        height = Math.max(0, Math.min(height, this._height));
-        x = Math.max(0, Math.min(x, width - 1));
-        y = Math.max(0, Math.min(y, height - 1));
-
-        // allocate the pixel buffers
-        if(this._pixelBuffer[0] == null)
-            this._reallocatePixelBuffers(this._width, this._height);
-
-        // last render target
-        const fbo = this._fbo[this._options.pingpong ? 1 - this._textureIndex : this._textureIndex];
-
-        // do not optimize?
-        if(!useBufferedDownloads) {
-            return GLUtils.readPixelsViaPBO(gl, this._pixelBuffer[0], x, y, width, height, fbo).then(() => {
-                return this._pixelBuffer[0];
-            });
-        }
-
-        // GPU needs to produce data
-        if(this._pboProducerQueue.length > 0) {
-            const nextPBO = this._pboProducerQueue.shift();
-            GLUtils.readPixelsViaPBO(gl, this._pixelBuffer[nextPBO], x, y, width, height, fbo).then(() => {
-                this._pboConsumerQueue.push(nextPBO);
-            });
-        }
-        else this._waitForQueueNotEmpty(this._pboProducerQueue).then(() => {
-            const nextPBO = this._pboProducerQueue.shift();
-            GLUtils.readPixelsViaPBO(gl, this._pixelBuffer[nextPBO], x, y, width, height, fbo).then(() => {
-                this._pboConsumerQueue.push(nextPBO);
-            });
-        }).turbocharge();
-
-        // CPU needs to consume data
-        if(this._pboConsumerQueue.length > 0) {
-            const readyPBO = this._pboConsumerQueue.shift();
-            return new SpeedyPromise(resolve => {
-                resolve(this._pixelBuffer[readyPBO]);
-                this._pboProducerQueue.push(readyPBO); // enqueue AFTER resolve()
-            });
-        }
-        else return new SpeedyPromise(resolve => {
-            this._waitForQueueNotEmpty(this._pboConsumerQueue).then(() => {
-                const readyPBO = this._pboConsumerQueue.shift();
-                resolve(this._pixelBuffer[readyPBO]);
-                this._pboProducerQueue.push(readyPBO); // enqueue AFTER resolve()
-            }).turbocharge();
-        });
+        // done!
+        return texture;
     }
 
     /**
@@ -501,47 +282,58 @@ export class SpeedyProgram extends Function
     }
 
     /**
-     * Copy the output of this program to a texture
-     * @param {SpeedyTexture} texture target texture
-     * @param {number} [lod] level-of-detail of the target texture
-     */
-    exportTo(texture, lod = 0)
-    {
-        const gl = this._gl;
-        const fbo = this._fbo[this._textureIndex];
-
-        // compute texture size as max(1, floor(size / 2^lod)),
-        // in accordance to the OpenGL ES 3.0 spec sec 3.8.10.4
-        // (Mipmapping)
-        const pot = 1 << (lod |= 0);
-        const expectedWidth = Math.max(1, Math.floor(texture.width / pot));
-        const expectedHeight = Math.max(1, Math.floor(texture.height / pot));
-
-        // validate
-        Utils.assert(this._width === expectedWidth && this._height === expectedHeight);
-        if(this._options.pingpong)
-            throw new NotSupportedError(`Can't copy the output of a pingpong-enabled SpeedyProgram`);
-
-        // copy to texture
-        GLUtils.copyToTexture(gl, fbo, texture.glTexture, 0, 0, this._width, this._height, lod);
-    }
-
-    /**
-     * Release resources associated with this SpeedyProgram
+     * Release the resources associated with this SpeedyProgram
      * @returns {null}
      */
     release()
     {
         const gl = this._gl;
 
-        for(let i = 0; i < this._texture.length; i++) {
-            this._texture[i] = this._texture[i].release();
-            this._fbo[i] = GLUtils.destroyFramebuffer(gl, this._fbo[i]);
-        }
+        // Release UBOs (if any)
+        if(this._ubo != null)
+            this._ubo = this._ubo.release();
 
-        this._program = GLUtils.destroyProgram(gl, this._program);
+        // Release internal textures
+        for(let i = 0; i < this._ownTexture.length; i++)
+            this._ownTexture[i] = this._ownTexture[i].release();
+        this._texture.fill(null);
 
+        // Release geometry
+        this._geometry = this._geometry.release();
+
+        // Release program
+        gl.deleteProgram(this._program);
+        this._program = null;
+
+        // Need to delete the shaders as well? In sec 5.14.9 Programs and shaders
+        // of the WebGL 1.0 spec, it is mentioned that the underlying GL object
+        // will automatically be marked for deletion when the JS object is
+        // destroyed (i.e., garbage collected)
+
+        // done!
         return null;
+    }
+
+    /**
+     * Use the provided texture(s) as output
+     * @param {SpeedyDrawableTexture[]} texture set to null to use the internal texture(s)
+     */
+    use(...texture)
+    {
+        const expectedTextures = this._ownTexture.length;
+        Utils.assert(texture.length === expectedTextures, `Incorrect number of textures (expected ${expectedTextures})`);
+
+        // we need to keep the current size
+        const width = this.width;
+        const height = this.height;
+
+        // update output texture(s)
+        const useInternal = texture.every(tex => tex === null);
+        this._texture = !useInternal ? [].concat(texture) : this._ownTexture;
+        this._textureIndex = 0;
+
+        // restore previous size
+        this.resize(width, height);
     }
 
     /**
@@ -550,7 +342,7 @@ export class SpeedyProgram extends Function
      */
     get width()
     {
-        return this._width;
+        return this._texture[0].width;
     }
 
     /**
@@ -559,7 +351,7 @@ export class SpeedyProgram extends Function
      */
     get height()
     {
-        return this._height;
+        return this._texture[0].height;
     }
 
     /**
@@ -568,160 +360,185 @@ export class SpeedyProgram extends Function
      */
     _pingpong()
     {
-        if(this._options.pingpong)
+        if(this._texture.length > 1)
             this._textureIndex = 1 - this._textureIndex;
     }
 
     /**
-     * Create a quad to be passed to the vertex shader
-     * (this is crafted for image processing)
+     * Compile and link GLSL shaders
      * @param {WebGL2RenderingContext} gl
-     * @param {ShaderDeclaration} shaderdecl
-     * @returns {StoredGeometry}
+     * @param {string} vertexShaderSource GLSL code of the vertex shader
+     * @param {string} fragmentShaderSource GLSL code of the fragment shader
+     * @returns {WebGLProgram}
      */
-    _createGeometry(gl, shaderdecl)
+    static _compile(gl, vertexShaderSource, fragmentShaderSource)
     {
-        // We assume that the geometry and the locations of the attributes of the
-        // vertex shaders are CONSTANT throughout time and the same for all shaders.
-        // That's why we cache the VAO and the VBO (is this really necessary?!)
+        const program = gl.createProgram();
+        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
 
-        // got cached values for this WebGL context?
-        if(geometryCache.has(gl))
-            return geometryCache.get(gl);
+        // compile vertex shader
+        gl.shaderSource(vertexShader, vertexShaderSource);
+        gl.compileShader(vertexShader);
+        gl.attachShader(program, vertexShader);
 
-        // configure the attributes of the vertex shader
-        const vao = gl.createVertexArray(); // vertex array object
-        const vbo = [ gl.createBuffer(), gl.createBuffer() ]; // vertex buffer objects
-        gl.bindVertexArray(vao);
+        // compile fragment shader
+        gl.shaderSource(fragmentShader, fragmentShaderSource);
+        gl.compileShader(fragmentShader);
+        gl.attachShader(program, fragmentShader);
 
-        // set the a_position attribute
-        // using the current vbo
-        gl.bindBuffer(gl.ARRAY_BUFFER, vbo[0]);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            // clip coordinates (CCW)
-            -1, -1,
-            1, -1,
-            -1, 1,
+        // link program
+        gl.linkProgram(program);
+        gl.validateProgram(program);
 
-            -1, 1,
-            1, -1,
-            1, 1,
-        ]), gl.STATIC_DRAW);
-        gl.enableVertexAttribArray(shaderdecl.locationOfAttributes.position);
-        gl.vertexAttribPointer(shaderdecl.locationOfAttributes.position, // attribute location
-                               2,          // 2 components per vertex (x,y)
-                               gl.FLOAT,   // type
-                               false,      // don't normalize
-                               0,          // default stride (tightly packed)
-                               0);         // offset
+        // got an error?
+        if(!gl.getProgramParameter(program, gl.LINK_STATUS) && !gl.isContextLost()) {
+            const errors = [
+                gl.getShaderInfoLog(fragmentShader),
+                gl.getShaderInfoLog(vertexShader),
+                gl.getProgramInfoLog(program),
+            ];
 
-        // set the a_texCoord attribute
-        // using the current vbo
-        gl.bindBuffer(gl.ARRAY_BUFFER, vbo[1]);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            // texture coordinates (CCW)
-            0, 0,
-            1, 0,
-            0, 1,
+            gl.deleteProgram(program);
+            gl.deleteShader(fragmentShader);
+            gl.deleteShader(vertexShader);
 
-            0, 1,
-            1, 0,
-            1, 1,
-        ]), gl.STATIC_DRAW);
-        gl.enableVertexAttribArray(shaderdecl.locationOfAttributes.texCoord);
-        gl.vertexAttribPointer(shaderdecl.locationOfAttributes.texCoord, // attribute location
-                               2,          // 2 components per vertex (x,y)
-                               gl.FLOAT,   // type
-                               false,      // don't normalize
-                               0,          // default stride (tightly packed)
-                               0);         // offset
+            // display error
+            const spaces = i => Math.max(0, 2 - Math.floor(Math.log10(i)));
+            const col = k => Array(spaces(k)).fill(' ').join('') + k + '. ';
+            const formattedSource = fragmentShaderSource.split('\n')
+                .map((line, no) => col(1+no) + line)
+                .join('\n');
 
-        // unbind
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
-
-        // cache & return
-        const result = new StoredGeometry(vao, vbo[0], vbo[1]);
-        geometryCache.set(gl, result);
-        return result;
-    }
-
-    /**
-     * Reallocate pixel buffers, so that they can hold width x height RGBA pixels
-     * @param {number} width
-     * @param {number} height
-     */
-    _reallocatePixelBuffers(width, height)
-    {
-        // skip realloc
-        if(width * height <= this._pixelBufferSize[0] * this._pixelBufferSize[1])
-            return;
-
-        // update size
-        this._pixelBufferSize[0] = width;
-        this._pixelBufferSize[1] = height;
-
-        // reallocate pixels array
-        for(let i = 0; i < PBO_COUNT; i++) {
-            const oldBuffer = this._pixelBuffer[i];
-            this._pixelBuffer[i] = new Uint8Array(width * height * 4);
-            this._pixelBuffer[i].fill(255, 0, 4); // will be recognized as empty... needed?
-
-            if(oldBuffer) {
-                if(oldBuffer.length > this._pixelBuffer[i].length)
-                    this._pixelBuffer[i].set(oldBuffer.slice(0, this._pixelBuffer[i].length));
-                else
-                    this._pixelBuffer[i].set(oldBuffer);
-            }
+            throw new GLError(
+                `Can't create shader.\n\n` +
+                `---------- ERROR ----------\n` +
+                errors.join('\n') + '\n\n' +
+                `---------- SOURCE CODE ----------\n` +
+                formattedSource
+            );
         }
-    }
 
-    /**
-     * Wait for a queue to be not empty
-     * @param {Array} queue
-     * @returns {SpeedyPromise}
-     */
-    _waitForQueueNotEmpty(queue)
-    {
-        return new SpeedyPromise(resolve => {
-            //const start = performance.now();
-            function wait() {
-                if(queue.length > 0)
-                    resolve(); //resolve(performance.now() - start);
-                else
-                    setTimeout(wait, 0); // Utils.setZeroTimeout may hinder performance (GLUtils already calls it)
-                    //Utils.setZeroTimeout(wait);
-            }
-            wait();
-        });
+        // done!
+        return program;
     }
 }
 
 
 
-//
-// Helpers
-//
+
+
+// ============================================================================
+//                                  HELPERS
+// ============================================================================
+
+
+
+
+
 
 /**
- * Storage for VAO & VBOs (vertex shader)
- * @param {WebGLVertexArrayObject} vao vertex array object
- * @param {WebGLBuffer} vboPosition buffer associated with the position attribute
- * @param {WebGLBuffer} vboTexCoord buffer associated with the texCoord attribute
+ * Configure and store the VAO and the VBOs
+ * @param {WebGL2RenderingContext} gl
+ * @param {LocationOfAttributes} location
+ * @returns {ProgramGeometry}
+ *
+ * @typedef {Object} LocationOfAttributes
+ * @property {number} position
+ * @property {number} texCoord
+ *
+ * @typedef {Object} BufferOfAttributes
+ * @property {WebGLBuffer} position
+ * @property {WebGLBuffer} texCoord
  */
-function StoredGeometry(vao, vboPosition, vboTexCoord)
+function ProgramGeometry(gl, location)
 {
-    this.vao = vao;
+    /** @type {WebGLVertexArrayObject} Vertex Array Object */
+    this.vao = gl.createVertexArray();
 
+    /** @type {BufferOfAttributes} Vertex Buffer Objects */
     this.vbo = Object.freeze({
-        position: vboPosition,
-        texCoord: vboTexCoord
+        position: gl.createBuffer(),
+        texCoord: gl.createBuffer()
     });
 
+    /** @type {WebGL2RenderingContext} */
+    this._gl = gl;
+
+
+
+    // bind the VAO
+    gl.bindVertexArray(this.vao);
+
+    // set the position attribute
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo.position);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        // clip coordinates (CCW)
+        -1, -1,
+        1, -1,
+        -1, 1,
+
+        -1, 1,
+        1, -1,
+        1, 1,
+    ]), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(location.position);
+    gl.vertexAttribPointer(location.position, // attribute location
+                            2,                // 2 components per vertex (x,y)
+                            gl.FLOAT,         // type
+                            false,            // don't normalize
+                            0,                // default stride (tightly packed)
+                            0);               // offset
+
+    // set the texCoord attribute
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.vbo.texCoord);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        // texture coordinates (CCW)
+        0, 0,
+        1, 0,
+        0, 1,
+
+        0, 1,
+        1, 0,
+        1, 1,
+    ]), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(location.texCoord);
+    gl.vertexAttribPointer(location.texCoord, // attribute location
+                            2,                // 2 components per vertex (x,y)
+                            gl.FLOAT,         // type
+                            false,            // don't normalize
+                            0,                // default stride (tightly packed)
+                            0);               // offset
+
+    // unbind
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    gl.bindVertexArray(null);
+
+    // done!
     return Object.freeze(this);
 }
 
 /**
- * Helper class for storing data related to GLSL uniform variables
+ * Releases the internal resources
+ * @returns {null}
+ */
+ProgramGeometry.prototype.release = function()
+{
+    const gl = this._gl;
+
+    gl.deleteVertexArray(this.vao);
+    gl.deleteBuffer(this.vbo.position);
+    gl.deleteBuffer(this.vbo.texCoord);
+
+    return null;
+}
+
+
+
+
+
+/**
+ * Helper class for storing data in GLSL uniform variables
  * @param {string} type
  * @param {WebGLUniformLocation} location
  */
@@ -795,6 +612,11 @@ UniformVariable.prototype.setValue = function(gl, value, texNo)
     return texNo;
 }
 
+
+
+
+
+
 /**
  * A helper class for handling Uniform Buffer Objects (UBOs)
  * @param {WebGL2RenderingContext} gl
@@ -859,4 +681,22 @@ UBOHelper.prototype.update = function()
         gl.bindBufferBase(gl.UNIFORM_BUFFER, ubo.blockBindingIndex, ubo.buffer);
         gl.bindBuffer(gl.UNIFORM_BUFFER, null);
     }
+}
+
+/**
+ * Release allocated buffers
+ * @returns {null}
+ */
+UBOHelper.prototype.release = function()
+{
+    const gl = this._gl;
+
+    for(const name in this._ubo) {
+        const ubo = this._ubo[name];
+
+        gl.deleteBuffer(ubo.buffer);
+        ubo.data = null;
+    }
+
+    return null;
 }
