@@ -154,7 +154,7 @@ export class GPUTrackers extends SpeedyProgramGroup
         lk.resize(lkEncoderLength, lkEncoderLength);
 
         // compute optical-flow
-        let flow = lk.clear(0, 0, 0, 0);
+        let flow = lk.clear();
         for(let level = depth - 1; level >= 0; level--)
             flow = lk(flow, prevKeypoints, nextPyramid, prevPyramid, windowSize, level, depth, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);
 

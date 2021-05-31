@@ -122,6 +122,27 @@ export class SpeedyTexture
     }
 
     /**
+     * Clear the texture
+     * @returns {SpeedyTexture} this texture
+     */
+    clear()
+    {
+        const gl = this._gl;
+
+        // context loss?
+        if(gl.isContextLost())
+            return this;
+
+        // clear texture data
+        gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, this._width, this._height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
+        // done!
+        return this;
+    }
+
+    /**
      * Invalidates previously generated mipmaps, if any
      */
     discardMipmaps()
@@ -456,7 +477,7 @@ export class SpeedyDrawableTexture extends SpeedyTexture
      * @param {number} [a] alpha component, a value in [0,1]
      * @returns {SpeedyDrawableTexture} this texture
      */
-    clear(r = 0, g = 0, b = 0, a = 0)
+    clearToColor(r = 0, g = 0, b = 0, a = 0)
     {
         const gl = this._gl;
 

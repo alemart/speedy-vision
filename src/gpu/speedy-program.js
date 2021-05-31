@@ -124,9 +124,6 @@ export class SpeedyProgram extends Function
         /** @type {number} used for pingpong rendering */
         this._textureIndex = 0;
 
-        /** @type {boolean} flag indicating the need to update the texSize uniform */
-        this._dirtySize = true;
-
         /** @type {Map<string,UniformVariable>} uniform variables */
         this._uniform = new Map();
 
@@ -181,12 +178,9 @@ export class SpeedyProgram extends Function
         // bind the VAO
         gl.bindVertexArray(this._geometry.vao);
 
-        // we need to update the texSize uniform (e.g., if the program was resized)
-        if(this._dirtySize) {
-            const texSize = this._uniform.get('texSize');
-            gl.uniform2f(texSize.location, this.width, this.height);
-            this._dirtySize = false;
-        }
+        // update texSize uniform
+        const texSize = this._uniform.get('texSize');
+        gl.uniform2f(texSize.location, this.width, this.height);
 
         // set uniforms[i] to args[i]
         for(let i = 0, texNo = 0; i < args.length; i++) {
@@ -245,17 +239,6 @@ export class SpeedyProgram extends Function
      */
     resize(width, height)
     {
-        // get size
-        width = Math.max(1, width | 0);
-        height = Math.max(1, height | 0);
-
-        // no need to resize?
-        if(width === this.width && height === this.height)
-            return;
-
-        // mark the texSize dirty flag
-        this._dirtySize = true;
-
         // resize the output texture(s)
         for(let i = 0; i < this._texture.length; i++)
             this._texture[i].resize(width, height);
@@ -264,20 +247,16 @@ export class SpeedyProgram extends Function
     }
 
     /**
-     * Clear the internal textures to a color
-     * @param {number} [r] in [0,1]
-     * @param {number} [g] in [0,1]
-     * @param {number} [b] in [0,1]
-     * @param {number} [a] in [0,1]
+     * Clear the internal textures
      * @returns {SpeedyDrawableTexture}
      */
-    clear(r = 0, g = 0, b = 0, a = 0)
+    clear()
     {
         const texture = this._texture[this._textureIndex];
 
         // clear internal textures
         for(let i = 0; i < this._texture.length; i++)
-            this._texture[i].clear(r, g, b, a);
+            this._texture[i].clear();
 
         // ping-pong rendering
         this._pingpong();

@@ -161,7 +161,7 @@ export class GPUEncoders extends SpeedyProgramGroup
         const keypointCapacity = FeatureEncoder.capacity(descriptorSize, extraSize, encoderLength);
         const headerEncoderLength = Math.max(1, Math.ceil(Math.sqrt(keypointCapacity * pixelsPerKeypointHeader)));
         this._encodeKeypoints.resize(headerEncoderLength, headerEncoderLength);
-        let encodedKeypointHeaders = this._encodeKeypoints.clear(0, 0, 0, 0);
+        let encodedKeypointHeaders = this._encodeKeypoints.clear();
         for(let passId = 0; passId < numPasses; passId++)
             encodedKeypointHeaders = this._encodeKeypoints(offsets, encodedKeypointHeaders, imageSize, passId, numPasses, 0, 0, headerEncoderLength);
 
