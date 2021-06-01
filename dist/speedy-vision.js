@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-06-01T15:19:48.941Z
+ * Date: 2021-06-01T15:26:30.943Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -10453,7 +10453,7 @@ PipelineOperation.Median = class extends SpeedyPipelineOperation
         // validate options
         if(size != 3 && size != 5 && size != 7)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Invalid window size: ${size}`);
-        else if(media._colorFormat != _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
+        else if(colorFormat != _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["NotSupportedError"](`The median filter requires a greyscale image as input`);
 
         // run filter
@@ -10602,9 +10602,9 @@ PipelineOperation.Normalize = class extends SpeedyPipelineOperation
         const { min, max } = this._loadOptions();
         let output;
 
-        if(media._colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].RGB)
+        if(colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].RGB)
             output = gpu.programs.enhancements.normalizeColoredImage(texture, min, max);
-        else if(media._colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
+        else if(colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
             output = gpu.programs.enhancements.normalizeGreyscaleImage(texture, min, max);
         else
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["NotSupportedError"]('Invalid color format');
@@ -10648,9 +10648,9 @@ PipelineOperation.Nightvision = class extends SpeedyPipelineOperation
         const { gain, offset, decay, quality } = this._loadOptions();
         let output;
 
-        if(media._colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].RGB)
+        if(colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].RGB)
             output = gpu.programs.enhancements.nightvision(texture, gain, offset, decay, quality, false);
-        else if(media._colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
+        else if(colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
             output = gpu.programs.enhancements.nightvision(texture, gain, offset, decay, quality, true);
         else
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["NotSupportedError"]('Invalid color format');
