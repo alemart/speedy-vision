@@ -202,7 +202,7 @@ PipelineOperation.Median = class extends SpeedyPipelineOperation
         // validate options
         if(size != 3 && size != 5 && size != 7)
             throw new IllegalArgumentError(`Invalid window size: ${size}`);
-        else if(media._colorFormat != ColorFormat.Greyscale)
+        else if(colorFormat != ColorFormat.Greyscale)
             throw new NotSupportedError(`The median filter requires a greyscale image as input`);
 
         // run filter
@@ -351,9 +351,9 @@ PipelineOperation.Normalize = class extends SpeedyPipelineOperation
         const { min, max } = this._loadOptions();
         let output;
 
-        if(media._colorFormat == ColorFormat.RGB)
+        if(colorFormat == ColorFormat.RGB)
             output = gpu.programs.enhancements.normalizeColoredImage(texture, min, max);
-        else if(media._colorFormat == ColorFormat.Greyscale)
+        else if(colorFormat == ColorFormat.Greyscale)
             output = gpu.programs.enhancements.normalizeGreyscaleImage(texture, min, max);
         else
             throw new NotSupportedError('Invalid color format');
@@ -397,9 +397,9 @@ PipelineOperation.Nightvision = class extends SpeedyPipelineOperation
         const { gain, offset, decay, quality } = this._loadOptions();
         let output;
 
-        if(media._colorFormat == ColorFormat.RGB)
+        if(colorFormat == ColorFormat.RGB)
             output = gpu.programs.enhancements.nightvision(texture, gain, offset, decay, quality, false);
-        else if(media._colorFormat == ColorFormat.Greyscale)
+        else if(colorFormat == ColorFormat.Greyscale)
             output = gpu.programs.enhancements.nightvision(texture, gain, offset, decay, quality, true);
         else
             throw new NotSupportedError('Invalid color format');

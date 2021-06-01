@@ -24,7 +24,6 @@ const FULFILLED = 1;
 const REJECTED = 2;
 
 const SUSPEND_ASYNC = 1;
-const DISABLE_ASYNC = 2;
 const asap = (typeof queueMicrotask !== 'undefined' && queueMicrotask) || // browsers
              (typeof process !== 'undefined' && process.nextTick) || // node.js
              (f => Promise.resolve().then(f)); // most compatible
@@ -40,9 +39,8 @@ export class SpeedyPromise
     /**
      * Constructor
      * @param {Function} callback
-     * @param {boolean} [sync] a hint that you'll be calling turbocharge() after a chain of then()/catch()/finally()
      */
-    constructor(callback, sync = false)
+    constructor(callback)
     {
         this._state = PENDING;
         this._value = undefined;
@@ -52,7 +50,7 @@ export class SpeedyPromise
         this._children = 0;
         this[0] = this;
         this._parent = undefined;
-        this._flags = sync ? DISABLE_ASYNC : 0;
+        this._flags = 0;
 
         this._fulfill = this._fulfill.bind(this);
         this._reject = this._reject.bind(this);
@@ -305,8 +303,7 @@ export class SpeedyPromise
         }
 
         // install a timer (default behavior)
-        if(!(this._flags & DISABLE_ASYNC))
-            asap(this._broadcastIfAsync);
+        asap(this._broadcastIfAsync);
     }
 
     /**

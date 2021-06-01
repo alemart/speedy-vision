@@ -1,5 +1,10 @@
 # Release notes
 
+## 0.6.1 - Jun 1st, 2021
+
+* Introduced image warping via homographies
+* Code cleanup
+
 ## 0.6.0 - May 20th, 2021
 
 * Introduced efficient methods for homography estimation
