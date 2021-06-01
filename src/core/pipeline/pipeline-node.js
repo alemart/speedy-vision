@@ -91,11 +91,11 @@ export class SpeedyPipelineNode
 
         // got a valid name?
         if(this._name.length == 0)
-            throw new IllegalArgumentError(`Invalid name "${this._name}" for node ${this.constructor.name}`);
+            throw new IllegalArgumentError(`Invalid name "${this._name}" for node ${this.fullName}`);
 
         // got some ports?
         if(portBuilders.length == 0)
-            throw new IllegalArgumentError(`No ports have been found in node "${this._name}"`);
+            throw new IllegalArgumentError(`No ports have been found in node ${this.fullName}`);
     }
 
     /**
@@ -105,6 +105,15 @@ export class SpeedyPipelineNode
     get name()
     {
         return this._name;
+    }
+
+    /**
+     * Name and type of this node
+     * @returns {string}
+     */
+    get fullName()
+    {
+        return `${this.constructor.name}[${this.name}]`;
     }
 
     /**
@@ -126,7 +135,7 @@ export class SpeedyPipelineNode
         if(portName in this._inputPorts)
             return this._inputPorts[portName];
 
-        throw new IllegalArgumentError(`Can't find input port ${portName} in node ${this.name}`);
+        throw new IllegalArgumentError(`Can't find input port ${portName} in node ${this.fullName}`);
     }
 
     /**
@@ -139,7 +148,7 @@ export class SpeedyPipelineNode
         if(portName in this._outputPorts)
             return this._outputPorts[portName];
 
-        throw new IllegalArgumentError(`Can't find output port ${portName} in node ${this.name}`);
+        throw new IllegalArgumentError(`Can't find output port ${portName} in node ${this.fullName}`);
     }
 
     /**
@@ -163,7 +172,7 @@ export class SpeedyPipelineNode
 
             // ensure that no output ports are empty
             for(portName in this._outputPorts)
-                Utils.assert(this._outputPorts[portName].hasMessage(), `Did you forget to write data to the output port ${portName} of ${this.constructor.name}?`);
+                Utils.assert(this._outputPorts[portName].hasMessage(), `Did you forget to write data to the output port ${portName} of ${this.fullName}?`);
 
         });
     }
@@ -193,6 +202,23 @@ export class SpeedyPipelineNode
     isSink()
     {
         return Object.keys(this._outputPorts).length == 0;
+    }
+
+    /**
+     * Find all nodes that feed input to this node
+     * @returns {SpeedyPipelineNode[]}
+     */
+    inputNodes()
+    {
+        const nodes = [];
+
+        for(const portName in this._inputPorts) {
+            const port = this._inputPorts[portName];
+            if(port.incomingLink != null)
+                nodes.push(port.incomingLink.node);
+        }
+
+        return nodes;
     }
 }
 

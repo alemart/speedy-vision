@@ -29,7 +29,7 @@ import { SpeedyPipelineNode } from './pipeline-node';
 const DEFAULT_INPUT_PORT_NAME = 'in';
 const DEFAULT_OUTPUT_PORT_NAME = 'out';
 const ACCEPTABLE_PORT_NAME = /^[a-z][a-zA-Z0-9]*$/;
-const emptyMessage = new SpeedyPipelineMessageWithNothing();
+const EMPTY_MESSAGE = new SpeedyPipelineMessageWithNothing();
 
 /**
  * Port of a node of a pipeline
@@ -55,7 +55,7 @@ export class SpeedyPipelinePort
         this._node = node;
 
         /** @type {SpeedyPipelineMessage} the message located in this port */
-        this._message = emptyMessage;
+        this._message = EMPTY_MESSAGE;
 
 
         // check if we've got an acceptable port name
@@ -112,7 +112,7 @@ export class SpeedyPipelinePort
      */
     clearMessage()
     {
-        this._message = emptyMessage;
+        this._message = EMPTY_MESSAGE;
     }
 
     /**
@@ -121,7 +121,7 @@ export class SpeedyPipelinePort
      */
     hasMessage()
     {
-        return this._message !== emptyMessage;
+        return !this._message.isEmpty();
     }
 
     /**
@@ -234,6 +234,15 @@ export class SpeedyPipelineInputPort extends SpeedyPipelinePort
     }
 
     /**
+     * Incoming link
+     * @returns {SpeedyPipelineOutputPort|null}
+     */
+    get incomingLink()
+    {
+        return this._incomingLink;
+    }
+
+    /**
      * Connect this port to another
      * @param {SpeedyPipelinePort} port
      */
@@ -266,19 +275,18 @@ export class SpeedyPipelineInputPort extends SpeedyPipelinePort
 
     /**
      * Receive a message using the incoming link
+     * @returns {SpeedyPipelineMessage}
      */
     pullMessage()
     {
-        if(this._incomingLink !== null) {
-            const message = this._incomingLink.read();
-
-            if(this._spec.accepts(message))
-                this._message = message;
-            else
-                throw new IllegalArgumentError(`Can't receive ${message} at port ${this.name}: ${this._spec}`);
-        }
-        else
+        if(this._incomingLink == null)
             throw new IllegalOperationError(`No incoming link for input port ${this.name}`);
+
+        const message = this._incomingLink.read();
+        if(!this._spec.accepts(message))
+            throw new IllegalArgumentError(`Can't receive ${message} at port ${this.name}: ${this._spec}`);
+
+        return (this._message = message);
     }
 
     /**

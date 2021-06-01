@@ -23,8 +23,13 @@ import { SpeedyPipelineMessage, SpeedyPipelineMessageType } from './pipeline-mes
 import { Utils } from '../../utils/utils';
 
 /**
+ * A message constraint is a message validation predicate
+ * @typedef {function(SpeedyPipelineMessage): boolean} SpeedyPipelineMessageConstraint
+ */
+
+/**
  * A validation predicate that validates all messages
- * @type {function(SpeedyPipelineMessage): boolean}
+ * @type {SpeedyPipelineMessageConstraint}
  */
 const none = message => true;
 
@@ -36,14 +41,14 @@ export class SpeedyPipelinePortSpec
     /**
      * Constructor
      * @param {SpeedyPipelineMessageType} expectedType expected message type
-     * @param {function(SpeedyPipelineMessage): boolean} [messageConstraint] message validation function 
+     * @param {SpeedyPipelineMessageConstraint} [messageConstraint] message validation function
      */
     constructor(expectedType, messageConstraint = none)
     {
         /** @type {SpeedyPipelineMessageType} expected message type */
         this._expectedType = expectedType;
 
-        /** @type {function(SpeedyPipelineMessage): boolean} message validation function */
+        /** @type {SpeedyPipelineMessageConstraint} message validation function */
         this._isValidMessage = (typeof messageConstant === 'function') ? messageConstraint : none;
 
 

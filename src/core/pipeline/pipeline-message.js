@@ -25,13 +25,13 @@ import { SpeedyTexture } from '../../gpu/speedy-texture';
 
 /**
  * Types of messages
- * @enum {SpeedyPipelineMessageType}
+ * @enum {number}
  */
-export const SpeedyPipelineMessageType = Utils.enum(
-    'Nothing',
-    'Image',
-    'Keypoints'
-);
+export const SpeedyPipelineMessageType = Object.freeze({
+    Nothing: 0,
+    Image: 1,
+    Keypoints: 2,
+});
 
 /**
  * A message that is shared between nodes of a pipeline

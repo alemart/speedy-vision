@@ -46,13 +46,13 @@ export class SpeedyPipelinePortBuilder
         /** @type {SpeedyPipelineMessageType} accepted message type */
         this._type = SpeedyPipelineMessageType.Nothing;
 
-        /** @type {function(SpeedyPipelineMessage): boolean} message validation function */
+        /** @type {SpeedyPipelineMessageConstraint} message validation function */
         this._messageConstraint = undefined;
     }
 
     /**
      * Declare that the new port expects a certain type of message
-     * @param {SpeedyPipelineMessageType} type
+     * @param {SpeedyPipelineMessageType} type expected type
      * @returns {SpeedyPipelinePortBuilder} this builder
      */
     expects(type)
@@ -67,7 +67,7 @@ export class SpeedyPipelinePortBuilder
 
     /**
      * Declare that the new port expects messages satisfying a constraint
-     * @param {function(SpeedyPipelineMessage): boolean} constraint
+     * @param {SpeedyPipelineMessageConstraint} constraint
      * @returns {SpeedyPipelinePortBuilder} this builder
      */
     satisfying(constraint)
