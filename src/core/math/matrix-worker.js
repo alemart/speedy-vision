@@ -79,7 +79,7 @@ export class MatrixWorker
         return new SpeedyPromise(resolve => {
             this._callbackTable.set(id, resolve);
             this._worker.postMessage(msg, transferables);
-        }, true);
+        });
     }
 
     /**
