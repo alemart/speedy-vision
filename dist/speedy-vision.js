@@ -1,12 +1,12 @@
 /*!
- * speedy-vision.js v0.6.1-wip
+ * speedy-vision.js v0.6.1
  * GPU-accelerated Computer Vision for JavaScript
  * https://github.com/alemart/speedy-vision-js
  * 
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-05-30T02:11:41.449Z
+ * Date: 2021-06-01T15:19:48.941Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -715,11 +715,13 @@ class MultiscaleFASTFeatures extends _feature_detection_algorithm__WEBPACK_IMPOR
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "HarrisFeatures", function() { return HarrisFeatures; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MultiscaleHarrisFeatures", function() { return MultiscaleHarrisFeatures; });
-/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
-/* harmony import */ var _feature_detection_algorithm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../feature-detection-algorithm */ "./src/core/keypoints/feature-detection-algorithm.js");
-/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../utils/globals */ "./src/utils/globals.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _gpu_speedy_gl__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../gpu/speedy-gl */ "./src/gpu/speedy-gl.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _feature_detection_algorithm__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../feature-detection-algorithm */ "./src/core/keypoints/feature-detection-algorithm.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -747,6 +749,8 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
 // constants
 const DEFAULT_QUALITY = 0.1; // default quality metric
 const DEFAULT_DEPTH = 4; // default depth for multiscale feature detection
@@ -754,12 +758,12 @@ const DEFAULT_WINDOW_SIZE = 3; // compute Harris autocorrelation matrix within a
 const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // scale factor between consecutive pyramid layers (sqrt(2))
 const MIN_WINDOW_SIZE = 0; // minimum window size when computing the autocorrelation matrix
 const MAX_WINDOW_SIZE = 7; // maximum window size when computing the autocorrelation matrix
-const MAX_LAYERS = 2 * _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_LEVELS"] - 1; // Sobel derivatives for each pyramid layer
+const MAX_LAYERS = 2 * _utils_globals__WEBPACK_IMPORTED_MODULE_5__["PYRAMID_MAX_LEVELS"] - 1; // Sobel derivatives for each pyramid layer
 
 /**
  * Harris corner detector
  */
-class HarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMPORTED_MODULE_1__["FeatureDetectionAlgorithm"]
+class HarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMPORTED_MODULE_3__["FeatureDetectionAlgorithm"]
 {
     /**
      * Constructor
@@ -786,7 +790,7 @@ class HarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMPORTED_MODU
     set quality(value)
     {
         this._quality = +value;
-        _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(this._quality >= 0 && this._quality <= 1);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(this._quality >= 0 && this._quality <= 1);
     }
 
     /**
@@ -805,14 +809,12 @@ class HarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMPORTED_MODU
         const lod = 0, lodStep = 1, numberOfLayers = 1;
 
         // compute derivatives
-        const df = gpu.programs.keypoints.multiscaleSobel(inputTexture, lod).clone();
+        gpu.programs.keypoints.multiscaleSobel.use(null);
+        const df = gpu.programs.keypoints.multiscaleSobel(inputTexture, lod);
         const sobelDerivatives = new Array(MAX_LAYERS).fill(df);
 
         // corner detection
         const corners = gpu.programs.keypoints.multiscaleHarris(inputTexture, windowSize, numberOfLayers, lodStep, sobelDerivatives);
-
-        // release derivatives
-        df.release();
 
         // find the maximum corner response
         const numIterations = Math.ceil(Math.log2(Math.max(corners.width, corners.height)));
@@ -838,7 +840,7 @@ class HarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMPORTED_MODU
 /**
  * Harris corner detector in an image pyramid
  */
-class MultiscaleHarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMPORTED_MODULE_1__["FeatureDetectionAlgorithm"]
+class MultiscaleHarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMPORTED_MODULE_3__["FeatureDetectionAlgorithm"]
 {
     /**
      * Constructor
@@ -849,6 +851,8 @@ class MultiscaleHarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMP
         this._quality = DEFAULT_QUALITY;
         this._depth = DEFAULT_DEPTH;
         this._scaleFactor = DEFAULT_SCALE_FACTOR;
+        this._derivativesTexture = Array.from({ length : MAX_LAYERS }, () =>
+            new _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_2__["SpeedyDrawableTexture"](_gpu_speedy_gl__WEBPACK_IMPORTED_MODULE_0__["SpeedyGL"].instance.gl, 1, 1));
     }
 
     /**
@@ -867,7 +871,7 @@ class MultiscaleHarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMP
     set quality(value)
     {
         this._quality = +value;
-        _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(this._quality >= 0 && this._quality <= 1);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(this._quality >= 0 && this._quality <= 1);
     }
 
     /**
@@ -886,7 +890,7 @@ class MultiscaleHarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMP
     set depth(value)
     {
         this._depth = value | 0;
-        _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(this._depth >= 1 && this._depth <= _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_LEVELS"]);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(this._depth >= 1 && this._depth <= _utils_globals__WEBPACK_IMPORTED_MODULE_5__["PYRAMID_MAX_LEVELS"]);
     }
 
     /**
@@ -929,17 +933,16 @@ class MultiscaleHarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMP
 
         // compute derivatives
         const sobelDerivatives = new Array(MAX_LAYERS);
-        for(let j = 0; j < numberOfLayers; j++)
-            sobelDerivatives[j] = gpu.programs.keypoints.multiscaleSobel(pyramid, j * lodStep).clone();
+        for(let j = 0; j < numberOfLayers; j++) {
+            gpu.programs.keypoints.multiscaleSobel.use(this._derivativesTexture[j]);
+            sobelDerivatives[j] = gpu.programs.keypoints.multiscaleSobel(pyramid, j * lodStep);
+            gpu.programs.keypoints.multiscaleSobel.use(null);
+        }
         for(let k = numberOfLayers; k < sobelDerivatives.length; k++)
             sobelDerivatives[k] = sobelDerivatives[k-1]; // can't call shaders with null pointers
 
         // corner detection
         const corners = gpu.programs.keypoints.multiscaleHarris(pyramid, windowSize, numberOfLayers, lodStep, sobelDerivatives);
-
-        // release derivatives
-        for(let i = 0; i < numberOfLayers; i++)
-            sobelDerivatives[i].release();
 
         // find the maximum corner response
         const numIterations = Math.ceil(Math.log2(Math.max(corners.width, corners.height)));
@@ -1951,6 +1954,10 @@ class FeatureEncoder
         const e2 = e * e * pixelsPerKeypoint * 4;
         const size = Math.min(pixels.length, e2);
 
+        // copy the data (we use shared buffers when receiving pixels[])
+        if(descriptorSize + extraSize > 0)
+            pixels = new Uint8Array(pixels);
+
         // for each encoded keypoint
         for(let i = 0; i < size; i += 4 /* RGBA */ * pixelsPerKeypoint) {
             // extract fixed-point coordinates
@@ -1986,10 +1993,10 @@ class FeatureEncoder
             score = pixels[i+6] / 255.0;
 
             // extra bytes
-            extraBytes = pixels.slice(8 + i, 8 + i + extraSize);
+            extraBytes = pixels.subarray(8 + i, 8 + i + extraSize);
 
             // descriptor bytes
-            descriptorBytes = pixels.slice(8 + i + extraSize, 8 + i + extraSize + descriptorSize);
+            descriptorBytes = pixels.subarray(8 + i + extraSize, 8 + i + extraSize + descriptorSize);
 
             // something is off here
             if(descriptorBytes.length < descriptorSize || extraBytes.length < extraSize)
@@ -9590,7 +9597,7 @@ class MatrixWorker
         return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"](resolve => {
             this._callbackTable.set(id, resolve);
             this._worker.postMessage(msg, transferables);
-        }, true);
+        });
     }
 
     /**
@@ -11366,7 +11373,9 @@ class SpeedyFeatureDetector
             return keypoints;
 
         // cap the number of keypoints
-        return keypoints.sort(this._compareKeypoints).slice(0, this._max);
+        keypoints.sort(this._compareKeypoints);
+        keypoints.length = Math.min(keypoints.length, this._max);
+        return keypoints;
     }
 }
 
@@ -13328,7 +13337,7 @@ class Speedy
      */
     static get version()
     {
-        return "0.6.1-wip";
+        return "0.6.1";
     }
 
     /**
@@ -13814,7 +13823,7 @@ class GPUEncoders extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
         const keypointCapacity = _core_keypoints_feature_encoder__WEBPACK_IMPORTED_MODULE_5__["FeatureEncoder"].capacity(descriptorSize, extraSize, encoderLength);
         const headerEncoderLength = Math.max(1, Math.ceil(Math.sqrt(keypointCapacity * pixelsPerKeypointHeader)));
         this._encodeKeypoints.resize(headerEncoderLength, headerEncoderLength);
-        let encodedKeypointHeaders = this._encodeKeypoints.clear(0, 0, 0, 0);
+        let encodedKeypointHeaders = this._encodeKeypoints.clear();
         for(let passId = 0; passId < numPasses; passId++)
             encodedKeypointHeaders = this._encodeKeypoints(offsets, encodedKeypointHeaders, imageSize, passId, numPasses, 0, 0, headerEncoderLength);
 
@@ -14967,7 +14976,7 @@ class GPUTrackers extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
         lk.resize(lkEncoderLength, lkEncoderLength);
 
         // compute optical-flow
-        let flow = lk.clear(0, 0, 0, 0);
+        let flow = lk.clear();
         for(let level = depth - 1; level >= 0; level--)
             flow = lk(flow, prevKeypoints, nextPyramid, prevPyramid, windowSize, level, depth, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);
 
@@ -15385,7 +15394,7 @@ const DEFAULT_ATTRIBUTES = Object.freeze({
 });
 
 const DEFAULT_ATTRIBUTES_LOCATION = Object.freeze({
-    position: 0,
+    position: 0, // use location 0; see https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices
     texCoord: 1,
 });
 
@@ -15400,8 +15409,8 @@ void main() {
 }\n`;
 
 const DEFAULT_FRAGMENT_SHADER_PREFIX = `#version 300 es
-precision highp int;
-precision mediump float;
+precision highp int; // int32
+precision mediump float; // ~float16
 precision mediump sampler2D;
 
 out vec4 color;
@@ -18043,15 +18052,15 @@ class SpeedyProgram extends Function
         /** @type {boolean} should we render to a texture? If false, we render to the canvas */
         this._renderToTexture = Boolean(options.renderToTexture);
 
-        /** @type {SpeedyDrawableTexture[]} output texture(s) */
-        this._texture = Array.from({ length: options.pingpong ? 2 : 1 },
+        /** @type {SpeedyDrawableTexture[]} internal texture(s) */
+        this._ownTexture = Array.from({ length: options.pingpong ? 2 : 1 },
             () => new _speedy_texture__WEBPACK_IMPORTED_MODULE_0__["SpeedyDrawableTexture"](gl, options.output[0] | 0, options.output[1] | 0));
+
+        /** @type {SpeedyDrawableTexture[]} output texture(s) */
+        this._texture = [].concat(this._ownTexture);
 
         /** @type {number} used for pingpong rendering */
         this._textureIndex = 0;
-
-        /** @type {boolean} flag indicating the need to update the texSize uniform */
-        this._dirtySize = true;
 
         /** @type {Map<string,UniformVariable>} uniform variables */
         this._uniform = new Map();
@@ -18107,12 +18116,9 @@ class SpeedyProgram extends Function
         // bind the VAO
         gl.bindVertexArray(this._geometry.vao);
 
-        // we need to update the texSize uniform (e.g., if the program was resized)
-        if(this._dirtySize) {
-            const texSize = this._uniform.get('texSize');
-            gl.uniform2f(texSize.location, this.width, this.height);
-            this._dirtySize = false;
-        }
+        // update texSize uniform (available in all fragment shaders)
+        const texSize = this._uniform.get('texSize');
+        gl.uniform2f(texSize.location, this.width, this.height);
 
         // set uniforms[i] to args[i]
         for(let i = 0, texNo = 0; i < args.length; i++) {
@@ -18171,39 +18177,24 @@ class SpeedyProgram extends Function
      */
     resize(width, height)
     {
-        // get size
-        width = Math.max(1, width | 0);
-        height = Math.max(1, height | 0);
-
-        // no need to resize?
-        if(width === this.width && height === this.height)
-            return;
-
-        // mark the texSize dirty flag
-        this._dirtySize = true;
-
         // resize the output texture(s)
         for(let i = 0; i < this._texture.length; i++)
-            this._texture[i].resize(width, height, true);
+            this._texture[i].resize(width, height);
 
         //console.log(`Resized SpeedyProgram to ${width} x ${height}`);
     }
 
     /**
-     * Clear the internal textures to a color
-     * @param {number} [r] in [0,1]
-     * @param {number} [g] in [0,1]
-     * @param {number} [b] in [0,1]
-     * @param {number} [a] in [0,1]
+     * Clear the internal textures
      * @returns {SpeedyDrawableTexture}
      */
-    clear(r = 0, g = 0, b = 0, a = 0)
+    clear()
     {
         const texture = this._texture[this._textureIndex];
 
         // clear internal textures
         for(let i = 0; i < this._texture.length; i++)
-            this._texture[i].clear(r, g, b, a);
+            this._texture[i].clear();
 
         // ping-pong rendering
         this._pingpong();
@@ -18226,7 +18217,7 @@ class SpeedyProgram extends Function
     }
 
     /**
-     * Release resources associated with this SpeedyProgram
+     * Release the resources associated with this SpeedyProgram
      * @returns {null}
      */
     release()
@@ -18238,8 +18229,9 @@ class SpeedyProgram extends Function
             this._ubo = this._ubo.release();
 
         // Release internal textures
-        for(let i = 0; i < this._texture.length; i++)
-            this._texture[i] = this._texture[i].release();
+        for(let i = 0; i < this._ownTexture.length; i++)
+            this._ownTexture[i] = this._ownTexture[i].release();
+        this._texture.fill(null);
 
         // Release geometry
         this._geometry = this._geometry.release();
@@ -18255,6 +18247,28 @@ class SpeedyProgram extends Function
 
         // done!
         return null;
+    }
+
+    /**
+     * Use the provided texture(s) as output
+     * @param {SpeedyDrawableTexture[]} texture set to null to use the internal texture(s)
+     */
+    use(...texture)
+    {
+        const expectedTextures = this._ownTexture.length;
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(texture.length === expectedTextures, `Incorrect number of textures (expected ${expectedTextures})`);
+
+        // we need to keep the current size
+        const width = this.width;
+        const height = this.height;
+
+        // update output texture(s)
+        const useInternal = texture.every(tex => tex === null);
+        this._texture = !useInternal ? [].concat(texture) : this._ownTexture;
+        this._textureIndex = 0;
+
+        // restore previous size
+        this.resize(width, height);
     }
 
     /**
@@ -18971,10 +18985,10 @@ class SpeedyTexture
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`The SpeedyTexture has already been released`);
 
         // release resources
+        this.discardMipmaps();
         gl.deleteTexture(this._glTexture);
         this._glTexture = null;
         this._width = this._height = 0;
-        this._hasMipmaps = false;
 
         // done!
         return null;
@@ -18987,7 +19001,7 @@ class SpeedyTexture
      */
     upload(pixels)
     {
-        this._hasMipmaps = false;
+        this.discardMipmaps();
         SpeedyTexture._upload(this._gl, this._glTexture, this._width, this._height, pixels, 0);
         return this;
     }
@@ -19021,6 +19035,30 @@ class SpeedyTexture
                 layer.copyTo(this, level);
             }
         }
+
+        // done!
+        return this;
+    }
+
+    /**
+     * Clear the texture
+     * @returns {SpeedyTexture} this texture
+     */
+    clear()
+    {
+        const gl = this._gl;
+
+        // context loss?
+        if(gl.isContextLost())
+            return this;
+
+        // clear texture data
+        gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, this._width, this._height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
+        // no mipmaps
+        this.discardMipmaps();
 
         // done!
         return this;
@@ -19283,7 +19321,7 @@ class SpeedyDrawableTexture extends SpeedyTexture
      * Resize this texture
      * @param {number} width new width, in pixels
      * @param {number} height new height, in pixels
-     * @param {boolean} [preserveContent] should we preserve the content of the texture?
+     * @param {boolean} [preserveContent] should we preserve the content of the texture? EXPENSIVE!
      * @returns {SpeedyDrawableTexture} this texture
      */
     resize(width, height, preserveContent = false)
@@ -19292,7 +19330,7 @@ class SpeedyDrawableTexture extends SpeedyTexture
 
         // no need to resize?
         if(this._width === width && this._height === height)
-            return;
+            return this;
 
         // validate size
         width |= 0; height |= 0;
@@ -19300,13 +19338,19 @@ class SpeedyDrawableTexture extends SpeedyTexture
 
         // context loss?
         if(gl.isContextLost())
-            return;
+            return this;
 
-        // allocate new texture
-        const newTexture = SpeedyTexture._createTexture(gl, width, height);
+        // do we need to copy the old content?
+        if(!preserveContent) {
+            // no; do a cheap resize
+            gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+            gl.bindTexture(gl.TEXTURE_2D, null);
+        }
+        else {
+            // allocate new texture
+            const newTexture = SpeedyTexture._createTexture(gl, width, height);
 
-        // copy old content
-        if(preserveContent) {
             // initialize the new texture with zeros to avoid a
             // warning when calling copyTexSubImage2D() on Firefox
             // this may not be very efficient?
@@ -19316,25 +19360,32 @@ class SpeedyDrawableTexture extends SpeedyTexture
             // copy the old texture to the new one
             const oldWidth = this._width, oldHeight = this._height;
             SpeedyDrawableTexture._copyToTexture(gl, this._glFbo, newTexture, 0, 0, Math.min(width, oldWidth), Math.min(height, oldHeight));
+
+            // bind FBO
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this._glFbo);
+
+            // invalidate old data (is this needed?)
+            gl.invalidateFramebuffer(gl.FRAMEBUFFER, [gl.COLOR_ATTACHMENT0]);
+
+            // attach the new texture to the existing framebuffer
+            gl.framebufferTexture2D(gl.FRAMEBUFFER,         // target
+                                    gl.COLOR_ATTACHMENT0,   // color buffer
+                                    gl.TEXTURE_2D,          // tex target
+                                    newTexture,             // texture
+                                    0);                     // mipmap level
+
+            // unbind FBO
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+            // release the old texture and replace it
+            gl.deleteTexture(this._glTexture);
+            this._glTexture = newTexture;
         }
 
         // update dimensions & discard mipmaps
         this.discardMipmaps();
         this._width = width;
         this._height = height;
-
-        // attach the new texture to the existing framebuffer
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this._glFbo);
-        gl.framebufferTexture2D(gl.FRAMEBUFFER,         // target
-                                gl.COLOR_ATTACHMENT0,   // color buffer
-                                gl.TEXTURE_2D,          // tex target
-                                newTexture,             // texture
-                                0);                     // mipmap level
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-        // release the old texture and replace it
-        gl.deleteTexture(this._glTexture);
-        this._glTexture = newTexture;
 
         // done!
         return this;
@@ -19348,13 +19399,13 @@ class SpeedyDrawableTexture extends SpeedyTexture
      * @param {number} [a] alpha component, a value in [0,1]
      * @returns {SpeedyDrawableTexture} this texture
      */
-    clear(r = 0, g = 0, b = 0, a = 0)
+    clearToColor(r = 0, g = 0, b = 0, a = 0)
     {
         const gl = this._gl;
 
         // context loss?
         if(gl.isContextLost())
-            return;
+            return this;
 
         // clamp parameters
         r = Math.max(0.0, Math.min(+r, 1.0));
@@ -20238,7 +20289,6 @@ const FULFILLED = 1;
 const REJECTED = 2;
 
 const SUSPEND_ASYNC = 1;
-const DISABLE_ASYNC = 2;
 const asap = (typeof queueMicrotask !== 'undefined' && queueMicrotask) || // browsers
              (typeof process !== 'undefined' && process.nextTick) || // node.js
              (f => Promise.resolve().then(f)); // most compatible
@@ -20254,9 +20304,8 @@ class SpeedyPromise
     /**
      * Constructor
      * @param {Function} callback
-     * @param {boolean} [sync] a hint that you'll be calling turbocharge() after a chain of then()/catch()/finally()
      */
-    constructor(callback, sync = false)
+    constructor(callback)
     {
         this._state = PENDING;
         this._value = undefined;
@@ -20266,7 +20315,7 @@ class SpeedyPromise
         this._children = 0;
         this[0] = this;
         this._parent = undefined;
-        this._flags = sync ? DISABLE_ASYNC : 0;
+        this._flags = 0;
 
         this._fulfill = this._fulfill.bind(this);
         this._reject = this._reject.bind(this);
@@ -20519,8 +20568,7 @@ class SpeedyPromise
         }
 
         // install a timer (default behavior)
-        if(!(this._flags & DISABLE_ASYNC))
-            asap(this._broadcastIfAsync);
+        asap(this._broadcastIfAsync);
     }
 
     /**
