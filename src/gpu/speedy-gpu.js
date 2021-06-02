@@ -22,6 +22,7 @@
 import { SpeedyGL } from './speedy-gl';
 import { SpeedyTexture } from './speedy-texture';
 import { SpeedyProgramCenter } from './speedy-program-center';
+import { SpeedyTexturePool } from './speedy-texture-pool';
 import { SpeedyMediaSource } from '../core/speedy-media-source';
 import { NotSupportedError, IllegalArgumentError } from '../utils/errors';
 import { MAX_TEXTURE_LENGTH } from '../utils/globals';
@@ -63,6 +64,9 @@ export class SpeedyGPU
 
         /** @type {SpeedyProgramCenter} GPU-accelerated routines */
         this._programs = new SpeedyProgramCenter(this, this._width, this._height);
+
+        /** @type {SpeedyTexturePool} texture pool */
+        this._texturePool = new SpeedyTexturePool(this.gl);
 
         /** @type {SpeedyTexture[]} upload textures (lazy instantiation) */
         this._texture = (new Array(UPLOAD_BUFFER_SIZE)).fill(null);
@@ -164,6 +168,7 @@ export class SpeedyGPU
         Utils.assert(!this.isReleased());
 
         this._programs = this._programs.release();
+        this._texturePool = this._texturePool.release();
         this._speedyGL.unsubscribe(this._reset);
 
         return null;
@@ -196,6 +201,7 @@ export class SpeedyGPU
         if(this.isReleased())
             return;
 
+        this._texturePool = new SpeedyTexturePool(this.gl);
         this._programs = new SpeedyProgramCenter(this, this._width, this._height);
         this._texture.fill(null);
     }

@@ -151,7 +151,7 @@ export class GPUTrackers extends SpeedyProgramGroup
         //
         const numKeypoints = FeatureEncoder.capacity(descriptorSize, extraSize, encoderLength);
         const lkEncoderLength = Math.max(1, Math.ceil(Math.sqrt(numKeypoints)));
-        lk.resize(lkEncoderLength, lkEncoderLength);
+        lk.setOutputSize(lkEncoderLength, lkEncoderLength);
 
         // compute optical-flow
         let flow = lk.clear();
@@ -159,11 +159,11 @@ export class GPUTrackers extends SpeedyProgramGroup
             flow = lk(flow, prevKeypoints, nextPyramid, prevPyramid, windowSize, level, depth, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);
 
         // transfer optical-flow to nextKeypoints
-        this._transferFlow.resize(encoderLength, encoderLength);
+        this._transferFlow.setOutputSize(encoderLength, encoderLength);
         const nextKeypoints = this._transferFlow(flow, prevKeypoints, descriptorSize, extraSize, encoderLength);
 
         // discard "bad" keypoints
-        this._lkDiscard.resize(encoderLength, encoderLength);
+        this._lkDiscard.setOutputSize(encoderLength, encoderLength);
         const goodKeypoints = this._lkDiscard(nextPyramid, nextKeypoints, windowSize, discardThreshold, descriptorSize, extraSize, encoderLength);
 
         // done!

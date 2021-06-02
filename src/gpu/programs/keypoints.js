@@ -219,7 +219,7 @@ export class GPUKeypoints extends SpeedyProgramGroup
     orb(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength)
     {
         Utils.assert(descriptorSize === 32);
-        this._orb.resize(encoderLength, encoderLength);
+        this._orb.setOutputSize(encoderLength, encoderLength);
         return this._orb(pyramid, encodedKeypoints, extraSize, encoderLength);
     }
 
@@ -238,10 +238,10 @@ export class GPUKeypoints extends SpeedyProgramGroup
         const numberOfKeypoints = FeatureEncoder.capacity(descriptorSize, extraSize, encoderLength);
         const orientationEncoderLength = Math.max(1, Math.ceil(Math.sqrt(numberOfKeypoints))); // 1 pixel per keypoint
 
-        this._orbOrientation.resize(orientationEncoderLength, orientationEncoderLength);
+        this._orbOrientation.setOutputSize(orientationEncoderLength, orientationEncoderLength);
         const encodedOrientations = this._orbOrientation(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength);
 
-        this._transferOrientation.resize(encoderLength, encoderLength);
+        this._transferOrientation.setOutputSize(encoderLength, encoderLength);
         return this._transferOrientation(encodedOrientations, encodedKeypoints, descriptorSize, extraSize, encoderLength);
     }
 
@@ -257,7 +257,7 @@ export class GPUKeypoints extends SpeedyProgramGroup
     suppressDescriptors(encodedKeypoints, descriptorSize, extraSize, encoderLength, suppressedEncoderLength)
     {
         Utils.assert(suppressedEncoderLength <= encoderLength);
-        this._suppressDescriptors.resize(suppressedEncoderLength, suppressedEncoderLength);
+        this._suppressDescriptors.setOutputSize(suppressedEncoderLength, suppressedEncoderLength);
         return this._suppressDescriptors(encodedKeypoints, descriptorSize, extraSize, encoderLength, suppressedEncoderLength);
     }
 }

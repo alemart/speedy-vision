@@ -236,17 +236,19 @@ export class SpeedyProgram extends Function
     }
 
     /**
-     * Resize the output texture(s)
+     * Set the size of the output
      * @param {number} width new width, in pixels
      * @param {number} height new height, in pixels
+     * @returns {SpeedyProgram} this
      */
-    resize(width, height)
+    setOutputSize(width, height)
     {
         // resize the output texture(s)
         for(let i = 0; i < this._texture.length; i++)
             this._texture[i].resize(width, height);
 
-        //console.log(`Resized SpeedyProgram to ${width} x ${height}`);
+        // done!
+        return this;
     }
 
     /**
@@ -317,8 +319,9 @@ export class SpeedyProgram extends Function
     /**
      * Use the provided texture(s) as output
      * @param {SpeedyDrawableTexture[]} texture set to null to use the internal texture(s)
+     * @returns {SpeedyProgram} this
      */
-    use(...texture)
+    useTexture(...texture)
     {
         const expectedTextures = this._ownTexture.length;
         Utils.assert(texture.length === expectedTextures, `Incorrect number of textures (expected ${expectedTextures})`);
@@ -333,7 +336,10 @@ export class SpeedyProgram extends Function
         this._textureIndex = 0;
 
         // restore previous size
-        this.resize(width, height);
+        this.setOutputSize(width, height);
+
+        // done!
+        return this;
     }
 
     /**

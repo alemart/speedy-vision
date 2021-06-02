@@ -160,13 +160,13 @@ export class GPUEncoders extends SpeedyProgramGroup
         const pixelsPerKeypointHeader = MIN_PIXELS_PER_KEYPOINT;
         const keypointCapacity = FeatureEncoder.capacity(descriptorSize, extraSize, encoderLength);
         const headerEncoderLength = Math.max(1, Math.ceil(Math.sqrt(keypointCapacity * pixelsPerKeypointHeader)));
-        this._encodeKeypoints.resize(headerEncoderLength, headerEncoderLength);
+        this._encodeKeypoints.setOutputSize(headerEncoderLength, headerEncoderLength);
         let encodedKeypointHeaders = this._encodeKeypoints.clear();
         for(let passId = 0; passId < numPasses; passId++)
             encodedKeypointHeaders = this._encodeKeypoints(offsets, encodedKeypointHeaders, imageSize, passId, numPasses, 0, 0, headerEncoderLength);
 
         // transfer keypoints to a elastic tiny texture with storage for descriptors & extra data
-        this._resizeEncodedKeypoints.resize(encoderLength, encoderLength);
+        this._resizeEncodedKeypoints.setOutputSize(encoderLength, encoderLength);
         return this._resizeEncodedKeypoints(encodedKeypointHeaders, 0, 0, headerEncoderLength, descriptorSize, extraSize, encoderLength);
     }
 
@@ -180,7 +180,7 @@ export class GPUEncoders extends SpeedyProgramGroup
     {
         // helper shader
         if(!(encodedKeypoints instanceof SpeedyDrawableTexture)) {
-            this._downloadEncodedKeypoints.resize(encodedKeypoints.width, encodedKeypoints.height);
+            this._downloadEncodedKeypoints.setOutputSize(encodedKeypoints.width, encodedKeypoints.height);
             encodedKeypoints = this._downloadEncodedKeypoints(encodedKeypoints);
         }
 
@@ -234,7 +234,7 @@ export class GPUEncoders extends SpeedyProgramGroup
         }
 
         // Upload data
-        this._uploadKeypoints.resize(encoderLength, encoderLength);
+        this._uploadKeypoints.setOutputSize(encoderLength, encoderLength);
         this._uploadKeypoints.setUBO('KeypointBuffer', this._uploadBuffer);
         return this._uploadKeypoints(keypointCount, encoderLength, descriptorSize, extraSize);
     }

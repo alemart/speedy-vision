@@ -77,29 +77,17 @@ export class SpeedyTexturePool
         Utils.assert(capacity > 0);
 
         /** @type {TextureBucket[]} buckets */
-        this._bucket = Array.from({ length: capacity }, (_, index) =>
-            // create new buckets
-            new TextureBucket(
-                new SpeedyDrawableTexture(gl, 1, 1),
-                index, index - 1
-            )
-        ).map(bucket => (Object.defineProperty(bucket.texture, BUCKET, {
-            // add to the texture a reference to the bucket
-            configurable: false,
-            enumerable: false,
-            writable: false,
-            value: bucket
-        }), bucket));
+        this._bucket = SpeedyTexturePool._createBuckets(gl, capacity);
 
         /** @type {TextureBucketIndex} index of an available bucket */
-        this._head = this._bucket.length - 1;
+        this._head = capacity - 1;
     }
 
     /**
      * Get a texture from the pool
      * @returns {SpeedyDrawableTexture}
      */
-    acquire()
+    allocate()
     {
         if(this._head < 0)
             throw new OutOfMemoryError(`Exhausted pool (capacity: ${this._bucket.length})`);
@@ -126,5 +114,40 @@ export class SpeedyTexturePool
         this._head = bucket.index;
 
         return null;
+    }
+
+    /**
+     * Release the texture pool
+     * @returns {null}
+     */
+    release()
+    {
+        for(let i = 0; i < this._bucket.length; i++)
+            this._bucket[i].texture = this._bucket[i].texture.release();
+
+        return null;
+    }
+
+    /**
+     * Create buckets
+     * @param {WebGL2RenderingContext} gl
+     * @param {number} numberOfBuckets
+     * @returns {TextureBucket[]}
+     */
+    static _createBuckets(gl, numberOfBuckets)
+    {
+         return Array.from({ length: numberOfBuckets }, (_, index) =>
+            // create new buckets
+            new TextureBucket(
+                new SpeedyDrawableTexture(gl, 1, 1),
+                index, index - 1
+            )
+        ).map(bucket => (Object.defineProperty(bucket.texture, BUCKET, {
+            // add to the texture a reference to the bucket
+            configurable: false,
+            enumerable: false,
+            writable: false,
+            value: bucket
+        }), bucket));
     }
 }

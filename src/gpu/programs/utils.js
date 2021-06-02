@@ -116,7 +116,7 @@ export class GPUUtils extends SpeedyProgramGroup
 
         // do we need to resize the program?
         if(width != this._renderToCanvas.width || height != this._renderToCanvas.height)
-            this._renderToCanvas.resize(width, height);
+            this._renderToCanvas.setOutputSize(width, height);
 
         // do we need to resize the canvas?
         if(width > canvas.width || height > canvas.height) {
