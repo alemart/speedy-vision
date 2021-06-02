@@ -23,14 +23,11 @@ import { SpeedyGL } from './speedy-gl';
 import { SpeedyTexture } from './speedy-texture';
 import { SpeedyProgramCenter } from './speedy-program-center';
 import { SpeedyTexturePool } from './speedy-texture-pool';
+import { SpeedyTextureUploader } from './speedy-texture-uploader';
 import { SpeedyMediaSource } from '../core/speedy-media-source';
 import { NotSupportedError, IllegalArgumentError } from '../utils/errors';
 import { MAX_TEXTURE_LENGTH } from '../utils/globals';
 import { Utils } from '../utils/utils';
-
-
-// Constants
-const UPLOAD_BUFFER_SIZE = 2; // how many textures we allocate for uploading data
 
 
 /**
@@ -62,17 +59,14 @@ export class SpeedyGPU
         /** @type {number} height of the textures */
         this._height = height | 0;
 
-        /** @type {SpeedyProgramCenter} GPU-accelerated routines */
+        /** @type {SpeedyProgramCenter} GPU-based programs */
         this._programs = new SpeedyProgramCenter(this, this._width, this._height);
 
         /** @type {SpeedyTexturePool} texture pool */
         this._texturePool = new SpeedyTexturePool(this.gl);
 
-        /** @type {SpeedyTexture[]} upload textures (lazy instantiation) */
-        this._texture = (new Array(UPLOAD_BUFFER_SIZE)).fill(null);
-
-        /** @type {number} index of the texture that was just uploaded to the GPU */
-        this._textureIndex = 0;
+        /** @type {SpeedyTextureUploader} texture uploader */
+        this._textureUploader = new SpeedyTextureUploader(this);
 
 
 
@@ -125,52 +119,24 @@ export class SpeedyGPU
      */
     upload(source)
     {
-        const data = source.data;
-
-        // validate media source
-        Utils.assert(
-            source.width === this._width && source.height === this._height,
-            `Unexpected dimensions for media source: ${source.width} x ${source.height} ` +
-            `(expected ${this._width} x ${this._height})`
-        );
-
-        // create upload textures lazily
-        if(this._texture[0] == null) {
-            for(let i = 0; i < this._texture.length; i++)
-                this._texture[i] = new SpeedyTexture(this.gl, this._width, this._height);
-        }
-
-        // bugfix: if the media is a video, we can't really
-        // upload it to the GPU unless it's ready
-        if(data.constructor.name == 'HTMLVideoElement') {
-            if(data.readyState < 2) {
-                // this may happen when the video loops (Firefox)
-                // return the previously uploaded texture
-                //Utils.warning(`Trying to process a video that isn't ready yet`);
-                return this._texture[this._textureIndex];
-            }
-        }
-
-        // use round-robin to mitigate WebGL's implicit synchronization
-        // and maybe minimize texture upload times
-        this._textureIndex = (this._textureIndex + 1) % UPLOAD_BUFFER_SIZE;
-
-        // upload the media
-        return this._texture[this._textureIndex].upload(data);
+        return this._textureUploader.upload(source);
     }
 
     /**
-     * Releases all programs and textures associated with this SpeedyGPU
+     * Releases resources
      * @returns {null}
      */
     release()
     {
         Utils.assert(!this.isReleased());
 
+        // release internal components
         this._programs = this._programs.release();
         this._texturePool = this._texturePool.release();
-        this._speedyGL.unsubscribe(this._reset);
+        this._textureUploader = this._textureUploader.release();
 
+        // unsubscribe
+        this._speedyGL.unsubscribe(this._reset);
         return null;
     }
 
@@ -201,8 +167,8 @@ export class SpeedyGPU
         if(this.isReleased())
             return;
 
-        this._texturePool = new SpeedyTexturePool(this.gl);
         this._programs = new SpeedyProgramCenter(this, this._width, this._height);
-        this._texture.fill(null);
+        this._texturePool = new SpeedyTexturePool(this.gl);
+        this._textureUploader = new SpeedyTextureUploader(this);
     }
 }
