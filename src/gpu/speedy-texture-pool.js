@@ -20,6 +20,7 @@
  */
 
 import { Utils } from '../utils/utils';
+import { SpeedyGPU } from './speedy-gpu';
 import { SpeedyDrawableTexture } from './speedy-texture';
 import { OutOfMemoryError } from '../utils/errors';
 
@@ -69,15 +70,15 @@ export class SpeedyTexturePool
 {
     /**
      * Constructor
-     * @param {WebGL2RenderingContext} gl
+     * @param {SpeedyGPU} gpu
      * @param {number} [capacity] number of textures in the pool
      */
-    constructor(gl, capacity = DEFAULT_CAPACITY)
+    constructor(gpu, capacity = DEFAULT_CAPACITY)
     {
         Utils.assert(capacity > 0);
 
         /** @type {TextureBucket[]} buckets */
-        this._bucket = SpeedyTexturePool._createBuckets(gl, capacity);
+        this._bucket = SpeedyTexturePool._createBuckets(gpu.gl, capacity);
 
         /** @type {TextureBucketIndex} index of an available bucket */
         this._head = capacity - 1;

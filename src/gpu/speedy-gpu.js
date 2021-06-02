@@ -63,7 +63,7 @@ export class SpeedyGPU
         this._programs = new SpeedyProgramCenter(this, this._width, this._height);
 
         /** @type {SpeedyTexturePool} texture pool */
-        this._texturePool = new SpeedyTexturePool(this.gl);
+        this._texturePool = new SpeedyTexturePool(this);
 
         /** @type {SpeedyTextureUploader} texture uploader */
         this._textureUploader = new SpeedyTextureUploader(this);
