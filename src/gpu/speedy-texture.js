@@ -76,14 +76,16 @@ export class SpeedyTexture
     }
 
     /**
-     * Upload pixel data to the texture
+     * Upload pixel data to the texture. The texture will be resized if needed.
+     * @param {number} [width] in pixels
+     * @param {number} [height] in pixels
      * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} pixels 
      * @return {SpeedyTexture} this
      */
-    upload(pixels)
+    upload(pixels, width = this._width, height = this._height)
     {
         this.discardMipmaps();
-        SpeedyTexture._upload(this._gl, this._glTexture, this._width, this._height, pixels, 0);
+        SpeedyTexture._upload(this._gl, this._glTexture, width, height, pixels, 0);
         return this;
     }
 

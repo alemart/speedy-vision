@@ -115,11 +115,12 @@ export class SpeedyGPU
     /**
      * Upload an image to the GPU
      * @param {SpeedyMediaSource} source
-     * @returns {SpeedyTexture} an internal upload texture
+     * @param {SpeedyTexture} [outputTexture]
+     * @returns {SpeedyTexture} an internal texture if an output texture is not provided
      */
-    upload(source)
+    upload(source, outputTexture = null)
     {
-        return this._textureUploader.upload(source);
+        return this._textureUploader.upload(source, outputTexture);
     }
 
     /**
@@ -168,7 +169,7 @@ export class SpeedyGPU
             return;
 
         this._programs = new SpeedyProgramCenter(this, this._width, this._height);
-        this._texturePool = new SpeedyTexturePool(this.gl);
+        this._texturePool = new SpeedyTexturePool(this);
         this._textureUploader = new SpeedyTextureUploader(this);
     }
 }

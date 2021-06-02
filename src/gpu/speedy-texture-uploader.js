@@ -50,15 +50,16 @@ export class SpeedyTextureUploader
     /**
      * Upload an image to the GPU
      * @param {SpeedyMediaSource} source
-     * @returns {SpeedyTexture} an internal upload texture
+     * @param {SpeedyTexture} [outputTexture]
+     * @returns {SpeedyTexture} an internal texture if an output texture is not provided
      */
-    upload(source)
+    upload(source, outputTexture = null)
     {
         const gl = this._gpu.gl;
         const data = source.data;
 
         // create upload textures lazily
-        if(this._texture[0] == null) {
+        if(outputTexture == null && this._texture[0] == null) {
             for(let i = 0; i < this._texture.length; i++)
                 this._texture[i] = new SpeedyTexture(gl, source.width, source.height);
         }
@@ -70,16 +71,20 @@ export class SpeedyTextureUploader
                 // this may happen when the video loops (Firefox)
                 // return the previously uploaded texture
                 //Utils.warning(`Trying to process a video that isn't ready yet`);
-                return this._texture[this._textureIndex];
+                return outputTexture || this._texture[this._textureIndex];
             }
         }
+
+        // upload to the output texture, if one is provided
+        if(outputTexture != null)
+            return outputTexture.upload(data, source.width, source.height);
 
         // use round-robin to mitigate WebGL's implicit synchronization
         // and maybe minimize texture upload times
         this._textureIndex = (this._textureIndex + 1) % UPLOAD_BUFFER_SIZE;
 
-        // upload the media
-        return this._texture[this._textureIndex].upload(data);
+        // upload to an internal texture
+        return this._texture[this._textureIndex].upload(data, source.width, source.height);
     }
 
     /**
