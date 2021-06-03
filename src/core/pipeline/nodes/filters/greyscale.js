@@ -16,7 +16,7 @@
  * limitations under the License.
  *
  * greyscale.js
- * Convert to greyscale
+ * Convert an image to greyscale
  */
 
 import { SpeedyPipelineNode } from '../../pipeline-node';
@@ -27,6 +27,9 @@ import { SpeedyTexture } from '../../../../gpu/speedy-texture';
 import { Utils } from '../../../../utils/utils';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 
+/**
+ * Convert an image to greyscale
+ */
 export class SpeedyPipelineNodeGreyscale extends SpeedyPipelineNode
 {
     /**
@@ -43,11 +46,21 @@ export class SpeedyPipelineNodeGreyscale extends SpeedyPipelineNode
 
     /**
      * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
      * @returns {SpeedyPromise<void>}
      */
-    _run()
+    _run(gpu)
     {
         const { image } = this.input().read();
+
+        (gpu.programs.colors.rgb2grey
+            .useTexture(this._outputTexture)
+            .setOutputSize(image.width, image.height)
+        )(image);
+
+        this.output().write(new SpeedyPipelineMessageWithImage(
+            this._outputTexture
+        ));
 
         return SpeedyPromise.resolve();
     }

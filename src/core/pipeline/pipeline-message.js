@@ -20,7 +20,6 @@
  */
 
 import { Utils } from '../../utils/utils';
-import { SpeedyGPU } from '../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../gpu/speedy-texture';
 
 /**
@@ -42,15 +41,11 @@ export class SpeedyPipelineMessage
     /**
      * Constructor
      * @param {SpeedyPipelineMessageType} type message type
-     * @param {SpeedyGPU} gpu GPU instance
      */
-    constructor(type, gpu)
+    constructor(type)
     {
         /** @type {SpeedyPipelineMessageType} message type */
         this._type = type;
-
-        /** @type {SpeedyGPU} GPU instance */
-        this._gpu = gpu;
     }
 
     /**
@@ -60,15 +55,6 @@ export class SpeedyPipelineMessage
     get type()
     {
         return this._type;
-    }
-
-    /**
-     * GPU instance
-     * @returns {SpeedyGPU}
-     */
-    get gpu()
-    {
-        return this._gpu;
     }
 
     /**
@@ -121,12 +107,11 @@ export class SpeedyPipelineMessageWithImage extends SpeedyPipelineMessage
 {
     /**
      * Constructor
-     * @param {SpeedyGPU} gpu GPU instance
      * @param {SpeedyTexture} image the image we carry
      */
-    constructor(gpu, image)
+    constructor(image)
     {
-        super(SpeedyPipelineMessageType.Image, gpu);
+        super(SpeedyPipelineMessageType.Image);
 
         /** @type {SpeedyTexture} the image we carry */
         this._image = image;
@@ -149,15 +134,14 @@ export class SpeedyPipelineMessageWithKeypoints extends SpeedyPipelineMessage
 {
     /**
      * Constructor
-     * @param {SpeedyGPU} gpu GPU instance
      * @param {SpeedyTexture} encodedKeypoints encoded keypoints
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
      * @param {number} encoderLength positive integer
      */
-    constructor(gpu, encodedKeypoints, descriptorSize, extraSize, encoderLength)
+    constructor(encodedKeypoints, descriptorSize, extraSize, encoderLength)
     {
-        super(SpeedyPipelineMessageType.Keypoints, gpu);
+        super(SpeedyPipelineMessageType.Keypoints);
 
         /** @type {SpeedyTexture} encoded keypoints */
         this._encodedKeypoints = encodedKeypoints;

@@ -34,20 +34,38 @@
         <script>
 window.onload = async function()
 {
-    // create a pipeline that converts a media to greyscale
-    const pipeline = Speedy.pipeline()
-                           .convertTo('greyscale');
+    /*
 
-    // tell Speedy to load the image
-    const image = document.querySelector('img');
-    const media = await Speedy.load(image);
+    This is our pipeline:
 
-    // run the pipeline
-    const transformedMedia = await media.run(pipeline);
+    Image  ---> Convert to ---> Image
+    Source      greyscale       Sink
 
-    // create a canvas to display the result
-    const canvas = createCanvas(transformedMedia.width, transformedMedia.height, image.title);
-    transformedMedia.draw(canvas);
+    */
+
+    // Load an image
+    const inputImage = document.querySelector('img');
+    const media = await Speedy.load(inputImage);
+
+    // Setup the pipeline
+    const pipeline = Speedy.Pipeline(); // create the pipeline and the nodes
+    const source = Speedy.Pipeline.ImageSource();
+    const sink = Speedy.Pipeline.ImageSink();
+    const greyscale = Speedy.Filter.Greyscale();
+
+    source.media = media; // set the media source
+
+    source.output().connectTo(greyscale.input()); // connect the nodes
+    greyscale.output().connectTo(sink.input());
+
+    pipeline.add(source, sink, greyscale); // add the nodes to the pipeline
+
+    // Run the pipeline
+    const { image } = await pipeline.run(); // image is a SpeedyMedia
+
+    // Display the result
+    const canvas = createCanvas(image.width, image.height);
+    image.draw(canvas);
 }
 
 function createCanvas(width, height, title)

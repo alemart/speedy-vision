@@ -275,16 +275,19 @@ export class SpeedyPipelineInputPort extends SpeedyPipelinePort
 
     /**
      * Receive a message using the incoming link
+     * @param {string} [nodeName]
      * @returns {SpeedyPipelineMessage}
      */
-    pullMessage()
+    pullMessage(nodeName = '')
     {
+        const name = nodeName.length > 0 ? `${this.name} of ${nodeName}` : this.name;
+
         if(this._incomingLink == null)
-            throw new IllegalOperationError(`No incoming link for input port ${this.name}`);
+            throw new IllegalOperationError(`No incoming link for input port ${name}`);
 
         const message = this._incomingLink.read();
         if(!this._spec.accepts(message))
-            throw new IllegalArgumentError(`Can't receive ${message} at port ${this.name}: ${this._spec}`);
+            throw new IllegalArgumentError(`Can't receive ${message} at port ${name}: ${this._spec}`);
 
         return (this._message = message);
     }

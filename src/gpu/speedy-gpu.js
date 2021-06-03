@@ -103,6 +103,15 @@ export class SpeedyGPU
     }
 
     /**
+     * Texture pool
+     * @returns {SpeedyTexturePool}
+     */
+    get texturePool()
+    {
+        return this._texturePool;
+    }
+
+    /**
      * Renders a texture to the canvas
      * @param {SpeedyTexture} texture
      * @returns {HTMLCanvasElement} returned for convenience

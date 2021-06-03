@@ -24,6 +24,8 @@ import { SpeedyPromise } from '../../utils/speedy-promise';
 import { AbstractMethodError, IllegalArgumentError } from '../../utils/errors';
 import { SpeedyPipelinePort, SpeedyPipelineInputPort, SpeedyPipelineOutputPort } from './pipeline-port';
 import { SpeedyPipelinePortBuilder } from './pipeline-portbuilder';
+import { SpeedyDrawableTexture } from '../../gpu/speedy-texture';
+import { SpeedyGPU } from '../../gpu/speedy-gpu';
 
 /**
  * A PortDictionary is an object with null prototype storing instances of SpeedyPipelinePort
@@ -86,6 +88,13 @@ export class SpeedyPipelineNode
 
         /** @type {OutputPortDictionary} output ports */
         this._outputPorts = PortDictionary(ports.filter(port => port.isOutputPort()));
+
+
+
+        // other properties
+
+        /** @type {SpeedyDrawableTexture[]} output texture(s) */
+        this._outputTextures = (new Array(this._outputPorts.length)).fill(null);
 
 
 
@@ -152,10 +161,12 @@ export class SpeedyPipelineNode
     }
 
     /**
-     * Execute the task that this node is supposed to execute
+     * Get data from the input ports and execute
+     * the task that this node is supposed to!
+     * @param {SpeedyGPU} gpu
      * @returns {SpeedyPromise<void>}
      */
-    execute()
+    execute(gpu)
     {
         let portName;
 
@@ -165,10 +176,10 @@ export class SpeedyPipelineNode
 
         // let the input ports receive what is due
         for(portName in this._inputPorts)
-            this._inputPorts[portName].pullMessage();
+            this._inputPorts[portName].pullMessage(this.fullName);
 
         // run the task
-        return this._run().then(() => {
+        return this._run(gpu).then(() => {
 
             // ensure that no output ports are empty
             for(portName in this._outputPorts)
@@ -179,9 +190,10 @@ export class SpeedyPipelineNode
 
     /**
      * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
      * @returns {SpeedyPromise<void>}
      */
-    _run()
+    _run(gpu)
     {
         throw new AbstractMethodError();
     }
@@ -205,6 +217,20 @@ export class SpeedyPipelineNode
     }
 
     /**
+     * Clear all ports
+     */
+    clearPorts()
+    {
+        let portName;
+
+        for(portName in this._inputPorts)
+            this._inputPorts[portName].clearMessage();
+
+        for(portName in this._outputPorts)
+            this._outputPorts[portName].clearMessage();
+    }
+
+    /**
      * Find all nodes that feed input to this node
      * @returns {SpeedyPipelineNode[]}
      */
@@ -219,6 +245,27 @@ export class SpeedyPipelineNode
         }
 
         return nodes;
+    }
+
+    /**
+     * Set the output texture(s) of this node
+     * @param {function(SpeedyDrawableTexture|null): SpeedyDrawableTexture|null} getOutputTexture to be called for each required output texture
+     */
+    setOutputTextures(getOutputTexture)
+    {
+        for(let i = 0; i < this._outputTextures.length; i++)
+            this._outputTextures[i] = getOutputTexture(this._outputTextures[i]);
+    }
+
+    /**
+     * Output texture
+     * @returns {SpeedyDrawableTexture}
+     */
+    get _outputTexture()
+    {
+        // don't use this helper if there are multiple output ports!
+        Utils.assert(this._outputTextures.length == 1);
+        return this._outputTextures[0];
     }
 }
 
@@ -237,15 +284,6 @@ export class SpeedyPipelineSourceNode extends SpeedyPipelineNode
     {
         super(name, portBuilders);
         Utils.assert(this.isSource());
-    }
-
-    /**
-     * Import user data to this node
-     * @returns {SpeedyPromise<void>}
-     */
-    import()
-    {
-        throw new AbstractMethodError();
     }
 }
 

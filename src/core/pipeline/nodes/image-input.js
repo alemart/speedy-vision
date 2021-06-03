@@ -46,9 +46,6 @@ export class SpeedyPipelineNodeImageInput extends SpeedyPipelineSourceNode
 
         /** @type {SpeedyMedia} source media */
         this._media = null;
-
-        /** @type {SpeedyTexture} imported media */
-        this._inputTexture = null;
     }
 
     /**
@@ -71,33 +68,17 @@ export class SpeedyPipelineNodeImageInput extends SpeedyPipelineSourceNode
     }
 
     /**
-     * Import user data to this node
-     * @returns {SpeedyPromise<void>}
-     */
-    import()
-    {
-        const media = this._media;
-
-        if(media == null)
-            throw new IllegalOperationError(`Have you set up the input media?`);
-
-        this._inputTexture = media._upload();
-        return SpeedyPromise.resolve();
-    }
-
-    /**
      * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
      * @returns {SpeedyPromise<void>}
      */
-    _run()
+    _run(gpu)
     {
-        const gpu = this._media._gpu; // friend class
 
-        if(this._inputTexture == null)
-            throw new IllegalOperationError(`Have you imported the input media?`);
+        gpu.upload(this._media._source, this._outputTexture);
 
         this.output().write(new SpeedyPipelineMessageWithImage(
-            gpu, this._inputTexture
+            this._outputTexture
         ));
 
         return SpeedyPromise.resolve();

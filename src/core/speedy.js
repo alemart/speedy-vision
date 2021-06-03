@@ -30,11 +30,14 @@ import { SpeedyVector2 } from './math/speedy-vector';
 import { SpeedyPoint2 } from './math/speedy-point';
 import { SpeedyMatrixExprFactory } from './math/matrix-expression-factory';
 import { SpeedyPromise } from '../utils/speedy-promise';
+import { SpeedyPipelineFactory } from './pipeline/factories/pipeline-factory';
+import { SpeedyPipelineFilterFactory } from './pipeline/factories/filter-factory';
 import { Utils } from '../utils/utils';
 import { LITTLE_ENDIAN } from '../utils/globals';
 
 // Constants
 const matrixExprFactory = new SpeedyMatrixExprFactory();
+const pipelineFactory = new SpeedyPipelineFactory();
 
 /**
  * Speedy's main class
@@ -140,7 +143,7 @@ export class Speedy
     }
 
     /**
-     * Create a matrix expression
+     * Matrix routines
      * @returns {SpeedyMatrixExprFactory}
      */
     static get Matrix()
@@ -155,6 +158,24 @@ export class Speedy
     static get Promise()
     {
         return SpeedyPromise;
+    }
+
+    /**
+     * Speedy Pipeline
+     * @returns {SpeedyPipelineFactory}
+     */
+    static get Pipeline()
+    {
+        return pipelineFactory;
+    }
+
+    /**
+     * Image filters
+     * @returns {Function}
+     */
+    static get Filter()
+    {
+        return SpeedyPipelineFilterFactory;
     }
 }
 

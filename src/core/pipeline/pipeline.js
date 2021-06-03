@@ -24,6 +24,7 @@ import { SpeedyPromise } from '../../utils/speedy-promise';
 import { IllegalOperationError, IllegalArgumentError, NotSupportedError } from '../../utils/errors';
 import { SpeedyPipelineNode, SpeedyPipelineSourceNode, SpeedyPipelineSinkNode } from './pipeline-node';
 import { SpeedyPipelinePort, SpeedyPipelineInputPort, SpeedyPipelineOutputPort } from './pipeline-port';
+import { SpeedyGPU } from '../../gpu/speedy-gpu';
 
 /**
  * A pipeline is a network of nodes in which data flows to a sink
@@ -40,6 +41,9 @@ export class SpeedyPipelineNEW
 
         /** @type {SpeedyPipelineNode[]} a sequence of nodes: from the source(s) to the sink */
         this._sequence = [];
+
+        /** @type {SpeedyGPU} GPU instance */
+        this._gpu = new SpeedyGPU(1, 1);
     }
 
     /**
@@ -89,14 +93,37 @@ export class SpeedyPipelineNEW
     {
         Utils.assert(this._sequence.length > 0, `Pipeline doesn't have nodes`);
         Utils.assert(this._sequence[0].isSource(), `Pipeline doesn't have a source`);
-        Utils.assert(this._sequence[this._sequence.length - 1].isSink(), `Pipeline doesn't have a sink`);
 
+        // find the sinks
         const sinks = this._sequence.filter(node => node.isSink());
-        return SpeedyPipelineNEW._runSequence(this._sequence).then(() =>
+        Utils.assert(sinks.length > 0, `Pipeline doesn't have a sink`);
+
+        // set the output textures of each node
+        const valid = _ => this._gpu.texturePool.allocate();
+        for(let i = this._sequence.length - 1; i >= 0; i--)
+            this._sequence[i].setOutputTextures(valid);
+
+        // run the pipeline
+        return SpeedyPipelineNEW._runSequence(this._sequence, this._gpu).then(() =>
+
+            // export results
             SpeedyPromise.all(sinks.map(sink => sink.export())).then(results =>
+
+                // aggregate results by the names of the sinks
                 results.reduce((obj, val, idx) => Object.assign(obj, { [sinks[idx].name]: val }), {})
             )
-        ).turbocharge();
+        ).then(aggregate => {
+            // unset the output textures of the nodes
+            // and clear all ports
+            const nil = tex => this._gpu.texturePool.free(tex);
+            for(let i = this._sequence.length - 1; i >= 0; i--) {
+                this._sequence[i].setOutputTextures(nil);
+                this._sequence[i].clearPorts();
+            }
+
+            // done!
+            return aggregate;
+        }).turbocharge();
     }
 
     /**
@@ -112,14 +139,15 @@ export class SpeedyPipelineNEW
     /**
      * Execute the tasks of a sequence of nodes
      * @param {SpeedyPipelineNode[]} sequence sequence of nodes
+     * @param {SpeedyGPU} gpu GPU instance
      * @param {number} [i] in [0,n)
      * @param {number} [n] number of nodes
      * @returns {SpeedyPromise<void>}
      */
-    static _runSequence(sequence, i = 0, n = sequence.length)
+    static _runSequence(sequence, gpu, i = 0, n = sequence.length)
     {
         return (i < n) ?
-            sequence[i].execute().then(() => SpeedyPipelineNEW._runSequence(sequence, i+1, n)) :
+            sequence[i].execute(gpu).then(() => SpeedyPipelineNEW._runSequence(sequence, gpu, i+1, n)) :
             SpeedyPromise.resolve();
     }
 
@@ -139,12 +167,14 @@ export class SpeedyPipelineNEW
             const [ node, done ] = stack.pop();
             if(!done) {
                 if(!trash.has(node)) {
+                    const outnodes = outlinks.get(node);
+
                     trash.add(node);
                     stack.push([ node, true ]);
-                    stack.push(...(outlinks.get(node).map(node => [ node, false ])));
+                    stack.push(...(outnodes.map(node => [ node, false ])));
 
-                    if(outlinks.get(node).some(node => trash.has(node) && !sorted.includes(node)))
-                        throw new IllegalOperationError(`Pipeline networks cannot have cycles`);
+                    if(outnodes.some(node => trash.has(node) && !sorted.includes(node)))
+                        throw new IllegalOperationError(`Pipeline networks cannot have cycles!`);
                 }
             }
             else
@@ -163,13 +193,16 @@ export class SpeedyPipelineNEW
     {
         const outlinks = new Map();
 
+        for(let k = 0; k < nodes.length; k++)
+            outlinks.set(nodes[k], []);
+
         for(let i = 0; i < nodes.length; i++) {
             const to = nodes[i];
             const inputs = to.inputNodes();
 
-            for(let j = 0; j < inputs.length; i++) {
+            for(let j = 0; j < inputs.length; j++) {
                 const from = inputs[j];
-                const links = outlinks.get(from) || [];
+                const links = outlinks.get(from);
 
                 outlinks.set(from, links.concat([ to ]));
             }

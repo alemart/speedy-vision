@@ -56,8 +56,8 @@ export class SpeedyMedia
         /** @type {ColorFormat} color format */
         this._colorFormat = colorFormat;
 
-        /** @type {SpeedyGPU} GPU-accelerated routines */
-        this._gpu = new SpeedyGPU(this._source.width, this._source.height);
+        /** @type {SpeedyGPU} GPU-accelerated routines */ // FIXME
+        this._gpu = options.lightweight ? Object.create(null) : new SpeedyGPU(this._source.width, this._source.height);
 
         // warning: loading a canvas without an explicit usage flag
         if(this._source.type == MediaType.Canvas && this._options.usage === undefined)

@@ -84,7 +84,12 @@ export class SpeedyTexture
      */
     upload(pixels, width = this._width, height = this._height)
     {
+        Utils.assert(width > 0 && height > 0);
+
         this.discardMipmaps();
+        this._width = width;
+        this._height = height;
+
         SpeedyTexture._upload(this._gl, this._glTexture, width, height, pixels, 0);
         return this;
     }
