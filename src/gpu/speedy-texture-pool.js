@@ -78,10 +78,13 @@ export class SpeedyTexturePool
         Utils.assert(capacity > 0);
 
         /** @type {TextureBucket[]} buckets */
-        this._bucket = SpeedyTexturePool._createBuckets(gpu.gl, capacity);
+        this._bucket = Array.from({ length: capacity }, (_, i) => new TextureBucket(null, i, i - 1));
 
         /** @type {TextureBucketIndex} index of an available bucket */
         this._head = capacity - 1;
+
+        /** @type {SpeedyGPU} GPU instance */
+        this._gpu = gpu;
     }
 
     /**
@@ -96,6 +99,9 @@ export class SpeedyTexturePool
         const bucket = this._bucket[this._head];
         bucket.free = false;
         this._head = bucket.next;
+
+        if(bucket.texture == null) // lazy instantiation
+            bucket.texture = SpeedyTexturePool._createManagedTexture(this._gpu.gl, bucket);
 
         return bucket.texture;
     }
@@ -123,32 +129,28 @@ export class SpeedyTexturePool
      */
     release()
     {
-        for(let i = 0; i < this._bucket.length; i++)
-            this._bucket[i].texture = this._bucket[i].texture.release();
+        for(let i = 0; i < this._bucket.length; i++) {
+            if(this._bucket[i].texture != null)
+                this._bucket[i].texture = this._bucket[i].texture.release();
+        }
 
         return null;
     }
 
     /**
-     * Create buckets
+     * Create a texture with a reference to a bucket
      * @param {WebGL2RenderingContext} gl
-     * @param {number} numberOfBuckets
-     * @returns {TextureBucket[]}
+     * @param {TextureBucket} bucket
+     * @returns {SpeedyDrawableTexture}
      */
-    static _createBuckets(gl, numberOfBuckets)
+    static _createManagedTexture(gl, bucket)
     {
-         return Array.from({ length: numberOfBuckets }, (_, index) =>
-            // create new buckets
-            new TextureBucket(
-                new SpeedyDrawableTexture(gl, 1, 1),
-                index, index - 1
-            )
-        ).map(bucket => (Object.defineProperty(bucket.texture, BUCKET, {
-            // add to the texture a reference to the bucket
+        const texture = new SpeedyDrawableTexture(gl, 1, 1);
+        return Object.defineProperty(texture, BUCKET, {
             configurable: false,
             enumerable: false,
             writable: false,
             value: bucket
-        }), bucket));
+        });
     }
 }
