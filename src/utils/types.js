@@ -33,8 +33,17 @@ export const MediaType = Utils.enum(
 );
 
 /**
+ * Image formats
+ * @enum {number}
+ */
+export const ImageFormat = Object.freeze({
+    RGBA: 0,
+    GREY: 1,
+});
+
+/**
  * Color formats
- * @enum {ColorFormat}
+ * @enum
  */
 export const ColorFormat = Utils.enum(
     'RGB',

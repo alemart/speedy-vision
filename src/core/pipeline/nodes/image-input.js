@@ -26,6 +26,7 @@ import { SpeedyGPU } from '../../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../../gpu/speedy-texture';
 import { SpeedyMedia } from '../../speedy-media';
 import { Utils } from '../../../utils/utils';
+import { ImageFormat } from '../../../utils/types';
 import { IllegalOperationError } from '../../../utils/errors';
 import { SpeedyPromise } from '../../../utils/speedy-promise';
 
@@ -74,11 +75,8 @@ export class SpeedyPipelineNodeImageInput extends SpeedyPipelineSourceNode
      */
     _run(gpu)
     {
-
         gpu.upload(this._media._source, this._outputTexture);
 
-        this.output().write(new SpeedyPipelineMessageWithImage(
-            this._outputTexture
-        ));
+        this.output().swrite(this._outputTexture, ImageFormat.RGBA);
     }
 }

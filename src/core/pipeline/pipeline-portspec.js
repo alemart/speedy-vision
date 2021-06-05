@@ -40,20 +40,20 @@ export class SpeedyPipelinePortSpec
 {
     /**
      * Constructor
-     * @param {SpeedyPipelineMessageType} expectedType expected message type
+     * @param {SpeedyPipelineMessageType} expectedMessageType expected message type
      * @param {SpeedyPipelineMessageConstraint} [messageConstraint] message validation function
      */
-    constructor(expectedType, messageConstraint = none)
+    constructor(expectedMessageType, messageConstraint = none)
     {
         /** @type {SpeedyPipelineMessageType} expected message type */
-        this._expectedType = expectedType;
+        this._expectedMessageType = expectedMessageType;
 
         /** @type {SpeedyPipelineMessageConstraint} message validation function */
         this._isValidMessage = (typeof messageConstant === 'function') ? messageConstraint : none;
 
 
         // expect a valid type
-        Utils.assert(this._expectedType != SpeedyPipelineMessageType.Nothing);
+        Utils.assert(this._expectedMessageType != SpeedyPipelineMessageType.Nothing);
     }
 
     /**
@@ -63,7 +63,7 @@ export class SpeedyPipelinePortSpec
      */
     isCompatibleWith(spec)
     {
-        return this._expectedType == spec._expectedType;
+        return this._expectedMessageType == spec._expectedMessageType;
     }
 
     /**
@@ -73,7 +73,7 @@ export class SpeedyPipelinePortSpec
      */
     accepts(message)
     {
-        return message.hasType(this._expectedType) && this._isValidMessage(message);
+        return message.hasType(this._expectedMessageType) && this._isValidMessage(message);
     }
 
     /**
@@ -82,6 +82,15 @@ export class SpeedyPipelinePortSpec
      */
     toString()
     {
-        return `Port expects ${this._expectedType} satisfying ${this._isValidMessage}`;
+        return `Port expects ${this._expectedMessageType} satisfying ${this._isValidMessage}`;
+    }
+
+    /**
+     * Expected message type
+     * @returns {SpeedyPipelineMessageType}
+     */
+    get expectedMessageType()
+    {
+        return this._expectedMessageType;
     }
 }

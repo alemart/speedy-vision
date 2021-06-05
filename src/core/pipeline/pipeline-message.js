@@ -20,6 +20,8 @@
  */
 
 import { Utils } from '../../utils/utils';
+import { ImageFormat } from '../../utils/types';
+import { AbstractMethodError } from '../../utils/errors';
 import { SpeedyTexture } from '../../gpu/speedy-texture';
 
 /**
@@ -84,6 +86,26 @@ export class SpeedyPipelineMessage
     {
         return `message of type ${this._type}`;
     }
+
+    /**
+     * Set parameters
+     * @param  {...any} args
+     * @returns {SpeedyPipelineMessage} this message
+     */
+    set(...args)
+    {
+        throw new AbstractMethodError();
+    }
+
+    /**
+     * Create a message of the specified type
+     * @param {SpeedyPipelineMessageType} type
+     * @returns {SpeedyPipelineMessage}
+     */
+    static create(type)
+    {
+        return createMessage(type);
+    }
 }
 
 /**
@@ -98,6 +120,15 @@ export class SpeedyPipelineMessageWithNothing extends SpeedyPipelineMessage
     {
         super(SpeedyPipelineMessageType.Nothing, null);
     }
+
+    /**
+     * Set parameters
+     * @returns {SpeedyPipelineMessage} this message
+     */
+    set()
+    {
+        return this;
+    }
 }
 
 /**
@@ -107,14 +138,32 @@ export class SpeedyPipelineMessageWithImage extends SpeedyPipelineMessage
 {
     /**
      * Constructor
-     * @param {SpeedyTexture} image the image we carry
      */
-    constructor(image)
+    constructor()
     {
         super(SpeedyPipelineMessageType.Image);
 
         /** @type {SpeedyTexture} the image we carry */
+        this._image = null;
+
+        /** @type {ImageFormat} image format */
+        this._format = ImageFormat.RGBA;
+    }
+
+    /**
+     * Set parameters
+     * @param {SpeedyTexture} image the image we carry
+     * @param {ImageFormat} [format] image format
+     * @returns {SpeedyPipelineMessage} this message
+     */
+    set(image, format = ImageFormat.RGBA)
+    {
+        // set parameters
         this._image = image;
+        this._format = format;
+
+        // done!
+        return this;
     }
 
     /**
@@ -125,6 +174,15 @@ export class SpeedyPipelineMessageWithImage extends SpeedyPipelineMessage
     {
         return this._image;
     }
+
+    /**
+     * Image format
+     * @returns {ImageFormat}
+     */
+    get format()
+    {
+        return this._format;
+    }
 }
 
 /**
@@ -134,32 +192,47 @@ export class SpeedyPipelineMessageWithKeypoints extends SpeedyPipelineMessage
 {
     /**
      * Constructor
-     * @param {SpeedyTexture} encodedKeypoints encoded keypoints
-     * @param {number} descriptorSize in bytes
-     * @param {number} extraSize in bytes
-     * @param {number} encoderLength positive integer
      */
-    constructor(encodedKeypoints, descriptorSize, extraSize, encoderLength)
+    constructor()
     {
         super(SpeedyPipelineMessageType.Keypoints);
 
         /** @type {SpeedyTexture} encoded keypoints */
-        this._encodedKeypoints = encodedKeypoints;
+        this._encodedKeypoints = null;
 
         /** @type {number} descriptor size in bytes */
-        this._descriptorSize = descriptorSize | 0;
+        this._descriptorSize = 0;
 
         /** @type {number} extra size in bytes */
-        this._extraSize = extraSize | 0;
+        this._extraSize = 0;
 
         /** @type {number} encoder length */
-        this._encoderLength = encoderLength | 0;
+        this._encoderLength = 1;
+    }
 
+    /**
+     * Set parameters
+     * @param {SpeedyTexture} encodedKeypoints encoded keypoints
+     * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
+     * @param {number} encoderLength positive integer
+     * @returns {SpeedyPipelineMessage} this message
+     */
+    set(encodedKeypoints, descriptorSize, extraSize, encoderLength)
+    {
+        // set parameters
+        this._encodedKeypoints = encodedKeypoints;
+        this._descriptorSize = descriptorSize | 0;
+        this._extraSize = extraSize | 0;
+        this._encoderLength = encoderLength | 0;
 
         // validate
         Utils.assert(this._descriptorSize >= 0 && this._extraSize >= 0);
         Utils.assert(this._encoderLength === this._encodedKeypoints.width, 'Invalid encoderLength');
         Utils.assert(this._encodedKeypoints.width === this._encodedKeypoints.height, 'Invalid encodedKeypoints texture');
+
+        // done!
+        return this;
     }
 
     /**
@@ -216,4 +289,34 @@ export class SpeedyPipelineMessageWithKeypoints extends SpeedyPipelineMessage
         // FIXME - find a better solution
         return this._extraSize > 0;
     }
+}
+
+
+
+
+
+
+
+//
+// Utilities
+//
+
+
+
+// Map message type to message class
+const MESSAGE_CLASS = Object.freeze({
+    [SpeedyPipelineMessageType.Nothing]: SpeedyPipelineMessageWithNothing,
+    [SpeedyPipelineMessageType.Image]: SpeedyPipelineMessageWithImage,
+    [SpeedyPipelineMessageType.Keypoints]: SpeedyPipelineMessageWithKeypoints,
+});
+
+/**
+ * Create a message of the specified type
+ * @param {SpeedyPipelineMessageType} type
+ * @returns {SpeedyPipelineMessage}
+ */
+function createMessage(type)
+{
+    //return Reflect.construct(MESSAGE_CLASS[type], []);
+    return new MESSAGE_CLASS[type];
 }

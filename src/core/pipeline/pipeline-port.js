@@ -22,7 +22,7 @@
 import { Utils } from '../../utils/utils';
 import { IllegalArgumentError, IllegalOperationError, AbstractMethodError, NotSupportedError } from '../../utils/errors';
 import { SpeedyPipelinePortSpec } from './pipeline-portspec';
-import { SpeedyPipelineMessage, SpeedyPipelineMessageWithNothing } from './pipeline-message';
+import { SpeedyPipelineMessage, SpeedyPipelineMessageWithNothing, SpeedyPipelineMessageType } from './pipeline-message';
 import { SpeedyPipelineNode } from './pipeline-node';
 
 // Constants
@@ -169,6 +169,9 @@ export class SpeedyPipelineOutputPort extends SpeedyPipelinePort
     constructor(name, spec, node)
     {
         super(name, spec, node);
+
+        /** @type {SpeedyPipelineMessage} cached message */
+        this._cachedMessage = null;
     }
 
     /**
@@ -202,6 +205,18 @@ export class SpeedyPipelineOutputPort extends SpeedyPipelinePort
             throw new IllegalArgumentError(`Can't write ${message} to port ${this.name}. ${this._spec}`);
 
         this._message = message;
+    }
+
+    /**
+     * Write a message to this port using a cached message object
+     * @param  {...any} args to be passed to SpeedyPipelineMessage.set()
+     */
+    swrite(...args)
+    {
+        if(this._cachedMessage == null)
+            this._cachedMessage = SpeedyPipelineMessage.create(this._spec.expectedMessageType);
+
+        this.write(this._cachedMessage.set(...args));
     }
 
     /**

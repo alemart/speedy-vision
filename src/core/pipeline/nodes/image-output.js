@@ -27,6 +27,7 @@ import { SpeedyTexture } from '../../../gpu/speedy-texture';
 import { SpeedyMedia } from '../../speedy-media';
 import { SpeedyMediaSource } from '../../speedy-media-source';
 import { Utils } from '../../../utils/utils';
+import { ImageFormat } from '../../../utils/types';
 import { SpeedyPromise } from '../../../utils/speedy-promise';
 
 /**
@@ -46,6 +47,9 @@ export class SpeedyPipelineNodeImageOutput extends SpeedyPipelineSinkNode
 
         /** @type {ImageBitmap} output bitmap */
         this._bitmap = null;
+
+        /** @type {ImageFormat} output format */
+        this._format = ImageFormat.RGBA;
     }
 
     /**
@@ -57,7 +61,7 @@ export class SpeedyPipelineNodeImageOutput extends SpeedyPipelineSinkNode
         Utils.assert(this._bitmap != null);
 
         return SpeedyMediaSource.load(this._bitmap).then(source =>
-            new SpeedyMedia(source, { lightweight: 1 /* FIXME */ }) //, colorFormat)
+            new SpeedyMedia(source, { lightweight: 1 /* FIXME */ }) //, this._format ?
         );
     }
 
@@ -68,12 +72,13 @@ export class SpeedyPipelineNodeImageOutput extends SpeedyPipelineSinkNode
      */
     _run(gpu)
     {
-        const { image } = this.input().read();
+        const { image, format } = this.input().read();
 
         return new SpeedyPromise(resolve => {
             const canvas = gpu.renderToCanvas(image);
             createImageBitmap(canvas, 0, canvas.height - image.height, image.width, image.height).then(bitmap => {
                 this._bitmap = bitmap;
+                this._format = format;
                 resolve();
             });
         });

@@ -25,6 +25,7 @@ import { InputPort, OutputPort } from '../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../../../gpu/speedy-texture';
 import { Utils } from '../../../../utils/utils';
+import { ImageFormat } from '../../../../utils/types';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 
 /**
@@ -58,8 +59,6 @@ export class SpeedyPipelineNodeGreyscale extends SpeedyPipelineNode
             .setOutputSize(image.width, image.height)
         )(image);
 
-        this.output().write(new SpeedyPipelineMessageWithImage(
-            this._outputTexture
-        ));
+        this.output().swrite(this._outputTexture, ImageFormat.GREY);
     }
 }
