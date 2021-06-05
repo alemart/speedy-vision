@@ -91,6 +91,7 @@ export class SpeedyPipelineNEW
      */
     run()
     {
+        Utils.assert(this._gpu != null, `Pipeline has been released`);
         Utils.assert(this._sequence.length > 0, `Pipeline doesn't have nodes`);
         Utils.assert(this._sequence[0].isSource(), `Pipeline doesn't have a source`);
 
@@ -113,8 +114,7 @@ export class SpeedyPipelineNEW
                 results.reduce((obj, val, idx) => Object.assign(obj, { [sinks[idx].name]: val }), {})
             )
         ).then(aggregate => {
-            // unset the output textures of the nodes
-            // and clear all ports
+            // unset the output textures of the nodes and clear all ports
             const nil = tex => this._gpu.texturePool.free(tex);
             for(let i = this._sequence.length - 1; i >= 0; i--) {
                 this._sequence[i].setOutputTextures(nil);
@@ -124,6 +124,22 @@ export class SpeedyPipelineNEW
             // done!
             return aggregate;
         }).turbocharge();
+    }
+
+    /**
+     * Release the resources associated with this pipeline
+     * @returns {null}
+     */
+    release()
+    {
+        if(this._gpu == null)
+            throw new IllegalOperationError(`The pipeline has already been released`);
+
+        this._gpu = this._gpu.release();
+        this._sequence.length = 0;
+        this._nodes.length = 0;
+
+        return null;
     }
 
     /**
