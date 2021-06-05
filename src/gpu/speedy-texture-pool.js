@@ -25,8 +25,31 @@ import { SpeedyDrawableTexture } from './speedy-texture';
 import { OutOfMemoryError } from '../utils/errors';
 
 // Constants
-const DEFAULT_CAPACITY = 16;
+const DEFAULT_CAPACITY = 64;
 const BUCKET = Symbol('Bucket');
+
+
+/*
+
+=== Heuristics to figure out the capacity of a texture pool ===
+
+1. Decide the maximum amount of VRAM you'd like to use in a pool (say, 64 MB).
+
+2. Figure out the average texture size (say, 640x360 pixels).
+
+3. Figure out the average texture size in bytes (say, 921600 bytes). Each pixel
+   uses 4 bytes (RGBA format).
+
+4. Divide the maximum amount of VRAM by the average texture size in bytes
+   (say, 72). That's the capacity of the pool.
+
+Note that textures are allocated lazily, so VRAM usage is kept to a minimum.
+
+Adapted from: https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices
+
+*/
+
+
 
 /**
  * @typedef {number} TextureBucketIndex index of a bucket in a pool
