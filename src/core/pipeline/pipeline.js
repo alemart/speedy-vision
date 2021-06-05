@@ -146,9 +146,14 @@ export class SpeedyPipelineNEW
      */
     static _runSequence(sequence, gpu, i = 0, n = sequence.length)
     {
-        return (i < n) ?
-            sequence[i].execute(gpu).then(() => SpeedyPipelineNEW._runSequence(sequence, gpu, i+1, n)) :
-            SpeedyPromise.resolve();
+        if(i >= n)
+            return SpeedyPromise.resolve();
+
+        const runTask = sequence[i].execute(gpu);
+        if(runTask == undefined)
+            return SpeedyPipelineNEW._runSequence(sequence, gpu, i+1, n);
+
+        return runTask.then(() => SpeedyPipelineNEW._runSequence(sequence, gpu, i+1, n));
     }
 
     /**

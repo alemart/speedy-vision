@@ -164,7 +164,7 @@ export class SpeedyPipelineNode
      * Get data from the input ports and execute
      * the task that this node is supposed to!
      * @param {SpeedyGPU} gpu
-     * @returns {SpeedyPromise<void>}
+     * @returns {void|SpeedyPromise<void>}
      */
     execute(gpu)
     {
@@ -179,19 +179,23 @@ export class SpeedyPipelineNode
             this._inputPorts[portName].pullMessage(this.fullName);
 
         // run the task
-        return this._run(gpu).then(() => {
-
-            // ensure that no output ports are empty
-            for(portName in this._outputPorts)
+        const runTask = this._run(gpu);
+        if(runTask == undefined) {
+            for(portName in this._outputPorts) // ensure that no output ports are empty
                 Utils.assert(this._outputPorts[portName].hasMessage(), `Did you forget to write data to the output port ${portName} of ${this.fullName}?`);
 
+            return undefined;
+        }
+        else return runTask.then(() => {
+            for(portName in this._outputPorts) // ensure that no output ports are empty
+                Utils.assert(this._outputPorts[portName].hasMessage(), `Did you forget to write data to the output port ${portName} of ${this.fullName}?`);
         });
     }
 
     /**
      * Run the specific task of this node
      * @param {SpeedyGPU} gpu
-     * @returns {SpeedyPromise<void>}
+     * @returns {void|SpeedyPromise<void>}
      */
     _run(gpu)
     {

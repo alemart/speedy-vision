@@ -64,17 +64,18 @@ export class SpeedyPipelineNodeImageOutput extends SpeedyPipelineSinkNode
     /**
      * Run the specific task of this node
      * @param {SpeedyGPU} gpu
-     * @returns {SpeedyPromise<void>}
+     * @returns {void|SpeedyPromise<void>}
      */
     _run(gpu)
     {
         const { image } = this.input().read();
 
-        return SpeedyPromise.resolve().then(() => {
+        return new SpeedyPromise(resolve => {
             const canvas = gpu.renderToCanvas(image);
-            return createImageBitmap(canvas, 0, canvas.height - image.height, image.width, image.height).then(bitmap =>
-                void(this._bitmap = bitmap)
-            )
+            createImageBitmap(canvas, 0, canvas.height - image.height, image.width, image.height).then(bitmap => {
+                this._bitmap = bitmap;
+                resolve();
+            });
         });
     }
 }

@@ -108,7 +108,7 @@ export class SpeedyPipelinePort
     }
 
     /**
-     * Clear the message located in this port
+     * Clear the message stored in this port
      */
     clearMessage()
     {

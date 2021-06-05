@@ -70,7 +70,7 @@ export class SpeedyPipelineNodeImageInput extends SpeedyPipelineSourceNode
     /**
      * Run the specific task of this node
      * @param {SpeedyGPU} gpu
-     * @returns {SpeedyPromise<void>}
+     * @returns {void|SpeedyPromise<void>}
      */
     _run(gpu)
     {
@@ -80,7 +80,5 @@ export class SpeedyPipelineNodeImageInput extends SpeedyPipelineSourceNode
         this.output().write(new SpeedyPipelineMessageWithImage(
             this._outputTexture
         ));
-
-        return SpeedyPromise.resolve();
     }
 }

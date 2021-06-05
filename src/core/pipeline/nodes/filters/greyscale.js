@@ -47,7 +47,7 @@ export class SpeedyPipelineNodeGreyscale extends SpeedyPipelineNode
     /**
      * Run the specific task of this node
      * @param {SpeedyGPU} gpu
-     * @returns {SpeedyPromise<void>}
+     * @returns {void|SpeedyPromise<void>}
      */
     _run(gpu)
     {
@@ -61,7 +61,5 @@ export class SpeedyPipelineNodeGreyscale extends SpeedyPipelineNode
         this.output().write(new SpeedyPipelineMessageWithImage(
             this._outputTexture
         ));
-
-        return SpeedyPromise.resolve();
     }
 }
