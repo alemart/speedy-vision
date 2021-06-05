@@ -35,7 +35,7 @@ const BUCKET = Symbol('Bucket');
 
 1. Decide the maximum amount of VRAM you'd like to use in a pool (say, 64 MB).
 
-2. Figure out the average texture size (say, 640x360 pixels).
+2. Figure out the average texture size in your application (say, 640x360 pixels).
 
 3. Figure out the average texture size in bytes (say, 921600 bytes). Each pixel
    uses 4 bytes (RGBA format).
