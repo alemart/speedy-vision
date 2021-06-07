@@ -1050,6 +1050,63 @@ Equality comparison.
 
 Returns `true` if the coordinates of `this` are equal to the coordinates of `p`, or `false` otherwise.
 
+#### 2D Size
+
+##### Speedy.Size()
+
+`Speedy.Size(width: number, height: number): SpeedySize`
+
+Creates a new immutable object that represents the size of a rectangle.
+
+###### Arguments
+
+* `width: number`. A non-negative number.
+* `height: number`. A non-negative number.
+
+###### Returns
+
+A new `SpeedySize` instance.
+
+###### Example
+
+```js
+const size = Speedy.Size(640, 360);
+```
+
+##### SpeedySize.width
+
+`SpeedySize.width: number`
+
+Width property.
+
+##### SpeedySize.height
+
+`SpeedySize.height: number`
+
+Height property.
+
+##### SpeedySize.equals
+
+`SpeedySize.equals(anotherSize: SpeedySize): boolean`
+
+Checks if two size objects have the same dimensions.
+
+###### Returns
+
+Returns `true` if the dimensions of `this` and `anotherSize` are equal.
+
+##### SpeedySize.toString
+
+`SpeedySize.toString(): string`
+
+Convert to string.
+
+###### Returns
+
+A string representation of the object.
+
+
+
 
 
 ### Matrices & Linear Algebra

@@ -28,6 +28,7 @@ import { SpeedyFeatureDescriptorFactory } from './speedy-feature-descriptor-fact
 import { SpeedyFlags } from './speedy-flags';
 import { SpeedyVector2 } from './math/speedy-vector';
 import { SpeedyPoint2 } from './math/speedy-point';
+import { SpeedySize } from './math/speedy-size';
 import { SpeedyMatrixExprFactory } from './math/matrix-expression-factory';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { SpeedyPipelineFactory } from './pipeline/factories/pipeline-factory';
@@ -140,6 +141,16 @@ export class Speedy
     static Point2(x, y)
     {
         return new SpeedyPoint2(x, y);
+    }
+
+    /**
+     * Create a new size object
+     * @param {number} width
+     * @param {number} height
+     */
+    static Size(width, height)
+    {
+        return new SpeedySize(width, height);
     }
 
     /**
