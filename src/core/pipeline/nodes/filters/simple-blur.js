@@ -121,8 +121,6 @@ export class SpeedyPipelineNodeSimpleBlur extends SpeedyPipelineNode
                 .setOutputSize(width, height)
             )(tex);
         }
-        else
-            throw new NotSupportedError();
 
         gpu.texturePool.free(tex);
         this.output().swrite(this._outputTexture, format);

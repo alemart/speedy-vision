@@ -107,8 +107,6 @@ export class SpeedyPipelineNodeMedianBlur extends SpeedyPipelineNode
                 .setOutputSize(width, height)
             )(image);
         }
-        else
-            throw new NotSupportedError();
 
         this.output().swrite(this._outputTexture, format);
     }
