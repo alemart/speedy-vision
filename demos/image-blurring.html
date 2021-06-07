@@ -1,7 +1,7 @@
 <!--
   speedy-vision.js
   GPU-accelerated Computer Vision for JavaScript
-  Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+  Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
   limitations under the License.
 
   image-blurring.html
-  Blurring an image demo
+  Blurring an image
 -->
 <!doctype html>
 <html>
@@ -34,20 +34,34 @@
         <script>
 window.onload = async function()
 {
-    // create a pipeline that blurs an image
-    const pipeline = Speedy.pipeline()
-                           .blur();
+    /*
 
-    // tell Speedy to load the image
-    const image = document.querySelector('img');
-    const media = await Speedy.load(image);
+    Here is the pipeline:
 
-    // run the pipeline
-    const transformedMedia = await media.run(pipeline);
+    Image ---> Gaussian ---> Image
+    Source     Blur          Sink
 
-    // create a canvas to display the result
-    const canvas = createCanvas(transformedMedia.width, transformedMedia.height, image.title);
-    transformedMedia.draw(canvas);
+    */
+
+    // load an image
+    const img = document.querySelector('img');
+    const media = await Speedy.load(img);
+
+    // create the pipeline
+    const pipeline = Speedy.Pipeline();
+    const source = Speedy.Pipeline.ImageSource();
+    const sink = Speedy.Pipeline.ImageSink();
+    const blur = Speedy.Filter.GaussianBlur();
+
+    source.media = media;
+    source.output().connectTo(blur.input());
+    blur.output().connectTo(sink.input());
+    pipeline.add(source, sink, blur);
+
+    // display the result
+    const { image } = await pipeline.run();
+    const canvas = createCanvas(media.width, media.height, img.title);
+    image.draw(canvas);
 }
 
 function createCanvas(width, height, title)
