@@ -46,34 +46,34 @@ export class SpeedyPipelineNodeSimpleBlur extends SpeedyPipelineNode
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
 
-        /** @type {SpeedySize} size of the kernel window (assumed to be square) */
-        this._windowSize = new SpeedySize(5,5);
+        /** @type {SpeedySize} size of the kernel (assumed to be square) */
+        this._kernelSize = new SpeedySize(5,5);
     }
 
     /**
-     * Size of the kernel window
+     * Size of the kernel
      * @returns {SpeedySize}
      */
-    get windowSize()
+    get kernelSize()
     {
-        return this._windowSize;
+        return this._kernelSize;
     }
 
     /**
-     * Size of the kernel window
-     * @param {SpeedySize} windowSize
+     * Size of the kernel
+     * @param {SpeedySize} kernelSize
      */
-    set windowSize(windowSize)
+    set kernelSize(kernelSize)
     {
-        Utils.assert(windowSize instanceof SpeedySize);
+        Utils.assert(kernelSize instanceof SpeedySize);
 
-        const ksize = windowSize.width;
+        const ksize = kernelSize.width;
         if(!(ksize == 3 || ksize == 5 || ksize == 7))
-            throw new NotSupportedError(`Supported window sizes: 3x3, 5x5, 7x7`);
-        else if(windowSize.width != windowSize.height)
-            throw new NotSupportedError(`Use a square window`);
+            throw new NotSupportedError(`Supported kernel sizes: 3x3, 5x5, 7x7`);
+        else if(kernelSize.width != kernelSize.height)
+            throw new NotSupportedError(`Use a square kernel`);
 
-        this._windowSize = windowSize;
+        this._kernelSize = kernelSize;
     }
 
     /**
@@ -85,7 +85,7 @@ export class SpeedyPipelineNodeSimpleBlur extends SpeedyPipelineNode
     {
         const { image, format } = this.input().read();
         const { width, height } = image;
-        const ksize = this._windowSize.width;
+        const ksize = this._kernelSize.width;
         const tex = gpu.texturePool.allocate();
 
         if(ksize == 3) {
