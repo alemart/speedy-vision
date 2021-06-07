@@ -49,7 +49,7 @@ export class SpeedyPipelinePortSpec
         this._expectedMessageType = expectedMessageType;
 
         /** @type {SpeedyPipelineMessageConstraint} message validation function */
-        this._isValidMessage = (typeof messageConstant === 'function') ? messageConstraint : none;
+        this._isValidMessage = (typeof messageConstraint === 'function') ? messageConstraint : none;
 
 
         // expect a valid type
