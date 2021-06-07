@@ -32,10 +32,9 @@
         <h1>Median filter</h1>
         <form autocomplete="off">
             <div>
-                <label for="window-size">Window size:</label>
-                <select id="window-size">
-                    <option value="1" selected>none</option>
-                    <option value="3">3x3</option>
+                <label for="kernel-size">Kernel size:</label>
+                <select id="kernel-size">
+                    <option value="3" selected>3x3</option>
                     <option value="5">5x5</option>
                     <option value="7">7x7</option>
                 </select>
@@ -49,42 +48,56 @@
         <video
             src="../assets/bird-walking.mp4"
             poster="../assets/loading.jpg"
-            width="480" height="270"
             preload="auto"
-            loop muted hidden
+            loop muted autoplay
             title="Free video by Wendy Laplume, https://www.pexels.com/pt-br/video/passaro-ave-passarinho-concreto-4168986/">
         </video>
         <script>
 window.onload = async function()
 {
-    // create pipelines that applies the median filter
-    const pipeline = {
-        '1': Speedy.pipeline().convertTo('greyscale'),
-        '3': Speedy.pipeline().convertTo('greyscale').median({ size: 3 }),
-        '5': Speedy.pipeline().convertTo('greyscale').median({ size: 5 }),
-        '7': Speedy.pipeline().convertTo('greyscale').median({ size: 7 })
-    };
+    /*
 
-    // tell Speedy to load the video
+    This is our pipeline:
+
+    Image  ---> Convert to ---> Median ---> Image
+    Source      greyscale       Blur        Sink
+
+    */
+
+    // Load a video
     const video = document.querySelector('video');
     const media = await Speedy.load(video);
-    video.play();
 
-    // create a canvas for rendering
-    const canvas = createCanvas(media.width, media.height, video.title);
+    // Setup the pipeline
+    const pipeline = Speedy.Pipeline();
+    const source = Speedy.Pipeline.ImageSource();
+    const sink = Speedy.Pipeline.ImageSink();
+    const greyscale = Speedy.Filter.Greyscale();
+    const median = Speedy.Filter.MedianBlur();
 
-    // input controls & video speed
-    const windowSize = document.getElementById('window-size');
+    source.media = media;
+    median.kernelSize = Speedy.Size(3,3);
+
+    source.output().connectTo(greyscale.input());
+    greyscale.output().connectTo(median.input());
+    median.output().connectTo(sink.input());
+
+    pipeline.add(source, sink, greyscale, median);
+
+    // Setup the input controls
+    const kernelSize = document.getElementById('kernel-size');
     const speedSlider = document.getElementById('speed-slider');
     speedSlider.oninput = () => video.playbackRate = speedSlider.value;
+    kernelSize.oninput = () => median.kernelSize = Speedy.Size(kernelSize.value, kernelSize.value);
 
-    // render the greyscale video
+    // Display the result
+    const canvas = createCanvas(media.width, media.height, video.title);
     async function render()
     {
-        const transformedMedia = await media.run(pipeline[windowSize.value]);
-        transformedMedia.draw(canvas);
+        const { image } = await pipeline.run();
+        image.draw(canvas);
         renderStatus(canvas);
-        requestAnimationFrame(render);
+        setTimeout(render, 1000 / 60);
     }
     render();
 }
