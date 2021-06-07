@@ -84,7 +84,11 @@ export class SpeedyPipelineMessage
      */
     toString()
     {
-        return `message of type ${this._type}`;
+        const type = Object.keys(SpeedyPipelineMessageType).find(
+            type => SpeedyPipelineMessageType[type] === this.type
+        );
+
+        return `message of type ${type}`;
     }
 
     /**

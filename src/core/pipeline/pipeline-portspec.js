@@ -82,7 +82,11 @@ export class SpeedyPipelinePortSpec
      */
     toString()
     {
-        return `Port expects ${this._expectedMessageType} satisfying ${this._isValidMessage}`;
+        const type = Object.keys(SpeedyPipelineMessageType).find(
+            type => SpeedyPipelineMessageType[type] === this._expectedMessageType
+        );
+
+        return `Port expects ${type} satisfying ${this._isValidMessage}`;
     }
 
     /**
