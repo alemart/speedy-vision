@@ -22,6 +22,7 @@
 import { SpeedyNamespace } from '../../speedy-namespace';
 import { SpeedyPipelineNodeGreyscale } from '../nodes/filters/greyscale';
 import { SpeedyPipelineNodeGaussianBlur } from '../nodes/filters/gaussian-blur';
+import { SpeedyPipelineNodeSimpleBlur } from '../nodes/filters/simple-blur';
 
 /**
  * Image filters
@@ -46,5 +47,15 @@ export class SpeedyPipelineFilterFactory extends SpeedyNamespace
     static GaussianBlur(name = undefined)
     {
         return new SpeedyPipelineNodeGaussianBlur(name);
+    }
+
+    /**
+     * Simple Blur (Box Filter)
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeSimpleBlur}
+     */
+    static SimpleBlur(name = undefined)
+    {
+        return new SpeedyPipelineNodeSimpleBlur(name);
     }
 }
