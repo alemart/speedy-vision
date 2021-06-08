@@ -33,6 +33,7 @@ import { SpeedyMatrixExprFactory } from './math/matrix-expression-factory';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { SpeedyPipelineFactory } from './pipeline/factories/pipeline-factory';
 import { SpeedyPipelineFilterFactory } from './pipeline/factories/filter-factory';
+import { SpeedyPipelineTransformFactory } from './pipeline/factories/transform-factory';
 import { Utils } from '../utils/utils';
 import { LITTLE_ENDIAN } from '../utils/globals';
 
@@ -187,6 +188,15 @@ export class Speedy
     static get Filter()
     {
         return SpeedyPipelineFilterFactory;
+    }
+
+    /**
+     * Image transforms
+     * @returns {Function}
+     */
+    static get Transform()
+    {
+        return SpeedyPipelineTransformFactory;
     }
 }
 

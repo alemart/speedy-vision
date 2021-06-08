@@ -1,7 +1,7 @@
 <!--
   speedy-vision.js
   GPU-accelerated Computer Vision for JavaScript
-  Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+  Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -32,55 +32,72 @@
         <h1>Normalize camera stream</h1>
         <form autocomplete="off">
             <div>
-                <label for="greyscale">Greyscale</label>
-                <input type="checkbox" id="greyscale" checked>
+                Map pixels to range:
+                &nbsp;&nbsp;
+            </div>
+            <div>
+                <label for="min-value">min</label>
+                <input type="range" id="min-value" min="0" max="255" value="0" step="1">
+            </div>
+            <div>
+                <label for="max-value">max</label>
+                <input type="range" id="max-value" min="0" max="255" value="255" step="1">
             </div>
         </form>
         <script>
 window.onload = async function()
 {
-    // create pipelines
-    const pipeline = {
-        colored: {
-            original: Speedy.pipeline(),
-            normalized: Speedy.pipeline().normalize()
-        },
-        greyscale: {
-            original: Speedy.pipeline().convertTo('greyscale'),
-            normalized: Speedy.pipeline().convertTo('greyscale').normalize()
-        }
-    };
+    /*
 
-    // tell Speedy to load the camera
-    const media1 = await Speedy.camera();
-    const media2 = await Speedy.camera();
+    Our pipeline:
 
-    // create two canvases for rendering
-    const canvas = [
-        createCanvas(media1.width, media1.height, 'Original'),
-        createCanvas(media2.width, media2.height, 'Normalized')
-    ];
+    Image ---> Convert to ---> Normalize ---> Image
+    Source     greyscale       image          Sink
+               |
+               |
+               +-------------> Image
+                               Sink
 
-    // user controls
-    const greyscale = document.getElementById('greyscale');
+    */
 
-    // render the greyscale video
-    function render()
+    // get camera stream
+    const camera = await Speedy.camera();
+
+    // setup the pipeline
+    const pipeline = Speedy.Pipeline();
+    const source = Speedy.Pipeline.ImageSource();
+    const sink1 = Speedy.Pipeline.ImageSink('grey');
+    const sink2 = Speedy.Pipeline.ImageSink('norm');
+    const greyscale = Speedy.Filter.Greyscale();
+    const normalize = Speedy.Transform.Normalize();
+
+    source.output().connectTo(greyscale.input());
+    greyscale.output().connectTo(normalize.input());
+    greyscale.output().connectTo(sink1.input());
+    normalize.output().connectTo(sink2.input());
+    pipeline.add(source, sink1, sink2, greyscale, normalize);
+
+    source.media = camera;
+    normalize.minValue = 0;
+    normalize.maxValue = 255;
+
+    // display the result
+    const canvas = createCanvas(camera.width, camera.height * 2);
+    async function render()
     {
-        const p = greyscale.checked ? 'greyscale' : 'colored';
-
-        Promise.all([
-            media1.run(pipeline[p].original),
-            media2.run(pipeline[p].normalized)
-        ]).then(([ original, normalized ]) => {
-            original.draw(canvas[0]);
-            normalized.draw(canvas[1]);
-
-            renderStatus(canvas[1]);
-            requestAnimationFrame(render);
-        });
+        const { grey, norm } = await pipeline.run();
+        norm.draw(canvas);
+        grey.draw(canvas, 0, norm.height);
+        renderStatus(canvas);
+        setTimeout(render, 1000 / 60);
     }
     render();
+
+    // setup sliders
+    const minSlider = document.getElementById('min-value');
+    const maxSlider = document.getElementById('max-value');
+    minSlider.oninput = () => normalize.minValue = minSlider.value;
+    maxSlider.oninput = () => normalize.maxValue = maxSlider.value;
 }
 
 function createCanvas(width, height, title)

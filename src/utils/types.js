@@ -53,6 +53,7 @@ export const ColorFormat = Utils.enum(
 
 /**
  * Pixel component (bitwise flags)
+ * @typedef {number} PixelComponent
  */
 export const PixelComponent = Object.freeze({
     RED:   1,
