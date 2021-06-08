@@ -183,7 +183,7 @@ export class SpeedyPipelineNEW
         const stack = nodes.map(node => [ node, false ]);
         const trash = new Set();
         const sorted = new Array(nodes.length);
-        let j = nodes.length;
+        let j = sorted.length;
 
         while(stack.length > 0) {
             const [ node, done ] = stack.pop();
