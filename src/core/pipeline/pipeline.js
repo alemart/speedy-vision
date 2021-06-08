@@ -182,7 +182,8 @@ export class SpeedyPipelineNEW
         const outlinks = SpeedyPipelineNEW._outlinks(nodes);
         const stack = nodes.map(node => [ node, false ]);
         const trash = new Set();
-        const sorted = [];
+        const sorted = new Array(nodes.length);
+        let j = nodes.length;
 
         while(stack.length > 0) {
             const [ node, done ] = stack.pop();
@@ -199,10 +200,10 @@ export class SpeedyPipelineNEW
                 }
             }
             else
-                sorted.push(node);
+                sorted[--j] = node;
         }
 
-        return sorted.reverse();
+        return sorted;
     }
 
     /**
