@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-06-05T23:08:22.610Z
+ * Date: 2021-06-08T03:06:04.071Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -10075,6 +10075,87 @@ class SpeedyPoint2
 
 /***/ }),
 
+/***/ "./src/core/math/speedy-size.js":
+/*!**************************************!*\
+  !*** ./src/core/math/speedy-size.js ***!
+  \**************************************/
+/*! exports provided: SpeedySize */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedySize", function() { return SpeedySize; });
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-size.js
+ * Size of a rectangle
+ */
+
+/**
+ * Size of a rectangle
+ */
+class SpeedySize
+{
+    /**
+     * Constructor
+     * @param {number} width non-negative number
+     * @param {number} height non-negative number
+     */
+    constructor(width, height)
+    {
+        /** @type {number} width */
+        this.width = Math.max(0, +width);
+
+        /** @type {number} height */
+        this.height = Math.max(0, +height);
+
+        // make it immutable
+        return Object.freeze(this);
+    }
+
+
+
+    //
+    // ===== METHODS =====
+    //
+
+    /**
+     * Convert to string
+     * @returns {string}
+     */
+    toString()
+    {
+        return `SpeedySize(${this.width}, ${this.height})`;
+    }
+
+    /**
+     * Is this size equal to anotherSize?
+     * @param {SpeedySize} anotherSize
+     * @returns {boolean}
+     */
+    equals(anotherSize)
+    {
+        return this.width === anotherSize.width && this.height === anotherSize.height;
+    }
+}
+
+/***/ }),
+
 /***/ "./src/core/math/speedy-vector.js":
 /*!****************************************!*\
   !*** ./src/core/math/speedy-vector.js ***!
@@ -10722,6 +10803,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineFilterFactory", function() { return SpeedyPipelineFilterFactory; });
 /* harmony import */ var _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../speedy-namespace */ "./src/core/speedy-namespace.js");
 /* harmony import */ var _nodes_filters_greyscale__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/filters/greyscale */ "./src/core/pipeline/nodes/filters/greyscale.js");
+/* harmony import */ var _nodes_filters_gaussian_blur__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../nodes/filters/gaussian-blur */ "./src/core/pipeline/nodes/filters/gaussian-blur.js");
+/* harmony import */ var _nodes_filters_simple_blur__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../nodes/filters/simple-blur */ "./src/core/pipeline/nodes/filters/simple-blur.js");
+/* harmony import */ var _nodes_filters_median_blur__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../nodes/filters/median-blur */ "./src/core/pipeline/nodes/filters/median-blur.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -10746,6 +10830,9 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
+
 /**
  * Image filters
  */
@@ -10754,10 +10841,41 @@ class SpeedyPipelineFilterFactory extends _speedy_namespace__WEBPACK_IMPORTED_MO
     /**
      * Convert image to greyscale
      * @param {string} [name]
+     * @returns {SpeedyPipelineNodeGreyscale}
      */
     static Greyscale(name = undefined)
     {
         return new _nodes_filters_greyscale__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodeGreyscale"](name);
+    }
+
+    /**
+     * Gaussian Blur
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeGaussianBlur}
+     */
+    static GaussianBlur(name = undefined)
+    {
+        return new _nodes_filters_gaussian_blur__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineNodeGaussianBlur"](name);
+    }
+
+    /**
+     * Simple Blur (Box Filter)
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeSimpleBlur}
+     */
+    static SimpleBlur(name = undefined)
+    {
+        return new _nodes_filters_simple_blur__WEBPACK_IMPORTED_MODULE_3__["SpeedyPipelineNodeSimpleBlur"](name);
+    }
+
+    /**
+     * Median Blur
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeSimpleBlur}
+     */
+    static MedianBlur(name = undefined)
+    {
+        return new _nodes_filters_median_blur__WEBPACK_IMPORTED_MODULE_4__["SpeedyPipelineNodeMedianBlur"](name);
     }
 }
 
@@ -10847,6 +10965,238 @@ class SpeedyPipelineFactory extends Function
 
 /***/ }),
 
+/***/ "./src/core/pipeline/factories/transform-factory.js":
+/*!**********************************************************!*\
+  !*** ./src/core/pipeline/factories/transform-factory.js ***!
+  \**********************************************************/
+/*! exports provided: SpeedyPipelineTransformFactory */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineTransformFactory", function() { return SpeedyPipelineTransformFactory; });
+/* harmony import */ var _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../speedy-namespace */ "./src/core/speedy-namespace.js");
+/* harmony import */ var _nodes_transforms_normalize__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/transforms/normalize */ "./src/core/pipeline/nodes/transforms/normalize.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * transform-factory.js
+ * Image transforms
+ */
+
+
+
+
+/**
+ * Image transforms
+ */
+class SpeedyPipelineTransformFactory extends _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__["SpeedyNamespace"]
+{
+    /**
+     * Normalize image
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeNormalize}
+     */
+    static Normalize(name = undefined)
+    {
+        return new _nodes_transforms_normalize__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodeNormalize"](name);
+    }
+}
+
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/filters/gaussian-blur.js":
+/*!**********************************************************!*\
+  !*** ./src/core/pipeline/nodes/filters/gaussian-blur.js ***!
+  \**********************************************************/
+/*! exports provided: SpeedyPipelineNodeGaussianBlur */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeGaussianBlur", function() { return SpeedyPipelineNodeGaussianBlur; });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../math/speedy-size */ "./src/core/math/speedy-size.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * gaussian-blur.js
+ * Gaussian Blur
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Gaussian Blur
+ */
+class SpeedyPipelineNodeGaussianBlur extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNode"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
+        ]);
+
+        /** @type {SpeedySize} size of the kernel (assumed to be square) */
+        this._kernelSize = new _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"](5,5);
+
+        /** @type {number} sigma of the Gaussian kernel (0 means: use default) */
+        this._sigma = 0.0;
+    }
+
+    /**
+     * Size of the kernel
+     * @returns {SpeedySize}
+     */
+    get kernelSize()
+    {
+        return this._kernelSize;
+    }
+
+    /**
+     * Size of the kernel
+     * @param {SpeedySize} kernelSize
+     */
+    set kernelSize(kernelSize)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(kernelSize instanceof _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"]);
+
+        const ksize = kernelSize.width;
+        if(!(ksize == 3 || ksize == 5 || ksize == 7))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["NotSupportedError"](`Supported kernel sizes: 3x3, 5x5, 7x7`);
+        else if(kernelSize.width != kernelSize.height)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["NotSupportedError"](`Use a square kernel`);
+
+        this._kernelSize = kernelSize;
+    }
+
+    /**
+     * Sigma of the Gaussian kernel
+     * @returns {number}
+     */
+    get sigma()
+    {
+        return this._sigma;
+    }
+
+    /**
+     * Sigma of the Gaussian kernel
+     * @param {number} sigma
+     */
+    set sigma(sigma)
+    {
+        // TODO
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["NotImplementedError"]();
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { image, format } = this.input().read();
+        const { width, height } = image;
+        const ksize = this._kernelSize.width;
+        const sigma = this._sigma;
+        const tex = gpu.texturePool.allocate();
+
+        if(sigma > 0.0) {
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["NotSupportedError"]();
+        }
+        else if(ksize == 3) {
+            (gpu.programs.filters._gauss3x
+                .useTexture(tex)
+                .setOutputSize(width, height)
+            )(image);
+
+            (gpu.programs.filters._gauss3y
+                .useTexture(this._outputTexture)
+                .setOutputSize(width, height)
+            )(tex);
+        }
+        else if(ksize == 5) {
+            (gpu.programs.filters._gauss5x
+                .useTexture(tex)
+                .setOutputSize(width, height)
+            )(image);
+
+            (gpu.programs.filters._gauss5y
+                .useTexture(this._outputTexture)
+                .setOutputSize(width, height)
+            )(tex);
+        }
+        else if(ksize == 7) {
+            (gpu.programs.filters._gauss7x
+                .useTexture(tex)
+                .setOutputSize(width, height)
+            )(image);
+
+            (gpu.programs.filters._gauss7y
+                .useTexture(this._outputTexture)
+                .setOutputSize(width, height)
+            )(tex);
+        }
+
+        gpu.texturePool.free(tex);
+        this.output().swrite(this._outputTexture, format);
+    }
+}
+
+/***/ }),
+
 /***/ "./src/core/pipeline/nodes/filters/greyscale.js":
 /*!******************************************************!*\
   !*** ./src/core/pipeline/nodes/filters/greyscale.js ***!
@@ -10927,6 +11277,293 @@ class SpeedyPipelineNodeGreyscale extends _pipeline_node__WEBPACK_IMPORTED_MODUL
         )(image);
 
         this.output().swrite(this._outputTexture, _utils_types__WEBPACK_IMPORTED_MODULE_6__["ImageFormat"].GREY);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/filters/median-blur.js":
+/*!********************************************************!*\
+  !*** ./src/core/pipeline/nodes/filters/median-blur.js ***!
+  \********************************************************/
+/*! exports provided: SpeedyPipelineNodeMedianBlur */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeMedianBlur", function() { return SpeedyPipelineNodeMedianBlur; });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../math/speedy-size */ "./src/core/math/speedy-size.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * median-blur.js
+ * Median Blur
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Median Blur
+ */
+class SpeedyPipelineNodeMedianBlur extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNode"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image).satisfying(
+                msg => msg.format === _utils_types__WEBPACK_IMPORTED_MODULE_7__["ImageFormat"].GREY
+            ),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
+        ]);
+
+        /** @type {SpeedySize} size of the kernel (assumed to be square) */
+        this._kernelSize = new _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"](5,5);
+    }
+
+    /**
+     * Size of the kernel
+     * @returns {SpeedySize}
+     */
+    get kernelSize()
+    {
+        return this._kernelSize;
+    }
+
+    /**
+     * Size of the kernel
+     * @param {SpeedySize} kernelSize
+     */
+    set kernelSize(kernelSize)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(kernelSize instanceof _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"]);
+
+        const ksize = kernelSize.width;
+        if(!(ksize == 3 || ksize == 5 || ksize == 7))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["NotSupportedError"](`Supported kernel sizes: 3x3, 5x5, 7x7`);
+        else if(kernelSize.width != kernelSize.height)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["NotSupportedError"](`Use a square kernel`);
+
+        this._kernelSize = kernelSize;
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { image, format } = this.input().read();
+        const { width, height } = image;
+        const ksize = this._kernelSize.width;
+
+        if(ksize == 3) {
+            (gpu.programs.filters.median3
+                .useTexture(this._outputTexture)
+                .setOutputSize(width, height)
+            )(image);
+        }
+        else if(ksize == 5) {
+            (gpu.programs.filters.median5
+                .useTexture(this._outputTexture)
+                .setOutputSize(width, height)
+            )(image);
+        }
+        else if(ksize == 7) {
+            (gpu.programs.filters.median7
+                .useTexture(this._outputTexture)
+                .setOutputSize(width, height)
+            )(image);
+        }
+
+        this.output().swrite(this._outputTexture, format);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/filters/simple-blur.js":
+/*!********************************************************!*\
+  !*** ./src/core/pipeline/nodes/filters/simple-blur.js ***!
+  \********************************************************/
+/*! exports provided: SpeedyPipelineNodeSimpleBlur */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeSimpleBlur", function() { return SpeedyPipelineNodeSimpleBlur; });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../math/speedy-size */ "./src/core/math/speedy-size.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * simple-blur.js
+ * Simple Blur (Box Filter)
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Simple Blur (Box Filter)
+ */
+class SpeedyPipelineNodeSimpleBlur extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNode"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
+        ]);
+
+        /** @type {SpeedySize} size of the kernel (assumed to be square) */
+        this._kernelSize = new _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"](5,5);
+    }
+
+    /**
+     * Size of the kernel
+     * @returns {SpeedySize}
+     */
+    get kernelSize()
+    {
+        return this._kernelSize;
+    }
+
+    /**
+     * Size of the kernel
+     * @param {SpeedySize} kernelSize
+     */
+    set kernelSize(kernelSize)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(kernelSize instanceof _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"]);
+
+        const ksize = kernelSize.width;
+        if(!(ksize == 3 || ksize == 5 || ksize == 7))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["NotSupportedError"](`Supported kernel sizes: 3x3, 5x5, 7x7`);
+        else if(kernelSize.width != kernelSize.height)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["NotSupportedError"](`Use a square kernel`);
+
+        this._kernelSize = kernelSize;
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { image, format } = this.input().read();
+        const { width, height } = image;
+        const ksize = this._kernelSize.width;
+        const tex = gpu.texturePool.allocate();
+
+        if(ksize == 3) {
+            (gpu.programs.filters._box3x
+                .useTexture(tex)
+                .setOutputSize(width, height)
+            )(image);
+
+            (gpu.programs.filters._box3y
+                .useTexture(this._outputTexture)
+                .setOutputSize(width, height)
+            )(tex);
+        }
+        else if(ksize == 5) {
+            (gpu.programs.filters._box5x
+                .useTexture(tex)
+                .setOutputSize(width, height)
+            )(image);
+
+            (gpu.programs.filters._box5y
+                .useTexture(this._outputTexture)
+                .setOutputSize(width, height)
+            )(tex);
+        }
+        else if(ksize == 7) {
+            (gpu.programs.filters._box7x
+                .useTexture(tex)
+                .setOutputSize(width, height)
+            )(image);
+
+            (gpu.programs.filters._box7y
+                .useTexture(this._outputTexture)
+                .setOutputSize(width, height)
+            )(tex);
+        }
+
+        gpu.texturePool.free(tex);
+        this.output().swrite(this._outputTexture, format);
     }
 }
 
@@ -11146,6 +11783,180 @@ class SpeedyPipelineNodeImageOutput extends _pipeline_node__WEBPACK_IMPORTED_MOD
 
 /***/ }),
 
+/***/ "./src/core/pipeline/nodes/transforms/normalize.js":
+/*!*********************************************************!*\
+  !*** ./src/core/pipeline/nodes/transforms/normalize.js ***!
+  \*********************************************************/
+/*! exports provided: SpeedyPipelineNodeNormalize */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeNormalize", function() { return SpeedyPipelineNodeNormalize; });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * normalize.js
+ * Normalize image to a range
+ */
+
+
+
+
+
+
+
+
+
+
+/**
+ * Normalize image to a range
+ */
+class SpeedyPipelineNodeNormalize extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNode"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image).satisfying(
+                msg => msg.format === _utils_types__WEBPACK_IMPORTED_MODULE_6__["ImageFormat"].GREY
+            ),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
+        ]);
+
+        /** @type {number} a value in [0,255] */
+        this._minValue = 0;
+
+        /** @type {number} a value in [0,255] */
+        this._maxValue = 255;
+    }
+
+    /**
+     * Minimum intensity in the output image, a value in [0,255]
+     * @returns {number}
+     */
+    get minValue()
+    {
+        return this._minValue;
+    }
+
+    /**
+     * Minimum intensity in the output image, a value in [0,255]
+     * @param {number} minValue
+     */
+    set minValue(minValue)
+    {
+        this._minValue = Math.max(0, Math.min(+minValue, 255));
+    }
+
+    /**
+     * Maximum intensity in the output image, a value in [0,255]
+     * @returns {number}
+     */
+    get maxValue()
+    {
+        return this._maxValue;
+    }
+
+    /**
+     * Maximum intensity in the output image, a value in [0,255]
+     * @param {number} maxValue
+     */
+    set maxValue(maxValue)
+    {
+        this._maxValue = Math.max(0, Math.min(+maxValue, 255));
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { image, format } = this.input().read();
+        const { width, height } = image;
+        let minValue = this._minValue;
+        let maxValue = this._maxValue;
+
+        if(minValue > maxValue)
+            minValue = maxValue = (minValue + maxValue) / 2;
+
+        const tex = [
+            gpu.texturePool.allocate(),
+            gpu.texturePool.allocate(),
+            gpu.texturePool.allocate()
+        ];
+
+        const minmax = this._scanMinMax(gpu, tex, image, _utils_types__WEBPACK_IMPORTED_MODULE_6__["PixelComponent"].GREEN);
+
+        (gpu.programs.enhancements._normalizeGreyscaleImage
+            .useTexture(this._outputTexture)
+            .setOutputSize(width, height)
+        )(minmax, minValue, maxValue)
+
+        gpu.texturePool.free(tex[2]);
+        gpu.texturePool.free(tex[1]);
+        gpu.texturePool.free(tex[0]);
+
+        this.output().swrite(this._outputTexture, format);
+    }
+
+    /**
+     * Scan a single component in all pixels of the image and find the min & max intensities
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTexture[]} tex temporary textures (3)
+     * @param {SpeedyTexture} image input image
+     * @param {PixelComponent} pixelComponent a single PixelComponent flag
+     * @returns {SpeedyDrawableTexture} RGBA = (max, min, max - min, original_pixel)
+     */
+    _scanMinMax(gpu, tex, image, pixelComponent)
+    {
+        const { width, height } = image;
+        const program = gpu.programs.utils;
+        const numIterations = Math.ceil(Math.log2(Math.max(width, height))) | 0;
+
+        _utils_utils__WEBPACK_IMPORTED_MODULE_5__["Utils"].assert(tex.length === 3);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_5__["Utils"].assert(_utils_types__WEBPACK_IMPORTED_MODULE_6__["ColorComponentId"][pixelComponent] !== undefined);
+
+        program._copyComponents.useTexture(tex[2]).setOutputSize(width, height);
+        program._scanMinMax2D.useTexture(tex[0], tex[1]).setOutputSize(width, height);
+        
+        let texture = program._copyComponents(image, image, _utils_types__WEBPACK_IMPORTED_MODULE_6__["PixelComponent"].ALL, _utils_types__WEBPACK_IMPORTED_MODULE_6__["ColorComponentId"][pixelComponent]);
+        for(let i = 0; i < numIterations; i++)
+            texture = program._scanMinMax2D(texture, i);
+
+        return texture;
+    }
+}
+
+/***/ }),
+
 /***/ "./src/core/pipeline/pipeline-message.js":
 /*!***********************************************!*\
   !*** ./src/core/pipeline/pipeline-message.js ***!
@@ -11250,7 +12061,11 @@ class SpeedyPipelineMessage
      */
     toString()
     {
-        return `message of type ${this._type}`;
+        const type = Object.keys(SpeedyPipelineMessageType).find(
+            type => SpeedyPipelineMessageType[type] === this.type
+        );
+
+        return `message of type ${type}`;
     }
 
     /**
@@ -12365,7 +13180,7 @@ class SpeedyPipelinePortSpec
         this._expectedMessageType = expectedMessageType;
 
         /** @type {SpeedyPipelineMessageConstraint} message validation function */
-        this._isValidMessage = (typeof messageConstant === 'function') ? messageConstraint : none;
+        this._isValidMessage = (typeof messageConstraint === 'function') ? messageConstraint : none;
 
 
         // expect a valid type
@@ -12398,7 +13213,11 @@ class SpeedyPipelinePortSpec
      */
     toString()
     {
-        return `Port expects ${this._expectedMessageType} satisfying ${this._isValidMessage}`;
+        const type = Object.keys(_pipeline_message__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineMessageType"]).find(
+            type => _pipeline_message__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineMessageType"][type] === this._expectedMessageType
+        );
+
+        return `Port expects ${type} satisfying ${this._isValidMessage}`;
     }
 
     /**
@@ -12522,6 +13341,7 @@ class SpeedyPipelineNEW
      */
     run()
     {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(this._gpu != null, `Pipeline has been released`);
         _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(this._sequence.length > 0, `Pipeline doesn't have nodes`);
         _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(this._sequence[0].isSource(), `Pipeline doesn't have a source`);
 
@@ -12544,8 +13364,7 @@ class SpeedyPipelineNEW
                 results.reduce((obj, val, idx) => Object.assign(obj, { [sinks[idx].name]: val }), {})
             )
         ).then(aggregate => {
-            // unset the output textures of the nodes
-            // and clear all ports
+            // unset the output textures of the nodes and clear all ports
             const nil = tex => this._gpu.texturePool.free(tex);
             for(let i = this._sequence.length - 1; i >= 0; i--) {
                 this._sequence[i].setOutputTextures(nil);
@@ -12555,6 +13374,22 @@ class SpeedyPipelineNEW
             // done!
             return aggregate;
         }).turbocharge();
+    }
+
+    /**
+     * Release the resources associated with this pipeline
+     * @returns {null}
+     */
+    release()
+    {
+        if(this._gpu == null)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`The pipeline has already been released`);
+
+        this._gpu = this._gpu.release();
+        this._sequence.length = 0;
+        this._nodes.length = 0;
+
+        return null;
     }
 
     /**
@@ -15192,12 +16027,14 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_flags__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./speedy-flags */ "./src/core/speedy-flags.js");
 /* harmony import */ var _math_speedy_vector__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./math/speedy-vector */ "./src/core/math/speedy-vector.js");
 /* harmony import */ var _math_speedy_point__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./math/speedy-point */ "./src/core/math/speedy-point.js");
-/* harmony import */ var _math_matrix_expression_factory__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./math/matrix-expression-factory */ "./src/core/math/matrix-expression-factory.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _pipeline_factories_pipeline_factory__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./pipeline/factories/pipeline-factory */ "./src/core/pipeline/factories/pipeline-factory.js");
-/* harmony import */ var _pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./pipeline/factories/filter-factory */ "./src/core/pipeline/factories/filter-factory.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _math_speedy_size__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./math/speedy-size */ "./src/core/math/speedy-size.js");
+/* harmony import */ var _math_matrix_expression_factory__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./math/matrix-expression-factory */ "./src/core/math/matrix-expression-factory.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _pipeline_factories_pipeline_factory__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./pipeline/factories/pipeline-factory */ "./src/core/pipeline/factories/pipeline-factory.js");
+/* harmony import */ var _pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./pipeline/factories/filter-factory */ "./src/core/pipeline/factories/filter-factory.js");
+/* harmony import */ var _pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./pipeline/factories/transform-factory */ "./src/core/pipeline/factories/transform-factory.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -15235,9 +16072,11 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
 // Constants
-const matrixExprFactory = new _math_matrix_expression_factory__WEBPACK_IMPORTED_MODULE_9__["SpeedyMatrixExprFactory"]();
-const pipelineFactory = new _pipeline_factories_pipeline_factory__WEBPACK_IMPORTED_MODULE_11__["SpeedyPipelineFactory"]();
+const matrixExprFactory = new _math_matrix_expression_factory__WEBPACK_IMPORTED_MODULE_10__["SpeedyMatrixExprFactory"]();
+const pipelineFactory = new _pipeline_factories_pipeline_factory__WEBPACK_IMPORTED_MODULE_12__["SpeedyPipelineFactory"]();
 
 /**
  * Speedy's main class
@@ -15343,6 +16182,16 @@ class Speedy
     }
 
     /**
+     * Create a new size object
+     * @param {number} width
+     * @param {number} height
+     */
+    static Size(width, height)
+    {
+        return new _math_speedy_size__WEBPACK_IMPORTED_MODULE_9__["SpeedySize"](width, height);
+    }
+
+    /**
      * Matrix routines
      * @returns {SpeedyMatrixExprFactory}
      */
@@ -15357,7 +16206,7 @@ class Speedy
      */
     static get Promise()
     {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_10__["SpeedyPromise"];
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_11__["SpeedyPromise"];
     }
 
     /**
@@ -15375,7 +16224,16 @@ class Speedy
      */
     static get Filter()
     {
-        return _pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_12__["SpeedyPipelineFilterFactory"];
+        return _pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_13__["SpeedyPipelineFilterFactory"];
+    }
+
+    /**
+     * Image transforms
+     * @returns {Function}
+     */
+    static get Transform()
+    {
+        return _pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_14__["SpeedyPipelineTransformFactory"];
     }
 }
 
@@ -15383,8 +16241,8 @@ class Speedy
 Object.assign(Speedy.constructor.prototype, _speedy_flags__WEBPACK_IMPORTED_MODULE_6__["SpeedyFlags"]);
 
 // Big-endian machine? Currently untested.
-if(!_utils_globals__WEBPACK_IMPORTED_MODULE_14__["LITTLE_ENDIAN"])
-    _utils_utils__WEBPACK_IMPORTED_MODULE_13__["Utils"].warn('Running on a big-endian machine');
+if(!_utils_globals__WEBPACK_IMPORTED_MODULE_16__["LITTLE_ENDIAN"])
+    _utils_utils__WEBPACK_IMPORTED_MODULE_15__["Utils"].warn('Running on a big-endian machine');
 
 /***/ }),
 
@@ -20000,9 +20858,15 @@ class SpeedyProgram extends Function
         /** @type {boolean} should we render to a texture? If false, we render to the canvas */
         this._renderToTexture = Boolean(options.renderToTexture);
 
+        /** @type {number} width of the output texture, in pixels */
+        this._width = options.output[0] | 0;
+
+        /** @type {number} height of the output texture, in pixels */
+        this._height = options.output[1] | 0;
+
         /** @type {SpeedyDrawableTexture[]} internal texture(s) */
         this._ownTexture = Array.from({ length: options.pingpong ? 2 : 1 },
-            () => new _speedy_texture__WEBPACK_IMPORTED_MODULE_0__["SpeedyDrawableTexture"](gl, options.output[0] | 0, options.output[1] | 0));
+            () => new _speedy_texture__WEBPACK_IMPORTED_MODULE_0__["SpeedyDrawableTexture"](gl, this._width, this._height));
 
         /** @type {SpeedyDrawableTexture[]} output texture(s) */
         this._texture = [].concat(this._ownTexture);
@@ -20126,9 +20990,43 @@ class SpeedyProgram extends Function
      */
     setOutputSize(width, height)
     {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(width > 0 && height > 0);
+
+        // update size
+        this._width = width | 0;
+        this._height = height | 0;
+
         // resize the output texture(s)
-        for(let i = 0; i < this._texture.length; i++)
-            this._texture[i].resize(width, height);
+        for(let i = 0; i < this._texture.length; i++) {
+            if(this._texture[i] != null)
+                this._texture[i].resize(this._width, this._height);
+        }
+
+        // done!
+        return this;
+    }
+
+    /**
+     * Use the provided texture(s) as output
+     * @param {SpeedyDrawableTexture[]} texture set to null to use the internal texture(s)
+     * @returns {SpeedyProgram} this
+     */
+    useTexture(...texture)
+    {
+        const expectedTextures = this._texture.length;
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(texture.length === expectedTextures, `Incorrect number of textures (expected ${expectedTextures})`);
+
+        // we need to keep the current size
+        const width = this.width;
+        const height = this.height;
+
+        // update output texture(s)
+        const useInternal = texture.every(tex => tex === null);
+        this._texture = !useInternal ? [].concat(texture) : this._ownTexture;
+        this._textureIndex = 0;
+
+        // restore previous size
+        this.setOutputSize(width, height);
 
         // done!
         return this;
@@ -20200,47 +21098,21 @@ class SpeedyProgram extends Function
     }
 
     /**
-     * Use the provided texture(s) as output
-     * @param {SpeedyDrawableTexture[]} texture set to null to use the internal texture(s)
-     * @returns {SpeedyProgram} this
-     */
-    useTexture(...texture)
-    {
-        const expectedTextures = this._ownTexture.length;
-        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(texture.length === expectedTextures, `Incorrect number of textures (expected ${expectedTextures})`);
-
-        // we need to keep the current size
-        const width = this.width;
-        const height = this.height;
-
-        // update output texture(s)
-        const useInternal = texture.every(tex => tex === null);
-        this._texture = !useInternal ? [].concat(texture) : this._ownTexture;
-        this._textureIndex = 0;
-
-        // restore previous size
-        this.setOutputSize(width, height);
-
-        // done!
-        return this;
-    }
-
-    /**
-     * Width of the internal texture, in pixels
+     * Width of the output texture, in pixels
      * @returns {number}
      */
     get width()
     {
-        return this._texture[0].width;
+        return this._width;
     }
 
     /**
-     * Height of the internal texture, in pixels
+     * Height of the output texture, in pixels
      * @returns {number}
      */
     get height()
     {
-        return this._texture[0].height;
+        return this._height;
     }
 
     /**
@@ -20633,8 +21505,31 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // Constants
-const DEFAULT_CAPACITY = 16;
+const DEFAULT_CAPACITY = 64;
 const BUCKET = Symbol('Bucket');
+
+
+/*
+
+=== Heuristics to figure out the capacity of a texture pool ===
+
+1. Decide the maximum amount of VRAM you'd like to use in a pool (say, 64 MB).
+
+2. Figure out the average texture size in your application (say, 640x360 pixels).
+
+3. Figure out the average texture size in bytes (say, 921600 bytes). Each pixel
+   uses 4 bytes (RGBA format).
+
+4. Divide the maximum amount of VRAM by the average texture size in bytes
+   (say, 72). That's the capacity of the pool.
+
+Note that textures are allocated lazily, so VRAM usage is kept to a minimum.
+
+Adapted from: https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices
+
+*/
+
+
 
 /**
  * @typedef {number} TextureBucketIndex index of a bucket in a pool
@@ -23044,6 +23939,7 @@ const ColorFormat = _utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].enum(
 
 /**
  * Pixel component (bitwise flags)
+ * @typedef {number} PixelComponent
  */
 const PixelComponent = Object.freeze({
     RED:   1,
