@@ -68,6 +68,30 @@
             </div>
         </form>
         <script>
+function createPipeline(media, mustConvertToGreyscale)
+{
+    const pipeline = Speedy.Pipeline();
+    const source = Speedy.Pipeline.ImageSource();
+    const sink = Speedy.Pipeline.ImageSink();
+    const nightvision = Speedy.Filter.Nightvision('nightvision');
+
+    source.media = media;
+
+    if(mustConvertToGreyscale) {
+        const greyscale = Speedy.Filter.Greyscale();
+        source.output().connectTo(greyscale.input());
+        greyscale.output().connectTo(nightvision.input());
+        nightvision.output().connectTo(sink.input());
+        pipeline.add(source, sink, greyscale, nightvision);
+    }
+    else {
+        source.output().connectTo(nightvision.input());
+        nightvision.output().connectTo(sink.input());
+        pipeline.add(source, sink, nightvision);
+    }
+
+    return pipeline;
+}
 window.onload = async function()
 {
     // form controls
@@ -80,55 +104,44 @@ window.onload = async function()
     const qualitySelect = document.getElementById('quality-select');
     const greyscaleCheckbox = document.getElementById('greyscale-checkbox');
 
-    // create a colored and a greyscale pipeline
-    const pipeline = [
-        Speedy.pipeline()
-              .nightvision(() => ({
-                  gain: Number(gainSlider.value),
-                  offset: Number(offsetSlider.value),
-                  decay: Number(decaySlider.value),
-                  quality: qualitySelect.value
-              })),
-
-        Speedy.pipeline()
-              .convertTo('greyscale')
-              .nightvision(() => ({
-                  gain: Number(gainSlider.value),
-                  offset: Number(offsetSlider.value),
-                  decay: Number(decaySlider.value),
-                  quality: qualitySelect.value
-              })),
-    ];
-
-    // tell Speedy to load the media
-    const media = await Speedy.camera();
-
-    // create a canvas for rendering
-    const canvas = createCanvas(media.width, media.height, 'Nightvision');
-
-    // render the media
-    async function render()
-    {
-        const i = greyscaleCheckbox.checked ? 1 : 0;
-        const transformedMedia = await media.run(pipeline[i]);
-
-        transformedMedia.draw(canvas);
-        media.draw(canvas, 0, 0, media.width / 3, media.height / 3);
-        renderStatus(canvas, 'white', 10);
-
-        requestAnimationFrame(render);
-    }
-    render();
-
-    // update form controls
     setInterval(() => {
         gainViewer.innerText = Number(gainSlider.value).toFixed(2);
         offsetViewer.innerText = Number(offsetSlider.value).toFixed(2);
         decayViewer.innerText = Number(decaySlider.value).toFixed(2);
     }, 100);
 
-    // details
+    // load the camera stream
+    const media = await Speedy.camera();
+
+    // create a colored and a greyscale pipeline
+    const pipeline = [
+        createPipeline(media, false),
+        createPipeline(media, true)
+    ];
+    const nightvision = pipeline.map(p => p.node('nightvision'));
+
+    // create a canvas
+    const canvas = createCanvas(media.width, media.height, 'Nightvision');
     canvas.style.width = (media.width * 2) + 'px';
+
+    // display the result
+    async function render()
+    {
+        const i = greyscaleCheckbox.checked ? 1 : 0;
+
+        nightvision[i].gain = Number(gainSlider.value);
+        nightvision[i].offset = Number(offsetSlider.value);
+        nightvision[i].decay = Number(decaySlider.value);
+        nightvision[i].quality = qualitySelect.value;
+
+        const { image } = await pipeline[i].run();
+        image.draw(canvas);
+        media.draw(canvas, 0, 0, media.width / 3, media.height / 3);
+        renderStatus(canvas, 'white', 10);
+
+        setTimeout(render, 1000 / 60);
+    }
+    render();
 }
 
 function createCanvas(width, height, title)
