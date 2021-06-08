@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-06-08T03:06:04.071Z
+ * Date: 2021-06-08T19:50:07.456Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -9344,9 +9344,9 @@ class MatrixShape
      * Constructor
      * @param {number} rows number of rows of the matrix
      * @param {number} columns number of columns of the matrix
-     * @param {MatrixDataType} dtype data type of the matrix
+     * @param {MatrixDataType} [dtype] data type of the matrix
      */
-    constructor(rows, columns, dtype)
+    constructor(rows, columns, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_1__["MatrixType"].default)
     {
         /** @type {number} number of rows of the matrix */
         this.rows = rows | 0;
@@ -10806,6 +10806,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _nodes_filters_gaussian_blur__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../nodes/filters/gaussian-blur */ "./src/core/pipeline/nodes/filters/gaussian-blur.js");
 /* harmony import */ var _nodes_filters_simple_blur__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../nodes/filters/simple-blur */ "./src/core/pipeline/nodes/filters/simple-blur.js");
 /* harmony import */ var _nodes_filters_median_blur__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../nodes/filters/median-blur */ "./src/core/pipeline/nodes/filters/median-blur.js");
+/* harmony import */ var _nodes_filters_nightvision__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../nodes/filters/nightvision */ "./src/core/pipeline/nodes/filters/nightvision.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -10826,6 +10827,7 @@ __webpack_require__.r(__webpack_exports__);
  * filter-factory.js
  * Image filters
  */
+
 
 
 
@@ -10876,6 +10878,16 @@ class SpeedyPipelineFilterFactory extends _speedy_namespace__WEBPACK_IMPORTED_MO
     static MedianBlur(name = undefined)
     {
         return new _nodes_filters_median_blur__WEBPACK_IMPORTED_MODULE_4__["SpeedyPipelineNodeMedianBlur"](name);
+    }
+
+    /**
+     * Nightvision
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeSimpleBlur}
+     */
+    static Nightvision(name = undefined)
+    {
+        return new _nodes_filters_nightvision__WEBPACK_IMPORTED_MODULE_5__["SpeedyPipelineNodeNightvision"](name);
     }
 }
 
@@ -10977,6 +10989,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineTransformFactory", function() { return SpeedyPipelineTransformFactory; });
 /* harmony import */ var _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../speedy-namespace */ "./src/core/speedy-namespace.js");
 /* harmony import */ var _nodes_transforms_normalize__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/transforms/normalize */ "./src/core/pipeline/nodes/transforms/normalize.js");
+/* harmony import */ var _nodes_transforms_perspective_warp__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../nodes/transforms/perspective-warp */ "./src/core/pipeline/nodes/transforms/perspective-warp.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -11001,6 +11014,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /**
  * Image transforms
  */
@@ -11015,8 +11029,17 @@ class SpeedyPipelineTransformFactory extends _speedy_namespace__WEBPACK_IMPORTED
     {
         return new _nodes_transforms_normalize__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodeNormalize"](name);
     }
-}
 
+    /**
+     * Warp an image using a perspective transformation
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeNormalize}
+     */
+    static PerspectiveWarp(name = undefined)
+    {
+        return new _nodes_transforms_perspective_warp__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineNodePerspectiveWarp"](name);
+    }
+}
 
 /***/ }),
 
@@ -11412,6 +11435,242 @@ class SpeedyPipelineNodeMedianBlur extends _pipeline_node__WEBPACK_IMPORTED_MODU
             )(image);
         }
 
+        this.output().swrite(this._outputTexture, format);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/filters/nightvision.js":
+/*!********************************************************!*\
+  !*** ./src/core/pipeline/nodes/filters/nightvision.js ***!
+  \********************************************************/
+/*! exports provided: SpeedyPipelineNodeNightvision */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeNightvision", function() { return SpeedyPipelineNodeNightvision; });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * nightvision.js
+ * Nightvision filter
+ */
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * @typedef {"high"|"medium"|"low"} NightvisionQualityLevel
+ */
+
+/**
+ * Nightvision filter: "see in the dark"
+ */
+class SpeedyPipelineNodeNightvision extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNode"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image).satisfying(
+                msg => msg.format === _utils_types__WEBPACK_IMPORTED_MODULE_7__["ImageFormat"].RGBA || msg.format === _utils_types__WEBPACK_IMPORTED_MODULE_7__["ImageFormat"].GREY
+            ),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
+        ]);
+
+        /** @type {number} a value typically in [0,1]: larger number => higher contrast */
+        this._gain = 0.5;
+
+        /** @type {number} a value typically in [0,1]: controls brightness */
+        this._offset = 0.5;
+
+        /** @type {number} gain decay, a value in [0,1] */
+        this._decay = 0.0;
+
+        /** @type {NightvisionQualityLevel} quality level */
+        this._quality = 'medium';
+    }
+
+    /**
+     * Gain, a value typically in [0,1]: larger number => higher contrast
+     * @returns {number}
+     */
+    get gain()
+    {
+        return this._gain;
+    }
+
+    /**
+     * Gain, a value typically in [0,1]: larger number => higher contrast
+     * @param {number} gain
+     */
+    set gain(gain)
+    {
+        this._gain = +gain;
+    }
+
+    /**
+     * Offset, a value typically in [0,1] that controls the brightness
+     * @returns {number}
+     */
+    get offset()
+    {
+        return this._offset;
+    }
+
+    /**
+     * Offset, a value typically in [0,1] that controls the brightness
+     * @param {number} offset
+     */
+    set offset(offset)
+    {
+        this._offset = +offset;
+    }
+
+    /**
+     * Gain decay, a value in [0,1] that controls how the gain decays from the center of the image
+     * @returns {number}
+     */
+    get decay()
+    {
+        return this._decay;
+    }
+
+    /**
+     * Gain decay, a value in [0,1] that controls how the gain decays from the center of the image
+     * @param {number} decay
+     */
+    set decay(decay)
+    {
+        this._decay = Math.max(0.0, Math.min(+decay, 1.0));
+    }
+
+    /**
+     * Quality level of the filter
+     * @returns {NightvisionQualityLevel}
+     */
+    get quality()
+    {
+        return this._quality;
+    }
+
+    /**
+     * Quality level of the filter
+     * @param {NightvisionQualityLevel} quality
+     */
+    set quality(quality)
+    {
+        if(!(quality == 'high' || quality == 'medium' || quality == 'low'))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_6__["IllegalArgumentError"](`Invalid quality level for the Nightvision filter: "${quality}"`);
+
+        this._quality = String(quality);
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { image, format } = this.input().read();
+        const { width, height } = image;
+        const gain = this._gain;
+        const offset = this._offset;
+        const decay = this._decay;
+        const quality = this._quality;
+        const program = gpu.programs.enhancements;
+
+        // compute illumination map
+        const tmp = gpu.texturePool.allocate();
+        const illuminationMap = gpu.texturePool.allocate();
+
+        if(quality == 'medium') {
+            (program._illuminationMapX
+                .useTexture(tmp)
+                .setOutputSize(width, height)
+            )(image);
+
+            (program._illuminationMapY
+                .useTexture(illuminationMap)
+                .setOutputSize(width, height)
+            )(tmp);
+        }
+        else if(quality == 'high') {
+            (program._illuminationMapHiX
+                .useTexture(tmp)
+                .setOutputSize(width, height)
+            )(image);
+
+            (program._illuminationMapHiY
+                .useTexture(illuminationMap)
+                .setOutputSize(width, height)
+            )(tmp);
+        }
+        else if(quality == 'low') {
+            (program._illuminationMapLoX
+                .useTexture(tmp)
+                .setOutputSize(width, height)
+            )(image);
+
+            (program._illuminationMapLoY
+                .useTexture(illuminationMap)
+                .setOutputSize(width, height)
+            )(tmp);
+        }
+
+        // run nightvision
+        if(format === _utils_types__WEBPACK_IMPORTED_MODULE_7__["ImageFormat"].GREY) {
+            (program._nightvisionGreyscale
+                .useTexture(this._outputTexture)
+                .setOutputSize(width, height)
+            )(image, illuminationMap, gain, offset, decay);
+        }
+        else if(format === _utils_types__WEBPACK_IMPORTED_MODULE_7__["ImageFormat"].RGBA) {
+            (program._nightvision
+                .useTexture(this._outputTexture)
+                .setOutputSize(width, height)
+            )(image, illuminationMap, gain, offset, decay);
+        }
+
+        // done!
+        gpu.texturePool.free(illuminationMap);
+        gpu.texturePool.free(tmp);
         this.output().swrite(this._outputTexture, format);
     }
 }
@@ -11952,6 +12211,183 @@ class SpeedyPipelineNodeNormalize extends _pipeline_node__WEBPACK_IMPORTED_MODUL
             texture = program._scanMinMax2D(texture, i);
 
         return texture;
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/transforms/perspective-warp.js":
+/*!****************************************************************!*\
+  !*** ./src/core/pipeline/nodes/transforms/perspective-warp.js ***!
+  \****************************************************************/
+/*! exports provided: SpeedyPipelineNodePerspectiveWarp */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodePerspectiveWarp", function() { return SpeedyPipelineNodePerspectiveWarp; });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _math_matrix__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../math/matrix */ "./src/core/math/matrix.js");
+/* harmony import */ var _math_matrix_shape__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../math/matrix-shape */ "./src/core/math/matrix-shape.js");
+/* harmony import */ var _math_matrix_expressions__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../../../math/matrix-expressions */ "./src/core/math/matrix-expressions.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * perspective-warp.js
+ * Warp an image using a perspective transformation
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Warp an image using a perspective transformation
+ */
+class SpeedyPipelineNodePerspectiveWarp extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNode"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
+        ]);
+
+        const shape = new _math_matrix_shape__WEBPACK_IMPORTED_MODULE_10__["MatrixShape"](3, 3);
+
+        /** @type {SpeedyMatrixExpr} perspective transformation */
+        this._transform = new _math_matrix_expressions__WEBPACK_IMPORTED_MODULE_11__["SpeedyMatrixElementaryExpr"](shape,
+            new _math_matrix__WEBPACK_IMPORTED_MODULE_9__["SpeedyMatrix"](shape, [1, 0, 0, 0, 1, 0, 0, 0, 1])); // identity matrix
+    }
+
+    /**
+     * Perspective transform, a 3x3 homography matrix
+     * @returns {SpeedyMatrixExpr}
+     */
+    get transform()
+    {
+        return this._transform;
+    }
+
+    /**
+     * Perspective transform, a 3x3 homography matrix
+     * @param {SpeedyMatrixExpr} transform
+     */
+    set transform(transform)
+    {
+        if(!(transform.rows == 3 && transform.columns == 3))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["IllegalArgumentError"](`Not a 3x3 transformation matrix: ${transform}`);
+
+        this._transform = transform;
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { image, format } = this.input().read();
+        const { width, height } = image;
+
+        return this._transform.read().then(homography => {
+            const inverseHomography = this._inverse3(homography);
+            const transforms = gpu.programs.transforms;
+
+            transforms._warpPerspective
+                .useTexture(this._outputTexture)
+                .setOutputSize(width, height);
+
+            if(!Number.isNaN(inverseHomography[0]))
+                transforms._warpPerspective(image, inverseHomography);
+            else
+                transforms._warpPerspective(image, [0,0,0,0,0,0,0,0,1]); // singular matrix
+
+            this.output().swrite(this._outputTexture, format);
+        });
+    }
+
+    /**
+     * Compute the inverse of a 3x3 matrix IN-PLACE (do it fast!)
+     * @param {number[]} mat 3x3 matrix in column-major format
+     * @param {number} [eps] epsilon
+     * @returns {number[]} 3x3 inverse matrix in column-major format
+     */
+    _inverse3(mat, eps = 1e-6)
+    {
+        // read the entries of the matrix
+        const a11 = mat[0];
+        const a21 = mat[1];
+        const a31 = mat[2];
+        const a12 = mat[3];
+        const a22 = mat[4];
+        const a32 = mat[5];
+        const a13 = mat[6];
+        const a23 = mat[7];
+        const a33 = mat[8];
+
+        // compute cofactors
+        const b1 = a33 * a22 - a32 * a23; // b11
+        const b2 = a33 * a12 - a32 * a13; // b21
+        const b3 = a23 * a12 - a22 * a13; // b31
+
+        // compute the determinant
+        const det = a11 * b1 - a21 * b2 + a31 * b3;
+
+        // set up the inverse
+        if(!(Math.abs(det) < eps)) {
+            const d = 1.0 / det;
+            mat[0] = b1 * d;
+            mat[1] = -(a33 * a21 - a31 * a23) * d;
+            mat[2] = (a32 * a21 - a31 * a22) * d;
+            mat[3] = -b2 * d;
+            mat[4] = (a33 * a11 - a31 * a13) * d;
+            mat[5] = -(a32 * a11 - a31 * a12) * d;
+            mat[6] = b3 * d;
+            mat[7] = -(a23 * a11 - a21 * a13) * d;
+            mat[8] = (a22 * a11 - a21 * a12) * d;
+        }
+        else
+            mat.fill(Number.NaN, 0, 9);
+
+        // done!
+        return mat;
     }
 }
 
