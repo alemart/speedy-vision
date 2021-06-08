@@ -26,24 +26,31 @@ import { Utils } from '../../utils/utils';
 
 
 
-//
-// Fast median filters
-//
+// Convolution
+const convolution3 = importShader('filters/convolution.glsl')
+                    .withDefines({ 'KERNEL_SIZE_SQUARED': 3*3 })
+                    .withArguments('image', 'kernel');
 
-// Median filter for a 3x3 window
+const convolution5 = importShader('filters/convolution.glsl')
+                    .withDefines({ 'KERNEL_SIZE_SQUARED': 5*5 })
+                    .withArguments('image', 'kernel');
+
+const convolution7 = importShader('filters/convolution.glsl')
+                    .withDefines({ 'KERNEL_SIZE_SQUARED': 7*7 })
+                    .withArguments('image', 'kernel');
+
+// Median filter
 const median3 = importShader('filters/fast-median.glsl')
-               .withArguments('image')
-               .withDefines({ 'WINDOW_SIZE': 3 });
+               .withDefines({ 'WINDOW_SIZE': 3 })
+               .withArguments('image');
 
-// Median filter for a 5x5 window
 const median5 = importShader('filters/fast-median.glsl')
-               .withArguments('image')
-               .withDefines({ 'WINDOW_SIZE': 5 });
+               .withDefines({ 'WINDOW_SIZE': 5 })
+               .withArguments('image');
 
-// Median filter for a 7x7 window
 const median7 = importShader('filters/fast-median.glsl')
-               .withArguments('image')
-               .withDefines({ 'WINDOW_SIZE': 7 });
+               .withDefines({ 'WINDOW_SIZE': 7 })
+               .withArguments('image');
 
 
 //
@@ -87,6 +94,11 @@ export class GPUFilters extends SpeedyProgramGroup
             .declare('median3', median3) // 3x3 window
             .declare('median5', median5) // 5x5 window
             .declare('median7', median7) // 7x7 window
+
+            // convolution
+            .declare('convolution3', convolution3) // 3x3 kernel
+            .declare('convolution5', convolution5) // 5x5 kernel
+            .declare('convolution7', convolution7) // 7x7 kernel
 
             // difference of gaussians
             .compose('dog16_1', '_dog16_1x', '_dog16_1y') // sigma_2 / sigma_1 = 1.6 (approx. laplacian with sigma = 1)

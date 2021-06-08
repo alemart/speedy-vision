@@ -1,7 +1,7 @@
 <!--
   speedy-vision.js
   GPU-accelerated Computer Vision for JavaScript
-  Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+  Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
   limitations under the License.
 
   convolution.html
-  Convolution demo
+  Image convolution
 -->
 <!doctype html>
 <html>
@@ -41,17 +41,17 @@
                 <table>
                     <tr>
                         <td><input type="text" id="kernel-0" value="0"></td>
-                        <td><input type="text" id="kernel-1" value="0"></td>
-                        <td><input type="text" id="kernel-2" value="0"></td>
-                    </tr>
-                    <tr>
                         <td><input type="text" id="kernel-3" value="0"></td>
-                        <td><input type="text" id="kernel-4" value="1"></td>
-                        <td><input type="text" id="kernel-5" value="0"></td>
+                        <td><input type="text" id="kernel-6" value="0"></td>
                     </tr>
                     <tr>
-                        <td><input type="text" id="kernel-6" value="0"></td>
+                        <td><input type="text" id="kernel-1" value="0"></td>
+                        <td><input type="text" id="kernel-4" value="1"></td>
                         <td><input type="text" id="kernel-7" value="0"></td>
+                    </tr>
+                    <tr>
+                        <td><input type="text" id="kernel-2" value="0"></td>
+                        <td><input type="text" id="kernel-5" value="0"></td>
                         <td><input type="text" id="kernel-8" value="0"></td>
                     </tr>
                 </table>
@@ -72,6 +72,7 @@
             title="Free video by Chris Munnik from https://www.pexels.com/pt-br/video/3297379/">
         </video>
         <script>
+// Convolution kernels written in column-major format (3x3)
 const template = {
     "Original":
     [
@@ -87,7 +88,7 @@ const template = {
         0, 0, 0,
     ],
 
-    "Blur":
+    "Simple blur":
     [
         0.11111, 0.11111, 0.11111,
         0.11111, 0.11111, 0.11111,
@@ -112,7 +113,7 @@ const template = {
     [
         -2,-1, 0,
         -1, 1, 1,
-         0, 1, 2
+         0, 1, 2,
     ],
 
     "Edges":
@@ -124,29 +125,21 @@ const template = {
 
     "Horizontal lines":
     [
-        -1,-1,-1,
-         2, 2, 2,
-        -1,-1,-1,
+        -1, 2,-1,
+        -1, 2,-1,
+        -1, 2,-1,
     ],
 
     "Vertical lines":
     [
-        -1, 2,-1,
-        -1, 2,-1,
-        -1, 2,-1,
+        -1,-1,-1,
+         2, 2, 2,
+        -1,-1,-1,
     ],
 };
 
 window.onload = async function()
 {
-    // tell Speedy to load the video
-    const video = document.querySelector('video');
-    const media = await Speedy.load(video);
-    video.play();
-
-    // create a canvas to display the features
-    const canvas = createCanvas(media.width, media.height, video.title);
-
     // input fields
     const kernelElement = [...(new Array(9)).keys()].map(k => document.getElementById('kernel-' + k));
 
@@ -170,29 +163,47 @@ window.onload = async function()
     for(let inputField of kernelElement)
         inputField.oninput = updatePipeline;
 
-    // update the pipeline
-    let pipeline = Speedy.pipeline();
-    function updatePipeline()
-    {
-        const kernel = kernelElement.map(k => +k.value);
-        pipeline.release(); // cleanup memory
-        pipeline = Speedy.pipeline()
-                         .convolve(kernel);
-    }
-
-    // render video
-    async function render()
-    {
-        const transformedMedia = await media.run(pipeline);
-        transformedMedia.draw(canvas);
-        renderStatus(canvas);
-        requestAnimationFrame(render);
-    }
-    render();
+    // load the video
+    const video = document.querySelector('video');
+    const media = await Speedy.load(video);
+    video.play();
 
     // play/pause
     const playButton = document.getElementById('play');
     playButton.onclick = () => video.paused ? video.play() : video.pause();
+
+    // create a pipeline
+    const pipeline = Speedy.Pipeline();
+    const source = Speedy.Pipeline.ImageSource();
+    const sink = Speedy.Pipeline.ImageSink();
+    const convolution = Speedy.Filter.Convolution();
+
+    source.media = media;
+
+    source.output().connectTo(convolution.input());
+    convolution.output().connectTo(sink.input());
+
+    pipeline.add(source, sink, convolution);
+
+    // update the pipeline
+    function updatePipeline()
+    {
+        const entries = kernelElement.map(field => Number(field.value));
+        convolution.kernel = Speedy.Matrix(3, 3, entries);
+    }
+
+    // render video
+    const canvas = createCanvas(media.width, media.height, video.title);
+    async function render()
+    {
+        const { image } = await pipeline.run();
+
+        image.draw(canvas);
+        renderStatus(canvas);
+
+        requestAnimationFrame(render);
+    }
+    render();
 }
 
 function createCanvas(width, height, title)

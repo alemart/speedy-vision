@@ -24,6 +24,7 @@ import { SpeedyPipelineNodeGreyscale } from '../nodes/filters/greyscale';
 import { SpeedyPipelineNodeGaussianBlur } from '../nodes/filters/gaussian-blur';
 import { SpeedyPipelineNodeSimpleBlur } from '../nodes/filters/simple-blur';
 import { SpeedyPipelineNodeMedianBlur } from '../nodes/filters/median-blur';
+import { SpeedyPipelineNodeConvolution } from '../nodes/filters/convolution';
 import { SpeedyPipelineNodeNightvision } from '../nodes/filters/nightvision';
 
 /**
@@ -69,6 +70,16 @@ export class SpeedyPipelineFilterFactory extends SpeedyNamespace
     static MedianBlur(name = undefined)
     {
         return new SpeedyPipelineNodeMedianBlur(name);
+    }
+
+    /**
+     * Image Convolution
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeSimpleBlur}
+     */
+    static Convolution(name = undefined)
+    {
+        return new SpeedyPipelineNodeConvolution(name);
     }
 
     /**
