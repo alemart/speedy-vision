@@ -31,9 +31,9 @@ export class MatrixShape
      * Constructor
      * @param {number} rows number of rows of the matrix
      * @param {number} columns number of columns of the matrix
-     * @param {MatrixDataType} dtype data type of the matrix
+     * @param {MatrixDataType} [dtype] data type of the matrix
      */
-    constructor(rows, columns, dtype)
+    constructor(rows, columns, dtype = MatrixType.default)
     {
         /** @type {number} number of rows of the matrix */
         this.rows = rows | 0;
