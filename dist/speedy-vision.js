@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-06-08T19:50:07.456Z
+ * Date: 2021-06-08T23:33:45.448Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -10806,7 +10806,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _nodes_filters_gaussian_blur__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../nodes/filters/gaussian-blur */ "./src/core/pipeline/nodes/filters/gaussian-blur.js");
 /* harmony import */ var _nodes_filters_simple_blur__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../nodes/filters/simple-blur */ "./src/core/pipeline/nodes/filters/simple-blur.js");
 /* harmony import */ var _nodes_filters_median_blur__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../nodes/filters/median-blur */ "./src/core/pipeline/nodes/filters/median-blur.js");
-/* harmony import */ var _nodes_filters_nightvision__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../nodes/filters/nightvision */ "./src/core/pipeline/nodes/filters/nightvision.js");
+/* harmony import */ var _nodes_filters_convolution__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../nodes/filters/convolution */ "./src/core/pipeline/nodes/filters/convolution.js");
+/* harmony import */ var _nodes_filters_nightvision__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../nodes/filters/nightvision */ "./src/core/pipeline/nodes/filters/nightvision.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -10827,6 +10828,7 @@ __webpack_require__.r(__webpack_exports__);
  * filter-factory.js
  * Image filters
  */
+
 
 
 
@@ -10881,13 +10883,23 @@ class SpeedyPipelineFilterFactory extends _speedy_namespace__WEBPACK_IMPORTED_MO
     }
 
     /**
+     * Image Convolution
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeSimpleBlur}
+     */
+    static Convolution(name = undefined)
+    {
+        return new _nodes_filters_convolution__WEBPACK_IMPORTED_MODULE_5__["SpeedyPipelineNodeConvolution"](name);
+    }
+
+    /**
      * Nightvision
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeSimpleBlur}
      */
     static Nightvision(name = undefined)
     {
-        return new _nodes_filters_nightvision__WEBPACK_IMPORTED_MODULE_5__["SpeedyPipelineNodeNightvision"](name);
+        return new _nodes_filters_nightvision__WEBPACK_IMPORTED_MODULE_6__["SpeedyPipelineNodeNightvision"](name);
     }
 }
 
@@ -11038,6 +11050,148 @@ class SpeedyPipelineTransformFactory extends _speedy_namespace__WEBPACK_IMPORTED
     static PerspectiveWarp(name = undefined)
     {
         return new _nodes_transforms_perspective_warp__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineNodePerspectiveWarp"](name);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/filters/convolution.js":
+/*!********************************************************!*\
+  !*** ./src/core/pipeline/nodes/filters/convolution.js ***!
+  \********************************************************/
+/*! exports provided: SpeedyPipelineNodeConvolution */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeConvolution", function() { return SpeedyPipelineNodeConvolution; });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../math/speedy-size */ "./src/core/math/speedy-size.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _math_matrix__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../math/matrix */ "./src/core/math/matrix.js");
+/* harmony import */ var _math_matrix_shape__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../../../math/matrix-shape */ "./src/core/math/matrix-shape.js");
+/* harmony import */ var _math_matrix_expressions__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../../../math/matrix-expressions */ "./src/core/math/matrix-expressions.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * convolution.js
+ * Image convolution
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Image convolution
+ */
+class SpeedyPipelineNodeConvolution extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNode"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
+        ]);
+
+        const shape = new _math_matrix_shape__WEBPACK_IMPORTED_MODULE_11__["MatrixShape"](3, 3);
+
+        /** @type {SpeedyMatrixExpr} convolution kernel (square matrix) */
+        this._kernel = new _math_matrix_expressions__WEBPACK_IMPORTED_MODULE_12__["SpeedyMatrixElementaryExpr"](shape,
+            new _math_matrix__WEBPACK_IMPORTED_MODULE_10__["SpeedyMatrix"](shape, [0, 0, 0, 0, 1, 0, 0, 0, 0])); // identity transform
+    }
+
+    /**
+     * Convolution kernel
+     * @returns {SpeedyMatrixExpr}
+     */
+    get kernel()
+    {
+        return this._kernel;
+    }
+
+    /**
+     * Convolution kernel
+     * @param {SpeedyMatrixExpr} kernel
+     */
+    set kernel(kernel)
+    {
+        if(kernel.rows != kernel.columns)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["NotSupportedError"](`Use a square kernel`);
+        else if(!(kernel.rows == 3 || kernel.rows == 5 || kernel.rows == 7))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["NotSupportedError"](`Invalid kernel size. Supported sizes: 3x3, 5x5, 7x7`);
+
+        this._kernel = kernel;
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { image, format } = this.input().read();
+        const { width, height } = image;
+        const ksize = this._kernel.rows;
+
+        return this._kernel.read().then(kernel => {
+            if(ksize == 3) {
+                (gpu.programs.filters.convolution3
+                    .useTexture(this._outputTexture)
+                    .setOutputSize(width, height)
+                )(image, kernel);
+            }
+            else if(ksize == 5) {
+                (gpu.programs.filters.convolution5
+                    .useTexture(this._outputTexture)
+                    .setOutputSize(width, height)
+                )(image, kernel);
+            }
+            else if(ksize == 7) {
+                (gpu.programs.filters.convolution7
+                    .useTexture(this._outputTexture)
+                    .setOutputSize(width, height)
+                )(image, kernel);
+            }
+
+            this.output().swrite(this._outputTexture, format);
+        });
     }
 }
 
@@ -13797,7 +13951,7 @@ class SpeedyPipelineNEW
             _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"].all(sinks.map(sink => sink.export())).then(results =>
 
                 // aggregate results by the names of the sinks
-                results.reduce((obj, val, idx) => Object.assign(obj, { [sinks[idx].name]: val }), {})
+                results.reduce((obj, val, idx) => ((obj[sinks[idx].name] = val), obj), {})
             )
         ).then(aggregate => {
             // unset the output textures of the nodes and clear all ports
@@ -13868,7 +14022,8 @@ class SpeedyPipelineNEW
         const outlinks = SpeedyPipelineNEW._outlinks(nodes);
         const stack = nodes.map(node => [ node, false ]);
         const trash = new Set();
-        const sorted = [];
+        const sorted = new Array(nodes.length);
+        let j = sorted.length;
 
         while(stack.length > 0) {
             const [ node, done ] = stack.pop();
@@ -13885,10 +14040,10 @@ class SpeedyPipelineNEW
                 }
             }
             else
-                sorted.push(node);
+                sorted[--j] = node;
         }
 
-        return sorted.reverse();
+        return sorted;
     }
 
     /**
@@ -17378,24 +17533,31 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-//
-// Fast median filters
-//
+// Convolution
+const convolution3 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/convolution.glsl')
+                    .withDefines({ 'KERNEL_SIZE_SQUARED': 3*3 })
+                    .withArguments('image', 'kernel');
 
-// Median filter for a 3x3 window
+const convolution5 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/convolution.glsl')
+                    .withDefines({ 'KERNEL_SIZE_SQUARED': 5*5 })
+                    .withArguments('image', 'kernel');
+
+const convolution7 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/convolution.glsl')
+                    .withDefines({ 'KERNEL_SIZE_SQUARED': 7*7 })
+                    .withArguments('image', 'kernel');
+
+// Median filter
 const median3 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/fast-median.glsl')
-               .withArguments('image')
-               .withDefines({ 'WINDOW_SIZE': 3 });
+               .withDefines({ 'WINDOW_SIZE': 3 })
+               .withArguments('image');
 
-// Median filter for a 5x5 window
 const median5 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/fast-median.glsl')
-               .withArguments('image')
-               .withDefines({ 'WINDOW_SIZE': 5 });
+               .withDefines({ 'WINDOW_SIZE': 5 })
+               .withArguments('image');
 
-// Median filter for a 7x7 window
 const median7 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/fast-median.glsl')
-               .withArguments('image')
-               .withDefines({ 'WINDOW_SIZE': 7 });
+               .withDefines({ 'WINDOW_SIZE': 7 })
+               .withArguments('image');
 
 
 //
@@ -17439,6 +17601,11 @@ class GPUFilters extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Spe
             .declare('median3', median3) // 3x3 window
             .declare('median5', median5) // 5x5 window
             .declare('median7', median7) // 7x7 window
+
+            // convolution
+            .declare('convolution3', convolution3) // 3x3 kernel
+            .declare('convolution5', convolution5) // 5x5 kernel
+            .declare('convolution7', convolution7) // 7x7 kernel
 
             // difference of gaussians
             .compose('dog16_1', '_dog16_1x', '_dog16_1y') // sigma_2 / sigma_1 = 1.6 (approx. laplacian with sigma = 1)
@@ -19179,6 +19346,7 @@ var map = {
 	"./enhancements/nightvision.glsl": "./src/gpu/shaders/enhancements/nightvision.glsl",
 	"./enhancements/normalize-image.glsl": "./src/gpu/shaders/enhancements/normalize-image.glsl",
 	"./filters/convolution": "./src/gpu/shaders/filters/convolution.js",
+	"./filters/convolution.glsl": "./src/gpu/shaders/filters/convolution.glsl",
 	"./filters/convolution.js": "./src/gpu/shaders/filters/convolution.js",
 	"./filters/fast-median.glsl": "./src/gpu/shaders/filters/fast-median.glsl",
 	"./include/colors.glsl": "./src/gpu/shaders/include/colors.glsl",
@@ -19333,6 +19501,17 @@ module.exports = "uniform sampler2D image;\nuniform sampler2D illuminationMap;\n
 /***/ (function(module, exports) {
 
 module.exports = "#ifdef GREYSCALE\nuniform sampler2D minmax2d;\n#else\nuniform sampler2D minmax2dRGB[3];\n#endif\nuniform float minValue;\nuniform float maxValue;\nconst float eps = 1.0f / 255.0f;\nvoid main()\n{\nvec2 minmax = clamp(vec2(minValue, maxValue), 0.0f, 255.0f) / 255.0f;\nvec4 newMin = vec4(minmax.x);\nvec4 newRange = vec4(minmax.y - minmax.x);\nvec4 alpha = vec4(1.0f, newMin.x, newRange.x, 1.0f);\n#ifdef GREYSCALE\nvec4 pixel = threadPixel(minmax2d);\nmat4 channel = mat4(pixel, pixel, pixel, alpha);\n#else\nmat4 channel = mat4(\nthreadPixel(minmax2dRGB[0]),\nthreadPixel(minmax2dRGB[1]),\nthreadPixel(minmax2dRGB[2]),\nalpha\n);\n#endif\nvec4 oldMin = vec4(channel[0].g, channel[1].g, channel[2].g, channel[3].g);\nvec4 oldRange = max(vec4(channel[0].b, channel[1].b, channel[2].b, channel[3].b), eps);\nvec4 oldIntensity = vec4(channel[0].a, channel[1].a, channel[2].a, channel[3].a);\nvec4 newIntensity = (oldIntensity - oldMin) * newRange / oldRange + newMin;\ncolor = newIntensity;\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/filters/convolution.glsl":
+/*!**************************************************!*\
+  !*** ./src/gpu/shaders/filters/convolution.glsl ***!
+  \**************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "#ifndef KERNEL_SIZE_SQUARED\n#define Must define KERNEL_SIZE_SQUARED\n#endif\nuniform sampler2D image;\nuniform float kernel[@KERNEL_SIZE_SQUARED@];\nvoid main()\n{\nvec4 result = vec4(0.0f);\n#if KERNEL_SIZE_SQUARED == 9\nresult += pixelAtShortOffset(image, ivec2(-1,-1)) * kernel[0];\nresult += pixelAtShortOffset(image, ivec2(-1, 0)) * kernel[1];\nresult += pixelAtShortOffset(image, ivec2(-1, 1)) * kernel[2];\nresult += pixelAtShortOffset(image, ivec2( 0,-1)) * kernel[3];\nresult += pixelAtShortOffset(image, ivec2( 0, 0)) * kernel[4];\nresult += pixelAtShortOffset(image, ivec2( 0, 1)) * kernel[5];\nresult += pixelAtShortOffset(image, ivec2( 1,-1)) * kernel[6];\nresult += pixelAtShortOffset(image, ivec2( 1, 0)) * kernel[7];\nresult += pixelAtShortOffset(image, ivec2( 1, 1)) * kernel[8];\n#elif KERNEL_SIZE_SQUARED == 25\nresult += pixelAtShortOffset(image, ivec2(-2,-2)) * kernel[0];\nresult += pixelAtShortOffset(image, ivec2(-2,-1)) * kernel[1];\nresult += pixelAtShortOffset(image, ivec2(-2, 0)) * kernel[2];\nresult += pixelAtShortOffset(image, ivec2(-2, 1)) * kernel[3];\nresult += pixelAtShortOffset(image, ivec2(-2, 2)) * kernel[4];\nresult += pixelAtShortOffset(image, ivec2(-1,-2)) * kernel[5];\nresult += pixelAtShortOffset(image, ivec2(-1,-1)) * kernel[6];\nresult += pixelAtShortOffset(image, ivec2(-1, 0)) * kernel[7];\nresult += pixelAtShortOffset(image, ivec2(-1, 1)) * kernel[8];\nresult += pixelAtShortOffset(image, ivec2(-1, 2)) * kernel[9];\nresult += pixelAtShortOffset(image, ivec2( 0,-2)) * kernel[10];\nresult += pixelAtShortOffset(image, ivec2( 0,-1)) * kernel[11];\nresult += pixelAtShortOffset(image, ivec2( 0, 0)) * kernel[12];\nresult += pixelAtShortOffset(image, ivec2( 0, 1)) * kernel[13];\nresult += pixelAtShortOffset(image, ivec2( 0, 2)) * kernel[14];\nresult += pixelAtShortOffset(image, ivec2( 1,-2)) * kernel[15];\nresult += pixelAtShortOffset(image, ivec2( 1,-1)) * kernel[16];\nresult += pixelAtShortOffset(image, ivec2( 1, 0)) * kernel[17];\nresult += pixelAtShortOffset(image, ivec2( 1, 1)) * kernel[18];\nresult += pixelAtShortOffset(image, ivec2( 1, 2)) * kernel[19];\nresult += pixelAtShortOffset(image, ivec2( 2,-2)) * kernel[20];\nresult += pixelAtShortOffset(image, ivec2( 2,-1)) * kernel[21];\nresult += pixelAtShortOffset(image, ivec2( 2, 0)) * kernel[22];\nresult += pixelAtShortOffset(image, ivec2( 2, 1)) * kernel[23];\nresult += pixelAtShortOffset(image, ivec2( 2, 2)) * kernel[24];\n#elif KERNEL_SIZE_SQUARED == 49\nfor(int k = 0, i = -3; i <= 3; i++) {\nfor(int j = -3; j <= 3; j++, k++) {\nresult += pixelAtLongOffset(image, ivec2(i, j)) * kernel[k];\n}\n}\n#else\n#error Invalid KERNEL_SIZE_SQUARED\n#endif\ncolor = vec4(result.rgb, 1.0f);\n}"
 
 /***/ }),
 
