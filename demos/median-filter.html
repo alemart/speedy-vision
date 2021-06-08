@@ -49,7 +49,7 @@
             src="../assets/bird-walking.mp4"
             poster="../assets/loading.jpg"
             preload="auto"
-            loop muted autoplay
+            loop muted hidden
             title="Free video by Wendy Laplume, https://www.pexels.com/pt-br/video/passaro-ave-passarinho-concreto-4168986/">
         </video>
         <script>
@@ -61,17 +61,23 @@ window.onload = async function()
 
     Image  ---> Convert to ---> Median ---> Image
     Source      greyscale       Blur        Sink
+                |
+                |
+                +-------------> Image
+                                Sink
 
     */
 
     // Load a video
     const video = document.querySelector('video');
     const media = await Speedy.load(video);
+    video.play();
 
     // Setup the pipeline
     const pipeline = Speedy.Pipeline();
     const source = Speedy.Pipeline.ImageSource();
-    const sink = Speedy.Pipeline.ImageSink();
+    const sink1 = Speedy.Pipeline.ImageSink('median');
+    const sink2 = Speedy.Pipeline.ImageSink('greyscale');
     const greyscale = Speedy.Filter.Greyscale();
     const median = Speedy.Filter.MedianBlur();
 
@@ -80,9 +86,10 @@ window.onload = async function()
 
     source.output().connectTo(greyscale.input());
     greyscale.output().connectTo(median.input());
-    median.output().connectTo(sink.input());
+    median.output().connectTo(sink1.input());
+    greyscale.output().connectTo(sink2.input());
 
-    pipeline.add(source, sink, greyscale, median);
+    pipeline.add(source, sink1, sink2, greyscale, median);
 
     // Setup the input controls
     const kernelSize = document.getElementById('kernel-size');
@@ -91,11 +98,14 @@ window.onload = async function()
     kernelSize.oninput = () => median.kernelSize = Speedy.Size(kernelSize.value, kernelSize.value);
 
     // Display the result
-    const canvas = createCanvas(media.width, media.height, video.title);
+    const canvas = createCanvas(media.width * 2, media.height, video.title);
     async function render()
     {
-        const { image } = await pipeline.run();
-        image.draw(canvas);
+        const { median, greyscale } = await pipeline.run();
+
+        median.draw(canvas, 0, 0);
+        greyscale.draw(canvas, median.width, 0);
+
         renderStatus(canvas);
         setTimeout(render, 1000 / 60);
     }
