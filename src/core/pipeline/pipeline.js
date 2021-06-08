@@ -111,7 +111,7 @@ export class SpeedyPipelineNEW
             SpeedyPromise.all(sinks.map(sink => sink.export())).then(results =>
 
                 // aggregate results by the names of the sinks
-                results.reduce((obj, val, idx) => Object.assign(obj, { [sinks[idx].name]: val }), {})
+                results.reduce((obj, val, idx) => ((obj[sinks[idx].name] = val), obj), {})
             )
         ).then(aggregate => {
             // unset the output textures of the nodes and clear all ports
