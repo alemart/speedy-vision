@@ -63,7 +63,7 @@
  * Get pixel at a constant (dx,dy) offset from the thread pixel (use |dx|,|dy| <= 7)
  * This assumes textureSize(img, 0) == ivec2(texSize), i.e., input size == output size
  * @param {sampler2D} img
- * @param {ivec2} offset such that |x| <= 7 and |y| <= 7
+ * @param {ivec2} offset a constant expression such that |dx|,|dy| <= 7
  * @returns {vec4} pixel data
  */
 #define pixelAtShortOffset(img, offset) textureLodOffset((img), texCoord, 0.0f, (offset))
@@ -72,7 +72,7 @@
  * Get pixel at a long (dx,dy) offset (max(|dx|,|dy|) > 7)
  * This assumes textureSize(img, 0) == ivec2(texSize), i.e., input size == output size
  * @param {sampler2D} img
- * @param {ivec2} offset
+ * @param {ivec2} offset (does not need to be a constant expression)
  * @returns {vec4} pixel data
  */
 #define pixelAtLongOffset(img, offset) textureLod((img), texCoord + vec2(offset) / texSize, 0.0f)
