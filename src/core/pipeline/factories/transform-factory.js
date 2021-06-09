@@ -22,6 +22,7 @@
 import { SpeedyNamespace } from '../../speedy-namespace';
 import { SpeedyPipelineNodeNormalize } from '../nodes/transforms/normalize';
 import { SpeedyPipelineNodePerspectiveWarp } from '../nodes/transforms/perspective-warp';
+import { SpeedyPipelineNodeResize } from '../nodes/transforms/resize';
 
 /**
  * Image transforms
@@ -36,6 +37,16 @@ export class SpeedyPipelineTransformFactory extends SpeedyNamespace
     static Normalize(name = undefined)
     {
         return new SpeedyPipelineNodeNormalize(name);
+    }
+
+    /**
+     * Resize image
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeNormalize}
+     */
+    static Resize(name = undefined)
+    {
+        return new SpeedyPipelineNodeResize(name);
     }
 
     /**

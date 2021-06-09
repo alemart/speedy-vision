@@ -145,7 +145,7 @@ export class ShaderDeclaration
 
     /**
      * Specify a set of #defines to be prepended to the fragment shader
-     * @param {object} defines key-value pairs (define-name: define-value)
+     * @param {Object.<string,number>} defines key-value pairs (define-name: define-value)
      * @returns {ShaderDeclaration} this
      */
     withDefines(defines)

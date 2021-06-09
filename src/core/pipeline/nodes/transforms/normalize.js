@@ -115,7 +115,7 @@ export class SpeedyPipelineNodeNormalize extends SpeedyPipelineNode
         (gpu.programs.enhancements._normalizeGreyscaleImage
             .useTexture(this._outputTexture)
             .setOutputSize(width, height)
-        )(minmax, minValue, maxValue)
+        )(minmax, minValue, maxValue);
 
         gpu.texturePool.free(tex[2]);
         gpu.texturePool.free(tex[1]);
