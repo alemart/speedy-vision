@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-06-08T23:33:45.448Z
+ * Date: 2021-06-09T22:14:07.032Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -11002,6 +11002,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../speedy-namespace */ "./src/core/speedy-namespace.js");
 /* harmony import */ var _nodes_transforms_normalize__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/transforms/normalize */ "./src/core/pipeline/nodes/transforms/normalize.js");
 /* harmony import */ var _nodes_transforms_perspective_warp__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../nodes/transforms/perspective-warp */ "./src/core/pipeline/nodes/transforms/perspective-warp.js");
+/* harmony import */ var _nodes_transforms_resize__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../nodes/transforms/resize */ "./src/core/pipeline/nodes/transforms/resize.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -11027,6 +11028,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /**
  * Image transforms
  */
@@ -11040,6 +11042,16 @@ class SpeedyPipelineTransformFactory extends _speedy_namespace__WEBPACK_IMPORTED
     static Normalize(name = undefined)
     {
         return new _nodes_transforms_normalize__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodeNormalize"](name);
+    }
+
+    /**
+     * Resize image
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeNormalize}
+     */
+    static Resize(name = undefined)
+    {
+        return new _nodes_transforms_resize__WEBPACK_IMPORTED_MODULE_3__["SpeedyPipelineNodeResize"](name);
     }
 
     /**
@@ -12331,7 +12343,7 @@ class SpeedyPipelineNodeNormalize extends _pipeline_node__WEBPACK_IMPORTED_MODUL
         (gpu.programs.enhancements._normalizeGreyscaleImage
             .useTexture(this._outputTexture)
             .setOutputSize(width, height)
-        )(minmax, minValue, maxValue)
+        )(minmax, minValue, maxValue);
 
         gpu.texturePool.free(tex[2]);
         gpu.texturePool.free(tex[1]);
@@ -12542,6 +12554,156 @@ class SpeedyPipelineNodePerspectiveWarp extends _pipeline_node__WEBPACK_IMPORTED
 
         // done!
         return mat;
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/transforms/resize.js":
+/*!******************************************************!*\
+  !*** ./src/core/pipeline/nodes/transforms/resize.js ***!
+  \******************************************************/
+/*! exports provided: SpeedyPipelineNodeResize */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeResize", function() { return SpeedyPipelineNodeResize; });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _math_speedy_size__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../math/speedy-size */ "./src/core/math/speedy-size.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * resize.js
+ * Resize image
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * @typedef {"nearest"|"bilinear"} ResizeInterpolationMethod
+ */
+
+/**
+ * Resize image
+ */
+class SpeedyPipelineNodeResize extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNode"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
+        ]);
+
+        /** @type {SpeedySize} size of the output image */
+        this._size = new _math_speedy_size__WEBPACK_IMPORTED_MODULE_8__["SpeedySize"](0, 0);
+
+        /** @type {ResizeInterpolationMethod} interpolation method */
+        this._method = 'bilinear';
+    }
+
+    /**
+     * Size of the output image (use 0 not to change a dimension)
+     * @returns {SpeedySize}
+     */
+    get size()
+    {
+        return this._size;
+    }
+
+    /**
+     * Size of the output image (use 0 not to change a dimension)
+     * @param {SpeedySize} size
+     */
+    set size(size)
+    {
+        this._size = size;
+    }
+
+    /**
+     * Interpolation method
+     * @returns {ResizeInterpolationMethod}
+     */
+    get method()
+    {
+        return this._method;
+    }
+
+    /**
+     * Interpolation method
+     * @param {ResizeInterpolationMethod} method
+     */
+    set method(method)
+    {
+        if(method !== 'nearest' && method !== 'bilinear')
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_6__["IllegalArgumentError"](`Invalid method method: "${method}"`);
+
+        this._method = method;
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { image, format } = this.input().read();
+        const { width, height } = image;
+        const method = this._method;
+        const newWidth = this._size.width || width; // keep the old size if zero
+        const newHeight = this._size.height || height;
+
+        if(method == 'bilinear') {
+            (gpu.programs.transforms.resizeBI
+                .useTexture(this._outputTexture)
+                .setOutputSize(newWidth, newHeight)
+            )(image);
+        }
+        else if(method == 'nearest') {
+            (gpu.programs.transforms.resizeNN
+                .useTexture(this._outputTexture)
+                .setOutputSize(newWidth, newHeight)
+            )(image);
+        }
+
+        this.output().swrite(this._outputTexture, format);
     }
 }
 
@@ -18467,7 +18629,18 @@ __webpack_require__.r(__webpack_exports__);
 // Perspective warp
 const warpPerspective = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('transforms/warp-perspective.glsl').withArguments('image', 'inverseHomography');
 
+// Resize image
+const resizeNN = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('transforms/resize.glsl')
+                 .withDefines({
+                     'INTERPOLATION_METHOD': 0 // Nearest neighbors
+                 })
+                 .withArguments('image');
 
+const resizeBI = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('transforms/resize.glsl')
+                 .withDefines({
+                     'INTERPOLATION_METHOD': 1 // Bilinear interpolation
+                 })
+                 .withArguments('image');
 
 
 /**
@@ -18487,6 +18660,8 @@ class GPUTransforms extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["
         super(gpu, width, height);
         this
             .declare('_warpPerspective', warpPerspective)
+            .declare('resizeNN', resizeNN)
+            .declare('resizeBI', resizeBI)
         ;
     }
 
@@ -18936,7 +19111,7 @@ class ShaderDeclaration
 
     /**
      * Specify a set of #defines to be prepended to the fragment shader
-     * @param {object} defines key-value pairs (define-name: define-value)
+     * @param {Object.<string,number>} defines key-value pairs (define-name: define-value)
      * @returns {ShaderDeclaration} this
      */
     withDefines(defines)
@@ -19385,6 +19560,7 @@ var map = {
 	"./trackers/lk-discard.glsl": "./src/gpu/shaders/trackers/lk-discard.glsl",
 	"./trackers/lk.glsl": "./src/gpu/shaders/trackers/lk.glsl",
 	"./trackers/transfer-flow.glsl": "./src/gpu/shaders/trackers/transfer-flow.glsl",
+	"./transforms/resize.glsl": "./src/gpu/shaders/transforms/resize.glsl",
 	"./transforms/warp-perspective.glsl": "./src/gpu/shaders/transforms/warp-perspective.glsl",
 	"./utils/copy-components.glsl": "./src/gpu/shaders/utils/copy-components.glsl",
 	"./utils/fill-components.glsl": "./src/gpu/shaders/utils/fill-components.glsl",
@@ -20396,6 +20572,17 @@ module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nunifor
 /***/ (function(module, exports) {
 
 module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D encodedFlow;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvec2 decodeFlow(vec4 pix)\n{\nreturn vec2(decodeFloat16(pix.rg), decodeFloat16(pix.ba));\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nint len = textureSize(encodedFlow, 0).x;\nivec2 location = ivec2(myIndex % len, myIndex / len);\nvec4 targetPixel = pixelAt(encodedFlow, location);\nvec2 flow = decodeFlow(targetPixel);\nvec4 encodedPosition = any(isinf(flow)) ? encodeKeypointPositionAtInfinity() : encodeKeypointPosition(\nkeypoint.position + flow\n);\ncolor = myAddress.offset == 0 ? encodedPosition : pixel;\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/transforms/resize.glsl":
+/*!************************************************!*\
+  !*** ./src/gpu/shaders/transforms/resize.glsl ***!
+  \************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"subpixel.glsl\"\nuniform sampler2D image;\nvoid main()\n{\nvec2 imageSize = vec2(textureSize(image, 0));\n#if !defined(INTERPOLATION_METHOD)\n#error Must define INTERPOLATION_METHOD\n#elif INTERPOLATION_METHOD == 0\nvec2 pos = texCoord * imageSize;\ncolor = textureLod(image, (round(pos) + vec2(0.5f)) / imageSize, 0.0f);\n#elif INTERPOLATION_METHOD == 1\ncolor = subpixelAtBI(image, texCoord * imageSize);\n#else\n#error Invalid INTERPOLATION_METHOD\n#endif\n}"
 
 /***/ }),
 
