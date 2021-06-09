@@ -1,0 +1,160 @@
+<!--
+  speedy-vision.js
+  GPU-accelerated Computer Vision for JavaScript
+  Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  resize-image.html
+  Resize an image
+-->
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
+        <meta name="author" content="Alexandre Martins">
+        <title>Resize an image</title>
+        <script src="../dist/speedy-vision.js"></script>
+        <link href="style.css" rel="stylesheet">
+    </head>
+    <body>
+        <h1>Resize an image</h1>
+        <form autocomplete="off">
+            <div>
+                <label for="scale-x">Width</label>
+                <input type="range" min="0.1" max="5.0" value="1.0" step="0.1" id="scale-x">
+                <span id="scale-x-percentage">100%</span>
+                <span>&nbsp;&nbsp;&nbsp;</span>
+            </div>
+            <div>
+                <label for="scale-y">Height</label>
+                <input type="range" min="0.1" max="5.0" value="1.0" step="0.1" id="scale-y">
+                <span id="scale-y-percentage">100%</span>
+                <span>&nbsp;&nbsp;&nbsp;</span>
+            </div>
+            <div>
+                <label for="keep-aspect-ratio">Keep aspect ratio</label>
+                <input type="checkbox" id="keep-aspect-ratio" checked>
+            </div>
+            <div>
+                <select id="interpolation-method">
+                    <option value="bilinear" selected>Bilinear interpolation</option>
+                    <option value="nearest">Nearest neighbors</option>
+                </select>
+            </div>
+        </form>
+        <img src="../assets/speedy-wall.jpg" title="Image by Bride of Frankenstein (CC-BY)" hidden>
+        <script>
+window.onload = async function()
+{
+    // form controls
+    const scaleX = document.getElementById('scale-x');
+    const scaleY = document.getElementById('scale-y');
+    const scaleXPercentage = document.getElementById('scale-x-percentage');
+    const scaleYPercentage = document.getElementById('scale-y-percentage');
+    const keepAspectRatio = document.getElementById('keep-aspect-ratio');
+    const interpolationMethod = document.getElementById('interpolation-method');
+    const format = x => (x >= 100 ? x : (x >= 10 ? '0' + x : '00' + x)) + '%';
+
+    scaleX.oninput = () => {
+        scaleXPercentage.innerText = format(Math.round(scaleX.value * 100));
+        if(keepAspectRatio.checked) {
+            scaleY.value = scaleX.value;
+            scaleYPercentage.innerText = format(Math.round(scaleY.value * 100));
+        }
+        render();
+    };
+
+    scaleY.oninput = () => {
+        scaleYPercentage.innerText = format(Math.round(scaleY.value * 100));
+        if(keepAspectRatio.checked) {
+            scaleX.value = scaleY.value;
+            scaleXPercentage.innerText = format(Math.round(scaleX.value * 100));
+        }
+        render();
+    };
+
+    keepAspectRatio.onchange = () => {
+        if(keepAspectRatio.checked) {
+            scaleY.value = scaleX.value;
+            scaleYPercentage.innerText = format(Math.round(scaleY.value * 100));
+        }
+        render();
+    }
+
+    interpolationMethod.onchange = render;
+
+    /*
+
+    This is the pipeline:
+
+    Image ---> Resize ---> Image
+    Source                 Sink
+
+    */
+
+    // load an image
+    const img = document.querySelector('img');
+    const media = await Speedy.load(img);
+
+    // create the pipeline
+    const pipeline = Speedy.Pipeline();
+    const source = Speedy.Pipeline.ImageSource();
+    const sink = Speedy.Pipeline.ImageSink();
+    const resize = Speedy.Transform.Resize();
+
+    source.media = media;
+    resize.size = Speedy.Size(0,0);
+
+    source.output().connectTo(resize.input());
+    resize.output().connectTo(sink.input());
+
+    pipeline.add(source, sink, resize);
+
+    // display the result
+    const canvas = createCanvas(media.width, media.height, img.title);
+    async function render()
+    {
+        const width = Number(scaleX.value) * media.width;
+        const height = Number(scaleY.value) * media.height;
+        resize.size = Speedy.Size(width, height);
+        resize.method = interpolationMethod.value;
+
+        const { image } = await pipeline.run();
+
+        canvas.width = image.width;
+        canvas.height = image.height;
+
+        image.draw(canvas);
+    }
+    render();
+}
+
+function createCanvas(width, height, title)
+{
+    const canvas = document.getElementById('canvas-demo') || document.createElement('canvas');
+
+    canvas.width = width;
+    canvas.height = height;
+    canvas.title = title;
+
+    if(!document.body.contains(canvas))
+        document.body.appendChild(canvas);
+
+    return canvas;
+}
+        </script>
+        <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>
+    </body>
+</html>

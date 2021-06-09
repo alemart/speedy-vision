@@ -108,6 +108,7 @@ Try the demos and take a look at their source code:
 * Image processing
   * [Image convolution](https://alemart.github.io/speedy-vision-js/demos/convolution.html)
   * [Image warping](https://alemart.github.io/speedy-vision-js/demos/warping.html)
+  * [Resize image](https://alemart.github.io/speedy-vision-js/demos/resize-image.html)
   * [Nightvision camera](https://alemart.github.io/speedy-vision-js/demos/nightvision-camera.html)
   * [Convert image to greyscale](https://alemart.github.io/speedy-vision-js/demos/greyscale-image.html)
   * [Convert video to greyscale](https://alemart.github.io/speedy-vision-js/demos/greyscale-video.html)
