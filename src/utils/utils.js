@@ -195,7 +195,7 @@ export class Utils
      * @param {number} [kernelSize] kernel size, odd number
      * @param {bool} [normalized] normalize entries so that their sum is 1
      */
-    static gaussianKernel(sigma, kernelSize = -1, normalized = true)
+    static gaussianKernel(sigma, kernelSize = 0, normalized = true)
     {
         /*
          * Let G(x) be a Gaussian function centered at 0 with fixed sigma:
@@ -213,7 +213,7 @@ export class Utils
          */
 
         // default kernel size
-        if(kernelSize < 0) {
+        if(kernelSize == 0) {
             kernelSize = Math.ceil(5.0 * sigma) | 0;
             kernelSize += 1 - (kernelSize % 2);
         }
