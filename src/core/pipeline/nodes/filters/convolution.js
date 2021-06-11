@@ -56,11 +56,9 @@ export class SpeedyPipelineNodeConvolution extends SpeedyPipelineNode
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
 
-        const shape = new MatrixShape(3, 3);
 
         /** @type {SpeedyMatrixExpr} convolution kernel (square matrix) */
-        this._kernel = new SpeedyMatrixElementaryExpr(shape,
-            new SpeedyMatrix(shape, [0, 0, 0, 0, 1, 0, 0, 0, 0])); // identity transform
+        this._kernel = SpeedyMatrixExpr.create(3, 3, [0, 0, 0, 0, 1, 0, 0, 0, 0]); // identity transform
     }
 
     /**

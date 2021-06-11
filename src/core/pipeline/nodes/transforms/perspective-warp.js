@@ -51,11 +51,8 @@ export class SpeedyPipelineNodePerspectiveWarp extends SpeedyPipelineNode
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
 
-        const shape = new MatrixShape(3, 3);
-
         /** @type {SpeedyMatrixExpr} perspective transformation */
-        this._transform = new SpeedyMatrixElementaryExpr(shape,
-            new SpeedyMatrix(shape, [1, 0, 0, 0, 1, 0, 0, 0, 1])); // identity matrix
+        this._transform = SpeedyMatrixExpr.create(3, 3, [1, 0, 0, 0, 1, 0, 0, 0, 1]); // identity matrix
     }
 
     /**

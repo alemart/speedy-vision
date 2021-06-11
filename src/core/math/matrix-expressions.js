@@ -604,6 +604,21 @@ export class SpeedyMatrixExpr
     //
 
     /**
+     * Create a new matrix expression
+     * @param {number} rows
+     * @param {number} columns
+     * @param {number[]} values in column-major format
+     * @returns {SpeedyMatrixElementaryExpr}
+     */
+    static create(rows, columns, values)
+    {
+        const shape = new MatrixShape(rows, columns);
+        const matrix = new SpeedyMatrix(shape, values);
+
+        return new SpeedyMatrixElementaryExpr(shape, matrix);
+    }
+
+    /**
      * Internal QR solver: Ax = b
      * This creates a matrix [ (Q^T) b | R ] using reduced QR
      * All (m-n) entries at the bottom are zeros
