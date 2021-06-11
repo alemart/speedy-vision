@@ -53,12 +53,13 @@ export class SpeedyPipelineNodeGreyscale extends SpeedyPipelineNode
     _run(gpu)
     {
         const { image } = this.input().read();
+        const width = image.width, height = image.height;
+        const outputTexture = this._outputTexture;
 
         (gpu.programs.colors.rgb2grey
-            .useTexture(this._outputTexture)
-            .setOutputSize(image.width, image.height)
+            .outputs(width, height, outputTexture)
         )(image);
 
-        this.output().swrite(this._outputTexture, ImageFormat.GREY);
+        this.output().swrite(outputTexture, ImageFormat.GREY);
     }
 }

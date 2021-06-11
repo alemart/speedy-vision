@@ -30,6 +30,13 @@ import { ImageFormat } from '../../../../utils/types';
 import { NotSupportedError, NotImplementedError } from '../../../../utils/errors';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 
+// Median programs
+const MEDIAN = {
+    3: 'median3',
+    5: 'median5',
+    7: 'median7',
+};
+
 /**
  * Median Blur
  */
@@ -86,28 +93,15 @@ export class SpeedyPipelineNodeMedianBlur extends SpeedyPipelineNode
     _run(gpu)
     {
         const { image, format } = this.input().read();
-        const { width, height } = image;
+        const width = image.width, height = image.height;
+        const outputTexture = this._outputTexture;
         const ksize = this._kernelSize.width;
+        const med = MEDIAN[ksize];
 
-        if(ksize == 3) {
-            (gpu.programs.filters.median3
-                .useTexture(this._outputTexture)
-                .setOutputSize(width, height)
-            )(image);
-        }
-        else if(ksize == 5) {
-            (gpu.programs.filters.median5
-                .useTexture(this._outputTexture)
-                .setOutputSize(width, height)
-            )(image);
-        }
-        else if(ksize == 7) {
-            (gpu.programs.filters.median7
-                .useTexture(this._outputTexture)
-                .setOutputSize(width, height)
-            )(image);
-        }
+        (gpu.programs.filters[med]
+            .outputs(width, height, outputTexture)
+        )(image);
 
-        this.output().swrite(this._outputTexture, format);
+        this.output().swrite(outputTexture, format);
     }
 }

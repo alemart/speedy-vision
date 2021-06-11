@@ -123,7 +123,8 @@ export class SpeedyPipelineNodeSimpleBlur extends SpeedyPipelineNode
     _run(gpu)
     {
         const { image, format } = this.input().read();
-        const { width, height } = image;
+        const width = image.width, height = image.height;
+        const outputTexture = this._outputTexture;
         const kernX = this._kernel.x;
         const kernY = this._kernel.y;
         const convX = CONVOLUTION_X[this._kernelSize.width];
@@ -131,16 +132,14 @@ export class SpeedyPipelineNodeSimpleBlur extends SpeedyPipelineNode
         const tex = gpu.texturePool.allocate();
 
         (gpu.programs.filters[convX]
-            .useTexture(tex)
-            .setOutputSize(width, height)
+            .outputs(width, height, tex)
         )(image, kernX);
 
         (gpu.programs.filters[convY]
-            .useTexture(this._outputTexture)
-            .setOutputSize(width, height)
+            .outputs(width, height, outputTexture)
         )(tex, kernY);
 
         gpu.texturePool.free(tex);
-        this.output().swrite(this._outputTexture, format);
+        this.output().swrite(outputTexture, format);
     }
 }

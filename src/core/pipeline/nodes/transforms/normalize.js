@@ -97,7 +97,8 @@ export class SpeedyPipelineNodeNormalize extends SpeedyPipelineNode
     _run(gpu)
     {
         const { image, format } = this.input().read();
-        const { width, height } = image;
+        const width = image.width, height = image.height;
+        const outputTexture = this._outputTexture;
         let minValue = this._minValue;
         let maxValue = this._maxValue;
 
@@ -113,15 +114,14 @@ export class SpeedyPipelineNodeNormalize extends SpeedyPipelineNode
         const minmax = this._scanMinMax(gpu, tex, image, PixelComponent.GREEN);
 
         (gpu.programs.enhancements._normalizeGreyscaleImage
-            .useTexture(this._outputTexture)
-            .setOutputSize(width, height)
+            .outputs(width, height, outputTexture)
         )(minmax, minValue, maxValue);
 
         gpu.texturePool.free(tex[2]);
         gpu.texturePool.free(tex[1]);
         gpu.texturePool.free(tex[0]);
 
-        this.output().swrite(this._outputTexture, format);
+        this.output().swrite(outputTexture, format);
     }
 
     /**
@@ -134,15 +134,15 @@ export class SpeedyPipelineNodeNormalize extends SpeedyPipelineNode
      */
     _scanMinMax(gpu, tex, image, pixelComponent)
     {
-        const { width, height } = image;
         const program = gpu.programs.utils;
+        const width = image.width, height = image.height;
         const numIterations = Math.ceil(Math.log2(Math.max(width, height))) | 0;
 
         Utils.assert(tex.length === 3);
         Utils.assert(ColorComponentId[pixelComponent] !== undefined);
 
-        program._copyComponents.useTexture(tex[2]).setOutputSize(width, height);
-        program._scanMinMax2D.useTexture(tex[0], tex[1]).setOutputSize(width, height);
+        program._copyComponents.outputs(width, height, tex[2]);
+        program._scanMinMax2D.outputs(width, height, tex[0], tex[1]);
         
         let texture = program._copyComponents(image, image, PixelComponent.ALL, ColorComponentId[pixelComponent]);
         for(let i = 0; i < numIterations; i++)

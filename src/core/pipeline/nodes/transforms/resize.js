@@ -104,24 +104,23 @@ export class SpeedyPipelineNodeResize extends SpeedyPipelineNode
     _run(gpu)
     {
         const { image, format } = this.input().read();
-        const { width, height } = image;
+        const width = image.width, height = image.height;
+        const outputTexture = this._outputTexture;
         const method = this._method;
         const newWidth = this._size.width || width; // keep the old size if zero
         const newHeight = this._size.height || height;
 
         if(method == 'bilinear') {
             (gpu.programs.transforms.resizeBI
-                .useTexture(this._outputTexture)
-                .setOutputSize(newWidth, newHeight)
+                .outputs(newWidth, newHeight, outputTexture)
             )(image);
         }
         else if(method == 'nearest') {
             (gpu.programs.transforms.resizeNN
-                .useTexture(this._outputTexture)
-                .setOutputSize(newWidth, newHeight)
+                .outputs(newWidth, newHeight, outputTexture)
             )(image);
         }
 
-        this.output().swrite(this._outputTexture, format);
+        this.output().swrite(outputTexture, format);
     }
 }

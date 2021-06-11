@@ -77,6 +77,7 @@ export class HarrisFeatures extends FeatureDetectionAlgorithm
      */
     _detect(gpu, inputTexture)
     {
+        const { width, height } = gpu.programs.keypoints.multiscaleSobel;
         const quality = this._quality;
         const descriptorSize = this.descriptorSize;
         const extraSize = this.extraSize;
@@ -85,7 +86,7 @@ export class HarrisFeatures extends FeatureDetectionAlgorithm
         const lod = 0, lodStep = 1, numberOfLayers = 1;
 
         // compute derivatives
-        gpu.programs.keypoints.multiscaleSobel.useTexture(null);
+        gpu.programs.keypoints.multiscaleSobel.outputs(width, height, null);
         const df = gpu.programs.keypoints.multiscaleSobel(inputTexture, lod);
         const sobelDerivatives = new Array(MAX_LAYERS).fill(df);
 
@@ -195,7 +196,7 @@ export class MultiscaleHarrisFeatures extends FeatureDetectionAlgorithm
      */
     _detect(gpu, inputTexture)
     {
-        const { width, height } = gpu.programs.keypoints.multiscaleHarris;
+        const { width, height } = gpu.programs.keypoints.multiscaleSobel;
         const quality = this._quality;
         const depth = this._depth;
         const descriptorSize = this.descriptorSize;
@@ -211,9 +212,9 @@ export class MultiscaleHarrisFeatures extends FeatureDetectionAlgorithm
         // compute derivatives
         const sobelDerivatives = new Array(MAX_LAYERS);
         for(let j = 0; j < numberOfLayers; j++) {
-            gpu.programs.keypoints.multiscaleSobel.setOutputSize(width, height).useTexture(this._derivativesTexture[j]);
+            gpu.programs.keypoints.multiscaleSobel.outputs(width, height, this._derivativesTexture[j]);
             sobelDerivatives[j] = gpu.programs.keypoints.multiscaleSobel(pyramid, j * lodStep);
-            gpu.programs.keypoints.multiscaleSobel.useTexture(null);
+            gpu.programs.keypoints.multiscaleSobel.outputs(width, height, null);
         }
         for(let k = numberOfLayers; k < sobelDerivatives.length; k++)
             sobelDerivatives[k] = sobelDerivatives[k-1]; // can't call shaders with null pointers

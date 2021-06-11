@@ -32,6 +32,9 @@ import { SpeedyMatrix } from '../../../math/matrix';
 import { MatrixShape } from '../../../math/matrix-shape';
 import { SpeedyMatrixExpr, SpeedyMatrixElementaryExpr } from '../../../math/matrix-expressions';
 
+// Used when an invalid matrix is provided
+const SINGULAR_MATRIX = [0,0,0,0,0,0,0,0,1];
+
 /**
  * Warp an image using a perspective transformation
  */
@@ -84,22 +87,20 @@ export class SpeedyPipelineNodePerspectiveWarp extends SpeedyPipelineNode
     _run(gpu)
     {
         const { image, format } = this.input().read();
-        const { width, height } = image;
+        const width = image.width, height = image.height;
+        const outputTexture = this._outputTexture;
 
         return this._transform.read().then(homography => {
-            const inverseHomography = this._inverse3(homography);
-            const transforms = gpu.programs.transforms;
+            let inverseHomography = this._inverse3(homography);
 
-            transforms._warpPerspective
-                .useTexture(this._outputTexture)
-                .setOutputSize(width, height);
+            if(Number.isNaN(inverseHomography[0]))
+                inverseHomography = SINGULAR_MATRIX;
 
-            if(!Number.isNaN(inverseHomography[0]))
-                transforms._warpPerspective(image, inverseHomography);
-            else
-                transforms._warpPerspective(image, [0,0,0,0,0,0,0,0,1]); // singular matrix
+            (gpu.programs.transforms._warpPerspective
+                .outputs(width, height, outputTexture)
+            )(image, inverseHomography);
 
-            this.output().swrite(this._outputTexture, format);
+            this.output().swrite(outputTexture, format);
         });
     }
 

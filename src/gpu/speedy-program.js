@@ -242,6 +242,20 @@ export class SpeedyProgram extends Function
     }
 
     /**
+     * Set the output texture(s) and its (their) shape(s)
+     * @param {number} width new width, in pixels
+     * @param {number} height new height, in pixels
+     * @param  {...SpeedyDrawableTexture} texture output texture(s)
+     * @returns {SpeedyProgram} this
+     */
+    outputs(width, height, ...texture)
+    {
+        this.setOutputTexture(...texture);
+        this.setOutputSize(width, height);
+        return this;
+    }
+
+    /**
      * Set the size of the output
      * @param {number} width new width, in pixels
      * @param {number} height new height, in pixels
@@ -267,10 +281,10 @@ export class SpeedyProgram extends Function
 
     /**
      * Use the provided texture(s) as output
-     * @param {SpeedyDrawableTexture[]} texture set to null to use the internal texture(s)
+     * @param {...SpeedyDrawableTextur} texture set to null to use the internal texture(s)
      * @returns {SpeedyProgram} this
      */
-    useTexture(...texture)
+    setOutputTexture(...texture)
     {
         const expectedTextures = this._texture.length;
         Utils.assert(texture.length === expectedTextures, `Incorrect number of textures (expected ${expectedTextures})`);

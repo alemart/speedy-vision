@@ -147,7 +147,8 @@ export class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode
     _run(gpu)
     {
         const { image, format } = this.input().read();
-        const { width, height } = image;
+        const width = image.width, height = image.height;
+        const outputTexture = this._outputTexture;
         const gain = this._gain;
         const offset = this._offset;
         const decay = this._decay;
@@ -160,55 +161,47 @@ export class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode
 
         if(quality == 'medium') {
             (program._illuminationMapX
-                .useTexture(tmp)
-                .setOutputSize(width, height)
+                .outputs(width, height, tmp)
             )(image);
 
             (program._illuminationMapY
-                .useTexture(illuminationMap)
-                .setOutputSize(width, height)
+                .outputs(width, height, illuminationMap)
             )(tmp);
         }
         else if(quality == 'high') {
             (program._illuminationMapHiX
-                .useTexture(tmp)
-                .setOutputSize(width, height)
+                .outputs(width, height, tmp)
             )(image);
 
             (program._illuminationMapHiY
-                .useTexture(illuminationMap)
-                .setOutputSize(width, height)
+                .outputs(width, height, illuminationMap)
             )(tmp);
         }
         else if(quality == 'low') {
             (program._illuminationMapLoX
-                .useTexture(tmp)
-                .setOutputSize(width, height)
+                .outputs(width, height, tmp)
             )(image);
 
             (program._illuminationMapLoY
-                .useTexture(illuminationMap)
-                .setOutputSize(width, height)
+                .outputs(width, height, illuminationMap)
             )(tmp);
         }
 
         // run nightvision
         if(format === ImageFormat.GREY) {
             (program._nightvisionGreyscale
-                .useTexture(this._outputTexture)
-                .setOutputSize(width, height)
+                .outputs(width, height, outputTexture)
             )(image, illuminationMap, gain, offset, decay);
         }
         else if(format === ImageFormat.RGBA) {
             (program._nightvision
-                .useTexture(this._outputTexture)
-                .setOutputSize(width, height)
+                .outputs(width, height, outputTexture)
             )(image, illuminationMap, gain, offset, decay);
         }
 
         // done!
         gpu.texturePool.free(illuminationMap);
         gpu.texturePool.free(tmp);
-        this.output().swrite(this._outputTexture, format);
+        this.output().swrite(outputTexture, format);
     }
 }

@@ -33,6 +33,13 @@ import { SpeedyMatrix } from '../../../math/matrix';
 import { MatrixShape } from '../../../math/matrix-shape';
 import { SpeedyMatrixExpr, SpeedyMatrixElementaryExpr } from '../../../math/matrix-expressions';
 
+// 2D convolution programs
+const CONVOLUTION = {
+    3: 'convolution3',
+    5: 'convolution5',
+    7: 'convolution7',
+};
+
 /**
  * Image convolution
  */
@@ -87,30 +94,17 @@ export class SpeedyPipelineNodeConvolution extends SpeedyPipelineNode
     _run(gpu)
     {
         const { image, format } = this.input().read();
-        const { width, height } = image;
+        const width = image.width, height = image.height;
+        const outputTexture = this._outputTexture;
         const ksize = this._kernel.rows;
+        const conv = CONVOLUTION[ksize];
 
         return this._kernel.read().then(kernel => {
-            if(ksize == 3) {
-                (gpu.programs.filters.convolution3
-                    .useTexture(this._outputTexture)
-                    .setOutputSize(width, height)
-                )(image, kernel);
-            }
-            else if(ksize == 5) {
-                (gpu.programs.filters.convolution5
-                    .useTexture(this._outputTexture)
-                    .setOutputSize(width, height)
-                )(image, kernel);
-            }
-            else if(ksize == 7) {
-                (gpu.programs.filters.convolution7
-                    .useTexture(this._outputTexture)
-                    .setOutputSize(width, height)
-                )(image, kernel);
-            }
+            (gpu.programs.filters[conv]
+                .outputs(width, height, outputTexture)
+            )(image, kernel);
 
-            this.output().swrite(this._outputTexture, format);
+            this.output().swrite(outputTexture, format);
         });
     }
 }
