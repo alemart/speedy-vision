@@ -43,7 +43,7 @@ export class SpeedyPipelineNEW
         this._sequence = [];
 
         /** @type {SpeedyGPU} GPU instance */
-        this._gpu = new SpeedyGPU(1, 1);
+        this._gpu = null;
     }
 
     /**
@@ -62,13 +62,19 @@ export class SpeedyPipelineNEW
     }
 
     /**
-     * Add node(s) to the pipeline
+     * Initialize the pipeline
      * @param  {...SpeedyPipelineNode} nodes
      * @returns {SpeedyPipelineNEW} this pipeline
      */
-    add(...nodes)
+    init(...nodes)
     {
+        // validate
         Utils.assert(nodes.length > 0);
+        if(this._gpu != null)
+            throw new IllegalOperationError(`The pipeline has already been initialized`);
+
+        // create a GPU instance
+        this._gpu = new SpeedyGPU(1, 1);
 
         // add nodes to the network
         for(let i = 0; i < nodes.length; i++) {
@@ -83,6 +89,22 @@ export class SpeedyPipelineNEW
 
         // done!
         return this;
+    }
+
+    /**
+     * Release the resources associated with this pipeline
+     * @returns {null}
+     */
+    release()
+    {
+        if(this._gpu == null)
+            throw new IllegalOperationError(`The pipeline has already been released or has never been initialized`);
+
+        this._gpu = this._gpu.release();
+        this._sequence.length = 0;
+        this._nodes.length = 0;
+
+        return null;
     }
 
     /**
@@ -124,22 +146,6 @@ export class SpeedyPipelineNEW
             // done!
             return aggregate;
         }).turbocharge();
-    }
-
-    /**
-     * Release the resources associated with this pipeline
-     * @returns {null}
-     */
-    release()
-    {
-        if(this._gpu == null)
-            throw new IllegalOperationError(`The pipeline has already been released`);
-
-        this._gpu = this._gpu.release();
-        this._sequence.length = 0;
-        this._nodes.length = 0;
-
-        return null;
     }
 
     /**

@@ -64,7 +64,7 @@ window.onload = async function()
     source.output().connectTo(greyscale.input()); // connect the nodes
     greyscale.output().connectTo(sink.input());
 
-    pipeline.add(source, sink, greyscale); // add the nodes to the pipeline
+    pipeline.init(source, sink, greyscale); // add the nodes to the pipeline
 
     // Display the result
     const canvas = createCanvas(media.width, media.height);

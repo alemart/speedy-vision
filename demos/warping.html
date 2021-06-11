@@ -153,7 +153,7 @@ window.onload = async function()
 
     source.output().connectTo(perspective.input());
     perspective.output().connectTo(sink.input());
-    pipeline.add(source, sink, perspective);
+    pipeline.init(source, sink, perspective);
 
     // input fields
     const homographyElement = [...(new Array(9)).keys()].map(k => document.getElementById('homography-' + k));

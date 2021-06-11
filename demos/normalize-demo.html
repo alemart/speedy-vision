@@ -75,7 +75,7 @@ window.onload = async function()
     greyscale.output().connectTo(normalize.input());
     greyscale.output().connectTo(sink1.input());
     normalize.output().connectTo(sink2.input());
-    pipeline.add(source, sink1, sink2, greyscale, normalize);
+    pipeline.init(source, sink1, sink2, greyscale, normalize);
 
     source.media = camera;
     normalize.minValue = 0;

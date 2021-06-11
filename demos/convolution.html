@@ -204,7 +204,7 @@ window.onload = async function()
     source.output().connectTo(convolution.input());
     convolution.output().connectTo(sink.input());
 
-    pipeline.add(source, sink, convolution);
+    pipeline.init(source, sink, convolution);
 
     // update the pipeline
     function updatePipeline()

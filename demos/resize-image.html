@@ -120,7 +120,7 @@ window.onload = async function()
     source.output().connectTo(resize.input());
     resize.output().connectTo(sink.input());
 
-    pipeline.add(source, sink, resize);
+    pipeline.init(source, sink, resize);
 
     // display the result
     const canvas = createCanvas(media.width, media.height, img.title);

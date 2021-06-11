@@ -88,7 +88,7 @@ window.onload = async function()
     source.media = media;
     source.output().connectTo(gaussian.input());
     gaussian.output().connectTo(sink.input());
-    pipeline.add(source, sink, gaussian);
+    pipeline.init(source, sink, gaussian);
 
     // display the result
     const canvas = createCanvas(media.width, media.height, img.title);

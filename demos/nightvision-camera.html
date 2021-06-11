@@ -82,12 +82,12 @@ function createPipeline(media, mustConvertToGreyscale)
         source.output().connectTo(greyscale.input());
         greyscale.output().connectTo(nightvision.input());
         nightvision.output().connectTo(sink.input());
-        pipeline.add(source, sink, greyscale, nightvision);
+        pipeline.init(source, sink, greyscale, nightvision);
     }
     else {
         source.output().connectTo(nightvision.input());
         nightvision.output().connectTo(sink.input());
-        pipeline.add(source, sink, nightvision);
+        pipeline.init(source, sink, nightvision);
     }
 
     return pipeline;

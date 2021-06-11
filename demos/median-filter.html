@@ -89,7 +89,7 @@ window.onload = async function()
     median.output().connectTo(sink1.input());
     greyscale.output().connectTo(sink2.input());
 
-    pipeline.add(source, sink1, sink2, greyscale, median);
+    pipeline.init(source, sink1, sink2, greyscale, median);
 
     // Setup the input controls
     const kernelSize = document.getElementById('kernel-size');
