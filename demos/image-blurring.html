@@ -16,7 +16,7 @@
   limitations under the License.
 
   image-blurring.html
-  Blurring an image
+  Gaussian Blur
 -->
 <!doctype html>
 <html>
@@ -24,19 +24,51 @@
         <meta charset="utf-8">
         <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
         <meta name="author" content="Alexandre Martins">
-        <title>Blurring an image</title>
+        <title>Gaussian Blur</title>
         <script src="../dist/speedy-vision.js"></script>
         <link href="style.css" rel="stylesheet">
     </head>
     <body>
-        <h1>Blurring an image</h1>
+        <h1>Gaussian Blur</h1>
+        <form autocomplete="off">
+            <div>
+                <label for="ksize">Kernel size</label>
+                <select id="ksize">
+                    <option value="3">3x3</option>
+                    <option value="5">5x5</option>
+                    <option value="7">7x7</option>
+                    <option value="9">9x9</option>
+                    <option value="11" selected>11x11</option>
+                    <option value="13">13x13</option>
+                    <option value="15">15x15</option>
+                </select>
+                <span>&nbsp;&nbsp;&nbsp;</span>
+            </div>
+            <div>
+                <label for="sigma">Sigma</label>
+                <input type="range" min="0" max="5" value="0" step="0.1" id="sigma">
+                <span id="sigma-view">auto</span>
+            </div>
+        </form>
+
         <img src="../assets/speedy-wall.jpg" title="Image by Bride of Frankenstein (CC-BY)">
         <script>
 window.onload = async function()
 {
+    // form controls
+    const ksize = document.getElementById('ksize');
+    const sigma = document.getElementById('sigma');
+    const sigmaView = document.getElementById('sigma-view');
+
+    ksize.oninput = render;
+    sigma.oninput = () => {
+        sigmaView.innerText = sigma.value > 0 ? sigma.value : 'auto';
+        render();
+    };
+
     /*
 
-    Here is the pipeline:
+    This is the pipeline:
 
     Image ---> Gaussian ---> Image
     Source     Blur          Sink
@@ -51,17 +83,25 @@ window.onload = async function()
     const pipeline = Speedy.Pipeline();
     const source = Speedy.Pipeline.ImageSource();
     const sink = Speedy.Pipeline.ImageSink();
-    const blur = Speedy.Filter.GaussianBlur();
+    const gaussian = Speedy.Filter.GaussianBlur();
 
     source.media = media;
-    source.output().connectTo(blur.input());
-    blur.output().connectTo(sink.input());
-    pipeline.add(source, sink, blur);
+    source.output().connectTo(gaussian.input());
+    gaussian.output().connectTo(sink.input());
+    pipeline.add(source, sink, gaussian);
 
     // display the result
-    const { image } = await pipeline.run();
     const canvas = createCanvas(media.width, media.height, img.title);
-    image.draw(canvas);
+    async function render()
+    {
+        gaussian.kernelSize = Speedy.Size(ksize.value, ksize.value);
+        gaussian.sigma = Speedy.Vector2(sigma.value, sigma.value);
+
+        const { image } = await pipeline.run();
+
+        image.draw(canvas);
+    }
+    render();
 }
 
 function createCanvas(width, height, title)

@@ -25,10 +25,52 @@ import { InputPort, OutputPort } from '../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../../../gpu/speedy-texture';
 import { SpeedySize } from '../../../math/speedy-size';
+import { SpeedyVector2 } from '../../../math/speedy-vector';
 import { Utils } from '../../../../utils/utils';
 import { ImageFormat } from '../../../../utils/types';
-import { NotSupportedError, NotImplementedError } from '../../../../utils/errors';
+import { NotSupportedError, NotImplementedError, IllegalArgumentError } from '../../../../utils/errors';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
+
+// Default kernels for different sizes: 3x3, 5x5, 7x7... (use sigma_x = sigma_y)
+// Heuristics: in order to pick a sigma, we set radius = 2 * sigma. Since
+// ksize = 1 + 2 * radius, it follows that sigma = (ksize - 1) / 4. When
+// ksize is 3, we set sigma = 1. Therefore, sigma = max(1, (ksize - 1) / 4).
+const DEFAULT_KERNEL = {
+    3: [ 0.27901008925473514, 0.44197982149052983, 0.27901008925473514 ], // 1D convolution (sigma = 1)
+    5: [ 0.06135959781344021, 0.2447701955296099, 0.3877404133138998, 0.2447701955296099, 0.06135959781344021 ], // 1D convolution (separable kernel)
+    7: [ 0.03873542500847274, 0.11308485700794121, 0.2150068609928349, 0.26634571398150225, 0.2150068609928349, 0.11308485700794121, 0.03873542500847274 ],
+    9: [ 0.028532262603370988, 0.067234535494912, 0.12400932997922749, 0.17904386461741617, 0.20236001461014655, 0.17904386461741617, 0.12400932997922749, 0.067234535494912, 0.028532262603370988 ],
+    11:[ 0.022656882730580346, 0.04610857898527292, 0.08012661469398517, 0.11890414969751599, 0.15067709325491124, 0.16305336127546846, 0.15067709325491124, 0.11890414969751599, 0.08012661469398517, 0.04610857898527292, 0.022656882730580346 ],
+    13:[ 0.018815730430644363, 0.03447396964662016, 0.05657737457255748, 0.08317258170844948, 0.10952340502389682, 0.12918787500405662, 0.13649812722755, 0.12918787500405662, 0.10952340502389682, 0.08317258170844948, 0.05657737457255748, 0.03447396964662016, 0.018815730430644363 ],
+    15:[ 0.016100340991695383, 0.027272329212157102, 0.042598338587449644, 0.06135478775568558, 0.08148767614129326, 0.09979838342934616, 0.11270444144735056, 0.11736740487004466, 0.11270444144735056, 0.09979838342934616, 0.08148767614129326, 0.06135478775568558, 0.042598338587449644, 0.027272329212157102, 0.016100340991695383 ],
+    //3: [ 0.25, 0.5, 0.25 ],
+    //5: [ 0.05, 0.25, 0.4, 0.25, 0.05 ],
+};
+
+// when we set sigma_x = sigma_y = 0, we use the above rule to compute sigma
+const DEFAULT_SIGMA = new SpeedyVector2(0,0);
+
+// convolution programs (x-axis)
+const CONVOLUTION_X = {
+    3: 'convolution3x',
+    5: 'convolution5x',
+    7: 'convolution7x',
+    9: 'convolution9x',
+    11: 'convolution11x',
+    13: 'convolution13x',
+    15: 'convolution15x',
+};
+
+// convolution programs (y-axis)
+const CONVOLUTION_Y = {
+    3: 'convolution3y',
+    5: 'convolution5y',
+    7: 'convolution7y',
+    9: 'convolution9y',
+    11: 'convolution11y',
+    13: 'convolution13y',
+    15: 'convolution15y',
+};
 
 /**
  * Gaussian Blur
@@ -46,11 +88,17 @@ export class SpeedyPipelineNodeGaussianBlur extends SpeedyPipelineNode
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
 
-        /** @type {SpeedySize} size of the kernel (assumed to be square) */
+        /** @type {SpeedySize} size of the kernel */
         this._kernelSize = new SpeedySize(5,5);
 
-        /** @type {number} sigma of the Gaussian kernel (0 means: use default) */
-        this._sigma = 0.0;
+        /** @type {SpeedyVector2} sigma of the Gaussian kernel (0 means: use default settings) */
+        this._sigma = DEFAULT_SIGMA;
+
+        /** @type {Object.<string,number[]>} convolution kernel */
+        this._kernel = {
+            x: DEFAULT_KERNEL[this._kernelSize.width],
+            y: DEFAULT_KERNEL[this._kernelSize.height]
+        };
     }
 
     /**
@@ -70,18 +118,17 @@ export class SpeedyPipelineNodeGaussianBlur extends SpeedyPipelineNode
     {
         Utils.assert(kernelSize instanceof SpeedySize);
 
-        const ksize = kernelSize.width;
-        if(!(ksize == 3 || ksize == 5 || ksize == 7))
-            throw new NotSupportedError(`Supported kernel sizes: 3x3, 5x5, 7x7`);
-        else if(kernelSize.width != kernelSize.height)
-            throw new NotSupportedError(`Use a square kernel`);
+        const kw = kernelSize.width, kh = kernelSize.height;
+        if(kw < 3 || kh < 3 || kw > 15 || kh > 15 || kw % 2 == 0 || kh % 2 == 0)
+            throw new NotSupportedError(`Unsupported kernel size: ${kw}x${kh}`);
 
         this._kernelSize = kernelSize;
+        this._updateKernel();
     }
 
     /**
      * Sigma of the Gaussian kernel
-     * @returns {number}
+     * @returns {SpeedyVector2}
      */
     get sigma()
     {
@@ -90,12 +137,15 @@ export class SpeedyPipelineNodeGaussianBlur extends SpeedyPipelineNode
 
     /**
      * Sigma of the Gaussian kernel
-     * @param {number} sigma
+     * @param {SpeedyVector2} sigma
      */
     set sigma(sigma)
     {
-        // TODO
-        throw new NotImplementedError();
+        Utils.assert(sigma instanceof SpeedyVector2, `Sigma must be a SpeedyVector2`);
+        Utils.assert(sigma.x >= 0 && sigma.y >= 0);
+
+        this._sigma = sigma;
+        this._updateKernel();
     }
 
     /**
@@ -107,48 +157,40 @@ export class SpeedyPipelineNodeGaussianBlur extends SpeedyPipelineNode
     {
         const { image, format } = this.input().read();
         const { width, height } = image;
-        const ksize = this._kernelSize.width;
-        const sigma = this._sigma;
+        const kernX = this._kernel.x;
+        const kernY = this._kernel.y;
+        const convX = CONVOLUTION_X[this._kernelSize.width];
+        const convY = CONVOLUTION_Y[this._kernelSize.height];
         const tex = gpu.texturePool.allocate();
 
-        if(sigma > 0.0) {
-            throw new NotSupportedError();
-        }
-        else if(ksize == 3) {
-            (gpu.programs.filters._gauss3x
-                .useTexture(tex)
-                .setOutputSize(width, height)
-            )(image);
+        (gpu.programs.filters[convX]
+            .useTexture(tex)
+            .setOutputSize(width, height)
+        )(image, kernX);
 
-            (gpu.programs.filters._gauss3y
-                .useTexture(this._outputTexture)
-                .setOutputSize(width, height)
-            )(tex);
-        }
-        else if(ksize == 5) {
-            (gpu.programs.filters._gauss5x
-                .useTexture(tex)
-                .setOutputSize(width, height)
-            )(image);
-
-            (gpu.programs.filters._gauss5y
-                .useTexture(this._outputTexture)
-                .setOutputSize(width, height)
-            )(tex);
-        }
-        else if(ksize == 7) {
-            (gpu.programs.filters._gauss7x
-                .useTexture(tex)
-                .setOutputSize(width, height)
-            )(image);
-
-            (gpu.programs.filters._gauss7y
-                .useTexture(this._outputTexture)
-                .setOutputSize(width, height)
-            )(tex);
-        }
+        (gpu.programs.filters[convY]
+            .useTexture(this._outputTexture)
+            .setOutputSize(width, height)
+        )(tex, kernY);
 
         gpu.texturePool.free(tex);
         this.output().swrite(this._outputTexture, format);
+    }
+
+    /**
+     * Update the internal kernel to match
+     * sigma and kernelSize
+     */
+    _updateKernel()
+    {
+        if(this._sigma.x == DEFAULT_SIGMA.x)
+            this._kernel.x = DEFAULT_KERNEL[this._kernelSize.width];
+        else
+            this._kernel.x = Utils.gaussianKernel(this._sigma.x, this._kernelSize.width, true);
+
+        if(this._sigma.y == DEFAULT_SIGMA.y)
+            this._kernel.y = DEFAULT_KERNEL[this._kernelSize.height];
+        else
+            this._kernel.y = Utils.gaussianKernel(this._sigma.y, this._kernelSize.height, true);
     }
 }
