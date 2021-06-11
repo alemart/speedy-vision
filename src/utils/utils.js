@@ -269,6 +269,28 @@ export class Utils
     }
 
     /**
+     * Generate a 2D kernel in column-major format using two separable 1D kernels
+     * @param {number[]} ka 1D kernel
+     * @param {number[]} [kb]
+     * @returns {number[]}
+     */
+    static kernel2d(ka, kb = ka)
+    {
+        const ksize = ka.length;
+        Utils.assert(ka.length == ka.length);
+        Utils.assert(ksize >= 1 && ksize % 2 == 1);
+
+        // compute the outer product ka x kb
+        let kernel2d = new Array(ksize * ksize), k = 0;
+        for(let col = 0; col < ksize; col++) {
+            for(let row = 0; row < ksize; row++)
+                kernel2d[k++] = ka[row] * kb[col];
+        }
+
+        return kernel2d;
+    }
+
+    /**
      * Cartesian product a x b: [ [ai, bj] for all i, j ]
      * @param {Array<number>} a
      * @param {Array<number>} b
