@@ -69,7 +69,7 @@ window.onload = async function()
     const sink1 = Speedy.Pipeline.ImageSink('grey');
     const sink2 = Speedy.Pipeline.ImageSink('norm');
     const greyscale = Speedy.Filter.Greyscale();
-    const normalize = Speedy.Transform.Normalize();
+    const normalize = Speedy.Filter.Normalize();
 
     source.output().connectTo(greyscale.input());
     greyscale.output().connectTo(normalize.input());

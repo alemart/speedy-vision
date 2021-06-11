@@ -26,6 +26,7 @@ import { SpeedyPipelineNodeSimpleBlur } from '../nodes/filters/simple-blur';
 import { SpeedyPipelineNodeMedianBlur } from '../nodes/filters/median-blur';
 import { SpeedyPipelineNodeConvolution } from '../nodes/filters/convolution';
 import { SpeedyPipelineNodeNightvision } from '../nodes/filters/nightvision';
+import { SpeedyPipelineNodeNormalize } from '../nodes/filters/normalize';
 
 /**
  * Image filters
@@ -90,5 +91,15 @@ export class SpeedyPipelineFilterFactory extends SpeedyNamespace
     static Nightvision(name = undefined)
     {
         return new SpeedyPipelineNodeNightvision(name);
+    }
+
+    /**
+     * Normalize image
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeNormalize}
+     */
+    static Normalize(name = undefined)
+    {
+        return new SpeedyPipelineNodeNormalize(name);
     }
 }
