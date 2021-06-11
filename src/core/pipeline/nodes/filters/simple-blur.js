@@ -30,6 +30,39 @@ import { ImageFormat } from '../../../../utils/types';
 import { NotSupportedError, NotImplementedError } from '../../../../utils/errors';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 
+// 1D convolution filters
+const BOX_FILTER = {
+    3: (new Array(3)).fill(1/3),
+    5: (new Array(5)).fill(1/5),
+    7: (new Array(7)).fill(1/7),
+    9: (new Array(9)).fill(1/9),
+    11: (new Array(11)).fill(1/11),
+    13: (new Array(13)).fill(1/13),
+    15: (new Array(15)).fill(1/15),
+};
+
+// convolution programs (x-axis)
+const CONVOLUTION_X = {
+    3: 'convolution3x',
+    5: 'convolution5x',
+    7: 'convolution7x',
+    9: 'convolution9x',
+    11: 'convolution11x',
+    13: 'convolution13x',
+    15: 'convolution15x',
+};
+
+// convolution programs (y-axis)
+const CONVOLUTION_Y = {
+    3: 'convolution3y',
+    5: 'convolution5y',
+    7: 'convolution7y',
+    9: 'convolution9y',
+    11: 'convolution11y',
+    13: 'convolution13y',
+    15: 'convolution15y',
+};
+
 /**
  * Simple Blur (Box Filter)
  */
@@ -46,8 +79,14 @@ export class SpeedyPipelineNodeSimpleBlur extends SpeedyPipelineNode
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
 
-        /** @type {SpeedySize} size of the kernel (assumed to be square) */
+        /** @type {SpeedySize} size of the kernel */
         this._kernelSize = new SpeedySize(5,5);
+
+        /** @type {Object.<string,number[]>} convolution kernel */
+        this._kernel = {
+            x: BOX_FILTER[this._kernelSize.width],
+            y: BOX_FILTER[this._kernelSize.height]
+        };
     }
 
     /**
@@ -67,13 +106,13 @@ export class SpeedyPipelineNodeSimpleBlur extends SpeedyPipelineNode
     {
         Utils.assert(kernelSize instanceof SpeedySize);
 
-        const ksize = kernelSize.width;
-        if(!(ksize == 3 || ksize == 5 || ksize == 7))
-            throw new NotSupportedError(`Supported kernel sizes: 3x3, 5x5, 7x7`);
-        else if(kernelSize.width != kernelSize.height)
-            throw new NotSupportedError(`Use a square kernel`);
+        const kw = kernelSize.width, kh = kernelSize.height;
+        if(kw < 3 || kh < 3 || kw > 15 || kh > 15 || kw % 2 == 0 || kh % 2 == 0)
+            throw new NotSupportedError(`Unsupported kernel size: ${kw}x${kh}`);
 
         this._kernelSize = kernelSize;
+        this._kernel.x = BOX_FILTER[this._kernelSize.width];
+        this._kernel.y = BOX_FILTER[this._kernelSize.height];
     }
 
     /**
@@ -85,42 +124,21 @@ export class SpeedyPipelineNodeSimpleBlur extends SpeedyPipelineNode
     {
         const { image, format } = this.input().read();
         const { width, height } = image;
-        const ksize = this._kernelSize.width;
+        const kernX = this._kernel.x;
+        const kernY = this._kernel.y;
+        const convX = CONVOLUTION_X[this._kernelSize.width];
+        const convY = CONVOLUTION_Y[this._kernelSize.height];
         const tex = gpu.texturePool.allocate();
 
-        if(ksize == 3) {
-            (gpu.programs.filters._box3x
-                .useTexture(tex)
-                .setOutputSize(width, height)
-            )(image);
+        (gpu.programs.filters[convX]
+            .useTexture(tex)
+            .setOutputSize(width, height)
+        )(image, kernX);
 
-            (gpu.programs.filters._box3y
-                .useTexture(this._outputTexture)
-                .setOutputSize(width, height)
-            )(tex);
-        }
-        else if(ksize == 5) {
-            (gpu.programs.filters._box5x
-                .useTexture(tex)
-                .setOutputSize(width, height)
-            )(image);
-
-            (gpu.programs.filters._box5y
-                .useTexture(this._outputTexture)
-                .setOutputSize(width, height)
-            )(tex);
-        }
-        else if(ksize == 7) {
-            (gpu.programs.filters._box7x
-                .useTexture(tex)
-                .setOutputSize(width, height)
-            )(image);
-
-            (gpu.programs.filters._box7y
-                .useTexture(this._outputTexture)
-                .setOutputSize(width, height)
-            )(tex);
-        }
+        (gpu.programs.filters[convY]
+            .useTexture(this._outputTexture)
+            .setOutputSize(width, height)
+        )(tex, kernY);
 
         gpu.texturePool.free(tex);
         this.output().swrite(this._outputTexture, format);
