@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-06-09T22:14:07.032Z
+ * Date: 2021-06-11T14:04:47.699Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -11225,10 +11225,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../math/speedy-size */ "./src/core/math/speedy-size.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _math_speedy_vector__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../math/speedy-vector */ "./src/core/math/speedy-vector.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -11261,6 +11262,48 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+// Default kernels for different sizes: 3x3, 5x5, 7x7... (use sigma_x = sigma_y)
+// Heuristics: in order to pick a sigma, we set radius = 2 * sigma. Since
+// ksize = 1 + 2 * radius, it follows that sigma = (ksize - 1) / 4. When
+// ksize is 3, we set sigma = 1. Therefore, sigma = max(1, (ksize - 1) / 4).
+const DEFAULT_KERNEL = {
+    3: [ 0.27901008925473514, 0.44197982149052983, 0.27901008925473514 ], // 1D convolution (sigma = 1)
+    5: [ 0.06135959781344021, 0.2447701955296099, 0.3877404133138998, 0.2447701955296099, 0.06135959781344021 ], // 1D convolution (separable kernel)
+    7: [ 0.03873542500847274, 0.11308485700794121, 0.2150068609928349, 0.26634571398150225, 0.2150068609928349, 0.11308485700794121, 0.03873542500847274 ],
+    9: [ 0.028532262603370988, 0.067234535494912, 0.12400932997922749, 0.17904386461741617, 0.20236001461014655, 0.17904386461741617, 0.12400932997922749, 0.067234535494912, 0.028532262603370988 ],
+    11:[ 0.022656882730580346, 0.04610857898527292, 0.08012661469398517, 0.11890414969751599, 0.15067709325491124, 0.16305336127546846, 0.15067709325491124, 0.11890414969751599, 0.08012661469398517, 0.04610857898527292, 0.022656882730580346 ],
+    13:[ 0.018815730430644363, 0.03447396964662016, 0.05657737457255748, 0.08317258170844948, 0.10952340502389682, 0.12918787500405662, 0.13649812722755, 0.12918787500405662, 0.10952340502389682, 0.08317258170844948, 0.05657737457255748, 0.03447396964662016, 0.018815730430644363 ],
+    15:[ 0.016100340991695383, 0.027272329212157102, 0.042598338587449644, 0.06135478775568558, 0.08148767614129326, 0.09979838342934616, 0.11270444144735056, 0.11736740487004466, 0.11270444144735056, 0.09979838342934616, 0.08148767614129326, 0.06135478775568558, 0.042598338587449644, 0.027272329212157102, 0.016100340991695383 ],
+    //3: [ 0.25, 0.5, 0.25 ],
+    //5: [ 0.05, 0.25, 0.4, 0.25, 0.05 ],
+};
+
+// when we set sigma_x = sigma_y = 0, we use the above rule to compute sigma
+const DEFAULT_SIGMA = new _math_speedy_vector__WEBPACK_IMPORTED_MODULE_6__["SpeedyVector2"](0,0);
+
+// convolution programs (x-axis)
+const CONVOLUTION_X = {
+    3: 'convolution3x',
+    5: 'convolution5x',
+    7: 'convolution7x',
+    9: 'convolution9x',
+    11: 'convolution11x',
+    13: 'convolution13x',
+    15: 'convolution15x',
+};
+
+// convolution programs (y-axis)
+const CONVOLUTION_Y = {
+    3: 'convolution3y',
+    5: 'convolution5y',
+    7: 'convolution7y',
+    9: 'convolution9y',
+    11: 'convolution11y',
+    13: 'convolution13y',
+    15: 'convolution15y',
+};
+
 /**
  * Gaussian Blur
  */
@@ -11277,11 +11320,17 @@ class SpeedyPipelineNodeGaussianBlur extends _pipeline_node__WEBPACK_IMPORTED_MO
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
         ]);
 
-        /** @type {SpeedySize} size of the kernel (assumed to be square) */
+        /** @type {SpeedySize} size of the kernel */
         this._kernelSize = new _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"](5,5);
 
-        /** @type {number} sigma of the Gaussian kernel (0 means: use default) */
-        this._sigma = 0.0;
+        /** @type {SpeedyVector2} sigma of the Gaussian kernel (0 means: use default settings) */
+        this._sigma = DEFAULT_SIGMA;
+
+        /** @type {Object.<string,number[]>} convolution kernel */
+        this._kernel = {
+            x: DEFAULT_KERNEL[this._kernelSize.width],
+            y: DEFAULT_KERNEL[this._kernelSize.height]
+        };
     }
 
     /**
@@ -11299,20 +11348,19 @@ class SpeedyPipelineNodeGaussianBlur extends _pipeline_node__WEBPACK_IMPORTED_MO
      */
     set kernelSize(kernelSize)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(kernelSize instanceof _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"]);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_7__["Utils"].assert(kernelSize instanceof _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"]);
 
-        const ksize = kernelSize.width;
-        if(!(ksize == 3 || ksize == 5 || ksize == 7))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["NotSupportedError"](`Supported kernel sizes: 3x3, 5x5, 7x7`);
-        else if(kernelSize.width != kernelSize.height)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["NotSupportedError"](`Use a square kernel`);
+        const kw = kernelSize.width, kh = kernelSize.height;
+        if(kw < 3 || kh < 3 || kw > 15 || kh > 15 || kw % 2 == 0 || kh % 2 == 0)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__["NotSupportedError"](`Unsupported kernel size: ${kw}x${kh}`);
 
         this._kernelSize = kernelSize;
+        this._updateKernel();
     }
 
     /**
      * Sigma of the Gaussian kernel
-     * @returns {number}
+     * @returns {SpeedyVector2}
      */
     get sigma()
     {
@@ -11321,12 +11369,15 @@ class SpeedyPipelineNodeGaussianBlur extends _pipeline_node__WEBPACK_IMPORTED_MO
 
     /**
      * Sigma of the Gaussian kernel
-     * @param {number} sigma
+     * @param {SpeedyVector2} sigma
      */
     set sigma(sigma)
     {
-        // TODO
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["NotImplementedError"]();
+        _utils_utils__WEBPACK_IMPORTED_MODULE_7__["Utils"].assert(sigma instanceof _math_speedy_vector__WEBPACK_IMPORTED_MODULE_6__["SpeedyVector2"], `Sigma must be a SpeedyVector2`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_7__["Utils"].assert(sigma.x >= 0 && sigma.y >= 0);
+
+        this._sigma = sigma;
+        this._updateKernel();
     }
 
     /**
@@ -11338,49 +11389,41 @@ class SpeedyPipelineNodeGaussianBlur extends _pipeline_node__WEBPACK_IMPORTED_MO
     {
         const { image, format } = this.input().read();
         const { width, height } = image;
-        const ksize = this._kernelSize.width;
-        const sigma = this._sigma;
+        const kernX = this._kernel.x;
+        const kernY = this._kernel.y;
+        const convX = CONVOLUTION_X[this._kernelSize.width];
+        const convY = CONVOLUTION_Y[this._kernelSize.height];
         const tex = gpu.texturePool.allocate();
 
-        if(sigma > 0.0) {
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["NotSupportedError"]();
-        }
-        else if(ksize == 3) {
-            (gpu.programs.filters._gauss3x
-                .useTexture(tex)
-                .setOutputSize(width, height)
-            )(image);
+        (gpu.programs.filters[convX]
+            .useTexture(tex)
+            .setOutputSize(width, height)
+        )(image, kernX);
 
-            (gpu.programs.filters._gauss3y
-                .useTexture(this._outputTexture)
-                .setOutputSize(width, height)
-            )(tex);
-        }
-        else if(ksize == 5) {
-            (gpu.programs.filters._gauss5x
-                .useTexture(tex)
-                .setOutputSize(width, height)
-            )(image);
-
-            (gpu.programs.filters._gauss5y
-                .useTexture(this._outputTexture)
-                .setOutputSize(width, height)
-            )(tex);
-        }
-        else if(ksize == 7) {
-            (gpu.programs.filters._gauss7x
-                .useTexture(tex)
-                .setOutputSize(width, height)
-            )(image);
-
-            (gpu.programs.filters._gauss7y
-                .useTexture(this._outputTexture)
-                .setOutputSize(width, height)
-            )(tex);
-        }
+        (gpu.programs.filters[convY]
+            .useTexture(this._outputTexture)
+            .setOutputSize(width, height)
+        )(tex, kernY);
 
         gpu.texturePool.free(tex);
         this.output().swrite(this._outputTexture, format);
+    }
+
+    /**
+     * Update the internal kernel to match
+     * sigma and kernelSize
+     */
+    _updateKernel()
+    {
+        if(this._sigma.x == DEFAULT_SIGMA.x)
+            this._kernel.x = DEFAULT_KERNEL[this._kernelSize.width];
+        else
+            this._kernel.x = _utils_utils__WEBPACK_IMPORTED_MODULE_7__["Utils"].gaussianKernel(this._sigma.x, this._kernelSize.width, true);
+
+        if(this._sigma.y == DEFAULT_SIGMA.y)
+            this._kernel.y = DEFAULT_KERNEL[this._kernelSize.height];
+        else
+            this._kernel.y = _utils_utils__WEBPACK_IMPORTED_MODULE_7__["Utils"].gaussianKernel(this._sigma.y, this._kernelSize.height, true);
     }
 }
 
@@ -11895,6 +11938,39 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+// 1D convolution filters
+const BOX_FILTER = {
+    3: (new Array(3)).fill(1/3),
+    5: (new Array(5)).fill(1/5),
+    7: (new Array(7)).fill(1/7),
+    9: (new Array(9)).fill(1/9),
+    11: (new Array(11)).fill(1/11),
+    13: (new Array(13)).fill(1/13),
+    15: (new Array(15)).fill(1/15),
+};
+
+// convolution programs (x-axis)
+const CONVOLUTION_X = {
+    3: 'convolution3x',
+    5: 'convolution5x',
+    7: 'convolution7x',
+    9: 'convolution9x',
+    11: 'convolution11x',
+    13: 'convolution13x',
+    15: 'convolution15x',
+};
+
+// convolution programs (y-axis)
+const CONVOLUTION_Y = {
+    3: 'convolution3y',
+    5: 'convolution5y',
+    7: 'convolution7y',
+    9: 'convolution9y',
+    11: 'convolution11y',
+    13: 'convolution13y',
+    15: 'convolution15y',
+};
+
 /**
  * Simple Blur (Box Filter)
  */
@@ -11911,8 +11987,14 @@ class SpeedyPipelineNodeSimpleBlur extends _pipeline_node__WEBPACK_IMPORTED_MODU
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
         ]);
 
-        /** @type {SpeedySize} size of the kernel (assumed to be square) */
+        /** @type {SpeedySize} size of the kernel */
         this._kernelSize = new _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"](5,5);
+
+        /** @type {Object.<string,number[]>} convolution kernel */
+        this._kernel = {
+            x: BOX_FILTER[this._kernelSize.width],
+            y: BOX_FILTER[this._kernelSize.height]
+        };
     }
 
     /**
@@ -11932,13 +12014,13 @@ class SpeedyPipelineNodeSimpleBlur extends _pipeline_node__WEBPACK_IMPORTED_MODU
     {
         _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(kernelSize instanceof _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"]);
 
-        const ksize = kernelSize.width;
-        if(!(ksize == 3 || ksize == 5 || ksize == 7))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["NotSupportedError"](`Supported kernel sizes: 3x3, 5x5, 7x7`);
-        else if(kernelSize.width != kernelSize.height)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["NotSupportedError"](`Use a square kernel`);
+        const kw = kernelSize.width, kh = kernelSize.height;
+        if(kw < 3 || kh < 3 || kw > 15 || kh > 15 || kw % 2 == 0 || kh % 2 == 0)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["NotSupportedError"](`Unsupported kernel size: ${kw}x${kh}`);
 
         this._kernelSize = kernelSize;
+        this._kernel.x = BOX_FILTER[this._kernelSize.width];
+        this._kernel.y = BOX_FILTER[this._kernelSize.height];
     }
 
     /**
@@ -11950,42 +12032,21 @@ class SpeedyPipelineNodeSimpleBlur extends _pipeline_node__WEBPACK_IMPORTED_MODU
     {
         const { image, format } = this.input().read();
         const { width, height } = image;
-        const ksize = this._kernelSize.width;
+        const kernX = this._kernel.x;
+        const kernY = this._kernel.y;
+        const convX = CONVOLUTION_X[this._kernelSize.width];
+        const convY = CONVOLUTION_Y[this._kernelSize.height];
         const tex = gpu.texturePool.allocate();
 
-        if(ksize == 3) {
-            (gpu.programs.filters._box3x
-                .useTexture(tex)
-                .setOutputSize(width, height)
-            )(image);
+        (gpu.programs.filters[convX]
+            .useTexture(tex)
+            .setOutputSize(width, height)
+        )(image, kernX);
 
-            (gpu.programs.filters._box3y
-                .useTexture(this._outputTexture)
-                .setOutputSize(width, height)
-            )(tex);
-        }
-        else if(ksize == 5) {
-            (gpu.programs.filters._box5x
-                .useTexture(tex)
-                .setOutputSize(width, height)
-            )(image);
-
-            (gpu.programs.filters._box5y
-                .useTexture(this._outputTexture)
-                .setOutputSize(width, height)
-            )(tex);
-        }
-        else if(ksize == 7) {
-            (gpu.programs.filters._box7x
-                .useTexture(tex)
-                .setOutputSize(width, height)
-            )(image);
-
-            (gpu.programs.filters._box7y
-                .useTexture(this._outputTexture)
-                .setOutputSize(width, height)
-            )(tex);
-        }
+        (gpu.programs.filters[convY]
+            .useTexture(this._outputTexture)
+            .setOutputSize(width, height)
+        )(tex, kernY);
 
         gpu.texturePool.free(tex);
         this.output().swrite(this._outputTexture, format);
@@ -17670,7 +17731,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17696,30 +17757,31 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // Convolution
-const convolution3 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/convolution.glsl')
-                    .withDefines({ 'KERNEL_SIZE_SQUARED': 3*3 })
-                    .withArguments('image', 'kernel');
+const convolution = [3, 5, 7].reduce((obj, ksize) => ((obj[ksize] =
+                        Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/convolution2d.glsl')
+                       .withDefines({ 'KERNEL_SIZE_SQUARED': ksize * ksize })
+                       .withArguments('image', 'kernel')
+                    ), obj), {});
 
-const convolution5 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/convolution.glsl')
-                    .withDefines({ 'KERNEL_SIZE_SQUARED': 5*5 })
-                    .withArguments('image', 'kernel');
+// Separable convolution
+const convolutionX = [3, 5, 7, 9, 11, 13, 15].reduce((obj, ksize) => ((obj[ksize] =
+                         Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/convolution1d.glsl')
+                        .withDefines({ 'KERNEL_SIZE': ksize, 'AXIS': 0 })
+                        .withArguments('image', 'kernel')
+                     ), obj), {});
 
-const convolution7 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/convolution.glsl')
-                    .withDefines({ 'KERNEL_SIZE_SQUARED': 7*7 })
-                    .withArguments('image', 'kernel');
-
+const convolutionY = [3, 5, 7, 9, 11, 13, 15].reduce((obj, ksize) => ((obj[ksize] =
+                         Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/convolution1d.glsl')
+                        .withDefines({ 'KERNEL_SIZE': ksize, 'AXIS': 1 })
+                        .withArguments('image', 'kernel')
+                     ), obj), {});
 // Median filter
-const median3 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/fast-median.glsl')
-               .withDefines({ 'WINDOW_SIZE': 3 })
-               .withArguments('image');
+const median = [3, 5, 7].reduce((obj, ksize) => ((obj[ksize] =
+                   Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/fast-median.glsl')
+                  .withDefines({ 'KERNEL_SIZE': ksize })
+                  .withArguments('image')
+               ), obj), {});
 
-const median5 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/fast-median.glsl')
-               .withDefines({ 'WINDOW_SIZE': 5 })
-               .withArguments('image');
-
-const median7 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('filters/fast-median.glsl')
-               .withDefines({ 'WINDOW_SIZE': 7 })
-               .withArguments('image');
 
 
 //
@@ -17727,6 +17789,7 @@ const median7 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importS
 //
 
 // Handy conversion for Gaussian filters
+// (symmetric kernel, approx. zero after 3*sigma)
 const ksize2sigma = ksize => Math.max(1.0, ksize / 6.0);
 
 /**
@@ -17760,14 +17823,30 @@ class GPUFilters extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Spe
             .compose('box11', '_box11x', '_box11y') // size: 11x11
 
             // median filters
-            .declare('median3', median3) // 3x3 window
-            .declare('median5', median5) // 5x5 window
-            .declare('median7', median7) // 7x7 window
+            .declare('median3', median[3]) // 3x3 window
+            .declare('median5', median[5]) // 5x5 window
+            .declare('median7', median[7]) // 7x7 window
 
             // convolution
-            .declare('convolution3', convolution3) // 3x3 kernel
-            .declare('convolution5', convolution5) // 5x5 kernel
-            .declare('convolution7', convolution7) // 7x7 kernel
+            .declare('convolution3', convolution[3]) // 3x3 kernel
+            .declare('convolution5', convolution[5]) // 5x5 kernel
+            .declare('convolution7', convolution[7]) // 7x7 kernel
+
+            // separable convolution
+            .declare('convolution3x', convolutionX[3]) // 1x3 kernel
+            .declare('convolution3y', convolutionY[3]) // 3x1 kernel
+            .declare('convolution5x', convolutionX[5]) // 1x5 kernel
+            .declare('convolution5y', convolutionY[5]) // 5x1 kernel
+            .declare('convolution7x', convolutionX[7])
+            .declare('convolution7y', convolutionY[7])
+            .declare('convolution9x', convolutionX[9])
+            .declare('convolution9y', convolutionY[9])
+            .declare('convolution11x', convolutionX[11])
+            .declare('convolution11y', convolutionY[11])
+            .declare('convolution13x', convolutionX[13])
+            .declare('convolution13y', convolutionY[13])
+            .declare('convolution15x', convolutionX[15])
+            .declare('convolution15y', convolutionY[15])
 
             // difference of gaussians
             .compose('dog16_1', '_dog16_1x', '_dog16_1y') // sigma_2 / sigma_1 = 1.6 (approx. laplacian with sigma = 1)
@@ -19521,8 +19600,9 @@ var map = {
 	"./enhancements/nightvision.glsl": "./src/gpu/shaders/enhancements/nightvision.glsl",
 	"./enhancements/normalize-image.glsl": "./src/gpu/shaders/enhancements/normalize-image.glsl",
 	"./filters/convolution": "./src/gpu/shaders/filters/convolution.js",
-	"./filters/convolution.glsl": "./src/gpu/shaders/filters/convolution.glsl",
 	"./filters/convolution.js": "./src/gpu/shaders/filters/convolution.js",
+	"./filters/convolution1d.glsl": "./src/gpu/shaders/filters/convolution1d.glsl",
+	"./filters/convolution2d.glsl": "./src/gpu/shaders/filters/convolution2d.glsl",
 	"./filters/fast-median.glsl": "./src/gpu/shaders/filters/fast-median.glsl",
 	"./include/colors.glsl": "./src/gpu/shaders/include/colors.glsl",
 	"./include/fixed-point.glsl": "./src/gpu/shaders/include/fixed-point.glsl",
@@ -19677,17 +19757,6 @@ module.exports = "uniform sampler2D image;\nuniform sampler2D illuminationMap;\n
 /***/ (function(module, exports) {
 
 module.exports = "#ifdef GREYSCALE\nuniform sampler2D minmax2d;\n#else\nuniform sampler2D minmax2dRGB[3];\n#endif\nuniform float minValue;\nuniform float maxValue;\nconst float eps = 1.0f / 255.0f;\nvoid main()\n{\nvec2 minmax = clamp(vec2(minValue, maxValue), 0.0f, 255.0f) / 255.0f;\nvec4 newMin = vec4(minmax.x);\nvec4 newRange = vec4(minmax.y - minmax.x);\nvec4 alpha = vec4(1.0f, newMin.x, newRange.x, 1.0f);\n#ifdef GREYSCALE\nvec4 pixel = threadPixel(minmax2d);\nmat4 channel = mat4(pixel, pixel, pixel, alpha);\n#else\nmat4 channel = mat4(\nthreadPixel(minmax2dRGB[0]),\nthreadPixel(minmax2dRGB[1]),\nthreadPixel(minmax2dRGB[2]),\nalpha\n);\n#endif\nvec4 oldMin = vec4(channel[0].g, channel[1].g, channel[2].g, channel[3].g);\nvec4 oldRange = max(vec4(channel[0].b, channel[1].b, channel[2].b, channel[3].b), eps);\nvec4 oldIntensity = vec4(channel[0].a, channel[1].a, channel[2].a, channel[3].a);\nvec4 newIntensity = (oldIntensity - oldMin) * newRange / oldRange + newMin;\ncolor = newIntensity;\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/filters/convolution.glsl":
-/*!**************************************************!*\
-  !*** ./src/gpu/shaders/filters/convolution.glsl ***!
-  \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "#ifndef KERNEL_SIZE_SQUARED\n#define Must define KERNEL_SIZE_SQUARED\n#endif\nuniform sampler2D image;\nuniform float kernel[@KERNEL_SIZE_SQUARED@];\nvoid main()\n{\nvec4 result = vec4(0.0f);\n#if KERNEL_SIZE_SQUARED == 9\nresult += pixelAtShortOffset(image, ivec2(-1,-1)) * kernel[0];\nresult += pixelAtShortOffset(image, ivec2(-1, 0)) * kernel[1];\nresult += pixelAtShortOffset(image, ivec2(-1, 1)) * kernel[2];\nresult += pixelAtShortOffset(image, ivec2( 0,-1)) * kernel[3];\nresult += pixelAtShortOffset(image, ivec2( 0, 0)) * kernel[4];\nresult += pixelAtShortOffset(image, ivec2( 0, 1)) * kernel[5];\nresult += pixelAtShortOffset(image, ivec2( 1,-1)) * kernel[6];\nresult += pixelAtShortOffset(image, ivec2( 1, 0)) * kernel[7];\nresult += pixelAtShortOffset(image, ivec2( 1, 1)) * kernel[8];\n#elif KERNEL_SIZE_SQUARED == 25\nresult += pixelAtShortOffset(image, ivec2(-2,-2)) * kernel[0];\nresult += pixelAtShortOffset(image, ivec2(-2,-1)) * kernel[1];\nresult += pixelAtShortOffset(image, ivec2(-2, 0)) * kernel[2];\nresult += pixelAtShortOffset(image, ivec2(-2, 1)) * kernel[3];\nresult += pixelAtShortOffset(image, ivec2(-2, 2)) * kernel[4];\nresult += pixelAtShortOffset(image, ivec2(-1,-2)) * kernel[5];\nresult += pixelAtShortOffset(image, ivec2(-1,-1)) * kernel[6];\nresult += pixelAtShortOffset(image, ivec2(-1, 0)) * kernel[7];\nresult += pixelAtShortOffset(image, ivec2(-1, 1)) * kernel[8];\nresult += pixelAtShortOffset(image, ivec2(-1, 2)) * kernel[9];\nresult += pixelAtShortOffset(image, ivec2( 0,-2)) * kernel[10];\nresult += pixelAtShortOffset(image, ivec2( 0,-1)) * kernel[11];\nresult += pixelAtShortOffset(image, ivec2( 0, 0)) * kernel[12];\nresult += pixelAtShortOffset(image, ivec2( 0, 1)) * kernel[13];\nresult += pixelAtShortOffset(image, ivec2( 0, 2)) * kernel[14];\nresult += pixelAtShortOffset(image, ivec2( 1,-2)) * kernel[15];\nresult += pixelAtShortOffset(image, ivec2( 1,-1)) * kernel[16];\nresult += pixelAtShortOffset(image, ivec2( 1, 0)) * kernel[17];\nresult += pixelAtShortOffset(image, ivec2( 1, 1)) * kernel[18];\nresult += pixelAtShortOffset(image, ivec2( 1, 2)) * kernel[19];\nresult += pixelAtShortOffset(image, ivec2( 2,-2)) * kernel[20];\nresult += pixelAtShortOffset(image, ivec2( 2,-1)) * kernel[21];\nresult += pixelAtShortOffset(image, ivec2( 2, 0)) * kernel[22];\nresult += pixelAtShortOffset(image, ivec2( 2, 1)) * kernel[23];\nresult += pixelAtShortOffset(image, ivec2( 2, 2)) * kernel[24];\n#elif KERNEL_SIZE_SQUARED == 49\nfor(int k = 0, i = -3; i <= 3; i++) {\nfor(int j = -3; j <= 3; j++, k++) {\nresult += pixelAtLongOffset(image, ivec2(i, j)) * kernel[k];\n}\n}\n#else\n#error Invalid KERNEL_SIZE_SQUARED\n#endif\ncolor = vec4(result.rgb, 1.0f);\n}"
 
 /***/ }),
 
@@ -20125,6 +20194,28 @@ function texConv1D(kernelSize, axis)
 
 /***/ }),
 
+/***/ "./src/gpu/shaders/filters/convolution1d.glsl":
+/*!****************************************************!*\
+  !*** ./src/gpu/shaders/filters/convolution1d.glsl ***!
+  \****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "#if !defined(KERNEL_SIZE) || !defined(AXIS)\n#define Must define KERNEL_SIZE and AXIS\n#endif\nuniform sampler2D image;\nuniform float kernel[@KERNEL_SIZE@];\n#define S(x,y,k) result += pixelAtShortOffset(image, ivec2((x),(y))) * kernel[k]\nvoid main()\n{\nvec4 result = vec4(0.0f);\n#if AXIS == 0 && KERNEL_SIZE == 3\nS(-1, 0, 2);\nS( 0, 0, 1);\nS( 1, 0, 0);\n#elif AXIS == 1 && KERNEL_SIZE == 3\nS( 0,-1, 2);\nS( 0, 0, 1);\nS( 0, 1, 0);\n#elif AXIS == 0 && KERNEL_SIZE == 5\nS(-2, 0, 4);\nS(-1, 0, 3);\nS( 0, 0, 2);\nS( 1, 0, 1);\nS( 2, 0, 0);\n#elif AXIS == 1 && KERNEL_SIZE == 5\nS(0,-2, 4);\nS(0,-1, 3);\nS(0, 0, 2);\nS(0, 1, 1);\nS(0, 2, 0);\n#elif AXIS == 0 && KERNEL_SIZE == 7\nS(-3, 0, 6);\nS(-2, 0, 5);\nS(-1, 0, 4);\nS( 0, 0, 3);\nS( 1, 0, 2);\nS( 2, 0, 1);\nS( 3, 0, 0);\n#elif AXIS == 1 && KERNEL_SIZE == 7\nS(0,-3, 6);\nS(0,-2, 5);\nS(0,-1, 4);\nS(0, 0, 3);\nS(0, 1, 2);\nS(0, 2, 1);\nS(0, 3, 0);\n#elif AXIS == 0 && KERNEL_SIZE == 9\nS(-4, 0, 8);\nS(-3, 0, 7);\nS(-2, 0, 6);\nS(-1, 0, 5);\nS( 0, 0, 4);\nS( 1, 0, 3);\nS( 2, 0, 2);\nS( 3, 0, 1);\nS( 4, 0, 0);\n#elif AXIS == 1 && KERNEL_SIZE == 9\nS(0,-4, 8);\nS(0,-3, 7);\nS(0,-2, 6);\nS(0,-1, 5);\nS(0, 0, 4);\nS(0, 1, 3);\nS(0, 2, 2);\nS(0, 3, 1);\nS(0, 4, 0);\n#elif AXIS == 0 && KERNEL_SIZE == 11\nS(-5, 0, 10);\nS(-4, 0, 9);\nS(-3, 0, 8);\nS(-2, 0, 7);\nS(-1, 0, 6);\nS( 0, 0, 5);\nS( 1, 0, 4);\nS( 2, 0, 3);\nS( 3, 0, 2);\nS( 4, 0, 1);\nS( 5, 0, 0);\n#elif AXIS == 1 && KERNEL_SIZE == 11\nS(0,-5, 10);\nS(0,-4, 9);\nS(0,-3, 8);\nS(0,-2, 7);\nS(0,-1, 6);\nS(0, 0, 5);\nS(0, 1, 4);\nS(0, 2, 3);\nS(0, 3, 2);\nS(0, 4, 1);\nS(0, 5, 0);\n#elif AXIS == 0 && KERNEL_SIZE == 13\nS(-6, 0, 12);\nS(-5, 0, 11);\nS(-4, 0, 10);\nS(-3, 0, 9);\nS(-2, 0, 8);\nS(-1, 0, 7);\nS( 0, 0, 6);\nS( 1, 0, 5);\nS( 2, 0, 4);\nS( 3, 0, 3);\nS( 4, 0, 2);\nS( 5, 0, 1);\nS( 6, 0, 0);\n#elif AXIS == 1 && KERNEL_SIZE == 13\nS(0,-6, 12);\nS(0,-5, 11);\nS(0,-4, 10);\nS(0,-3, 9);\nS(0,-2, 8);\nS(0,-1, 7);\nS(0, 0, 6);\nS(0, 1, 5);\nS(0, 2, 4);\nS(0, 3, 3);\nS(0, 4, 2);\nS(0, 5, 1);\nS(0, 6, 0);\n#elif AXIS == 0 && KERNEL_SIZE == 15\nS(-7, 0, 14);\nS(-6, 0, 13);\nS(-5, 0, 12);\nS(-4, 0, 11);\nS(-3, 0, 10);\nS(-2, 0, 9);\nS(-1, 0, 8);\nS( 0, 0, 7);\nS( 1, 0, 6);\nS( 2, 0, 5);\nS( 3, 0, 4);\nS( 4, 0, 3);\nS( 5, 0, 2);\nS( 6, 0, 1);\nS( 7, 0, 0);\n#elif AXIS == 1 && KERNEL_SIZE == 15\nS(0,-7, 14);\nS(0,-6, 13);\nS(0,-5, 12);\nS(0,-4, 11);\nS(0,-3, 10);\nS(0,-2, 9);\nS(0,-1, 8);\nS(0, 0, 7);\nS(0, 1, 6);\nS(0, 2, 5);\nS(0, 3, 4);\nS(0, 4, 3);\nS(0, 5, 2);\nS(0, 6, 1);\nS(0, 7, 0);\n#else\n#error Invalid parameters\n#endif\ncolor = vec4(result.rgb, 1.0f);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/filters/convolution2d.glsl":
+/*!****************************************************!*\
+  !*** ./src/gpu/shaders/filters/convolution2d.glsl ***!
+  \****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "#ifndef KERNEL_SIZE_SQUARED\n#define Must define KERNEL_SIZE_SQUARED\n#endif\nuniform sampler2D image;\nuniform float kernel[@KERNEL_SIZE_SQUARED@];\n#define S(x,y,k) result += pixelAtShortOffset(image, ivec2((x),(y))) * kernel[k]\nvoid main()\n{\nvec4 result = vec4(0.0f);\n#if KERNEL_SIZE_SQUARED == 9\nS(-1,-1, 8);\nS(-1, 0, 7);\nS(-1, 1, 6);\nS( 0,-1, 5);\nS( 0, 0, 4);\nS( 0, 1, 3);\nS( 1,-1, 2);\nS( 1, 0, 1);\nS( 1, 1, 0);\n#elif KERNEL_SIZE_SQUARED == 25\nS(-2,-2, 24);\nS(-2,-1, 23);\nS(-2, 0, 22);\nS(-2, 1, 21);\nS(-2, 2, 20);\nS(-1,-2, 19);\nS(-1,-1, 18);\nS(-1, 0, 17);\nS(-1, 1, 16);\nS(-1, 2, 15);\nS( 0,-2, 14);\nS( 0,-1, 13);\nS( 0, 0, 12);\nS( 0, 1, 11);\nS( 0, 2, 10);\nS( 1,-2, 9);\nS( 1,-1, 8);\nS( 1, 0, 7);\nS( 1, 1, 6);\nS( 1, 2, 5);\nS( 2,-2, 4);\nS( 2,-1, 3);\nS( 2, 0, 2);\nS( 2, 1, 1);\nS( 2, 2, 0);\n#elif KERNEL_SIZE_SQUARED == 49\nS(-3,-3, 48);\nS(-3,-2, 47);\nS(-3,-1, 46);\nS(-3, 0, 45);\nS(-3, 1, 44);\nS(-3, 2, 43);\nS(-3, 3, 42);\nS(-2,-3, 41);\nS(-2,-2, 40);\nS(-2,-1, 39);\nS(-2, 0, 38);\nS(-2, 1, 37);\nS(-2, 2, 36);\nS(-2, 3, 35);\nS(-1,-3, 34);\nS(-1,-2, 33);\nS(-1,-1, 32);\nS(-1, 0, 31);\nS(-1, 1, 30);\nS(-1, 2, 29);\nS(-1, 3, 28);\nS( 0,-3, 27);\nS( 0,-2, 26);\nS( 0,-1, 25);\nS( 0, 0, 24);\nS( 0, 1, 23);\nS( 0, 2, 22);\nS( 0, 3, 21);\nS( 1,-3, 20);\nS( 1,-2, 19);\nS( 1,-1, 18);\nS( 1, 0, 17);\nS( 1, 1, 16);\nS( 1, 2, 15);\nS( 1, 3, 14);\nS( 2,-3, 13);\nS( 2,-2, 12);\nS( 2,-1, 11);\nS( 2, 0, 10);\nS( 2, 1, 9);\nS( 2, 2, 8);\nS( 2, 3, 7);\nS( 3,-3, 6);\nS( 3,-2, 5);\nS( 3,-1, 4);\nS( 3, 0, 3);\nS( 3, 1, 2);\nS( 3, 2, 1);\nS( 3, 3, 0);\n#else\n#error Invalid KERNEL_SIZE_SQUARED\n#endif\ncolor = vec4(result.rgb, 1.0f);\n}"
+
+/***/ }),
+
 /***/ "./src/gpu/shaders/filters/fast-median.glsl":
 /*!**************************************************!*\
   !*** ./src/gpu/shaders/filters/fast-median.glsl ***!
@@ -20132,7 +20223,7 @@ function texConv1D(kernelSize, axis)
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\n#ifndef WINDOW_SIZE\n#define Must define WINDOW_SIZE\n#endif\n#define X(i,j) t = vec2(p[i], p[j]); p[i] = min(t.x, t.y); p[j] = max(t.x, t.y);\nvoid main()\n{\nfloat median;\nvec2 t;\n#if WINDOW_SIZE == 3\nfloat p[9];\np[0] = pixelAtShortOffset(image, ivec2(-1,-1)).g;\np[1] = pixelAtShortOffset(image, ivec2(0,-1)).g;\np[2] = pixelAtShortOffset(image, ivec2(1,-1)).g;\np[3] = pixelAtShortOffset(image, ivec2(-1,0)).g;\np[4] = pixelAtShortOffset(image, ivec2(0,0)).g;\np[5] = pixelAtShortOffset(image, ivec2(1,0)).g;\np[6] = pixelAtShortOffset(image, ivec2(-1,1)).g;\np[7] = pixelAtShortOffset(image, ivec2(0,1)).g;\np[8] = pixelAtShortOffset(image, ivec2(1,1)).g;\nX(1,2);X(4,5);X(7,8);X(0,1);X(3,4);X(6,7);X(1,2);X(4,5);X(7,8);X(0,3);X(5,8);X(4,7);X(3,6);X(1,4);X(2,5);X(4,7);X(4,2);X(6,4);X(4,2);\nmedian = p[4];\n#elif WINDOW_SIZE == 5\nfloat p[25];\np[0] = pixelAtShortOffset(image, ivec2(-2,-2)).g;\np[1] = pixelAtShortOffset(image, ivec2(-1,-2)).g;\np[2] = pixelAtShortOffset(image, ivec2(0,-2)).g;\np[3] = pixelAtShortOffset(image, ivec2(1,-2)).g;\np[4] = pixelAtShortOffset(image, ivec2(2,-2)).g;\np[5] = pixelAtShortOffset(image, ivec2(-2,-1)).g;\np[6] = pixelAtShortOffset(image, ivec2(-1,-1)).g;\np[7] = pixelAtShortOffset(image, ivec2(0,-1)).g;\np[8] = pixelAtShortOffset(image, ivec2(1,-1)).g;\np[9] = pixelAtShortOffset(image, ivec2(2,-1)).g;\np[10] = pixelAtShortOffset(image, ivec2(-2,0)).g;\np[11] = pixelAtShortOffset(image, ivec2(-1,0)).g;\np[12] = pixelAtShortOffset(image, ivec2(0,0)).g;\np[13] = pixelAtShortOffset(image, ivec2(1,0)).g;\np[14] = pixelAtShortOffset(image, ivec2(2,0)).g;\np[15] = pixelAtShortOffset(image, ivec2(-2,1)).g;\np[16] = pixelAtShortOffset(image, ivec2(-1,1)).g;\np[17] = pixelAtShortOffset(image, ivec2(0,1)).g;\np[18] = pixelAtShortOffset(image, ivec2(1,1)).g;\np[19] = pixelAtShortOffset(image, ivec2(2,1)).g;\np[20] = pixelAtShortOffset(image, ivec2(-2,2)).g;\np[21] = pixelAtShortOffset(image, ivec2(-1,2)).g;\np[22] = pixelAtShortOffset(image, ivec2(0,2)).g;\np[23] = pixelAtShortOffset(image, ivec2(1,2)).g;\np[24] = pixelAtShortOffset(image, ivec2(2,2)).g;\nX(0,1);X(3,4);X(2,4);X(2,3);X(6,7);X(5,7);X(5,6);X(9,10);X(8,10);X(8,9);X(12,13);X(11,13);X(11,12);X(15,16);X(14,16);X(14,15);X(18,19);X(17,19);X(17,18);X(21,22);X(20,22);X(20,21);X(23,24);X(2,5);X(3,6);X(0,6);X(0,3);X(4,7);X(1,7);X(1,4);X(11,14);X(8,14);X(8,11);X(12,15);X(9,15);X(9,12);X(13,16);X(10,16);X(10,13);X(20,23);X(17,23);X(17,20);X(21,24);X(18,24);X(18,21);X(19,22);X(8,17);X(9,18);X(0,18);X(0,9);X(10,19);X(1,19);X(1,10);X(11,20);X(2,20);X(2,11);X(12,21);X(3,21);X(3,12);X(13,22);X(4,22);X(4,13);X(14,23);X(5,23);X(5,14);X(15,24);X(6,24);X(6,15);X(7,16);X(7,19);X(13,21);X(15,23);X(7,13);X(7,15);X(1,9);X(3,11);X(5,17);X(11,17);X(9,17);X(4,10);X(6,12);X(7,14);X(4,6);X(4,7);X(12,14);X(10,14);X(6,7);X(10,12);X(6,10);X(6,17);X(12,17);X(7,17);X(7,10);X(12,18);X(7,12);X(10,18);X(12,20);X(10,20);X(10,12);\nmedian = p[12];\n#elif WINDOW_SIZE == 7\nfloat p[49];\nint i, j, k = 0;\nfor(j = -3; j <= 3; j++) {\nfor(i = -3; i <= 3; i++) {\np[k++] = pixelAtLongOffset(image, ivec2(i, j)).g;\n}\n}\nX(0,1);X(2,3);X(0,2);X(1,3);X(1,2);X(4,5);X(6,7);X(4,6);X(5,7);X(5,6);X(0,4);X(2,6);X(2,4);X(1,5);X(3,7);X(3,5);X(1,2);X(3,4);X(5,6);X(8,9);X(10,11);X(8,10);X(9,11);X(9,10);X(12,13);X(14,15);X(12,14);X(13,15);X(13,14);X(8,12);X(10,14);X(10,12);X(9,13);X(11,15);X(11,13);X(9,10);X(11,12);X(13,14);X(0,8);X(4,12);X(4,8);X(2,10);X(6,14);X(6,10);X(2,4);X(6,8);X(10,12);X(1,9);X(5,13);X(5,9);X(3,11);X(7,15);X(7,11);X(3,5);X(7,9);X(11,13);X(1,2);X(3,4);X(5,6);X(7,8);X(9,10);X(11,12);X(13,14);X(16,17);X(18,19);X(16,18);X(17,19);X(17,18);X(20,21);X(22,23);X(20,22);X(21,23);X(21,22);X(16,20);X(18,22);X(18,20);X(17,21);X(19,23);X(19,21);X(17,18);X(19,20);X(21,22);X(24,25);X(26,27);X(24,26);X(25,27);X(25,26);X(28,29);X(30,31);X(28,30);X(29,31);X(29,30);X(24,28);X(26,30);X(26,28);X(25,29);X(27,31);X(27,29);X(25,26);X(27,28);X(29,30);X(16,24);X(20,28);X(20,24);X(18,26);X(22,30);X(22,26);X(18,20);X(22,24);X(26,28);X(17,25);X(21,29);X(21,25);X(19,27);X(23,31);X(23,27);X(19,21);X(23,25);X(27,29);X(17,18);X(19,20);X(21,22);X(23,24);X(25,26);X(27,28);X(29,30);X(0,16);X(8,24);X(8,16);X(4,20);X(12,28);X(12,20);X(4,8);X(12,16);X(20,24);X(2,18);X(10,26);X(10,18);X(6,22);X(14,30);X(14,22);X(6,10);X(14,18);X(22,26);X(2,4);X(6,8);X(10,12);X(14,16);X(18,20);X(22,24);X(26,28);X(1,17);X(9,25);X(9,17);X(5,21);X(13,29);X(13,21);X(5,9);X(13,17);X(21,25);X(3,19);X(11,27);X(11,19);X(7,23);X(15,31);X(15,23);X(7,11);X(15,19);X(23,27);X(3,5);X(7,9);X(11,13);X(15,17);X(19,21);X(23,25);X(27,29);X(1,2);X(3,4);X(5,6);X(7,8);X(9,10);X(11,12);X(13,14);X(15,16);X(17,18);X(19,20);X(21,22);X(23,24);X(25,26);X(27,28);X(29,30);X(32,33);X(34,35);X(32,34);X(33,35);X(33,34);X(36,37);X(38,39);X(36,38);X(37,39);X(37,38);X(32,36);X(34,38);X(34,36);X(33,37);X(35,39);X(35,37);X(33,34);X(35,36);X(37,38);X(40,41);X(42,43);X(40,42);X(41,43);X(41,42);X(44,45);X(46,47);X(44,46);X(45,47);X(45,46);X(40,44);X(42,46);X(42,44);X(41,45);X(43,47);X(43,45);X(41,42);X(43,44);X(45,46);X(32,40);X(36,44);X(36,40);X(34,42);X(38,46);X(38,42);X(34,36);X(38,40);X(42,44);X(33,41);X(37,45);X(37,41);X(35,43);X(39,47);X(39,43);X(35,37);X(39,41);X(43,45);X(33,34);X(35,36);X(37,38);X(39,40);X(41,42);X(43,44);X(45,46);X(32,48);X(40,48);X(36,40);X(44,48);X(38,42);X(34,36);X(38,40);X(42,44);X(46,48);X(37,41);X(39,43);X(35,37);X(39,41);X(43,45);X(33,34);X(35,36);X(37,38);X(39,40);X(41,42);X(43,44);X(45,46);X(47,48);X(0,32);X(16,48);X(16,32);X(8,40);X(24,40);X(8,16);X(24,32);X(40,48);X(4,36);X(20,36);X(12,44);X(28,44);X(12,20);X(28,36);X(4,8);X(12,16);X(20,24);X(28,32);X(36,40);X(44,48);X(2,34);X(18,34);X(10,42);X(26,42);X(10,18);X(26,34);X(6,38);X(22,38);X(14,46);X(30,46);X(14,22);X(30,38);X(6,10);X(14,18);X(22,26);X(30,34);X(38,42);X(2,4);X(6,8);X(10,12);X(14,16);X(18,20);X(22,24);X(26,28);X(30,32);X(34,36);X(38,40);X(42,44);X(46,48);X(1,33);X(17,33);X(9,41);X(25,41);X(9,17);X(25,33);X(5,37);X(21,37);X(13,45);X(29,45);X(13,21);X(29,37);X(5,9);X(13,17);X(21,25);X(29,33);X(37,41);X(3,35);X(19,35);X(11,43);X(27,43);X(11,19);X(27,35);X(7,39);X(23,39);X(15,47);X(31,47);X(15,23);X(31,39);X(7,11);X(15,19);X(23,27);X(31,35);X(39,43);X(3,5);X(7,9);X(11,13);X(15,17);X(19,21);X(23,25);X(27,29);X(31,33);X(35,37);X(39,41);X(43,45);X(1,2);X(3,4);X(5,6);X(7,8);X(9,10);X(11,12);X(13,14);X(15,16);X(17,18);X(19,20);X(21,22);X(23,24);\nmedian = p[24];\n#else\n#error Unsupported window size\n#endif\ncolor = vec4(median, median, median, 1.0f);\n}"
+module.exports = "uniform sampler2D image;\n#define X(i,j) t = vec2(min(p[i], p[j]), max(p[i], p[j])); p[i] = t.x; p[j] = t.y;\n#define S(i,x,y) p[i] = pixelAtShortOffset(image, ivec2((x),(y))).g\nvoid main()\n{\nfloat median;\nvec2 t;\n#if !defined(KERNEL_SIZE)\n#error Must define KERNEL_SIZE\n#elif KERNEL_SIZE == 3\nfloat p[9];\nS(0,-1,-1);\nS(1, 0,-1);\nS(2, 1,-1);\nS(3,-1, 0);\nS(4, 0, 0);\nS(5, 1, 0);\nS(6,-1, 1);\nS(7, 0, 1);\nS(8, 1, 1);\nX(1,2);X(4,5);X(7,8);X(0,1);X(3,4);X(6,7);X(1,2);X(4,5);X(7,8);X(0,3);X(5,8);X(4,7);X(3,6);X(1,4);X(2,5);X(4,7);X(4,2);X(6,4);X(4,2);\nmedian = p[4];\n#elif KERNEL_SIZE == 5\nfloat p[25];\nS( 0,-2,-2);\nS( 1,-1,-2);\nS( 2, 0,-2);\nS( 3, 1,-2);\nS( 4, 2,-2);\nS( 5,-2,-1);\nS( 6,-1,-1);\nS( 7, 0,-1);\nS( 8, 1,-1);\nS( 9, 2,-1);\nS(10,-2, 0);\nS(11,-1, 0);\nS(12, 0, 0);\nS(13, 1, 0);\nS(14, 2, 0);\nS(15,-2, 1);\nS(16,-1, 1);\nS(17, 0, 1);\nS(18, 1, 1);\nS(19, 2, 1);\nS(20,-2, 2);\nS(21,-1, 2);\nS(22, 0, 2);\nS(23, 1, 2);\nS(24, 2, 2);\nX(0,1);X(3,4);X(2,4);X(2,3);X(6,7);X(5,7);X(5,6);X(9,10);X(8,10);X(8,9);X(12,13);X(11,13);X(11,12);X(15,16);X(14,16);X(14,15);X(18,19);X(17,19);X(17,18);X(21,22);X(20,22);X(20,21);X(23,24);X(2,5);X(3,6);X(0,6);X(0,3);X(4,7);X(1,7);X(1,4);X(11,14);X(8,14);X(8,11);X(12,15);X(9,15);X(9,12);X(13,16);X(10,16);X(10,13);X(20,23);X(17,23);X(17,20);X(21,24);X(18,24);X(18,21);X(19,22);X(8,17);X(9,18);X(0,18);X(0,9);X(10,19);X(1,19);X(1,10);X(11,20);X(2,20);X(2,11);X(12,21);X(3,21);X(3,12);X(13,22);X(4,22);X(4,13);X(14,23);X(5,23);X(5,14);X(15,24);X(6,24);X(6,15);X(7,16);X(7,19);X(13,21);X(15,23);X(7,13);X(7,15);X(1,9);X(3,11);X(5,17);X(11,17);X(9,17);X(4,10);X(6,12);X(7,14);X(4,6);X(4,7);X(12,14);X(10,14);X(6,7);X(10,12);X(6,10);X(6,17);X(12,17);X(7,17);X(7,10);X(12,18);X(7,12);X(10,18);X(12,20);X(10,20);X(10,12);\nmedian = p[12];\n#elif KERNEL_SIZE == 7\nfloat p[49];\nS( 0,-3,-3);\nS( 1,-2,-3);\nS( 2,-1,-3);\nS( 3, 0,-3);\nS( 4, 1,-3);\nS( 5, 2,-3);\nS( 6, 3,-3);\nS( 7,-3,-2);\nS( 8,-2,-2);\nS( 9,-1,-2);\nS(10, 0,-2);\nS(11, 1,-2);\nS(12, 2,-2);\nS(13, 3,-2);\nS(14,-3,-1);\nS(15,-2,-1);\nS(16,-1,-1);\nS(17, 0,-1);\nS(18, 1,-1);\nS(19, 2,-1);\nS(20, 3,-1);\nS(21,-3, 0);\nS(22,-2, 0);\nS(23,-1, 0);\nS(24, 0, 0);\nS(25, 1, 0);\nS(26, 2, 0);\nS(27, 3, 0);\nS(28,-3, 1);\nS(29,-2, 1);\nS(30,-1, 1);\nS(31, 0, 1);\nS(32, 1, 1);\nS(33, 2, 1);\nS(34, 3, 1);\nS(35,-3, 2);\nS(36,-2, 2);\nS(37,-1, 2);\nS(38, 0, 2);\nS(39, 1, 2);\nS(40, 2, 2);\nS(41, 3, 2);\nS(42,-3, 3);\nS(43,-2, 3);\nS(44,-1, 3);\nS(45, 0, 3);\nS(46, 1, 3);\nS(47, 2, 3);\nS(48, 3, 3);\nX(0,1);X(2,3);X(0,2);X(1,3);X(1,2);X(4,5);X(6,7);X(4,6);X(5,7);X(5,6);X(0,4);X(2,6);X(2,4);X(1,5);X(3,7);X(3,5);X(1,2);X(3,4);X(5,6);X(8,9);X(10,11);X(8,10);X(9,11);X(9,10);X(12,13);X(14,15);X(12,14);X(13,15);X(13,14);X(8,12);X(10,14);X(10,12);X(9,13);X(11,15);X(11,13);X(9,10);X(11,12);X(13,14);X(0,8);X(4,12);X(4,8);X(2,10);X(6,14);X(6,10);X(2,4);X(6,8);X(10,12);X(1,9);X(5,13);X(5,9);X(3,11);X(7,15);X(7,11);X(3,5);X(7,9);X(11,13);X(1,2);X(3,4);X(5,6);X(7,8);X(9,10);X(11,12);X(13,14);X(16,17);X(18,19);X(16,18);X(17,19);X(17,18);X(20,21);X(22,23);X(20,22);X(21,23);X(21,22);X(16,20);X(18,22);X(18,20);X(17,21);X(19,23);X(19,21);X(17,18);X(19,20);X(21,22);X(24,25);X(26,27);X(24,26);X(25,27);X(25,26);X(28,29);X(30,31);X(28,30);X(29,31);X(29,30);X(24,28);X(26,30);X(26,28);X(25,29);X(27,31);X(27,29);X(25,26);X(27,28);X(29,30);X(16,24);X(20,28);X(20,24);X(18,26);X(22,30);X(22,26);X(18,20);X(22,24);X(26,28);X(17,25);X(21,29);X(21,25);X(19,27);X(23,31);X(23,27);X(19,21);X(23,25);X(27,29);X(17,18);X(19,20);X(21,22);X(23,24);X(25,26);X(27,28);X(29,30);X(0,16);X(8,24);X(8,16);X(4,20);X(12,28);X(12,20);X(4,8);X(12,16);X(20,24);X(2,18);X(10,26);X(10,18);X(6,22);X(14,30);X(14,22);X(6,10);X(14,18);X(22,26);X(2,4);X(6,8);X(10,12);X(14,16);X(18,20);X(22,24);X(26,28);X(1,17);X(9,25);X(9,17);X(5,21);X(13,29);X(13,21);X(5,9);X(13,17);X(21,25);X(3,19);X(11,27);X(11,19);X(7,23);X(15,31);X(15,23);X(7,11);X(15,19);X(23,27);X(3,5);X(7,9);X(11,13);X(15,17);X(19,21);X(23,25);X(27,29);X(1,2);X(3,4);X(5,6);X(7,8);X(9,10);X(11,12);X(13,14);X(15,16);X(17,18);X(19,20);X(21,22);X(23,24);X(25,26);X(27,28);X(29,30);X(32,33);X(34,35);X(32,34);X(33,35);X(33,34);X(36,37);X(38,39);X(36,38);X(37,39);X(37,38);X(32,36);X(34,38);X(34,36);X(33,37);X(35,39);X(35,37);X(33,34);X(35,36);X(37,38);X(40,41);X(42,43);X(40,42);X(41,43);X(41,42);X(44,45);X(46,47);X(44,46);X(45,47);X(45,46);X(40,44);X(42,46);X(42,44);X(41,45);X(43,47);X(43,45);X(41,42);X(43,44);X(45,46);X(32,40);X(36,44);X(36,40);X(34,42);X(38,46);X(38,42);X(34,36);X(38,40);X(42,44);X(33,41);X(37,45);X(37,41);X(35,43);X(39,47);X(39,43);X(35,37);X(39,41);X(43,45);X(33,34);X(35,36);X(37,38);X(39,40);X(41,42);X(43,44);X(45,46);X(32,48);X(40,48);X(36,40);X(44,48);X(38,42);X(34,36);X(38,40);X(42,44);X(46,48);X(37,41);X(39,43);X(35,37);X(39,41);X(43,45);X(33,34);X(35,36);X(37,38);X(39,40);X(41,42);X(43,44);X(45,46);X(47,48);X(0,32);X(16,48);X(16,32);X(8,40);X(24,40);X(8,16);X(24,32);X(40,48);X(4,36);X(20,36);X(12,44);X(28,44);X(12,20);X(28,36);X(4,8);X(12,16);X(20,24);X(28,32);X(36,40);X(44,48);X(2,34);X(18,34);X(10,42);X(26,42);X(10,18);X(26,34);X(6,38);X(22,38);X(14,46);X(30,46);X(14,22);X(30,38);X(6,10);X(14,18);X(22,26);X(30,34);X(38,42);X(2,4);X(6,8);X(10,12);X(14,16);X(18,20);X(22,24);X(26,28);X(30,32);X(34,36);X(38,40);X(42,44);X(46,48);X(1,33);X(17,33);X(9,41);X(25,41);X(9,17);X(25,33);X(5,37);X(21,37);X(13,45);X(29,45);X(13,21);X(29,37);X(5,9);X(13,17);X(21,25);X(29,33);X(37,41);X(3,35);X(19,35);X(11,43);X(27,43);X(11,19);X(27,35);X(7,39);X(23,39);X(15,47);X(31,47);X(15,23);X(31,39);X(7,11);X(15,19);X(23,27);X(31,35);X(39,43);X(3,5);X(7,9);X(11,13);X(15,17);X(19,21);X(23,25);X(27,29);X(31,33);X(35,37);X(39,41);X(43,45);X(1,2);X(3,4);X(5,6);X(7,8);X(9,10);X(11,12);X(13,14);X(15,16);X(17,18);X(19,20);X(21,22);X(23,24);\nmedian = p[24];\n#else\n#error Unsupported kernel size\n#endif\ncolor = vec4(median, median, median, 1.0f);\n}"
 
 /***/ }),
 
@@ -24972,7 +25063,7 @@ class Utils
      * @param {number} [kernelSize] kernel size, odd number
      * @param {bool} [normalized] normalize entries so that their sum is 1
      */
-    static gaussianKernel(sigma, kernelSize = -1, normalized = true)
+    static gaussianKernel(sigma, kernelSize = 0, normalized = true)
     {
         /*
          * Let G(x) be a Gaussian function centered at 0 with fixed sigma:
@@ -24990,7 +25081,7 @@ class Utils
          */
 
         // default kernel size
-        if(kernelSize < 0) {
+        if(kernelSize == 0) {
             kernelSize = Math.ceil(5.0 * sigma) | 0;
             kernelSize += 1 - (kernelSize % 2);
         }
@@ -25043,6 +25134,28 @@ class Utils
 
         // done!
         return normalized ? kernel.map(k => k / sum) : kernel;
+    }
+
+    /**
+     * Generate a 2D kernel in column-major format using two separable 1D kernels
+     * @param {number[]} ka 1D kernel
+     * @param {number[]} [kb]
+     * @returns {number[]}
+     */
+    static kernel2d(ka, kb = ka)
+    {
+        const ksize = ka.length;
+        Utils.assert(ka.length == ka.length);
+        Utils.assert(ksize >= 1 && ksize % 2 == 1);
+
+        // compute the outer product ka x kb
+        let kernel2d = new Array(ksize * ksize), k = 0;
+        for(let col = 0; col < ksize; col++) {
+            for(let row = 0; row < ksize; row++)
+                kernel2d[k++] = ka[row] * kb[col];
+        }
+
+        return kernel2d;
     }
 
     /**
