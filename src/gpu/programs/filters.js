@@ -27,29 +27,29 @@ import { Utils } from '../../utils/utils';
 
 
 // Convolution
-const convolution = [3, 5, 7].reduce((ksize, obj) => ((obj[ksize] =
+const convolution = [3, 5, 7].reduce((obj, ksize) => ((obj[ksize] =
                         importShader('filters/convolution2d.glsl')
                        .withDefines({ 'KERNEL_SIZE_SQUARED': ksize * ksize })
                        .withArguments('image', 'kernel')
                     ), obj), {});
 
 // Separable convolution
-const convolutionX = [3, 5, 7, 9, 11].reduce((ksize, obj) => ((obj[ksize] =
+const convolutionX = [3, 5, 7, 9, 11, 13, 15].reduce((obj, ksize) => ((obj[ksize] =
                          importShader('filters/convolution1d.glsl')
                         .withDefines({ 'KERNEL_SIZE': ksize, 'AXIS': 0 })
                         .withArguments('image', 'kernel')
                      ), obj), {});
 
-const convolutionY = [3, 5, 7, 9, 11].reduce((ksize, obj) => ((obj[ksize] =
+const convolutionY = [3, 5, 7, 9, 11, 13, 15].reduce((obj, ksize) => ((obj[ksize] =
                          importShader('filters/convolution1d.glsl')
                         .withDefines({ 'KERNEL_SIZE': ksize, 'AXIS': 1 })
                         .withArguments('image', 'kernel')
                      ), obj), {});
 // Median filter
-const median = [3, 5, 7].reduce((ksize, obj) => ((obj[ksize] =
+const median = [3, 5, 7].reduce((obj, ksize) => ((obj[ksize] =
                    importShader('filters/fast-median.glsl')
-                  .withDefines({ 'WINDOW_SIZE': ksize })
-                  .withArguments('image', 'kernel')
+                  .withDefines({ 'KERNEL_SIZE': ksize })
+                  .withArguments('image')
                ), obj), {});
 
 
@@ -105,14 +105,18 @@ export class GPUFilters extends SpeedyProgramGroup
             // separable convolution
             .declare('convolution3x', convolutionX[3]) // 1x3 kernel
             .declare('convolution3y', convolutionY[3]) // 3x1 kernel
-            .declare('convolution5x', convolutionX[5])
-            .declare('convolution5y', convolutionY[5])
+            .declare('convolution5x', convolutionX[5]) // 1x5 kernel
+            .declare('convolution5y', convolutionY[5]) // 5x1 kernel
             .declare('convolution7x', convolutionX[7])
             .declare('convolution7y', convolutionY[7])
             .declare('convolution9x', convolutionX[9])
             .declare('convolution9y', convolutionY[9])
             .declare('convolution11x', convolutionX[11])
             .declare('convolution11y', convolutionY[11])
+            .declare('convolution13x', convolutionX[13])
+            .declare('convolution13y', convolutionY[13])
+            .declare('convolution15x', convolutionX[15])
+            .declare('convolution15y', convolutionY[15])
 
             // difference of gaussians
             .compose('dog16_1', '_dog16_1x', '_dog16_1y') // sigma_2 / sigma_1 = 1.6 (approx. laplacian with sigma = 1)

@@ -22,13 +22,11 @@
 // input image
 uniform sampler2D image;
 
-// window size
-#ifndef WINDOW_SIZE
-#define Must define WINDOW_SIZE // 3, 5 or 7
-#endif
-
 // compare-exchange: given indices i and j of an array p[], swap p[i] and p[j] if p[i] > p[j]
-#define X(i,j) t = vec2(p[i], p[j]); p[i] = min(t.x, t.y); p[j] = max(t.x, t.y);
+#define X(i,j) t = vec2(min(p[i], p[j]), max(p[i], p[j])); p[i] = t.x; p[j] = t.y;
+
+// shrink the code
+#define S(i,x,y) p[i] = pixelAtShortOffset(image, ivec2((x),(y))).g
 
 // Median shader
 void main()
@@ -36,21 +34,23 @@ void main()
     float median;
     vec2 t;
 
-#if WINDOW_SIZE == 3
+#if !defined(KERNEL_SIZE)
+#error Must define KERNEL_SIZE // 3, 5 or 7
+#elif KERNEL_SIZE == 3
 
     // 3x3 window
     float p[9];
 
     // read pixels
-    p[0] = pixelAtShortOffset(image, ivec2(-1,-1)).g;
-    p[1] = pixelAtShortOffset(image, ivec2(0,-1)).g;
-    p[2] = pixelAtShortOffset(image, ivec2(1,-1)).g;
-    p[3] = pixelAtShortOffset(image, ivec2(-1,0)).g;
-    p[4] = pixelAtShortOffset(image, ivec2(0,0)).g;
-    p[5] = pixelAtShortOffset(image, ivec2(1,0)).g;
-    p[6] = pixelAtShortOffset(image, ivec2(-1,1)).g;
-    p[7] = pixelAtShortOffset(image, ivec2(0,1)).g;
-    p[8] = pixelAtShortOffset(image, ivec2(1,1)).g;
+    S(0,-1,-1);
+    S(1, 0,-1);
+    S(2, 1,-1);
+    S(3,-1, 0);
+    S(4, 0, 0);
+    S(5, 1, 0);
+    S(6,-1, 1);
+    S(7, 0, 1);
+    S(8, 1, 1);
 
     // sorting network for a 3x3 window
     // based on Nicolas Devillard's optimized sorting networks code
@@ -59,37 +59,37 @@ void main()
     // done!
     median = p[4];
 
-#elif WINDOW_SIZE == 5
+#elif KERNEL_SIZE == 5
 
     // 5x5 window
     float p[25];
 
     // read pixels
-    p[0] = pixelAtShortOffset(image, ivec2(-2,-2)).g;
-    p[1] = pixelAtShortOffset(image, ivec2(-1,-2)).g;
-    p[2] = pixelAtShortOffset(image, ivec2(0,-2)).g;
-    p[3] = pixelAtShortOffset(image, ivec2(1,-2)).g;
-    p[4] = pixelAtShortOffset(image, ivec2(2,-2)).g;
-    p[5] = pixelAtShortOffset(image, ivec2(-2,-1)).g;
-    p[6] = pixelAtShortOffset(image, ivec2(-1,-1)).g;
-    p[7] = pixelAtShortOffset(image, ivec2(0,-1)).g;
-    p[8] = pixelAtShortOffset(image, ivec2(1,-1)).g;
-    p[9] = pixelAtShortOffset(image, ivec2(2,-1)).g;
-    p[10] = pixelAtShortOffset(image, ivec2(-2,0)).g;
-    p[11] = pixelAtShortOffset(image, ivec2(-1,0)).g;
-    p[12] = pixelAtShortOffset(image, ivec2(0,0)).g;
-    p[13] = pixelAtShortOffset(image, ivec2(1,0)).g;
-    p[14] = pixelAtShortOffset(image, ivec2(2,0)).g;
-    p[15] = pixelAtShortOffset(image, ivec2(-2,1)).g;
-    p[16] = pixelAtShortOffset(image, ivec2(-1,1)).g;
-    p[17] = pixelAtShortOffset(image, ivec2(0,1)).g;
-    p[18] = pixelAtShortOffset(image, ivec2(1,1)).g;
-    p[19] = pixelAtShortOffset(image, ivec2(2,1)).g;
-    p[20] = pixelAtShortOffset(image, ivec2(-2,2)).g;
-    p[21] = pixelAtShortOffset(image, ivec2(-1,2)).g;
-    p[22] = pixelAtShortOffset(image, ivec2(0,2)).g;
-    p[23] = pixelAtShortOffset(image, ivec2(1,2)).g;
-    p[24] = pixelAtShortOffset(image, ivec2(2,2)).g;
+    S( 0,-2,-2);
+    S( 1,-1,-2);
+    S( 2, 0,-2);
+    S( 3, 1,-2);
+    S( 4, 2,-2);
+    S( 5,-2,-1);
+    S( 6,-1,-1);
+    S( 7, 0,-1);
+    S( 8, 1,-1);
+    S( 9, 2,-1);
+    S(10,-2, 0);
+    S(11,-1, 0);
+    S(12, 0, 0);
+    S(13, 1, 0);
+    S(14, 2, 0);
+    S(15,-2, 1);
+    S(16,-1, 1);
+    S(17, 0, 1);
+    S(18, 1, 1);
+    S(19, 2, 1);
+    S(20,-2, 2);
+    S(21,-1, 2);
+    S(22, 0, 2);
+    S(23, 1, 2);
+    S(24, 2, 2);
 
     // sorting network for a 5x5 window
     // based on Nicolas Devillard's optimized sorting networks code
@@ -98,18 +98,61 @@ void main()
     // done!
     median = p[12];
 
-#elif WINDOW_SIZE == 7
+#elif KERNEL_SIZE == 7
 
     // 7x7 window
     float p[49];
 
     // read pixels
-    int i, j, k = 0;
-    for(j = -3; j <= 3; j++) {
-        for(i = -3; i <= 3; i++) {
-            p[k++] = pixelAtLongOffset(image, ivec2(i, j)).g; // i, j are not constant
-        }
-    }
+    S( 0,-3,-3);
+    S( 1,-2,-3);
+    S( 2,-1,-3);
+    S( 3, 0,-3);
+    S( 4, 1,-3);
+    S( 5, 2,-3);
+    S( 6, 3,-3);
+    S( 7,-3,-2);
+    S( 8,-2,-2);
+    S( 9,-1,-2);
+    S(10, 0,-2);
+    S(11, 1,-2);
+    S(12, 2,-2);
+    S(13, 3,-2);
+    S(14,-3,-1);
+    S(15,-2,-1);
+    S(16,-1,-1);
+    S(17, 0,-1);
+    S(18, 1,-1);
+    S(19, 2,-1);
+    S(20, 3,-1);
+    S(21,-3, 0);
+    S(22,-2, 0);
+    S(23,-1, 0);
+    S(24, 0, 0);
+    S(25, 1, 0);
+    S(26, 2, 0);
+    S(27, 3, 0);
+    S(28,-3, 1);
+    S(29,-2, 1);
+    S(30,-1, 1);
+    S(31, 0, 1);
+    S(32, 1, 1);
+    S(33, 2, 1);
+    S(34, 3, 1);
+    S(35,-3, 2);
+    S(36,-2, 2);
+    S(37,-1, 2);
+    S(38, 0, 2);
+    S(39, 1, 2);
+    S(40, 2, 2);
+    S(41, 3, 2);
+    S(42,-3, 3);
+    S(43,-2, 3);
+    S(44,-1, 3);
+    S(45, 0, 3);
+    S(46, 1, 3);
+    S(47, 2, 3);
+    S(48, 3, 3);
 
     // sorting network for a 7x7 window
     // created with Odd-Even MergeSort
@@ -119,7 +162,7 @@ void main()
     median = p[24];
 
 #else
-#error Unsupported window size
+#error Unsupported kernel size
 #endif
 
     // output

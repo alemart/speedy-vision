@@ -26,6 +26,9 @@
 uniform sampler2D image;
 uniform float kernel[@KERNEL_SIZE_SQUARED@]; // kernel entries in column-major format
 
+// Shrink the code
+#define S(x,y,k) result += pixelAtShortOffset(image, ivec2((x),(y))) * kernel[k]
+
 void main()
 {
     vec4 result = vec4(0.0f);
@@ -36,17 +39,15 @@ void main()
     // 3x3 kernel
     //
 
-    result += pixelAtShortOffset(image, ivec2(-1,-1)) * kernel[8];
-    result += pixelAtShortOffset(image, ivec2(-1, 0)) * kernel[7];
-    result += pixelAtShortOffset(image, ivec2(-1, 1)) * kernel[6];
-
-    result += pixelAtShortOffset(image, ivec2( 0,-1)) * kernel[5];
-    result += pixelAtShortOffset(image, ivec2( 0, 0)) * kernel[4];
-    result += pixelAtShortOffset(image, ivec2( 0, 1)) * kernel[3];
-
-    result += pixelAtShortOffset(image, ivec2( 1,-1)) * kernel[2];
-    result += pixelAtShortOffset(image, ivec2( 1, 0)) * kernel[1];
-    result += pixelAtShortOffset(image, ivec2( 1, 1)) * kernel[0];
+    S(-1,-1, 8);
+    S(-1, 0, 7);
+    S(-1, 1, 6);
+    S( 0,-1, 5);
+    S( 0, 0, 4);
+    S( 0, 1, 3);
+    S( 1,-1, 2);
+    S( 1, 0, 1);
+    S( 1, 1, 0);
 
     #elif KERNEL_SIZE_SQUARED == 25
 
@@ -54,35 +55,31 @@ void main()
     // 5x5 kernel
     //
 
-    result += pixelAtShortOffset(image, ivec2(-2,-2)) * kernel[24];
-    result += pixelAtShortOffset(image, ivec2(-2,-1)) * kernel[23];
-    result += pixelAtShortOffset(image, ivec2(-2, 0)) * kernel[22];
-    result += pixelAtShortOffset(image, ivec2(-2, 1)) * kernel[21];
-    result += pixelAtShortOffset(image, ivec2(-2, 2)) * kernel[20];
-
-    result += pixelAtShortOffset(image, ivec2(-1,-2)) * kernel[19];
-    result += pixelAtShortOffset(image, ivec2(-1,-1)) * kernel[18];
-    result += pixelAtShortOffset(image, ivec2(-1, 0)) * kernel[17];
-    result += pixelAtShortOffset(image, ivec2(-1, 1)) * kernel[16];
-    result += pixelAtShortOffset(image, ivec2(-1, 2)) * kernel[15];
-
-    result += pixelAtShortOffset(image, ivec2( 0,-2)) * kernel[14];
-    result += pixelAtShortOffset(image, ivec2( 0,-1)) * kernel[13];
-    result += pixelAtShortOffset(image, ivec2( 0, 0)) * kernel[12];
-    result += pixelAtShortOffset(image, ivec2( 0, 1)) * kernel[11];
-    result += pixelAtShortOffset(image, ivec2( 0, 2)) * kernel[10];
-
-    result += pixelAtShortOffset(image, ivec2( 1,-2)) * kernel[9];
-    result += pixelAtShortOffset(image, ivec2( 1,-1)) * kernel[8];
-    result += pixelAtShortOffset(image, ivec2( 1, 0)) * kernel[7];
-    result += pixelAtShortOffset(image, ivec2( 1, 1)) * kernel[6];
-    result += pixelAtShortOffset(image, ivec2( 1, 2)) * kernel[5];
-
-    result += pixelAtShortOffset(image, ivec2( 2,-2)) * kernel[4];
-    result += pixelAtShortOffset(image, ivec2( 2,-1)) * kernel[3];
-    result += pixelAtShortOffset(image, ivec2( 2, 0)) * kernel[2];
-    result += pixelAtShortOffset(image, ivec2( 2, 1)) * kernel[1];
-    result += pixelAtShortOffset(image, ivec2( 2, 2)) * kernel[0];
+    S(-2,-2, 24);
+    S(-2,-1, 23);
+    S(-2, 0, 22);
+    S(-2, 1, 21);
+    S(-2, 2, 20);
+    S(-1,-2, 19);
+    S(-1,-1, 18);
+    S(-1, 0, 17);
+    S(-1, 1, 16);
+    S(-1, 2, 15);
+    S( 0,-2, 14);
+    S( 0,-1, 13);
+    S( 0, 0, 12);
+    S( 0, 1, 11);
+    S( 0, 2, 10);
+    S( 1,-2, 9);
+    S( 1,-1, 8);
+    S( 1, 0, 7);
+    S( 1, 1, 6);
+    S( 1, 2, 5);
+    S( 2,-2, 4);
+    S( 2,-1, 3);
+    S( 2, 0, 2);
+    S( 2, 1, 1);
+    S( 2, 2, 0);
 
     #elif KERNEL_SIZE_SQUARED == 49
 
@@ -90,11 +87,55 @@ void main()
     // 7x7 kernel
     //
 
-    for(int k = 0, i = -3; i <= 3; i++) {
-        for(int j = -3; j <= 3; j++, k++) {
-            result += pixelAtLongOffset(image, ivec2(-i, -j)) * kernel[k];
-        }
-    }
+    S(-3,-3, 48);
+    S(-3,-2, 47);
+    S(-3,-1, 46);
+    S(-3, 0, 45);
+    S(-3, 1, 44);
+    S(-3, 2, 43);
+    S(-3, 3, 42);
+    S(-2,-3, 41);
+    S(-2,-2, 40);
+    S(-2,-1, 39);
+    S(-2, 0, 38);
+    S(-2, 1, 37);
+    S(-2, 2, 36);
+    S(-2, 3, 35);
+    S(-1,-3, 34);
+    S(-1,-2, 33);
+    S(-1,-1, 32);
+    S(-1, 0, 31);
+    S(-1, 1, 30);
+    S(-1, 2, 29);
+    S(-1, 3, 28);
+    S( 0,-3, 27);
+    S( 0,-2, 26);
+    S( 0,-1, 25);
+    S( 0, 0, 24);
+    S( 0, 1, 23);
+    S( 0, 2, 22);
+    S( 0, 3, 21);
+    S( 1,-3, 20);
+    S( 1,-2, 19);
+    S( 1,-1, 18);
+    S( 1, 0, 17);
+    S( 1, 1, 16);
+    S( 1, 2, 15);
+    S( 1, 3, 14);
+    S( 2,-3, 13);
+    S( 2,-2, 12);
+    S( 2,-1, 11);
+    S( 2, 0, 10);
+    S( 2, 1, 9);
+    S( 2, 2, 8);
+    S( 2, 3, 7);
+    S( 3,-3, 6);
+    S( 3,-2, 5);
+    S( 3,-1, 4);
+    S( 3, 0, 3);
+    S( 3, 1, 2);
+    S( 3, 2, 1);
+    S( 3, 3, 0);
 
     #else
     #error Invalid KERNEL_SIZE_SQUARED
