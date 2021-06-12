@@ -107,7 +107,7 @@ window.onload = async function()
     const sink = Speedy.Pipeline.ImageSink();
     const mux = Speedy.Pipeline.ImageMultiplexer();
     const greyscale = Speedy.Filter.Greyscale();
-    const nightvision = Speedy.Filter.Nightvision('nightvision');
+    const nightvision = Speedy.Filter.Nightvision();
 
     source.media = media;
 
