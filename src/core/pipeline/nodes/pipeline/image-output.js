@@ -19,16 +19,16 @@
  * Gets an image out of a pipeline
  */
 
-import { SpeedyPipelineNode, SpeedyPipelineSinkNode } from '../pipeline-node';
-import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithImage } from '../pipeline-message';
-import { InputPort, OutputPort } from '../pipeline-portbuilder';
-import { SpeedyGPU } from '../../../gpu/speedy-gpu';
-import { SpeedyTexture } from '../../../gpu/speedy-texture';
-import { SpeedyMedia } from '../../speedy-media';
-import { SpeedyMediaSource } from '../../speedy-media-source';
-import { Utils } from '../../../utils/utils';
-import { ImageFormat } from '../../../utils/types';
-import { SpeedyPromise } from '../../../utils/speedy-promise';
+import { SpeedyPipelineNode, SpeedyPipelineSinkNode } from '../../pipeline-node';
+import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithImage } from '../../pipeline-message';
+import { InputPort, OutputPort } from '../../pipeline-portbuilder';
+import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
+import { SpeedyTexture } from '../../../../gpu/speedy-texture';
+import { SpeedyMedia } from '../../../speedy-media';
+import { SpeedyMediaSource } from '../../../speedy-media-source';
+import { Utils } from '../../../../utils/utils';
+import { ImageFormat } from '../../../../utils/types';
+import { SpeedyPromise } from '../../../../utils/speedy-promise';
 
 /**
  * Gets an image out of a pipeline

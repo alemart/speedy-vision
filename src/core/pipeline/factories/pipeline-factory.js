@@ -20,8 +20,9 @@
  */
 
 import { SpeedyPipelineNEW } from '../pipeline';
-import { SpeedyPipelineNodeImageInput } from '../nodes/image-input';
-import { SpeedyPipelineNodeImageOutput } from '../nodes/image-output';
+import { SpeedyPipelineNodeImageInput } from '../nodes/pipeline/image-input';
+import { SpeedyPipelineNodeImageOutput } from '../nodes/pipeline/image-output';
+import { SpeedyPipelineNodeImageMultiplexer } from '../nodes/pipeline/image-multiplexer';
 
 /**
  * Pipeline factory
@@ -64,5 +65,15 @@ export class SpeedyPipelineFactory extends Function
     ImageSink(name = 'image')
     {
         return new SpeedyPipelineNodeImageOutput(name);
+    }
+
+    /**
+     * Create an image multiplexer
+     * @param {string} [name] name of the node
+     * @returns {SpeedyPipelineNodeImageMultiplexer}
+     */
+    ImageMultiplexer(name = undefined)
+    {
+        return new SpeedyPipelineNodeImageMultiplexer(name);
     }
 }

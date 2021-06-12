@@ -68,30 +68,6 @@
             </div>
         </form>
         <script>
-function createPipeline(media, mustConvertToGreyscale)
-{
-    const pipeline = Speedy.Pipeline();
-    const source = Speedy.Pipeline.ImageSource();
-    const sink = Speedy.Pipeline.ImageSink();
-    const nightvision = Speedy.Filter.Nightvision('nightvision');
-
-    source.media = media;
-
-    if(mustConvertToGreyscale) {
-        const greyscale = Speedy.Filter.Greyscale();
-        source.output().connectTo(greyscale.input());
-        greyscale.output().connectTo(nightvision.input());
-        nightvision.output().connectTo(sink.input());
-        pipeline.init(source, sink, greyscale, nightvision);
-    }
-    else {
-        source.output().connectTo(nightvision.input());
-        nightvision.output().connectTo(sink.input());
-        pipeline.init(source, sink, nightvision);
-    }
-
-    return pipeline;
-}
 window.onload = async function()
 {
     // form controls
@@ -110,15 +86,38 @@ window.onload = async function()
         decayViewer.innerText = Number(decaySlider.value).toFixed(2);
     }, 100);
 
+    /*
+
+    Our pipeline:
+
+    Image  ---------------------> Image ---> Nightvision ---> Image
+    Source                        Mux                         Sink
+       |                           ^
+       |         Convert to        |
+       +-------> greyscale  -------+
+
+    */
+
     // load the camera stream
     const media = await Speedy.camera();
 
-    // create a colored and a greyscale pipeline
-    const pipeline = [
-        createPipeline(media, false),
-        createPipeline(media, true)
-    ];
-    const nightvision = pipeline.map(p => p.node('nightvision'));
+    // create the pipeline
+    const pipeline = Speedy.Pipeline();
+    const source = Speedy.Pipeline.ImageSource();
+    const sink = Speedy.Pipeline.ImageSink();
+    const mux = Speedy.Pipeline.ImageMultiplexer();
+    const greyscale = Speedy.Filter.Greyscale();
+    const nightvision = Speedy.Filter.Nightvision('nightvision');
+
+    source.media = media;
+
+    source.output().connectTo(greyscale.input());
+    source.output().connectTo(mux.input('in0'));
+    greyscale.output().connectTo(mux.input('in1'));
+    mux.output().connectTo(nightvision.input());
+    nightvision.output().connectTo(sink.input());
+
+    pipeline.init(source, sink, mux, greyscale, nightvision);
 
     // create a canvas
     const canvas = createCanvas(media.width, media.height, 'Nightvision');
@@ -127,14 +126,15 @@ window.onload = async function()
     // display the result
     async function render()
     {
-        const i = greyscaleCheckbox.checked ? 1 : 0;
+        mux.port = greyscaleCheckbox.checked ? 1 : 0;
 
-        nightvision[i].gain = Number(gainSlider.value);
-        nightvision[i].offset = Number(offsetSlider.value);
-        nightvision[i].decay = Number(decaySlider.value);
-        nightvision[i].quality = qualitySelect.value;
+        nightvision.gain = Number(gainSlider.value);
+        nightvision.offset = Number(offsetSlider.value);
+        nightvision.decay = Number(decaySlider.value);
+        nightvision.quality = qualitySelect.value;
 
-        const { image } = await pipeline[i].run();
+        const { image } = await pipeline.run();
+
         image.draw(canvas);
         media.draw(canvas, 0, 0, media.width / 3, media.height / 3);
         renderStatus(canvas, 'white', 10);
