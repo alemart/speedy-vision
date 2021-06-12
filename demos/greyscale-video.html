@@ -67,7 +67,7 @@ window.onload = async function()
     pipeline.init(source, sink, greyscale); // add the nodes to the pipeline
 
     // Display the result
-    const canvas = createCanvas(media.width, media.height);
+    const canvas = createCanvas(media.width, media.height, video.title);
     async function render()
     {
         const { image } = await pipeline.run(); // run the pipeline

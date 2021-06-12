@@ -44,8 +44,8 @@ window.onload = async function()
     */
 
     // Load an image
-    const inputImage = document.querySelector('img');
-    const media = await Speedy.load(inputImage);
+    const img = document.querySelector('img');
+    const media = await Speedy.load(img);
 
     // Setup the pipeline
     const pipeline = Speedy.Pipeline(); // create the pipeline and the nodes
@@ -64,7 +64,7 @@ window.onload = async function()
     const { image } = await pipeline.run(); // image is a SpeedyMedia
 
     // Display the result
-    const canvas = createCanvas(image.width, image.height);
+    const canvas = createCanvas(image.width, image.height, img.title);
     image.draw(canvas);
 }
 
