@@ -25,6 +25,13 @@ import { IllegalOperationError, IllegalArgumentError, NotSupportedError } from '
 import { SpeedyPipelineNode, SpeedyPipelineSourceNode, SpeedyPipelineSinkNode } from './pipeline-node';
 import { SpeedyPipelinePort, SpeedyPipelineInputPort, SpeedyPipelineOutputPort } from './pipeline-port';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
+import { SpeedyMedia } from '../speedy-media';
+import { SpeedyFeature } from '../speedy-feature';
+
+/**
+ * @typedef {Object.<string,(SpeedyMedia|SpeedyFeature[])>} SpeedyPipelineOutput
+ * indexed by the names of the sink nodes
+ */
 
 /**
  * A pipeline is a network of nodes in which data flows to a sink
@@ -41,6 +48,9 @@ export class SpeedyPipelineNEW
 
         /** @type {SpeedyPipelineNode[]} a sequence of nodes: from the source(s) to the sink */
         this._sequence = [];
+
+        /** @type {SpeedyPipelineOutput} output template */
+        this._template = SpeedyPipelineNEW._createOutputTemplate();
 
         /** @type {SpeedyGPU} GPU instance */
         this._gpu = null;
@@ -69,9 +79,10 @@ export class SpeedyPipelineNEW
     init(...nodes)
     {
         // validate
-        Utils.assert(nodes.length > 0);
         if(this._gpu != null)
             throw new IllegalOperationError(`The pipeline has already been initialized`);
+        else if(nodes.length == 0)
+            throw new IllegalArgumentError(`Can't initialize the pipeline. Please specify its nodes`);
 
         // create a GPU instance
         this._gpu = new SpeedyGPU(1, 1);
@@ -83,9 +94,12 @@ export class SpeedyPipelineNEW
                 this._nodes.push(node);
         }
 
-        // topological sorting
+        // generate the sequence of nodes
         this._sequence = SpeedyPipelineNEW._tsort(this._nodes);
-        Utils.assert(this._sequence.length === this._nodes.length);
+        SpeedyPipelineNEW._validateSequence(this._sequence);
+
+        // generate the output template
+        this._template = SpeedyPipelineNEW._createOutputTemplate(this._nodes);
 
         // done!
         return this;
@@ -103,23 +117,21 @@ export class SpeedyPipelineNEW
         this._gpu = this._gpu.release();
         this._sequence.length = 0;
         this._nodes.length = 0;
+        this._template = SpeedyPipelineNEW._createOutputTemplate();
 
         return null;
     }
 
     /**
      * Run the pipeline
-     * @returns {SpeedyPromise<object.<string,(SpeedyMedia|SpeedyFeature[])>>} results are indexed by the names of the sink nodes
+     * @returns {SpeedyPromise<SpeedyPipelineOutput>} results are indexed by the names of the sink nodes
      */
     run()
     {
         Utils.assert(this._gpu != null, `Pipeline has been released`);
-        Utils.assert(this._sequence.length > 0, `Pipeline doesn't have nodes`);
-        Utils.assert(this._sequence[0].isSource(), `Pipeline doesn't have a source`);
 
         // find the sinks
         const sinks = this._sequence.filter(node => node.isSink());
-        Utils.assert(sinks.length > 0, `Pipeline doesn't have a sink`);
 
         // set the output textures of each node
         const valid = _ => this._gpu.texturePool.allocate();
@@ -133,7 +145,7 @@ export class SpeedyPipelineNEW
             SpeedyPromise.all(sinks.map(sink => sink.export())).then(results =>
 
                 // aggregate results by the names of the sinks
-                results.reduce((obj, val, idx) => ((obj[sinks[idx].name] = val), obj), {})
+                results.reduce((obj, val, idx) => ((obj[sinks[idx].name] = val), obj), this._template)
             )
         ).then(aggregate => {
             // unset the output textures of the nodes and clear all ports
@@ -231,11 +243,40 @@ export class SpeedyPipelineNEW
             for(let j = 0; j < inputs.length; j++) {
                 const from = inputs[j];
                 const links = outlinks.get(from);
+                if(!links)
+                    throw new IllegalOperationError(`Can't initialize the pipeline. Missing node: ${from.fullName}. Did you forget to add it to the initialization list?`);
 
                 outlinks.set(from, links.concat([ to ]));
             }
         }
 
         return outlinks;
+    }
+
+    /**
+     * Generate the output template by aggregating the names of the sinks
+     * @param {SpeedyPipelineNode[]} [nodes]
+     * @returns {SpeedyPipelineOutput}
+     */
+    static _createOutputTemplate(nodes = [])
+    {
+        const template = Object.create(null);
+        const sinks = nodes.filter(node => node.isSink());
+
+        return sinks.reduce((obj, sink) => ((obj[sink.name] = null), obj), template);
+    }
+
+    /**
+     * Validate a sequence of nodes
+     * @param {SpeedyPipelineNode[]} sequence
+     */
+    static _validateSequence(sequence)
+    {
+        if(sequence.length == 0)
+            throw new IllegalOperationError(`Pipeline doesn't have nodes`);
+        else if(!sequence[0].isSource())
+            throw new IllegalOperationError(`Pipeline doesn't have a source`);
+        else if(!sequence[sequence.length - 1].isSink())
+            throw new IllegalOperationError(`Pipeline doesn't have a sink`);
     }
 }
