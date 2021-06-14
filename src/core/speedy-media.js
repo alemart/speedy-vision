@@ -251,7 +251,7 @@ export class SpeedyMedia
 
     /**
      * Converts the media to an ImageBitmap
-     * @returns {Promise<ImageBitmap>}
+     * @returns {SpeedyPromise<ImageBitmap>}
      */
     toBitmap()
     {
@@ -260,7 +260,7 @@ export class SpeedyMedia
         else if(!this._source.isLoaded())
             throw new IllegalOperationError('Can\'t convert SpeedyMedia to bitmap: the media hasn\'t been loaded');
 
-        return createImageBitmap(this._source.data);
+        return new SpeedyPromise((resolve, reject) => createImageBitmap(this._source.data).then(resolve, reject));
     }
 
     /**
