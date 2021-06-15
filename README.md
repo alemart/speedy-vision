@@ -56,6 +56,13 @@ For general enquiries, contact me at alemartf `at` gmail `dot` com.
     * [Loading your media](#loading-your-media)
     * [Media properties](#media-properties)
     * [Playing with your media](#playing-with-your-media)
+  * [Pipeline](#pipeline)
+    * [Basic routines](#basic-routines)
+    * [Basic properties](#basic-properties)
+    * [Basic nodes](#basic-nodes)
+  * [Image processing](#image-processing)
+    * [Image filters](#image-filters)
+    * [General transformations](#general-transformations)
   * [Feature detection](#feature-detection)
     * [Detection methods](#detection-methods)
     * [Properties of feature points](#properties-of-feature-points)
@@ -69,12 +76,6 @@ For general enquiries, contact me at alemartf `at` gmail `dot` com.
     * [Tracking API](#tracking-api)
     * [LK feature tracker](#lk-feature-tracker)
   * [Feature matching](#feature-matching)
-  * [Image processing](#image-processing)
-    * [Creating a pipeline](#creating-a-pipeline)
-    * [Running a pipeline](#running-a-pipeline)
-    * [Pipeline operations](#pipeline-operations)
-  * [Maths](#maths)
-    * [2D vectors](#2d-vectors)
   * [Matrices & Linear Algebra](#matrices-linear-algebra)
     * [Creating new matrices](#creating-new-matrices)
     * [Matrix properties](#matrix-properties)
@@ -88,6 +89,10 @@ For general enquiries, contact me at alemartf `at` gmail `dot` com.
     * [Misc. Utilities](#misc-utilities)
   * [Geometric transformations](#geometric-transformations)
     * [Homography](#perspective-transformation)
+  * [Geometric Utilities](#geometric-utilities)
+    * [2D vectors](#2d-vectors)
+    * [2D points](#2d-points)
+    * [2D size](#2d-size)
   * [Extras](#extras)
     * [Promises](#promises)
     * [Utilities](#utilities)
@@ -138,16 +143,17 @@ Speedy's real-time performance in the web browser is possible thanks to its effi
 
 ## The Pipeline
 
-The pipeline is a central concept in Speedy. It's a powerful structure that lets us organize the computations that take place in the GPU. It's a very flexible, yet conceptually simple, way of working with computer vision and image processing. Let's define a few things:
+The pipeline is a central concept in Speedy. It's a powerful structure that lets you organize the computations that take place in the GPU. It's a very flexible, yet conceptually simple, way of working with computer vision and image processing. Let's define a few things:
 
 - A **pipeline** is a network of **nodes** in which data flows downstream from one or more sources to one or more sinks.
 - Nodes have input and/or output **ports**. A node with no input ports is called a source. A node with no output ports is called a sink. A node with both input and output ports transforms the input data in some way, writing the results to its output port(s).
-- A **link** connects an output port of a node to an input port of another node. Two nodes are said to be connected if there is a link connecting their ports.
+- A **link** connects an output port of a node to an input port of another node. Two nodes are said to be connected if there is a link connecting their ports. Data flows from one node to another by means of a link.
 - Input ports expect data of a certain **type** (e.g., an image). Output ports hold data of a certain type. Two ports may only be connected if their types match.
+- An input port may only be connected to a single output port, but an output port may be connected to multiple input ports.
 - Different nodes may have different **parameters**. These parameters can be adjusted and are meant to modify the output of the nodes in some way.
 - Nodes and their ports have **names**. An input port is typically called `"in"`. An output port is typically called `"out"`. These names can vary, e.g., if a node has more than one input / output port. Speedy automatically assigns names to the nodes, but you can assign your own names as well.
 
-The picture below shows a visual representation of a pipeline that lets us convert an image or video to greyscale. Data gets into the pipeline via the image source. It is then passed to the Convert to greyscale node. Finally, a greyscale image goes into the image sink, where it gets out of the pipeline.
+The picture below shows a visual representation of a pipeline that converts an image or video to greyscale. Data gets into the pipeline via the image source. It is then passed to the Convert to greyscale node. Finally, a greyscale image goes into the image sink, where it gets out of the pipeline.
 
 ![Convert to greyscale: a simple pipeline](assets/network-example.png)
 
@@ -350,7 +356,376 @@ A `SpeedyPromise` that resolves as soon as the resources are released.
 
 ### Pipeline
 
+#### Basic routines
+
+##### Speedy.Pipeline.Pipeline()
+
+`Speedy.Pipeline.Pipeline(): SpeedyPipeline`
+
+Creates a new, empty pipeline.
+
+###### Returns
+
+A new `SpeedyPipeline` object.
+
+##### SpeedyPipeline.init()
+
+`SpeedyPipeline.init(...nodes: ...SpeedyPipelineNode): SpeedyPipeline`
+
+Initializes a pipeline with the specified `nodes`.
+
+###### Arguments
+
+* `...nodes: ...SpeedyPipelineNode`. The list of nodes that belong to the pipeline.
+
+###### Returns
+
+The pipeline itself.
+
+###### Example
+
+```js
+const pipeline = Speedy.Pipeline(); // create the pipeline and the nodes
+const source = Speedy.Pipeline.ImageSource();
+const sink = Speedy.Pipeline.ImageSink();
+const greyscale = Speedy.Filter.Greyscale();
+
+source.media = media; // set the media source
+
+source.output().connectTo(greyscale.input()); // connect the nodes
+greyscale.output().connectTo(sink.input());
+
+pipeline.init(source, sink, greyscale); // add the nodes to the pipeline
+```
+
+##### SpeedyPipeline.release()
+
+`SpeedyPipeline.release(): null`
+
+Releases the resources associated with `this` pipeline.
+
+###### Returns
+
+Returns `null`.
+
+##### SpeedyPipeline.run()
+
+`SpeedyPipeline.run(): SpeedyPromise<object>`
+
+Runs `this` pipeline.
+
+###### Returns
+
+Returns a `SpeedyPromise` that resolves to an object whose keys are the names of the sinks of the pipeline and whose values are the data exported by those sinks.
+
+###### Example
+
+```js
+const { sink1, sink2 } = await pipeline.run();
+```
+
+##### SpeedyPipeline.node()
+
+`SpeedyPipeline.node(name: string): SpeedyPipelineNode | null`
+
+Finds a node by its `name`.
+
+###### Arguments
+
+* `name: string`. Name of the target node.
+
+###### Returns
+
+Returns a `SpeedyPipelineNode` that has the specified `name` and that belongs to `this` pipeline, or `null` if there is no such node.
+
+##### SpeedyPipelineNode.input()
+
+`SpeedyPipelineNode.input(portName?: string): SpeedyPipelineNodePort`
+
+The input port of `this` node whose name is `portName`.
+
+###### Arguments
+
+* `portName: string, optional`. The name of the port you want to access. Defaults to `"in"`.
+
+###### Returns
+
+The requested input port.
+
+##### SpeedyPipelineNode.output()
+
+`SpeedyPipelineNode.output(portName?: string): SpeedyPipelineNodePort`
+
+The output port of `this` node whose name is `portName`.
+
+###### Arguments
+
+* `portName: string, optional`. The name of the port you want to access. Defaults to `"out"`.
+
+###### Returns
+
+The requested output port.
+
+##### SpeedyPipelineNodePort.connectTo()
+
+`SpeedyPipelineNodePort.connectTo(port: SpeedyPipelineNodePort): void`
+
+Creates a link connecting `this` port to another `port`.
+
+#### Basic properties
+
+##### SpeedyPipelineNode.name
+
+`SpeedyPipelineNode.name: string, read-only`
+
+The name of the node.
+
+##### SpeedyPipelineNode.fullName
+
+`SpeedyPipelineNode.fullName: string, read-only`
+
+A string that exhibits the name and the type of the node.
+
+##### SpeedyPipelineNodePort.name
+
+`SpeedyPipelineNodePort.name: string, read-only`
+
+The name of the port.
+
+##### SpeedyPipelineNodePort.node
+
+`SpeedyPipelineNodePort.node: SpeedyPipelineNode, read-only`
+
+The node to which `this` port belongs.
+
+#### Basic nodes
+
+##### Speedy.Pipeline.ImageSource
+
+`Speedy.Pipeline.ImageSource(name?: string): SpeedyPipelineNodeImageInput`
+
+Creates an image source with the specified name. If unspecified, Speedy will automatically generate a name for you.
+
+###### Parameters
+
+* `media: SpeedyMedia`. The media to be imported into the pipeline.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"out"`   | Image     | An image corresponding to the `media` of this node. |
+
+##### Speedy.Pipeline.ImageSink
+
+`Speedy.Pipeline.ImageSink(name?: string): SpeedyPipelineNodeImageOutput`
+
+Creates an image sink with the specified name. If unspecified, Speedy will use the name `"image"`.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Image     | An image to be exported from the pipeline. |
+
+##### Speedy.Pipeline.ImageMultiplexer
+
+`Speedy.Pipeline.ImageMultiplexer(name?: string): SpeedyPipelineNodeImageMultiplexer`
+
+Creates an image multiplexer. It receives two images as input and outputs one of the them.
+
+###### Parameters
+
+* `port: number`. Which input image should be redirected to the output: `0` or `1`? Defaults to `0`.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in0"`   | Image     | First image. |
+| `"in1"`   | Image     | Second image. |
+| `"out"`   | Image     | Either the first or the second image, depending on the value of `port`. |
+
 ### Image processing
+
+#### Image filters
+
+##### Speedy.Filter.Greyscale
+
+`Speedy.Filter.Greyscale(name?: string): SpeedyPipelineNodeGreyscale`
+
+Creates a node that converts an image to greyscale.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Image     | Input image. |
+| `"out"`   | Image     | The input image converted to greyscale. |
+
+##### Speedy.Filter.SimpleBlur
+
+`Speedy.Filter.SimpleBlur(name?: string): SpeedyPipelineNodeSimpleBlur`
+
+Creates a node that blurs an image using a box filter.
+
+###### Parameters
+
+* `kernelSize: SpeedySize`. The size of the convolution kernel: from 3x3 to 15x15. Defaults to 5x5.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Image     | Input image. |
+| `"out"`   | Image     | The input image, blurred. |
+
+##### Speedy.Filter.GaussianBlur
+
+`Speedy.Filter.SimpleBlur(name?: string): SpeedyPipelineNodeGaussianBlur`
+
+Creates a node that blurs an image using a Gaussian kernel.
+
+###### Parameters
+
+* `kernelSize: SpeedySize`. The size of the convolution kernel: from 3x3 to 15x15. Defaults to 5x5.
+* `sigma: SpeedyVector2`. The sigma of the Gaussian function in both x and y axes. If set to the zero vector, Speedy will automatically pick a sigma according to the selected `kernelSize`. Defaults to (0,0).
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Image     | Input image. |
+| `"out"`   | Image     | The input image, blurred. |
+
+##### Speedy.Filter.MedianBlur
+
+`Speedy.Filter.MedianBlur(name?: string): SpeedyPipelineNodeMedianBlur`
+
+Creates a node that applies a median filter to an image.
+
+###### Parameters
+
+* `kernelSize: SpeedySize`. One of the following: 3x3, 5x5 or 7x7. Defaults to 5x5.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Image     | A greyscale image. |
+| `"out"`   | Image     | The result of the median blur. |
+
+###### Example
+
+```js
+const median = Speedy.Filter.MedianBlur();
+median.kernelSize = Speedy.Size(7,7);
+```
+
+##### Speedy.Filter.Convolution
+
+`Speedy.Filter.Convolution(name?: string): SpeedyPipelineNodeConvolution`
+
+Compute the convolution of an image using a 2D kernel.
+
+###### Parameters
+
+* `kernel: SpeedyMatrixExpr`. A 3x3, 5x5 or 7x7 matrix.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Image     | Input image. |
+| `"out"`   | Image     | The result of the convolution. |
+
+###### Example
+
+```js
+// Sharpening an image
+const sharpen = Speedy.Filter.Convolution();
+sharpen.kernel = Speedy.Matrix(3, 3, [
+    0,-1, 0,
+   -1, 5,-1,
+    0,-1, 0
+]);
+```
+
+##### Speedy.Filter.Normalize()
+
+`Speedy.Filter.Normalize(name?: string): SpeedyPipelineNodeNormalize`
+
+Normalize the intensity values of the input image to the [`minValue`, `maxValue`] interval.
+
+###### Parameters
+
+* `minValue: number`. A value in [0,255].
+* `maxValue: number`. A value in [0,255] greater than or equal to `minValue`.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Image     | Greyscale image. |
+| `"out"`   | Image     | Normalized image. |
+
+##### Speedy.Filter.Nightvision()
+
+`Speedy.Filter.Nightvision(name?: string): SpeedyPipelineNodeNightvision`
+
+Nightvision filter for local contrast stretching and brightness control.
+
+###### Parameters
+
+* `gain: number`. A value in [0,1]: the larger the number, the higher the contrast. Defaults to `0.5`.
+* `offset: number`. A value in [0,1] that controls the brightness. Defaults to `0.5`.
+* `decay: number`. A value in [0,1] specifying a contrast decay from the center of the image. Defaults to zero (no decay).
+* `quality: string`. Quality level: `"high"`, `"medium"` or `"low"`. Defaults to `"medium"`.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Image     | Input image. |
+| `"out"`   | Image     | Output image. |
+
+#### General transformations
+
+##### Speedy.Transform.Resize()
+
+`Speedy.Transform.Resize(name?: string): SpeedyPipelineNodeResize`
+
+Resize image.
+
+###### Parameters
+
+* `size: SpeedySize`. The size of the output image, in pixels. If set to zero, `scale` will be used to determine the size of the output. Defaults to zero.
+* `scale: SpeedyVector2`. The size of the output image relative to the size of the input image. This parameter is only applied if `size` is zero. Defaults to (1,1), meaning: keep the original size.
+* `method: string`. Resize method. One of the following: `"bilinear"` (bilinear interpolation) or `"nearest"` (nearest neighbors). Defaults to `"bilinear"`.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Image     | Input image. |
+| `"out"`   | Image     | Resized image. |
+
+##### Speedy.Transform.PerspectiveWarp()
+
+`Speedy.Transform.PerspectiveWarp(name?: string): SpeedyPipelineNodePerspectiveWarp`
+
+Warp an image using a [homography matrix](#perspective-transformation).
+
+###### Parameters
+
+* `transform: SpeedyMatrixExpr`. A 3x3 perspective transformation. Defaults to the identity matrix.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Image     | Input image. |
+| `"out"`   | Image     | Warped image. |
 
 ### Feature detection
 
@@ -688,459 +1063,6 @@ Pyramid-based LK optical-flow algorithm. The following properties are available:
 ### Feature matching
 
 Coming soon!
-
-### Image processing
-
-Image processing is vital in Computer Vision applications. Speedy lets you transform images in multiple ways using the `SpeedyPipeline` interface. A `SpeedyPipeline` encodes a sequence of operations that take an image (or video) as input and give you an image as output. These operations are executed on the GPU. Furthermore, a pipeline is described using method chaining (see the examples below).
-
-#### Creating a pipeline
-
-##### Speedy.pipeline()
-
-`Speedy.pipeline(): SpeedyPipeline`
-
-Creates a new, empty `SpeedyPipeline`.
-
-###### Returns
-
-A new `SpeedyPipeline` instance.
-
-###### Example
-
-```js
-// create a pipeline
-const pipeline = Speedy.pipeline()                 // create a new SpeedyPipeline
-                       .convertTo('greyscale')     // add an operation to the pipeline
-                       .blur();                    // add another operation to the pipeline
-
-// pipeline operations are executed
-// in the order they are declared
-
-// execute the pipeline on a SpeedyMedia
-const media = await Speedy.load(/* ... */);        // load some media (image, video, etc.)
-const processedMedia = await media.run(pipeline);  // processedMedia is a new SpeedyMedia object
-```
-
-##### SpeedyPipeline.release()
-
-`SpeedyPipeline.release(): SpeedyPromise<SpeedyPipeline>`
-
-Cleanup pipeline memory. The JavaScript engine has an automatic garbage collector, but this is still useful if you spawn lots of pipelines.
-
-##### SpeedyPipeline.length
-
-`SpeedyPipeline.length: number, read-only`
-
-The number of operations of the pipeline.
-
-#### Running a pipeline
-
-##### SpeedyMedia.run()
-
-`SpeedyMedia.run(pipeline: SpeedyPipeline): SpeedyPromise<SpeedyMedia>`
-
-Runs the provided `pipeline`, outputting a `SpeedyMedia` representing the result.
-
-###### Arguments
-
-* `pipeline: SpeedyPipeline`.
-
-###### Returns
-
-A `SpeedyPromise` that resolves to the resulting image: a new `SpeedyMedia` object.
-
-###### Example
-
-```js
-// How to blur an image
-const pipeline = Speedy.pipeline()
-                       .blur();
-
-const media = await Speedy.load(/* ... */);
-const blurred = await media.run(pipeline);
-```
-
-#### Pipeline operations
-
-The methods below can be chained together to create your own image processing pipelines. They all return the `SpeedyPipeline` instance they operate upon.
-
-Many pipeline operations accept an `option` parameter of type `PipelineOperationOptions`. This should be either an object or a function with no arguments that returns an object, that is, `object | () => object`. In the first case, all data related to the operation is set when the pipeline is instantiated. In the latter, the data may change in time, allowing you to regulate the parameters.
-
-##### Generic
-
-###### .concat
-
-`SpeedyPipeline.concat(pipeline: SpeedyPipeline): SpeedyPipeline`
-
-Concatenates another pipeline into the current one.
-
-##### Color conversion
-
-###### .convertTo
-
-`SpeedyPipeline.convertTo(dest: string): SpeedyPipeline`
-
-Converts the media to a different color space. The following case-sensitive strings can be passed as parameters:
-
-* `"greyscale"`: convert to greyscale
-* `"grayscale"`: an alias to `"greyscale"`
-
-##### Image filters
-
-###### .blur
-
-`SpeedyPipeline.blur(options?: PipelineOperationOptions): SpeedyPipeline`
-
-Blurs the media. Available options:
-
-* `filter: string`. Name of the smoothing filter. One of the following: `"gaussian"`, `"box"`. Defaults to `"gaussian"`.
-* `size: number`. Kernel size. One of the following: `3`, `5` or `7`. Defaults to `5`.
-
-###### .median
-
-`SpeedyPipeline.median(options?: PipelineOperationOptions): SpeedyPipeline`
-
-Blur using a median filter. The input image must be greyscale. Available options:
-
-* `size: number`. Window size. One of the following: `3`, `5` or `7`. Defaults to `5`.
-
-###### .convolve
-
-`SpeedyPipeline.convolve(kernel: Array<number>, divisor?: number): SpeedyPipeline`
-
-Performs an image convolution given a `kernel`. Currently, Speedy supports 3x3, 5x5 and 7x7 convolution kernels. If you have a non-square kernel, pad it with zeroes.
-
-Optionally, you may specify a `divisor`: all kernel entries will be divided by it. Useful for normalizing the kernel.
-
-```js
-// Example: Sharpening an image
-const pipeline = Speedy.pipeline()
-                       .convolve([
-                           0,-1, 0,
-                          -1, 5,-1,
-                           0,-1, 0,
-                       ]);
-
-const image = document.getElementById('my-image');
-const media = await Speedy.load(image);
-const transformedMedia = await media.run(pipeline);
-
-// Display the result
-const canvas = document.getElementById('my-canvas');
-transformedMedia.draw(canvas);
-```
-
-###### .normalize
-
-`SpeedyPipeline.normalize(options?: PipelineOperationOptions): SpeedyPipeline`
-
-Normalizes the media (histogram stretching). Available options:
-
-* `min: number`. The minimum desired pixel intensity. Defaults to `0`.
-* `max: number`. The maximum desired pixel intensity. Defaults to `255`.
-
-###### .nightvision
-
-`SpeedyPipeline.nightvision(options?: PipelineOperationOptions): SpeedyPipeline`
-
-Nightvision enhances the illumination of the scene. It improves local contrast and brightness, enabling you to "see in the dark" - [see the demo](#demos). Available options:
-
-* `gain: number`. A value used to stretch the contrast, typically between `0` and `1`.
-* `offset: number`. A value used to adjust the brightness, typically between `0` and `1`.
-* `decay: number`. A value between `0` (no decay, default) and `1` (full decay) that modifies the gain from the center of the image to its corners. Used to get high contrast at the center and low contrast at the corners. Defaults to `0`.
-* `quality: string`. One of the following: `"high"`, `"medium"`, `"low"`. Defaults to `"medium"`.
-
-##### Geometric transformations
-
-`SpeedyPipeline.warpPerspective(options?: PipelineOperationOptions): SpeedyPipeline`
-
-Warp the image according to a perspective matrix. Available options:
-
-* `homography: number[]`. A 3x3 homography matrix in column-major format.
-
-
-
-### Maths
-
-#### 2D Vectors
-
-##### Speedy.Vector2()
-
-`Speedy.Vector2(x: number, y: number): SpeedyVector2`
-
-Creates a new immutable 2D vector with the given coordinates.
-
-###### Arguments
-
-* `x: number`. The x-coordinate of the vector.
-* `y: number`. The y-coordinate of the vector.
-
-###### Returns
-
-A new `SpeedyVector2` instance.
-
-###### Example
-
-```js
-const zero = Speedy.Vector2(0, 0);
-```
-
-##### SpeedyVector2.x
-
-`SpeedyVector2.x: number`
-
-The x-coordinate of the vector.
-
-##### SpeedyVector2.y
-
-`SpeedyVector2.y: number`
-
-The y-coordinate of the vector.
-
-##### SpeedyVector2.plus()
-
-`SpeedyVector2.plus(offset: SpeedyVector2): SpeedyVector2`
-
-Vector addition.
-
-###### Returns
-
-A new vector corresponding to `this` + `offset`.
-
-##### SpeedyVector2.minus()
-
-`SpeedyVector2.minus(offset: SpeedyVector2): SpeedyVector2`
-
-Vector subtraction.
-
-###### Returns
-
-A new vector corresponding to `this` - `offset`.
-
-##### SpeedyVector2.times()
-
-`SpeedyVector2.times(scalar: number): SpeedyVector2`
-
-Multiply a vector by a scalar.
-
-###### Returns
-
-A new vector corresponding to `this` * `scalar`.
-
-##### SpeedyVector2.length()
-
-`SpeedyVector2.length(): number`
-
-Computes the length of the vector (Euclidean norm).
-
-###### Returns
-
-The length of the vector.
-
-###### Example
-
-```js
-const v = Speedy.Vector2(3, 4);
-
-console.log('Coordinates', v.x, v.y);
-console.log('Length', v.length()); // 5
-```
-
-##### SpeedyVector2.normalized()
-
-`SpeedyVector2.normalized(): SpeedyVector2`
-
-Returns a normalized version of this vector.
-
-###### Returns
-
-A new vector with the same direction as the original one and with length equal to one.
-
-##### SpeedyVector2.dot()
-
-`SpeedyVector2.dot(v: SpeedyVector2): number`
-
-Dot product.
-
-###### Arguments
-
-* `v: SpeedyVector2`. A vector.
-
-###### Returns
-
-The dot product between the two vectors.
-
-##### SpeedyVector2.distanceTo()
-
-`SpeedyVector2.distanceTo(v: SpeedyVector2): number`
-
-Computes the distance between two vectors.
-
-###### Arguments
-
-* `v: SpeedyVector2`. A vector.
-
-###### Returns
-
-The Euclidean distance between the two vectors.
-
-###### Example
-
-```js
-const u = Speedy.Vector2(1, 0);
-const v = Speedy.Vector2(5, 0);
-
-console.log(u.distanceTo(v)); // 4
-```
-
-##### SpeedyVector2.toString()
-
-`SpeedyVector2.toString(): string`
-
-Get a string representation of the vector.
-
-###### Returns
-
-A string representation of the vector.
-
-##### SpeedyVector2.equals()
-
-`SpeedyVector2.equals(v: SpeedyVector2): boolean`
-
-Equality comparison.
-
-###### Returns
-
-Returns `true` if the coordinates of `this` are equal to the coordinates of `v`, or `false` otherwise.
-
-#### 2D Points
-
-##### Speedy.Point2()
-
-`Speedy.Point2(x: number, y: number): SpeedyPoint2`
-
-Creates a new immutable 2D point with the given coordinates.
-
-###### Arguments
-
-* `x: number`. The x-coordinate of the point.
-* `y: number`. The y-coordinate of the point.
-
-###### Returns
-
-A new `SpeedyPoint2` instance.
-
-###### Example
-
-```js
-const p = Speedy.Point2(5, 10);
-```
-
-##### SpeedyPoint2.x
-
-`SpeedyPoint2.x: number`
-
-The x-coordinate of the point.
-
-##### SpeedyPoint2.y
-
-`SpeedyPoint2.y: number`
-
-The y-coordinate of the point.
-
-##### SpeedyPoint2.plus()
-
-`SpeedyPoint2.plus(v: SpeedyVector2): SpeedyPoint2`
-
-Adds a vector to this point.
-
-###### Arguments
-
-* `v: SpeedyVector2`. A 2D vector.
-
-###### Returns
-
-A new `SpeedyPoint2` instance corresponding to this point translated by `v`.
-
-##### SpeedyPoint2.minus()
-
-`SpeedyPoint2.minus(p: SpeedyPoint2): SpeedyVector2`
-
-Subtracts point `p` from this.
-
-###### Arguments
-
-* `p: SpeedyPoint2`. A 2D point.
-
-###### Returns
-
-A new `SpeedyVector2` instance such that `p` plus that vector equals this point.
-
-##### SpeedyPoint2.equals()
-
-`SpeedyPoint2.equals(p: SpeedyPoint2): boolean`
-
-Equality comparison.
-
-###### Returns
-
-Returns `true` if the coordinates of `this` are equal to the coordinates of `p`, or `false` otherwise.
-
-#### 2D Size
-
-##### Speedy.Size()
-
-`Speedy.Size(width: number, height: number): SpeedySize`
-
-Creates a new immutable object that represents the size of a rectangle.
-
-###### Arguments
-
-* `width: number`. A non-negative number.
-* `height: number`. A non-negative number.
-
-###### Returns
-
-A new `SpeedySize` instance.
-
-###### Example
-
-```js
-const size = Speedy.Size(640, 360);
-```
-
-##### SpeedySize.width
-
-`SpeedySize.width: number`
-
-Width property.
-
-##### SpeedySize.height
-
-`SpeedySize.height: number`
-
-Height property.
-
-##### SpeedySize.equals
-
-`SpeedySize.equals(anotherSize: SpeedySize): boolean`
-
-Checks if two size objects have the same dimensions.
-
-###### Returns
-
-Returns `true` if the dimensions of `this` and `anotherSize` are equal.
-
-##### SpeedySize.toString
-
-`SpeedySize.toString(): string`
-
-Convert to string.
-
-###### Returns
-
-A string representation of the object.
-
 
 
 
@@ -2200,6 +2122,61 @@ await B.print(); // identity matrix
 ```
 
 
+
+#### Utilities
+
+##### Speedy.Matrix.Settings
+
+`Speedy.Matrix.Settings: object`
+
+Settings object. It accepts the following keys:
+
+* `useWorker: boolean`. Should the matrix computations be performed in a Web Worker? Using a Web Worker may or may not be faster than using the main thread, depending on various factors. Different web browsers, machines and applications may perform differently. Profile and see. Defaults to `true`.
+
+##### Speedy.Matrix.fromPoints()
+
+`Speedy.Matrix.fromPoints(points: SpeedyPoint2[]): SpeedyMatrixExpr`
+
+Convert a non-empty array of points to a matrix in which each column encodes the coordinates of a point.
+
+###### Arguments
+
+* `points: SpeedyPoint2[]`. A non-empty array of points.
+
+###### Returns
+
+A 2 x *n* matrix, where *n* is the number of points that are provided.
+
+##### Speedy.Matrix.toPoints()
+
+`Speedy.Matrix.toPoints(matrix: SpeedyMatrixExpr): SpeedyPromise<SpeedyPoint2[]>`
+
+Convert a matrix in which each column encodes the coordinates of a point to an array of points.
+
+###### Arguments
+
+* `matrix: SpeedyMatrixExpr`. A matrix with 2 rows.
+
+###### Returns
+
+A non-empty array of points.
+
+###### Example
+
+```js
+const M = Speedy.Matrix(2, 3, [
+    1, 0, // coordinates of the first point
+    0, 1, // coordinates of the second point
+    1, 1, // coordinates of the third point
+]);
+
+const points = await Speedy.Matrix.toPoints(M);
+console.log(points);
+```
+
+
+
+
 ### Geometric transformations
 
 #### Perspective transformation
@@ -2372,56 +2349,290 @@ await dstQuad.print();
 
 
 
-#### Utilities
 
-##### Speedy.Matrix.Settings
+### Geometric Utilities
 
-`Speedy.Matrix.Settings: object`
+#### 2D Vectors
 
-Settings object. It accepts the following keys:
+##### Speedy.Vector2()
 
-* `useWorker: boolean`. Should the matrix computations be performed in a Web Worker? Using a Web Worker may or may not be faster than using the main thread, depending on various factors. Different web browsers, machines and applications may perform differently. Profile and see. Defaults to `true`.
+`Speedy.Vector2(x: number, y: number): SpeedyVector2`
 
-##### Speedy.Matrix.fromPoints()
-
-`Speedy.Matrix.fromPoints(points: SpeedyPoint2[]): SpeedyMatrixExpr`
-
-Convert a non-empty array of points to a matrix in which each column encodes the coordinates of a point.
+Creates a new immutable 2D vector with the given coordinates.
 
 ###### Arguments
 
-* `points: SpeedyPoint2[]`. A non-empty array of points.
+* `x: number`. The x-coordinate of the vector.
+* `y: number`. The y-coordinate of the vector.
 
 ###### Returns
 
-A 2 x *n* matrix, where *n* is the number of points that are provided.
-
-##### Speedy.Matrix.toPoints()
-
-`Speedy.Matrix.toPoints(matrix: SpeedyMatrixExpr): SpeedyPromise<SpeedyPoint2[]>`
-
-Convert a matrix in which each column encodes the coordinates of a point to an array of points.
-
-###### Arguments
-
-* `matrix: SpeedyMatrixExpr`. A matrix with 2 rows.
-
-###### Returns
-
-A non-empty array of points.
+A new `SpeedyVector2` instance.
 
 ###### Example
 
 ```js
-const M = Speedy.Matrix(2, 3, [
-    1, 0, // coordinates of the first point
-    0, 1, // coordinates of the second point
-    1, 1, // coordinates of the third point
-]);
-
-const points = await Speedy.Matrix.toPoints(M);
-console.log(points);
+const zero = Speedy.Vector2(0, 0);
 ```
+
+##### SpeedyVector2.x
+
+`SpeedyVector2.x: number`
+
+The x-coordinate of the vector.
+
+##### SpeedyVector2.y
+
+`SpeedyVector2.y: number`
+
+The y-coordinate of the vector.
+
+##### SpeedyVector2.plus()
+
+`SpeedyVector2.plus(offset: SpeedyVector2): SpeedyVector2`
+
+Vector addition.
+
+###### Returns
+
+A new vector corresponding to `this` + `offset`.
+
+##### SpeedyVector2.minus()
+
+`SpeedyVector2.minus(offset: SpeedyVector2): SpeedyVector2`
+
+Vector subtraction.
+
+###### Returns
+
+A new vector corresponding to `this` - `offset`.
+
+##### SpeedyVector2.times()
+
+`SpeedyVector2.times(scalar: number): SpeedyVector2`
+
+Multiply a vector by a scalar.
+
+###### Returns
+
+A new vector corresponding to `this` * `scalar`.
+
+##### SpeedyVector2.length()
+
+`SpeedyVector2.length(): number`
+
+Computes the length of the vector (Euclidean norm).
+
+###### Returns
+
+The length of the vector.
+
+###### Example
+
+```js
+const v = Speedy.Vector2(3, 4);
+
+console.log('Coordinates', v.x, v.y);
+console.log('Length', v.length()); // 5
+```
+
+##### SpeedyVector2.normalized()
+
+`SpeedyVector2.normalized(): SpeedyVector2`
+
+Returns a normalized version of this vector.
+
+###### Returns
+
+A new vector with the same direction as the original one and with length equal to one.
+
+##### SpeedyVector2.dot()
+
+`SpeedyVector2.dot(v: SpeedyVector2): number`
+
+Dot product.
+
+###### Arguments
+
+* `v: SpeedyVector2`. A vector.
+
+###### Returns
+
+The dot product between the two vectors.
+
+##### SpeedyVector2.distanceTo()
+
+`SpeedyVector2.distanceTo(v: SpeedyVector2): number`
+
+Computes the distance between two vectors.
+
+###### Arguments
+
+* `v: SpeedyVector2`. A vector.
+
+###### Returns
+
+The Euclidean distance between the two vectors.
+
+###### Example
+
+```js
+const u = Speedy.Vector2(1, 0);
+const v = Speedy.Vector2(5, 0);
+
+console.log(u.distanceTo(v)); // 4
+```
+
+##### SpeedyVector2.toString()
+
+`SpeedyVector2.toString(): string`
+
+Get a string representation of the vector.
+
+###### Returns
+
+A string representation of the vector.
+
+##### SpeedyVector2.equals()
+
+`SpeedyVector2.equals(v: SpeedyVector2): boolean`
+
+Equality comparison.
+
+###### Returns
+
+Returns `true` if the coordinates of `this` are equal to the coordinates of `v`, or `false` otherwise.
+
+#### 2D Points
+
+##### Speedy.Point2()
+
+`Speedy.Point2(x: number, y: number): SpeedyPoint2`
+
+Creates a new immutable 2D point with the given coordinates.
+
+###### Arguments
+
+* `x: number`. The x-coordinate of the point.
+* `y: number`. The y-coordinate of the point.
+
+###### Returns
+
+A new `SpeedyPoint2` instance.
+
+###### Example
+
+```js
+const p = Speedy.Point2(5, 10);
+```
+
+##### SpeedyPoint2.x
+
+`SpeedyPoint2.x: number`
+
+The x-coordinate of the point.
+
+##### SpeedyPoint2.y
+
+`SpeedyPoint2.y: number`
+
+The y-coordinate of the point.
+
+##### SpeedyPoint2.plus()
+
+`SpeedyPoint2.plus(v: SpeedyVector2): SpeedyPoint2`
+
+Adds a vector to this point.
+
+###### Arguments
+
+* `v: SpeedyVector2`. A 2D vector.
+
+###### Returns
+
+A new `SpeedyPoint2` instance corresponding to this point translated by `v`.
+
+##### SpeedyPoint2.minus()
+
+`SpeedyPoint2.minus(p: SpeedyPoint2): SpeedyVector2`
+
+Subtracts point `p` from this.
+
+###### Arguments
+
+* `p: SpeedyPoint2`. A 2D point.
+
+###### Returns
+
+A new `SpeedyVector2` instance such that `p` plus that vector equals this point.
+
+##### SpeedyPoint2.equals()
+
+`SpeedyPoint2.equals(p: SpeedyPoint2): boolean`
+
+Equality comparison.
+
+###### Returns
+
+Returns `true` if the coordinates of `this` are equal to the coordinates of `p`, or `false` otherwise.
+
+#### 2D Size
+
+##### Speedy.Size()
+
+`Speedy.Size(width: number, height: number): SpeedySize`
+
+Creates a new immutable object that represents the size of a rectangle.
+
+###### Arguments
+
+* `width: number`. A non-negative number.
+* `height: number`. A non-negative number.
+
+###### Returns
+
+A new `SpeedySize` instance.
+
+###### Example
+
+```js
+const size = Speedy.Size(640, 360);
+```
+
+##### SpeedySize.width
+
+`SpeedySize.width: number`
+
+Width property.
+
+##### SpeedySize.height
+
+`SpeedySize.height: number`
+
+Height property.
+
+##### SpeedySize.equals
+
+`SpeedySize.equals(anotherSize: SpeedySize): boolean`
+
+Checks if two size objects have the same dimensions.
+
+###### Returns
+
+Returns `true` if the dimensions of `this` and `anotherSize` are equal.
+
+##### SpeedySize.toString
+
+`SpeedySize.toString(): string`
+
+Convert to string.
+
+###### Returns
+
+A string representation of the object.
+
+
+
 
 
 
