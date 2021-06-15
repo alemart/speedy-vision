@@ -50,6 +50,7 @@ For general enquiries, contact me at alemartf `at` gmail `dot` com.
 * [Demos](#demos)
 * [Installation](#installation)
 * [Motivation](#motivation)
+* [The Pipeline](#the-pipeline)
 * [API Reference](#api-reference)
   * [Media routines](#media-routines)
     * [Loading your media](#loading-your-media)
@@ -127,31 +128,61 @@ Download the latest release of speedy-vision.js and include it in the `<head>` s
 <script src="dist/speedy-vision.min.js"></script>
 ```
 
-Once you import the library, the `Speedy` object will be exposed.
-
-```js
-window.onload = async function() {
-    // Load an image with Speedy
-    let image = document.querySelector('img');
-    let media = await Speedy.load(image);
-
-    // Create a feature detector
-    let harris = Speedy.FeatureDetector.Harris();
-
-    // Find the feature points
-    let features = await harris.detect(media);
-    for(let feature of features)
-        console.log(feature.x, feature.y);
-}
-```
-
-Check out the [Hello World demo](demos/hello-world.html) for a working example.
+Once you import the library, the `Speedy` object will be exposed. Check out the [Hello World demo](demos/hello-world.html) for a working example.
 
 ## Motivation
 
 Detecting features in an image is an important step of many computer vision algorithms. Traditionally, the computationally expensive nature of this process made it difficult to bring interactive Computer Vision applications to the web browser. The framerates were unsatisfactory for a compelling user experience. Speedy, a short name for speedy-vision.js, is a JavaScript library created to address this issue.
 
 Speedy's real-time performance in the web browser is possible thanks to its efficient WebGL2 backend and to its GPU implementations of fast computer vision algorithms. With an easy-to-use API, Speedy is an excellent choice for real-time computer vision projects involving tasks such as: object detection in videos, pose estimation, Simultaneous Location and Mapping (SLAM), and others.
+
+## The Pipeline
+
+The pipeline is a central concept in Speedy. It's a powerful structure that lets us organize the computations that take place in the GPU. It's a very flexible, yet conceptually simple, way of working with computer vision and image processing. Let's define a few things:
+
+- A **pipeline** is a network of **nodes** in which data flows downstream from one or more sources to one or more sinks.
+- Nodes have input and/or output **ports**. A node with no input ports is called a source. A node with no output ports is called a sink. A node with both input and output ports transforms the input data in some way, writing the results to its output port(s).
+- A **link** connects an output port of a node to an input port of another node. Two nodes are said to be connected if there is a link connecting their ports.
+- Input ports expect data of a certain **type** (e.g., an image). Output ports hold data of a certain type. Two ports may only be connected if their types match.
+- Different nodes may have different **parameters**. These parameters can be adjusted and are meant to modify the output of the nodes in some way.
+- Nodes and their ports have **names**. An input port is typically called `"in"`. An output port is typically called `"out"`. These names can vary, e.g., if a node has more than one input / output port. Speedy automatically assigns names to the nodes, but you can assign your own names as well.
+
+The picture below shows a visual representation of a pipeline that lets us convert an image or video to greyscale. Data gets into the pipeline via the image source. It is then passed to the Convert to greyscale node. Finally, a greyscale image goes into the image sink, where it gets out of the pipeline.
+
+![Convert to greyscale: a simple pipeline](assets/network-example.png)
+
+Here's a little bit of code:
+
+```js
+// Load an image
+const img = document.querySelector('img');
+const media = await Speedy.load(img);
+
+// Create the pipeline and the nodes
+const pipeline = Speedy.Pipeline();
+const source = Speedy.Pipeline.ImageSource();
+const sink = Speedy.Pipeline.ImageSink();
+const greyscale = Speedy.Filter.Greyscale();
+
+// Set the media source
+source.media = media; // media is a SpeedyMedia object
+
+// Connect the nodes
+source.output().connectTo(greyscale.input());
+greyscale.output().connectTo(sink.input());
+
+// Specify the nodes to initialize the pipeline
+pipeline.init(source, sink, greyscale);
+
+// Run the pipeline
+const { image } = await pipeline.run(); // image is a SpeedyMedia
+
+// Display the result
+const canvas = createCanvas(image.width, image.height);
+image.draw(canvas);
+```
+
+Speedy provides many types of nodes. You can connect these nodes in a way that is suitable to your application, and Speedy will bring back the results you ask for.
 
 ## API Reference
 
@@ -299,23 +330,27 @@ const clone = await media.clone();
 
 ##### SpeedyMedia.toBitmap()
 
-`SpeedyMedia.toBitmap(): Promise<ImageBitmap>`
+`SpeedyMedia.toBitmap(): SpeedyPromise<ImageBitmap>`
 
 Converts the media to an `ImageBitmap`.
 
 ###### Returns
 
-A Promise that resolves to an `ImageBitmap`.
+A `SpeedyPromise` that resolves to an `ImageBitmap`.
 
 ##### SpeedyMedia.release()
 
-`SpeedyMedia.release(): SpeedyPromise`
+`SpeedyMedia.release(): SpeedyPromise<void>`
 
 Releases internal resources associated with this `SpeedyMedia` (textures, framebuffers, etc.)
 
 ###### Returns
 
 A `SpeedyPromise` that resolves as soon as the resources are released.
+
+### Pipeline
+
+### Image processing
 
 ### Feature detection
 
