@@ -90,7 +90,7 @@ export class SpeedyPipelineNEW
         // add nodes to the network
         for(let i = 0; i < nodes.length; i++) {
             const node = nodes[i];
-            if(!this._hasNode(node))
+            if(!this._nodes.includes(node))
                 this._nodes.push(node);
         }
 
@@ -128,7 +128,7 @@ export class SpeedyPipelineNEW
      */
     run()
     {
-        Utils.assert(this._gpu != null, `Pipeline has been released`);
+        Utils.assert(this._gpu != null, `Pipeline has not been initialized or has been released`);
 
         // find the sinks
         const sinks = this._sequence.filter(node => node.isSink());
@@ -158,16 +158,6 @@ export class SpeedyPipelineNEW
             // done!
             return aggregate;
         }).turbocharge();
-    }
-
-    /**
-     * Is the given node already present in the pipeline?
-     * @param {SpeedyPipelineNode} node
-     * @returns {boolean}
-     */
-    _hasNode(node)
-    {
-        return this._nodes.includes(node);
     }
 
     /**
