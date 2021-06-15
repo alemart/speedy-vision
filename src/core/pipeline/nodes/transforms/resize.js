@@ -28,6 +28,7 @@ import { Utils } from '../../../../utils/utils';
 import { IllegalArgumentError } from '../../../../utils/errors';
 import { ImageFormat } from '../../../../utils/types';
 import { SpeedySize } from '../../../math/speedy-size';
+import { SpeedyVector2 } from '../../../math/speedy-vector';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 
 /**
@@ -50,15 +51,18 @@ export class SpeedyPipelineNodeResize extends SpeedyPipelineNode
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
 
-        /** @type {SpeedySize} size of the output image */
+        /** @type {SpeedySize} size of the output image, in pixels */
         this._size = new SpeedySize(0, 0);
+
+        /** @type {SpeedyVector2} size of the output relative to the size of the input */
+        this._scale = new SpeedyVector2(1, 1);
 
         /** @type {ResizeInterpolationMethod} interpolation method */
         this._method = 'bilinear';
     }
 
     /**
-     * Size of the output image (use 0 not to change a dimension)
+     * Size of the output image, in pixels (use 0 to use scale)
      * @returns {SpeedySize}
      */
     get size()
@@ -67,12 +71,30 @@ export class SpeedyPipelineNodeResize extends SpeedyPipelineNode
     }
 
     /**
-     * Size of the output image (use 0 not to change a dimension)
+     * Size of the output image, in pixels (use 0 to use scale)
      * @param {SpeedySize} size
      */
     set size(size)
     {
         this._size = size;
+    }
+
+    /**
+     * Size of the output image relative to the size of the input image
+     * @returns {SpeedyVector2}
+     */
+    get scale()
+    {
+        return this._scale;
+    }
+
+    /**
+     * Size of the output image relative to the size of the input image
+     * @param {SpeedyVector2} scale
+     */
+    set scale(scale)
+    {
+        this._scale = scale;
     }
 
     /**
@@ -107,8 +129,8 @@ export class SpeedyPipelineNodeResize extends SpeedyPipelineNode
         const width = image.width, height = image.height;
         const outputTexture = this._outputTexture;
         const method = this._method;
-        const newWidth = this._size.width || width; // keep the old size if zero
-        const newHeight = this._size.height || height;
+        const newWidth = this._size.width || Math.max(1, this._scale.x * width);
+        const newHeight = this._size.height || Math.max(1, this._scale.y * height);
 
         if(method == 'bilinear') {
             (gpu.programs.transforms.resizeBI
