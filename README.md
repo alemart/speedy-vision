@@ -147,7 +147,7 @@ The pipeline is a central concept in Speedy. It's a powerful structure that lets
 
 - A **pipeline** is a network of **nodes** in which data flows downstream from one or more sources to one or more sinks.
 - Nodes have input and/or output **ports**. A node with no input ports is called a **source**. A node with no output ports is called a **sink**. A node with both input and output ports transforms the input data in some way and writes the results to its output port(s).
-- A **link** connects an output port of a node to an input port of another node. Two nodes are said to be connected if there is a link connecting their ports. Data flows from one node to another by means of a link. Additionally, an input port may only be connected to a single output port, but an output port may be connected to multiple input ports.
+- A **link** connects an output port of a node to an input port of another node. Two nodes are said to be connected if there is a link connecting their ports. Data flows from one node to another by means of a link. An input port may only be connected to a single output port, but an output port may be connected to multiple input ports.
 - Input ports expect data of a certain **type** (e.g., an image). Output ports hold data of a certain type. Two ports may only be connected if their types match.
 - Ports may impose additional **constraints** on the data passing through them. For example, an input port may expect an image and also impose the constraint that this image must be greyscale.
 - Different nodes may have different **parameters**. These parameters can be adjusted and are meant to modify the output of the nodes in some way.
