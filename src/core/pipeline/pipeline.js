@@ -233,10 +233,12 @@ export class SpeedyPipelineNEW
             for(let j = 0; j < inputs.length; j++) {
                 const from = inputs[j];
                 const links = outlinks.get(from);
+
                 if(!links)
                     throw new IllegalOperationError(`Can't initialize the pipeline. Missing node: ${from.fullName}. Did you forget to add it to the initialization list?`);
 
-                outlinks.set(from, links.concat([ to ]));
+                if(!links.includes(to))
+                    links.push(to);
             }
         }
 
