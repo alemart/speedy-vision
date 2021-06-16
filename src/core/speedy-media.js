@@ -160,9 +160,8 @@ export class SpeedyMedia
     }
 
     /**
-     * Releases the resources associated with this media:
-     * WebGL textures, framebuffers, programs, etc.
-     * @returns {SpeedyPromise<void>} resolves as soon as the resources are released
+     * Releases resources associated with this media
+     * @returns {null}
      */
     release()
     {
@@ -171,7 +170,7 @@ export class SpeedyMedia
             this._gpu = this._gpu.release();
         }
 
-        return SpeedyPromise.resolve();
+        return null;
     }
 
     /**
