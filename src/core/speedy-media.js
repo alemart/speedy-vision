@@ -26,7 +26,6 @@ import { IllegalArgumentError, IllegalOperationError } from '../utils/errors';
 import { Utils } from '../utils/utils';
 import { SpeedyMediaSource } from './speedy-media-source';
 import { SpeedyPromise } from '../utils/speedy-promise';
-import { SpeedyPipeline } from './speedy-pipeline';
 
 /**
  * SpeedyMedia encapsulates a media element
@@ -197,32 +196,6 @@ export class SpeedyMedia
 
         // done!
         return SpeedyPromise.resolve(clone);
-    }
-
-    /**
-     * Runs a pipeline
-     * @param {SpeedyPipeline} pipeline
-     * @returns {SpeedyPromise<SpeedyMedia>} a promise that resolves to A CLONE of this SpeedyMedia
-     */
-    run(pipeline)
-    {
-        // has the media been released?
-        if(this.isReleased())
-            throw new IllegalOperationError(`Can't run pipeline: the SpeedyMedia has been released`);
-
-        // upload the media to the GPU
-        const texture = this._upload();
-
-        // run the pipeline
-        return pipeline._run([ texture, this._colorFormat ], this._gpu, this).turbocharge().then(([ texture, colorFormat ]) => {
-            // convert to bitmap
-            const canvas = this._gpu.renderToCanvas(texture);
-            return createImageBitmap(canvas, 0, canvas.height - this.height, this.width, this.height).then(bitmap => {
-                return SpeedyMediaSource.load(bitmap).then(source => {
-                    return new SpeedyMedia(source, {}, colorFormat);
-                });
-            });
-        });
     }
 
     /**

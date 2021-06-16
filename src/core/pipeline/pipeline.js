@@ -36,7 +36,7 @@ import { SpeedyFeature } from '../speedy-feature';
 /**
  * A pipeline is a network of nodes in which data flows to a sink
  */
-export class SpeedyPipelineNEW
+export class SpeedyPipeline
 {
     /**
      * Constructor
@@ -50,7 +50,7 @@ export class SpeedyPipelineNEW
         this._sequence = [];
 
         /** @type {SpeedyPipelineOutput} output template */
-        this._template = SpeedyPipelineNEW._createOutputTemplate();
+        this._template = SpeedyPipeline._createOutputTemplate();
 
         /** @type {SpeedyGPU} GPU instance */
         this._gpu = null;
@@ -74,7 +74,7 @@ export class SpeedyPipelineNEW
     /**
      * Initialize the pipeline
      * @param  {...SpeedyPipelineNode} nodes
-     * @returns {SpeedyPipelineNEW} this pipeline
+     * @returns {SpeedyPipeline} this pipeline
      */
     init(...nodes)
     {
@@ -95,11 +95,11 @@ export class SpeedyPipelineNEW
         }
 
         // generate the sequence of nodes
-        this._sequence = SpeedyPipelineNEW._tsort(this._nodes);
-        SpeedyPipelineNEW._validateSequence(this._sequence);
+        this._sequence = SpeedyPipeline._tsort(this._nodes);
+        SpeedyPipeline._validateSequence(this._sequence);
 
         // generate the output template
-        this._template = SpeedyPipelineNEW._createOutputTemplate(this._nodes);
+        this._template = SpeedyPipeline._createOutputTemplate(this._nodes);
 
         // done!
         return this;
@@ -117,7 +117,7 @@ export class SpeedyPipelineNEW
         this._gpu = this._gpu.release();
         this._sequence.length = 0;
         this._nodes.length = 0;
-        this._template = SpeedyPipelineNEW._createOutputTemplate();
+        this._template = SpeedyPipeline._createOutputTemplate();
 
         return null;
     }
@@ -139,7 +139,7 @@ export class SpeedyPipelineNEW
             this._sequence[i].setOutputTextures(valid);
 
         // run the pipeline
-        return SpeedyPipelineNEW._runSequence(this._sequence, this._gpu).then(() =>
+        return SpeedyPipeline._runSequence(this._sequence, this._gpu).then(() =>
 
             // export results
             SpeedyPromise.all(sinks.map(sink => sink.export())).then(results =>
@@ -175,9 +175,9 @@ export class SpeedyPipelineNEW
 
         const runTask = sequence[i].execute(gpu);
         if(runTask == undefined)
-            return SpeedyPipelineNEW._runSequence(sequence, gpu, i+1, n);
+            return SpeedyPipeline._runSequence(sequence, gpu, i+1, n);
 
-        return runTask.then(() => SpeedyPipelineNEW._runSequence(sequence, gpu, i+1, n));
+        return runTask.then(() => SpeedyPipeline._runSequence(sequence, gpu, i+1, n));
     }
 
     /**
@@ -187,7 +187,7 @@ export class SpeedyPipelineNEW
      */
     static _tsort(nodes)
     {
-        const outlinks = SpeedyPipelineNEW._outlinks(nodes);
+        const outlinks = SpeedyPipeline._outlinks(nodes);
         const stack = nodes.map(node => [ node, false ]);
         const trash = new Set();
         const sorted = new Array(nodes.length);

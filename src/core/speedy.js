@@ -20,7 +20,6 @@
  */
 
 import { SpeedyMedia } from './speedy-media';
-import { SpeedyPipeline } from './speedy-pipeline';
 import { FPSCounter } from '../utils/fps-counter';
 import { SpeedyFeatureDetectorFactory } from './speedy-feature-detector-factory';
 import { SpeedyFeatureTrackerFactory } from './speedy-feature-tracker-factory';
@@ -68,15 +67,6 @@ export class Speedy
     static camera(width = 640, height = 360, cameraOptions = {}, mediaOptions = {})
     {
         return SpeedyMedia.loadCameraStream(width, height, cameraOptions, mediaOptions);
-    }
-
-    /**
-     * Creates a new pipeline
-     * @returns {SpeedyPipeline}
-     */
-    static pipeline()
-    {
-        return new SpeedyPipeline();
     }
 
     /**

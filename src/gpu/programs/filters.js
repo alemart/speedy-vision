@@ -21,7 +21,7 @@
 
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
-import { convX, convY, texConvX, texConvY, texConv2D, createKernel2D, createKernel1D } from '../shaders/filters/convolution';
+import { convX, convY } from '../shaders/filters/convolution';
 import { Utils } from '../../utils/utils';
 
 
@@ -118,74 +118,6 @@ export class GPUFilters extends SpeedyProgramGroup
             .declare('convolution15x', convolutionX[15])
             .declare('convolution15y', convolutionY[15])
 
-            // difference of gaussians
-            .compose('dog16_1', '_dog16_1x', '_dog16_1y') // sigma_2 / sigma_1 = 1.6 (approx. laplacian with sigma = 1)
-
-            // texture-based convolutions
-            .declare('texConv2D3', texConv2D(3), { // 2D convolution with a 3x3 texture-based kernel
-                ...this.program.usesPingpongRendering()
-            })
-            .declare('texConv2D5', texConv2D(5), { // 2D convolution with a 5x5 texture-based kernel
-                ...this.program.usesPingpongRendering()
-            })
-            .declare('texConv2D7', texConv2D(7), { // 2D convolution with a 7x7 texture-based kernel
-                ...this.program.usesPingpongRendering()
-            })
-
-            // texture-based separable convolutions
-            .compose('texConvXY3', 'texConvX3', 'texConvY3') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX3', texConvX(3)) // 3x1 convolution, x-axis
-            .declare('texConvY3', texConvY(3)) // 1x3 convolution, y-axis
-            .compose('texConvXY5', 'texConvX5', 'texConvY5') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX5', texConvX(5)) // 5x1 convolution, x-axis
-            .declare('texConvY5', texConvY(5)) // 1x5 convolution, y-axis
-            .compose('texConvXY7', 'texConvX7', 'texConvY7') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX7', texConvX(7)) // 7x1 convolution, x-axis
-            .declare('texConvY7', texConvY(7)) // 1x7 convolution, y-axis
-            .compose('texConvXY9', 'texConvX9', 'texConvY9') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX9', texConvX(9)) // 9x1 convolution, x-axis
-            .declare('texConvY9', texConvY(9)) // 1x9 convolution, y-axis
-            .compose('texConvXY11', 'texConvX11', 'texConvY11') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX11', texConvX(11)) // 11x1 convolution, x-axis
-            .declare('texConvY11', texConvY(11)) // 1x11 convolution, y-axis
-
-            // create custom convolution kernels
-            .declare('createKernel3x3', createKernel2D(3), { // 3x3 texture kernel
-                ...(this.program.hasTextureSize(3, 3)),
-            })
-            .declare('createKernel5x5', createKernel2D(5), { // 5x5 texture kernel
-                ...(this.program.hasTextureSize(5, 5)),
-            })
-            .declare('createKernel7x7', createKernel2D(7), { // 7x7 texture kernel
-                ...(this.program.hasTextureSize(7, 7)),
-            })
-            .declare('createKernel3x1', createKernel1D(3), { // 3x1 texture kernel
-                ...(this.program.hasTextureSize(3, 1)),
-            })
-            .declare('createKernel5x1', createKernel1D(5), { // 5x1 texture kernel
-                ...(this.program.hasTextureSize(5, 1)),
-            })
-            .declare('createKernel7x1', createKernel1D(7), { // 7x1 texture kernel
-                ...(this.program.hasTextureSize(7, 1)),
-            })
-            .declare('createKernel9x1', createKernel1D(9), { // 9x1 texture kernel
-                ...(this.program.hasTextureSize(9, 1)),
-            })
-            .declare('createKernel11x1', createKernel1D(11), { // 11x1 texture kernel
-                ...(this.program.hasTextureSize(11, 1)),
-            })
-            /*.declare('_readKernel3x3', identity, { // for testing
-                ...(this.program.hasTextureSize(3, 3)),
-                ...(this.program.rendersToCanvas())
-            })
-            .declare('_readKernel3x1', identity, {
-                ...(this.program.hasTextureSize(3, 1)),
-                ...(this.program.rendersToCanvas())
-            })*/
-
-
-
-
             // separable kernels (Gaussian)
             // see also: http://dev.theomader.com/gaussian-kernel-calculator/
             .declare('_gauss3x', convX([ // sigma ~ 1.0
@@ -218,50 +150,17 @@ export class GPUFilters extends SpeedyProgramGroup
             .declare('_gauss11x', convX(Utils.gaussianKernel(ksize2sigma(11), 11)))
             .declare('_gauss11y', convY(Utils.gaussianKernel(ksize2sigma(11), 11)))
 
-
-
-
             // separable kernels (Box filter)
-            .declare('_box3x', convX([
-                1, 1, 1
-            ], 1 / 3))
-            .declare('_box3y', convY([
-                1, 1, 1
-            ], 1 / 3))
-            .declare('_box5x', convX([
-                1, 1, 1, 1, 1
-            ], 1 / 5))
-            .declare('_box5y', convY([
-                1, 1, 1, 1, 1
-            ], 1 / 5))
-            .declare('_box7x', convX([
-                1, 1, 1, 1, 1, 1, 1
-            ], 1 / 7))
-            .declare('_box7y', convY([
-                1, 1, 1, 1, 1, 1, 1
-            ], 1 / 7))
-            .declare('_box9x', convX([
-                1, 1, 1, 1, 1, 1, 1, 1, 1
-            ], 1 / 9))
-            .declare('_box9y', convY([
-                1, 1, 1, 1, 1, 1, 1, 1, 1
-            ], 1 / 9))
-            .declare('_box11x', convX([
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
-            ], 1 / 11))
-            .declare('_box11y', convY([
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
-            ], 1 / 11))
-
-
-            // difference of gaussians (DoG)
-            // sigma_2 (1.6) - sigma_1 (1.0) => approximates laplacian of gaussian (LoG)
-            .declare('_dog16_1x', convX([
-                0.011725, 0.038976, 0.055137, -0.037649, -0.136377, -0.037649, 0.055137, 0.038976, 0.011725
-            ]))
-            .declare('_dog16_1y', convY([
-                0.011725, 0.038976, 0.055137, -0.037649, -0.136377, -0.037649, 0.055137, 0.038976, 0.011725
-            ]))
+            .declare('_box3x', convX((new Array(3)).fill(1 / 3)))
+            .declare('_box3y', convY((new Array(3)).fill(1 / 3)))
+            .declare('_box5x', convX((new Array(5)).fill(1 / 5)))
+            .declare('_box5y', convY((new Array(5)).fill(1 / 5)))
+            .declare('_box7x', convX((new Array(7)).fill(1 / 7)))
+            .declare('_box7y', convY((new Array(7)).fill(1 / 7)))
+            .declare('_box9x', convX((new Array(9)).fill(1 / 9)))
+            .declare('_box9y', convY((new Array(9)).fill(1 / 9)))
+            .declare('_box11x', convX((new Array(11)).fill(1 / 11)))
+            .declare('_box11y', convY((new Array(11)).fill(1 / 11)))
         ;
     }
 }

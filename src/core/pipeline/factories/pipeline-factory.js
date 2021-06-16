@@ -19,7 +19,7 @@
  * Pipeline factory
  */
 
-import { SpeedyPipelineNEW } from '../pipeline';
+import { SpeedyPipeline } from '../pipeline';
 import { SpeedyPipelineNodeImageInput } from '../nodes/pipeline/image-input';
 import { SpeedyPipelineNodeImageOutput } from '../nodes/pipeline/image-output';
 import { SpeedyPipelineNodeImageMultiplexer } from '../nodes/pipeline/image-multiplexer';
@@ -40,11 +40,11 @@ export class SpeedyPipelineFactory extends Function
 
     /**
      * Create a new pipeline
-     * @returns {SpeedyPipelineNEW}
+     * @returns {SpeedyPipeline}
      */
     _create()
     {
-        return new SpeedyPipelineNEW();
+        return new SpeedyPipeline();
     }
 
     /**
