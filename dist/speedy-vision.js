@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-06-12T03:01:03.139Z
+ * Date: 2021-06-16T00:42:44.929Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -12756,7 +12756,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _math_speedy_size__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../math/speedy-size */ "./src/core/math/speedy-size.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _math_speedy_vector__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../math/speedy-vector */ "./src/core/math/speedy-vector.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -12789,6 +12790,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /**
  * @typedef {"nearest"|"bilinear"} ResizeInterpolationMethod
  */
@@ -12809,15 +12811,18 @@ class SpeedyPipelineNodeResize extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
         ]);
 
-        /** @type {SpeedySize} size of the output image */
+        /** @type {SpeedySize} size of the output image, in pixels */
         this._size = new _math_speedy_size__WEBPACK_IMPORTED_MODULE_8__["SpeedySize"](0, 0);
+
+        /** @type {SpeedyVector2} size of the output relative to the size of the input */
+        this._scale = new _math_speedy_vector__WEBPACK_IMPORTED_MODULE_9__["SpeedyVector2"](1, 1);
 
         /** @type {ResizeInterpolationMethod} interpolation method */
         this._method = 'bilinear';
     }
 
     /**
-     * Size of the output image (use 0 not to change a dimension)
+     * Size of the output image, in pixels (use 0 to use scale)
      * @returns {SpeedySize}
      */
     get size()
@@ -12826,12 +12831,30 @@ class SpeedyPipelineNodeResize extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0
     }
 
     /**
-     * Size of the output image (use 0 not to change a dimension)
+     * Size of the output image, in pixels (use 0 to use scale)
      * @param {SpeedySize} size
      */
     set size(size)
     {
         this._size = size;
+    }
+
+    /**
+     * Size of the output image relative to the size of the input image
+     * @returns {SpeedyVector2}
+     */
+    get scale()
+    {
+        return this._scale;
+    }
+
+    /**
+     * Size of the output image relative to the size of the input image
+     * @param {SpeedyVector2} scale
+     */
+    set scale(scale)
+    {
+        this._scale = scale;
     }
 
     /**
@@ -12866,8 +12889,8 @@ class SpeedyPipelineNodeResize extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0
         const width = image.width, height = image.height;
         const outputTexture = this._outputTexture;
         const method = this._method;
-        const newWidth = this._size.width || width; // keep the old size if zero
-        const newHeight = this._size.height || height;
+        const newWidth = this._size.width || Math.max(1, this._scale.x * width);
+        const newHeight = this._size.height || Math.max(1, this._scale.y * height);
 
         if(method == 'bilinear') {
             (gpu.programs.transforms.resizeBI
@@ -14177,6 +14200,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./pipeline-node */ "./src/core/pipeline/pipeline-node.js");
 /* harmony import */ var _pipeline_port__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./pipeline-port */ "./src/core/pipeline/pipeline-port.js");
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _speedy_media__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../speedy-media */ "./src/core/speedy-media.js");
+/* harmony import */ var _speedy_feature__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../speedy-feature */ "./src/core/speedy-feature.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -14205,6 +14230,13 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
+/**
+ * @typedef {Object.<string,(SpeedyMedia|SpeedyFeature[])>} SpeedyPipelineOutput
+ * indexed by the names of the sink nodes
+ */
+
 /**
  * A pipeline is a network of nodes in which data flows to a sink
  */
@@ -14220,6 +14252,9 @@ class SpeedyPipelineNEW
 
         /** @type {SpeedyPipelineNode[]} a sequence of nodes: from the source(s) to the sink */
         this._sequence = [];
+
+        /** @type {SpeedyPipelineOutput} output template */
+        this._template = SpeedyPipelineNEW._createOutputTemplate();
 
         /** @type {SpeedyGPU} GPU instance */
         this._gpu = null;
@@ -14248,9 +14283,10 @@ class SpeedyPipelineNEW
     init(...nodes)
     {
         // validate
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(nodes.length > 0);
         if(this._gpu != null)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`The pipeline has already been initialized`);
+        else if(nodes.length == 0)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Can't initialize the pipeline. Please specify its nodes`);
 
         // create a GPU instance
         this._gpu = new _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_5__["SpeedyGPU"](1, 1);
@@ -14258,13 +14294,16 @@ class SpeedyPipelineNEW
         // add nodes to the network
         for(let i = 0; i < nodes.length; i++) {
             const node = nodes[i];
-            if(!this._hasNode(node))
+            if(!this._nodes.includes(node))
                 this._nodes.push(node);
         }
 
-        // topological sorting
+        // generate the sequence of nodes
         this._sequence = SpeedyPipelineNEW._tsort(this._nodes);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(this._sequence.length === this._nodes.length);
+        SpeedyPipelineNEW._validateSequence(this._sequence);
+
+        // generate the output template
+        this._template = SpeedyPipelineNEW._createOutputTemplate(this._nodes);
 
         // done!
         return this;
@@ -14282,23 +14321,21 @@ class SpeedyPipelineNEW
         this._gpu = this._gpu.release();
         this._sequence.length = 0;
         this._nodes.length = 0;
+        this._template = SpeedyPipelineNEW._createOutputTemplate();
 
         return null;
     }
 
     /**
      * Run the pipeline
-     * @returns {SpeedyPromise<object.<string,(SpeedyMedia|SpeedyFeature[])>>} results are indexed by the names of the sink nodes
+     * @returns {SpeedyPromise<SpeedyPipelineOutput>} results are indexed by the names of the sink nodes
      */
     run()
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(this._gpu != null, `Pipeline has been released`);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(this._sequence.length > 0, `Pipeline doesn't have nodes`);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(this._sequence[0].isSource(), `Pipeline doesn't have a source`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(this._gpu != null, `Pipeline has not been initialized or has been released`);
 
         // find the sinks
         const sinks = this._sequence.filter(node => node.isSink());
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(sinks.length > 0, `Pipeline doesn't have a sink`);
 
         // set the output textures of each node
         const valid = _ => this._gpu.texturePool.allocate();
@@ -14312,7 +14349,7 @@ class SpeedyPipelineNEW
             _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"].all(sinks.map(sink => sink.export())).then(results =>
 
                 // aggregate results by the names of the sinks
-                results.reduce((obj, val, idx) => ((obj[sinks[idx].name] = val), obj), {})
+                results.reduce((obj, val, idx) => ((obj[sinks[idx].name] = val), obj), this._template)
             )
         ).then(aggregate => {
             // unset the output textures of the nodes and clear all ports
@@ -14325,16 +14362,6 @@ class SpeedyPipelineNEW
             // done!
             return aggregate;
         }).turbocharge();
-    }
-
-    /**
-     * Is the given node already present in the pipeline?
-     * @param {SpeedyPipelineNode} node
-     * @returns {boolean}
-     */
-    _hasNode(node)
-    {
-        return this._nodes.includes(node);
     }
 
     /**
@@ -14410,12 +14437,41 @@ class SpeedyPipelineNEW
             for(let j = 0; j < inputs.length; j++) {
                 const from = inputs[j];
                 const links = outlinks.get(from);
+                if(!links)
+                    throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`Can't initialize the pipeline. Missing node: ${from.fullName}. Did you forget to add it to the initialization list?`);
 
                 outlinks.set(from, links.concat([ to ]));
             }
         }
 
         return outlinks;
+    }
+
+    /**
+     * Generate the output template by aggregating the names of the sinks
+     * @param {SpeedyPipelineNode[]} [nodes]
+     * @returns {SpeedyPipelineOutput}
+     */
+    static _createOutputTemplate(nodes = [])
+    {
+        const template = Object.create(null);
+        const sinks = nodes.filter(node => node.isSink());
+
+        return sinks.reduce((obj, sink) => ((obj[sink.name] = null), obj), template);
+    }
+
+    /**
+     * Validate a sequence of nodes
+     * @param {SpeedyPipelineNode[]} sequence
+     */
+    static _validateSequence(sequence)
+    {
+        if(sequence.length == 0)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`Pipeline doesn't have nodes`);
+        else if(!sequence[0].isSource())
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`Pipeline doesn't have a source`);
+        else if(!sequence[sequence.length - 1].isSink())
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`Pipeline doesn't have a sink`);
     }
 }
 
@@ -16605,7 +16661,7 @@ class SpeedyMedia
 
     /**
      * Converts the media to an ImageBitmap
-     * @returns {Promise<ImageBitmap>}
+     * @returns {SpeedyPromise<ImageBitmap>}
      */
     toBitmap()
     {
@@ -16614,7 +16670,7 @@ class SpeedyMedia
         else if(!this._source.isLoaded())
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"]('Can\'t convert SpeedyMedia to bitmap: the media hasn\'t been loaded');
 
-        return createImageBitmap(this._source.data);
+        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__["SpeedyPromise"]((resolve, reject) => createImageBitmap(this._source.data).then(resolve, reject));
     }
 
     /**
