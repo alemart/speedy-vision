@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-06-16T00:42:44.929Z
+ * Date: 2021-06-16T19:10:44.166Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -10332,481 +10332,6 @@ class SpeedyVector2
 
 /***/ }),
 
-/***/ "./src/core/pipeline-operations.js":
-/*!*****************************************!*\
-  !*** ./src/core/pipeline-operations.js ***!
-  \*****************************************/
-/*! exports provided: PipelineOperation */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "PipelineOperation", function() { return PipelineOperation; });
-/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * pipeline-operations.js
- * A pipeline operation is an element of a SpeedyPipeline
- */
-
-
-
-
-
-
-
-const PipelineOperation = { };
-
-/**
- * @typedef {[SpeedyTexture,ColorFormat]} SpeedyTextureWithColorFormat
- */
-
-/**
- * Abstract basic operation
- * @abstract
- */
-class SpeedyPipelineOperation
-{
-    /**
-     * Class constructor
-     */
-    constructor()
-    {
-        // lambda: load options object
-        this._loadOptions = () => ({});
-    }
-
-    /**
-     * Run the pipeline operation
-     * @param {SpeedyTextureWithColorFormat} input input texture
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
-     */
-    run(input, gpu, media)
-    {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"].resolve(input);
-    }
-
-    /**
-     * Perform any necessary cleanup
-     */
-    release()
-    {
-    }
-
-    /**
-     * Save an options object
-     * @param {PipelineOperationOptions} options user-passed parameter
-     * @param {object} [defaultOptions]
-     * @returns {()=>object}
-     */
-    _saveOptions(options, defaultOptions = {})
-    {
-        if(typeof options == 'object') {
-            // evaluate when instantiating the pipeline
-            const storedOptions = Object.assign(defaultOptions, options);
-            this._loadOptions = () => storedOptions;
-        }
-        else if(typeof options == 'function') {
-            // evaluate when running the pipeline
-            this._loadOptions = () => Object.assign(defaultOptions, options());
-        }
-        else
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Expected an options object | function`);
-    }
-}
-
-
-// =====================================================
-//               COLOR CONVERSIONS
-// =====================================================
-
-/**
- * Convert to greyscale
- */
-PipelineOperation.ConvertToGreyscale = class extends SpeedyPipelineOperation
-{
-    /**
-     * Run the pipeline operation
-     * @param {SpeedyTextureWithColorFormat} input input texture
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
-     */
-    run(input, gpu, media)
-    {
-        let [ texture, colorFormat ] = input;
-
-        if(colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].RGB)
-            texture = gpu.programs.colors.rgb2grey(texture);
-        else if(colorFormat != _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["NotSupportedError"](`Can't convert image to greyscale: unknown color format`);
-
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"].resolve([ texture, _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale ]);
-    }
-}
-
-
-
-// =====================================================
-//               IMAGE FILTERS
-// =====================================================
-
-/**
- * Blur image
- */
-PipelineOperation.Blur = class extends SpeedyPipelineOperation
-{
-    /**
-     * Blur operation
-     * @param {PipelineOperationOptions} [options]
-     */
-    constructor(options = {})
-    {
-        super();
-
-        // save options
-        this._saveOptions(options, {
-            filter: 'gaussian', // "gassuian" | "box"
-            size: 5             // 3 | 5 | 7
-        });
-    }
-
-    /**
-     * Run the pipeline operation
-     * @param {SpeedyTextureWithColorFormat} input input texture
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
-     */
-    run(input, gpu, media)
-    {
-        const { filter, size } = this._loadOptions();
-        let [ texture, colorFormat ] = input;
-
-        // validate options
-        if(filter != 'gaussian' && filter != 'box')
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Invalid filter: "${filter}"`);
-        else if(size != 3 && size != 5 && size != 7)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Invalid kernel size: ${size}`);
-        
-        // run filter
-        const fname = (filter == 'gaussian' ? 'gauss' : 'box') + size;
-        const output = gpu.programs.filters[fname](texture);
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"].resolve([ output, colorFormat ]);
-    }
-}
-
-/**
- * Median filter
- */
-PipelineOperation.Median = class extends SpeedyPipelineOperation
-{
-    /**
-     * Median filter
-     * @param {PipelineOperationOptions} [options]
-     */
-    constructor(options = {})
-    {
-        super();
-
-        // save options
-        this._saveOptions(options, {
-            size: 5 // 3 | 5 | 7
-        });
-    }
-
-    /**
-     * Run the pipeline operation
-     * @param {SpeedyTextureWithColorFormat} input input texture
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
-     */
-    run(input, gpu, media)
-    {
-        const { size } = this._loadOptions();
-        let [ texture, colorFormat ] = input;
-
-        // validate options
-        if(size != 3 && size != 5 && size != 7)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Invalid window size: ${size}`);
-        else if(colorFormat != _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["NotSupportedError"](`The median filter requires a greyscale image as input`);
-
-        // run filter
-        const fname = 'median' + size;
-        const output = gpu.programs.filters[fname](texture);
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"].resolve([ output, colorFormat ]);
-    }
-}
-
-/**
- * Image convolution
- */
-PipelineOperation.Convolve = class extends SpeedyPipelineOperation
-{
-    /**
-     * Perform a convolution
-     * Must provide a SQUARE kernel with size: 3x3, 5x5 or 7x7
-     * @param {Array<number>} kernel convolution kernel
-     * @param {number} [divisor] divide all kernel entries by this number
-     */
-    constructor(kernel, divisor = 1.0)
-    {
-        let kern = new Float32Array(kernel).map(x => x / divisor);
-        const len = kern.length;
-        const size = Math.sqrt(len) | 0;
-        const method = ({
-            3: ['createKernel3x3', 'texConv2D3'],
-            5: ['createKernel5x5', 'texConv2D5'],
-            7: ['createKernel7x7', 'texConv2D7'],
-        })[size] || null;
-        super();
-
-        // validate kernel
-        if(len == 1)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Cannot convolve with a kernel containing a single element`);
-        else if(size * size != len || !method)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Cannot convolve with a non-square kernel of ${len} elements`);
-
-        // normalize kernel entries to [0,1]
-        const min = Math.min(...kern), max = Math.max(...kern);
-        const offset = min;
-        const scale = Math.abs(max - min) > 1e-5 ? max - min : 1;
-        kern = kern.map(x => (x - offset) / scale);
-
-        // store the normalized kernel
-        this._method = method;
-        this._scale = scale;
-        this._offset = offset;
-        this._kernel = kern;
-        this._kernelSize = size;
-        this._texKernel = null;
-        this._gl = null;
-    }
-
-    /**
-     * Run the pipeline operation
-     * @param {SpeedyTextureWithColorFormat} input input texture
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
-     */
-    run(input, gpu, media)
-    {
-        let [ texture, colorFormat ] = input;
-
-        // lost context?
-        if(gpu.gl.isContextLost()) {
-            this._texKernel = null;
-            this._gl = null;
-            // convolve with a null texKernel anyway,
-            // SpeedyProgram handles lost contexts
-        }
-
-        // instantiate the texture kernel
-        else if(this._texKernel == null || (this._gl !== gpu.gl && this._gl !== null)) {
-            // warn about performance
-            if(this._gl !== gpu.gl && this._gl !== null && !this._gl.isContextLost()) {
-                const warn = 'Performance warning: need to recreate the texture kernel. ' +
-                             'Consider duplicating the pipeline when using convolutions ' +
-                             'for different media objects.';
-                _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].warning(warn);
-
-                // release old texture
-                this._texKernel.release();
-            }
-
-            const texKernel = gpu.programs.filters[this._method[0]](this._kernel);
-            this._texKernel = texKernel.clone();
-            this._gl = gpu.gl;
-        }
-
-        // convolve
-        const output = gpu.programs.filters[this._method[1]](
-            texture,
-            this._texKernel,
-            this._scale,
-            this._offset
-        );
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"].resolve([ output, colorFormat ]);
-    }
-
-    /**
-     * Cleanup
-     */
-    release()
-    {
-        if(this._texKernel != null) {
-            this._texKernel.release();
-            this._texKernel = this._gl = null;
-        }
-
-        super.release();
-    }
-}
-
-/**
- * Normalize image
- */
-PipelineOperation.Normalize = class extends SpeedyPipelineOperation
-{
-    /**
-     * Normalize operation
-     * @param {PipelineOperationOptions} [options]
-     */
-    constructor(options = {})
-    {
-        super();
-
-        // save options
-        this._saveOptions(options, {
-            min: undefined, // min. desired pixel intensity, a value in [0,255]
-            max: undefined  // max. desired pixel intensity, a value in [0,255]
-        });
-    }
-
-    /**
-     * Run the pipeline operation
-     * @param {SpeedyTextureWithColorFormat} input input texture
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
-     */
-    run(input, gpu, media)
-    {
-        let [ texture, colorFormat ] = input;
-        const { min, max } = this._loadOptions();
-        let output;
-
-        if(colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].RGB)
-            output = gpu.programs.enhancements.normalizeColoredImage(texture, min, max);
-        else if(colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
-            output = gpu.programs.enhancements.normalizeGreyscaleImage(texture, min, max);
-        else
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["NotSupportedError"]('Invalid color format');
-
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"].resolve([ output, colorFormat ]);
-    }
-}
-
-/**
- * Nightvision: "see in the dark"
- */
-PipelineOperation.Nightvision = class extends SpeedyPipelineOperation
-{
-    /**
-     * Class constructor
-     * @param {object|()=>object} [options]
-     */
-    constructor(options = {})
-    {
-        super();
-
-        // save options
-        this._saveOptions(options, {
-            gain: undefined,    // controls the contrast
-            offset: undefined,  // controls the brightness
-            decay: undefined,   // gain decay from the center
-            quality: undefined, // "high" | "medium" | "low"
-        });
-    }
-
-    /**
-     * Run the pipeline operation
-     * @param {SpeedyTextureWithColorFormat} input input texture
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
-     */
-    run(input, gpu, media)
-    {
-        let [ texture, colorFormat ] = input;
-        const { gain, offset, decay, quality } = this._loadOptions();
-        let output;
-
-        if(colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].RGB)
-            output = gpu.programs.enhancements.nightvision(texture, gain, offset, decay, quality, false);
-        else if(colorFormat == _utils_types__WEBPACK_IMPORTED_MODULE_0__["ColorFormat"].Greyscale)
-            output = gpu.programs.enhancements.nightvision(texture, gain, offset, decay, quality, true);
-        else
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["NotSupportedError"]('Invalid color format');
-
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"].resolve([ output, colorFormat ]);
-    }
-}
-
-
-
-
-// =====================================================
-// GEOMETRIC TRANSFORMATIONS
-// =====================================================
-
-/**
- * Dense perspective transform
- */
-PipelineOperation.WarpPerspective = class extends SpeedyPipelineOperation
-{
-    /**
-     * Constructor
-     * @param {PipelineOperationOptions} [options]
-     */
-    constructor(options = {})
-    {
-        super();
-
-        // save options
-        this._saveOptions(options, {
-            homography: [ 1, 0, 0, 0, 1, 0, 0, 0, 1 ] // identity matrix
-        });
-    }
-
-    /**
-     * Run the pipeline operation
-     * @param {SpeedyTextureWithColorFormat} input input texture
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyMedia} [media]
-     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>}
-     */
-    run(input, gpu, media)
-    {
-        let [ texture, colorFormat ] = input;
-        const { homography } = this._loadOptions();
-
-        // validate options
-        if(!(Array.isArray(homography) && homography.length == 9))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Invalid homography: ${homography}`);
-
-        // transform
-        const output = gpu.programs.transforms.warpPerspective(texture, homography);
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"].resolve([ output, colorFormat ]);
-    }
-}
-
-/***/ }),
-
 /***/ "./src/core/pipeline/factories/filter-factory.js":
 /*!*******************************************************!*\
   !*** ./src/core/pipeline/factories/filter-factory.js ***!
@@ -10989,11 +10514,11 @@ class SpeedyPipelineFactory extends Function
 
     /**
      * Create a new pipeline
-     * @returns {SpeedyPipelineNEW}
+     * @returns {SpeedyPipeline}
      */
     _create()
     {
-        return new _pipeline__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNEW"]();
+        return new _pipeline__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipeline"]();
     }
 
     /**
@@ -14188,12 +13713,12 @@ class SpeedyPipelinePortSpec
 /*!***************************************!*\
   !*** ./src/core/pipeline/pipeline.js ***!
   \***************************************/
-/*! exports provided: SpeedyPipelineNEW */
+/*! exports provided: SpeedyPipeline */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNEW", function() { return SpeedyPipelineNEW; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipeline", function() { return SpeedyPipeline; });
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
@@ -14240,7 +13765,7 @@ __webpack_require__.r(__webpack_exports__);
 /**
  * A pipeline is a network of nodes in which data flows to a sink
  */
-class SpeedyPipelineNEW
+class SpeedyPipeline
 {
     /**
      * Constructor
@@ -14254,7 +13779,7 @@ class SpeedyPipelineNEW
         this._sequence = [];
 
         /** @type {SpeedyPipelineOutput} output template */
-        this._template = SpeedyPipelineNEW._createOutputTemplate();
+        this._template = SpeedyPipeline._createOutputTemplate();
 
         /** @type {SpeedyGPU} GPU instance */
         this._gpu = null;
@@ -14278,7 +13803,7 @@ class SpeedyPipelineNEW
     /**
      * Initialize the pipeline
      * @param  {...SpeedyPipelineNode} nodes
-     * @returns {SpeedyPipelineNEW} this pipeline
+     * @returns {SpeedyPipeline} this pipeline
      */
     init(...nodes)
     {
@@ -14299,11 +13824,11 @@ class SpeedyPipelineNEW
         }
 
         // generate the sequence of nodes
-        this._sequence = SpeedyPipelineNEW._tsort(this._nodes);
-        SpeedyPipelineNEW._validateSequence(this._sequence);
+        this._sequence = SpeedyPipeline._tsort(this._nodes);
+        SpeedyPipeline._validateSequence(this._sequence);
 
         // generate the output template
-        this._template = SpeedyPipelineNEW._createOutputTemplate(this._nodes);
+        this._template = SpeedyPipeline._createOutputTemplate(this._nodes);
 
         // done!
         return this;
@@ -14321,7 +13846,7 @@ class SpeedyPipelineNEW
         this._gpu = this._gpu.release();
         this._sequence.length = 0;
         this._nodes.length = 0;
-        this._template = SpeedyPipelineNEW._createOutputTemplate();
+        this._template = SpeedyPipeline._createOutputTemplate();
 
         return null;
     }
@@ -14343,7 +13868,7 @@ class SpeedyPipelineNEW
             this._sequence[i].setOutputTextures(valid);
 
         // run the pipeline
-        return SpeedyPipelineNEW._runSequence(this._sequence, this._gpu).then(() =>
+        return SpeedyPipeline._runSequence(this._sequence, this._gpu).then(() =>
 
             // export results
             _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"].all(sinks.map(sink => sink.export())).then(results =>
@@ -14379,9 +13904,9 @@ class SpeedyPipelineNEW
 
         const runTask = sequence[i].execute(gpu);
         if(runTask == undefined)
-            return SpeedyPipelineNEW._runSequence(sequence, gpu, i+1, n);
+            return SpeedyPipeline._runSequence(sequence, gpu, i+1, n);
 
-        return runTask.then(() => SpeedyPipelineNEW._runSequence(sequence, gpu, i+1, n));
+        return runTask.then(() => SpeedyPipeline._runSequence(sequence, gpu, i+1, n));
     }
 
     /**
@@ -14391,7 +13916,7 @@ class SpeedyPipelineNEW
      */
     static _tsort(nodes)
     {
-        const outlinks = SpeedyPipelineNEW._outlinks(nodes);
+        const outlinks = SpeedyPipeline._outlinks(nodes);
         const stack = nodes.map(node => [ node, false ]);
         const trash = new Set();
         const sorted = new Array(nodes.length);
@@ -14437,10 +13962,12 @@ class SpeedyPipelineNEW
             for(let j = 0; j < inputs.length; j++) {
                 const from = inputs[j];
                 const links = outlinks.get(from);
+
                 if(!links)
                     throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`Can't initialize the pipeline. Missing node: ${from.fullName}. Did you forget to add it to the initialization list?`);
 
-                outlinks.set(from, links.concat([ to ]));
+                if(!links.includes(to))
+                    links.push(to);
             }
         }
 
@@ -14474,6 +14001,7 @@ class SpeedyPipelineNEW
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`Pipeline doesn't have a sink`);
     }
 }
+
 
 /***/ }),
 
@@ -16407,7 +15935,6 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _speedy_media_source__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./speedy-media-source */ "./src/core/speedy-media-source.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _speedy_pipeline__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./speedy-pipeline */ "./src/core/speedy-pipeline.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -16428,7 +15955,6 @@ __webpack_require__.r(__webpack_exports__);
  * speedy-media.js
  * SpeedyMedia implementation
  */
-
 
 
 
@@ -16570,9 +16096,8 @@ class SpeedyMedia
     }
 
     /**
-     * Releases the resources associated with this media:
-     * WebGL textures, framebuffers, programs, etc.
-     * @returns {SpeedyPromise<void>} resolves as soon as the resources are released
+     * Releases resources associated with this media
+     * @returns {null}
      */
     release()
     {
@@ -16581,7 +16106,7 @@ class SpeedyMedia
             this._gpu = this._gpu.release();
         }
 
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__["SpeedyPromise"].resolve();
+        return null;
     }
 
     /**
@@ -16608,32 +16133,6 @@ class SpeedyMedia
 
         // done!
         return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__["SpeedyPromise"].resolve(clone);
-    }
-
-    /**
-     * Runs a pipeline
-     * @param {SpeedyPipeline} pipeline
-     * @returns {SpeedyPromise<SpeedyMedia>} a promise that resolves to A CLONE of this SpeedyMedia
-     */
-    run(pipeline)
-    {
-        // has the media been released?
-        if(this.isReleased())
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`Can't run pipeline: the SpeedyMedia has been released`);
-
-        // upload the media to the GPU
-        const texture = this._upload();
-
-        // run the pipeline
-        return pipeline._run([ texture, this._colorFormat ], this._gpu, this).turbocharge().then(([ texture, colorFormat ]) => {
-            // convert to bitmap
-            const canvas = this._gpu.renderToCanvas(texture);
-            return createImageBitmap(canvas, 0, canvas.height - this.height, this.width, this.height).then(bitmap => {
-                return _speedy_media_source__WEBPACK_IMPORTED_MODULE_5__["SpeedyMediaSource"].load(bitmap).then(source => {
-                    return new SpeedyMedia(source, {}, colorFormat);
-                });
-            });
-        });
     }
 
     /**
@@ -16761,245 +16260,6 @@ class SpeedyNamespace
 
 /***/ }),
 
-/***/ "./src/core/speedy-pipeline.js":
-/*!*************************************!*\
-  !*** ./src/core/speedy-pipeline.js ***!
-  \*************************************/
-/*! exports provided: SpeedyPipeline */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipeline", function() { return SpeedyPipeline; });
-/* harmony import */ var _pipeline_operations__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./pipeline-operations */ "./src/core/pipeline-operations.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * speedy-pipeline.js
- * A pipeline is a sequence of operations that transform the image in some way
- */
-
-
-
-
-
-
-/**
- * A SpeedyPipeline holds a sequence of operations that
- * graphically transform the incoming media in some way
- * 
- * SpeedyPipeline's methods are chainable: use them to
- * create your own sequence of image operations
- *
- * @typedef {(object|()=>object)} PipelineOperationOptions
- */
-class SpeedyPipeline
-{
-    /**
-     * Class constructor
-     */
-    constructor()
-    {
-        /** @type {SpeedyPipelineOperation[]} operations vector */
-        this._operations = [];
-    }
-
-    /**
-     * The number of the operations of the pipeline
-     * @returns {number}
-     */
-    get length()
-    {
-        return this._operations.length;
-    }
-
-    /**
-     * Cleanup pipeline memory
-     * @returns {SpeedyPromise<SpeedyPipeline>} resolves as soon as the memory is released
-     */
-    release()
-    {
-        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"]((resolve, reject) => {
-            for(let i = this._operations.length - 1; i >= 0; i--)
-                this._operations[i].release();
-            this._operations.length = 0;
-            resolve(this);
-        });
-    }
-
-    /**
-     * Adds a new operation to the end of the pipeline
-     * @param {SpeedyPipelineOperation} operation
-     * @returns {SpeedyPipeline} the pipeline itself
-     */
-    _spawn(operation)
-    {
-        this._operations.push(operation);
-        return this;
-    }
-
-    /**
-     * Runs the pipeline
-     * @param {SpeedyTextureWithColorFormat} input input texture
-     * @param {SpeedyGPU} gpu gpu attached to the media
-     * @param {SpeedyMedia} media media object
-     * @param {number} [cnt] loop counter
-     * @returns {SpeedyPromise<SpeedyTextureWithColorFormat>} output texutre
-     */
-    _run(input, gpu, media, cnt = 0)
-    {
-        if(cnt >= this._operations.length)
-            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(input);
-
-        return this._operations[cnt].run(input, gpu, media).then(output =>
-            this._run(output, gpu, media, cnt + 1)
-        );
-    }
-
-
-    // =====================================================
-    //                    GENERIC
-    // =====================================================
-
-    /**
-     * Concatenates another pipeline into this one
-     * @param {SpeedyPipeline} pipeline
-     * @returns {SpeedyPipeline}
-     */
-    concat(pipeline)
-    {
-        if(pipeline instanceof SpeedyPipeline) {
-            this._operations = this._operations.concat(pipeline._operations);
-            return this;
-        }
-
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Invalid argument "${pipeline}" given to SpeedyPipeline.concatenate()`);
-    }
-
-
-    // =====================================================
-    //               COLOR CONVERSIONS
-    // =====================================================
-
-    /**
-     * Convert to a color space
-     * @param {string} [colorSpace] 'greyscale' | 'grayscale'
-     * @returns {SpeedyPipeline}
-     */
-    convertTo(colorSpace = null)
-    {
-        if(colorSpace == 'greyscale' || colorSpace == 'grayscale') {
-            return this._spawn(
-                new _pipeline_operations__WEBPACK_IMPORTED_MODULE_0__["PipelineOperation"].ConvertToGreyscale()
-            );
-        }
-
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Can't convert to unknown color space: "${colorSpace}"`);
-    }
-
-
-
-    // =====================================================
-    //               IMAGE FILTERING
-    // =====================================================
-
-    /**
-     * Image smoothing
-     * @param {PipelineOperationOptions} [options]
-     * @returns {SpeedyPipeline}
-     */
-    blur(options = {})
-    {
-        return this._spawn(
-            new _pipeline_operations__WEBPACK_IMPORTED_MODULE_0__["PipelineOperation"].Blur(options)
-        );
-    }
-
-    /**
-     * Median filter
-     * @param {PipelineOperationOptions} [options]
-     * @returns {SpeedyPipeline}
-     */
-    median(options = {})
-    {
-        return this._spawn(
-            new _pipeline_operations__WEBPACK_IMPORTED_MODULE_0__["PipelineOperation"].Median(options)
-        );
-    }
-
-    /**
-     * Image convolution
-     * @param {Array<number>} kernel
-     * @param {number} [divisor]
-     * @returns {SpeedyPipeline}
-     */
-    convolve(kernel, divisor = 1.0)
-    {
-        return this._spawn(
-            new _pipeline_operations__WEBPACK_IMPORTED_MODULE_0__["PipelineOperation"].Convolve(kernel, divisor)
-        );
-    }
-
-    /**
-     * Image normalization
-     * @param {PipelineOperationOptions} [options]
-     * @returns {SpeedyPipeline}
-     */
-    normalize(options = {})
-    {
-        return this._spawn(
-            new _pipeline_operations__WEBPACK_IMPORTED_MODULE_0__["PipelineOperation"].Normalize(options)
-        );
-    }
-
-    /**
-     * Nightvision
-     * @param {PipelineOperationOptions} [options]
-     * @returns {SpeedyPipeline}
-     */
-    nightvision(options = {})
-    {
-        return this._spawn(
-            new _pipeline_operations__WEBPACK_IMPORTED_MODULE_0__["PipelineOperation"].Nightvision(options)
-        );
-    }
-
-
-    // =====================================================
-    //             GEOMETRIC TRANSFORMATIONS
-    // =====================================================
-
-    /**
-     * Dense perspective transform
-     * @param {PipelineOperationOptions} [options]
-     * @returns {SpeedyPipeline}
-     */
-    warpPerspective(options = {})
-    {
-        return this._spawn(
-            new _pipeline_operations__WEBPACK_IMPORTED_MODULE_0__["PipelineOperation"].WarpPerspective(options)
-        );
-    }
-}
-
-/***/ }),
-
 /***/ "./src/core/speedy.js":
 /*!****************************!*\
   !*** ./src/core/speedy.js ***!
@@ -17011,22 +16271,21 @@ class SpeedyPipeline
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "Speedy", function() { return Speedy; });
 /* harmony import */ var _speedy_media__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-media */ "./src/core/speedy-media.js");
-/* harmony import */ var _speedy_pipeline__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-pipeline */ "./src/core/speedy-pipeline.js");
-/* harmony import */ var _utils_fps_counter__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/fps-counter */ "./src/utils/fps-counter.js");
-/* harmony import */ var _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-feature-detector-factory */ "./src/core/speedy-feature-detector-factory.js");
-/* harmony import */ var _speedy_feature_tracker_factory__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./speedy-feature-tracker-factory */ "./src/core/speedy-feature-tracker-factory.js");
-/* harmony import */ var _speedy_feature_descriptor_factory__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./speedy-feature-descriptor-factory */ "./src/core/speedy-feature-descriptor-factory.js");
-/* harmony import */ var _speedy_flags__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./speedy-flags */ "./src/core/speedy-flags.js");
-/* harmony import */ var _math_speedy_vector__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./math/speedy-vector */ "./src/core/math/speedy-vector.js");
-/* harmony import */ var _math_speedy_point__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./math/speedy-point */ "./src/core/math/speedy-point.js");
-/* harmony import */ var _math_speedy_size__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./math/speedy-size */ "./src/core/math/speedy-size.js");
-/* harmony import */ var _math_matrix_expression_factory__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./math/matrix-expression-factory */ "./src/core/math/matrix-expression-factory.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _pipeline_factories_pipeline_factory__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./pipeline/factories/pipeline-factory */ "./src/core/pipeline/factories/pipeline-factory.js");
-/* harmony import */ var _pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./pipeline/factories/filter-factory */ "./src/core/pipeline/factories/filter-factory.js");
-/* harmony import */ var _pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./pipeline/factories/transform-factory */ "./src/core/pipeline/factories/transform-factory.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _utils_fps_counter__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/fps-counter */ "./src/utils/fps-counter.js");
+/* harmony import */ var _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-feature-detector-factory */ "./src/core/speedy-feature-detector-factory.js");
+/* harmony import */ var _speedy_feature_tracker_factory__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-feature-tracker-factory */ "./src/core/speedy-feature-tracker-factory.js");
+/* harmony import */ var _speedy_feature_descriptor_factory__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./speedy-feature-descriptor-factory */ "./src/core/speedy-feature-descriptor-factory.js");
+/* harmony import */ var _speedy_flags__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./speedy-flags */ "./src/core/speedy-flags.js");
+/* harmony import */ var _math_speedy_vector__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./math/speedy-vector */ "./src/core/math/speedy-vector.js");
+/* harmony import */ var _math_speedy_point__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./math/speedy-point */ "./src/core/math/speedy-point.js");
+/* harmony import */ var _math_speedy_size__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./math/speedy-size */ "./src/core/math/speedy-size.js");
+/* harmony import */ var _math_matrix_expression_factory__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./math/matrix-expression-factory */ "./src/core/math/matrix-expression-factory.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _pipeline_factories_pipeline_factory__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./pipeline/factories/pipeline-factory */ "./src/core/pipeline/factories/pipeline-factory.js");
+/* harmony import */ var _pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./pipeline/factories/filter-factory */ "./src/core/pipeline/factories/filter-factory.js");
+/* harmony import */ var _pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./pipeline/factories/transform-factory */ "./src/core/pipeline/factories/transform-factory.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -17065,10 +16324,9 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-
 // Constants
-const matrixExprFactory = new _math_matrix_expression_factory__WEBPACK_IMPORTED_MODULE_10__["SpeedyMatrixExprFactory"]();
-const pipelineFactory = new _pipeline_factories_pipeline_factory__WEBPACK_IMPORTED_MODULE_12__["SpeedyPipelineFactory"]();
+const matrixExprFactory = new _math_matrix_expression_factory__WEBPACK_IMPORTED_MODULE_9__["SpeedyMatrixExprFactory"]();
+const pipelineFactory = new _pipeline_factories_pipeline_factory__WEBPACK_IMPORTED_MODULE_11__["SpeedyPipelineFactory"]();
 
 /**
  * Speedy's main class
@@ -17100,15 +16358,6 @@ class Speedy
     }
 
     /**
-     * Creates a new pipeline
-     * @returns {SpeedyPipeline}
-     */
-    static pipeline()
-    {
-        return new _speedy_pipeline__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipeline"]();
-    }
-
-    /**
      * The version of the library
      * @returns {string} The version of the library
      */
@@ -17123,7 +16372,7 @@ class Speedy
      */
     static get fps()
     {
-        return _utils_fps_counter__WEBPACK_IMPORTED_MODULE_2__["FPSCounter"].instance.fps;
+        return _utils_fps_counter__WEBPACK_IMPORTED_MODULE_1__["FPSCounter"].instance.fps;
     }
 
     /**
@@ -17132,7 +16381,7 @@ class Speedy
      */
     static get FeatureDetector()
     {
-        return _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_3__["SpeedyFeatureDetectorFactory"];
+        return _speedy_feature_detector_factory__WEBPACK_IMPORTED_MODULE_2__["SpeedyFeatureDetectorFactory"];
     }
 
     /**
@@ -17141,7 +16390,7 @@ class Speedy
      */
     static get FeatureTracker()
     {
-        return _speedy_feature_tracker_factory__WEBPACK_IMPORTED_MODULE_4__["SpeedyFeatureTrackerFactory"];
+        return _speedy_feature_tracker_factory__WEBPACK_IMPORTED_MODULE_3__["SpeedyFeatureTrackerFactory"];
     }
 
     /**
@@ -17150,7 +16399,7 @@ class Speedy
      */
     static get FeatureDescriptor()
     {
-        return _speedy_feature_descriptor_factory__WEBPACK_IMPORTED_MODULE_5__["SpeedyFeatureDescriptorFactory"];
+        return _speedy_feature_descriptor_factory__WEBPACK_IMPORTED_MODULE_4__["SpeedyFeatureDescriptorFactory"];
     }
 
     /**
@@ -17160,7 +16409,7 @@ class Speedy
      */
     static Vector2(x, y)
     {
-        return new _math_speedy_vector__WEBPACK_IMPORTED_MODULE_7__["SpeedyVector2"](x, y);
+        return new _math_speedy_vector__WEBPACK_IMPORTED_MODULE_6__["SpeedyVector2"](x, y);
     }
 
     /**
@@ -17170,7 +16419,7 @@ class Speedy
      */
     static Point2(x, y)
     {
-        return new _math_speedy_point__WEBPACK_IMPORTED_MODULE_8__["SpeedyPoint2"](x, y);
+        return new _math_speedy_point__WEBPACK_IMPORTED_MODULE_7__["SpeedyPoint2"](x, y);
     }
 
     /**
@@ -17180,7 +16429,7 @@ class Speedy
      */
     static Size(width, height)
     {
-        return new _math_speedy_size__WEBPACK_IMPORTED_MODULE_9__["SpeedySize"](width, height);
+        return new _math_speedy_size__WEBPACK_IMPORTED_MODULE_8__["SpeedySize"](width, height);
     }
 
     /**
@@ -17198,7 +16447,7 @@ class Speedy
      */
     static get Promise()
     {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_11__["SpeedyPromise"];
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_10__["SpeedyPromise"];
     }
 
     /**
@@ -17216,7 +16465,7 @@ class Speedy
      */
     static get Filter()
     {
-        return _pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_13__["SpeedyPipelineFilterFactory"];
+        return _pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_12__["SpeedyPipelineFilterFactory"];
     }
 
     /**
@@ -17225,16 +16474,16 @@ class Speedy
      */
     static get Transform()
     {
-        return _pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_14__["SpeedyPipelineTransformFactory"];
+        return _pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_13__["SpeedyPipelineTransformFactory"];
     }
 }
 
 // Mix SpeedyFlags with Speedy
-Object.assign(Speedy.constructor.prototype, _speedy_flags__WEBPACK_IMPORTED_MODULE_6__["SpeedyFlags"]);
+Object.assign(Speedy.constructor.prototype, _speedy_flags__WEBPACK_IMPORTED_MODULE_5__["SpeedyFlags"]);
 
 // Big-endian machine? Currently untested.
-if(!_utils_globals__WEBPACK_IMPORTED_MODULE_16__["LITTLE_ENDIAN"])
-    _utils_utils__WEBPACK_IMPORTED_MODULE_15__["Utils"].warn('Running on a big-endian machine');
+if(!_utils_globals__WEBPACK_IMPORTED_MODULE_15__["LITTLE_ENDIAN"])
+    _utils_utils__WEBPACK_IMPORTED_MODULE_14__["Utils"].warn('Running on a big-endian machine');
 
 /***/ }),
 
@@ -18026,74 +17275,6 @@ class GPUFilters extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Spe
             .declare('convolution15x', convolutionX[15])
             .declare('convolution15y', convolutionY[15])
 
-            // difference of gaussians
-            .compose('dog16_1', '_dog16_1x', '_dog16_1y') // sigma_2 / sigma_1 = 1.6 (approx. laplacian with sigma = 1)
-
-            // texture-based convolutions
-            .declare('texConv2D3', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["texConv2D"])(3), { // 2D convolution with a 3x3 texture-based kernel
-                ...this.program.usesPingpongRendering()
-            })
-            .declare('texConv2D5', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["texConv2D"])(5), { // 2D convolution with a 5x5 texture-based kernel
-                ...this.program.usesPingpongRendering()
-            })
-            .declare('texConv2D7', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["texConv2D"])(7), { // 2D convolution with a 7x7 texture-based kernel
-                ...this.program.usesPingpongRendering()
-            })
-
-            // texture-based separable convolutions
-            .compose('texConvXY3', 'texConvX3', 'texConvY3') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX3', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["texConvX"])(3)) // 3x1 convolution, x-axis
-            .declare('texConvY3', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["texConvY"])(3)) // 1x3 convolution, y-axis
-            .compose('texConvXY5', 'texConvX5', 'texConvY5') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX5', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["texConvX"])(5)) // 5x1 convolution, x-axis
-            .declare('texConvY5', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["texConvY"])(5)) // 1x5 convolution, y-axis
-            .compose('texConvXY7', 'texConvX7', 'texConvY7') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX7', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["texConvX"])(7)) // 7x1 convolution, x-axis
-            .declare('texConvY7', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["texConvY"])(7)) // 1x7 convolution, y-axis
-            .compose('texConvXY9', 'texConvX9', 'texConvY9') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX9', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["texConvX"])(9)) // 9x1 convolution, x-axis
-            .declare('texConvY9', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["texConvY"])(9)) // 1x9 convolution, y-axis
-            .compose('texConvXY11', 'texConvX11', 'texConvY11') // 2D convolution with same 1D separable kernel in both axes
-            .declare('texConvX11', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["texConvX"])(11)) // 11x1 convolution, x-axis
-            .declare('texConvY11', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["texConvY"])(11)) // 1x11 convolution, y-axis
-
-            // create custom convolution kernels
-            .declare('createKernel3x3', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["createKernel2D"])(3), { // 3x3 texture kernel
-                ...(this.program.hasTextureSize(3, 3)),
-            })
-            .declare('createKernel5x5', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["createKernel2D"])(5), { // 5x5 texture kernel
-                ...(this.program.hasTextureSize(5, 5)),
-            })
-            .declare('createKernel7x7', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["createKernel2D"])(7), { // 7x7 texture kernel
-                ...(this.program.hasTextureSize(7, 7)),
-            })
-            .declare('createKernel3x1', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["createKernel1D"])(3), { // 3x1 texture kernel
-                ...(this.program.hasTextureSize(3, 1)),
-            })
-            .declare('createKernel5x1', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["createKernel1D"])(5), { // 5x1 texture kernel
-                ...(this.program.hasTextureSize(5, 1)),
-            })
-            .declare('createKernel7x1', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["createKernel1D"])(7), { // 7x1 texture kernel
-                ...(this.program.hasTextureSize(7, 1)),
-            })
-            .declare('createKernel9x1', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["createKernel1D"])(9), { // 9x1 texture kernel
-                ...(this.program.hasTextureSize(9, 1)),
-            })
-            .declare('createKernel11x1', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["createKernel1D"])(11), { // 11x1 texture kernel
-                ...(this.program.hasTextureSize(11, 1)),
-            })
-            /*.declare('_readKernel3x3', identity, { // for testing
-                ...(this.program.hasTextureSize(3, 3)),
-                ...(this.program.rendersToCanvas())
-            })
-            .declare('_readKernel3x1', identity, {
-                ...(this.program.hasTextureSize(3, 1)),
-                ...(this.program.rendersToCanvas())
-            })*/
-
-
-
-
             // separable kernels (Gaussian)
             // see also: http://dev.theomader.com/gaussian-kernel-calculator/
             .declare('_gauss3x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([ // sigma ~ 1.0
@@ -18126,50 +17307,17 @@ class GPUFilters extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Spe
             .declare('_gauss11x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])(_utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].gaussianKernel(ksize2sigma(11), 11)))
             .declare('_gauss11y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])(_utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].gaussianKernel(ksize2sigma(11), 11)))
 
-
-
-
             // separable kernels (Box filter)
-            .declare('_box3x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
-                1, 1, 1
-            ], 1 / 3))
-            .declare('_box3y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
-                1, 1, 1
-            ], 1 / 3))
-            .declare('_box5x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
-                1, 1, 1, 1, 1
-            ], 1 / 5))
-            .declare('_box5y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
-                1, 1, 1, 1, 1
-            ], 1 / 5))
-            .declare('_box7x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
-                1, 1, 1, 1, 1, 1, 1
-            ], 1 / 7))
-            .declare('_box7y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
-                1, 1, 1, 1, 1, 1, 1
-            ], 1 / 7))
-            .declare('_box9x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
-                1, 1, 1, 1, 1, 1, 1, 1, 1
-            ], 1 / 9))
-            .declare('_box9y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
-                1, 1, 1, 1, 1, 1, 1, 1, 1
-            ], 1 / 9))
-            .declare('_box11x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
-            ], 1 / 11))
-            .declare('_box11y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
-            ], 1 / 11))
-
-
-            // difference of gaussians (DoG)
-            // sigma_2 (1.6) - sigma_1 (1.0) => approximates laplacian of gaussian (LoG)
-            .declare('_dog16_1x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])([
-                0.011725, 0.038976, 0.055137, -0.037649, -0.136377, -0.037649, 0.055137, 0.038976, 0.011725
-            ]))
-            .declare('_dog16_1y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])([
-                0.011725, 0.038976, 0.055137, -0.037649, -0.136377, -0.037649, 0.055137, 0.038976, 0.011725
-            ]))
+            .declare('_box3x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])((new Array(3)).fill(1 / 3)))
+            .declare('_box3y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])((new Array(3)).fill(1 / 3)))
+            .declare('_box5x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])((new Array(5)).fill(1 / 5)))
+            .declare('_box5y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])((new Array(5)).fill(1 / 5)))
+            .declare('_box7x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])((new Array(7)).fill(1 / 7)))
+            .declare('_box7y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])((new Array(7)).fill(1 / 7)))
+            .declare('_box9x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])((new Array(9)).fill(1 / 9)))
+            .declare('_box9y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])((new Array(9)).fill(1 / 9)))
+            .declare('_box11x', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convX"])((new Array(11)).fill(1 / 11)))
+            .declare('_box11y', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_2__["convY"])((new Array(11)).fill(1 / 11)))
         ;
     }
 }
@@ -19942,7 +19090,7 @@ module.exports = "#ifdef GREYSCALE\nuniform sampler2D minmax2d;\n#else\nuniform 
 /*!************************************************!*\
   !*** ./src/gpu/shaders/filters/convolution.js ***!
   \************************************************/
-/*! exports provided: conv2D, convX, convY, createKernel2D, createKernel1D, texConv2D, texConvX, texConvY */
+/*! exports provided: conv2D, convX, convY */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -19950,18 +19098,13 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "conv2D", function() { return conv2D; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "convX", function() { return convX; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "convY", function() { return convY; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createKernel2D", function() { return createKernel2D; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createKernel1D", function() { return createKernel1D; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConv2D", function() { return texConv2D; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConvX", function() { return texConvX; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "texConvY", function() { return texConvY; });
 /* harmony import */ var _shader_declaration__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../shader-declaration */ "./src/gpu/shader-declaration.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20014,7 +19157,7 @@ function conv2D(kernel, normalizationConstant = 1.0)
     ).join('\n');
 
     const generateCode = (k, dy, dx) => `
-        result += ${pixelAtOffset}(image, ivec2(${dx | 0}, ${dy | 0})) * float(${+k});
+        result += ${pixelAtOffset}(image, ivec2(${(-dx) | 0}, ${(-dy) | 0})) * float(${+k});
     `;
 
     // shader
@@ -20091,9 +19234,9 @@ function conv1D(axis, kernel, normalizationConstant = 1.0)
         (acc, cur) => acc + fn(kernel32[cur + N], cur),
     '');
     const generateCode = (k, i) => ((axis == 'x') ? `
-        pixel += ${pixelAtOffset}(image, ivec2(${i | 0}, 0)) * float(${+k});
+        pixel += ${pixelAtOffset}(image, ivec2(${(-i) | 0}, 0)) * float(${+k});
     ` : `
-        pixel += ${pixelAtOffset}(image, ivec2(0, ${i | 0})) * float(${+k});
+        pixel += ${pixelAtOffset}(image, ivec2(0, ${(-i) | 0})) * float(${+k});
     `);
 
     // shader
@@ -20113,261 +19256,6 @@ function conv1D(axis, kernel, normalizationConstant = 1.0)
 
     // done!
     return Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_0__["createShader"])(source).withArguments('image');
-}
-
-
-
-
-
-/*
- * ------------------------------------------------------------------
- * Texture Encoding
- * Encoding a float in [0,1] into RGB[A]
- * ------------------------------------------------------------------
- * Define frac(x) := x - floor(x)
- * Of course, 0 <= frac(x) < 1.
- * 
- * Given: x in [0,1]
- * 
- * Define e0 := floor(x),
- *        e1 := 256 frac(x)
- *        e2 := 256 frac(e1) = 256 frac(256 frac(x))
- *        e3 := 256 frac(e2) = 256 frac(256 frac(e1)) = 256 frac(256 frac(256 frac(x))),
- *        ...
- *        more generally,
- *        ej := 256 frac(e_{j-1}), j >= 2
- * 
- * Since x = frac(x) + floor(x), it follows that
- * x = floor(x) + 256 frac(x) / 256 = e0 + e1 / 256 = e0 + (frac(e1) + floor(e1)) / 256 =
- * e0 + (256 frac(e1) + 256 floor(e1)) / (256^2) = e0 + (e2 + 256 floor(e1)) / (256^2) =
- * e0 + ((256 frac(e2) + 256 floor(e2)) + 256^2 floor(e1)) / (256^3) =
- * e0 + (e3 + 256 floor(e2) + 256^2 floor(e1)) / (256^3) = 
- * floor(e0) + floor(e1) / 256 + floor(e2) / (256^2) + e3 / (256^3) = ... =
- * floor(e0) + floor(e1) / 256 + floor(e2) / (256^2) + floor(e3) / (256^3) + e4 / (256^4) = ... ~
- * \sum_{i >= 0} floor(e_i) / 256^i
- * 
- * Observe that e0 in {0, 1} and, for j >= 1, 0 <= e_j < 256, meaning that
- * e0 and (e_j / 256) can be stored in a 8-bit color channel.
- * 
- * We now have approximations for x:
- * x ~ x0 <-- first order
- * x ~ x0 + x1 / 256 <-- second order
- * x ~ x0 + x1 / 256 + x2 / (256^2) <-- third order (RGB)
- * x ~ x0 + x1 / 256 + x2 / (256^2) + x3 / (256^3) <-- fourth order (RGBA)
- * where x_i = floor(e_i).
- */
-
-
-
-
-/**
- * Generate a texture-based 2D convolution kernel of size
- * (kernelSize x kernelSize), where all entries belong to
- * the [0, 1] range
- * @param {number} kernelSize odd number, e.g., 3 to create a 3x3 kernel, and so on
- */
-function createKernel2D(kernelSize)
-{
-    // validate input
-    kernelSize |= 0;
-    if(kernelSize < 1 || kernelSize % 2 == 0)
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Can't create a 2D texture kernel of size ${kernelSize}`);
-
-    // encode float in the [0,1] range to RGBA
-    const shader = `
-    uniform float kernel[${kernelSize * kernelSize}];
-
-    void main()
-    {
-        ivec2 thread = threadLocation();
-        float val = kernel[(${kernelSize}) * thread.y + thread.x];
-
-        float e0 = floor(val);
-        float e1 = 256.0f * fract(val);
-        float e2 = 256.0f * fract(e1);
-        float e3 = 256.0f * fract(e2);
-
-        color = vec4(e0, floor(vec3(e1, e2, e3)) / 256.0f);
-    }
-    `;
-
-    // IMPORTANT: all entries of the input kernel
-    // are assumed to be in the [0, 1] range AND
-    // kernel.length >= kernelSize * kernelSize
-    return Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_0__["createShader"])(shader).withArguments('kernel');
-}
-
-
-
-
-/**
- * Generate a texture-based 1D convolution kernel of size
- * (kernelSize x 1), where all entries belong to the [0,1] range
- * @param {number} kernelSize odd number
- */
-function createKernel1D(kernelSize)
-{
-    // validate input
-    kernelSize |= 0;
-    if(kernelSize < 1 || kernelSize % 2 == 0)
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Can't create a 1D texture kernel of size ${kernelSize}`);
-
-    // encode float in the [0,1] range to RGBA
-    const shader = `
-    uniform float kernel[${kernelSize}];
-
-    void main()
-    {
-        ivec2 thread = threadLocation();
-        float val = kernel[thread.x];
-
-        float e0 = floor(val);
-        float e1 = 256.0f * fract(val);
-        float e2 = 256.0f * fract(e1);
-        float e3 = 256.0f * fract(e2);
-
-        color = vec4(e0, floor(vec3(e1, e2, e3)) / 256.0f);
-    }
-    `;
-
-    // IMPORTANT: all entries of the input kernel
-    // are assumed to be in the [0, 1] range AND
-    // kernel.length >= kernelSize
-    return Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_0__["createShader"])(shader).withArguments('kernel');
-}
-
-
-
-
-/**
- * 2D convolution with a texture-based kernel of size
- * kernelSize x kernelSize, with optional scale & offset
- * By default, scale and offset are 1 and 0, respectively
- * @param {number} kernelSize odd number, e.g., 3 to create a 3x3 kernel, and so on
- */
-function texConv2D(kernelSize)
-{
-    // validate input
-    const N = kernelSize >> 1; // idiv 2
-    if(kernelSize < 1 || kernelSize % 2 == 0)
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Can't perform a texture-based 2D convolution with an invalid kernel size of ${kernelSize}`);
-
-    // select the appropriate pixel function
-    const pixelAtOffset = (N <= 7) ? 'pixelAtShortOffset' : 'pixelAtLongOffset';
-
-    // utilities
-    const foreachKernelElement = fn => _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].cartesian(_utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].symmetricRange(N), _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].symmetricRange(N)).map(
-        ij => fn(ij[0], ij[1])
-    ).join('\n');
-
-    const generateCode = (i, j) => `
-        kernel = pixelAt(texKernel, ivec2(${i + N}, ${j + N}));
-        value = dot(kernel, magic) * scale + offset;
-        result += ${pixelAtOffset}(image, ivec2(${i}, ${j})) * value;
-    `;
-
-    // image: target image
-    // texKernel: convolution kernel (all entries in [0,1])
-    // scale: multiply the kernel entries by a number (like 1.0)
-    // offset: add a number to all kernel entries (like 0.0)
-    const shader = `
-    const vec4 magic = vec4(1.0f, 1.0f, 1.0f / 256.0f, 1.0f / 65536.0f);
-    uniform sampler2D image, texKernel;
-    uniform float scale, offset;
-
-    void main()
-    {
-        vec4 kernel = vec4(0.0f);
-        vec4 result = vec4(0.0f);
-        float alpha = threadPixel(image).a;
-        float value = 0.0f;
-
-        ${foreachKernelElement(generateCode)}
-
-        result = clamp(result, 0.0f, 1.0f);
-        color = vec4(result.rgb, alpha);
-    }
-    `;
-
-    // done!
-    return Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_0__["createShader"])(shader).withArguments('image', 'texKernel', 'scale', 'offset');
-}
-
-
-
-
-/**
- * Texture-based 1D convolution on the x-axis
- * @param {number} kernelSize odd number
- */
-const texConvX = kernelSize => texConv1D(kernelSize, 'x');
-
-
-
-/**
- * Texture-based 1D convolution on the x-axis
- * @param {number} kernelSize odd number
- */
-const texConvY = kernelSize => texConv1D(kernelSize, 'y');
-
-
-
-
-/**
- * Texture-based 1D convolution function generator
- * (the convolution kernel is stored in a texture)
- * @param {number} kernelSize odd number
- * @param {string} axis either "x" or "y"
- */
-function texConv1D(kernelSize, axis)
-{
-    // validate input
-    const N = kernelSize >> 1; // idiv 2
-    if(kernelSize < 1 || kernelSize % 2 == 0)
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Can't perform a texture-based 2D convolution with an invalid kernel size of ${kernelSize}`);
-    else if(axis != 'x' && axis != 'y')
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Can't perform a texture-based 1D convolution: invalid axis "${axis}"`); // this should never happen
-
-    // select the appropriate pixel function
-    const pixelAtOffset = (N <= 7) ? 'pixelAtShortOffset' : 'pixelAtLongOffset';
-
-    // utilities
-    const foreachKernelElement = fn => _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].symmetricRange(N).map(fn).join('\n');
-    const generateCode = i => ((axis == 'x') ? `
-        kernel = pixelAt(texKernel, ivec2(${i + N}, 0));
-        value = dot(kernel, magic) * scale + offset;
-        result += ${pixelAtOffset}(image, ivec2(${i}, 0)) * value;
-    ` : `
-        kernel = pixelAt(texKernel, ivec2(${i + N}, 0));
-        value = dot(kernel, magic) * scale + offset;
-        result += ${pixelAtOffset}(image, ivec2(0, ${i})) * value;
-    `);
-
-    // image: target image
-    // texKernel: convolution kernel (all entries in [0,1])
-    // scale: multiply the kernel entries by a number (like 1.0)
-    // offset: add a number to all kernel entries (like 0.0)
-    const shader = `
-    const vec4 magic = vec4(1.0f, 1.0f, 1.0f / 256.0f, 1.0f / 65536.0f);
-    uniform sampler2D image, texKernel;
-    uniform float scale, offset;
-
-    void main()
-    {
-        vec4 kernel = vec4(0.0f);
-        vec4 result = vec4(0.0f);
-        float alpha = threadPixel(image).a;
-        float value = 0.0f;
-
-        ${foreachKernelElement(generateCode)}
-
-        result = clamp(result, 0.0f, 1.0f);
-        color = vec4(result.rgb, alpha);
-    }
-    `;
-
-    // done!
-    return Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_0__["createShader"])(shader).withArguments('image', 'texKernel', 'scale', 'offset');
 }
 
 /***/ }),
