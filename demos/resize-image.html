@@ -126,9 +126,7 @@ window.onload = async function()
     const canvas = createCanvas(media.width, media.height, img.title);
     async function render()
     {
-        const width = Number(scaleX.value) * media.width;
-        const height = Number(scaleY.value) * media.height;
-        resize.size = Speedy.Size(width, height);
+        resize.scale = Speedy.Vector2(scaleX.value, scaleY.value);
         resize.method = interpolationMethod.value;
 
         const { image } = await pipeline.run();
