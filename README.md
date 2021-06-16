@@ -346,13 +346,13 @@ A `SpeedyPromise` that resolves to an `ImageBitmap`.
 
 ##### SpeedyMedia.release()
 
-`SpeedyMedia.release(): SpeedyPromise<void>`
+`SpeedyMedia.release(): null`
 
-Releases internal resources associated with this `SpeedyMedia` (textures, framebuffers, etc.)
+Releases internal resources associated with this `SpeedyMedia`.
 
 ###### Returns
 
-A `SpeedyPromise` that resolves as soon as the resources are released.
+Returns `null`.
 
 ### Pipeline
 
