@@ -504,7 +504,7 @@ The node to which `this` port belongs.
 
 `Speedy.Pipeline.ImageSource(name?: string): SpeedyPipelineNodeImageInput`
 
-Creates an image source with the specified name. If unspecified, Speedy will automatically generate a name for you.
+Creates an image source with the specified name. If the name is not specified, Speedy will automatically generate a name for you.
 
 ###### Parameters
 
@@ -520,7 +520,7 @@ Creates an image source with the specified name. If unspecified, Speedy will aut
 
 `Speedy.Pipeline.ImageSink(name?: string): SpeedyPipelineNodeImageOutput`
 
-Creates an image sink with the specified name. If unspecified, Speedy will use the name `"image"`.
+Creates an image sink with the specified name. If the name is not specified, Speedy will use the name `"image"`.
 
 ###### Ports
 
@@ -554,7 +554,7 @@ Creates an image multiplexer. It receives two images as input and outputs one of
 
 `Speedy.Filter.Greyscale(name?: string): SpeedyPipelineNodeGreyscale`
 
-Creates a node that converts an image to greyscale.
+Convert an image to greyscale.
 
 ###### Ports
 
@@ -567,7 +567,7 @@ Creates a node that converts an image to greyscale.
 
 `Speedy.Filter.SimpleBlur(name?: string): SpeedyPipelineNodeSimpleBlur`
 
-Creates a node that blurs an image using a box filter.
+Blur an image using a box filter.
 
 ###### Parameters
 
@@ -584,7 +584,7 @@ Creates a node that blurs an image using a box filter.
 
 `Speedy.Filter.SimpleBlur(name?: string): SpeedyPipelineNodeGaussianBlur`
 
-Creates a node that blurs an image using a Gaussian kernel.
+Blur an image using a Gaussian filter.
 
 ###### Parameters
 
@@ -602,7 +602,7 @@ Creates a node that blurs an image using a Gaussian kernel.
 
 `Speedy.Filter.MedianBlur(name?: string): SpeedyPipelineNodeMedianBlur`
 
-Creates a node that applies a median filter to an image.
+Median filter.
 
 ###### Parameters
 
@@ -695,7 +695,7 @@ Nightvision filter for local contrast stretching and brightness control.
 
 `Speedy.Transform.Resize(name?: string): SpeedyPipelineNodeResize`
 
-Resize image.
+Resize an image.
 
 ###### Parameters
 
