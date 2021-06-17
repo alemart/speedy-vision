@@ -33,7 +33,7 @@ import { SpeedyPromise } from '../../../../utils/speedy-promise';
 /**
  * Gets an image into a pipeline
  */
-export class SpeedyPipelineNodeImageInput extends SpeedyPipelineSourceNode
+export class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode
 {
     /**
      * Constructor

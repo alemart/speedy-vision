@@ -20,8 +20,8 @@
  */
 
 import { SpeedyPipeline } from '../pipeline';
-import { SpeedyPipelineNodeImageInput } from '../nodes/pipeline/image-input';
-import { SpeedyPipelineNodeImageOutput } from '../nodes/pipeline/image-output';
+import { SpeedyPipelineNodeImageSource } from '../nodes/pipeline/image-source';
+import { SpeedyPipelineNodeImageSink } from '../nodes/pipeline/image-sink';
 import { SpeedyPipelineNodeImageMultiplexer } from '../nodes/pipeline/image-multiplexer';
 
 /**
@@ -50,21 +50,21 @@ export class SpeedyPipelineFactory extends Function
     /**
      * Create an image source
      * @param {string} [name] name of the node
-     * @returns {SpeedyPipelineNodeImageInput}
+     * @returns {SpeedyPipelineNodeImageSource}
      */
     ImageSource(name = undefined)
     {
-        return new SpeedyPipelineNodeImageInput(name);
+        return new SpeedyPipelineNodeImageSource(name);
     }
 
     /**
      * Create an image sink
      * @param {string} [name] name of the node
-     * @returns {SpeedyPipelineNodeImageOutput}
+     * @returns {SpeedyPipelineNodeImageSink}
      */
     ImageSink(name = 'image')
     {
-        return new SpeedyPipelineNodeImageOutput(name);
+        return new SpeedyPipelineNodeImageSink(name);
     }
 
     /**
