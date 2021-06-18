@@ -31,28 +31,46 @@
     <body>
         <h1>Hello, Speedy!</h1>
         <p>Feature detection made easy:</p>
-        <div id="demo-frame"></div>
-        <img src="../assets/peregrine-falcon.jpg" title="Peregrine Falcon, the fastest animal on Earth. Credit: Andrew Kuhn/NPS (Arches National Park). Released under the Public Domain.">
+        <img src="../assets/peregrine-falcon.jpg" title="Peregrine Falcon, the fastest animal on Earth. Credit: Andrew Kuhn/NPS (Arches National Park). Released under the Public Domain." hidden>
         <script>
 window.onload = async function()
 {
+    /*
+
+    Our pipeline:
+
+    Image  ---> Convert to ---> FAST corner ---> Keypoint
+    Source      greyscale       detector         Sink
+
+    */
+
     // load the image
     const image = document.querySelector('img');
     const media = await Speedy.load(image);
 
-    // create a feature detector
-    const featureDetector = Speedy.FeatureDetector.Harris();
+    // create the pipeline
+    const pipeline = Speedy.Pipeline();
+    const source = Speedy.Pipeline.ImageSource();
+    const greyscale = Speedy.Filter.Greyscale();
+    const fast = Speedy.Keypoint.Detector.FAST();
+    const sink = Speedy.Pipeline.KeypointSink();
 
-    // the higher the sensitivity, the more feature points you get
-    featureDetector.sensitivity = 0.9;
+    source.media = media;
+    fast.threshold = 50;
+
+    source.output().connectTo(greyscale.input());
+    greyscale.output().connectTo(fast.input());
+    fast.output().connectTo(sink.input());
+
+    pipeline.init(source, greyscale, fast, sink);
 
     // find the feature points
-    const features = await featureDetector.detect(media);
+    const { keypoints } = await pipeline.run();
 
     // render the feature points
     const canvas = createCanvas(media.width, media.height, image.title);
     media.draw(canvas);
-    renderFeatures(canvas, features);
+    renderFeatures(canvas, keypoints);
 }
 
 function createCanvas(width, height, title)
@@ -63,8 +81,7 @@ function createCanvas(width, height, title)
     canvas.height = height;
     canvas.title = title;
 
-    document.querySelector('#demo-frame').appendChild(canvas);
-    return canvas;
+    return document.body.appendChild(canvas);
 }
 
 function renderFeatures(canvas, features, size = 1, color = 'yellow')
