@@ -23,6 +23,7 @@ import { SpeedyPipeline } from '../pipeline';
 import { SpeedyPipelineNodeImageSource } from '../nodes/pipeline/image-source';
 import { SpeedyPipelineNodeImageSink } from '../nodes/pipeline/image-sink';
 import { SpeedyPipelineNodeImageMultiplexer } from '../nodes/pipeline/image-multiplexer';
+import { SpeedyPipelineNodeKeypointSink } from '../nodes/pipeline/keypoint-sink';
 
 /**
  * Pipeline factory
@@ -75,5 +76,15 @@ export class SpeedyPipelineFactory extends Function
     ImageMultiplexer(name = undefined)
     {
         return new SpeedyPipelineNodeImageMultiplexer(name);
+    }
+
+    /**
+     * Creates a sink of keypoints
+     * @param {string} [name] name of the node
+     * @returns {SpeedyPipelineNodeKeypointSink}
+     */
+    KeypointSink(name = 'keypoints')
+    {
+        return new SpeedyPipelineNodeKeypointSink(name);
     }
 }

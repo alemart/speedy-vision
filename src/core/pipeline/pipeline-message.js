@@ -201,7 +201,7 @@ export class SpeedyPipelineMessageWithKeypoints extends SpeedyPipelineMessage
     {
         super(SpeedyPipelineMessageType.Keypoints);
 
-        /** @type {SpeedyTexture} encoded keypoints */
+        /** @type {SpeedyDrawableTexture} encoded keypoints */
         this._encodedKeypoints = null;
 
         /** @type {number} descriptor size in bytes */
@@ -216,7 +216,7 @@ export class SpeedyPipelineMessageWithKeypoints extends SpeedyPipelineMessage
 
     /**
      * Set parameters
-     * @param {SpeedyTexture} encodedKeypoints encoded keypoints
+     * @param {SpeedyDrawableTexture} encodedKeypoints encoded keypoints
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
      * @param {number} encoderLength positive integer
@@ -241,7 +241,7 @@ export class SpeedyPipelineMessageWithKeypoints extends SpeedyPipelineMessage
 
     /**
      * Encoded keypoints
-     * @returns {SpeedyTexture}
+     * @returns {SpeedyDrawableTexture}
      */
     get encodedKeypoints()
     {
