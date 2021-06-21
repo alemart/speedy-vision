@@ -15,8 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * fast.js
- * FAST corner detector
+ * harris.js
+ * Harris corner detector
  */
 
 import { SpeedyPipelineNodeMultiscaleKeypointDetector } from './detector';
@@ -25,20 +25,25 @@ import { InputPort, OutputPort } from '../../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../../../../gpu/speedy-texture';
 import { ImageFormat } from '../../../../../utils/types';
+import { SpeedySize } from '../../../../speedy-size';
 import { Utils } from '../../../../../utils/utils';
-import { IllegalOperationError } from '../../../../../utils/errors';
+import { IllegalOperationError, IllegalArgumentError } from '../../../../../utils/errors';
 import { SpeedyPromise } from '../../../../../utils/speedy-promise';
-import { MIN_KEYPOINT_SIZE, PYRAMID_MAX_LEVELS } from '../../../../../utils/globals';
 
 // Constants
-const DEFAULT_THRESHOLD = 20;
-
+const DEFAULT_QUALITY = 0.1;
+const HARRIS = {
+    1: 'harris1',
+    3: 'harris3',
+    5: 'harris5',
+    7: 'harris7',
+};
 
 
 /**
- * FAST corner detector
+ * Harris corner detector
  */
-export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMultiscaleKeypointDetector
+export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNodeMultiscaleKeypointDetector
 {
     /**
      * Constructor
@@ -53,26 +58,53 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints),
         ]);
 
-        /** @type {number} FAST threshold in [0,255] */
-        this._threshold = DEFAULT_THRESHOLD;
+        /** @type {SpeedySize} neighborhood size */
+        this._windowSize = new SpeedySize(3, 3);
+
+        /** @type {number} min corner quality in [0,1] */
+        this._quality = DEFAULT_QUALITY;
     }
 
     /**
-     * FAST threshold in [0,255]
+     * Minimum corner quality in [0,1] - this is a fraction of
+     * the largest min. eigenvalue of the autocorrelation matrix
+     * over the entire image
      * @returns {number}
      */
-    get threshold()
+    get quality()
     {
-        return this._threshold;
+        return this._quality;
     }
 
     /**
-     * FAST threshold in [0,255]
-     * @param {number} threshold
+     * Minimum corner quality in [0,1]
+     * @param {number} quality
      */
-    set threshold(threshold)
+    set quality(quality)
     {
-        this._threshold = Math.max(0, Math.min(threshold | 0, 255));
+        this._quality = Math.max(0.0, Math.min(+quality, 1.0));
+    }
+
+    /**
+     * Neighborhood size
+     * @returns {SpeedySize}
+     */
+    get windowSize()
+    {
+        return this._windowSize;
+    }
+
+    /**
+     * Neighborhood size
+     * @param {SpeedySize} windowSize
+     */
+    set windowSize(windowSize)
+    {
+        const d = windowSize.width;
+        if(!((d == windowSize.height) && (d == 1 || d == 3 || d == 5 || d == 7)))
+            throw new IllegalArgumentError(`Invalid window: ${windowSize}. Acceptable sizes: 1x1, 3x3, 5x5, 7x7`);
+
+        this._windowSize = windowSize;
     }
 
     /**
@@ -84,11 +116,13 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
     {
         const image = this.input().read().image;
         const width = image.width, height = image.height;
-        const threshold = this._threshold;
+        const quality = this._quality;
+        const windowSize = this._windowSize;
         const lodStep = Math.log2(this.scaleFactor);
         const levels = this.levels;
         const keypoints = gpu.programs.keypoints;
         const nonmax = levels > 1 ? keypoints.pyrnonmax : keypoints.nonmax;
+        const harris = keypoints[HARRIS[windowSize.width]];
 
         // validate pyramid
         if(!(levels == 1 || image.hasMipmaps()))
@@ -101,21 +135,37 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
             gpu.texturePool.allocate(),
         ];
 
-        // FAST
-        keypoints.fast9_16.outputs(width, height, tex[0], tex[1]);
-        let corners = tex[1].clear(); //tex[1].clearToColor(0, 0, 0, 0);
-        for(let i = 0; i < levels; i++)
-            corners = keypoints.fast9_16(corners, image, lodStep * i, threshold);
+        // compute corner response map
+        harris.outputs(width, height, tex[0], tex[1]);
+        keypoints.harrisDerivatives.outputs(width, height, tex[2]);
+        let corners = tex[1].clear();
+        for(let i = 0; i < levels; i++) {
+            const lod = lodStep * i;
+            const derivatives = keypoints.harrisDerivatives(image, lod);
+            corners = harris(corners, derivatives, lod);
+        }
 
         // non-maximum suppression
         const suppressedCorners = (nonmax
             .outputs(width, height, tex[2])
         )(corners, lodStep);
 
+        // find the maximum corner response over the entire image
+        keypoints.harrisScoreFindMax.outputs(width, height, tex[0], tex[1]);
+        const npasses = Math.ceil(Math.log2(Math.max(width, height)));
+        let maxScore = suppressedCorners;
+        for(let j = 0; j < npasses; j++)
+            maxScore = keypoints.harrisScoreFindMax(maxScore, j);
+
+        // discard corners below a quality level
+        const niceCorners = (keypoints.harrisScoreCutoff
+            .outputs(width, height, maxScore == tex[0] ? tex[1] : tex[0])
+        )(suppressedCorners, maxScore, quality);
+
         // convert scores to 8 bit
         const finalCorners = (keypoints.fastScoreTo8bits
-            .outputs(width, height, tex[0])
-        )(suppressedCorners);
+            .outputs(width, height, tex[2])
+        )(niceCorners);
 
         // encode keypoints
         const encodedKeypoints = this._encodeKeypoints(gpu, finalCorners, this._outputTexture);

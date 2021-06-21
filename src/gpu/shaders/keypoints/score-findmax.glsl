@@ -37,7 +37,7 @@ uniform int iterationNumber; // 0, 1, 2, 3...
 void main()
 {
     ivec2 thread = threadLocation();
-    ivec2 last = outputSize() - ivec2(1);
+    ivec2 bounds = outputSize();
 
     int jump = (1 << iterationNumber);
     int clusterLength = jump << 1;
@@ -49,9 +49,9 @@ void main()
     ivec2 next3 = clusterPos + ((thread - clusterPos + ivec2(jump, jump)) & clusterMask);
 
     vec4 p0 = texelFetch(corners, thread, 0);
-    vec4 p1 = texelFetch(corners, min(next1, last), 0);
-    vec4 p2 = texelFetch(corners, min(next2, last), 0);
-    vec4 p3 = texelFetch(corners, min(next3, last), 0);
+    vec4 p1 = texelFetch(corners, next1 % bounds, 0);
+    vec4 p2 = texelFetch(corners, next2 % bounds, 0);
+    vec4 p3 = texelFetch(corners, next3 % bounds, 0);
 
     float s0 = decodeFloat16(p0.rb);
     float s1 = decodeFloat16(p1.rb);

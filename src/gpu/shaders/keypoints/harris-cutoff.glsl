@@ -27,7 +27,8 @@ uniform float quality; // in [0,1]
 
 void main()
 {
-    float score = decodeFloat16(threadPixel(corners).rb);
+    vec4 pixel = threadPixel(corners);
+    float score = decodeFloat16(pixel.rb);
     float maxval = decodeFloat16(threadPixel(maxScore).rb);
 
     // compute threshold

@@ -15,8 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * keypoint-detector.js
- * Abstract keypoint detector
+ * detector.js
+ * Abstract keypoint detectors
  */
 
 import { SpeedyPipelineNode } from '../../../pipeline-node';
@@ -25,15 +25,16 @@ import { SpeedyPipelinePortBuilder } from '../../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../../gpu/speedy-gpu';
 import { SpeedyTexture, SpeedyDrawableTexture } from '../../../../../gpu/speedy-texture';
 import { Utils } from '../../../../../utils/utils';
-import { PixelComponent } from '../../../../../utils/types';
 import { SpeedyPromise } from '../../../../../utils/speedy-promise';
-import { MIN_KEYPOINT_SIZE } from '../../../../../utils/globals';
+import { MIN_KEYPOINT_SIZE, PYRAMID_MAX_LEVELS } from '../../../../../utils/globals';
 
 // Constants
 const ENCODER_PASSES = 8; // number of passes of the keypoint encoder: directly impacts performance
 const LONG_SKIP_OFFSET_PASSES = 2; // number of passes of the long skip offsets shader
 const MIN_CAPACITY = 16; // minimum number of keypoints we can encode
 const MAX_CAPACITY = 8192; // maximum number of keypoints we can encode
+const DEFAULT_CAPACITY = MAX_CAPACITY; // default capacity of the encoder
+const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // sqrt(2)
 
 /**
  * Abstract keypoint detector
@@ -51,7 +52,7 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         super(name, portBuilders);
 
         /** @type {number} encoder capacity */
-        this._capacity = MAX_CAPACITY;
+        this._capacity = DEFAULT_CAPACITY;
     }
 
     /**
@@ -152,5 +153,64 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         const numberOfPixels = encoderCapacity * pixelsPerKeypoint;
 
         return Math.max(1, Math.ceil(Math.sqrt(numberOfPixels)));
+    }
+}
+
+/**
+ * Abstract scale-space keypoint detector
+ * @abstract
+ */
+export class SpeedyPipelineNodeMultiscaleKeypointDetector extends SpeedyPipelineNodeKeypointDetector
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
+     */
+    constructor(name = undefined, portBuilders = undefined)
+    {
+        super(name, portBuilders);
+
+        /** @type {number} number of pyramid levels */
+        this._levels = 1;
+
+        /** @type {number} scale factor between two pyramid levels */
+        this._scaleFactor = DEFAULT_SCALE_FACTOR;
+    }
+
+    /**
+     * Number of pyramid levels
+     * @returns {number}
+     */
+    get levels()
+    {
+        return this._levels;
+    }
+
+    /**
+     * Number of pyramid levels
+     * @param {number} levels
+     */
+    set levels(levels)
+    {
+        this._levels = Math.max(1, Math.min(levels | 0, PYRAMID_MAX_LEVELS));
+    }
+
+    /**
+     * Scale factor between two pyramid levels
+     * @returns {number}
+     */
+    get scaleFactor()
+    {
+        return this._scaleFactor;
+    }
+
+    /**
+     * Scale factor between two pyramid levels
+     * @param {number} scaleFactor should be greater than 1
+     */
+    set scaleFactor(scaleFactor)
+    {
+        this._scaleFactor = Math.max(1.0, Math.min(+scaleFactor, 2.0));
     }
 }

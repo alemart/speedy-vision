@@ -95,6 +95,30 @@ export class SpeedyTexture
     }
 
     /**
+     * Clear the texture
+     * @returns {SpeedyTexture} this texture
+     */
+    clear()
+    {
+        const gl = this._gl;
+
+        // context loss?
+        if(gl.isContextLost())
+            return this;
+
+        // clear texture data
+        gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, this._width, this._height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
+        // no mipmaps
+        this.discardMipmaps();
+
+        // done!
+        return this;
+    }
+
+    /**
      * Generates an image pyramid
      * @param {SpeedyGPU} gpu
      * @param {boolean} [gaussian] should we compute a Gaussian pyramid? Recommended!
@@ -109,15 +133,18 @@ export class SpeedyTexture
         // let the hardware compute the all levels of the pyramid, up to 1x1
         // this might be a simple box filter...
         SpeedyTexture._generateDefaultMipmaps(this._gl, this._glTexture);
-        this._hasMipmaps = true;
 
         // compute a Gaussian pyramid for better results
         if(gaussian) {
-            const tex = [ gpu.texturePool.allocate(), gpu.texturePool.allocate(), gpu.texturePool.allocate() ];
             let width = this.width, height = this.height;
             let halfWidth = 0, halfHeight = 0;
-            let pyramid = gpu.programs.pyramids(0);
             let layer = this;
+            const pyramid = gpu.programs.pyramids(0);
+            const tex = [
+                gpu.texturePool.allocate(),
+                gpu.texturePool.allocate(),
+                gpu.texturePool.allocate()
+            ];
 
             // apply successive reduce operations
             for(let level = 1; level < PYRAMID_MAX_LEVELS; level++) {
@@ -149,30 +176,7 @@ export class SpeedyTexture
         }
 
         // done!
-        return this;
-    }
-
-    /**
-     * Clear the texture
-     * @returns {SpeedyTexture} this texture
-     */
-    clear()
-    {
-        const gl = this._gl;
-
-        // context loss?
-        if(gl.isContextLost())
-            return this;
-
-        // clear texture data
-        gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, this._width, this._height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-        gl.bindTexture(gl.TEXTURE_2D, null);
-
-        // no mipmaps
-        this.discardMipmaps();
-
-        // done!
+        this._hasMipmaps = true;
         return this;
     }
 

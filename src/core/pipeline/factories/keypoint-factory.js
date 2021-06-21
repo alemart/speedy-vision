@@ -22,6 +22,7 @@
 import { SpeedyNamespace } from '../../speedy-namespace';
 import { SpeedyPipelineNodeKeypointSink } from '../nodes/keypoints/sink';
 import { SpeedyPipelineNodeFASTKeypointDetector } from '../nodes/keypoints/detectors/fast';
+import { SpeedyPipelineNodeHarrisKeypointDetector } from '../nodes/keypoints/detectors/harris';
 
 /**
  * Keypoint detectors
@@ -36,6 +37,16 @@ class SpeedyPipelineKeypointDetectorFactory extends SpeedyNamespace
     static FAST(name = undefined)
     {
         return new SpeedyPipelineNodeFASTKeypointDetector(name);
+    }
+
+    /**
+     * Harris corner detector
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeFASTKeypointDetector}
+     */
+    static Harris(name = undefined)
+    {
+        return new SpeedyPipelineNodeHarrisKeypointDetector(name);
     }
 }
 

@@ -32,9 +32,29 @@ const fast9_16 = importShader('keypoints/fast.glsl')
                 .withDefines({ 'FAST_TYPE': 916 })
                 .withArguments('corners', 'pyramid', 'lod', 'threshold');
 
-const fastScore8bits = importShader('keypoints/score-8bits.glsl')
-                      .withDefines({ 'METHOD': 0 })
-                      .withArguments('corners');
+const fastScoreTo8bits = importShader('keypoints/score-8bits.glsl')
+                        .withDefines({ 'METHOD': 0 })
+                        .withArguments('corners');
+
+// Harris corner detector
+const harris = [1, 3, 5, 7].reduce((obj, win) => ((obj[win] =
+                   importShader('keypoints/harris.glsl')
+                  .withDefines({ 'WINDOW_SIZE': win })
+                  .withArguments('corners', 'derivatives', 'lod')
+               ), obj), {});
+
+const harrisDerivatives = importShader('keypoints/harris-derivatives.glsl')
+                         .withArguments('pyramid', 'lod');
+
+const harrisScoreFindMax = importShader('keypoints/score-findmax.glsl')
+                          .withArguments('corners', 'iterationNumber');
+
+const harrisScoreCutoff = importShader('keypoints/harris-cutoff.glsl')
+                         .withArguments('corners', 'maxScore', 'quality');
+
+const harrisScoreTo8bits = importShader('keypoints/score-8bits.glsl')
+                          .withDefines({ 'METHOD': 1 })
+                          .withArguments('corners');
 
 // Non-maximum suppression
 const nonMaxSuppression = importShader('keypoints/nonmax-suppression.glsl')
@@ -85,7 +105,7 @@ const multiscaleFast = importShader('keypoints/fast/multiscale-fast.glsl')
                       .withArguments('pyramid', 'threshold', 'numberOfLayers', 'lodStep');
 
 // encode FAST score in an 8-bit component
-const encodeFastScore = fastScore8bits;
+const encodeFastScore = fastScoreTo8bits;
 
 
 
@@ -99,13 +119,13 @@ const multiscaleHarris = importShader('keypoints/harris/multiscale-harris.glsl')
                         .withArguments('pyramid', 'windowSize', 'numberOfLayers', 'lodStep', 'sobelDerivatives');
 
 // discard corners below a specified quality level
-const harrisCutoff = importShader('keypoints/harris-cutoff.glsl').withArguments('corners', 'maxScore', 'quality');
+const harrisCutoff = harrisScoreCutoff;
 
 // encode harris score in an 8-bit component
 const encodeHarrisScore = importShader('keypoints/harris/encode-harris-score.glsl').withArguments('image');
 
 // find the maximum harris score in an image
-const maxHarrisScore = importShader('keypoints/score-findmax.glsl').withArguments('corners', 'iterationNumber');
+const maxHarrisScore = harrisScoreFindMax;
 
 // Sobel derivatives
 const multiscaleSobel = importShader('keypoints/harris/multiscale-sobel.glsl').withArguments('pyramid', 'lod');
@@ -162,14 +182,39 @@ export class GPUKeypoints extends SpeedyProgramGroup
     {
         super(gpu, width, height);
         this
+            //
             // FAST corner detector
+            //
             .declare('fast9_16', fast9_16, {
                 ...this.program.usesPingpongRendering()
             })
+            .declare('fastScoreTo8bits', fastScoreTo8bits)
 
-            .declare('fastScore8bits', fastScore8bits)
+            //
+            // Harris corner detector
+            //
+            .declare('harris1', harris[1], {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('harris3', harris[3], {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('harris5', harris[5], {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('harris7', harris[7], {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('harrisDerivatives', harrisDerivatives)
+            .declare('harrisScoreFindMax', harrisScoreFindMax, {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('harrisScoreCutoff', harrisScoreCutoff)
+            .declare('harrisScoreTo8bits', harrisScoreTo8bits)
 
+            //
             // Non-maximum suppression
+            //
             .declare('nonmax', nonMaxSuppression)
             .declare('pyrnonmax', multiscaleNonMaxSuppression)
 
