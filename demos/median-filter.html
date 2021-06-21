@@ -75,9 +75,9 @@ window.onload = async function()
 
     // Setup the pipeline
     const pipeline = Speedy.Pipeline();
-    const source = Speedy.Pipeline.ImageSource();
-    const sink1 = Speedy.Pipeline.ImageSink('median');
-    const sink2 = Speedy.Pipeline.ImageSink('greyscale');
+    const source = Speedy.Image.Source();
+    const sink1 = Speedy.Image.Sink('median');
+    const sink2 = Speedy.Image.Sink('greyscale');
     const greyscale = Speedy.Filter.Greyscale();
     const median = Speedy.Filter.MedianBlur();
 

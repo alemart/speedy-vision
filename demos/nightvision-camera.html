@@ -103,9 +103,9 @@ window.onload = async function()
 
     // create the pipeline
     const pipeline = Speedy.Pipeline();
-    const source = Speedy.Pipeline.ImageSource();
-    const sink = Speedy.Pipeline.ImageSink();
-    const mux = Speedy.Pipeline.ImageMultiplexer();
+    const source = Speedy.Image.Source();
+    const sink = Speedy.Image.Sink();
+    const mux = Speedy.Image.Multiplexer();
     const greyscale = Speedy.Filter.Greyscale();
     const nightvision = Speedy.Filter.Nightvision();
 

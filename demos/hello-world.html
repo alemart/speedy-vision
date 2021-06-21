@@ -50,10 +50,10 @@ window.onload = async function()
 
     // create the pipeline
     const pipeline = Speedy.Pipeline();
-    const source = Speedy.Pipeline.ImageSource();
+    const source = Speedy.Image.Source();
     const greyscale = Speedy.Filter.Greyscale();
     const fast = Speedy.Keypoint.Detector.FAST();
-    const sink = Speedy.Pipeline.KeypointSink();
+    const sink = Speedy.Keypoint.Sink();
 
     source.media = media;
     fast.threshold = 50;

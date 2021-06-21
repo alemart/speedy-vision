@@ -49,7 +49,7 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name = undefined)
+    constructor(name = 'keypoints')
     {
         super(name, [
             InputPort().expects(SpeedyPipelineMessageType.Keypoints)

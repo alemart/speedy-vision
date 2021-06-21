@@ -55,8 +55,8 @@ window.onload = async function()
 
     // Setup the pipeline
     const pipeline = Speedy.Pipeline(); // create the pipeline and the nodes
-    const source = Speedy.Pipeline.ImageSource();
-    const sink = Speedy.Pipeline.ImageSink();
+    const source = Speedy.Image.Source();
+    const sink = Speedy.Image.Sink();
     const greyscale = Speedy.Filter.Greyscale();
 
     source.media = media; // set the media source

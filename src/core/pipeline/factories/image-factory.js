@@ -15,45 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * pipeline-factory.js
- * Pipeline factory
+ * image-factory.js
+ * Image-related nodes
  */
 
-import { SpeedyPipeline } from '../pipeline';
-import { SpeedyPipelineNodeImageSource } from '../nodes/pipeline/image-source';
-import { SpeedyPipelineNodeImageSink } from '../nodes/pipeline/image-sink';
-import { SpeedyPipelineNodeImageMultiplexer } from '../nodes/pipeline/image-multiplexer';
-import { SpeedyPipelineNodeKeypointSink } from '../nodes/pipeline/keypoint-sink';
+import { SpeedyNamespace } from '../../speedy-namespace';
+import { SpeedyPipelineNodeImageSource } from '../nodes/images/source';
+import { SpeedyPipelineNodeImageSink } from '../nodes/images/sink';
+import { SpeedyPipelineNodeImageMultiplexer } from '../nodes/images/multiplexer';
 
 /**
- * Pipeline factory
+ * Image nodes
  */
-export class SpeedyPipelineFactory extends Function
+export class SpeedyPipelineImageFactory extends SpeedyNamespace
 {
-    /**
-     * Constructor
-     */
-    constructor()
-    {
-        super('return this._create();');
-        return this.bind(this);
-    }
-
-    /**
-     * Create a new pipeline
-     * @returns {SpeedyPipeline}
-     */
-    _create()
-    {
-        return new SpeedyPipeline();
-    }
-
     /**
      * Create an image source
      * @param {string} [name] name of the node
      * @returns {SpeedyPipelineNodeImageSource}
      */
-    ImageSource(name = undefined)
+    static Source(name = undefined)
     {
         return new SpeedyPipelineNodeImageSource(name);
     }
@@ -63,7 +44,7 @@ export class SpeedyPipelineFactory extends Function
      * @param {string} [name] name of the node
      * @returns {SpeedyPipelineNodeImageSink}
      */
-    ImageSink(name = 'image')
+    static Sink(name = undefined)
     {
         return new SpeedyPipelineNodeImageSink(name);
     }
@@ -73,18 +54,8 @@ export class SpeedyPipelineFactory extends Function
      * @param {string} [name] name of the node
      * @returns {SpeedyPipelineNodeImageMultiplexer}
      */
-    ImageMultiplexer(name = undefined)
+    static Multiplexer(name = undefined)
     {
         return new SpeedyPipelineNodeImageMultiplexer(name);
-    }
-
-    /**
-     * Creates a sink of keypoints
-     * @param {string} [name] name of the node
-     * @returns {SpeedyPipelineNodeKeypointSink}
-     */
-    KeypointSink(name = 'keypoints')
-    {
-        return new SpeedyPipelineNodeKeypointSink(name);
     }
 }

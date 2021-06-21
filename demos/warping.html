@@ -145,8 +145,8 @@ window.onload = async function()
 
     // create the pipeline
     const pipeline = Speedy.Pipeline();
-    const source = Speedy.Pipeline.ImageSource();
-    const sink = Speedy.Pipeline.ImageSink();
+    const source = Speedy.Image.Source();
+    const sink = Speedy.Image.Sink();
     const perspective = Speedy.Transform.PerspectiveWarp();
 
     source.media = media;

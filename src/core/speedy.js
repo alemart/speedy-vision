@@ -30,7 +30,8 @@ import { SpeedyPoint2 } from './math/speedy-point';
 import { SpeedySize } from './math/speedy-size';
 import { SpeedyMatrixExprFactory } from './math/matrix-expression-factory';
 import { SpeedyPromise } from '../utils/speedy-promise';
-import { SpeedyPipelineFactory } from './pipeline/factories/pipeline-factory';
+import { SpeedyPipeline } from './pipeline/pipeline';
+import { SpeedyPipelineImageFactory } from './pipeline/factories/image-factory';
 import { SpeedyPipelineFilterFactory } from './pipeline/factories/filter-factory';
 import { SpeedyPipelineTransformFactory } from './pipeline/factories/transform-factory';
 import { SpeedyPipelineKeypointFactory } from './pipeline/factories/keypoint-factory';
@@ -39,7 +40,6 @@ import { LITTLE_ENDIAN } from '../utils/globals';
 
 // Constants
 const matrixExprFactory = new SpeedyMatrixExprFactory();
-const pipelineFactory = new SpeedyPipelineFactory();
 
 /**
  * Speedy's main class
@@ -164,12 +164,21 @@ export class Speedy
     }
 
     /**
-     * Speedy Pipeline
-     * @returns {SpeedyPipelineFactory}
+     * Create a new Pipeline
+     * @returns {SpeedyPipeline}
      */
-    static get Pipeline()
+    static Pipeline()
     {
-        return pipelineFactory;
+        return new SpeedyPipeline();
+    }
+
+    /**
+     * Image-related nodes
+     * @returns {Function}
+     */
+    static get Image()
+    {
+        return SpeedyPipelineImageFactory;
     }
 
     /**

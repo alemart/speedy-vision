@@ -195,8 +195,8 @@ window.onload = async function()
 
     // create a pipeline
     const pipeline = Speedy.Pipeline();
-    const source = Speedy.Pipeline.ImageSource();
-    const sink = Speedy.Pipeline.ImageSink();
+    const source = Speedy.Image.Source();
+    const sink = Speedy.Image.Sink();
     const convolution = Speedy.Filter.Convolution();
 
     source.media = media;

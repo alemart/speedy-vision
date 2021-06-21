@@ -43,8 +43,8 @@ describe('SpeedyPipeline', function() {
     });
 
     it('does nothing if the pipeline is empty', async function() {
-        const source = Speedy.Pipeline.ImageSource();
-        const sink = Speedy.Pipeline.ImageSink();
+        const source = Speedy.Image.Source();
+        const sink = Speedy.Image.Sink();
 
         source.media = media;
         source.output().connectTo(sink.input());
@@ -65,8 +65,8 @@ describe('SpeedyPipeline', function() {
     });
 
     it('converts to greyscale', async function() {
-        const source = Speedy.Pipeline.ImageSource();
-        const sink = Speedy.Pipeline.ImageSink();
+        const source = Speedy.Image.Source();
+        const sink = Speedy.Image.Sink();
         const greyscale = Speedy.Filter.Greyscale();
 
         source.media = media;
@@ -104,8 +104,8 @@ describe('SpeedyPipeline', function() {
             print();
 
             for(const ksize of ksizes) {
-                const source = Speedy.Pipeline.ImageSource();
-                const sink = Speedy.Pipeline.ImageSink('blurred');
+                const source = Speedy.Image.Source();
+                const sink = Speedy.Image.Sink('blurred');
 
                 source.media = media;
                 blur.kernelSize = Speedy.Size(ksize, ksize);
@@ -143,8 +143,8 @@ describe('SpeedyPipeline', function() {
         });
 
         it('convolves with identity kernels', async function() {
-            const source = Speedy.Pipeline.ImageSource();
-            const sink = Speedy.Pipeline.ImageSink();
+            const source = Speedy.Image.Source();
+            const sink = Speedy.Image.Sink();
             const convolution = Speedy.Filter.Convolution();
 
             const I3 = Speedy.Matrix(3, 3, [
@@ -217,8 +217,8 @@ describe('SpeedyPipeline', function() {
         });
 
         it('brightens an image', async function() {
-            const source = Speedy.Pipeline.ImageSource();
-            const sink = Speedy.Pipeline.ImageSink();
+            const source = Speedy.Image.Source();
+            const sink = Speedy.Image.Sink();
             const convolution = Speedy.Filter.Convolution();
 
             source.media = media;
@@ -249,8 +249,8 @@ describe('SpeedyPipeline', function() {
         });
 
         it('darkens an image', async function() {
-            const source = Speedy.Pipeline.ImageSource();
-            const sink = Speedy.Pipeline.ImageSink();
+            const source = Speedy.Image.Source();
+            const sink = Speedy.Image.Sink();
             const convolution = Speedy.Filter.Convolution();
 
             source.media = media;
@@ -281,8 +281,8 @@ describe('SpeedyPipeline', function() {
         });
 
         it('accepts chains of convolutions', async function() {
-            const source = Speedy.Pipeline.ImageSource();
-            const sink = Speedy.Pipeline.ImageSink();
+            const source = Speedy.Image.Source();
+            const sink = Speedy.Image.Sink();
             const conv1 = Speedy.Filter.Convolution();
             const conv2 = Speedy.Filter.Convolution();
             const conv3 = Speedy.Filter.Convolution();
@@ -324,8 +324,8 @@ describe('SpeedyPipeline', function() {
         });
 
         it('accepts chains of convolutions of different sizes', async function() {
-            const source = Speedy.Pipeline.ImageSource();
-            const sink = Speedy.Pipeline.ImageSink();
+            const source = Speedy.Image.Source();
+            const sink = Speedy.Image.Sink();
             const conv1 = Speedy.Filter.Convolution();
             const conv2 = Speedy.Filter.Convolution();
             const conv3 = Speedy.Filter.Convolution();
@@ -376,9 +376,9 @@ describe('SpeedyPipeline', function() {
             const sobelX = await Speedy.load(await loadImage('square-sobel-x.png'));
             const sobelY = await Speedy.load(await loadImage('square-sobel-y.png'));
 
-            const source = Speedy.Pipeline.ImageSource();
-            const sink1 = Speedy.Pipeline.ImageSink('mySobelX');
-            const sink2 = Speedy.Pipeline.ImageSink('mySobelY');
+            const source = Speedy.Image.Source();
+            const sink1 = Speedy.Image.Sink('mySobelX');
+            const sink2 = Speedy.Image.Sink('mySobelY');
             const conv1 = Speedy.Filter.Convolution();
             const conv2 = Speedy.Filter.Convolution();
 
@@ -429,8 +429,8 @@ describe('SpeedyPipeline', function() {
         it('captures outlines', async function() {
             const outline = await Speedy.load(await loadImage('square-outline.png'));
 
-            const source = Speedy.Pipeline.ImageSource();
-            const sink = Speedy.Pipeline.ImageSink();
+            const source = Speedy.Image.Source();
+            const sink = Speedy.Image.Sink();
             const conv = Speedy.Filter.Convolution();
 
             source.media = square;
@@ -461,8 +461,8 @@ describe('SpeedyPipeline', function() {
     });
 
     it('recovers from WebGL context loss', async function() {
-        const source = Speedy.Pipeline.ImageSource();
-        const sink = Speedy.Pipeline.ImageSink();
+        const source = Speedy.Image.Source();
+        const sink = Speedy.Image.Sink();
         const conv = Speedy.Filter.Convolution();
         const blur = Speedy.Filter.SimpleBlur();
 

@@ -166,8 +166,8 @@ const media = await Speedy.load(img);
 
 // Create the pipeline and the nodes
 const pipeline = Speedy.Pipeline();
-const source = Speedy.Pipeline.ImageSource();
-const sink = Speedy.Pipeline.ImageSink();
+const source = Speedy.Image.Source();
+const sink = Speedy.Image.Sink();
 const greyscale = Speedy.Filter.Greyscale();
 
 // Set the media source
@@ -386,8 +386,8 @@ The pipeline itself.
 
 ```js
 const pipeline = Speedy.Pipeline(); // create the pipeline and the nodes
-const source = Speedy.Pipeline.ImageSource();
-const sink = Speedy.Pipeline.ImageSink();
+const source = Speedy.Image.Source();
+const sink = Speedy.Image.Sink();
 const greyscale = Speedy.Filter.Greyscale();
 
 source.media = media; // set the media source
@@ -500,9 +500,9 @@ The node to which `this` port belongs.
 
 #### Basic nodes
 
-##### Speedy.Pipeline.ImageSource
+##### Speedy.Image.Source
 
-`Speedy.Pipeline.ImageSource(name?: string): SpeedyPipelineNodeImageInput`
+`Speedy.Image.Source(name?: string): SpeedyPipelineNodeImageInput`
 
 Creates an image source with the specified name. If the name is not specified, Speedy will automatically generate a name for you.
 
@@ -516,9 +516,9 @@ Creates an image source with the specified name. If the name is not specified, S
 |-----------|-----------|-------------|
 | `"out"`   | Image     | An image corresponding to the `media` of this node. |
 
-##### Speedy.Pipeline.ImageSink
+##### Speedy.Image.Sink
 
-`Speedy.Pipeline.ImageSink(name?: string): SpeedyPipelineNodeImageOutput`
+`Speedy.Image.Sink(name?: string): SpeedyPipelineNodeImageOutput`
 
 Creates an image sink with the specified name. If the name is not specified, Speedy will use the name `"image"`.
 
@@ -528,9 +528,13 @@ Creates an image sink with the specified name. If the name is not specified, Spe
 |-----------|-----------|-------------|
 | `"in"`    | Image     | An image to be exported from the pipeline. |
 
-##### Speedy.Pipeline.ImageMultiplexer
+### Image processing
 
-`Speedy.Pipeline.ImageMultiplexer(name?: string): SpeedyPipelineNodeImageMultiplexer`
+#### Basic tools
+
+##### Speedy.Image.Multiplexer
+
+`Speedy.Image.Multiplexer(name?: string): SpeedyPipelineNodeImageMultiplexer`
 
 Creates an image multiplexer. It receives two images as input and outputs one of the them.
 
@@ -545,8 +549,6 @@ Creates an image multiplexer. It receives two images as input and outputs one of
 | `"in0"`   | Image     | First image. |
 | `"in1"`   | Image     | Second image. |
 | `"out"`   | Image     | Either the first or the second image, depending on the value of `port`. |
-
-### Image processing
 
 #### Image filters
 

@@ -65,9 +65,9 @@ window.onload = async function()
 
     // setup the pipeline
     const pipeline = Speedy.Pipeline();
-    const source = Speedy.Pipeline.ImageSource();
-    const sink1 = Speedy.Pipeline.ImageSink('grey');
-    const sink2 = Speedy.Pipeline.ImageSink('norm');
+    const source = Speedy.Image.Source();
+    const sink1 = Speedy.Image.Sink('grey');
+    const sink2 = Speedy.Image.Sink('norm');
     const greyscale = Speedy.Filter.Greyscale();
     const normalize = Speedy.Filter.Normalize();
 

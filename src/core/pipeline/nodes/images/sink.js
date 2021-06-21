@@ -39,7 +39,7 @@ export class SpeedyPipelineNodeImageSink extends SpeedyPipelineSinkNode
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name = undefined)
+    constructor(name = 'image')
     {
         super(name, [
             InputPort().expects(SpeedyPipelineMessageType.Image)
