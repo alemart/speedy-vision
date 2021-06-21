@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-06-18T02:06:29.202Z
+ * Date: 2021-06-21T23:53:35.114Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -2390,10 +2390,10 @@ class LKFeatureTrackingAlgorithm extends _feature_tracking_algorithm__WEBPACK_IM
 
 /***/ }),
 
-/***/ "./src/core/math/bound-matrix-operation.js":
-/*!*************************************************!*\
-  !*** ./src/core/math/bound-matrix-operation.js ***!
-  \*************************************************/
+/***/ "./src/core/matrix/bound-matrix-operation.js":
+/*!***************************************************!*\
+  !*** ./src/core/matrix/bound-matrix-operation.js ***!
+  \***************************************************/
 /*! exports provided: BoundMatrixOperation, BoundMatrixOperationTree */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -2401,9 +2401,9 @@ class LKFeatureTrackingAlgorithm extends _feature_tracking_algorithm__WEBPACK_IM
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "BoundMatrixOperation", function() { return BoundMatrixOperation; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "BoundMatrixOperationTree", function() { return BoundMatrixOperationTree; });
-/* harmony import */ var _matrix_operations__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix-operations */ "./src/core/math/matrix-operations.js");
+/* harmony import */ var _matrix_operations__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix-operations */ "./src/core/matrix/matrix-operations.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix */ "./src/core/math/matrix.js");
+/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix */ "./src/core/matrix/matrix.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
@@ -2580,10 +2580,10 @@ class BoundMatrixOperationTree
 
 /***/ }),
 
-/***/ "./src/core/math/linalg/basic.js":
-/*!***************************************!*\
-  !*** ./src/core/math/linalg/basic.js ***!
-  \***************************************/
+/***/ "./src/core/matrix/linalg/basic.js":
+/*!*****************************************!*\
+  !*** ./src/core/matrix/linalg/basic.js ***!
+  \*****************************************/
 /*! exports provided: nop, fill, copy, transpose, add, subtract, multiply, multiplylt, multiplyrt, multiply3, multiplyvec, scale, compmult, outer, addInPlace */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -2976,10 +2976,10 @@ function addInPlace(header, output, inputs)
 
 /***/ }),
 
-/***/ "./src/core/math/linalg/functional.js":
-/*!********************************************!*\
-  !*** ./src/core/math/linalg/functional.js ***!
-  \********************************************/
+/***/ "./src/core/matrix/linalg/functional.js":
+/*!**********************************************!*\
+  !*** ./src/core/matrix/linalg/functional.js ***!
+  \**********************************************/
 /*! exports provided: map, reduce, sort */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -3231,10 +3231,10 @@ function sort(header, output, inputs)
 
 /***/ }),
 
-/***/ "./src/core/math/linalg/homography.js":
-/*!********************************************!*\
-  !*** ./src/core/math/linalg/homography.js ***!
-  \********************************************/
+/***/ "./src/core/matrix/linalg/homography.js":
+/*!**********************************************!*\
+  !*** ./src/core/matrix/linalg/homography.js ***!
+  \**********************************************/
 /*! exports provided: homography4p, homographynorm4p, homographydlt, homographynormdlt, dltnorm2d */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -3848,10 +3848,10 @@ function dltnorm2d(header, output, inputs)
 
 /***/ }),
 
-/***/ "./src/core/math/linalg/inverse.js":
-/*!*****************************************!*\
-  !*** ./src/core/math/linalg/inverse.js ***!
-  \*****************************************/
+/***/ "./src/core/matrix/linalg/inverse.js":
+/*!*******************************************!*\
+  !*** ./src/core/matrix/linalg/inverse.js ***!
+  \*******************************************/
 /*! exports provided: inverse1, inverse2, inverse3 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -3968,10 +3968,10 @@ function inverse3(header, output, inputs)
 
 /***/ }),
 
-/***/ "./src/core/math/linalg/linalg.js":
-/*!****************************************!*\
-  !*** ./src/core/math/linalg/linalg.js ***!
-  \****************************************/
+/***/ "./src/core/matrix/linalg/linalg.js":
+/*!******************************************!*\
+  !*** ./src/core/matrix/linalg/linalg.js ***!
+  \******************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -3996,18 +3996,18 @@ function inverse3(header, output, inputs)
  * Plug & Play Linear algebra methods
  */
 
-const { MatrixType } = __webpack_require__(/*! ../matrix-type */ "./src/core/math/matrix-type.js");
+const { MatrixType } = __webpack_require__(/*! ../matrix-type */ "./src/core/matrix/matrix-type.js");
 const LinAlgLib = {
-    ...__webpack_require__(/*! ./basic */ "./src/core/math/linalg/basic.js"),
-    ...__webpack_require__(/*! ./inverse */ "./src/core/math/linalg/inverse.js"),
-    ...__webpack_require__(/*! ./solve */ "./src/core/math/linalg/solve.js"),
-    ...__webpack_require__(/*! ./qr */ "./src/core/math/linalg/qr.js"),
-    ...__webpack_require__(/*! ./sequence */ "./src/core/math/linalg/sequence.js"),
-    ...__webpack_require__(/*! ./functional */ "./src/core/math/linalg/functional.js"),
-    ...__webpack_require__(/*! ./homography */ "./src/core/math/linalg/homography.js"),
-    ...__webpack_require__(/*! ./transform */ "./src/core/math/linalg/transform.js"),
-    ...__webpack_require__(/*! ./ransac */ "./src/core/math/linalg/ransac.js"),
-    ...__webpack_require__(/*! ./utils */ "./src/core/math/linalg/utils.js"),
+    ...__webpack_require__(/*! ./basic */ "./src/core/matrix/linalg/basic.js"),
+    ...__webpack_require__(/*! ./inverse */ "./src/core/matrix/linalg/inverse.js"),
+    ...__webpack_require__(/*! ./solve */ "./src/core/matrix/linalg/solve.js"),
+    ...__webpack_require__(/*! ./qr */ "./src/core/matrix/linalg/qr.js"),
+    ...__webpack_require__(/*! ./sequence */ "./src/core/matrix/linalg/sequence.js"),
+    ...__webpack_require__(/*! ./functional */ "./src/core/matrix/linalg/functional.js"),
+    ...__webpack_require__(/*! ./homography */ "./src/core/matrix/linalg/homography.js"),
+    ...__webpack_require__(/*! ./transform */ "./src/core/matrix/linalg/transform.js"),
+    ...__webpack_require__(/*! ./ransac */ "./src/core/matrix/linalg/ransac.js"),
+    ...__webpack_require__(/*! ./utils */ "./src/core/matrix/linalg/utils.js"),
 };
 
 /**
@@ -4109,10 +4109,10 @@ module.exports = { LinAlg };
 
 /***/ }),
 
-/***/ "./src/core/math/linalg/qr.js":
-/*!************************************!*\
-  !*** ./src/core/math/linalg/qr.js ***!
-  \************************************/
+/***/ "./src/core/matrix/linalg/qr.js":
+/*!**************************************!*\
+  !*** ./src/core/matrix/linalg/qr.js ***!
+  \**************************************/
 /*! exports provided: qr */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -4415,10 +4415,10 @@ function qr(header, output, inputs)
 
 /***/ }),
 
-/***/ "./src/core/math/linalg/ransac.js":
-/*!****************************************!*\
-  !*** ./src/core/math/linalg/ransac.js ***!
-  \****************************************/
+/***/ "./src/core/matrix/linalg/ransac.js":
+/*!******************************************!*\
+  !*** ./src/core/matrix/linalg/ransac.js ***!
+  \******************************************/
 /*! exports provided: pransacHomography */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -4647,10 +4647,10 @@ function pransacHomography(header, output, inputs)
 
 /***/ }),
 
-/***/ "./src/core/math/linalg/sequence.js":
-/*!******************************************!*\
-  !*** ./src/core/math/linalg/sequence.js ***!
-  \******************************************/
+/***/ "./src/core/matrix/linalg/sequence.js":
+/*!********************************************!*\
+  !*** ./src/core/matrix/linalg/sequence.js ***!
+  \********************************************/
 /*! exports provided: sequence */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -4691,10 +4691,10 @@ function sequence(header, output, inputs)
 
 /***/ }),
 
-/***/ "./src/core/math/linalg/solve.js":
-/*!***************************************!*\
-  !*** ./src/core/math/linalg/solve.js ***!
-  \***************************************/
+/***/ "./src/core/matrix/linalg/solve.js":
+/*!*****************************************!*\
+  !*** ./src/core/matrix/linalg/solve.js ***!
+  \*****************************************/
 /*! exports provided: backsub, lssolve */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -4805,10 +4805,10 @@ function lssolve(header, output, inputs)
 
 /***/ }),
 
-/***/ "./src/core/math/linalg/transform.js":
-/*!*******************************************!*\
-  !*** ./src/core/math/linalg/transform.js ***!
-  \*******************************************/
+/***/ "./src/core/matrix/linalg/transform.js":
+/*!*********************************************!*\
+  !*** ./src/core/matrix/linalg/transform.js ***!
+  \*********************************************/
 /*! exports provided: applyHomography, applyAffine, applyLinear2d */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -4935,10 +4935,10 @@ function applyLinear2d(header, output, inputs)
 
 /***/ }),
 
-/***/ "./src/core/math/linalg/utils.js":
-/*!***************************************!*\
-  !*** ./src/core/math/linalg/utils.js ***!
-  \***************************************/
+/***/ "./src/core/matrix/linalg/utils.js":
+/*!*****************************************!*\
+  !*** ./src/core/matrix/linalg/utils.js ***!
+  \*****************************************/
 /*! exports provided: execute, run, runWithBlocks, subroutine, createTypedArray, norm2, dot, shuffle, range */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -5187,17 +5187,17 @@ function range(n)
 
 /***/ }),
 
-/***/ "./src/core/math/matrix-buffer.js":
-/*!****************************************!*\
-  !*** ./src/core/math/matrix-buffer.js ***!
-  \****************************************/
+/***/ "./src/core/matrix/matrix-buffer.js":
+/*!******************************************!*\
+  !*** ./src/core/matrix/matrix-buffer.js ***!
+  \******************************************/
 /*! exports provided: MatrixBuffer */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixBuffer", function() { return MatrixBuffer; });
-/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix-type */ "./src/core/math/matrix-type.js");
+/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix-type */ "./src/core/matrix/matrix-type.js");
 /* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_matrix_type__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
@@ -5449,10 +5449,10 @@ class MatrixBuffer
 
 /***/ }),
 
-/***/ "./src/core/math/matrix-expression-factory.js":
-/*!****************************************************!*\
-  !*** ./src/core/math/matrix-expression-factory.js ***!
-  \****************************************************/
+/***/ "./src/core/matrix/matrix-expression-factory.js":
+/*!******************************************************!*\
+  !*** ./src/core/matrix/matrix-expression-factory.js ***!
+  \******************************************************/
 /*! exports provided: SpeedyMatrixExprFactory */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -5460,13 +5460,13 @@ class MatrixBuffer
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixExprFactory", function() { return SpeedyMatrixExprFactory; });
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-type */ "./src/core/math/matrix-type.js");
+/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-type */ "./src/core/matrix/matrix-type.js");
 /* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_matrix_type__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var _matrix_shape__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix-shape */ "./src/core/math/matrix-shape.js");
-/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./matrix */ "./src/core/math/matrix.js");
-/* harmony import */ var _matrix_settings__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./matrix-settings */ "./src/core/math/matrix-settings.js");
-/* harmony import */ var _speedy_point__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./speedy-point */ "./src/core/math/speedy-point.js");
-/* harmony import */ var _matrix_expressions__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./matrix-expressions */ "./src/core/math/matrix-expressions.js");
+/* harmony import */ var _matrix_shape__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix-shape */ "./src/core/matrix/matrix-shape.js");
+/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./matrix */ "./src/core/matrix/matrix.js");
+/* harmony import */ var _matrix_settings__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./matrix-settings */ "./src/core/matrix/matrix-settings.js");
+/* harmony import */ var _speedy_point__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../speedy-point */ "./src/core/speedy-point.js");
+/* harmony import */ var _matrix_expressions__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./matrix-expressions */ "./src/core/matrix/matrix-expressions.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -5797,10 +5797,10 @@ class SpeedyMatrixExprFactory extends Function
 
 /***/ }),
 
-/***/ "./src/core/math/matrix-expressions.js":
-/*!*********************************************!*\
-  !*** ./src/core/math/matrix-expressions.js ***!
-  \*********************************************/
+/***/ "./src/core/matrix/matrix-expressions.js":
+/*!***********************************************!*\
+  !*** ./src/core/matrix/matrix-expressions.js ***!
+  \***********************************************/
 /*! exports provided: SpeedyMatrixExpr, SpeedyMatrixLvalueExpr, SpeedyMatrixElementaryExpr, SpeedyMatrixConstantExpr, SpeedyMatrixHomography4pExpr, SpeedyMatrixHomographyDLTExpr, SpeedyMatrixApplyHomographyExpr, SpeedyMatrixApplyAffineExpr, SpeedyMatrixApplyLinear2dExpr, SpeedyMatrixPransacHomographyExpr */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -5816,15 +5816,15 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixApplyAffineExpr", function() { return SpeedyMatrixApplyAffineExpr; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixApplyLinear2dExpr", function() { return SpeedyMatrixApplyLinear2dExpr; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixPransacHomographyExpr", function() { return SpeedyMatrixPransacHomographyExpr; });
-/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix */ "./src/core/math/matrix.js");
-/* harmony import */ var _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./bound-matrix-operation */ "./src/core/math/bound-matrix-operation.js");
-/* harmony import */ var _matrix_shape__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix-shape */ "./src/core/math/matrix-shape.js");
-/* harmony import */ var _matrix_operations_queue__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./matrix-operations-queue */ "./src/core/math/matrix-operations-queue.js");
+/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix */ "./src/core/matrix/matrix.js");
+/* harmony import */ var _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./bound-matrix-operation */ "./src/core/matrix/bound-matrix-operation.js");
+/* harmony import */ var _matrix_shape__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix-shape */ "./src/core/matrix/matrix-shape.js");
+/* harmony import */ var _matrix_operations_queue__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./matrix-operations-queue */ "./src/core/matrix/matrix-operations-queue.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_sorting_networks__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../utils/sorting-networks */ "./src/utils/sorting-networks.js");
-/* harmony import */ var _matrix_operations__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./matrix-operations */ "./src/core/math/matrix-operations.js");
+/* harmony import */ var _matrix_operations__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./matrix-operations */ "./src/core/matrix/matrix-operations.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -8077,18 +8077,18 @@ class SpeedyMatrixLSSolveNodeExpr extends SpeedyMatrixBinaryExpr
 
 /***/ }),
 
-/***/ "./src/core/math/matrix-operation-header.js":
-/*!**************************************************!*\
-  !*** ./src/core/math/matrix-operation-header.js ***!
-  \**************************************************/
+/***/ "./src/core/matrix/matrix-operation-header.js":
+/*!****************************************************!*\
+  !*** ./src/core/matrix/matrix-operation-header.js ***!
+  \****************************************************/
 /*! exports provided: MatrixOperationHeader */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationHeader", function() { return MatrixOperationHeader; });
-/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix */ "./src/core/math/matrix.js");
-/* harmony import */ var _matrix_shape__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-shape */ "./src/core/math/matrix-shape.js");
+/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix */ "./src/core/matrix/matrix.js");
+/* harmony import */ var _matrix_shape__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-shape */ "./src/core/matrix/matrix-shape.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
@@ -8234,18 +8234,18 @@ class MatrixOperationHeader
 
 /***/ }),
 
-/***/ "./src/core/math/matrix-operations-queue.js":
-/*!**************************************************!*\
-  !*** ./src/core/math/matrix-operations-queue.js ***!
-  \**************************************************/
+/***/ "./src/core/matrix/matrix-operations-queue.js":
+/*!****************************************************!*\
+  !*** ./src/core/matrix/matrix-operations-queue.js ***!
+  \****************************************************/
 /*! exports provided: MatrixOperationsQueue */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationsQueue", function() { return MatrixOperationsQueue; });
-/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix */ "./src/core/math/matrix.js");
-/* harmony import */ var _matrix_operations__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-operations */ "./src/core/math/matrix-operations.js");
+/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix */ "./src/core/matrix/matrix.js");
+/* harmony import */ var _matrix_operations__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-operations */ "./src/core/matrix/matrix-operations.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /*
  * speedy-vision.js
@@ -8376,10 +8376,10 @@ class MatrixOperationsQueue
 
 /***/ }),
 
-/***/ "./src/core/math/matrix-operations.js":
-/*!********************************************!*\
-  !*** ./src/core/math/matrix-operations.js ***!
-  \********************************************/
+/***/ "./src/core/matrix/matrix-operations.js":
+/*!**********************************************!*\
+  !*** ./src/core/matrix/matrix-operations.js ***!
+  \**********************************************/
 /*! exports provided: MatrixOperation, MatrixOperationNop, MatrixOperationFill, MatrixOperationCopy, MatrixOperationTranspose, MatrixOperationInverse, MatrixOperationAdd, MatrixOperationSubtract, MatrixOperationMultiply, MatrixOperationScale, MatrixOperationCompMult, MatrixOperationMultiplyLT, MatrixOperationMultiplyRT, MatrixOperationMultiplyVec, MatrixOperationQR, MatrixOperationQRSolve, MatrixOperationBackSubstitution, MatrixOperationLSSolve, MatrixOperationWithSubroutine, MatrixOperationSequence, MatrixOperationSort, MatrixOperationMap, MatrixOperationReduce, MatrixOperationHomography4p, MatrixOperationHomographyDLT, MatrixOperationApplyHomography, MatrixOperationApplyAffine, MatrixOperationApplyLinear2d, MatrixOperationPransacHomography */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -8417,11 +8417,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./matrix */ "./src/core/math/matrix.js");
-/* harmony import */ var _matrix_shape__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./matrix-shape */ "./src/core/math/matrix-shape.js");
-/* harmony import */ var _matrix_worker__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./matrix-worker */ "./src/core/math/matrix-worker.js");
-/* harmony import */ var _matrix_operation_header__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./matrix-operation-header */ "./src/core/math/matrix-operation-header.js");
-/* harmony import */ var _linalg_linalg__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./linalg/linalg */ "./src/core/math/linalg/linalg.js");
+/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./matrix */ "./src/core/matrix/matrix.js");
+/* harmony import */ var _matrix_shape__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./matrix-shape */ "./src/core/matrix/matrix-shape.js");
+/* harmony import */ var _matrix_worker__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./matrix-worker */ "./src/core/matrix/matrix-worker.js");
+/* harmony import */ var _matrix_operation_header__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./matrix-operation-header */ "./src/core/matrix/matrix-operation-header.js");
+/* harmony import */ var _linalg_linalg__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./linalg/linalg */ "./src/core/matrix/linalg/linalg.js");
 /* harmony import */ var _linalg_linalg__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(_linalg_linalg__WEBPACK_IMPORTED_MODULE_7__);
 /*
  * speedy-vision.js
@@ -9243,17 +9243,17 @@ class MatrixOperationPransacHomography extends MatrixOperation
 
 /***/ }),
 
-/***/ "./src/core/math/matrix-settings.js":
-/*!******************************************!*\
-  !*** ./src/core/math/matrix-settings.js ***!
-  \******************************************/
+/***/ "./src/core/matrix/matrix-settings.js":
+/*!********************************************!*\
+  !*** ./src/core/matrix/matrix-settings.js ***!
+  \********************************************/
 /*! exports provided: SpeedyMatrixSettings */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixSettings", function() { return SpeedyMatrixSettings; });
-/* harmony import */ var _matrix_operations_queue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix-operations-queue */ "./src/core/math/matrix-operations-queue.js");
+/* harmony import */ var _matrix_operations_queue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix-operations-queue */ "./src/core/matrix/matrix-operations-queue.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -9314,10 +9314,10 @@ class SpeedyMatrixSettings
 
 /***/ }),
 
-/***/ "./src/core/math/matrix-shape.js":
-/*!***************************************!*\
-  !*** ./src/core/math/matrix-shape.js ***!
-  \***************************************/
+/***/ "./src/core/matrix/matrix-shape.js":
+/*!*****************************************!*\
+  !*** ./src/core/matrix/matrix-shape.js ***!
+  \*****************************************/
 /*! exports provided: MatrixShape */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -9325,7 +9325,7 @@ class SpeedyMatrixSettings
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixShape", function() { return MatrixShape; });
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-type */ "./src/core/math/matrix-type.js");
+/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-type */ "./src/core/matrix/matrix-type.js");
 /* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_matrix_type__WEBPACK_IMPORTED_MODULE_1__);
 /*
  * speedy-vision.js
@@ -9405,10 +9405,10 @@ class MatrixShape
 
 /***/ }),
 
-/***/ "./src/core/math/matrix-type.js":
-/*!**************************************!*\
-  !*** ./src/core/math/matrix-type.js ***!
-  \**************************************/
+/***/ "./src/core/matrix/matrix-type.js":
+/*!****************************************!*\
+  !*** ./src/core/matrix/matrix-type.js ***!
+  \****************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
@@ -9518,19 +9518,19 @@ module.exports = { MatrixType: MatrixType.freeze() };
 
 /***/ }),
 
-/***/ "./src/core/math/matrix-worker.js":
-/*!****************************************!*\
-  !*** ./src/core/math/matrix-worker.js ***!
-  \****************************************/
+/***/ "./src/core/matrix/matrix-worker.js":
+/*!******************************************!*\
+  !*** ./src/core/matrix/matrix-worker.js ***!
+  \******************************************/
 /*! exports provided: MatrixWorker */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixWorker", function() { return MatrixWorker; });
-/* harmony import */ var _linalg_linalg__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./linalg/linalg */ "./src/core/math/linalg/linalg.js");
+/* harmony import */ var _linalg_linalg__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./linalg/linalg */ "./src/core/matrix/linalg/linalg.js");
 /* harmony import */ var _linalg_linalg__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_linalg_linalg__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _matrix_operation_header__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-operation-header */ "./src/core/math/matrix-operation-header.js");
+/* harmony import */ var _matrix_operation_header__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-operation-header */ "./src/core/matrix/matrix-operation-header.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /*
@@ -9665,10 +9665,10 @@ function onmessage(ev)
 
 /***/ }),
 
-/***/ "./src/core/math/matrix.js":
-/*!*********************************!*\
-  !*** ./src/core/math/matrix.js ***!
-  \*********************************/
+/***/ "./src/core/matrix/matrix.js":
+/*!***********************************!*\
+  !*** ./src/core/matrix/matrix.js ***!
+  \***********************************/
 /*! exports provided: SpeedyMatrix */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -9676,12 +9676,12 @@ function onmessage(ev)
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrix", function() { return SpeedyMatrix; });
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-type */ "./src/core/math/matrix-type.js");
+/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-type */ "./src/core/matrix/matrix-type.js");
 /* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_matrix_type__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var _matrix_shape__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix-shape */ "./src/core/math/matrix-shape.js");
-/* harmony import */ var _matrix_buffer__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./matrix-buffer */ "./src/core/math/matrix-buffer.js");
-/* harmony import */ var _matrix_operations_queue__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./matrix-operations-queue */ "./src/core/math/matrix-operations-queue.js");
-/* harmony import */ var _matrix_operations__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./matrix-operations */ "./src/core/math/matrix-operations.js");
+/* harmony import */ var _matrix_shape__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix-shape */ "./src/core/matrix/matrix-shape.js");
+/* harmony import */ var _matrix_buffer__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./matrix-buffer */ "./src/core/matrix/matrix-buffer.js");
+/* harmony import */ var _matrix_operations_queue__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./matrix-operations-queue */ "./src/core/matrix/matrix-operations-queue.js");
+/* harmony import */ var _matrix_operations__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./matrix-operations */ "./src/core/matrix/matrix-operations.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /*
  * speedy-vision.js
@@ -9987,351 +9987,6 @@ class SpeedyMatrix
 
 /***/ }),
 
-/***/ "./src/core/math/speedy-point.js":
-/*!***************************************!*\
-  !*** ./src/core/math/speedy-point.js ***!
-  \***************************************/
-/*! exports provided: SpeedyPoint2 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPoint2", function() { return SpeedyPoint2; });
-/* harmony import */ var _speedy_vector__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-vector */ "./src/core/math/speedy-vector.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * speedy-point.js
- * Points in space
- */
-
-
-
-/**
- * 2D point
- */
-class SpeedyPoint2
-{
-    /**
-     * Create a 2D point
-     * @param {number} x
-     * @param {number} y
-     */
-    constructor(x, y)
-    {
-        /** @type {number} x coordinate */
-        this.x = +x;
-
-        /** @type {number} y coordinate */
-        this.y = +y;
-
-        // make it immutable
-        return Object.freeze(this);
-    }
-
-
-
-    //
-    // ===== METHODS =====
-    //
-
-    /**
-     * Convert to string
-     * @returns {string}
-     */
-    toString()
-    {
-        return `SpeedyPoint2(${this.x.toFixed(5)}, ${this.y.toFixed(5)})`;
-    }
-
-    /**
-     * Add a vector to this point
-     * @param {SpeedyVector2} v 
-     * @returns {SpeedyPoint2}
-     */
-    plus(v)
-    {
-        return new SpeedyPoint2(this.x + v.x, this.y + v.y);
-    }
-
-    /**
-     * Subtracts a point p from this point
-     * @param {SpeedyPoint2} p 
-     * @returns {SpeedyVector2}
-     */
-    minus(p)
-    {
-        return new _speedy_vector__WEBPACK_IMPORTED_MODULE_0__["SpeedyVector2"](this.x - p.x, this.y - p.y);
-    }
-
-    /**
-     * Is this point equal to p?
-     * @param {SpeedyPoint2} p
-     * @returns {boolean}
-     */
-    equals(p)
-    {
-        return this.x === p.x && this.y === p.y;
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/math/speedy-size.js":
-/*!**************************************!*\
-  !*** ./src/core/math/speedy-size.js ***!
-  \**************************************/
-/*! exports provided: SpeedySize */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedySize", function() { return SpeedySize; });
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * speedy-size.js
- * Size of a rectangle
- */
-
-/**
- * Size of a rectangle
- */
-class SpeedySize
-{
-    /**
-     * Constructor
-     * @param {number} width non-negative number
-     * @param {number} height non-negative number
-     */
-    constructor(width, height)
-    {
-        /** @type {number} width */
-        this.width = Math.max(0, +width);
-
-        /** @type {number} height */
-        this.height = Math.max(0, +height);
-
-        // make it immutable
-        return Object.freeze(this);
-    }
-
-
-
-    //
-    // ===== METHODS =====
-    //
-
-    /**
-     * Convert to string
-     * @returns {string}
-     */
-    toString()
-    {
-        return `SpeedySize(${this.width}, ${this.height})`;
-    }
-
-    /**
-     * Is this size equal to anotherSize?
-     * @param {SpeedySize} anotherSize
-     * @returns {boolean}
-     */
-    equals(anotherSize)
-    {
-        return this.width === anotherSize.width && this.height === anotherSize.height;
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/math/speedy-vector.js":
-/*!****************************************!*\
-  !*** ./src/core/math/speedy-vector.js ***!
-  \****************************************/
-/*! exports provided: SpeedyVector2 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyVector2", function() { return SpeedyVector2; });
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * speedy-vector.js
- * Vectors
- */
-
-
-
-/**
- * 2D vector of floating-point numbers
- */
-class SpeedyVector2
-{
-    /**
-     * Create a 2D vector
-     * @param {number} x
-     * @param {number} y
-     */
-    constructor(x, y)
-    {
-        /** @type {number} x coordinate */
-        this.x = +x;
-
-        /** @type {number} y coordinate */
-        this.y = +y;
-
-        // make it immutable
-        return Object.freeze(this);
-    }
-
-
-
-    //
-    // ===== METHODS =====
-    //
-
-    /**
-     * Convert to string
-     * @returns {string}
-     */
-    toString()
-    {
-        return `SpeedyVector2(${this.x.toFixed(5)}, ${this.y.toFixed(5)})`;
-    }
-
-    /**
-     * Is this vector equal to v?
-     * @param {SpeedyVector2} v
-     * @returns {boolean}
-     */
-    equals(v)
-    {
-        return this.x === v.x && this.y === v.y;
-    }
-
-    /**
-     * Dot product between this vector and another vector
-     * @param {SpeedyVector2} v another vector
-     * @returns {number}
-     */
-    dot(v)
-    {
-        return this.x * v.x + this.y * v.y;
-    }
-
-    /**
-     * The distance between this vector and another vector
-     * @param {SpeedyVector2} v another vector
-     * @returns {number}
-     */
-    distanceTo(v)
-    {
-        const dx = this.x - v.x;
-        const dy = this.y - v.y;
-
-        return Math.sqrt(dx * dx + dy * dy);
-    }
-
-    /**
-     * Euclidean norm
-     * @returns {number}
-     */
-    length()
-    {
-        return Math.sqrt(this.x * this.x + this.y * this.y);
-    }
-
-    /**
-     * Returns a normalized version of this vector
-     * @returns {SpeedyVector2}
-     */
-    normalized()
-    {
-        const len = this.length();
-
-        if(len > 0.0)
-            return new SpeedyVector2(this.x / len, this.y / len);
-        else
-            return new SpeedyVector2(0.0, 0.0);
-    }
-
-    /**
-     * Returns a copy of this vector translated by offset
-     * @param {SpeedyVector2} offset
-     * @returns {SpeedyVector2}
-     */
-    plus(offset)
-    {
-        return new SpeedyVector2(this.x + offset.x, this.y + offset.y);
-    }
-
-    /**
-     * Returns a copy of this vector translated by -offset
-     * @param {SpeedyVector2} offset
-     * @returns {SpeedyVector2}
-     */
-    minus(offset)
-    {
-        return new SpeedyVector2(this.x - offset.x, this.y - offset.y);
-    }
-
-    /**
-     * Returns a copy of this vector scaled by a scalar
-     * @param {number} scalar
-     * @returns {SpeedyVector2}
-     */
-    times(scalar)
-    {
-        return new SpeedyVector2(this.x * scalar, this.y * scalar);
-    }
-}
-
-/***/ }),
-
 /***/ "./src/core/pipeline/factories/filter-factory.js":
 /*!*******************************************************!*\
   !*** ./src/core/pipeline/factories/filter-factory.js ***!
@@ -10458,6 +10113,96 @@ class SpeedyPipelineFilterFactory extends _speedy_namespace__WEBPACK_IMPORTED_MO
 
 /***/ }),
 
+/***/ "./src/core/pipeline/factories/image-factory.js":
+/*!******************************************************!*\
+  !*** ./src/core/pipeline/factories/image-factory.js ***!
+  \******************************************************/
+/*! exports provided: SpeedyPipelineImageFactory */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineImageFactory", function() { return SpeedyPipelineImageFactory; });
+/* harmony import */ var _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../speedy-namespace */ "./src/core/speedy-namespace.js");
+/* harmony import */ var _nodes_images_source__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/images/source */ "./src/core/pipeline/nodes/images/source.js");
+/* harmony import */ var _nodes_images_sink__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../nodes/images/sink */ "./src/core/pipeline/nodes/images/sink.js");
+/* harmony import */ var _nodes_images_multiplexer__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../nodes/images/multiplexer */ "./src/core/pipeline/nodes/images/multiplexer.js");
+/* harmony import */ var _nodes_images_pyramid__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../nodes/images/pyramid */ "./src/core/pipeline/nodes/images/pyramid.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * image-factory.js
+ * Image-related nodes
+ */
+
+
+
+
+
+
+
+/**
+ * Image nodes
+ */
+class SpeedyPipelineImageFactory extends _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__["SpeedyNamespace"]
+{
+    /**
+     * Create an image source
+     * @param {string} [name] name of the node
+     * @returns {SpeedyPipelineNodeImageSource}
+     */
+    static Source(name = undefined)
+    {
+        return new _nodes_images_source__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodeImageSource"](name);
+    }
+
+    /**
+     * Create an image sink
+     * @param {string} [name] name of the node
+     * @returns {SpeedyPipelineNodeImageSink}
+     */
+    static Sink(name = undefined)
+    {
+        return new _nodes_images_sink__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineNodeImageSink"](name);
+    }
+
+    /**
+     * Create an image multiplexer
+     * @param {string} [name] name of the node
+     * @returns {SpeedyPipelineNodeImageMultiplexer}
+     */
+    static Multiplexer(name = undefined)
+    {
+        return new _nodes_images_multiplexer__WEBPACK_IMPORTED_MODULE_3__["SpeedyPipelineNodeImageMultiplexer"](name);
+    }
+
+    /**
+     * Image Pyramid
+     * @param {string} [name] name of the node
+     * @returns {SpeedyPipelineNodeImagePyramid}
+     */
+    static Pyramid(name = undefined)
+    {
+        return new _nodes_images_pyramid__WEBPACK_IMPORTED_MODULE_4__["SpeedyPipelineNodeImagePyramid"](name);
+    }
+}
+
+/***/ }),
+
 /***/ "./src/core/pipeline/factories/keypoint-factory.js":
 /*!*********************************************************!*\
   !*** ./src/core/pipeline/factories/keypoint-factory.js ***!
@@ -10469,7 +10214,9 @@ class SpeedyPipelineFilterFactory extends _speedy_namespace__WEBPACK_IMPORTED_MO
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineKeypointFactory", function() { return SpeedyPipelineKeypointFactory; });
 /* harmony import */ var _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../speedy-namespace */ "./src/core/speedy-namespace.js");
-/* harmony import */ var _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/keypoints/detectors/fast */ "./src/core/pipeline/nodes/keypoints/detectors/fast.js");
+/* harmony import */ var _nodes_keypoints_sink__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/keypoints/sink */ "./src/core/pipeline/nodes/keypoints/sink.js");
+/* harmony import */ var _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../nodes/keypoints/detectors/fast */ "./src/core/pipeline/nodes/keypoints/detectors/fast.js");
+/* harmony import */ var _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../nodes/keypoints/detectors/harris */ "./src/core/pipeline/nodes/keypoints/detectors/harris.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -10494,6 +10241,8 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
 /**
  * Keypoint detectors
  */
@@ -10506,7 +10255,17 @@ class SpeedyPipelineKeypointDetectorFactory extends _speedy_namespace__WEBPACK_I
      */
     static FAST(name = undefined)
     {
-        return new _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodeFASTKeypointDetector"](name);
+        return new _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineNodeFASTKeypointDetector"](name);
+    }
+
+    /**
+     * Harris corner detector
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeFASTKeypointDetector}
+     */
+    static Harris(name = undefined)
+    {
+        return new _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_3__["SpeedyPipelineNodeHarrisKeypointDetector"](name);
     }
 }
 
@@ -10523,113 +10282,15 @@ class SpeedyPipelineKeypointFactory extends _speedy_namespace__WEBPACK_IMPORTED_
     {
         return SpeedyPipelineKeypointDetectorFactory;
     }
-}
-
-/***/ }),
-
-/***/ "./src/core/pipeline/factories/pipeline-factory.js":
-/*!*********************************************************!*\
-  !*** ./src/core/pipeline/factories/pipeline-factory.js ***!
-  \*********************************************************/
-/*! exports provided: SpeedyPipelineFactory */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineFactory", function() { return SpeedyPipelineFactory; });
-/* harmony import */ var _pipeline__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../pipeline */ "./src/core/pipeline/pipeline.js");
-/* harmony import */ var _nodes_pipeline_image_source__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/pipeline/image-source */ "./src/core/pipeline/nodes/pipeline/image-source.js");
-/* harmony import */ var _nodes_pipeline_image_sink__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../nodes/pipeline/image-sink */ "./src/core/pipeline/nodes/pipeline/image-sink.js");
-/* harmony import */ var _nodes_pipeline_image_multiplexer__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../nodes/pipeline/image-multiplexer */ "./src/core/pipeline/nodes/pipeline/image-multiplexer.js");
-/* harmony import */ var _nodes_pipeline_keypoint_sink__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../nodes/pipeline/keypoint-sink */ "./src/core/pipeline/nodes/pipeline/keypoint-sink.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * pipeline-factory.js
- * Pipeline factory
- */
-
-
-
-
-
-
-
-/**
- * Pipeline factory
- */
-class SpeedyPipelineFactory extends Function
-{
-    /**
-     * Constructor
-     */
-    constructor()
-    {
-        super('return this._create();');
-        return this.bind(this);
-    }
 
     /**
-     * Create a new pipeline
-     * @returns {SpeedyPipeline}
-     */
-    _create()
-    {
-        return new _pipeline__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipeline"]();
-    }
-
-    /**
-     * Create an image source
-     * @param {string} [name] name of the node
-     * @returns {SpeedyPipelineNodeImageSource}
-     */
-    ImageSource(name = undefined)
-    {
-        return new _nodes_pipeline_image_source__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodeImageSource"](name);
-    }
-
-    /**
-     * Create an image sink
-     * @param {string} [name] name of the node
-     * @returns {SpeedyPipelineNodeImageSink}
-     */
-    ImageSink(name = 'image')
-    {
-        return new _nodes_pipeline_image_sink__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineNodeImageSink"](name);
-    }
-
-    /**
-     * Create an image multiplexer
-     * @param {string} [name] name of the node
-     * @returns {SpeedyPipelineNodeImageMultiplexer}
-     */
-    ImageMultiplexer(name = undefined)
-    {
-        return new _nodes_pipeline_image_multiplexer__WEBPACK_IMPORTED_MODULE_3__["SpeedyPipelineNodeImageMultiplexer"](name);
-    }
-
-    /**
-     * Creates a sink of keypoints
-     * @param {string} [name] name of the node
+     * Create a sink of keypoints
+     * @param {string} [name]
      * @returns {SpeedyPipelineNodeKeypointSink}
      */
-    KeypointSink(name = 'keypoints')
+    static Sink(name = undefined)
     {
-        return new _nodes_pipeline_keypoint_sink__WEBPACK_IMPORTED_MODULE_4__["SpeedyPipelineNodeKeypointSink"](name);
+        return new _nodes_keypoints_sink__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodeKeypointSink"](name);
     }
 }
 
@@ -10716,14 +10377,14 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../math/speedy-size */ "./src/core/math/speedy-size.js");
+/* harmony import */ var _speedy_size__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../speedy-size */ "./src/core/speedy-size.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _math_matrix__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../math/matrix */ "./src/core/math/matrix.js");
-/* harmony import */ var _math_matrix_shape__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../../../math/matrix-shape */ "./src/core/math/matrix-shape.js");
-/* harmony import */ var _math_matrix_expressions__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../../../math/matrix-expressions */ "./src/core/math/matrix-expressions.js");
+/* harmony import */ var _matrix_matrix__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../matrix/matrix */ "./src/core/matrix/matrix.js");
+/* harmony import */ var _matrix_matrix_shape__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../../../matrix/matrix-shape */ "./src/core/matrix/matrix-shape.js");
+/* harmony import */ var _matrix_matrix_expressions__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../../../matrix/matrix-expressions */ "./src/core/matrix/matrix-expressions.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -10784,7 +10445,7 @@ class SpeedyPipelineNodeConvolution extends _pipeline_node__WEBPACK_IMPORTED_MOD
 
 
         /** @type {SpeedyMatrixExpr} convolution kernel (square matrix) */
-        this._kernel = _math_matrix_expressions__WEBPACK_IMPORTED_MODULE_12__["SpeedyMatrixExpr"].create(3, 3, [0, 0, 0, 0, 1, 0, 0, 0, 0]); // identity transform
+        this._kernel = _matrix_matrix_expressions__WEBPACK_IMPORTED_MODULE_12__["SpeedyMatrixExpr"].create(3, 3, [0, 0, 0, 0, 1, 0, 0, 0, 0]); // identity transform
     }
 
     /**
@@ -10850,8 +10511,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../math/speedy-size */ "./src/core/math/speedy-size.js");
-/* harmony import */ var _math_speedy_vector__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../math/speedy-vector */ "./src/core/math/speedy-vector.js");
+/* harmony import */ var _speedy_size__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../speedy-size */ "./src/core/speedy-size.js");
+/* harmony import */ var _speedy_vector__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../speedy-vector */ "./src/core/speedy-vector.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
@@ -10906,7 +10567,7 @@ const DEFAULT_KERNEL = {
 };
 
 // when we set sigma_x = sigma_y = 0, we use the above rule to compute sigma
-const DEFAULT_SIGMA = new _math_speedy_vector__WEBPACK_IMPORTED_MODULE_6__["SpeedyVector2"](0,0);
+const DEFAULT_SIGMA = new _speedy_vector__WEBPACK_IMPORTED_MODULE_6__["SpeedyVector2"](0,0);
 
 // convolution programs (x-axis)
 const CONVOLUTION_X = {
@@ -10947,7 +10608,7 @@ class SpeedyPipelineNodeGaussianBlur extends _pipeline_node__WEBPACK_IMPORTED_MO
         ]);
 
         /** @type {SpeedySize} size of the kernel */
-        this._kernelSize = new _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"](5,5);
+        this._kernelSize = new _speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"](5,5);
 
         /** @type {SpeedyVector2} sigma of the Gaussian kernel (0 means: use default settings) */
         this._sigma = DEFAULT_SIGMA;
@@ -10974,7 +10635,7 @@ class SpeedyPipelineNodeGaussianBlur extends _pipeline_node__WEBPACK_IMPORTED_MO
      */
     set kernelSize(kernelSize)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_7__["Utils"].assert(kernelSize instanceof _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"]);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_7__["Utils"].assert(kernelSize instanceof _speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"]);
 
         const kw = kernelSize.width, kh = kernelSize.height;
         if(kw < 3 || kh < 3 || kw > 15 || kh > 15 || kw % 2 == 0 || kh % 2 == 0)
@@ -10999,7 +10660,7 @@ class SpeedyPipelineNodeGaussianBlur extends _pipeline_node__WEBPACK_IMPORTED_MO
      */
     set sigma(sigma)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_7__["Utils"].assert(sigma instanceof _math_speedy_vector__WEBPACK_IMPORTED_MODULE_6__["SpeedyVector2"], `Sigma must be a SpeedyVector2`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_7__["Utils"].assert(sigma instanceof _speedy_vector__WEBPACK_IMPORTED_MODULE_6__["SpeedyVector2"], `Sigma must be a SpeedyVector2`);
         _utils_utils__WEBPACK_IMPORTED_MODULE_7__["Utils"].assert(sigma.x >= 0 && sigma.y >= 0);
 
         this._sigma = sigma;
@@ -11155,7 +10816,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../math/speedy-size */ "./src/core/math/speedy-size.js");
+/* harmony import */ var _speedy_size__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../speedy-size */ "./src/core/speedy-size.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
@@ -11218,7 +10879,7 @@ class SpeedyPipelineNodeMedianBlur extends _pipeline_node__WEBPACK_IMPORTED_MODU
         ]);
 
         /** @type {SpeedySize} size of the kernel (assumed to be square) */
-        this._kernelSize = new _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"](5,5);
+        this._kernelSize = new _speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"](5,5);
     }
 
     /**
@@ -11236,7 +10897,7 @@ class SpeedyPipelineNodeMedianBlur extends _pipeline_node__WEBPACK_IMPORTED_MODU
      */
     set kernelSize(kernelSize)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(kernelSize instanceof _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"]);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(kernelSize instanceof _speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"]);
 
         const ksize = kernelSize.width;
         if(!(ksize == 3 || ksize == 5 || ksize == 7))
@@ -11688,7 +11349,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../math/speedy-size */ "./src/core/math/speedy-size.js");
+/* harmony import */ var _speedy_size__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../speedy-size */ "./src/core/speedy-size.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
@@ -11775,7 +11436,7 @@ class SpeedyPipelineNodeSimpleBlur extends _pipeline_node__WEBPACK_IMPORTED_MODU
         ]);
 
         /** @type {SpeedySize} size of the kernel */
-        this._kernelSize = new _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"](5,5);
+        this._kernelSize = new _speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"](5,5);
 
         /** @type {Object.<string,number[]>} convolution kernel */
         this._kernel = {
@@ -11799,7 +11460,7 @@ class SpeedyPipelineNodeSimpleBlur extends _pipeline_node__WEBPACK_IMPORTED_MODU
      */
     set kernelSize(kernelSize)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(kernelSize instanceof _math_speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"]);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(kernelSize instanceof _speedy_size__WEBPACK_IMPORTED_MODULE_5__["SpeedySize"]);
 
         const kw = kernelSize.width, kh = kernelSize.height;
         if(kw < 3 || kh < 3 || kw > 15 || kh > 15 || kw % 2 == 0 || kh % 2 == 0)
@@ -11841,378 +11502,10 @@ class SpeedyPipelineNodeSimpleBlur extends _pipeline_node__WEBPACK_IMPORTED_MODU
 
 /***/ }),
 
-/***/ "./src/core/pipeline/nodes/keypoints/detectors/fast.js":
-/*!*************************************************************!*\
-  !*** ./src/core/pipeline/nodes/keypoints/detectors/fast.js ***!
-  \*************************************************************/
-/*! exports provided: SpeedyPipelineNodeFASTKeypointDetector */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeFASTKeypointDetector", function() { return SpeedyPipelineNodeFASTKeypointDetector; });
-/* harmony import */ var _keypoint_detector__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./keypoint-detector */ "./src/core/pipeline/nodes/keypoints/detectors/keypoint-detector.js");
-/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
-/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
-/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
-/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../../utils/globals */ "./src/utils/globals.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * fast.js
- * FAST corner detector
- */
-
-
-
-
-
-
-
-
-
-
-
-// Constants
-const DEFAULT_THRESHOLD = 20;
-const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // sqrt(2)
-
-
-
-/**
- * FAST corner detector
- */
-class SpeedyPipelineNodeFASTKeypointDetector extends _keypoint_detector__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNodeKeypointDetector"]
-{
-    /**
-     * Constructor
-     * @param {string} [name] name of the node
-     */
-    constructor(name = undefined)
-    {
-        super(name, [
-            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image).satisfying(
-                msg => msg.format === _utils_types__WEBPACK_IMPORTED_MODULE_5__["ImageFormat"].GREY
-            ),
-            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Keypoints),
-        ]);
-
-        /** @type {number} FAST threshold in [0,255] */
-        this._threshold = DEFAULT_THRESHOLD;
-
-        /** @type {number} number of pyramid levels */
-        this._levels = 1;
-
-        /** @type {number} scale factor between two pyramid levels */
-        this._scaleFactor = DEFAULT_SCALE_FACTOR;
-    }
-
-    /**
-     * FAST threshold in [0,255]
-     * @returns {number}
-     */
-    get threshold()
-    {
-        return this._threshold;
-    }
-
-    /**
-     * FAST threshold in [0,255]
-     * @param {number} threshold
-     */
-    set threshold(threshold)
-    {
-        this._threshold = Math.max(0, Math.min(threshold | 0, 255));
-    }
-
-    /**
-     * Number of pyramid levels
-     * @returns {number}
-     */
-    get levels()
-    {
-        return this._levels;
-    }
-
-    /**
-     * Number of pyramid levels
-     * @param {number} levels
-     */
-    set levels(levels)
-    {
-        this._levels = Math.max(1, Math.min(levels | 0, _utils_globals__WEBPACK_IMPORTED_MODULE_8__["PYRAMID_MAX_LEVELS"]));
-    }
-
-    /**
-     * Scale factor between two pyramid levels
-     * @returns {number}
-     */
-    get scaleFactor()
-    {
-        return this._scaleFactor;
-    }
-
-    /**
-     * Scale factor between two pyramid levels
-     * @param {number} scaleFactor should be greater than 1
-     */
-    set scaleFactor(scaleFactor)
-    {
-        this._scaleFactor = Math.max(1.0, Math.min(+scaleFactor, 2.0));
-    }
-
-    /**
-     * Run the specific task of this node
-     * @param {SpeedyGPU} gpu
-     * @returns {void|SpeedyPromise<void>}
-     */
-    _run(gpu)
-    {
-        const image = this.input().read().image;
-        const width = image.width, height = image.height;
-        const normalizedThreshold = this._threshold / 255.0;
-        const keypoints = gpu.programs.keypoints;
-
-        // allocate textures
-        const tex = [
-            gpu.texturePool.allocate(),
-            gpu.texturePool.allocate(),
-        ];
-
-        // FAST (TODO FIXME)
-        const corners = (keypoints._fast9
-            .outputs(width, height, tex[1])
-        )(image, normalizedThreshold);
-
-        const cornersWithScore = (keypoints._fastScore16
-            .outputs(width, height, tex[0])
-        )(corners, normalizedThreshold);
-
-        // non-maximum suppression
-        const suppressedCorners = (keypoints._nonMaxSuppression
-            .outputs(width, height, tex[1])
-        )(cornersWithScore, 0);
-
-        // convert scores to 8 bit
-        const finalCorners = (keypoints.encodeFastScore
-            .outputs(width, height, tex[0])
-        )(suppressedCorners);
-
-        // encode keypoints
-        const encodedKeypoints = this._encodeKeypoints(gpu, finalCorners, this._outputTexture);
-        const encoderLength = encodedKeypoints.width;
-
-        // release textures
-        gpu.texturePool.free(tex[1]);
-        gpu.texturePool.free(tex[0]);
-
-        // done!
-        this.output().swrite(encodedKeypoints, 0, 0, encoderLength);
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/pipeline/nodes/keypoints/detectors/keypoint-detector.js":
-/*!**************************************************************************!*\
-  !*** ./src/core/pipeline/nodes/keypoints/detectors/keypoint-detector.js ***!
-  \**************************************************************************/
-/*! exports provided: SpeedyPipelineNodeKeypointDetector */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeKeypointDetector", function() { return SpeedyPipelineNodeKeypointDetector; });
-/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
-/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
-/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
-/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
-/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../../utils/globals */ "./src/utils/globals.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * keypoint-detector.js
- * Abstract keypoint detector
- */
-
-
-
-
-
-
-
-
-
-
-
-// Constants
-const ENCODER_PASSES = 8; // number of passes of the keypoint encoder: directly impacts performance
-const LONG_SKIP_OFFSET_PASSES = 2; // number of passes of the long skip offsets shader
-const MIN_CAPACITY = 16; // minimum number of keypoints we can encode
-const MAX_CAPACITY = 8192; // maximum number of keypoints we can encode
-
-/**
- * Abstract keypoint detector
- * @abstract
- */
-class SpeedyPipelineNodeKeypointDetector extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNode"]
-{
-    /**
-     * Constructor
-     * @param {string} [name] name of the node
-     * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
-     */
-    constructor(name = undefined, portBuilders = undefined)
-    {
-        super(name, portBuilders);
-
-        /** @type {number} encoder capacity */
-        this._capacity = MAX_CAPACITY;
-    }
-
-    /**
-     * We can encode up to this many keypoints. If you find a
-     * tight bound for this, download times will be faster.
-     * @returns {number}
-     */
-    get capacity()
-    {
-        return this._capacity;
-    }
-
-    /**
-     * We can encode up to this many keypoints. If you find a
-     * tight bound for this, download times will be faster.
-     * @param {number} capacity
-     */
-    set capacity(capacity)
-    {
-        this._capacity = Math.min(Math.max(MIN_CAPACITY, capacity | 0), MAX_CAPACITY);
-    }
-
-    /**
-     * Create a tiny texture with encoded keypoints out of
-     * an encoded corners texture
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture} corners input
-     * @param {SpeedyDrawableTexture} encodedKeypoints output
-     * @returns {SpeedyDrawableTexture} encodedKeypoints
-     */
-    _encodeKeypoints(gpu, corners, encodedKeypoints)
-    {
-        const encoders = gpu.programs.encoders;
-        const encoderLength = SpeedyPipelineNodeKeypointDetector._encoderLength(this._capacity, 0, 0);
-        const width = corners.width, height = corners.height;
-        const imageSize = [ width, height ];
-
-        // allocate textures
-        const tex = [
-            gpu.texturePool.allocate(),
-            gpu.texturePool.allocate(),
-            gpu.texturePool.allocate(),
-        ];
-
-        // prepare programs
-        encoders._encodeKeypointSkipOffsets.outputs(width, height, tex[0]);
-        encoders._encodeKeypointLongSkipOffsets.outputs(width, height, tex[1], tex[2]);
-        encoders._encodeKeypoints.outputs(encoderLength, encoderLength, tex[0], encodedKeypoints);
-
-        // encode skip offsets
-        let offsets = encoders._encodeKeypointSkipOffsets(corners, imageSize);
-        for(let i = 0; i < LONG_SKIP_OFFSET_PASSES; i++) // to boost performance
-            offsets = encoders._encodeKeypointLongSkipOffsets(corners, imageSize);
-
-        /*
-        // debug: view corners
-        let cornerview = offsets;
-        gpu.programs.utils.fillComponents.outputs(width,height,null);
-        gpu.programs.utils.identity.outputs(width,height,null);
-        cornerview = gpu.programs.utils.fillComponents(cornerview, PixelComponent.GREEN, 0);
-        cornerview = gpu.programs.utils.identity(cornerview);
-        cornerview = gpu.programs.utils.fillComponents(cornerview, PixelComponent.RED, 0);
-        cornerview = gpu.programs.utils.identity(cornerview);
-        cornerview = gpu.programs.utils.fillComponents(cornerview, PixelComponent.ALPHA, 1);
-        const canvas = gpu.renderToCanvas(cornerview);
-        if(!window._ww) document.body.appendChild(canvas);
-        window._ww = 1;
-        */
-
-        // encode keypoints
-        const numPasses = ENCODER_PASSES;
-        let encodedKps = encodedKeypoints.resize(encoderLength, encoderLength).clear();
-        for(let passId = 0; passId < numPasses; passId++)
-            encodedKps = encoders._encodeKeypoints(offsets, encodedKps, imageSize, passId, numPasses, 0, 0, encoderLength);
-
-        // write to encodedKeypoints
-        if(encodedKps != encodedKeypoints) // depends on numPasses
-            encodedKps.copyTo(encodedKeypoints);
-
-        // release textures
-        gpu.texturePool.free(tex[2]);
-        gpu.texturePool.free(tex[1]);
-        gpu.texturePool.free(tex[0]);
-
-        // done!
-        return encodedKeypoints;
-    }
-
-    /**
-     * Compute the length of the keypoint encoder, given its capacity
-     * @param {number} encoderCapacity how many keypoints can we fit?
-     * @param {number} descriptorSize in bytes
-     * @param {number} extraSize in bytes
-     */
-    static _encoderLength(encoderCapacity, descriptorSize, extraSize)
-    {
-        const pixelsPerKeypoint = Math.ceil((_utils_globals__WEBPACK_IMPORTED_MODULE_8__["MIN_KEYPOINT_SIZE"] + descriptorSize + extraSize) / 4);
-        const numberOfPixels = encoderCapacity * pixelsPerKeypoint;
-
-        return Math.max(1, Math.ceil(Math.sqrt(numberOfPixels)));
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/pipeline/nodes/pipeline/image-multiplexer.js":
-/*!***************************************************************!*\
-  !*** ./src/core/pipeline/nodes/pipeline/image-multiplexer.js ***!
-  \***************************************************************/
+/***/ "./src/core/pipeline/nodes/images/multiplexer.js":
+/*!*******************************************************!*\
+  !*** ./src/core/pipeline/nodes/images/multiplexer.js ***!
+  \*******************************************************/
 /*! exports provided: SpeedyPipelineNodeImageMultiplexer */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -12322,10 +11615,95 @@ class SpeedyPipelineNodeImageMultiplexer extends _pipeline_node__WEBPACK_IMPORTE
 
 /***/ }),
 
-/***/ "./src/core/pipeline/nodes/pipeline/image-sink.js":
-/*!********************************************************!*\
-  !*** ./src/core/pipeline/nodes/pipeline/image-sink.js ***!
-  \********************************************************/
+/***/ "./src/core/pipeline/nodes/images/pyramid.js":
+/*!***************************************************!*\
+  !*** ./src/core/pipeline/nodes/images/pyramid.js ***!
+  \***************************************************/
+/*! exports provided: SpeedyPipelineNodeImagePyramid */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeImagePyramid", function() { return SpeedyPipelineNodeImagePyramid; });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * pyramid.js
+ * Generate pyramid
+ */
+
+
+
+
+
+
+
+
+
+
+/**
+ * Generate pyramid
+ */
+class SpeedyPipelineNodeImagePyramid extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNode"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
+        ]);
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { image, format } = this.input().read();
+        const outputTexture = this._outputTexture;
+
+        outputTexture.resize(image.width, image.height);
+        image.copyTo(outputTexture);
+        outputTexture.generateMipmaps(gpu, true);
+
+        this.output().swrite(outputTexture, format);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/images/sink.js":
+/*!************************************************!*\
+  !*** ./src/core/pipeline/nodes/images/sink.js ***!
+  \************************************************/
 /*! exports provided: SpeedyPipelineNodeImageSink */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -12383,7 +11761,7 @@ class SpeedyPipelineNodeImageSink extends _pipeline_node__WEBPACK_IMPORTED_MODUL
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name = undefined)
+    constructor(name = 'image')
     {
         super(name, [
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image)
@@ -12431,10 +11809,10 @@ class SpeedyPipelineNodeImageSink extends _pipeline_node__WEBPACK_IMPORTED_MODUL
 
 /***/ }),
 
-/***/ "./src/core/pipeline/nodes/pipeline/image-source.js":
-/*!**********************************************************!*\
-  !*** ./src/core/pipeline/nodes/pipeline/image-source.js ***!
-  \**********************************************************/
+/***/ "./src/core/pipeline/nodes/images/source.js":
+/*!**************************************************!*\
+  !*** ./src/core/pipeline/nodes/images/source.js ***!
+  \**************************************************/
 /*! exports provided: SpeedyPipelineNodeImageSource */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -12536,10 +11914,608 @@ class SpeedyPipelineNodeImageSource extends _pipeline_node__WEBPACK_IMPORTED_MOD
 
 /***/ }),
 
-/***/ "./src/core/pipeline/nodes/pipeline/keypoint-sink.js":
-/*!***********************************************************!*\
-  !*** ./src/core/pipeline/nodes/pipeline/keypoint-sink.js ***!
-  \***********************************************************/
+/***/ "./src/core/pipeline/nodes/keypoints/detectors/detector.js":
+/*!*****************************************************************!*\
+  !*** ./src/core/pipeline/nodes/keypoints/detectors/detector.js ***!
+  \*****************************************************************/
+/*! exports provided: SpeedyPipelineNodeKeypointDetector, SpeedyPipelineNodeMultiscaleKeypointDetector */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeKeypointDetector", function() { return SpeedyPipelineNodeKeypointDetector; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeMultiscaleKeypointDetector", function() { return SpeedyPipelineNodeMultiscaleKeypointDetector; });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../../utils/globals */ "./src/utils/globals.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * detector.js
+ * Abstract keypoint detectors
+ */
+
+
+
+
+
+
+
+
+
+
+// Constants
+const ENCODER_PASSES = 8; // number of passes of the keypoint encoder: directly impacts performance
+const LONG_SKIP_OFFSET_PASSES = 2; // number of passes of the long skip offsets shader
+const MIN_CAPACITY = 16; // minimum number of keypoints we can encode
+const MAX_CAPACITY = 8192; // maximum number of keypoints we can encode
+const DEFAULT_CAPACITY = MAX_CAPACITY; // default capacity of the encoder
+const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // sqrt(2)
+
+/**
+ * Abstract keypoint detector
+ * @abstract
+ */
+class SpeedyPipelineNodeKeypointDetector extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNode"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
+     */
+    constructor(name = undefined, portBuilders = undefined)
+    {
+        super(name, portBuilders);
+
+        /** @type {number} encoder capacity */
+        this._capacity = DEFAULT_CAPACITY;
+    }
+
+    /**
+     * We can encode up to this many keypoints. If you find a
+     * tight bound for this, download times will be faster.
+     * @returns {number}
+     */
+    get capacity()
+    {
+        return this._capacity;
+    }
+
+    /**
+     * We can encode up to this many keypoints. If you find a
+     * tight bound for this, download times will be faster.
+     * @param {number} capacity
+     */
+    set capacity(capacity)
+    {
+        this._capacity = Math.min(Math.max(MIN_CAPACITY, capacity | 0), MAX_CAPACITY);
+    }
+
+    /**
+     * Create a tiny texture with encoded keypoints out of
+     * an encoded corners texture
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTexture} corners input
+     * @param {SpeedyDrawableTexture} encodedKeypoints output
+     * @returns {SpeedyDrawableTexture} encodedKeypoints
+     */
+    _encodeKeypoints(gpu, corners, encodedKeypoints)
+    {
+        const encoders = gpu.programs.encoders;
+        const encoderLength = SpeedyPipelineNodeKeypointDetector._encoderLength(this._capacity, 0, 0);
+        const width = corners.width, height = corners.height;
+        const imageSize = [ width, height ];
+
+        // allocate textures
+        const tex = [
+            gpu.texturePool.allocate(),
+            gpu.texturePool.allocate(),
+            gpu.texturePool.allocate(),
+        ];
+
+        // prepare programs
+        encoders._encodeKeypointSkipOffsets.outputs(width, height, tex[0]);
+        encoders._encodeKeypointLongSkipOffsets.outputs(width, height, tex[1], tex[0]);
+        encoders._encodeKeypoints.outputs(encoderLength, encoderLength, tex[2], encodedKeypoints);
+
+        // encode skip offsets
+        let offsets = encoders._encodeKeypointSkipOffsets(corners, imageSize);
+        for(let i = 0; i < LONG_SKIP_OFFSET_PASSES; i++) // to boost performance
+            offsets = encoders._encodeKeypointLongSkipOffsets(offsets, imageSize);
+
+        /*
+        // debug: view corners
+        let cornerview = offsets;
+        gpu.programs.utils.fillComponents.outputs(width,height,null);
+        gpu.programs.utils.identity.outputs(width,height,null);
+        cornerview = gpu.programs.utils.fillComponents(cornerview, PixelComponent.GREEN, 0);
+        cornerview = gpu.programs.utils.identity(cornerview);
+        cornerview = gpu.programs.utils.fillComponents(cornerview, PixelComponent.RED, 0);
+        cornerview = gpu.programs.utils.identity(cornerview);
+        cornerview = gpu.programs.utils.fillComponents(cornerview, PixelComponent.ALPHA, 1);
+        const canvas = gpu.renderToCanvas(cornerview);
+        if(!window._ww) document.body.appendChild(canvas);
+        window._ww = 1;
+        */
+
+        // encode keypoints
+        const numPasses = ENCODER_PASSES;
+        let encodedKps = encodedKeypoints.clear();
+        for(let passId = 0; passId < numPasses; passId++)
+            encodedKps = encoders._encodeKeypoints(offsets, encodedKps, imageSize, passId, numPasses, 0, 0, encoderLength);
+
+        // write to encodedKeypoints
+        if(encodedKps != encodedKeypoints) // depends on numPasses
+            encodedKps.copyTo(encodedKeypoints);
+
+        // release textures
+        gpu.texturePool.free(tex[2]);
+        gpu.texturePool.free(tex[1]);
+        gpu.texturePool.free(tex[0]);
+
+        // done!
+        return encodedKeypoints;
+    }
+
+    /**
+     * Compute the length of the keypoint encoder, given its capacity
+     * @param {number} encoderCapacity how many keypoints can we fit?
+     * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
+     */
+    static _encoderLength(encoderCapacity, descriptorSize, extraSize)
+    {
+        const pixelsPerKeypoint = Math.ceil((_utils_globals__WEBPACK_IMPORTED_MODULE_7__["MIN_KEYPOINT_SIZE"] + descriptorSize + extraSize) / 4);
+        const numberOfPixels = encoderCapacity * pixelsPerKeypoint;
+
+        return Math.max(1, Math.ceil(Math.sqrt(numberOfPixels)));
+    }
+}
+
+/**
+ * Abstract scale-space keypoint detector
+ * @abstract
+ */
+class SpeedyPipelineNodeMultiscaleKeypointDetector extends SpeedyPipelineNodeKeypointDetector
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
+     */
+    constructor(name = undefined, portBuilders = undefined)
+    {
+        super(name, portBuilders);
+
+        /** @type {number} number of pyramid levels */
+        this._levels = 1;
+
+        /** @type {number} scale factor between two pyramid levels */
+        this._scaleFactor = DEFAULT_SCALE_FACTOR;
+    }
+
+    /**
+     * Number of pyramid levels
+     * @returns {number}
+     */
+    get levels()
+    {
+        return this._levels;
+    }
+
+    /**
+     * Number of pyramid levels
+     * @param {number} levels
+     */
+    set levels(levels)
+    {
+        this._levels = Math.max(1, Math.min(levels | 0, _utils_globals__WEBPACK_IMPORTED_MODULE_7__["PYRAMID_MAX_LEVELS"]));
+    }
+
+    /**
+     * Scale factor between two pyramid levels
+     * @returns {number}
+     */
+    get scaleFactor()
+    {
+        return this._scaleFactor;
+    }
+
+    /**
+     * Scale factor between two pyramid levels
+     * @param {number} scaleFactor should be greater than 1
+     */
+    set scaleFactor(scaleFactor)
+    {
+        this._scaleFactor = Math.max(1.0, Math.min(+scaleFactor, 2.0));
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/keypoints/detectors/fast.js":
+/*!*************************************************************!*\
+  !*** ./src/core/pipeline/nodes/keypoints/detectors/fast.js ***!
+  \*************************************************************/
+/*! exports provided: SpeedyPipelineNodeFASTKeypointDetector */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeFASTKeypointDetector", function() { return SpeedyPipelineNodeFASTKeypointDetector; });
+/* harmony import */ var _detector__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./detector */ "./src/core/pipeline/nodes/keypoints/detectors/detector.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../../utils/globals */ "./src/utils/globals.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * fast.js
+ * FAST corner detector
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+// Constants
+const DEFAULT_THRESHOLD = 20;
+
+
+
+/**
+ * FAST corner detector
+ */
+class SpeedyPipelineNodeFASTKeypointDetector extends _detector__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNodeMultiscaleKeypointDetector"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image).satisfying(
+                msg => msg.format === _utils_types__WEBPACK_IMPORTED_MODULE_5__["ImageFormat"].GREY
+            ),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Keypoints),
+        ]);
+
+        /** @type {number} FAST threshold in [0,255] */
+        this._threshold = DEFAULT_THRESHOLD;
+    }
+
+    /**
+     * FAST threshold in [0,255]
+     * @returns {number}
+     */
+    get threshold()
+    {
+        return this._threshold;
+    }
+
+    /**
+     * FAST threshold in [0,255]
+     * @param {number} threshold
+     */
+    set threshold(threshold)
+    {
+        this._threshold = Math.max(0, Math.min(threshold | 0, 255));
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const image = this.input().read().image;
+        const width = image.width, height = image.height;
+        const threshold = this._threshold;
+        const lodStep = Math.log2(this.scaleFactor);
+        const levels = this.levels;
+        const keypoints = gpu.programs.keypoints;
+        const nonmax = levels > 1 ? keypoints.pyrnonmax : keypoints.nonmax;
+
+        // validate pyramid
+        if(!(levels == 1 || image.hasMipmaps()))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__["IllegalOperationError"](`Expected a pyramid in ${this.fullName}`);
+
+        // allocate textures
+        const tex = [
+            gpu.texturePool.allocate(),
+            gpu.texturePool.allocate(),
+            gpu.texturePool.allocate(),
+        ];
+
+        // FAST
+        keypoints.fast9_16.outputs(width, height, tex[0], tex[1]);
+        let corners = tex[1].clear(); //tex[1].clearToColor(0, 0, 0, 0);
+        for(let i = 0; i < levels; i++)
+            corners = keypoints.fast9_16(corners, image, lodStep * i, threshold);
+
+        // non-maximum suppression
+        const suppressedCorners = (nonmax
+            .outputs(width, height, tex[2])
+        )(corners, lodStep);
+
+        // convert scores to 8 bit
+        const finalCorners = (keypoints.fastScoreTo8bits
+            .outputs(width, height, tex[0])
+        )(suppressedCorners);
+
+        // encode keypoints
+        const encodedKeypoints = this._encodeKeypoints(gpu, finalCorners, this._outputTexture);
+        const encoderLength = encodedKeypoints.width;
+
+        // release textures
+        gpu.texturePool.free(tex[2]);
+        gpu.texturePool.free(tex[1]);
+        gpu.texturePool.free(tex[0]);
+
+        // done!
+        this.output().swrite(encodedKeypoints, 0, 0, encoderLength);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/keypoints/detectors/harris.js":
+/*!***************************************************************!*\
+  !*** ./src/core/pipeline/nodes/keypoints/detectors/harris.js ***!
+  \***************************************************************/
+/*! exports provided: SpeedyPipelineNodeHarrisKeypointDetector */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeHarrisKeypointDetector", function() { return SpeedyPipelineNodeHarrisKeypointDetector; });
+/* harmony import */ var _detector__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./detector */ "./src/core/pipeline/nodes/keypoints/detectors/detector.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _speedy_size__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../speedy-size */ "./src/core/speedy-size.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * harris.js
+ * Harris corner detector
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+// Constants
+const DEFAULT_QUALITY = 0.1;
+const HARRIS = {
+    1: 'harris1',
+    3: 'harris3',
+    5: 'harris5',
+    7: 'harris7',
+};
+
+
+/**
+ * Harris corner detector
+ */
+class SpeedyPipelineNodeHarrisKeypointDetector extends _detector__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNodeMultiscaleKeypointDetector"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image).satisfying(
+                msg => msg.format === _utils_types__WEBPACK_IMPORTED_MODULE_5__["ImageFormat"].GREY
+            ),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Keypoints),
+        ]);
+
+        /** @type {SpeedySize} neighborhood size */
+        this._windowSize = new _speedy_size__WEBPACK_IMPORTED_MODULE_6__["SpeedySize"](3, 3);
+
+        /** @type {number} min corner quality in [0,1] */
+        this._quality = DEFAULT_QUALITY;
+    }
+
+    /**
+     * Minimum corner quality in [0,1] - this is a fraction of
+     * the largest min. eigenvalue of the autocorrelation matrix
+     * over the entire image
+     * @returns {number}
+     */
+    get quality()
+    {
+        return this._quality;
+    }
+
+    /**
+     * Minimum corner quality in [0,1]
+     * @param {number} quality
+     */
+    set quality(quality)
+    {
+        this._quality = Math.max(0.0, Math.min(+quality, 1.0));
+    }
+
+    /**
+     * Neighborhood size
+     * @returns {SpeedySize}
+     */
+    get windowSize()
+    {
+        return this._windowSize;
+    }
+
+    /**
+     * Neighborhood size
+     * @param {SpeedySize} windowSize
+     */
+    set windowSize(windowSize)
+    {
+        const d = windowSize.width;
+        if(!((d == windowSize.height) && (d == 1 || d == 3 || d == 5 || d == 7)))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["IllegalArgumentError"](`Invalid window: ${windowSize}. Acceptable sizes: 1x1, 3x3, 5x5, 7x7`);
+
+        this._windowSize = windowSize;
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const image = this.input().read().image;
+        const width = image.width, height = image.height;
+        const quality = this._quality;
+        const windowSize = this._windowSize;
+        const lodStep = Math.log2(this.scaleFactor);
+        const levels = this.levels;
+        const keypoints = gpu.programs.keypoints;
+        const nonmax = levels > 1 ? keypoints.pyrnonmax : keypoints.nonmax;
+        const harris = keypoints[HARRIS[windowSize.width]];
+
+        // validate pyramid
+        if(!(levels == 1 || image.hasMipmaps()))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["IllegalOperationError"](`Expected a pyramid in ${this.fullName}`);
+
+        // allocate textures
+        const tex = [
+            gpu.texturePool.allocate(),
+            gpu.texturePool.allocate(),
+            gpu.texturePool.allocate(),
+        ];
+
+        // compute corner response map
+        harris.outputs(width, height, tex[0], tex[1]);
+        keypoints.harrisDerivatives.outputs(width, height, tex[2]);
+        let corners = tex[1].clear();
+        for(let i = 0; i < levels; i++) {
+            const lod = lodStep * i;
+            const derivatives = keypoints.harrisDerivatives(image, lod);
+            corners = harris(corners, derivatives, lod);
+        }
+
+        // non-maximum suppression
+        const suppressedCorners = (nonmax
+            .outputs(width, height, tex[2])
+        )(corners, lodStep);
+
+        // find the maximum corner response over the entire image
+        keypoints.harrisScoreFindMax.outputs(width, height, tex[0], tex[1]);
+        const npasses = Math.ceil(Math.log2(Math.max(width, height)));
+        let maxScore = suppressedCorners;
+        for(let j = 0; j < npasses; j++)
+            maxScore = keypoints.harrisScoreFindMax(maxScore, j);
+
+        // discard corners below a quality level
+        const niceCorners = (keypoints.harrisScoreCutoff
+            .outputs(width, height, maxScore == tex[0] ? tex[1] : tex[0])
+        )(suppressedCorners, maxScore, quality);
+
+        // convert scores to 8 bit
+        const finalCorners = (keypoints.fastScoreTo8bits
+            .outputs(width, height, tex[2])
+        )(niceCorners);
+
+        // encode keypoints
+        const encodedKeypoints = this._encodeKeypoints(gpu, finalCorners, this._outputTexture);
+        const encoderLength = encodedKeypoints.width;
+
+        // release textures
+        gpu.texturePool.free(tex[2]);
+        gpu.texturePool.free(tex[1]);
+        gpu.texturePool.free(tex[0]);
+
+        // done!
+        this.output().swrite(encodedKeypoints, 0, 0, encoderLength);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/keypoints/sink.js":
+/*!***************************************************!*\
+  !*** ./src/core/pipeline/nodes/keypoints/sink.js ***!
+  \***************************************************/
 /*! exports provided: SpeedyPipelineNodeKeypointSink */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -12605,7 +12581,7 @@ class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MO
      * Constructor
      * @param {string} [name] name of the node
      */
-    constructor(name = undefined)
+    constructor(name = 'keypoints')
     {
         super(name, [
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Keypoints)
@@ -12742,9 +12718,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _math_matrix__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../math/matrix */ "./src/core/math/matrix.js");
-/* harmony import */ var _math_matrix_shape__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../math/matrix-shape */ "./src/core/math/matrix-shape.js");
-/* harmony import */ var _math_matrix_expressions__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../../../math/matrix-expressions */ "./src/core/math/matrix-expressions.js");
+/* harmony import */ var _matrix_matrix__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../matrix/matrix */ "./src/core/matrix/matrix.js");
+/* harmony import */ var _matrix_matrix_shape__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../matrix/matrix-shape */ "./src/core/matrix/matrix-shape.js");
+/* harmony import */ var _matrix_matrix_expressions__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../../../matrix/matrix-expressions */ "./src/core/matrix/matrix-expressions.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -12799,7 +12775,7 @@ class SpeedyPipelineNodePerspectiveWarp extends _pipeline_node__WEBPACK_IMPORTED
         ]);
 
         /** @type {SpeedyMatrixExpr} perspective transformation */
-        this._transform = _math_matrix_expressions__WEBPACK_IMPORTED_MODULE_11__["SpeedyMatrixExpr"].create(3, 3, [1, 0, 0, 0, 1, 0, 0, 0, 1]); // identity matrix
+        this._transform = _matrix_matrix_expressions__WEBPACK_IMPORTED_MODULE_11__["SpeedyMatrixExpr"].create(3, 3, [1, 0, 0, 0, 1, 0, 0, 0, 1]); // identity matrix
     }
 
     /**
@@ -12916,8 +12892,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _math_speedy_size__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../math/speedy-size */ "./src/core/math/speedy-size.js");
-/* harmony import */ var _math_speedy_vector__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../math/speedy-vector */ "./src/core/math/speedy-vector.js");
+/* harmony import */ var _speedy_size__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../speedy-size */ "./src/core/speedy-size.js");
+/* harmony import */ var _speedy_vector__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../speedy-vector */ "./src/core/speedy-vector.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /*
  * speedy-vision.js
@@ -12973,10 +12949,10 @@ class SpeedyPipelineNodeResize extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0
         ]);
 
         /** @type {SpeedySize} size of the output image, in pixels */
-        this._size = new _math_speedy_size__WEBPACK_IMPORTED_MODULE_8__["SpeedySize"](0, 0);
+        this._size = new _speedy_size__WEBPACK_IMPORTED_MODULE_8__["SpeedySize"](0, 0);
 
         /** @type {SpeedyVector2} size of the output relative to the size of the input */
-        this._scale = new _math_speedy_vector__WEBPACK_IMPORTED_MODULE_9__["SpeedyVector2"](1, 1);
+        this._scale = new _speedy_vector__WEBPACK_IMPORTED_MODULE_9__["SpeedyVector2"](1, 1);
 
         /** @type {ResizeInterpolationMethod} interpolation method */
         this._method = 'bilinear';
@@ -14419,6 +14395,9 @@ class SpeedyPipeline
 
         /** @type {SpeedyGPU} GPU instance */
         this._gpu = null;
+
+        /** @type {boolean} are we running the pipeline at this moment? */
+        this._busy = false;
     }
 
     /**
@@ -14495,13 +14474,26 @@ class SpeedyPipeline
     {
         _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(this._gpu != null, `Pipeline has not been initialized or has been released`);
 
-        // find the sinks
-        const sinks = this._sequence.filter(node => node.isSink());
+        // is the pipeline busy?
+        if(this._busy) {
+            // if so, we need to wait 'til it finishes
+            return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"]((resolve, reject) => {
+                setTimeout(() => this.run().then(resolve, reject), 0);
+            });
+        }
+        else {
+            // the pipeline is now busy and won't accept concurrent tasks
+            // (we allocate textures using a single pool)
+            this._busy = true;
+        }
 
         // set the output textures of each node
         const valid = _ => this._gpu.texturePool.allocate();
         for(let i = this._sequence.length - 1; i >= 0; i--)
             this._sequence[i].setOutputTextures(valid);
+
+        // find the sinks
+        const sinks = this._sequence.filter(node => node.isSink());
 
         // run the pipeline
         return SpeedyPipeline._runSequence(this._sequence, this._gpu).then(() =>
@@ -14519,6 +14511,9 @@ class SpeedyPipeline
                 this._sequence[i].setOutputTextures(nil);
                 this._sequence[i].clearPorts();
             }
+
+            // the pipeline is no longer busy
+            this._busy = false;
 
             // done!
             return aggregate;
@@ -15674,7 +15669,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_media__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-media */ "./src/core/speedy-media.js");
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _math_speedy_vector__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./math/speedy-vector */ "./src/core/math/speedy-vector.js");
+/* harmony import */ var _speedy_vector__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./speedy-vector */ "./src/core/speedy-vector.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
@@ -15808,8 +15803,8 @@ class SpeedyFeatureTracker
 
                 if(flow != null) {
                     flow[i] = goodFeature ? 
-                        new _math_speedy_vector__WEBPACK_IMPORTED_MODULE_6__["SpeedyVector2"](trackedKeypoints[i].x - keypoints[i].x, trackedKeypoints[i].y - keypoints[i].y) :
-                        new _math_speedy_vector__WEBPACK_IMPORTED_MODULE_6__["SpeedyVector2"](0, 0);
+                        new _speedy_vector__WEBPACK_IMPORTED_MODULE_6__["SpeedyVector2"](trackedKeypoints[i].x - keypoints[i].x, trackedKeypoints[i].y - keypoints[i].y) :
+                        new _speedy_vector__WEBPACK_IMPORTED_MODULE_6__["SpeedyVector2"](0, 0);
                 }
             }
 
@@ -16186,7 +16181,7 @@ const SpeedyFlags = Object.freeze({
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyKeypoint", function() { return SpeedyKeypoint; });
-/* harmony import */ var _math_speedy_point__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./math/speedy-point */ "./src/core/math/speedy-point.js");
+/* harmony import */ var _speedy_point__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-point */ "./src/core/speedy-point.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -16231,7 +16226,7 @@ class SpeedyKeypoint
      */
     constructor(x, y, lod = 0.0, rotation = 0.0, score = 0.0, flags = 0, descriptorBytes = null, extraBytes = null)
     {
-        this._position = new _math_speedy_point__WEBPACK_IMPORTED_MODULE_0__["SpeedyPoint2"](+x, +y);
+        this._position = new _speedy_point__WEBPACK_IMPORTED_MODULE_0__["SpeedyPoint2"](+x, +y);
         this._lod = +lod;
         this._rotation = +rotation;
         this._score = +score;
@@ -16279,10 +16274,20 @@ class SpeedyKeypoint
     /**
      * The pyramid level-of-detail from which
      * this feature point was extracted
+     * @returns {number}
      */
     get lod()
     {
         return this._lod;
+    }
+
+    /**
+     * Scale: 2^lod
+     * @returns {number}
+     */
+    get scale()
+    {
+        return Math.pow(2, this._lod);
     }
 
     /**
@@ -17044,6 +17049,348 @@ class SpeedyNamespace
 
 /***/ }),
 
+/***/ "./src/core/speedy-point.js":
+/*!**********************************!*\
+  !*** ./src/core/speedy-point.js ***!
+  \**********************************/
+/*! exports provided: SpeedyPoint2 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPoint2", function() { return SpeedyPoint2; });
+/* harmony import */ var _speedy_vector__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-vector */ "./src/core/speedy-vector.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-point.js
+ * Points in space
+ */
+
+
+
+/**
+ * 2D point
+ */
+class SpeedyPoint2
+{
+    /**
+     * Create a 2D point
+     * @param {number} x
+     * @param {number} y
+     */
+    constructor(x, y)
+    {
+        /** @type {number} x coordinate */
+        this.x = +x;
+
+        /** @type {number} y coordinate */
+        this.y = +y;
+
+        // make it immutable
+        return Object.freeze(this);
+    }
+
+
+
+    //
+    // ===== METHODS =====
+    //
+
+    /**
+     * Convert to string
+     * @returns {string}
+     */
+    toString()
+    {
+        return `SpeedyPoint2(${this.x.toFixed(5)}, ${this.y.toFixed(5)})`;
+    }
+
+    /**
+     * Add a vector to this point
+     * @param {SpeedyVector2} v 
+     * @returns {SpeedyPoint2}
+     */
+    plus(v)
+    {
+        return new SpeedyPoint2(this.x + v.x, this.y + v.y);
+    }
+
+    /**
+     * Subtracts a point p from this point
+     * @param {SpeedyPoint2} p 
+     * @returns {SpeedyVector2}
+     */
+    minus(p)
+    {
+        return new _speedy_vector__WEBPACK_IMPORTED_MODULE_0__["SpeedyVector2"](this.x - p.x, this.y - p.y);
+    }
+
+    /**
+     * Is this point equal to p?
+     * @param {SpeedyPoint2} p
+     * @returns {boolean}
+     */
+    equals(p)
+    {
+        return this.x === p.x && this.y === p.y;
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/speedy-size.js":
+/*!*********************************!*\
+  !*** ./src/core/speedy-size.js ***!
+  \*********************************/
+/*! exports provided: SpeedySize */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedySize", function() { return SpeedySize; });
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-size.js
+ * Size of a rectangle
+ */
+
+/**
+ * Size of a rectangle
+ */
+class SpeedySize
+{
+    /**
+     * Constructor
+     * @param {number} width non-negative number
+     * @param {number} height non-negative number
+     */
+    constructor(width, height)
+    {
+        /** @type {number} width */
+        this.width = Math.max(0, +width);
+
+        /** @type {number} height */
+        this.height = Math.max(0, +height);
+
+        // make it immutable
+        return Object.freeze(this);
+    }
+
+
+
+    //
+    // ===== METHODS =====
+    //
+
+    /**
+     * Convert to string
+     * @returns {string}
+     */
+    toString()
+    {
+        return `SpeedySize(${this.width}, ${this.height})`;
+    }
+
+    /**
+     * Is this size equal to anotherSize?
+     * @param {SpeedySize} anotherSize
+     * @returns {boolean}
+     */
+    equals(anotherSize)
+    {
+        return this.width === anotherSize.width && this.height === anotherSize.height;
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/speedy-vector.js":
+/*!***********************************!*\
+  !*** ./src/core/speedy-vector.js ***!
+  \***********************************/
+/*! exports provided: SpeedyVector2 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyVector2", function() { return SpeedyVector2; });
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-vector.js
+ * Vectors
+ */
+
+/**
+ * 2D vector of floating-point numbers
+ */
+class SpeedyVector2
+{
+    /**
+     * Create a 2D vector
+     * @param {number} x
+     * @param {number} y
+     */
+    constructor(x, y)
+    {
+        /** @type {number} x coordinate */
+        this.x = +x;
+
+        /** @type {number} y coordinate */
+        this.y = +y;
+
+        // make it immutable
+        return Object.freeze(this);
+    }
+
+
+
+    //
+    // ===== METHODS =====
+    //
+
+    /**
+     * Convert to string
+     * @returns {string}
+     */
+    toString()
+    {
+        return `SpeedyVector2(${this.x.toFixed(5)}, ${this.y.toFixed(5)})`;
+    }
+
+    /**
+     * Is this vector equal to v?
+     * @param {SpeedyVector2} v
+     * @returns {boolean}
+     */
+    equals(v)
+    {
+        return this.x === v.x && this.y === v.y;
+    }
+
+    /**
+     * Dot product between this vector and another vector
+     * @param {SpeedyVector2} v another vector
+     * @returns {number}
+     */
+    dot(v)
+    {
+        return this.x * v.x + this.y * v.y;
+    }
+
+    /**
+     * The distance between this vector and another vector
+     * @param {SpeedyVector2} v another vector
+     * @returns {number}
+     */
+    distanceTo(v)
+    {
+        const dx = this.x - v.x;
+        const dy = this.y - v.y;
+
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    /**
+     * Euclidean norm
+     * @returns {number}
+     */
+    length()
+    {
+        return Math.sqrt(this.x * this.x + this.y * this.y);
+    }
+
+    /**
+     * Returns a normalized version of this vector
+     * @returns {SpeedyVector2}
+     */
+    normalized()
+    {
+        const len = this.length();
+
+        if(len > 0.0)
+            return new SpeedyVector2(this.x / len, this.y / len);
+        else
+            return new SpeedyVector2(0.0, 0.0);
+    }
+
+    /**
+     * Returns a copy of this vector translated by offset
+     * @param {SpeedyVector2} offset
+     * @returns {SpeedyVector2}
+     */
+    plus(offset)
+    {
+        return new SpeedyVector2(this.x + offset.x, this.y + offset.y);
+    }
+
+    /**
+     * Returns a copy of this vector translated by -offset
+     * @param {SpeedyVector2} offset
+     * @returns {SpeedyVector2}
+     */
+    minus(offset)
+    {
+        return new SpeedyVector2(this.x - offset.x, this.y - offset.y);
+    }
+
+    /**
+     * Returns a copy of this vector scaled by a scalar
+     * @param {number} scalar
+     * @returns {SpeedyVector2}
+     */
+    times(scalar)
+    {
+        return new SpeedyVector2(this.x * scalar, this.y * scalar);
+    }
+}
+
+/***/ }),
+
 /***/ "./src/core/speedy.js":
 /*!****************************!*\
   !*** ./src/core/speedy.js ***!
@@ -17060,17 +17407,18 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_feature_tracker_factory__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-feature-tracker-factory */ "./src/core/speedy-feature-tracker-factory.js");
 /* harmony import */ var _speedy_feature_descriptor_factory__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./speedy-feature-descriptor-factory */ "./src/core/speedy-feature-descriptor-factory.js");
 /* harmony import */ var _speedy_flags__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./speedy-flags */ "./src/core/speedy-flags.js");
-/* harmony import */ var _math_speedy_vector__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./math/speedy-vector */ "./src/core/math/speedy-vector.js");
-/* harmony import */ var _math_speedy_point__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./math/speedy-point */ "./src/core/math/speedy-point.js");
-/* harmony import */ var _math_speedy_size__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./math/speedy-size */ "./src/core/math/speedy-size.js");
-/* harmony import */ var _math_matrix_expression_factory__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./math/matrix-expression-factory */ "./src/core/math/matrix-expression-factory.js");
+/* harmony import */ var _speedy_vector__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./speedy-vector */ "./src/core/speedy-vector.js");
+/* harmony import */ var _speedy_point__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./speedy-point */ "./src/core/speedy-point.js");
+/* harmony import */ var _speedy_size__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./speedy-size */ "./src/core/speedy-size.js");
+/* harmony import */ var _matrix_matrix_expression_factory__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./matrix/matrix-expression-factory */ "./src/core/matrix/matrix-expression-factory.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _pipeline_factories_pipeline_factory__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./pipeline/factories/pipeline-factory */ "./src/core/pipeline/factories/pipeline-factory.js");
-/* harmony import */ var _pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./pipeline/factories/filter-factory */ "./src/core/pipeline/factories/filter-factory.js");
-/* harmony import */ var _pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./pipeline/factories/transform-factory */ "./src/core/pipeline/factories/transform-factory.js");
-/* harmony import */ var _pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./pipeline/factories/keypoint-factory */ "./src/core/pipeline/factories/keypoint-factory.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _pipeline_pipeline__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./pipeline/pipeline */ "./src/core/pipeline/pipeline.js");
+/* harmony import */ var _pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./pipeline/factories/image-factory */ "./src/core/pipeline/factories/image-factory.js");
+/* harmony import */ var _pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./pipeline/factories/filter-factory */ "./src/core/pipeline/factories/filter-factory.js");
+/* harmony import */ var _pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./pipeline/factories/transform-factory */ "./src/core/pipeline/factories/transform-factory.js");
+/* harmony import */ var _pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./pipeline/factories/keypoint-factory */ "./src/core/pipeline/factories/keypoint-factory.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -17110,9 +17458,9 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 // Constants
-const matrixExprFactory = new _math_matrix_expression_factory__WEBPACK_IMPORTED_MODULE_9__["SpeedyMatrixExprFactory"]();
-const pipelineFactory = new _pipeline_factories_pipeline_factory__WEBPACK_IMPORTED_MODULE_11__["SpeedyPipelineFactory"]();
+const matrixExprFactory = new _matrix_matrix_expression_factory__WEBPACK_IMPORTED_MODULE_9__["SpeedyMatrixExprFactory"]();
 
 /**
  * Speedy's main class
@@ -17195,7 +17543,7 @@ class Speedy
      */
     static Vector2(x, y)
     {
-        return new _math_speedy_vector__WEBPACK_IMPORTED_MODULE_6__["SpeedyVector2"](x, y);
+        return new _speedy_vector__WEBPACK_IMPORTED_MODULE_6__["SpeedyVector2"](x, y);
     }
 
     /**
@@ -17205,7 +17553,7 @@ class Speedy
      */
     static Point2(x, y)
     {
-        return new _math_speedy_point__WEBPACK_IMPORTED_MODULE_7__["SpeedyPoint2"](x, y);
+        return new _speedy_point__WEBPACK_IMPORTED_MODULE_7__["SpeedyPoint2"](x, y);
     }
 
     /**
@@ -17215,7 +17563,7 @@ class Speedy
      */
     static Size(width, height)
     {
-        return new _math_speedy_size__WEBPACK_IMPORTED_MODULE_8__["SpeedySize"](width, height);
+        return new _speedy_size__WEBPACK_IMPORTED_MODULE_8__["SpeedySize"](width, height);
     }
 
     /**
@@ -17237,12 +17585,21 @@ class Speedy
     }
 
     /**
-     * Speedy Pipeline
-     * @returns {SpeedyPipelineFactory}
+     * Create a new Pipeline
+     * @returns {SpeedyPipeline}
      */
-    static get Pipeline()
+    static Pipeline()
     {
-        return pipelineFactory;
+        return new _pipeline_pipeline__WEBPACK_IMPORTED_MODULE_11__["SpeedyPipeline"]();
+    }
+
+    /**
+     * Image-related nodes
+     * @returns {Function}
+     */
+    static get Image()
+    {
+        return _pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_12__["SpeedyPipelineImageFactory"];
     }
 
     /**
@@ -17251,7 +17608,7 @@ class Speedy
      */
     static get Filter()
     {
-        return _pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_12__["SpeedyPipelineFilterFactory"];
+        return _pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_13__["SpeedyPipelineFilterFactory"];
     }
 
     /**
@@ -17260,7 +17617,7 @@ class Speedy
      */
     static get Transform()
     {
-        return _pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_13__["SpeedyPipelineTransformFactory"];
+        return _pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_14__["SpeedyPipelineTransformFactory"];
     }
 
     /**
@@ -17269,7 +17626,7 @@ class Speedy
      */
     static get Keypoint()
     {
-        return _pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_14__["SpeedyPipelineKeypointFactory"];
+        return _pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_15__["SpeedyPipelineKeypointFactory"];
     }
 }
 
@@ -17277,8 +17634,8 @@ class Speedy
 Object.assign(Speedy.constructor.prototype, _speedy_flags__WEBPACK_IMPORTED_MODULE_5__["SpeedyFlags"]);
 
 // Big-endian machine? Currently untested.
-if(!_utils_globals__WEBPACK_IMPORTED_MODULE_16__["LITTLE_ENDIAN"])
-    _utils_utils__WEBPACK_IMPORTED_MODULE_15__["Utils"].warn('Running on a big-endian machine');
+if(!_utils_globals__WEBPACK_IMPORTED_MODULE_17__["LITTLE_ENDIAN"])
+    _utils_utils__WEBPACK_IMPORTED_MODULE_16__["Utils"].warn('Running on a big-endian machine');
 
 /***/ }),
 
@@ -17567,7 +17924,7 @@ const MAX_SKIP_OFFSET_ITERATIONS = [ 32, 32 ]; // used when computing skip offse
 
 // encode keypoint offsets: maxIterations is an experimentally determined integer
 const encodeKeypointSkipOffsets = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_3__["importShader"])('encoders/encode-keypoint-offsets.glsl')
-                                 .withArguments('image', 'imageSize')
+                                 .withArguments('corners', 'imageSize')
                                  .withDefines({ 'MAX_ITERATIONS': MAX_SKIP_OFFSET_ITERATIONS[0] });
 
 // encode long offsets for improved performance
@@ -18165,6 +18522,49 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+// FAST corner detector
+const fast9_16 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/fast.glsl')
+                .withDefines({ 'FAST_TYPE': 916 })
+                .withArguments('corners', 'pyramid', 'lod', 'threshold');
+
+const fastScoreTo8bits = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/score-8bits.glsl')
+                        .withDefines({ 'METHOD': 0 })
+                        .withArguments('corners');
+
+// Harris corner detector
+const harris = [1, 3, 5, 7].reduce((obj, win) => ((obj[win] =
+                   Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/harris.glsl')
+                  .withDefines({ 'WINDOW_SIZE': win })
+                  .withArguments('corners', 'derivatives', 'lod')
+               ), obj), {});
+
+const harrisDerivatives = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/harris-derivatives.glsl')
+                         .withArguments('pyramid', 'lod');
+
+const harrisScoreFindMax = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/score-findmax.glsl')
+                          .withArguments('corners', 'iterationNumber');
+
+const harrisScoreCutoff = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/harris-cutoff.glsl')
+                         .withArguments('corners', 'maxScore', 'quality');
+
+const harrisScoreTo8bits = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/score-8bits.glsl')
+                          .withDefines({ 'METHOD': 1 })
+                          .withArguments('corners');
+
+// Non-maximum suppression
+const nonMaxSuppression = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/nonmax-suppression.glsl')
+                         .withDefines({ 'MULTISCALE': 0 })
+                         .withArguments('image', 'lodStep');
+
+const multiscaleNonMaxSuppression = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/nonmax-suppression.glsl')
+                                   .withDefines({ 'MULTISCALE': 1 })
+                                   .withArguments('image', 'lodStep');
+
+
+
+
+// --- OLD (TODO remove) ---
+
 
 //
 // FAST corner detector
@@ -18200,7 +18600,7 @@ const multiscaleFast = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["
                       .withArguments('pyramid', 'threshold', 'numberOfLayers', 'lodStep');
 
 // encode FAST score in an 8-bit component
-const encodeFastScore = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/fast/encode-fast-score.glsl').withArguments('image');
+const encodeFastScore = fastScoreTo8bits;
 
 
 
@@ -18214,13 +18614,13 @@ const multiscaleHarris = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__
                         .withArguments('pyramid', 'windowSize', 'numberOfLayers', 'lodStep', 'sobelDerivatives');
 
 // discard corners below a specified quality level
-const harrisCutoff = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/harris/harris-cutoff.glsl').withArguments('corners', 'maxScore', 'quality');
+const harrisCutoff = harrisScoreCutoff;
 
 // encode harris score in an 8-bit component
 const encodeHarrisScore = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/harris/encode-harris-score.glsl').withArguments('image');
 
 // find the maximum harris score in an image
-const maxHarrisScore = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/harris/max-harris-score.glsl').withArguments('self', 'iterationNumber');
+const maxHarrisScore = harrisScoreFindMax;
 
 // Sobel derivatives
 const multiscaleSobel = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/harris/multiscale-sobel.glsl').withArguments('pyramid', 'lod');
@@ -18251,13 +18651,6 @@ const orbOrientation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["
 // Generic keypoint routines
 //
 
-// non-maximum suppression
-const nonMaxSuppression = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/nonmax-suppression.glsl')
-                         .withArguments('image', 'lodStep');
-const multiscaleNonMaxSuppression = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/nonmax-suppression.glsl')
-                                   .withArguments('image', 'lodStep')
-                                   .withDefines({ 'MULTISCALE': 1 });
-
 // transfer keypoint orientation
 const transferOrientation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/transfer-orientation.glsl')
                            .withArguments('encodedOrientations', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
@@ -18284,6 +18677,46 @@ class GPUKeypoints extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["S
     {
         super(gpu, width, height);
         this
+            //
+            // FAST corner detector
+            //
+            .declare('fast9_16', fast9_16, {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('fastScoreTo8bits', fastScoreTo8bits)
+
+            //
+            // Harris corner detector
+            //
+            .declare('harris1', harris[1], {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('harris3', harris[3], {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('harris5', harris[5], {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('harris7', harris[7], {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('harrisDerivatives', harrisDerivatives)
+            .declare('harrisScoreFindMax', harrisScoreFindMax, {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('harrisScoreCutoff', harrisScoreCutoff)
+            .declare('harrisScoreTo8bits', harrisScoreTo8bits)
+
+            //
+            // Non-maximum suppression
+            //
+            .declare('nonmax', nonMaxSuppression)
+            .declare('pyrnonmax', multiscaleNonMaxSuppression)
+
+
+
+            // --- OLD (TODO remove) ---
+
             // FAST-9,16
             .compose('fast9', '_fast9', '_fastScore16')
             .declare('_fast9', fast9) // find corners
@@ -18481,6 +18914,42 @@ class GPUPyramids extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["Sp
     {
         super(gpu, width, height);
         this
+            // upsampling & downsampling
+            .declare('upsample2', upsample2, {
+                ...(this.program.hasTextureSize(2 * this._width, 2 * this._height))
+            })
+
+            .declare('downsample2', downsample2, {
+                ...(this.program.hasTextureSize(Math.max(1, Math.floor(this._width / 2)), Math.max(1, Math.floor(this._height / 2))))
+            })
+
+            // separable kernels for gaussian smoothing
+            // use [c, b, a, b, c] where a+2c = 2b and a+2b+2c = 1
+            // pick a = 0.4 for gaussian approximation
+            .declare('smoothX', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_5__["convX"])([
+                0.05, 0.25, 0.4, 0.25, 0.05
+            ]))
+            .declare('smoothY', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_5__["convY"])([
+                0.05, 0.25, 0.4, 0.25, 0.05
+            ]))
+
+            // smoothing for 2x image
+            // same rules as above with sum(k) = 2
+            .declare('smoothX2', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_5__["convX"])([
+                0.1, 0.5, 0.8, 0.5, 0.1 // NOTE: this would saturate the image, but we apply it on a 2x upsampled version with lots of zero pixels
+            ]), {
+                ...(this.program.hasTextureSize(2 * this._width, 2 * this._height))
+            })
+
+            .declare('smoothY2', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_5__["convY"])([
+                0.1, 0.5, 0.8, 0.5, 0.1
+            ], 1.0 / 2.0), {
+                ...(this.program.hasTextureSize(2 * this._width, 2 * this._height))
+            })
+
+
+            // --- OLD shaders ---
+
             // pyramid operations (scale = 2)
             .compose('_reduce', '_smoothX', '_smoothY', '_downsample2')
             .compose('_expand', '_upsample2', '_smoothX2', '_smoothY2')
@@ -19737,7 +20206,7 @@ var map = {
 	"./include/sobel.glsl": "./src/gpu/shaders/include/sobel.glsl",
 	"./include/subpixel.glsl": "./src/gpu/shaders/include/subpixel.glsl",
 	"./keypoints/brisk.glsl": "./src/gpu/shaders/keypoints/brisk.glsl",
-	"./keypoints/fast/encode-fast-score.glsl": "./src/gpu/shaders/keypoints/fast/encode-fast-score.glsl",
+	"./keypoints/fast.glsl": "./src/gpu/shaders/keypoints/fast.glsl",
 	"./keypoints/fast/fast-score12.glsl": "./src/gpu/shaders/keypoints/fast/fast-score12.glsl",
 	"./keypoints/fast/fast-score16.glsl": "./src/gpu/shaders/keypoints/fast/fast-score16.glsl",
 	"./keypoints/fast/fast-score8.glsl": "./src/gpu/shaders/keypoints/fast/fast-score8.glsl",
@@ -19745,14 +20214,17 @@ var map = {
 	"./keypoints/fast/fast7.glsl": "./src/gpu/shaders/keypoints/fast/fast7.glsl",
 	"./keypoints/fast/fast9.glsl": "./src/gpu/shaders/keypoints/fast/fast9.glsl",
 	"./keypoints/fast/multiscale-fast.glsl": "./src/gpu/shaders/keypoints/fast/multiscale-fast.glsl",
+	"./keypoints/harris-cutoff.glsl": "./src/gpu/shaders/keypoints/harris-cutoff.glsl",
+	"./keypoints/harris-derivatives.glsl": "./src/gpu/shaders/keypoints/harris-derivatives.glsl",
+	"./keypoints/harris.glsl": "./src/gpu/shaders/keypoints/harris.glsl",
 	"./keypoints/harris/encode-harris-score.glsl": "./src/gpu/shaders/keypoints/harris/encode-harris-score.glsl",
-	"./keypoints/harris/harris-cutoff.glsl": "./src/gpu/shaders/keypoints/harris/harris-cutoff.glsl",
-	"./keypoints/harris/max-harris-score.glsl": "./src/gpu/shaders/keypoints/harris/max-harris-score.glsl",
 	"./keypoints/harris/multiscale-harris.glsl": "./src/gpu/shaders/keypoints/harris/multiscale-harris.glsl",
 	"./keypoints/harris/multiscale-sobel.glsl": "./src/gpu/shaders/keypoints/harris/multiscale-sobel.glsl",
 	"./keypoints/nonmax-suppression.glsl": "./src/gpu/shaders/keypoints/nonmax-suppression.glsl",
 	"./keypoints/orb/orb-descriptor.glsl": "./src/gpu/shaders/keypoints/orb/orb-descriptor.glsl",
 	"./keypoints/orb/orb-orientation.glsl": "./src/gpu/shaders/keypoints/orb/orb-orientation.glsl",
+	"./keypoints/score-8bits.glsl": "./src/gpu/shaders/keypoints/score-8bits.glsl",
+	"./keypoints/score-findmax.glsl": "./src/gpu/shaders/keypoints/score-findmax.glsl",
 	"./keypoints/sort-by-score.glsl": "./src/gpu/shaders/keypoints/sort-by-score.glsl",
 	"./keypoints/suppress-descriptors.glsl": "./src/gpu/shaders/keypoints/suppress-descriptors.glsl",
 	"./keypoints/transfer-orientation.glsl": "./src/gpu/shaders/keypoints/transfer-orientation.glsl",
@@ -19811,7 +20283,7 @@ module.exports = "const vec4 grey = vec4(0.299f, 0.587f, 0.114f, 0.0f);\nuniform
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D offsetsImage;\nuniform ivec2 imageSize;\n#ifndef MAX_ITERATIONS\n#error Must define MAX_ITERATIONS\n#endif\n#define decodeSkipOffset(pixel) int((pixel).b * 255.0f) | (int((pixel).a * 255.0f) << 8)\n#define encodeSkipOffset(offset) vec2((offset) & 255, (offset) >> 8) / 255.0f\nvoid main()\n{\nvec4 pixel = threadPixel(offsetsImage);\nivec2 thread = threadLocation();\nvec2 prefix = pixel.rg;\nint rasterIndex = thread.y * imageSize.x + thread.x;\nint offset = decodeSkipOffset(pixel);\nint totalOffset = offset;\nivec2 pos = thread;\n#if 0\nwhile(offset < MAX_ITERATIONS && pos.y < imageSize.y && pixel.r == 0.0f) {\nrasterIndex += offset;\npos = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);\npixel = pixelAt(offsetsImage, pos);\noffset = decodeSkipOffset(pixel);\ntotalOffset += offset;\n}\n#else\nint allow = 1;\nfor(int i = 0; i < MAX_ITERATIONS; i++) {\nallow *= int(pos.y < imageSize.y) * int(pixel.r == 0.0f);\nrasterIndex += allow * offset;\npos = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);\npixel = pixelAt(offsetsImage, pos);\noffset = decodeSkipOffset(pixel);\ntotalOffset += allow * offset;\n}\n#endif\ntotalOffset = min(totalOffset, 65535);\ncolor = vec4(prefix, encodeSkipOffset(totalOffset));\n}"
+module.exports = "uniform sampler2D offsetsImage;\nuniform ivec2 imageSize;\n#ifndef MAX_ITERATIONS\n#error Must define MAX_ITERATIONS\n#endif\n#define decodeSkipOffset(pixel) (int((pixel).g * 255.0f) | (int((pixel).b * 255.0f) << 8))\n#define encodeSkipOffset(offset) (vec2((offset) & 255, (offset) >> 8) / 255.0f)\nvoid main()\n{\nvec4 pixel = threadPixel(offsetsImage);\nivec2 thread = threadLocation();\nfloat score = pixel.r;\nfloat scale = pixel.a;\nint rasterIndex = thread.y * imageSize.x + thread.x;\nint offset = decodeSkipOffset(pixel);\nint totalOffset = offset;\nivec2 pos = thread;\n#if 0\nwhile(offset < MAX_ITERATIONS && pos.y < imageSize.y && pixel.r == 0.0f) {\nrasterIndex += offset;\npos = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);\npixel = pixelAt(offsetsImage, pos);\noffset = decodeSkipOffset(pixel);\ntotalOffset += offset;\n}\n#else\nint allow = 1;\nfor(int i = 0; i < MAX_ITERATIONS; i++) {\nallow *= int(pos.y < imageSize.y) * int(pixel.r == 0.0f);\nrasterIndex += allow * offset;\npos = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);\npixel = pixelAt(offsetsImage, pos);\noffset = decodeSkipOffset(pixel);\ntotalOffset += allow * offset;\n}\n#endif\ntotalOffset = min(totalOffset, 65535);\ncolor = vec4(score, encodeSkipOffset(totalOffset), scale);\n}"
 
 /***/ }),
 
@@ -19822,7 +20294,7 @@ module.exports = "uniform sampler2D offsetsImage;\nuniform ivec2 imageSize;\n#if
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nuniform ivec2 imageSize;\n#if !defined(MAX_ITERATIONS)\n#error Must define MAX_ITERATIONS\n#elif MAX_ITERATIONS > 255\n#error MAX_ITERATIONS must be less than 256\n#endif\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nivec2 pos = threadLocation();\nvec2 prefix = pixel.ra;\nint offset = 0;\n#if 0\nwhile(offset < MAX_ITERATIONS && pos.y < imageSize.y && pixelAt(image, pos).r == 0.0f) {\n++offset;\npos.x = (pos.x + 1) % imageSize.x;\npos.y += int(pos.x == 0);\n}\n#else\nint allow = 1;\nfor(int i = 0; i < MAX_ITERATIONS; i++) {\nallow *= int(pos.y < imageSize.y) * int(pixel.r == 0.0f);\noffset += allow;\npos.x = (pos.x + 1) % imageSize.x;\npos.y += int(pos.x == 0);\npixel = pixelAt(image, pos);\n}\n#endif\ncolor = vec4(prefix, float(offset) / 255.0f, 0.0f);\n}"
+module.exports = "uniform sampler2D corners;\nuniform ivec2 imageSize;\n#if !defined(MAX_ITERATIONS)\n#error Must define MAX_ITERATIONS\n#elif MAX_ITERATIONS > 255\n#error MAX_ITERATIONS must be less than 256\n#endif\nvoid main()\n{\nvec4 pixel = threadPixel(corners);\nivec2 pos = threadLocation();\nfloat score = pixel.r;\nfloat scale = pixel.a;\nint offset = 0;\n#if 0\nwhile(offset < MAX_ITERATIONS && pos.y < imageSize.y && pixelAt(corners, pos).r == 0.0f) {\n++offset;\npos.x = (pos.x + 1) % imageSize.x;\npos.y += int(pos.x == 0);\n}\n#else\nint allow = 1;\nfor(int i = 0; i < MAX_ITERATIONS; i++) {\nallow *= int(pos.y < imageSize.y) * int(pixel.r == 0.0f);\noffset += allow;\npos.x = (pos.x + 1) % imageSize.x;\npos.y += int(pos.x == 0);\npixel = pixelAt(corners, pos);\n}\n#endif\ncolor = vec4(score, float(offset) / 255.0f, 0.0f, scale);\n}"
 
 /***/ }),
 
@@ -19833,7 +20305,7 @@ module.exports = "uniform sampler2D image;\nuniform ivec2 imageSize;\n#if !defin
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D offsetsImage;\nuniform sampler2D encodedKeypoints;\nuniform ivec2 imageSize;\nuniform int passId;\nuniform int numPasses;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#define decodeSkipOffset(pixel) int((pixel).b * 255.0f) | (int((pixel).a * 255.0f) << 8)\nbool findQthKeypoint(int q, int p, inout ivec2 position, out vec4 pixel)\n{\nint notFirstPass = int(passId > 0);\nposition *= notFirstPass;\np |= -(1 - notFirstPass);\np -= notFirstPass;\nint rasterIndex = position.y * imageSize.x + position.x;\nwhile(position.y < imageSize.y && p != q) {\nposition = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);\npixel = texelFetch(offsetsImage, position, 0);\np += int(pixel.r > 0.0f);\nrasterIndex += max(1, decodeSkipOffset(pixel));\n}\nreturn (p == q);\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint q = findKeypointIndex(address, descriptorSize, extraSize);\ncolor = vec4(0.0f);\nif(address.offset > 1)\nreturn;\ncolor = threadPixel(encodedKeypoints);\nint numPixels = encoderLength * encoderLength;\nint maxKeypoints = numPixels / pixelsPerKeypoint;\nint maxKeypointsPerPass = maxKeypoints / numPasses + int(maxKeypoints % numPasses != 0);\nint targetPassId = q / maxKeypointsPerPass;\nif(passId != targetPassId)\nreturn;\n#if 1\nint lastIndexFromPrevPass = passId * maxKeypointsPerPass - 1;\nKeypointAddress lastAddressFromPrevPass = KeypointAddress(max(0, lastIndexFromPrevPass) * pixelsPerKeypoint, 0);\nKeypoint lastKeypointFromPrevPass = decodeKeypoint(encodedKeypoints, encoderLength, lastAddressFromPrevPass);\nivec2 position = ivec2(lastKeypointFromPrevPass.position);\n#else\nint lastIndexFromPrevPass = -1; ivec2 position = ivec2(0);\n#endif\nvec4 pixel;\ncolor = encodeNullKeypoint();\nif(q >= maxKeypoints || !findQthKeypoint(q, lastIndexFromPrevPass, position, pixel))\nreturn;\ncolor = (address.offset == 1) ? vec4(\npixel.g,\n0.0f,\npixel.r,\nencodeKeypointFlags(KPF_NONE)\n) : encodeKeypointPosition(\nvec2(position)\n);\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D offsetsImage;\nuniform sampler2D encodedKeypoints;\nuniform ivec2 imageSize;\nuniform int passId;\nuniform int numPasses;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#define decodeSkipOffset(pixel) (int((pixel).g * 255.0f) | (int((pixel).b * 255.0f) << 8))\nbool findQthKeypoint(int q, int p, inout ivec2 position, out vec4 pixel)\n{\nint notFirstPass = int(passId > 0);\nposition *= notFirstPass;\np |= -(1 - notFirstPass);\np -= notFirstPass;\nint rasterIndex = position.y * imageSize.x + position.x;\nwhile(position.y < imageSize.y && p != q) {\nposition = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);\npixel = texelFetch(offsetsImage, position, 0);\np += int(pixel.r > 0.0f);\nrasterIndex += max(1, decodeSkipOffset(pixel));\n}\nreturn (p == q);\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint q = findKeypointIndex(address, descriptorSize, extraSize);\ncolor = vec4(0.0f);\nif(address.offset > 1)\nreturn;\ncolor = threadPixel(encodedKeypoints);\nint numPixels = encoderLength * encoderLength;\nint maxKeypoints = numPixels / pixelsPerKeypoint;\nint maxKeypointsPerPass = maxKeypoints / numPasses + int(maxKeypoints % numPasses != 0);\nint targetPassId = q / maxKeypointsPerPass;\nif(passId != targetPassId)\nreturn;\n#if 1\nint lastIndexFromPrevPass = passId * maxKeypointsPerPass - 1;\nKeypointAddress lastAddressFromPrevPass = KeypointAddress(max(0, lastIndexFromPrevPass) * pixelsPerKeypoint, 0);\nKeypoint lastKeypointFromPrevPass = decodeKeypoint(encodedKeypoints, encoderLength, lastAddressFromPrevPass);\nivec2 position = ivec2(lastKeypointFromPrevPass.position);\n#else\nint lastIndexFromPrevPass = -1; ivec2 position = ivec2(0);\n#endif\nvec4 pixel;\ncolor = encodeNullKeypoint();\nif(q >= maxKeypoints || !findQthKeypoint(q, lastIndexFromPrevPass, position, pixel))\nreturn;\ncolor = (address.offset == 1) ? vec4(\npixel.a,\n0.0f,\npixel.r,\nencodeKeypointFlags(KPF_NONE)\n) : encodeKeypointPosition(\nvec2(position)\n);\n}"
 
 /***/ }),
 
@@ -20215,7 +20687,7 @@ module.exports = "#ifndef _ORIENTATION_GLSL\n#define _ORIENTATION_GLSL\n@include
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "#ifndef _PYRAMIDS_GLSL\n#define _PYRAMIDS_GLSL\n#define pyrPixel(pyr, lod) textureLod((pyr), texCoord, (lod))\n#define pyrPixelAtOffset(pyr, lod, pot, offset) textureLod((pyr), texCoord + ((pot) * vec2(offset)) / texSize, (lod))\n#define pyrPixelAt(pyr, pos, lod) textureLod((pyr), (vec2(pos) + vec2(0.5f)) / texSize, (lod))\n#define pyrPixelAtEx(pyr, pos, lod, pyrBaseSize) textureLod((pyr), (vec2(pos) + vec2(0.5f)) / vec2(pyrBaseSize), (lod))\n#define pyrSubpixelAtEx(pyr, pos, lod, pyrBaseSize) textureLod((pyr), ((pos) + vec2(0.5f)) / vec2(pyrBaseSize), (lod))\n#define pyrSubpixelAtExOffset(pyr, pos, lod, pot, offset, pyrBaseSize) textureLod((pyr), (((pos) + vec2(0.5f)) + ((pot) * vec2(offset))) / vec2(pyrBaseSize), (lod))\nconst int PYRAMID_MAX_LEVELS = int(@PYRAMID_MAX_LEVELS@);\nconst float F_PYRAMID_MAX_LEVELS = float(@PYRAMID_MAX_LEVELS@);\nconst float LOG2_PYRAMID_MAX_SCALE = float(@LOG2_PYRAMID_MAX_SCALE@);\nfloat encodeLod(float lod)\n{\nreturn (LOG2_PYRAMID_MAX_SCALE + lod) / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS);\n}\nfloat decodeLod(float encodedLod)\n{\nfloat lod = encodedLod * (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS) - LOG2_PYRAMID_MAX_SCALE;\nreturn lod * float(encodedLod < 1.0f);\n}\n#define isSameEncodedLod(alpha1, alpha2) (abs((alpha1) - (alpha2)) < encodedLodEps)\nconst float encodedLodEps = 0.2f / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS);\n#endif"
+module.exports = "#ifndef _PYRAMIDS_GLSL\n#define _PYRAMIDS_GLSL\n#define pyrPixel(pyr, lod) textureLod((pyr), texCoord, (lod))\n#define pyrPixelAtOffset(pyr, lod, pot, offset) textureLod((pyr), texCoord + ((pot) * vec2(offset)) / texSize, (lod))\n#define pyrPixelAt(pyr, pos, lod) textureLod((pyr), (vec2(pos) + vec2(0.5f)) / texSize, (lod))\n#define pyrPixelAtEx(pyr, pos, lod, pyrBaseSize) textureLod((pyr), (vec2(pos) + vec2(0.5f)) / vec2(pyrBaseSize), (lod))\n#define pyrSubpixelAtEx(pyr, pos, lod, pyrBaseSize) textureLod((pyr), ((pos) + vec2(0.5f)) / vec2(pyrBaseSize), (lod))\n#define pyrSubpixelAtExOffset(pyr, pos, lod, pot, offset, pyrBaseSize) textureLod((pyr), (((pos) + vec2(0.5f)) + ((pot) * vec2(offset))) / vec2(pyrBaseSize), (lod))\nconst int PYRAMID_MAX_LEVELS = int(@PYRAMID_MAX_LEVELS@);\nconst float F_PYRAMID_MAX_LEVELS = float(@PYRAMID_MAX_LEVELS@);\nconst float LOG2_PYRAMID_MAX_SCALE = float(@LOG2_PYRAMID_MAX_SCALE@);\nfloat encodeLod(float lod)\n{\nreturn (LOG2_PYRAMID_MAX_SCALE + lod) / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS);\n}\nfloat decodeLod(float encodedLod)\n{\nfloat lod = encodedLod * (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS) - LOG2_PYRAMID_MAX_SCALE;\nreturn lod - lod * step(1.0f, encodedLod);\n}\n#define isSameEncodedLod(alpha1, alpha2) (abs((alpha1) - (alpha2)) < encodedLodEps)\nconst float encodedLodEps = 0.2f / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS);\n#endif"
 
 /***/ }),
 
@@ -20263,14 +20735,14 @@ module.exports = "uniform sampler2D image, layerA, layerB;\nuniform float scaleA
 
 /***/ }),
 
-/***/ "./src/gpu/shaders/keypoints/fast/encode-fast-score.glsl":
-/*!***************************************************************!*\
-  !*** ./src/gpu/shaders/keypoints/fast/encode-fast-score.glsl ***!
-  \***************************************************************/
+/***/ "./src/gpu/shaders/keypoints/fast.glsl":
+/*!*********************************************!*\
+  !*** ./src/gpu/shaders/keypoints/fast.glsl ***!
+  \*********************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"float16.glsl\"\nuniform sampler2D image;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat score = decodeFloat16(pixel.rb);\nconst float mul = 6.0f;\nfloat score8 = clamp(score * mul, 0.0f, 1.0f);\ncolor = vec4(score8, pixel.g, 0.0f, pixel.a);\n}"
+module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D corners;\nuniform sampler2D pyramid;\nuniform float lod;\nuniform int threshold;\n#define PIX(x,y) pyrPixelAtOffset(pyramid, lod, pot, ivec2((x),(y))).g\nvoid main()\n{\nfloat pixel = threadPixel(pyramid).g;\nvec4 prev = threadPixel(corners);\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nfloat pot = exp2(lod);\nfloat t = float(clamp(threshold, 0, 255)) / 255.0f;\nfloat ct = pixel + t, c_t = pixel - t;\ncolor = vec4(prev.r, pixel, prev.ba);\n#if !defined(FAST_TYPE)\n#error Must define FAST_TYPE\n#elif FAST_TYPE == 916\nconst ivec4 margin = ivec4(3, 3, 4, 4);\nif(any(lessThan(ivec4(thread, size - thread), margin)))\nreturn;\nfloat p0 = PIX(0,3), p4 = PIX(3,0), p8 = PIX(0,-3), p12 = PIX(-3,0);\nbvec4 brighter = bvec4(p0 > ct, p4 > ct, p8 > ct, p12 > ct);\nbvec4 darker = bvec4(p0 < c_t, p4 < c_t, p8 < c_t, p12 < c_t);\nbvec4 bpairs = bvec4(all(brighter.xy), all(brighter.yz), all(brighter.zw), all(brighter.wx));\nbvec4 dpairs = bvec4(all(darker.xy), all(darker.yz), all(darker.zw), all(darker.wx));\nif(!(any(bpairs) || any(dpairs)))\nreturn;\nfloat p1 = PIX(1,3), p2 = PIX(2,2), p3 = PIX(3,1);\nfloat p5 = PIX(3,-1), p6 = PIX(2,-2), p7 = PIX(1,-3);\nfloat p9 = PIX(-1,-3), p10 = PIX(-2,-2), p11 = PIX(-3,-1);\nfloat p13 = PIX(-3,1), p14 = PIX(-2,2), p15 = PIX(-1,3);\nbool A=(p0>ct),B=(p1>ct),C=(p2>ct),D=(p3>ct),E=(p4>ct),F=(p5>ct),G=(p6>ct),H=(p7>ct),I=(p8>ct),J=(p9>ct),K=(p10>ct),L=(p11>ct),M=(p12>ct),N=(p13>ct),O=(p14>ct),P=(p15>ct),a=(p0<c_t),b=(p1<c_t),c=(p2<c_t),d=(p3<c_t),e=(p4<c_t),f=(p5<c_t),g=(p6<c_t),h=(p7<c_t),i=(p8<c_t),j=(p9<c_t),k=(p10<c_t),l=(p11<c_t),m=(p12<c_t),n=(p13<c_t),o=(p14<c_t),p=(p15<c_t);\nbool isCorner=A&&(B&&(K&&L&&J&&(M&&N&&O&&P||G&&H&&I&&(M&&N&&O||F&&(M&&N||E&&(M||D))))||C&&(K&&L&&M&&(N&&O&&P||G&&H&&I&&J&&(N&&O||F&&(N||E)))||D&&(N&&(L&&M&&(K&&G&&H&&I&&J&&(O||F)||O&&P)||k&&l&&m&&e&&f&&g&&h&&i&&j)||E&&(O&&(M&&N&&(K&&L&&G&&H&&I&&J||P)||k&&l&&m&&n&&f&&g&&h&&i&&j)||F&&(P&&(N&&O||k&&l&&m&&n&&o&&g&&h&&i&&j)||G&&(O&&P||H&&(P||I)||k&&l&&m&&n&&o&&p&&h&&i&&j)||k&&l&&m&&n&&o&&h&&i&&j&&(p||g))||k&&l&&m&&n&&h&&i&&j&&(o&&(p||g)||f&&(o&&p||g)))||k&&l&&m&&h&&i&&j&&(n&&(o&&p||g&&(o||f))||e&&(n&&o&&p||g&&(n&&o||f))))||k&&l&&h&&i&&j&&(m&&(n&&o&&p||g&&(n&&o||f&&(n||e)))||d&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e)))))||k&&h&&i&&j&&(l&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d))))))||K&&I&&J&&(L&&M&&N&&O&&P||G&&H&&(L&&M&&N&&O||F&&(L&&M&&N||E&&(L&&M||D&&(L||C)))))||h&&i&&j&&(b&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c)))))||k&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c)))))))||B&&(H&&I&&J&&(K&&L&&M&&N&&O&&P&&a||G&&(K&&L&&M&&N&&O&&a||F&&(K&&L&&M&&N&&a||E&&(K&&L&&M&&a||D&&(K&&L&&a||C)))))||a&&k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||C&&(K&&H&&I&&J&&(L&&M&&N&&O&&P&&a&&b||G&&(L&&M&&N&&O&&a&&b||F&&(L&&M&&N&&a&&b||E&&(L&&M&&a&&b||D))))||a&&b&&k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d)))))||D&&(K&&L&&H&&I&&J&&(M&&N&&O&&P&&a&&b&&c||G&&(M&&N&&O&&a&&b&&c||F&&(M&&N&&a&&b&&c||E)))||a&&b&&k&&l&&m&&c&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e))))||E&&(K&&L&&M&&H&&I&&J&&(N&&O&&P&&a&&b&&c&&d||G&&(N&&O&&a&&b&&c&&d||F))||a&&b&&l&&m&&n&&c&&d&&(k&&g&&h&&i&&j&&(o||f)||o&&p))||F&&(K&&L&&M&&N&&H&&I&&J&&(O&&P&&a&&b&&c&&d&&e||G)||a&&b&&m&&n&&o&&c&&d&&e&&(k&&l&&g&&h&&i&&j||p))||G&&(K&&L&&M&&N&&O&&H&&I&&J||a&&b&&n&&o&&p&&c&&d&&e&&f)||H&&(K&&L&&M&&N&&O&&P&&I&&J||a&&b&&o&&p&&c&&d&&e&&f&&g)||a&&(b&&(k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(k&&l&&m&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e)))||d&&(l&&m&&n&&(k&&g&&h&&i&&j&&(o||f)||o&&p)||e&&(m&&n&&o&&(k&&l&&g&&h&&i&&j||p)||f&&(n&&o&&p||g&&(o&&p||h&&(p||i)))))))||k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||h&&i&&j&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c&&(b||k))))));\nif(!isCorner)\nreturn;\nmat4 mp = mat4(p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15);\nmat4 mct = mp - mat4(ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct);\nmat4 mc_t = mat4(c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t) - mp;\nconst vec4 zeros = vec4(0.0f), ones = vec4(1.0f);\nvec4 bs = max(mct[0], zeros), ds = max(mc_t[0], zeros);\nbs += max(mct[1], zeros);     ds += max(mc_t[1], zeros);\nbs += max(mct[2], zeros);     ds += max(mc_t[2], zeros);\nbs += max(mct[3], zeros);     ds += max(mc_t[3], zeros);\nfloat thisScore = max(dot(bs, ones), dot(ds, ones)) / 16.0f;\nfloat prevScore = decodeFloat16(prev.rb);\nvec3 thisResult = vec3(encodeFloat16(thisScore), encodeLod(lod));\ncolor.rba = thisScore > prevScore ? thisResult : color.rba;\n#else\n#error Unrecognized FAST_TYPE\n#endif\n}"
 
 /***/ }),
 
@@ -20351,6 +20823,39 @@ module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform
 
 /***/ }),
 
+/***/ "./src/gpu/shaders/keypoints/harris-cutoff.glsl":
+/*!******************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/harris-cutoff.glsl ***!
+  \******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"float16.glsl\"\nuniform sampler2D corners;\nuniform sampler2D maxScore;\nuniform float quality;\nvoid main()\n{\nvec4 pixel = threadPixel(corners);\nfloat score = decodeFloat16(pixel.rb);\nfloat maxval = decodeFloat16(threadPixel(maxScore).rb);\nfloat threshold = maxval * clamp(quality, 0.0f, 1.0f);\ncolor = pixel;\ncolor.rb = score >= threshold ? color.rb : encodeFloat16(0.0f);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/harris-derivatives.glsl":
+/*!***********************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/harris-derivatives.glsl ***!
+  \***********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D pyramid;\nuniform float lod;\nconst mat3 hkern = mat3(\n1.0f, 0.0f,-1.0f,\n2.0f, 0.0f,-2.0f,\n1.0f, 0.0f,-1.0f\n), vkern = mat3(\n1.0f, 2.0f, 1.0f,\n0.0f, 0.0f, 0.0f,\n-1.0f,-2.0f,-1.0f\n);\n#define PIX(x,y) pyrPixelAtOffset(pyramid, lod, pot, ivec2((x),(y))).g\nconst vec3 ones = vec3(1.0f);\nvoid main()\n{\nfloat pot = exp2(lod);\nmat3 win = mat3(\nPIX(-1,-1), PIX(0,-1), PIX(1,-1),\nPIX(-1,0), PIX(0,0), PIX(1,0),\nPIX(-1,1), PIX(0,1), PIX(1,1)\n);\nmat3 dx = matrixCompMult(hkern, win);\nmat3 dy = matrixCompMult(vkern, win);\nvec2 df = vec2(\ndot(dx[0] + dx[1] + dx[2], ones),\ndot(dy[0] + dy[1] + dy[2], ones)\n);\ncolor = vec4(encodeFloat16(df.x), encodeFloat16(df.y));\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/harris.glsl":
+/*!***********************************************!*\
+  !*** ./src/gpu/shaders/keypoints/harris.glsl ***!
+  \***********************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D corners;\nuniform sampler2D derivatives;\nuniform float lod;\n#define H(ox,oy) dpix = pixelAtShortOffset(derivatives, ivec2((ox),(oy))); \\\ndf = vec2(decodeFloat16(dpix.xy), decodeFloat16(dpix.zw)); \\\nh += vec3(df.x * df.x, df.x * df.y, df.y * df.y)\nvoid main()\n{\nvec4 pixel = threadPixel(corners);\nvec4 dpix = vec4(0.0f);\nvec2 df = vec2(0.0f);\nvec3 h = vec3(0.0f);\ncolor = pixel;\n#if !defined(WINDOW_SIZE)\n#error Must define WINDOW_SIZE\n#elif WINDOW_SIZE == 1\nH(0,0);\n#elif WINDOW_SIZE == 3\nH(-1,-1); H(0,-1); H(1,-1);\nH(-1,0); H(0,0); H(1,0);\nH(-1,1); H(0,1); H(1,1);\n#elif WINDOW_SIZE == 5\nH(-2,-2); H(-1,-2); H(0,-2); H(1,-2); H(2,-2);\nH(-2,-1); H(-1,-1); H(0,-1); H(1,-1); H(2,-1);\nH(-2,0); H(-1,0); H(0,0); H(1,0); H(2,0);\nH(-2,1); H(-1,1); H(0,1); H(1,1); H(2,1);\nH(-2,2); H(-1,2); H(0,2); H(1,2); H(2,2);\n#elif WINDOW_SIZE == 7\nH(-3,-3); H(-2,-3); H(-1,-3); H(0,-3); H(1,-3); H(2,-3); H(3,-3);\nH(-3,-2); H(-2,-2); H(-1,-2); H(0,-2); H(1,-2); H(2,-2); H(3,-2);\nH(-3,-1); H(-2,-1); H(-1,-1); H(0,-1); H(1,-1); H(2,-1); H(3,-1);\nH(-3,0); H(-2,0); H(-1,0); H(0,0); H(1,0); H(2,0); H(3,0);\nH(-3,1); H(-2,1); H(-1,1); H(0,1); H(1,1); H(2,1); H(3,1);\nH(-3,2); H(-2,2); H(-1,2); H(0,2); H(1,2); H(2,2); H(3,2);\nH(-3,3); H(-2,3); H(-1,3); H(0,3); H(1,3); H(2,3); H(3,3);\n#else\n#error Invalid WINDOW_SIZE\n#endif\nfloat response = 0.5f * (h.x + h.z - sqrt((h.x - h.z) * (h.x - h.z) + 4.0f * h.y * h.y));\nvec3 result = vec3(encodeFloat16(response), encodeLod(lod));\nfloat prevResponse = decodeFloat16(pixel.rb);\ncolor.rba = response > prevResponse ? result : pixel.rba;\n}"
+
+/***/ }),
+
 /***/ "./src/gpu/shaders/keypoints/harris/encode-harris-score.glsl":
 /*!*******************************************************************!*\
   !*** ./src/gpu/shaders/keypoints/harris/encode-harris-score.glsl ***!
@@ -20359,28 +20864,6 @@ module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform
 /***/ (function(module, exports) {
 
 module.exports = "@include \"float16.glsl\"\nuniform sampler2D image;\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat score = decodeFloat16(pixel.rb);\nfloat score8 = 1.0f - exp2(-score);\ncolor = vec4(score8, pixel.g, 0.0f, pixel.a);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/keypoints/harris/harris-cutoff.glsl":
-/*!*************************************************************!*\
-  !*** ./src/gpu/shaders/keypoints/harris/harris-cutoff.glsl ***!
-  \*************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "@include \"float16.glsl\"\nuniform sampler2D corners;\nuniform sampler2D maxScore;\nuniform float quality;\nvoid main()\n{\nvec4 pixel = threadPixel(corners);\nfloat maxval = decodeFloat16(threadPixel(maxScore).rb);\nfloat score = decodeFloat16(pixel.rb);\nfloat threshold = maxval * clamp(quality, 0.0f, 1.0f);\ncolor = pixel;\ncolor.rb = score >= threshold ? color.rb : encodeFloat16(0.0f);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/keypoints/harris/max-harris-score.glsl":
-/*!****************************************************************!*\
-  !*** ./src/gpu/shaders/keypoints/harris/max-harris-score.glsl ***!
-  \****************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "@include \"float16.glsl\"\nuniform sampler2D self;\nuniform int iterationNumber;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 last = outputSize() - ivec2(1);\nint jump = (1 << iterationNumber);\nint clusterLength = jump << 1;\nint clusterMask = clusterLength - 1;\nivec2 clusterPos = ivec2(thread >> (1 + iterationNumber)) << (1 + iterationNumber);\nivec2 next1 = clusterPos + ((thread - clusterPos + ivec2(jump, 0)) & clusterMask);\nivec2 next2 = clusterPos + ((thread - clusterPos + ivec2(0, jump)) & clusterMask);\nivec2 next3 = clusterPos + ((thread - clusterPos + ivec2(jump, jump)) & clusterMask);\nvec4 p0 = texelFetch(self, thread, 0);\nvec4 p1 = texelFetch(self, min(next1, last), 0);\nvec4 p2 = texelFetch(self, min(next2, last), 0);\nvec4 p3 = texelFetch(self, min(next3, last), 0);\nfloat s0 = decodeFloat16(p0.rb);\nfloat s1 = decodeFloat16(p1.rb);\nfloat s2 = decodeFloat16(p2.rb);\nfloat s3 = decodeFloat16(p3.rb);\nbool b0 = s0 >= s1 && s0 >= s2 && s0 >= s3;\nbool b1 = s1 >= s0 && s1 >= s2 && s1 >= s3;\nbool b2 = s2 >= s0 && s2 >= s1 && s2 >= s3;\ncolor = vec4(0.0f);\ncolor.rb = b0 ? p0.rb : (\nb1 ? p1.rb : (\nb2 ? p2.rb : p3.rb\n)\n);\n}"
 
 /***/ }),
 
@@ -20413,7 +20896,7 @@ module.exports = "@include \"sobel.glsl\"\n@include \"pyramids.glsl\"\nuniform s
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D image;\nuniform float lodStep;\n#if defined(MULTISCALE) && MULTISCALE != 0\n# define ENABLE_INNER_RING\n# define ENABLE_MIDDLE_RING\n# define ENABLE_OUTER_RING\n# define LOD_STEP (lodStep)\n#else\n# define ENABLE_INNER_RING\n# define LOD_STEP (0.0f)\n#endif\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat lod = decodeLod(pixel.a);\nfloat score = decodeFloat16(pixel.rb);\ncolor = pixel;\nif(score == 0.0f)\nreturn;\n#ifdef ENABLE_INNER_RING\nvec4 p0 = pixelAtShortOffset(image, ivec2(0, 1));\nvec4 p1 = pixelAtShortOffset(image, ivec2(1, 1));\nvec4 p2 = pixelAtShortOffset(image, ivec2(1, 0));\nvec4 p3 = pixelAtShortOffset(image, ivec2(1, -1));\nvec4 p4 = pixelAtShortOffset(image, ivec2(0, -1));\nvec4 p5 = pixelAtShortOffset(image, ivec2(-1, -1));\nvec4 p6 = pixelAtShortOffset(image, ivec2(-1, 0));\nvec4 p7 = pixelAtShortOffset(image, ivec2(-1, 1));\n#else\nvec4 p0, p1, p2, p3, p4, p5, p6, p7;\np0 = p1 = p2 = p3 = p4 = p5 = p6 = p7 = vec4(0.0f);\n#endif\n#ifdef ENABLE_MIDDLE_RING\nvec4 q0 = pixelAtShortOffset(image, ivec2(0, 2));\nvec4 q1 = pixelAtShortOffset(image, ivec2(1, 2));\nvec4 q2 = pixelAtShortOffset(image, ivec2(2, 2));\nvec4 q3 = pixelAtShortOffset(image, ivec2(2, 1));\nvec4 q4 = pixelAtShortOffset(image, ivec2(2, 0));\nvec4 q5 = pixelAtShortOffset(image, ivec2(2, -1));\nvec4 q6 = pixelAtShortOffset(image, ivec2(2, -2));\nvec4 q7 = pixelAtShortOffset(image, ivec2(1, -2));\nvec4 q8 = pixelAtShortOffset(image, ivec2(0, -2));\nvec4 q9 = pixelAtShortOffset(image, ivec2(-1, -2));\nvec4 q10 = pixelAtShortOffset(image, ivec2(-2, -2));\nvec4 q11 = pixelAtShortOffset(image, ivec2(-2, -1));\nvec4 q12 = pixelAtShortOffset(image, ivec2(-2, 0));\nvec4 q13 = pixelAtShortOffset(image, ivec2(-2, 1));\nvec4 q14 = pixelAtShortOffset(image, ivec2(-2, 2));\nvec4 q15 = pixelAtShortOffset(image, ivec2(-1, 2));\n#else\nvec4 q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15;\nq0 = q1 = q2 = q3 = q4 = q5 = q6 = q7 = q8 = q9 = q10 =\nq11 = q12 = q13 = q14 = q15 = vec4(0.0f);\n#endif\n#ifdef ENABLE_OUTER_RING\nvec4 r0 = pixelAtShortOffset(image, ivec2(0, 3));\nvec4 r1 = pixelAtShortOffset(image, ivec2(1, 3));\nvec4 r2 = pixelAtShortOffset(image, ivec2(3, 1));\nvec4 r3 = pixelAtShortOffset(image, ivec2(3, 0));\nvec4 r4 = pixelAtShortOffset(image, ivec2(3, -1));\nvec4 r5 = pixelAtShortOffset(image, ivec2(1, -3));\nvec4 r6 = pixelAtShortOffset(image, ivec2(0, -3));\nvec4 r7 = pixelAtShortOffset(image, ivec2(-1, -3));\nvec4 r8 = pixelAtShortOffset(image, ivec2(-3, -1));\nvec4 r9 = pixelAtShortOffset(image, ivec2(-3, 0));\nvec4 r10 = pixelAtShortOffset(image, ivec2(-3, 1));\nvec4 r11 = pixelAtShortOffset(image, ivec2(-1, 3));\nvec4 r12 = pixelAtShortOffset(image, ivec2(0, 4));\nvec4 r13 = pixelAtShortOffset(image, ivec2(4, 0));\nvec4 r14 = pixelAtShortOffset(image, ivec2(0, -4));\nvec4 r15 = pixelAtShortOffset(image, ivec2(-4, 0));\n#else\nvec4 r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15;\nr0 = r1 = r2 = r3 = r4 = r5 = r6 = r7 = r8 = r9 = r10 =\nr11 = r12 = r13 = r14 = r15 = vec4(0.0f);\n#endif\nfloat lodPlus = lod + LOD_STEP;\nfloat lodMinus = lod - LOD_STEP;\nfloat alphaPlus = encodeLod(lodPlus);\nfloat alphaMinus = encodeLod(lodMinus);\nfloat alpha = encodeLod(lod);\nmat3 innerScore = mat3(\ndecodeFloat16(p0.rb) * float(isSameEncodedLod(p0.a, alpha) || isSameEncodedLod(p0.a, alphaPlus) || isSameEncodedLod(p0.a, alphaMinus)),\ndecodeFloat16(p1.rb) * float(isSameEncodedLod(p1.a, alpha) || isSameEncodedLod(p1.a, alphaPlus) || isSameEncodedLod(p1.a, alphaMinus)),\ndecodeFloat16(p2.rb) * float(isSameEncodedLod(p2.a, alpha) || isSameEncodedLod(p2.a, alphaPlus) || isSameEncodedLod(p2.a, alphaMinus)),\ndecodeFloat16(p3.rb) * float(isSameEncodedLod(p3.a, alpha) || isSameEncodedLod(p3.a, alphaPlus) || isSameEncodedLod(p3.a, alphaMinus)),\ndecodeFloat16(p4.rb) * float(isSameEncodedLod(p4.a, alpha) || isSameEncodedLod(p4.a, alphaPlus) || isSameEncodedLod(p4.a, alphaMinus)),\ndecodeFloat16(p5.rb) * float(isSameEncodedLod(p5.a, alpha) || isSameEncodedLod(p5.a, alphaPlus) || isSameEncodedLod(p5.a, alphaMinus)),\ndecodeFloat16(p6.rb) * float(isSameEncodedLod(p6.a, alpha) || isSameEncodedLod(p6.a, alphaPlus) || isSameEncodedLod(p6.a, alphaMinus)),\ndecodeFloat16(p7.rb) * float(isSameEncodedLod(p7.a, alpha) || isSameEncodedLod(p7.a, alphaPlus) || isSameEncodedLod(p7.a, alphaMinus)),\n0.0f\n);\nmat4 middleScore = mat4(\ndecodeFloat16(q0.rb) * float(isSameEncodedLod(q0.a, alphaPlus) || isSameEncodedLod(q0.a, alphaMinus)),\ndecodeFloat16(q1.rb) * float(isSameEncodedLod(q1.a, alphaPlus) || isSameEncodedLod(q1.a, alphaMinus)),\ndecodeFloat16(q2.rb) * float(isSameEncodedLod(q2.a, alphaPlus) || isSameEncodedLod(q2.a, alphaMinus)),\ndecodeFloat16(q3.rb) * float(isSameEncodedLod(q3.a, alphaPlus) || isSameEncodedLod(q3.a, alphaMinus)),\ndecodeFloat16(q4.rb) * float(isSameEncodedLod(q4.a, alphaPlus) || isSameEncodedLod(q4.a, alphaMinus)),\ndecodeFloat16(q5.rb) * float(isSameEncodedLod(q5.a, alphaPlus) || isSameEncodedLod(q5.a, alphaMinus)),\ndecodeFloat16(q6.rb) * float(isSameEncodedLod(q6.a, alphaPlus) || isSameEncodedLod(q6.a, alphaMinus)),\ndecodeFloat16(q7.rb) * float(isSameEncodedLod(q7.a, alphaPlus) || isSameEncodedLod(q7.a, alphaMinus)),\ndecodeFloat16(q8.rb) * float(isSameEncodedLod(q8.a, alphaPlus) || isSameEncodedLod(q8.a, alphaMinus)),\ndecodeFloat16(q9.rb) * float(isSameEncodedLod(q9.a, alphaPlus) || isSameEncodedLod(q9.a, alphaMinus)),\ndecodeFloat16(q10.rb) * float(isSameEncodedLod(q10.a, alphaPlus) || isSameEncodedLod(q10.a, alphaMinus)),\ndecodeFloat16(q11.rb) * float(isSameEncodedLod(q11.a, alphaPlus) || isSameEncodedLod(q11.a, alphaMinus)),\ndecodeFloat16(q12.rb) * float(isSameEncodedLod(q12.a, alphaPlus) || isSameEncodedLod(q12.a, alphaMinus)),\ndecodeFloat16(q13.rb) * float(isSameEncodedLod(q13.a, alphaPlus) || isSameEncodedLod(q13.a, alphaMinus)),\ndecodeFloat16(q14.rb) * float(isSameEncodedLod(q14.a, alphaPlus) || isSameEncodedLod(q14.a, alphaMinus)),\ndecodeFloat16(q15.rb) * float(isSameEncodedLod(q15.a, alphaPlus) || isSameEncodedLod(q15.a, alphaMinus))\n);\nmat4 outerScore = mat4(\ndecodeFloat16(r0.rb) * float(isSameEncodedLod(r0.a, alphaPlus) || isSameEncodedLod(r0.a, alphaMinus)),\ndecodeFloat16(r1.rb) * float(isSameEncodedLod(r1.a, alphaPlus) || isSameEncodedLod(r1.a, alphaMinus)),\ndecodeFloat16(r2.rb) * float(isSameEncodedLod(r2.a, alphaPlus) || isSameEncodedLod(r2.a, alphaMinus)),\ndecodeFloat16(r3.rb) * float(isSameEncodedLod(r3.a, alphaPlus) || isSameEncodedLod(r3.a, alphaMinus)),\ndecodeFloat16(r4.rb) * float(isSameEncodedLod(r4.a, alphaPlus) || isSameEncodedLod(r4.a, alphaMinus)),\ndecodeFloat16(r5.rb) * float(isSameEncodedLod(r5.a, alphaPlus) || isSameEncodedLod(r5.a, alphaMinus)),\ndecodeFloat16(r6.rb) * float(isSameEncodedLod(r6.a, alphaPlus) || isSameEncodedLod(r6.a, alphaMinus)),\ndecodeFloat16(r7.rb) * float(isSameEncodedLod(r7.a, alphaPlus) || isSameEncodedLod(r7.a, alphaMinus)),\ndecodeFloat16(r8.rb) * float(isSameEncodedLod(r8.a, alphaPlus) || isSameEncodedLod(r8.a, alphaMinus)),\ndecodeFloat16(r9.rb) * float(isSameEncodedLod(r9.a, alphaPlus) || isSameEncodedLod(r9.a, alphaMinus)),\ndecodeFloat16(r10.rb) * float(isSameEncodedLod(r10.a, alphaPlus) || isSameEncodedLod(r10.a, alphaMinus)),\ndecodeFloat16(r11.rb) * float(isSameEncodedLod(r11.a, alphaPlus) || isSameEncodedLod(r11.a, alphaMinus)),\ndecodeFloat16(r12.rb) * float(isSameEncodedLod(r12.a, alphaPlus) || isSameEncodedLod(r12.a, alphaMinus)),\ndecodeFloat16(r13.rb) * float(isSameEncodedLod(r13.a, alphaPlus) || isSameEncodedLod(r13.a, alphaMinus)),\ndecodeFloat16(r14.rb) * float(isSameEncodedLod(r14.a, alphaPlus) || isSameEncodedLod(r14.a, alphaMinus)),\ndecodeFloat16(r15.rb) * float(isSameEncodedLod(r15.a, alphaPlus) || isSameEncodedLod(r15.a, alphaMinus))\n);\nvec3 maxInnerScore3 = max(innerScore[0], max(innerScore[1], innerScore[2]));\nvec4 maxMiddleScore4 = max(max(middleScore[0], middleScore[1]), max(middleScore[2], middleScore[3]));\nvec4 maxOuterScore4 = max(max(outerScore[0], outerScore[1]), max(outerScore[2], outerScore[3]));\nfloat maxInnerScore = max(maxInnerScore3.x, max(maxInnerScore3.y, maxInnerScore3.z));\nfloat maxMiddleScore = max(max(maxMiddleScore4.x, maxMiddleScore4.y), max(maxMiddleScore4.z, maxMiddleScore4.w));\nfloat maxOuterScore = max(max(maxOuterScore4.x, maxOuterScore4.y), max(maxOuterScore4.z, maxOuterScore4.w));\nfloat maxScore = max(maxInnerScore, max(maxMiddleScore, maxOuterScore));\nfloat finalScore = step(maxScore, score) * score;\ncolor.rb = encodeFloat16(finalScore);\n}"
+module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D image;\nuniform float lodStep;\n#if !defined(MULTISCALE)\n#error Must define MULTISCALE\n#elif MULTISCALE != 0\n#define LOD_STEP (lodStep)\n#define USE_MIDDLE_RING\n#else\n#define LOD_STEP (0.0f)\n#endif\n#define PIX(x,y) pixelAtShortOffset(image, ivec2((x),(y)))\n#define L2(v,i) bvec2(isSameEncodedLod(v[i].a, alphaMinus), isSameEncodedLod(v[i].a, alphaPlus))\n#define L3(v,i) bvec3(isSameEncodedLod(v[i].a, alpha), isSameEncodedLod(v[i].a, alphaMinus), isSameEncodedLod(v[i].a, alphaPlus))\n#define S3(v,i) decodeFloat16(v[i].rb) * float(any(L3(v,i)))\n#define S2(v,i) decodeFloat16(v[i].rb) * float(any(L2(v,i)))\n#define P(i) S3(p,i)\n#define Q(i) S2(q,i)\n#define R(i) S2(r,i)\nconst vec4 O = vec4(0.0f);\nvoid main()\n{\nvec4 pixel = threadPixel(image);\nfloat lod = decodeLod(pixel.a);\nfloat score = decodeFloat16(pixel.rb);\ncolor = pixel;\nif(score == 0.0f)\nreturn;\nvec4 p[8] = vec4[8](\nPIX(0,1), PIX(1,1), PIX(1,0), PIX(1,-1),\nPIX(0,-1), PIX(-1,-1), PIX(-1,0), PIX(-1,1)\n);\n#ifdef USE_MIDDLE_RING\nvec4 q[16] = vec4[16](\nPIX(0,2), PIX(1,2), PIX(2,2), PIX(2,1),\nPIX(2,0), PIX(2,-1), PIX(2,-2), PIX(1,-2),\nPIX(0,-2), PIX(-1,-2), PIX(-2,-2), PIX(-2,-1),\nPIX(-2,0), PIX(-2,1), PIX(-2,2), PIX(-1,2)\n);\n#else\nvec4 q[16] = vec4[16](O,O,O,O,O,O,O,O,O,O,O,O,O,O,O,O);\n#endif\n#ifdef USE_OUTER_RING\nvec4 r[16] = vec4[16](\nPIX(0,3), PIX(1,3), PIX(3,1), PIX(3,0),\nPIX(3,-1), PIX(1,-3), PIX(0,-3), PIX(-1,-3),\nPIX(-3,-1), PIX(-3,0), PIX(-3,1), PIX(-1,3),\nPIX(0,4), PIX(4,0), PIX(0,-4), PIX(-4,0)\n);\n#else\nvec4 r[16] = vec4[16](O,O,O,O,O,O,O,O,O,O,O,O,O,O,O,O);\n#endif\nfloat alphaPlus = encodeLod(lod + LOD_STEP);\nfloat alphaMinus = encodeLod(lod - LOD_STEP);\nfloat alpha = encodeLod(lod);\nmat3 innerScore = mat3(\nP(0), P(1), P(2), P(3),\nP(4), P(5), P(6), P(7),\n0.0f);\nmat4 middleScore = mat4(\nQ(0), Q(1), Q(2), Q(3),\nQ(4), Q(5), Q(6), Q(7),\nQ(8), Q(9), Q(10), Q(11),\nQ(12), Q(13), Q(14), Q(15)\n);\nmat4 outerScore = mat4(\nR(0), R(1), R(2), R(3),\nR(4), R(5), R(6), R(7),\nR(8), R(9), R(10), R(11),\nR(12), R(13), R(14), R(15)\n);\nvec3 maxInnerScore3 = max(innerScore[0], max(innerScore[1], innerScore[2]));\nvec4 maxMiddleScore4 = max(max(middleScore[0], middleScore[1]), max(middleScore[2], middleScore[3]));\nvec4 maxOuterScore4 = max(max(outerScore[0], outerScore[1]), max(outerScore[2], outerScore[3]));\nfloat maxInnerScore = max(maxInnerScore3.x, max(maxInnerScore3.y, maxInnerScore3.z));\nfloat maxMiddleScore = max(max(maxMiddleScore4.x, maxMiddleScore4.y), max(maxMiddleScore4.z, maxMiddleScore4.w));\nfloat maxOuterScore = max(max(maxOuterScore4.x, maxOuterScore4.y), max(maxOuterScore4.z, maxOuterScore4.w));\nfloat maxScore = max(maxInnerScore, max(maxMiddleScore, maxOuterScore));\nfloat finalScore = step(maxScore, score) * score;\ncolor.rb = encodeFloat16(finalScore);\n}"
 
 /***/ }),
 
@@ -20436,6 +20919,28 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedCorners;
 /***/ (function(module, exports) {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D pyramid;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nconst int diskPointCount[16] = int[16](0, 4, 12, 28, 48, 80, 112, 148, 196, 252, 316, 376, 440, 528, 612, 708);\nconst ivec2 diskPoint[708] = ivec2[708](\nivec2(0,-1),ivec2(-1,0),ivec2(1,0),ivec2(0,1),\nivec2(-1,-1),ivec2(1,-1),ivec2(-1,1),ivec2(1,1),ivec2(0,-2),ivec2(-2,0),ivec2(2,0),ivec2(0,2),\nivec2(-1,-2),ivec2(1,-2),ivec2(-2,-1),ivec2(2,-1),ivec2(-2,1),ivec2(2,1),ivec2(-1,2),ivec2(1,2),ivec2(-2,-2),ivec2(2,-2),ivec2(-2,2),ivec2(2,2),ivec2(0,-3),ivec2(-3,0),ivec2(3,0),ivec2(0,3),\nivec2(-1,-3),ivec2(1,-3),ivec2(-3,-1),ivec2(3,-1),ivec2(-3,1),ivec2(3,1),ivec2(-1,3),ivec2(1,3),ivec2(-2,-3),ivec2(2,-3),ivec2(-3,-2),ivec2(3,-2),ivec2(-3,2),ivec2(3,2),ivec2(-2,3),ivec2(2,3),ivec2(0,-4),ivec2(-4,0),ivec2(4,0),ivec2(0,4),\nivec2(-1,-4),ivec2(1,-4),ivec2(-4,-1),ivec2(4,-1),ivec2(-4,1),ivec2(4,1),ivec2(-1,4),ivec2(1,4),ivec2(-3,-3),ivec2(3,-3),ivec2(-3,3),ivec2(3,3),ivec2(-2,-4),ivec2(2,-4),ivec2(-4,-2),ivec2(4,-2),ivec2(-4,2),ivec2(4,2),ivec2(-2,4),ivec2(2,4),ivec2(0,-5),ivec2(-3,-4),ivec2(3,-4),ivec2(-4,-3),ivec2(4,-3),ivec2(-5,0),ivec2(5,0),ivec2(-4,3),ivec2(4,3),ivec2(-3,4),ivec2(3,4),ivec2(0,5),\nivec2(-1,-5),ivec2(1,-5),ivec2(-5,-1),ivec2(5,-1),ivec2(-5,1),ivec2(5,1),ivec2(-1,5),ivec2(1,5),ivec2(-2,-5),ivec2(2,-5),ivec2(-5,-2),ivec2(5,-2),ivec2(-5,2),ivec2(5,2),ivec2(-2,5),ivec2(2,5),ivec2(-4,-4),ivec2(4,-4),ivec2(-4,4),ivec2(4,4),ivec2(-3,-5),ivec2(3,-5),ivec2(-5,-3),ivec2(5,-3),ivec2(-5,3),ivec2(5,3),ivec2(-3,5),ivec2(3,5),ivec2(0,-6),ivec2(-6,0),ivec2(6,0),ivec2(0,6),\nivec2(-1,-6),ivec2(1,-6),ivec2(-6,-1),ivec2(6,-1),ivec2(-6,1),ivec2(6,1),ivec2(-1,6),ivec2(1,6),ivec2(-2,-6),ivec2(2,-6),ivec2(-6,-2),ivec2(6,-2),ivec2(-6,2),ivec2(6,2),ivec2(-2,6),ivec2(2,6),ivec2(-4,-5),ivec2(4,-5),ivec2(-5,-4),ivec2(5,-4),ivec2(-5,4),ivec2(5,4),ivec2(-4,5),ivec2(4,5),ivec2(-3,-6),ivec2(3,-6),ivec2(-6,-3),ivec2(6,-3),ivec2(-6,3),ivec2(6,3),ivec2(-3,6),ivec2(3,6),ivec2(0,-7),ivec2(-7,0),ivec2(7,0),ivec2(0,7),\nivec2(-1,-7),ivec2(1,-7),ivec2(-5,-5),ivec2(5,-5),ivec2(-7,-1),ivec2(7,-1),ivec2(-7,1),ivec2(7,1),ivec2(-5,5),ivec2(5,5),ivec2(-1,7),ivec2(1,7),ivec2(-4,-6),ivec2(4,-6),ivec2(-6,-4),ivec2(6,-4),ivec2(-6,4),ivec2(6,4),ivec2(-4,6),ivec2(4,6),ivec2(-2,-7),ivec2(2,-7),ivec2(-7,-2),ivec2(7,-2),ivec2(-7,2),ivec2(7,2),ivec2(-2,7),ivec2(2,7),ivec2(-3,-7),ivec2(3,-7),ivec2(-7,-3),ivec2(7,-3),ivec2(-7,3),ivec2(7,3),ivec2(-3,7),ivec2(3,7),ivec2(-5,-6),ivec2(5,-6),ivec2(-6,-5),ivec2(6,-5),ivec2(-6,5),ivec2(6,5),ivec2(-5,6),ivec2(5,6),ivec2(0,-8),ivec2(-8,0),ivec2(8,0),ivec2(0,8),\nivec2(-1,-8),ivec2(1,-8),ivec2(-4,-7),ivec2(4,-7),ivec2(-7,-4),ivec2(7,-4),ivec2(-8,-1),ivec2(8,-1),ivec2(-8,1),ivec2(8,1),ivec2(-7,4),ivec2(7,4),ivec2(-4,7),ivec2(4,7),ivec2(-1,8),ivec2(1,8),ivec2(-2,-8),ivec2(2,-8),ivec2(-8,-2),ivec2(8,-2),ivec2(-8,2),ivec2(8,2),ivec2(-2,8),ivec2(2,8),ivec2(-6,-6),ivec2(6,-6),ivec2(-6,6),ivec2(6,6),ivec2(-3,-8),ivec2(3,-8),ivec2(-8,-3),ivec2(8,-3),ivec2(-8,3),ivec2(8,3),ivec2(-3,8),ivec2(3,8),ivec2(-5,-7),ivec2(5,-7),ivec2(-7,-5),ivec2(7,-5),ivec2(-7,5),ivec2(7,5),ivec2(-5,7),ivec2(5,7),ivec2(-4,-8),ivec2(4,-8),ivec2(-8,-4),ivec2(8,-4),ivec2(-8,4),ivec2(8,4),ivec2(-4,8),ivec2(4,8),ivec2(0,-9),ivec2(-9,0),ivec2(9,0),ivec2(0,9),\nivec2(-1,-9),ivec2(1,-9),ivec2(-9,-1),ivec2(9,-1),ivec2(-9,1),ivec2(9,1),ivec2(-1,9),ivec2(1,9),ivec2(-2,-9),ivec2(2,-9),ivec2(-6,-7),ivec2(6,-7),ivec2(-7,-6),ivec2(7,-6),ivec2(-9,-2),ivec2(9,-2),ivec2(-9,2),ivec2(9,2),ivec2(-7,6),ivec2(7,6),ivec2(-6,7),ivec2(6,7),ivec2(-2,9),ivec2(2,9),ivec2(-5,-8),ivec2(5,-8),ivec2(-8,-5),ivec2(8,-5),ivec2(-8,5),ivec2(8,5),ivec2(-5,8),ivec2(5,8),ivec2(-3,-9),ivec2(3,-9),ivec2(-9,-3),ivec2(9,-3),ivec2(-9,3),ivec2(9,3),ivec2(-3,9),ivec2(3,9),ivec2(-4,-9),ivec2(4,-9),ivec2(-9,-4),ivec2(9,-4),ivec2(-9,4),ivec2(9,4),ivec2(-4,9),ivec2(4,9),ivec2(-7,-7),ivec2(7,-7),ivec2(-7,7),ivec2(7,7),ivec2(0,-10),ivec2(-6,-8),ivec2(6,-8),ivec2(-8,-6),ivec2(8,-6),ivec2(-10,0),ivec2(10,0),ivec2(-8,6),ivec2(8,6),ivec2(-6,8),ivec2(6,8),ivec2(0,10),\nivec2(-1,-10),ivec2(1,-10),ivec2(-10,-1),ivec2(10,-1),ivec2(-10,1),ivec2(10,1),ivec2(-1,10),ivec2(1,10),ivec2(-2,-10),ivec2(2,-10),ivec2(-10,-2),ivec2(10,-2),ivec2(-10,2),ivec2(10,2),ivec2(-2,10),ivec2(2,10),ivec2(-5,-9),ivec2(5,-9),ivec2(-9,-5),ivec2(9,-5),ivec2(-9,5),ivec2(9,5),ivec2(-5,9),ivec2(5,9),ivec2(-3,-10),ivec2(3,-10),ivec2(-10,-3),ivec2(10,-3),ivec2(-10,3),ivec2(10,3),ivec2(-3,10),ivec2(3,10),ivec2(-7,-8),ivec2(7,-8),ivec2(-8,-7),ivec2(8,-7),ivec2(-8,7),ivec2(8,7),ivec2(-7,8),ivec2(7,8),ivec2(-4,-10),ivec2(4,-10),ivec2(-10,-4),ivec2(10,-4),ivec2(-10,4),ivec2(10,4),ivec2(-4,10),ivec2(4,10),ivec2(-6,-9),ivec2(6,-9),ivec2(-9,-6),ivec2(9,-6),ivec2(-9,6),ivec2(9,6),ivec2(-6,9),ivec2(6,9),ivec2(0,-11),ivec2(-11,0),ivec2(11,0),ivec2(0,11),\nivec2(-1,-11),ivec2(1,-11),ivec2(-11,-1),ivec2(11,-1),ivec2(-11,1),ivec2(11,1),ivec2(-1,11),ivec2(1,11),ivec2(-2,-11),ivec2(2,-11),ivec2(-5,-10),ivec2(5,-10),ivec2(-10,-5),ivec2(10,-5),ivec2(-11,-2),ivec2(11,-2),ivec2(-11,2),ivec2(11,2),ivec2(-10,5),ivec2(10,5),ivec2(-5,10),ivec2(5,10),ivec2(-2,11),ivec2(2,11),ivec2(-8,-8),ivec2(8,-8),ivec2(-8,8),ivec2(8,8),ivec2(-3,-11),ivec2(3,-11),ivec2(-7,-9),ivec2(7,-9),ivec2(-9,-7),ivec2(9,-7),ivec2(-11,-3),ivec2(11,-3),ivec2(-11,3),ivec2(11,3),ivec2(-9,7),ivec2(9,7),ivec2(-7,9),ivec2(7,9),ivec2(-3,11),ivec2(3,11),ivec2(-6,-10),ivec2(6,-10),ivec2(-10,-6),ivec2(10,-6),ivec2(-10,6),ivec2(10,6),ivec2(-6,10),ivec2(6,10),ivec2(-4,-11),ivec2(4,-11),ivec2(-11,-4),ivec2(11,-4),ivec2(-11,4),ivec2(11,4),ivec2(-4,11),ivec2(4,11),ivec2(0,-12),ivec2(-12,0),ivec2(12,0),ivec2(0,12),\nivec2(-1,-12),ivec2(1,-12),ivec2(-8,-9),ivec2(8,-9),ivec2(-9,-8),ivec2(9,-8),ivec2(-12,-1),ivec2(12,-1),ivec2(-12,1),ivec2(12,1),ivec2(-9,8),ivec2(9,8),ivec2(-8,9),ivec2(8,9),ivec2(-1,12),ivec2(1,12),ivec2(-5,-11),ivec2(5,-11),ivec2(-11,-5),ivec2(11,-5),ivec2(-11,5),ivec2(11,5),ivec2(-5,11),ivec2(5,11),ivec2(-2,-12),ivec2(2,-12),ivec2(-12,-2),ivec2(12,-2),ivec2(-12,2),ivec2(12,2),ivec2(-2,12),ivec2(2,12),ivec2(-7,-10),ivec2(7,-10),ivec2(-10,-7),ivec2(10,-7),ivec2(-10,7),ivec2(10,7),ivec2(-7,10),ivec2(7,10),ivec2(-3,-12),ivec2(3,-12),ivec2(-12,-3),ivec2(12,-3),ivec2(-12,3),ivec2(12,3),ivec2(-3,12),ivec2(3,12),ivec2(-6,-11),ivec2(6,-11),ivec2(-11,-6),ivec2(11,-6),ivec2(-11,6),ivec2(11,6),ivec2(-6,11),ivec2(6,11),ivec2(-4,-12),ivec2(4,-12),ivec2(-12,-4),ivec2(12,-4),ivec2(-12,4),ivec2(12,4),ivec2(-4,12),ivec2(4,12),ivec2(-9,-9),ivec2(9,-9),ivec2(-9,9),ivec2(9,9),ivec2(-8,-10),ivec2(8,-10),ivec2(-10,-8),ivec2(10,-8),ivec2(-10,8),ivec2(10,8),ivec2(-8,10),ivec2(8,10),ivec2(0,-13),ivec2(-5,-12),ivec2(5,-12),ivec2(-12,-5),ivec2(12,-5),ivec2(-13,0),ivec2(13,0),ivec2(-12,5),ivec2(12,5),ivec2(-5,12),ivec2(5,12),ivec2(0,13),\nivec2(-1,-13),ivec2(1,-13),ivec2(-7,-11),ivec2(7,-11),ivec2(-11,-7),ivec2(11,-7),ivec2(-13,-1),ivec2(13,-1),ivec2(-13,1),ivec2(13,1),ivec2(-11,7),ivec2(11,7),ivec2(-7,11),ivec2(7,11),ivec2(-1,13),ivec2(1,13),ivec2(-2,-13),ivec2(2,-13),ivec2(-13,-2),ivec2(13,-2),ivec2(-13,2),ivec2(13,2),ivec2(-2,13),ivec2(2,13),ivec2(-3,-13),ivec2(3,-13),ivec2(-13,-3),ivec2(13,-3),ivec2(-13,3),ivec2(13,3),ivec2(-3,13),ivec2(3,13),ivec2(-6,-12),ivec2(6,-12),ivec2(-12,-6),ivec2(12,-6),ivec2(-12,6),ivec2(12,6),ivec2(-6,12),ivec2(6,12),ivec2(-9,-10),ivec2(9,-10),ivec2(-10,-9),ivec2(10,-9),ivec2(-10,9),ivec2(10,9),ivec2(-9,10),ivec2(9,10),ivec2(-4,-13),ivec2(4,-13),ivec2(-8,-11),ivec2(8,-11),ivec2(-11,-8),ivec2(11,-8),ivec2(-13,-4),ivec2(13,-4),ivec2(-13,4),ivec2(13,4),ivec2(-11,8),ivec2(11,8),ivec2(-8,11),ivec2(8,11),ivec2(-4,13),ivec2(4,13),ivec2(-7,-12),ivec2(7,-12),ivec2(-12,-7),ivec2(12,-7),ivec2(-12,7),ivec2(12,7),ivec2(-7,12),ivec2(7,12),ivec2(-5,-13),ivec2(5,-13),ivec2(-13,-5),ivec2(13,-5),ivec2(-13,5),ivec2(13,5),ivec2(-5,13),ivec2(5,13),ivec2(0,-14),ivec2(-14,0),ivec2(14,0),ivec2(0,14),\nivec2(-1,-14),ivec2(1,-14),ivec2(-14,-1),ivec2(14,-1),ivec2(-14,1),ivec2(14,1),ivec2(-1,14),ivec2(1,14),ivec2(-2,-14),ivec2(2,-14),ivec2(-10,-10),ivec2(10,-10),ivec2(-14,-2),ivec2(14,-2),ivec2(-14,2),ivec2(14,2),ivec2(-10,10),ivec2(10,10),ivec2(-2,14),ivec2(2,14),ivec2(-9,-11),ivec2(9,-11),ivec2(-11,-9),ivec2(11,-9),ivec2(-11,9),ivec2(11,9),ivec2(-9,11),ivec2(9,11),ivec2(-3,-14),ivec2(3,-14),ivec2(-6,-13),ivec2(6,-13),ivec2(-13,-6),ivec2(13,-6),ivec2(-14,-3),ivec2(14,-3),ivec2(-14,3),ivec2(14,3),ivec2(-13,6),ivec2(13,6),ivec2(-6,13),ivec2(6,13),ivec2(-3,14),ivec2(3,14),ivec2(-8,-12),ivec2(8,-12),ivec2(-12,-8),ivec2(12,-8),ivec2(-12,8),ivec2(12,8),ivec2(-8,12),ivec2(8,12),ivec2(-4,-14),ivec2(4,-14),ivec2(-14,-4),ivec2(14,-4),ivec2(-14,4),ivec2(14,4),ivec2(-4,14),ivec2(4,14),ivec2(-7,-13),ivec2(7,-13),ivec2(-13,-7),ivec2(13,-7),ivec2(-13,7),ivec2(13,7),ivec2(-7,13),ivec2(7,13),ivec2(-5,-14),ivec2(5,-14),ivec2(-10,-11),ivec2(10,-11),ivec2(-11,-10),ivec2(11,-10),ivec2(-14,-5),ivec2(14,-5),ivec2(-14,5),ivec2(14,5),ivec2(-11,10),ivec2(11,10),ivec2(-10,11),ivec2(10,11),ivec2(-5,14),ivec2(5,14),ivec2(0,-15),ivec2(-9,-12),ivec2(9,-12),ivec2(-12,-9),ivec2(12,-9),ivec2(-15,0),ivec2(15,0),ivec2(-12,9),ivec2(12,9),ivec2(-9,12),ivec2(9,12),ivec2(0,15)\n);\nconst int DEFAULT_PATCH_RADIUS = 15;\nconst int MIN_PATCH_RADIUS = 2;\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nint keypointIndex = thread.x + thread.y * outputSize().x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nvec2 m = vec2(0.0f);\nfloat pot = exp2(keypoint.lod);\nivec2 pyrBaseSize = textureSize(pyramid, 0);\nint scaledRadius = int(ceil(float(DEFAULT_PATCH_RADIUS) / pot));\nint radius = max(scaledRadius, MIN_PATCH_RADIUS);\nint count = diskPointCount[radius];\nfor(int j = 0; j < count; j++) {\nvec2 offset = vec2(diskPoint[j]);\nvec2 position = keypoint.position + round(pot * offset);\nvec4 patchPixel = pyrPixelAtEx(pyramid, position, keypoint.lod, pyrBaseSize);\nm += offset * patchPixel.g;\n}\nfloat angle = fastAtan2(m.y, m.x);\nfloat encodedOrientation = encodeOrientation(angle);\nfloat encodedFlags = encodeKeypointFlags(keypoint.flags | KPF_ORIENTED);\ncolor = vec4(0.0f, encodedOrientation, 0.0f, encodedFlags);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/score-8bits.glsl":
+/*!****************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/score-8bits.glsl ***!
+  \****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"float16.glsl\"\nuniform sampler2D corners;\nvoid main()\n{\nvec4 pixel = threadPixel(corners);\nfloat score = decodeFloat16(pixel.rb);\n#if !defined(METHOD)\n#error Must define METHOD\n#elif METHOD == 0\nfloat score8 = clamp(score, 0.0f, 1.0f);\n#elif METHOD == 1\nfloat score8 = 1.0f - exp2(-score);\n#else\n#error Invalid METHOD\n#endif\ncolor = vec4(score8, pixel.g, 0.0f, pixel.a);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/score-findmax.glsl":
+/*!******************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/score-findmax.glsl ***!
+  \******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"float16.glsl\"\nuniform sampler2D corners;\nuniform int iterationNumber;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 bounds = outputSize();\nint jump = (1 << iterationNumber);\nint clusterLength = jump << 1;\nint clusterMask = clusterLength - 1;\nivec2 clusterPos = ivec2(thread >> (1 + iterationNumber)) << (1 + iterationNumber);\nivec2 next1 = clusterPos + ((thread - clusterPos + ivec2(jump, 0)) & clusterMask);\nivec2 next2 = clusterPos + ((thread - clusterPos + ivec2(0, jump)) & clusterMask);\nivec2 next3 = clusterPos + ((thread - clusterPos + ivec2(jump, jump)) & clusterMask);\nvec4 p0 = texelFetch(corners, thread, 0);\nvec4 p1 = texelFetch(corners, next1 % bounds, 0);\nvec4 p2 = texelFetch(corners, next2 % bounds, 0);\nvec4 p3 = texelFetch(corners, next3 % bounds, 0);\nfloat s0 = decodeFloat16(p0.rb);\nfloat s1 = decodeFloat16(p1.rb);\nfloat s2 = decodeFloat16(p2.rb);\nfloat s3 = decodeFloat16(p3.rb);\nbool b0 = s0 >= s1 && s0 >= s2 && s0 >= s3;\nbool b1 = s1 >= s0 && s1 >= s2 && s1 >= s3;\nbool b2 = s2 >= s0 && s2 >= s1 && s2 >= s3;\ncolor = vec4(0.0f);\ncolor.rb = b0 ? p0.rb : (\nb1 ? p1.rb : (\nb2 ? p2.rb : p3.rb\n)\n);\n}"
 
 /***/ }),
 
@@ -22923,40 +23428,6 @@ class SpeedyTexture
     }
 
     /**
-     * Generates an image pyramid
-     * @param {SpeedyGPU} gpu
-     * @param {boolean} [gaussian] should we compute a Gaussian pyramid? Recommended!
-     * @returns {SpeedyTexture} this
-     */
-    generateMipmaps(gpu, gaussian = true)
-    {
-        // nothing to do
-        if(this._hasMipmaps)
-            return this;
-
-        // let the hardware compute the all levels of the pyramid, up to 1x1
-        // this might be a simple box filter...
-        SpeedyTexture._generateDefaultMipmaps(this._gl, this._glTexture);
-        this._hasMipmaps = true;
-
-        // compute a few layers of a Gaussian pyramid for better results
-        if(gaussian) {
-            let layer = this, pyramid = null;
-            for(let level = 1; level < _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_LEVELS"]; level++) {
-                if(Math.min(layer.width, layer.height) < 2)
-                    break;
-
-                pyramid = gpu.programs.pyramids(level - 1);
-                layer = pyramid.reduce(layer);
-                layer.copyTo(this, level);
-            }
-        }
-
-        // done!
-        return this;
-    }
-
-    /**
      * Clear the texture
      * @returns {SpeedyTexture} this texture
      */
@@ -22977,6 +23448,68 @@ class SpeedyTexture
         this.discardMipmaps();
 
         // done!
+        return this;
+    }
+
+    /**
+     * Generates an image pyramid
+     * @param {SpeedyGPU} gpu
+     * @param {boolean} [gaussian] should we compute a Gaussian pyramid? Recommended!
+     * @returns {SpeedyTexture} this
+     */
+    generateMipmaps(gpu, gaussian = true)
+    {
+        // nothing to do
+        if(this._hasMipmaps)
+            return this;
+
+        // let the hardware compute the all levels of the pyramid, up to 1x1
+        // this might be a simple box filter...
+        SpeedyTexture._generateDefaultMipmaps(this._gl, this._glTexture);
+
+        // compute a Gaussian pyramid for better results
+        if(gaussian) {
+            let width = this.width, height = this.height;
+            let halfWidth = 0, halfHeight = 0;
+            let layer = this;
+            const pyramid = gpu.programs.pyramids(0);
+            const tex = [
+                gpu.texturePool.allocate(),
+                gpu.texturePool.allocate(),
+                gpu.texturePool.allocate()
+            ];
+
+            // apply successive reduce operations
+            for(let level = 1; level < _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_LEVELS"]; level++) {
+                if(Math.min(width, height) < 2)
+                    break;
+
+                // use max(1, floor(size / 2^lod)), in accordance to
+                // the OpenGL ES 3.0 spec sec 3.8.10.4 (Mipmapping)
+                halfWidth = Math.max(1, width >>> 1);
+                halfHeight = Math.max(1, height >>> 1);
+
+                // reduce operation
+                (pyramid.smoothX.outputs(width, height, tex[0]))(layer);
+                (pyramid.smoothY.outputs(width, height, tex[1]))(tex[0]);
+                (pyramid.downsample2.outputs(halfWidth, halfHeight, tex[2]))(tex[1]);
+
+                // copy to mipmap
+                tex[2].copyTo(this, level);
+
+                // next level
+                layer = tex[2];
+                width = halfWidth;
+                height = halfHeight;
+            }
+
+            gpu.texturePool.free(tex[2]);
+            gpu.texturePool.free(tex[1]);
+            gpu.texturePool.free(tex[0]);
+        }
+
+        // done!
+        this._hasMipmaps = true;
         return this;
     }
 
