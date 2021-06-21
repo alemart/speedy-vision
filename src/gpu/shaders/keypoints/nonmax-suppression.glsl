@@ -27,13 +27,19 @@ uniform float lodStep; // ignored if not using multiscale
 
 // settings (better suppression = more texture reads)
 #if !defined(MULTISCALE)
+
 #error Must define MULTISCALE
+
 #elif MULTISCALE != 0
-#define ENABLE_MIDDLE_RING
-#define ENABLE_OUTER_RING
+
 #define LOD_STEP (lodStep)
+#define USE_MIDDLE_RING
+//#define USE_OUTER_RING // too large if lodStep <= 0.5 ?
+
 #else
+
 #define LOD_STEP (0.0f)
+
 #endif
 
 // Helper macros
@@ -68,7 +74,7 @@ void main()
     );
 
     // read middle ring
-#ifdef ENABLE_MIDDLE_RING
+#ifdef USE_MIDDLE_RING
     vec4 q[16] = vec4[16](
         PIX(0,2), PIX(1,2), PIX(2,2), PIX(2,1),
         PIX(2,0), PIX(2,-1), PIX(2,-2), PIX(1,-2),
@@ -80,7 +86,7 @@ void main()
 #endif
 
     // read outer ring
-#ifdef ENABLE_OUTER_RING
+#ifdef USE_OUTER_RING
     vec4 r[16] = vec4[16](
         PIX(0,3), PIX(1,3), PIX(3,1), PIX(3,0),
         PIX(3,-1), PIX(1,-3), PIX(0,-3), PIX(-1,-3),
