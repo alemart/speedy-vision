@@ -163,7 +163,7 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
         )(suppressedCorners, maxScore, quality);
 
         // convert scores to 8 bit
-        const finalCorners = (keypoints.fastScoreTo8bits
+        const finalCorners = (keypoints.harrisScoreTo8bits
             .outputs(width, height, tex[2])
         )(niceCorners);
 
