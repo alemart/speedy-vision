@@ -30,8 +30,7 @@ void main()
     float score = decodeFloat16(pixel.rb);
 
     // convert to 8-bit
-    const float mul = 6.0f; // looks good
-    float score8 = clamp(score * mul, 0.0f, 1.0f);
+    float score8 = clamp(score, 0.0f, 1.0f);
 
     // done!
     color = vec4(score8, pixel.g, 0.0f, pixel.a);

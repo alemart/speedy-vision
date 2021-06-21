@@ -126,28 +126,28 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeKe
     {
         const image = this.input().read().image;
         const width = image.width, height = image.height;
-        const normalizedThreshold = this._threshold / 255.0;
+        const threshold = this._threshold;
         const keypoints = gpu.programs.keypoints;
+        const lodStep = Math.log2(this._scaleFactor);
+        const levels = this._levels;
 
         // allocate textures
         const tex = [
             gpu.texturePool.allocate(),
             gpu.texturePool.allocate(),
+            gpu.texturePool.allocate(),
         ];
 
-        // FAST (TODO FIXME)
-        const corners = (keypoints._fast9
-            .outputs(width, height, tex[1])
-        )(image, normalizedThreshold);
-
-        const cornersWithScore = (keypoints._fastScore16
-            .outputs(width, height, tex[0])
-        )(corners, normalizedThreshold);
+        // FAST
+        keypoints.fast9_16.outputs(width, height, tex[0], tex[1]);
+        let corners = tex[1].clearToColor(0, 0, 0, 0);
+        for(let i = 0; i < levels; i++)
+            corners = keypoints.fast9_16(corners, image, lodStep * i, threshold);
 
         // non-maximum suppression
-        const suppressedCorners = (keypoints._nonMaxSuppression
-            .outputs(width, height, tex[1])
-        )(cornersWithScore, 0);
+        const suppressedCorners = (keypoints.pyrnonmax
+            .outputs(width, height, tex[2])
+        )(corners, lodStep);
 
         // convert scores to 8 bit
         const finalCorners = (keypoints.encodeFastScore
@@ -159,6 +159,7 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeKe
         const encoderLength = encodedKeypoints.width;
 
         // release textures
+        gpu.texturePool.free(tex[2]);
         gpu.texturePool.free(tex[1]);
         gpu.texturePool.free(tex[0]);
 

@@ -19,7 +19,7 @@
  * Encode offsets between keypoints
  */
 
-uniform sampler2D image;
+uniform sampler2D corners;
 uniform ivec2 imageSize;
 
 #if !defined(MAX_ITERATIONS)
@@ -32,21 +32,22 @@ uniform ivec2 imageSize;
 // We'll encode the following in the RGBA channels:
 //
 // R: keypoint score
-// G: keypoint scale
-// BA: skip offset (little endian)
+// GB: skip offset (little endian)
+// A: keypoint scale
 //
 // Skip offset = min(c, offset to the next keypoint),
 // for a constant c in [1, 65535]
 //
 void main()
 {
-    vec4 pixel = threadPixel(image);
+    vec4 pixel = threadPixel(corners);
     ivec2 pos = threadLocation();
-    vec2 prefix = pixel.ra;
+    float score = pixel.r;
+    float scale = pixel.a;
     int offset = 0;
 
 #if 0
-    while(offset < MAX_ITERATIONS && pos.y < imageSize.y && pixelAt(image, pos).r == 0.0f) {
+    while(offset < MAX_ITERATIONS && pos.y < imageSize.y && pixelAt(corners, pos).r == 0.0f) {
         ++offset;
         pos.x = (pos.x + 1) % imageSize.x;
         pos.y += int(pos.x == 0);
@@ -54,15 +55,15 @@ void main()
 #else
     int allow = 1;
 
+    // branchless
     for(int i = 0; i < MAX_ITERATIONS; i++) {
         allow *= int(pos.y < imageSize.y) * int(pixel.r == 0.0f);
         offset += allow;
         pos.x = (pos.x + 1) % imageSize.x;
         pos.y += int(pos.x == 0);
-        pixel = pixelAt(image, pos);
+        pixel = pixelAt(corners, pos);
     }
 #endif
 
-    //offset = min(offset, 255);
-    color = vec4(prefix, float(offset) / 255.0f, 0.0f);
+    color = vec4(score, float(offset) / 255.0f, 0.0f, scale);
 }

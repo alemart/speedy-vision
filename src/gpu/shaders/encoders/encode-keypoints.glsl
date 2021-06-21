@@ -30,7 +30,7 @@ uniform int descriptorSize;
 uniform int extraSize;
 uniform int encoderLength;
 
-#define decodeSkipOffset(pixel) int((pixel).b * 255.0f) | (int((pixel).a * 255.0f) << 8)
+#define decodeSkipOffset(pixel) (int((pixel).g * 255.0f) | (int((pixel).b * 255.0f) << 8))
 
 /**
  * Find the q-th keypoint in the offsets image
@@ -100,7 +100,7 @@ void main()
 
     // write keypoint data
     color = (address.offset == 1) ? vec4(
-        pixel.g, // scale
+        pixel.a, // scale
         0.0f, // rotation
         pixel.r, // score
         encodeKeypointFlags(KPF_NONE) // flags

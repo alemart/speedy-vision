@@ -27,15 +27,15 @@ uniform ivec2 imageSize;
 #endif
 
 // helper macros
-#define decodeSkipOffset(pixel) int((pixel).b * 255.0f) | (int((pixel).a * 255.0f) << 8)
-#define encodeSkipOffset(offset) vec2((offset) & 255, (offset) >> 8) / 255.0f // offset is guaranteed to be <= 0xFFFF
+#define decodeSkipOffset(pixel) (int((pixel).g * 255.0f) | (int((pixel).b * 255.0f) << 8))
+#define encodeSkipOffset(offset) (vec2((offset) & 255, (offset) >> 8) / 255.0f) // offset is guaranteed to be <= 0xFFFF
 
 //
 // We'll encode the following in the RGBA channels:
 //
 // R: keypoint score
-// G: keypoint scale
-// BA: skip offset (little endian)
+// GB: skip offset (little endian)
+// A: keypoint scale
 //
 // Skip offset = min(c, offset to the next keypoint),
 // for a constant c in [1, 65535]
@@ -44,7 +44,8 @@ void main()
 {
     vec4 pixel = threadPixel(offsetsImage);
     ivec2 thread = threadLocation();
-    vec2 prefix = pixel.rg;
+    float score = pixel.r;
+    float scale = pixel.a;
     int rasterIndex = thread.y * imageSize.x + thread.x;
     int offset = decodeSkipOffset(pixel);
     int totalOffset = offset;
@@ -72,5 +73,5 @@ void main()
 #endif
 
     totalOffset = min(totalOffset, 65535);
-    color = vec4(prefix, encodeSkipOffset(totalOffset));
+    color = vec4(score, encodeSkipOffset(totalOffset), scale);
 }

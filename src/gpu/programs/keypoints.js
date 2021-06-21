@@ -27,6 +27,25 @@ import { PYRAMID_MAX_LEVELS } from '../../utils/globals';
 import { Utils } from '../../utils/utils';
 
 
+// FAST corner detector
+const fast9_16 = importShader('keypoints/fast.glsl')
+                .withDefines({ 'FAST_TYPE': 916 })
+                .withArguments('corners', 'pyramid', 'lod', 'threshold');
+
+// Non-maximum suppression
+const nonMaxSuppression = importShader('keypoints/nonmax-suppression.glsl')
+                         .withDefines({ 'MULTISCALE': 0 })
+                         .withArguments('image', 'lodStep');
+
+const multiscaleNonMaxSuppression = importShader('keypoints/nonmax-suppression.glsl')
+                                   .withDefines({ 'MULTISCALE': 1 })
+                                   .withArguments('image', 'lodStep');
+
+
+
+
+// --- OLD (TODO remove) ---
+
 
 //
 // FAST corner detector
@@ -113,13 +132,6 @@ const orbOrientation = importShader('keypoints/orb/orb-orientation.glsl')
 // Generic keypoint routines
 //
 
-// non-maximum suppression
-const nonMaxSuppression = importShader('keypoints/nonmax-suppression.glsl')
-                         .withArguments('image', 'lodStep');
-const multiscaleNonMaxSuppression = importShader('keypoints/nonmax-suppression.glsl')
-                                   .withArguments('image', 'lodStep')
-                                   .withDefines({ 'MULTISCALE': 1 });
-
 // transfer keypoint orientation
 const transferOrientation = importShader('keypoints/transfer-orientation.glsl')
                            .withArguments('encodedOrientations', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
@@ -146,6 +158,19 @@ export class GPUKeypoints extends SpeedyProgramGroup
     {
         super(gpu, width, height);
         this
+            // FAST corner detector
+            .declare('fast9_16', fast9_16, {
+                ...this.program.usesPingpongRendering()
+            })
+
+            // Non-maximum suppression
+            .declare('nonmax', nonMaxSuppression)
+            .declare('pyrnonmax', multiscaleNonMaxSuppression)
+
+
+
+            // --- OLD (TODO remove) ---
+
             // FAST-9,16
             .compose('fast9', '_fast9', '_fastScore16')
             .declare('_fast9', fast9) // find corners

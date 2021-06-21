@@ -98,13 +98,13 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
 
         // prepare programs
         encoders._encodeKeypointSkipOffsets.outputs(width, height, tex[0]);
-        encoders._encodeKeypointLongSkipOffsets.outputs(width, height, tex[1], tex[2]);
-        encoders._encodeKeypoints.outputs(encoderLength, encoderLength, tex[0], encodedKeypoints);
+        encoders._encodeKeypointLongSkipOffsets.outputs(width, height, tex[1], tex[0]);
+        encoders._encodeKeypoints.outputs(encoderLength, encoderLength, tex[2], encodedKeypoints);
 
         // encode skip offsets
         let offsets = encoders._encodeKeypointSkipOffsets(corners, imageSize);
         for(let i = 0; i < LONG_SKIP_OFFSET_PASSES; i++) // to boost performance
-            offsets = encoders._encodeKeypointLongSkipOffsets(corners, imageSize);
+            offsets = encoders._encodeKeypointLongSkipOffsets(offsets, imageSize);
 
         /*
         // debug: view corners
@@ -123,7 +123,7 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
 
         // encode keypoints
         const numPasses = ENCODER_PASSES;
-        let encodedKps = encodedKeypoints.resize(encoderLength, encoderLength).clear();
+        let encodedKps = encodedKeypoints.clear();
         for(let passId = 0; passId < numPasses; passId++)
             encodedKps = encoders._encodeKeypoints(offsets, encodedKps, imageSize, passId, numPasses, 0, 0, encoderLength);
 

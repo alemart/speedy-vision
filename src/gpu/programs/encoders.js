@@ -47,7 +47,7 @@ const MAX_SKIP_OFFSET_ITERATIONS = [ 32, 32 ]; // used when computing skip offse
 
 // encode keypoint offsets: maxIterations is an experimentally determined integer
 const encodeKeypointSkipOffsets = importShader('encoders/encode-keypoint-offsets.glsl')
-                                 .withArguments('image', 'imageSize')
+                                 .withArguments('corners', 'imageSize')
                                  .withDefines({ 'MAX_ITERATIONS': MAX_SKIP_OFFSET_ITERATIONS[0] });
 
 // encode long offsets for improved performance

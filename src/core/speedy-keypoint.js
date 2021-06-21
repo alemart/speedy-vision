@@ -90,10 +90,20 @@ export class SpeedyKeypoint
     /**
      * The pyramid level-of-detail from which
      * this feature point was extracted
+     * @returns {number}
      */
     get lod()
     {
         return this._lod;
+    }
+
+    /**
+     * Scale: 2^lod
+     * @returns {number}
+     */
+    get scale()
+    {
+        return Math.pow(2, this._lod);
     }
 
     /**

@@ -152,7 +152,7 @@ float encodeLod(float lod)
 float decodeLod(float encodedLod)
 {
     float lod = encodedLod * (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS) - LOG2_PYRAMID_MAX_SCALE;
-    return lod * float(encodedLod < 1.0f); // will be zero if encodedLod is 1
+    return lod - lod * step(1.0f, encodedLod); // will be zero if encodedLod is 1
 }
 
 /**
