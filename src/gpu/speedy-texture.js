@@ -111,17 +111,41 @@ export class SpeedyTexture
         SpeedyTexture._generateDefaultMipmaps(this._gl, this._glTexture);
         this._hasMipmaps = true;
 
-        // compute a few layers of a Gaussian pyramid for better results
+        // compute a Gaussian pyramid for better results
         if(gaussian) {
-            let layer = this, pyramid = null;
+            const tex = [ gpu.texturePool.allocate(), gpu.texturePool.allocate(), gpu.texturePool.allocate() ];
+            let width = this.width, height = this.height;
+            let halfWidth = 0, halfHeight = 0;
+            let pyramid = gpu.programs.pyramids(0);
+            let layer = this;
+
+            // apply successive reduce operations
             for(let level = 1; level < PYRAMID_MAX_LEVELS; level++) {
-                if(Math.min(layer.width, layer.height) < 2)
+                if(Math.min(width, height) < 2)
                     break;
 
-                pyramid = gpu.programs.pyramids(level - 1);
-                layer = pyramid.reduce(layer);
-                layer.copyTo(this, level);
+                // use max(1, floor(size / 2^lod)), in accordance to
+                // the OpenGL ES 3.0 spec sec 3.8.10.4 (Mipmapping)
+                halfWidth = Math.max(1, width >>> 1);
+                halfHeight = Math.max(1, height >>> 1);
+
+                // reduce operation
+                (pyramid.smoothX.outputs(width, height, tex[0]))(layer);
+                (pyramid.smoothY.outputs(width, height, tex[1]))(tex[0]);
+                (pyramid.downsample2.outputs(halfWidth, halfHeight, tex[2]))(tex[1]);
+
+                // copy to mipmap
+                tex[2].copyTo(this, level);
+
+                // next level
+                layer = tex[2];
+                width = halfWidth;
+                height = halfHeight;
             }
+
+            gpu.texturePool.free(tex[2]);
+            gpu.texturePool.free(tex[1]);
+            gpu.texturePool.free(tex[0]);
         }
 
         // done!

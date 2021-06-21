@@ -26,6 +26,7 @@ import { SpeedyGPU } from '../../../../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../../../../gpu/speedy-texture';
 import { ImageFormat } from '../../../../../utils/types';
 import { Utils } from '../../../../../utils/utils';
+import { IllegalOperationError } from '../../../../../utils/errors';
 import { SpeedyPromise } from '../../../../../utils/speedy-promise';
 import { MIN_KEYPOINT_SIZE, PYRAMID_MAX_LEVELS } from '../../../../../utils/globals';
 
@@ -130,6 +131,10 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeKe
         const keypoints = gpu.programs.keypoints;
         const lodStep = Math.log2(this._scaleFactor);
         const levels = this._levels;
+
+        // validate pyramid
+        if(!(levels == 1 || image.hasMipmaps()))
+            throw new IllegalOperationError(`Expected a pyramid in ${this.fullName}`);
 
         // allocate textures
         const tex = [

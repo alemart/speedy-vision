@@ -532,11 +532,22 @@ Creates an image sink with the specified name. If the name is not specified, Spe
 
 #### Basic tools
 
+##### Speedy.Image.Pyramid
+
+`Speedy.Image.Pyramid(name?: string): SpeedyPipelineNodeImagePyramid`
+
+Generate a Gaussian pyramid. A pyramid is a texture with mipmaps. For best results, Speedy computes the layers instead of relying on the hardware only.
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Image     | Input image. |
+| `"out"`   | Image     | Gaussian pyramid. |
+
 ##### Speedy.Image.Multiplexer
 
 `Speedy.Image.Multiplexer(name?: string): SpeedyPipelineNodeImageMultiplexer`
 
-Creates an image multiplexer. It receives two images as input and outputs one of the them.
+An image multiplexer receives two images as input and outputs one of the them.
 
 ###### Parameters
 

@@ -60,6 +60,42 @@ export class GPUPyramids extends SpeedyProgramGroup
     {
         super(gpu, width, height);
         this
+            // upsampling & downsampling
+            .declare('upsample2', upsample2, {
+                ...(this.program.hasTextureSize(2 * this._width, 2 * this._height))
+            })
+
+            .declare('downsample2', downsample2, {
+                ...(this.program.hasTextureSize(Math.max(1, Math.floor(this._width / 2)), Math.max(1, Math.floor(this._height / 2))))
+            })
+
+            // separable kernels for gaussian smoothing
+            // use [c, b, a, b, c] where a+2c = 2b and a+2b+2c = 1
+            // pick a = 0.4 for gaussian approximation
+            .declare('smoothX', convX([
+                0.05, 0.25, 0.4, 0.25, 0.05
+            ]))
+            .declare('smoothY', convY([
+                0.05, 0.25, 0.4, 0.25, 0.05
+            ]))
+
+            // smoothing for 2x image
+            // same rules as above with sum(k) = 2
+            .declare('smoothX2', convX([
+                0.1, 0.5, 0.8, 0.5, 0.1 // NOTE: this would saturate the image, but we apply it on a 2x upsampled version with lots of zero pixels
+            ]), {
+                ...(this.program.hasTextureSize(2 * this._width, 2 * this._height))
+            })
+
+            .declare('smoothY2', convY([
+                0.1, 0.5, 0.8, 0.5, 0.1
+            ], 1.0 / 2.0), {
+                ...(this.program.hasTextureSize(2 * this._width, 2 * this._height))
+            })
+
+
+            // --- OLD shaders ---
+
             // pyramid operations (scale = 2)
             .compose('_reduce', '_smoothX', '_smoothY', '_downsample2')
             .compose('_expand', '_upsample2', '_smoothX2', '_smoothY2')
