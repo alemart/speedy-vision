@@ -24,7 +24,7 @@ import { MatrixType } from './matrix-type';
 import { MatrixShape } from './matrix-shape';
 import { SpeedyMatrix } from './matrix';
 import { SpeedyMatrixSettings } from './matrix-settings';
-import { SpeedyPoint2 } from './speedy-point';
+import { SpeedyPoint2 } from '../speedy-point';
 import {
     SpeedyMatrixExpr,
     SpeedyMatrixLvalueExpr,

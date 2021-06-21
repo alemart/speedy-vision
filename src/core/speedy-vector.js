@@ -19,8 +19,6 @@
  * Vectors
  */
 
-import { IllegalArgumentError } from '../../utils/errors';
-
 /**
  * 2D vector of floating-point numbers
  */

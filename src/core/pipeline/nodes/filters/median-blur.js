@@ -24,7 +24,7 @@ import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithImage } from '../..
 import { InputPort, OutputPort } from '../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../../../gpu/speedy-texture';
-import { SpeedySize } from '../../../math/speedy-size';
+import { SpeedySize } from '../../../speedy-size';
 import { Utils } from '../../../../utils/utils';
 import { ImageFormat } from '../../../../utils/types';
 import { NotSupportedError, NotImplementedError } from '../../../../utils/errors';

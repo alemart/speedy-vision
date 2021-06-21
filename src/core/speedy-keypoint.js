@@ -19,7 +19,7 @@
  * Keypoint class
  */
 
-import { SpeedyPoint2 } from './math/speedy-point';
+import { SpeedyPoint2 } from './speedy-point';
 
 // Constants
 const noBytes = new Uint8Array([]);

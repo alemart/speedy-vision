@@ -25,9 +25,9 @@ import { SpeedyFeatureDetectorFactory } from './speedy-feature-detector-factory'
 import { SpeedyFeatureTrackerFactory } from './speedy-feature-tracker-factory';
 import { SpeedyFeatureDescriptorFactory } from './speedy-feature-descriptor-factory';
 import { SpeedyFlags } from './speedy-flags';
-import { SpeedyVector2 } from './math/speedy-vector';
-import { SpeedyPoint2 } from './math/speedy-point';
-import { SpeedySize } from './math/speedy-size';
+import { SpeedyVector2 } from './speedy-vector';
+import { SpeedyPoint2 } from './speedy-point';
+import { SpeedySize } from './speedy-size';
 import { SpeedyMatrixExprFactory } from './math/matrix-expression-factory';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { SpeedyPipeline } from './pipeline/pipeline';

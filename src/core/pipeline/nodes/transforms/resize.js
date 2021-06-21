@@ -27,8 +27,8 @@ import { SpeedyTexture } from '../../../../gpu/speedy-texture';
 import { Utils } from '../../../../utils/utils';
 import { IllegalArgumentError } from '../../../../utils/errors';
 import { ImageFormat } from '../../../../utils/types';
-import { SpeedySize } from '../../../math/speedy-size';
-import { SpeedyVector2 } from '../../../math/speedy-vector';
+import { SpeedySize } from '../../../speedy-size';
+import { SpeedyVector2 } from '../../../speedy-vector';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 
 /**

@@ -25,7 +25,7 @@ import { FeatureDownloader } from './keypoints/feature-downloader';
 import { SpeedyMedia } from './speedy-media';
 import { SpeedyGPU } from '../gpu/speedy-gpu';
 import { SpeedyTexture } from '../gpu/speedy-texture';
-import { SpeedyVector2 } from './math/speedy-vector';
+import { SpeedyVector2 } from './speedy-vector';
 import { IllegalOperationError, IllegalArgumentError } from '../utils/errors';
 import { Utils } from '../utils/utils';
 import { PYRAMID_MAX_LEVELS, KPF_DISCARD } from '../utils/globals';
