@@ -99,7 +99,7 @@ const multiscaleHarris = importShader('keypoints/harris/multiscale-harris.glsl')
                         .withArguments('pyramid', 'windowSize', 'numberOfLayers', 'lodStep', 'sobelDerivatives');
 
 // discard corners below a specified quality level
-const harrisCutoff = importShader('keypoints/harris/harris-cutoff.glsl').withArguments('corners', 'maxScore', 'quality');
+const harrisCutoff = importShader('keypoints/harris-cutoff.glsl').withArguments('corners', 'maxScore', 'quality');
 
 // encode harris score in an 8-bit component
 const encodeHarrisScore = importShader('keypoints/harris/encode-harris-score.glsl').withArguments('image');

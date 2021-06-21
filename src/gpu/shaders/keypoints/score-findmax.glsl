@@ -26,10 +26,10 @@ uniform int iterationNumber; // 0, 1, 2, 3...
 
 //
 // Output format: (after M passes)
-// output.rb = max_score
+// output.rb = max_score (of all corners)
 //
 // When iterationNumber is zero, it is assumed that
-// input.rb is that of the corner image
+// corners.rb is that of the corner image
 //
 // This algorithm takes M = ceil(log2 n) passes to run, where
 // n = max(imageWidth, imageHeight)

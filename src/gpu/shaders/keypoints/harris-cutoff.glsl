@@ -27,14 +27,13 @@ uniform float quality; // in [0,1]
 
 void main()
 {
-    vec4 pixel = threadPixel(corners);
+    float score = decodeFloat16(threadPixel(corners).rb);
     float maxval = decodeFloat16(threadPixel(maxScore).rb);
-    float score = decodeFloat16(pixel.rb);
 
-    // threshold
+    // compute threshold
     float threshold = maxval * clamp(quality, 0.0f, 1.0f);
 
-    // done!
+    // apply threshold
     color = pixel;
     color.rb = score >= threshold ? color.rb : encodeFloat16(0.0f);
 }
