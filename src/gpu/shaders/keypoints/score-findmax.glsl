@@ -15,13 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * max-harris-score.glsl
- * Scan the entire image and find the maximum Harris score
+ * score-findmax.glsl
+ * Scan an entire corners image and find the maximum score
  */
 
 @include "float16.glsl"
 
-uniform sampler2D self; // input image
+uniform sampler2D corners;
 uniform int iterationNumber; // 0, 1, 2, 3...
 
 //
@@ -48,10 +48,10 @@ void main()
     ivec2 next2 = clusterPos + ((thread - clusterPos + ivec2(0, jump)) & clusterMask);
     ivec2 next3 = clusterPos + ((thread - clusterPos + ivec2(jump, jump)) & clusterMask);
 
-    vec4 p0 = texelFetch(self, thread, 0);
-    vec4 p1 = texelFetch(self, min(next1, last), 0);
-    vec4 p2 = texelFetch(self, min(next2, last), 0);
-    vec4 p3 = texelFetch(self, min(next3, last), 0);
+    vec4 p0 = texelFetch(corners, thread, 0);
+    vec4 p1 = texelFetch(corners, min(next1, last), 0);
+    vec4 p2 = texelFetch(corners, min(next2, last), 0);
+    vec4 p3 = texelFetch(corners, min(next3, last), 0);
 
     float s0 = decodeFloat16(p0.rb);
     float s1 = decodeFloat16(p1.rb);

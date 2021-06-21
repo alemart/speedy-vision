@@ -105,7 +105,7 @@ const harrisCutoff = importShader('keypoints/harris/harris-cutoff.glsl').withArg
 const encodeHarrisScore = importShader('keypoints/harris/encode-harris-score.glsl').withArguments('image');
 
 // find the maximum harris score in an image
-const maxHarrisScore = importShader('keypoints/harris/max-harris-score.glsl').withArguments('self', 'iterationNumber');
+const maxHarrisScore = importShader('keypoints/score-findmax.glsl').withArguments('corners', 'iterationNumber');
 
 // Sobel derivatives
 const multiscaleSobel = importShader('keypoints/harris/multiscale-sobel.glsl').withArguments('pyramid', 'lod');
