@@ -32,6 +32,9 @@ const fast9_16 = importShader('keypoints/fast.glsl')
                 .withDefines({ 'FAST_TYPE': 916 })
                 .withArguments('corners', 'pyramid', 'lod', 'threshold');
 
+const fastScore8bits = importShader('keypoints/fast-score-8bits.glsl')
+                      .withArguments('corners');
+
 // Non-maximum suppression
 const nonMaxSuppression = importShader('keypoints/nonmax-suppression.glsl')
                          .withDefines({ 'MULTISCALE': 0 })
@@ -81,7 +84,7 @@ const multiscaleFast = importShader('keypoints/fast/multiscale-fast.glsl')
                       .withArguments('pyramid', 'threshold', 'numberOfLayers', 'lodStep');
 
 // encode FAST score in an 8-bit component
-const encodeFastScore = importShader('keypoints/fast/encode-fast-score.glsl').withArguments('image');
+const encodeFastScore = importShader('keypoints/fast-score-8bits.glsl').withArguments('corners');
 
 
 
@@ -162,6 +165,8 @@ export class GPUKeypoints extends SpeedyProgramGroup
             .declare('fast9_16', fast9_16, {
                 ...this.program.usesPingpongRendering()
             })
+
+            .declare('fastScore8bits', fastScore8bits)
 
             // Non-maximum suppression
             .declare('nonmax', nonMaxSuppression)

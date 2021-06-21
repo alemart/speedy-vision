@@ -15,18 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * encode-fast-score.glsl
+ * fast-score-8bits.glsl
  * Convert FAST score to an 8 bit component
  */
 
 @include "float16.glsl"
 
-uniform sampler2D image;
+uniform sampler2D corners;
 
 void main()
 {
     // read 16-bit half-float score
-    vec4 pixel = threadPixel(image);
+    vec4 pixel = threadPixel(corners);
     float score = decodeFloat16(pixel.rb);
 
     // convert to 8-bit

@@ -140,7 +140,7 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeKe
 
         // FAST
         keypoints.fast9_16.outputs(width, height, tex[0], tex[1]);
-        let corners = tex[1].clearToColor(0, 0, 0, 0);
+        let corners = tex[1].clear(); //tex[1].clearToColor(0, 0, 0, 0);
         for(let i = 0; i < levels; i++)
             corners = keypoints.fast9_16(corners, image, lodStep * i, threshold);
 
@@ -150,7 +150,7 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeKe
         )(corners, lodStep);
 
         // convert scores to 8 bit
-        const finalCorners = (keypoints.encodeFastScore
+        const finalCorners = (keypoints.fastScore8bits
             .outputs(width, height, tex[0])
         )(suppressedCorners);
 
