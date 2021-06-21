@@ -57,7 +57,6 @@ window.onload = async function()
 
     source.media = media;
     fast.threshold = 50;
-    fast.levels = 8;
 
     source.output().connectTo(greyscale.input());
     greyscale.output().connectTo(fast.input());

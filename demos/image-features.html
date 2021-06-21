@@ -1,7 +1,7 @@
 <!--
   speedy-vision.js
   GPU-accelerated Computer Vision for JavaScript
-  Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+  Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -44,40 +44,48 @@
         <script>
 window.onload = async function()
 {
+    // form components
+    const sensitivity = document.getElementById('sensitivity');
+    const multiscale = document.getElementById('multiscale');
+
     // tell Speedy to load the image
     const image = document.querySelector('img');
     const media = await Speedy.load(image);
 
-    // create a canvas to display the features
-    const canvas = createCanvas(media.width, media.height, image.title);
+    // create the pipeline
+    const pipeline = Speedy.Pipeline();
+    const source = Speedy.Image.Source();
+    const greyscale = Speedy.Filter.Greyscale();
+    const pyramid = Speedy.Image.Pyramid();
+    const harris = Speedy.Keypoint.Detector.Harris();
+    const sink = Speedy.Keypoint.Sink();
 
-    // components
-    const sensitivity = document.getElementById('sensitivity');
-    const multiscale = document.getElementById('multiscale');
+    source.media = media;
 
-    // create the feature detectors
-    const featureDetectors = [
-        Speedy.FeatureDetector.Harris(),
-        Speedy.FeatureDetector.MultiscaleHarris()
-    ];
+    source.output().connectTo(greyscale.input());
+    greyscale.output().connectTo(pyramid.input());
+    pyramid.output().connectTo(harris.input());
+    harris.output().connectTo(sink.input());
 
-    // update function
+    pipeline.init(source, greyscale, pyramid, harris, sink);
+
     // find & render features
+    const canvas = createCanvas(media.width, media.height, image.title);
     async function update()
     {
-        // pick a feature detector
-        const featureDetector = multiscale.checked ? featureDetectors[1] : featureDetectors[0];
+        // multiscale?
+        harris.levels = multiscale.checked ? 8 : 1;
 
-        // set its sensitivity
-        featureDetector.sensitivity = sensitivity.value;
+        // adjust sensitivity
+        harris.quality = 1 - sensitivity.value;
 
         // find features
-        const features = await featureDetector.detect(media);
+        const { keypoints } = await pipeline.run();
 
         // render features
         media.draw(canvas);
-        renderFeatures(canvas, features);
-        renderStatus(canvas, features);
+        renderFeatures(canvas, keypoints);
+        renderStatus(canvas, keypoints);
     }
     update();
 
