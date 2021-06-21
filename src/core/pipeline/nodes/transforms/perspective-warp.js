@@ -28,9 +28,9 @@ import { Utils } from '../../../../utils/utils';
 import { ImageFormat, PixelComponent, ColorComponentId } from '../../../../utils/types';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 import { IllegalArgumentError } from '../../../../utils/errors';
-import { SpeedyMatrix } from '../../../math/matrix';
-import { MatrixShape } from '../../../math/matrix-shape';
-import { SpeedyMatrixExpr, SpeedyMatrixElementaryExpr } from '../../../math/matrix-expressions';
+import { SpeedyMatrix } from '../../../matrix/matrix';
+import { MatrixShape } from '../../../matrix/matrix-shape';
+import { SpeedyMatrixExpr, SpeedyMatrixElementaryExpr } from '../../../matrix/matrix-expressions';
 
 // Used when an invalid matrix is provided
 const SINGULAR_MATRIX = [0,0,0,0,0,0,0,0,1];

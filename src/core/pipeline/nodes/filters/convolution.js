@@ -29,9 +29,9 @@ import { Utils } from '../../../../utils/utils';
 import { ImageFormat } from '../../../../utils/types';
 import { NotSupportedError, IllegalArgumentError } from '../../../../utils/errors';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
-import { SpeedyMatrix } from '../../../math/matrix';
-import { MatrixShape } from '../../../math/matrix-shape';
-import { SpeedyMatrixExpr, SpeedyMatrixElementaryExpr } from '../../../math/matrix-expressions';
+import { SpeedyMatrix } from '../../../matrix/matrix';
+import { MatrixShape } from '../../../matrix/matrix-shape';
+import { SpeedyMatrixExpr, SpeedyMatrixElementaryExpr } from '../../../matrix/matrix-expressions';
 
 // 2D convolution programs
 const CONVOLUTION = {
