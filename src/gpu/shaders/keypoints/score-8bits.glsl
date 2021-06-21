@@ -15,13 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * fast-score-8bits.glsl
- * Convert FAST score to an 8 bit component
+ * score-8bits.glsl
+ * Convert corner score to an 8 bit component
  */
 
 @include "float16.glsl"
 
 uniform sampler2D corners;
+
+/*
+
+The 8-bit score will be placed in the
+R component of the output texture.
+
+*/
 
 void main()
 {
@@ -30,7 +37,19 @@ void main()
     float score = decodeFloat16(pixel.rb);
 
     // convert to 8-bit
+    #if !defined(METHOD)
+    #error Must define METHOD
+    #elif METHOD == 0 // FAST corner detector
+
     float score8 = clamp(score, 0.0f, 1.0f);
+
+    #elif METHOD == 1 // Harris corner detector
+
+    float score8 = 1.0f - exp2(-score); // assuming 0 <= score <= 4
+    
+    #else
+    #error Invalid METHOD
+    #endif
 
     // done!
     color = vec4(score8, pixel.g, 0.0f, pixel.a);

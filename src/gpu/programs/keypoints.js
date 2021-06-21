@@ -32,7 +32,8 @@ const fast9_16 = importShader('keypoints/fast.glsl')
                 .withDefines({ 'FAST_TYPE': 916 })
                 .withArguments('corners', 'pyramid', 'lod', 'threshold');
 
-const fastScore8bits = importShader('keypoints/fast-score-8bits.glsl')
+const fastScore8bits = importShader('keypoints/score-8bits.glsl')
+                      .withDefines({ 'METHOD': 0 })
                       .withArguments('corners');
 
 // Non-maximum suppression
@@ -84,7 +85,7 @@ const multiscaleFast = importShader('keypoints/fast/multiscale-fast.glsl')
                       .withArguments('pyramid', 'threshold', 'numberOfLayers', 'lodStep');
 
 // encode FAST score in an 8-bit component
-const encodeFastScore = importShader('keypoints/fast-score-8bits.glsl').withArguments('corners');
+const encodeFastScore = fastScore8bits;
 
 
 
