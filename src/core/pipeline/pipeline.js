@@ -54,6 +54,9 @@ export class SpeedyPipeline
 
         /** @type {SpeedyGPU} GPU instance */
         this._gpu = null;
+
+        /** @type {boolean} are we running the pipeline at this moment? */
+        this._busy = false;
     }
 
     /**
@@ -130,13 +133,26 @@ export class SpeedyPipeline
     {
         Utils.assert(this._gpu != null, `Pipeline has not been initialized or has been released`);
 
-        // find the sinks
-        const sinks = this._sequence.filter(node => node.isSink());
+        // is the pipeline busy?
+        if(this._busy) {
+            // if so, we need to wait 'til it finishes
+            return new SpeedyPromise((resolve, reject) => {
+                setTimeout(() => this.run().then(resolve, reject), 0);
+            });
+        }
+        else {
+            // the pipeline is now busy and won't accept concurrent tasks
+            // (we allocate textures using a single pool)
+            this._busy = true;
+        }
 
         // set the output textures of each node
         const valid = _ => this._gpu.texturePool.allocate();
         for(let i = this._sequence.length - 1; i >= 0; i--)
             this._sequence[i].setOutputTextures(valid);
+
+        // find the sinks
+        const sinks = this._sequence.filter(node => node.isSink());
 
         // run the pipeline
         return SpeedyPipeline._runSequence(this._sequence, this._gpu).then(() =>
@@ -154,6 +170,9 @@ export class SpeedyPipeline
                 this._sequence[i].setOutputTextures(nil);
                 this._sequence[i].clearPorts();
             }
+
+            // the pipeline is no longer busy
+            this._busy = false;
 
             // done!
             return aggregate;
