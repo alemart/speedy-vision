@@ -40,7 +40,7 @@ uniform sampler2D derivatives; // corresponding to lod
 uniform float lod; // level-of-detail
 
 /**
- * Compute a factor of the Harris corner response
+ * Compute a term of the autocorrelation matrix
  * @param {const int} ox x-offset from the thread pixel
  * @param {const int} oy y-offset from the thread pixel
  */
