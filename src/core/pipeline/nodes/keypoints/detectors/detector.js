@@ -33,7 +33,7 @@ const ENCODER_PASSES = 8; // number of passes of the keypoint encoder: directly 
 const LONG_SKIP_OFFSET_PASSES = 2; // number of passes of the long skip offsets shader
 const MIN_CAPACITY = 16; // minimum number of keypoints we can encode
 const MAX_CAPACITY = 8192; // maximum number of keypoints we can encode
-const DEFAULT_CAPACITY = MAX_CAPACITY; // default capacity of the encoder
+const DEFAULT_CAPACITY = 2048; // default capacity of the encoder (64x64 texture with 2 pixels per keypoint)
 const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // sqrt(2)
 
 /**
