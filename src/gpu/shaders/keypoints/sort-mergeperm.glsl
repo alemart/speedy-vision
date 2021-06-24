@@ -108,17 +108,17 @@ PermutationElement readPermutationElement(int elementIndex, int stride, int heig
  * @param {int} ra array index
  * @param {int} lb array index
  * @param {int} rb array index
- * @param {int} stride permutation texture width
  * @returns {PermutationElement}
  */
-PermutationElement selectKth(int k, int la, int ra, int lb, int rb, int stride)
+PermutationElement selectKth(int k, int la, int ra, int lb, int rb)
 {
     PermutationElement a, b;
     int ha, hb, ma, mb;
     bool discard1stHalf, altb;
     bool locked = false;
     int result = 0;
-    int height = outputSize().y; // adjust for non-powers-of-two values of numberOfPixels
+    int stride = outputSize().x; // a power of two
+    int height = outputSize().y; // used to adjust for values of numberOfPixels that are not powers-of-two
 
     // This is a loop with a uniform variable. No unnecessary branching!
     // It takes at most N = (1 + log2(Ba)) + (1 + log2(Bb)) iterations to
@@ -190,7 +190,7 @@ void main()
     // find the k-th element of A[la..rb], assuming
     // that A[la..ra] and A[lb..rb] are already sorted
     int k = blockOffset;
-    PermutationElement element = selectKth(k, la, ra, lb, rb, stride);
+    PermutationElement element = selectKth(k, la, ra, lb, rb);
 
     // write permutation element to the output
     color = encodePermutationElement(element);
