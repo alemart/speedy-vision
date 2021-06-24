@@ -1,0 +1,115 @@
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * clipper.js
+ * Keypoint clipper
+ */
+
+import { SpeedyPipelineNode, SpeedyPipelineSinkNode } from '../../pipeline-node';
+import { SpeedyPipelineNodeKeypointDetector } from './detectors/detector';
+import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithImage } from '../../pipeline-message';
+import { InputPort, OutputPort } from '../../pipeline-portbuilder';
+import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
+import { SpeedyTextureReader } from '../../../../gpu/speedy-texture-reader';
+import { SpeedyTexture } from '../../../../gpu/speedy-texture';
+import { Utils } from '../../../../utils/utils';
+import { ImageFormat } from '../../../../utils/types';
+import { IllegalOperationError } from '../../../../utils/errors';
+import { SpeedyPromise } from '../../../../utils/speedy-promise';
+
+
+// Constants
+const LOG2_STRIDE = 6; // use a stride of 64
+
+
+
+/**
+ * Keypoint clipper: filters the best keypoints from a stream
+ */
+export class SpeedyPipelineNodeKeypointClipper extends SpeedyPipelineNode
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, [
+            InputPort().expects(SpeedyPipelineMessageType.Keypoints).satisfying(
+                msg => msg.descriptorSize == 0 && msg.extraSize == 0
+            ),
+            OutputPort().expects(SpeedyPipelineMessageType.Keypoints)
+        ]);
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input().read();
+        const tex = [ gpu.texturePool.allocate(), gpu.texturePool.allocate(), gpu.texturePool.allocate() ];
+        const keypoints = gpu.programs.keypoints;
+
+        // find the minimum power of 2 pot such that pot >= capacity
+        const capacity = SpeedyPipelineNodeKeypointDetector._encoderCapacity(descriptorSize, extraSize, encoderLength);
+        //const pot = 1 << (Math.ceil(Math.log2(capacity)) | 0);
+
+        // find the dimensions of the sorting shaders
+        const stride = 1 << LOG2_STRIDE; // must be a power of 2
+        //const height = Math.max(1, pot >>> LOG2_STRIDE); // this is also a power of 2
+        const height = Math.ceil(capacity / stride); // more economical, maybe not a power of 2
+        const numberOfPixels = stride * height;
+
+        // generate permutation of keypoints
+        keypoints.sortCreatePermutation.outputs(stride, height, tex[0]);
+        let permutation = keypoints.sortCreatePermutation(encodedKeypoints, descriptorSize, extraSize, encoderLength);
+
+        // sort permutation
+        const numPasses = Math.ceil(Math.log2(numberOfPixels));
+        keypoints.sortMergePermutation.outputs(stride, height, tex[1], tex[2]);
+        for(let i = 1; i <= numPasses; i++) {
+            const blockSize = 1 << i; // 2, 4, 8...
+            const dblLog2BlockSize = i << 1; // 2 * log2(blockSize)
+            permutation = keypoints.sortMergePermutation(permutation, blockSize, dblLog2BlockSize);
+        }
+
+        /*
+        // debug (read the contents of the permutation)
+        this._textureReader = this._textureReader || new SpeedyTextureReader();
+        const debug = [];
+        const pixels = this._textureReader.readPixelsSync(permutation);
+        for(let i = 0; i < pixels.length; i += 4) {
+            let id = pixels[i] | (pixels[i+1] << 8);
+            let score = pixels[i+2] / 255.0;
+            let valid = pixels[i+3] / 255.0;
+            debug.push([ id, valid, score, ].join(', '));
+        }
+        console.log(debug);
+        */
+
+        // release textures
+        gpu.texturePool.free(tex[2]);
+        gpu.texturePool.free(tex[1]);
+        gpu.texturePool.free(tex[0]);
+
+        // done!
+        this.output().swrite(encodedKeypoints, descriptorSize, extraSize, encoderLength);
+    }
+}

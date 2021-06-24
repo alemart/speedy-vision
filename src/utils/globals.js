@@ -65,6 +65,12 @@ export const MAX_DESCRIPTOR_SIZE = 64;
 // Size of a keypoint header, in bytes (must be divisible by 4)
 export const MIN_KEYPOINT_SIZE = 8;
 
+// Minimum length of a keypoint encoder, in pixels (encodes at least 1 keypoint)
+export const MIN_ENCODER_LENGTH = Math.ceil(Math.sqrt(MIN_KEYPOINT_SIZE / 4)); // encodes 2, actually
+
+// Maximum number of keypoints we can encode (the actual length of the encoder may vary)
+export const MAX_ENCODER_CAPACITY = 8192;
+
 // Initial size of the keypoint encoder
 export const INITIAL_ENCODER_LENGTH = 32; // pick a small number to reduce processing load and not crash things on mobile
 

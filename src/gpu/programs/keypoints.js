@@ -65,7 +65,12 @@ const multiscaleNonMaxSuppression = importShader('keypoints/nonmax-suppression.g
                                    .withDefines({ 'MULTISCALE': 1 })
                                    .withArguments('image', 'lodStep');
 
+// Keypoint sorting
+const sortCreatePermutation = importShader('keypoints/sort-createperm.glsl')
+                               .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
+const sortMergePermutation = importShader('keypoints/sort-mergeperm.glsl')
+                            .withArguments('permutation', 'blockSize', 'dblLog2BlockSize');
 
 
 // --- OLD (TODO remove) ---
@@ -217,6 +222,14 @@ export class GPUKeypoints extends SpeedyProgramGroup
             //
             .declare('nonmax', nonMaxSuppression)
             .declare('pyrnonmax', multiscaleNonMaxSuppression)
+
+            //
+            // Keypoint sorting
+            //
+            .declare('sortCreatePermutation', sortCreatePermutation)
+            .declare('sortMergePermutation', sortMergePermutation, {
+                ...this.program.usesPingpongRendering()
+            })
 
 
 

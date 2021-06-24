@@ -21,6 +21,7 @@
 
 import { SpeedyNamespace } from '../../speedy-namespace';
 import { SpeedyPipelineNodeKeypointSink } from '../nodes/keypoints/sink';
+import { SpeedyPipelineNodeKeypointClipper } from '../nodes/keypoints/clipper';
 import { SpeedyPipelineNodeFASTKeypointDetector } from '../nodes/keypoints/detectors/fast';
 import { SpeedyPipelineNodeHarrisKeypointDetector } from '../nodes/keypoints/detectors/harris';
 
@@ -72,5 +73,15 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
     static Sink(name = undefined)
     {
         return new SpeedyPipelineNodeKeypointSink(name);
+    }
+
+    /**
+     * Keypoint clipper
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeKeypointClipper}
+     */
+    static Clipper(name = undefined)
+    {
+        return new SpeedyPipelineNodeKeypointClipper(name);
     }
 }

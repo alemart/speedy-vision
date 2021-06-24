@@ -26,13 +26,11 @@ import { SpeedyGPU } from '../../../../../gpu/speedy-gpu';
 import { SpeedyTexture, SpeedyDrawableTexture } from '../../../../../gpu/speedy-texture';
 import { Utils } from '../../../../../utils/utils';
 import { SpeedyPromise } from '../../../../../utils/speedy-promise';
-import { MIN_KEYPOINT_SIZE, PYRAMID_MAX_LEVELS } from '../../../../../utils/globals';
+import { MIN_KEYPOINT_SIZE, MIN_ENCODER_LENGTH, MAX_ENCODER_CAPACITY, PYRAMID_MAX_LEVELS } from '../../../../../utils/globals';
 
 // Constants
 const ENCODER_PASSES = 8; // number of passes of the keypoint encoder: directly impacts performance
 const LONG_SKIP_OFFSET_PASSES = 2; // number of passes of the long skip offsets shader
-const MIN_CAPACITY = 16; // minimum number of keypoints we can encode
-const MAX_CAPACITY = 8192; // maximum number of keypoints we can encode
 const DEFAULT_CAPACITY = 2048; // default capacity of the encoder (64x64 texture with 2 pixels per keypoint)
 const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // sqrt(2)
 
@@ -52,7 +50,7 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         super(name, portBuilders);
 
         /** @type {number} encoder capacity */
-        this._capacity = DEFAULT_CAPACITY;
+        this._capacity = DEFAULT_CAPACITY; // must not be greater than MAX_ENCODER_CAPACITY
     }
 
     /**
@@ -72,6 +70,9 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
      */
     set capacity(capacity)
     {
+        const MIN_CAPACITY = SpeedyPipelineNodeKeypointDetector._encoderCapacity(0, 0, MIN_ENCODER_LENGTH);
+        const MAX_CAPACITY = MAX_ENCODER_CAPACITY;
+
         this._capacity = Math.min(Math.max(MIN_CAPACITY, capacity | 0), MAX_CAPACITY);
     }
 
@@ -152,7 +153,22 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         const pixelsPerKeypoint = Math.ceil((MIN_KEYPOINT_SIZE + descriptorSize + extraSize) / 4);
         const numberOfPixels = encoderCapacity * pixelsPerKeypoint;
 
-        return Math.max(1, Math.ceil(Math.sqrt(numberOfPixels)));
+        return Math.max(MIN_ENCODER_LENGTH, Math.ceil(Math.sqrt(numberOfPixels)));
+    }
+
+    /**
+     * The maximum number of keypoints we can store using
+     * a particular configuration of a keypoint encoder
+     * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
+     * @param {number} encoderLength
+     */
+    static _encoderCapacity(descriptorSize, extraSize, encoderLength)
+    {
+        const pixelsPerKeypoint = Math.ceil((MIN_KEYPOINT_SIZE + descriptorSize + extraSize) / 4);
+        const numberOfPixels = encoderLength * encoderLength;
+
+        return Math.floor(numberOfPixels / pixelsPerKeypoint);
     }
 }
 

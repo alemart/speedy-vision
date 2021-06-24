@@ -97,17 +97,11 @@ const int KPF_ORIENTED = int(@KPF_ORIENTED@); // the keypoint is oriented
 const int KPF_DISCARD = int(@KPF_DISCARD@); // the keypoint should be discarded in the next frame
 
 /**
- * Low-level routine for reading a pixel in an encoded keypoint texture
- * @param {sampler2D} encodedKeypoints texture sampler
- * @param {int} encoderLength encoded keypoint texture is encoderLength x encoderLength
- * @param {KeypointAddress} address keypoint address
- * @returns {vec4} 32-bit encoded data
+ * Encode a "null" keypoint, that is, a token
+ * representing the end of a list of keypoints
+ * @returns {vec4} RGBA
  */
-vec4 readKeypointData(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)
-{
-    int rasterIndex = address.base + address.offset; // must be a VALID pixel index in raster order
-    return pixelAt(encodedKeypoints, ivec2(rasterIndex % encoderLength, rasterIndex / encoderLength));
-}
+#define encodeNullKeypoint() (vec4(1.0f)) // that's (0xFFFF, 0xFFFF)
 
 /**
  * The size of an encoded keypoint in bytes
@@ -126,6 +120,20 @@ vec4 readKeypointData(sampler2D encodedKeypoints, int encoderLength, KeypointAdd
  * @returns {int} a number in { 0, 1, 2, ..., keypointCount - 1 }
  */
 #define findKeypointIndex(address, descriptorSize, extraSize) ((address).base / ((sizeofEncodedKeypoint((descriptorSize), (extraSize))) / 4))
+
+/**
+ * Low-level routine for reading a pixel in an encoded keypoint texture
+ * @param {sampler2D} encodedKeypoints texture sampler
+ * @param {int} encoderLength encoded keypoint texture is encoderLength x encoderLength
+ * @param {KeypointAddress} address keypoint address
+ * @returns {vec4} 32-bit encoded data
+ */
+vec4 readKeypointData(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)
+{
+    int rasterIndex = address.base + address.offset;
+    vec4 data = pixelAt(encodedKeypoints, ivec2(rasterIndex % encoderLength, rasterIndex / encoderLength));
+    return rasterIndex < encoderLength * encoderLength ? data : encodeNullKeypoint();
+}
 
 /**
  * Given a thread location, return the corresponding keypoint base address & offset
@@ -181,7 +189,7 @@ Keypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointA
     vec4 encodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);
     keypoint.orientation = decodeOrientation(encodedProperties.g); // in radians
     keypoint.lod = decodeLod(encodedProperties.r); // level-of-detail
-    keypoint.score = encodedProperties.b; // score
+    keypoint.score = encodedProperties.b; // score in [0,1]
     keypoint.flags = int(encodedProperties.a * 255.0f); // flags
 
     // got a null or invalid keypoint? encode it with a negative score
@@ -207,13 +215,6 @@ vec4 encodeKeypointPosition(vec2 position)
 
     return vec4(lo.x, hi.x, lo.y, hi.y) / 255.0f;
 }
-
-/**
- * Encode a "null" keypoint, that is, a token
- * representing the end of a list of keypoints
- * @returns {vec4} RGBA
- */
-#define encodeNullKeypoint() (vec4(1.0f)) // that's (0xFFFF, 0xFFFF)
 
 /**
  * Checks whether the given keypoint is "bad",
