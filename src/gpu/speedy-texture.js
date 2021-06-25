@@ -126,13 +126,19 @@ export class SpeedyTexture
      */
     generateMipmaps(gpu, gaussian = true)
     {
+        const gl = this._gl;
+
         // nothing to do
         if(this._hasMipmaps)
             return this;
 
         // let the hardware compute the all levels of the pyramid, up to 1x1
-        // this might be a simple box filter...
-        SpeedyTexture._generateDefaultMipmaps(this._gl, this._glTexture);
+        // we also specify the TEXTURE_MIN_FILTER to be used from now on
+        gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
+        //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_NEAREST);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.bindTexture(gl.TEXTURE_2D, null);
 
         // compute a Gaussian pyramid for better results
         if(gaussian) {
@@ -146,11 +152,13 @@ export class SpeedyTexture
                 gpu.texturePool.allocate()
             ];
 
-            // apply successive reduce operations
-            for(let level = 1; level < PYRAMID_MAX_LEVELS; level++) {
-                if(Math.min(width, height) < 2)
-                    break;
+            // number of mipmaps according to the OpenGL ES 3.0 spec (sec 3.8.10.4)
+            const numMipmaps = 1 + Math.floor(Math.log2(Math.max(width, height)));
 
+            // apply successive reduce operations
+            //const n = Math.min(numMipmaps, PYRAMID_MAX_LEVELS);
+            const n = numMipmaps;
+            for(let level = 1; level < n; level++) {
                 // use max(1, floor(size / 2^lod)), in accordance to
                 // the OpenGL ES 3.0 spec sec 3.8.10.4 (Mipmapping)
                 halfWidth = Math.max(1, width >>> 1);
@@ -185,6 +193,18 @@ export class SpeedyTexture
      */
     discardMipmaps()
     {
+        const gl = this._gl;
+
+        // nothing to do
+        if(!this._hasMipmaps)
+            return;
+
+        // reset the min filter
+        gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
+        // done!
         this._hasMipmaps = false;
     }
 
@@ -313,22 +333,6 @@ export class SpeedyTexture
         gl.bindTexture(gl.TEXTURE_2D, null);
         return texture;
     }
-
-    /**
-     * Generate texture mipmap via hardware
-     * @param {WebGL2RenderingContext} gl
-     * @param {WebGLTexture} texture
-     * @returns {WebGLTexture} the input texture
-     */
-    static _generateDefaultMipmaps(gl, texture)
-    {
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
-        gl.generateMipmap(gl.TEXTURE_2D);
-        gl.bindTexture(gl.TEXTURE_2D, null);
-
-        return texture;
-    }
 }
 
 /**
@@ -381,6 +385,7 @@ export class SpeedyDrawableTexture extends SpeedyTexture
 
     /**
      * Copy this texture into another
+     * (you may have to discard the mipmaps after calling this function)
      * @param {SpeedyTexture} texture target texture
      * @param {number} [lod] level-of-detail of the target texture
      */
@@ -401,9 +406,6 @@ export class SpeedyDrawableTexture extends SpeedyTexture
 
         // validate
         Utils.assert(this._width === expectedWidth && this._height === expectedHeight);
-
-        // discard mipmaps, if any
-        texture.discardMipmaps();
 
         // copy to texture
         SpeedyDrawableTexture._copyToTexture(gl, this._glFbo, texture.glTexture, 0, 0, this._width, this._height, lod);
@@ -475,7 +477,7 @@ export class SpeedyDrawableTexture extends SpeedyTexture
 
             // copy the old texture to the new one
             const oldWidth = this._width, oldHeight = this._height;
-            SpeedyDrawableTexture._copyToTexture(gl, this._glFbo, newTexture, 0, 0, Math.min(width, oldWidth), Math.min(height, oldHeight));
+            SpeedyDrawableTexture._copyToTexture(gl, this._glFbo, newTexture, 0, 0, Math.min(width, oldWidth), Math.min(height, oldHeight), 0);
 
             // bind FBO
             gl.bindFramebuffer(gl.FRAMEBUFFER, this._glFbo);
@@ -508,14 +510,32 @@ export class SpeedyDrawableTexture extends SpeedyTexture
     }
 
     /**
-     * Clear the texture to a color
-     * @param {number} [r] red component, a value in [0,1]
-     * @param {number} [g] green component, a value in [0,1]
-     * @param {number} [b] blue component, a value in [0,1]
-     * @param {number} [a] alpha component, a value in [0,1]
+     * Clear the texture
      * @returns {SpeedyDrawableTexture} this texture
      */
-    clearToColor(r = 0, g = 0, b = 0, a = 0)
+    clear()
+    {
+        //
+        // When we pass null to texImage2D(), it seems that Firefox
+        // doesn't clear the texture. Instead, it displays this warning:
+        //
+        // "WebGL warning: drawArraysInstanced:
+        //  Tex image TEXTURE_2D level 0 is incurring lazy initialization."
+        //
+        // So here's a workaround:
+        //
+        return this.clearToColor(0, 0, 0, 0);
+    }
+
+    /**
+     * Clear the texture to a color
+     * @param {number} r red component, a value in [0,1]
+     * @param {number} g green component, a value in [0,1]
+     * @param {number} b blue component, a value in [0,1]
+     * @param {number} a alpha component, a value in [0,1]
+     * @returns {SpeedyDrawableTexture} this texture
+     */
+    clearToColor(r, g, b, a)
     {
         const gl = this._gl;
 
@@ -580,7 +600,7 @@ export class SpeedyDrawableTexture extends SpeedyTexture
     }
 
     /**
-     * Copy data from a framebuffer into a texture
+     * Copy data from a framebuffer to a texture
      * @param {WebGL2RenderingContext} gl
      * @param {WebGLFramebuffer} fbo we'll read the data from this
      * @param {WebGLTexture} texture destination texture
@@ -593,7 +613,7 @@ export class SpeedyDrawableTexture extends SpeedyTexture
      */
     static _copyToTexture(gl, fbo, texture, x, y, width, height, lod = 0)
     {
-        gl.activeTexture(gl.TEXTURE0);
+        //gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
 
