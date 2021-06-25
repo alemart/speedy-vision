@@ -27,13 +27,14 @@ import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
 import { SpeedyTextureReader } from '../../../../gpu/speedy-texture-reader';
 import { SpeedyTexture } from '../../../../gpu/speedy-texture';
 import { Utils } from '../../../../utils/utils';
-import { ImageFormat } from '../../../../utils/types';
 import { IllegalOperationError } from '../../../../utils/errors';
+import { MAX_ENCODER_CAPACITY } from '../../../../utils/globals';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 
 
 // Constants
-const LOG2_STRIDE = 6; // use a stride of 64
+const LOG2_STRIDE = 5;
+const MAX_SIZE = MAX_ENCODER_CAPACITY;
 
 
 
@@ -54,6 +55,27 @@ export class SpeedyPipelineNodeKeypointClipper extends SpeedyPipelineNode
             ),
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints)
         ]);
+
+        /** @type {number} the maximum number of keypoints in the output */
+        this._size = MAX_SIZE;
+    }
+
+    /**
+     * The maximum number of keypoints in the output
+     * @returns {number}
+     */
+    get size()
+    {
+        return this._size;
+    }
+
+    /**
+     * The maximum number of keypoints in the output
+     * @param {number} size
+     */
+    set size(size)
+    {
+        this._size = Math.max(0, Math.min(size | 0, MAX_SIZE));
     }
 
     /**
@@ -64,11 +86,17 @@ export class SpeedyPipelineNodeKeypointClipper extends SpeedyPipelineNode
     _run(gpu)
     {
         const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input().read();
-        const tex = [ gpu.texturePool.allocate(), gpu.texturePool.allocate(), gpu.texturePool.allocate() ];
         const keypoints = gpu.programs.keypoints;
+        const outputTexture = this._outputTexture;
+        const clipValue = this._size;
+        const tex = [
+            gpu.texturePool.allocate(),
+            gpu.texturePool.allocate(),
+            gpu.texturePool.allocate()
+        ];
 
         // find the minimum power of 2 pot such that pot >= capacity
-        const capacity = SpeedyPipelineNodeKeypointDetector._encoderCapacity(descriptorSize, extraSize, encoderLength);
+        const capacity = SpeedyPipelineNodeKeypointDetector.encoderCapacity(descriptorSize, extraSize, encoderLength);
         //const pot = 1 << (Math.ceil(Math.log2(capacity)) | 0);
 
         // find the dimensions of the sorting shaders
@@ -76,6 +104,10 @@ export class SpeedyPipelineNodeKeypointClipper extends SpeedyPipelineNode
         //const height = Math.max(1, pot >>> LOG2_STRIDE); // this is also a power of 2
         const height = Math.ceil(capacity / stride); // more economical, maybe not a power of 2
         const numberOfPixels = stride * height;
+
+        // find the dimensions of the output texture
+        const newCapacity = Math.min(capacity, clipValue);
+        const newEncoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(newCapacity, descriptorSize, extraSize);
 
         // generate permutation of keypoints
         keypoints.sortCreatePermutation.outputs(stride, height, tex[0]);
@@ -89,6 +121,10 @@ export class SpeedyPipelineNodeKeypointClipper extends SpeedyPipelineNode
             const dblLog2BlockSize = i << 1; // 2 * log2(blockSize)
             permutation = keypoints.sortMergePermutation(permutation, blockSize, dblLog2BlockSize);
         }
+
+        // apply permutation
+        keypoints.sortApplyPermutation.outputs(newEncoderLength, newEncoderLength, outputTexture);
+        keypoints.sortApplyPermutation(permutation, newCapacity, encodedKeypoints, descriptorSize, extraSize);
 
         /*
         // debug (read the contents of the permutation)
@@ -110,6 +146,6 @@ export class SpeedyPipelineNodeKeypointClipper extends SpeedyPipelineNode
         gpu.texturePool.free(tex[0]);
 
         // done!
-        this.output().swrite(encodedKeypoints, descriptorSize, extraSize, encoderLength);
+        this.output().swrite(outputTexture, descriptorSize, extraSize, newEncoderLength);
     }
 }

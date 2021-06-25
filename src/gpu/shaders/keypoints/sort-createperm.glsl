@@ -27,7 +27,7 @@ RG : keypoint index (0, 1, 2...), uint16, little-endian
 B  : keypoint score
 A  : validity flag in {0,1}
 
-We generate 2^n output pixels, one for each keypoint. If we've got k
+We generate one output pixel for each keypoint. If we've got k
 keypoints in the stream, the validity flag of pixel p (p = 0, 1, ...)
 will be set to 1 if, and only if, p < k.
 

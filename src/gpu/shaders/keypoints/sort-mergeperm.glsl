@@ -86,12 +86,13 @@ vec4 encodePermutationElement(PermutationElement element)
 
 /**
  * Read an element of a permutation of keypoints
+ * @param {sampler2D} permutation texture
  * @param {int} elementIndex a valid index in {0, 1, 2...}
  * @param {int} stride permutation texture width
  * @param {int} height permutation texture height
  * @returns {PermutationElement}
  */
-PermutationElement readPermutationElement(int elementIndex, int stride, int height)
+PermutationElement readPermutationElement(sampler2D permutation, int elementIndex, int stride, int height)
 {
     const vec4 INVALID_PIXEL = vec4(0.0f); // the valid flag (alpha) is false
     ivec2 pos = ivec2(elementIndex % stride, elementIndex / stride);
@@ -101,7 +102,7 @@ PermutationElement readPermutationElement(int elementIndex, int stride, int heig
 }
 
 /**
- * Given two sorted subarrays A[la...ra] and A[lb...rb], find
+ * Given two sorted subarrays A[la..ra] and A[lb..rb], find
  * the k-th smallest* element of their concatenation in log time
  * @param {int} k element index 0, 1, 2...
  * @param {int} la array index
@@ -116,7 +117,7 @@ PermutationElement selectKth(int k, int la, int ra, int lb, int rb)
     int ha, hb, ma, mb;
     bool discard1stHalf, altb;
     bool locked = false;
-    int result = 0;
+    int tmp, result = 0;
     int stride = outputSize().x; // a power of two
     int height = outputSize().y; // used to adjust for values of numberOfPixels that are not powers-of-two
 
@@ -128,9 +129,9 @@ PermutationElement selectKth(int k, int la, int ra, int lb, int rb)
     // Ba = Bb = B/2. Therefore, N = 2 * (1 + log2(B/2)) = 2 * log2(B).
     for(int i = 0; i < dblLog2BlockSize; i++) {
         // we find the result when we get an empty sub-array and when we're unlocked
-        // get the k-th element of A[la..ra] or A[lb..rb], depending on which one is empty
-        result = (la > ra && !locked) ? (lb+k) : ((lb > rb && !locked) ? (la+k) : result);
-        locked = locked || (la > ra) || (lb > rb); // lock as soon as we find the result
+        tmp = (lb > rb && !locked) ? (la+k) : result; // get the k-th element of A[la..ra]
+        result = (la > ra && !locked) ? (lb+k) : tmp; // get the k-th element of A[lb..rb]
+        locked = locked || (la > ra) || (lb > rb); // lock the result as soon as we find it
 
         // half the size of A[la..ra] and A[lb..rb]
         ha = (ra - la + 1) / 2;
@@ -141,8 +142,8 @@ PermutationElement selectKth(int k, int la, int ra, int lb, int rb)
         mb = lb + hb;
 
         // read a = A[ma] and b = A[mb]
-        a = readPermutationElement(ma, stride, height);
-        b = readPermutationElement(mb, stride, height);
+        a = readPermutationElement(permutation, ma, stride, height);
+        b = readPermutationElement(permutation, mb, stride, height);
 
         // if k is larger than ha+hb, we can safely discard
         // the first half of one of the subarrays. Which one?
@@ -162,7 +163,7 @@ PermutationElement selectKth(int k, int la, int ra, int lb, int rb)
     }
 
     // done!
-    return readPermutationElement(result, stride, height);
+    return readPermutationElement(permutation, result, stride, height);
 }
 
 void main()
@@ -175,7 +176,7 @@ void main()
 
     /*
     // debug (are we reading it correctly?)
-    PermutationElement element = readPermutationElement(elementIndex, stride);
+    PermutationElement element = readPermutationElement(permutation, elementIndex, stride, height);
     color = encodePermutationElement(element);
     return;
     */

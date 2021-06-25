@@ -67,11 +67,13 @@ const multiscaleNonMaxSuppression = importShader('keypoints/nonmax-suppression.g
 
 // Keypoint sorting
 const sortCreatePermutation = importShader('keypoints/sort-createperm.glsl')
-                               .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
+                             .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 const sortMergePermutation = importShader('keypoints/sort-mergeperm.glsl')
                             .withArguments('permutation', 'blockSize', 'dblLog2BlockSize');
 
+const sortApplyPermutation = importShader('keypoints/sort-applyperm.glsl')
+                            .withArguments('permutation', 'maxKeypoints', 'encodedKeypoints', 'descriptorSize', 'extraSize');
 
 // --- OLD (TODO remove) ---
 
@@ -230,6 +232,7 @@ export class GPUKeypoints extends SpeedyProgramGroup
             .declare('sortMergePermutation', sortMergePermutation, {
                 ...this.program.usesPingpongRendering()
             })
+            .declare('sortApplyPermutation', sortApplyPermutation)
 
 
 
