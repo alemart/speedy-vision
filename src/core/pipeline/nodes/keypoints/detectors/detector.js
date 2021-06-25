@@ -70,7 +70,7 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
      */
     set capacity(capacity)
     {
-        const MIN_CAPACITY = SpeedyPipelineNodeKeypointDetector._encoderCapacity(0, 0, MIN_ENCODER_LENGTH);
+        const MIN_CAPACITY = SpeedyPipelineNodeKeypointDetector.encoderCapacity(0, 0, MIN_ENCODER_LENGTH);
         const MAX_CAPACITY = MAX_ENCODER_CAPACITY;
 
         this._capacity = Math.min(Math.max(MIN_CAPACITY, capacity | 0), MAX_CAPACITY);
@@ -87,7 +87,7 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
     _encodeKeypoints(gpu, corners, encodedKeypoints)
     {
         const encoders = gpu.programs.encoders;
-        const encoderLength = SpeedyPipelineNodeKeypointDetector._encoderLength(this._capacity, 0, 0);
+        const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(this._capacity, 0, 0);
         const width = corners.width, height = corners.height;
         const imageSize = [ width, height ];
 
@@ -96,12 +96,13 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
             gpu.texturePool.allocate(),
             gpu.texturePool.allocate(),
             gpu.texturePool.allocate(),
+            gpu.texturePool.allocate(),
         ];
 
         // prepare programs
         encoders._encodeKeypointSkipOffsets.outputs(width, height, tex[0]);
         encoders._encodeKeypointLongSkipOffsets.outputs(width, height, tex[1], tex[0]);
-        encoders._encodeKeypoints.outputs(encoderLength, encoderLength, tex[2], encodedKeypoints);
+        encoders._encodeKeypoints.outputs(encoderLength, encoderLength, tex[2], tex[3]);
 
         // encode skip offsets
         let offsets = encoders._encodeKeypointSkipOffsets(corners, imageSize);
@@ -125,15 +126,16 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
 
         // encode keypoints
         const numPasses = ENCODER_PASSES;
-        let encodedKps = encodedKeypoints.clear();
+        let encodedKps = tex[3].clear();
         for(let passId = 0; passId < numPasses; passId++)
             encodedKps = encoders._encodeKeypoints(offsets, encodedKps, imageSize, passId, numPasses, 0, 0, encoderLength);
 
         // write to encodedKeypoints
-        if(encodedKps != encodedKeypoints) // depends on numPasses
-            encodedKps.copyTo(encodedKeypoints);
+        encodedKeypoints.resize(encoderLength, encoderLength);
+        encodedKps.copyTo(encodedKeypoints);
 
         // release textures
+        gpu.texturePool.free(tex[3]);
         gpu.texturePool.free(tex[2]);
         gpu.texturePool.free(tex[1]);
         gpu.texturePool.free(tex[0]);
@@ -148,7 +150,7 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
      */
-    static _encoderLength(encoderCapacity, descriptorSize, extraSize)
+    static encoderLength(encoderCapacity, descriptorSize, extraSize)
     {
         const pixelsPerKeypoint = Math.ceil((MIN_KEYPOINT_SIZE + descriptorSize + extraSize) / 4);
         const numberOfPixels = encoderCapacity * pixelsPerKeypoint;
@@ -163,7 +165,7 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
      * @param {number} extraSize in bytes
      * @param {number} encoderLength
      */
-    static _encoderCapacity(descriptorSize, extraSize, encoderLength)
+    static encoderCapacity(descriptorSize, extraSize, encoderLength)
     {
         const pixelsPerKeypoint = Math.ceil((MIN_KEYPOINT_SIZE + descriptorSize + extraSize) / 4);
         const numberOfPixels = encoderLength * encoderLength;

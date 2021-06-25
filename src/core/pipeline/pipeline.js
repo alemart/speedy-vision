@@ -193,6 +193,8 @@ export class SpeedyPipeline
             return SpeedyPromise.resolve();
 
         const runTask = sequence[i].execute(gpu);
+        gpu.gl.flush();
+
         if(runTask == undefined)
             return SpeedyPipeline._runSequence(sequence, gpu, i+1, n);
 
