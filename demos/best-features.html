@@ -24,7 +24,7 @@
         <meta charset="utf-8">
         <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
         <meta name="author" content="Alexandre Martins">
-        <title>Find the best keypoints up to a limit</title>
+        <title>Find the best keypoints</title>
         <script src="../dist/speedy-vision.js"></script>
         <link href="style.css" rel="stylesheet">
     </head>
@@ -44,12 +44,12 @@
                     <option value="1600">1600</option>
                     <option value="2000">2000</option>
                 </select>
-                best keypoints (according to cornerness score)
+                best keypoints (corner response function)
             </div>
             <div class="separator"></div>
             <div>
                 <label for="sensitivity">Sensitivity</label>
-                <input type="range" min="0.0" max="0.99" value="0.5" step="0.01" id="sensitivity">
+                <input type="range" min="0.0" max="0.99" value="0.9" step="0.01" id="sensitivity">
             </div>
             <div>
                 <label for="speed-slider">Video speed</label>
@@ -57,7 +57,7 @@
             </div>
             <div>
                 <label for="multiscale">Multi-scale</label>
-                <input type="checkbox" id="multiscale">
+                <input type="checkbox" id="multiscale" checked>
             </div>
         </form>
         <div>
@@ -75,56 +75,65 @@
         <script>
 window.onload = async function()
 {
-    // tell Speedy to load the video
+    // form elements
+    const multiscale = document.getElementById('multiscale');
+    const sensitivity = document.getElementById('sensitivity');
+    const featureLimit = document.getElementById('feature-limit');
+    const speedSlider = document.getElementById('speed-slider');
+    const playButton = document.getElementById('play');
+
+    // load the video
     const video = document.querySelector('video');
     const media = await Speedy.load(video);
     video.play();
 
-    // create a canvas to display the features
+    // create the pipeline
+    const pipeline = Speedy.Pipeline();
+    const source = Speedy.Image.Source();
+    const greyscale = Speedy.Filter.Greyscale();
+    const pyramid = Speedy.Image.Pyramid();
+    const detector = Speedy.Keypoint.Detector.Harris();
+    const clipper = Speedy.Keypoint.Clipper();
+    const sink = Speedy.Keypoint.Sink();
+
+    source.media = media;
+    detector.capacity = 8192;
+
+    source.output().connectTo(greyscale.input());
+    greyscale.output().connectTo(pyramid.input());
+    pyramid.output().connectTo(detector.input());
+    detector.output().connectTo(clipper.input());
+    clipper.output().connectTo(sink.input());
+    pipeline.init(source, greyscale, pyramid, detector, clipper, sink);
+
+    // display the keypoints
     const canvas = createCanvas(media.width, media.height, video.title);
-
-    // elements
-    const multiscale = document.getElementById('multiscale');
-    const sensitivity = document.getElementById('sensitivity');
-    const featureLimit = document.getElementById('feature-limit');
-
-    // create the feature detectors
-    const featureDetectors = [
-        Speedy.FeatureDetector.Harris(),
-        Speedy.FeatureDetector.MultiscaleHarris()
-    ];
-
-    // update features
     async function loop()
     {
-        // pick a feature detector
-        const featureDetector = multiscale.checked ? featureDetectors[1] : featureDetectors[0];
+        // multiscale?
+        detector.levels = multiscale.checked ? 6 : 1;
 
-        // set its sensitivity
-        featureDetector.sensitivity = sensitivity.value;
+        // adjust sensitivity
+        detector.quality = 1.0 - Number(sensitivity.value);
 
-        // cap the number of features
-        featureDetector.max = featureLimit.value;
+        // cap the number of keypoints
+        clipper.size = Number(featureLimit.value);
 
-        // find features
-        const features = await featureDetector.detect(media);
+        // find keypoints
+        const { keypoints } = await pipeline.run();
 
         // render features
         media.draw(canvas);
-        renderFeatures(canvas, features);
-        renderStatus(canvas, features);
+        renderFeatures(canvas, keypoints);
+        renderStatus(canvas, keypoints);
 
         // next frame
         setTimeout(loop, 1000 / 60);
     }
     loop();
 
-    // play/pause
-    const playButton = document.getElementById('play');
+    // misc
     playButton.onclick = () => video.paused ? video.play() : video.pause();
-
-    // video speed
-    const speedSlider = document.getElementById('speed-slider');
     speedSlider.oninput = () => video.playbackRate = speedSlider.value;
 }
 
