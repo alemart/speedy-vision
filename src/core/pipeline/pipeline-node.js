@@ -203,21 +203,32 @@ export class SpeedyPipelineNode
     }
 
     /**
-     * Is this a source node, i.e., it has no input ports?
-     * @returns {boolean}
+     * Initializes this node
+     * @param {SpeedyGPU} gpu
      */
-    isSource()
+    init(gpu)
     {
-        return Object.keys(this._inputPorts).length == 0;
+        for(let i = 0; i < this._outputTextures.length; i++)
+            this._outputTextures[i] = gpu.texturePool.allocate();
     }
 
     /**
-     * Is this a sink node, i.e., it has no output ports?
-     * @returns {boolean}
+     * Releases this node
+     * @param {SpeedyGPU} gpu
      */
-    isSink()
+    release(gpu)
     {
-        return Object.keys(this._outputPorts).length == 0;
+        for(let i = this._outputTextures.length - 1; i >= 0; i--)
+            this._outputTextures[i] = gpu.texturePool.free(this._outputTextures[i]);
+    }
+
+    /**
+     * Clear all internal textures
+     */
+    clearTextures()
+    {
+        for(let i = 0; i < this._outputTextures.length; i++)
+            this._outputTextures[i].clear();
     }
 
     /**
@@ -252,13 +263,21 @@ export class SpeedyPipelineNode
     }
 
     /**
-     * Set the output texture(s) of this node
-     * @param {function(SpeedyDrawableTexture|null): SpeedyDrawableTexture|null} getOutputTexture to be called for each required output texture
+     * Is this a source node, i.e., it has no input ports?
+     * @returns {boolean}
      */
-    setOutputTextures(getOutputTexture)
+    isSource()
     {
-        for(let i = 0; i < this._outputTextures.length; i++)
-            this._outputTextures[i] = getOutputTexture(this._outputTextures[i]);
+        return Object.keys(this._inputPorts).length == 0;
+    }
+
+    /**
+     * Is this a sink node, i.e., it has no output ports?
+     * @returns {boolean}
+     */
+    isSink()
+    {
+        return Object.keys(this._outputPorts).length == 0;
     }
 
     /**

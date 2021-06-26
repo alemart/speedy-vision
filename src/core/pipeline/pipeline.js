@@ -82,7 +82,7 @@ export class SpeedyPipeline
     init(...nodes)
     {
         // validate
-        if(this._gpu != null)
+        if(this._nodes.length > 0)
             throw new IllegalOperationError(`The pipeline has already been initialized`);
         else if(nodes.length == 0)
             throw new IllegalArgumentError(`Can't initialize the pipeline. Please specify its nodes`);
@@ -97,12 +97,16 @@ export class SpeedyPipeline
                 this._nodes.push(node);
         }
 
+        // generate the output template
+        this._template = SpeedyPipeline._createOutputTemplate(this._nodes);
+
         // generate the sequence of nodes
         this._sequence = SpeedyPipeline._tsort(this._nodes);
         SpeedyPipeline._validateSequence(this._sequence);
 
-        // generate the output template
-        this._template = SpeedyPipeline._createOutputTemplate(this._nodes);
+        // initialize nodes
+        for(let i = 0; i < this._sequence.length; i++)
+            this._sequence[i].init(this._gpu);
 
         // done!
         return this;
@@ -114,14 +118,22 @@ export class SpeedyPipeline
      */
     release()
     {
-        if(this._gpu == null)
+        if(this._nodes.length == 0)
             throw new IllegalOperationError(`The pipeline has already been released or has never been initialized`);
 
-        this._gpu = this._gpu.release();
+        // release nodes
+        for(let i = this._sequence.length - 1; i >= 0; i--)
+            this._sequence[i].release(this._gpu);
         this._sequence.length = 0;
         this._nodes.length = 0;
+
+        // release GPU
+        this._gpu = this._gpu.release();
+
+        // release other properties
         this._template = SpeedyPipeline._createOutputTemplate();
 
+        // done!
         return null;
     }
 
@@ -146,11 +158,6 @@ export class SpeedyPipeline
             this._busy = true;
         }
 
-        // set the output textures of each node
-        const valid = _ => this._gpu.texturePool.allocate();
-        for(let i = this._sequence.length - 1; i >= 0; i--)
-            this._sequence[i].setOutputTextures(valid);
-
         // find the sinks
         const sinks = this._sequence.filter(node => node.isSink());
 
@@ -164,11 +171,10 @@ export class SpeedyPipeline
                 results.reduce((obj, val, idx) => ((obj[sinks[idx].name] = val), obj), this._template)
             )
         ).then(aggregate => {
-            // unset the output textures of the nodes and clear all ports
-            const nil = tex => this._gpu.texturePool.free(tex);
+            // clear all ports & textures
             for(let i = this._sequence.length - 1; i >= 0; i--) {
-                this._sequence[i].setOutputTextures(nil);
                 this._sequence[i].clearPorts();
+                this._sequence[i].clearTextures();
             }
 
             // the pipeline is no longer busy
