@@ -162,8 +162,8 @@ export class SpeedyTexture
         this._width = width;
         this._height = height;
 
-
         // resize
+        // Note: this is fast on Chrome, but seems slow on Firefox
         gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
         gl.bindTexture(gl.TEXTURE_2D, null);
