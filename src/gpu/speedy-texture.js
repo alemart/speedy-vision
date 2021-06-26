@@ -261,6 +261,16 @@ export class SpeedyTexture
     }
 
     /**
+     * The size of this texture, in bytes
+     * @returns {number}
+     */
+    size()
+    {
+        // RGBA8: 32 bits per pixel
+        return 4 * this._width * this._height;
+    }
+
+    /**
      * The internal WebGLTexture
      * @returns {WebGLTexture}
      */
