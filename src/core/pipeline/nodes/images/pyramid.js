@@ -54,11 +54,46 @@ export class SpeedyPipelineNodeImagePyramid extends SpeedyPipelineNode
     {
         const { image, format } = this.input().read();
         const outputTexture = this._outputTexture;
+        const pyramids = gpu.programs.pyramids(0);
+        let width = image.width, height = image.height;
 
+        // number of mipmaps according to the OpenGL ES 3.0 spec (sec 3.8.10.4)
+        const numMipmaps = 1 + Math.floor(Math.log2(Math.max(width, height)));
+
+        // allocate textures
+        const mip = new Array(2 * numMipmaps);
+        mip[0] = image;
+        for(let i = 1; i < mip.length; i++)
+            mip[i] = gpu.texturePool.allocate();
+
+        // generate gaussian pyramid
+        for(let level = 1; level < numMipmaps; level++) {
+            // use max(1, floor(size / 2^lod)), in accordance to
+            // the OpenGL ES 3.0 spec sec 3.8.10.4 (Mipmapping)
+            const halfWidth = Math.max(1, width >>> 1);
+            const halfHeight = Math.max(1, height >>> 1);
+
+            // reduce operation
+            const tmp = (level - 1) + numMipmaps;
+            (pyramids.smoothX.outputs(width, height, mip[tmp]))(mip[level-1]);
+            (pyramids.smoothY.outputs(width, height, mip[level-1]))(mip[tmp]);
+            (pyramids.downsample2.outputs(halfWidth, halfHeight, mip[level]))(mip[level-1]);
+
+            // next level
+            width = halfWidth;
+            height = halfHeight;
+        }
+
+        // copy to output & set mipmaps
         outputTexture.resize(image.width, image.height);
         image.copyTo(outputTexture);
-        outputTexture.generateMipmaps(gpu, true);
+        outputTexture.generateMipmaps(mip.slice(0, numMipmaps));
 
+        // free textures
+        for(let i = mip.length - 1; i > 0; i--)
+            gpu.texturePool.free(mip[i]);
+
+        // done!
         this.output().swrite(outputTexture, format);
     }
 }

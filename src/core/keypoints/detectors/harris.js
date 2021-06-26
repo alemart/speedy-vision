@@ -207,7 +207,7 @@ export class MultiscaleHarrisFeatures extends FeatureDetectionAlgorithm
         const lodStep = Math.log2(this._scaleFactor);
 
         // generate pyramid
-        const pyramid = inputTexture.generateMipmaps(gpu);
+        const pyramid = inputTexture.generateMipmaps();
 
         // compute derivatives
         const sobelDerivatives = new Array(MAX_LAYERS);

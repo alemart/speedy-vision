@@ -295,7 +295,7 @@ export class SpeedyProgram extends Function
 
         // update output texture(s)
         const useInternal = texture.every(tex => tex === null);
-        this._texture = !useInternal ? [].concat(texture) : this._ownTexture;
+        this._texture = !useInternal ? texture : this._ownTexture;
         this._textureIndex = 0;
 
         // restore previous size

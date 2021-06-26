@@ -60,7 +60,7 @@ export class ORBFeatures extends FeatureDescriptionAlgorithm
 
         // smooth the image before computing the descriptors
         const smoothTexture = gpu.programs.filters.gauss7(inputTexture);
-        const smoothPyramid = smoothTexture.generateMipmaps(gpu);
+        const smoothPyramid = smoothTexture.generateMipmaps();
 
         // compute ORB feature descriptors
         return gpu.programs.keypoints.orb(smoothPyramid, orientedKeypoints, descriptorSize, extraSize, encoderLength);
@@ -80,7 +80,7 @@ export class ORBFeatures extends FeatureDescriptionAlgorithm
         const encoderLength = this.encoderLength;
 
         // generate pyramid
-        const pyramid = inputTexture.generateMipmaps(gpu);
+        const pyramid = inputTexture.generateMipmaps();
 
         // compute orientation
         return gpu.programs.keypoints.orbOrientation(pyramid, detectedKeypoints, descriptorSize, extraSize, encoderLength);

@@ -25,6 +25,24 @@ import { IllegalOperationError, GLError } from '../utils/errors';
 import { PYRAMID_MAX_LEVELS } from '../utils/globals';
 
 /**
+ * Get a buffer filled with zeros
+ * @param {number} size number of bytes
+ * @returns {Uint8Array}
+ */
+/*
+const zeros = (function() {
+    let buffer = new Uint8Array(4);
+
+    return function(size) {
+        if(size > buffer.length)
+            buffer = new Uint8Array(size);
+
+        return buffer.subarray(0, size);
+    }
+})();
+*/
+
+/**
  * A wrapper around WebGLTexture
  */
 export class SpeedyTexture
@@ -119,12 +137,49 @@ export class SpeedyTexture
     }
 
     /**
+     * Resize this texture. Its content will be lost!
+     * @param {number} width new width, in pixels
+     * @param {number} height new height, in pixels
+     * @returns {SpeedyTexture} this texture
+     */
+    resize(width, height)
+    {
+        const gl = this._gl;
+
+        // no need to resize?
+        if(this._width === width && this._height === height)
+            return this;
+
+        // validate size
+        width |= 0; height |= 0;
+        Utils.assert(width > 0 && height > 0);
+
+        // context loss?
+        if(gl.isContextLost())
+            return this;
+
+        // update dimensions
+        this._width = width;
+        this._height = height;
+
+        // resize
+        gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
+        // no mipmaps
+        this.discardMipmaps();
+
+        // done!
+        return this;
+    }
+
+    /**
      * Generates an image pyramid
-     * @param {SpeedyGPU} gpu
-     * @param {boolean} [gaussian] should we compute a Gaussian pyramid? Recommended!
+     * @param {SpeedyDrawableTexture[]} [mipmaps] custom texture for each mip level
      * @returns {SpeedyTexture} this
      */
-    generateMipmaps(gpu, gaussian = true)
+    generateMipmaps(mipmaps = [])
     {
         const gl = this._gl;
 
@@ -135,52 +190,31 @@ export class SpeedyTexture
         // let the hardware compute the all levels of the pyramid, up to 1x1
         // we also specify the TEXTURE_MIN_FILTER to be used from now on
         gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
-        //gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
         gl.generateMipmap(gl.TEXTURE_2D);
         gl.bindTexture(gl.TEXTURE_2D, null);
 
-        // compute a Gaussian pyramid for better results
-        if(gaussian) {
-            let width = this.width, height = this.height;
-            let halfWidth = 0, halfHeight = 0;
-            let layer = this;
-            const pyramid = gpu.programs.pyramids(0);
-            const tex = [
-                gpu.texturePool.allocate(),
-                gpu.texturePool.allocate(),
-                gpu.texturePool.allocate()
-            ];
+        // accept custom textures
+        if(mipmaps.length > 0) {
+            const width = this.width, height = this.height;
 
-            // number of mipmaps according to the OpenGL ES 3.0 spec (sec 3.8.10.4)
+            // expect number of mipmaps according to the OpenGL ES 3.0 spec (sec 3.8.10.4)
             const numMipmaps = 1 + Math.floor(Math.log2(Math.max(width, height)));
+            Utils.assert(mipmaps.length == numMipmaps);
 
-            // apply successive reduce operations
-            //const n = Math.min(numMipmaps, PYRAMID_MAX_LEVELS);
-            const n = numMipmaps;
-            for(let level = 1; level < n; level++) {
+            // verify the dimensions of each level
+            for(let level = 1; level < numMipmaps; level++) {
                 // use max(1, floor(size / 2^lod)), in accordance to
                 // the OpenGL ES 3.0 spec sec 3.8.10.4 (Mipmapping)
-                halfWidth = Math.max(1, width >>> 1);
-                halfHeight = Math.max(1, height >>> 1);
+                const w = Math.max(1, width >>> level);
+                const h = Math.max(1, height >>> level);
 
-                // reduce operation
-                (pyramid.smoothX.outputs(width, height, tex[0]))(layer);
-                (pyramid.smoothY.outputs(width, height, tex[1]))(tex[0]);
-                (pyramid.downsample2.outputs(halfWidth, halfHeight, tex[2]))(tex[1]);
+                // verify the dimensions of this level
+                Utils.assert(mipmaps[level].width === w && mipmaps[level].height === h);
 
                 // copy to mipmap
-                tex[2].copyTo(this, level);
-
-                // next level
-                layer = tex[2];
-                width = halfWidth;
-                height = halfHeight;
+                mipmaps[level].copyTo(this, level);
             }
-
-            gpu.texturePool.free(tex[2]);
-            gpu.texturePool.free(tex[1]);
-            gpu.texturePool.free(tex[0]);
         }
 
         // done!
@@ -442,9 +476,13 @@ export class SpeedyDrawableTexture extends SpeedyTexture
      * @param {boolean} [preserveContent] should we preserve the content of the texture? EXPENSIVE!
      * @returns {SpeedyDrawableTexture} this texture
      */
-    resize(width, height, preserveContent = false)
+    /*resize(width, height, preserveContent = false)
     {
         const gl = this._gl;
+
+        // no need to preserve the content?
+        if(!preserveContent)
+            return super.resize(width, height);
 
         // no need to resize?
         if(this._width === width && this._height === height)
@@ -458,47 +496,37 @@ export class SpeedyDrawableTexture extends SpeedyTexture
         if(gl.isContextLost())
             return this;
 
-        // do we need to copy the old content?
-        if(!preserveContent) {
-            // no; do a cheap resize
-            gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-            gl.bindTexture(gl.TEXTURE_2D, null);
-        }
-        else {
-            // allocate new texture
-            const newTexture = SpeedyTexture._createTexture(gl, width, height);
+        // allocate new texture
+        const newTexture = SpeedyTexture._createTexture(gl, width, height);
 
-            // initialize the new texture with zeros to avoid a
-            // warning when calling copyTexSubImage2D() on Firefox
-            // this may not be very efficient?
-            const zeros = new Uint8Array(width * height * 4); // RGBA: 4 bytes per pixel
-            SpeedyTexture._upload(gl, newTexture, width, height, zeros);
+        // initialize the new texture with zeros to avoid a
+        // warning when calling copyTexSubImage2D() on Firefox
+        // this may not be very efficient?
+        SpeedyTexture._upload(gl, newTexture, width, height, zeros(width * height * 4)); // RGBA: 4 bytes per pixel
 
-            // copy the old texture to the new one
-            const oldWidth = this._width, oldHeight = this._height;
-            SpeedyDrawableTexture._copyToTexture(gl, this._glFbo, newTexture, 0, 0, Math.min(width, oldWidth), Math.min(height, oldHeight), 0);
+        // copy the old texture to the new one
+        const oldWidth = this._width, oldHeight = this._height;
+        SpeedyDrawableTexture._copyToTexture(gl, this._glFbo, newTexture, 0, 0, Math.min(width, oldWidth), Math.min(height, oldHeight), 0);
 
-            // bind FBO
-            gl.bindFramebuffer(gl.FRAMEBUFFER, this._glFbo);
+        // bind FBO
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this._glFbo);
 
-            // invalidate old data (is this needed?)
-            gl.invalidateFramebuffer(gl.FRAMEBUFFER, [gl.COLOR_ATTACHMENT0]);
+        // invalidate old data (is this needed?)
+        gl.invalidateFramebuffer(gl.FRAMEBUFFER, [gl.COLOR_ATTACHMENT0]);
 
-            // attach the new texture to the existing framebuffer
-            gl.framebufferTexture2D(gl.FRAMEBUFFER,         // target
-                                    gl.COLOR_ATTACHMENT0,   // color buffer
-                                    gl.TEXTURE_2D,          // tex target
-                                    newTexture,             // texture
-                                    0);                     // mipmap level
+        // attach the new texture to the existing framebuffer
+        gl.framebufferTexture2D(gl.FRAMEBUFFER,         // target
+                                gl.COLOR_ATTACHMENT0,   // color buffer
+                                gl.TEXTURE_2D,          // tex target
+                                newTexture,             // texture
+                                0);                     // mipmap level
 
-            // unbind FBO
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        // unbind FBO
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-            // release the old texture and replace it
-            gl.deleteTexture(this._glTexture);
-            this._glTexture = newTexture;
-        }
+        // release the old texture and replace it
+        gl.deleteTexture(this._glTexture);
+        this._glTexture = newTexture;
 
         // update dimensions & discard mipmaps
         this.discardMipmaps();
@@ -508,6 +536,7 @@ export class SpeedyDrawableTexture extends SpeedyTexture
         // done!
         return this;
     }
+    */
 
     /**
      * Clear the texture

@@ -125,8 +125,6 @@ export class SpeedyTexturePool
 
         if(bucket.texture == null) // lazy instantiation
             bucket.texture = SpeedyTexturePool._createManagedTexture(this._gpu.gl, bucket);
-        else
-            bucket.texture.clear();
 
         return bucket.texture;
     }
