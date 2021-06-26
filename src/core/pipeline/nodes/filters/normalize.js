@@ -39,7 +39,7 @@ export class SpeedyPipelineNodeNormalize extends SpeedyPipelineNode
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, 3, [
             InputPort().expects(SpeedyPipelineMessageType.Image).satisfying(
                 msg => msg.format === ImageFormat.GREY
             ),
@@ -105,21 +105,11 @@ export class SpeedyPipelineNodeNormalize extends SpeedyPipelineNode
         if(minValue > maxValue)
             minValue = maxValue = (minValue + maxValue) / 2;
 
-        const tex = [
-            gpu.texturePool.allocate(),
-            gpu.texturePool.allocate(),
-            gpu.texturePool.allocate()
-        ];
-
-        const minmax = this._scanMinMax(gpu, tex, image, PixelComponent.GREEN);
+        const minmax = this._scanMinMax(gpu, image, PixelComponent.GREEN);
 
         (gpu.programs.enhancements._normalizeGreyscaleImage
             .outputs(width, height, outputTexture)
         )(minmax, minValue, maxValue);
-
-        gpu.texturePool.free(tex[2]);
-        gpu.texturePool.free(tex[1]);
-        gpu.texturePool.free(tex[0]);
 
         this.output().swrite(outputTexture, format);
     }
@@ -127,18 +117,17 @@ export class SpeedyPipelineNodeNormalize extends SpeedyPipelineNode
     /**
      * Scan a single component in all pixels of the image and find the min & max intensities
      * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture[]} tex temporary textures (3)
      * @param {SpeedyTexture} image input image
      * @param {PixelComponent} pixelComponent a single PixelComponent flag
      * @returns {SpeedyDrawableTexture} RGBA = (max, min, max - min, original_pixel)
      */
-    _scanMinMax(gpu, tex, image, pixelComponent)
+    _scanMinMax(gpu, image, pixelComponent)
     {
+        const tex = this._tex;
         const program = gpu.programs.utils;
         const width = image.width, height = image.height;
         const numIterations = Math.ceil(Math.log2(Math.max(width, height))) | 0;
 
-        Utils.assert(tex.length === 3);
         Utils.assert(ColorComponentId[pixelComponent] !== undefined);
 
         program._copyComponents.outputs(width, height, tex[2]);

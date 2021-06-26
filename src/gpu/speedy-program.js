@@ -289,17 +289,22 @@ export class SpeedyProgram extends Function
         const expectedTextures = this._texture.length;
         Utils.assert(texture.length === expectedTextures, `Incorrect number of textures (expected ${expectedTextures})`);
 
+        /*
+        // FIXME pyramid bug... TODO get rid of ownTextures
         // we need to keep the current size
         const width = this.width;
         const height = this.height;
+        */
 
         // update output texture(s)
         const useInternal = texture.every(tex => tex === null);
         this._texture = !useInternal ? texture : this._ownTexture;
         this._textureIndex = 0;
 
+        /*
         // restore previous size
         this.setOutputSize(width, height);
+        */
 
         // done!
         return this;

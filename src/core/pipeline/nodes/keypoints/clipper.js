@@ -49,7 +49,7 @@ export class SpeedyPipelineNodeKeypointClipper extends SpeedyPipelineNode
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, 3, [
             InputPort().expects(SpeedyPipelineMessageType.Keypoints).satisfying(
                 msg => msg.descriptorSize == 0 && msg.extraSize == 0
             ),
@@ -89,11 +89,7 @@ export class SpeedyPipelineNodeKeypointClipper extends SpeedyPipelineNode
         const keypoints = gpu.programs.keypoints;
         const outputTexture = this._outputTexture;
         const clipValue = this._size;
-        const tex = [
-            gpu.texturePool.allocate(),
-            gpu.texturePool.allocate(),
-            gpu.texturePool.allocate()
-        ];
+        const tex = this._tex;
 
         // find the minimum power of 2 pot such that pot >= capacity
         const capacity = SpeedyPipelineNodeKeypointDetector.encoderCapacity(descriptorSize, extraSize, encoderLength);
@@ -139,11 +135,6 @@ export class SpeedyPipelineNodeKeypointClipper extends SpeedyPipelineNode
         }
         console.log(debug);
         */
-
-        // release textures
-        gpu.texturePool.free(tex[2]);
-        gpu.texturePool.free(tex[1]);
-        gpu.texturePool.free(tex[0]);
 
         // done!
         this.output().swrite(outputTexture, descriptorSize, extraSize, newEncoderLength);

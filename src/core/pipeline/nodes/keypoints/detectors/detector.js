@@ -43,11 +43,12 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
     /**
      * Constructor
      * @param {string} [name] name of the node
+     * @param {number} [texCount] number of internal work textures
      * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
      */
-    constructor(name = undefined, portBuilders = undefined)
+    constructor(name = undefined, texCount = 0, portBuilders = undefined)
     {
-        super(name, portBuilders);
+        super(name, texCount + 4, portBuilders);
 
         /** @type {number} encoder capacity */
         this._capacity = DEFAULT_CAPACITY; // must not be greater than MAX_ENCODER_CAPACITY
@@ -90,14 +91,7 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(this._capacity, 0, 0);
         const width = corners.width, height = corners.height;
         const imageSize = [ width, height ];
-
-        // allocate textures
-        const tex = [
-            gpu.texturePool.allocate(),
-            gpu.texturePool.allocate(),
-            gpu.texturePool.allocate(),
-            gpu.texturePool.allocate(),
-        ];
+        const tex = this._tex.slice(this._tex.length - 4);
 
         // prepare programs
         encoders._encodeKeypointSkipOffsets.outputs(width, height, tex[0]);
@@ -133,12 +127,6 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         // write to encodedKeypoints
         encodedKeypoints.resize(encoderLength, encoderLength);
         encodedKps.copyTo(encodedKeypoints);
-
-        // release textures
-        gpu.texturePool.free(tex[3]);
-        gpu.texturePool.free(tex[2]);
-        gpu.texturePool.free(tex[1]);
-        gpu.texturePool.free(tex[0]);
 
         // done!
         return encodedKeypoints;
@@ -183,11 +171,12 @@ export class SpeedyPipelineNodeMultiscaleKeypointDetector extends SpeedyPipeline
     /**
      * Constructor
      * @param {string} [name] name of the node
+     * @param {number} [texCount] number of internal work textures
      * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
      */
-    constructor(name = undefined, portBuilders = undefined)
+    constructor(name = undefined, texCount = undefined, portBuilders = undefined)
     {
-        super(name, portBuilders);
+        super(name, texCount, portBuilders);
 
         /** @type {number} number of pyramid levels */
         this._levels = 1;

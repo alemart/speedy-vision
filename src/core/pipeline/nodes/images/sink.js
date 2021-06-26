@@ -41,7 +41,7 @@ export class SpeedyPipelineNodeImageSink extends SpeedyPipelineSinkNode
      */
     constructor(name = 'image')
     {
-        super(name, [
+        super(name, 0, [
             InputPort().expects(SpeedyPipelineMessageType.Image)
         ]);
 

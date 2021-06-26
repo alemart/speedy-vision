@@ -47,7 +47,7 @@ export class SpeedyPipelineNodeImageMultiplexer extends SpeedyPipelineNode
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, 0, [
             ...(INPUT_PORT.map(portName => InputPort(portName).expects(SpeedyPipelineMessageType.Image))),
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);

@@ -162,6 +162,7 @@ export class SpeedyTexture
         this._width = width;
         this._height = height;
 
+
         // resize
         gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
@@ -175,11 +176,11 @@ export class SpeedyTexture
     }
 
     /**
-     * Generates an image pyramid
-     * @param {SpeedyDrawableTexture[]} [mipmaps] custom texture for each mip level
+     * Generate mipmap
+     * @param {SpeedyDrawableTexture[]} [mipmap] custom texture for each mip level
      * @returns {SpeedyTexture} this
      */
-    generateMipmaps(mipmaps = [])
+    generateMipmaps(mipmap = [])
     {
         const gl = this._gl;
 
@@ -195,25 +196,25 @@ export class SpeedyTexture
         gl.bindTexture(gl.TEXTURE_2D, null);
 
         // accept custom textures
-        if(mipmaps.length > 0) {
+        if(mipmap.length > 0) {
             const width = this.width, height = this.height;
 
-            // expect number of mipmaps according to the OpenGL ES 3.0 spec (sec 3.8.10.4)
+            // expect number of mipmap images according to the OpenGL ES 3.0 spec (sec 3.8.10.4)
             const numMipmaps = 1 + Math.floor(Math.log2(Math.max(width, height)));
-            Utils.assert(mipmaps.length == numMipmaps);
+            Utils.assert(mipmap.length <= numMipmaps);
 
             // verify the dimensions of each level
-            for(let level = 1; level < numMipmaps; level++) {
+            for(let level = 1; level < mipmap.length; level++) {
                 // use max(1, floor(size / 2^lod)), in accordance to
                 // the OpenGL ES 3.0 spec sec 3.8.10.4 (Mipmapping)
                 const w = Math.max(1, width >>> level);
                 const h = Math.max(1, height >>> level);
 
                 // verify the dimensions of this level
-                Utils.assert(mipmaps[level].width === w && mipmaps[level].height === h);
+                Utils.assert(mipmap[level].width === w && mipmap[level].height === h);
 
                 // copy to mipmap
-                mipmaps[level].copyTo(this, level);
+                mipmap[level].copyTo(this, level);
             }
         }
 
@@ -223,7 +224,7 @@ export class SpeedyTexture
     }
 
     /**
-     * Invalidates previously generated mipmaps, if any
+     * Invalidates previously generated mipmap, if any
      */
     discardMipmaps()
     {
@@ -243,7 +244,7 @@ export class SpeedyTexture
     }
 
     /**
-     * Does this texture have mipmaps?
+     * Does this texture have a mipmap?
      * @returns {boolean}
      */
     hasMipmaps()

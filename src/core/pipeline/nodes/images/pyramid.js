@@ -25,8 +25,13 @@ import { InputPort, OutputPort } from '../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../../../gpu/speedy-texture';
 import { Utils } from '../../../../utils/utils';
+import { PYRAMID_MAX_LEVELS } from '../../../../utils/globals';
 import { ImageFormat } from '../../../../utils/types';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
+
+// Constants
+const MAX_LEVELS = PYRAMID_MAX_LEVELS;
+const MAX_TEXTURES = 2 * MAX_LEVELS - 1;
 
 /**
  * Generate pyramid
@@ -39,7 +44,7 @@ export class SpeedyPipelineNodeImagePyramid extends SpeedyPipelineNode
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, MAX_TEXTURES, [
             InputPort().expects(SpeedyPipelineMessageType.Image),
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
@@ -57,24 +62,25 @@ export class SpeedyPipelineNodeImagePyramid extends SpeedyPipelineNode
         const pyramids = gpu.programs.pyramids(0);
         let width = image.width, height = image.height;
 
-        // number of mipmaps according to the OpenGL ES 3.0 spec (sec 3.8.10.4)
-        const numMipmaps = 1 + Math.floor(Math.log2(Math.max(width, height)));
+        // number of mipmap images according to the OpenGL ES 3.0 spec (sec 3.8.10.4)
+        const mipLevels = 1 + Math.floor(Math.log2(Math.max(width, height)));
 
-        // allocate textures
-        const mip = new Array(2 * numMipmaps);
+        // get work textures
+        const mip = new Array(MAX_TEXTURES + 1);
+        for(let i = 0; i < MAX_TEXTURES; i++)
+            mip[i+1] = this._tex[i];
         mip[0] = image;
-        for(let i = 1; i < mip.length; i++)
-            mip[i] = gpu.texturePool.allocate();
 
         // generate gaussian pyramid
-        for(let level = 1; level < numMipmaps; level++) {
+        const numLevels = Math.min(mipLevels, MAX_LEVELS);
+        for(let level = 1; level < numLevels; level++) {
             // use max(1, floor(size / 2^lod)), in accordance to
             // the OpenGL ES 3.0 spec sec 3.8.10.4 (Mipmapping)
             const halfWidth = Math.max(1, width >>> 1);
             const halfHeight = Math.max(1, height >>> 1);
 
             // reduce operation
-            const tmp = (level - 1) + numMipmaps;
+            const tmp = (level - 1) + MAX_LEVELS;
             (pyramids.smoothX.outputs(width, height, mip[tmp]))(mip[level-1]);
             (pyramids.smoothY.outputs(width, height, mip[level-1]))(mip[tmp]);
             (pyramids.downsample2.outputs(halfWidth, halfHeight, mip[level]))(mip[level-1]);
@@ -84,14 +90,10 @@ export class SpeedyPipelineNodeImagePyramid extends SpeedyPipelineNode
             height = halfHeight;
         }
 
-        // copy to output & set mipmaps
+        // copy to output & set mipmap
         outputTexture.resize(image.width, image.height);
         image.copyTo(outputTexture);
-        outputTexture.generateMipmaps(mip.slice(0, numMipmaps));
-
-        // free textures
-        for(let i = mip.length - 1; i > 0; i--)
-            gpu.texturePool.free(mip[i]);
+        outputTexture.generateMipmaps(mip.slice(0, numLevels));
 
         // done!
         this.output().swrite(outputTexture, format);

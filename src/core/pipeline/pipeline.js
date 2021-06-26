@@ -161,6 +161,10 @@ export class SpeedyPipeline
         // find the sinks
         const sinks = this._sequence.filter(node => node.isSink());
 
+        // clear output textures
+        for(let i = 0; i < this._sequence.length; i++)
+            this._sequence[i].clearTextures();
+
         // run the pipeline
         return SpeedyPipeline._runSequence(this._sequence, this._gpu).then(() =>
 
@@ -171,11 +175,9 @@ export class SpeedyPipeline
                 results.reduce((obj, val, idx) => ((obj[sinks[idx].name] = val), obj), this._template)
             )
         ).then(aggregate => {
-            // clear all ports & textures
-            for(let i = this._sequence.length - 1; i >= 0; i--) {
+            // clear all ports
+            for(let i = this._sequence.length - 1; i >= 0; i--)
                 this._sequence[i].clearPorts();
-                this._sequence[i].clearTextures();
-            }
 
             // the pipeline is no longer busy
             this._busy = false;

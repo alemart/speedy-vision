@@ -46,7 +46,7 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, 3, [
             InputPort().expects(SpeedyPipelineMessageType.Image).satisfying(
                 msg => msg.format === ImageFormat.GREY
             ),
@@ -84,6 +84,7 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
     {
         const image = this.input().read().image;
         const width = image.width, height = image.height;
+        const tex = this._tex;
         const threshold = this._threshold;
         const lodStep = Math.log2(this.scaleFactor);
         const levels = this.levels;
@@ -93,13 +94,6 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
         // validate pyramid
         if(!(levels == 1 || image.hasMipmaps()))
             throw new IllegalOperationError(`Expected a pyramid in ${this.fullName}`);
-
-        // allocate textures
-        const tex = [
-            gpu.texturePool.allocate(),
-            gpu.texturePool.allocate(),
-            gpu.texturePool.allocate(),
-        ];
 
         // FAST
         keypoints.fast9_16.outputs(width, height, tex[0], tex[1]);
@@ -120,11 +114,6 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
         // encode keypoints
         const encodedKeypoints = this._encodeKeypoints(gpu, finalCorners, this._outputTexture);
         const encoderLength = encodedKeypoints.width;
-
-        // release textures
-        gpu.texturePool.free(tex[2]);
-        gpu.texturePool.free(tex[1]);
-        gpu.texturePool.free(tex[0]);
 
         // done!
         this.output().swrite(encodedKeypoints, 0, 0, encoderLength);

@@ -51,7 +51,7 @@ export class SpeedyPipelineNodeConvolution extends SpeedyPipelineNode
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, 0, [
             InputPort().expects(SpeedyPipelineMessageType.Image),
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);

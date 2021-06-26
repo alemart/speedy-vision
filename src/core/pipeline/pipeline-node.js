@@ -68,9 +68,10 @@ export class SpeedyPipelineNode
     /**
      * Constructor
      * @param {string} [name] the name of this node
+     * @param {number} [texCount] number of internal work textures
      * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
      */
-    constructor(name = generateRandomName(), portBuilders = [])
+    constructor(name = generateRandomName(), texCount = 0, portBuilders = [])
     {
         /** @type {number} the ID of this node (unique) */
         this._id = generateUniqueID(); // node names may be the same...
@@ -95,6 +96,9 @@ export class SpeedyPipelineNode
 
         /** @type {SpeedyDrawableTexture[]} output texture(s) */
         this._outputTextures = (new Array(this._outputPorts.length)).fill(null);
+
+        /** @type {SpeedyDrawableTexture[]} internal work texture(s) */
+        this._tex = (new Array(texCount)).fill(null);
 
 
 
@@ -208,8 +212,13 @@ export class SpeedyPipelineNode
      */
     init(gpu)
     {
+        // allocate output texture(s)
         for(let i = 0; i < this._outputTextures.length; i++)
             this._outputTextures[i] = gpu.texturePool.allocate();
+
+        // allocate internal work texture(s)
+        for(let j = 0; j < this._tex.length; j++)
+            this._tex[j] = gpu.texturePool.allocate();
     }
 
     /**
@@ -218,17 +227,28 @@ export class SpeedyPipelineNode
      */
     release(gpu)
     {
+        // deallocate internal work texture(s)
+        for(let j = this._tex.length - 1; j >= 0; j--)
+            this._tex[j] = gpu.texturePool.free(this._tex[j]);
+
+        // deallocate output texture(s)
         for(let i = this._outputTextures.length - 1; i >= 0; i--)
             this._outputTextures[i] = gpu.texturePool.free(this._outputTextures[i]);
     }
 
     /**
-     * Clear all internal textures
+     * Clear internal textures
      */
     clearTextures()
     {
+        // clear output textures
         for(let i = 0; i < this._outputTextures.length; i++)
             this._outputTextures[i].clear();
+
+        /*// do we need this?!
+        // clear internal work textures
+        for(let j = 0; j < this._tex.length; j++)
+            this._tex[j].clear();*/
     }
 
     /**
@@ -301,11 +321,12 @@ export class SpeedyPipelineSourceNode extends SpeedyPipelineNode
     /**
      * Constructor
      * @param {string} [name] the name of this node
+     * @param {number} [texCount] number of internal work textures
      * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
      */
-    constructor(name = undefined, portBuilders = undefined)
+    constructor(name = undefined, texCount = undefined, portBuilders = undefined)
     {
-        super(name, portBuilders);
+        super(name, texCount, portBuilders);
         Utils.assert(this.isSource());
     }
 }
@@ -319,11 +340,12 @@ export class SpeedyPipelineSinkNode extends SpeedyPipelineNode
     /**
      * Constructor
      * @param {string} [name] the name of this node
+     * @param {number} [texCount] number of internal work textures
      * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
      */
-    constructor(name = undefined, portBuilders = undefined)
+    constructor(name = undefined, texCount = undefined, portBuilders = undefined)
     {
-        super(name, portBuilders);
+        super(name, texCount, portBuilders);
         Utils.assert(this.isSink());
     }
 

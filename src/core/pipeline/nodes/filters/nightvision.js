@@ -44,7 +44,7 @@ export class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, 2, [
             InputPort().expects(SpeedyPipelineMessageType.Image).satisfying(
                 msg => msg.format === ImageFormat.RGBA || msg.format === ImageFormat.GREY
             ),
@@ -154,11 +154,10 @@ export class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode
         const decay = this._decay;
         const quality = this._quality;
         const program = gpu.programs.enhancements;
+        const tmp = this._tex[0];
+        const illuminationMap = this._tex[1];
 
         // compute illumination map
-        const tmp = gpu.texturePool.allocate();
-        const illuminationMap = gpu.texturePool.allocate();
-
         if(quality == 'medium') {
             (program._illuminationMapX
                 .outputs(width, height, tmp)
@@ -200,8 +199,6 @@ export class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode
         }
 
         // done!
-        gpu.texturePool.free(illuminationMap);
-        gpu.texturePool.free(tmp);
         this.output().swrite(outputTexture, format);
     }
 }

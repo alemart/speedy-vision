@@ -41,7 +41,7 @@ export class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, 0, [
             OutputPort().expects(SpeedyPipelineMessageType.Image)
         ]);
 
