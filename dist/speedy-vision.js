@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-06-21T23:53:35.114Z
+ * Date: 2021-06-26T02:57:05.310Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -369,7 +369,7 @@ class ORBFeatures extends _feature_description_algorithm__WEBPACK_IMPORTED_MODUL
 
         // smooth the image before computing the descriptors
         const smoothTexture = gpu.programs.filters.gauss7(inputTexture);
-        const smoothPyramid = smoothTexture.generateMipmaps(gpu);
+        const smoothPyramid = smoothTexture.generateMipmaps();
 
         // compute ORB feature descriptors
         return gpu.programs.keypoints.orb(smoothPyramid, orientedKeypoints, descriptorSize, extraSize, encoderLength);
@@ -389,7 +389,7 @@ class ORBFeatures extends _feature_description_algorithm__WEBPACK_IMPORTED_MODUL
         const encoderLength = this.encoderLength;
 
         // generate pyramid
-        const pyramid = inputTexture.generateMipmaps(gpu);
+        const pyramid = inputTexture.generateMipmaps();
 
         // compute orientation
         return gpu.programs.keypoints.orbOrientation(pyramid, detectedKeypoints, descriptorSize, extraSize, encoderLength);
@@ -683,7 +683,7 @@ class MultiscaleFASTFeatures extends _feature_detection_algorithm__WEBPACK_IMPOR
         const encoderLength = this.encoderLength;
 
         // generate pyramid
-        const pyramid = inputTexture.generateMipmaps(gpu);
+        const pyramid = inputTexture.generateMipmaps();
 
         // find corners
         const corners = gpu.programs.keypoints.multiscaleFast(pyramid, normalizedThreshold, numberOfLayers, lodStep);
@@ -931,7 +931,7 @@ class MultiscaleHarrisFeatures extends _feature_detection_algorithm__WEBPACK_IMP
         const lodStep = Math.log2(this._scaleFactor);
 
         // generate pyramid
-        const pyramid = inputTexture.generateMipmaps(gpu);
+        const pyramid = inputTexture.generateMipmaps();
 
         // compute derivatives
         const sobelDerivatives = new Array(MAX_LAYERS);
@@ -2380,8 +2380,8 @@ class LKFeatureTrackingAlgorithm extends _feature_tracking_algorithm__WEBPACK_IM
         const epsilon = this.epsilon;
 
         // create pyramids
-        const nextPyramid = nextImage.generateMipmaps(gpu);
-        const prevPyramid = prevImage.generateMipmaps(gpu);
+        const nextPyramid = nextImage.generateMipmaps();
+        const prevPyramid = prevImage.generateMipmaps();
 
         // track feature points
         return gpu.programs.trackers.lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, depth, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);
@@ -10215,8 +10215,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineKeypointFactory", function() { return SpeedyPipelineKeypointFactory; });
 /* harmony import */ var _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../speedy-namespace */ "./src/core/speedy-namespace.js");
 /* harmony import */ var _nodes_keypoints_sink__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/keypoints/sink */ "./src/core/pipeline/nodes/keypoints/sink.js");
-/* harmony import */ var _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../nodes/keypoints/detectors/fast */ "./src/core/pipeline/nodes/keypoints/detectors/fast.js");
-/* harmony import */ var _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../nodes/keypoints/detectors/harris */ "./src/core/pipeline/nodes/keypoints/detectors/harris.js");
+/* harmony import */ var _nodes_keypoints_clipper__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../nodes/keypoints/clipper */ "./src/core/pipeline/nodes/keypoints/clipper.js");
+/* harmony import */ var _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../nodes/keypoints/detectors/fast */ "./src/core/pipeline/nodes/keypoints/detectors/fast.js");
+/* harmony import */ var _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../nodes/keypoints/detectors/harris */ "./src/core/pipeline/nodes/keypoints/detectors/harris.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -10243,6 +10244,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /**
  * Keypoint detectors
  */
@@ -10255,7 +10257,7 @@ class SpeedyPipelineKeypointDetectorFactory extends _speedy_namespace__WEBPACK_I
      */
     static FAST(name = undefined)
     {
-        return new _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineNodeFASTKeypointDetector"](name);
+        return new _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_3__["SpeedyPipelineNodeFASTKeypointDetector"](name);
     }
 
     /**
@@ -10265,7 +10267,7 @@ class SpeedyPipelineKeypointDetectorFactory extends _speedy_namespace__WEBPACK_I
      */
     static Harris(name = undefined)
     {
-        return new _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_3__["SpeedyPipelineNodeHarrisKeypointDetector"](name);
+        return new _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_4__["SpeedyPipelineNodeHarrisKeypointDetector"](name);
     }
 }
 
@@ -10291,6 +10293,16 @@ class SpeedyPipelineKeypointFactory extends _speedy_namespace__WEBPACK_IMPORTED_
     static Sink(name = undefined)
     {
         return new _nodes_keypoints_sink__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodeKeypointSink"](name);
+    }
+
+    /**
+     * Keypoint clipper
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeKeypointClipper}
+     */
+    static Clipper(name = undefined)
+    {
+        return new _nodes_keypoints_clipper__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineNodeKeypointClipper"](name);
     }
 }
 
@@ -10438,7 +10450,7 @@ class SpeedyPipelineNodeConvolution extends _pipeline_node__WEBPACK_IMPORTED_MOD
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, 0, [
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
         ]);
@@ -10602,7 +10614,7 @@ class SpeedyPipelineNodeGaussianBlur extends _pipeline_node__WEBPACK_IMPORTED_MO
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, 1, [
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
         ]);
@@ -10681,7 +10693,7 @@ class SpeedyPipelineNodeGaussianBlur extends _pipeline_node__WEBPACK_IMPORTED_MO
         const kernY = this._kernel.y;
         const convX = CONVOLUTION_X[this._kernelSize.width];
         const convY = CONVOLUTION_Y[this._kernelSize.height];
-        const tex = gpu.texturePool.allocate();
+        const tex = this._tex[0];
 
         (gpu.programs.filters[convX]
             .outputs(width, height, tex)
@@ -10691,7 +10703,6 @@ class SpeedyPipelineNodeGaussianBlur extends _pipeline_node__WEBPACK_IMPORTED_MO
             .outputs(width, height, outputTexture)
         )(tex, kernY);
 
-        gpu.texturePool.free(tex);
         this.output().swrite(outputTexture, format);
     }
 
@@ -10774,7 +10785,7 @@ class SpeedyPipelineNodeGreyscale extends _pipeline_node__WEBPACK_IMPORTED_MODUL
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, 0, [
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
         ]);
@@ -10871,7 +10882,7 @@ class SpeedyPipelineNodeMedianBlur extends _pipeline_node__WEBPACK_IMPORTED_MODU
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, 0, [
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image).satisfying(
                 msg => msg.format === _utils_types__WEBPACK_IMPORTED_MODULE_7__["ImageFormat"].GREY
             ),
@@ -10996,7 +11007,7 @@ class SpeedyPipelineNodeNightvision extends _pipeline_node__WEBPACK_IMPORTED_MOD
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, 2, [
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image).satisfying(
                 msg => msg.format === _utils_types__WEBPACK_IMPORTED_MODULE_7__["ImageFormat"].RGBA || msg.format === _utils_types__WEBPACK_IMPORTED_MODULE_7__["ImageFormat"].GREY
             ),
@@ -11106,11 +11117,10 @@ class SpeedyPipelineNodeNightvision extends _pipeline_node__WEBPACK_IMPORTED_MOD
         const decay = this._decay;
         const quality = this._quality;
         const program = gpu.programs.enhancements;
+        const tmp = this._tex[0];
+        const illuminationMap = this._tex[1];
 
         // compute illumination map
-        const tmp = gpu.texturePool.allocate();
-        const illuminationMap = gpu.texturePool.allocate();
-
         if(quality == 'medium') {
             (program._illuminationMapX
                 .outputs(width, height, tmp)
@@ -11152,8 +11162,6 @@ class SpeedyPipelineNodeNightvision extends _pipeline_node__WEBPACK_IMPORTED_MOD
         }
 
         // done!
-        gpu.texturePool.free(illuminationMap);
-        gpu.texturePool.free(tmp);
         this.output().swrite(outputTexture, format);
     }
 }
@@ -11219,7 +11227,7 @@ class SpeedyPipelineNodeNormalize extends _pipeline_node__WEBPACK_IMPORTED_MODUL
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, 3, [
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image).satisfying(
                 msg => msg.format === _utils_types__WEBPACK_IMPORTED_MODULE_6__["ImageFormat"].GREY
             ),
@@ -11285,21 +11293,11 @@ class SpeedyPipelineNodeNormalize extends _pipeline_node__WEBPACK_IMPORTED_MODUL
         if(minValue > maxValue)
             minValue = maxValue = (minValue + maxValue) / 2;
 
-        const tex = [
-            gpu.texturePool.allocate(),
-            gpu.texturePool.allocate(),
-            gpu.texturePool.allocate()
-        ];
-
-        const minmax = this._scanMinMax(gpu, tex, image, _utils_types__WEBPACK_IMPORTED_MODULE_6__["PixelComponent"].GREEN);
+        const minmax = this._scanMinMax(gpu, image, _utils_types__WEBPACK_IMPORTED_MODULE_6__["PixelComponent"].GREEN);
 
         (gpu.programs.enhancements._normalizeGreyscaleImage
             .outputs(width, height, outputTexture)
         )(minmax, minValue, maxValue);
-
-        gpu.texturePool.free(tex[2]);
-        gpu.texturePool.free(tex[1]);
-        gpu.texturePool.free(tex[0]);
 
         this.output().swrite(outputTexture, format);
     }
@@ -11307,18 +11305,17 @@ class SpeedyPipelineNodeNormalize extends _pipeline_node__WEBPACK_IMPORTED_MODUL
     /**
      * Scan a single component in all pixels of the image and find the min & max intensities
      * @param {SpeedyGPU} gpu
-     * @param {SpeedyTexture[]} tex temporary textures (3)
      * @param {SpeedyTexture} image input image
      * @param {PixelComponent} pixelComponent a single PixelComponent flag
      * @returns {SpeedyDrawableTexture} RGBA = (max, min, max - min, original_pixel)
      */
-    _scanMinMax(gpu, tex, image, pixelComponent)
+    _scanMinMax(gpu, image, pixelComponent)
     {
+        const tex = this._tex;
         const program = gpu.programs.utils;
         const width = image.width, height = image.height;
         const numIterations = Math.ceil(Math.log2(Math.max(width, height))) | 0;
 
-        _utils_utils__WEBPACK_IMPORTED_MODULE_5__["Utils"].assert(tex.length === 3);
         _utils_utils__WEBPACK_IMPORTED_MODULE_5__["Utils"].assert(_utils_types__WEBPACK_IMPORTED_MODULE_6__["ColorComponentId"][pixelComponent] !== undefined);
 
         program._copyComponents.outputs(width, height, tex[2]);
@@ -11430,7 +11427,7 @@ class SpeedyPipelineNodeSimpleBlur extends _pipeline_node__WEBPACK_IMPORTED_MODU
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, 1, [
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
         ]);
@@ -11485,7 +11482,7 @@ class SpeedyPipelineNodeSimpleBlur extends _pipeline_node__WEBPACK_IMPORTED_MODU
         const kernY = this._kernel.y;
         const convX = CONVOLUTION_X[this._kernelSize.width];
         const convY = CONVOLUTION_Y[this._kernelSize.height];
-        const tex = gpu.texturePool.allocate();
+        const tex = this._tex[0];
 
         (gpu.programs.filters[convX]
             .outputs(width, height, tex)
@@ -11495,7 +11492,6 @@ class SpeedyPipelineNodeSimpleBlur extends _pipeline_node__WEBPACK_IMPORTED_MODU
             .outputs(width, height, outputTexture)
         )(tex, kernY);
 
-        gpu.texturePool.free(tex);
         this.output().swrite(outputTexture, format);
     }
 }
@@ -11570,7 +11566,7 @@ class SpeedyPipelineNodeImageMultiplexer extends _pipeline_node__WEBPACK_IMPORTE
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, 0, [
             ...(INPUT_PORT.map(portName => Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])(portName).expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image))),
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
         ]);
@@ -11631,8 +11627,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -11663,6 +11660,11 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+// Constants
+const MAX_LEVELS = _utils_globals__WEBPACK_IMPORTED_MODULE_6__["PYRAMID_MAX_LEVELS"];
+const MAX_TEXTURES = 2 * MAX_LEVELS - 1;
+
 /**
  * Generate pyramid
  */
@@ -11674,7 +11676,7 @@ class SpeedyPipelineNodeImagePyramid extends _pipeline_node__WEBPACK_IMPORTED_MO
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, MAX_TEXTURES, [
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
         ]);
@@ -11689,11 +11691,43 @@ class SpeedyPipelineNodeImagePyramid extends _pipeline_node__WEBPACK_IMPORTED_MO
     {
         const { image, format } = this.input().read();
         const outputTexture = this._outputTexture;
+        const pyramids = gpu.programs.pyramids(0);
+        let width = image.width, height = image.height;
 
+        // number of mipmap images according to the OpenGL ES 3.0 spec (sec 3.8.10.4)
+        const mipLevels = 1 + Math.floor(Math.log2(Math.max(width, height)));
+
+        // get work textures
+        const mip = new Array(MAX_TEXTURES + 1);
+        for(let i = 0; i < MAX_TEXTURES; i++)
+            mip[i+1] = this._tex[i];
+        mip[0] = image;
+
+        // generate gaussian pyramid
+        const numLevels = Math.min(mipLevels, MAX_LEVELS);
+        for(let level = 1; level < numLevels; level++) {
+            // use max(1, floor(size / 2^lod)), in accordance to
+            // the OpenGL ES 3.0 spec sec 3.8.10.4 (Mipmapping)
+            const halfWidth = Math.max(1, width >>> 1);
+            const halfHeight = Math.max(1, height >>> 1);
+
+            // reduce operation
+            const tmp = (level - 1) + MAX_LEVELS;
+            (pyramids.smoothX.outputs(width, height, mip[tmp]))(mip[level-1]);
+            (pyramids.smoothY.outputs(width, height, mip[level-1]))(mip[tmp]);
+            (pyramids.downsample2.outputs(halfWidth, halfHeight, mip[level]))(mip[level-1]);
+
+            // next level
+            width = halfWidth;
+            height = halfHeight;
+        }
+
+        // copy to output & set mipmap
         outputTexture.resize(image.width, image.height);
         image.copyTo(outputTexture);
-        outputTexture.generateMipmaps(gpu, true);
+        outputTexture.generateMipmaps(mip.slice(0, numLevels));
 
+        // done!
         this.output().swrite(outputTexture, format);
     }
 }
@@ -11763,7 +11797,7 @@ class SpeedyPipelineNodeImageSink extends _pipeline_node__WEBPACK_IMPORTED_MODUL
      */
     constructor(name = 'image')
     {
-        super(name, [
+        super(name, 0, [
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image)
         ]);
 
@@ -11872,7 +11906,7 @@ class SpeedyPipelineNodeImageSource extends _pipeline_node__WEBPACK_IMPORTED_MOD
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, 0, [
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image)
         ]);
 
@@ -11909,6 +11943,172 @@ class SpeedyPipelineNodeImageSource extends _pipeline_node__WEBPACK_IMPORTED_MOD
         gpu.upload(this._media._source, this._outputTexture);
 
         this.output().swrite(this._outputTexture, _utils_types__WEBPACK_IMPORTED_MODULE_7__["ImageFormat"].RGBA);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/keypoints/clipper.js":
+/*!******************************************************!*\
+  !*** ./src/core/pipeline/nodes/keypoints/clipper.js ***!
+  \******************************************************/
+/*! exports provided: SpeedyPipelineNodeKeypointClipper */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeKeypointClipper", function() { return SpeedyPipelineNodeKeypointClipper; });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _detectors_detector__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./detectors/detector */ "./src/core/pipeline/nodes/keypoints/detectors/detector.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture_reader__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../gpu/speedy-texture-reader */ "./src/gpu/speedy-texture-reader.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * clipper.js
+ * Keypoint clipper
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Constants
+const LOG2_STRIDE = 5;
+const MAX_SIZE = _utils_globals__WEBPACK_IMPORTED_MODULE_9__["MAX_ENCODER_CAPACITY"];
+
+
+
+/**
+ * Keypoint clipper: filters the best keypoints from a stream
+ */
+class SpeedyPipelineNodeKeypointClipper extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNode"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, 3, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineMessageType"].Keypoints).satisfying(
+                msg => msg.descriptorSize == 0 && msg.extraSize == 0
+            ),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineMessageType"].Keypoints)
+        ]);
+
+        /** @type {number} the maximum number of keypoints in the output */
+        this._size = MAX_SIZE;
+    }
+
+    /**
+     * The maximum number of keypoints in the output
+     * @returns {number}
+     */
+    get size()
+    {
+        return this._size;
+    }
+
+    /**
+     * The maximum number of keypoints in the output
+     * @param {number} size
+     */
+    set size(size)
+    {
+        this._size = Math.max(0, Math.min(size | 0, MAX_SIZE));
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input().read();
+        const keypoints = gpu.programs.keypoints;
+        const outputTexture = this._outputTexture;
+        const clipValue = this._size;
+        const tex = this._tex;
+
+        // find the minimum power of 2 pot such that pot >= capacity
+        const capacity = _detectors_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodeKeypointDetector"].encoderCapacity(descriptorSize, extraSize, encoderLength);
+        //const pot = 1 << (Math.ceil(Math.log2(capacity)) | 0);
+
+        // find the dimensions of the sorting shaders
+        const stride = 1 << LOG2_STRIDE; // must be a power of 2
+        //const height = Math.max(1, pot >>> LOG2_STRIDE); // this is also a power of 2
+        const height = Math.ceil(capacity / stride); // more economical, maybe not a power of 2
+        const numberOfPixels = stride * height;
+
+        // find the dimensions of the output texture
+        const newCapacity = Math.min(capacity, clipValue);
+        const newEncoderLength = _detectors_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodeKeypointDetector"].encoderLength(newCapacity, descriptorSize, extraSize);
+
+        // generate permutation of keypoints
+        keypoints.sortCreatePermutation.outputs(stride, height, tex[0]);
+        let permutation = keypoints.sortCreatePermutation(encodedKeypoints, descriptorSize, extraSize, encoderLength);
+
+        // sort permutation
+        const numPasses = Math.ceil(Math.log2(numberOfPixels));
+        keypoints.sortMergePermutation.outputs(stride, height, tex[1], tex[2]);
+        for(let i = 1; i <= numPasses; i++) {
+            const blockSize = 1 << i; // 2, 4, 8...
+            const dblLog2BlockSize = i << 1; // 2 * log2(blockSize)
+            permutation = keypoints.sortMergePermutation(permutation, blockSize, dblLog2BlockSize);
+        }
+
+        // apply permutation
+        keypoints.sortApplyPermutation.outputs(newEncoderLength, newEncoderLength, outputTexture);
+        keypoints.sortApplyPermutation(permutation, newCapacity, encodedKeypoints, descriptorSize, extraSize);
+
+        /*
+        // debug (read the contents of the permutation)
+        this._textureReader = this._textureReader || new SpeedyTextureReader();
+        const debug = [];
+        const pixels = this._textureReader.readPixelsSync(permutation);
+        for(let i = 0; i < pixels.length; i += 4) {
+            let id = pixels[i] | (pixels[i+1] << 8);
+            let score = pixels[i+2] / 255.0;
+            let valid = pixels[i+3] / 255.0;
+            debug.push([ id, valid, score, ].join(', '));
+        }
+        console.log(debug);
+        */
+
+        // done!
+        this.output().swrite(outputTexture, descriptorSize, extraSize, newEncoderLength);
     }
 }
 
@@ -11966,9 +12166,7 @@ __webpack_require__.r(__webpack_exports__);
 // Constants
 const ENCODER_PASSES = 8; // number of passes of the keypoint encoder: directly impacts performance
 const LONG_SKIP_OFFSET_PASSES = 2; // number of passes of the long skip offsets shader
-const MIN_CAPACITY = 16; // minimum number of keypoints we can encode
-const MAX_CAPACITY = 8192; // maximum number of keypoints we can encode
-const DEFAULT_CAPACITY = MAX_CAPACITY; // default capacity of the encoder
+const DEFAULT_CAPACITY = 2048; // default capacity of the encoder (64x64 texture with 2 pixels per keypoint)
 const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // sqrt(2)
 
 /**
@@ -11980,14 +12178,15 @@ class SpeedyPipelineNodeKeypointDetector extends _pipeline_node__WEBPACK_IMPORTE
     /**
      * Constructor
      * @param {string} [name] name of the node
+     * @param {number} [texCount] number of internal work textures
      * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
      */
-    constructor(name = undefined, portBuilders = undefined)
+    constructor(name = undefined, texCount = 0, portBuilders = undefined)
     {
-        super(name, portBuilders);
+        super(name, texCount + 4, portBuilders);
 
         /** @type {number} encoder capacity */
-        this._capacity = DEFAULT_CAPACITY;
+        this._capacity = DEFAULT_CAPACITY; // must not be greater than MAX_ENCODER_CAPACITY
     }
 
     /**
@@ -12007,6 +12206,9 @@ class SpeedyPipelineNodeKeypointDetector extends _pipeline_node__WEBPACK_IMPORTE
      */
     set capacity(capacity)
     {
+        const MIN_CAPACITY = SpeedyPipelineNodeKeypointDetector.encoderCapacity(0, 0, _utils_globals__WEBPACK_IMPORTED_MODULE_7__["MIN_ENCODER_LENGTH"]);
+        const MAX_CAPACITY = _utils_globals__WEBPACK_IMPORTED_MODULE_7__["MAX_ENCODER_CAPACITY"];
+
         this._capacity = Math.min(Math.max(MIN_CAPACITY, capacity | 0), MAX_CAPACITY);
     }
 
@@ -12021,21 +12223,15 @@ class SpeedyPipelineNodeKeypointDetector extends _pipeline_node__WEBPACK_IMPORTE
     _encodeKeypoints(gpu, corners, encodedKeypoints)
     {
         const encoders = gpu.programs.encoders;
-        const encoderLength = SpeedyPipelineNodeKeypointDetector._encoderLength(this._capacity, 0, 0);
+        const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(this._capacity, 0, 0);
         const width = corners.width, height = corners.height;
         const imageSize = [ width, height ];
-
-        // allocate textures
-        const tex = [
-            gpu.texturePool.allocate(),
-            gpu.texturePool.allocate(),
-            gpu.texturePool.allocate(),
-        ];
+        const tex = this._tex.slice(this._tex.length - 4);
 
         // prepare programs
         encoders._encodeKeypointSkipOffsets.outputs(width, height, tex[0]);
         encoders._encodeKeypointLongSkipOffsets.outputs(width, height, tex[1], tex[0]);
-        encoders._encodeKeypoints.outputs(encoderLength, encoderLength, tex[2], encodedKeypoints);
+        encoders._encodeKeypoints.outputs(encoderLength, encoderLength, tex[2], tex[3]);
 
         // encode skip offsets
         let offsets = encoders._encodeKeypointSkipOffsets(corners, imageSize);
@@ -12059,18 +12255,13 @@ class SpeedyPipelineNodeKeypointDetector extends _pipeline_node__WEBPACK_IMPORTE
 
         // encode keypoints
         const numPasses = ENCODER_PASSES;
-        let encodedKps = encodedKeypoints.clear();
+        let encodedKps = tex[3].clear();
         for(let passId = 0; passId < numPasses; passId++)
             encodedKps = encoders._encodeKeypoints(offsets, encodedKps, imageSize, passId, numPasses, 0, 0, encoderLength);
 
         // write to encodedKeypoints
-        if(encodedKps != encodedKeypoints) // depends on numPasses
-            encodedKps.copyTo(encodedKeypoints);
-
-        // release textures
-        gpu.texturePool.free(tex[2]);
-        gpu.texturePool.free(tex[1]);
-        gpu.texturePool.free(tex[0]);
+        encodedKeypoints.resize(encoderLength, encoderLength);
+        encodedKps.copyTo(encodedKeypoints);
 
         // done!
         return encodedKeypoints;
@@ -12082,12 +12273,27 @@ class SpeedyPipelineNodeKeypointDetector extends _pipeline_node__WEBPACK_IMPORTE
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
      */
-    static _encoderLength(encoderCapacity, descriptorSize, extraSize)
+    static encoderLength(encoderCapacity, descriptorSize, extraSize)
     {
         const pixelsPerKeypoint = Math.ceil((_utils_globals__WEBPACK_IMPORTED_MODULE_7__["MIN_KEYPOINT_SIZE"] + descriptorSize + extraSize) / 4);
         const numberOfPixels = encoderCapacity * pixelsPerKeypoint;
 
-        return Math.max(1, Math.ceil(Math.sqrt(numberOfPixels)));
+        return Math.max(_utils_globals__WEBPACK_IMPORTED_MODULE_7__["MIN_ENCODER_LENGTH"], Math.ceil(Math.sqrt(numberOfPixels)));
+    }
+
+    /**
+     * The maximum number of keypoints we can store using
+     * a particular configuration of a keypoint encoder
+     * @param {number} descriptorSize in bytes
+     * @param {number} extraSize in bytes
+     * @param {number} encoderLength
+     */
+    static encoderCapacity(descriptorSize, extraSize, encoderLength)
+    {
+        const pixelsPerKeypoint = Math.ceil((_utils_globals__WEBPACK_IMPORTED_MODULE_7__["MIN_KEYPOINT_SIZE"] + descriptorSize + extraSize) / 4);
+        const numberOfPixels = encoderLength * encoderLength;
+
+        return Math.floor(numberOfPixels / pixelsPerKeypoint);
     }
 }
 
@@ -12100,11 +12306,12 @@ class SpeedyPipelineNodeMultiscaleKeypointDetector extends SpeedyPipelineNodeKey
     /**
      * Constructor
      * @param {string} [name] name of the node
+     * @param {number} [texCount] number of internal work textures
      * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
      */
-    constructor(name = undefined, portBuilders = undefined)
+    constructor(name = undefined, texCount = undefined, portBuilders = undefined)
     {
-        super(name, portBuilders);
+        super(name, texCount, portBuilders);
 
         /** @type {number} number of pyramid levels */
         this._levels = 1;
@@ -12220,7 +12427,7 @@ class SpeedyPipelineNodeFASTKeypointDetector extends _detector__WEBPACK_IMPORTED
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, 3, [
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image).satisfying(
                 msg => msg.format === _utils_types__WEBPACK_IMPORTED_MODULE_5__["ImageFormat"].GREY
             ),
@@ -12258,6 +12465,7 @@ class SpeedyPipelineNodeFASTKeypointDetector extends _detector__WEBPACK_IMPORTED
     {
         const image = this.input().read().image;
         const width = image.width, height = image.height;
+        const tex = this._tex;
         const threshold = this._threshold;
         const lodStep = Math.log2(this.scaleFactor);
         const levels = this.levels;
@@ -12268,16 +12476,9 @@ class SpeedyPipelineNodeFASTKeypointDetector extends _detector__WEBPACK_IMPORTED
         if(!(levels == 1 || image.hasMipmaps()))
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__["IllegalOperationError"](`Expected a pyramid in ${this.fullName}`);
 
-        // allocate textures
-        const tex = [
-            gpu.texturePool.allocate(),
-            gpu.texturePool.allocate(),
-            gpu.texturePool.allocate(),
-        ];
-
         // FAST
         keypoints.fast9_16.outputs(width, height, tex[0], tex[1]);
-        let corners = tex[1].clear(); //tex[1].clearToColor(0, 0, 0, 0);
+        let corners = tex[1].clear();
         for(let i = 0; i < levels; i++)
             corners = keypoints.fast9_16(corners, image, lodStep * i, threshold);
 
@@ -12294,11 +12495,6 @@ class SpeedyPipelineNodeFASTKeypointDetector extends _detector__WEBPACK_IMPORTED
         // encode keypoints
         const encodedKeypoints = this._encodeKeypoints(gpu, finalCorners, this._outputTexture);
         const encoderLength = encodedKeypoints.width;
-
-        // release textures
-        gpu.texturePool.free(tex[2]);
-        gpu.texturePool.free(tex[1]);
-        gpu.texturePool.free(tex[0]);
 
         // done!
         this.output().swrite(encodedKeypoints, 0, 0, encoderLength);
@@ -12380,7 +12576,7 @@ class SpeedyPipelineNodeHarrisKeypointDetector extends _detector__WEBPACK_IMPORT
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, 3, [
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image).satisfying(
                 msg => msg.format === _utils_types__WEBPACK_IMPORTED_MODULE_5__["ImageFormat"].GREY
             ),
@@ -12445,6 +12641,7 @@ class SpeedyPipelineNodeHarrisKeypointDetector extends _detector__WEBPACK_IMPORT
     {
         const image = this.input().read().image;
         const width = image.width, height = image.height;
+        const tex = this._tex;
         const quality = this._quality;
         const windowSize = this._windowSize;
         const lodStep = Math.log2(this.scaleFactor);
@@ -12456,13 +12653,6 @@ class SpeedyPipelineNodeHarrisKeypointDetector extends _detector__WEBPACK_IMPORT
         // validate pyramid
         if(!(levels == 1 || image.hasMipmaps()))
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["IllegalOperationError"](`Expected a pyramid in ${this.fullName}`);
-
-        // allocate textures
-        const tex = [
-            gpu.texturePool.allocate(),
-            gpu.texturePool.allocate(),
-            gpu.texturePool.allocate(),
-        ];
 
         // compute corner response map
         harris.outputs(width, height, tex[0], tex[1]);
@@ -12492,18 +12682,13 @@ class SpeedyPipelineNodeHarrisKeypointDetector extends _detector__WEBPACK_IMPORT
         )(suppressedCorners, maxScore, quality);
 
         // convert scores to 8 bit
-        const finalCorners = (keypoints.fastScoreTo8bits
+        const finalCorners = (keypoints.harrisScoreTo8bits
             .outputs(width, height, tex[2])
         )(niceCorners);
 
         // encode keypoints
         const encodedKeypoints = this._encodeKeypoints(gpu, finalCorners, this._outputTexture);
         const encoderLength = encodedKeypoints.width;
-
-        // release textures
-        gpu.texturePool.free(tex[2]);
-        gpu.texturePool.free(tex[1]);
-        gpu.texturePool.free(tex[0]);
 
         // done!
         this.output().swrite(encodedKeypoints, 0, 0, encoderLength);
@@ -12552,7 +12737,7 @@ __webpack_require__.r(__webpack_exports__);
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * keypoint-sink.js
+ * sink.js
  * Gets keypoints out of the pipeline
  */
 
@@ -12583,7 +12768,7 @@ class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MO
      */
     constructor(name = 'keypoints')
     {
-        super(name, [
+        super(name, 0, [
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Keypoints)
         ]);
 
@@ -12769,7 +12954,7 @@ class SpeedyPipelineNodePerspectiveWarp extends _pipeline_node__WEBPACK_IMPORTED
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, 0, [
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
         ]);
@@ -12943,7 +13128,7 @@ class SpeedyPipelineNodeResize extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0
      */
     constructor(name = undefined)
     {
-        super(name, [
+        super(name, 0, [
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
         ]);
@@ -13482,9 +13667,10 @@ class SpeedyPipelineNode
     /**
      * Constructor
      * @param {string} [name] the name of this node
+     * @param {number} [texCount] number of internal work textures
      * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
      */
-    constructor(name = generateRandomName(), portBuilders = [])
+    constructor(name = generateRandomName(), texCount = 0, portBuilders = [])
     {
         /** @type {number} the ID of this node (unique) */
         this._id = generateUniqueID(); // node names may be the same...
@@ -13509,6 +13695,9 @@ class SpeedyPipelineNode
 
         /** @type {SpeedyDrawableTexture[]} output texture(s) */
         this._outputTextures = (new Array(this._outputPorts.length)).fill(null);
+
+        /** @type {SpeedyDrawableTexture[]} internal work texture(s) */
+        this._tex = (new Array(texCount)).fill(null);
 
 
 
@@ -13617,21 +13806,48 @@ class SpeedyPipelineNode
     }
 
     /**
-     * Is this a source node, i.e., it has no input ports?
-     * @returns {boolean}
+     * Initializes this node
+     * @param {SpeedyGPU} gpu
      */
-    isSource()
+    init(gpu)
     {
-        return Object.keys(this._inputPorts).length == 0;
+        // allocate output texture(s)
+        for(let i = 0; i < this._outputTextures.length; i++)
+            this._outputTextures[i] = gpu.texturePool.allocate();
+
+        // allocate internal work texture(s)
+        for(let j = 0; j < this._tex.length; j++)
+            this._tex[j] = gpu.texturePool.allocate();
     }
 
     /**
-     * Is this a sink node, i.e., it has no output ports?
-     * @returns {boolean}
+     * Releases this node
+     * @param {SpeedyGPU} gpu
      */
-    isSink()
+    release(gpu)
     {
-        return Object.keys(this._outputPorts).length == 0;
+        // deallocate internal work texture(s)
+        for(let j = this._tex.length - 1; j >= 0; j--)
+            this._tex[j] = gpu.texturePool.free(this._tex[j]);
+
+        // deallocate output texture(s)
+        for(let i = this._outputTextures.length - 1; i >= 0; i--)
+            this._outputTextures[i] = gpu.texturePool.free(this._outputTextures[i]);
+    }
+
+    /**
+     * Clear internal textures
+     */
+    clearTextures()
+    {
+        // clear output textures
+        for(let i = 0; i < this._outputTextures.length; i++)
+            this._outputTextures[i].clear();
+
+        /*// do we need this?!
+        // clear internal work textures
+        for(let j = 0; j < this._tex.length; j++)
+            this._tex[j].clear();*/
     }
 
     /**
@@ -13666,13 +13882,21 @@ class SpeedyPipelineNode
     }
 
     /**
-     * Set the output texture(s) of this node
-     * @param {function(SpeedyDrawableTexture|null): SpeedyDrawableTexture|null} getOutputTexture to be called for each required output texture
+     * Is this a source node, i.e., it has no input ports?
+     * @returns {boolean}
      */
-    setOutputTextures(getOutputTexture)
+    isSource()
     {
-        for(let i = 0; i < this._outputTextures.length; i++)
-            this._outputTextures[i] = getOutputTexture(this._outputTextures[i]);
+        return Object.keys(this._inputPorts).length == 0;
+    }
+
+    /**
+     * Is this a sink node, i.e., it has no output ports?
+     * @returns {boolean}
+     */
+    isSink()
+    {
+        return Object.keys(this._outputPorts).length == 0;
     }
 
     /**
@@ -13696,11 +13920,12 @@ class SpeedyPipelineSourceNode extends SpeedyPipelineNode
     /**
      * Constructor
      * @param {string} [name] the name of this node
+     * @param {number} [texCount] number of internal work textures
      * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
      */
-    constructor(name = undefined, portBuilders = undefined)
+    constructor(name = undefined, texCount = undefined, portBuilders = undefined)
     {
-        super(name, portBuilders);
+        super(name, texCount, portBuilders);
         _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(this.isSource());
     }
 }
@@ -13714,11 +13939,12 @@ class SpeedyPipelineSinkNode extends SpeedyPipelineNode
     /**
      * Constructor
      * @param {string} [name] the name of this node
+     * @param {number} [texCount] number of internal work textures
      * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
      */
-    constructor(name = undefined, portBuilders = undefined)
+    constructor(name = undefined, texCount = undefined, portBuilders = undefined)
     {
-        super(name, portBuilders);
+        super(name, texCount, portBuilders);
         _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(this.isSink());
     }
 
@@ -14423,7 +14649,7 @@ class SpeedyPipeline
     init(...nodes)
     {
         // validate
-        if(this._gpu != null)
+        if(this._nodes.length > 0)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`The pipeline has already been initialized`);
         else if(nodes.length == 0)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalArgumentError"](`Can't initialize the pipeline. Please specify its nodes`);
@@ -14438,12 +14664,16 @@ class SpeedyPipeline
                 this._nodes.push(node);
         }
 
+        // generate the output template
+        this._template = SpeedyPipeline._createOutputTemplate(this._nodes);
+
         // generate the sequence of nodes
         this._sequence = SpeedyPipeline._tsort(this._nodes);
         SpeedyPipeline._validateSequence(this._sequence);
 
-        // generate the output template
-        this._template = SpeedyPipeline._createOutputTemplate(this._nodes);
+        // initialize nodes
+        for(let i = 0; i < this._sequence.length; i++)
+            this._sequence[i].init(this._gpu);
 
         // done!
         return this;
@@ -14455,14 +14685,22 @@ class SpeedyPipeline
      */
     release()
     {
-        if(this._gpu == null)
+        if(this._nodes.length == 0)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`The pipeline has already been released or has never been initialized`);
 
-        this._gpu = this._gpu.release();
+        // release nodes
+        for(let i = this._sequence.length - 1; i >= 0; i--)
+            this._sequence[i].release(this._gpu);
         this._sequence.length = 0;
         this._nodes.length = 0;
+
+        // release GPU
+        this._gpu = this._gpu.release();
+
+        // release other properties
         this._template = SpeedyPipeline._createOutputTemplate();
 
+        // done!
         return null;
     }
 
@@ -14487,13 +14725,12 @@ class SpeedyPipeline
             this._busy = true;
         }
 
-        // set the output textures of each node
-        const valid = _ => this._gpu.texturePool.allocate();
-        for(let i = this._sequence.length - 1; i >= 0; i--)
-            this._sequence[i].setOutputTextures(valid);
-
         // find the sinks
         const sinks = this._sequence.filter(node => node.isSink());
+
+        // clear output textures
+        for(let i = 0; i < this._sequence.length; i++)
+            this._sequence[i].clearTextures();
 
         // run the pipeline
         return SpeedyPipeline._runSequence(this._sequence, this._gpu).then(() =>
@@ -14505,12 +14742,9 @@ class SpeedyPipeline
                 results.reduce((obj, val, idx) => ((obj[sinks[idx].name] = val), obj), this._template)
             )
         ).then(aggregate => {
-            // unset the output textures of the nodes and clear all ports
-            const nil = tex => this._gpu.texturePool.free(tex);
-            for(let i = this._sequence.length - 1; i >= 0; i--) {
-                this._sequence[i].setOutputTextures(nil);
+            // clear all ports
+            for(let i = this._sequence.length - 1; i >= 0; i--)
                 this._sequence[i].clearPorts();
-            }
 
             // the pipeline is no longer busy
             this._busy = false;
@@ -14534,6 +14768,8 @@ class SpeedyPipeline
             return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"].resolve();
 
         const runTask = sequence[i].execute(gpu);
+        gpu.gl.flush();
+
         if(runTask == undefined)
             return SpeedyPipeline._runSequence(sequence, gpu, i+1, n);
 
@@ -18560,8 +18796,15 @@ const multiscaleNonMaxSuppression = Object(_shader_declaration__WEBPACK_IMPORTED
                                    .withDefines({ 'MULTISCALE': 1 })
                                    .withArguments('image', 'lodStep');
 
+// Keypoint sorting
+const sortCreatePermutation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/sort-createperm.glsl')
+                             .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
+const sortMergePermutation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/sort-mergeperm.glsl')
+                            .withArguments('permutation', 'blockSize', 'dblLog2BlockSize');
 
+const sortApplyPermutation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/sort-applyperm.glsl')
+                            .withArguments('permutation', 'maxKeypoints', 'encodedKeypoints', 'descriptorSize', 'extraSize');
 
 // --- OLD (TODO remove) ---
 
@@ -18712,6 +18955,15 @@ class GPUKeypoints extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["S
             //
             .declare('nonmax', nonMaxSuppression)
             .declare('pyrnonmax', multiscaleNonMaxSuppression)
+
+            //
+            // Keypoint sorting
+            //
+            .declare('sortCreatePermutation', sortCreatePermutation)
+            .declare('sortMergePermutation', sortMergePermutation, {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('sortApplyPermutation', sortApplyPermutation)
 
 
 
@@ -20225,7 +20477,9 @@ var map = {
 	"./keypoints/orb/orb-orientation.glsl": "./src/gpu/shaders/keypoints/orb/orb-orientation.glsl",
 	"./keypoints/score-8bits.glsl": "./src/gpu/shaders/keypoints/score-8bits.glsl",
 	"./keypoints/score-findmax.glsl": "./src/gpu/shaders/keypoints/score-findmax.glsl",
-	"./keypoints/sort-by-score.glsl": "./src/gpu/shaders/keypoints/sort-by-score.glsl",
+	"./keypoints/sort-applyperm.glsl": "./src/gpu/shaders/keypoints/sort-applyperm.glsl",
+	"./keypoints/sort-createperm.glsl": "./src/gpu/shaders/keypoints/sort-createperm.glsl",
+	"./keypoints/sort-mergeperm.glsl": "./src/gpu/shaders/keypoints/sort-mergeperm.glsl",
 	"./keypoints/suppress-descriptors.glsl": "./src/gpu/shaders/keypoints/suppress-descriptors.glsl",
 	"./keypoints/transfer-orientation.glsl": "./src/gpu/shaders/keypoints/transfer-orientation.glsl",
 	"./pyramids/downsample2.glsl": "./src/gpu/shaders/pyramids/downsample2.glsl",
@@ -20654,7 +20908,7 @@ module.exports = "#ifndef _GLOBAL_GLSL\n#define _GLOBAL_GLSL\n#define threadLoca
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "#ifndef _KEYPOINTS_GLSL\n#define _KEYPOINTS_GLSL\n@include \"pyramids.glsl\"\n@include \"orientation.glsl\"\n@include \"fixed-point.glsl\"\nstruct Keypoint\n{\nvec2 position;\nfloat orientation;\nfloat lod;\nfloat score;\nint flags;\n};\nstruct KeypointAddress\n{\nint base;\nint offset;\n};\nconst int MAX_DESCRIPTOR_SIZE = int(@MAX_DESCRIPTOR_SIZE@);\nconst int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@);\nconst int KPF_NONE = int(@KPF_NONE@);\nconst int KPF_ORIENTED = int(@KPF_ORIENTED@);\nconst int KPF_DISCARD = int(@KPF_DISCARD@);\nvec4 readKeypointData(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nint rasterIndex = address.base + address.offset;\nreturn pixelAt(encodedKeypoints, ivec2(rasterIndex % encoderLength, rasterIndex / encoderLength));\n}\n#define sizeofEncodedKeypoint(descriptorSize, extraSize) (MIN_KEYPOINT_SIZE + (descriptorSize) + (extraSize))\n#define findKeypointIndex(address, descriptorSize, extraSize) ((address).base / ((sizeofEncodedKeypoint((descriptorSize), (extraSize))) / 4))\nKeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descriptorSize, int extraSize)\n{\nint threadRaster = thread.y * encoderLength + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nint keypointIndex = int(threadRaster / pixelsPerKeypoint);\nKeypointAddress address = KeypointAddress(\nkeypointIndex * pixelsPerKeypoint,\nthreadRaster % pixelsPerKeypoint\n);\nreturn address;\n}\nKeypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nconst vec4 ones = vec4(1.0f);\nKeypoint keypoint;\nKeypointAddress positionAddress = KeypointAddress(address.base, 0);\nKeypointAddress propertiesAddress = KeypointAddress(address.base, 1);\nvec4 rawEncodedPosition = readKeypointData(encodedKeypoints, encoderLength, positionAddress);\nivec4 encodedPosition = ivec4(rawEncodedPosition * 255.0f);\nkeypoint.position = fixtovec2(fixed2_t(\nencodedPosition.r | (encodedPosition.g << 8),\nencodedPosition.b | (encodedPosition.a << 8)\n));\nvec4 encodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);\nkeypoint.orientation = decodeOrientation(encodedProperties.g);\nkeypoint.lod = decodeLod(encodedProperties.r);\nkeypoint.score = encodedProperties.b;\nkeypoint.flags = int(encodedProperties.a * 255.0f);\nbool isNull = all(greaterThanEqual(rawEncodedPosition, ones));\nkeypoint.score = keypoint.score * float(!isNull) - float(isNull);\nkeypoint.score -= float(keypoint.score == 0.0f) * float(all(equal(keypoint.position, vec2(0.0f))));\nreturn keypoint;\n}\nvec4 encodeKeypointPosition(vec2 position)\n{\nconst vec2 zeros = vec2(0.0f);\nfixed2_t pos = vec2tofix(max(position, zeros));\nfixed2_t lo = pos & 255;\nfixed2_t hi = pos >> 8;\nreturn vec4(lo.x, hi.x, lo.y, hi.y) / 255.0f;\n}\n#define encodeNullKeypoint() (vec4(1.0f))\n#define isBadKeypoint(keypoint) ((keypoint).score < 0.0f)\n#define encodeKeypointPositionAtInfinity() (vec4(254.0f / 255.0f, vec3(1.0f)))\nbool isKeypointAtInfinity(Keypoint keypoint)\n{\nconst vec2 V2_MAX_TEXTURE_LENGTH = vec2(@MAX_TEXTURE_LENGTH@);\nreturn any(greaterThan(keypoint.position, V2_MAX_TEXTURE_LENGTH));\n}\n#define encodeKeypointFlags(flags) (float(flags) / 255.0f)\n#endif"
+module.exports = "#ifndef _KEYPOINTS_GLSL\n#define _KEYPOINTS_GLSL\n@include \"pyramids.glsl\"\n@include \"orientation.glsl\"\n@include \"fixed-point.glsl\"\nstruct Keypoint\n{\nvec2 position;\nfloat orientation;\nfloat lod;\nfloat score;\nint flags;\n};\nstruct KeypointAddress\n{\nint base;\nint offset;\n};\nconst int MAX_DESCRIPTOR_SIZE = int(@MAX_DESCRIPTOR_SIZE@);\nconst int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@);\nconst int KPF_NONE = int(@KPF_NONE@);\nconst int KPF_ORIENTED = int(@KPF_ORIENTED@);\nconst int KPF_DISCARD = int(@KPF_DISCARD@);\n#define encodeNullKeypoint() (vec4(1.0f))\n#define sizeofEncodedKeypoint(descriptorSize, extraSize) (MIN_KEYPOINT_SIZE + (descriptorSize) + (extraSize))\n#define findKeypointIndex(address, descriptorSize, extraSize) ((address).base / ((sizeofEncodedKeypoint((descriptorSize), (extraSize))) / 4))\nvec4 readKeypointData(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nint rasterIndex = address.base + address.offset;\nvec4 data = pixelAt(encodedKeypoints, ivec2(rasterIndex % encoderLength, rasterIndex / encoderLength));\nreturn rasterIndex < encoderLength * encoderLength ? data : encodeNullKeypoint();\n}\nKeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descriptorSize, int extraSize)\n{\nint threadRaster = thread.y * encoderLength + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nint keypointIndex = int(threadRaster / pixelsPerKeypoint);\nKeypointAddress address = KeypointAddress(\nkeypointIndex * pixelsPerKeypoint,\nthreadRaster % pixelsPerKeypoint\n);\nreturn address;\n}\nKeypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nconst vec4 ones = vec4(1.0f);\nKeypoint keypoint;\nKeypointAddress positionAddress = KeypointAddress(address.base, 0);\nKeypointAddress propertiesAddress = KeypointAddress(address.base, 1);\nvec4 rawEncodedPosition = readKeypointData(encodedKeypoints, encoderLength, positionAddress);\nivec4 encodedPosition = ivec4(rawEncodedPosition * 255.0f);\nkeypoint.position = fixtovec2(fixed2_t(\nencodedPosition.r | (encodedPosition.g << 8),\nencodedPosition.b | (encodedPosition.a << 8)\n));\nvec4 encodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);\nkeypoint.orientation = decodeOrientation(encodedProperties.g);\nkeypoint.lod = decodeLod(encodedProperties.r);\nkeypoint.score = encodedProperties.b;\nkeypoint.flags = int(encodedProperties.a * 255.0f);\nbool isNull = all(greaterThanEqual(rawEncodedPosition, ones));\nkeypoint.score = keypoint.score * float(!isNull) - float(isNull);\nkeypoint.score -= float(keypoint.score == 0.0f) * float(all(equal(keypoint.position, vec2(0.0f))));\nreturn keypoint;\n}\nvec4 encodeKeypointPosition(vec2 position)\n{\nconst vec2 zeros = vec2(0.0f);\nfixed2_t pos = vec2tofix(max(position, zeros));\nfixed2_t lo = pos & 255;\nfixed2_t hi = pos >> 8;\nreturn vec4(lo.x, hi.x, lo.y, hi.y) / 255.0f;\n}\n#define isBadKeypoint(keypoint) ((keypoint).score < 0.0f)\n#define encodeKeypointPositionAtInfinity() (vec4(254.0f / 255.0f, vec3(1.0f)))\nbool isKeypointAtInfinity(Keypoint keypoint)\n{\nconst vec2 V2_MAX_TEXTURE_LENGTH = vec2(@MAX_TEXTURE_LENGTH@);\nreturn any(greaterThan(keypoint.position, V2_MAX_TEXTURE_LENGTH));\n}\n#define encodeKeypointFlags(flags) (float(flags) / 255.0f)\n#endif"
 
 /***/ }),
 
@@ -20944,14 +21198,36 @@ module.exports = "@include \"float16.glsl\"\nuniform sampler2D corners;\nuniform
 
 /***/ }),
 
-/***/ "./src/gpu/shaders/keypoints/sort-by-score.glsl":
-/*!******************************************************!*\
-  !*** ./src/gpu/shaders/keypoints/sort-by-score.glsl ***!
-  \******************************************************/
+/***/ "./src/gpu/shaders/keypoints/sort-applyperm.glsl":
+/*!*******************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/sort-applyperm.glsl ***!
+  \*******************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int estimatedKeypointCount;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#if !defined(MAX_KEYPOINTS)\n#error Must define MAX_KEYPOINTS\n#elif MAX_KEYPOINTS >= 65536\n#error MAX_KEYPOINTS is too large!\n#endif\nuint tuple[1 + MAX_KEYPOINTS];\nuint encodeTuple(Keypoint keypoint, int index)\n{\nuint mask = uint(-int(!isBadKeypoint(keypoint)));\nuint score = uint(clamp(keypoint.score, 0.0f, 1.0f) * 65535.0f);\nuint data = (uint(index) & 65535u) | (score << 16u);\nreturn data & mask;\n}\n#define decodeTupleIndex(tuple) int((tuple) & 16777215u)\n#define QUICKSELECT_UNSIGNED\n#define QUICKSELECT_DESCENDING\n#define QUICKSELECT_ARRAY tuple\n@include \"quickselect.glsl\"\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\ncolor = pixel;\nif(myIndex >= estimatedKeypointCount)\nreturn;\nKeypoint keypoint;\nKeypointAddress address = KeypointAddress(0, 0);\nint actualKeypointCount = estimatedKeypointCount;\nfor(int i = 0; i < estimatedKeypointCount; i++) {\nkeypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\ntuple[min(i, MAX_KEYPOINTS)] = encodeTuple(keypoint, i);\nactualKeypointCount = isBadKeypoint(keypoint) ? min(actualKeypointCount, i) : actualKeypointCount;\naddress.base += pixelsPerKeypoint;\n}\nint desiredTuple = quickselect(0, min(MAX_KEYPOINTS, actualKeypointCount - 1), myIndex);\nint desiredIndex = decodeTupleIndex(desiredTuple);\nKeypointAddress desiredAddress = KeypointAddress(desiredIndex * pixelsPerKeypoint, myAddress.offset);\nvec4 desiredPixel = readKeypointData(encodedKeypoints, encoderLength, desiredAddress);\ncolor = myIndex < actualKeypointCount ? desiredPixel : encodeNullKeypoint();\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D permutation;\nuniform int maxKeypoints;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nstruct PermutationElement\n{\nint keypointIndex;\nfloat score;\nbool valid;\n};\nPermutationElement decodePermutationElement(vec4 pixel)\n{\nPermutationElement element;\nelement.keypointIndex = int(pixel.r * 255.0f) | (int(pixel.g * 255.0f) << 8);\nelement.valid = (pixel.a > 0.0f);\nelement.score = element.valid ? pixel.b : -1.0f;\nreturn element;\n}\nPermutationElement readPermutationElement(sampler2D permutation, int elementIndex, int stride, int height)\n{\nconst vec4 INVALID_PIXEL = vec4(0.0f);\nivec2 pos = ivec2(elementIndex % stride, elementIndex / stride);\nvec4 pixel = pos.y < height ? pixelAt(permutation, pos) : INVALID_PIXEL;\nreturn decodePermutationElement(pixel);\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nint newEncoderLength = outputSize().x;\nKeypointAddress myAddress = findKeypointAddress(thread, newEncoderLength, descriptorSize, extraSize);\nint myKeypointIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nivec2 psize = textureSize(permutation, 0);\nPermutationElement element = readPermutationElement(permutation, myKeypointIndex, psize.x, psize.y);\nint oldEncoderLength = textureSize(encodedKeypoints, 0).x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(element.keypointIndex * pixelsPerKeypoint, myAddress.offset);\nvec4 keypointData = readKeypointData(encodedKeypoints, oldEncoderLength, address);\ncolor = myKeypointIndex < maxKeypoints && element.valid ? keypointData : encodeNullKeypoint();\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/sort-createperm.glsl":
+/*!********************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/sort-createperm.glsl ***!
+  \********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nstruct PermutationElement\n{\nint keypointIndex;\nfloat score;\nbool valid;\n};\nvec4 encodePermutationElement(PermutationElement element)\n{\nfloat valid = float(element.valid);\nfloat score = clamp(element.score, 0.0f, 1.0f);\nvec2 encodedIndex = vec2(element.keypointIndex & 255, (element.keypointIndex >> 8) & 255) / 255.0f;\nreturn vec4(encodedIndex, score, valid);\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nint stride = outputSize().x;\nint keypointIndex = thread.y * stride + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nPermutationElement element;\nelement.valid = (keypoint.score > 0.0f);\nelement.score = keypoint.score;\nelement.keypointIndex = keypointIndex;\ncolor = encodePermutationElement(element);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/sort-mergeperm.glsl":
+/*!*******************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/sort-mergeperm.glsl ***!
+  \*******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D permutation;\nuniform int blockSize;\nuniform int dblLog2BlockSize;\nstruct PermutationElement\n{\nint keypointIndex;\nfloat score;\nbool valid;\n};\nPermutationElement decodePermutationElement(vec4 pixel)\n{\nPermutationElement element;\nelement.keypointIndex = int(pixel.r * 255.0f) | (int(pixel.g * 255.0f) << 8);\nelement.valid = (pixel.a > 0.0f);\nelement.score = element.valid ? pixel.b : -1.0f;\nreturn element;\n}\nvec4 encodePermutationElement(PermutationElement element)\n{\nfloat valid = float(element.valid);\nfloat score = clamp(element.score, 0.0f, 1.0f);\nvec2 encodedIndex = vec2(element.keypointIndex & 255, (element.keypointIndex >> 8) & 255) / 255.0f;\nreturn vec4(encodedIndex, score, valid);\n}\nPermutationElement readPermutationElement(sampler2D permutation, int elementIndex, int stride, int height)\n{\nconst vec4 INVALID_PIXEL = vec4(0.0f);\nivec2 pos = ivec2(elementIndex % stride, elementIndex / stride);\nvec4 pixel = pos.y < height ? pixelAt(permutation, pos) : INVALID_PIXEL;\nreturn decodePermutationElement(pixel);\n}\nPermutationElement selectKth(int k, int la, int ra, int lb, int rb)\n{\nPermutationElement a, b;\nint ha, hb, ma, mb;\nbool discard1stHalf, altb;\nbool locked = false;\nint tmp, result = 0;\nint stride = outputSize().x;\nint height = outputSize().y;\nfor(int i = 0; i < dblLog2BlockSize; i++) {\ntmp = (lb > rb && !locked) ? (la+k) : result;\nresult = (la > ra && !locked) ? (lb+k) : tmp;\nlocked = locked || (la > ra) || (lb > rb);\nha = (ra - la + 1) / 2;\nhb = (rb - lb + 1) / 2;\nma = la + ha;\nmb = lb + hb;\na = readPermutationElement(permutation, ma, stride, height);\nb = readPermutationElement(permutation, mb, stride, height);\ndiscard1stHalf = (k > ha + hb);\naltb = (-a.score < -b.score);\nk -= int(discard1stHalf && altb) * (ha + 1);\nk -= int(discard1stHalf && !altb) * (hb + 1);\nla += int(discard1stHalf && altb) * (ma + 1 - la);\nlb += int(discard1stHalf && !altb) * (mb + 1 - lb);\nra += int(!discard1stHalf && !altb) * (ma - 1 - ra);\nrb += int(!discard1stHalf && altb) * (mb - 1 - rb);\n}\nreturn readPermutationElement(permutation, result, stride, height);\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nint stride = outputSize().x;\nint elementIndex = thread.y * stride + thread.x;\nint blockIndex = elementIndex / blockSize;\nint blockOffset = elementIndex % blockSize;\nint la = blockIndex * blockSize;\nint lb = la + blockSize / 2;\nint ra = lb - 1;\nint rb = (blockIndex + 1) * blockSize - 1;\nint k = blockOffset;\nPermutationElement element = selectKth(k, la, ra, lb, rb);\ncolor = encodePermutationElement(element);\n}"
 
 /***/ }),
 
@@ -22289,17 +22565,22 @@ class SpeedyProgram extends Function
         const expectedTextures = this._texture.length;
         _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(texture.length === expectedTextures, `Incorrect number of textures (expected ${expectedTextures})`);
 
+        /*
+        // FIXME pyramid bug... TODO get rid of ownTextures
         // we need to keep the current size
         const width = this.width;
         const height = this.height;
+        */
 
         // update output texture(s)
         const useInternal = texture.every(tex => tex === null);
-        this._texture = !useInternal ? [].concat(texture) : this._ownTexture;
+        this._texture = !useInternal ? texture : this._ownTexture;
         this._textureIndex = 0;
 
+        /*
         // restore previous size
         this.setOutputSize(width, height);
+        */
 
         // done!
         return this;
@@ -22778,7 +23059,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // Constants
-const DEFAULT_CAPACITY = 64;
+const DEFAULT_CAPACITY = 80;
 const BUCKET = Symbol('Bucket');
 
 
@@ -23358,6 +23639,24 @@ __webpack_require__.r(__webpack_exports__);
 
 
 /**
+ * Get a buffer filled with zeros
+ * @param {number} size number of bytes
+ * @returns {Uint8Array}
+ */
+/*
+const zeros = (function() {
+    let buffer = new Uint8Array(4);
+
+    return function(size) {
+        if(size > buffer.length)
+            buffer = new Uint8Array(size);
+
+        return buffer.subarray(0, size);
+    }
+})();
+*/
+
+/**
  * A wrapper around WebGLTexture
  */
 class SpeedyTexture
@@ -23452,60 +23751,85 @@ class SpeedyTexture
     }
 
     /**
-     * Generates an image pyramid
-     * @param {SpeedyGPU} gpu
-     * @param {boolean} [gaussian] should we compute a Gaussian pyramid? Recommended!
+     * Resize this texture. Its content will be lost!
+     * @param {number} width new width, in pixels
+     * @param {number} height new height, in pixels
+     * @returns {SpeedyTexture} this texture
+     */
+    resize(width, height)
+    {
+        const gl = this._gl;
+
+        // no need to resize?
+        if(this._width === width && this._height === height)
+            return this;
+
+        // validate size
+        width |= 0; height |= 0;
+        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(width > 0 && height > 0);
+
+        // context loss?
+        if(gl.isContextLost())
+            return this;
+
+        // update dimensions
+        this._width = width;
+        this._height = height;
+
+
+        // resize
+        gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
+        // no mipmaps
+        this.discardMipmaps();
+
+        // done!
+        return this;
+    }
+
+    /**
+     * Generate mipmap
+     * @param {SpeedyDrawableTexture[]} [mipmap] custom texture for each mip level
      * @returns {SpeedyTexture} this
      */
-    generateMipmaps(gpu, gaussian = true)
+    generateMipmaps(mipmap = [])
     {
+        const gl = this._gl;
+
         // nothing to do
         if(this._hasMipmaps)
             return this;
 
         // let the hardware compute the all levels of the pyramid, up to 1x1
-        // this might be a simple box filter...
-        SpeedyTexture._generateDefaultMipmaps(this._gl, this._glTexture);
+        // we also specify the TEXTURE_MIN_FILTER to be used from now on
+        gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        gl.bindTexture(gl.TEXTURE_2D, null);
 
-        // compute a Gaussian pyramid for better results
-        if(gaussian) {
-            let width = this.width, height = this.height;
-            let halfWidth = 0, halfHeight = 0;
-            let layer = this;
-            const pyramid = gpu.programs.pyramids(0);
-            const tex = [
-                gpu.texturePool.allocate(),
-                gpu.texturePool.allocate(),
-                gpu.texturePool.allocate()
-            ];
+        // accept custom textures
+        if(mipmap.length > 0) {
+            const width = this.width, height = this.height;
 
-            // apply successive reduce operations
-            for(let level = 1; level < _utils_globals__WEBPACK_IMPORTED_MODULE_3__["PYRAMID_MAX_LEVELS"]; level++) {
-                if(Math.min(width, height) < 2)
-                    break;
+            // expect number of mipmap images according to the OpenGL ES 3.0 spec (sec 3.8.10.4)
+            const numMipmaps = 1 + Math.floor(Math.log2(Math.max(width, height)));
+            _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(mipmap.length <= numMipmaps);
 
+            // verify the dimensions of each level
+            for(let level = 1; level < mipmap.length; level++) {
                 // use max(1, floor(size / 2^lod)), in accordance to
                 // the OpenGL ES 3.0 spec sec 3.8.10.4 (Mipmapping)
-                halfWidth = Math.max(1, width >>> 1);
-                halfHeight = Math.max(1, height >>> 1);
+                const w = Math.max(1, width >>> level);
+                const h = Math.max(1, height >>> level);
 
-                // reduce operation
-                (pyramid.smoothX.outputs(width, height, tex[0]))(layer);
-                (pyramid.smoothY.outputs(width, height, tex[1]))(tex[0]);
-                (pyramid.downsample2.outputs(halfWidth, halfHeight, tex[2]))(tex[1]);
+                // verify the dimensions of this level
+                _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(mipmap[level].width === w && mipmap[level].height === h);
 
                 // copy to mipmap
-                tex[2].copyTo(this, level);
-
-                // next level
-                layer = tex[2];
-                width = halfWidth;
-                height = halfHeight;
+                mipmap[level].copyTo(this, level);
             }
-
-            gpu.texturePool.free(tex[2]);
-            gpu.texturePool.free(tex[1]);
-            gpu.texturePool.free(tex[0]);
         }
 
         // done!
@@ -23514,15 +23838,27 @@ class SpeedyTexture
     }
 
     /**
-     * Invalidates previously generated mipmaps, if any
+     * Invalidates previously generated mipmap, if any
      */
     discardMipmaps()
     {
+        const gl = this._gl;
+
+        // nothing to do
+        if(!this._hasMipmaps)
+            return;
+
+        // reset the min filter
+        gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
+        // done!
         this._hasMipmaps = false;
     }
 
     /**
-     * Does this texture have mipmaps?
+     * Does this texture have a mipmap?
      * @returns {boolean}
      */
     hasMipmaps()
@@ -23537,6 +23873,16 @@ class SpeedyTexture
     isReleased()
     {
         return this._glTexture == null;
+    }
+
+    /**
+     * The size of this texture, in bytes
+     * @returns {number}
+     */
+    size()
+    {
+        // RGBA8: 32 bits per pixel
+        return 4 * this._width * this._height;
     }
 
     /**
@@ -23646,22 +23992,6 @@ class SpeedyTexture
         gl.bindTexture(gl.TEXTURE_2D, null);
         return texture;
     }
-
-    /**
-     * Generate texture mipmap via hardware
-     * @param {WebGL2RenderingContext} gl
-     * @param {WebGLTexture} texture
-     * @returns {WebGLTexture} the input texture
-     */
-    static _generateDefaultMipmaps(gl, texture)
-    {
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
-        gl.generateMipmap(gl.TEXTURE_2D);
-        gl.bindTexture(gl.TEXTURE_2D, null);
-
-        return texture;
-    }
 }
 
 /**
@@ -23714,6 +24044,7 @@ class SpeedyDrawableTexture extends SpeedyTexture
 
     /**
      * Copy this texture into another
+     * (you may have to discard the mipmaps after calling this function)
      * @param {SpeedyTexture} texture target texture
      * @param {number} [lod] level-of-detail of the target texture
      */
@@ -23734,9 +24065,6 @@ class SpeedyDrawableTexture extends SpeedyTexture
 
         // validate
         _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(this._width === expectedWidth && this._height === expectedHeight);
-
-        // discard mipmaps, if any
-        texture.discardMipmaps();
 
         // copy to texture
         SpeedyDrawableTexture._copyToTexture(gl, this._glFbo, texture.glTexture, 0, 0, this._width, this._height, lod);
@@ -23773,9 +24101,13 @@ class SpeedyDrawableTexture extends SpeedyTexture
      * @param {boolean} [preserveContent] should we preserve the content of the texture? EXPENSIVE!
      * @returns {SpeedyDrawableTexture} this texture
      */
-    resize(width, height, preserveContent = false)
+    /*resize(width, height, preserveContent = false)
     {
         const gl = this._gl;
+
+        // no need to preserve the content?
+        if(!preserveContent)
+            return super.resize(width, height);
 
         // no need to resize?
         if(this._width === width && this._height === height)
@@ -23783,53 +24115,43 @@ class SpeedyDrawableTexture extends SpeedyTexture
 
         // validate size
         width |= 0; height |= 0;
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(width > 0 && height > 0);
+        Utils.assert(width > 0 && height > 0);
 
         // context loss?
         if(gl.isContextLost())
             return this;
 
-        // do we need to copy the old content?
-        if(!preserveContent) {
-            // no; do a cheap resize
-            gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-            gl.bindTexture(gl.TEXTURE_2D, null);
-        }
-        else {
-            // allocate new texture
-            const newTexture = SpeedyTexture._createTexture(gl, width, height);
+        // allocate new texture
+        const newTexture = SpeedyTexture._createTexture(gl, width, height);
 
-            // initialize the new texture with zeros to avoid a
-            // warning when calling copyTexSubImage2D() on Firefox
-            // this may not be very efficient?
-            const zeros = new Uint8Array(width * height * 4); // RGBA: 4 bytes per pixel
-            SpeedyTexture._upload(gl, newTexture, width, height, zeros);
+        // initialize the new texture with zeros to avoid a
+        // warning when calling copyTexSubImage2D() on Firefox
+        // this may not be very efficient?
+        SpeedyTexture._upload(gl, newTexture, width, height, zeros(width * height * 4)); // RGBA: 4 bytes per pixel
 
-            // copy the old texture to the new one
-            const oldWidth = this._width, oldHeight = this._height;
-            SpeedyDrawableTexture._copyToTexture(gl, this._glFbo, newTexture, 0, 0, Math.min(width, oldWidth), Math.min(height, oldHeight));
+        // copy the old texture to the new one
+        const oldWidth = this._width, oldHeight = this._height;
+        SpeedyDrawableTexture._copyToTexture(gl, this._glFbo, newTexture, 0, 0, Math.min(width, oldWidth), Math.min(height, oldHeight), 0);
 
-            // bind FBO
-            gl.bindFramebuffer(gl.FRAMEBUFFER, this._glFbo);
+        // bind FBO
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this._glFbo);
 
-            // invalidate old data (is this needed?)
-            gl.invalidateFramebuffer(gl.FRAMEBUFFER, [gl.COLOR_ATTACHMENT0]);
+        // invalidate old data (is this needed?)
+        gl.invalidateFramebuffer(gl.FRAMEBUFFER, [gl.COLOR_ATTACHMENT0]);
 
-            // attach the new texture to the existing framebuffer
-            gl.framebufferTexture2D(gl.FRAMEBUFFER,         // target
-                                    gl.COLOR_ATTACHMENT0,   // color buffer
-                                    gl.TEXTURE_2D,          // tex target
-                                    newTexture,             // texture
-                                    0);                     // mipmap level
+        // attach the new texture to the existing framebuffer
+        gl.framebufferTexture2D(gl.FRAMEBUFFER,         // target
+                                gl.COLOR_ATTACHMENT0,   // color buffer
+                                gl.TEXTURE_2D,          // tex target
+                                newTexture,             // texture
+                                0);                     // mipmap level
 
-            // unbind FBO
-            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        // unbind FBO
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-            // release the old texture and replace it
-            gl.deleteTexture(this._glTexture);
-            this._glTexture = newTexture;
-        }
+        // release the old texture and replace it
+        gl.deleteTexture(this._glTexture);
+        this._glTexture = newTexture;
 
         // update dimensions & discard mipmaps
         this.discardMipmaps();
@@ -23839,16 +24161,35 @@ class SpeedyDrawableTexture extends SpeedyTexture
         // done!
         return this;
     }
+    */
+
+    /**
+     * Clear the texture
+     * @returns {SpeedyDrawableTexture} this texture
+     */
+    clear()
+    {
+        //
+        // When we pass null to texImage2D(), it seems that Firefox
+        // doesn't clear the texture. Instead, it displays this warning:
+        //
+        // "WebGL warning: drawArraysInstanced:
+        //  Tex image TEXTURE_2D level 0 is incurring lazy initialization."
+        //
+        // So here's a workaround:
+        //
+        return this.clearToColor(0, 0, 0, 0);
+    }
 
     /**
      * Clear the texture to a color
-     * @param {number} [r] red component, a value in [0,1]
-     * @param {number} [g] green component, a value in [0,1]
-     * @param {number} [b] blue component, a value in [0,1]
-     * @param {number} [a] alpha component, a value in [0,1]
+     * @param {number} r red component, a value in [0,1]
+     * @param {number} g green component, a value in [0,1]
+     * @param {number} b blue component, a value in [0,1]
+     * @param {number} a alpha component, a value in [0,1]
      * @returns {SpeedyDrawableTexture} this texture
      */
-    clearToColor(r = 0, g = 0, b = 0, a = 0)
+    clearToColor(r, g, b, a)
     {
         const gl = this._gl;
 
@@ -23913,7 +24254,7 @@ class SpeedyDrawableTexture extends SpeedyTexture
     }
 
     /**
-     * Copy data from a framebuffer into a texture
+     * Copy data from a framebuffer to a texture
      * @param {WebGL2RenderingContext} gl
      * @param {WebGLFramebuffer} fbo we'll read the data from this
      * @param {WebGLTexture} texture destination texture
@@ -23926,7 +24267,7 @@ class SpeedyDrawableTexture extends SpeedyTexture
      */
     static _copyToTexture(gl, fbo, texture, x, y, width, height, lod = 0)
     {
-        gl.activeTexture(gl.TEXTURE0);
+        //gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
 
@@ -24379,7 +24720,7 @@ class FPSCounter
 /*!******************************!*\
   !*** ./src/utils/globals.js ***!
   \******************************/
-/*! exports provided: PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE, LOG2_PYRAMID_MAX_SCALE, FIX_BITS, FIX_RESOLUTION, MAX_TEXTURE_LENGTH, MAX_DESCRIPTOR_SIZE, MIN_KEYPOINT_SIZE, INITIAL_ENCODER_LENGTH, KPF_NONE, KPF_ORIENTED, KPF_DISCARD, LITTLE_ENDIAN */
+/*! exports provided: PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE, LOG2_PYRAMID_MAX_SCALE, FIX_BITS, FIX_RESOLUTION, MAX_TEXTURE_LENGTH, MAX_DESCRIPTOR_SIZE, MIN_KEYPOINT_SIZE, MIN_ENCODER_LENGTH, MAX_ENCODER_CAPACITY, INITIAL_ENCODER_LENGTH, KPF_NONE, KPF_ORIENTED, KPF_DISCARD, LITTLE_ENDIAN */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -24392,6 +24733,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MAX_TEXTURE_LENGTH", function() { return MAX_TEXTURE_LENGTH; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MAX_DESCRIPTOR_SIZE", function() { return MAX_DESCRIPTOR_SIZE; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MIN_KEYPOINT_SIZE", function() { return MIN_KEYPOINT_SIZE; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MIN_ENCODER_LENGTH", function() { return MIN_ENCODER_LENGTH; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MAX_ENCODER_CAPACITY", function() { return MAX_ENCODER_CAPACITY; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "INITIAL_ENCODER_LENGTH", function() { return INITIAL_ENCODER_LENGTH; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "KPF_NONE", function() { return KPF_NONE; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "KPF_ORIENTED", function() { return KPF_ORIENTED; });
@@ -24463,6 +24806,12 @@ const MAX_DESCRIPTOR_SIZE = 64;
 
 // Size of a keypoint header, in bytes (must be divisible by 4)
 const MIN_KEYPOINT_SIZE = 8;
+
+// Minimum length of a keypoint encoder, in pixels (encodes at least 1 keypoint)
+const MIN_ENCODER_LENGTH = Math.ceil(Math.sqrt(MIN_KEYPOINT_SIZE / 4)); // encodes 2, actually
+
+// Maximum number of keypoints we can encode (the actual length of the encoder may vary)
+const MAX_ENCODER_CAPACITY = 8192;
 
 // Initial size of the keypoint encoder
 const INITIAL_ENCODER_LENGTH = 32; // pick a small number to reduce processing load and not crash things on mobile
