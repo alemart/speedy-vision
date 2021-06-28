@@ -63,19 +63,24 @@ For general enquiries, contact me at alemartf `at` gmail `dot` com.
   * [Image processing](#image-processing)
     * [Image filters](#image-filters)
     * [General transformations](#general-transformations)
-  * [Feature detection](#feature-detection)
+  * [Keypoints and descriptors](#keypoints-and-descriptors)
+    * [Keypoint basics](#keypoint-basics)
+    * [Keypoint detection](#keypoint-detection)
+    * [Keypoint description](#keypoint-description)
+    * [Keypoint tracking (optical-flow)](#keypoint-tracking)
+    * [Keypoint matching](#keypoint-matching)
+  * [Feature detection (old API)](#feature-detection)
     * [Detection methods](#detection-methods)
     * [Properties of feature points](#properties-of-feature-points)
     * [FAST features](#fast-features)
     * [Harris corners](#harris-corners)
     * [ORB features](#orb-features)
-  * [Feature description](#feature-description)
+  * [Feature description (old API)](#feature-description)
     * [ORB descriptors](#orb-descriptors)
-  * [Feature tracking](#feature-tracking)
+  * [Feature tracking (old API)](#feature-tracking)
     * [Tracking methods](#tracking-methods)
     * [Tracking API](#tracking-api)
     * [LK feature tracker](#lk-feature-tracker)
-  * [Feature matching](#feature-matching)
   * [Matrices & Linear Algebra](#matrices-linear-algebra)
     * [Creating new matrices](#creating-new-matrices)
     * [Matrix properties](#matrix-properties)
@@ -520,7 +525,7 @@ Creates an image source with the specified name. If the name is not specified, S
 
 `Speedy.Image.Sink(name?: string): SpeedyPipelineNodeImageOutput`
 
-Creates an image sink with the specified name. If the name is not specified, Speedy will use the name `"image"`.
+Creates an image sink with the specified name. If the name is not specified, Speedy will call this node `"image"`. A `SpeedyMedia` object will be exported from the pipeline.
 
 ###### Ports
 
@@ -740,7 +745,162 @@ Warp an image using a [homography matrix](#perspective-transformation).
 | `"in"`    | Image     | Input image. |
 | `"out"`   | Image     | Warped image. |
 
+### Keypoints and descriptors
+
+A **keypoint** is a small patch in an image that is somehow *distinctive*. For example, a small patch with significant intensity changes in both x and y axes (i.e., a "corner") is distinctive. If we pick two "similar" images, we should be able to locate a set of keypoints in each of them and then match those keypoints based on their similarity.
+
+A **descriptor** is a mathematical object that somehow describes a keypoint. Two keypoints are considered to be "similar" if their descriptors are "similar". Speedy works with binary descriptors, meaning that keypoints are described using bit vectors of fixed length.
+
+There are different ways to detect and describe keypoints. For example, in order to detect a keypoint, you may take a look at the pixel intensities around a point or perhaps study the image derivatives. You may describe a keypoint by comparing the pixel intensities of the image patch in a special way. Additionally, it's possible to conceive a way to describe a keypoint in such a way that, if you rotate the patch, the descriptor stays roughly the same. This is called *rotational invariance* and is usually a desirable property for a descriptor.
+
+Speedy offers different options for processing keypoints in multiple ways. A novelty of this work is that Speedy's implementations have been either adapted from the literature or conceived from scratch to work on the GPU. Therefore, keypoint processing is done in parallel and is often very fast.
+
+#### Keypoint basics
+
+##### SpeedyKeypoint
+
+A `SpeedyKeypoint` object represents a keypoint.
+
+###### SpeedyKeypoint.position
+
+`SpeedyKeypoint.position: SpeedyPoint2, read-only`
+
+The position of the keypoint in the image.
+
+###### SpeedyKeypoint.x
+
+`SpeedyKeypoint.x: number, read-only`
+
+The x position of the keypoint in the image. A shortcut to `position.x`.
+
+###### SpeedyKeypoint.y
+
+`SpeedyKeypoint.y: number, read-only`
+
+The y position of the keypoint in the image. A shortcut to `position.y`.
+
+###### SpeedyKeypoint.lod
+
+`SpeedyKeypoint.lod: number, read-only`
+
+The level-of-detail (pyramid level) from which the keypoint was extracted, starting from zero. Defaults to `0.0`.
+
+###### SpeedyKeypoint.scale
+
+`SpeedyKeypoint.scale: number, read-only`
+
+The scale of the keypoint. This is equivalent to *2 ^ lod*. Defaults to `1.0`.
+
+###### SpeedyKeypoint.rotation
+
+`SpeedyKeypoint.rotation: number, read-only`
+
+The orientation angle of the keypoint, in radians. Defaults to `0.0`.
+
+###### SpeedyKeypoint.score
+
+`SpeedyKeypoint.score: number, read-only`
+
+The score is a measure associated with the keypoint. Although different detection methods employ different measurement strategies, the larger the score, the "better" the keypoint is considered to be. The score is always a positive value.
+
+###### SpeedyKeypoint.descriptor
+
+`SpeedyKeypoint.descriptor: Uint8Array, read-only`
+
+The binary descriptor associated with the keypoint. If there is no descriptor, this becomes an empty array.
+
+##### Speedy.Keypoint.Sink
+
+`Speedy.Keypoint.Sink(name?: string): SpeedyPipelineNodeKeypointSink`
+
+Creates a sink of keypoints using the specified name. If the name is not specified, Speedy will call this node `"keypoints"`. An array of `SpeedyKeypoint` objects will be exported from the pipeline.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Keypoints | A set of keypoints to be exported from the pipeline. |
+
+##### Speedy.Keypoint.Clipper
+
+`Speedy.Keypoint.Clipper(name?: string): SpeedyPipelineNodeKeypointClipper`
+
+Clips a set of keypoints, so that it outputs no more than a fixed quantity of them. When generating the output, it will choose the "best" keypoints according to their score metric. The keypoint clipper is a very useful tool to reduce processing time, since it can discard "bad" keypoints regardless of the sensitivity of their detector. The clipping must be applied before computing any descriptors.
+
+###### Parameters
+
+* `size: number`. A positive integer. No more than this number of keypoints will be available in the output.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Keypoints | A set of keypoints. |
+| `"out"`   | Keypoints | A set of at most `size` keypoints. |
+
+#### Keypoint detection
+
+The following nodes expect greyscale images as input. They output a set of keypoints.
+
+##### Speedy.Keypoint.Detector.FAST()
+
+`Speedy.Keypoint.Detector.FAST(name?: string): SpeedyPipelineNodeFASTKeypointDetector`
+
+FAST keypoint detector. Speedy implements the FAST-9,16 variant of the algorithm.
+
+###### Parameters
+
+* `threshold: number`. An integer between `0` and `255`, inclusive. The larger the number, the "stronger" your keypoints will be. The smaller the number, the more keypoint you will get. Numbers between `20` and `50` are usually meaningful.
+* `levels: number`. The number of pyramid levels you want to use. Defaults to `1` (i.e., no pyramid is used).
+* `scaleFactor: number`. The scale factor between two consecutive levels of the pyramid. This is a value between `1` (exclusive) and `2` (inclusive). Since a standard pyramid with a scale factor of two is too coarse, this value is set to the square root of two by default. This is applicable only when using a pyramid.
+* `capacity: number`. The maximum number of keypoints that can be detected by this node. Currently, this number can be set to at most `8192`.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Image     | Greyscale image or pyramid. |
+| `"out"`   | Keypoints | Detected keypoints. |
+
+##### Speedy.Keypoint.Detector.Harris()
+
+`Speedy.Keypoint.Detector.Harris(name?: string): SpeedyPipelineNodeHarrisKeypointDetector`
+
+Harris corner detector. Speedy implements the Shi-Tomasi corner response for best results.
+
+###### Parameters
+
+* `quality: number`. A value between `0` and `1` representing the minimum "quality" of the returned keypoints. Speedy will discard any keypoint whose score is lower than the specified percentage of the maximum keypoint score found in the image. A typical value for this parameter is `0.10` (10%).
+* `levels: number`. The number of pyramid levels you want to use. Defaults to `1` (i.e., no pyramid is used).
+* `scaleFactor: number`. The scale factor between two consecutive levels of the pyramid. This is a value between `1` (exclusive) and `2` (inclusive). Since a standard pyramid with a scale factor of two is too coarse, this value is set to the square root of two by default. This is applicable only when using a pyramid.
+* `capacity: number`. The maximum number of keypoints that can be detected by this node. Currently, this number can be set to at most `8192`.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Image     | Greyscale image or pyramid. |
+| `"out"`   | Keypoints | Detected keypoints. |
+
+#### Keypoint description
+
+Soon! It's being ported to the new API.
+
+#### Keypoint tracking
+
+Soon! It's being ported to the new API.
+
+Keypoint tracking is the process of tracking keypoint across a sequence of images. It basically allows you to get a sense of how keypoints are moving in time - i.e., how fast they are moving and where they are going.
+
+Speedy uses sparse optical-flow algorithms to track keypoints in a video. Applications of optical-flow are numerous. You may get a sense of how objects are moving in a scene, you may estimate how the camera itself is moving, you may detect a transition in a film (a cut between two shots), and so on.
+
+#### Keypoint matching
+
+Soon!
+
 ### Feature detection
+
+THE FOLLOWING METHODS BELONG TO THE OLD API. THEY WILL BE REMOVED SOON. GET THE PREVIOUS VERSION OF THE LIBRARY IF YOU'RE INTERESTED IN TESTING THEM.
 
 #### Detection methods
 
