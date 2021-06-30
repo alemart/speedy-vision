@@ -104,7 +104,7 @@
  *            that is preferably a power of two
  *            (this is PYRAMID_MAX_SCALE)
  *
- *
+ * when M = 1, it simplifies to a(x) = lod / h.
  *
  * This model has neat properties:
  *
