@@ -79,6 +79,6 @@ export class FeatureDescriptorSuppressor extends FeatureAlgorithmDecorator
         const capacity = FeatureEncoder.capacity(descriptorSize, extraSize, encoderLength);
         const suppressedEncoderLength = FeatureEncoder.minLength(capacity, 0, extraSize);
 
-        return gpu.programs.keypoints.suppressDescriptors(encodedKeypoints, descriptorSize, extraSize, encoderLength, suppressedEncoderLength);
+        return gpu.programs.keypoints.suppressDescriptorsOld(encodedKeypoints, descriptorSize, extraSize, encoderLength, suppressedEncoderLength);
     }
 }
