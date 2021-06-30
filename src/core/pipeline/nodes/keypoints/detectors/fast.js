@@ -98,8 +98,8 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
         // FAST
         keypoints.fast9_16.outputs(width, height, tex[0], tex[1]);
         let corners = tex[1].clear();
-        for(let i = 0; i < levels; i++)
-            corners = keypoints.fast9_16(corners, image, lodStep * i, threshold);
+        for(let i = 0, lod = 0.0; i < levels && lod < PYRAMID_MAX_LEVELS; i++, lod += lodStep)
+            corners = keypoints.fast9_16(corners, image, lod, threshold);
 
         // non-maximum suppression
         const suppressedCorners = (nonmax

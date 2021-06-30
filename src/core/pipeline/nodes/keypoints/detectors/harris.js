@@ -29,6 +29,7 @@ import { SpeedySize } from '../../../../speedy-size';
 import { Utils } from '../../../../../utils/utils';
 import { IllegalOperationError, IllegalArgumentError } from '../../../../../utils/errors';
 import { SpeedyPromise } from '../../../../../utils/speedy-promise';
+import { PYRAMID_MAX_LEVELS } from '../../../../../utils/globals';
 
 // Constants
 const DEFAULT_QUALITY = 0.1;
@@ -133,8 +134,7 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
         harris.outputs(width, height, tex[0], tex[1]);
         keypoints.harrisDerivatives.outputs(width, height, tex[2]);
         let corners = tex[1].clear();
-        for(let i = 0; i < levels; i++) {
-            const lod = lodStep * i;
+        for(let i = 0, lod = 0.0; i < levels && lod < PYRAMID_MAX_LEVELS; i++, lod += lodStep) {
             const derivatives = keypoints.harrisDerivatives(image, lod);
             corners = harris(corners, derivatives, lod);
         }
