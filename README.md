@@ -541,7 +541,7 @@ Creates an image sink with the specified name. If the name is not specified, Spe
 
 `Speedy.Image.Pyramid(name?: string): SpeedyPipelineNodeImagePyramid`
 
-Generate a Gaussian pyramid. A pyramid is a texture with mipmaps. For best results, Speedy computes the layers instead of relying on the hardware only.
+Generate a Gaussian pyramid. A pyramid is a texture with mipmaps.
 
 | Port name | Data type | Description |
 |-----------|-----------|-------------|
@@ -884,7 +884,19 @@ Harris corner detector. Speedy implements the Shi-Tomasi corner response for bes
 
 #### Keypoint description
 
-Soon! It's being ported to the new API.
+##### Speedy.Keypoint.Detector.ORB()
+
+`Speedy.Keypoint.Detector.ORB(name?: string): SpeedyPipelineNodeORBKeypointDescriptor`
+
+ORB descriptors. In order to decrease the sensitivity to noise, you may use as input a pyramid of a blurred image.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"pyramid"` | Image     | Input pyramid. Must be greyscale. |
+| `"keypoints"` | Keypoints | Input keypoints. |
+| `"out"`   | Keypoints | Described keypoints. |
 
 #### Keypoint tracking
 

@@ -32,19 +32,30 @@
         <h1>ORB features</h1>
         <form autocomplete="off">
             <div>
+                <label for="detection-method">Detector</label>
+                <select id="detection-method">
+                    <option value="fast" selected>FAST</option>
+                    <option value="harris">Harris</option>
+                </select>
+            </div>
+            <div>&nbsp;
+                <label for="max-features">Clipping</label>
+                <select id="max-features">
+                    <option value="100">100</option>
+                    <option value="200">200</option>
+                    <option value="500">500</option>
+                    <option value="800" selected>800</option>
+                    <option value="1200">1200</option>
+                </select>
+            </div>
+            <div class="separator"></div>
+            <div>
                 <label for="sensitivity">Sensitivity</label>
-                <input type="range" min="0.0" max="0.99" value="0.5" step="0.01" id="sensitivity">
+                <input type="range" min="0.0" max="0.90" value="0.70" step="0.01" id="sensitivity">
             </div>
             <div>
                 <label for="speed-slider">Video speed</label>
                 <input type="range" id="speed-slider" min="0.10" max="2" value="1" step="0.01">
-            </div>
-            <div>
-                <label for="method">Detector</label>
-                <select id="method">
-                    <option value="fast">FAST</option>
-                    <option value="harris" selected>Harris</option>
-                </select>
             </div>
         </form>
         <div>
@@ -62,54 +73,109 @@
         <script>
 window.onload = async function()
 {
-    // tell Speedy to load the video
+    /*
+
+    This is our pipeline:
+
+    Image  ---> Convert to ---> Image ------> Keypoint -----> Keypoint ---> ORB ----------> Keypoint
+    Source      greyscale       Pyramid       detector        Clipper       descriptors     Sink
+                |                                                            ^
+                |                                                            |
+                +----------> Gaussian --------------> Image -----------------+
+                             Blur                     Pyramid
+
+    The Keypoint detector is either FAST or Harris
+
+    */
+
+    // form elements
+    const detectionMethod = document.getElementById('detection-method');
+    const sensitivity = document.getElementById('sensitivity');
+    const maxFeatures = document.getElementById('max-features');
+    const playButton = document.getElementById('play');
+    const speedSlider = document.getElementById('speed-slider');
+
+    // load the video
     const video = document.querySelector('video');
     const media = await Speedy.load(video);
     video.play();
 
-    // create a canvas to display the features
-    const canvas = createCanvas(media.width, media.height, video.title);
+    // create the pipelines
+    function createPipelineWith(detector)
+    {
+        const pipeline = Speedy.Pipeline();
+        const source = Speedy.Image.Source();
+        const greyscale = Speedy.Filter.Greyscale();
+        const pyramid = Speedy.Image.Pyramid();
+        const blur = Speedy.Filter.GaussianBlur(); // reduce noise before computing the descriptors
+        const blurredPyramid = Speedy.Image.Pyramid();
+        const clipper = Speedy.Keypoint.Clipper('clipper');
+        const descriptor = Speedy.Keypoint.Descriptor.ORB();
+        const sink = Speedy.Keypoint.Sink();
 
-    // elements
-    const sensitivity = document.getElementById('sensitivity');
-    const method = document.getElementById('method');
+        source.media = media;
+        blur.kernelSize = Speedy.Size(9, 9);
+        blur.sigma = Speedy.Vector2(2, 2);
+        detector.levels = 12; // pyramid levels
+        detector.scaleFactor = 1.19; // approx. 2^0.25
+        detector.capacity = 8192;
+        clipper.size = 800; // up to how many features?
 
-    // create the feature detector
-    const orb = Speedy.FeatureDescriptor.ORB();
-    const featureDetector = {
-        'fast': Speedy.FeatureDetector.MultiscaleFAST().link(orb),
-        'harris': Speedy.FeatureDetector.MultiscaleHarris().link(orb),
+        source.output().connectTo(greyscale.input());
+
+        greyscale.output().connectTo(pyramid.input());
+        pyramid.output().connectTo(detector.input());
+        detector.output().connectTo(clipper.input());
+        clipper.output().connectTo(descriptor.input('keypoints'));
+
+        greyscale.output().connectTo(blur.input());
+        blur.output().connectTo(blurredPyramid.input());
+        blurredPyramid.output().connectTo(descriptor.input('pyramid'));
+
+        descriptor.output().connectTo(sink.input());
+
+        pipeline.init(source, greyscale, pyramid, blur, blurredPyramid, detector, clipper, descriptor, sink);
+
+        return pipeline;
+    }
+
+    const fast = Speedy.Keypoint.Detector.FAST();
+    const harris = Speedy.Keypoint.Detector.Harris();
+    const pipelines = {
+        fast: createPipelineWith(fast),
+        harris: createPipelineWith(harris)
     };
 
     // main loop
+    const canvas = createCanvas(media.width, media.height, video.title);
     async function loop()
     {
-        // pick a feature detector
-        const detector = featureDetector[method.value];
+        // pick a pipeline
+        const pipeline = pipelines[detectionMethod.value];
 
-        // configure the detector
-        detector.sensitivity = Number(sensitivity.value);
-        detector.scaleFactor = 1.19;
+        // adjust the sensitivity
+        fast.threshold = 255 * (1.0 - Number(sensitivity.value));
+        harris.quality = 1.0 - Number(sensitivity.value);
 
-        // find features
-        const features = await detector.detect(media);
+        // adjust the clipper
+        const clipper = pipeline.node('clipper');
+        clipper.size = Number(maxFeatures.value);
 
-        // render features
+        // find the features
+        const { keypoints } = await pipeline.run();
+
+        // render the features
         media.draw(canvas);
-        renderFeatures(canvas, features, 2, '#0fa', 2);
-        renderStatus(canvas, features);
+        renderFeatures(canvas, keypoints, 2, '#0fa', 2);
+        renderStatus(canvas, keypoints);
 
         // loop
         setTimeout(loop, 1000 / 60);
     }
     loop();
 
-    // play/pause
-    const playButton = document.getElementById('play');
+    // misc
     playButton.onclick = () => video.paused ? video.play() : video.pause();
-
-    // video speed
-    const speedSlider = document.getElementById('speed-slider');
     speedSlider.oninput = () => video.playbackRate = speedSlider.value;
 }
 

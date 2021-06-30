@@ -45,7 +45,7 @@ export class SpeedyPipelineNodeORBKeypointDescriptor extends SpeedyPipelineNodeK
     constructor(name = undefined)
     {
         super(name, 2, [
-            InputPort('image').expects(SpeedyPipelineMessageType.Image).satisfying(
+            InputPort('pyramid').expects(SpeedyPipelineMessageType.Image).satisfying(
                 msg => msg.format === ImageFormat.GREY && msg.image.hasMipmaps()
             ),
             InputPort('keypoints').expects(SpeedyPipelineMessageType.Keypoints).satisfying(
@@ -63,7 +63,7 @@ export class SpeedyPipelineNodeORBKeypointDescriptor extends SpeedyPipelineNodeK
     _run(gpu)
     {
         const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input('keypoints').read();
-        const image = this.input('image').read().image;
+        const pyramid = this.input('pyramid').read().image;
         const outputTexture = this._outputTexture;
         const tex = this._tex;
 
@@ -72,7 +72,7 @@ export class SpeedyPipelineNodeORBKeypointDescriptor extends SpeedyPipelineNodeK
         const orientationEncoderLength = Math.max(1, Math.ceil(Math.sqrt(capacity))); // 1 pixel per keypoint
         const encodedOrientations = (gpu.programs.keypoints.orbOrientation
             .outputs(orientationEncoderLength, orientationEncoderLength, tex[0])
-        )(image, encodedKeypoints, descriptorSize, extraSize, encoderLength);
+        )(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength);
         const orientedKeypoints = (gpu.programs.keypoints.transferOrientation
             .outputs(encoderLength, encoderLength, tex[1])
         )(encodedOrientations, encodedKeypoints, descriptorSize, extraSize, encoderLength);
@@ -84,7 +84,7 @@ export class SpeedyPipelineNodeORBKeypointDescriptor extends SpeedyPipelineNodeK
         // compute descriptors (it's a good idea to blur the pyramid)
         const describedKeypoints = (gpu.programs.keypoints.orbDescriptor
             .outputs(newEncoderLength, newEncoderLength, outputTexture)
-        )(image, encodedKps, extraSize, newEncoderLength);
+        )(pyramid, encodedKps, extraSize, newEncoderLength);
 
         // done!
         this.output().swrite(describedKeypoints, DESCRIPTOR_SIZE, extraSize, newEncoderLength);
