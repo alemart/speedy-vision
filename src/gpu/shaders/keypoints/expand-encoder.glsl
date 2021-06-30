@@ -56,8 +56,11 @@ void main()
         myAddress.offset
     );
 
+    // is this a header cell?
+    bool head = myAddress.offset < MIN_KEYPOINT_SIZE / 4;
+
     // read the data
-    vec4 data = readKeypointData(encodedKeypoints, inputEncoderLength, otherAddress);
+    vec4 data = head ? readKeypointData(encodedKeypoints, inputEncoderLength, otherAddress) : vec4(0.0f);
 
     // drop the data if we shrink the encoder (invalid input!)
     bool drop = outputDescriptorSize < inputDescriptorSize || outputExtraSize < inputExtraSize;

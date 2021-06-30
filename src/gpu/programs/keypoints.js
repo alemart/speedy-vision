@@ -55,6 +55,12 @@ const harrisScoreCutoff = importShader('keypoints/harris-cutoff.glsl')
 const harrisScoreTo8bits = importShader('keypoints/score-8bits.glsl')
                           .withDefines({ 'METHOD': 1 })
                           .withArguments('corners');
+// ORB descriptors
+const orbDescriptor = importShader('keypoints/orb-descriptor.glsl')
+                     .withArguments('pyramid', 'encodedCorners', 'extraSize', 'encoderLength');
+
+const orbOrientation = importShader('keypoints/orb-orientation.glsl')
+                      .withArguments('pyramid', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 // Non-maximum suppression
 const nonMaxSuppression = importShader('keypoints/nonmax-suppression.glsl')
@@ -159,15 +165,6 @@ const brisk = importShader('keypoints/brisk.glsl')
 
 
 
-//
-// ORB feature description
-//
-const orb = importShader('keypoints/orb/orb-descriptor.glsl')
-           .withArguments('pyramid', 'encodedCorners', 'extraSize', 'encoderLength');
-
-const orbOrientation = importShader('keypoints/orb/orb-orientation.glsl')
-                      .withArguments('pyramid', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
-
 
 
 
@@ -224,6 +221,12 @@ export class GPUKeypoints extends SpeedyProgramGroup
             .declare('harrisScoreTo8bits', harrisScoreTo8bits)
 
             //
+            // ORB descriptors
+            //
+            .declare('orbDescriptor', orbDescriptor)
+            .declare('orbOrientation', orbOrientation)
+
+            //
             // Non-maximum suppression
             //
             .declare('nonmax', nonMaxSuppression)
@@ -278,17 +281,11 @@ export class GPUKeypoints extends SpeedyProgramGroup
             .declare('maxHarrisScore', maxHarrisScore, {
                 ...this.program.usesPingpongRendering()
             })
+            .declare('multiscaleSobel', multiscaleSobel) // scale-space
 
             // Non-maximum suppression
             .declare('_nonMaxSuppression', nonMaxSuppression)
             .declare('_multiscaleNonMaxSuppression', multiscaleNonMaxSuppression)
-
-            // ORB
-            .declare('_orb', orb)
-            .declare('_orbOrientation', orbOrientation)
-            .declare('multiscaleSobel', multiscaleSobel) // scale-space
-
-
         ;
     }
 
@@ -315,11 +312,11 @@ export class GPUKeypoints extends SpeedyProgramGroup
      * @param {number} encoderLength
      * @returns {SpeedyDrawableTexture}
      */
-    orb(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength)
+    orbOld(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength)
     {
         Utils.assert(descriptorSize === 32);
-        this._orb.setOutputSize(encoderLength, encoderLength);
-        return this._orb(pyramid, encodedKeypoints, extraSize, encoderLength);
+        this.orbDescriptor.setOutputSize(encoderLength, encoderLength);
+        return this.orbDescriptor(pyramid, encodedKeypoints, extraSize, encoderLength);
     }
 
     /**
@@ -332,13 +329,13 @@ export class GPUKeypoints extends SpeedyProgramGroup
      * @param {number} encoderLength
      * @returns {SpeedyDrawableTexture}
      */
-    orbOrientation(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength)
+    orbOrientationOld(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength)
     {
         const numberOfKeypoints = FeatureEncoder.capacity(descriptorSize, extraSize, encoderLength);
         const orientationEncoderLength = Math.max(1, Math.ceil(Math.sqrt(numberOfKeypoints))); // 1 pixel per keypoint
 
-        this._orbOrientation.setOutputSize(orientationEncoderLength, orientationEncoderLength);
-        const encodedOrientations = this._orbOrientation(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength);
+        this.orbOrientation.setOutputSize(orientationEncoderLength, orientationEncoderLength);
+        const encodedOrientations = this.orbOrientation(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength);
 
         this.transferOrientation.setOutputSize(encoderLength, encoderLength);
         return this.transferOrientation(encodedOrientations, encodedKeypoints, descriptorSize, extraSize, encoderLength);

@@ -26,7 +26,7 @@ import { SpeedyGPU } from '../../../../../gpu/speedy-gpu';
 import { SpeedyTexture, SpeedyDrawableTexture } from '../../../../../gpu/speedy-texture';
 import { Utils } from '../../../../../utils/utils';
 import { SpeedyPromise } from '../../../../../utils/speedy-promise';
-import { MIN_KEYPOINT_SIZE, MIN_ENCODER_LENGTH, MAX_ENCODER_CAPACITY, PYRAMID_MAX_LEVELS } from '../../../../../utils/globals';
+import { MIN_KEYPOINT_SIZE, MIN_ENCODER_LENGTH, MAX_ENCODER_CAPACITY } from '../../../../../utils/globals';
 
 // Constants
 const ENCODER_PASSES = 8; // number of passes of the keypoint encoder: directly impacts performance
@@ -200,7 +200,7 @@ export class SpeedyPipelineNodeMultiscaleKeypointDetector extends SpeedyPipeline
      */
     set levels(levels)
     {
-        this._levels = Math.max(1, Math.min(levels | 0, PYRAMID_MAX_LEVELS));
+        this._levels = Math.max(1, levels | 0);
     }
 
     /**

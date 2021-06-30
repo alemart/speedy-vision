@@ -63,7 +63,7 @@ export class ORBFeatures extends FeatureDescriptionAlgorithm
         const smoothPyramid = smoothTexture.generateMipmaps();
 
         // compute ORB feature descriptors
-        return gpu.programs.keypoints.orb(smoothPyramid, orientedKeypoints, descriptorSize, extraSize, encoderLength);
+        return gpu.programs.keypoints.orbOld(smoothPyramid, orientedKeypoints, descriptorSize, extraSize, encoderLength);
     }
 
     /**
@@ -83,7 +83,7 @@ export class ORBFeatures extends FeatureDescriptionAlgorithm
         const pyramid = inputTexture.generateMipmaps();
 
         // compute orientation
-        return gpu.programs.keypoints.orbOrientation(pyramid, detectedKeypoints, descriptorSize, extraSize, encoderLength);
+        return gpu.programs.keypoints.orbOrientationOld(pyramid, detectedKeypoints, descriptorSize, extraSize, encoderLength);
     }
 
     /**

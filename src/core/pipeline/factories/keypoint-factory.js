@@ -24,6 +24,7 @@ import { SpeedyPipelineNodeKeypointSink } from '../nodes/keypoints/sink';
 import { SpeedyPipelineNodeKeypointClipper } from '../nodes/keypoints/clipper';
 import { SpeedyPipelineNodeFASTKeypointDetector } from '../nodes/keypoints/detectors/fast';
 import { SpeedyPipelineNodeHarrisKeypointDetector } from '../nodes/keypoints/detectors/harris';
+import { SpeedyPipelineNodeORBKeypointDescriptor } from '../nodes/keypoints/descriptors/orb';
 
 /**
  * Keypoint detectors
@@ -52,6 +53,22 @@ class SpeedyPipelineKeypointDetectorFactory extends SpeedyNamespace
 }
 
 /**
+ * Keypoint descriptors
+ */
+class SpeedyPipelineKeypointDescriptorFactory extends SpeedyNamespace
+{
+    /**
+     * ORB descriptors
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeORBKeypointDescriptor}
+     */
+    static ORB(name = undefined)
+    {
+        return new SpeedyPipelineNodeORBKeypointDescriptor(name);
+    }
+}
+
+/**
  * Keypoint-related nodes
  */
 export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
@@ -63,6 +80,15 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
     static get Detector()
     {
         return SpeedyPipelineKeypointDetectorFactory;
+    }
+
+    /**
+     * Keypoint descriptors
+     * @returns {Function}
+     */
+    static get Descriptor()
+    {
+        return SpeedyPipelineKeypointDescriptorFactory;
     }
 
     /**
