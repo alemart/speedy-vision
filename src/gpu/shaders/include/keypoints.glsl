@@ -97,6 +97,20 @@ const int KPF_ORIENTED = int(@KPF_ORIENTED@); // the keypoint is oriented
 const int KPF_DISCARD = int(@KPF_DISCARD@); // the keypoint should be discarded in the next frame
 
 /**
+ * Encode keypoint flags
+ * @param {int} flags in [0,255]
+ * @returns {float}
+ */
+#define encodeKeypointFlags(flags) (float(flags) / 255.0f)
+
+/**
+ * Decode keypoint flags
+ * @param {float} encodedFlags in [0,1]
+ * @returns {int}
+ */
+#define decodeKeypointFlags(encodedFlags) int((encodedFlags) * 255.0f)
+
+/**
  * Encode a "null" keypoint, that is, a token
  * representing the end of a list of keypoints
  * @returns {vec4} RGBA
@@ -190,7 +204,7 @@ Keypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointA
     keypoint.orientation = decodeOrientation(encodedProperties.g); // in radians
     keypoint.lod = decodeLod(encodedProperties.r); // level-of-detail
     keypoint.score = encodedProperties.b; // score in [0,1]
-    keypoint.flags = int(encodedProperties.a * 255.0f); // flags
+    keypoint.flags = decodeKeypointFlags(encodedProperties.a); // flags
 
     // got a null or invalid keypoint? encode it with a negative score
     bool isNull = all(greaterThanEqual(rawEncodedPosition, ones));
@@ -240,12 +254,5 @@ bool isKeypointAtInfinity(Keypoint keypoint)
     const vec2 V2_MAX_TEXTURE_LENGTH = vec2(@MAX_TEXTURE_LENGTH@);
     return any(greaterThan(keypoint.position, V2_MAX_TEXTURE_LENGTH));
 }
-
-/**
- * Encode keypoint flags
- * @param {int} flags
- * @returns {float}
- */
-#define encodeKeypointFlags(flags) (float(flags) / 255.0f)
 
 #endif
