@@ -75,6 +75,18 @@ const sortMergePermutation = importShader('keypoints/sort-mergeperm.glsl')
 const sortApplyPermutation = importShader('keypoints/sort-applyperm.glsl')
                             .withArguments('permutation', 'maxKeypoints', 'encodedKeypoints', 'descriptorSize', 'extraSize');
 
+// Keypoint encoders
+const expandEncoder = importShader('keypoints/expand-encoder.glsl')
+                     .withArguments('encodedKeypoints', 'inputDescriptorSize', 'inputExtraSize', 'inputEncoderLength', 'outputDescriptorSize', 'outputExtraSize', 'outputEncoderLength');
+
+const transferOrientation = importShader('keypoints/transfer-orientation.glsl')
+                           .withArguments('encodedOrientations', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
+
+const suppressDescriptors = importShader('keypoints/suppress-descriptors.glsl')
+                           .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'suppressedEncoderLength');
+
+
+
 // --- OLD (TODO remove) ---
 
 
@@ -163,14 +175,6 @@ const orbOrientation = importShader('keypoints/orb/orb-orientation.glsl')
 // Generic keypoint routines
 //
 
-// transfer keypoint orientation
-const transferOrientation = importShader('keypoints/transfer-orientation.glsl')
-                           .withArguments('encodedOrientations', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
-
-// suppress feature descriptors
-const suppressDescriptors = importShader('keypoints/suppress-descriptors.glsl')
-                           .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'suppressedEncoderLength');
-
 
 
 /**
@@ -234,6 +238,13 @@ export class GPUKeypoints extends SpeedyProgramGroup
             })
             .declare('sortApplyPermutation', sortApplyPermutation)
 
+            //
+            // Keypoint encoders
+            //
+            .declare('expandEncoder', expandEncoder)
+            .declare('transferOrientation', transferOrientation)
+            .declare('suppressDescriptors', suppressDescriptors)
+
 
 
             // --- OLD (TODO remove) ---
@@ -277,11 +288,7 @@ export class GPUKeypoints extends SpeedyProgramGroup
             .declare('_orbOrientation', orbOrientation)
             .declare('multiscaleSobel', multiscaleSobel) // scale-space
 
-            // Transfer keypoint orientation
-            .declare('_transferOrientation', transferOrientation)
 
-            // Suppress feature descriptors
-            .declare('_suppressDescriptors', suppressDescriptors)
         ;
     }
 
@@ -333,8 +340,8 @@ export class GPUKeypoints extends SpeedyProgramGroup
         this._orbOrientation.setOutputSize(orientationEncoderLength, orientationEncoderLength);
         const encodedOrientations = this._orbOrientation(pyramid, encodedKeypoints, descriptorSize, extraSize, encoderLength);
 
-        this._transferOrientation.setOutputSize(encoderLength, encoderLength);
-        return this._transferOrientation(encodedOrientations, encodedKeypoints, descriptorSize, extraSize, encoderLength);
+        this.transferOrientation.setOutputSize(encoderLength, encoderLength);
+        return this.transferOrientation(encodedOrientations, encodedKeypoints, descriptorSize, extraSize, encoderLength);
     }
 
     /**
@@ -346,10 +353,10 @@ export class GPUKeypoints extends SpeedyProgramGroup
      * @param {number} suppressedEncoderLength equivalent to encoderLength, but without the descriptors
      * @returns {SpeedyDrawableTexture}
      */
-    suppressDescriptors(encodedKeypoints, descriptorSize, extraSize, encoderLength, suppressedEncoderLength)
+    suppressDescriptorsOld(encodedKeypoints, descriptorSize, extraSize, encoderLength, suppressedEncoderLength)
     {
         Utils.assert(suppressedEncoderLength <= encoderLength);
-        this._suppressDescriptors.setOutputSize(suppressedEncoderLength, suppressedEncoderLength);
-        return this._suppressDescriptors(encodedKeypoints, descriptorSize, extraSize, encoderLength, suppressedEncoderLength);
+        this.suppressDescriptors.setOutputSize(suppressedEncoderLength, suppressedEncoderLength);
+        return this.suppressDescriptors(encodedKeypoints, descriptorSize, extraSize, encoderLength, suppressedEncoderLength);
     }
 }
