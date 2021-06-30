@@ -43,11 +43,15 @@ void main()
     float encodedOrientation = targetPixel.g;
     float encodedFlags = targetPixel.a; // will bring KPF_ORIENTED
 
-    // is this a valid keypoint?
+    // mix keypoint orientation & flags
     Keypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);
+    //keypoint.orientation = decodeOrientation(encodedOrientation);
+    keypoint.flags |= decodeKeypointFlags(encodedFlags);
+
+    // is this a valid keypoint?
     bool isValid = !isBadKeypoint(keypoint);
 
     // transfer the orientation
     // ONLY IF THIS IS A VALID PROPERTIES CELL
-    color = isValid && myAddress.offset == 1 ? vec4(pixel.r, encodedOrientation, pixel.b, encodedFlags) : pixel;
+    color = isValid && myAddress.offset == 1 ? vec4(pixel.r, encodedOrientation, pixel.b, encodeKeypointFlags(keypoint.flags)) : pixel;
 }
