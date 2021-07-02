@@ -16,41 +16,47 @@
  * limitations under the License.
  *
  * upload-keypoints.glsl
- * Upload keypoints to the GPU via Uniform Buffer Object
+ * Upload keypoints to the GPU using a Uniform Buffer Object
  */
 
 @include "keypoints.glsl"
 
-uniform int keypointCount; // how many keypoints
+uniform sampler2D encodedKeypoints;
+uniform int startIndex; // multipass. Start index, inclusive. Defaults to 0
+uniform int endIndex; // multipass. End index, exclusive
 uniform int descriptorSize; // in bytes
 uniform int extraSize; // in bytes
 uniform int encoderLength;
 
-#ifndef KEYPOINT_BUFFER_LENGTH
-#error Must specify KEYPOINT_BUFFER_LENGTH
+#ifndef BUFFER_SIZE
+#error Undefined BUFFER_SIZE
 #endif
 
 layout(std140) uniform KeypointBuffer
 {
     // tightly packed (16 bytes)
-    vec4 keypointBuffer[KEYPOINT_BUFFER_LENGTH]; // xpos, ypos, lod, score
+    vec4 keypointBuffer[BUFFER_SIZE]; // xpos, ypos, lod, score
 };
 
 void main()
 {
+    vec4 pixel = threadPixel(encodedKeypoints);
     ivec2 thread = threadLocation();
     KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);
     int index = findKeypointIndex(address, descriptorSize, extraSize);
 
-    // the keypoint doesn't exist
-    color = encodeNullKeypoint();
-    if(index >= keypointCount)
+    // multipass: keep previous results
+    color = pixel;
+    if(index < startIndex)
+        return;
+
+    // multipass: await future results
+    color = encodeNullKeypoint(); // end of list
+    if(index >= endIndex)
         return;
     
-    // get keypoint data
-    vec4 data = keypointBuffer[index];
-
-    // fill in the keypoint data
+    // encode keypoint data
+    vec4 data = keypointBuffer[index - startIndex];
     switch(address.offset) {
         case 0: {
             // keypoint position

@@ -20,6 +20,7 @@
  */
 
 import { SpeedyNamespace } from '../../speedy-namespace';
+import { SpeedyPipelineNodeKeypointSource } from '../nodes/keypoints/source';
 import { SpeedyPipelineNodeKeypointSink } from '../nodes/keypoints/sink';
 import { SpeedyPipelineNodeKeypointClipper } from '../nodes/keypoints/clipper';
 import { SpeedyPipelineNodeFASTKeypointDetector } from '../nodes/keypoints/detectors/fast';
@@ -92,7 +93,17 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
     }
 
     /**
-     * Create a sink of keypoints
+     * Create a keypoint source
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeKeypointSource}
+     */
+    static Source(name = undefined)
+    {
+        return new SpeedyPipelineNodeKeypointSource(name);
+    }
+
+    /**
+     * Create a keypoint sink
      * @param {string} [name]
      * @returns {SpeedyPipelineNodeKeypointSink}
      */

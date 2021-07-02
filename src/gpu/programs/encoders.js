@@ -69,7 +69,7 @@ const downloadKeypoints = importShader('utils/identity.glsl')
 
 // upload keypoints via UBO
 const uploadKeypoints = importShader('encoders/upload-keypoints.glsl')
-                       .withArguments('keypointCount', 'encoderLength', 'descriptorSize', 'extraSize')
+                       .withArguments('keypointCount', 'descriptorSize', 'extraSize', 'encoderLength')
                        .withDefines({
                            'KEYPOINT_BUFFER_LENGTH': KEYPOINT_BUFFER_LENGTH
                        });
@@ -110,7 +110,7 @@ export class GPUEncoders extends SpeedyProgramGroup
             .declare('_downloadEncodedKeypoints', downloadKeypoints, {
                 ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
             })
-            .declare('_uploadKeypoints', uploadKeypoints, {
+            .declare('uploadKeypoints', uploadKeypoints, {
                 ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
             })
         ;
@@ -200,7 +200,7 @@ export class GPUEncoders extends SpeedyProgramGroup
      * @param {number} encoderLength
      * @returns {SpeedyDrawableTexture} encodedKeypoints
      */
-    uploadKeypoints(keypoints, descriptorSize, extraSize, encoderLength)
+    uploadKeypointsOld(keypoints, descriptorSize, extraSize, encoderLength)
     {
         // Too many keypoints?
         const keypointCount = keypoints.length;
@@ -234,8 +234,8 @@ export class GPUEncoders extends SpeedyProgramGroup
         }
 
         // Upload data
-        this._uploadKeypoints.setOutputSize(encoderLength, encoderLength);
-        this._uploadKeypoints.setUBO('KeypointBuffer', this._uploadBuffer);
-        return this._uploadKeypoints(keypointCount, encoderLength, descriptorSize, extraSize);
+        this.uploadKeypoints.setOutputSize(encoderLength, encoderLength);
+        this.uploadKeypoints.setUBO('KeypointBuffer', this._uploadBuffer);
+        return this.uploadKeypoints(keypointCount, descriptorSize, extraSize, encoderLength);
     }
 }

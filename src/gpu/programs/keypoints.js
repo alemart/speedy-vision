@@ -91,6 +91,17 @@ const transferOrientation = importShader('keypoints/transfer-orientation.glsl')
 const suppressDescriptors = importShader('keypoints/suppress-descriptors.glsl')
                            .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'suppressedEncoderLength');
 
+const uploadKeypoints = importShader('keypoints/upload-keypoints.glsl')
+                       .withDefines({
+                            // UBOs can hold at least 16KB of data;
+                            // gl.MAX_UNIFORM_BLOCK_SIZE >= 16384
+                            // according to the GL ES 3 reference.
+                            // Each keypoint uses 16 bytes (vec4)
+                           'BUFFER_SIZE': 1024 //16384 / 16
+                        })
+                       .withArguments('encodedKeypoints', 'startIndex', 'endIndex', 'descriptorSize', 'extraSize', 'encoderLength');
+
+
 
 
 // --- OLD (TODO remove) ---
@@ -247,6 +258,9 @@ export class GPUKeypoints extends SpeedyProgramGroup
             .declare('expandEncoder', expandEncoder)
             .declare('transferOrientation', transferOrientation)
             .declare('suppressDescriptors', suppressDescriptors)
+            .declare('uploadKeypoints', uploadKeypoints, {
+                ...this.program.usesPingpongRendering()
+            })
 
 
 

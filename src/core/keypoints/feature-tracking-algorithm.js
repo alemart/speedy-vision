@@ -143,7 +143,7 @@ export class FeatureTrackingAlgorithm extends FeatureAlgorithm
     upload(gpu, keypoints)
     {
         const encoderLength = FeatureEncoder.minLength(keypoints.length, this.descriptorSize, this.extraSize);
-        return gpu.programs.encoders.uploadKeypoints(keypoints, this.descriptorSize, this.extraSize, encoderLength);
+        return gpu.programs.encoders.uploadKeypointsOld(keypoints, this.descriptorSize, this.extraSize, encoderLength);
     }
 
     /**
