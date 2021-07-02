@@ -331,4 +331,54 @@ describe('Feature detection', function() {
             expect(f1).toEqual(f2);
         });
     });
+
+    describe('Upload', function() {
+        const createPipeline = (keypoints) => {
+            const pipeline = Speedy.Pipeline();
+            const source = Speedy.Keypoint.Source();
+            const sink = Speedy.Keypoint.Sink();
+
+            source.keypoints = keypoints;
+            source.output().connectTo(sink.input());
+            pipeline.init(source, sink);
+
+            return pipeline;
+        }
+
+        it('gets you the same keypoints you have uploaded', async function() {
+            const myKeypoints = [
+                // TODO class?
+                // we lose precision on lod/score
+                {
+                    position: { x: 100, y: 200 },
+                    score: 1,
+                },
+                {
+                    position: { x: 10, y: 256 },
+                    score: 0,
+                },
+                {
+                    position: { x: 320, y: 320 },
+                    score: 1,
+                },
+                {
+                    position: { x: 400, y: 220 },
+                    score: 0,
+                },
+                {
+                    position: { x: 500, y: 250 },
+                    score: 1,
+                },
+            ];
+            const pipeline = createPipeline(myKeypoints);
+            const keypoints = (await pipeline.run()).keypoints;
+            const serialize = keypoints => JSON.stringify(
+                keypoints.map(keypoint => [keypoint.position.x, keypoint.position.y, keypoint.score])
+            );
+
+            print(`When uploading ${serialize(myKeypoints)}, we get ${serialize(keypoints)}`);
+
+            expect(serialize(keypoints)).toEqual(serialize(myKeypoints));
+        });
+    });
 });
