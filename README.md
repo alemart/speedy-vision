@@ -888,7 +888,7 @@ Harris corner detector. Speedy implements the Shi-Tomasi corner response for bes
 
 `Speedy.Keypoint.Detector.ORB(name?: string): SpeedyPipelineNodeORBKeypointDescriptor`
 
-ORB descriptors. In order to decrease the sensitivity to noise, you may use as input a pyramid of a blurred image.
+ORB descriptors. In order to improve robustness to noise, apply a Gaussian filter to the image before computing the descriptors.
 
 ###### Ports
 
@@ -897,6 +897,56 @@ ORB descriptors. In order to decrease the sensitivity to noise, you may use as i
 | `"pyramid"` | Image     | Input pyramid. Must be greyscale. |
 | `"keypoints"` | Keypoints | Input keypoints. |
 | `"out"`   | Keypoints | Described keypoints. |
+
+###### Example
+
+```js
+/*
+
+This is our pipeline:
+
+Image  ---> Convert to ---> Image ------> FAST corner -----> Keypoint ---> ORB ----------> Keypoint
+Source      greyscale       Pyramid       detector           Clipper       descriptors     Sink
+            |                                                               ^
+            |                                                               |
+            +----------> Gaussian -----------------> Image -----------------+
+                         Blur                        Pyramid
+*/
+
+const pipeline = Speedy.Pipeline();
+const source = Speedy.Image.Source();
+const greyscale = Speedy.Filter.Greyscale();
+const pyramid = Speedy.Image.Pyramid();
+const fast = Speedy.Keypoint.Detector.FAST();
+const gaussian = Speedy.Filter.GaussianBlur();
+const blurredPyramid = Speedy.Image.Pyramid();
+const clipper = Speedy.Keypoint.Clipper();
+const descriptor = Speedy.Keypoint.Descriptor.ORB();
+const sink = Speedy.Keypoint.Sink();
+
+source.media = media;
+gaussian.kernelSize = Speedy.Size(9, 9);
+gaussian.sigma = Speedy.Vector2(2, 2);
+fast.threshold = 50;
+fast.levels = 12; // pyramid levels
+fast.scaleFactor = 1.19; // approx. 2^0.25
+clipper.size = 800; // up to how many features?
+
+source.output().connectTo(greyscale.input());
+
+greyscale.output().connectTo(pyramid.input());
+pyramid.output().connectTo(fast.input());
+fast.output().connectTo(clipper.input());
+clipper.output().connectTo(descriptor.input('keypoints'));
+
+greyscale.output().connectTo(gaussian.input());
+gaussian.output().connectTo(blurredPyramid.input());
+blurredPyramid.output().connectTo(descriptor.input('pyramid'));
+
+descriptor.output().connectTo(sink.input());
+
+pipeline.init(source, greyscale, pyramid, gaussian, blurredPyramid, fast, clipper, descriptor, sink);
+```
 
 #### Keypoint tracking
 
