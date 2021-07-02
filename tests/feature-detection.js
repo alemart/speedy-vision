@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,11 @@ describe('Feature detection', function() {
     });
 
     beforeEach(async function() {
-        const image = [ await loadImage('masp.jpg'), await loadImage('square.png') ];
+        const image = [
+            await loadImage('masp.jpg'),
+            await loadImage('square.png')
+        ];
+
         media = await Speedy.load(image[0]);
         square = await Speedy.load(image[1]);
     });
@@ -38,74 +42,287 @@ describe('Feature detection', function() {
         await square.release();
     });
 
-    describe('FAST-9,16', function() {
-        const createFeatureDetector = () => Speedy.FeatureDetector.FAST(9);
+    function createKeypointDetectionPipeline(detector, media, maxKeypoints = 99999)
+    {
+        const pipeline = Speedy.Pipeline();
+        const source = Speedy.Image.Source();
+        const greyscale = Speedy.Filter.Greyscale();
+        const pyramid = Speedy.Image.Pyramid();
+        const clipper = Speedy.Keypoint.Clipper('clipper');
+        const sink = Speedy.Keypoint.Sink();
 
-        runGenericTests(createFeatureDetector);
-        runFastTests(createFeatureDetector);
-    });
+        source.media = media;
+        clipper.size = maxKeypoints;
 
-    describe('FAST-7,12', function() {
-        const createFeatureDetector = () => Speedy.FeatureDetector.FAST(7);
+        source.output().connectTo(greyscale.input());
+        greyscale.output().connectTo(pyramid.input());
+        pyramid.output().connectTo(detector.input());
+        detector.output().connectTo(clipper.input());
+        clipper.output().connectTo(sink.input());
 
-        runGenericTests(createFeatureDetector);
-        runFastTests(createFeatureDetector);
-    });
+        pipeline.init(source, greyscale, pyramid, detector, clipper, sink);
+        return pipeline;
+    }
 
-    describe('FAST-5,8', function() {
-        const createFeatureDetector = () => Speedy.FeatureDetector.FAST(5);
+    describe('FAST', function() {
+        const createPipeline = (media) => {
+            const fast = Speedy.Keypoint.Detector.FAST('fast');
+            return createKeypointDetectionPipeline(fast, media);
+        };
 
-        runGenericTests(createFeatureDetector);
-        runFastTests(createFeatureDetector);
-    });
+        it('finds the corners of a square', async function() {
+            const pipeline = createPipeline(square);
+            const features = (await pipeline.run()).keypoints;
+            const numFeatures = features.length;
 
-    describe('Multiscale FAST', function() {
-        const createFeatureDetector = () => Speedy.FeatureDetector.MultiscaleFAST();
+            print(`Found ${numFeatures} features`);
+            displayFeatures(square, features);
 
-        runGenericTests(createFeatureDetector);
-        runGenericMultiscaleTests(createFeatureDetector);
-        runFastTests(createFeatureDetector);
+            expect(numFeatures).toBeGreaterThanOrEqual(4);
+            pipeline.release();
+        });
+
+        it('finds features in multiple scales', async function() {
+            const pipeline = createPipeline(media);
+            const fast = pipeline.node('fast');
+
+            const depths = [1, 3, 5, 7];
+            for(const depth of depths) {
+                fast.threshold = 50;
+                fast.levels = depth;
+                fast.scaleFactor = Math.sqrt(2);
+                fast.capacity = 8192;
+
+                const set = new Set();
+                const features = (await pipeline.run()).keypoints;
+
+                for(let i = 0; i < features.length; i++)
+                    set.add(features[i].lod);
+
+                print(`With depth = ${depth}, we get ${features.length} features in ${set.size} different scales.`);
+                displayFeatures(media, features);
+
+                expect(set.size).toBeGreaterThanOrEqual(depth);
+            }
+
+            pipeline.release();
+        });
+
+        it('gets you less features if you increase the threshold', async function() {
+            const pipeline = createPipeline(media);
+            const fast = pipeline.node('fast');
+            let lastNumFeatures = 0;
+
+            const t = linspace(64, 4, 5);
+            for(const threshold of t) {
+
+                fast.threshold = threshold;
+                fast.capacity = 8192;
+
+                const features = (await pipeline.run()).keypoints;
+                const numFeatures = features.length;
+
+                print(`With threshold = ${threshold}, we get ${numFeatures} features.`);
+                displayFeatures(media, features);
+
+                expect(numFeatures).toBeGreaterThan(lastNumFeatures);
+                lastNumFeatures = numFeatures;
+            }
+            
+            expect(lastNumFeatures).toBeGreaterThan(0);
+
+            pipeline.release();
+        });
+
     });
 
     describe('Harris', function() {
-        const createFeatureDetector = () => Speedy.FeatureDetector.Harris();
+        const createPipeline = (media) => {
+            const harris = Speedy.Keypoint.Detector.Harris('harris');
+            return createKeypointDetectionPipeline(harris, media);
+        };
 
-        runGenericTests(createFeatureDetector);
-        runHarrisTests(createFeatureDetector);
+        it('finds the corners of a square', async function() {
+            const pipeline = createPipeline(square);
+            const features = (await pipeline.run()).keypoints;
+            const numFeatures = features.length;
+
+            print(`Found ${numFeatures} features`);
+            displayFeatures(square, features);
+
+            expect(numFeatures).toBeGreaterThanOrEqual(4);
+            pipeline.release();
+        });
+
+        it('finds features in multiple scales', async function() {
+            const pipeline = createPipeline(media);
+            const harris = pipeline.node('harris');
+
+            const depths = [1, 3, 5, 7];
+            for(const depth of depths) {
+                harris.quality = 0.10;
+                harris.levels = depth;
+                harris.scaleFactor = Math.sqrt(2);
+                harris.capacity = 8192;
+
+                const set = new Set();
+                const features = (await pipeline.run()).keypoints;
+
+                for(let i = 0; i < features.length; i++)
+                    set.add(features[i].lod);
+
+                print(`With depth = ${depth}, we get ${features.length} features in ${set.size} different scales.`);
+                displayFeatures(media, features);
+
+                expect(set.size).toBeGreaterThanOrEqual(depth);
+            }
+
+            pipeline.release();
+        });
+
+        it('gets you less features if you increase the quality', async function() {
+            const pipeline = createPipeline(media);
+            const harris = pipeline.node('harris');
+            let lastNumFeatures = 0;
+
+            const q = linspace(0.5, 0.1, 5);
+            for(const quality of q) {
+
+                harris.quality = quality;
+                harris.capacity = 8192;
+
+                const features = (await pipeline.run()).keypoints;
+                const numFeatures = features.length;
+
+                print(`With quality = ${quality}, we get ${numFeatures} features.`);
+                displayFeatures(media, features);
+
+                expect(numFeatures).toBeGreaterThan(lastNumFeatures);
+                lastNumFeatures = numFeatures;
+            }
+            
+            expect(lastNumFeatures).toBeGreaterThan(0);
+
+            pipeline.release();
+        });
     });
-
-    describe('Multiscale Harris', function () {
-        const createFeatureDetector = () => Speedy.FeatureDetector.MultiscaleHarris();
-
-        runGenericTests(createFeatureDetector);
-        runGenericMultiscaleTests(createFeatureDetector);
-        runHarrisTests(createFeatureDetector);
-    });
-
-    /*
-    describe('BRISK', function() {
-        const createFeatureDetector = () => Speedy.FeatureDetector.BRISK();
-
-        runGenericTests(createFeatureDetector);
-        runGenericMultiscaleTests(createFeatureDetector);
-        runGenericTestsForDescriptors(createFeatureDetector, 64);
-    });
-    */
 
     describe('ORB', function() {
-        const createFeatureDetector = () => Speedy.FeatureDetector.ORB();
+        const createPipeline = (media) => {
+            const pipeline = Speedy.Pipeline();
+            const source = Speedy.Image.Source();
+            const greyscale = Speedy.Filter.Greyscale();
+            const pyramid = Speedy.Image.Pyramid();
+            const fast = Speedy.Keypoint.Detector.FAST('fast');
+            const gaussian = Speedy.Filter.GaussianBlur();
+            const blurredPyramid = Speedy.Image.Pyramid();
+            const clipper = Speedy.Keypoint.Clipper('clipper');
+            const orb = Speedy.Keypoint.Descriptor.ORB();
+            const sink = Speedy.Keypoint.Sink();
 
-        runGenericTests(createFeatureDetector);
-        runGenericMultiscaleTests(createFeatureDetector);
-        runGenericTestsForDescriptors(createFeatureDetector, 32);
+            source.media = media;
+            gaussian.kernelSize = Speedy.Size(9, 9);
+            gaussian.sigma = Speedy.Vector2(2, 2);
+            fast.capacity = 8192;
+            fast.threshold = 80;
+            fast.levels = 12; // pyramid levels
+            fast.scaleFactor = 1.19; // approx. 2^0.25
+            //clipper.size = 800; // up to how many features?
+
+            source.output().connectTo(greyscale.input());
+
+            greyscale.output().connectTo(pyramid.input());
+            pyramid.output().connectTo(fast.input());
+            fast.output().connectTo(clipper.input());
+            clipper.output().connectTo(orb.input('keypoints'));
+
+            greyscale.output().connectTo(gaussian.input());
+            gaussian.output().connectTo(blurredPyramid.input());
+            blurredPyramid.output().connectTo(orb.input('pyramid'));
+
+            orb.output().connectTo(sink.input());
+
+            pipeline.init(source, greyscale, pyramid, gaussian, blurredPyramid, fast, clipper, orb, sink);
+            return pipeline;
+        }
+
+        it('computes a feature descriptor of 32 bytes', async function() {
+            const pipeline = createPipeline(media);
+            const features = (await pipeline.run()).keypoints;
+
+            print(`Found ${features.length} features of 32 bytes`);
+            displayFeatures(media, features);
+
+            for(let i = 0; i < features.length; i++)
+                expect(features[i].descriptor.length).toEqual(32);
+            expect(features.length).toBeGreaterThan(0);
+
+            pipeline.release();
+        });
+
+        it('computes different feature descriptors', async function() {
+            const set = new Set();
+            const pipeline = createPipeline(media);
+            const features = (await pipeline.run()).keypoints;
+
+            const uid = buffer => buffer.join(',');
+            for(let i = 0; i < features.length; i++)
+                set.add(uid(features[i].descriptor));
+
+            print(`Found ${set.size} different descriptors in ${features.length} features`);
+            displayFeatures(media, features);
+
+            expect(features.length).toBeGreaterThan(0);
+            expect(set.size / features.length).toBeGreaterThan(0.5);
+
+            pipeline.release();
+        });
+    });
+
+    describe('Clipper', function() {
+        const createPipeline = (media) => {
+            const fast = Speedy.Keypoint.Detector.FAST('fast');
+            return createKeypointDetectionPipeline(fast, media);
+        };
+
+        const tests = [0, 100, 300];
+        for(const max of tests) {
+            it(`finds up to ${max} features`, async function() {
+                const pipeline = createPipeline(media);
+                const clipper = pipeline.node('clipper');
+                const fast = pipeline.node('fast');
+
+                const t = [20, 30, 50];
+                for(const threshold of t) {
+                    fast.threshold = threshold;
+                    clipper.size = max;
+
+                    const features = (await pipeline.run()).keypoints;
+                    const numFeatures = features.length;
+
+                    print(`With FAST threshold = ${threshold.toFixed(2)} and max = ${max}, we find ${numFeatures} features`);
+                    displayFeatures(media, features);
+
+                    expect(numFeatures).toBeLessThanOrEqual(max);
+                }
+
+                pipeline.release();
+            });
+        }
     });
 
     describe('Context loss', function() {
+        const createPipeline = (media) => {
+            const fast = Speedy.Keypoint.Detector.FAST('fast');
+            return createKeypointDetectionPipeline(fast, media);
+        };
+
         it('recovers from WebGL context loss', async function() {
-            const featureDetector = Speedy.FeatureDetector.FAST();
-            const f1 = await featureDetector.detect(media);
-            await media._gpu.loseAndRestoreWebGLContext();
-            const f2 = await featureDetector.detect(media);
+            const pipeline = createPipeline(media);
+
+            const f1 = (await pipeline.run()).keypoints;
+            await pipeline._gpu.loseAndRestoreWebGLContext();
+            const f2 = (await pipeline.run()).keypoints;
 
             print('Lose WebGL context, repeat the algorithm');
             displayFeatures(media, f1, 'Before losing context');
@@ -114,251 +331,4 @@ describe('Feature detection', function() {
             expect(f1).toEqual(f2);
         });
     });
-
-
-
-
-
-
-    //
-    // Tests that apply to all methods
-    //
-
-    function runGenericTests(createFeatureDetector)
-    {
-        describe('generic tests', function() {
-            let featureDetector;
-
-            beforeEach(function() {
-                featureDetector = createFeatureDetector();
-            });
-
-            it('finds the corners of a square', async function() {
-                const features = await featureDetector.detect(square);
-                const numFeatures = features.length;
-
-                print(`Found ${numFeatures} features`);
-                displayFeatures(square, features);
-
-                expect(numFeatures).toBeGreaterThanOrEqual(4);
-            });
-
-            it('gets you more features if you increase the sensitivity', async function() {
-                const v = linspace(0, 0.8, 5);
-                let lastNumFeatures = 0;
-
-                for(const sensitivity of v) {
-                    const features = await repeat(1, () => {
-                        featureDetector.sensitivity = sensitivity;
-                        return featureDetector.detect(media);
-                    });
-                    const numFeatures = features.length;
-
-                    print(`With sensitivity = ${sensitivity.toFixed(2)}, we get ${numFeatures} features.`);
-                    displayFeatures(media, features);
-
-                    expect(numFeatures).toBeGreaterThanOrEqual(lastNumFeatures);
-                    lastNumFeatures = numFeatures;
-                }
-                
-                expect(lastNumFeatures).toBeGreaterThan(0);
-            });
-
-            describe('Maximum number of features', function() {
-                const tests = [0, 100, 300];
-
-                for(const max of tests) {
-                    it(`finds up to ${max} features`, async function() {
-                        const v = [0.5, 1.0];
-                        for(const sensitivity of v) {
-                            const features = await repeat(1, () => {
-                                featureDetector.sensitivity = sensitivity;
-                                featureDetector.max = max;
-                                return featureDetector.detect(media);
-                            });
-                            const numFeatures = features.length;
-
-                            print(`With sensitivity = ${sensitivity.toFixed(2)} and max = ${max}, we find ${numFeatures} features`);
-                            displayFeatures(media, features);
-
-                            expect(numFeatures).toBeLessThanOrEqual(max);
-                        }
-                    });
-                }
-            });
-        });
-    }
-
-
-
-    //
-    // Tests that apply to all multi-scale methods
-    //
-
-    function runGenericMultiscaleTests(createFeatureDetector)
-    {
-        describe('multiscale tests', function() {
-            let featureDetector;
-
-            beforeEach(function() {
-                featureDetector = createFeatureDetector();
-            });
-
-            it('gets you features in multiple scales', async function() {
-                const depths = [1, 2, 3, 4];
-
-                for(const depth of depths) {
-                    const set = new Set();
-                    const features = await repeat(1, () => {
-                        featureDetector.sensitivity = 0.95;
-                        featureDetector.depth = depth;
-                        return featureDetector.detect(media);
-                    });
-
-                    for(let i = 0; i < features.length; i++)
-                        set.add(features[i].lod);
-
-                    print(`With depth = ${depth}, we get ${features.length} features in ${set.size} different scales.`);
-                    displayFeatures(media, features);
-
-                    expect(set.size).toBeGreaterThanOrEqual(depth);
-                }
-            });
-        });
-    }
-
-
-    //
-    // Tests that apply to all FAST detectors
-    //
-
-    function runFastTests(createFeatureDetector)
-    {
-        describe('FAST tests', function() {
-            let featureDetector;
-
-            beforeEach(function() {
-                featureDetector = createFeatureDetector();
-            });
-
-            it('finds no features when the sensitivity is zero', async function() {
-                featureDetector.sensitivity = 0;
-
-                const features = await featureDetector.detect(square);
-                const numFeatures = features.length;
-
-                print(`Found ${numFeatures} features.`);
-                displayFeatures(square, features);
-
-                expect(numFeatures).toBe(0);
-            });
-
-            it('gets you less features if you increase the threshold', async function() {
-                const v = linspace(32, 4, 5);
-                let lastNumFeatures = 0;
-
-                for(const threshold of v) {
-                    const features = await repeat(1, () => {
-                        featureDetector.threshold = threshold;
-                        return featureDetector.detect(media);
-                    });
-                    const numFeatures = features.length;
-
-                    print(`With threshold = ${threshold}, we get ${numFeatures} features.`);
-                    displayFeatures(media, features);
-
-                    expect(numFeatures).toBeGreaterThan(lastNumFeatures);
-                    lastNumFeatures = numFeatures;
-                }
-                
-                expect(lastNumFeatures).toBeGreaterThan(0);
-            });
-        });
-    }
-
-
-
-    //
-    // Tests that apply to all Harris detectors
-    //
-
-    function runHarrisTests(createFeatureDetector)
-    {
-        describe('Harris tests', function() {
-            let featureDetector;
-
-            beforeEach(function() {
-                featureDetector = createFeatureDetector();
-            });
-
-            it('gets you less features if you increase the quality', async function() {
-                const v = linspace(1.0, 0.0, 5);
-                let lastNumFeatures = 0;
-
-                for(const quality of v) {
-                    const features = await repeat(1, () => {
-                        featureDetector.quality = quality;
-                        return featureDetector.detect(media);
-                    });
-                    const numFeatures = features.length;
-
-                    print(`With quality = ${quality.toFixed(2)}, we get ${numFeatures} features.`);
-                    displayFeatures(media, features);
-
-                    expect(numFeatures).toBeGreaterThan(lastNumFeatures);
-                    lastNumFeatures = numFeatures;
-                }
-                
-                expect(lastNumFeatures).toBeGreaterThan(0);
-            });
-        });
-    }
-
-
-
-
-    //
-    // Tests that apply to all feature descriptors
-    //
-
-    function runGenericTestsForDescriptors(createFeatureDescriptor, descriptorSize)
-    {
-        describe('Feature descriptor', function() {
-            let featureDescriptor;
-            const uid = function(buffer) {
-                let a = [];
-                for(let i = 0; i < buffer.length; i++)
-                    a.push(buffer[i]);
-                return a.join(',');
-            };
-
-            beforeEach(function() {
-                featureDescriptor = createFeatureDescriptor();
-            });
-
-            it('computes a feature descriptor of ' + descriptorSize + ' bytes', async function() {
-                const features = await featureDescriptor.detect(media);
-
-                for(let i = 0; i < features.length; i++)
-                    expect(features[i].descriptor.size).toEqual(descriptorSize);
-                expect(features.length).toBeGreaterThan(0);
-
-                print(`Found ${features.length} features of ${descriptorSize} bytes`);
-            });
-
-            it('computes different feature descriptors', async function() {
-                const features = await featureDescriptor.detect(media);
-                const set = new Set();
-
-                for(let i = 0; i < features.length; i++)
-                    set.add(uid(features[i].descriptor.data));
-
-                print(`Found ${set.size} different descriptors in ${features.length} features`);
-                displayFeatures(media, features);
-
-                expect(features.length).toBeGreaterThan(0);
-                expect(set.size / features.length).toBeGreaterThan(0.5);
-            });
-        });
-    }
 });
