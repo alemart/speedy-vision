@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,14 +22,23 @@
 @include "keypoints.glsl"
 
 uniform sampler2D offsetsImage;
-uniform sampler2D encodedKeypoints;
 uniform ivec2 imageSize;
+
 uniform int passId; // 0, 1, 2..., numPasses - 1
 uniform int numPasses; // >= 1
+
+uniform int keypointLimit; // clipping
+
+uniform sampler2D encodedKeypoints;
 uniform int descriptorSize;
 uniform int extraSize;
 uniform int encoderLength;
 
+/**
+ * Decode skip offset
+ * @param {vec4} pixel data
+ * @returns {int} skip offset
+ */
 #define decodeSkipOffset(pixel) (int((pixel).g * 255.0f) | (int((pixel).b * 255.0f) << 8))
 
 /**
@@ -81,27 +90,26 @@ void main()
     if(passId != targetPassId)
         return;
 
-    #if 1
     // find the position of the last keypoint of the last pass
     int lastIndexFromPrevPass = passId * maxKeypointsPerPass - 1;
     KeypointAddress lastAddressFromPrevPass = KeypointAddress(max(0, lastIndexFromPrevPass) * pixelsPerKeypoint, 0);
     Keypoint lastKeypointFromPrevPass = decodeKeypoint(encodedKeypoints, encoderLength, lastAddressFromPrevPass);
     ivec2 position = ivec2(lastKeypointFromPrevPass.position);
-    #else
+    /*
     // no optimization
     int lastIndexFromPrevPass = -1; ivec2 position = ivec2(0);
-    #endif
+    */
 
     // find the q-th keypoint, if it exists
     vec4 pixel;
     color = encodeNullKeypoint(); // end of list
-    if(q >= maxKeypoints || !findQthKeypoint(q, lastIndexFromPrevPass, position, pixel))
+    if(q >= min(maxKeypoints, keypointLimit) || !findQthKeypoint(q, lastIndexFromPrevPass, position, pixel))
         return;
 
     // write keypoint data
     color = (address.offset == 1) ? vec4(
         pixel.a, // scale
-        0.0f, // rotation
+        encodeOrientation(0.0f), // rotation
         pixel.r, // score
         encodeKeypointFlags(KPF_NONE) // flags
     ) : encodeKeypointPosition(

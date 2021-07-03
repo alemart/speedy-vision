@@ -87,11 +87,12 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
      */
     _encodeKeypoints(gpu, corners, encodedKeypoints)
     {
-        const encoders = gpu.programs.encoders;
-        const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(this._capacity, 0, 0);
+        const capacity = this._capacity;
+        const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(capacity, 0, 0);
         const width = corners.width, height = corners.height;
         const imageSize = [ width, height ];
         const tex = this._tex.slice(this._tex.length - 4);
+        const encoders = gpu.programs.encoders;
 
         // prepare programs
         encoders._encodeKeypointSkipOffsets.outputs(width, height, tex[0]);
@@ -122,7 +123,7 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         const numPasses = ENCODER_PASSES;
         let encodedKps = tex[3].clear();
         for(let passId = 0; passId < numPasses; passId++)
-            encodedKps = encoders._encodeKeypoints(offsets, encodedKps, imageSize, passId, numPasses, 0, 0, encoderLength);
+            encodedKps = encoders._encodeKeypoints(offsets, imageSize, passId, numPasses, capacity, encodedKps, 0, 0, encoderLength);
 
         // write to encodedKeypoints
         encodedKeypoints.resize(encoderLength, encoderLength);

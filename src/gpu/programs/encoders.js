@@ -28,7 +28,7 @@ import { FeatureEncoder } from '../../core/keypoints/feature-encoder';
 import { Utils } from '../../utils/utils'
 import { SpeedyPromise } from '../../utils/speedy-promise'
 import { IllegalOperationError, NotSupportedError } from '../../utils/errors';
-import { MIN_KEYPOINT_SIZE, INITIAL_ENCODER_LENGTH } from '../../utils/globals';
+import { MIN_KEYPOINT_SIZE, INITIAL_ENCODER_LENGTH, MAX_ENCODER_CAPACITY } from '../../utils/globals';
 
 // Constants
 const MIN_PIXELS_PER_KEYPOINT = MIN_KEYPOINT_SIZE / 4; // encodes a keypoint header
@@ -57,7 +57,7 @@ const encodeKeypointLongSkipOffsets = importShader('encoders/encode-keypoint-lon
 
 // encode keypoints
 const encodeKeypoints = importShader('encoders/encode-keypoints.glsl')
-                       .withArguments('offsetsImage', 'encodedKeypoints', 'imageSize', 'passId', 'numPasses', 'descriptorSize', 'extraSize', 'encoderLength');
+                       .withArguments('offsetsImage', 'imageSize', 'passId', 'numPasses', 'keypointLimit', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 // resize encoded keypoints
 const resizeEncodedKeypoints = importShader('encoders/resize-encoded-keypoints.glsl')
@@ -156,6 +156,7 @@ export class GPUEncoders extends SpeedyProgramGroup
         */
 
         // encode keypoints
+        const keypointLimit = MAX_ENCODER_CAPACITY;
         const numPasses = ENCODER_PASSES;
         const pixelsPerKeypointHeader = MIN_PIXELS_PER_KEYPOINT;
         const keypointCapacity = FeatureEncoder.capacity(descriptorSize, extraSize, encoderLength);
@@ -163,7 +164,7 @@ export class GPUEncoders extends SpeedyProgramGroup
         this._encodeKeypoints.setOutputSize(headerEncoderLength, headerEncoderLength);
         let encodedKeypointHeaders = this._encodeKeypoints.clear();
         for(let passId = 0; passId < numPasses; passId++)
-            encodedKeypointHeaders = this._encodeKeypoints(offsets, encodedKeypointHeaders, imageSize, passId, numPasses, 0, 0, headerEncoderLength);
+            encodedKeypointHeaders = this._encodeKeypoints(offsets, imageSize, passId, numPasses, keypointLimit, encodedKeypointHeaders, 0, 0, headerEncoderLength);
 
         // transfer keypoints to a elastic tiny texture with storage for descriptors & extra data
         this._resizeEncodedKeypoints.setOutputSize(encoderLength, encoderLength);
