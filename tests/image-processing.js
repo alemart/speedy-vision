@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * pipeline.js
+ * image-processing.js
  * Unit testing
  */
 
-describe('SpeedyPipeline', function() {
+describe('Image processing', function() {
     let pipeline;
-    let media;
+    let media, square;
 
     beforeEach(function() {
         jasmine.addMatchers(speedyMatchers);
@@ -30,10 +30,15 @@ describe('SpeedyPipeline', function() {
     beforeEach(async function() {
         const image = await loadImage('speedy-wall.jpg');
         media = await Speedy.load(image);
+
+        const sqr = await loadImage('square.png');
+        square = await Speedy.load(sqr);
+
         pipeline = Speedy.Pipeline();
     });
 
     afterEach(async function() {
+        square.release();
         media.release();
     });
 
@@ -131,16 +136,6 @@ describe('SpeedyPipeline', function() {
     });
 
     describe('Convolution', function() {
-        let square;
-
-        beforeEach(async function() {
-            const img = await loadImage('square.png');
-            square = await Speedy.load(img);
-        });
-
-        afterEach(async function() {
-            square.release();
-        });
 
         it('convolves with identity kernels', async function() {
             const source = Speedy.Image.Source();
@@ -458,6 +453,35 @@ describe('SpeedyPipeline', function() {
             pipeline.release();
         });
 
+    });
+
+    it('bufferizes an image', async function() {
+        const source = Speedy.Image.Source();
+        const buffer = Speedy.Image.Buffer();
+        const sink = Speedy.Image.Sink();
+
+        source.output().connectTo(buffer.input());
+        buffer.output().connectTo(sink.input());
+        pipeline.init(source, buffer, sink);
+
+        const src = [ media, square, media, square, square ];
+        const n = src.length;
+        const input = new Array(n);
+        const output = new Array(n);
+        let t;
+
+        for(t = 0; t < n; t++) {
+            input[t] = source.media = src[t];
+            output[t] = (await pipeline.run()).image;
+
+            print(`Input / Output at time ${t}`);
+            display(input[t], `Input at time ${t}`);
+            display(output[t], `Output at time ${t}`);
+        }
+
+        expect(imerr(input[0], output[0])).toBeAnAcceptableImageError();
+        for(t = 1; t < n; t++)
+            expect(imerr(input[t-1], output[t])).toBeAnAcceptableImageError();
     });
 
     it('recovers from WebGL context loss', async function() {
