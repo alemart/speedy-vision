@@ -61,6 +61,7 @@ window.onload = async function()
     const sink = Speedy.Keypoint.Sink();
 
     source.media = media;
+    harris.capacity = 8192;
 
     source.output().connectTo(greyscale.input());
     greyscale.output().connectTo(pyramid.input());
