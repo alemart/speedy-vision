@@ -29,13 +29,13 @@
  * @param {number} angle in radians between -PI and PI
  * @returns {number}
  */
-#define encodeOrientation(angle) ((angle) * INV_PI + 1.0f) * 0.5f
+#define encodeOrientation(angle) (((angle) * INV_PI + 1.0f) * 0.5f)
 
 /**
  * Convert a normalized value in [0,1] to an angle in radians
  * @param {number} value in [0,1]
  * @returns {number}
  */
-#define decodeOrientation(value) ((value) * 2.0f - 1.0f) * PI
+#define decodeOrientation(value) (((value) * 2.0f - 1.0f) * PI)
 
 #endif
