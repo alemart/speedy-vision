@@ -23,6 +23,7 @@ import { SpeedyNamespace } from '../../speedy-namespace';
 import { SpeedyPipelineNodeImageSource } from '../nodes/images/source';
 import { SpeedyPipelineNodeImageSink } from '../nodes/images/sink';
 import { SpeedyPipelineNodeImageMultiplexer } from '../nodes/images/multiplexer';
+import { SpeedyPipelineNodeImageBuffer } from '../nodes/images/buffer';
 import { SpeedyPipelineNodeImagePyramid } from '../nodes/images/pyramid';
 
 /**
@@ -58,6 +59,16 @@ export class SpeedyPipelineImageFactory extends SpeedyNamespace
     static Multiplexer(name = undefined)
     {
         return new SpeedyPipelineNodeImageMultiplexer(name);
+    }
+
+    /**
+     * Create an image buffer
+     * @param {string} [name] name of the node
+     * @returns {SpeedyPipelineNodeImageBuffer}
+     */
+    static Buffer(name = undefined)
+    {
+        return new SpeedyPipelineNodeImageBuffer(name);
     }
 
     /**
