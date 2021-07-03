@@ -329,56 +329,94 @@ describe('Feature detection', function() {
             displayFeatures(media, f2, 'After losing context');
 
             expect(f1).toEqual(f2);
+
+            pipeline.release();
         });
     });
 
-    describe('Upload', function() {
-        const createPipeline = (keypoints) => {
-            const pipeline = Speedy.Pipeline();
-            const source = Speedy.Keypoint.Source();
-            const sink = Speedy.Keypoint.Sink();
+    describe('Uploads & buffers', function() {
+        const serialize = keypoints => JSON.stringify(
+            keypoints.map(keypoint => [keypoint.position.x, keypoint.position.y, keypoint.score])
+        );
 
-            source.keypoints = keypoints;
-            source.output().connectTo(sink.input());
-            pipeline.init(source, sink);
-
-            return pipeline;
-        }
+        const testKeypoints = [
+            // TODO class?
+            // we lose precision on lod & score when uploading
+            {
+                position: { x: 100, y: 200 },
+                score: 1,
+            },
+            {
+                position: { x: 10, y: 256 },
+                score: 0,
+            },
+            {
+                position: { x: 320, y: 320 },
+                score: 1,
+            },
+            {
+                position: { x: 400, y: 220 },
+                score: 0,
+            },
+            {
+                position: { x: 500, y: 250 },
+                score: 1,
+            },
+        ];
 
         it('gets you the same keypoints you have uploaded', async function() {
-            const myKeypoints = [
-                // TODO class?
-                // we lose precision on lod/score
-                {
-                    position: { x: 100, y: 200 },
-                    score: 1,
-                },
-                {
-                    position: { x: 10, y: 256 },
-                    score: 0,
-                },
-                {
-                    position: { x: 320, y: 320 },
-                    score: 1,
-                },
-                {
-                    position: { x: 400, y: 220 },
-                    score: 0,
-                },
-                {
-                    position: { x: 500, y: 250 },
-                    score: 1,
-                },
-            ];
-            const pipeline = createPipeline(myKeypoints);
+            const createPipeline = (keypoints) => {
+                const pipeline = Speedy.Pipeline();
+                const source = Speedy.Keypoint.Source();
+                const sink = Speedy.Keypoint.Sink();
+
+                source.keypoints = keypoints;
+                source.output().connectTo(sink.input());
+                pipeline.init(source, sink);
+
+                return pipeline;
+            };
+
+            const pipeline = createPipeline(testKeypoints);
             const keypoints = (await pipeline.run()).keypoints;
-            const serialize = keypoints => JSON.stringify(
-                keypoints.map(keypoint => [keypoint.position.x, keypoint.position.y, keypoint.score])
-            );
 
-            print(`When uploading ${serialize(myKeypoints)}, we get ${serialize(keypoints)}`);
+            print(`When uploading ${serialize(testKeypoints)}, we get ${serialize(keypoints)} back`);
+            expect(serialize(keypoints)).toEqual(serialize(testKeypoints));
 
-            expect(serialize(keypoints)).toEqual(serialize(myKeypoints));
+            pipeline.release();
+        });
+
+        it('bufferizes keypoints correctly', async function() {
+            const createPipeline = () => {
+                const pipeline = Speedy.Pipeline();
+                const source = Speedy.Keypoint.Source('source');
+                const buffer = Speedy.Keypoint.Buffer();
+                const sink = Speedy.Keypoint.Sink();
+
+                source.output().connectTo(buffer.input());
+                buffer.output().connectTo(sink.input());
+                pipeline.init(source, buffer, sink);
+
+                return pipeline;
+            };
+
+            const pipeline = createPipeline();
+            const source = pipeline.node('source');
+            const n = 1 + testKeypoints.length;
+            const input = new Array(n);
+            const output = new Array(n);
+            let t;
+
+            for(t = 0; t < n; t++) {
+                input[t] = source.keypoints = testKeypoints.slice(t);
+                output[t] = (await pipeline.run()).keypoints;
+
+                print(`At time ${t}, we uploaded ${serialize(input[t])} and got ${serialize(output[t])} back`);
+            }
+
+            expect(serialize(output[0])).toEqual(serialize(input[0]));
+            for(t = 1; t < n; t++)
+                expect(serialize(output[t])).toEqual(serialize(input[t-1]));
         });
     });
 });
