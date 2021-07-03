@@ -32,7 +32,7 @@ import { SpeedyKeypoint } from '../../../speedy-keypoint';
 
 // Constants
 const UBO_MAX_BYTES = 16384; // UBOs can hold at least 16KB of data: gl.MAX_UNIFORM_BLOCK_SIZE >= 16384 according to the GL ES 3 reference
-const BUFFER_SIZE = 1024; // how many keypoints we can upload in one pass of the shader
+const BUFFER_SIZE = 1024; // how many keypoints we can upload in one pass of the shader (as defined in the shader program)
 const SIZEOF_VEC4 = Float32Array.BYTES_PER_ELEMENT * 4; // 16 bytes
 
 /**
@@ -145,8 +145,8 @@ export class SpeedyPipelineNodeKeypointSource extends SpeedyPipelineSourceNode
 
             // Format data as follows:
             // vec4(xpos, ypos, lod, score)
-            buffer[j]   = +(keypoint.x) || 0;
-            buffer[j+1] = +(keypoint.y) || 0;
+            buffer[j]   = +(keypoint.position.x) || 0;
+            buffer[j+1] = +(keypoint.position.y) || 0;
             buffer[j+2] = +(keypoint.lod) || 0;
             buffer[j+3] = +(keypoint.score) || 0;
         }
