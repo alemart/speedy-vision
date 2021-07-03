@@ -81,6 +81,10 @@ export class SpeedyPipelineNodeImageBuffer extends SpeedyPipelineNode
         const previousInputTexture = page[1 - this._pageIndex];
         const outputTexture = page[this._pageIndex];
 
+        // can't store pyramids
+        if(image.hasMipmaps())
+            throw new NotSupportedError(`Can't bufferize a pyramid`);
+
         // store input
         this._previousFormat = format;
         previousInputTexture.resize(image.width, image.height);
