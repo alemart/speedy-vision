@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-07-03T03:40:55.593Z
+ * Date: 2021-07-04T04:12:11.579Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -10230,9 +10230,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _nodes_keypoints_sink__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../nodes/keypoints/sink */ "./src/core/pipeline/nodes/keypoints/sink.js");
 /* harmony import */ var _nodes_keypoints_clipper__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../nodes/keypoints/clipper */ "./src/core/pipeline/nodes/keypoints/clipper.js");
 /* harmony import */ var _nodes_keypoints_buffer__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../nodes/keypoints/buffer */ "./src/core/pipeline/nodes/keypoints/buffer.js");
-/* harmony import */ var _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../nodes/keypoints/detectors/fast */ "./src/core/pipeline/nodes/keypoints/detectors/fast.js");
-/* harmony import */ var _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../nodes/keypoints/detectors/harris */ "./src/core/pipeline/nodes/keypoints/detectors/harris.js");
-/* harmony import */ var _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/orb */ "./src/core/pipeline/nodes/keypoints/descriptors/orb.js");
+/* harmony import */ var _nodes_keypoints_mixer__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../nodes/keypoints/mixer */ "./src/core/pipeline/nodes/keypoints/mixer.js");
+/* harmony import */ var _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../nodes/keypoints/detectors/fast */ "./src/core/pipeline/nodes/keypoints/detectors/fast.js");
+/* harmony import */ var _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../nodes/keypoints/detectors/harris */ "./src/core/pipeline/nodes/keypoints/detectors/harris.js");
+/* harmony import */ var _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/orb */ "./src/core/pipeline/nodes/keypoints/descriptors/orb.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -10263,6 +10264,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /**
  * Keypoint detectors
  */
@@ -10275,7 +10277,7 @@ class SpeedyPipelineKeypointDetectorFactory extends _speedy_namespace__WEBPACK_I
      */
     static FAST(name = undefined)
     {
-        return new _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_5__["SpeedyPipelineNodeFASTKeypointDetector"](name);
+        return new _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_6__["SpeedyPipelineNodeFASTKeypointDetector"](name);
     }
 
     /**
@@ -10285,7 +10287,7 @@ class SpeedyPipelineKeypointDetectorFactory extends _speedy_namespace__WEBPACK_I
      */
     static Harris(name = undefined)
     {
-        return new _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_6__["SpeedyPipelineNodeHarrisKeypointDetector"](name);
+        return new _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_7__["SpeedyPipelineNodeHarrisKeypointDetector"](name);
     }
 }
 
@@ -10301,7 +10303,7 @@ class SpeedyPipelineKeypointDescriptorFactory extends _speedy_namespace__WEBPACK
      */
     static ORB(name = undefined)
     {
-        return new _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_7__["SpeedyPipelineNodeORBKeypointDescriptor"](name);
+        return new _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_8__["SpeedyPipelineNodeORBKeypointDescriptor"](name);
     }
 }
 
@@ -10366,6 +10368,16 @@ class SpeedyPipelineKeypointFactory extends _speedy_namespace__WEBPACK_IMPORTED_
     static Buffer(name = undefined)
     {
         return new _nodes_keypoints_buffer__WEBPACK_IMPORTED_MODULE_4__["SpeedyPipelineNodeKeypointBuffer"](name);
+    }
+
+    /**
+     * Create a keypoint mixer
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeKeypointMixer}
+     */
+    static Mixer(name = undefined)
+    {
+        return new _nodes_keypoints_mixer__WEBPACK_IMPORTED_MODULE_5__["SpeedyPipelineNodeKeypointMixer"](name);
     }
 }
 
@@ -11662,6 +11674,10 @@ class SpeedyPipelineNodeImageBuffer extends _pipeline_node__WEBPACK_IMPORTED_MOD
         const page = this._tex;
         const previousInputTexture = page[1 - this._pageIndex];
         const outputTexture = page[this._pageIndex];
+
+        // can't store pyramids
+        if(image.hasMipmaps())
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__["NotSupportedError"](`Can't bufferize a pyramid`);
 
         // store input
         this._previousFormat = format;
@@ -13221,6 +13237,151 @@ class SpeedyPipelineNodeHarrisKeypointDetector extends _detector__WEBPACK_IMPORT
 
         // done!
         this.output().swrite(encodedKeypoints, 0, 0, encoderLength);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/keypoints/mixer.js":
+/*!****************************************************!*\
+  !*** ./src/core/pipeline/nodes/keypoints/mixer.js ***!
+  \****************************************************/
+/*! exports provided: SpeedyPipelineNodeKeypointMixer */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeKeypointMixer", function() { return SpeedyPipelineNodeKeypointMixer; });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _detectors_detector__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./detectors/detector */ "./src/core/pipeline/nodes/keypoints/detectors/detector.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture_reader__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../gpu/speedy-texture-reader */ "./src/gpu/speedy-texture-reader.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * mixer.js
+ * Keypoint Mixer
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Constants
+const LOG2_STRIDE = 5;
+
+
+
+/**
+ * Keypoint Mixer: merges two sets of keypoints
+ */
+class SpeedyPipelineNodeKeypointMixer extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNode"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, 4, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__["InputPort"])('in0').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineMessageType"].Keypoints),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__["InputPort"])('in1').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineMessageType"].Keypoints),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineMessageType"].Keypoints)
+        ]);
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const kps0 = this.input('in0').read();
+        const kps1 = this.input('in1').read();
+        const descriptorSize = kps0.descriptorSize;
+        const extraSize = kps0.extraSize;
+        const keypoints = gpu.programs.keypoints;
+        const outputTexture = this._outputTexture;
+        const tex = this._tex;
+
+        // ensure that the format of kps0 equals the format of kps1
+        if(!(kps0.descriptorSize === kps1.descriptorSize && kps0.extraSize === kps0.extraSize))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["IllegalOperationError"](`Can't merge two sets of keypoints that have different formats`);
+
+        // find the capacity of kps0 + kps1
+        const cap0 = _detectors_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodeKeypointDetector"].encoderCapacity(kps0.descriptorSize, kps0.extraSize, kps0.encoderLength);
+        const cap1 = _detectors_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodeKeypointDetector"].encoderCapacity(kps1.descriptorSize, kps1.extraSize, kps1.encoderLength);
+        const capacity = cap0 + cap1;
+
+        // find the dimensions of the output texture
+        const encoderLength = _detectors_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodeKeypointDetector"].encoderLength(capacity, descriptorSize, extraSize);
+
+        // mix keypoints
+        keypoints.mixKeypoints.outputs(encoderLength, encoderLength, tex[3]);
+        const mixedKeypoints = keypoints.mixKeypoints(
+            [ kps0.encodedKeypoints, kps1.encodedKeypoints ],
+            [ kps0.encoderLength, kps1.encoderLength ],
+            [ cap0, cap1 ],
+            descriptorSize,
+            extraSize,
+            encoderLength
+        );
+
+        // find the dimensions of the sorting shaders
+        const stride = 1 << LOG2_STRIDE; // must be a power of 2
+        const height = Math.ceil(capacity / stride);
+        const numberOfPixels = stride * height;
+
+        // generate permutation of keypoints
+        keypoints.sortCreatePermutation.outputs(stride, height, tex[0]);
+        let permutation = keypoints.sortCreatePermutation(mixedKeypoints, descriptorSize, extraSize, encoderLength);
+
+        // sort permutation
+        const numPasses = Math.ceil(Math.log2(numberOfPixels));
+        keypoints.sortMergePermutation.outputs(stride, height, tex[1], tex[2]);
+        for(let i = 1; i <= numPasses; i++) {
+            const blockSize = 1 << i; // 2, 4, 8...
+            const dblLog2BlockSize = i << 1; // 2 * log2(blockSize)
+            permutation = keypoints.sortMergePermutation(permutation, blockSize, dblLog2BlockSize);
+        }
+
+        // apply permutation
+        keypoints.sortApplyPermutation.outputs(encoderLength, encoderLength, outputTexture);
+        keypoints.sortApplyPermutation(permutation, capacity, mixedKeypoints, descriptorSize, extraSize);
+
+        // done!
+        this.output().swrite(outputTexture, descriptorSize, extraSize, encoderLength);
     }
 }
 
@@ -19542,6 +19703,9 @@ const uploadKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__[
                         })
                        .withArguments('encodedKeypoints', 'startIndex', 'endIndex', 'descriptorSize', 'extraSize', 'encoderLength');
 
+const mixKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/mix-keypoints.glsl')
+                    .withArguments('encodedKeypoints', 'encoderLength', 'encoderCapacity', 'descriptorSize', 'extraSize', 'outEncoderLength');
+
 
 
 
@@ -19702,6 +19866,7 @@ class GPUKeypoints extends _speedy_program_group__WEBPACK_IMPORTED_MODULE_0__["S
             .declare('uploadKeypoints', uploadKeypoints, {
                 ...this.program.usesPingpongRendering()
             })
+            .declare('mixKeypoints', mixKeypoints)
 
 
 
@@ -21201,6 +21366,7 @@ var map = {
 	"./keypoints/harris/encode-harris-score.glsl": "./src/gpu/shaders/keypoints/harris/encode-harris-score.glsl",
 	"./keypoints/harris/multiscale-harris.glsl": "./src/gpu/shaders/keypoints/harris/multiscale-harris.glsl",
 	"./keypoints/harris/multiscale-sobel.glsl": "./src/gpu/shaders/keypoints/harris/multiscale-sobel.glsl",
+	"./keypoints/mix-keypoints.glsl": "./src/gpu/shaders/keypoints/mix-keypoints.glsl",
 	"./keypoints/nonmax-suppression.glsl": "./src/gpu/shaders/keypoints/nonmax-suppression.glsl",
 	"./keypoints/orb-descriptor.glsl": "./src/gpu/shaders/keypoints/orb-descriptor.glsl",
 	"./keypoints/orb-orientation.glsl": "./src/gpu/shaders/keypoints/orb-orientation.glsl",
@@ -21884,6 +22050,17 @@ module.exports = "@include \"sobel.glsl\"\n@include \"pyramids.glsl\"\nuniform s
 
 /***/ }),
 
+/***/ "./src/gpu/shaders/keypoints/mix-keypoints.glsl":
+/*!******************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/mix-keypoints.glsl ***!
+  \******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints[2];\nuniform int encoderLength[2];\nuniform int encoderCapacity[2];\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int outEncoderLength;\nvoid main()\n{\nivec2 thread = threadLocation();\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress outAddr = findKeypointAddress(thread, outEncoderLength, descriptorSize, extraSize);\nint outIndex = findKeypointIndex(outAddr, descriptorSize, extraSize);\nint encoderIndex = int(outIndex >= encoderCapacity[0]);\nint inIndex = (outIndex - encoderCapacity[0] * encoderIndex);\nKeypointAddress inAddr = KeypointAddress(\ninIndex * pixelsPerKeypoint,\noutAddr.offset\n);\nvec4 data[2] = vec4[2](\nreadKeypointData(encodedKeypoints[0], encoderLength[0], inAddr),\nreadKeypointData(encodedKeypoints[1], encoderLength[1], inAddr)\n);\ncolor = data[encoderIndex];\n}"
+
+/***/ }),
+
 /***/ "./src/gpu/shaders/keypoints/nonmax-suppression.glsl":
 /*!***********************************************************!*\
   !*** ./src/gpu/shaders/keypoints/nonmax-suppression.glsl ***!
@@ -21957,7 +22134,7 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D permutation;\nu
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nstruct PermutationElement\n{\nint keypointIndex;\nfloat score;\nbool valid;\n};\nvec4 encodePermutationElement(PermutationElement element)\n{\nfloat valid = float(element.valid);\nfloat score = clamp(element.score, 0.0f, 1.0f);\nvec2 encodedIndex = vec2(element.keypointIndex & 255, (element.keypointIndex >> 8) & 255) / 255.0f;\nreturn vec4(encodedIndex, score, valid);\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nint stride = outputSize().x;\nint keypointIndex = thread.y * stride + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nPermutationElement element;\nelement.valid = (keypoint.score > 0.0f);\nelement.score = keypoint.score;\nelement.keypointIndex = keypointIndex;\ncolor = encodePermutationElement(element);\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nstruct PermutationElement\n{\nint keypointIndex;\nfloat score;\nbool valid;\n};\nvec4 encodePermutationElement(PermutationElement element)\n{\nfloat valid = float(element.valid);\nfloat score = clamp(element.score, 0.0f, 1.0f);\nvec2 encodedIndex = vec2(element.keypointIndex & 255, (element.keypointIndex >> 8) & 255) / 255.0f;\nreturn vec4(encodedIndex, score, valid);\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nint stride = outputSize().x;\nint keypointIndex = thread.y * stride + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nPermutationElement element;\nelement.valid = !isBadKeypoint(keypoint);\nelement.score = keypoint.score;\nelement.keypointIndex = keypointIndex;\ncolor = encodePermutationElement(element);\n}"
 
 /***/ }),
 
