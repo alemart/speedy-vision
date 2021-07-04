@@ -50,5 +50,6 @@ void main()
     );
 
     // need further sorting (there will be null keypoints in the middle)
-    color = data[encoderIndex];
+    bool valid = (inIndex < max(encoderCapacity[0], encoderCapacity[1]));
+    color = valid ? data[encoderIndex] : encodeNullKeypoint();
 }
