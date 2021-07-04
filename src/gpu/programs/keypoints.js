@@ -101,6 +101,9 @@ const uploadKeypoints = importShader('keypoints/upload-keypoints.glsl')
                         })
                        .withArguments('encodedKeypoints', 'startIndex', 'endIndex', 'descriptorSize', 'extraSize', 'encoderLength');
 
+const mixKeypoints = importShader('keypoints/mix-keypoints.glsl')
+                    .withArguments('encodedKeypoints', 'encoderLength', 'encoderCapacity', 'descriptorSize', 'extraSize', 'outEncoderLength');
+
 
 
 
@@ -261,6 +264,7 @@ export class GPUKeypoints extends SpeedyProgramGroup
             .declare('uploadKeypoints', uploadKeypoints, {
                 ...this.program.usesPingpongRendering()
             })
+            .declare('mixKeypoints', mixKeypoints)
 
 
 

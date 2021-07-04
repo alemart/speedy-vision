@@ -418,5 +418,37 @@ describe('Feature detection', function() {
             for(t = 1; t < n; t++)
                 expect(serialize(output[t])).toEqual(serialize(input[t-1]));
         });
+
+        it('mixes keypoints correctly', async function() {
+            const cmp = (a, b) => (a.position.x - b.position.x) || (a.position.y - b.position.y);
+            const createPipeline = () => {
+                const pipeline = Speedy.Pipeline();
+                const source0 = Speedy.Keypoint.Source('source0');
+                const source1 = Speedy.Keypoint.Source('source1');
+                const mixer = Speedy.Keypoint.Mixer();
+                const sink = Speedy.Keypoint.Sink();
+
+                source0.output().connectTo(mixer.input('in0'));
+                source1.output().connectTo(mixer.input('in1'));
+                mixer.output().connectTo(sink.input());
+                pipeline.init(source0, source1, mixer, sink);
+
+                return pipeline;
+            };
+
+            const pipeline = createPipeline();
+            const source0 = pipeline.node('source0');
+            const source1 = pipeline.node('source1');
+
+            for(let i = 0; i <= testKeypoints.length; i++) {
+                source0.keypoints = testKeypoints.slice(0, i);
+                source1.keypoints = testKeypoints.slice(i);
+
+                const output = (await pipeline.run()).keypoints;
+
+                print(`When merging ${serialize(source0.keypoints)} and ${serialize(source1.keypoints)}, we get ${serialize(output.sort(cmp))}`);
+                expect(serialize(output.sort(cmp))).toEqual(serialize(testKeypoints.sort(cmp)));
+            }
+        });
     });
 });
