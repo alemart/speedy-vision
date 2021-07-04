@@ -78,7 +78,7 @@ void main()
     Keypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);
 
     PermutationElement element;
-    element.valid = (keypoint.score > 0.0f); // is this keypoint valid?
+    element.valid = !isBadKeypoint(keypoint); // is this keypoint valid?
     element.score = keypoint.score;
     element.keypointIndex = keypointIndex;
 
