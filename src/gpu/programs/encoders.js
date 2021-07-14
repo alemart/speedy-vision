@@ -59,6 +59,9 @@ const encodeKeypointLongSkipOffsets = importShader('encoders/encode-keypoint-lon
 const encodeKeypoints = importShader('encoders/encode-keypoints.glsl')
                        .withArguments('offsetsImage', 'imageSize', 'passId', 'numPasses', 'keypointLimit', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
+// encode null keypoints
+const encodeNullKeypoints = importShader('encoders/encode-null-keypoints.glsl');
+
 // resize encoded keypoints
 const resizeEncodedKeypoints = importShader('encoders/resize-encoded-keypoints.glsl')
                               .withArguments('inputTexture', 'inputDescriptorSize', 'inputExtraSize', 'inputEncoderLength', 'outputDescriptorSize', 'outputExtraSize', 'outputEncoderLength');
@@ -103,6 +106,9 @@ export class GPUEncoders extends SpeedyProgramGroup
             .declare('_encodeKeypoints', encodeKeypoints, {
                 ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH),
                 ...this.program.usesPingpongRendering()
+            })
+            .declare('_encodeNullKeypoints', encodeNullKeypoints, {
+                ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
             })
             .declare('_resizeEncodedKeypoints', resizeEncodedKeypoints, {
                 ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)

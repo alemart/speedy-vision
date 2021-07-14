@@ -85,6 +85,7 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
         const image = this.input().read().image;
         const width = image.width, height = image.height;
         const tex = this._tex;
+        const capacity = this._capacity;
         const threshold = this._threshold;
         const lodStep = Math.log2(this.scaleFactor);
         const levels = this.levels;
@@ -94,6 +95,14 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
         // validate pyramid
         if(!(levels == 1 || image.hasMipmaps()))
             throw new IllegalOperationError(`Expected a pyramid in ${this.fullName}`);
+
+        // skip if the capacity is zero
+        if(capacity == 0) {
+            const encodedKeypoints = this._encodeZeroKeypoints(gpu, this._outputTexture);
+            const encoderLength = encodedKeypoints.width;
+            this.output().swrite(encodedKeypoints, 0, 0, encoderLength);
+            return;
+        }
 
         // FAST
         keypoints.fast9_16.outputs(width, height, tex[0], tex[1]);

@@ -31,6 +31,7 @@ import { MIN_KEYPOINT_SIZE, MIN_ENCODER_LENGTH, MAX_ENCODER_CAPACITY } from '../
 // Constants
 const ENCODER_PASSES = 8; // number of passes of the keypoint encoder: directly impacts performance
 const LONG_SKIP_OFFSET_PASSES = 2; // number of passes of the long skip offsets shader
+const MAX_CAPACITY = MAX_ENCODER_CAPACITY; // maximum capacity of the encoder (up to this many keypoints can be stored)
 const DEFAULT_CAPACITY = 2048; // default capacity of the encoder (64x64 texture with 2 pixels per keypoint)
 const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // sqrt(2)
 
@@ -71,10 +72,7 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
      */
     set capacity(capacity)
     {
-        const MIN_CAPACITY = SpeedyPipelineNodeKeypointDetector.encoderCapacity(0, 0, MIN_ENCODER_LENGTH);
-        const MAX_CAPACITY = MAX_ENCODER_CAPACITY;
-
-        this._capacity = Math.min(Math.max(MIN_CAPACITY, capacity | 0), MAX_CAPACITY);
+        this._capacity = Math.min(Math.max(0, capacity | 0), MAX_CAPACITY);
     }
 
     /**
@@ -130,6 +128,24 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         encodedKps.copyTo(encodedKeypoints);
 
         // done!
+        return encodedKeypoints;
+    }
+
+    /**
+     * Create a tiny texture with zero encoded keypoints
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyDrawableTexture} encodedKeypoints output texture
+     * @returns {SpeedyDrawableTexture} encodedKeypoints
+     */
+    _encodeZeroKeypoints(gpu, encodedKeypoints)
+    {
+        const capacity = 0;
+        const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(capacity, 0, 0);
+        const program = gpu.programs.encoders;
+
+        program._encodeNullKeypoints.outputs(encoderLength, encoderLength, encodedKeypoints);
+        program._encodeNullKeypoints();
+
         return encodedKeypoints;
     }
 

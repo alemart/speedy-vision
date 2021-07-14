@@ -118,6 +118,7 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
         const image = this.input().read().image;
         const width = image.width, height = image.height;
         const tex = this._tex;
+        const capacity = this._capacity;
         const quality = this._quality;
         const windowSize = this._windowSize;
         const lodStep = Math.log2(this.scaleFactor);
@@ -129,6 +130,14 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
         // validate pyramid
         if(!(levels == 1 || image.hasMipmaps()))
             throw new IllegalOperationError(`Expected a pyramid in ${this.fullName}`);
+
+        // skip if the capacity is zero
+        if(capacity == 0) {
+            const encodedKeypoints = this._encodeZeroKeypoints(gpu, this._outputTexture);
+            const encoderLength = encodedKeypoints.width;
+            this.output().swrite(encodedKeypoints, 0, 0, encoderLength);
+            return;
+        }
 
         // compute corner response map
         harris.outputs(width, height, tex[0], tex[1]);
