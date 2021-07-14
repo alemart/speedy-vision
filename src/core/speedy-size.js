@@ -65,4 +65,13 @@ export class SpeedySize
     {
         return this.width === anotherSize.width && this.height === anotherSize.height;
     }
+
+    /**
+     * The area of the rectangle
+     * @returns {number}
+     */
+    area()
+    {
+        return this.width * this.height;
+    }
 }
