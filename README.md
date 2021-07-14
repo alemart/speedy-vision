@@ -894,9 +894,9 @@ ORB descriptors. In order to improve robustness to noise, apply a Gaussian filte
 
 | Port name | Data type | Description |
 |-----------|-----------|-------------|
-| `"pyramid"` | Image     | Input pyramid. Must be greyscale. |
+| `"image"` | Image     | Input pyramid. Must be greyscale. |
 | `"keypoints"` | Keypoints | Input keypoints. |
-| `"out"`   | Keypoints | Described keypoints. |
+| `"out"`   | Keypoints | Keypoints with descriptors. |
 
 ###### Example
 
@@ -941,7 +941,7 @@ clipper.output().connectTo(descriptor.input('keypoints'));
 
 greyscale.output().connectTo(gaussian.input());
 gaussian.output().connectTo(blurredPyramid.input());
-blurredPyramid.output().connectTo(descriptor.input('pyramid'));
+blurredPyramid.output().connectTo(descriptor.input('image'));
 
 descriptor.output().connectTo(sink.input());
 

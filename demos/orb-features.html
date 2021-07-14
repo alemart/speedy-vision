@@ -130,7 +130,7 @@ window.onload = async function()
 
         greyscale.output().connectTo(blur.input());
         blur.output().connectTo(blurredPyramid.input());
-        blurredPyramid.output().connectTo(descriptor.input('pyramid'));
+        blurredPyramid.output().connectTo(descriptor.input('image'));
 
         descriptor.output().connectTo(sink.input());
 

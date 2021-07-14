@@ -238,7 +238,7 @@ describe('Feature detection', function() {
 
             greyscale.output().connectTo(gaussian.input());
             gaussian.output().connectTo(blurredPyramid.input());
-            blurredPyramid.output().connectTo(orb.input('pyramid'));
+            blurredPyramid.output().connectTo(orb.input('image'));
 
             orb.output().connectTo(sink.input());
 
