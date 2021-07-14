@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,16 @@
  * limitations under the License.
  *
  * lk-discard.glsl
- * Discard keypoints that aren't suitable for tracking by the pyramidal LK
+ * Discard feature points that aren't suitable for tracking by the
+ * pyramidal Lucas-Kanade feature tracker
  */
 
 @include "keypoints.glsl"
 
 uniform sampler2D pyramid; // image pyramid at time t
-uniform int windowSize; // odd number - typical values: 5, 7, 11, ..., 21
-
 uniform sampler2D encodedKeypoints; // encoded keypoints at time t
+uniform int windowSize; // odd number - typical values: 5, 7, 11, ..., 21
+uniform float discardThreshold; // typical value: 10^(-4)
 uniform int descriptorSize; // in bytes
 uniform int extraSize; // in bytes
 uniform int encoderLength;
@@ -51,9 +52,19 @@ void main()
     vec4 pixel = threadPixel(encodedKeypoints);
     ivec2 thread = threadLocation();
     KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);
+
+    // not a properties cell?
+    color = pixel;
+    if(address.offset != 1)
+        return;
+
+    // decode keypoint
     Keypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);
+    if(isBadKeypoint(keypoint))
+        return;
 
     // should we discard the keypoint?
-    bool shouldDiscard = isBadKeypoint(keypoint) || isKeypointAtInfinity(keypoint) || !isInsideImage(keypoint.position);
-    color = shouldDiscard ? encodeDiscardedKeypoint() : pixel;
+    bool shouldDiscard = isKeypointAtInfinity(keypoint) || !isInsideImage(keypoint.position);
+    int newFlag = shouldDiscard ? KPF_DISCARD : 0;
+    color.a = encodeKeypointFlags(keypoint.flags | newFlag);
 }

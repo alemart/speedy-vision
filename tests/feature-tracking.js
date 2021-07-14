@@ -22,32 +22,59 @@
 describe('Feature tracking', function() {
 
     const _sq = createCanvasWithASquare();
-    const deltaTime = 1000 / 30;
     const deg2rad = Math.PI / 180;
 
-    let canvas;
-    let renderToCanvas;
-    let detector;
+    let canvas, renderToCanvas;
 
     beforeEach(function() {
         jasmine.addMatchers(speedyMatchers);
         canvas = createCanvas(_sq.width, _sq.height);
         renderToCanvas = img => canvas.getContext('2d').drawImage(img, 0, 0);
-        detector = Speedy.FeatureDetector.Harris();
-        detector.enhance({ denoise: false });
     });
 
     describe('LK feature tracker', function() {
 
-        let media;
+        function createPipeline(media)
+        {
+            const pipeline = Speedy.Pipeline();
+            const imgsrc = Speedy.Image.Source();
+            const kpsrc = Speedy.Keypoint.Source('keypointSource');
 
-        beforeEach(async function() {
-            media = await Speedy.load(canvas, { usage: 'static' });
-        });
+            const grey = Speedy.Filter.Greyscale();
+            const pyr = Speedy.Image.Pyramid();
+            const harris = Speedy.Keypoint.Detector.Harris('detector');
 
-        afterEach(async function() {
-            await media.release();
-        });
+            const buf = Speedy.Image.Buffer();
+            const bufpyr = Speedy.Image.Pyramid();
+
+            const lk = Speedy.Keypoint.Tracker.LK();
+            const mixer = Speedy.Keypoint.Mixer();
+            const sink = Speedy.Keypoint.Sink();
+
+            imgsrc.media = media;
+            harris.quality = 0.10;
+            lk.discardThreshold = 0; // don't discard keypoints
+            //lk.numberOfIterations = 15;
+
+            imgsrc.output().connectTo(grey.input());
+            grey.output().connectTo(pyr.input());
+            pyr.output().connectTo(harris.input());
+            harris.output().connectTo(mixer.input('in1'));
+
+            grey.output().connectTo(buf.input());
+            buf.output().connectTo(bufpyr.input());
+
+            bufpyr.output().connectTo(lk.input('previousImage'));
+            pyr.output().connectTo(lk.input('nextImage'));
+            kpsrc.output().connectTo(lk.input('previousKeypoints'));
+
+            lk.output().connectTo(mixer.input('in0'));
+            mixer.output().connectTo(sink.input());
+
+            pipeline.init(imgsrc, grey, pyr, harris, kpsrc, buf, bufpyr, lk, mixer, sink);
+
+            return pipeline;
+        }
 
         it('tracks keypoints that don\'t move at all', async function() {
             const length = 0;
@@ -75,21 +102,17 @@ describe('Feature tracking', function() {
         });
 
         // Test the feature tracking in many directions
-        async function track360(length, maxError = 1.2)
+        async function track360(length, maxError = 1.5)
         {
-            let features;
-            let tracker;
+            const media = await Speedy.load(canvas);
 
             print(`Testing feature tracking with a displacement of ${length} pixels:`);
             for(const angle of [0, 45, 90, 135, 180, 225, 270, 315]) {
                 print(`-----`);
                 print(`Tracking a displacement of ${length} pixels (${angle} degrees):`);
 
-                // create new tracker
-                tracker = Speedy.FeatureTracker.LK(media);
-                tracker.discardThreshold = 0; // don't discard keypoints
-
                 // prepare stuff
+                const pipeline = createPipeline(media);
                 const offset = Speedy.Vector2(
                     length * Math.cos(angle * deg2rad),
                     length * -Math.sin(angle * deg2rad)
@@ -99,22 +122,19 @@ describe('Feature tracking', function() {
 
                 // render first image
                 renderToCanvas(sq1);
-                features = await detector.detect(media);
-                displayFeatures(media, features);
-                const cm1 = centerOfMass(features);
-                const n1 = features.length;
-
-                // prepare tracker frames (simulate loop)
-                tracker._prevInputImage = tracker._inputTexture = null;
-                features = await tracker.track(features);
-                await sleep(deltaTime);
+                const kp1 = (await pipeline.run()).keypoints;
+                displayFeatures(media, kp1);
+                const cm1 = centerOfMass(kp1);
+                const n1 = kp1.length;
 
                 // render second image
                 renderToCanvas(sq2);
-                features = await tracker.track(features);
-                displayFeatures(media, features);
-                const cm2 = centerOfMass(features);
-                const n2 = features.length;
+                pipeline.node('detector').capacity = 0;
+                pipeline.node('keypointSource').keypoints = kp1;
+                const kp2 = (await pipeline.run()).keypoints;
+                displayFeatures(media, kp2);
+                const cm2 = centerOfMass(kp2);
+                const n2 = kp2.length;
 
                 // compute actual x tracked
                 const trackedOffset = Speedy.Vector2(cm2.x - cm1.x, cm2.y - cm1.y);
@@ -125,7 +145,12 @@ describe('Feature tracking', function() {
                 print(`Tracked displacement: ${trackedOffset} (${n2} keypoints)`);
                 print(`Error: ${error} pixels`);
                 expect(error).toBeLessThanOrEqual(maxError);
+
+                // done!
+                pipeline.release();
             }
+
+            media.release();
         }
     });
 

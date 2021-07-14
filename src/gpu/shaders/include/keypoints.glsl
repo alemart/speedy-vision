@@ -118,6 +118,14 @@ const int KPF_DISCARD = int(@KPF_DISCARD@); // the keypoint should be discarded 
 #define encodeNullKeypoint() (vec4(1.0f)) // that's (0xFFFF, 0xFFFF)
 
 /**
+ * Encode a discarded keypoint, i.e., one that
+ * will be ignored (skipped) when downloading data
+ * from the GPU. Use this value as the entire header.
+ * @returns {vec4} RGBA
+ */
+#define encodeDiscardedKeypoint() (vec4(0.0f))
+
+/**
  * The size of an encoded keypoint in bytes
  * (must be a multiple of 4 - that's 32 bits per pixel)
  * @param {int} descriptorSize in bytes

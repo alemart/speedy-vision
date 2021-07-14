@@ -65,17 +65,16 @@
         <script>
 window.onload = async function()
 {
-    // tell Speedy to load the video
+    // form elements
+    const method = document.getElementById('method');
+    const sensitivity = document.getElementById('sensitivity');
+    const playButton = document.getElementById('play');
+    const speedSlider = document.getElementById('speed-slider');
+
+    // load the video
     const video = document.querySelector('video');
     const media = await Speedy.load(video);
     video.play();
-
-    // create a canvas to display the features
-    const canvas = createCanvas(media.width, media.height, video.title);
-
-    // elements
-    const method = document.getElementById('method');
-    const sensitivity = document.getElementById('sensitivity');
 
     // create the feature detectors
     const featureDetectors = {
@@ -86,6 +85,7 @@ window.onload = async function()
     };
 
     // main loop
+    const canvas = createCanvas(media.width, media.height, video.title);
     async function loop()
     {
         // pick a feature detector
@@ -107,12 +107,8 @@ window.onload = async function()
     }
     loop();
 
-    // play/pause
-    const playButton = document.getElementById('play');
+    // misc
     playButton.onclick = () => video.paused ? video.play() : video.pause();
-
-    // video speed
-    const speedSlider = document.getElementById('speed-slider');
     speedSlider.oninput = () => video.playbackRate = speedSlider.value;
 }
 

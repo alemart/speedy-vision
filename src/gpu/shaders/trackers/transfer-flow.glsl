@@ -56,9 +56,8 @@ void main()
 
     // compute the new position of the keypoint
     vec2 flow = decodeFlow(targetPixel);
-    vec4 encodedPosition = any(isinf(flow)) ? encodeKeypointPositionAtInfinity() : encodeKeypointPosition(
-        keypoint.position + flow
-    );
+    vec4 newPosition = encodeKeypointPosition(keypoint.position + flow);
+    vec4 encodedPosition = any(isinf(flow)) ? encodeKeypointPositionAtInfinity() : newPosition;
 
     // transfer the position
     color = myAddress.offset == 0 ? encodedPosition : pixel;

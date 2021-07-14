@@ -36,12 +36,12 @@
                 <label for="window-size">Window size</label>
                 <select id="window-size">
                     <option value="7">7x7</option>
-                    <option value="11">11x11</option>
-                    <option value="15" selected>15x15</option>
+                    <option value="11" selected>11x11</option>
+                    <option value="15">15x15</option>
                     <option value="21">21x21</option>
                 </select>
-                <label for="depth">Depth</label>
-                <select id="depth">
+                <label for="levels">Levels</label>
+                <select id="levels">
                     <option value="1">1</option>
                     <option value="2">2</option>
                     <option value="3">3</option>
@@ -105,66 +105,94 @@ let userPoints = [];
 
 window.onload = async function()
 {
-    // tell Speedy to load the video
+    // get DOM elements
+    const windowSize = document.getElementById('window-size');
+    const discardThreshold = document.getElementById('discard-threshold');
+    const levels = document.getElementById('levels');
+    const numberOfIterations = document.getElementById('number-of-iterations');
+    const epsilon = document.getElementById('epsilon');
+
+    // load the video
     const video = document.querySelector('video');
     const media = await Speedy.load(video);
     video.play();
 
-    // create a canvas to display the features
-    const canvas = createCanvas(media.width, media.height, video.title);
+    // create the pipeline
+    const pipeline = Speedy.Pipeline();
+    const imgsrc = Speedy.Image.Source();
+    const kpsrc = Speedy.Keypoint.Source();
 
-    // get DOM elements
-    const windowSize = document.getElementById('window-size');
-    const discardThreshold = document.getElementById('discard-threshold');
-    const depth = document.getElementById('depth');
-    const numberOfIterations = document.getElementById('number-of-iterations');
-    const epsilon = document.getElementById('epsilon');
+    const grey = Speedy.Filter.Greyscale();
+    const pyr = Speedy.Image.Pyramid();
+    const harris = Speedy.Keypoint.Detector.Harris();
 
-    // create a feature detector
-    const featureDetector = Speedy.FeatureDetector.Harris();
-    featureDetector.quality = 0.15;
-    featureDetector.max = 100;
-    featureDetector.useBufferedDownloads = false;
+    const buf = Speedy.Image.Buffer();
+    const bufpyr = Speedy.Image.Pyramid();
 
-    // create a feature tracker
-    const featureTracker = Speedy.FeatureTracker.LK(media);
+    const lk = Speedy.Keypoint.Tracker.LK();
+    const mixer = Speedy.Keypoint.Mixer();
+    const sink = Speedy.Keypoint.Sink();
+
+    imgsrc.media = media;
+    harris.quality = 0.10;
+    harris.capacity = 0;
+
+    imgsrc.output().connectTo(grey.input());
+    grey.output().connectTo(pyr.input());
+    pyr.output().connectTo(harris.input());
+    harris.output().connectTo(mixer.input('in1'));
+
+    grey.output().connectTo(buf.input());
+    buf.output().connectTo(bufpyr.input());
+
+    bufpyr.output().connectTo(lk.input('previousImage'));
+    pyr.output().connectTo(lk.input('nextImage'));
+    kpsrc.output().connectTo(lk.input('previousKeypoints'));
+
+    lk.output().connectTo(mixer.input('in0'));
+    mixer.output().connectTo(sink.input());
+
+    pipeline.init(imgsrc, grey, pyr, harris, kpsrc, buf, bufpyr, lk, mixer, sink);
 
     // update features
     let features = [], detect = false, clear = false;
+    const canvas = createCanvas(media.width, media.height, video.title);
     async function loop()
     {
-        // update tracker parameters
-        featureTracker.windowSize = Number(windowSize.value);
-        featureTracker.discardThreshold = Number(discardThreshold.value);
-        featureTracker.depth = Number(depth.value);
-        featureTracker.numberOfIterations = Number(numberOfIterations.value);
-        featureTracker.epsilon = Number(epsilon.value);
-
-        // track existing features
-        features = await featureTracker.track(features);
-
         // find new features
+        harris.capacity = 0;
         if(detect) {
-            if(features.length < featureDetector.max)
-                userPoints = await featureDetector.detect(media);
+            harris.capacity = 2048;
             detect = false;
         }
 
         // clear all features
         if(clear) {
-            features.length = 0;
-            userPoints.length = 0;
+            features.length = userPoints.length = 0;
             clear = false;
         }
 
+        // handle new points added by the user
+        if(userPoints.length > 0) {
+            features.push(...userPoints);
+            userPoints.length = 0;
+        }
+
+        // update parameters
+        kpsrc.keypoints = features;
+        lk.windowSize = Speedy.Size(Number(windowSize.value), Number(windowSize.value));
+        lk.levels = Number(levels.value);
+        lk.discardThreshold = Number(discardThreshold.value);
+        lk.numberOfIterations = Number(numberOfIterations.value);
+        lk.epsilon = Number(epsilon.value);
+        
+        // run the pipeline
+        features = (await pipeline.run()).keypoints;
+
         // render features
         media.draw(canvas);
-        renderFeatures(canvas, features, 4, '#0fa');
+        renderFeatures(canvas, features, 2, '#0fa');
         renderStatus(canvas, features);
-
-        // handle new features added by the user
-        while(userPoints.length > 0)
-            features.push(userPoints.pop());
 
         // next frame
         setTimeout(loop, 1000 / 60);
@@ -208,10 +236,7 @@ function createCanvas(width, height, title)
 
     canvas.addEventListener('mousedown', ev => {
         const position = cursorPosition(canvas, ev);
-        userPoints.push({
-            x: position.x,
-            y: position.y,
-        });
+        userPoints.push({ position });
     });
 
     return canvas;
@@ -236,7 +261,7 @@ function renderFeatures(canvas, features, size = 2, color = 'yellow')
         context.lineTo(feature.x + radius * cos, feature.y + radius * sin);
     }
     context.strokeStyle = color;
-    context.lineWidth = 3;
+    context.lineWidth = 2;
     context.stroke();
 }
 

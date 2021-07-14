@@ -566,6 +566,19 @@ An image multiplexer receives two images as input and outputs one of the them.
 | `"in1"`   | Image     | Second image. |
 | `"out"`   | Image     | Either the first or the second image, depending on the value of `port`. |
 
+##### Speedy.Image.Buffer
+
+`Speedy.Image.Buffer(name?: string): SpeedyPipelineNodeImageBuffer`
+
+An image buffer outputs at time *t* the input image received at time *t-1*. It's useful for tracking.
+
+**Note:** an image buffer cannot be used to store a pyramid at this time.
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Image     | Input image at time *t*. |
+| `"out"`   | Image     | Output image: the input image at time *t-1*. |
+
 #### Image filters
 
 ##### Speedy.Filter.Greyscale
@@ -950,355 +963,76 @@ pipeline.init(source, greyscale, pyramid, gaussian, blurredPyramid, fast, clippe
 
 #### Keypoint tracking
 
-Soon! It's being ported to the new API.
+Keypoint tracking is the process of tracking keypoints across a sequence of images. It allows you to get a sense of how keypoints are moving in time - i.e., how fast they are moving and where they are going.
 
-Keypoint tracking is the process of tracking keypoint across a sequence of images. It basically allows you to get a sense of how keypoints are moving in time - i.e., how fast they are moving and where they are going.
+Speedy uses sparse optical-flow algorithms to track keypoints in a video. Applications of optical-flow are numerous: you may get a sense of how objects are moving in a scene, estimate how the camera itself is moving, detect a transition in a film (a cut between two shots), and so on.
 
-Speedy uses sparse optical-flow algorithms to track keypoints in a video. Applications of optical-flow are numerous. You may get a sense of how objects are moving in a scene, you may estimate how the camera itself is moving, you may detect a transition in a film (a cut between two shots), and so on.
+##### Speedy.Keypoint.Tracker.LK()
+
+`Speedy.Keypoint.Tracker.LK(name?: string): SpeedyPipelineNodeLKKeypointTracker`
+
+Pyramid LK optical-flow.
+
+###### Parameters
+
+* `windowSize: number`. The size of the window to be used by the feature tracker. The algorithm will read neighbor pixels to determine the motion of a keypoint. Typical values for this property include: `21`, `15`, `11`, `7`. This must be a positive odd integer. Defaults to `15`.
+* `levels: number`. Specifies how many pyramid levels will be used in the computation. You should generally leave this as it is.
+* `discardThreshold: number`. A threshold used to discard keypoints that are not "good" candidates for tracking. The higher the value, the more keypoints will be discarded. Defaults to `0.0001`.
+* `numberOfIterations: number`. Maximum number of iterations for computing the local optical-flow on each level of the pyramid. Defaults to `5`.
+* `epsilon: number`. An accuracy threshold used to stop the computation of the local optical-flow of any level of the pyramid. The local optical-flow is computed iteratively and in small increments. If the length of an increment is too small, we discard it. This property defaults to `0.01`.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"previousImage"` | Image | Input image at time *t-1*. Must be greyscale. |
+| `"nextImage"` | Image | Input image at time *t*. Must be greyscale. |
+| `"previousKeypoints"` | Keypoints | Input keypoints at time *t-1*. |
+| `"out"` | Keypoints | Output keypoints at time *t*. |
+
+###### Example
+
+```js
+const pipeline = Speedy.Pipeline();
+const imgsrc = Speedy.Image.Source();
+const kpsrc = Speedy.Keypoint.Source();
+
+const grey = Speedy.Filter.Greyscale();
+const pyr = Speedy.Image.Pyramid();
+const harris = Speedy.Keypoint.Detector.Harris();
+
+const buf = Speedy.Image.Buffer();
+const bufpyr = Speedy.Image.Pyramid();
+
+const lk = Speedy.Keypoint.Tracker.LK();
+const mixer = Speedy.Keypoint.Mixer();
+const sink = Speedy.Keypoint.Sink();
+
+imgsrc.media = media;
+harris.quality = 0.10;
+lk.numberOfIterations = 15;
+
+imgsrc.output().connectTo(grey.input());
+grey.output().connectTo(pyr.input());
+pyr.output().connectTo(harris.input());
+harris.output().connectTo(mixer.input('in1'));
+
+grey.output().connectTo(buf.input());
+buf.output().connectTo(bufpyr.input());
+
+bufpyr.output().connectTo(lk.input('previousImage'));
+pyr.output().connectTo(lk.input('nextImage'));
+kpsrc.output().connectTo(lk.input('previousKeypoints'));
+
+lk.output().connectTo(mixer.input('in0'));
+mixer.output().connectTo(sink.input());
+
+pipeline.init(imgsrc, grey, pyr, harris, kpsrc, buf, bufpyr, lk, mixer, sink);
+```
 
 #### Keypoint matching
 
 Soon!
-
-### Feature detection
-
-THE FOLLOWING METHODS BELONG TO THE OLD API. THEY WILL BE REMOVED SOON. GET THE PREVIOUS VERSION OF THE LIBRARY IF YOU'RE INTERESTED IN TESTING THEM.
-
-#### Detection methods
-
-Speedy can use different methods for detecting feature points. Different methods return different results. Some work in scale-space, others do not. Currently, the following detectors are available:
-
-| Detector | Description                      | Multi-scale | Oriented | Includes descriptor |
-|----------|----------------------------------|-------------|----------|---------------------|
-|`FAST`    | FAST corner detector             | -           | -        | -                   |
-|`MultiscaleFAST` | FAST augmented with scale | Yes         | -        | -                   |
-|`Harris`  | Harris corner detector           | -           | -        | -                   |
-|`MultiscaleHarris` | Harris augmented with scale | Yes     | -        | -                   |
-|`ORB`     | ORB features                     | Yes         | Yes      | Yes                 |
-|`BRISK`   | BRISK features                   | Soon        | Soon     | Soon                |
-
-Before you're able to detect any features in a media, you must create a `SpeedyFeatureDetector` object. Feature detectors are created using the `Speedy.FeatureDetector` factory (see the example below).
-
-```js
-// 1st. load our media
-const media = await Speedy.load( /* ... */ );
-
-// 2nd. create a SpeedyFeatureDetector
-const featureDetector = Speedy.FeatureDetector.Harris();
-
-// 3rd. detect features in our media
-const features = await featureDetector.detect(media);
-
-// Now, features is an array of SpeedyFeature objects
-console.log(features);
-```
-
-##### SpeedyFeatureDetector.detect()
-
-`SpeedyFeatureDetector.detect(media: SpeedyMedia): SpeedyPromise<SpeedyFeature[]>`
-
-Detects feature points in a `SpeedyMedia`.
-
-###### Arguments
-
-* `media: SpeedyMedia`. The media object (image, video, etc.)
-
-###### Returns
-
-A `SpeedyPromise` that resolves to an array of `SpeedyFeature` objects.
-
-###### Example
-
-```js
-window.onload = async function() {
-    // load the media
-    const image = document.querySelector('img');
-    const media = await Speedy.load(image);
-
-    // create a feature detector
-    const harris = Speedy.FeatureDetector.Harris();
-
-    // detect the features
-    const features = await harris.detect(media);
-
-    // display the features
-    for(let feature of features) {
-        const x = feature.x;
-        const y = feature.y;
-        console.log(x, y);
-    }
-}
-```
-
-##### SpeedyFeatureDetector.sensitivity
-
-`SpeedyFeatureDetector.sensitivity: number`
-
-A number between `0.0` and `1.0`. The higher the number, the more features you get.
-
-###### Example
-
-```js
-window.onload = () => {
-    // load the media
-    const media = await Speedy.load( /* ... */ );
-
-    // create the feature detector
-    const fast = Speedy.FeatureDetector.FAST();
-
-    // set its sensitivity
-    fast.sensitivity = 0.7; // experiment with this number
-
-    // detect features
-    const features = await fast.detect(media);
-    console.log(features);
-};
-```
-
-##### SpeedyFeatureDetector.max
-
-`SpeedyFeatureDetector.max: number | undefined`
-
-Used to cap the number of keypoints: Speedy will return the best keypoints (according to their scores) up to this number. If it's `undefined`, no such limit will be applied.
-
-##### SpeedyFeatureDetector.useBufferedDownloads
-
-`SpeedyFeatureDetector.useBufferedDownloads: boolean`
-
-Used to optimize the download of data from the GPU when working with dynamic media (e.g., videos). This saves you some time by returning the keypoints of the previous frame of the video, which are likely to be almost identical to the keypoints of the current frame (i.e., there is a 1-frame delay). This is set to `true` by default. You may set it to `false` when you don't intend to be calling the feature detector continuously. This option has no effect no static media.
-
-##### SpeedyFeatureDetector.enhance()
-
-`SpeedyFeatureDetector.enhance(enhancements: object)`
-
-Speedy can enhance your images in different ways before detecting the interest points. These enhancements are intended to make the feature detection more robust, at a slighly higher computational cost. The desired enhancements are specified in the `enhancements` parameter. That's an object that accepts the following keys (all are optional):
-
-* `denoise: boolean`. Whether or not to denoise the image before finding the features. A simple Gaussian Blur will be applied. Defaults to `true`.
-* `illumination: boolean`. If set to `true`, the feature detection algorithm will be more robust when dealing with lighting changes and shadows. It will use the [Nightvision](#nightvision) filter behind the scenes. Defaults to `false`.
-* `nightvision: object`. An object with the following keys: `gain`, `offset`, `decay` and `quality`, as in the [Nightvision](#nightvision) filter.
-
-##### SpeedyFeatureDetector.link()
-
-`SpeedyFeatureDetector.link(decorator: SpeedyFeatureDecorator): SpeedyFeatureDetector`
-
-Links the feature detector with a feature descriptor. As soon as the link is established, the `detect()` method will return additional data.
-
-###### Arguments
-
-* `decorator: SpeedyFeatureDecorator`.
-
-###### Returns
-
-The `SpeedyFeatureDetector` itself.
-
-
-
-#### Properties of feature points
-
-A `SpeedyFeature` object represents a feature point (also known as keypoint).
-
-##### SpeedyFeature.x
-
-`SpeedyFeature.x: number, read-only`
-
-The x position of the feature in the image.
-
-##### SpeedyFeature.y
-
-`SpeedyFeature.y: number, read-only`
-
-The y position of the feature in the image.
-
-##### SpeedyFeature.scale
-
-`SpeedyFeature.scale: number, read-only`
-
-The scale of the image feature. Only a subset of the feature [detection methods](#detection-methods) support scaled features. Defaults to `1.0`.
-
-##### SpeedyFeature.rotation
-
-`SpeedyFeature.rotation: number, read-only`
-
-The orientation angle of the image feature, in radians. Only a subset of the feature [detection methods](#detection-methods) support oriented features. Defaults to `0.0`.
-
-##### SpeedyFeature.score
-
-`SpeedyFeature.score: number, read-only`
-
-A score measure of the image feature. Although different detection methods employ different measurement strategies, the larger the score, the "better" the feature is.
-
-##### SpeedyFeature.lod
-
-`SpeedyFeature.lod: number, read-only`
-
-The level-of-detail (pyramid level) corresponding to the feature point, starting from zero. While not the same, `lod` is equivalent to `scale`.
-
-
-
-
-
-#### FAST features
-
-`Speedy.FeatureDetector.FAST(n?: number): SpeedyFeatureDetector`
-
-`Speedy.FeatureDetector.MultiscaleFAST(): SpeedyFeatureDetector`
-
-When using any variation of the FAST feature detector, the following additional properties are available:
-
-* `threshold: number`. An alternative to `sensitivity` representing the threshold paramter of FAST: an integer between `0` and `255`, inclusive. Lower thresholds get you more features. A typical value is `20`.
-  * Note: `sensitivity` is an easier-to-use property and does *not* map linearly to `threshold`.
-* `n: number`. The FAST variant you want: use `9` for FAST-9,16 (default), `7` for FAST-7,12 or `5` for FAST-5,8. Option not available for multiscale.
-
-When using the `MultiscaleFAST` detector, you may also specify:
-
-* `depth: number`. An integer between `1` and `7` that tells Speedy how "deep" it should go when searching for keypoints in scale-space. Defaults to `4`.
-* `scaleFactor: number`. The scale factor between two consecutive pyramid layers. Defaults to the square root of two.
-
-#### Harris corners
-
-`Speedy.FeatureDetector.Harris(): SpeedyFeatureDetector`
-
-`Speedy.FeatureDetector.MultiscaleHarris(): SpeedyFeatureDetector`
-
-Speedy includes an implementation of the Harris corner detector with the Shi-Tomasi corner response. Harris usually gives better feature points than FAST (e.g., for tracking), but it's more computationally expensive. The following additional properties are available:
-
-* `quality: number`. A value between `0` and `1` representing the minimum "quality" of the returned keypoints. Speedy will discard any keypoint whose score is lower than the specified fraction of the maximum keypoint score. A typical value for `quality` is `0.10` (10%).
-  * Note: `quality` is an alternative to `sensitivity`.
-
-When using the `MultiscaleHarris` detector, the following additional properties are available:
-
-* `depth: number`. An integer between `1` and `7` that tells Speedy how "deep" it should go when searching for keypoints in scale-space. Defaults to `4`.
-* `scaleFactor: number`. The scale factor between two consecutive pyramid layers. Defaults to the square root of two.
-
-#### ORB features
-
-`Speedy.FeatureDetector.ORB(): SpeedyFeatureDetector`
-
-Speedy includes an implementation of ORB. It is an efficient solution that first finds keypoints in scale-space and then computes descriptors for feature matching. The following additional properties are available:
-
-* `depth: number`. An integer between `1` and `7` that tells Speedy how "deep" it should go when searching for keypoints in scale-space. Defaults to `4`.
-* `scaleFactor: number`. The scale factor between two consecutive pyramid layers. Defaults to `1.19`.
-* `quality: number`. A value between `0` and `1`, as in the Harris detector. This is an alternative to `sensitivity`.
-
-
-
-
-
-
-### Feature description
-
-Feature descriptors are data that somehow describe feature points. "Similar" feature points have "similar" descriptors, according to a distance metric. There are different algorithms for computing descriptors. The idea is to use the descriptors to match feature points of different images.
-
-Feature detectors and feature trackers may be linked with a feature descriptor using a decorator. The decorator design pattern lets you dynamically add new behavior to objects. It creates a flexible way of combining detection and description algorithms, considering that the actual computations take place in the GPU.
-
-#### ORB descriptors
-
-`SpeedyFeatureDescriptor.ORB(): SpeedyFeatureDecorator`
-
-Used to augment a feature detector/tracker with 256-bit binary descriptors for feature matching.
-
-###### Returns
-
-A `SpeedyFeatureDecorator` to be linked with the feature detector or tracker.
-
-###### Example
-
-```js
-// Combine Harris corner detector with ORB descriptors
-const orb = Speedy.FeatureDescriptor.ORB();
-const detector = Speedy.FeatureDetector.MultiscaleHarris().link(orb);
-
-const features = await detector.detect(media);
-```
-
-
-
-### Feature tracking
-
-Feature point tracking is the process of tracking feature points across a sequence of images. Feature tracking allows you to get a sense of how keypoints are moving in time (how fast they are moving and where they are going).
-
-Speedy uses sparse optical-flow algorithms to track feature points in a video. Applications of optical-flow are numerous. You may get a sense of how objects are moving in a scene, you may estimate how the camera itself is moving, you may detect a transition in a film (a cut between two shots), and so on.
-
-#### Tracking methods
-
-Currently, the following feature trackers are available:
-
-| Tracker | Description |
-|---------|-------------|
-| `LK`    | Pyramid-based LK optical-flow |
-
-Feature trackers are associated with a `SpeedyMedia`, so that consecutive frames of a video are automatically stored in memory and used in the optical-flow algorithms.
-
-**Note:** some keypoints may be discarded during tracking. Additionally, feature trackers will not recompute any keypoints.
-
-#### Tracking API
-
-##### SpeedyFeatureTracker.track()
-
-`SpeedyFeatureTracker.track(features: SpeedyFeature[], flow?: SpeedyVector2[], found?: boolean[]): SpeedyPromise<SpeedyFeature[]>`
-
-Track a collection of `features` between frames. You may optionally specify the `flow` array to get the flow vector for each of the tracked features. Additionally, `found[i]` will tell you whether the i-th feature point has been found in the next frame of the video/animation or not.
-
-###### Arguments
-
-* `features: SpeedyFeature[]`. The feature points you want to track.
-* `flow: SpeedyVector2[], optional`. Output parameter giving you the flow vector of each feature point. Pass an array to it.
-* `found: boolean[], optional`. Output parameter telling you whether the feature points remain in the scene or not. Pass an array to it.
-
-###### Returns
-
-A `SpeedyPromise` that resolves to an array of `SpeedyFeature` objects.
-
-###### Example
-
-```js
-// setup a feature tracker
-const featureTracker = Speedy.FeatureTracker.LK(media);
-
-// [...]
-
-// features is an array of SpeedyFeature objects
-let flow = [];
-let features = await featureTracker.track(features, flow);
-
-// output
-console.log(features, flow);
-```
-
-##### SpeedyFeatureTracker.link()
-
-`SpeedyFeatureTracker.link(decorator: SpeedyFeatureDecorator): SpeedyFeatureTracker`
-
-Links the feature tracker with a feature descriptor. As soon as the link is established, the `track()` method will return additional data.
-
-###### Arguments
-
-* `decorator: SpeedyFeatureDecorator`.
-
-###### Returns
-
-The `SpeedyFeatureTracker` itself.
-
-
-
-
-
-#### LK feature tracker
-
-`Speedy.FeatureTracker.LK(media: SpeedyMedia): LKFeatureTracker`
-
-Pyramid-based LK optical-flow algorithm. The following properties are available:
-
-* `windowSize: number`. The size of the window to be used by the feature tracker. For a window of size *n*, the algorithm will read *n* x *n* neighboring pixels to determine the motion of a keypoint. Typical values for this property include: `21`, `15`, `11`, `7`. This must be a positive odd integer. Defaults to `15`.
-* `depth: number`. Specifies how many pyramid levels will be used in the computation. You should generally leave this property as it is.
-* `discardThreshold: number`. A threshold used to discard keypoints that are not "good" candidates for tracking. The higher the value, the more keypoints will be discarded. Defaults to `0.0001`.
-* `numberOfIterations: number`. Maximum number of iterations for computing the local optical-flow on each level of the pyramid. The larger this number, the more demanding the algorithm is on the GPU. Defaults to `5`.
-* `epsilon: number`. An accuracy threshold used to stop the computation of the local optical-flow of any level of the pyramid. The local optical-flow is computed iteratively and in small increments. If the length of an increment is too small, we discard it. This property defaults to `0.01`.
-
-### Feature matching
-
-Coming soon!
-
 
 
 

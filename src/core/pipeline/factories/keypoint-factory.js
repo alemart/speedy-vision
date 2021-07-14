@@ -28,6 +28,7 @@ import { SpeedyPipelineNodeKeypointMixer } from '../nodes/keypoints/mixer';
 import { SpeedyPipelineNodeFASTKeypointDetector } from '../nodes/keypoints/detectors/fast';
 import { SpeedyPipelineNodeHarrisKeypointDetector } from '../nodes/keypoints/detectors/harris';
 import { SpeedyPipelineNodeORBKeypointDescriptor } from '../nodes/keypoints/descriptors/orb';
+import { SpeedyPipelineNodeLKKeypointTracker } from '../nodes/keypoints/trackers/lk';
 
 /**
  * Keypoint detectors
@@ -72,6 +73,22 @@ class SpeedyPipelineKeypointDescriptorFactory extends SpeedyNamespace
 }
 
 /**
+ * Keypoint trackers
+ */
+class SpeedyPipelineKeypointTrackerFactory extends SpeedyNamespace
+{
+    /**
+     * LK optical-flow
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeLKKeypointTracker}
+     */
+    static LK(name = undefined)
+    {
+        return new SpeedyPipelineNodeLKKeypointTracker(name);
+    }
+}
+
+/**
  * Keypoint-related nodes
  */
 export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
@@ -92,6 +109,15 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
     static get Descriptor()
     {
         return SpeedyPipelineKeypointDescriptorFactory;
+    }
+
+    /**
+     * Keypoint trackers
+     * @returns {Function}
+     */
+    static get Tracker()
+    {
+        return SpeedyPipelineKeypointTrackerFactory;
     }
 
     /**

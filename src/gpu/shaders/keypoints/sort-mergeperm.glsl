@@ -145,9 +145,11 @@ PermutationElement selectKth(int k, int la, int ra, int lb, int rb)
         a = readPermutationElement(permutation, ma, stride, height);
         b = readPermutationElement(permutation, mb, stride, height);
 
-        // if k is larger than ha+hb, we can safely discard
+        // if k is larger than ha + hb, we can safely discard
         // the first half of one of the subarrays. Which one?
         // The one with the smaller middle element.
+        // note: ha + hb <= (Ba + Bb) / 2. So if k <= ha + hb,
+        // then k is in the first half of the concatenation
         discard1stHalf = (k > ha + hb);
         altb = (-a.score < -b.score); // sorting criteria(*): is a less than b?
 

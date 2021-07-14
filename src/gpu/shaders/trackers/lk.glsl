@@ -340,8 +340,9 @@ void main()
     for(int k = 0; k < numberOfIterations; k++) { // meant to reach convergence
         mismatch = vec2(computeMismatch(pyrGuess, localGuess)) * FLT_SCALE;
         delta = mismatch * invHarris * invDet;
-        niceNumbers &= int(step(eps2, dot(delta, delta))); // stop when ||delta|| < epsilon
-        localGuess += niceNumbers != 0 ? delta : vec2(0.0f);
+        niceNumbers *= int(eps2 <= dot(delta, delta)); // stop when ||delta|| < epsilon
+        //localGuess += niceNumbers != 0 ? delta : vec2(0.0f);
+        localGuess += float(niceNumbers) * delta;
     }
 
     // update our guess of the optical flow for the next level of the pyramid

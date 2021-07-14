@@ -97,6 +97,7 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
     static _decode(pixels, descriptorSize, extraSize, encoderLength)
     {
         const pixelsPerKeypoint = Math.ceil((MIN_KEYPOINT_SIZE + descriptorSize + extraSize) / 4);
+        const bytesPerKeypoint = 4 * pixelsPerKeypoint;
         let x, y, lod, rotation, score, flags, extraBytes, descriptorBytes;
         let hasLod, hasRotation;
         const keypoints = [];
@@ -111,18 +112,18 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
             pixels = new Uint8Array(pixels);
 
         // for each encoded keypoint
-        for(let i = 0; i < size; i += 4 /* RGBA */ * pixelsPerKeypoint) {
+        for(let i = 0; i < size; i += bytesPerKeypoint) {
             // extract fixed-point coordinates
             x = (pixels[i+1] << 8) | pixels[i];
             y = (pixels[i+3] << 8) | pixels[i+2];
-            if(x >= 0xFFFF && y >= 0xFFFF) // if end of list
+
+            // we have reached the end of the list
+            if(x >= 0xFFFF && y >= 0xFFFF) // "null" keypoint
                 break;
 
-            // We've cleared the texture to black.
-            // Likely to be incorrect black pixels
-            // due to resize. Bad for encoderLength
+            // discard if the header is zero
             if(x + y == 0 && pixels[i+6] == 0)
-                continue; // discard, it's noise
+                continue;
 
             // convert from fixed-point
             x /= FIX_RESOLUTION;

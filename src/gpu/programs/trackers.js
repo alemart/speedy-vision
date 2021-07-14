@@ -61,8 +61,11 @@ const lkSmallest = importShader('trackers/lk.glsl')
                        'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALLEST,
                    });
 
+const lkDiscardOld = importShader('trackers/lk-discard-old.glsl')
+                     .withArguments('pyramid', 'encodedKeypoints', 'windowSize', 'discardThreshold', 'descriptorSize', 'extraSize', 'encoderLength');
+
 const lkDiscard = importShader('trackers/lk-discard.glsl')
-                  .withArguments('pyramid', 'encodedKeypoints', 'windowSize', 'discardThreshold', 'descriptorSize', 'extraSize', 'encoderLength');
+                  .withArguments('pyramid', 'windowSize', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 const transferFlow = importShader('trackers/transfer-flow.glsl')
                      .withArguments('encodedFlow', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
@@ -84,6 +87,29 @@ export class GPUTrackers extends SpeedyProgramGroup
     {
         super(gpu, width, height);
         this
+            // LK optical-flow
+            .declare('lk21', lk, { // up to 21x21 window
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('lk15', lkSmall, { // up to 15x15 window
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('lk11', lkSmaller, { // up to 11x11 window (nice on mobile)
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('lk7', lkSmallest, { // up to 7x7 window (faster)
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('lkDiscard', lkDiscard)
+
+            // Transfer optical-flow
+            .declare('transferFlow', transferFlow)
+
+
+
+
+            // --- old TOOD remove ---
+
             // LK
             .declare('_lk', lk, {
                 ...this.program.usesPingpongRendering()
@@ -97,7 +123,7 @@ export class GPUTrackers extends SpeedyProgramGroup
             .declare('_lkSmallest', lkSmallest, {
                 ...this.program.usesPingpongRendering()
             })
-            .declare('_lkDiscard', lkDiscard)
+            .declare('_lkDiscard', lkDiscardOld)
 
             // Transfer optical-flow
             .declare('_transferFlow', transferFlow)
