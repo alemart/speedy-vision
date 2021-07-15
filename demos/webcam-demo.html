@@ -1,7 +1,7 @@
 <!--
   speedy-vision.js
   GPU-accelerated Computer Vision for JavaScript
-  Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+  Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@
         <form autocomplete="off">
             <div>
                 Sensitivity
-                <input type="range" min="0.0" max="0.99" value="0.50" step="0.01" id="sensitivity">
+                <input type="range" min="0.0" max="0.99" value="0.80" step="0.01" id="sensitivity">
             </div>
             <div>
                 <label for="enhance-illumination">Fix uneven illumination</label>
@@ -42,12 +42,9 @@
             <div>
                 Method:
                 <select id="method">
-                    <option value="harris" selected>harris</option>
-                    <option value="multiscale-harris">multiscale-harris</option>
-                    <option value="fast">fast</option>
-                    <option value="multiscale-fast">multiscale-fast</option>
-                    <option value="orb">orb</option>
-                    <option value="brisk" disabled>brisk (soon)</option>
+                    <option value="orb" selected>ORB</option>
+                    <option value="orbharris">ORB-Harris</option>
+                    <option value="brisk" disabled>BRISK (soon)</option>
                 </select>
             </div>
         </form>
@@ -58,47 +55,92 @@
 window.onload = async function()
 {
     try {
-        // tell Speedy to load the camera
+        // webcam access
         const media = await Speedy.camera();
 
-        // create a canvas to display the features
-        const canvas = createCanvas(media.width, media.height);
-
-        // user controls
+        // form controls
         const method = document.getElementById('method');
         const sensitivity = document.getElementById('sensitivity');
         const enhanceIllumination = document.getElementById('enhance-illumination');
 
-        // create the feature detectors
-        const featureDetectors = {
-            'fast': Speedy.FeatureDetector.FAST(),
-            'multiscale-fast': Speedy.FeatureDetector.MultiscaleFAST(),
-            'harris': Speedy.FeatureDetector.Harris(),
-            'multiscale-harris': Speedy.FeatureDetector.MultiscaleHarris(),
-            'orb': Speedy.FeatureDetector.ORB(),
+        // create the pipelines
+        function orbWith(detector)
+        {
+            const pipeline = Speedy.Pipeline();
+            const source = Speedy.Image.Source();
+            const greyscale = Speedy.Filter.Greyscale();
+            const nightvision = Speedy.Filter.Nightvision();
+            const mux = Speedy.Image.Multiplexer('mux');
+            const pyramid = Speedy.Image.Pyramid();
+            const blur = Speedy.Filter.GaussianBlur(); // reduce noise before computing the descriptors
+            const blurredPyramid = Speedy.Image.Pyramid();
+            const clipper = Speedy.Keypoint.Clipper();
+            const descriptor = Speedy.Keypoint.Descriptor.ORB();
+            const sink = Speedy.Keypoint.Sink();
+
+            source.media = media;
+            nightvision.gain = 0.9; // increase contrast
+            nightvision.offset = 0.5;
+            nightvision.decay = 0.0;
+            nightvision.quality = 'low';
+            blur.kernelSize = Speedy.Size(9, 9);
+            blur.sigma = Speedy.Vector2(2, 2);
+            detector.levels = 12; // pyramid levels
+            detector.scaleFactor = 1.19; // approx. 2^0.25
+            detector.capacity = 8192;
+            clipper.size = 800; // up to how many features?
+
+            source.output().connectTo(greyscale.input());
+            greyscale.output().connectTo(mux.input('in0'));
+            greyscale.output().connectTo(nightvision.input());
+            nightvision.output().connectTo(mux.input('in1'));
+
+            mux.output().connectTo(pyramid.input());
+            pyramid.output().connectTo(detector.input());
+            detector.output().connectTo(clipper.input());
+            clipper.output().connectTo(descriptor.input('keypoints'));
+
+            greyscale.output().connectTo(blur.input());
+            blur.output().connectTo(blurredPyramid.input());
+            blurredPyramid.output().connectTo(descriptor.input('image'));
+
+            descriptor.output().connectTo(sink.input());
+
+            pipeline.init(source, greyscale, nightvision, mux, pyramid, blur, blurredPyramid, detector, clipper, descriptor, sink);
+
+            return pipeline;
+        }
+
+        const fast = Speedy.Keypoint.Detector.FAST();
+        const harris = Speedy.Keypoint.Detector.Harris();
+        const pipelines = {
+            orb: orbWith(fast),
+            orbharris: orbWith(harris),
+            brisk: null,
         };
 
         // main loop
+        const canvas = createCanvas(media.width, media.height);
         async function loop()
         {
-            // pick a feature detector
-            const featureDetector = featureDetectors[method.value];
+            // pick a pipeline
+            const pipeline = pipelines[method.value];
 
-            // set its sensitivity
-            featureDetector.sensitivity = sensitivity.value;
+            // enhance illumination?
+            const mux = pipeline.node('mux');
+            mux.port = enhanceIllumination.checked ? 1 : 0;
 
-            // set enhancements
-            featureDetector.enhance({
-                illumination: enhanceIllumination.checked
-            });
+            // adjust the sensitivity
+            fast.threshold = 255 * (1.0 - Number(sensitivity.value));
+            harris.quality = 1.0 - Number(sensitivity.value);
 
-            // find features
-            const features = await featureDetector.detect(media);
+            // find the features
+            const { keypoints } = await pipeline.run();
 
-            // render features
+            // render the features
             media.draw(canvas);
-            renderFeatures(canvas, features);
-            renderStatus(canvas, features, 'white', 10);
+            renderFeatures(canvas, keypoints, 2, '#ff0', 2);
+            renderStatus(canvas, keypoints, 'white', 14);
 
             // loop
             setTimeout(loop, 1000 / 60);

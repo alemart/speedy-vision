@@ -1,7 +1,7 @@
 <!--
   speedy-vision.js
   GPU-accelerated Computer Vision for JavaScript
-  Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+  Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -32,12 +32,10 @@
         <h1>Gotta go FAST!!!</h1>
         <form autocomplete="off">
             <div>
-                <label for="method">Method</label>
-                <select id="method">
+                <label for="detection-method">Method</label>
+                <select id="detection-method">
                     <option value="fast" selected>FAST</option>
                     <option value="harris">Harris</option>
-                    <option value="multiscale-fast">Multiscale FAST</option>
-                    <option value="multiscale-harris">Multiscale Harris</option>
                 </select>
             </div>
             <div class="separator"></div>
@@ -66,7 +64,7 @@
 window.onload = async function()
 {
     // form elements
-    const method = document.getElementById('method');
+    const detectionMethod = document.getElementById('detection-method');
     const sensitivity = document.getElementById('sensitivity');
     const playButton = document.getElementById('play');
     const speedSlider = document.getElementById('speed-slider');
@@ -76,31 +74,51 @@ window.onload = async function()
     const media = await Speedy.load(video);
     video.play();
 
-    // create the feature detectors
-    const featureDetectors = {
-        'fast': Speedy.FeatureDetector.FAST(),
-        'multiscale-fast': Speedy.FeatureDetector.MultiscaleFAST(),
-        'harris': Speedy.FeatureDetector.Harris(),
-        'multiscale-harris': Speedy.FeatureDetector.MultiscaleHarris(),
+    // create the pipelines
+    function createPipelineWith(detector)
+    {
+        const pipeline = Speedy.Pipeline();
+        const source = Speedy.Image.Source();
+        const greyscale = Speedy.Filter.Greyscale();
+        const sink = Speedy.Keypoint.Sink();
+
+        source.media = media;
+
+        source.output().connectTo(greyscale.input());
+        greyscale.output().connectTo(detector.input());
+        detector.output().connectTo(sink.input());
+
+        pipeline.init(source, greyscale, detector, sink);
+
+        return pipeline;
+    }
+
+    const fast = Speedy.Keypoint.Detector.FAST();
+    const harris = Speedy.Keypoint.Detector.Harris();
+    const pipelines = {
+        fast: createPipelineWith(fast),
+        harris: createPipelineWith(harris)
     };
 
     // main loop
     const canvas = createCanvas(media.width, media.height, video.title);
     async function loop()
     {
-        // pick a feature detector
-        const featureDetector = featureDetectors[method.value];
+        // pick a pipeline
+        const pipeline = pipelines[detectionMethod.value];
 
-        // set its sensitivity
-        featureDetector.sensitivity = sensitivity.value;
+        // adjust the sensitivity
+        const x = 1.0 - Number(sensitivity.value);
+        fast.threshold = 255 * x + 2;
+        harris.quality = x;
 
-        // find features
-        const features = await featureDetector.detect(media);
+        // find the features
+        const { keypoints } = await pipeline.run();
 
-        // render features
+        // render the features
         media.draw(canvas);
-        renderFeatures(canvas, features);
-        renderStatus(canvas, features);
+        renderFeatures(canvas, keypoints, 2, '#ff0', 2);
+        renderStatus(canvas, keypoints);
 
         // loop
         setTimeout(loop, 1000 / 60);
