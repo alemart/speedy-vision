@@ -26,10 +26,10 @@ import { SpeedyPipelineNode, SpeedyPipelineSourceNode, SpeedyPipelineSinkNode } 
 import { SpeedyPipelinePort, SpeedyPipelineInputPort, SpeedyPipelineOutputPort } from './pipeline-port';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
 import { SpeedyMedia } from '../speedy-media';
-import { SpeedyFeature } from '../speedy-feature';
+import { SpeedyKeypoint } from '../speedy-keypoint';
 
 /**
- * @typedef {Object.<string,(SpeedyMedia|SpeedyFeature[])>} SpeedyPipelineOutput
+ * @typedef {Object.<string,(SpeedyMedia|SpeedyKeypoint[])>} SpeedyPipelineOutput
  * indexed by the names of the sink nodes
  */
 

@@ -21,21 +21,14 @@
 
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { SpeedyTexture, SpeedyDrawableTexture } from '../speedy-texture';
-import { SpeedyTextureReader } from '../speedy-texture-reader';
 import { importShader } from '../shader-declaration';
-import { SpeedyFeature } from '../../core/speedy-feature';
-import { FeatureEncoder } from '../../core/keypoints/feature-encoder';
 import { Utils } from '../../utils/utils'
 import { SpeedyPromise } from '../../utils/speedy-promise'
-import { IllegalOperationError, NotSupportedError } from '../../utils/errors';
 import { MIN_KEYPOINT_SIZE, INITIAL_ENCODER_LENGTH, MAX_ENCODER_CAPACITY } from '../../utils/globals';
 
 // Constants
-const MIN_PIXELS_PER_KEYPOINT = MIN_KEYPOINT_SIZE / 4; // encodes a keypoint header
 const UBO_MAX_BYTES = 16384; // UBOs can hold at least 16KB of data: gl.MAX_UNIFORM_BLOCK_SIZE >= 16384 according to the GL ES 3 reference
 const KEYPOINT_BUFFER_LENGTH = (UBO_MAX_BYTES / 16) | 0; // maximum number of keypoints that can be uploaded to the GPU via UBOs (each keypoint uses 16 bytes)
-const ENCODER_PASSES = 8; // number of passes of the keypoint encoder: directly impacts performance
-const LONG_SKIP_OFFSET_PASSES = 2; // number of passes of the long skip offsets shader
 const MAX_SKIP_OFFSET_ITERATIONS = [ 32, 32 ]; // used when computing skip offsets
 
 
@@ -120,129 +113,5 @@ export class GPUEncoders extends SpeedyProgramGroup
                 ...this.program.hasTextureSize(INITIAL_ENCODER_LENGTH, INITIAL_ENCODER_LENGTH)
             })
         ;
-
-
-
-        // setup internal data
-
-        /** @type {SpeedyTextureReader} Texture Reader */
-        this._textureReader = new SpeedyTextureReader();
-
-        /** @type {Float32Array} UBO stuff */
-        this._uploadBuffer = null; // lazy spawn
-    }
-
-    /**
-     * Encodes the keypoints of an image into a compressed texture
-     * @param {SpeedyTexture} corners texture with corners
-     * @param {number} descriptorSize in bytes
-     * @param {number} extraSize in bytes
-     * @param {number} encoderLength
-     * @returns {SpeedyDrawableTexture} texture with encoded keypoints
-     */
-    encodeKeypoints(corners, descriptorSize, extraSize, encoderLength)
-    {
-        // parameters
-        const imageSize = [ this._width, this._height ];
-
-        // encode skip offsets
-        let offsets = this._encodeKeypointSkipOffsets(corners, imageSize);
-        for(let i = 0; i < LONG_SKIP_OFFSET_PASSES; i++) // meant to boost performance
-            offsets = this._encodeKeypointLongSkipOffsets(offsets, imageSize);
-
-        /*
-        // debug: view corners
-        let cornerview = corners;
-        cornerview = this._gpu.programs.utils.fillComponents(cornerview, PixelComponent.GREEN, 0);
-        cornerview = this._gpu.programs.utils.identity(cornerview);
-        cornerview = this._gpu.programs.utils.fillComponents(cornerview, PixelComponent.ALPHA, 1);
-        this._gpu.renderToCanvas(cornerview);
-        if(!window._ww) document.body.appendChild(this._gpu.canvas);
-        window._ww = 1;
-        */
-
-        // encode keypoints
-        const keypointLimit = MAX_ENCODER_CAPACITY;
-        const numPasses = ENCODER_PASSES;
-        const pixelsPerKeypointHeader = MIN_PIXELS_PER_KEYPOINT;
-        const keypointCapacity = FeatureEncoder.capacity(descriptorSize, extraSize, encoderLength);
-        const headerEncoderLength = Math.max(1, Math.ceil(Math.sqrt(keypointCapacity * pixelsPerKeypointHeader)));
-        this._encodeKeypoints.setOutputSize(headerEncoderLength, headerEncoderLength);
-        let encodedKeypointHeaders = this._encodeKeypoints.clear();
-        for(let passId = 0; passId < numPasses; passId++)
-            encodedKeypointHeaders = this._encodeKeypoints(offsets, imageSize, passId, numPasses, keypointLimit, encodedKeypointHeaders, 0, 0, headerEncoderLength);
-
-        // transfer keypoints to a elastic tiny texture with storage for descriptors & extra data
-        this._resizeEncodedKeypoints.setOutputSize(encoderLength, encoderLength);
-        return this._resizeEncodedKeypoints(encodedKeypointHeaders, 0, 0, headerEncoderLength, descriptorSize, extraSize, encoderLength);
-    }
-
-    /**
-     * Download RAW encoded keypoint data from the GPU - this is a bottleneck!
-     * @param {SpeedyTexture} encodedKeypoints texture with keypoints that have already been encoded
-     * @param {boolean} [useBufferedDownloads] download keypoints detected in the previous framestep (optimization)
-     * @returns {SpeedyPromise<Uint8Array[]>} pixels in the [r,g,b,a, ...] format
-     */
-    downloadEncodedKeypoints(encodedKeypoints, useBufferedDownloads = true)
-    {
-        // helper shader
-        if(!(encodedKeypoints instanceof SpeedyDrawableTexture)) {
-            this._downloadEncodedKeypoints.setOutputSize(encodedKeypoints.width, encodedKeypoints.height);
-            encodedKeypoints = this._downloadEncodedKeypoints(encodedKeypoints);
-        }
-
-        // read data from the GPU
-        return this._textureReader.readPixelsAsync(encodedKeypoints, useBufferedDownloads).catch(err =>
-            new IllegalOperationError(`Can't download the encoded keypoint texture`, err)
-        );
-    }
-
-    /**
-     * Upload keypoints to the GPU
-     * The descriptor & orientation of the keypoints will be lost
-     * (need to recalculate)
-     * @param {SpeedyFeature[]} keypoints
-     * @param {number} descriptorSize in bytes
-     * @param {number} extraSize in bytes
-     * @param {number} encoderLength
-     * @returns {SpeedyDrawableTexture} encodedKeypoints
-     */
-    uploadKeypointsOld(keypoints, descriptorSize, extraSize, encoderLength)
-    {
-        // Too many keypoints?
-        const keypointCount = keypoints.length;
-        if(keypointCount > KEYPOINT_BUFFER_LENGTH) {
-            // TODO: multipass
-            throw new NotSupportedError(`Can't upload ${keypointCount} keypoints: maximum is currently ${KEYPOINT_BUFFER_LENGTH}`);
-        }
-
-        // Insufficient encoderLength?
-        if(encoderLength < FeatureEncoder.minLength(keypointCount, descriptorSize, extraSize))
-            Utils.warning(`Insufficient encoderLength (${encoderLength}) for ${keypoints.length} keypoints (descriptorSize: ${descriptorSize}, extraSize: ${extraSize})`);
-
-        // Create a buffer for uploading the data
-        if(this._uploadBuffer === null) {
-            const sizeofVec4 = Float32Array.BYTES_PER_ELEMENT * 4; // 16
-            const internalBuffer = new ArrayBuffer(sizeofVec4 * KEYPOINT_BUFFER_LENGTH);
-            Utils.assert(internalBuffer.byteLength <= UBO_MAX_BYTES);
-            this._uploadBuffer = new Float32Array(internalBuffer);
-        }
-
-        // Format data as follows: (xpos, ypos, lod, score)
-        for(let i = 0; i < keypointCount; i++) {
-            const keypoint = keypoints[i];
-            const j = i * 4;
-
-            // this will be uploaded into a vec4
-            this._uploadBuffer[j]   = +(keypoint.x) || 0;
-            this._uploadBuffer[j+1] = +(keypoint.y) || 0;
-            this._uploadBuffer[j+2] = +(keypoint.lod) || 0;
-            this._uploadBuffer[j+3] = +(keypoint.score) || 0;
-        }
-
-        // Upload data
-        this.uploadKeypoints.setOutputSize(encoderLength, encoderLength);
-        this.uploadKeypoints.setUBO('KeypointBuffer', this._uploadBuffer);
-        return this.uploadKeypoints(keypointCount, descriptorSize, extraSize, encoderLength);
     }
 }

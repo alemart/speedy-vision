@@ -184,24 +184,4 @@ export class GPUPyramids extends SpeedyProgramGroup
             */
         ;
     }
-
-    /**
-     * Reduce the image (0.5x)
-     * @param {SpeedyTexture} image
-     * @returns {SpeedyDrawableTexture}
-     */
-    reduce(image)
-    {
-        return this._reduce(image);
-    }
-
-    /**
-     * Expand the image (2x)
-     * @param {SpeedyTexture} image
-     * @returns {SpeedyDrawableTexture}
-     */
-    expand(image)
-    {
-        return this._expand(image);
-    }
 }

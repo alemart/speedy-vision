@@ -21,10 +21,6 @@
 
 import { SpeedyMedia } from './speedy-media';
 import { FPSCounter } from '../utils/fps-counter';
-import { SpeedyFeatureDetectorFactory } from './speedy-feature-detector-factory';
-import { SpeedyFeatureTrackerFactory } from './speedy-feature-tracker-factory';
-import { SpeedyFeatureDescriptorFactory } from './speedy-feature-descriptor-factory';
-import { SpeedyFlags } from './speedy-flags';
 import { SpeedyVector2 } from './speedy-vector';
 import { SpeedyPoint2 } from './speedy-point';
 import { SpeedySize } from './speedy-size';
@@ -86,33 +82,6 @@ export class Speedy
     static get fps()
     {
         return FPSCounter.instance.fps;
-    }
-
-    /**
-     * Feature detectors
-     * @returns {SpeedyFeatureDetectorFactory}
-     */
-    static get FeatureDetector()
-    {
-        return SpeedyFeatureDetectorFactory;
-    }
-
-    /**
-     * Feature trackers
-     * @returns {SpeedyFeatureTrackerFactory}
-     */
-    static get FeatureTracker()
-    {
-        return SpeedyFeatureTrackerFactory;
-    }
-
-    /**
-     * Feature descriptors
-     * @returns {SpeedyFeatureDescriptorFactory}
-     */
-    static get FeatureDescriptor()
-    {
-        return SpeedyFeatureDescriptorFactory;
     }
 
     /**
@@ -208,9 +177,6 @@ export class Speedy
         return SpeedyPipelineKeypointFactory;
     }
 }
-
-// Mix SpeedyFlags with Speedy
-Object.assign(Speedy.constructor.prototype, SpeedyFlags);
 
 // Big-endian machine? Currently untested.
 if(!LITTLE_ENDIAN)

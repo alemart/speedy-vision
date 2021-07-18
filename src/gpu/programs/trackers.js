@@ -21,8 +21,6 @@
 
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
-import { PYRAMID_MAX_LEVELS } from '../../utils/globals';
-import { FeatureEncoder } from '../../core/keypoints/feature-encoder';
 
 
 
@@ -60,9 +58,6 @@ const lkSmallest = importShader('trackers/lk.glsl')
                    .withDefines({
                        'MAX_WINDOW_SIZE': LK_MAX_WINDOW_SIZE_SMALLEST,
                    });
-
-const lkDiscardOld = importShader('trackers/lk-discard-old.glsl')
-                     .withArguments('pyramid', 'encodedKeypoints', 'windowSize', 'discardThreshold', 'descriptorSize', 'extraSize', 'encoderLength');
 
 const lkDiscard = importShader('trackers/lk-discard.glsl')
                   .withArguments('pyramid', 'windowSize', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
@@ -104,95 +99,6 @@ export class GPUTrackers extends SpeedyProgramGroup
 
             // Transfer optical-flow
             .declare('transferFlow', transferFlow)
-
-
-
-
-            // --- old TOOD remove ---
-
-            // LK
-            .declare('_lk', lk, {
-                ...this.program.usesPingpongRendering()
-            })
-            .declare('_lkSmall', lkSmall, {
-                ...this.program.usesPingpongRendering()
-            })
-            .declare('_lkSmaller', lkSmaller, {
-                ...this.program.usesPingpongRendering()
-            })
-            .declare('_lkSmallest', lkSmallest, {
-                ...this.program.usesPingpongRendering()
-            })
-            .declare('_lkDiscard', lkDiscardOld)
-
-            // Transfer optical-flow
-            .declare('_transferFlow', transferFlow)
         ;
-    }
-
-    /**
-     * LK feature tracker
-     * @param {SpeedyTexture} nextPyramid image pyramid at time t
-     * @param {SpeedyTexture} prevPyramid image pyramid at time t-1
-     * @param {SpeedyTexture} prevKeypoints tiny texture of encoded keypoints at time t-1
-     * @param {number} windowSize neighborhood size, an odd number (5, 7, 9, 11...)
-     * @param {number} depth how many pyramid layers will be scanned
-     * @param {number} numberOfIterations for iterative LK
-     * @param {number} discardThreshold used to discard "bad" keypoints, typically 10^(-4)
-     * @param {number} epsilon accuracy threshold to stop iterations, typically 0.01
-     * @param {number} descriptorSize in bytes
-     * @param {number} extraSize in bytes
-     * @param {number} encoderLength
-     * @returns {SpeedyTexture}
-     */
-    lk(nextPyramid, prevPyramid, prevKeypoints, windowSize, depth, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength)
-    {
-        // make sure we get a proper depth
-        const MIN_DEPTH = 1, MAX_DEPTH = PYRAMID_MAX_LEVELS;
-        depth = Math.max(MIN_DEPTH, Math.min(depth | 0, MAX_DEPTH));
-
-        // windowSize must be a positive odd number
-        windowSize = windowSize + ((windowSize + 1) % 2);
-        windowSize = Math.max(LK_MIN_WINDOW_SIZE, Math.min(windowSize, LK_MAX_WINDOW_SIZE));
-
-        // we want at least one iteration
-        numberOfIterations = Math.max(1, numberOfIterations);
-
-        // select program
-        let lk = null;
-        if(windowSize <= LK_MAX_WINDOW_SIZE_SMALLEST)
-            lk = this._lkSmallest;
-        else if(windowSize <= LK_MAX_WINDOW_SIZE_SMALLER)
-            lk = this._lkSmaller;
-        else if(windowSize <= LK_MAX_WINDOW_SIZE_SMALL)
-            lk = this._lkSmall;
-        else
-            lk = this._lk;
-
-        //
-        // Optimization!
-        // because this is such a demanding algorithm, we'll
-        // split the work into multiple passes of the shader
-        // (so we don't get WebGL context loss on mobile)
-        //
-        const numKeypoints = FeatureEncoder.capacity(descriptorSize, extraSize, encoderLength);
-        const lkEncoderLength = Math.max(1, Math.ceil(Math.sqrt(numKeypoints)));
-        lk.setOutputSize(lkEncoderLength, lkEncoderLength);
-
-        // compute optical-flow
-        let flow = lk.clear();
-        for(let level = depth - 1; level >= 0; level--)
-            flow = lk(flow, prevKeypoints, nextPyramid, prevPyramid, windowSize, level, depth, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);
-
-        // transfer optical-flow to nextKeypoints
-        this._transferFlow.setOutputSize(encoderLength, encoderLength);
-        const nextKeypoints = this._transferFlow(flow, prevKeypoints, descriptorSize, extraSize, encoderLength);
-
-        // discard "bad" keypoints
-        this._lkDiscard.setOutputSize(encoderLength, encoderLength);
-        const goodKeypoints = this._lkDiscard(nextPyramid, nextKeypoints, windowSize, discardThreshold, descriptorSize, extraSize, encoderLength);
-
-        // done!
-        return goodKeypoints;
     }
 }

@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -102,12 +102,12 @@ describe('Feature tracking', function() {
         });
 
         // Test the feature tracking in many directions
-        async function track360(length, maxError = 1.5)
+        async function track360(length, maxError = 1.0)
         {
             const media = await Speedy.load(canvas);
 
             print(`Testing feature tracking with a displacement of ${length} pixels:`);
-            for(const angle of [0, 45, 90, 135, 180, 225, 270, 315]) {
+            for(const angle of [0, 45, 90, -135, 180]) {
                 print(`-----`);
                 print(`Tracking a displacement of ${length} pixels (${angle} degrees):`);
 

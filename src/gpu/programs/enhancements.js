@@ -22,9 +22,7 @@
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
 import { convX, convY } from '../shaders/filters/convolution';
-import { PixelComponent } from '../../utils/types';
 import { Utils } from '../../utils/utils';
-import { IllegalArgumentError } from '../../utils/errors';
 
 
 //
@@ -83,73 +81,5 @@ export class GPUEnhancements extends SpeedyProgramGroup
             .declare('_illuminationMapHiX', convX(Utils.gaussianKernel(80, 255)))
             .declare('_illuminationMapHiY', convY(Utils.gaussianKernel(80, 255)))
         ;
-    }
-
-    /**
-     * Normalize a greyscale image
-     * @param {SpeedyTexture} image greyscale image (RGB components are the same)
-     * @param {number} [minValue] minimum desired pixel intensity (from 0 to 255, inclusive)
-     * @param {number} [maxValue] maximum desired pixel intensity (from 0 to 255, inclusive)
-     * @returns {SpeedyTexture}
-     */
-    normalizeGreyscaleImage(image, minValue = 0, maxValue = 255)
-    {
-        const gpu = this._gpu;
-        const minmax2d = gpu.programs.utils._scanMinMax(image, PixelComponent.GREEN);
-        return this._normalizeGreyscaleImage(minmax2d, Math.min(minValue, maxValue), Math.max(minValue, maxValue));
-    }
-
-    /**
-     * Normalize a RGB image
-     * @param {SpeedyTexture} image
-     * @param {number} [minValue] minimum desired pixel intensity (from 0 to 255, inclusive)
-     * @param {number} [maxValue] maximum desired pixel intensity (from 0 to 255, inclusive)
-     * @returns {SpeedyTexture}
-     */
-    normalizeColoredImage(image, minValue = 0, maxValue = 255)
-    {
-        const gpu = this._gpu;
-        
-        // TODO: normalize on a luminance channel instead (e.g., use HSL color space)
-        const minmax2d = new Array(3);
-        minmax2d[0] = gpu.programs.utils._scanMinMax(image, PixelComponent.RED).clone();
-        minmax2d[1] = gpu.programs.utils._scanMinMax(image, PixelComponent.GREEN).clone();
-        minmax2d[2] = gpu.programs.utils._scanMinMax(image, PixelComponent.BLUE);
-
-        const normalized = this._normalizeColoredImage(minmax2d, Math.min(minValue, maxValue), Math.max(minValue, maxValue));
-
-        minmax2d[1].release();
-        minmax2d[0].release();
-
-        return normalized;
-    }
-
-    /**
-     * Nightvision filter: "see in the dark"
-     * @param {SpeedyTexture} image
-     * @param {number} [gain] typically in [0,1]; higher values => higher contrast
-     * @param {number} [offset] brightness, typically in [0,1]
-     * @param {number} [decay] gain decay, in the [0,1] range
-     * @param {string} [quality] "high" | "medium" | "low" (more quality -> more expensive)
-     * @param {boolean} [greyscale] use the greyscale variant of the algorithm
-     * @returns {SpeedyTexture}
-     */
-    nightvision(image, gain = 0.5, offset = 0.5, decay = 0.0, quality = 'medium', greyscale = false)
-    {
-        // compute illumination map
-        let illuminationMap = null;
-        if(quality == 'medium')
-            illuminationMap = this._illuminationMap(image);
-        else if(quality == 'high')
-            illuminationMap = this._illuminationMapHi(image);
-        else if(quality == 'low')
-            illuminationMap = this._illuminationMapLo(image);
-        else
-            throw new IllegalArgumentError(`Invalid quality level for nightvision: "${quality}"`);
-
-        // run nightvision
-        const strategy = greyscale ? this._nightvisionGreyscale : this._nightvision;
-        const enhancedImage = strategy(image, illuminationMap, gain, offset, decay);
-        return enhancedImage;
     }
 }

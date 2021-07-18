@@ -281,7 +281,7 @@ export class SpeedyProgram extends Function
 
     /**
      * Use the provided texture(s) as output
-     * @param {...SpeedyDrawableTextur} texture set to null to use the internal texture(s)
+     * @param {...SpeedyDrawableTexture} texture set to null to use the internal texture(s)
      * @returns {SpeedyProgram} this
      */
     setOutputTexture(...texture)

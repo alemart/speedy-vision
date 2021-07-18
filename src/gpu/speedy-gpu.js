@@ -118,7 +118,23 @@ export class SpeedyGPU
      */
     renderToCanvas(texture)
     {
-        return this.programs.utils.renderToCanvas(texture);
+        const width = texture.width;
+        const height = texture.height;
+        const canvas = this.canvas;
+
+        // do we need to resize the canvas?
+        if(width > canvas.width || height > canvas.height) {
+            Utils.warning(`Resizing the canvas to ${width} x ${height}`);
+            canvas.width = width;
+            canvas.height = height;
+        }
+
+        // render
+        this.programs.utils._renderToCanvas.setOutputSize(width, height);
+        this.programs.utils._renderToCanvas(texture);
+
+        // done!
+        return canvas;
     }
 
     /**
