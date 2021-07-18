@@ -19,9 +19,6 @@
  * Nightvision enhancement: reduce illumination differences
  */
 
-// is the input image greyscale?
-//#define GREYSCALE
-
 // input image & illumination map
 uniform sampler2D image;
 uniform sampler2D illuminationMap;
@@ -33,6 +30,11 @@ uniform float decay;  // gain decay from the center, in [0,1] (default: 0.0)
                       // - the gain at the center will be gain
                       // - the gain at the corners will be (1 - decay) * gain
 
+#ifndef GREYSCALE
+#error Must define GREYSCALE // 0 or 1
+#endif
+
+#if GREYSCALE == 0
 // RGB to YUV conversion
 const mat3 rgb2yuv = mat3(
     0.299f, -0.14713f, 0.615f,
@@ -44,6 +46,8 @@ const mat3 yuv2rgb = mat3(
     0.0f, -0.39465f, 2.03211f,
     1.13983f, -0.58060f, 0.0f
 );
+#endif
+
 const float eps = 0.0001f;
 const float sqrt2 = 1.4142135623730951f;
 const float magic = 20.0f; // multiplier for default gain
@@ -65,7 +69,7 @@ void main()
     float normalizedGain = 2.0f * vgain; // default gain of 0.5 becomes 1.0
     float normalizedOffset = 2.0f * offset - 1.0f; // use offset in [0,1]
 
-#ifdef GREYSCALE
+#if GREYSCALE != 0
     // contrast stretching
     float luma = 1.0 / (1.0 + exp(-normalizedGain * magic * (pixel.g - imapPixel.g)));
     luma = clamp(luma + normalizedOffset, 0.0f, 1.0f); // adjust brightness

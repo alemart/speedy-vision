@@ -89,13 +89,11 @@ export class SpeedyPipelineNodePerspectiveWarp extends SpeedyPipelineNode
 
         return this._transform.read().then(homography => {
             let inverseHomography = this._inverse3(homography);
-
             if(Number.isNaN(inverseHomography[0]))
                 inverseHomography = SINGULAR_MATRIX;
 
-            (gpu.programs.transforms._warpPerspective
-                .outputs(width, height, outputTexture)
-            )(image, inverseHomography);
+            gpu.programs.transforms.warpPerspective.outputs(width, height, outputTexture);
+            gpu.programs.transforms.warpPerspective(image, inverseHomography);
 
             this.output().swrite(outputTexture, format);
         });

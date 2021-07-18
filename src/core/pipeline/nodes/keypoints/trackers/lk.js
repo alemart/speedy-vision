@@ -199,7 +199,7 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
         const numberOfIterations = this._numberOfIterations;
         const discardThreshold = this._discardThreshold;
         const epsilon = this._epsilon;
-        const program = gpu.programs.trackers;
+        const keypoints = gpu.programs.keypoints;
         const tex = this._tex;
 
         // do we need a pyramid?
@@ -208,10 +208,10 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
 
         // select the appropriate program
         const lk = (
-            (wsize <= 7  ? program.lk7  :
-            (wsize <= 11 ? program.lk11 : 
-            (wsize <= 15 ? program.lk15 :
-            (wsize <= 21 ? program.lk21 : null
+            (wsize <= 7  ? keypoints.lk7  :
+            (wsize <= 11 ? keypoints.lk11 : 
+            (wsize <= 15 ? keypoints.lk15 :
+            (wsize <= 21 ? keypoints.lk21 : null
         )))));
 
         //
@@ -229,12 +229,12 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
             flow = lk(flow, previousKeypoints, nextImage, previousImage, wsize, lod, levels, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);
 
         // transfer optical-flow to nextKeypoints
-        program.transferFlow.outputs(encoderLength, encoderLength, tex[2]);
-        const nextKeypoints = program.transferFlow(flow, previousKeypoints, descriptorSize, extraSize, encoderLength);
+        keypoints.transferFlow.outputs(encoderLength, encoderLength, tex[2]);
+        const nextKeypoints = keypoints.transferFlow(flow, previousKeypoints, descriptorSize, extraSize, encoderLength);
 
         // discard "bad" keypoints
-        program.lkDiscard.outputs(encoderLength, encoderLength, this._outputTexture);
-        const goodKeypoints = program.lkDiscard(nextImage, wsize, nextKeypoints, descriptorSize, extraSize, encoderLength);
+        keypoints.lkDiscard.outputs(encoderLength, encoderLength, this._outputTexture);
+        const goodKeypoints = keypoints.lkDiscard(nextImage, wsize, nextKeypoints, descriptorSize, extraSize, encoderLength);
 
         // done!
         this.output().swrite(goodKeypoints, descriptorSize, extraSize, encoderLength);

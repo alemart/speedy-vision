@@ -30,10 +30,12 @@
 //
 
 // normalize greyscale or RGB image?
-//#define GREYSCALE
+#ifndef GREYSCALE
+#error Must define GREYSCALE // 0 or 1
+#endif
 
 // output(s) of scan-minmax2d algorithm
-#ifdef GREYSCALE
+#if GREYSCALE != 0
 uniform sampler2D minmax2d;
 #else
 uniform sampler2D minmax2dRGB[3]; // in all 3 RGB channels
@@ -54,7 +56,7 @@ void main()
     vec4 alpha = vec4(1.0f, newMin.x, newRange.x, 1.0f); // will set alpha to 1.0
 
     // collect pixels
-#ifdef GREYSCALE
+#if GREYSCALE != 0
     vec4 pixel = threadPixel(minmax2d);
     mat4 channel = mat4(pixel, pixel, pixel, alpha);
 #else

@@ -59,7 +59,7 @@ export class SpeedyPipelineNodeImagePyramid extends SpeedyPipelineNode
     {
         const { image, format } = this.input().read();
         const outputTexture = this._outputTexture;
-        const pyramids = gpu.programs.pyramids(0);
+        const pyramids = gpu.programs.pyramids;
         let width = image.width, height = image.height;
 
         // number of mipmap images according to the OpenGL ES 3.0 spec (sec 3.8.10.4)

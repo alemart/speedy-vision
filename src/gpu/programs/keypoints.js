@@ -22,7 +22,6 @@
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { SpeedyTexture, SpeedyDrawableTexture } from '../speedy-texture';
 import { importShader } from '../shader-declaration';
-import { PYRAMID_MAX_LEVELS } from '../../utils/globals';
 
 
 // FAST corner detector
@@ -69,6 +68,21 @@ const multiscaleNonMaxSuppression = importShader('keypoints/nonmax-suppression.g
                                    .withDefines({ 'MULTISCALE': 1 })
                                    .withArguments('image', 'lodStep');
 
+// LK optical-flow
+const lk = [7, 11, 15, 21].reduce((obj, win) => ((obj[win] = 
+               importShader('keypoints/lk.glsl')
+               .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'level', 'depth', 'numberOfIterations', 'discardThreshold', 'epsilon', 'descriptorSize', 'extraSize', 'encoderLength')
+               .withDefines({
+                   'MAX_WINDOW_SIZE': win,
+               })
+           ), obj), {});
+
+const lkDiscard = importShader('keypoints/lk-discard.glsl')
+                  .withArguments('pyramid', 'windowSize', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
+
+const transferFlow = importShader('keypoints/transfer-flow.glsl')
+                     .withArguments('encodedFlow', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
+
 // Keypoint sorting
 const sortCreatePermutation = importShader('keypoints/sort-createperm.glsl')
                              .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
@@ -79,7 +93,21 @@ const sortMergePermutation = importShader('keypoints/sort-mergeperm.glsl')
 const sortApplyPermutation = importShader('keypoints/sort-applyperm.glsl')
                             .withArguments('permutation', 'maxKeypoints', 'encodedKeypoints', 'descriptorSize', 'extraSize');
 
-// Keypoint encoders
+// Keypoint encoding
+const encodeKeypointSkipOffsets = importShader('keypoints/encode-keypoint-offsets.glsl')
+                                 .withDefines({ 'MAX_ITERATIONS': 32 })
+                                 .withArguments('corners', 'imageSize');
+
+const encodeKeypointLongSkipOffsets = importShader('keypoints/encode-keypoint-long-offsets.glsl')
+                                     .withDefines({ 'MAX_ITERATIONS': 32 })
+                                     .withArguments('offsetsImage', 'imageSize');
+
+const encodeKeypoints = importShader('keypoints/encode-keypoints.glsl')
+                       .withArguments('offsetsImage', 'imageSize', 'passId', 'numPasses', 'keypointLimit', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
+
+const encodeNullKeypoints = importShader('keypoints/encode-null-keypoints.glsl')
+                           .withArguments();
+
 const expandEncoder = importShader('keypoints/expand-encoder.glsl')
                      .withArguments('encodedKeypoints', 'inputDescriptorSize', 'inputExtraSize', 'inputEncoderLength', 'outputDescriptorSize', 'outputExtraSize', 'outputEncoderLength');
 
@@ -111,10 +139,10 @@ const mixKeypoints = importShader('keypoints/mix-keypoints.glsl')
 
 
 /**
- * GPUKeypoints
+ * SpeedyProgramGroupKeypoints
  * Keypoint detection
  */
-export class GPUKeypoints extends SpeedyProgramGroup
+export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
 {
     /**
      * Class constructor
@@ -169,6 +197,24 @@ export class GPUKeypoints extends SpeedyProgramGroup
             .declare('pyrnonmax', multiscaleNonMaxSuppression)
 
             //
+            // LK optical-flow
+            //
+            .declare('lk21', lk[21], { // up to 21x21 window
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('lk15', lk[15], { // up to 15x15 window
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('lk11', lk[11], { // up to 11x11 window (nice on mobile)
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('lk7', lk[7], { // up to 7x7 window (faster)
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('lkDiscard', lkDiscard)
+            .declare('transferFlow', transferFlow)
+
+            //
             // Keypoint sorting
             //
             .declare('sortCreatePermutation', sortCreatePermutation)
@@ -180,6 +226,14 @@ export class GPUKeypoints extends SpeedyProgramGroup
             //
             // Keypoint encoders
             //
+            .declare('encodeKeypointSkipOffsets', encodeKeypointSkipOffsets)
+            .declare('encodeKeypointLongSkipOffsets', encodeKeypointLongSkipOffsets, {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('encodeKeypoints', encodeKeypoints, {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('encodeNullKeypoints', encodeNullKeypoints)
             .declare('expandEncoder', expandEncoder)
             .declare('transferOrientation', transferOrientation)
             .declare('suppressDescriptors', suppressDescriptors)

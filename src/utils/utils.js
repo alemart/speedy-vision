@@ -193,7 +193,7 @@ export class Utils
      * Tip: use kernelSize >= (5 * sigma), kernelSize odd
      * @param {number} sigma gaussian sigma
      * @param {number} [kernelSize] kernel size, odd number
-     * @param {bool} [normalized] normalize entries so that their sum is 1
+     * @param {boolean} [normalized] normalize entries so that their sum is 1
      */
     static gaussianKernel(sigma, kernelSize = 0, normalized = true)
     {

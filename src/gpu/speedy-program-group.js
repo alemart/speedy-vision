@@ -22,6 +22,27 @@
 import { SpeedyProgram } from './speedy-program';
 import { SpeedyGPU } from './speedy-gpu';
 
+/** @type {object} Program settings generator */
+const PROGRAM_HELPERS = {
+    // Pingpong Rendering: the output texture of a
+    // program cannot be used as an input to itself.
+    // This is a convenient helper in these situations
+    usesPingpongRendering() {
+        return {
+            pingpong: true
+        };
+    },
+
+    // Render to canvas
+    // Use it when we're supposed to see the texture
+    rendersToCanvas() {
+        return {
+            renderToTexture: false
+        };
+    },
+};
+
+
 /**
  * SpeedyProgramGroup
  * A semantically correlated group
@@ -48,9 +69,6 @@ export class SpeedyProgramGroup
         /** @type {number} height of the output textures of the programs */
         this._height = height;
 
-        /** @type {object?} helpers for declaring programs */
-        this._helpers = null;
-
         /** @type {SpeedyProgram[]} the list of all programs that belong to this group */
         this._programs = [];
     }
@@ -60,7 +78,7 @@ export class SpeedyProgramGroup
      * @protected
      * @param {string} name Program name
      * @param {ShaderDeclaration} shaderdecl Shader declaration
-     * @param {object} settings Program settings
+     * @param {object} [settings] Program settings
      * @returns {SpeedyProgramGroup} This object
      */
     declare(name, shaderdecl, settings = {})
@@ -68,54 +86,9 @@ export class SpeedyProgramGroup
         // lazy instantiation of kernels
         Object.defineProperty(this, name, {
             get: (() => {
-                const key = '__k_' + name;
-                return (function() {
-                    return this[key] || (this[key] = this._createProgram(shaderdecl, settings));
-                }).bind(this);
-            })()
-        });
-
-        return this;
-    }
-
-    /**
-     * Multi-pass composition
-     * @protected
-     * @param {string} name Program name
-     * @param {string} fn Other programs
-     * @returns {SpeedyProgramGroup} This object
-     */
-    compose(name, ...fn)
-    {
-        // function composition: functions are called in the order they are specified
-        // e.g., compose('h', 'f', 'g') means h(x) = g(f(x))
-        Object.defineProperty(this, name, {
-            get: (() => {
-                const key = '__c_' + name;
-                return (function() {
-                    return this[key] || (this[key] = (fn.length == 2) ? (() => {
-                        fn = fn.map(fi => this[fi]);
-                        return function compose(image, ...args) {
-                            return (fn[1])((fn[0])(image, ...args), ...args);
-                        };
-                    })() : ((fn.length == 3) ? (() => {
-                        fn = fn.map(fi => this[fi]);
-                        return function compose(image, ...args) {
-                            return (fn[2])((fn[1])((fn[0])(image, ...args), ...args), ...args);
-                        };
-                    })() : ((fn.length == 4) ? (() => {
-                        fn = fn.map(fi => this[fi]);
-                        return function compose(image, ...args) {
-                            return (fn[3])((fn[2])((fn[1])((fn[0])(image, ...args), ...args), ...args), ...args);
-                        };
-                    })() : (() => {
-                        fn = fn.map(fi => this[fi]);
-                        return function compose(image, ...args) {
-                            return fn.reduce((img, fi) => fi(img, ...args), image);
-                        };
-                    })())));
-                }).bind(this);
-            })()
+                const program = this._createProgram(shaderdecl, settings);
+                return (function() { return program; }).bind(this);
+            }).call(this)
         });
 
         return this;
@@ -127,34 +100,7 @@ export class SpeedyProgramGroup
      */
     get program()
     {
-        return this._helpers || (this.helpers = {
-
-            // Set texture input/output size
-            // Dimensions are converted to integers
-            hasTextureSize(width, height) {
-                return {
-                    output: [ Math.max(1, width | 0), Math.max(1, height | 0) ]
-                };
-            },
-
-            // Render to canvas
-            // Use it when we're supposed to see the texture
-            rendersToCanvas() {
-                return {
-                    renderToTexture: false
-                };
-            },
-
-            // Pingpong Rendering: the output texture of a
-            // program cannot be used as an input to itself.
-            // This is a convenient helper in these situations
-            usesPingpongRendering() {
-                return {
-                    pingpong: true
-                };
-            },
-
-        });
+        return PROGRAM_HELPERS;
     }
 
     /**

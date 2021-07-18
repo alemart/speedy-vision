@@ -90,17 +90,17 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         const width = corners.width, height = corners.height;
         const imageSize = [ width, height ];
         const tex = this._tex.slice(this._tex.length - 4);
-        const encoders = gpu.programs.encoders;
+        const keypoints = gpu.programs.keypoints;
 
         // prepare programs
-        encoders._encodeKeypointSkipOffsets.outputs(width, height, tex[0]);
-        encoders._encodeKeypointLongSkipOffsets.outputs(width, height, tex[1], tex[0]);
-        encoders._encodeKeypoints.outputs(encoderLength, encoderLength, tex[2], tex[3]);
+        keypoints.encodeKeypointSkipOffsets.outputs(width, height, tex[0]);
+        keypoints.encodeKeypointLongSkipOffsets.outputs(width, height, tex[1], tex[0]);
+        keypoints.encodeKeypoints.outputs(encoderLength, encoderLength, tex[2], tex[3]);
 
         // encode skip offsets
-        let offsets = encoders._encodeKeypointSkipOffsets(corners, imageSize);
+        let offsets = keypoints.encodeKeypointSkipOffsets(corners, imageSize);
         for(let i = 0; i < LONG_SKIP_OFFSET_PASSES; i++) // to boost performance
-            offsets = encoders._encodeKeypointLongSkipOffsets(offsets, imageSize);
+            offsets = keypoints.encodeKeypointLongSkipOffsets(offsets, imageSize);
 
         /*
         // debug: view corners
@@ -121,7 +121,7 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         const numPasses = ENCODER_PASSES;
         let encodedKps = tex[3].clear();
         for(let passId = 0; passId < numPasses; passId++)
-            encodedKps = encoders._encodeKeypoints(offsets, imageSize, passId, numPasses, capacity, encodedKps, 0, 0, encoderLength);
+            encodedKps = keypoints.encodeKeypoints(offsets, imageSize, passId, numPasses, capacity, encodedKps, 0, 0, encoderLength);
 
         // write to encodedKeypoints
         encodedKeypoints.resize(encoderLength, encoderLength);
@@ -141,10 +141,10 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
     {
         const capacity = 0;
         const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(capacity, 0, 0);
-        const program = gpu.programs.encoders;
+        const keypoints = gpu.programs.keypoints;
 
-        program._encodeNullKeypoints.outputs(encoderLength, encoderLength, encodedKeypoints);
-        program._encodeNullKeypoints();
+        keypoints.encodeNullKeypoints.outputs(encoderLength, encoderLength, encodedKeypoints);
+        keypoints.encodeNullKeypoints();
 
         return encodedKeypoints;
     }

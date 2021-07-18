@@ -106,10 +106,8 @@ export class SpeedyPipelineNodeNormalize extends SpeedyPipelineNode
             minValue = maxValue = (minValue + maxValue) / 2;
 
         const minmax = this._scanMinMax(gpu, image, PixelComponent.GREEN);
-
-        (gpu.programs.enhancements._normalizeGreyscaleImage
-            .outputs(width, height, outputTexture)
-        )(minmax, minValue, maxValue);
+        gpu.programs.filters.normalizeGreyscale.outputs(width, height, outputTexture);
+        gpu.programs.filters.normalizeGreyscale(minmax, minValue, maxValue);
 
         this.output().swrite(outputTexture, format);
     }
@@ -130,12 +128,12 @@ export class SpeedyPipelineNodeNormalize extends SpeedyPipelineNode
 
         Utils.assert(ColorComponentId[pixelComponent] !== undefined);
 
-        program._copyComponents.outputs(width, height, tex[2]);
-        program._scanMinMax2D.outputs(width, height, tex[0], tex[1]);
+        program.copyComponents.outputs(width, height, tex[2]);
+        program.scanMinMax2D.outputs(width, height, tex[0], tex[1]);
         
-        let texture = program._copyComponents(image, image, PixelComponent.ALL, ColorComponentId[pixelComponent]);
+        let texture = program.copyComponents(image, image, PixelComponent.ALL, ColorComponentId[pixelComponent]);
         for(let i = 0; i < numIterations; i++)
-            texture = program._scanMinMax2D(texture, i);
+            texture = program.scanMinMax2D(texture, i);
 
         return texture;
     }

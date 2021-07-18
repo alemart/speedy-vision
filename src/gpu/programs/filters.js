@@ -26,6 +26,14 @@ import { Utils } from '../../utils/utils';
 
 
 
+//
+// Shaders
+//
+
+// Convert to greyscale
+const rgb2grey = importShader('filters/rgb2grey.glsl')
+                .withArguments('image');
+
 // Convolution
 const convolution = [3, 5, 7].reduce((obj, ksize) => ((obj[ksize] =
                         importShader('filters/convolution2d.glsl')
@@ -52,6 +60,24 @@ const median = [3, 5, 7].reduce((obj, ksize) => ((obj[ksize] =
                   .withArguments('image')
                ), obj), {});
 
+// Normalize image
+const normalizeGreyscale = importShader('filters/normalize-image.glsl')
+                          .withDefines({ 'GREYSCALE': 1 })
+                          .withArguments('minmax2d', 'minValue', 'maxValue');
+
+const normalizeColored = importShader('filters/normalize-image.glsl')
+                        .withDefines({ 'GREYSCALE': 0 })
+                        .withArguments('minmax2dRGB', 'minValue', 'maxValue');
+
+// Nightvision
+const nightvision = importShader('filters/nightvision.glsl')
+                   .withDefines({ 'GREYSCALE': 0 })
+                   .withArguments('image', 'illuminationMap', 'gain', 'offset', 'decay');
+
+const nightvisionGreyscale = importShader('filters/nightvision.glsl')
+                            .withDefines({ 'GREYSCALE': 1 })
+                            .withArguments('image', 'illuminationMap', 'gain', 'offset', 'decay');
+
 
 
 //
@@ -62,11 +88,19 @@ const median = [3, 5, 7].reduce((obj, ksize) => ((obj[ksize] =
 // (symmetric kernel, approx. zero after 3*sigma)
 const ksize2sigma = ksize => Math.max(1.0, ksize / 6.0);
 
+// Generate a 1D Gaussian kernel
+const gaussian = ksize => Utils.gaussianKernel(ksize2sigma(ksize), ksize);
+
+// Generate a 1D Box filter
+const box = ksize => (new Array(ksize)).fill(1.0 / ksize);
+
+
+
 /**
- * GPUFilters
+ * SpeedyProgramGroupFilters
  * Image filtering
  */
-export class GPUFilters extends SpeedyProgramGroup
+export class SpeedyProgramGroupFilters extends SpeedyProgramGroup
 {
     /**
      * Class constructor
@@ -78,31 +112,20 @@ export class GPUFilters extends SpeedyProgramGroup
     {
         super(gpu, width, height);
         this
-            // gaussian filters
-            .compose('gauss3', '_gauss3x', '_gauss3y') // size: 3x3 (sigma ~ 1.0)
-            .compose('gauss5', '_gauss5x', '_gauss5y') // size: 5x5 (sigma ~ 1.0)
-            .compose('gauss7', '_gauss7x', '_gauss7y') // size: 7x7
-            .compose('gauss9', '_gauss9x', '_gauss9y') // size: 9x9
-            .compose('gauss11', '_gauss11x', '_gauss11y') // size: 11x11
-
-            // box filters
-            .compose('box3', '_box3x', '_box3y') // size: 3x3
-            .compose('box5', '_box5x', '_box5y') // size: 5x5
-            .compose('box7', '_box7x', '_box7y') // size: 7x7
-            .compose('box9', '_box9x', '_box9y') // size: 9x9
-            .compose('box11', '_box11x', '_box11y') // size: 11x11
+            // convert to greyscale
+            .declare('rgb2grey', rgb2grey)
 
             // median filters
             .declare('median3', median[3]) // 3x3 window
             .declare('median5', median[5]) // 5x5 window
             .declare('median7', median[7]) // 7x7 window
 
-            // convolution
+            // 2D convolution
             .declare('convolution3', convolution[3]) // 3x3 kernel
             .declare('convolution5', convolution[5]) // 5x5 kernel
             .declare('convolution7', convolution[7]) // 7x7 kernel
 
-            // separable convolution
+            // 1D separable convolution
             .declare('convolution3x', convolutionX[3]) // 1x3 kernel
             .declare('convolution3y', convolutionY[3]) // 3x1 kernel
             .declare('convolution5x', convolutionX[5]) // 1x5 kernel
@@ -118,49 +141,44 @@ export class GPUFilters extends SpeedyProgramGroup
             .declare('convolution15x', convolutionX[15])
             .declare('convolution15y', convolutionY[15])
 
-            // separable kernels (Gaussian)
-            // see also: http://dev.theomader.com/gaussian-kernel-calculator/
-            .declare('_gauss3x', convX([ // sigma ~ 1.0
-                0.25, 0.5, 0.25
-                //0.27901, 0.44198, 0.27901
-            ]))
-            .declare('_gauss3y', convY([
-                0.25, 0.5, 0.25
-                //0.27901, 0.44198, 0.27901
-            ]))
-            .declare('_gauss5x', convX([ // sigma ~ 1.0
-                0.05, 0.25, 0.4, 0.25, 0.05
-                //0.06136, 0.24477, 0.38774, 0.24477, 0.06136
-            ]))
-            .declare('_gauss5y', convY([
-                0.05, 0.25, 0.4, 0.25, 0.05
-                //0.06136, 0.24477, 0.38774, 0.24477, 0.06136
-            ]))
-            /*.declare('_gauss5', conv2D([ // for testing
-                1, 4, 7, 4, 1,
-                4, 16, 26, 16, 4,
-                7, 26, 41, 26, 7,
-                4, 16, 26, 16, 4,
-                1, 4, 7, 4, 1,
-            ], 1 / 237))*/
-            .declare('_gauss7x', convX(Utils.gaussianKernel(ksize2sigma(7), 7)))
-            .declare('_gauss7y', convY(Utils.gaussianKernel(ksize2sigma(7), 7)))
-            .declare('_gauss9x', convX(Utils.gaussianKernel(ksize2sigma(9), 9)))
-            .declare('_gauss9y', convY(Utils.gaussianKernel(ksize2sigma(9), 9)))
-            .declare('_gauss11x', convX(Utils.gaussianKernel(ksize2sigma(11), 11)))
-            .declare('_gauss11y', convY(Utils.gaussianKernel(ksize2sigma(11), 11)))
+            // normalize image
+            .declare('normalizeGreyscale', normalizeGreyscale)
+            .declare('normalizeColored', normalizeColored)
 
-            // separable kernels (Box filter)
-            .declare('_box3x', convX((new Array(3)).fill(1 / 3)))
-            .declare('_box3y', convY((new Array(3)).fill(1 / 3)))
-            .declare('_box5x', convX((new Array(5)).fill(1 / 5)))
-            .declare('_box5y', convY((new Array(5)).fill(1 / 5)))
-            .declare('_box7x', convX((new Array(7)).fill(1 / 7)))
-            .declare('_box7y', convY((new Array(7)).fill(1 / 7)))
-            .declare('_box9x', convX((new Array(9)).fill(1 / 9)))
-            .declare('_box9y', convY((new Array(9)).fill(1 / 9)))
-            .declare('_box11x', convX((new Array(11)).fill(1 / 11)))
-            .declare('_box11y', convY((new Array(11)).fill(1 / 11)))
+            // nightvision
+            .declare('nightvision', nightvision)
+            .declare('nightvisionGreyscale', nightvisionGreyscale)
+            .declare('illuminationMapLoX', convX(Utils.gaussianKernel(80, 31)))
+            .declare('illuminationMapLoY', convY(Utils.gaussianKernel(80, 31)))
+            .declare('illuminationMapX', convX(Utils.gaussianKernel(80, 63)))
+            .declare('illuminationMapY', convY(Utils.gaussianKernel(80, 63)))
+            .declare('illuminationMapHiX', convX(Utils.gaussianKernel(80, 255)))
+            .declare('illuminationMapHiY', convY(Utils.gaussianKernel(80, 255)))
+
+            // gaussian: separable kernels
+            // see also: http://dev.theomader.com/gaussian-kernel-calculator/
+            .declare('gaussian3x', convX([ 0.25, 0.5, 0.25 ])) // sigma ~ 1.0
+            .declare('gaussian3y', convY([ 0.25, 0.5, 0.25 ]))
+            .declare('gaussian5x', convX([ 0.05, 0.25, 0.4, 0.25, 0.05 ])) // sigma ~ 1.0
+            .declare('gaussian5y', convY([ 0.05, 0.25, 0.4, 0.25, 0.05 ]))
+            .declare('gaussian7x', convX(gaussian(7)))
+            .declare('gaussian7y', convY(gaussian(7)))
+            .declare('gaussian9x', convX(gaussian(9)))
+            .declare('gaussian9y', convY(gaussian(9)))
+            .declare('gaussian11x', convX(gaussian(11)))
+            .declare('gaussian11y', convY(gaussian(11)))
+
+            // box filter: separable kernels
+            .declare('box3x', convX(box(3)))
+            .declare('box3y', convY(box(3)))
+            .declare('box5x', convX(box(5)))
+            .declare('box5y', convY(box(5)))
+            .declare('box7x', convX(box(7)))
+            .declare('box7y', convY(box(7)))
+            .declare('box9x', convX(box(9)))
+            .declare('box9y', convY(box(9)))
+            .declare('box11x', convX(box(11)))
+            .declare('box11y', convY(box(11)))
         ;
     }
 }

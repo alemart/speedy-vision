@@ -153,49 +153,38 @@ export class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode
         const offset = this._offset;
         const decay = this._decay;
         const quality = this._quality;
-        const program = gpu.programs.enhancements;
+        const filters = gpu.programs.filters;
         const tmp = this._tex[0];
         const illuminationMap = this._tex[1];
 
         // compute illumination map
         if(quality == 'medium') {
-            (program._illuminationMapX
-                .outputs(width, height, tmp)
-            )(image);
-
-            (program._illuminationMapY
-                .outputs(width, height, illuminationMap)
-            )(tmp);
+            filters.illuminationMapX.outputs(width, height, tmp);
+            filters.illuminationMapY.outputs(width, height, illuminationMap);
+            filters.illuminationMapX(image);
+            filters.illuminationMapY(tmp);
         }
         else if(quality == 'high') {
-            (program._illuminationMapHiX
-                .outputs(width, height, tmp)
-            )(image);
-
-            (program._illuminationMapHiY
-                .outputs(width, height, illuminationMap)
-            )(tmp);
+            filters.illuminationMapHiX.outputs(width, height, tmp);
+            filters.illuminationMapHiY.outputs(width, height, illuminationMap);
+            filters.illuminationMapHiX(image);
+            filters.illuminationMapHiY(tmp);
         }
         else if(quality == 'low') {
-            (program._illuminationMapLoX
-                .outputs(width, height, tmp)
-            )(image);
-
-            (program._illuminationMapLoY
-                .outputs(width, height, illuminationMap)
-            )(tmp);
+            filters.illuminationMapLoX.outputs(width, height, tmp);
+            filters.illuminationMapLoY.outputs(width, height, illuminationMap);
+            filters.illuminationMapLoX(image);
+            filters.illuminationMapLoY(tmp);
         }
 
         // run nightvision
         if(format === ImageFormat.GREY) {
-            (program._nightvisionGreyscale
-                .outputs(width, height, outputTexture)
-            )(image, illuminationMap, gain, offset, decay);
+            filters.nightvisionGreyscale.outputs(width, height, outputTexture);
+            filters.nightvisionGreyscale(image, illuminationMap, gain, offset, decay);
         }
         else if(format === ImageFormat.RGBA) {
-            (program._nightvision
-                .outputs(width, height, outputTexture)
-            )(image, illuminationMap, gain, offset, decay);
+            filters.nightvision.outputs(width, height, outputTexture);
+            filters.nightvision(image, illuminationMap, gain, offset, decay);
         }
 
         // done!

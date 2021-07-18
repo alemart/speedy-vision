@@ -130,8 +130,8 @@ export class SpeedyGPU
         }
 
         // render
-        this.programs.utils._renderToCanvas.setOutputSize(width, height);
-        this.programs.utils._renderToCanvas(texture);
+        this.programs.utils.renderToCanvas.setOutputSize(width, height);
+        this.programs.utils.renderToCanvas(texture);
 
         // done!
         return canvas;

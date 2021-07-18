@@ -30,7 +30,8 @@ import { IllegalArgumentError } from '../../utils/errors';
 //
 
 // Perspective warp
-const warpPerspective = importShader('transforms/warp-perspective.glsl').withArguments('image', 'inverseHomography');
+const warpPerspective = importShader('transforms/warp-perspective.glsl')
+                        .withArguments('image', 'inverseHomography');
 
 // Resize image
 const resizeNN = importShader('transforms/resize.glsl')
@@ -47,10 +48,10 @@ const resizeBI = importShader('transforms/resize.glsl')
 
 
 /**
- * GPUTransforms
+ * SpeedyProgramGroupTransforms
  * Geometric transformations
  */
-export class GPUTransforms extends SpeedyProgramGroup
+export class SpeedyProgramGroupTransforms extends SpeedyProgramGroup
 {
     /**
      * Class constructor
@@ -62,7 +63,7 @@ export class GPUTransforms extends SpeedyProgramGroup
     {
         super(gpu, width, height);
         this
-            .declare('_warpPerspective', warpPerspective)
+            .declare('warpPerspective', warpPerspective)
             .declare('resizeNN', resizeNN)
             .declare('resizeBI', resizeBI)
         ;

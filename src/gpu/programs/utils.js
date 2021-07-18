@@ -22,8 +22,6 @@
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { SpeedyTexture, SpeedyDrawableTexture } from '../speedy-texture';
 import { importShader } from '../shader-declaration';
-import { PixelComponent, ColorComponentId } from '../../utils/types';
-import { IllegalArgumentError } from '../../utils/errors';
 import { Utils } from '../../utils/utils';
 
 
@@ -47,19 +45,16 @@ const fillComponents = importShader('utils/fill-components.glsl').withArguments(
 // Copy the src component of src to zero or more color components of a copy of dest
 const copyComponents = importShader('utils/copy-components.glsl').withArguments('dest', 'src', 'destComponents', 'srcComponentId');
 
-// Scan the entire image and find the minimum & maximum pixel intensity for each row and column
-//const scanMinMax1D = importShader('utils/scan-minmax1d.glsl').withArguments('image', 'iterationNumber');
-
 // Scan the entire image and find the minimum & maximum pixel intensity
 const scanMinMax2D = importShader('utils/scan-minmax2d.glsl').withArguments('image', 'iterationNumber');
 
 
 
 /**
- * GPUUtils
+ * SpeedyProgramGroupUtils
  * Utility operations
  */
-export class GPUUtils extends SpeedyProgramGroup
+export class SpeedyProgramGroupUtils extends SpeedyProgramGroup
 {
     /**
      * Class constructor
@@ -75,13 +70,10 @@ export class GPUUtils extends SpeedyProgramGroup
             .declare('identity', identity)
 
             // render to the canvas
-            .declare('_renderToCanvas', flipY, {
+            .declare('renderToCanvas', flipY, {
                 ...this.program.rendersToCanvas()
             })
                 
-            // flip y-axis
-            .declare('flipY', flipY)
-
             // Fill image with a constant
             .declare('fill', fill)
 
@@ -89,15 +81,10 @@ export class GPUUtils extends SpeedyProgramGroup
             .declare('fillComponents', fillComponents)
 
             // Copy the src component of src to zero or more color components of a copy of dest
-            .declare('_copyComponents', copyComponents)
-
-            // find minimum & maximum pixel intensity for each row and column
-            /*.declare('_scanMinMax1D', scanMinMax1D, {
-                ...this.program.usesPingpongRendering()
-            })*/
+            .declare('copyComponents', copyComponents)
 
             // find minimum & maximum pixel intensity
-            .declare('_scanMinMax2D', scanMinMax2D, {
+            .declare('scanMinMax2D', scanMinMax2D, {
                 ...this.program.usesPingpongRendering()
             })
         ;
