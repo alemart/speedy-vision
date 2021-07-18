@@ -86,9 +86,11 @@ export class SpeedyProgramGroup
         // lazy instantiation of kernels
         Object.defineProperty(this, name, {
             get: (() => {
-                const program = this._createProgram(shaderdecl, settings);
-                return (function() { return program; }).bind(this);
-            }).call(this)
+                const key = Symbol(name);
+                return (function() {
+                    return this[key] || (this[key] = this._createProgram(shaderdecl, settings));
+                }).bind(this);
+            })()
         });
 
         return this;
