@@ -349,8 +349,9 @@ export class Utils
             return m == 0 ? sign * 0.0 : sign * (m * t24);
         else if(e == 31)
             return m == 0 ? sign * Number.POSITIVE_INFINITY : Number.NaN
-        else
-            return sign * Math.pow(2, e-15) * (1.0 + m * t10);
+
+        const te15 = e >= 15 ? (1 << (e-15)) : 1.0 / (1 << (15-e)); // 2^(e-15)
+        return sign * te15 * (1.0 + m * t10);
     }
 
     /**
