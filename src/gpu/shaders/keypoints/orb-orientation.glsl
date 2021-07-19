@@ -122,6 +122,5 @@ void main()
 
     // done!
     float encodedOrientation = encodeOrientation(angle);
-    float encodedFlags = encodeKeypointFlags(keypoint.flags | KPF_ORIENTED);
-    color = vec4(0.0f, encodedOrientation, 0.0f, encodedFlags);
+    color = vec4(0.0f, encodedOrientation, 0.0f, 0.0f);
 }

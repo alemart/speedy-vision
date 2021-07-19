@@ -24,15 +24,15 @@
 Each output pixel is encoded as follows:
 
 RG : keypoint index (0, 1, 2...), uint16, little-endian
-B  : keypoint score
-A  : validity flag in {0,1}
+BA : keypoint score, float16
 
 We generate one output pixel for each keypoint. If we've got k
 keypoints in the stream, the validity flag of pixel p (p = 0, 1, ...)
 will be set to 1 if, and only if, p < k.
 
 If the validity flag of a pixel is set to 0, the other fields will be
-considered to be undefined.
+considered to be undefined. The validity of a pixel will be set to 0
+if BA encodes the bits 0xFFFF
 
 */
 
@@ -60,11 +60,11 @@ struct PermutationElement
  */
 vec4 encodePermutationElement(PermutationElement element)
 {
-    float valid = float(element.valid);
-    float score = clamp(element.score, 0.0f, 1.0f);
+    const vec2 ones = vec2(1.0f);
+    vec2 encodedScore = element.valid ? encodeFloat16(element.score) : ones;
     vec2 encodedIndex = vec2(element.keypointIndex & 255, (element.keypointIndex >> 8) & 255) / 255.0f;
 
-    return vec4(encodedIndex, score, valid);
+    return vec4(encodedIndex, encodedScore);
 }
 
 void main()
@@ -78,9 +78,9 @@ void main()
     Keypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);
 
     PermutationElement element;
-    element.valid = !isBadKeypoint(keypoint); // is this keypoint valid?
-    element.score = keypoint.score;
     element.keypointIndex = keypointIndex;
+    element.score = keypoint.score;
+    element.valid = !isBadKeypoint(keypoint); // is this keypoint valid?
 
     color = encodePermutationElement(element);
 }

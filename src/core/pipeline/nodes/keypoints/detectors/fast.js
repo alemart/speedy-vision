@@ -112,14 +112,9 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
             corners = keypoints.fast9_16(corners, image, last - lod, threshold);
 
         // non-maximum suppression
-        const suppressedCorners = (nonmax
+        const finalCorners = (nonmax
             .outputs(width, height, tex[2])
         )(corners, lodStep);
-
-        // convert scores to 8 bit
-        const finalCorners = (keypoints.fastScoreTo8bits
-            .outputs(width, height, tex[0])
-        )(suppressedCorners);
 
         // encode keypoints
         const encodedKeypoints = this._encodeKeypoints(gpu, finalCorners, this._outputTexture);

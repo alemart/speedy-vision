@@ -15,8 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * encode-keypoints.glsl
- * Encode keypoints in a texture
+ * encode-keypoint-positions.glsl
+ * Encode the positions of the keypoints in a texture
  */
 
 @include "keypoints.glsl"
@@ -108,10 +108,9 @@ void main()
 
     // write keypoint data
     color = (address.offset == 1) ? vec4(
-        pixel.a, // scale
+        encodeLod(0.0f), // scale
         encodeOrientation(0.0f), // rotation
-        pixel.r, // score
-        encodeKeypointFlags(KPF_NONE) // flags
+        encodeKeypointScore(0.0f) // score
     ) : encodeKeypointPosition(
         vec2(position) // position
     );

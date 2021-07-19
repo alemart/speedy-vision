@@ -19,6 +19,7 @@
  * Keypoint class
  */
 
+import { Utils } from '../utils/utils';
 import { SpeedyPoint2 } from './speedy-point';
 
 // Constants
@@ -35,18 +36,16 @@ export class SpeedyKeypoint
      * @param {number} y Y position
      * @param {number} [lod] Level-of-detail
      * @param {number} [rotation] Rotation in radians
-     * @param {number} [score] Cornerness measure
-     * @param {number} [flags] Keypoint flags
+     * @param {number} [score16] Cornerness measure as 16-bit unsigned int
      * @param {Uint8Array} [descriptorBytes] bytes of the feature descriptor, if any
      * @param {Uint8Array} [extraBytes] extra bytes of the header, if any
      */
-    constructor(x, y, lod = 0.0, rotation = 0.0, score = 0.0, flags = 0, descriptorBytes = null, extraBytes = null)
+    constructor(x, y, lod = 0.0, rotation = 0.0, score16 = 0, descriptorBytes = null, extraBytes = null)
     {
         this._position = new SpeedyPoint2(+x, +y);
         this._lod = +lod;
         this._rotation = +rotation;
-        this._score = +score;
-        this._flags = flags | 0;
+        this._score = score16 | 0;
         this._extraBytes = extraBytes || noBytes;
         this._descriptorBytes = descriptorBytes || noBytes;
     }
@@ -121,16 +120,7 @@ export class SpeedyKeypoint
      */
     get score()
     {
-        return this._score;
-    }
-
-    /**
-     * Internal flags
-     * @returns {number}
-     */
-    get flags()
-    {
-        return this._flags;
+        return Utils.decodeFloat16(this._score);
     }
 
     /**

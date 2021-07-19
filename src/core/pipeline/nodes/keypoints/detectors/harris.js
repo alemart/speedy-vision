@@ -165,13 +165,8 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
             .outputs(width, height, maxScore == tex[0] ? tex[1] : tex[0])
         )(suppressedCorners, maxScore, quality);
 
-        // convert scores to 8 bit
-        const finalCorners = (keypoints.harrisScoreTo8bits
-            .outputs(width, height, tex[2])
-        )(niceCorners);
-
         // encode keypoints
-        const encodedKeypoints = this._encodeKeypoints(gpu, finalCorners, this._outputTexture);
+        const encodedKeypoints = this._encodeKeypoints(gpu, niceCorners, this._outputTexture);
         const encoderLength = encodedKeypoints.width;
 
         // done!

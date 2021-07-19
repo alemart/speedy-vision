@@ -328,6 +328,34 @@ export class Utils
     }
 
     /**
+     * Decode a 16-bit float from a
+     * unsigned 16-bit integer
+     * @param {number} uint16
+     * @returns {number}
+     */
+    static decodeFloat16(uint16)
+    {
+        // decode according to sec 2.1.2
+        // 16-Bit Floating Point Numbers
+        // of the OpenGL ES 3 spec
+        const t10 = 0.0009765625; // 2^-10
+        const t24 = 5.960464477539063e-8; // 2^-24
+        const t15 = 0.000030517578125; // 2^-15
+
+        const s = (uint16 & 0xFFFF) >> 15; // sign bit
+        const e = (uint16 & 0x7FFF) >> 10; // exponent
+        const m = (uint16 & 0x3FF); // mantissa
+        const sign = 1 - 2 * s; // (-1)^s
+
+        if(e == 0)
+            return m == 0 ? sign * 0.0 : sign * (m * t24);
+        else if(e == 31)
+            return m == 0 ? sign * Number.POSITIVE_INFINITY : Number.NaN
+        else
+            return (sign * (1 << e)) * (t15 * (1.0 + m * t10));
+    }
+
+    /**
      * Request webcam access (WebRTC)
      * @param {number} width in pixels
      * @param {number} height in pixels

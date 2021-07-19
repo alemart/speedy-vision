@@ -74,15 +74,6 @@ export const MAX_ENCODER_CAPACITY = 8192;
 // Initial size of the keypoint encoder
 export const INITIAL_ENCODER_LENGTH = 32; // pick a small number to reduce processing load and not crash things on mobile
 
-// Flag: no special flags
-export const KPF_NONE = 0x0;
-
-// Flag: the keypoint is oriented
-export const KPF_ORIENTED = 0x1;
-
-// Flag: should the keypoint be discarded? (in the next frame)
-export const KPF_DISCARD = 0x80;
-
 
 
 // -----------------------------------------------------------------

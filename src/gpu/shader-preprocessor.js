@@ -24,7 +24,6 @@ import {
     MAX_TEXTURE_LENGTH,
     FIX_BITS, FIX_RESOLUTION,
     MAX_DESCRIPTOR_SIZE, MIN_KEYPOINT_SIZE,
-    KPF_NONE, KPF_ORIENTED, KPF_DISCARD,
     LITTLE_ENDIAN
 } from '../utils/globals';
 import { Utils } from '../utils/utils';
@@ -63,9 +62,6 @@ const constants = Object.freeze({
     // keypoints
     'MAX_DESCRIPTOR_SIZE': MAX_DESCRIPTOR_SIZE,
     'MIN_KEYPOINT_SIZE': MIN_KEYPOINT_SIZE,
-    'KPF_NONE': KPF_NONE,
-    'KPF_ORIENTED': KPF_ORIENTED,
-    'KPF_DISCARD': KPF_DISCARD,
 });
 
 /**

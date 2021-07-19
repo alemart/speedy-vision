@@ -69,11 +69,10 @@ void main()
 
         case 1: {
             // keypoint score & scale
-            float score = clamp(data.w, 0.0f, 1.0f);
+            vec2 score = encodeKeypointScore(max(data.w, 0.0f));
             float scale = encodeLod(data.z);
             float rotation = encodeOrientation(0.0f);
-            float flags = encodeKeypointFlags(KPF_NONE);
-            color = vec4(scale, rotation, score, flags);
+            color = vec4(scale, rotation, score);
             break;
         }
 

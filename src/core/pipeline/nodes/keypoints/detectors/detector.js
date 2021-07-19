@@ -95,7 +95,8 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         // prepare programs
         keypoints.encodeKeypointSkipOffsets.outputs(width, height, tex[0]);
         keypoints.encodeKeypointLongSkipOffsets.outputs(width, height, tex[1], tex[0]);
-        keypoints.encodeKeypoints.outputs(encoderLength, encoderLength, tex[2], tex[3]);
+        keypoints.encodeKeypointPositions.outputs(encoderLength, encoderLength, tex[2], tex[3]);
+        keypoints.encodeKeypointProperties.outputs(encoderLength, encoderLength, encodedKeypoints);
 
         // encode skip offsets
         let offsets = keypoints.encodeKeypointSkipOffsets(corners, imageSize);
@@ -117,18 +118,13 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         window._ww = 1;
         */
 
-        // encode keypoints
-        const numPasses = ENCODER_PASSES;
+        // encode keypoint positions
         let encodedKps = tex[3].clear();
-        for(let passId = 0; passId < numPasses; passId++)
-            encodedKps = keypoints.encodeKeypoints(offsets, imageSize, passId, numPasses, capacity, encodedKps, 0, 0, encoderLength);
+        for(let passId = 0; passId < ENCODER_PASSES; passId++)
+            encodedKps = keypoints.encodeKeypointPositions(offsets, imageSize, passId, ENCODER_PASSES, capacity, encodedKps, 0, 0, encoderLength);
 
-        // write to encodedKeypoints
-        encodedKeypoints.resize(encoderLength, encoderLength);
-        encodedKps.copyTo(encodedKeypoints);
-
-        // done!
-        return encodedKeypoints;
+        // encode keypoint properties
+        return keypoints.encodeKeypointProperties(corners, encodedKps, 0, 0, encoderLength);
     }
 
     /**

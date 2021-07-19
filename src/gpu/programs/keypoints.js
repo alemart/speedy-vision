@@ -29,10 +29,6 @@ const fast9_16 = importShader('keypoints/fast.glsl')
                 .withDefines({ 'FAST_TYPE': 916 })
                 .withArguments('corners', 'pyramid', 'lod', 'threshold');
 
-const fastScoreTo8bits = importShader('keypoints/score-8bits.glsl')
-                        .withDefines({ 'METHOD': 0 })
-                        .withArguments('corners');
-
 // Harris corner detector
 const harris = [1, 3, 5, 7].reduce((obj, win) => ((obj[win] =
                    importShader('keypoints/harris.glsl')
@@ -49,9 +45,6 @@ const harrisScoreFindMax = importShader('keypoints/score-findmax.glsl')
 const harrisScoreCutoff = importShader('keypoints/harris-cutoff.glsl')
                          .withArguments('corners', 'maxScore', 'quality');
 
-const harrisScoreTo8bits = importShader('keypoints/score-8bits.glsl')
-                          .withDefines({ 'METHOD': 1 })
-                          .withArguments('corners');
 // ORB descriptors
 const orbDescriptor = importShader('keypoints/orb-descriptor.glsl')
                      .withArguments('pyramid', 'encodedCorners', 'extraSize', 'encoderLength');
@@ -102,8 +95,11 @@ const encodeKeypointLongSkipOffsets = importShader('keypoints/encode-keypoint-lo
                                      .withDefines({ 'MAX_ITERATIONS': 32 })
                                      .withArguments('offsetsImage', 'imageSize');
 
-const encodeKeypoints = importShader('keypoints/encode-keypoints.glsl')
-                       .withArguments('offsetsImage', 'imageSize', 'passId', 'numPasses', 'keypointLimit', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
+const encodeKeypointPositions = importShader('keypoints/encode-keypoint-positions.glsl')
+                               .withArguments('offsetsImage', 'imageSize', 'passId', 'numPasses', 'keypointLimit', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
+
+const encodeKeypointProperties = importShader('keypoints/encode-keypoint-properties.glsl')
+                                .withArguments('corners', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 const encodeNullKeypoints = importShader('keypoints/encode-null-keypoints.glsl')
                            .withArguments();
@@ -158,7 +154,6 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             .declare('fast9_16', fast9_16, {
                 ...this.program.usesPingpongRendering()
             })
-            .declare('fastScoreTo8bits', fastScoreTo8bits)
 
             //
             // Harris corner detector
@@ -180,7 +175,6 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
                 ...this.program.usesPingpongRendering()
             })
             .declare('harrisScoreCutoff', harrisScoreCutoff)
-            .declare('harrisScoreTo8bits', harrisScoreTo8bits)
 
             //
             // ORB descriptors
@@ -228,9 +222,10 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             .declare('encodeKeypointLongSkipOffsets', encodeKeypointLongSkipOffsets, {
                 ...this.program.usesPingpongRendering()
             })
-            .declare('encodeKeypoints', encodeKeypoints, {
+            .declare('encodeKeypointPositions', encodeKeypointPositions, {
                 ...this.program.usesPingpongRendering()
             })
+            .declare('encodeKeypointProperties', encodeKeypointProperties)
             .declare('encodeNullKeypoints', encodeNullKeypoints)
             .declare('expandEncoder', expandEncoder)
             .declare('transferOrientation', transferOrientation)

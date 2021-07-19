@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,18 +25,17 @@
  * each keypoint takes (2 + M/4 + N/4) pixels of 32 bits
  *
  *    1 pixel        1 pixel       M/4 pixels      N/4 pixels
- * [  X  |  Y  ][ S | R | C | F ][ ... E ... ][  ...  D  ...  ]
+ * [  X  |  Y  ][ S | R |   C   ][ ... E ... ][  ...  D  ...  ]
  *
  * X: keypoint_xpos (2 bytes)
  * Y: keypoint_ypos (2 bytes)
  * S: keypoint_scale (1 byte)
  * R: keypoint_rotation (1 byte)
- * C: keypoint_cornerness_score (1 byte)
- * F: keypoint_flags (1 byte)
+ * C: keypoint_cornerness_score (2 bytes)
  * E: extra binary string (M bytes)
  * D: descriptor binary string (N bytes)
  *
- * (X,Y,S,R,C,F) is the keypoint header (8 bytes)
+ * (X,Y,S,R,C) is the keypoint header (8 bytes)
  *
  *
  *
@@ -51,6 +50,8 @@
  *
  * Pixel value 0xFFFFFFFF is reserved (not available),
  * and it's considered to be "null"
+ *
+ * The cornerness score is encoded as a float16
  */
 
 #ifndef _KEYPOINTS_GLSL
@@ -59,6 +60,7 @@
 @include "pyramids.glsl"
 @include "orientation.glsl"
 @include "fixed-point.glsl"
+@include "float16.glsl"
 
 /**
  * Keypoint struct
@@ -68,8 +70,7 @@ struct Keypoint
     vec2 position;
     float orientation; // in radians
     float lod; // level-of-detail
-    float score; // in [0,1]
-    int flags; // 8 bits
+    float score;
 };
 
 /**
@@ -90,25 +91,18 @@ const int MAX_DESCRIPTOR_SIZE = int(@MAX_DESCRIPTOR_SIZE@); // in bytes
 const int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@); // in bytes
 
 /**
- * Keypoint Flags
+ * Encode keypoint score
+ * @param {float} score
+ * @returns {vec2} in [0,1]x[0,1]
  */
-const int KPF_NONE = int(@KPF_NONE@); // no special flags
-const int KPF_ORIENTED = int(@KPF_ORIENTED@); // the keypoint is oriented
-const int KPF_DISCARD = int(@KPF_DISCARD@); // the keypoint should be discarded in the next frame
+#define encodeKeypointScore(score) encodeFloat16(score)
 
 /**
- * Encode keypoint flags
- * @param {int} flags in [0,255]
- * @returns {float}
+ * Encode keypoint score
+ * @param {vec2} encodedScore in [0,1]x[0,1]
+ * @returns {float} score
  */
-#define encodeKeypointFlags(flags) (float(flags) / 255.0f)
-
-/**
- * Decode keypoint flags
- * @param {float} encodedFlags in [0,1]
- * @returns {int}
- */
-#define decodeKeypointFlags(encodedFlags) int((encodedFlags) * 255.0f)
+#define decodeKeypointScore(encodedScore) decodeFloat16(encodedScore)
 
 /**
  * Encode a "null" keypoint, that is, a token
@@ -211,8 +205,7 @@ Keypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointA
     vec4 encodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);
     keypoint.orientation = decodeOrientation(encodedProperties.g); // in radians
     keypoint.lod = decodeLod(encodedProperties.r); // level-of-detail
-    keypoint.score = encodedProperties.b; // score in [0,1]
-    keypoint.flags = decodeKeypointFlags(encodedProperties.a); // flags
+    keypoint.score = decodeKeypointScore(encodedProperties.ba); // score
 
     // got a null or invalid keypoint? encode it with a negative score
     bool isNull = all(greaterThanEqual(rawEncodedPosition, ones));

@@ -35,7 +35,6 @@ import {
     MIN_KEYPOINT_SIZE,
     FIX_RESOLUTION,
     LOG2_PYRAMID_MAX_SCALE, PYRAMID_MAX_LEVELS,
-    KPF_ORIENTED,
 } from '../../../../utils/globals';
 
 
@@ -98,8 +97,9 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
     {
         const pixelsPerKeypoint = Math.ceil((MIN_KEYPOINT_SIZE + descriptorSize + extraSize) / 4);
         const bytesPerKeypoint = 4 * pixelsPerKeypoint;
-        let x, y, lod, rotation, score, flags, extraBytes, descriptorBytes;
-        let hasLod, hasRotation;
+        const m = LOG2_PYRAMID_MAX_SCALE, h = PYRAMID_MAX_LEVELS;
+        const piOver255 = Math.PI / 255.0;
+        let x, y, lod, rotation, score, extraBytes, descriptorBytes;
         const keypoints = [];
 
         // how many bytes should we read?
@@ -129,21 +129,14 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
             x /= FIX_RESOLUTION;
             y /= FIX_RESOLUTION;
 
-            // extract flags
-            flags = pixels[i+7];
+            // decode level-of-detail
+            lod = (pixels[i+4] < 255) ? -m + ((m + h) * pixels[i+4]) / 255.0 : 0.0;
 
-            // extract LOD
-            hasLod = (pixels[i+4] < 255);
-            lod = !hasLod ? 0.0 :
-                -LOG2_PYRAMID_MAX_SCALE + (LOG2_PYRAMID_MAX_SCALE + PYRAMID_MAX_LEVELS) * pixels[i+4] / 255.0;
-
-            // extract orientation
-            hasRotation = (flags & KPF_ORIENTED != 0);
-            rotation = !hasRotation ? 0.0 :
-                ((2 * pixels[i+5]) / 255.0 - 1.0) * Math.PI;
+            // decode orientation
+            rotation = (2 * pixels[i+5] - 255) * piOver255;
 
             // extract score
-            score = pixels[i+6] / 255.0;
+            score = (pixels[i+7] << 8) | pixels[i+6];
 
             // extra bytes
             extraBytes = pixels.subarray(8 + i, 8 + i + extraSize);
@@ -157,7 +150,7 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
 
             // register keypoint
             keypoints.push(
-                new SpeedyKeypoint(x, y, lod, rotation, score, flags, descriptorBytes, extraBytes)
+                new SpeedyKeypoint(x, y, lod, rotation, score, descriptorBytes, extraBytes)
             );
         }
 

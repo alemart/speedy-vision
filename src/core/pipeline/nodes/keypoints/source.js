@@ -83,7 +83,7 @@ export class SpeedyPipelineNodeKeypointSource extends SpeedyPipelineSourceNode
      */
     _run(gpu)
     {
-        // Descriptors, orientation, flags and extra bytes will be lost
+        // Orientation, descriptors and extra bytes will be lost
         const descriptorSize = 0, extraSize = 0;
         const keypoints = this._keypoints;
         const numKeypoints = keypoints.length;

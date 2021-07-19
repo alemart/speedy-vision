@@ -40,18 +40,12 @@ void main()
     int orientationEncoderLength = textureSize(encodedOrientations, 0).x;
     ivec2 location = ivec2(myIndex % orientationEncoderLength, myIndex / orientationEncoderLength);
     vec4 targetPixel = pixelAt(encodedOrientations, location);
-    float encodedOrientation = targetPixel.g;
-    float encodedFlags = targetPixel.a; // will bring KPF_ORIENTED
-
-    // mix keypoint orientation & flags
-    Keypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);
-    //keypoint.orientation = decodeOrientation(encodedOrientation);
-    keypoint.flags |= decodeKeypointFlags(encodedFlags);
 
     // is this a valid keypoint?
+    Keypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);
     bool isValid = !isBadKeypoint(keypoint);
 
-    // transfer the orientation
-    // ONLY IF THIS IS A VALID PROPERTIES CELL
-    color = isValid && myAddress.offset == 1 ? vec4(pixel.r, encodedOrientation, pixel.b, encodeKeypointFlags(keypoint.flags)) : pixel;
+    // transfer the orientation ONLY IF THIS IS A VALID PROPERTIES CELL
+    float encodedOrientation = targetPixel.g;
+    color = isValid && myAddress.offset == 1 ? vec4(pixel.r, encodedOrientation, pixel.ba) : pixel;
 }

@@ -19,6 +19,8 @@
  * Sort a permutation of keypoints
  */
 
+@include "keypoints.glsl"
+
 uniform sampler2D permutation; // texture with 2^n permutation elements
 uniform int blockSize; // 2, 4, 8... i.e., this is 2^(1+i) for i = 0, 1, 2, 3...
 uniform int dblLog2BlockSize; // 2 * log2(blockSize)
@@ -61,11 +63,12 @@ struct PermutationElement
  */
 PermutationElement decodePermutationElement(vec4 pixel)
 {
+    const vec2 ones = vec2(1.0f);
     PermutationElement element;
 
     element.keypointIndex = int(pixel.r * 255.0f) | (int(pixel.g * 255.0f) << 8);
-    element.valid = (pixel.a > 0.0f);
-    element.score = element.valid ? pixel.b : -1.0f; // give a negative score to invalid elements
+    element.valid = !all(equal(pixel.ba, ones));
+    element.score = element.valid ? decodeFloat16(pixel.ba) : -1.0f; // give a negative score to invalid elements
 
     return element;
 }
@@ -77,11 +80,11 @@ PermutationElement decodePermutationElement(vec4 pixel)
  */
 vec4 encodePermutationElement(PermutationElement element)
 {
-    float valid = float(element.valid);
-    float score = clamp(element.score, 0.0f, 1.0f);
+    const vec2 ones = vec2(1.0f);
+    vec2 encodedScore = element.valid ? encodeFloat16(element.score) : ones;
     vec2 encodedIndex = vec2(element.keypointIndex & 255, (element.keypointIndex >> 8) & 255) / 255.0f;
 
-    return vec4(encodedIndex, score, valid);
+    return vec4(encodedIndex, encodedScore);
 }
 
 /**

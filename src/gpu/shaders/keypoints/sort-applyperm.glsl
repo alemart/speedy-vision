@@ -47,11 +47,12 @@ struct PermutationElement
  */
 PermutationElement decodePermutationElement(vec4 pixel)
 {
+    const vec2 ones = vec2(1.0f);
     PermutationElement element;
 
     element.keypointIndex = int(pixel.r * 255.0f) | (int(pixel.g * 255.0f) << 8);
-    element.valid = (pixel.a > 0.0f);
-    element.score = element.valid ? pixel.b : -1.0f; // give a negative score to invalid elements
+    element.valid = !all(equal(pixel.ba, ones));
+    element.score = element.valid ? decodeFloat16(pixel.ba) : -1.0f; // give a negative score to invalid elements
 
     return element;
 }
