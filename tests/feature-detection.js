@@ -348,19 +348,19 @@ describe('Feature detection', function() {
             },
             {
                 position: { x: 10, y: 256 },
-                score: 0,
+                score: 0.75,
             },
             {
                 position: { x: 320, y: 320 },
-                score: 1,
+                score: 0.5,
             },
             {
                 position: { x: 400, y: 220 },
-                score: 0,
+                score: 0.25,
             },
             {
                 position: { x: 500, y: 250 },
-                score: 1,
+                score: 0,
             },
         ];
 
