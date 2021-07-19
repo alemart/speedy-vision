@@ -86,7 +86,6 @@ export class SpeedyProgram extends Function
         // options object
         options = Object.assign({
             // default options
-            output: [ 1, 1 ], // size of the output texture
             renderToTexture: true, // render results to a texture?
             pingpong: false, // alternate output texture between calls
         }, options);
@@ -117,18 +116,14 @@ export class SpeedyProgram extends Function
         /** @type {boolean} should we render to a texture? If false, we render to the canvas */
         this._renderToTexture = Boolean(options.renderToTexture);
 
-        /** @type {number} width of the output texture, in pixels */
-        this._width = options.output[0] | 0;
+        /** @type {number} width of the output */
+        this._width = 1;
 
-        /** @type {number} height of the output texture, in pixels */
-        this._height = options.output[1] | 0;
-
-        /** @type {SpeedyDrawableTexture[]} internal texture(s) */
-        this._ownTexture = Array.from({ length: options.pingpong ? 2 : 1 },
-            () => new SpeedyDrawableTexture(gl, this._width, this._height));
+        /** @type {number} height of the output */
+        this._height = 1;
 
         /** @type {SpeedyDrawableTexture[]} output texture(s) */
-        this._texture = [].concat(this._ownTexture);
+        this._texture = (new Array(options.pingpong ? 2 : 1)).fill(null);
 
         /** @type {number} used for pingpong rendering */
         this._textureIndex = 0;
@@ -187,9 +182,14 @@ export class SpeedyProgram extends Function
         // bind the VAO
         gl.bindVertexArray(this._geometry.vao);
 
+        // select the render target
+        const texture = this._texture[this._textureIndex];
+        const fbo = this._renderToTexture ? texture.glFbo : null;
+
         // update texSize uniform (available in all fragment shaders)
+        const width = this._width, height = this._height;
         const texSize = this._uniform.get('texSize');
-        gl.uniform2f(texSize.location, this.width, this.height);
+        gl.uniform2f(texSize.location, width, height);
 
         // set uniforms[i] to args[i]
         for(let i = 0, texNo = 0; i < args.length; i++) {
@@ -214,15 +214,11 @@ export class SpeedyProgram extends Function
         if(this._ubo !== null)
             this._ubo.update();
 
-        // select the render target
-        const texture = this._texture[this._textureIndex];
-        const fbo = this._renderToTexture ? texture.glFbo : null;
-
         // bind the FBO
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
 
         // draw call
-        gl.viewport(0, 0, this.width, this.height);
+        gl.viewport(0, 0, width, height);
         gl.drawArrays(gl.TRIANGLES, 0, 6); // mode, offset, count
 
         // unbind the FBO
@@ -232,7 +228,8 @@ export class SpeedyProgram extends Function
         gl.bindVertexArray(null);
 
         // we've just changed the texture! discard the pyramid, if any
-        texture.discardMipmaps();
+        if(texture != null)
+            texture.discardMipmaps();
 
         // ping-pong rendering
         this._pingpong();
@@ -245,13 +242,13 @@ export class SpeedyProgram extends Function
      * Set the output texture(s) and its (their) shape(s)
      * @param {number} width new width, in pixels
      * @param {number} height new height, in pixels
-     * @param  {...SpeedyDrawableTexture} texture output texture(s)
+     * @param  {...SpeedyDrawableTexture|null} texture output texture(s)
      * @returns {SpeedyProgram} this
      */
     outputs(width, height, ...texture)
     {
-        this.setOutputTexture(...texture);
-        this.setOutputSize(width, height);
+        this._setOutputTexture(...texture);
+        this._setOutputSize(width, height);
         return this;
     }
 
@@ -261,11 +258,11 @@ export class SpeedyProgram extends Function
      * @param {number} height new height, in pixels
      * @returns {SpeedyProgram} this
      */
-    setOutputSize(width, height)
+    _setOutputSize(width, height)
     {
         Utils.assert(width > 0 && height > 0);
 
-        // update size
+        // update output size
         this._width = width | 0;
         this._height = height | 0;
 
@@ -284,27 +281,14 @@ export class SpeedyProgram extends Function
      * @param {...SpeedyDrawableTexture} texture set to null to use the internal texture(s)
      * @returns {SpeedyProgram} this
      */
-    setOutputTexture(...texture)
+    _setOutputTexture(...texture)
     {
-        const expectedTextures = this._texture.length;
-        Utils.assert(texture.length === expectedTextures, `Incorrect number of textures (expected ${expectedTextures})`);
-
-        /*
-        // FIXME pyramid bug... TODO get rid of ownTextures
-        // we need to keep the current size
-        const width = this.width;
-        const height = this.height;
-        */
+        Utils.assert(texture.length === this._texture.length, `Incorrect number of textures (expected ${this._texture.length})`);
 
         // update output texture(s)
-        const useInternal = texture.every(tex => tex === null);
-        this._texture = !useInternal ? texture : this._ownTexture;
+        for(let i = 0; i < this._texture.length; i++)
+            this._texture[i] = texture[i];
         this._textureIndex = 0;
-
-        /*
-        // restore previous size
-        this.setOutputSize(width, height);
-        */
 
         // done!
         return this;
@@ -354,9 +338,7 @@ export class SpeedyProgram extends Function
         if(this._ubo != null)
             this._ubo = this._ubo.release();
 
-        // Release internal textures
-        for(let i = 0; i < this._ownTexture.length; i++)
-            this._ownTexture[i] = this._ownTexture[i].release();
+        // Unlink textures
         this._texture.fill(null);
 
         // Release geometry
@@ -373,24 +355,6 @@ export class SpeedyProgram extends Function
 
         // done!
         return null;
-    }
-
-    /**
-     * Width of the output texture, in pixels
-     * @returns {number}
-     */
-    get width()
-    {
-        return this._width;
-    }
-
-    /**
-     * Height of the output texture, in pixels
-     * @returns {number}
-     */
-    get height()
-    {
-        return this._height;
     }
 
     /**

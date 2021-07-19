@@ -125,11 +125,7 @@ export class SpeedyProgramGroup
      */
     _createProgram(shaderdecl, settings = {})
     {
-        const program = new SpeedyProgram(this._gpu.gl, shaderdecl, {
-            output: [ this._width, this._height ], // default settings
-            ...settings
-        });
-
+        const program = new SpeedyProgram(this._gpu.gl, shaderdecl, settings);
         this._programs.push(program);
         return program;
     }
