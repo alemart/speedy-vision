@@ -35,24 +35,13 @@ export class SpeedyProgramCenter
     /**
      * Class constructor
      * @param {SpeedyGPU} gpu reference to SpeedyGPU
-     * @param {number} width default width for output textures
-     * @param {number} height default height for output textures
      */
-    constructor(gpu, width, height)
+    constructor(gpu)
     {
+        // Note: we instantiate the program groups lazily
+
         /** @type {SpeedyGPU} reference to SpeedyGPU */
         this._gpu = gpu;
-
-        /** @type {number} default width for output textures */
-        this._width = width;
-
-        /** @type {number} default height for output textures */
-        this._height = height;
-
-
-
-        // program groups
-        // lazy instantiation:
 
         /** @type {SpeedyProgramGroupFilters} image filters */
         this._filters = null;
@@ -71,48 +60,12 @@ export class SpeedyProgramCenter
     }
 
     /**
-     * Default width of the output texture of the programs
-     * @returns {number}
-     */
-    get width()
-    {
-        return this._width;
-    }
-
-    /**
-     * Default height of the output texture of the programs
-     * @returns {number}
-     */
-    get height()
-    {
-        return this._height;
-    }
-
-    /**
-     * Utility programs
-     * @returns {SpeedyProgramGroupUtils}
-     */
-    get utils()
-    {
-        return this._utils || (this._utils = new SpeedyProgramGroupUtils(this._gpu, this._width, this._height));
-    }
-
-    /**
      * Image filters & convolutions
      * @returns {SpeedyProgramGroupFilters}
      */
     get filters()
     {
-        return this._filters || (this._filters = new SpeedyProgramGroupFilters(this._gpu, this._width, this._height));
-    }
-
-    /**
-     * Keypoint detection & description
-     * @returns {SpeedyProgramGroupKeypoints}
-     */
-    get keypoints()
-    {
-        return this._keypoints || (this._keypoints = new SpeedyProgramGroupKeypoints(this._gpu, this._width, this._height));
+        return this._filters || (this._filters = new SpeedyProgramGroupFilters(this._gpu));
     }
 
     /**
@@ -121,7 +74,7 @@ export class SpeedyProgramCenter
      */
     get transforms()
     {
-        return this._transforms || (this._transforms = new SpeedyProgramGroupTransforms(this._gpu, this._width, this._height));
+        return this._transforms || (this._transforms = new SpeedyProgramGroupTransforms(this._gpu));
     }
 
     /**
@@ -130,7 +83,25 @@ export class SpeedyProgramCenter
      */
     get pyramids()
     {
-        return this._pyramids || (this._pyramids = new SpeedyProgramGroupPyramids(this._gpu, this._width, this._height));
+        return this._pyramids || (this._pyramids = new SpeedyProgramGroupPyramids(this._gpu));
+    }
+
+    /**
+     * Keypoint detection & description
+     * @returns {SpeedyProgramGroupKeypoints}
+     */
+    get keypoints()
+    {
+        return this._keypoints || (this._keypoints = new SpeedyProgramGroupKeypoints(this._gpu));
+    }
+
+    /**
+     * Utility programs
+     * @returns {SpeedyProgramGroupUtils}
+     */
+    get utils()
+    {
+        return this._utils || (this._utils = new SpeedyProgramGroupUtils(this._gpu));
     }
 
     /**

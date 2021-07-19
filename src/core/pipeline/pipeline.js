@@ -88,7 +88,7 @@ export class SpeedyPipeline
             throw new IllegalArgumentError(`Can't initialize the pipeline. Please specify its nodes`);
 
         // create a GPU instance
-        this._gpu = new SpeedyGPU(1, 1);
+        this._gpu = new SpeedyGPU();
 
         // add nodes to the network
         for(let i = 0; i < nodes.length; i++) {

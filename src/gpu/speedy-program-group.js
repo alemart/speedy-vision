@@ -55,19 +55,11 @@ export class SpeedyProgramGroup
      * Class constructor
      * @protected
      * @param {SpeedyGPU} gpu
-     * @param {number} width Texture width (depends on the pyramid layer)
-     * @param {number} height Texture height (depends on the pyramid layer)
      */
-    constructor(gpu, width, height)
+    constructor(gpu)
     {
         /** @type {SpeedyGPU} GPU-accelerated routines */
         this._gpu = gpu;
-
-        /** @type {number} width of the output textures of the programs */
-        this._width = width;
-
-        /** @type {number} height of the output textures of the programs */
-        this._height = height;
 
         /** @type {SpeedyProgram[]} the list of all programs that belong to this group */
         this._programs = [];

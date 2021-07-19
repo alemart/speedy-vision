@@ -25,8 +25,6 @@ import { SpeedyProgramCenter } from './speedy-program-center';
 import { SpeedyTexturePool } from './speedy-texture-pool';
 import { SpeedyTextureUploader } from './speedy-texture-uploader';
 import { SpeedyMediaSource } from '../core/speedy-media-source';
-import { NotSupportedError, IllegalArgumentError } from '../utils/errors';
-import { MAX_TEXTURE_LENGTH } from '../utils/globals';
 import { Utils } from '../utils/utils';
 
 
@@ -37,30 +35,14 @@ export class SpeedyGPU
 {
     /**
      * Constructor
-     * @param {number} width width of the image you're working with
-     * @param {number} height height of the image you're working with
      */
-    constructor(width, height)
+    constructor()
     {
-        // validate texture size
-        if(width > MAX_TEXTURE_LENGTH || height > MAX_TEXTURE_LENGTH)
-            throw new NotSupportedError(`Maximum texture size exceeded. Using ${width} x ${height}, expected up to ${MAX_TEXTURE_LENGTH} x ${MAX_TEXTURE_LENGTH}.`);
-        else if(width < 1 || height < 1)
-            throw new IllegalArgumentError(`Invalid texture size: ${width} x ${height}`);
-
-
-
         /** @type {SpeedyGL} cached reference */
         this._speedyGL = SpeedyGL.instance;
 
-        /** @type {number} width of the textures */
-        this._width = width | 0;
-
-        /** @type {number} height of the textures */
-        this._height = height | 0;
-
         /** @type {SpeedyProgramCenter} GPU-based programs */
-        this._programs = new SpeedyProgramCenter(this, this._width, this._height);
+        this._programs = new SpeedyProgramCenter(this);
 
         /** @type {SpeedyTexturePool} texture pool */
         this._texturePool = new SpeedyTexturePool(this);
@@ -193,7 +175,7 @@ export class SpeedyGPU
         if(this.isReleased())
             return;
 
-        this._programs = new SpeedyProgramCenter(this, this._width, this._height);
+        this._programs = new SpeedyProgramCenter(this);
         this._texturePool = new SpeedyTexturePool(this);
         this._textureUploader = new SpeedyTextureUploader(this);
     }

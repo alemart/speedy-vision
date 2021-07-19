@@ -44,12 +44,10 @@ export class SpeedyProgramGroupPyramids extends SpeedyProgramGroup
     /**
      * Class constructor
      * @param {SpeedyGPU} gpu
-     * @param {number} width
-     * @param {number} height
      */
-    constructor(gpu, width, height)
+    constructor(gpu)
     {
-        super(gpu, width, height);
+        super(gpu);
         this
             // upsampling & downsampling
             .declare('upsample2', upsample2)

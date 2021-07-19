@@ -147,12 +147,10 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
     /**
      * Class constructor
      * @param {SpeedyGPU} gpu
-     * @param {number} width
-     * @param {number} height
      */
-    constructor(gpu, width, height)
+    constructor(gpu)
     {
-        super(gpu, width, height);
+        super(gpu);
         this
             //
             // FAST corner detector

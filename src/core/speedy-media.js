@@ -22,7 +22,7 @@
 import { SpeedyGPU } from '../gpu/speedy-gpu';
 import { SpeedyTexture } from '../gpu/speedy-texture';
 import { MediaType, ColorFormat } from '../utils/types'
-import { IllegalArgumentError, IllegalOperationError } from '../utils/errors';
+import { IllegalOperationError } from '../utils/errors';
 import { Utils } from '../utils/utils';
 import { SpeedyMediaSource } from './speedy-media-source';
 import { SpeedyPromise } from '../utils/speedy-promise';
@@ -56,7 +56,7 @@ export class SpeedyMedia
         this._colorFormat = colorFormat;
 
         /** @type {SpeedyGPU} GPU-accelerated routines */ // FIXME
-        this._gpu = options.lightweight ? Object.create(null) : new SpeedyGPU(this._source.width, this._source.height);
+        this._gpu = options.lightweight ? Object.create(null) : new SpeedyGPU();
 
         // warning: loading a canvas without an explicit usage flag
         if(this._source.type == MediaType.Canvas && this._options.usage === undefined)
