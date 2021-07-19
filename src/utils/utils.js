@@ -340,8 +340,6 @@ export class Utils
         // of the OpenGL ES 3 spec
         const t10 = 0.0009765625; // 2^-10
         const t24 = 5.960464477539063e-8; // 2^-24
-        const t15 = 0.000030517578125; // 2^-15
-
         const s = (uint16 & 0xFFFF) >> 15; // sign bit
         const e = (uint16 & 0x7FFF) >> 10; // exponent
         const m = (uint16 & 0x3FF); // mantissa
@@ -352,7 +350,7 @@ export class Utils
         else if(e == 31)
             return m == 0 ? sign * Number.POSITIVE_INFINITY : Number.NaN
         else
-            return (sign * (1 << e)) * (t15 * (1.0 + m * t10));
+            return sign * Math.pow(2, e-15) * (1.0 + m * t10);
     }
 
     /**
