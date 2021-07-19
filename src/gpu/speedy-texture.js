@@ -21,8 +21,8 @@
 
 import { SpeedyGPU } from './speedy-gpu';
 import { Utils } from '../utils/utils';
-import { IllegalOperationError, GLError } from '../utils/errors';
-import { PYRAMID_MAX_LEVELS } from '../utils/globals';
+import { IllegalOperationError, IllegalArgumentError, NotSupportedError, GLError } from '../utils/errors';
+import { MAX_TEXTURE_LENGTH } from '../utils/globals';
 
 /**
  * Get a buffer filled with zeros
@@ -152,7 +152,10 @@ export class SpeedyTexture
 
         // validate size
         width |= 0; height |= 0;
-        Utils.assert(width > 0 && height > 0);
+        if(width > MAX_TEXTURE_LENGTH || height > MAX_TEXTURE_LENGTH)
+            throw new NotSupportedError(`Maximum texture size exceeded. Using ${width} x ${height}, expected up to ${MAX_TEXTURE_LENGTH} x ${MAX_TEXTURE_LENGTH}.`);
+        else if(width < 1 || height < 1)
+            throw new IllegalArgumentError(`Invalid texture size: ${width} x ${height}`);
 
         // context loss?
         if(gl.isContextLost())
