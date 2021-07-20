@@ -19,6 +19,8 @@
  * Encode offsets between keypoints
  */
 
+@include "float16.glsl"
+
 uniform sampler2D offsetsImage;
 uniform ivec2 imageSize;
 
@@ -27,51 +29,31 @@ uniform ivec2 imageSize;
 #endif
 
 // helper macros
-#define decodeSkipOffset(pixel) (int((pixel).g * 255.0f) | (int((pixel).b * 255.0f) << 8))
+#define decodeSkipOffset(pixel) (int((pixel).g * 255.0f) | (int((pixel).a * 255.0f) << 8))
 #define encodeSkipOffset(offset) (vec2((offset) & 255, (offset) >> 8) / 255.0f) // offset is guaranteed to be <= 0xFFFF
 
-//
-// We'll encode the following in the RGBA channels:
-//
-// R: keypoint score
-// GB: skip offset (little endian)
-// A: keypoint scale
-//
-// Skip offset = min(c, offset to the next keypoint),
-// for a constant c in [1, 65535]
-//
 void main()
 {
     vec4 pixel = threadPixel(offsetsImage);
     ivec2 thread = threadLocation();
-    float score = pixel.r;
-    float scale = pixel.a;
     int rasterIndex = thread.y * imageSize.x + thread.x;
     int offset = decodeSkipOffset(pixel);
     int totalOffset = offset;
-    ivec2 pos = thread;
+    vec2 encodedScore = pixel.rb;
 
-#if 0
-    while(offset < MAX_ITERATIONS && pos.y < imageSize.y && pixel.r == 0.0f) {
-        rasterIndex += offset;
-        pos = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);
-        pixel = pixelAt(offsetsImage, pos);
-        offset = decodeSkipOffset(pixel);
-        totalOffset += offset;
-    }
-#else
-    int allow = 1;
-
-    for(int i = 0; i < MAX_ITERATIONS; i++) { // branchless
-        allow *= int(pos.y < imageSize.y) * int(pixel.r == 0.0f);
+    // branchless
+    ivec2 pos = thread; int allow = 1;
+    for(int i = 0; i < MAX_ITERATIONS; i++) {
+        allow *= int(pos.y < imageSize.y) * int(isEncodedFloat16Zero(pixel.rb));
         rasterIndex += allow * offset;
         pos = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);
         pixel = pixelAt(offsetsImage, pos);
         offset = decodeSkipOffset(pixel);
         totalOffset += allow * offset;
     }
-#endif
-
     totalOffset = min(totalOffset, 65535);
-    color = vec4(score, encodeSkipOffset(totalOffset), scale);
+
+    // write data
+    color.rb = encodedScore;
+    color.ga = encodeSkipOffset(totalOffset);
 }

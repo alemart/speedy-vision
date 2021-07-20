@@ -39,7 +39,7 @@ uniform int encoderLength;
  * @param {vec4} pixel data
  * @returns {int} skip offset
  */
-#define decodeSkipOffset(pixel) (int((pixel).g * 255.0f) | (int((pixel).b * 255.0f) << 8))
+#define decodeSkipOffset(pixel) (int((pixel).g * 255.0f) | (int((pixel).a * 255.0f) << 8))
 
 /**
  * Find the q-th keypoint in the offsets image
@@ -61,7 +61,7 @@ bool findQthKeypoint(int q, int p, inout ivec2 position, out vec4 pixel)
     while(position.y < imageSize.y && p != q) {
         position = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);
         pixel = texelFetch(offsetsImage, position, 0);
-        p += int(pixel.r > 0.0f);
+        p += int(!isEncodedFloat16Zero(pixel.rb));
         rasterIndex += max(1, decodeSkipOffset(pixel));
     }
 
@@ -76,9 +76,9 @@ void main()
     KeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);
     int q = findKeypointIndex(address, descriptorSize, extraSize);
 
-    // is it a descriptor/extra cell?
+    // not a position cell?
     color = vec4(0.0f); // fill it with zeroes
-    if(address.offset > 1)
+    if(address.offset != 0)
         return;
 
     // we divide the processing in a few passes...
@@ -106,12 +106,6 @@ void main()
     if(q >= min(maxKeypoints, keypointLimit) || !findQthKeypoint(q, lastIndexFromPrevPass, position, pixel))
         return;
 
-    // write keypoint data
-    color = (address.offset == 1) ? vec4(
-        encodeLod(0.0f), // scale
-        encodeOrientation(0.0f), // rotation
-        encodeKeypointScore(0.0f) // score
-    ) : encodeKeypointPosition(
-        vec2(position) // position
-    );
+    // write keypoint position
+    color = encodeKeypointPosition(vec2(position));
 }
