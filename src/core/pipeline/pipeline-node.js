@@ -58,7 +58,7 @@ export class SpeedyPipelineNode
     /**
      * Constructor
      * @param {string} [name] the name of this node
-     * @param {number} [texCount] number of internal work textures
+     * @param {number} [texCount] number of work textures
      * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
      */
     constructor(name = generateRandomName(), texCount = 0, portBuilders = [])
@@ -262,7 +262,7 @@ export class SpeedyPipelineSourceNode extends SpeedyPipelineNode
     /**
      * Constructor
      * @param {string} [name] the name of this node
-     * @param {number} [texCount] number of internal work textures
+     * @param {number} [texCount] number of work textures
      * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
      */
     constructor(name = undefined, texCount = undefined, portBuilders = undefined)
@@ -281,7 +281,7 @@ export class SpeedyPipelineSinkNode extends SpeedyPipelineNode
     /**
      * Constructor
      * @param {string} [name] the name of this node
-     * @param {number} [texCount] number of internal work textures
+     * @param {number} [texCount] number of work textures
      * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
      */
     constructor(name = undefined, texCount = undefined, portBuilders = undefined)

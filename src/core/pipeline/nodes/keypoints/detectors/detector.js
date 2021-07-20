@@ -44,7 +44,7 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
     /**
      * Constructor
      * @param {string} [name] name of the node
-     * @param {number} [texCount] number of internal work textures
+     * @param {number} [texCount] number of work textures
      * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
      */
     constructor(name = undefined, texCount = 0, portBuilders = undefined)
@@ -188,7 +188,7 @@ export class SpeedyPipelineNodeMultiscaleKeypointDetector extends SpeedyPipeline
     /**
      * Constructor
      * @param {string} [name] name of the node
-     * @param {number} [texCount] number of internal work textures
+     * @param {number} [texCount] number of work textures
      * @param {SpeedyPipelinePortBuilder[]} [portBuilders] port builders
      */
     constructor(name = undefined, texCount = undefined, portBuilders = undefined)
