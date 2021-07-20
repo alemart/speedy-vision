@@ -68,13 +68,17 @@ uvec2 packf16(/*highp*/ float f)
  */
 bool isEncodedFloat16Zero(vec2 v)
 {
-    //return decodeFloat16(v) == 0.0f;
     // this is as in sec 2.1.2 16-bit
     // floating point numbers of the
     // OpenGL ES 3 spec
+    uvec2 w = uvec2(v * 255.0f);
+    return 0u == w.x + w.y * (0x80u - w.y); // 0x8000 is negative zero
+    /*
+    //return decodeFloat16(v) == 0.0f;
     uvec2 w = uvec2(v * 255.0f) & 0xFFu;
     uint u16 = (w.y << 8u) | w.x;
     return (u16 & 0x7FFFu) == 0u;
+    */
 }
 
 #endif
