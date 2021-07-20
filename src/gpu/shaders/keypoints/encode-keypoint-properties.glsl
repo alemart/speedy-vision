@@ -49,6 +49,6 @@ void main()
 
     // write to the properties cell
     color.r = kpix.a; //encodeLod(keypoint.lod);
-    color.g = encodeOrientation(0.0f);
+    color.g = encodeKeypointOrientation(0.0f);
     color.ba = encodeKeypointScore(keypoint.score);
 }

@@ -121,6 +121,6 @@ void main()
     float angle = fastAtan2(m.y, m.x);
 
     // done!
-    float encodedOrientation = encodeOrientation(angle);
+    float encodedOrientation = encodeKeypointOrientation(angle);
     color = vec4(0.0f, encodedOrientation, 0.0f, 0.0f);
 }

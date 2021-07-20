@@ -27,11 +27,11 @@
  *    1 pixel        1 pixel       M/4 pixels      N/4 pixels
  * [  X  |  Y  ][ S | R |   C   ][ ... E ... ][  ...  D  ...  ]
  *
- * X: keypoint_xpos (2 bytes)
- * Y: keypoint_ypos (2 bytes)
+ * X: keypoint_xpos (2 bytes) as fixed-point
+ * Y: keypoint_ypos (2 bytes) as fixed-point
  * S: keypoint_scale (1 byte)
  * R: keypoint_rotation (1 byte)
- * C: keypoint_cornerness_score (2 bytes)
+ * C: keypoint_cornerness_score (2 bytes) as float16
  * E: extra binary string (M bytes)
  * D: descriptor binary string (N bytes)
  *
@@ -39,7 +39,7 @@
  *
  *
  *
- * The position of keypoints are encoded as follows:
+ * The position of the keypoints are encoded as follows:
  *
  * |------- 1 pixel = 32 bits -------|
  * |--- 16 bits ----|---- 16 bits ---|
@@ -49,28 +49,26 @@
  * for subpixel representation
  *
  * Pixel value 0xFFFFFFFF is reserved (not available),
- * and it's considered to be "null"
- *
- * The cornerness score is encoded as a float16
+ * and is considered to be "null"
  */
 
 #ifndef _KEYPOINTS_GLSL
 #define _KEYPOINTS_GLSL
 
-@include "pyramids.glsl"
-@include "orientation.glsl"
+@include "math.glsl"
 @include "fixed-point.glsl"
 @include "float16.glsl"
+@include "pyramids.glsl"
 
 /**
  * Keypoint struct
  */
 struct Keypoint
 {
-    vec2 position;
+    vec2 position; // position in the image
+    float lod; // level-of-detail of the image
     float orientation; // in radians
-    float lod; // level-of-detail
-    float score;
+    float score; // cornerness measure
 };
 
 /**
@@ -105,6 +103,20 @@ const int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@); // in bytes
 #define decodeKeypointScore(encodedScore) decodeFloat16(encodedScore)
 
 /**
+ * Convert an angle in radians to a normalized value in [0,1]
+ * @param {float} angle in radians between -PI and PI
+ * @returns {float} in [0,1]
+ */
+#define encodeKeypointOrientation(angle) ((angle) * INV_PI_OVER_2 + 0.5f)
+
+/**
+ * Convert a normalized value in [0,1] to an angle in radians
+ * @param {float} value in [0,1]
+ * @returns {float} radians
+ */
+#define decodeKeypointOrientation(value) ((value) * TWO_PI - PI)
+
+/**
  * Encode a "null" keypoint, that is, a token
  * representing the end of a list of keypoints
  * @returns {vec4} RGBA
@@ -118,6 +130,14 @@ const int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@); // in bytes
  * @returns {vec4} RGBA
  */
 #define encodeDiscardedKeypoint() (vec4(0.0f))
+
+/**
+ * Checks whether the given keypoint is "bad",
+ * i.e., whether it's null or invalid in some way
+ * @param {Keypoint} keypoint
+ * @returns {bool}
+ */
+#define isBadKeypoint(keypoint) ((keypoint).score < 0.0f)
 
 /**
  * The size of an encoded keypoint in bytes
@@ -203,8 +223,8 @@ Keypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointA
 
     // get keypoint properties: scale, orientation, score & flags
     vec4 encodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);
-    keypoint.orientation = decodeOrientation(encodedProperties.g); // in radians
     keypoint.lod = decodeLod(encodedProperties.r); // level-of-detail
+    keypoint.orientation = decodeKeypointOrientation(encodedProperties.g); // in radians
     keypoint.score = decodeKeypointScore(encodedProperties.ba); // score
 
     // got a null or invalid keypoint? encode it with a negative score
@@ -230,14 +250,6 @@ vec4 encodeKeypointPosition(vec2 position)
 
     return vec4(lo.x, hi.x, lo.y, hi.y) / 255.0f;
 }
-
-/**
- * Checks whether the given keypoint is "bad",
- * i.e., whether it's null or invalid in some way
- * @param {Keypoint} keypoint
- * @returns {bool}
- */
-#define isBadKeypoint(keypoint) ((keypoint).score < 0.0f)
 
 /**
  * Encode the position of a keypoint at "infinity"

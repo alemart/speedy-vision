@@ -71,7 +71,7 @@ void main()
             // keypoint score & scale
             vec2 score = encodeKeypointScore(max(data.w, 0.0f));
             float scale = encodeLod(data.z);
-            float rotation = encodeOrientation(0.0f);
+            float rotation = encodeKeypointOrientation(0.0f);
             color = vec4(scale, rotation, score);
             break;
         }
