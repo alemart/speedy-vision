@@ -122,7 +122,7 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
                 break;
 
             // discard if the header is zero
-            if(x + y == 0 && pixels[i+6] == 0)
+            if(x + y == 0 && pixels[i+6] + pixels[i+7] == 0)
                 continue;
 
             // convert from fixed-point
@@ -135,8 +135,8 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
             // decode orientation
             rotation = (2 * pixels[i+5] - 255) * piOver255;
 
-            // extract score
-            score = (pixels[i+7] << 8) | pixels[i+6];
+            // decode score
+            score = Utils.decodeFloat16((pixels[i+7] << 8) | pixels[i+6]);
 
             // extra bytes
             extraBytes = pixels.subarray(8 + i, 8 + i + extraSize);

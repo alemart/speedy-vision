@@ -23,7 +23,7 @@ import { Utils } from '../utils/utils';
 import { SpeedyPoint2 } from './speedy-point';
 
 // Constants
-const noBytes = new Uint8Array([]);
+const EMPTY = new Uint8Array([]);
 
 /**
  * Represents a keypoint
@@ -36,18 +36,18 @@ export class SpeedyKeypoint
      * @param {number} y Y position
      * @param {number} [lod] Level-of-detail
      * @param {number} [rotation] Rotation in radians
-     * @param {number} [score16] Cornerness measure as 16-bit unsigned int
+     * @param {number} [score] Cornerness measure
      * @param {Uint8Array} [descriptorBytes] bytes of the feature descriptor, if any
      * @param {Uint8Array} [extraBytes] extra bytes of the header, if any
      */
-    constructor(x, y, lod = 0.0, rotation = 0.0, score16 = 0, descriptorBytes = null, extraBytes = null)
+    constructor(x, y, lod = 0.0, rotation = 0.0, score = 0, descriptorBytes = null, extraBytes = null)
     {
         this._position = new SpeedyPoint2(+x, +y);
         this._lod = +lod;
         this._rotation = +rotation;
-        this._score = score16 | 0;
-        this._extraBytes = extraBytes || noBytes;
-        this._descriptorBytes = descriptorBytes || noBytes;
+        this._score = +score;
+        this._extraBytes = extraBytes || EMPTY;
+        this._descriptorBytes = descriptorBytes || EMPTY;
     }
 
     /**
@@ -120,7 +120,7 @@ export class SpeedyKeypoint
      */
     get score()
     {
-        return Utils.decodeFloat16(this._score);
+        return this._score;
     }
 
     /**
