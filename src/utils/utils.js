@@ -338,20 +338,18 @@ export class Utils
         // decode according to sec 2.1.2
         // 16-Bit Floating Point Numbers
         // of the OpenGL ES 3 spec
-        const t10 = 0.0009765625; // 2^-10
-        const t24 = 5.960464477539063e-8; // 2^-24
         const s = (uint16 & 0xFFFF) >> 15; // sign bit
         const e = (uint16 & 0x7FFF) >> 10; // exponent
         const m = (uint16 & 0x3FF); // mantissa
         const sign = 1 - 2 * s; // (-1)^s
 
         if(e == 0)
-            return m == 0 ? sign * 0.0 : sign * (m * t24);
+            return m == 0 ? sign * 0.0 : sign * m * 5.960464477539063e-8; // zero / subnormal
         else if(e == 31)
-            return m == 0 ? sign * Number.POSITIVE_INFINITY : Number.NaN
+            return m == 0 ? sign * Number.POSITIVE_INFINITY : Number.NaN;
 
-        const te15 = e >= 15 ? (1 << (e-15)) : 1.0 / (1 << (15-e)); // 2^(e-15)
-        return sign * te15 * (1.0 + m * t10);
+        const f = e >= 15 ? (1 << (e-15)) : 1.0 / (1 << (15-e)); // 2^(e-15)
+        return sign * f * (1.0 + m * 0.0009765625); // normal
     }
 
     /**

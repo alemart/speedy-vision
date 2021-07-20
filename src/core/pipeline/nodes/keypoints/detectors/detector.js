@@ -81,12 +81,14 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
      * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} corners input
      * @param {SpeedyDrawableTexture} encodedKeypoints output
+     * @param {number} [descriptorSize] in bytes
+     * @param {number} [extraSize] in bytes
      * @returns {SpeedyDrawableTexture} encodedKeypoints
      */
-    _encodeKeypoints(gpu, corners, encodedKeypoints)
+    _encodeKeypoints(gpu, corners, encodedKeypoints, descriptorSize = 0, extraSize = 0)
     {
         const capacity = this._capacity;
-        const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(capacity, 0, 0);
+        const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(capacity, descriptorSize, extraSize);
         const width = corners.width, height = corners.height;
         const imageSize = [ width, height ];
         const tex = this._tex.slice(this._tex.length - 4);
@@ -120,11 +122,11 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
 
         // encode keypoint positions
         let encodedKps = tex[3].clear();
-        for(let passId = 0; passId < ENCODER_PASSES; passId++)
-            encodedKps = keypoints.encodeKeypointPositions(offsets, imageSize, passId, ENCODER_PASSES, capacity, encodedKps, 0, 0, encoderLength);
+        for(let j = 0; j < ENCODER_PASSES; j++)
+            encodedKps = keypoints.encodeKeypointPositions(offsets, imageSize, j, ENCODER_PASSES, capacity, encodedKps, descriptorSize, extraSize, encoderLength);
 
         // encode keypoint properties
-        return keypoints.encodeKeypointProperties(corners, encodedKps, 0, 0, encoderLength);
+        return keypoints.encodeKeypointProperties(corners, encodedKps, descriptorSize, extraSize, encoderLength);
     }
 
     /**
