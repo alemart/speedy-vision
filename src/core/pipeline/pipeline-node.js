@@ -44,20 +44,10 @@ const PortDictionary = ports =>
     //ports.reduce((dict, port) => Object.assign(dict, { [port.name]: port }), Object.create(null));
 
 /**
- * Generate a unique ID
- * @returns {number}
- */
-const generateUniqueID = (function() {
-    let counter = 0;
-    return () => counter++;
-})();
-
-/**
  * Generate a random name for a node
  * @returns {string}
  */
-const generateRandomName = () =>
-    Math.random().toString(16).substr(2);
+const generateRandomName = () => Math.random().toString(16).substr(2);
 
 /**
  * Node of a pipeline
@@ -73,9 +63,6 @@ export class SpeedyPipelineNode
      */
     constructor(name = generateRandomName(), texCount = 0, portBuilders = [])
     {
-        /** @type {number} the ID of this node (unique) */
-        this._id = generateUniqueID(); // node names may be the same...
-
         /** @type {string} the name of this node */
         this._name = String(name);
 
@@ -127,15 +114,6 @@ export class SpeedyPipelineNode
     get fullName()
     {
         return `${this.constructor.name}[${this.name}]`;
-    }
-
-    /**
-     * The unique ID of this node
-     * @returns {number}
-     */
-    get id()
-    {
-        return this._id;
     }
 
     /**
