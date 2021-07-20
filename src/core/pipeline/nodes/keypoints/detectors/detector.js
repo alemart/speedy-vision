@@ -133,12 +133,14 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
      * Create a tiny texture with zero encoded keypoints
      * @param {SpeedyGPU} gpu
      * @param {SpeedyDrawableTexture} encodedKeypoints output texture
+     * @param {number} [descriptorSize] in bytes
+     * @param {number} [extraSize] in bytes
      * @returns {SpeedyDrawableTexture} encodedKeypoints
      */
-    _encodeZeroKeypoints(gpu, encodedKeypoints)
+    _encodeZeroKeypoints(gpu, encodedKeypoints, descriptorSize = 0, extraSize = 0)
     {
         const capacity = 0;
-        const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(capacity, 0, 0);
+        const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(capacity, descriptorSize, extraSize);
         const keypoints = gpu.programs.keypoints;
 
         keypoints.encodeNullKeypoints.outputs(encoderLength, encoderLength, encodedKeypoints);
