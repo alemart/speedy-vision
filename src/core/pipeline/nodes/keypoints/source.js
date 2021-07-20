@@ -46,7 +46,7 @@ export class SpeedyPipelineNodeKeypointSource extends SpeedyPipelineSourceNode
      */
     constructor(name = undefined)
     {
-        super(name, 1, [
+        super(name, 2, [
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints)
         ]);
 
@@ -90,7 +90,7 @@ export class SpeedyPipelineNodeKeypointSource extends SpeedyPipelineSourceNode
         const numPasses = Math.max(1, Math.ceil(numKeypoints / BUFFER_SIZE));
         const buffer = this._buffer;
         const tex = this._tex[0];
-        const outputTexture = this._outputTexture;
+        const outputTexture = this._tex[1];
         const uploadKeypoints = gpu.programs.keypoints.uploadKeypoints;
         const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(numKeypoints, descriptorSize, extraSize);
 

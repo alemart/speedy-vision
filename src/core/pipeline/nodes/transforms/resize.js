@@ -46,7 +46,7 @@ export class SpeedyPipelineNodeResize extends SpeedyPipelineNode
      */
     constructor(name = undefined)
     {
-        super(name, 0, [
+        super(name, 1, [
             InputPort().expects(SpeedyPipelineMessageType.Image),
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
@@ -127,7 +127,7 @@ export class SpeedyPipelineNodeResize extends SpeedyPipelineNode
     {
         const { image, format } = this.input().read();
         const width = image.width, height = image.height;
-        const outputTexture = this._outputTexture;
+        const outputTexture = this._tex[0];
         const method = this._method;
         const newWidth = this._size.width || Math.max(1, this._scale.x * width);
         const newHeight = this._size.height || Math.max(1, this._scale.y * height);

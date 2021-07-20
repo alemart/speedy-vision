@@ -41,7 +41,7 @@ export class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode
      */
     constructor(name = undefined)
     {
-        super(name, 0, [
+        super(name, 1, [
             OutputPort().expects(SpeedyPipelineMessageType.Image)
         ]);
 
@@ -75,8 +75,8 @@ export class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode
      */
     _run(gpu)
     {
-        gpu.upload(this._media._source, this._outputTexture);
-
-        this.output().swrite(this._outputTexture, ImageFormat.RGBA);
+        const outputTexture = this._tex[0]
+        gpu.upload(this._media._source, outputTexture);
+        this.output().swrite(outputTexture, ImageFormat.RGBA);
     }
 }

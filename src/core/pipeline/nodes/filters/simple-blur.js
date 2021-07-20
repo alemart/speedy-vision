@@ -74,7 +74,7 @@ export class SpeedyPipelineNodeSimpleBlur extends SpeedyPipelineNode
      */
     constructor(name = undefined)
     {
-        super(name, 1, [
+        super(name, 2, [
             InputPort().expects(SpeedyPipelineMessageType.Image),
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
@@ -124,12 +124,12 @@ export class SpeedyPipelineNodeSimpleBlur extends SpeedyPipelineNode
     {
         const { image, format } = this.input().read();
         const width = image.width, height = image.height;
-        const outputTexture = this._outputTexture;
         const kernX = this._kernel.x;
         const kernY = this._kernel.y;
         const convX = CONVOLUTION_X[this._kernelSize.width];
         const convY = CONVOLUTION_Y[this._kernelSize.height];
         const tex = this._tex[0];
+        const outputTexture = this._tex[1];
 
         (gpu.programs.filters[convX]
             .outputs(width, height, tex)

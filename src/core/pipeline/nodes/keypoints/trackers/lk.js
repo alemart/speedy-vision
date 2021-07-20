@@ -53,7 +53,7 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
      */
     constructor(name = undefined)
     {
-        super(name, 3, [
+        super(name, 4, [
             InputPort('previousImage').expects(SpeedyPipelineMessageType.Image).satisfying(
                 msg => msg.format === ImageFormat.GREY
             ),
@@ -201,6 +201,7 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
         const epsilon = this._epsilon;
         const keypoints = gpu.programs.keypoints;
         const tex = this._tex;
+        const outputTexture = this._tex[3];
 
         // do we need a pyramid?
         if(!(levels == 1 || (previousImage.hasMipmaps() && nextImage.hasMipmaps())))
@@ -233,7 +234,7 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
         const nextKeypoints = keypoints.transferFlow(flow, previousKeypoints, descriptorSize, extraSize, encoderLength);
 
         // discard "bad" keypoints
-        keypoints.lkDiscard.outputs(encoderLength, encoderLength, this._outputTexture);
+        keypoints.lkDiscard.outputs(encoderLength, encoderLength, outputTexture);
         const goodKeypoints = keypoints.lkDiscard(nextImage, wsize, nextKeypoints, descriptorSize, extraSize, encoderLength);
 
         // done!

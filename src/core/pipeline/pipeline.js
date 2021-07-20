@@ -161,10 +161,6 @@ export class SpeedyPipeline
         // find the sinks
         const sinks = this._sequence.filter(node => node.isSink());
 
-        // clear output textures
-        for(let i = 0; i < this._sequence.length; i++)
-            this._sequence[i].clearTextures();
-
         // run the pipeline
         return SpeedyPipeline._runSequence(this._sequence, this._gpu).then(() =>
 

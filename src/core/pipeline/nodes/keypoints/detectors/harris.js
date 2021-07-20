@@ -52,7 +52,7 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
      */
     constructor(name = undefined)
     {
-        super(name, 3, [
+        super(name, 4, [
             InputPort().expects(SpeedyPipelineMessageType.Image).satisfying(
                 msg => msg.format === ImageFormat.GREY
             ),
@@ -118,6 +118,7 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
         const image = this.input().read().image;
         const width = image.width, height = image.height;
         const tex = this._tex;
+        const outputTexture = this._tex[3];
         const capacity = this._capacity;
         const quality = this._quality;
         const windowSize = this._windowSize;
@@ -133,7 +134,7 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
 
         // skip if the capacity is zero
         if(capacity == 0) {
-            const encodedKeypoints = this._encodeZeroKeypoints(gpu, this._outputTexture);
+            const encodedKeypoints = this._encodeZeroKeypoints(gpu, outputTexture);
             const encoderLength = encodedKeypoints.width;
             this.output().swrite(encodedKeypoints, 0, 0, encoderLength);
             return;
@@ -166,7 +167,7 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
         )(suppressedCorners, maxScore, quality);
 
         // encode keypoints
-        const encodedKeypoints = this._encodeKeypoints(gpu, niceCorners, this._outputTexture);
+        const encodedKeypoints = this._encodeKeypoints(gpu, niceCorners, outputTexture);
         const encoderLength = encodedKeypoints.width;
 
         // done!

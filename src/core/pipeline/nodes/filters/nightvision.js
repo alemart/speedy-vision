@@ -44,7 +44,7 @@ export class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode
      */
     constructor(name = undefined)
     {
-        super(name, 2, [
+        super(name, 3, [
             InputPort().expects(SpeedyPipelineMessageType.Image).satisfying(
                 msg => msg.format === ImageFormat.RGBA || msg.format === ImageFormat.GREY
             ),
@@ -148,7 +148,6 @@ export class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode
     {
         const { image, format } = this.input().read();
         const width = image.width, height = image.height;
-        const outputTexture = this._outputTexture;
         const gain = this._gain;
         const offset = this._offset;
         const decay = this._decay;
@@ -156,6 +155,7 @@ export class SpeedyPipelineNodeNightvision extends SpeedyPipelineNode
         const filters = gpu.programs.filters;
         const tmp = this._tex[0];
         const illuminationMap = this._tex[1];
+        const outputTexture = this._tex[2];
 
         // compute illumination map
         if(quality == 'medium') {

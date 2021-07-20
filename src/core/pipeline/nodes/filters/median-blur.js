@@ -48,7 +48,7 @@ export class SpeedyPipelineNodeMedianBlur extends SpeedyPipelineNode
      */
     constructor(name = undefined)
     {
-        super(name, 0, [
+        super(name, 1, [
             InputPort().expects(SpeedyPipelineMessageType.Image).satisfying(
                 msg => msg.format === ImageFormat.GREY
             ),
@@ -94,9 +94,9 @@ export class SpeedyPipelineNodeMedianBlur extends SpeedyPipelineNode
     {
         const { image, format } = this.input().read();
         const width = image.width, height = image.height;
-        const outputTexture = this._outputTexture;
         const ksize = this._kernelSize.width;
         const med = MEDIAN[ksize];
+        const outputTexture = this._tex[0];
 
         (gpu.programs.filters[med]
             .outputs(width, height, outputTexture)

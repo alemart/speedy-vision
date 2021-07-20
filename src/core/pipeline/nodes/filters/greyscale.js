@@ -39,7 +39,7 @@ export class SpeedyPipelineNodeGreyscale extends SpeedyPipelineNode
      */
     constructor(name = undefined)
     {
-        super(name, 0, [
+        super(name, 1, [
             InputPort().expects(SpeedyPipelineMessageType.Image),
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
@@ -54,7 +54,7 @@ export class SpeedyPipelineNodeGreyscale extends SpeedyPipelineNode
     {
         const { image } = this.input().read();
         const width = image.width, height = image.height;
-        const outputTexture = this._outputTexture;
+        const outputTexture = this._tex[0];
         const filters = gpu.programs.filters;
 
         filters.rgb2grey.outputs(width, height, outputTexture);

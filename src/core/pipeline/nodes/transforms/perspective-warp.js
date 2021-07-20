@@ -46,7 +46,7 @@ export class SpeedyPipelineNodePerspectiveWarp extends SpeedyPipelineNode
      */
     constructor(name = undefined)
     {
-        super(name, 0, [
+        super(name, 1, [
             InputPort().expects(SpeedyPipelineMessageType.Image),
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
@@ -85,7 +85,7 @@ export class SpeedyPipelineNodePerspectiveWarp extends SpeedyPipelineNode
     {
         const { image, format } = this.input().read();
         const width = image.width, height = image.height;
-        const outputTexture = this._outputTexture;
+        const outputTexture = this._tex[0];
 
         return this._transform.read().then(homography => {
             let inverseHomography = this._inverse3(homography);

@@ -51,7 +51,7 @@ export class SpeedyPipelineNodeConvolution extends SpeedyPipelineNode
      */
     constructor(name = undefined)
     {
-        super(name, 0, [
+        super(name, 1, [
             InputPort().expects(SpeedyPipelineMessageType.Image),
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
@@ -93,7 +93,7 @@ export class SpeedyPipelineNodeConvolution extends SpeedyPipelineNode
     {
         const { image, format } = this.input().read();
         const width = image.width, height = image.height;
-        const outputTexture = this._outputTexture;
+        const outputTexture = this._tex[0];
         const ksize = this._kernel.rows;
         const conv = CONVOLUTION[ksize];
 

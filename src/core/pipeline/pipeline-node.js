@@ -81,10 +81,7 @@ export class SpeedyPipelineNode
 
         // other properties
 
-        /** @type {SpeedyDrawableTexture[]} output texture(s) */
-        this._outputTextures = (new Array(this._outputPorts.length)).fill(null);
-
-        /** @type {SpeedyDrawableTexture[]} internal work texture(s) */
+        /** @type {SpeedyDrawableTexture[]} work texture(s) */
         this._tex = (new Array(texCount)).fill(null);
 
 
@@ -190,11 +187,7 @@ export class SpeedyPipelineNode
      */
     init(gpu)
     {
-        // allocate output texture(s)
-        for(let i = 0; i < this._outputTextures.length; i++)
-            this._outputTextures[i] = gpu.texturePool.allocate();
-
-        // allocate internal work texture(s)
+        // allocate work texture(s)
         for(let j = 0; j < this._tex.length; j++)
             this._tex[j] = gpu.texturePool.allocate();
     }
@@ -205,28 +198,9 @@ export class SpeedyPipelineNode
      */
     release(gpu)
     {
-        // deallocate internal work texture(s)
+        // deallocate work texture(s)
         for(let j = this._tex.length - 1; j >= 0; j--)
             this._tex[j] = gpu.texturePool.free(this._tex[j]);
-
-        // deallocate output texture(s)
-        for(let i = this._outputTextures.length - 1; i >= 0; i--)
-            this._outputTextures[i] = gpu.texturePool.free(this._outputTextures[i]);
-    }
-
-    /**
-     * Clear internal textures
-     */
-    clearTextures()
-    {
-        // clear output textures
-        for(let i = 0; i < this._outputTextures.length; i++)
-            this._outputTextures[i].clear();
-
-        /*// do we need this?!
-        // clear internal work textures
-        for(let j = 0; j < this._tex.length; j++)
-            this._tex[j].clear();*/
     }
 
     /**
@@ -276,17 +250,6 @@ export class SpeedyPipelineNode
     isSink()
     {
         return Object.keys(this._outputPorts).length == 0;
-    }
-
-    /**
-     * Output texture
-     * @returns {SpeedyDrawableTexture}
-     */
-    get _outputTexture()
-    {
-        // don't use this helper if there are multiple output ports!
-        Utils.assert(this._outputTextures.length == 1);
-        return this._outputTextures[0];
     }
 }
 

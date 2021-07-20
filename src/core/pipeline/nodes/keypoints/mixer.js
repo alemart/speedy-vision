@@ -48,7 +48,7 @@ export class SpeedyPipelineNodeKeypointMixer extends SpeedyPipelineNode
      */
     constructor(name = undefined)
     {
-        super(name, 4, [
+        super(name, 5, [
             InputPort('in0').expects(SpeedyPipelineMessageType.Keypoints),
             InputPort('in1').expects(SpeedyPipelineMessageType.Keypoints),
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints)
@@ -67,8 +67,8 @@ export class SpeedyPipelineNodeKeypointMixer extends SpeedyPipelineNode
         const descriptorSize = kps0.descriptorSize;
         const extraSize = kps0.extraSize;
         const keypoints = gpu.programs.keypoints;
-        const outputTexture = this._outputTexture;
         const tex = this._tex;
+        const outputTexture = this._tex[4];
 
         // ensure that the format of kps0 equals the format of kps1
         if(!(kps0.descriptorSize === kps1.descriptorSize && kps0.extraSize === kps0.extraSize))

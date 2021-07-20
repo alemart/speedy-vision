@@ -44,7 +44,7 @@ export class SpeedyPipelineNodeImagePyramid extends SpeedyPipelineNode
      */
     constructor(name = undefined)
     {
-        super(name, MAX_TEXTURES, [
+        super(name, MAX_TEXTURES + 1, [
             InputPort().expects(SpeedyPipelineMessageType.Image),
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
@@ -58,7 +58,7 @@ export class SpeedyPipelineNodeImagePyramid extends SpeedyPipelineNode
     _run(gpu)
     {
         const { image, format } = this.input().read();
-        const outputTexture = this._outputTexture;
+        const outputTexture = this._tex[0];
         const pyramids = gpu.programs.pyramids;
         let width = image.width, height = image.height;
 
@@ -67,8 +67,8 @@ export class SpeedyPipelineNodeImagePyramid extends SpeedyPipelineNode
 
         // get work textures
         const mip = new Array(MAX_TEXTURES + 1);
-        for(let i = 0; i < MAX_TEXTURES; i++)
-            mip[i+1] = this._tex[i];
+        for(let i = MAX_TEXTURES; i >= 1; i--)
+            mip[i] = this._tex[i];
         mip[0] = image;
 
         // generate gaussian pyramid
@@ -92,6 +92,7 @@ export class SpeedyPipelineNodeImagePyramid extends SpeedyPipelineNode
 
         // copy to output & set mipmap
         outputTexture.resize(image.width, image.height);
+        outputTexture.clear();
         image.copyTo(outputTexture);
         outputTexture.generateMipmaps(mip.slice(0, numLevels));
 
