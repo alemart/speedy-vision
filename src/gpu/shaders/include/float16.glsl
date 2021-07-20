@@ -33,7 +33,7 @@
 
 /**
  * The inverse of encodeFloat16()
- * @param {vec2} v input in [0,1]^2
+ * @param {vec2} v in [0,1]^2
  * @returns {float}
  */
 #define decodeFloat16(v) unpackf16(uvec2((v) * 255.0f))
@@ -47,7 +47,7 @@
 uvec2 packf16(/*highp*/ float f)
 {
     uint y = packHalf2x16(vec2(f, 0.0f));
-    return uvec2(y, y >> 8) & 0xFFu;
+    return uvec2(y, y >> 8u) & 0xFFu;
 }
 
 /**
@@ -58,7 +58,23 @@ uvec2 packf16(/*highp*/ float f)
 /*highp*/ float unpackf16(uvec2 v)
 {
     v &= 0xFFu;
-    return unpackHalf2x16(v.x | (v.y << 8)).x;
+    return unpackHalf2x16(v.x | (v.y << 8u)).x;
+}
+
+/**
+ * Checks if an encoded 16-bit float is either +0 or -0
+ * @param {vec2} v in [0,1]^2
+ * @returns {bool}
+ */
+bool isEncodedFloat16Zero(vec2 v)
+{
+    //return decodeFloat16(v) == 0.0f;
+    // this is as in sec 2.1.2 16-bit
+    // floating point numbers of the
+    // OpenGL ES 3 spec
+    uvec2 w = uvec2(v * 255.0f) & 0xFFu;
+    uint u16 = (w.y << 8u) | w.x;
+    return (u16 & 0x7FFFu) == 0u;
 }
 
 #endif
