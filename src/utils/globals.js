@@ -23,13 +23,13 @@
 // IMAGE PYRAMIDS & SCALE-SPACE
 // -----------------------------------------------------------------
 
-// The maximum number of levels in a pyramid, considering a scale factor of 2x between levels
+/** @type {number} The maximum number of levels in a pyramid, considering a scale factor of 2x between levels */
 export const PYRAMID_MAX_LEVELS = 8; // i.e., maximum number of octaves
 
-// The maximum supported scale for a pyramid level
+/** @type {number} The maximum supported scale for a pyramid level */
 export const PYRAMID_MAX_SCALE = 1; // preferably a power of 2 (image scale can go up to this value)
 
-// The base-2 logarithm of PYRAMID_MAX_SCALE
+/** @type {number} The base-2 logarithm of PYRAMID_MAX_SCALE */
 export const LOG2_PYRAMID_MAX_SCALE = Math.log2(PYRAMID_MAX_SCALE);
 
 
@@ -38,11 +38,11 @@ export const LOG2_PYRAMID_MAX_SCALE = Math.log2(PYRAMID_MAX_SCALE);
 // FIXED-POINT MATH
 // -----------------------------------------------------------------
 
-// How many bits do we use for storing the fractional data
-export const FIX_BITS = 4; // MAX_TEXTURE_LENGTH depends on this
+/** @type {number} How many bits do we use to store fractional data? */
+export const FIX_BITS = 4; // step size: 0.0625
 
-// Fixed-point resolution
-export const FIX_RESOLUTION = 1.0 * (1 << FIX_BITS); // float(2^(FIX_BITS))
+/** @type {number} Fixed-point resolution */
+export const FIX_RESOLUTION = 1 << FIX_BITS; // float(2^(FIX_BITS))
 
 
 
@@ -50,8 +50,8 @@ export const FIX_RESOLUTION = 1.0 * (1 << FIX_BITS); // float(2^(FIX_BITS))
 // TEXTURE LIMITS
 // -----------------------------------------------------------------
 
-// Maximum texture length
-export const MAX_TEXTURE_LENGTH = (1 << (16 - FIX_BITS)) - 2; // 2^n - 2 due to keypoint encoding
+/** @type {number} Maximum texture length (width, height) */
+export const MAX_TEXTURE_LENGTH = (1 << (16 - FIX_BITS)) - 2; // must be 2^n - 2 due to keypoint encoding
 
 
 
@@ -59,20 +59,14 @@ export const MAX_TEXTURE_LENGTH = (1 << (16 - FIX_BITS)) - 2; // 2^n - 2 due to 
 // KEYPOINTS
 // -----------------------------------------------------------------
 
-// Maximum size of a descriptor, in bytes (must be divisible by 4)
-export const MAX_DESCRIPTOR_SIZE = 64;
-
-// Size of a keypoint header, in bytes (must be divisible by 4)
+/** @type {number} Size of a keypoint header, in bytes (must be divisible by 4) */
 export const MIN_KEYPOINT_SIZE = 8;
 
-// Minimum length of a keypoint encoder, in pixels (encodes at least 1 keypoint)
+/** @type {number} Minimum length of a keypoint encoder, in pixels (encodes at least 1 keypoint) */
 export const MIN_ENCODER_LENGTH = Math.ceil(Math.sqrt(MIN_KEYPOINT_SIZE / 4)); // encodes 2, actually
 
-// Maximum number of keypoints we can encode (the actual length of the encoder may vary)
+/** @type {number} Maximum number of keypoints we can encode (the actual length of the encoder may vary) */
 export const MAX_ENCODER_CAPACITY = 8192;
-
-// Initial size of the keypoint encoder
-export const INITIAL_ENCODER_LENGTH = 32; // pick a small number to reduce processing load and not crash things on mobile
 
 
 
@@ -80,7 +74,7 @@ export const INITIAL_ENCODER_LENGTH = 32; // pick a small number to reduce proce
 // MISC
 // -----------------------------------------------------------------
 
-// Are we in a little-endian machine?
+/** @type {boolean} Are we in a little-endian machine? */
 export const LITTLE_ENDIAN = (function() {
     return 0xCAFE === (new Uint16Array(new Uint8Array([0xFE, 0xCA]).buffer))[0];
 })();

@@ -85,7 +85,6 @@ struct KeypointAddress
 /**
  * Keypoint Constants
  */
-const int MAX_DESCRIPTOR_SIZE = int(@MAX_DESCRIPTOR_SIZE@); // in bytes
 const int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@); // in bytes
 
 /**
@@ -256,16 +255,13 @@ vec4 encodeKeypointPosition(vec2 position)
  * This is just a convenient marker
  * @returns {vec4} RGBA
  */
-#define encodeKeypointPositionAtInfinity() (vec4(254.0f / 255.0f, vec3(1.0f))) // that's (0xFFFE, 0xFFFF)
+#define encodeKeypointPositionAtInfinity() (vec4(254, 255, 255, 255) / 255.0f) // that's (0xFFFE, 0xFFFF)
 
 /**
  * Checks whether the given keypoint is at "infinity"
+ * @param {keypoint} keypoint
  * @returns {bool}
  */
-bool isKeypointAtInfinity(Keypoint keypoint)
-{
-    const vec2 V2_MAX_TEXTURE_LENGTH = vec2(@MAX_TEXTURE_LENGTH@);
-    return any(greaterThan(keypoint.position, V2_MAX_TEXTURE_LENGTH));
-}
+#define isKeypointAtInfinity(keypoint) (any(greaterThanEqual((keypoint).position, vec2(@MAX_TEXTURE_LENGTH@))))
 
 #endif

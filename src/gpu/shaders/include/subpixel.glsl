@@ -28,7 +28,7 @@
  * @param {vec2} pos
  * @returns {vec4} pixel data
  */
-#define subpixelAtHW(image, pos) textureLod((image), ((pos) + vec2(0.5f)) / texSize, 0.0f)
+#define subpixelAt(image, pos) textureLod((image), ((pos) + vec2(0.5f)) / texSize, 0.0f)
 
 /**
  * Compute subpixel using bilinear interpolation

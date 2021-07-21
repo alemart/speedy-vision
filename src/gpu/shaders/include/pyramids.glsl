@@ -1,7 +1,7 @@
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,7 +65,10 @@
  * Get a specific subpixel at a specific level-of-detail
  * Similar to pyrPixelAtEx(), expect that this works with subpixel accuracy
  * @param {sampler2D} pyr pyramid
- * @param {vec2} pos pixel position considering lod = 0
+ * @param {vec2} pos pixel position considerifloat encodeLod(float lod)
+{
+    return (LOG2_PYRAMID_MAX_SCALE + lod) / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS);
+}ng lod = 0
  * @param {float} lod level-of-detail
  * @param {ivec2} pyrBaseSize this is textureSize(pyr, 0)
  * @returns {vec4} pixel data
@@ -84,6 +87,8 @@
  * @returns {vec4} pixel data
  */
 #define pyrSubpixelAtExOffset(pyr, pos, lod, pot, offset, pyrBaseSize) textureLod((pyr), (((pos) + vec2(0.5f)) + ((pot) * vec2(offset))) / vec2(pyrBaseSize), (lod))
+
+
 
 /*
  * Image scale is encoded in the alpha channel (a)
@@ -139,10 +144,7 @@ const float LOG2_PYRAMID_MAX_SCALE = float(@LOG2_PYRAMID_MAX_SCALE@);
  * @param {float} lod a value up to PYRAMID_MAX_LEVELS
  * @returns {float} encoded LOD in [0,1]
  */
-float encodeLod(float lod)
-{
-    return (LOG2_PYRAMID_MAX_SCALE + lod) / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS);
-}
+#define encodeLod(lod) ((LOG2_PYRAMID_MAX_SCALE + (lod)) / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS))
 
 /**
  * Decode a pyramid level-of-detail from a float in [0,1]
@@ -156,18 +158,18 @@ float decodeLod(float encodedLod)
 }
 
 /**
+ * This constant is used to separate different encoded LODs
+ * It must be < 0.25 / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS)
+ * because min(|lod_i - lod_j|) >= 0.25 for any i, j (previously 0.5)
+ */
+const float ENCODED_LOD_EPS = 0.125f / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS);
+
+/**
  * Decide whether two encoded LODs are really the same
  * @param {float} alpha1 encoded LOD
  * @param {float} alpha2 encoded LOD
  * @returns {bool}
  */
-#define isSameEncodedLod(alpha1, alpha2) (abs((alpha1) - (alpha2)) < encodedLodEps)
-
-/**
- * encodedLodEps is used to separate different encoded LODs
- * encodedLodEps must be < 0.25 / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS),
- * because min(|lod_i - lod_j|) >= 0.25 for any i, j (previously 0.5)
- */
-const float encodedLodEps = 0.2f / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS);
+#define isSameEncodedLod(alpha1, alpha2) (abs((alpha1) - (alpha2)) < ENCODED_LOD_EPS)
 
 #endif

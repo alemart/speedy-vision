@@ -21,9 +21,9 @@
 
 import {
     PYRAMID_MAX_LEVELS, LOG2_PYRAMID_MAX_SCALE,
-    MAX_TEXTURE_LENGTH,
     FIX_BITS, FIX_RESOLUTION,
-    MAX_DESCRIPTOR_SIZE, MIN_KEYPOINT_SIZE,
+    MAX_TEXTURE_LENGTH,
+    MIN_KEYPOINT_SIZE,
     LITTLE_ENDIAN
 } from '../utils/globals';
 import { Utils } from '../utils/utils';
@@ -60,7 +60,6 @@ const constants = Object.freeze({
     'FIX_RESOLUTION': FIX_RESOLUTION,
 
     // keypoints
-    'MAX_DESCRIPTOR_SIZE': MAX_DESCRIPTOR_SIZE,
     'MIN_KEYPOINT_SIZE': MIN_KEYPOINT_SIZE,
 });
 
