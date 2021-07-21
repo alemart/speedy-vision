@@ -38,6 +38,13 @@ vec2 decodeFlow(vec4 pix)
     return vec2(decodeFloat16(pix.rg), decodeFloat16(pix.ba));
 }
 
+/**
+ * Checks if we've encoded an invalid flow
+ * @param {vec4} pix
+ * @returns {bool}
+ */
+#define isInvalidFlow(pix) (all(equal((pix), vec4(1.0f))))
+
 // main
 void main()
 {
@@ -57,7 +64,7 @@ void main()
     // compute the new position of the keypoint
     vec2 flow = decodeFlow(targetPixel);
     vec4 newPosition = encodeKeypointPosition(keypoint.position + flow);
-    vec4 encodedPosition = any(isinf(flow)) ? encodeKeypointPositionAtInfinity() : newPosition;
+    vec4 encodedPosition = isInvalidFlow(targetPixel) ? encodeKeypointPositionAtInfinity() : newPosition;
 
     // transfer the position
     color = myAddress.offset == 0 ? encodedPosition : pixel;

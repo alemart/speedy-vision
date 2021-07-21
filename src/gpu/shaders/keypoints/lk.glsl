@@ -280,6 +280,12 @@ vec2 decodeFlow(vec4 pix)
     return vec2(decodeFloat16(pix.rg), decodeFloat16(pix.ba));
 }
 
+/**
+ * Encode an invalid flow vector into a RGBA pixel
+ * @returns {vec4} in [0,1]^4
+ */
+#define encodeInvalidFlow() (vec4(1.0f))
+
 
 
 // main
@@ -348,9 +354,6 @@ void main()
     pyrGuess = 2.0f * (pyrGuess + localGuess);
 
     // done!
-    vec2 opticalFlow = goodKeypoint ? pyrGuess : vec2(INFINITY); // discard "bad" keypoints
-    color = encodeFlow(opticalFlow);
-
-    // Note: are we sure that converting INFINITY
-    // to float16 is supported by the driver?
+    vec2 opticalFlow = pyrGuess;
+    color = goodKeypoint ? encodeFlow(opticalFlow) : encodeInvalidFlow(); // discard "bad" keypoints
 }
