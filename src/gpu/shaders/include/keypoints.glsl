@@ -267,6 +267,6 @@ vec4 encodeKeypointPosition(vec2 position)
  * @param {keypoint} keypoint
  * @returns {bool}
  */
-#define isKeypointAtInfinity(keypoint) (any(equal((keypoint).position, fixtovec2(fixed2_t(0xFFFE, 0xFFFF)))))
+#define isKeypointAtInfinity(keypoint) (all(equal((keypoint).position, fixtovec2(fixed2_t(0xFFFE, 0xFFFF)))))
 
 #endif
