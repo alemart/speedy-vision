@@ -30,6 +30,9 @@
 #define INV_PI          0.3183098861837907f // 1.0 / PI
 #define INV_PI_OVER_2   0.15915494309189535f
 
+// this is +Inf according to the GLSL ES 3 Spec sec 4.5.1
+const highp float INFINITY = 1.0f / 0.0f; // must be highp to include support for Infinity
+
 /**
  * Fast arctangent - use an approximation
  * We don't know how fast atan() is in actual hardware

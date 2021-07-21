@@ -62,7 +62,6 @@ const int MAX_WINDOW_RADIUS_PLUS = (MAX_WINDOW_SIZE_PLUS - 1) / 2;
 const int MAX_WINDOW_RADIUS = ((MAX_WINDOW_SIZE) - 1) / 2;
 const highp float FLT_SCALE = 0.00000095367431640625f; // this is 1 / 2^20, for numeric compatibility with OpenCV (discardThreshold)
 const highp float FLT_EPSILON = 0.00000011920929f;
-const highp float INFINITY = 1.0f / 0.0f; // this is +Inf according to the GLSL ES 3 Spec sec 4.5.1
 
 /*
  * Note this:
@@ -351,4 +350,7 @@ void main()
     // done!
     vec2 opticalFlow = goodKeypoint ? pyrGuess : vec2(INFINITY); // discard "bad" keypoints
     color = encodeFlow(opticalFlow);
+
+    // Note: are we sure that converting INFINITY
+    // to float16 is supported by the driver?
 }
