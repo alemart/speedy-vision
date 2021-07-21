@@ -75,6 +75,7 @@ struct Keypoint
     float lod; // level-of-detail of the image
     float orientation; // in radians
     float score; // cornerness measure
+    uint flags; // bit field
 };
 
 /**
@@ -92,6 +93,8 @@ struct KeypointAddress
  * Keypoint Constants
  */
 const int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@); // in bytes
+const uint KPF_NONE = 0u; // no flags
+const uint KPF_INFINITY = 1u; // keypoint at infinity
 
 /**
  * Encode keypoint score
@@ -225,7 +228,7 @@ Keypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointA
         encodedPosition.b | (encodedPosition.a << 8)
     ));
 
-    // get keypoint properties: scale, orientation, score & flags
+    // get keypoint properties: scale, orientation & score
     vec4 encodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);
     keypoint.lod = decodeLod(encodedProperties.r); // level-of-detail
     keypoint.orientation = decodeKeypointOrientation(encodedProperties.g); // in radians
@@ -236,6 +239,10 @@ Keypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointA
     bool isDiscarded = all(equal(rawEncodedPosition + encodedProperties, vec4(0))); // implies score == 0
     bool isBad = isNull || isDiscarded;
     keypoint.score = keypoint.score * float(!isBad) - float(isBad);
+
+    // keypoint flags
+    keypoint.flags = KPF_NONE;
+    keypoint.flags |= KPF_INFINITY * uint(all(equal(encodedPosition, ivec4(254, 255, 255, 255))));
 
     // done!
     return keypoint;
@@ -267,6 +274,6 @@ vec4 encodeKeypointPosition(vec2 position)
  * @param {keypoint} keypoint
  * @returns {bool}
  */
-#define isKeypointAtInfinity(keypoint) (all(equal((keypoint).position, fixtovec2(fixed2_t(0xFFFE, 0xFFFF)))))
+#define isKeypointAtInfinity(keypoint) (((keypoint.flags) & KPF_INFINITY) != 0u)
 
 #endif
