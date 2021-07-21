@@ -232,9 +232,8 @@ Keypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointA
     keypoint.score = decodeKeypointScore(encodedProperties.ba); // score
 
     // got a null or invalid keypoint? give it a negative score
-    vec4 header = rawEncodedPosition + encodedProperties;
-    bool isNull = all(equal(header, vec4(2))); // both pixels are 1s
-    bool isDiscarded = all(equal(header, vec4(0))); // implies score == 0
+    bool isNull = all(equal(rawEncodedPosition, vec4(1)));
+    bool isDiscarded = all(equal(rawEncodedPosition + encodedProperties, vec4(0))); // implies score == 0
     bool isBad = isNull || isDiscarded;
     keypoint.score = keypoint.score * float(!isBad) - float(isBad);
 
