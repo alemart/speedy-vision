@@ -95,16 +95,15 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
      */
     static _decode(pixels, descriptorSize, extraSize, encoderLength)
     {
-        const pixelsPerKeypoint = Math.ceil((MIN_KEYPOINT_SIZE + descriptorSize + extraSize) / 4);
-        const bytesPerKeypoint = 4 * pixelsPerKeypoint;
+        const bytesPerKeypoint = MIN_KEYPOINT_SIZE + descriptorSize + extraSize;
         const m = LOG2_PYRAMID_MAX_SCALE, h = PYRAMID_MAX_LEVELS;
         const piOver255 = Math.PI / 255.0;
-        let x, y, lod, rotation, score, extraBytes, descriptorBytes;
         const keypoints = [];
+        let x, y, z, w, lod, rotation, score, extraBytes, descriptorBytes;
 
         // how many bytes should we read?
         const e = encoderLength;
-        const e2 = e * e * pixelsPerKeypoint * 4;
+        const e2 = e * e * bytesPerKeypoint;
         const size = Math.min(pixels.length, e2);
 
         // copy the data (we use shared buffers when receiving pixels[])
@@ -113,19 +112,21 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
 
         // for each encoded keypoint
         for(let i = 0; i < size; i += bytesPerKeypoint) {
-            // extract fixed-point coordinates
+            // extract encoded header
             x = (pixels[i+1] << 8) | pixels[i];
             y = (pixels[i+3] << 8) | pixels[i+2];
+            z = (pixels[i+5] << 8) | pixels[i+4];
+            w = (pixels[i+7] << 8) | pixels[i+6];
 
-            // we have reached the end of the list
-            if(x >= 0xFFFF && y >= 0xFFFF) // "null" keypoint
+            // the keypoint is "null": we have reached the end of the list
+            if(x >= 0xFFFF && y >= 0xFFFF)
                 break;
 
-            // discard if the header is zero
-            if(x + y == 0 && pixels[i+6] + pixels[i+7] == 0)
+            // the header is zero: discard the keypoint
+            if(x + y + z + w == 0)
                 continue;
 
-            // convert from fixed-point
+            // decode position: convert from fixed-point
             x /= FIX_RESOLUTION;
             y /= FIX_RESOLUTION;
 
@@ -136,7 +137,7 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
             rotation = (2 * pixels[i+5] - 255) * piOver255;
 
             // decode score
-            score = Utils.decodeFloat16((pixels[i+7] << 8) | pixels[i+6]);
+            score = Utils.decodeFloat16(w);
 
             // extra bytes
             extraBytes = pixels.subarray(8 + i, 8 + i + extraSize);
@@ -149,9 +150,7 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
                 continue; // discard
 
             // register keypoint
-            keypoints.push(
-                new SpeedyKeypoint(x, y, lod, rotation, score, descriptorBytes, extraBytes)
-            );
+            keypoints.push(new SpeedyKeypoint(x, y, lod, rotation, score, descriptorBytes, extraBytes));
         }
 
         // done!

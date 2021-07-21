@@ -37,9 +37,15 @@
  *
  * (X,Y,S,R,C) is the keypoint header (8 bytes)
  *
+ * If X and Y are both 0xFFFF, the keypoint is
+ * considered to be "null" (meaning: end of list)
+ *
+ * If all bytes of the header are 0, the keypoint
+ * must be discarded (it's invalid)
  *
  *
- * The position of the keypoints are encoded as follows:
+ *
+ * The position of a keypoint is encoded as follows:
  *
  * |------- 1 pixel = 32 bits -------|
  * |--- 16 bits ----|---- 16 bits ---|
@@ -48,8 +54,8 @@
  * The (X,Y) position is encoded as a fixed-point number
  * for subpixel representation
  *
- * Pixel value 0xFFFFFFFF is reserved (not available),
- * and is considered to be "null"
+ * Pixel value 0xFFFFFFFE is reserved (not available),
+ * and is considered to be "infinity"
  */
 
 #ifndef _KEYPOINTS_GLSL
@@ -205,7 +211,6 @@ KeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descrip
  */
 Keypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)
 {
-    const vec4 ones = vec4(1.0f);
     Keypoint keypoint;
 
     // get addresses
@@ -226,10 +231,12 @@ Keypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointA
     keypoint.orientation = decodeKeypointOrientation(encodedProperties.g); // in radians
     keypoint.score = decodeKeypointScore(encodedProperties.ba); // score
 
-    // got a null or invalid keypoint? encode it with a negative score
-    bool isNull = all(greaterThanEqual(rawEncodedPosition, ones));
-    keypoint.score = keypoint.score * float(!isNull) - float(isNull);
-    keypoint.score -= float(keypoint.score == 0.0f) * float(all(equal(keypoint.position, vec2(0.0f))));
+    // got a null or invalid keypoint? give it a negative score
+    vec4 header = rawEncodedPosition + encodedProperties;
+    bool isNull = all(equal(header, vec4(2))); // both pixels are 1s
+    bool isDiscarded = all(equal(header, vec4(0))); // implies score == 0
+    bool isBad = isNull || isDiscarded;
+    keypoint.score = keypoint.score * float(!isBad) - float(isBad);
 
     // done!
     return keypoint;
@@ -237,7 +244,7 @@ Keypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointA
 
 /**
  * Encode the position of a keypoint
- * @param {vec2} position
+ * @param {vec2} position (finite)
  * @returns {vec4} RGBA
  */
 vec4 encodeKeypointPosition(vec2 position)
@@ -252,16 +259,15 @@ vec4 encodeKeypointPosition(vec2 position)
 
 /**
  * Encode the position of a keypoint at "infinity"
- * This is just a convenient marker
  * @returns {vec4} RGBA
  */
-#define encodeKeypointPositionAtInfinity() (vec4(254, 255, 255, 255) / 255.0f) // that's (0xFFFE, 0xFFFF)
+#define encodeKeypointPositionAtInfinity() (vec4(254, 255, 255, 255) / 255.0f)
 
 /**
  * Checks whether the given keypoint is at "infinity"
  * @param {keypoint} keypoint
  * @returns {bool}
  */
-#define isKeypointAtInfinity(keypoint) (any(greaterThanEqual((keypoint).position, vec2(@MAX_TEXTURE_LENGTH@))))
+#define isKeypointAtInfinity(keypoint) (any(equal((keypoint).position, fixtovec2(fixed2_t(0xFFFE, 0xFFFF)))))
 
 #endif
