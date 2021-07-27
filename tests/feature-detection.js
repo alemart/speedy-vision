@@ -254,7 +254,7 @@ describe('Feature detection', function() {
             displayFeatures(media, features);
 
             for(let i = 0; i < features.length; i++)
-                expect(features[i].descriptor.length).toEqual(32);
+                expect(features[i].descriptor.size).toEqual(32);
             expect(features.length).toBeGreaterThan(0);
 
             pipeline.release();
@@ -265,9 +265,8 @@ describe('Feature detection', function() {
             const pipeline = createPipeline(media);
             const features = (await pipeline.run()).keypoints;
 
-            const uid = buffer => buffer.join(',');
             for(let i = 0; i < features.length; i++)
-                set.add(uid(features[i].descriptor));
+                set.add(features[i].descriptor.toString());
 
             print(`Found ${set.size} different descriptors in ${features.length} features`);
             displayFeatures(media, features);

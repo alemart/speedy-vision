@@ -818,9 +818,31 @@ The score is a measure associated with the keypoint. Although different detectio
 
 ###### SpeedyKeypoint.descriptor
 
-`SpeedyKeypoint.descriptor: Uint8Array, read-only`
+`SpeedyKeypoint.descriptor: SpeedyKeypointDescriptor, read-only`
 
-The binary descriptor associated with the keypoint. If there is no descriptor, this becomes an empty array.
+The descriptor associated with the keypoint.
+
+##### SpeedyKeypointDescriptor
+
+A `SpeedyKeypointDescriptor` represents a keypoint descriptor.
+
+###### SpeedyKeypointDescriptor.data
+
+`SpeedyKeypointDescriptor.data: Uint8Array, read-only`
+
+The bytes of the keypoint descriptor.
+
+###### SpeedyKeypointDescriptor.size
+
+`SpeedyKeypointDescriptor.size: number, read-only`
+
+The size of the keypoint descriptor, in bytes.
+
+###### SpeedyKeypointDescriptor.toString()
+
+`SpeedyKeypointDescriptor.toString(): string`
+
+Returns a string representation of the keypoint descriptor.
 
 ##### Speedy.Keypoint.Sink
 

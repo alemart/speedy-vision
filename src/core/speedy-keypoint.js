@@ -19,7 +19,7 @@
  * Keypoint class
  */
 
-import { Utils } from '../utils/utils';
+import { SpeedyKeypointDescriptor } from './speedy-keypoint-descriptor';
 import { SpeedyPoint2 } from './speedy-point';
 
 // Constants
@@ -47,7 +47,9 @@ export class SpeedyKeypoint
         this._rotation = +rotation;
         this._score = +score;
         this._extraBytes = extraBytes || EMPTY;
-        this._descriptorBytes = descriptorBytes || EMPTY;
+        this._descriptor = new SpeedyKeypointDescriptor(descriptorBytes || EMPTY);
+
+        return Object.freeze(this);
     }
 
     /**
@@ -124,11 +126,11 @@ export class SpeedyKeypoint
     }
 
     /**
-     * Descriptor data
-     * @return {Uint8Array}
+     * Keypoint descriptor
+     * @return {SpeedyKeypointDescriptor}
      */
     get descriptor()
     {
-        return this._descriptorBytes;
+        return this._descriptor;
     }
 }
