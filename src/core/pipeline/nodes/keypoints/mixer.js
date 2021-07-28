@@ -24,7 +24,6 @@ import { SpeedyPipelineNodeKeypointDetector } from './detectors/detector';
 import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithKeypoints } from '../../pipeline-message';
 import { InputPort, OutputPort } from '../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
-import { SpeedyTextureReader } from '../../../../gpu/speedy-texture-reader';
 import { SpeedyTexture } from '../../../../gpu/speedy-texture';
 import { Utils } from '../../../../utils/utils';
 import { IllegalOperationError } from '../../../../utils/errors';

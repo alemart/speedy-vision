@@ -26,6 +26,7 @@ import { SpeedyPipelinePort, SpeedyPipelineInputPort, SpeedyPipelineOutputPort }
 import { SpeedyPipelinePortBuilder } from './pipeline-portbuilder';
 import { SpeedyDrawableTexture } from '../../gpu/speedy-texture';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
+import { SpeedyTextureReader } from '../../gpu/speedy-texture-reader';
 
 /**
  * A PortDictionary is an object with null prototype storing instances of SpeedyPipelinePort
@@ -250,6 +251,17 @@ export class SpeedyPipelineNode
     isSink()
     {
         return Object.keys(this._outputPorts).length == 0;
+    }
+
+    /**
+     * Inspect the pixels of a texture for debugging purposes
+     * @param {SpeedyTexture} texture
+     * @returns {Uint8Array}
+     */
+    _inspect(texture)
+    {
+        this._textureReader = this._textureReader || new SpeedyTextureReader();
+        return this._textureReader.readPixelsSync(texture);
     }
 }
 

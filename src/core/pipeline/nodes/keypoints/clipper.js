@@ -19,15 +19,13 @@
  * Keypoint clipper
  */
 
-import { SpeedyPipelineNode, SpeedyPipelineSinkNode } from '../../pipeline-node';
+import { SpeedyPipelineNode } from '../../pipeline-node';
 import { SpeedyPipelineNodeKeypointDetector } from './detectors/detector';
-import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithImage } from '../../pipeline-message';
+import { SpeedyPipelineMessageType } from '../../pipeline-message';
 import { InputPort, OutputPort } from '../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
-import { SpeedyTextureReader } from '../../../../gpu/speedy-texture-reader';
 import { SpeedyTexture } from '../../../../gpu/speedy-texture';
 import { Utils } from '../../../../utils/utils';
-import { IllegalOperationError } from '../../../../utils/errors';
 import { MAX_ENCODER_CAPACITY } from '../../../../utils/globals';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 
@@ -124,9 +122,7 @@ export class SpeedyPipelineNodeKeypointClipper extends SpeedyPipelineNode
 
         /*
         // debug (read the contents of the permutation)
-        this._textureReader = this._textureReader || new SpeedyTextureReader();
-        const debug = [];
-        const pixels = this._textureReader.readPixelsSync(permutation);
+        const pixels = this._inspect(permutation), debug = [];
         for(let i = 0; i < pixels.length; i += 4) {
             let id = pixels[i] | (pixels[i+1] << 8);
             let score = pixels[i+2] / 255.0;
