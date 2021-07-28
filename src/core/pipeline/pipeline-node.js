@@ -20,6 +20,7 @@
  */
 
 import { Utils } from '../../utils/utils';
+import { LITTLE_ENDIAN } from '../../utils/globals';
 import { SpeedyPromise } from '../../utils/speedy-promise';
 import { AbstractMethodError, IllegalArgumentError } from '../../utils/errors';
 import { SpeedyPipelinePort, SpeedyPipelineInputPort, SpeedyPipelineOutputPort } from './pipeline-port';
@@ -263,6 +264,17 @@ export class SpeedyPipelineNode
     {
         this._textureReader = this._textureReader || new SpeedyTextureReader();
         return this._textureReader.readPixelsSync(texture);
+    }
+
+    /**
+     * Inspect the pixels of a texture as unsigned 32-bit integers
+     * @param {SpeedyTexture} texture
+     * @returns {Uint32Array}
+     */
+    _inspect32(texture)
+    {
+        Utils.assert(LITTLE_ENDIAN); // make sure we use little-endian
+        return new Uint32Array(this._inspect(texture).buffer);
     }
 }
 
