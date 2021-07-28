@@ -122,7 +122,7 @@ export class SpeedyPipelineMessageWithNothing extends SpeedyPipelineMessage
      */
     constructor()
     {
-        super(SpeedyPipelineMessageType.Nothing, null);
+        super(SpeedyPipelineMessageType.Nothing);
     }
 
     /**
