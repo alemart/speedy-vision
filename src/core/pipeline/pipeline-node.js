@@ -26,6 +26,7 @@ import { SpeedyPipelinePort, SpeedyPipelineInputPort, SpeedyPipelineOutputPort }
 import { SpeedyPipelinePortBuilder } from './pipeline-portbuilder';
 import { SpeedyDrawableTexture } from '../../gpu/speedy-texture';
 import { SpeedyGPU } from '../../gpu/speedy-gpu';
+import { SpeedyTexture } from '../../gpu/speedy-texture';
 import { SpeedyTextureReader } from '../../gpu/speedy-texture-reader';
 
 /**
