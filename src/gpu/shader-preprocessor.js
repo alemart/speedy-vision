@@ -19,16 +19,27 @@
  * Custom preprocessor for shaders
  */
 
-import {
-    PYRAMID_MAX_LEVELS, LOG2_PYRAMID_MAX_SCALE,
-    FIX_BITS, FIX_RESOLUTION,
-    MAX_TEXTURE_LENGTH,
-    MIN_KEYPOINT_SIZE,
-    LITTLE_ENDIAN
-} from '../utils/globals';
 import { Utils } from '../utils/utils';
 import { PixelComponent } from '../utils/types';
 import { FileNotFoundError, ParseError } from '../utils/errors';
+
+// Import numeric globals
+const globals = require('../utils/globals');
+const numericGlobals = Object.keys(globals).filter(key => typeof globals[key] == 'number').reduce(
+    (obj, key) => ((obj[key] = globals[key]), obj), {}
+);
+
+// Constants accessible by all shaders
+const constants = Object.freeze({
+    // numeric globals
+    ...numericGlobals,
+
+    // colors
+    'PIXELCOMPONENT_RED': PixelComponent.RED,
+    'PIXELCOMPONENT_GREEN': PixelComponent.GREEN,
+    'PIXELCOMPONENT_BLUE': PixelComponent.BLUE,
+    'PIXELCOMPONENT_ALPHA': PixelComponent.ALPHA,
+});
 
 // Regular Expressions
 const commentsRegex = [ /\/\*(.|\s)*?\*\//g , /\/\/.*$/gm ];
@@ -39,32 +50,8 @@ const unrollRegex = [
     /@\s*unroll\s+?for\s*\(\s*(int|)\s*(?<counter>\w+)\s*\=\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*(<=?)\s*(-?\d+|\w+)\s*;\s*\k<counter>\s*\+=\s*(-?\d+)\s*\)\s*\{\s*([\s\S]+?)\s*\}/g,
 ];
 
-// Constants accessible by all shaders
-const constants = Object.freeze({
-    // general
-    'MAX_TEXTURE_LENGTH': MAX_TEXTURE_LENGTH,
-    'LITTLE_ENDIAN': LITTLE_ENDIAN ? 1 : 0,
-
-    // pyramids
-    'PYRAMID_MAX_LEVELS': PYRAMID_MAX_LEVELS,
-    'LOG2_PYRAMID_MAX_SCALE': LOG2_PYRAMID_MAX_SCALE,
-
-    // colors
-    'PIXELCOMPONENT_RED': PixelComponent.RED,
-    'PIXELCOMPONENT_GREEN': PixelComponent.GREEN,
-    'PIXELCOMPONENT_BLUE': PixelComponent.BLUE,
-    'PIXELCOMPONENT_ALPHA': PixelComponent.ALPHA,
-
-    // fixed-point math
-    'FIX_BITS': FIX_BITS,
-    'FIX_RESOLUTION': FIX_RESOLUTION,
-
-    // keypoints
-    'MIN_KEYPOINT_SIZE': MIN_KEYPOINT_SIZE,
-});
-
 /**
- * Custom preprocessor for shaders
+ * Custom preprocessor for the shaders
  */
 export class ShaderPreprocessor
 {
