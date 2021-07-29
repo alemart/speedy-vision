@@ -64,10 +64,8 @@ const multiscaleNonMaxSuppression = importShader('keypoints/nonmax-suppression.g
 // LK optical-flow
 const lk = [7, 11, 15, 21].reduce((obj, win) => ((obj[win] = 
                importShader('keypoints/lk.glsl')
+               .withDefines({ 'MAX_WINDOW_SIZE': win })
                .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'level', 'depth', 'numberOfIterations', 'discardThreshold', 'epsilon', 'descriptorSize', 'extraSize', 'encoderLength')
-               .withDefines({
-                   'MAX_WINDOW_SIZE': win,
-               })
            ), obj), {});
 
 const lkDiscard = importShader('keypoints/lk-discard.glsl')
