@@ -237,8 +237,7 @@ Keypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointA
     // got a null or invalid keypoint? give it a negative score
     bool isNull = all(equal(rawEncodedPosition, vec4(1)));
     bool isDiscarded = all(equal(rawEncodedPosition + encodedProperties, vec4(0))); // implies score == 0
-    bool isBad = isNull || isDiscarded;
-    keypoint.score = keypoint.score * float(!isBad) - float(isBad);
+    keypoint.score = (isNull || isDiscarded) ? -1.0f : keypoint.score;
 
     // keypoint flags
     keypoint.flags = KPF_NONE;
