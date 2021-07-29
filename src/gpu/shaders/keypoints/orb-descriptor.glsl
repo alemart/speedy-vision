@@ -39,6 +39,7 @@ uniform int extraSize; // in bytes
 
 // ORB constants
 const int descriptorSize = 32; // 32 bytes = 256 bits = 8 pixels
+const vec4 BAD_DESCRIPTOR = vec4(1.0f);
 
 // ORB pattern adapted from
 // OpenCV's BSD-licensed code
@@ -331,6 +332,7 @@ void main()
         return;
 
     // decode keypoint
+    color = BAD_DESCRIPTOR;
     Keypoint keypoint = decodeKeypoint(encodedCorners, encoderLength, address);
     if(isBadKeypoint(keypoint))
         return;
