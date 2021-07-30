@@ -31,6 +31,7 @@ import { ImageFormat } from '../../../../utils/types';
 import { IllegalOperationError } from '../../../../utils/errors';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 import { SpeedyKeypoint } from '../../../speedy-keypoint';
+import { SpeedyKeypointDescriptor } from '../../../speedy-keypoint-descriptor';
 import {
     MIN_KEYPOINT_SIZE,
     FIX_RESOLUTION,
@@ -87,7 +88,7 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
 
     /**
      * Decode a sequence of keypoints, given a flattened image of encoded pixels
-     * @param {Uint8Array[]} pixels pixels in the [r,g,b,a,...] format
+     * @param {Uint8Array} pixels pixels in the [r,g,b,a,...] format
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
      * @param {number} encoderLength
@@ -99,7 +100,8 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
         const m = LOG2_PYRAMID_MAX_SCALE, h = PYRAMID_MAX_LEVELS;
         const piOver255 = Math.PI / 255.0;
         const keypoints = [];
-        let x, y, z, w, lod, rotation, score, extraBytes, descriptorBytes;
+        let x, y, z, w, lod, rotation, score;
+        let descriptorBytes, extraBytes, descriptor;
 
         // how many bytes should we read?
         const e = encoderLength;
@@ -142,15 +144,16 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
             // extra bytes
             extraBytes = pixels.subarray(8 + i, 8 + i + extraSize);
 
-            // descriptor bytes
+            // read descriptor, if any
             descriptorBytes = pixels.subarray(8 + i + extraSize, 8 + i + extraSize + descriptorSize);
+            descriptor = descriptorBytes.byteLength > 0 ? new SpeedyKeypointDescriptor(descriptorBytes) : null;
 
             // something is off here
-            if(descriptorBytes.length < descriptorSize || extraBytes.length < extraSize)
+            if(descriptorBytes.byteLength < descriptorSize || extraBytes.byteLength < extraSize)
                 continue; // discard
 
             // register keypoint
-            keypoints.push(new SpeedyKeypoint(x, y, lod, rotation, score, descriptorBytes, extraBytes));
+            keypoints.push(new SpeedyKeypoint(x, y, lod, rotation, score, descriptor));
         }
 
         // done!

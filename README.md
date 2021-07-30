@@ -818,9 +818,9 @@ The score is a measure associated with the keypoint. Although different detectio
 
 ###### SpeedyKeypoint.descriptor
 
-`SpeedyKeypoint.descriptor: SpeedyKeypointDescriptor, read-only`
+`SpeedyKeypoint.descriptor: SpeedyKeypointDescriptor | null, read-only`
 
-The descriptor associated with the keypoint.
+The descriptor associated with the keypoint, if it exists.
 
 ##### SpeedyKeypointDescriptor
 

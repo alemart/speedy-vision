@@ -22,9 +22,6 @@
 import { SpeedyKeypointDescriptor } from './speedy-keypoint-descriptor';
 import { SpeedyPoint2 } from './speedy-point';
 
-// Constants
-const EMPTY = new Uint8Array([]);
-
 /**
  * Represents a keypoint
  */
@@ -37,32 +34,30 @@ export class SpeedyKeypoint
      * @param {number} [lod] Level-of-detail
      * @param {number} [rotation] Rotation in radians
      * @param {number} [score] Cornerness measure
-     * @param {Uint8Array} [descriptorBytes] bytes of the feature descriptor, if any
-     * @param {Uint8Array} [extraBytes] extra bytes of the header, if any
+     * @param {?SpeedyKeypointDescriptor} [descriptor] Keypoint descriptor, if any
      */
-    constructor(x, y, lod = 0.0, rotation = 0.0, score = 0, descriptorBytes = null, extraBytes = null)
+    constructor(x, y, lod = 0.0, rotation = 0.0, score = 0.0, descriptor = null)
     {
         this._position = new SpeedyPoint2(+x, +y);
         this._lod = +lod;
         this._rotation = +rotation;
         this._score = +score;
-        this._extraBytes = extraBytes || EMPTY;
-        this._descriptor = new SpeedyKeypointDescriptor(descriptorBytes || EMPTY);
+        this._descriptor = descriptor;
 
         return Object.freeze(this);
     }
 
     /**
-     * Converts a SpeedyFeature to a representative string
+     * Converts this keypoint to a descriptive string
      * @returns {string}
      */
     toString()
     {
-        return `(${this.x},${this.y})`;
+        return `SpeedyKeypoint(${this.x},${this.y})`;
     }
 
     /**
-     * The position of the feature point
+     * The position of this keypoint
      * @returns {SpeedyPoint2}
      */
     get position()
@@ -71,7 +66,7 @@ export class SpeedyKeypoint
     }
 
     /**
-     * X-position of the feature point
+     * The x-position of this keypoint
      * @returns {number}
      */
     get x()
@@ -80,7 +75,7 @@ export class SpeedyKeypoint
     }
 
     /**
-     * Y-position of the feature point
+     * The y-position of this keypoint
      * @returns {number}
      */
     get y()
@@ -89,8 +84,7 @@ export class SpeedyKeypoint
     }
 
     /**
-     * The pyramid level-of-detail from which
-     * this feature point was extracted
+     * The pyramid level-of-detail from which this keypoint was extracted
      * @returns {number}
      */
     get lod()
@@ -108,7 +102,7 @@ export class SpeedyKeypoint
     }
 
     /**
-     * The rotation of the feature point, in radians
+     * The orientation of the keypoint, in radians
      * @returns {number} Angle in radians
      */
     get rotation()
@@ -127,7 +121,7 @@ export class SpeedyKeypoint
 
     /**
      * Keypoint descriptor
-     * @return {SpeedyKeypointDescriptor}
+     * @return {?SpeedyKeypointDescriptor}
      */
     get descriptor()
     {
