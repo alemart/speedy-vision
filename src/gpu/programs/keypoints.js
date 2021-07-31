@@ -46,6 +46,9 @@ const harrisScoreCutoff = importShader('keypoints/harris-cutoff.glsl')
                          .withArguments('corners', 'maxScore', 'quality');
 
 // ORB descriptors
+const allocateDescriptors = importShader('keypoints/allocate-descriptors.glsl')
+                            .withArguments('inputEncodedKeypoints', 'inputDescriptorSize', 'inputExtraSize', 'inputEncoderLength', 'outputDescriptorSize', 'outputExtraSize', 'outputEncoderLength');
+
 const orbDescriptor = importShader('keypoints/orb-descriptor.glsl')
                      .withArguments('pyramid', 'encodedCorners', 'extraSize', 'encoderLength');
 
@@ -101,9 +104,6 @@ const encodeKeypointProperties = importShader('keypoints/encode-keypoint-propert
 
 const encodeNullKeypoints = importShader('keypoints/encode-null-keypoints.glsl')
                            .withArguments();
-
-const expandEncoder = importShader('keypoints/expand-encoder.glsl')
-                     .withArguments('encodedKeypoints', 'inputDescriptorSize', 'inputExtraSize', 'inputEncoderLength', 'outputDescriptorSize', 'outputExtraSize', 'outputEncoderLength');
 
 const transferOrientation = importShader('keypoints/transfer-orientation.glsl')
                            .withArguments('encodedOrientations', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
@@ -177,6 +177,7 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             //
             // ORB descriptors
             //
+            .declare('allocateDescriptors', allocateDescriptors)
             .declare('orbDescriptor', orbDescriptor)
             .declare('orbOrientation', orbOrientation)
 
@@ -225,7 +226,6 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             })
             .declare('encodeKeypointProperties', encodeKeypointProperties)
             .declare('encodeNullKeypoints', encodeNullKeypoints)
-            .declare('expandEncoder', expandEncoder)
             .declare('transferOrientation', transferOrientation)
             .declare('suppressDescriptors', suppressDescriptors)
             .declare('uploadKeypoints', uploadKeypoints, {

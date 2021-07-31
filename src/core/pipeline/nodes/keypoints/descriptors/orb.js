@@ -78,7 +78,7 @@ export class SpeedyPipelineNodeORBKeypointDescriptor extends SpeedyPipelineNodeK
         )(encodedOrientations, encodedKeypoints, descriptorSize, extraSize, encoderLength);
 
         // allocate space
-        const encodedKps = this._allocateSpaceForTheDescriptors(gpu, descriptorSize, extraSize, DESCRIPTOR_SIZE, extraSize, orientedKeypoints);
+        const encodedKps = this._allocateDescriptors(gpu, descriptorSize, extraSize, DESCRIPTOR_SIZE, extraSize, orientedKeypoints);
         const newEncoderLength = encodedKps.width;
 
         // compute descriptors (it's a good idea to blur the pyramid)

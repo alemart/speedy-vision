@@ -48,16 +48,16 @@ export class SpeedyPipelineNodeKeypointDescriptor extends SpeedyPipelineNode
      * Allocate space for keypoint descriptors
      * @param {SpeedyGPU} gpu
      * @param {number} inputDescriptorSize must be 0
-     * @param {number} inputExtraSize must be 0
-     * @param {number} outputDescriptorSize in bytes, must be positive
+     * @param {number} inputExtraSize must be non-negative
+     * @param {number} outputDescriptorSize in bytes, must be a positive multiple of 4
      * @param {number} outputExtraSize must be inputExtraSize
      * @param {SpeedyTexture} inputEncodedKeypoints input with no descriptors
      * @returns {SpeedyDrawableTexture} encodedKeypoints
      */
-    _allocateSpaceForTheDescriptors(gpu, inputDescriptorSize, inputExtraSize, outputDescriptorSize, outputExtraSize, inputEncodedKeypoints)
+    _allocateDescriptors(gpu, inputDescriptorSize, inputExtraSize, outputDescriptorSize, outputExtraSize, inputEncodedKeypoints)
     {
-        Utils.assert(inputDescriptorSize === 0 && inputExtraSize === 0);
-        Utils.assert(outputDescriptorSize > 0 && outputExtraSize === inputExtraSize);
+        Utils.assert(inputDescriptorSize === 0 && inputExtraSize >= 0);
+        Utils.assert(outputDescriptorSize > 0 && outputDescriptorSize % 4 === 0 && outputExtraSize === inputExtraSize);
 
         const inputEncoderLength = inputEncodedKeypoints.width;
         const inputEncoderCapacity = SpeedyPipelineNodeKeypointDetector.encoderCapacity(inputDescriptorSize, inputExtraSize, inputEncoderLength);
@@ -65,7 +65,7 @@ export class SpeedyPipelineNodeKeypointDescriptor extends SpeedyPipelineNode
         const outputEncoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(outputEncoderCapacity, outputDescriptorSize, outputExtraSize);
 
         const tex = this._tex[this._tex.length - 1];
-        return (gpu.programs.keypoints.expandEncoder
+        return (gpu.programs.keypoints.allocateDescriptors
             .outputs(outputEncoderLength, outputEncoderLength, tex)
         )(inputEncodedKeypoints, inputDescriptorSize, inputExtraSize, inputEncoderLength, outputDescriptorSize, outputExtraSize, outputEncoderLength);
     }
