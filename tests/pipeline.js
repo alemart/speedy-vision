@@ -249,4 +249,39 @@ describe('Pipeline system', function() {
         }).toThrow();
     });
 
+    it('cannot create a link between ports of incompatible types', function() {
+        const pipeline = Speedy.Pipeline();
+        const source = Speedy.Image.Source();
+        const sink = Speedy.Image.Sink(); // Image sink
+        //const sink = Speedy.Keypoint.Sink();
+        const greyscale = Speedy.Filter.Greyscale();
+        const fast = Speedy.Keypoint.Detector.FAST();
+
+        expect(() => {
+            source.media = media;
+            source.output().connectTo(greyscale.input());
+            greyscale.output().connectTo(fast.input());
+            fast.output().connectTo(sink.input());
+        }).toThrow();
+    });
+
+    it('cannot create a link between ports if constraints are unfulfilled', function() {
+        const pipeline = Speedy.Pipeline();
+        const source = Speedy.Image.Source();
+        const sink = Speedy.Keypoint.Sink();
+        const greyscale = Speedy.Filter.Greyscale();
+        const fast = Speedy.Keypoint.Detector.FAST();
+
+        expect(() => {
+            source.media = media;
+            source.output().connectTo(greyscale.input());
+            //greyscale.output().connectTo(fast.input());
+            source.output().connectTo(fast.input()); // not a greyscale image
+            fast.output().connectTo(sink.input());
+
+            pipeline.init(source, sink, greyscale, fast);
+            pipeline.run().then(_ => pipeline.release());
+        }).toThrow();
+    });
+
 });
