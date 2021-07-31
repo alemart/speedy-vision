@@ -263,7 +263,8 @@ export class SpeedyPipelineNode
     _inspect(texture)
     {
         this._textureReader = this._textureReader || new SpeedyTextureReader();
-        return this._textureReader.readPixelsSync(texture);
+        const pixels = this._textureReader.readPixelsSync(texture);
+        return new Uint8Array(pixels); // copy the array
     }
 
     /**
