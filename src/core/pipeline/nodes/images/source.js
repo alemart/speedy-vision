@@ -27,7 +27,7 @@ import { SpeedyTexture } from '../../../../gpu/speedy-texture';
 import { SpeedyMedia } from '../../../speedy-media';
 import { Utils } from '../../../../utils/utils';
 import { ImageFormat } from '../../../../utils/types';
-import { IllegalOperationError } from '../../../../utils/errors';
+import { IllegalArgumentError, IllegalOperationError } from '../../../../utils/errors';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 
 /**
@@ -64,7 +64,9 @@ export class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode
      */
     set media(media)
     {
-        Utils.assert(media instanceof SpeedyMedia);
+        if(!(media instanceof SpeedyMedia))
+            throw new IllegalArgumentError(`Not a SpeedyMedia: ${media}`);
+
         this._media = media;
     }
 
@@ -75,7 +77,11 @@ export class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode
      */
     _run(gpu)
     {
-        const outputTexture = this._tex[0]
+        const outputTexture = this._tex[0];
+
+        if(this._media == null)
+            throw new IllegalOperationError(`Did you forget to set the media of ${this.fullName}?`);
+
         gpu.upload(this._media._source, outputTexture);
         this.output().swrite(outputTexture, ImageFormat.RGBA);
     }
