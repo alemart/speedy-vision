@@ -1,5 +1,9 @@
 # Release notes
 
+## 0.7.0 - Jul 31st, 2021
+
+* Introduced the new Pipeline system (partial rewrite of the library)
+
 ## 0.6.1 - Jun 1st, 2021
 
 * Introduced image warping via homographies
