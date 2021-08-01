@@ -2,7 +2,7 @@ const path = require('path');
 const webpack = require('webpack');
 const TerserPlugin = require('terser-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
-const package = require("./package.json");
+const pack = require("./package.json");
 
 module.exports = (env, argv) => ({
   plugins: [
@@ -16,14 +16,14 @@ module.exports = (env, argv) => ({
             `@license ${license}`,
             ``,
             `Date: ${date}`,
-        ].join('\n'))(Object.assign(package, {
+        ].join('\n'))(Object.assign({}, pack, {
             'date': (new Date()).toISOString(),
             'year': [2020, new Date().getFullYear()].join('-'),
-            'author': package.author.replace('@', '(at)'),
+            'author': pack.author.replace('@', '(at)'),
         }))
     }),
     new webpack.DefinePlugin({
-      '__SPEEDY_VERSION__': JSON.stringify(package.version),
+      '__SPEEDY_VERSION__': JSON.stringify(pack.version),
       '__SPEEDY_DEVELOPMENT_MODE__': argv.mode == 'development',
     }),
     new webpack.IgnorePlugin({
