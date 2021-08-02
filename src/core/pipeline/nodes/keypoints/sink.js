@@ -128,6 +128,18 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
             if(x + y + z + w == 0)
                 continue;
 
+            // extract extra & descriptor bytes
+            if(extraSize > 0) {
+                extraBytes = pixels.subarray(8 + i, 8 + i + extraSize);
+                if(extraBytes.byteLength < extraSize)
+                    continue; // something is off here; discard
+            }
+            if(descriptorSize > 0) {
+                descriptorBytes = pixels.subarray(8 + i + extraSize, 8 + i + extraSize + descriptorSize);
+                if(descriptorBytes.byteLength < descriptorSize)
+                    continue; // something is off here; discard
+            }
+
             // decode position: convert from fixed-point
             x /= FIX_RESOLUTION;
             y /= FIX_RESOLUTION;
@@ -141,16 +153,8 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
             // decode score
             score = Utils.decodeFloat16(w);
 
-            // extra bytes
-            extraBytes = pixels.subarray(8 + i, 8 + i + extraSize);
-
             // read descriptor, if any
-            descriptorBytes = pixels.subarray(8 + i + extraSize, 8 + i + extraSize + descriptorSize);
-            descriptor = descriptorBytes.byteLength > 0 ? new SpeedyKeypointDescriptor(descriptorBytes) : null;
-
-            // something is off here
-            if(descriptorBytes.byteLength < descriptorSize || extraBytes.byteLength < extraSize)
-                continue; // discard
+            descriptor = descriptorSize > 0 ? new SpeedyKeypointDescriptor(descriptorBytes) : null;
 
             // register keypoint
             keypoints.push(new SpeedyKeypoint(x, y, lod, rotation, score, descriptor));
