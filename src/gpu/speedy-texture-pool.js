@@ -25,7 +25,7 @@ import { SpeedyDrawableTexture } from './speedy-texture';
 import { OutOfMemoryError } from '../utils/errors';
 
 // Constants
-const DEFAULT_CAPACITY = 80;
+const DEFAULT_CAPACITY = 256;
 const BUCKET = Symbol('Bucket');
 
 
