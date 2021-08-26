@@ -1,12 +1,12 @@
 /*!
- * speedy-vision.js v0.7.0
+ * speedy-vision.js v0.7.1-wip
  * GPU-accelerated Computer Vision for JavaScript
  * https://github.com/alemart/speedy-vision-js
  * 
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-08-01T00:17:45.899Z
+ * Date: 2021-08-26T19:04:02.242Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -1260,6 +1260,21 @@ function homography4p(header, output, inputs)
     a = b = c = d = e = f = g = h = i = Number.NaN;
 
     do {
+
+    // Geometric constraint: given any three correspondences,
+    // the signed areas of the triangles formed by the points
+    // must have the same sign. This means that the points
+    // are in the same order, i.e., no flipping took place.
+    const s012 = u0 * (v1 - v2) + u1 * (v2 - v0) + u2 * (v0 - v1);
+    const s013 = u0 * (v1 - v3) + u1 * (v3 - v0) + u3 * (v0 - v1);
+    const s023 = u0 * (v2 - v3) + u2 * (v3 - v0) + u3 * (v0 - v2);
+    const s123 = u1 * (v2 - v3) + u2 * (v3 - v1) + u3 * (v1 - v2);
+    const z012 = x0 * (y1 - y2) + x1 * (y2 - y0) + x2 * (y0 - y1);
+    const z013 = x0 * (y1 - y3) + x1 * (y3 - y0) + x3 * (y0 - y1);
+    const z023 = x0 * (y2 - y3) + x2 * (y3 - y0) + x3 * (y0 - y2);
+    const z123 = x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2);
+    if(s012 * z012 < 0 || s013 * z013 < 0 || s023 * z023 < 0 || s123 * z123 < 0)
+        break; // goto end;
 
     //
     // From source to unit square
@@ -8133,10 +8148,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _nodes_keypoints_clipper__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../nodes/keypoints/clipper */ "./src/core/pipeline/nodes/keypoints/clipper.js");
 /* harmony import */ var _nodes_keypoints_buffer__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../nodes/keypoints/buffer */ "./src/core/pipeline/nodes/keypoints/buffer.js");
 /* harmony import */ var _nodes_keypoints_mixer__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../nodes/keypoints/mixer */ "./src/core/pipeline/nodes/keypoints/mixer.js");
-/* harmony import */ var _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../nodes/keypoints/detectors/fast */ "./src/core/pipeline/nodes/keypoints/detectors/fast.js");
-/* harmony import */ var _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../nodes/keypoints/detectors/harris */ "./src/core/pipeline/nodes/keypoints/detectors/harris.js");
-/* harmony import */ var _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/orb */ "./src/core/pipeline/nodes/keypoints/descriptors/orb.js");
-/* harmony import */ var _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../nodes/keypoints/trackers/lk */ "./src/core/pipeline/nodes/keypoints/trackers/lk.js");
+/* harmony import */ var _nodes_keypoints_transformer__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../nodes/keypoints/transformer */ "./src/core/pipeline/nodes/keypoints/transformer.js");
+/* harmony import */ var _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../nodes/keypoints/detectors/fast */ "./src/core/pipeline/nodes/keypoints/detectors/fast.js");
+/* harmony import */ var _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../nodes/keypoints/detectors/harris */ "./src/core/pipeline/nodes/keypoints/detectors/harris.js");
+/* harmony import */ var _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/orb */ "./src/core/pipeline/nodes/keypoints/descriptors/orb.js");
+/* harmony import */ var _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../nodes/keypoints/trackers/lk */ "./src/core/pipeline/nodes/keypoints/trackers/lk.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -8169,6 +8185,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /**
  * Keypoint detectors
  */
@@ -8181,7 +8198,7 @@ class SpeedyPipelineKeypointDetectorFactory extends _speedy_namespace__WEBPACK_I
      */
     static FAST(name = undefined)
     {
-        return new _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_6__["SpeedyPipelineNodeFASTKeypointDetector"](name);
+        return new _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_7__["SpeedyPipelineNodeFASTKeypointDetector"](name);
     }
 
     /**
@@ -8191,7 +8208,7 @@ class SpeedyPipelineKeypointDetectorFactory extends _speedy_namespace__WEBPACK_I
      */
     static Harris(name = undefined)
     {
-        return new _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_7__["SpeedyPipelineNodeHarrisKeypointDetector"](name);
+        return new _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_8__["SpeedyPipelineNodeHarrisKeypointDetector"](name);
     }
 }
 
@@ -8207,7 +8224,7 @@ class SpeedyPipelineKeypointDescriptorFactory extends _speedy_namespace__WEBPACK
      */
     static ORB(name = undefined)
     {
-        return new _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_8__["SpeedyPipelineNodeORBKeypointDescriptor"](name);
+        return new _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_9__["SpeedyPipelineNodeORBKeypointDescriptor"](name);
     }
 }
 
@@ -8223,7 +8240,7 @@ class SpeedyPipelineKeypointTrackerFactory extends _speedy_namespace__WEBPACK_IM
      */
     static LK(name = undefined)
     {
-        return new _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_9__["SpeedyPipelineNodeLKKeypointTracker"](name);
+        return new _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_10__["SpeedyPipelineNodeLKKeypointTracker"](name);
     }
 }
 
@@ -8307,6 +8324,16 @@ class SpeedyPipelineKeypointFactory extends _speedy_namespace__WEBPACK_IMPORTED_
     static Mixer(name = undefined)
     {
         return new _nodes_keypoints_mixer__WEBPACK_IMPORTED_MODULE_5__["SpeedyPipelineNodeKeypointMixer"](name);
+    }
+
+    /**
+     * Create a keypoint transformer
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeKeypointTransformer}
+     */
+    static Transformer(name = undefined)
+    {
+        return new _nodes_keypoints_transformer__WEBPACK_IMPORTED_MODULE_6__["SpeedyPipelineNodeKeypointTransformer"](name);
     }
 }
 
@@ -11478,6 +11505,18 @@ class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MO
             if(x + y + z + w == 0)
                 continue;
 
+            // extract extra & descriptor bytes
+            if(extraSize > 0) {
+                extraBytes = pixels.subarray(8 + i, 8 + i + extraSize);
+                if(extraBytes.byteLength < extraSize)
+                    continue; // something is off here; discard
+            }
+            if(descriptorSize > 0) {
+                descriptorBytes = pixels.subarray(8 + i + extraSize, 8 + i + extraSize + descriptorSize);
+                if(descriptorBytes.byteLength < descriptorSize)
+                    continue; // something is off here; discard
+            }
+
             // decode position: convert from fixed-point
             x /= _utils_globals__WEBPACK_IMPORTED_MODULE_13__["FIX_RESOLUTION"];
             y /= _utils_globals__WEBPACK_IMPORTED_MODULE_13__["FIX_RESOLUTION"];
@@ -11491,16 +11530,8 @@ class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MO
             // decode score
             score = _utils_utils__WEBPACK_IMPORTED_MODULE_7__["Utils"].decodeFloat16(w);
 
-            // extra bytes
-            extraBytes = pixels.subarray(8 + i, 8 + i + extraSize);
-
             // read descriptor, if any
-            descriptorBytes = pixels.subarray(8 + i + extraSize, 8 + i + extraSize + descriptorSize);
-            descriptor = descriptorBytes.byteLength > 0 ? new _speedy_keypoint_descriptor__WEBPACK_IMPORTED_MODULE_12__["SpeedyKeypointDescriptor"](descriptorBytes) : null;
-
-            // something is off here
-            if(descriptorBytes.byteLength < descriptorSize || extraBytes.byteLength < extraSize)
-                continue; // discard
+            descriptor = descriptorSize > 0 ? new _speedy_keypoint_descriptor__WEBPACK_IMPORTED_MODULE_12__["SpeedyKeypointDescriptor"](descriptorBytes) : null;
 
             // register keypoint
             keypoints.push(new _speedy_keypoint__WEBPACK_IMPORTED_MODULE_11__["SpeedyKeypoint"](x, y, lod, rotation, score, descriptor));
@@ -11956,6 +11987,124 @@ class SpeedyPipelineNodeLKKeypointTracker extends _pipeline_node__WEBPACK_IMPORT
 
         // done!
         this.output().swrite(goodKeypoints, descriptorSize, extraSize, encoderLength);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/keypoints/transformer.js":
+/*!**********************************************************!*\
+  !*** ./src/core/pipeline/nodes/keypoints/transformer.js ***!
+  \**********************************************************/
+/*! exports provided: SpeedyPipelineNodeKeypointTransformer */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeKeypointTransformer", function() { return SpeedyPipelineNodeKeypointTransformer; });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _matrix_matrix_expressions__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../matrix/matrix-expressions */ "./src/core/matrix/matrix-expressions.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * transformer.js
+ * Apply a transformation matrix to a set of keypoints
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Apply a transformation matrix to a set of keypoints
+ */
+class SpeedyPipelineNodeKeypointTransformer extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNode"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, 1, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Keypoints),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Keypoints)
+        ]);
+
+        /** @type {SpeedyMatrixExpr} transformation matrix */
+        this._transform = _matrix_matrix_expressions__WEBPACK_IMPORTED_MODULE_7__["SpeedyMatrixExpr"].create(3, 3, [1, 0, 0, 0, 1, 0, 0, 0, 1]); // identity matrix
+    }
+
+    /**
+     * Transformation matrix
+     * @returns {SpeedyMatrixExpr}
+     */
+    get transform()
+    {
+        return this._transform;
+    }
+
+    /**
+     * Transformation matrix. Must be 3x3
+     * @param {SpeedyMatrixExpr} transform
+     */
+    set transform(transform)
+    {
+        if(!(transform.rows == 3 && transform.columns == 3))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["IllegalArgumentError"](`Not a 3x3 transformation matrix: ${transform}`);
+
+        this._transform = transform;
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input().read();
+        const outputTexture = this._tex[0];
+
+        return this._transform.read().then(homography => {
+
+            // apply homography
+            (gpu.programs.keypoints.applyHomography
+                .outputs(encodedKeypoints.width, encodedKeypoints.height, outputTexture)
+            )(homography, encodedKeypoints, descriptorSize, extraSize, encoderLength);
+
+            // done!
+            this.output().swrite(outputTexture, descriptorSize, extraSize, encoderLength);
+
+        });
     }
 }
 
@@ -15302,7 +15451,7 @@ class Speedy
      */
     static get version()
     {
-        return "0.7.0";
+        return "0.7.1-wip";
     }
 
     /**
@@ -15897,11 +16046,11 @@ const uploadKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__[
 const mixKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/mix-keypoints.glsl')
                     .withArguments('encodedKeypoints', 'encoderLength', 'encoderCapacity', 'descriptorSize', 'extraSize', 'outEncoderLength');
 
+// Geometric transformations
+const applyHomography = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/apply-homography.glsl')
+                        .withArguments('homography', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 
-//
-// Generic keypoint routines
-//
 
 
 
@@ -16005,6 +16154,11 @@ class SpeedyProgramGroupKeypoints extends _speedy_program_group__WEBPACK_IMPORTE
                 ...this.program.usesPingpongRendering()
             })
             .declare('mixKeypoints', mixKeypoints)
+
+            //
+            // Geometric transformations
+            //
+            .declare('applyHomography', applyHomography)
         ;
     }
 }
@@ -16864,9 +17018,9 @@ var map = {
 	"./include/keypoints.glsl": "./src/gpu/shaders/include/keypoints.glsl",
 	"./include/math.glsl": "./src/gpu/shaders/include/math.glsl",
 	"./include/pyramids.glsl": "./src/gpu/shaders/include/pyramids.glsl",
-	"./include/quickselect.glsl": "./src/gpu/shaders/include/quickselect.glsl",
 	"./include/subpixel.glsl": "./src/gpu/shaders/include/subpixel.glsl",
 	"./keypoints/allocate-descriptors.glsl": "./src/gpu/shaders/keypoints/allocate-descriptors.glsl",
+	"./keypoints/apply-homography.glsl": "./src/gpu/shaders/keypoints/apply-homography.glsl",
 	"./keypoints/encode-keypoint-long-offsets.glsl": "./src/gpu/shaders/keypoints/encode-keypoint-long-offsets.glsl",
 	"./keypoints/encode-keypoint-offsets.glsl": "./src/gpu/shaders/keypoints/encode-keypoint-offsets.glsl",
 	"./keypoints/encode-keypoint-positions.glsl": "./src/gpu/shaders/keypoints/encode-keypoint-positions.glsl",
@@ -17179,7 +17333,6 @@ var map = {
 	"./keypoints.glsl": "./src/gpu/shaders/include/keypoints.glsl",
 	"./math.glsl": "./src/gpu/shaders/include/math.glsl",
 	"./pyramids.glsl": "./src/gpu/shaders/include/pyramids.glsl",
-	"./quickselect.glsl": "./src/gpu/shaders/include/quickselect.glsl",
 	"./subpixel.glsl": "./src/gpu/shaders/include/subpixel.glsl"
 };
 
@@ -17282,17 +17435,6 @@ module.exports = "#ifndef _PYRAMIDS_GLSL\n#define _PYRAMIDS_GLSL\n#define pyrPix
 
 /***/ }),
 
-/***/ "./src/gpu/shaders/include/quickselect.glsl":
-/*!**************************************************!*\
-  !*** ./src/gpu/shaders/include/quickselect.glsl ***!
-  \**************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "#ifndef _QUICKSELECT_GLSL\n#define _QUICKSELECT_GLSL\n#if defined(QUICKSELECT_UNSIGNED) && !defined(QUICKSELECT_SIGNED)\n#define QS_TYPE uint\n#define QS_TYPE4 uvec4\n#elif !defined(QUICKSELECT_UNSIGNED) && defined(QUICKSELECT_SIGNED)\n#define QS_TYPE int\n#define QS_TYPE4 ivec4\n#else\n#error Must define either QUICKSELECT_SIGNED or QUICKSELECT_UNSIGNED before including quickselect\n#endif\n#if defined(QUICKSELECT_ASCENDING) && !defined(QUICKSELECT_DESCENDING)\n#define QS_ORD(element,pivot) ((element) < (pivot))\n#elif defined(QUICKSELECT_DESCENDING) && !defined(QUICKSELECT_ASCENDING)\n#define QS_ORD(element,pivot) ((element) > (pivot))\n#else\n#error Must define either QUICKSELECT_ASCENDING or QUICKSELECT_DESCENDING before including quickselect\n#endif\n#ifdef QUICKSELECT_ARRAY\n#define QS_ARRAY QUICKSELECT_ARRAY\n#else\n#error Must define QUICKSELECT_ARRAY before including quickselect\n#endif\nint qspart(int l, int r, int p)\n{\n#define QS_SWAP(a,b) t = QS_ARRAY[(a)]; QS_ARRAY[(a)] = QS_ARRAY[(b)]; QS_ARRAY[(b)] = t\nhighp QS_TYPE e, t, mask, pivot = QS_ARRAY[p];\nhighp QS_TYPE4 tmp;\nint q, cond;\nQS_SWAP(p, r);\nq = l;\nfor(int i = l; i < r; i++) {\ne = QS_ARRAY[i];\nt = QS_ARRAY[q];\ncond = int(QS_ORD(e, pivot));\nmask = QS_TYPE(-cond);\ntmp = QS_TYPE4(mask & t, (~mask) & e, mask & e, (~mask) & t);\nQS_ARRAY[i] = tmp.x | tmp.y;\nQS_ARRAY[q] = tmp.z | tmp.w;\nq += cond;\n}\nQS_SWAP(q, r);\nreturn q;\n}\nhighp QS_TYPE quickselect(int l, int r, int k)\n{\nint p = -1337;\nivec2 idx = ivec2(l, r);\nwhile(idx.s < idx.t && p != k) {\np = qspart(idx.s, idx.t, (idx.s + idx.t) / 2);\nidx = int(k < p) * ivec2(idx.s, p-1) + int(k >= p) * ivec2(p+1, idx.t);\n}\nreturn (p == k) ? QS_ARRAY[k] : QS_ARRAY[idx.s];\n}\n#endif"
-
-/***/ }),
-
 /***/ "./src/gpu/shaders/include/subpixel.glsl":
 /*!***********************************************!*\
   !*** ./src/gpu/shaders/include/subpixel.glsl ***!
@@ -17312,6 +17454,17 @@ module.exports = "#ifndef _SUBPIXEL_GLSL\n#define _SUBPIXEL_GLSL\n#define subpix
 /***/ (function(module, exports) {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D inputEncodedKeypoints;\nuniform int inputDescriptorSize;\nuniform int inputExtraSize;\nuniform int inputEncoderLength;\nuniform int outputDescriptorSize;\nuniform int outputExtraSize;\nuniform int outputEncoderLength;\nconst vec4 EMPTY_DESCRIPTOR = vec4(0.0f);\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, outputEncoderLength, outputDescriptorSize, outputExtraSize);\nint myIndex = findKeypointIndex(myAddress, outputDescriptorSize, outputExtraSize);\nint headerSize = sizeofEncodedKeypoint(0, 0);\nbool isDescriptor = (myAddress.offset >= (headerSize + outputExtraSize) / 4);\nint addressOffset = myAddress.offset;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(inputDescriptorSize, inputExtraSize) / 4;\nKeypointAddress otherAddress = KeypointAddress(myIndex * pixelsPerKeypoint, addressOffset);\ncolor = isDescriptor ? EMPTY_DESCRIPTOR : readKeypointData(inputEncodedKeypoints, inputEncoderLength, otherAddress);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/apply-homography.glsl":
+/*!*********************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/apply-homography.glsl ***!
+  \*********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"keypoints.glsl\"\nuniform mat3 homography;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\ncolor = pixel;\nif(address.offset != 0)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nif(isBadKeypoint(keypoint))\nreturn;\nvec3 pos3 = homography * vec3(keypoint.position, 1.0f);\ncolor = encodeKeypointPosition(pos3.xy / pos3.z);\n}"
 
 /***/ }),
 
@@ -19151,7 +19304,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // Constants
-const DEFAULT_CAPACITY = 80;
+const DEFAULT_CAPACITY = 256;
 const BUCKET = Symbol('Bucket');
 
 
