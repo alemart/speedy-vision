@@ -861,6 +861,33 @@ Clips a set of keypoints, so that it outputs no more than a fixed quantity of th
 | `"in"`    | Keypoints | A set of keypoints. |
 | `"out"`   | Keypoints | A set of at most `size` keypoints. |
 
+##### Speedy.Keypoint.Mixer
+
+`Speedy.Keypoint.Mixer(name?: string): SpeedyPipelineNodeKeypointMixer`
+
+Mixes (merges) two sets of keypoints.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in0"`   | Keypoints | A set of keypoints. |
+| `"in1"`   | Keypoints | Another set of keypoints. |
+| `"out"`   | Keypoints | The union of the two input sets. |
+
+##### Speedy.Keypoint.Buffer
+
+`Speedy.Keypoint.Buffer(name?: string): SpeedyPipelineNodeKeypointBuffer`
+
+A keypoint buffer outputs at time *t* the keypoints received at time *t-1*.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Keypoints | A set of keypoints at time *t*. |
+| `"out"`   | Keypoints | The set of keypoints received at time *t-1*. |
+
 #### Keypoint detection
 
 The following nodes expect greyscale images as input. They output a set of keypoints.
