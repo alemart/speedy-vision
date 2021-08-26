@@ -832,6 +832,22 @@ The size of the keypoint descriptor, in bytes.
 
 Returns a string representation of the keypoint descriptor.
 
+##### Speedy.Keypoint.Source
+
+`Speedy.Keypoint.Source(name?: string): SpeedyPipelineNodeKeypointSource`
+
+Creates a source of keypoints. Only the position, score and scale of the provided keypoints will be imported to the pipeline. Descriptors, if present, will be lost.
+
+###### Parameters
+
+* `keypoints: SpeedyKeypoint[]`. The keypoints you want to import.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"out"`   | Keypoints | The imported set of keypoints. |
+
 ##### Speedy.Keypoint.Sink
 
 `Speedy.Keypoint.Sink(name?: string): SpeedyPipelineNodeKeypointSink`
