@@ -112,6 +112,21 @@ export function homography4p(header, output, inputs)
 
     do {
 
+    // Geometric constraint: given any three correspondences,
+    // the signed areas of the triangles formed by the points
+    // must have the same sign. This means that the points
+    // are in the same order, i.e., no flipping took place.
+    const s012 = u0 * (v1 - v2) + u1 * (v2 - v0) + u2 * (v0 - v1);
+    const s013 = u0 * (v1 - v3) + u1 * (v3 - v0) + u3 * (v0 - v1);
+    const s023 = u0 * (v2 - v3) + u2 * (v3 - v0) + u3 * (v0 - v2);
+    const s123 = u1 * (v2 - v3) + u2 * (v3 - v1) + u3 * (v1 - v2);
+    const z012 = x0 * (y1 - y2) + x1 * (y2 - y0) + x2 * (y0 - y1);
+    const z013 = x0 * (y1 - y3) + x1 * (y3 - y0) + x3 * (y0 - y1);
+    const z023 = x0 * (y2 - y3) + x2 * (y3 - y0) + x3 * (y0 - y2);
+    const z123 = x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2);
+    if(s012 * z012 < 0 || s013 * z013 < 0 || s023 * z023 < 0 || s123 * z123 < 0)
+        break; // goto end;
+
     //
     // From source to unit square
     //
