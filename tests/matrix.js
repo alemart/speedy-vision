@@ -30,18 +30,6 @@ describe('Matrix', function() {
         return Speedy.Matrix(rows, columns, data, type);
     }
 
-    function printm(...matrices) {
-        if(matrices.length > 0) {
-            const m = matrices.shift();
-            if(typeof m === 'object')
-                return m.print(2, print).then(() => printm(...matrices));
-            else {
-                print(m);
-                return Promise.resolve().then(() => printm(...matrices));
-            }
-        }
-    }
-
 
 
 

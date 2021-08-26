@@ -124,11 +124,11 @@ const uploadKeypoints = importShader('keypoints/upload-keypoints.glsl')
 const mixKeypoints = importShader('keypoints/mix-keypoints.glsl')
                     .withArguments('encodedKeypoints', 'encoderLength', 'encoderCapacity', 'descriptorSize', 'extraSize', 'outEncoderLength');
 
+// Geometric transformations
+const applyHomography = importShader('keypoints/apply-homography.glsl')
+                        .withArguments('homography', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 
-//
-// Generic keypoint routines
-//
 
 
 
@@ -232,6 +232,11 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
                 ...this.program.usesPingpongRendering()
             })
             .declare('mixKeypoints', mixKeypoints)
+
+            //
+            // Geometric transformations
+            //
+            .declare('applyHomography', applyHomography)
         ;
     }
 }

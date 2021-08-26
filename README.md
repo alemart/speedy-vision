@@ -904,6 +904,23 @@ A keypoint buffer outputs at time *t* the keypoints received at time *t-1*.
 | `"in"`    | Keypoints | A set of keypoints at time *t*. |
 | `"out"`   | Keypoints | The set of keypoints received at time *t-1*. |
 
+##### Speedy.Keypoint.Transformer
+
+`Speedy.Keypoint.Transformer(name?: string): SpeedyPipelineNodeKeypointTransformer`
+
+Applies a transformation matrix to a set of keypoints.
+
+###### Parameters
+
+* `transform: SpeedyMatrixExpr`. A 3x3 homography matrix. Defaults to the identity matrix.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Keypoints | A set of keypoints. |
+| `"out"`   | Keypoints | A transformed set of keypoints. |
+
 #### Keypoint detection
 
 The following nodes expect greyscale images as input. They output a set of keypoints.

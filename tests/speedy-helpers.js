@@ -112,6 +112,19 @@ function print(message = '', style)
         pre.style.margin = 0;
 }
 
+// Print matrices
+function printm(...matrices) {
+    if(matrices.length > 0) {
+        const m = matrices.shift();
+        if(typeof m === 'object')
+            return m.print(2, print).then(() => printm(...matrices));
+        else {
+            print(m);
+            return Promise.resolve().then(() => printm(...matrices));
+        }
+    }
+}
+
 // Displays a SpeedyMedia, Image or Canvas
 function display(source, title = '')
 {
