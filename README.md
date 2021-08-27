@@ -1031,17 +1031,17 @@ descriptor.output().connectTo(sink.input());
 pipeline.init(source, greyscale, pyramid, gaussian, blurredPyramid, fast, clipper, descriptor, sink);
 ```
 
-##### Speedy.Keypoint.Detector.None()
+##### Speedy.Keypoint.Detector.Discard()
 
-`Speedy.Keypoint.Detector.None(name?: string): SpeedyPipelineNodeNoneKeypointDescriptor`
+`Speedy.Keypoint.Detector.Discard(name?: string): SpeedyPipelineNodeDiscardKeypointDescriptor`
 
-Remove the descriptors from a set of keypoints. Used to reduce the size of the data.
+Discard the descriptors from a set of keypoints. This is used to reduce the size of the data.
 
 ###### Ports
 
 | Port name | Data type | Description |
 |-----------|-----------|-------------|
-| `"in"`    | Keypoints | A set of keypoints. |
+| `"in"`    | Keypoints | A set of keypoints with descriptors. |
 | `"out"`   | Keypoints | A set of keypoints without descriptors. |
 
 

@@ -15,8 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * none.js
- * Suppress keypoint descriptors
+ * discard.js
+ * Discard keypoint descriptors
  */
 
 import { SpeedyPipelineNode } from '../../../pipeline-node';
@@ -31,9 +31,9 @@ import { SpeedyPipelineNodeKeypointDetector } from '../detectors/detector';
 import { SpeedyPipelineNodeKeypointDescriptor } from './descriptor';
 
 /**
- * Suppress keypoint descriptors
+ * Discard keypoint descriptors
  */
-export class SpeedyPipelineNodeNoneKeypointDescriptor extends SpeedyPipelineNodeKeypointDescriptor
+export class SpeedyPipelineNodeDiscardKeypointDescriptor extends SpeedyPipelineNodeKeypointDescriptor
 {
     /**
      * Constructor
@@ -42,7 +42,9 @@ export class SpeedyPipelineNodeNoneKeypointDescriptor extends SpeedyPipelineNode
     constructor(name = undefined)
     {
         super(name, 0, [
-            InputPort().expects(SpeedyPipelineMessageType.Keypoints),
+            InputPort().expects(SpeedyPipelineMessageType.Keypoints).satisfying(
+                msg => msg.descriptorSize > 0
+            ),
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints),
         ]);
     }
@@ -58,14 +60,14 @@ export class SpeedyPipelineNodeNoneKeypointDescriptor extends SpeedyPipelineNode
 
         // allocate space
         const outputTexture = this._allocateDescriptors(gpu, descriptorSize, extraSize, 0, extraSize, encodedKeypoints);
-        const suppressedEncoderLength = outputTexture.width;
+        const newEncoderLength = outputTexture.width;
 
-        // suppress descriptors
-        (gpu.programs.keypoints.suppressDescriptors
-            .outputs(suppressedEncoderLength, suppressedEncoderLength, outputTexture)
-        )(encodedKeypoints, descriptorSize, extraSize, encoderLength, suppressedEncoderLength);
+        // discard descriptors
+        (gpu.programs.keypoints.discardDescriptors
+            .outputs(newEncoderLength, newEncoderLength, outputTexture)
+        )(encodedKeypoints, descriptorSize, extraSize, encoderLength, newEncoderLength);
 
         // done!
-        this.output().swrite(outputTexture, 0, extraSize, suppressedEncoderLength);
+        this.output().swrite(outputTexture, 0, extraSize, newEncoderLength);
     }
 }

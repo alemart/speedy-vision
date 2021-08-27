@@ -15,8 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * suppress-descriptors.glsl
- * Suppress descriptors from an encodedKeypoints texture
+ * discard-descriptors.glsl
+ * Discard descriptors from an encodedKeypoints texture
  */
 
 @include "keypoints.glsl"
@@ -25,14 +25,14 @@ uniform sampler2D encodedKeypoints;
 uniform int descriptorSize;
 uniform int extraSize;
 uniform int encoderLength; // original encoderLength (with descriptors)
-uniform int suppressedEncoderLength; // less than (or equal to) encoderLength
+uniform int newEncoderLength; // less than (or equal to) encoderLength
 
 void main()
 {
     ivec2 thread = threadLocation();
 
     // find my location
-    KeypointAddress myAddress = findKeypointAddress(thread, suppressedEncoderLength, 0, extraSize);
+    KeypointAddress myAddress = findKeypointAddress(thread, newEncoderLength, 0, extraSize);
     int myIndex = findKeypointIndex(myAddress, 0, extraSize);
 
     // find the corresponding location in the input texture

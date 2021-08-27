@@ -108,8 +108,8 @@ const encodeNullKeypoints = importShader('keypoints/encode-null-keypoints.glsl')
 const transferOrientation = importShader('keypoints/transfer-orientation.glsl')
                            .withArguments('encodedOrientations', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const suppressDescriptors = importShader('keypoints/suppress-descriptors.glsl')
-                           .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'suppressedEncoderLength');
+const discardDescriptors = importShader('keypoints/discard-descriptors.glsl')
+                           .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'newEncoderLength');
 
 const uploadKeypoints = importShader('keypoints/upload-keypoints.glsl')
                        .withDefines({
@@ -227,7 +227,7 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             .declare('encodeKeypointProperties', encodeKeypointProperties)
             .declare('encodeNullKeypoints', encodeNullKeypoints)
             .declare('transferOrientation', transferOrientation)
-            .declare('suppressDescriptors', suppressDescriptors)
+            .declare('discardDescriptors', discardDescriptors)
             .declare('uploadKeypoints', uploadKeypoints, {
                 ...this.program.usesPingpongRendering()
             })

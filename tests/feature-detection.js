@@ -278,7 +278,7 @@ describe('Feature detection', function() {
         });
     });
 
-    describe('Suppress descriptors', function() {
+    describe('Discard descriptors', function() {
         const createPipeline = (media) => {
             const pipeline = Speedy.Pipeline();
             const source = Speedy.Image.Source();
@@ -289,7 +289,7 @@ describe('Feature detection', function() {
             const blurredPyramid = Speedy.Image.Pyramid();
             const clipper = Speedy.Keypoint.Clipper('clipper');
             const orb = Speedy.Keypoint.Descriptor.ORB();
-            const none = Speedy.Keypoint.Descriptor.None();
+            const discard = Speedy.Keypoint.Descriptor.Discard();
             const sink1 = Speedy.Keypoint.Sink('keypointsWithoutDescriptors');
             const sink2 = Speedy.Keypoint.Sink('keypointsWithDescriptors');
 
@@ -313,20 +313,19 @@ describe('Feature detection', function() {
             gaussian.output().connectTo(blurredPyramid.input());
             blurredPyramid.output().connectTo(orb.input('image'));
 
-            orb.output().connectTo(none.input());
-            none.output().connectTo(sink1.input());
+            orb.output().connectTo(discard.input());
+            discard.output().connectTo(sink1.input());
             orb.output().connectTo(sink2.input());
 
-            pipeline.init(source, greyscale, pyramid, gaussian, blurredPyramid, fast, clipper, orb, none, sink1, sink2);
+            pipeline.init(source, greyscale, pyramid, gaussian, blurredPyramid, fast, clipper, orb, discard, sink1, sink2);
             return pipeline;
         }
 
-        it('computes and suppresses descriptors', async function() {
+        it('computes and discards descriptors', async function() {
             const pipeline = createPipeline(media);
             const { keypointsWithDescriptors, keypointsWithoutDescriptors } = await pipeline.run();
 
-            print(`Found ${keypointsWithoutDescriptors.length} features`);
-            displayFeatures(media, keypointsWithoutDescriptors);
+            print(`Testing ${keypointsWithoutDescriptors.length} features`);
 
             expect(keypointsWithoutDescriptors.length).toBeGreaterThan(0);
             expect(keypointsWithoutDescriptors.length).toEqual(keypointsWithDescriptors.length);

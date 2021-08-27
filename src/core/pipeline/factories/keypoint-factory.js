@@ -29,7 +29,7 @@ import { SpeedyPipelineNodeKeypointTransformer } from '../nodes/keypoints/transf
 import { SpeedyPipelineNodeFASTKeypointDetector } from '../nodes/keypoints/detectors/fast';
 import { SpeedyPipelineNodeHarrisKeypointDetector } from '../nodes/keypoints/detectors/harris';
 import { SpeedyPipelineNodeORBKeypointDescriptor } from '../nodes/keypoints/descriptors/orb';
-import { SpeedyPipelineNodeNoneKeypointDescriptor } from '../nodes/keypoints/descriptors/none';
+import { SpeedyPipelineNodeDiscardKeypointDescriptor } from '../nodes/keypoints/descriptors/discard';
 import { SpeedyPipelineNodeLKKeypointTracker } from '../nodes/keypoints/trackers/lk';
 
 /**
@@ -74,13 +74,13 @@ class SpeedyPipelineKeypointDescriptorFactory extends SpeedyNamespace
     }
 
     /**
-     * Suppress descriptors
+     * Discard descriptors
      * @param {string} [name]
-     * @returns {SpeedyPipelineNodeNoneKeypointDescriptor}
+     * @returns {SpeedyPipelineNodeDiscardKeypointDescriptor}
      */
-    static None(name = undefined)
+    static Discard(name = undefined)
     {
-        return new SpeedyPipelineNodeNoneKeypointDescriptor(name);
+        return new SpeedyPipelineNodeDiscardKeypointDescriptor(name);
     }
 }
 
