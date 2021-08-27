@@ -28,7 +28,7 @@ import { GLError, IllegalArgumentError, IllegalOperationError } from '../utils/e
 //
 // Constants
 //
-const isFirefox = navigator.userAgent.includes('Firefox');
+const IS_FIREFOX = navigator.userAgent.includes('Firefox');
 
 
 
@@ -60,40 +60,6 @@ export class GLUtils
     }
 
     /**
-     * Waits for a sync object to become signaled
-     * @param {WebGL2RenderingContext} gl
-     * @param {WebGLSync} sync sync object
-     * @param {GLbitfield} [flags] may be gl.SYNC_FLUSH_COMMANDS_BIT or 0
-     * @returns {SpeedyPromise} a promise that resolves as soon as the sync object becomes signaled
-     */
-    static clientWaitAsync(gl, sync, flags = 0)
-    {
-        this._checkStatus = this._checkStatus || (this._checkStatus = function checkStatus(gl, sync, flags, resolve, reject) {
-            const status = gl.clientWaitSync(sync, flags, 0);
-            if(status == gl.TIMEOUT_EXPIRED) {
-                //Utils.setZeroTimeout(() => checkStatus.call(this, gl, sync, flags, resolve, reject)); // better performance (preferred)
-                setTimeout(() => checkStatus.call(this, gl, sync, flags, resolve, reject), 0); // easier on the CPU
-            }
-            else if(status == gl.WAIT_FAILED) {
-                if(isFirefox && gl.getError() == gl.NO_ERROR) { // firefox bug?
-                    //Utils.setZeroTimeout(() => checkStatus.call(this, gl, sync, flags, resolve, reject));
-                    setTimeout(() => checkStatus.call(this, gl, sync, flags, resolve, reject), 0);
-                }
-                else {
-                    reject(GLUtils.getError(gl));
-                }
-            }
-            else {
-                resolve();
-            }
-        });
-
-        return new SpeedyPromise((resolve, reject) => {
-            this._checkStatus(gl, sync, flags, resolve, reject);
-        });
-    }
-
-    /**
      * Reads data from a WebGLBuffer into an ArrayBufferView
      * This is like gl.getBufferSubData(), but async
      * @param {WebGL2RenderingContext} gl
@@ -114,7 +80,7 @@ export class GLUtils
         gl.flush(); // make sure the sync command is read
 
         // wait for the commands to be processed by the GPU
-        return GLUtils.clientWaitAsync(gl, sync).then(() => {
+        return this.clientWaitAsync(gl, sync).then(() => {
             gl.bindBuffer(target, glBuffer);
             gl.getBufferSubData(target, srcByteOffset, destBuffer, destOffset, length);
             gl.bindBuffer(target, null);
@@ -124,5 +90,48 @@ export class GLUtils
         }).finally(() => {
             gl.deleteSync(sync);
         });
+    }
+
+    /**
+     * Waits for a sync object to become signaled
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLSync} sync sync object
+     * @param {GLbitfield} [flags] may be gl.SYNC_FLUSH_COMMANDS_BIT or 0
+     * @returns {SpeedyPromise} a promise that resolves as soon as the sync object becomes signaled
+     */
+    static clientWaitAsync(gl, sync, flags = 0)
+    {
+        return new SpeedyPromise((resolve, reject) => {
+            this._checkStatus(gl, sync, flags, resolve, reject);
+        });
+    }
+
+    /**
+     * Auxiliary method for clientWaitAsync()
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLSync} sync
+     * @param {GLbitfield} flags
+     * @param {Function} resolve
+     * @param {Function} reject
+     */
+    static _checkStatus(gl, sync, flags, resolve, reject)
+    {
+        const status = gl.clientWaitSync(sync, flags, 0);
+        if(status == gl.TIMEOUT_EXPIRED) {
+            //Utils.setZeroTimeout(GLUtils._checkStatus, gl, sync, flags, resolve, reject); // no ~4ms delay
+            setTimeout(GLUtils._checkStatus, 0, gl, sync, flags, resolve, reject); // easier on the CPU
+        }
+        else if(status == gl.WAIT_FAILED) {
+            if(IS_FIREFOX && gl.getError() == gl.NO_ERROR) { // firefox bug?
+                //Utils.setZeroTimeout(GLUtils._checkStatus, gl, sync, flags, resolve, reject);
+                setTimeout(GLUtils._checkStatus, 0, gl, sync, flags, resolve, reject);
+            }
+            else {
+                reject(GLUtils.getError(gl));
+            }
+        }
+        else {
+            resolve();
+        }
     }
 }
