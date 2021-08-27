@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-08-26T19:04:02.242Z
+ * Date: 2021-08-27T01:13:16.163Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -8152,7 +8152,8 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../nodes/keypoints/detectors/fast */ "./src/core/pipeline/nodes/keypoints/detectors/fast.js");
 /* harmony import */ var _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../nodes/keypoints/detectors/harris */ "./src/core/pipeline/nodes/keypoints/detectors/harris.js");
 /* harmony import */ var _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/orb */ "./src/core/pipeline/nodes/keypoints/descriptors/orb.js");
-/* harmony import */ var _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../nodes/keypoints/trackers/lk */ "./src/core/pipeline/nodes/keypoints/trackers/lk.js");
+/* harmony import */ var _nodes_keypoints_descriptors_none__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/none */ "./src/core/pipeline/nodes/keypoints/descriptors/none.js");
+/* harmony import */ var _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../nodes/keypoints/trackers/lk */ "./src/core/pipeline/nodes/keypoints/trackers/lk.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -8173,6 +8174,7 @@ __webpack_require__.r(__webpack_exports__);
  * keypoint-factory.js
  * Keypoint-related nodes
  */
+
 
 
 
@@ -8226,6 +8228,16 @@ class SpeedyPipelineKeypointDescriptorFactory extends _speedy_namespace__WEBPACK
     {
         return new _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_9__["SpeedyPipelineNodeORBKeypointDescriptor"](name);
     }
+
+    /**
+     * Suppress descriptors
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeNoneKeypointDescriptor}
+     */
+    static None(name = undefined)
+    {
+        return new _nodes_keypoints_descriptors_none__WEBPACK_IMPORTED_MODULE_10__["SpeedyPipelineNodeNoneKeypointDescriptor"](name);
+    }
 }
 
 /**
@@ -8240,7 +8252,7 @@ class SpeedyPipelineKeypointTrackerFactory extends _speedy_namespace__WEBPACK_IM
      */
     static LK(name = undefined)
     {
-        return new _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_10__["SpeedyPipelineNodeLKKeypointTracker"](name);
+        return new _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_11__["SpeedyPipelineNodeLKKeypointTracker"](name);
     }
 }
 
@@ -10458,17 +10470,17 @@ class SpeedyPipelineNodeKeypointDescriptor extends _pipeline_node__WEBPACK_IMPOR
      * 
      * Allocate space for keypoint descriptors
      * @param {SpeedyGPU} gpu
-     * @param {number} inputDescriptorSize must be 0
+     * @param {number} inputDescriptorSize should be 0
      * @param {number} inputExtraSize must be non-negative
-     * @param {number} outputDescriptorSize in bytes, must be a positive multiple of 4
+     * @param {number} outputDescriptorSize in bytes, must be a multiple of 4
      * @param {number} outputExtraSize must be inputExtraSize
      * @param {SpeedyTexture} inputEncodedKeypoints input with no descriptors
      * @returns {SpeedyDrawableTexture} encodedKeypoints
      */
     _allocateDescriptors(gpu, inputDescriptorSize, inputExtraSize, outputDescriptorSize, outputExtraSize, inputEncodedKeypoints)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_5__["Utils"].assert(inputDescriptorSize === 0 && inputExtraSize >= 0);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_5__["Utils"].assert(outputDescriptorSize > 0 && outputDescriptorSize % 4 === 0 && outputExtraSize === inputExtraSize);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_5__["Utils"].assert(inputDescriptorSize >= 0 && inputExtraSize >= 0);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_5__["Utils"].assert(outputDescriptorSize >= 0 && outputDescriptorSize % 4 === 0 && outputExtraSize === inputExtraSize);
 
         const inputEncoderLength = inputEncodedKeypoints.width;
         const inputEncoderCapacity = _detectors_detector__WEBPACK_IMPORTED_MODULE_4__["SpeedyPipelineNodeKeypointDetector"].encoderCapacity(inputDescriptorSize, inputExtraSize, inputEncoderLength);
@@ -10481,6 +10493,101 @@ class SpeedyPipelineNodeKeypointDescriptor extends _pipeline_node__WEBPACK_IMPOR
         )(inputEncodedKeypoints, inputDescriptorSize, inputExtraSize, inputEncoderLength, outputDescriptorSize, outputExtraSize, outputEncoderLength);
     }
 }
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/keypoints/descriptors/none.js":
+/*!***************************************************************!*\
+  !*** ./src/core/pipeline/nodes/keypoints/descriptors/none.js ***!
+  \***************************************************************/
+/*! exports provided: SpeedyPipelineNodeNoneKeypointDescriptor */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeNoneKeypointDescriptor", function() { return SpeedyPipelineNodeNoneKeypointDescriptor; });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _detectors_detector__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../detectors/detector */ "./src/core/pipeline/nodes/keypoints/detectors/detector.js");
+/* harmony import */ var _descriptor__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./descriptor */ "./src/core/pipeline/nodes/keypoints/descriptors/descriptor.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * none.js
+ * Suppress keypoint descriptors
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Suppress keypoint descriptors
+ */
+class SpeedyPipelineNodeNoneKeypointDescriptor extends _descriptor__WEBPACK_IMPORTED_MODULE_9__["SpeedyPipelineNodeKeypointDescriptor"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, 0, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Keypoints),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Keypoints),
+        ]);
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input().read();
+
+        // allocate space
+        const outputTexture = this._allocateDescriptors(gpu, descriptorSize, extraSize, 0, extraSize, encodedKeypoints);
+        const suppressedEncoderLength = outputTexture.width;
+
+        // suppress descriptors
+        (gpu.programs.keypoints.suppressDescriptors
+            .outputs(suppressedEncoderLength, suppressedEncoderLength, outputTexture)
+        )(encodedKeypoints, descriptorSize, extraSize, encoderLength, suppressedEncoderLength);
+
+        // done!
+        this.output().swrite(outputTexture, 0, extraSize, suppressedEncoderLength);
+    }
+}
+
 
 /***/ }),
 
