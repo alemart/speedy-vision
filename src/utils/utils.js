@@ -84,9 +84,9 @@ export class Utils
      * (heavy on battery) if used in a loop. Use with caution.
      * Implementation based on David Baron's, but adapted for ES6 classes
      * @param {Function} fn
+     * @param {...any} [args] optional arguments to be passed to fn
      */
-    //static setZeroTimeout(fn) { setTimeout(fn, 0); } // easier on the CPU
-    static setZeroTimeout(fn)
+    static setZeroTimeout(fn, ...args)
     {
         const ctx = (Utils._setZeroTimeoutContext = Utils._setZeroTimeoutContext || (Utils._setZeroTimeoutContext = {
             callbacks: new Map(),
@@ -94,10 +94,10 @@ export class Utils
                 if(ev.source === window) {
                     const ctx = Utils._setZeroTimeoutContext;
                     const msgId = ev.data;
-                    const fn = ctx.callbacks.get(msgId);
+                    const { fn, args } = ctx.callbacks.get(msgId);
                     if(fn !== undefined) {
                         ev.stopPropagation();
-                        fn.call(window);
+                        fn.apply(window, args);
                         ctx.callbacks.delete(msgId);
                     }
                 }
@@ -105,7 +105,7 @@ export class Utils
         }));
 
         const msgId = '0%' + Math.random();
-        ctx.callbacks.set(msgId, fn);
+        ctx.callbacks.set(msgId, { fn, args });
         window.postMessage(msgId, '*');
     }
 
