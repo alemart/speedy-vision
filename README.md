@@ -1031,6 +1031,20 @@ descriptor.output().connectTo(sink.input());
 pipeline.init(source, greyscale, pyramid, gaussian, blurredPyramid, fast, clipper, descriptor, sink);
 ```
 
+##### Speedy.Keypoint.Detector.None()
+
+`Speedy.Keypoint.Detector.None(name?: string): SpeedyPipelineNodeNoneKeypointDescriptor`
+
+Remove the descriptors from a set of keypoints. Used to reduce the size of the data.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Keypoints | A set of keypoints. |
+| `"out"`   | Keypoints | A set of keypoints without descriptors. |
+
+
 #### Keypoint tracking
 
 Keypoint tracking is the process of tracking keypoints across a sequence of images. It allows you to get a sense of how keypoints are moving in time - i.e., how fast they are moving and where they are going.

@@ -47,17 +47,17 @@ export class SpeedyPipelineNodeKeypointDescriptor extends SpeedyPipelineNode
      * 
      * Allocate space for keypoint descriptors
      * @param {SpeedyGPU} gpu
-     * @param {number} inputDescriptorSize must be 0
+     * @param {number} inputDescriptorSize should be 0
      * @param {number} inputExtraSize must be non-negative
-     * @param {number} outputDescriptorSize in bytes, must be a positive multiple of 4
+     * @param {number} outputDescriptorSize in bytes, must be a multiple of 4
      * @param {number} outputExtraSize must be inputExtraSize
      * @param {SpeedyTexture} inputEncodedKeypoints input with no descriptors
      * @returns {SpeedyDrawableTexture} encodedKeypoints
      */
     _allocateDescriptors(gpu, inputDescriptorSize, inputExtraSize, outputDescriptorSize, outputExtraSize, inputEncodedKeypoints)
     {
-        Utils.assert(inputDescriptorSize === 0 && inputExtraSize >= 0);
-        Utils.assert(outputDescriptorSize > 0 && outputDescriptorSize % 4 === 0 && outputExtraSize === inputExtraSize);
+        Utils.assert(inputDescriptorSize >= 0 && inputExtraSize >= 0);
+        Utils.assert(outputDescriptorSize >= 0 && outputDescriptorSize % 4 === 0 && outputExtraSize === inputExtraSize);
 
         const inputEncoderLength = inputEncodedKeypoints.width;
         const inputEncoderCapacity = SpeedyPipelineNodeKeypointDetector.encoderCapacity(inputDescriptorSize, inputExtraSize, inputEncoderLength);
