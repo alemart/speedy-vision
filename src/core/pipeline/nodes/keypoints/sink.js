@@ -79,9 +79,8 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
     _run(gpu)
     {
         const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input().read();
-        const useBufferedDownloads = false; // TODO
 
-        return this._textureReader.readPixelsAsync(encodedKeypoints, useBufferedDownloads).then(pixels => {
+        return this._textureReader.readPixelsAsync(encodedKeypoints).then(pixels => {
             this._keypoints = SpeedyPipelineNodeKeypointSink._decode(pixels, descriptorSize, extraSize, encoderLength);
         });
     }

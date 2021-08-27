@@ -96,14 +96,14 @@ export class SpeedyTextureReader
      * Read pixels from a texture, asynchronously, with PBOs.
      * You may optionally specify a (x,y,width,height) sub-rectangle.
      * @param {SpeedyDrawableTexture} texture a texture with a FBO
-     * @param {boolean} [useBufferedDownloads] accelerate downloads by returning pixels from the texture of the previous call (useful for streaming)
      * @param {number} [x]
      * @param {number} [y] 
      * @param {number} [width]
      * @param {number} [height]
+     * @param {boolean} [useBufferedDownloads] accelerate downloads by returning pixels from the texture of the previous call (useful for streaming)
      * @returns {SpeedyPromise<Uint8Array>} resolves to an array of pixels in the RGBA format
      */
-    readPixelsAsync(texture, useBufferedDownloads = false, x = 0, y = 0, width = texture.width, height = texture.height)
+    readPixelsAsync(texture, x = 0, y = 0, width = texture.width, height = texture.height, useBufferedDownloads = false)
     {
         const gl = texture.gl;
         const fbo = texture.glFbo;
