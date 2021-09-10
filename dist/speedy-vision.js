@@ -1,12 +1,12 @@
 /*!
- * speedy-vision.js v0.7.1-wip
+ * speedy-vision.js v0.7.1
  * GPU-accelerated Computer Vision for JavaScript
  * https://github.com/alemart/speedy-vision-js
  * 
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-08-27T01:13:16.163Z
+ * Date: 2021-09-10T15:59:58.061Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -8152,7 +8152,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _nodes_keypoints_detectors_fast__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../nodes/keypoints/detectors/fast */ "./src/core/pipeline/nodes/keypoints/detectors/fast.js");
 /* harmony import */ var _nodes_keypoints_detectors_harris__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../nodes/keypoints/detectors/harris */ "./src/core/pipeline/nodes/keypoints/detectors/harris.js");
 /* harmony import */ var _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/orb */ "./src/core/pipeline/nodes/keypoints/descriptors/orb.js");
-/* harmony import */ var _nodes_keypoints_descriptors_none__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/none */ "./src/core/pipeline/nodes/keypoints/descriptors/none.js");
+/* harmony import */ var _nodes_keypoints_descriptors_discard__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/discard */ "./src/core/pipeline/nodes/keypoints/descriptors/discard.js");
 /* harmony import */ var _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../nodes/keypoints/trackers/lk */ "./src/core/pipeline/nodes/keypoints/trackers/lk.js");
 /*
  * speedy-vision.js
@@ -8230,13 +8230,13 @@ class SpeedyPipelineKeypointDescriptorFactory extends _speedy_namespace__WEBPACK
     }
 
     /**
-     * Suppress descriptors
+     * Discard descriptors
      * @param {string} [name]
-     * @returns {SpeedyPipelineNodeNoneKeypointDescriptor}
+     * @returns {SpeedyPipelineNodeDiscardKeypointDescriptor}
      */
-    static None(name = undefined)
+    static Discard(name = undefined)
     {
-        return new _nodes_keypoints_descriptors_none__WEBPACK_IMPORTED_MODULE_10__["SpeedyPipelineNodeNoneKeypointDescriptor"](name);
+        return new _nodes_keypoints_descriptors_discard__WEBPACK_IMPORTED_MODULE_10__["SpeedyPipelineNodeDiscardKeypointDescriptor"](name);
     }
 }
 
@@ -10496,16 +10496,16 @@ class SpeedyPipelineNodeKeypointDescriptor extends _pipeline_node__WEBPACK_IMPOR
 
 /***/ }),
 
-/***/ "./src/core/pipeline/nodes/keypoints/descriptors/none.js":
-/*!***************************************************************!*\
-  !*** ./src/core/pipeline/nodes/keypoints/descriptors/none.js ***!
-  \***************************************************************/
-/*! exports provided: SpeedyPipelineNodeNoneKeypointDescriptor */
+/***/ "./src/core/pipeline/nodes/keypoints/descriptors/discard.js":
+/*!******************************************************************!*\
+  !*** ./src/core/pipeline/nodes/keypoints/descriptors/discard.js ***!
+  \******************************************************************/
+/*! exports provided: SpeedyPipelineNodeDiscardKeypointDescriptor */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeNoneKeypointDescriptor", function() { return SpeedyPipelineNodeNoneKeypointDescriptor; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeDiscardKeypointDescriptor", function() { return SpeedyPipelineNodeDiscardKeypointDescriptor; });
 /* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
 /* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
 /* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
@@ -10533,8 +10533,8 @@ __webpack_require__.r(__webpack_exports__);
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * none.js
- * Suppress keypoint descriptors
+ * discard.js
+ * Discard keypoint descriptors
  */
 
 
@@ -10549,9 +10549,9 @@ __webpack_require__.r(__webpack_exports__);
 
 
 /**
- * Suppress keypoint descriptors
+ * Discard keypoint descriptors
  */
-class SpeedyPipelineNodeNoneKeypointDescriptor extends _descriptor__WEBPACK_IMPORTED_MODULE_9__["SpeedyPipelineNodeKeypointDescriptor"]
+class SpeedyPipelineNodeDiscardKeypointDescriptor extends _descriptor__WEBPACK_IMPORTED_MODULE_9__["SpeedyPipelineNodeKeypointDescriptor"]
 {
     /**
      * Constructor
@@ -10560,7 +10560,9 @@ class SpeedyPipelineNodeNoneKeypointDescriptor extends _descriptor__WEBPACK_IMPO
     constructor(name = undefined)
     {
         super(name, 0, [
-            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Keypoints),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Keypoints).satisfying(
+                msg => msg.descriptorSize > 0
+            ),
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Keypoints),
         ]);
     }
@@ -10576,15 +10578,15 @@ class SpeedyPipelineNodeNoneKeypointDescriptor extends _descriptor__WEBPACK_IMPO
 
         // allocate space
         const outputTexture = this._allocateDescriptors(gpu, descriptorSize, extraSize, 0, extraSize, encodedKeypoints);
-        const suppressedEncoderLength = outputTexture.width;
+        const newEncoderLength = outputTexture.width;
 
-        // suppress descriptors
-        (gpu.programs.keypoints.suppressDescriptors
-            .outputs(suppressedEncoderLength, suppressedEncoderLength, outputTexture)
-        )(encodedKeypoints, descriptorSize, extraSize, encoderLength, suppressedEncoderLength);
+        // discard descriptors
+        (gpu.programs.keypoints.discardDescriptors
+            .outputs(newEncoderLength, newEncoderLength, outputTexture)
+        )(encodedKeypoints, descriptorSize, extraSize, encoderLength, newEncoderLength);
 
         // done!
-        this.output().swrite(outputTexture, 0, extraSize, suppressedEncoderLength);
+        this.output().swrite(outputTexture, 0, extraSize, newEncoderLength);
     }
 }
 
@@ -11563,9 +11565,8 @@ class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MO
     _run(gpu)
     {
         const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input().read();
-        const useBufferedDownloads = false; // TODO
 
-        return this._textureReader.readPixelsAsync(encodedKeypoints, useBufferedDownloads).then(pixels => {
+        return this._textureReader.readPixelsAsync(encodedKeypoints).then(pixels => {
             this._keypoints = SpeedyPipelineNodeKeypointSink._decode(pixels, descriptorSize, extraSize, encoderLength);
         });
     }
@@ -11762,15 +11763,12 @@ class SpeedyPipelineNodeKeypointSource extends _pipeline_node__WEBPACK_IMPORTED_
         const numKeypoints = keypoints.length;
         const numPasses = Math.max(1, Math.ceil(numKeypoints / BUFFER_SIZE));
         const buffer = this._buffer;
-        const tex = this._tex[0];
-        const outputTexture = this._tex[1];
         const uploadKeypoints = gpu.programs.keypoints.uploadKeypoints;
         const encoderLength = _detectors_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodeKeypointDetector"].encoderLength(numKeypoints, descriptorSize, extraSize);
 
-        uploadKeypoints.outputs(encoderLength, encoderLength, outputTexture, tex);
+        uploadKeypoints.outputs(encoderLength, encoderLength, this._tex[0], this._tex[1]);
 
-        let startIndex = 0;
-        let encodedKeypoints = tex;
+        let startIndex = 0, encodedKeypoints = uploadKeypoints.clear();
         for(let i = 0; i < numPasses; i++) {
             const n = Math.min(BUFFER_SIZE, numKeypoints - startIndex);
             const endIndex = startIndex + n;
@@ -11781,10 +11779,7 @@ class SpeedyPipelineNodeKeypointSource extends _pipeline_node__WEBPACK_IMPORTED_
             startIndex = endIndex;
         }
 
-        if(encodedKeypoints != outputTexture)
-            encodedKeypoints.copyTo(outputTexture);
-
-        this.output().swrite(outputTexture, descriptorSize, extraSize, encoderLength);
+        this.output().swrite(encodedKeypoints, descriptorSize, extraSize, encoderLength);
     }
 
     /**
@@ -15558,7 +15553,7 @@ class Speedy
      */
     static get version()
     {
-        return "0.7.1-wip";
+        return "0.7.1";
     }
 
     /**
@@ -15713,7 +15708,7 @@ __webpack_require__.r(__webpack_exports__);
 //
 // Constants
 //
-const isFirefox = navigator.userAgent.includes('Firefox');
+const IS_FIREFOX = navigator.userAgent.includes('Firefox');
 
 
 
@@ -15745,40 +15740,6 @@ class GLUtils
     }
 
     /**
-     * Waits for a sync object to become signaled
-     * @param {WebGL2RenderingContext} gl
-     * @param {WebGLSync} sync sync object
-     * @param {GLbitfield} [flags] may be gl.SYNC_FLUSH_COMMANDS_BIT or 0
-     * @returns {SpeedyPromise} a promise that resolves as soon as the sync object becomes signaled
-     */
-    static clientWaitAsync(gl, sync, flags = 0)
-    {
-        this._checkStatus = this._checkStatus || (this._checkStatus = function checkStatus(gl, sync, flags, resolve, reject) {
-            const status = gl.clientWaitSync(sync, flags, 0);
-            if(status == gl.TIMEOUT_EXPIRED) {
-                _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].setZeroTimeout(() => checkStatus.call(this, gl, sync, flags, resolve, reject)); // better performance (preferred)
-                //setTimeout(() => checkStatus.call(this, gl, sync, flags, resolve, reject), 0); // easier on the CPU
-            }
-            else if(status == gl.WAIT_FAILED) {
-                if(isFirefox && gl.getError() == gl.NO_ERROR) { // firefox bug?
-                    _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].setZeroTimeout(() => checkStatus.call(this, gl, sync, flags, resolve, reject));
-                    //setTimeout(() => checkStatus.call(this, gl, sync, flags, resolve, reject), 0);
-                }
-                else {
-                    reject(GLUtils.getError(gl));
-                }
-            }
-            else {
-                resolve();
-            }
-        });
-
-        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"]((resolve, reject) => {
-            this._checkStatus(gl, sync, flags, resolve, reject);
-        });
-    }
-
-    /**
      * Reads data from a WebGLBuffer into an ArrayBufferView
      * This is like gl.getBufferSubData(), but async
      * @param {WebGL2RenderingContext} gl
@@ -15793,24 +15754,69 @@ class GLUtils
     static getBufferSubDataAsync(gl, glBuffer, target, srcByteOffset, destBuffer, destOffset = 0, length = 0)
     {
         const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-        const start = performance.now();
+        //const start = performance.now();
 
         // empty internal command queues and send them to the GPU asap
         gl.flush(); // make sure the sync command is read
 
         // wait for the commands to be processed by the GPU
-        return GLUtils.clientWaitAsync(gl, sync).then(() => {
+        return this.clientWaitAsync(gl, sync).then(() => {
             gl.bindBuffer(target, glBuffer);
             gl.getBufferSubData(target, srcByteOffset, destBuffer, destOffset, length);
             gl.bindBuffer(target, null);
-            return performance.now() - start;
+            return 0; // disable timers
+            //return performance.now() - start;
         }).catch(err => {
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`Can't getBufferSubDataAsync(): error in clientWaitAsync()`, err);
         }).finally(() => {
             gl.deleteSync(sync);
         });
     }
+
+    /**
+     * Waits for a sync object to become signaled
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLSync} sync sync object
+     * @param {GLbitfield} [flags] may be gl.SYNC_FLUSH_COMMANDS_BIT or 0
+     * @returns {SpeedyPromise} a promise that resolves as soon as the sync object becomes signaled
+     */
+    static clientWaitAsync(gl, sync, flags = 0)
+    {
+        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"]((resolve, reject) => {
+            this._checkStatus(gl, sync, flags, resolve, reject);
+        });
+    }
+
+    /**
+     * Auxiliary method for clientWaitAsync()
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLSync} sync
+     * @param {GLbitfield} flags
+     * @param {Function} resolve
+     * @param {Function} reject
+     */
+    static _checkStatus(gl, sync, flags, resolve, reject)
+    {
+        const status = gl.clientWaitSync(sync, flags, 0);
+        if(status == gl.TIMEOUT_EXPIRED) {
+            //Utils.setZeroTimeout(GLUtils._checkStatus, gl, sync, flags, resolve, reject); // no ~4ms delay
+            setTimeout(GLUtils._checkStatus, 0, gl, sync, flags, resolve, reject); // easier on the CPU
+        }
+        else if(status == gl.WAIT_FAILED) {
+            if(IS_FIREFOX && gl.getError() == gl.NO_ERROR) { // firefox bug?
+                //Utils.setZeroTimeout(GLUtils._checkStatus, gl, sync, flags, resolve, reject);
+                setTimeout(GLUtils._checkStatus, 0, gl, sync, flags, resolve, reject);
+            }
+            else {
+                reject(GLUtils.getError(gl));
+            }
+        }
+        else {
+            resolve();
+        }
+    }
 }
+
 
 /***/ }),
 
@@ -16137,8 +16143,8 @@ const encodeNullKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_
 const transferOrientation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/transfer-orientation.glsl')
                            .withArguments('encodedOrientations', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const suppressDescriptors = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/suppress-descriptors.glsl')
-                           .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'suppressedEncoderLength');
+const discardDescriptors = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/discard-descriptors.glsl')
+                           .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'newEncoderLength');
 
 const uploadKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/upload-keypoints.glsl')
                        .withDefines({
@@ -16256,7 +16262,7 @@ class SpeedyProgramGroupKeypoints extends _speedy_program_group__WEBPACK_IMPORTE
             .declare('encodeKeypointProperties', encodeKeypointProperties)
             .declare('encodeNullKeypoints', encodeNullKeypoints)
             .declare('transferOrientation', transferOrientation)
-            .declare('suppressDescriptors', suppressDescriptors)
+            .declare('discardDescriptors', discardDescriptors)
             .declare('uploadKeypoints', uploadKeypoints, {
                 ...this.program.usesPingpongRendering()
             })
@@ -17128,6 +17134,7 @@ var map = {
 	"./include/subpixel.glsl": "./src/gpu/shaders/include/subpixel.glsl",
 	"./keypoints/allocate-descriptors.glsl": "./src/gpu/shaders/keypoints/allocate-descriptors.glsl",
 	"./keypoints/apply-homography.glsl": "./src/gpu/shaders/keypoints/apply-homography.glsl",
+	"./keypoints/discard-descriptors.glsl": "./src/gpu/shaders/keypoints/discard-descriptors.glsl",
 	"./keypoints/encode-keypoint-long-offsets.glsl": "./src/gpu/shaders/keypoints/encode-keypoint-long-offsets.glsl",
 	"./keypoints/encode-keypoint-offsets.glsl": "./src/gpu/shaders/keypoints/encode-keypoint-offsets.glsl",
 	"./keypoints/encode-keypoint-positions.glsl": "./src/gpu/shaders/keypoints/encode-keypoint-positions.glsl",
@@ -17147,7 +17154,6 @@ var map = {
 	"./keypoints/sort-applyperm.glsl": "./src/gpu/shaders/keypoints/sort-applyperm.glsl",
 	"./keypoints/sort-createperm.glsl": "./src/gpu/shaders/keypoints/sort-createperm.glsl",
 	"./keypoints/sort-mergeperm.glsl": "./src/gpu/shaders/keypoints/sort-mergeperm.glsl",
-	"./keypoints/suppress-descriptors.glsl": "./src/gpu/shaders/keypoints/suppress-descriptors.glsl",
 	"./keypoints/transfer-flow.glsl": "./src/gpu/shaders/keypoints/transfer-flow.glsl",
 	"./keypoints/transfer-orientation.glsl": "./src/gpu/shaders/keypoints/transfer-orientation.glsl",
 	"./keypoints/upload-keypoints.glsl": "./src/gpu/shaders/keypoints/upload-keypoints.glsl",
@@ -17575,6 +17581,17 @@ module.exports = "@include \"keypoints.glsl\"\nuniform mat3 homography;\nuniform
 
 /***/ }),
 
+/***/ "./src/gpu/shaders/keypoints/discard-descriptors.glsl":
+/*!************************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/discard-descriptors.glsl ***!
+  \************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int newEncoderLength;\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, newEncoderLength, 0, extraSize);\nint myIndex = findKeypointIndex(myAddress, 0, extraSize);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress otherAddress = KeypointAddress(myIndex * pixelsPerKeypoint, myAddress.offset);\ncolor = readKeypointData(encodedKeypoints, encoderLength, otherAddress);\n}"
+
+/***/ }),
+
 /***/ "./src/gpu/shaders/keypoints/encode-keypoint-long-offsets.glsl":
 /*!*********************************************************************!*\
   !*** ./src/gpu/shaders/keypoints/encode-keypoint-long-offsets.glsl ***!
@@ -17781,17 +17798,6 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoint
 /***/ (function(module, exports) {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D permutation;\nuniform int blockSize;\nuniform int dblLog2BlockSize;\nstruct PermutationElement\n{\nint keypointIndex;\nfloat score;\nbool valid;\n};\nPermutationElement decodePermutationElement(vec4 pixel)\n{\nconst vec2 ones = vec2(1.0f);\nPermutationElement element;\nelement.keypointIndex = int(pixel.r * 255.0f) | (int(pixel.g * 255.0f) << 8);\nelement.valid = !all(equal(pixel.ba, ones));\nelement.score = element.valid ? decodeFloat16(pixel.ba) : -1.0f;\nreturn element;\n}\nvec4 encodePermutationElement(PermutationElement element)\n{\nconst vec2 ones = vec2(1.0f);\nvec2 encodedScore = element.valid ? encodeFloat16(element.score) : ones;\nvec2 encodedIndex = vec2(element.keypointIndex & 255, (element.keypointIndex >> 8) & 255) / 255.0f;\nreturn vec4(encodedIndex, encodedScore);\n}\nPermutationElement readPermutationElement(sampler2D permutation, int elementIndex, int stride, int height)\n{\nconst vec4 INVALID_PIXEL = vec4(0.0f);\nivec2 pos = ivec2(elementIndex % stride, elementIndex / stride);\nvec4 pixel = pos.y < height ? pixelAt(permutation, pos) : INVALID_PIXEL;\nreturn decodePermutationElement(pixel);\n}\nPermutationElement selectKth(int k, int la, int ra, int lb, int rb)\n{\nPermutationElement a, b;\nint ha, hb, ma, mb;\nbool discard1stHalf, altb;\nbool locked = false;\nint tmp, result = 0;\nint stride = outputSize().x;\nint height = outputSize().y;\nfor(int i = 0; i < dblLog2BlockSize; i++) {\ntmp = (lb > rb && !locked) ? (la+k) : result;\nresult = (la > ra && !locked) ? (lb+k) : tmp;\nlocked = locked || (la > ra) || (lb > rb);\nha = (ra - la + 1) / 2;\nhb = (rb - lb + 1) / 2;\nma = la + ha;\nmb = lb + hb;\na = readPermutationElement(permutation, ma, stride, height);\nb = readPermutationElement(permutation, mb, stride, height);\ndiscard1stHalf = (k > ha + hb);\naltb = (-a.score < -b.score);\nk -= int(discard1stHalf && altb) * (ha + 1);\nk -= int(discard1stHalf && !altb) * (hb + 1);\nla += int(discard1stHalf && altb) * (ma + 1 - la);\nlb += int(discard1stHalf && !altb) * (mb + 1 - lb);\nra += int(!discard1stHalf && !altb) * (ma - 1 - ra);\nrb += int(!discard1stHalf && altb) * (mb - 1 - rb);\n}\nreturn readPermutationElement(permutation, result, stride, height);\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nint stride = outputSize().x;\nint elementIndex = thread.y * stride + thread.x;\nint blockIndex = elementIndex / blockSize;\nint blockOffset = elementIndex % blockSize;\nint la = blockIndex * blockSize;\nint lb = la + blockSize / 2;\nint ra = lb - 1;\nint rb = (blockIndex + 1) * blockSize - 1;\nint k = blockOffset;\nPermutationElement element = selectKth(k, la, ra, lb, rb);\ncolor = encodePermutationElement(element);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/keypoints/suppress-descriptors.glsl":
-/*!*************************************************************!*\
-  !*** ./src/gpu/shaders/keypoints/suppress-descriptors.glsl ***!
-  \*************************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int suppressedEncoderLength;\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, suppressedEncoderLength, 0, extraSize);\nint myIndex = findKeypointIndex(myAddress, 0, extraSize);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress otherAddress = KeypointAddress(myIndex * pixelsPerKeypoint, myAddress.offset);\ncolor = readKeypointData(encodedKeypoints, encoderLength, otherAddress);\n}"
 
 /***/ }),
 
@@ -19679,14 +19685,14 @@ class SpeedyTextureReader
      * Read pixels from a texture, asynchronously, with PBOs.
      * You may optionally specify a (x,y,width,height) sub-rectangle.
      * @param {SpeedyDrawableTexture} texture a texture with a FBO
-     * @param {boolean} [useBufferedDownloads] accelerate downloads by returning pixels from the texture of the previous call (useful for streaming)
      * @param {number} [x]
      * @param {number} [y] 
      * @param {number} [width]
      * @param {number} [height]
+     * @param {boolean} [useBufferedDownloads] accelerate downloads by returning pixels from the texture of the previous call (useful for streaming)
      * @returns {SpeedyPromise<Uint8Array>} resolves to an array of pixels in the RGBA format
      */
-    readPixelsAsync(texture, useBufferedDownloads = false, x = 0, y = 0, width = texture.width, height = texture.height)
+    readPixelsAsync(texture, x = 0, y = 0, width = texture.width, height = texture.height, useBufferedDownloads = false)
     {
         const gl = texture.gl;
         const fbo = texture.glFbo;
@@ -20531,7 +20537,7 @@ class SpeedyDrawableTexture extends SpeedyTexture
         // "WebGL warning: drawArraysInstanced:
         //  Tex image TEXTURE_2D level 0 is incurring lazy initialization."
         //
-        // So here's a workaround:
+        // Here is a workaround:
         //
         return this.clearToColor(0, 0, 0, 0);
     }
@@ -22044,9 +22050,9 @@ class Utils
      * (heavy on battery) if used in a loop. Use with caution.
      * Implementation based on David Baron's, but adapted for ES6 classes
      * @param {Function} fn
+     * @param {...any} [args] optional arguments to be passed to fn
      */
-    //static setZeroTimeout(fn) { setTimeout(fn, 0); } // easier on the CPU
-    static setZeroTimeout(fn)
+    static setZeroTimeout(fn, ...args)
     {
         const ctx = (Utils._setZeroTimeoutContext = Utils._setZeroTimeoutContext || (Utils._setZeroTimeoutContext = {
             callbacks: new Map(),
@@ -22054,10 +22060,10 @@ class Utils
                 if(ev.source === window) {
                     const ctx = Utils._setZeroTimeoutContext;
                     const msgId = ev.data;
-                    const fn = ctx.callbacks.get(msgId);
+                    const { fn, args } = ctx.callbacks.get(msgId);
                     if(fn !== undefined) {
                         ev.stopPropagation();
-                        fn.call(window);
+                        fn.apply(window, args);
                         ctx.callbacks.delete(msgId);
                     }
                 }
@@ -22065,7 +22071,7 @@ class Utils
         }));
 
         const msgId = '0%' + Math.random();
-        ctx.callbacks.set(msgId, fn);
+        ctx.callbacks.set(msgId, { fn, args });
         window.postMessage(msgId, '*');
     }
 
