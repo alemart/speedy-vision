@@ -410,20 +410,6 @@ function createCanvasFromPixels(width, height, pixels, title = '')
     return canvas;
 }
 
-function createCanvasWithASquare(xpos = 0, ypos = 0, squareLength = 100, title = '')
-{
-    const canvas = createCanvas(480, 360, title);
-    const context = canvas.getContext('2d');
-    const w = canvas.width, h = canvas.height, s = squareLength;
-
-    context.fillStyle = 'beige';
-    context.fillRect(0, 0, w, h);
-    context.fillStyle = 'lightsalmon';
-    context.fillRect((w-s)/2 + xpos, (h-s)/2 + ypos, s, s);
-
-    return canvas;
-}
-
 // Custom matchers for Jasmine
 var speedyMatchers =
 {

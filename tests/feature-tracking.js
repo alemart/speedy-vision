@@ -23,8 +23,21 @@ describe('Feature tracking', function() {
 
     const _sq = createCanvasWithASquare();
     const deg2rad = Math.PI / 180;
-
     let canvas, renderToCanvas;
+
+    function createCanvasWithASquare(xpos = 0, ypos = 0, squareLength = 100, title = '')
+    {
+        const canvas = createCanvas(480, 360, title);
+        const context = canvas.getContext('2d');
+        const w = canvas.width, h = canvas.height, s = squareLength;
+
+        context.fillStyle = 'beige';
+        context.fillRect(0, 0, w, h);
+        context.fillStyle = 'lightsalmon';
+        context.fillRect((w-s)/2 + xpos, (h-s)/2 + ypos, s, s);
+
+        return canvas;
+    }
 
     beforeEach(function() {
         jasmine.addMatchers(speedyMatchers);
@@ -49,7 +62,8 @@ describe('Feature tracking', function() {
 
             const lk = Speedy.Keypoint.Tracker.LK();
             const mixer = Speedy.Keypoint.Mixer();
-            const sink = Speedy.Keypoint.Sink();
+            const tracked = Speedy.Keypoint.Sink('tracked');
+            const detected = Speedy.Keypoint.Sink('detected');
 
             imgsrc.media = media;
             harris.quality = 0.10;
@@ -60,6 +74,7 @@ describe('Feature tracking', function() {
             grey.output().connectTo(pyr.input());
             pyr.output().connectTo(harris.input());
             harris.output().connectTo(mixer.input('in1'));
+            harris.output().connectTo(detected.input());
 
             grey.output().connectTo(buf.input());
             buf.output().connectTo(bufpyr.input());
@@ -69,9 +84,9 @@ describe('Feature tracking', function() {
             kpsrc.output().connectTo(lk.input('previousKeypoints'));
 
             lk.output().connectTo(mixer.input('in0'));
-            mixer.output().connectTo(sink.input());
+            mixer.output().connectTo(tracked.input());
 
-            pipeline.init(imgsrc, grey, pyr, harris, kpsrc, buf, bufpyr, lk, mixer, sink);
+            pipeline.init(imgsrc, grey, pyr, harris, kpsrc, buf, bufpyr, lk, mixer, tracked, detected);
 
             return pipeline;
         }
@@ -105,6 +120,8 @@ describe('Feature tracking', function() {
         async function track360(length, maxError = 1.0)
         {
             const media = await Speedy.load(canvas);
+            const pipeline = createPipeline(media);
+            const sq1 = createCanvasWithASquare();
 
             print(`Testing feature tracking with a displacement of ${length} pixels:`);
             for(const angle of [0, 45, 90, -135, 180]) {
@@ -112,17 +129,17 @@ describe('Feature tracking', function() {
                 print(`Tracking a displacement of ${length} pixels (${angle} degrees):`);
 
                 // prepare stuff
-                const pipeline = createPipeline(media);
                 const offset = Speedy.Vector2(
                     length * Math.cos(angle * deg2rad),
                     length * -Math.sin(angle * deg2rad)
                 );
-                const sq1 = createCanvasWithASquare();
                 const sq2 = createCanvasWithASquare(offset.x, offset.y);
 
                 // render first image
                 renderToCanvas(sq1);
-                const kp1 = (await pipeline.run()).keypoints;
+                pipeline.node('detector').capacity = 8192;
+                pipeline.node('keypointSource').keypoints = [];
+                const kp1 = (await pipeline.run()).detected;
                 displayFeatures(media, kp1);
                 const cm1 = centerOfMass(kp1);
                 const n1 = kp1.length;
@@ -131,7 +148,7 @@ describe('Feature tracking', function() {
                 renderToCanvas(sq2);
                 pipeline.node('detector').capacity = 0;
                 pipeline.node('keypointSource').keypoints = kp1;
-                const kp2 = (await pipeline.run()).keypoints;
+                const kp2 = (await pipeline.run()).tracked;
                 displayFeatures(media, kp2);
                 const cm2 = centerOfMass(kp2);
                 const n2 = kp2.length;
@@ -145,11 +162,9 @@ describe('Feature tracking', function() {
                 print(`Tracked displacement: ${trackedOffset} (${n2} keypoints)`);
                 print(`Error: ${error} pixels`);
                 expect(error).toBeLessThanOrEqual(maxError);
-
-                // done!
-                pipeline.release();
             }
 
+            pipeline.release();
             media.release();
         }
     });
