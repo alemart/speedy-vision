@@ -1,5 +1,12 @@
 # Release notes
 
+## 0.7.1 - September 10th, 2021
+
+* Improved homography estimation
+* Added Speedy.Keypoint.Transformer
+* Reduced the CPU usage when polling the GPU
+* General improvements
+
 ## 0.7.0 - July 31st, 2021
 
 * Introduced the new Pipeline system (partial rewrite of the library)
