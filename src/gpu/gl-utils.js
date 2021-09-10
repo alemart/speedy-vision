@@ -74,7 +74,7 @@ export class GLUtils
     static getBufferSubDataAsync(gl, glBuffer, target, srcByteOffset, destBuffer, destOffset = 0, length = 0)
     {
         const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-        const start = performance.now();
+        //const start = performance.now();
 
         // empty internal command queues and send them to the GPU asap
         gl.flush(); // make sure the sync command is read
@@ -84,7 +84,8 @@ export class GLUtils
             gl.bindBuffer(target, glBuffer);
             gl.getBufferSubData(target, srcByteOffset, destBuffer, destOffset, length);
             gl.bindBuffer(target, null);
-            return performance.now() - start;
+            return 0; // disable timers
+            //return performance.now() - start;
         }).catch(err => {
             throw new IllegalOperationError(`Can't getBufferSubDataAsync(): error in clientWaitAsync()`, err);
         }).finally(() => {
