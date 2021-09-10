@@ -89,15 +89,12 @@ export class SpeedyPipelineNodeKeypointSource extends SpeedyPipelineSourceNode
         const numKeypoints = keypoints.length;
         const numPasses = Math.max(1, Math.ceil(numKeypoints / BUFFER_SIZE));
         const buffer = this._buffer;
-        const tex = this._tex[0];
-        const outputTexture = this._tex[1];
         const uploadKeypoints = gpu.programs.keypoints.uploadKeypoints;
         const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(numKeypoints, descriptorSize, extraSize);
 
-        uploadKeypoints.outputs(encoderLength, encoderLength, outputTexture, tex);
+        uploadKeypoints.outputs(encoderLength, encoderLength, this._tex[0], this._tex[1]);
 
-        let startIndex = 0;
-        let encodedKeypoints = tex;
+        let startIndex = 0, encodedKeypoints = uploadKeypoints.clear();
         for(let i = 0; i < numPasses; i++) {
             const n = Math.min(BUFFER_SIZE, numKeypoints - startIndex);
             const endIndex = startIndex + n;
@@ -108,10 +105,7 @@ export class SpeedyPipelineNodeKeypointSource extends SpeedyPipelineSourceNode
             startIndex = endIndex;
         }
 
-        if(encodedKeypoints != outputTexture)
-            encodedKeypoints.copyTo(outputTexture);
-
-        this.output().swrite(outputTexture, descriptorSize, extraSize, encoderLength);
+        this.output().swrite(encodedKeypoints, descriptorSize, extraSize, encoderLength);
     }
 
     /**

@@ -565,7 +565,7 @@ export class SpeedyDrawableTexture extends SpeedyTexture
         // "WebGL warning: drawArraysInstanced:
         //  Tex image TEXTURE_2D level 0 is incurring lazy initialization."
         //
-        // So here's a workaround:
+        // Here is a workaround:
         //
         return this.clearToColor(0, 0, 0, 0);
     }
