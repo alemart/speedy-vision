@@ -60,39 +60,6 @@ const _memory = (mem => ({
 }));
 
 /**
- * WebAssembly loader
- * @param {AugmentedMemory} memory
- */
-(function loadWASM(memory) {
-    const base64decode = data => Uint8Array.from(atob(data), v => v.charCodeAt(0));
-
-    // Endianness check
-    if(!LITTLE_ENDIAN)
-        throw new NotSupportedError(`Can't run WebAssembly code: not in a little-endian machine!`);
-
-    // Load the WASM binary
-    SpeedyPromise.resolve(WASM_BINARY)
-    .then(data => base64decode(data))
-    .then(bytes => WebAssembly.instantiate(bytes, {
-        env: {
-            memory: memory.as.object,
-            ...SpeedyMatrixWASM.imports(memory),
-        }
-    }))
-    .then(wasm => {
-        _instance = wasm.instance;
-        _module = wasm.module;
-
-        wasm.instance.exports.srand((Date.now() * 0.001) & 0xffffffff); // srand(time(NULL))
-
-        Utils.log(`The WebAssembly code has been loaded!`);
-    })
-    .catch(err => {
-        throw new WebAssemblyError(`Can't load WebAssembly code: ${err}`, err);
-    });
-})(_memory);
-
-/**
  * WebAssembly utilities
  */
 export class SpeedyMatrixWASM
@@ -334,3 +301,36 @@ class CStringUtils
         return this._decoder.decode(byte.subarray(ptr, p));
     }
 }
+
+/**
+ * WebAssembly loader
+ * @param {AugmentedMemory} memory
+ */
+(function loadWASM(memory) {
+    const base64decode = data => Uint8Array.from(atob(data), v => v.charCodeAt(0));
+
+    // Endianness check
+    if(!LITTLE_ENDIAN)
+        throw new NotSupportedError(`Can't run WebAssembly code: not in a little-endian machine!`);
+
+    // Load the WASM binary
+    SpeedyPromise.resolve(WASM_BINARY)
+    .then(data => base64decode(data))
+    .then(bytes => WebAssembly.instantiate(bytes, {
+        env: {
+            memory: memory.as.object,
+            ...SpeedyMatrixWASM.imports(memory),
+        }
+    }))
+    .then(wasm => {
+        _instance = wasm.instance;
+        _module = wasm.module;
+
+        wasm.instance.exports.srand((Date.now() * 0.001) & 0xffffffff); // srand(time(NULL))
+
+        Utils.log(`The WebAssembly code has been loaded!`);
+    })
+    .catch(err => {
+        throw new WebAssemblyError(`Can't load WebAssembly code: ${err}`, err);
+    });
+})(_memory);
