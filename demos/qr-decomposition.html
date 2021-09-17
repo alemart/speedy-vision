@@ -57,9 +57,6 @@
                 </table>
             </div>
             <div class="separator"></div>
-            <div>
-                The columns should be linearly independent.
-            </div>
         </form>
         <pre>Edit any field to begin!</pre>
         <script>
@@ -75,9 +72,9 @@
                 );
 
                 // output
-                function println(str)
+                function print(x)
                 {
-                    output.innerText += str + '\n';
+                    output.innerText += x.toString() + '\n';
                 }
 
                 function clear()
@@ -89,19 +86,25 @@
                 async function qr()
                 {
                     // read the matrix from the input fields
-                    const A = Speedy.Matrix(3, 3, input.a.map(field => Number(field.value)), 'float64');
+                    const A = Speedy.Matrix(3, 3, input.a.map(field => Number(field.value)));
 
                     // compute QR
-                    const [Q, R] = await Speedy.Matrix.QR(A);
+                    const Q = Speedy.Matrix.Zeros(3, 3);
+                    const R = Speedy.Matrix.Zeros(3, 3);
+                    await Speedy.Matrix.qr(Q, R, A);
                     
                     // print the factorization
                     clear();
-                    println('Matrix Q:\n');
-                    await Q.print(9, println);
-                    println('\nMatrix R:\n');
-                    await R.print(9, println);
-                    println('\nMatrix QR:\n');
-                    await Q.times(R).print(9, println);
+                    print('Matrix Q:\n');
+                    print(Q);
+                    print('\nMatrix R:\n');
+                    print(R);
+
+                    // validate
+                    const QR = Speedy.Matrix.Zeros(3, 3);
+                    await QR.setTo(Q.times(R));
+                    print('\nMatrix QR:\n');
+                    print(QR);
                 }
             }
         </script>

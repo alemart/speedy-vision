@@ -183,14 +183,14 @@ window.onload = async function()
             canvas.width, 0,
             canvas.width, canvas.height,
             0, canvas.height
-        ])
-        const dst = await Speedy.Matrix.evaluate(
-            Speedy.Matrix.transform(homography, src)
-        );
-        const newVertices = await Speedy.Matrix.toPoints(dst);
-        for(let i = 0; i < newVertices.length; i++) {
-            vertices[i].x = newVertices[i].x;
-            vertices[i].y = newVertices[i].y;
+        ]);
+
+        const dest = Speedy.Matrix.Zeros(2, 4);
+        await Speedy.Matrix.perspectiveTransform(dest, src, homography);
+
+        for(let i = 0; i < dest.columns; i++) {
+            vertices[i].x = dest.at(0, i);
+            vertices[i].y = dest.at(1, i);
         }
     }
     homographyElement.map(el => el.oninput = syncVertices);
@@ -230,12 +230,13 @@ window.onload = async function()
                 canvas.width, canvas.height,
                 0, canvas.height
             ]);
-            const dst = Speedy.Matrix.fromPoints(
-                vertices.map(v => Speedy.Point2(v.x, v.y))
+            const dest = Speedy.Matrix(2, 4,
+                vertices.reduce((entries, v) => entries.concat([v.x, v.y]), [])
             );
-            const homography = await Speedy.Matrix.evaluate(
-                Speedy.Matrix.Perspective(src, dst)
-            );
+
+            const homography = Speedy.Matrix.Zeros(3, 3);
+            await Speedy.Matrix.perspective(homography, src, dest);
+
             const entries = await homography.read();
             for(let i = 0; i < entries.length; i++)
                 homographyElement[i].value = entries[i];

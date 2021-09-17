@@ -38,7 +38,6 @@
                 Method:
                 <select id="method">
                     <option value="qr" selected>qr</option>
-                    <option value="lu" disabled>lu (soon)</option>
                 </select>
             </div>
             <div class="separator"></div>
@@ -104,17 +103,18 @@
                 async function solve()
                 {
                     // Solve Ax = b for x
-                    const A = Speedy.Matrix(3, 3, input.a.map(field => Number(field.value)), 'float64');
-                    const b = Speedy.Matrix(3, 1, input.b.map(field => Number(field.value)), 'float64');
-                    const x = A.solve(b, input.method.value);
-                    const soln = await x.read();
+                    const A = Speedy.Matrix(3, 3, input.a.map(field => Number(field.value)));
+                    const b = Speedy.Matrix(3, 1, input.b.map(field => Number(field.value)));
+                    const x = Speedy.Matrix.Zeros(3, 1);
+                    await Speedy.Matrix.solve(x, A, b);
+                    const solution = x.read();
                     
                     // print the solution
                     clear();
                     println('Solution:\n');
-                    println('x = ' + soln[0].toFixed(9));
-                    println('y = ' + soln[1].toFixed(9));
-                    println('z = ' + soln[2].toFixed(9));
+                    println('x = ' + solution[0].toFixed(9));
+                    println('y = ' + solution[1].toFixed(9));
+                    println('z = ' + solution[2].toFixed(9));
                 }
             }
         </script>
