@@ -47,6 +47,14 @@ module.exports = (env, argv) => ({
           }
         ],
       },
+      {
+        test: /\.wasm.txt$/i,
+        use: [
+          {
+            loader: path.resolve('webpack-wasm-loader.js'),
+          }
+        ],
+      },
     ],
   },
   mode: argv.mode == 'development' ? 'development' : 'production',

@@ -26,7 +26,7 @@ import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../../../gpu/speedy-texture';
 import { Utils } from '../../../../utils/utils';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
-import { SpeedyMatrixExpr } from '../../../matrix/matrix-expressions';
+import { SpeedyMatrix } from '../../../speedy-matrix';
 import { IllegalArgumentError } from '../../../../utils/errors';
 
 
@@ -46,13 +46,13 @@ export class SpeedyPipelineNodeKeypointTransformer extends SpeedyPipelineNode
             OutputPort().expects(SpeedyPipelineMessageType.Keypoints)
         ]);
 
-        /** @type {SpeedyMatrixExpr} transformation matrix */
-        this._transform = SpeedyMatrixExpr.create(3, 3, [1, 0, 0, 0, 1, 0, 0, 0, 1]); // identity matrix
+        /** @type {SpeedyMatrix} transformation matrix */
+        this._transform = SpeedyMatrix.Create(3, 3, [1, 0, 0, 0, 1, 0, 0, 0, 1]); // identity matrix
     }
 
     /**
      * Transformation matrix
-     * @returns {SpeedyMatrixExpr}
+     * @returns {SpeedyMatrix}
      */
     get transform()
     {
@@ -61,7 +61,7 @@ export class SpeedyPipelineNodeKeypointTransformer extends SpeedyPipelineNode
 
     /**
      * Transformation matrix. Must be 3x3
-     * @param {SpeedyMatrixExpr} transform
+     * @param {SpeedyMatrix} transform
      */
     set transform(transform)
     {
@@ -80,17 +80,14 @@ export class SpeedyPipelineNodeKeypointTransformer extends SpeedyPipelineNode
     {
         const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input().read();
         const outputTexture = this._tex[0];
+        const homography = this._transform.read();
 
-        return this._transform.read().then(homography => {
+        // apply homography
+        (gpu.programs.keypoints.applyHomography
+            .outputs(encodedKeypoints.width, encodedKeypoints.height, outputTexture)
+        )(homography, encodedKeypoints, descriptorSize, extraSize, encoderLength);
 
-            // apply homography
-            (gpu.programs.keypoints.applyHomography
-                .outputs(encodedKeypoints.width, encodedKeypoints.height, outputTexture)
-            )(homography, encodedKeypoints, descriptorSize, extraSize, encoderLength);
-
-            // done!
-            this.output().swrite(outputTexture, descriptorSize, extraSize, encoderLength);
-
-        });
+        // done!
+        this.output().swrite(outputTexture, descriptorSize, extraSize, encoderLength);
     }
 }

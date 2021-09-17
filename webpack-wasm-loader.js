@@ -15,17 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * sequence.js
- * Sequences of matrix operations
+ * webpack-wasm-loader.js
+ * Load a base64-encoded WebAssembly binary
  */
 
-/**
- * A sequence of matrix operations encapsulated into one
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-export function sequence(header, output, inputs)
-{
-    this.subroutine('sequence', header, inputs);
-}
+module.exports = data => `module.exports = \`${data}\``;

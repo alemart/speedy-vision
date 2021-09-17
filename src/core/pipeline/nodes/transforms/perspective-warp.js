@@ -28,9 +28,7 @@ import { Utils } from '../../../../utils/utils';
 import { ImageFormat, PixelComponent, ColorComponentId } from '../../../../utils/types';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 import { IllegalArgumentError } from '../../../../utils/errors';
-import { SpeedyMatrix } from '../../../matrix/matrix';
-import { MatrixShape } from '../../../matrix/matrix-shape';
-import { SpeedyMatrixExpr, SpeedyMatrixElementaryExpr } from '../../../matrix/matrix-expressions';
+import { SpeedyMatrix } from '../../../speedy-matrix';
 
 // Used when an invalid matrix is provided
 const SINGULAR_MATRIX = [0,0,0,0,0,0,0,0,1];
@@ -51,13 +49,13 @@ export class SpeedyPipelineNodePerspectiveWarp extends SpeedyPipelineNode
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
 
-        /** @type {SpeedyMatrixExpr} perspective transformation */
-        this._transform = SpeedyMatrixExpr.create(3, 3, [1, 0, 0, 0, 1, 0, 0, 0, 1]); // identity matrix
+        /** @type {SpeedyMatrix} perspective transformation */
+        this._transform = SpeedyMatrix.Create(3, 3, [1, 0, 0, 0, 1, 0, 0, 0, 1]); // identity matrix
     }
 
     /**
      * Perspective transform, a 3x3 homography matrix
-     * @returns {SpeedyMatrixExpr}
+     * @returns {SpeedyMatrix}
      */
     get transform()
     {
@@ -66,7 +64,7 @@ export class SpeedyPipelineNodePerspectiveWarp extends SpeedyPipelineNode
 
     /**
      * Perspective transform, a 3x3 homography matrix
-     * @param {SpeedyMatrixExpr} transform
+     * @param {SpeedyMatrix} transform
      */
     set transform(transform)
     {
@@ -86,17 +84,14 @@ export class SpeedyPipelineNodePerspectiveWarp extends SpeedyPipelineNode
         const { image, format } = this.input().read();
         const width = image.width, height = image.height;
         const outputTexture = this._tex[0];
+        const homography = this._transform.read();
+        const inverseHomography = this._inverse3(homography);
+        const isValidHomography = !Number.isNaN(inverseHomography[0]);
 
-        return this._transform.read().then(homography => {
-            let inverseHomography = this._inverse3(homography);
-            if(Number.isNaN(inverseHomography[0]))
-                inverseHomography = SINGULAR_MATRIX;
+        gpu.programs.transforms.warpPerspective.outputs(width, height, outputTexture);
+        gpu.programs.transforms.warpPerspective(image, isValidHomography ? inverseHomography : SINGULAR_MATRIX);
 
-            gpu.programs.transforms.warpPerspective.outputs(width, height, outputTexture);
-            gpu.programs.transforms.warpPerspective(image, inverseHomography);
-
-            this.output().swrite(outputTexture, format);
-        });
+        this.output().swrite(outputTexture, format);
     }
 
     /**

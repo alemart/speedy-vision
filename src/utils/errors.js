@@ -264,3 +264,19 @@ export class AccessDeniedError extends SpeedyError
         super(`Access denied. ${message}`, cause);
     }
 }
+
+/**
+ * WebAssembly error
+ */
+export class WebAssemblyError extends SpeedyError
+{
+    /**
+     * Class constructor
+     * @param {string} [message] additional text
+     * @param {SpeedyError} [cause] cause of the error
+     */
+    constructor(message = '', cause = null)
+    {
+        super(`WebAssembly error. ${message}`, cause);
+    }
+}

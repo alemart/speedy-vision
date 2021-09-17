@@ -29,9 +29,7 @@ import { Utils } from '../../../../utils/utils';
 import { ImageFormat } from '../../../../utils/types';
 import { NotSupportedError, IllegalArgumentError } from '../../../../utils/errors';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
-import { SpeedyMatrix } from '../../../matrix/matrix';
-import { MatrixShape } from '../../../matrix/matrix-shape';
-import { SpeedyMatrixExpr, SpeedyMatrixElementaryExpr } from '../../../matrix/matrix-expressions';
+import { SpeedyMatrix } from '../../../speedy-matrix';
 
 // 2D convolution programs
 const CONVOLUTION = {
@@ -56,14 +54,13 @@ export class SpeedyPipelineNodeConvolution extends SpeedyPipelineNode
             OutputPort().expects(SpeedyPipelineMessageType.Image),
         ]);
 
-
-        /** @type {SpeedyMatrixExpr} convolution kernel (square matrix) */
-        this._kernel = SpeedyMatrixExpr.create(3, 3, [0, 0, 0, 0, 1, 0, 0, 0, 0]); // identity transform
+        /** @type {SpeedyMatrix} convolution kernel (square matrix) */
+        this._kernel = SpeedyMatrix.Create(3, 3, [0, 0, 0, 0, 1, 0, 0, 0, 0]); // identity transform
     }
 
     /**
      * Convolution kernel
-     * @returns {SpeedyMatrixExpr}
+     * @returns {SpeedyMatrix}
      */
     get kernel()
     {
@@ -72,7 +69,7 @@ export class SpeedyPipelineNodeConvolution extends SpeedyPipelineNode
 
     /**
      * Convolution kernel
-     * @param {SpeedyMatrixExpr} kernel
+     * @param {SpeedyMatrix} kernel
      */
     set kernel(kernel)
     {
@@ -96,13 +93,12 @@ export class SpeedyPipelineNodeConvolution extends SpeedyPipelineNode
         const outputTexture = this._tex[0];
         const ksize = this._kernel.rows;
         const conv = CONVOLUTION[ksize];
+        const kernel = this._kernel.read();
 
-        return this._kernel.read().then(kernel => {
-            (gpu.programs.filters[conv]
-                .outputs(width, height, outputTexture)
-            )(image, kernel);
+        (gpu.programs.filters[conv]
+            .outputs(width, height, outputTexture)
+        )(image, kernel);
 
-            this.output().swrite(outputTexture, format);
-        });
+        this.output().swrite(outputTexture, format);
     }
 }

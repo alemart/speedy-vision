@@ -24,7 +24,7 @@ import { FPSCounter } from '../utils/fps-counter';
 import { SpeedyVector2 } from './speedy-vector';
 import { SpeedyPoint2 } from './speedy-point';
 import { SpeedySize } from './speedy-size';
-import { SpeedyMatrixExprFactory } from './matrix/matrix-expression-factory';
+import { SpeedyMatrixFactory } from './speedy-matrix-factory';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { SpeedyPipeline } from './pipeline/pipeline';
 import { SpeedyPipelineImageFactory } from './pipeline/factories/image-factory';
@@ -35,7 +35,7 @@ import { Utils } from '../utils/utils';
 import { LITTLE_ENDIAN } from '../utils/globals';
 
 // Constants
-const matrixExprFactory = new SpeedyMatrixExprFactory();
+const matrixFactory = new SpeedyMatrixFactory();
 
 /**
  * Speedy's main class
@@ -116,11 +116,11 @@ export class Speedy
 
     /**
      * Matrix routines
-     * @returns {SpeedyMatrixExprFactory}
+     * @returns {SpeedyMatrixFactory}
      */
     static get Matrix()
     {
-        return matrixExprFactory;
+        return matrixFactory;
     }
 
     /**
