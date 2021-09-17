@@ -41,6 +41,6 @@ const Mat32* Mat32_inner(const Mat32* result, const Mat32* left, const Mat32* ri
 const Mat32* Mat32_addInPlace(const Mat32* result, const Mat32* mat, float scalar);
 
 float Mat32_dot(const Mat32* left, const Mat32* right);
-float Mat32_2norm(const Mat32* vec);
+float Mat32_length(const Mat32* vec);
 
 #endif

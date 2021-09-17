@@ -92,8 +92,13 @@ static void householder(int m, int n, Mat32** v, const Mat32* R, const Mat32* A)
         // compute -v[i] = (+-||x_i|| e1) - x_i, where e_1 = [ 1 0 0 ... 0 ]'
         // these are the reflection vectors
         Mat32_copy(v[i], xi);
-        Mat32_at(v[i], 0, 0) += sign(xi0) * Mat32_2norm(xi);
-        Mat32_scale(v[i], v[i], 1.0f / Mat32_2norm(v[i])); // normalize v[i]
+        Mat32_at(v[i], 0, 0) += sign(xi0) * Mat32_length(xi);
+
+        // normalize v[i]
+        float length = Mat32_length(v[i]);
+        if(fabs(length) < EPS)
+            continue;
+        Mat32_scale(v[i], v[i], 1.0f / length);
 
         // P = v v' is a projector onto v (v is a unit vector): P x = v (v'x); P (P x) = v (v'v) (v'x) = P x for all x
         // P = I - v v' is a projector orthogonal to v: v'P x = v'(x - v v'x) = v'x - (v'v) v'x = 0 for all x
