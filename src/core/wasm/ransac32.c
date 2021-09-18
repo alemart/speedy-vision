@@ -75,6 +75,10 @@ WASM_EXPORT const Mat32* Mat32_pransac_homography(const Mat32* result, const Mat
     int b = bundleSize;
     float reprojErr2 = reprojectionError * reprojectionError;
 
+    // initialize the mask
+    if(mask != NULL)
+        Mat32_fill(mask, 0.0f);
+
     // create a soon-to-be-filled array of inliers
     int* inliers = smalloc(n * sizeof(*inliers));
     int numberOfInliers = 0;
@@ -138,16 +142,6 @@ WASM_EXPORT const Mat32* Mat32_pransac_homography(const Mat32* result, const Mat
         qsort_s(hypothesis, m, sizeof(*hypothesis), compareHypotheses, NULL);
         m = numberOfValidHypotheses;
 
-        puts("numberOfHypotheses"); puts(int2str(numberOfHypotheses));
-        puts("numberOfValidHypotheses:"); puts(int2str(numberOfValidHypotheses));
-        puts("bundleSz:"); puts(int2str(bundleSize));
-        puts("reprojec:"); puts(int2str(1000 * reprojectionError));
-        puts("scor");
-        for(int i = 0; i < numberOfHypotheses; i++)
-            puts(int2str(hypothesis[i].score));
-        Mat32_copy(result, hypothesis[numberOfHypotheses-1].homography);
-        Mat32_copy(result, hypothesis[0].homography);
-
         // test each correspondence
         for(int c = 0; c < n; c++) {
             // every b iterations: cut the number of hypotheses in half
@@ -207,11 +201,6 @@ WASM_EXPORT const Mat32* Mat32_pransac_homography(const Mat32* result, const Mat
                 inliers[numberOfInliers++] = c;
                 if(mask != NULL)
                     Mat32_at(mask, 0, c) = 1.0f;
-            }
-            else {
-                // the point is an outlier
-                if(mask != NULL)
-                    Mat32_at(mask, 0, c) = 0.0f;
             }
         }
 
