@@ -87,25 +87,6 @@ export class SpeedyMatrixFactory extends Function
     }
 
     /**
-     * Convert an array of points to a matrix representation
-     * @param {SpeedyPoint2[]} points a non-empty array
-     * @returns {SpeedyMatrix} a 2 x n matrix with the coordinates of the points
-     */
-    From(points)
-    {
-        if(!(Array.isArray(points) && points.length > 0))
-            throw new IllegalArgumentError(`Can't create matrix from points: ${points}`);
-
-        const entries = [], n = points.length;
-        for(let i = 0; i < n; i++) {
-            entries.push(points[i].x);
-            entries.push(points[i].y);
-        }
-
-        return SpeedyMatrix.Create(2, n, entries);
-    }
-
-    /**
      * QR decomposition
      * @param {SpeedyMatrix} Q is m x n (reduced) or m x m (full), output
      * @param {SpeedyMatrix} R is n x n (reduced) or m x n (full), output
@@ -116,21 +97,21 @@ export class SpeedyMatrixFactory extends Function
      */
     qr(Q, R, mat, { mode = 'reduced' } = {})
     {
+        const A = mat, m = mat.rows, n = mat.columns;
+
+        // validate shapes & mode
+        if(mode == 'reduced') {
+            if(Q.rows != m || Q.columns != n || R.rows != n || R.columns != n)
+                throw new IllegalArgumentError(`Invalid shape for reduced QR`);
+        }
+        else if(mode == 'full') {
+            if(Q.rows != m || Q.columns != m || R.rows != m || R.columns != n)
+                throw new IllegalArgumentError(`Invalid shape for full QR`);
+        }
+        else
+            throw new IllegalArgumentError(`Invalid mode for QR: "${mode}"`);
+
         return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
-            const A = mat, m = mat.rows, n = mat.columns;
-
-            // validate shapes & mode
-            if(mode == 'reduced') {
-                if(Q.rows != m || Q.columns != n || R.rows != n || R.columns != n)
-                    throw new IllegalArgumentError(`Invalid shape for reduced QR`);
-            }
-            else if(mode == 'full') {
-                if(Q.rows != m || Q.columns != m || R.rows != m || R.columns != n)
-                    throw new IllegalArgumentError(`Invalid shape for full QR`);
-            }
-            else
-                throw new IllegalArgumentError(`Invalid mode for QR: "${mode}"`);
-
             // allocate matrices
             const Qptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, Q);
             const Rptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, R);
@@ -168,16 +149,16 @@ export class SpeedyMatrixFactory extends Function
      */
     ols(solution, A, b, { method = 'qr' } = {})
     {
+        const m = A.rows, n = A.columns;
+        const x = solution;
+
+        // validate shapes
+        if(m < n || n == 0)
+            throw new IllegalArgumentError(`Can't solve an underdetermined system of equations`);
+        else if(b.rows != m || b.columns != 1 || x.rows != n || x.columns != 1)
+            throw new IllegalArgumentError(`Invalid shapes`);
+
         return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
-            const m = A.rows, n = A.columns;
-            const x = solution;
-
-            // validate shapes
-            if(m < n || n == 0)
-                throw new IllegalArgumentError(`Can't solve an underdetermined system of equations`);
-            else if(b.rows != m || b.columns != 1 || x.rows != n || x.columns != 1)
-                throw new IllegalArgumentError(`Invalid shapes`);
-
             // allocate matrices
             const Aptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, A);
             const bptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, b);
@@ -221,16 +202,16 @@ export class SpeedyMatrixFactory extends Function
      */
     solve(solution, A, b, { method = 'qr' } = {})
     {
+        const m = A.rows, n = A.columns;
+        const x = solution;
+
+        // validate shapes
+        if(m != n)
+            throw new IllegalArgumentError(`Can't solve an over or underdetermined system of equations`);
+        else if(b.rows != m || b.columns != 1 || x.rows != m || x.columns != 1)
+            throw new IllegalArgumentError(`Invalid shapes`);
+
         return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
-            const m = A.rows, n = A.columns;
-            const x = solution;
-
-            // validate shapes
-            if(m != n)
-                throw new IllegalArgumentError(`Can't solve an over or underdetermined system of equations`);
-            else if(b.rows != m || b.columns != 1 || x.rows != m || x.columns != 1)
-                throw new IllegalArgumentError(`Invalid shapes`);
-
             // select method
             switch(method) {
                 case 'qr':
@@ -254,13 +235,13 @@ export class SpeedyMatrixFactory extends Function
      */
     perspective(homography, src, dest)
     {
-        return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
-            // validate shapes
-            if(src.rows != 2 || src.columns != 4 || dest.rows != 2 || dest.columns != 4)
-                throw new IllegalArgumentError(`You need two 2x4 input matrices to compute a perspective transformation`);
-            else if(homography.rows != 3 || homography.columns != 3)
-                throw new IllegalArgumentError(`The output of perspective() is a 3x3 homography`);
+        // validate shapes
+        if(src.rows != 2 || src.columns != 4 || dest.rows != 2 || dest.columns != 4)
+            throw new IllegalArgumentError(`You need two 2x4 input matrices to compute a perspective transformation`);
+        else if(homography.rows != 3 || homography.columns != 3)
+            throw new IllegalArgumentError(`The output of perspective() is a 3x3 homography`);
 
+        return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
             // allocate matrices
             const homptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, homography);
             const srcptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, src);
@@ -307,15 +288,15 @@ export class SpeedyMatrixFactory extends Function
         bundleSize = 100,
     } = {})
     {
-        return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
-            // validate shapes
-            if(src.rows != 2 || src.columns < 4 || dest.rows != 2 || dest.columns != src.columns)
-                throw new IllegalArgumentError(`You need two 2 x n (n >= 4) input matrices to compute a homography`);
-            else if(homography.rows != 3 || homography.columns != 3)
-                throw new IllegalArgumentError(`The output of findHomography() is a 3x3 homography`);
-            else if(mask != null && (mask.rows != 1 || mask.columns != src.columns))
-                throw new IllegalArgumentError(`Invalid shape of the inliers mask`);
+        // validate shapes
+        if(src.rows != 2 || src.columns < 4 || dest.rows != 2 || dest.columns != src.columns)
+            throw new IllegalArgumentError(`You need two 2 x n (n >= 4) input matrices to compute a homography`);
+        else if(homography.rows != 3 || homography.columns != 3)
+            throw new IllegalArgumentError(`The output of findHomography() is a 3x3 homography`);
+        else if(mask != null && (mask.rows != 1 || mask.columns != src.columns))
+            throw new IllegalArgumentError(`Invalid shape of the inliers mask`);
 
+        return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
             // allocate matrices
             const homptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, homography);
             const srcptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, src);
@@ -367,13 +348,13 @@ export class SpeedyMatrixFactory extends Function
      */
     perspectiveTransform(dest, src, transform)
     {
-        return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
-            // validate shapes
-            if(src.rows != 2 || dest.rows != 2 || src.columns != dest.columns)
-                throw new IllegalArgumentError(`Invalid shapes`);
-            else if(transform.rows != 3 || transform.columns != 3)
-                throw new IllegalArgumentError(`The perspective transformation must be a 3x3 matrix`);
+        // validate shapes
+        if(src.rows != 2 || dest.rows != 2 || src.columns != dest.columns)
+            throw new IllegalArgumentError(`Invalid shapes`);
+        else if(transform.rows != 3 || transform.columns != 3)
+            throw new IllegalArgumentError(`The perspective transformation must be a 3x3 matrix`);
 
+        return SpeedyMatrixWASM.ready().then(([wasm, memory]) => {
             // allocate matrices
             const homptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, transform);
             const srcptr = SpeedyMatrixWASM.allocateMat32(wasm, memory, src);

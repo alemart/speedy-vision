@@ -159,6 +159,16 @@ export class SpeedyMatrixExpr
     }
 
     /**
+     * Component-wise multiplication
+     * @param {SpeedyMatrixExpr} expr
+     * @returns {SpeedyMatrixExpr}
+     */
+    compMult(expr)
+    {
+        return new SpeedyMatrixCompMultExpr(this, expr);
+    }
+
+    /**
      * Returns a human-readable string representation of the matrix expression
      * @returns {string}
      */
@@ -532,5 +542,35 @@ class SpeedyMatrixMultiplyExpr extends SpeedyMatrixBinaryOperationExpr
     _compute(wasm, memory, resultptr, leftptr, rightptr)
     {
         wasm.exports.Mat32_multiply(resultptr, leftptr, rightptr);
+    }
+}
+
+/**
+ * Component-wise multiplication
+ */
+class SpeedyMatrixCompMultExpr extends SpeedyMatrixBinaryOperationExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} left left operand
+     * @param {SpeedyMatrixExpr} right right operand
+     */
+    constructor(left, right)
+    {
+        Utils.assert(left.rows === right.rows && left.columns === right.columns);
+        super(right.rows, right.columns, left, right);
+    }
+
+    /**
+     * Compute result = left <compMult> right
+     * @param {WebAssembly.Instance} wasm
+     * @param {AugmentedMemory} memory
+     * @param {number} resultptr pointer to Mat32
+     * @param {number} leftptr pointer to Mat32
+     * @param {number} rightptr pointer to Mat32
+     */
+    _compute(wasm, memory, resultptr, leftptr, rightptr)
+    {
+        wasm.exports.Mat32_compmult(resultptr, leftptr, rightptr);
     }
 }
