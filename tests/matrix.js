@@ -604,13 +604,19 @@ describe('Matrix', function() {
                     const inv = Speedy.Matrix.Zeros(eye.rows);
                     await inv.setTo(mat.inverse());
 
-                    await printm('M:', mat, 'M^(-1):', inv, '--------------------');
-
                     const mm1 = Speedy.Matrix.Zeros(eye.rows);
                     const m1m = Speedy.Matrix.Zeros(eye.rows);
                     
                     await mm1.setTo(mat.times(inv));
                     await m1m.setTo(inv.times(mat));
+
+                    await printm(
+                        'M:', mat,
+                        'M^(-1):', inv,
+                        'M * M^(-1):', mm1,
+                        'M^(-1) * M:', m1m,
+                        '--------------------'
+                    );
 
                     expect(mm1.read()).toBeElementwiseNearlyEqual(id);
                     expect(m1m.read()).toBeElementwiseNearlyEqual(id);
@@ -632,13 +638,19 @@ describe('Matrix', function() {
                     const inv = Speedy.Matrix.Zeros(eye.rows);
                     await inv.setTo(mat.inverse());
 
-                    await printm('M:', mat, 'M^(-1):', inv, '--------------------');
-
                     const mm1 = Speedy.Matrix.Zeros(eye.rows);
                     const m1m = Speedy.Matrix.Zeros(eye.rows);
                     
                     await mm1.setTo(mat.times(inv));
                     await m1m.setTo(inv.times(mat));
+
+                    await printm(
+                        'M:', mat,
+                        'M^(-1):', inv,
+                        'M * M^(-1):', mm1,
+                        'M^(-1) * M:', m1m,
+                        '--------------------'
+                    );
 
                     expect(mm1.read()).toBeElementwiseNearlyEqual(id);
                     expect(m1m.read()).toBeElementwiseNearlyEqual(id);
@@ -659,13 +671,52 @@ describe('Matrix', function() {
                     const inv = Speedy.Matrix.Zeros(eye.rows);
                     await inv.setTo(mat.inverse());
 
-                    await printm('M:', mat, 'M^(-1):', inv, '--------------------');
+                    const mm1 = Speedy.Matrix.Zeros(eye.rows);
+                    const m1m = Speedy.Matrix.Zeros(eye.rows);
+                    
+                    await mm1.setTo(mat.times(inv));
+                    await m1m.setTo(inv.times(mat));
+
+                    await printm(
+                        'M:', mat,
+                        'M^(-1):', inv,
+                        'M * M^(-1):', mm1,
+                        'M^(-1) * M:', m1m,
+                        '--------------------'
+                    );
+
+                    expect(mm1.read()).toBeElementwiseNearlyEqual(id);
+                    expect(m1m.read()).toBeElementwiseNearlyEqual(id);
+                }
+            });
+
+            it('computes the inverse of 4x4 matrices', async function() {
+                const eye = Speedy.Matrix.Eye(4);
+                const id = eye.read();
+
+                const mats = [
+                    Speedy.Matrix(4, 4, [1, 1, 1,-1, 1, 1,-1, 1, 1,-1, 1, 1,-1, 1, 1, 1]),
+                    Speedy.Matrix(4, 4, [0, 0, 0, 4, 0, 0, 3, 0, 0, 2, 0, 0, 1, 0, 0, 0]),
+                    Speedy.Matrix(4, 4, [2, 1, 7, 1, 5, 4, 8, 5, 0, 2, 9, 7, 8, 6, 3, 8]),
+                ];
+
+                for(let mat of mats) {
+                    const inv = Speedy.Matrix.Zeros(eye.rows);
+                    await inv.setTo(mat.inverse());
 
                     const mm1 = Speedy.Matrix.Zeros(eye.rows);
                     const m1m = Speedy.Matrix.Zeros(eye.rows);
                     
                     await mm1.setTo(mat.times(inv));
                     await m1m.setTo(inv.times(mat));
+
+                    await printm(
+                        'M:', mat,
+                        'M^(-1):', inv,
+                        'M * M^(-1):', mm1,
+                        'M^(-1) * M:', m1m,
+                        '--------------------'
+                    );
 
                     expect(mm1.read()).toBeElementwiseNearlyEqual(id);
                     expect(m1m.read()).toBeElementwiseNearlyEqual(id);
