@@ -11,7 +11,7 @@
     "build": "npm run build-dev && npm run build-pro",
     "build-dev": "NODE_ENV=development webpack --mode development",
     "build-pro": "NODE_ENV=production webpack --mode production",
-    "build-wasm": "cd src/core/wasm; make; cd ..",
+    "make": "cd src/core/wasm; make; cd ..",
     "watch": "webpack --watch"
   },
   "keywords": [
