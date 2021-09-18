@@ -1165,13 +1165,6 @@ describe('Matrix', function() {
                     expect(norm(r.read())).toBeCloseTo(0);
                 });
             });
-
-
-
-
-            xdescribe('Triangular systems', function() {
-
-            });
         });
     });
 
