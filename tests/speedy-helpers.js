@@ -116,13 +116,17 @@ function print(message = '', style)
 function printm(...matrices) {
     if(matrices.length > 0) {
         const m = matrices.shift();
-        if(typeof m === 'object')
-            return m.print(2, print).then(() => printm(...matrices));
+        if(typeof m === 'object') {
+            print(m.toString());
+            printm(...matrices);
+        }
         else {
             print(m);
-            return Promise.resolve().then(() => printm(...matrices));
+            printm(...matrices);
         }
     }
+
+    return Promise.resolve();
 }
 
 // Displays a SpeedyMedia, Image or Canvas
@@ -438,10 +442,8 @@ var speedyMatchers =
 
     toBeElementwiseNearlyEqual: util =>
     ({
-        compare(a, b)
+        compare(a, b, tolerance = 1e-5)
         {
-            const tolerance = 1e-5;
-
             let pass = (a.length == b.length);
             for(let i = 0; i < a.length && pass; i++)
                 pass = pass && Math.abs(a[i] - b[i]) <= tolerance;

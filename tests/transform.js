@@ -25,18 +25,6 @@ describe('Geometric transformations', function() {
         jasmine.addMatchers(speedyMatchers);
     });
 
-    function printm(...matrices) {
-        if(matrices.length > 0) {
-            const m = matrices.shift();
-            if(typeof m === 'object')
-                return m.print(2, print).then(() => printm(...matrices));
-            else {
-                print(m);
-                return Promise.resolve().then(() => printm(...matrices));
-            }
-        }
-    }
-
     function printp(...points) {
         if(points.length > 0) {
             const p = points.shift();
@@ -54,196 +42,9 @@ describe('Geometric transformations', function() {
         }
     }
 
-    describe('Point conversion', function() {
-
-        it('converts an array of points to a matrix', async function() {
-            const P = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 1),
-                Speedy.Point2(2, 3),
-                Speedy.Point2(4, 5),
-                Speedy.Point2(6, 7),
-                Speedy.Point2(8, 9),
-            ]);
-
-            const M = Speedy.Matrix(2, 5, [
-                0, 1,
-                2, 3,
-                4, 5,
-                6, 7,
-                8, 9
-            ]);
-
-            const zeros = (new Array(M.rows * M.columns)).fill(0);
-            const data = await M.minus(P).read();
-            expect(data).toBeElementwiseEqual(zeros);
-        });
-
-        it('converts a matrix to an array of points', async function() {
-            const p = [
-                Speedy.Point2(0, 1),
-                Speedy.Point2(2, 3),
-                Speedy.Point2(4, 5),
-                Speedy.Point2(6, 7),
-                Speedy.Point2(8, 9),
-            ];
-
-            const q = await Speedy.Matrix.toPoints(Speedy.Matrix(2, 5, [
-                0, 1,
-                2, 3,
-                4, 5,
-                6, 7,
-                8, 9
-            ]));
-
-            for(let i = 0; i < p.length; i++)
-                expect(p[i].equals(q[i])).toEqual(true);
-        });
-
-    });
-
     describe('Perspective transform', function() {
 
         it('computes a perspective transform from four correspondences of points', async function() {
-
-            const srcQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(1, 0),
-                Speedy.Point2(1, 1),
-                Speedy.Point2(0, 1)
-            ]);
-
-            const dstQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(3, 0),
-                Speedy.Point2(3, 2),
-                Speedy.Point2(0, 2)
-            ]);
-
-            const homography = Speedy.Matrix.Perspective(srcQuad, dstQuad);
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
-
-            const tstQuad = Speedy.Matrix.transform(homography, srcQuad);
-            expect(await tstQuad.read()).toBeElementwiseNearlyEqual(await dstQuad.read());
-
-        });
-
-        it('computes another perspective transform from four correspondences of points', async function() {
-
-            const srcQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(3, 0),
-                Speedy.Point2(3, 2),
-                Speedy.Point2(0, 2)
-            ]);
-
-            const dstQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(1, 0),
-                Speedy.Point2(1, 1),
-                Speedy.Point2(0, 1)
-            ]);
-
-            const homography = Speedy.Matrix.Perspective(srcQuad, dstQuad);
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
-
-            const tstQuad = Speedy.Matrix.transform(homography, srcQuad);
-            expect(await tstQuad.read()).toBeElementwiseNearlyEqual(await dstQuad.read());
-
-        });
-
-        it('computes yet another perspective transform from four correspondences of points', async function() {
-
-            const srcQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(1, 0),
-                Speedy.Point2(1, 1),
-                Speedy.Point2(0, 1)
-            ]);
-
-            const dstQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(1, 0),
-                Speedy.Point2(4, 0),
-                Speedy.Point2(4, 2),
-                Speedy.Point2(1, 2)
-            ]);
-
-            const homography = Speedy.Matrix.Perspective(srcQuad, dstQuad);
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
-
-            const tstQuad = Speedy.Matrix.transform(homography, srcQuad);
-            expect(await tstQuad.read()).toBeElementwiseNearlyEqual(await dstQuad.read());
-
-        });
-
-        it('computes an identity transform from four non-distinct correspondences of points', async function() {
-
-            const srcQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(3, 0),
-                Speedy.Point2(3, 2),
-                Speedy.Point2(0, 2)
-            ]);
-
-            const dstQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(3, 0),
-                Speedy.Point2(3, 2),
-                Speedy.Point2(0, 2)
-            ]);
-
-            const homography = Speedy.Matrix.Perspective(srcQuad, dstQuad);
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
-
-            const tstQuad = Speedy.Matrix.transform(homography, srcQuad);
-            expect(await tstQuad.read()).toBeElementwiseNearlyEqual(await dstQuad.read());
-
-        });
-
-        it('fails to compute a homography if 3 or more points are collinear', async function() {
-
-            const srcQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(2, 0),
-                Speedy.Point2(1, 1),
-                Speedy.Point2(0, 2)
-            ]);
-
-            const dstQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(3, 0),
-                Speedy.Point2(3, 2),
-                Speedy.Point2(0, 2)
-            ]);
-
-            const homography = Speedy.Matrix.Perspective(srcQuad, dstQuad);
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
-
-            const homdata = await homography.read();
-            expect(homdata).toBeElementwiseNaN();
-
-            print('----------');
-
-            const homography2 = Speedy.Matrix.Perspective(dstQuad, srcQuad);
-            await printm('From:', dstQuad);
-            await printm('To:', srcQuad);
-            await printm('Homography:', homography2);
-
-            const homdata2 = await homography2.read();
-            expect(homdata2).toBeElementwiseNaN();
-
-        });
-
-        it('computes a perspective transform using matrices as input', async function() {
 
             const srcQuad = Speedy.Matrix(2, 4, [
                 0, 0,
@@ -259,13 +60,144 @@ describe('Geometric transformations', function() {
                 0, 2,
             ]);
 
-            const homography = Speedy.Matrix.Perspective(srcQuad, dstQuad);
+            const tstQuad = Speedy.Matrix.Zeros(2, 4);
+            const homography = Speedy.Matrix.Zeros(3, 3);
+
+            await Speedy.Matrix.perspective(homography, srcQuad, dstQuad);
+
             await printm('From:', srcQuad);
             await printm('To:', dstQuad);
             await printm('Homography:', homography);
 
-            const tstQuad = Speedy.Matrix.transform(homography, srcQuad);
-            expect(await tstQuad.read()).toBeElementwiseNearlyEqual(await dstQuad.read());
+            await Speedy.Matrix.perspectiveTransform(tstQuad, srcQuad, homography);
+            expect(tstQuad.read()).toBeElementwiseNearlyEqual(dstQuad.read());
+
+        });
+
+        it('computes another perspective transform from four correspondences of points', async function() {
+
+            const srcQuad = Speedy.Matrix(2, 4, [
+                0, 0,
+                3, 0,
+                3, 2,
+                0, 2,
+            ]);
+
+            const dstQuad = Speedy.Matrix(2, 4, [
+                0, 0,
+                1, 0,
+                1, 1,
+                0, 1,
+            ]);
+
+            const tstQuad = Speedy.Matrix.Zeros(2, 4);
+            const homography = Speedy.Matrix.Zeros(3, 3);
+
+            await Speedy.Matrix.perspective(homography, srcQuad, dstQuad);
+
+            await printm('From:', srcQuad);
+            await printm('To:', dstQuad);
+            await printm('Homography:', homography);
+
+            await Speedy.Matrix.perspectiveTransform(tstQuad, srcQuad, homography);
+            expect(tstQuad.read()).toBeElementwiseNearlyEqual(dstQuad.read());
+
+        });
+
+        it('computes yet another perspective transform from four correspondences of points', async function() {
+
+            const srcQuad = Speedy.Matrix(2, 4, [
+                0, 0,
+                1, 0,
+                1, 1,
+                0, 1,
+            ]);
+
+            const dstQuad = Speedy.Matrix(2, 4, [
+                1, 0,
+                4, 0,
+                4, 2,
+                1, 2,
+            ]);
+
+            const tstQuad = Speedy.Matrix.Zeros(2, 4);
+            const homography = Speedy.Matrix.Zeros(3, 3);
+
+            await Speedy.Matrix.perspective(homography, srcQuad, dstQuad);
+
+            await printm('From:', srcQuad);
+            await printm('To:', dstQuad);
+            await printm('Homography:', homography);
+
+            await Speedy.Matrix.perspectiveTransform(tstQuad, srcQuad, homography);
+            expect(tstQuad.read()).toBeElementwiseNearlyEqual(dstQuad.read());
+        });
+
+        it('computes an identity transform from four non-distinct correspondences of points', async function() {
+
+            const srcQuad = Speedy.Matrix(2, 4, [
+                0, 0,
+                3, 0,
+                3, 2,
+                0, 2,
+            ]);
+
+            const dstQuad = Speedy.Matrix(2, 4, [
+                0, 0,
+                3, 0,
+                3, 2,
+                0, 2,
+            ]);
+
+            const homography = Speedy.Matrix.Zeros(3, 3);
+            await Speedy.Matrix.perspective(homography, srcQuad, dstQuad);
+
+            await printm('From:', srcQuad);
+            await printm('To:', dstQuad);
+            await printm('Homography:', homography);
+
+            const eye = Speedy.Matrix.Eye(3, 3);
+            expect(homography.read()).toBeElementwiseNearlyEqual(eye.read());
+
+        });
+
+        it('fails to compute a homography if 3 or more points are collinear', async function() {
+
+            const srcQuad = Speedy.Matrix(2, 4, [
+                0, 0,
+                2, 0,
+                1, 1,
+                0, 2,
+            ]);
+
+            const dstQuad = Speedy.Matrix(2, 4, [
+                0, 0,
+                3, 0,
+                3, 2,
+                0, 2,
+            ]);
+
+            const homography = Speedy.Matrix.Zeros(3, 3);
+            await Speedy.Matrix.perspective(homography, srcQuad, dstQuad);
+
+            await printm('From:', srcQuad);
+            await printm('To:', dstQuad);
+            await printm('Homography:', homography);
+
+            const homdata = homography.read();
+            expect(homdata).toBeElementwiseNaN();
+
+            print('----------');
+
+            const homography2 = Speedy.Matrix.Zeros(3, 3);
+            await Speedy.Matrix.perspective(homography2, dstQuad, srcQuad);
+
+            await printm('From:', dstQuad);
+            await printm('To:', srcQuad);
+            await printm('Homography:', homography2);
+
+            const homdata2 = homography2.read();
+            expect(homdata2).toBeElementwiseNaN();
 
         });
 
@@ -285,39 +217,42 @@ describe('Geometric transformations', function() {
                 3, 2,
             ]);
 
-            expect(() => Speedy.Matrix.Perspective(srcQuad, dstQuad)).toThrow();
-            expect(() => Speedy.Matrix.Perspective(dstQuad, srcQuad)).toThrow();
+            const homography = Speedy.Matrix.Zeros(3, 3);
+
+            expect(() => Speedy.Matrix.perspective(homography, srcQuad, dstQuad)).toThrow();
+            expect(() => Speedy.Matrix.perspective(homography, dstQuad, srcQuad)).toThrow();
 
         });
 
         it('fails to compute a perspective transform using incorrect input', async function() {
 
-            const srcQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(2, 0),
-                Speedy.Point2(1, 1),
+            const srcQuad = Speedy.Matrix(2, 3, [
+                0, 0,
+                2, 0,
+                1, 1,
             ]);
 
-            const dstQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(3, 0),
-                Speedy.Point2(3, 2),
-                Speedy.Point2(0, 2)
+            const dstQuad = Speedy.Matrix(2, 4, [
+                0, 0,
+                3, 0,
+                3, 2,
+                0, 2,
             ]);
 
-            const fooQuad = Speedy.Matrix.fromPoints([
+            const fooQuad = Speedy.Matrix(2, 4, [
                 0, 0,
                 2, 0,
                 1, 1,
                 0, 2,
             ]);
 
-            expect(() => Speedy.Matrix.Perspective(srcQuad, dstQuad)).toThrow();
-            expect(() => Speedy.Matrix.Perspective(dstQuad, srcQuad)).toThrow();
-            expect(() => Speedy.Matrix.Perspective(srcQuad, srcQuad)).toThrow();
-            expect(() => Speedy.Matrix.Perspective(srcQuad, fooQuad)).toThrow();
-            expect(() => Speedy.Matrix.Perspective(fooQuad, srcQuad)).toThrow();
+            const homography = Speedy.Matrix.Zeros(3, 3);
 
+            expect(() => Speedy.Matrix.perspective(homography, srcQuad, dstQuad)).toThrow();
+            expect(() => Speedy.Matrix.perspective(homography, dstQuad, srcQuad)).toThrow();
+            expect(() => Speedy.Matrix.perspective(homography, srcQuad, srcQuad)).toThrow();
+            expect(() => Speedy.Matrix.perspective(homography, srcQuad, fooQuad)).toThrow();
+            expect(() => Speedy.Matrix.perspective(homography, fooQuad, srcQuad)).toThrow();
         });
 
         it('applies a perspective transform to a set of points', async function() {
@@ -334,32 +269,12 @@ describe('Geometric transformations', function() {
                 0, 1,
             ]);
 
-            const dstQuad = Speedy.Matrix.transform(homography, srcQuad);
+            const dstQuad = Speedy.Matrix.Zeros(2, 4);
+
+            await Speedy.Matrix.perspectiveTransform(dstQuad, srcQuad, homography);
             await printm('homography:', homography, 'srcQuad:', srcQuad, 'dstQuad:', dstQuad);
 
-            const actual = await dstQuad.read();
-            const expected = [2, 1, 5, 1, 5, 3, 2, 3];
-            expect(actual).toBeElementwiseEqual(expected);
-        });
-
-        it('applies an affine transform to a set of points', async function() {
-            const mat = Speedy.Matrix(2, 3, [
-                3, 0,
-                0, 2,
-                2, 1,
-            ]);
-
-            const srcQuad = Speedy.Matrix(2, 4, [
-                0, 0,
-                1, 0,
-                1, 1,
-                0, 1,
-            ]);
-
-            const dstQuad = Speedy.Matrix.transform(mat, srcQuad);
-            await printm('affine transform:', mat, 'srcQuad:', srcQuad, 'dstQuad:', dstQuad);
-
-            const actual = await dstQuad.read();
+            const actual = dstQuad.read();
             const expected = [2, 1, 5, 1, 5, 3, 2, 3];
             expect(actual).toBeElementwiseEqual(expected);
         });
@@ -377,17 +292,19 @@ describe('Geometric transformations', function() {
                 0, 1,
             ]);
 
-            const dstQuad = Speedy.Matrix.transform(mat, srcQuad);
+            const dstQuad = Speedy.Matrix.Zeros(2, 4);
+            await dstQuad.setTo(mat.times(srcQuad));
+
             await printm('linear transform:', mat, 'srcQuad:', srcQuad, 'dstQuad:', dstQuad);
 
-            const actual = await dstQuad.read();
+            const actual = dstQuad.read();
             const expected = [0, 0, 3, 0, 3, 2, 0, 2];
             expect(actual).toBeElementwiseEqual(expected);
         });
 
     });
 
-    describe('Planar homography with P-RANSAC', function() {
+    describe('Planar homography with PRANSAC', function() {
 
         const countInliers = maskdata => maskdata.reduce((sum, val) => sum + val, 0);
         const countOutliers = maskdata => maskdata.length - countInliers(maskdata);
@@ -395,83 +312,85 @@ describe('Geometric transformations', function() {
 
         it('computes a planar homography using only 4 inliers without noise', async function() {
 
-            const srcQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(1, 0),
-                Speedy.Point2(1, 1),
-                Speedy.Point2(0, 1)
+            const srcQuad = Speedy.Matrix(2, 4, [
+                0, 0,
+                1, 0,
+                1, 1,
+                0, 1,
             ]);
 
-            const dstQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(3, 0),
-                Speedy.Point2(3, 2),
-                Speedy.Point2(0, 2)
+            const dstQuad = Speedy.Matrix(2, 4, [
+                0, 0,
+                3, 0,
+                3, 2,
+                0, 2,
             ]);
 
             const mask = Speedy.Matrix.Zeros(1, srcQuad.columns);
+            const homography = Speedy.Matrix.Zeros(3, 3);
 
-            const homography = Speedy.Matrix(3, 3);
-            await homography.assign(Speedy.Matrix.findHomography(srcQuad, dstQuad, {
-                method: 'p-ransac',
-                parameters: {
-                    mask: mask
-                }
-            }));
+            await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
+                method: 'pransac',
+                mask: mask
+            });
+
             await printm('From:', srcQuad);
             await printm('To:', dstQuad);
             await printm('Homography:', homography);
             await printm('Inliers mask:', mask);
 
-            const tstQuad = Speedy.Matrix.transform(homography, srcQuad);
-            expect(await tstQuad.read()).toBeElementwiseNearlyEqual(await dstQuad.read());
-            expect(countInliers(await mask.read())).toEqual(srcQuad.columns);
+            const tstQuad = Speedy.Matrix.Zeros(srcQuad.rows, srcQuad.columns);
+            await Speedy.Matrix.perspectiveTransform(tstQuad, srcQuad, homography);
+
+            expect(tstQuad.read()).toBeElementwiseNearlyEqual(dstQuad.read());
+            expect(countInliers(mask.read())).toEqual(srcQuad.columns);
 
         });
 
         it('computes a planar homography using only 8 inliers without noise', async function() {
 
-            const srcQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(1, 0),
-                Speedy.Point2(1, 1),
-                Speedy.Point2(0, 1),
+            const srcQuad = Speedy.Matrix(2, 8, [
+                0, 0,
+                1, 0,
+                1, 1,
+                0, 1,
 
-                Speedy.Point2(2, 2),
-                Speedy.Point2(3, 2),
-                Speedy.Point2(3, 3),
-                Speedy.Point2(2, 3),
+                2, 2,
+                3, 2,
+                3, 3,
+                2, 3,
             ]);
 
-            const dstQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(3, 0),
-                Speedy.Point2(3, 2),
-                Speedy.Point2(0, 2),
+            const dstQuad = Speedy.Matrix(2, 8, [
+                0, 0,
+                3, 0,
+                3, 2,
+                0, 2,
 
-                Speedy.Point2(6, 4),
-                Speedy.Point2(9, 4),
-                Speedy.Point2(9, 6),
-                Speedy.Point2(6, 6),
+                6, 4,
+                9, 4,
+                9, 6,
+                6, 6,
             ]);
 
             const mask = Speedy.Matrix.Zeros(1, srcQuad.columns);
+            const homography = Speedy.Matrix.Zeros(3, 3);
 
-            const homography = Speedy.Matrix(3, 3);
-            await homography.assign(Speedy.Matrix.findHomography(srcQuad, dstQuad, {
-                method: 'p-ransac',
-                parameters: {
-                    mask: mask
-                }
-            }));
+            await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
+                method: 'pransac',
+                mask: mask
+            });
+
             await printm('From:', srcQuad);
             await printm('To:', dstQuad);
             await printm('Homography:', homography);
             await printm('Inliers mask:', mask);
 
-            const tstQuad = Speedy.Matrix.transform(homography, srcQuad);
-            expect(await tstQuad.read()).toBeElementwiseNearlyEqual(await dstQuad.read());
-            expect(countInliers(await mask.read())).toEqual(srcQuad.columns);
+            const tstQuad = Speedy.Matrix.Zeros(srcQuad.rows, srcQuad.columns);
+            await Speedy.Matrix.perspectiveTransform(tstQuad, srcQuad, homography);
+
+            expect(tstQuad.read()).toBeElementwiseNearlyEqual(dstQuad.read());
+            expect(countInliers(mask.read())).toEqual(srcQuad.columns);
 
         });
 
@@ -479,34 +398,34 @@ describe('Geometric transformations', function() {
 
             const numInliers = 8; // 8/10
 
-            const srcQuad = Speedy.Matrix.fromPoints([
+            const srcQuad = Speedy.Matrix(2, 10, [
                 // ---- inliers: ----
-                Speedy.Point2(0, 0),
-                Speedy.Point2(100, 0),
-                Speedy.Point2(100, 100),
-                Speedy.Point2(0, 100),
-                Speedy.Point2(0, 0),
-                Speedy.Point2(100, 0),
-                Speedy.Point2(100, 100),
-                Speedy.Point2(0, 100),
+                0, 0,
+                100, 0,
+                100, 100,
+                0, 100,
+                0, 0,
+                100, 0,
+                100, 100,
+                0, 100,
                 // ---- outliers: ----
-                Speedy.Point2(9999, 9999),
-                Speedy.Point2(9999, 9999),
+                9999, 9999,
+                9999, 9999,
             ]);
 
-            const dstQuad = Speedy.Matrix.fromPoints([
+            const dstQuad = Speedy.Matrix(2, 10, [
                 // ---- inliers: ----
-                Speedy.Point2(0, 0),
-                Speedy.Point2(300, 0),
-                Speedy.Point2(300, 200),
-                Speedy.Point2(0, 200),
-                Speedy.Point2(0, 0),
-                Speedy.Point2(300, 0),
-                Speedy.Point2(300, 200),
-                Speedy.Point2(0, 200),
+                0, 0,
+                300, 0,
+                300, 200,
+                0, 200,
+                0, 0,
+                300, 0,
+                300, 200,
+                0, 200,
                 // ---- outliers: ----
-                Speedy.Point2(19999, 9999),
-                Speedy.Point2(999, 9999),
+                19999, 9999,
+                9999, 9999,
             ]);
 
             const mask = Speedy.Matrix.Zeros(1, srcQuad.columns);
@@ -514,59 +433,60 @@ describe('Geometric transformations', function() {
             const dstQuadInliers = dstQuad.block(0, 1, 0, numInliers - 1);
             const maskOutliers = mask.block(0, 0, numInliers, mask.columns - 1);
 
-            const homography = Speedy.Matrix(3, 3);
-            await homography.assign(Speedy.Matrix.findHomography(srcQuad, dstQuad, {
-                method: 'p-ransac',
-                parameters: {
-                    mask: mask,
-                }
-            }));
+            const homography = Speedy.Matrix.Zeros(3, 3);
+            await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
+                method: 'pransac',
+                mask: mask
+            });
+
             await printm('From:', srcQuad);
             await printm('To:', dstQuad);
             await printm('Homography:', homography);
             await printm('Inliers mask:', mask);
 
-            const tstQuadInliers = Speedy.Matrix.transform(homography, srcQuadInliers);
-            const difQuadInliers = tstQuadInliers.minus(dstQuadInliers);
-            const errQuadInliers = difQuadInliers.compMult(difQuadInliers);
+            const tstQuadInliers = Speedy.Matrix.Zeros(srcQuadInliers.rows, srcQuadInliers.columns);
+            const difQuadInliers = Speedy.Matrix.Zeros(srcQuadInliers.rows, srcQuadInliers.columns);
+
+            await Speedy.Matrix.perspectiveTransform(tstQuadInliers, srcQuadInliers, homography);
+            await difQuadInliers.setTo(tstQuadInliers.minus(dstQuadInliers));
+            const err2 = difQuadInliers.read().reduce((err, x) => err + x*x, 0);
 
             await printm('Reprojection:', tstQuadInliers, 'vs', dstQuadInliers);
-            await printm('Reprojection error (signed):', difQuadInliers);
+            await printm('Reprojection error: ' + Math.sqrt(err2));
 
-            expect(await errQuadInliers.read()).toBeElementwiseNearlyZero();
-            expect(await maskOutliers.read()).toBeElementwiseZero();
-            expect(countInliers(await mask.read())).toEqual(numInliers);
-
+            expect(maskOutliers.read()).toBeElementwiseZero();
+            expect(countInliers(mask.read())).toEqual(numInliers);
+            expect(err2).toBeNearlyZero();
         });
 
         it('computes a planar homography using 75% of inliers', async function() {
 
             const numInliers = 6; // 6/8
 
-            const srcQuad = Speedy.Matrix.fromPoints([
+            const srcQuad = Speedy.Matrix(2, 8, [
                 // ---- inliers: ----
-                Speedy.Point2(0, 0),
-                Speedy.Point2(100, 0),
-                Speedy.Point2(100, 100),
-                Speedy.Point2(0, 100),
-                Speedy.Point2(50, 50),
-                Speedy.Point2(0, 50),
+                0, 0,
+                100, 0,
+                100, 100,
+                0, 100,
+                50, 50,
+                0, 50,
                 // ---- outliers: ----
-                Speedy.Point2(9999, 9999),
-                Speedy.Point2(-9999, -9999),
+                9999, 9999,
+                -9999, -9999,
             ]);
 
-            const dstQuad = Speedy.Matrix.fromPoints([
+            const dstQuad = Speedy.Matrix(2, 8, [
                 // ---- inliers: ----
-                Speedy.Point2(0, 0),
-                Speedy.Point2(300, 0),
-                Speedy.Point2(300, 200),
-                Speedy.Point2(0, 200),
-                Speedy.Point2(150, 100),
-                Speedy.Point2(0, 100),
+                0, 0,
+                300, 0,
+                300, 200,
+                0, 200,
+                150, 100,
+                0, 100,
                 // ---- outliers: ----
-                Speedy.Point2(19999, 9999),
-                Speedy.Point2(999, 9999),
+                19999, 9999,
+                999, 9999,
             ]);
 
             const mask = Speedy.Matrix.Zeros(1, srcQuad.columns);
@@ -574,78 +494,76 @@ describe('Geometric transformations', function() {
             const dstQuadInliers = dstQuad.block(0, 1, 0, numInliers - 1);
             const maskOutliers = mask.block(0, 0, numInliers, mask.columns - 1);
 
-            const homography = Speedy.Matrix(3, 3);
-            await homography.assign(Speedy.Matrix.findHomography(srcQuad, dstQuad, {
-                method: 'p-ransac',
-                parameters: {
-                    mask: mask,
-                }
-            }));
+            const homography = Speedy.Matrix.Zeros(3, 3);
+            await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
+                method: 'pransac',
+                mask: mask
+            });
+
             await printm('From:', srcQuad);
             await printm('To:', dstQuad);
             await printm('Homography:', homography);
             await printm('Inliers mask:', mask);
 
-            const tstQuadInliers = Speedy.Matrix.Zeros(2, srcQuadInliers.columns);
-            await tstQuadInliers.assign(Speedy.Matrix.transform(homography, srcQuadInliers));
-            const difQuadInliers = tstQuadInliers.minus(dstQuadInliers);
-            const errQuadInliers = difQuadInliers.compMult(difQuadInliers);
+            const tstQuadInliers = Speedy.Matrix.Zeros(srcQuadInliers.rows, srcQuadInliers.columns);
+            const difQuadInliers = Speedy.Matrix.Zeros(srcQuadInliers.rows, srcQuadInliers.columns);
+
+            await Speedy.Matrix.perspectiveTransform(tstQuadInliers, srcQuadInliers, homography);
+            await difQuadInliers.setTo(tstQuadInliers.minus(dstQuadInliers));
+            const err2 = difQuadInliers.read().reduce((err, x) => err + x*x, 0);
 
             await printm('Reprojection:', tstQuadInliers, 'vs', dstQuadInliers);
-            await printm('Reprojection error (signed):', difQuadInliers);
+            await printm('Reprojection error: ' + Math.sqrt(err2));
 
-            expect(await errQuadInliers.read()).toBeElementwiseNearlyZero();
-            expect(await maskOutliers.read()).toBeElementwiseZero();
-            expect(countInliers(await mask.read())).toEqual(numInliers);
-
+            expect(maskOutliers.read()).toBeElementwiseZero();
+            expect(countInliers(mask.read())).toEqual(numInliers);
+            expect(err2).toBeNearlyZero();
         });
 
         it('computes a planar homography using 50% of inliers', async function() {
 
             const numInliers = 8; // 8/16
 
-            const srcQuad = Speedy.Matrix.fromPoints([
+            const srcQuad = Speedy.Matrix(2, 16, [
                 // ---- inliers: ----
-                //Speedy.Point2(0, 0),
-                Speedy.Point2(100, 0),
-                Speedy.Point2(100, 100),
-                Speedy.Point2(0, 100),
-                Speedy.Point2(-50, -50),
-                Speedy.Point2(100, 0),
-                Speedy.Point2(100, 100),
-                Speedy.Point2(0, 100),
-                Speedy.Point2(-50, -50),
+                100, 0,
+                100, 100,
+                0, 100,
+                -50, -50,
+                100, 0,
+                100, 100,
+                0, 100,
+                -50, -50,
                 // ---- outliers: ----
-                Speedy.Point2(999, 999),
-                Speedy.Point2(-999, -999),
-                Speedy.Point2(-999, 999),
-                Speedy.Point2(999, -999),
-                Speedy.Point2(7999, 0),
-                Speedy.Point2(-1, -99999),
-                Speedy.Point2(-0, 7999),
-                Speedy.Point2(7999, -0),
+                999, 999,
+                -999, -999,
+                -999, 999,
+                999, -999,
+                7999, 0,
+                -1, -99999,
+                -0, 7999,
+                7999, -0,
             ]);
 
-            const dstQuad = Speedy.Matrix.fromPoints([
+            const dstQuad = Speedy.Matrix(2, 16, [
                 // ---- inliers: ----
-                //Speedy.Point2(0, 0),
-                Speedy.Point2(100, 0),
-                Speedy.Point2(100, 100),
-                Speedy.Point2(0, 100),
-                Speedy.Point2(-50, -50),
-                Speedy.Point2(100, 0),
-                Speedy.Point2(100, 100),
-                Speedy.Point2(0, 100),
-                Speedy.Point2(-50, -50),
+                100, 0,
+                100, 100,
+                0, 100,
+                -50, -50,
+                100, 0,
+                100, 100,
+                0, 100,
+                -50, -50,
                 // ---- outliers: ----
-                Speedy.Point2(-9, -9),
-                Speedy.Point2(-221999, -999),
-                Speedy.Point2(0, 0),
-                Speedy.Point2(-221999, -999),
-                Speedy.Point2(-2, -9),
-                Speedy.Point2(-1, -2),
-                Speedy.Point2(912717, 0),
-                Speedy.Point2(33, -2),
+                -9, -9,
+                -221999, -999,
+                0, 0,
+                -221999, -999,
+                -2, -9,
+                -1, -2,
+                912717, 0,
+                33, -2,
             ]);
 
             const mask = Speedy.Matrix.Zeros(1, srcQuad.columns);
@@ -653,97 +571,96 @@ describe('Geometric transformations', function() {
             const dstQuadInliers = dstQuad.block(0, 1, 0, numInliers - 1);
             const maskOutliers = mask.block(0, 0, numInliers, mask.columns - 1);
 
+            const homography = Speedy.Matrix.Zeros(3, 3);
+            await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
+                method: 'pransac',
+                mask: mask,
+                numberOfHypotheses: 2000, // increase the number of hypotheses for low inlier ratios
+                bundleSize: 2000 / 5,
+                reprojectionError: 0.5,
+            });
 
-            const homography = Speedy.Matrix(3, 3);
-            await homography.assign(Speedy.Matrix.findHomography(srcQuad, dstQuad, {
-                method: 'p-ransac',
-                parameters: {
-                    mask: mask,
-                    numberOfHypotheses: 2000, // increase the number of hypotheses for low inlier ratios
-                    bundleSize: 2000 / 5,
-                    reprojectionError: 0.5,
-                }
-            }));
             await printm('From:', srcQuad);
             await printm('To:', dstQuad);
             await printm('Homography:', homography);
             await printm('Inliers mask:', mask);
 
-            const tstQuadInliers = Speedy.Matrix.Zeros(2, srcQuadInliers.columns);
-            await tstQuadInliers.assign(Speedy.Matrix.transform(homography, srcQuadInliers));
-            const difQuadInliers = tstQuadInliers.minus(dstQuadInliers);
-            const errQuadInliers = difQuadInliers.compMult(difQuadInliers);
+            const tstQuadInliers = Speedy.Matrix.Zeros(srcQuadInliers.rows, srcQuadInliers.columns);
+            const difQuadInliers = Speedy.Matrix.Zeros(srcQuadInliers.rows, srcQuadInliers.columns);
+
+            await Speedy.Matrix.perspectiveTransform(tstQuadInliers, srcQuadInliers, homography);
+            await difQuadInliers.setTo(tstQuadInliers.minus(dstQuadInliers));
+            const err2 = difQuadInliers.read().reduce((err, x) => err + x*x, 0);
 
             await printm('Reprojection:', tstQuadInliers, 'vs', dstQuadInliers);
-            await printm('Reprojection error (signed):', difQuadInliers);
+            await printm('Reprojection error: ' + Math.sqrt(err2));
 
-            expect(await errQuadInliers.read()).toBeElementwiseNearlyZero();
-            expect(await maskOutliers.read()).toBeElementwiseZero();
-            expect(countInliers(await mask.read())).toEqual(numInliers);
-
+            expect(maskOutliers.read()).toBeElementwiseZero();
+            expect(countInliers(mask.read())).toEqual(numInliers);
+            expect(err2).toBeNearlyZero();
         });
 
         it('fails to compute a planar homography using too few points', async function() {
 
-            const srcQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(100, 0),
-                Speedy.Point2(100, 100),
+            const srcQuad = Speedy.Matrix(2, 3, [
+                0, 0,
+                100, 0,
+                100, 100,
             ]);
 
-            const dstQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(300, 0),
-                Speedy.Point2(300, 200),
+            const dstQuad = Speedy.Matrix(2, 3, [
+                0, 0,
+                300, 0,
+                300, 200,
             ]);
+
+            const homography = Speedy.Matrix.Zeros(3, 3);
 
             await printm('From:', srcQuad);
             await printm('To:', dstQuad);
 
-            expect(() => Speedy.Matrix.findHomography(srcQuad, dstQuad, {
-                method: 'p-ransac',
+            expect(() => Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
+                method: 'pransac',
             })).toThrow();
 
         });
 
         it('fails to compute a planar homography using a degenerate configuration', async function() {
 
-            const srcQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(100, 0),
-                Speedy.Point2(100, 100),
-                Speedy.Point2(0, 0),
-                Speedy.Point2(100, 0),
-                Speedy.Point2(100, 100),
-                Speedy.Point2(50, 50),
+            const srcQuad = Speedy.Matrix(2, 7, [
+                0, 0,
+                100, 0,
+                100, 100,
+                0, 0,
+                100, 0,
+                100, 100,
+                50, 50,
             ]);
 
-            const dstQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(300, 0),
-                Speedy.Point2(300, 200),
-                Speedy.Point2(0, 0),
-                Speedy.Point2(300, 0),
-                Speedy.Point2(300, 200),
-                Speedy.Point2(150, 100),
+            const dstQuad = Speedy.Matrix(2, 7, [
+                0, 0,
+                300, 0,
+                300, 200,
+                0, 0,
+                300, 0,
+                300, 200,
+                150, 100,
             ]);
 
             const mask = Speedy.Matrix.Zeros(1, srcQuad.columns);
 
-            const homography = Speedy.Matrix(3, 3);
-            await homography.assign(Speedy.Matrix.findHomography(srcQuad, dstQuad, {
-                method: 'p-ransac',
-                parameters: {
-                    mask: mask,
-                }
-            }));
+            const homography = Speedy.Matrix.Zeros(3, 3);
+            await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
+                method: 'pransac',
+                mask: mask,
+            });
             await printm('From:', srcQuad);
             await printm('To:', dstQuad);
             await printm('Homography:', homography);
             await printm('Inliers mask:', mask);
 
-            expect(await homography.read()).toBeElementwiseNaN();
-            expect(countInliers(await mask.read())).toEqual(0);
+            expect(homography.read()).toBeElementwiseNaN();
+            expect(countInliers(mask.read())).toEqual(0);
 
         });
 
@@ -753,20 +670,18 @@ describe('Geometric transformations', function() {
             const dstQuad = Speedy.Matrix.Zeros(2, 4);
             const mask = Speedy.Matrix.Zeros(1, srcQuad.columns);
 
-            const homography = Speedy.Matrix(3, 3);
-            await homography.assign(Speedy.Matrix.findHomography(srcQuad, dstQuad, {
-                method: 'p-ransac',
-                parameters: {
-                    mask: mask,
-                }
-            }));
+            const homography = Speedy.Matrix.Zeros(3, 3);
+            await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
+                method: 'pransac',
+                mask: mask,
+            });
             await printm('From:', srcQuad);
             await printm('To:', dstQuad);
             await printm('Homography:', homography);
             await printm('Inliers mask:', mask);
 
-            expect(await homography.read()).toBeElementwiseNaN();
-            expect(countInliers(await mask.read())).toEqual(0);
+            expect(homography.read()).toBeElementwiseNaN();
+            expect(countInliers(mask.read())).toEqual(0);
 
         });
 
@@ -789,50 +704,34 @@ describe('Geometric transformations', function() {
                     const entries = Array.from({ length: numPoints * 2 }, () => 100 * Math.random());
                     const srcQuad = Speedy.Matrix(2, numPoints, entries);
                     const dstQuad = Speedy.Matrix(2, numPoints, entries.map(x => 200 + 2 * x + noise(noiseLevel)));
-                    const mask = Speedy.Matrix(1, numPoints);
+                    const mask = Speedy.Matrix.Zeros(1, numPoints);
 
                     // compute homography
-                    const homography = await Speedy.Matrix.evaluate(
-                        Speedy.Matrix.findHomography(srcQuad, dstQuad, {
-                            method: 'p-ransac',
-                            parameters: {
-                                mask: mask,
-                                reprojectionError: reprojErrTolerance
-                            },
-                        })
-                    );
+                    const homography = Speedy.Matrix.Zeros(3, 3);
+                    await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
+                        method: 'pransac',
+                        mask: mask,
+                        reprojectionError: reprojErrTolerance,
+                    });
 
                     await printm('From:', srcQuad);
                     await printm('To:', dstQuad);
                     await printm('Inliers mask:', mask);
                     await printm('Homography:', homography);
 
-                    const tstQuad = await Speedy.Matrix.evaluate(
-                        Speedy.Matrix.transform(homography, srcQuad)
-                    );
-                    const difQuad = await Speedy.Matrix.evaluate(
-                        tstQuad.minus(dstQuad)
-                    );
+                    const tstQuad = Speedy.Matrix.Zeros(srcQuad.rows, srcQuad.columns);
+                    const difQuad = Speedy.Matrix.Zeros(srcQuad.rows, srcQuad.columns);
 
-                    const zero = Speedy.Matrix.Zeros(1, 1); // [0]
-                    const zeros = Speedy.Matrix.Zeros(2, 1); // column vector [ 0  0 ]^T
-                    const ones = Speedy.Matrix.Ones(1, 2); // row vector [ 1  1 ]
+                    await Speedy.Matrix.perspectiveTransform(tstQuad, srcQuad, homography);
+                    await difQuad.setTo(tstQuad.minus(dstQuad));
 
-                    const [ reprojectionError2 ] = await ones.times(
-                        difQuad
-                        .compMult(difQuad)
-                        .reduce(2, 1, (A, B) => A.plus(B), zeros)
-                    ).read();
+                    const reprojectionError2 = difQuad.read().reduce((err, x) => err + x*x, 0);
                     const reprojectionError = Math.sqrt(reprojectionError2);
-
-                    const [ numberOfInliers ] = await (
-                        mask
-                        .reduce(1, 1, (A, B) => A.plus(B), zero)
-                    ).read();
-                    const percentageOfInliers = 100.0 * numberOfInliers / numPoints;
+                    const numberOfInliers = mask.read().reduce((cnt, x) => cnt + x, 0);
+                    const percentageOfInliers = 100 * numberOfInliers / numPoints;
 
                     await printm('Percentage of inliers:', percentageOfInliers + '%');
-                    await printm('Reprojection error:', reprojectionError);
+                    await printm('Average reprojection error:', reprojectionError / numPoints);
 
                     expect(reprojectionError).toBeLessThan(numPoints * reprojErrTolerance);
                 });
@@ -845,119 +744,122 @@ describe('Geometric transformations', function() {
 
         it('computes a planar homography using 4 correspondences', async function() {
 
-            const srcQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(1, 0),
-                Speedy.Point2(1, 1),
-                Speedy.Point2(0, 1)
+            const srcQuad = Speedy.Matrix(2, 4, [
+                0, 0,
+                1, 0,
+                1, 1,
+                0, 1,
             ]);
 
-            const dstQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(3, 0),
-                Speedy.Point2(3, 2),
-                Speedy.Point2(0, 2)
+            const dstQuad = Speedy.Matrix(2, 4, [
+                0, 0,
+                3, 0,
+                3, 2,
+                0, 2,
             ]);
 
-            const homography = Speedy.Matrix(3, 3);
-            await homography.assign(Speedy.Matrix.findHomography(srcQuad, dstQuad, {
+            const homography = Speedy.Matrix.Zeros(3, 3);
+            await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
                 method: 'dlt',
-            }));
+            });
             await printm('From:', srcQuad);
             await printm('To:', dstQuad);
             await printm('Homography:', homography);
 
-            const tstQuad = Speedy.Matrix.transform(homography, srcQuad);
-            expect(await tstQuad.read()).toBeElementwiseNearlyEqual(await dstQuad.read());
+            const tstQuad = Speedy.Matrix.Zeros(srcQuad.rows, srcQuad.columns);
+            await Speedy.Matrix.perspectiveTransform(tstQuad, srcQuad, homography);
+            expect(tstQuad.read()).toBeElementwiseNearlyEqual(dstQuad.read());
 
         });
 
         it('computes a planar homography using 5 correspondences', async function() {
 
-            const srcQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(1, 0),
-                Speedy.Point2(1, 1),
-                Speedy.Point2(0, 1),
-                Speedy.Point2(0.5, 0.5),
+            const srcQuad = Speedy.Matrix(2, 5, [
+                0, 0,
+                1, 0,
+                1, 1,
+                0, 1,
+                0.5, 0.5,
             ]);
 
-            const dstQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(3, 0),
-                Speedy.Point2(3, 2),
-                Speedy.Point2(0, 2),
-                Speedy.Point2(1.5, 1.0),
+            const dstQuad = Speedy.Matrix(2, 5, [
+                0, 0,
+                3, 0,
+                3, 2,
+                0, 2,
+                1.5, 1.0,
             ]);
 
-            const homography = Speedy.Matrix(3, 3);
-            await homography.assign(Speedy.Matrix.findHomography(srcQuad, dstQuad, {
+            const homography = Speedy.Matrix.Zeros(3, 3);
+            await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
                 method: 'dlt',
-            }));
+            });
             await printm('From:', srcQuad);
             await printm('To:', dstQuad);
             await printm('Homography:', homography);
 
-            const tstQuad = Speedy.Matrix.transform(homography, srcQuad);
-            expect(await tstQuad.read()).toBeElementwiseNearlyEqual(await dstQuad.read());
+            const tstQuad = Speedy.Matrix.Zeros(srcQuad.rows, srcQuad.columns);
+            await Speedy.Matrix.perspectiveTransform(tstQuad, srcQuad, homography);
+            expect(tstQuad.read()).toBeElementwiseNearlyEqual(dstQuad.read());
 
         });
 
         it('computes a planar homography using 8 correspondences', async function() {
 
-            const srcQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(1, 0),
-                Speedy.Point2(1, 1),
-                Speedy.Point2(0, 1),
-                Speedy.Point2(0.5, 0.5),
-                Speedy.Point2(2, 2),
-                Speedy.Point2(-1, 0),
-                Speedy.Point2(-1, -1),
+            const srcQuad = Speedy.Matrix(2, 8, [
+                0, 0,
+                1, 0,
+                1, 1,
+                0, 1,
+                0.5, 0.5,
+                2, 2,
+                -1, 0,
+                -1, -1,
             ]);
 
-            const dstQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(3, 0),
-                Speedy.Point2(3, 2),
-                Speedy.Point2(0, 2),
-                Speedy.Point2(1.5, 1.0),
-                Speedy.Point2(6, 4),
-                Speedy.Point2(-3, 0),
-                Speedy.Point2(-3, -2),
+            const dstQuad = Speedy.Matrix(2, 8, [
+                0, 0,
+                3, 0,
+                3, 2,
+                0, 2,
+                1.5, 1.0,
+                6, 4,
+                -3, 0,
+                -3, -2,
             ]);
 
-            const homography = Speedy.Matrix(3, 3);
-            await homography.assign(Speedy.Matrix.findHomography(srcQuad, dstQuad, {
+            const homography = Speedy.Matrix.Zeros(3, 3);
+            await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
                 method: 'dlt',
-            }));
+            });
             await printm('From:', srcQuad);
             await printm('To:', dstQuad);
             await printm('Homography:', homography);
 
-            const tstQuad = Speedy.Matrix.transform(homography, srcQuad);
-            expect(await tstQuad.read()).toBeElementwiseNearlyEqual(await dstQuad.read());
+            const tstQuad = Speedy.Matrix.Zeros(srcQuad.rows, srcQuad.columns);
+            await Speedy.Matrix.perspectiveTransform(tstQuad, srcQuad, homography);
+            expect(tstQuad.read()).toBeElementwiseNearlyEqual(dstQuad.read());
 
         });
 
         it('fails to compute a planar homography using too few points', async function() {
 
-            const srcQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(100, 0),
-                Speedy.Point2(100, 100),
+            const srcQuad = Speedy.Matrix(2, 3, [
+                0, 0,
+                100, 0,
+                100, 100,
             ]);
 
-            const dstQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(300, 0),
-                Speedy.Point2(300, 200),
+            const dstQuad = Speedy.Matrix(2, 3, [
+                0, 0,
+                300, 0,
+                300, 200,
             ]);
 
             await printm('From:', srcQuad);
             await printm('To:', dstQuad);
 
-            expect(() => Speedy.Matrix.findHomography(srcQuad, dstQuad, {
+            expect(() => Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
                 method: 'dlt',
             })).toThrow();
 
@@ -965,29 +867,29 @@ describe('Geometric transformations', function() {
 
         it('fails to compute a planar homography using a degenerate configuration', async function() {
 
-            const srcQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(100, 0),
-                Speedy.Point2(100, 100),
-                Speedy.Point2(0, 100),
+            const srcQuad = Speedy.Matrix(2, 4, [
+                0, 0,
+                100, 0,
+                100, 100,
+                0, 100,
             ]);
 
-            const dstQuad = Speedy.Matrix.fromPoints([
-                Speedy.Point2(0, 0),
-                Speedy.Point2(300, 0),
-                Speedy.Point2(300, 200),
-                Speedy.Point2(150, 0),
+            const dstQuad = Speedy.Matrix(2, 4, [
+                0, 0,
+                300, 0,
+                300, 200,
+                150, 0,
             ]);
 
-            const homography = Speedy.Matrix(3, 3);
-            await homography.assign(Speedy.Matrix.findHomography(srcQuad, dstQuad, {
+            const homography = Speedy.Matrix.Zeros(3, 3);
+            await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
                 method: 'dlt',
-            }));
+            });
             await printm('From:', srcQuad);
             await printm('To:', dstQuad);
             await printm('Homography:', homography);
 
-            expect(await homography.read()).toBeElementwiseNaN();
+            expect(homography.read()).toBeElementwiseNaN();
 
         });
 
@@ -996,15 +898,16 @@ describe('Geometric transformations', function() {
             const srcQuad = Speedy.Matrix.Zeros(2, 4);
             const dstQuad = Speedy.Matrix.Zeros(2, 4);
 
-            const homography = Speedy.Matrix(3, 3);
-            await homography.assign(Speedy.Matrix.findHomography(srcQuad, dstQuad, {
+            const homography = Speedy.Matrix.Zeros(3, 3);
+            await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
                 method: 'dlt',
-            }));
+            });
+
             await printm('From:', srcQuad);
             await printm('To:', dstQuad);
             await printm('Homography:', homography);
 
-            expect(await homography.read()).toBeElementwiseNaN();
+            expect(homography.read()).toBeElementwiseNaN();
 
         });
     });

@@ -378,18 +378,18 @@ describe('Image processing', function() {
             const conv2 = Speedy.Filter.Convolution();
 
             source.media = square;
-            conv1.kernel = Speedy.Matrix(3, 3, [
+            conv1.kernel = await Speedy.Matrix.Zeros(3).setTo(Speedy.Matrix(3, 3, [
                 // Sobel X
                 1, 0,-1,
                 2, 0,-2,
                 1, 0,-1,
-            ]).transpose(); // column-major format
-            conv2.kernel = Speedy.Matrix(3, 3, [
+            ]).transpose()); // column-major format
+            conv2.kernel = await Speedy.Matrix.Zeros(3).setTo(Speedy.Matrix(3, 3, [
                 // Sobel Y
                 1, 2, 1,
                 0, 0, 0,
                -1,-2,-1,
-            ]).transpose(); // column-major format
+            ]).transpose()); // column-major format
 
             source.output().connectTo(conv1.input());
             source.output().connectTo(conv2.input());

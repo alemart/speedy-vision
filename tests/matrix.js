@@ -37,14 +37,14 @@ describe('Matrix', function() {
 
     describe('Read/write operations', function() {
 
-        it('creates matrices of different types and reads their data', async function() {
-            const types = [ 'float32', 'float64', 'int32', 'uint8' ];
+        it('creates matrices and reads their data', async function() {
+            const types = [ 'float32' ];
             for(const type of types) {
                 const data = [1, 8, 91, 81, 7, 4, 77, 10, 0];
                 const matrix = Speedy.Matrix(3, 3, data, type);
                 await printm(matrix);
 
-                const readData = await matrix.read();
+                const readData = matrix.read();
                 expect(readData).toBeElementwiseEqual(data);
             }
         });
@@ -52,11 +52,11 @@ describe('Matrix', function() {
         it('creates matrices with random entries and reads their data', async function() {
             const cnt = 10;
             for(let i = 0; i < cnt; i++) {
-                const data = new Array(25).fill(0).map(_ => Math.random());
-                const matrix = Speedy.Matrix(5, 5, data, 'float64');
+                const data = new Array(25).fill(0).map(_ => (1000 * Math.random()) | 0);
+                const matrix = Speedy.Matrix(5, 5, data);
                 //await printm(matrix);
 
-                const readData = await matrix.read();
+                const readData = matrix.read();
                 expect(readData).toBeElementwiseNearlyEqual(data);
             }
         });
@@ -67,7 +67,7 @@ describe('Matrix', function() {
             const matrix = Speedy.Matrix.Zeros(n);
             await printm(matrix);
 
-            const readData = await matrix.read();
+            const readData = matrix.read();
             expect(readData.length).toEqual(data.length);
             expect(readData).toBeElementwiseEqual(data);
         });
@@ -78,7 +78,7 @@ describe('Matrix', function() {
             const matrix = Speedy.Matrix.Ones(n);
             await printm(matrix);
 
-            const readData = await matrix.read();
+            const readData = matrix.read();
             expect(readData.length).toEqual(data.length);
             expect(readData).toBeElementwiseEqual(data);
         });
@@ -88,14 +88,15 @@ describe('Matrix', function() {
             const matrix = Speedy.Matrix.Eye(3);
             await printm(matrix);
 
-            const readData = await matrix.read();
+            const readData = matrix.read();
             expect(readData.length).toEqual(data.length);
             expect(readData).toBeElementwiseEqual(data);
         });
 
         it('can\'t create an empty matrix', async function() {
             expect(() => Speedy.Matrix(0, 0)).toThrow();
-            expect(() => Speedy.Matrix(-1, -1)).toThrow();
+            expect(() => Speedy.Matrix.Zeros(0, 0)).toThrow();
+            expect(() => Speedy.Matrix.Zeros(-1, -1)).toThrow();
         });
 
         it('fills a row', async function() {
@@ -103,13 +104,13 @@ describe('Matrix', function() {
             const ones = new Array(n).fill(1);
             for(let i = 0; i < n; i++) {
                 const matrix = Speedy.Matrix.Zeros(n);
-                await matrix.row(i).fill(1);
+                matrix.row(i).fill(1);
                 await printm(matrix);
 
-                const readOnes = await matrix.row(i).read();
+                const readOnes = matrix.row(i).read();
                 expect(readOnes).toBeElementwiseEqual(ones);
 
-                const readData = await matrix.read();
+                const readData = matrix.read();
                 const sumOfEntries = readData.reduce((sum, aij) => sum += aij, 0);
                 expect(sumOfEntries).toEqual(n);
             }
@@ -120,13 +121,13 @@ describe('Matrix', function() {
             const ones = new Array(n).fill(1);
             for(let i = 0; i < n; i++) {
                 const matrix = Speedy.Matrix.Zeros(n);
-                await matrix.column(i).fill(1);
+                matrix.column(i).fill(1);
                 await printm(matrix);
 
-                const readOnes = await matrix.column(i).read();
+                const readOnes = matrix.column(i).read();
                 expect(readOnes).toBeElementwiseEqual(ones);
 
-                const readData = await matrix.read();
+                const readData = matrix.read();
                 const sumOfEntries = readData.reduce((sum, aij) => sum += aij, 0);
                 expect(sumOfEntries).toEqual(n);
             }
@@ -137,17 +138,17 @@ describe('Matrix', function() {
             for(let i = 1; i <= n; i++) {
                 const eye = Speedy.Matrix.Eye(i);
                 const matrix = Speedy.Matrix.Zeros(i);
-                await matrix.diagonal().fill(1);
+                matrix.diagonal().fill(1);
                 await printm(matrix);
 
-                const readOnes = await matrix.diagonal().read();
+                const readOnes = matrix.diagonal().read();
                 expect(readOnes).toBeElementwiseEqual(Array(i).fill(1));
 
-                const readData = await matrix.read();
+                const readData = matrix.read();
                 const sumOfEntries = readData.reduce((sum, aij) => sum += aij, 0);
                 expect(sumOfEntries).toEqual(i);
 
-                const readEye = await eye.read();
+                const readEye = eye.read();
                 expect(readEye).toBeElementwiseEqual(readData);
             }
         });
@@ -155,29 +156,32 @@ describe('Matrix', function() {
         it('reads a diagonal', async function() {
             const n = 5;
             for(let i = 1; i <= n; i++) {
-                const matrix = Speedy.Matrix.Eye(i).times(i * i);
+                const eye = Speedy.Matrix.Eye(i);
+                const matrix = Speedy.Matrix.Zeros(eye.rows, eye.columns);
+                
+                await matrix.setTo(eye.times(i * i));
                 await printm(matrix);
 
                 const diag = matrix.diagonal();
-                expect(diag.rows).toEqual(1);
-                expect(diag.columns).toEqual(i);
+                expect(diag.columns).toEqual(1);
+                expect(diag.rows).toEqual(i);
                 await printm(diag);
 
-                const diagData = await diag.read();
+                const diagData = diag.read();
                 expect(diagData).toBeElementwiseEqual(Array(i).fill(i * i));
             }
         });
 
         it('handles assignment expressions', async function() {
-            let A = Speedy.Matrix(3, 3);
-            let B = Speedy.Matrix(3, 3);
+            let A = Speedy.Matrix.Zeros(3, 3);
+            let B = Speedy.Matrix.Zeros(3, 3);
             let I = Speedy.Matrix.Eye(3);
 
-            await A.assign(B.setTo(I));
+            await A.setTo(await B.setTo(I));
             await printm('A:', A, 'B:', B, 'I:', I);
 
-            expect(await A.read()).toBeElementwiseEqual(await I.read());
-            expect(await B.read()).toBeElementwiseEqual(await I.read());
+            expect(A.read()).toBeElementwiseEqual(I.read());
+            expect(B.read()).toBeElementwiseEqual(I.read());
         });
 
     });
@@ -195,8 +199,8 @@ describe('Matrix', function() {
             let A, B, C, a, b, c;
             A = RandomMatrix(n);
             B = RandomMatrix(n);
-            C = Speedy.Matrix(n);
-            await C.assign(A.plus(B));
+            C = Speedy.Matrix.Zeros(n);
+            await C.setTo(A.plus(B));
 
             await printm(A);
             print('+');
@@ -204,13 +208,13 @@ describe('Matrix', function() {
             print('=');
             await printm(C);
 
-            a = await A.read();
-            b = await B.read();
-            c = await C.read();
+            a = A.read();
+            b = B.read();
+            c = C.read();
             expect(c).toBeElementwiseNearlyEqual(add(a, b));
 
-            await C.assign(B.plus(A));
-            c = await C.read();
+            await C.setTo(B.plus(A));
+            c = C.read();
             expect(c).toBeElementwiseNearlyEqual(add(a, b));
         });
 
@@ -218,8 +222,8 @@ describe('Matrix', function() {
             let A, B, C, a, b, c;
             A = RandomMatrix(n);
             B = RandomMatrix(n);
-            C = Speedy.Matrix(n);
-            await C.assign(A.minus(B));
+            C = Speedy.Matrix.Zeros(n);
+            await C.setTo(A.minus(B));
 
             await printm(A);
             print('-');
@@ -227,21 +231,21 @@ describe('Matrix', function() {
             print('=');
             await printm(C);
 
-            a = await A.read();
-            b = await B.read();
-            c = await C.read();
+            a = A.read();
+            b = B.read();
+            c = C.read();
             expect(c).toBeElementwiseNearlyEqual(subtract(a, b));
         });
 
         it('can\'t add nor subtract matrices of incompatible sizes', async function() {
             let A = RandomMatrix(n);
             let B = RandomMatrix(n+1);
-            let C = Speedy.Matrix(n+1);
+            let C = Speedy.Matrix.Zeros(n+1);
 
-            expect(() => C.assign(A.plus(B))).toThrow();
-            expect(() => C.assign(B.plus(A))).toThrow();
-            expect(() => C.assign(A.minus(B))).toThrow();
-            expect(() => C.assign(B.minus(A))).toThrow();
+            expect(() => C.setTo(A.plus(B))).toThrow();
+            expect(() => C.setTo(B.plus(A))).toThrow();
+            expect(() => C.setTo(A.minus(B))).toThrow();
+            expect(() => C.setTo(B.minus(A))).toThrow();
         });
 
         it('multiplies two matrices', async function() {
@@ -261,14 +265,17 @@ describe('Matrix', function() {
                 64, 154
             ]);
 
+            let AB = Speedy.Matrix.Zeros(2);
+            await AB.setTo(A.times(B));
+
             await printm(A);
             print("*");
             await printm(B);
             print("=");
-            await printm(A.times(B));
+            await printm(AB);
 
-            const expected = await C.read();
-            const actual = await A.times(B).read();
+            const expected = C.read();
+            const actual = AB.read();
             expect(actual).toBeElementwiseEqual(expected);
         });
 
@@ -291,45 +298,51 @@ describe('Matrix', function() {
                 27, 36, 45
             ]);
 
-            let aat = await AAt.read();
-            let ata = await AtA.read();
+            let At_ = Speedy.Matrix.Zeros(3, 2);
+            let AAt_ = Speedy.Matrix.Zeros(2, 2);
+            let AtA_ = Speedy.Matrix.Zeros(3, 3);
+            await At_.setTo(A.transpose());
+            await AAt_.setTo(A.times(A.transpose()));
+            await AtA_.setTo(A.transpose().times(A));
 
             await printm(
                 'A:', A,
-                'A^T:', A.transpose(),
-                'A A^T:', A.times(A.transpose()),
-                'A^T A:', A.transpose().times(A),
+                'A^T:', At_,
+                'A A^T:', AAt_,
+                'A^T A:', AtA_,
                 '-----'
             );
 
-            let aat_ = await A.times(A.transpose()).read();
-            let ata_ = await A.transpose().times(A).read();
+            let aat = AAt.read();
+            let ata = AtA.read();
+            let aat_ = AAt_.read();
+            let ata_ = AtA_.read();
 
             expect(aat_).toBeElementwiseEqual(aat);
             expect(ata_).toBeElementwiseEqual(ata);
         });
 
         it('can\'t multiply matrices of incompatible shapes', async function() {
-            let A = Speedy.Matrix(3, 2);
+            let A = Speedy.Matrix.Zeros(3, 2);
             let B = Speedy.Matrix.Ones(5);
 
-            expect(() => A.times(A).read()).toThrow();
-            expect(() => A.transpose().times(A.transpose()).read()).toThrow();
-            expect(() => A.times(B).read()).toThrow();
-            expect(() => B.times(A).read()).toThrow();
+            expect(() => A.times(A)).toThrow();
+            expect(() => A.transpose().times(A.transpose())).toThrow();
+            expect(() => A.times(B)).toThrow();
+            expect(() => B.times(A)).toThrow();
         });
 
         it('multiplies by a scalar', async function() {
             let A = RandomMatrix(n);
-            let B = Speedy.Matrix(n);
+            let B = Speedy.Matrix.Zeros(n);
 
             const scalars = [0, 1, 10];
             for(const scalar of scalars) {
 
-                await B.assign(A.times(scalar));
+                await B.setTo(A.times(scalar));
 
-                let a = await A.read();
-                let b = await B.read();
+                let a = A.read();
+                let b = B.read();
                 let c = multiply(a, scalar);
 
                 await printm(
@@ -346,17 +359,22 @@ describe('Matrix', function() {
         it('multiplies by the identity matrix', async function() {
             let A = RandomMatrix(n);
             let I = Speedy.Matrix.Eye(n);
-            let a = await A.read();
+            let IA = Speedy.Matrix.Zeros(n);
+            let AI = Speedy.Matrix.Zeros(n);
+
+            await IA.setTo(I.times(A));
+            await AI.setTo(A.times(I));
 
             await printm(
                 'A:', A,
                 'I:', I,
-                'I A:', I.times(A),
-                'A I:', A.times(I)
+                'I A:', IA,
+                'A I:', AI,
             );
 
-            let ai = await A.times(I).read();
-            let ia = await I.times(A).read();
+            let a = A.read();
+            let ai = AI.read();
+            let ia = IA.read();
             expect(ai).toBeElementwiseEqual(a);
             expect(ia).toBeElementwiseEqual(a);
         });
@@ -371,14 +389,17 @@ describe('Matrix', function() {
                 10, 20, 30,
             ]);
             let soln = [ 380, 440, 500, 560 ];
+            let Ax = Speedy.Matrix.Zeros(4, 1);
+
+            await Ax.setTo(A.times(x));
 
             await printm(
                 'A:', A,
                 'x:', x,
-                'A x:', A.times(x)
+                'A x:', Ax,
             );
 
-            let ax = await A.times(x).read();
+            let ax = Ax.read();
             expect(ax).toBeElementwiseEqual(soln);
         });
 
@@ -398,19 +419,24 @@ describe('Matrix', function() {
                 -16, -25, -36,
                 -49, -64, -81,
             ]);
+            let AB = Speedy.Matrix.Zeros(3, 3);
+            let BA = Speedy.Matrix.Zeros(3, 3);
+
+            await AB.setTo(A.compMult(B));
+            await BA.setTo(B.compMult(A));
 
             await printm(
                 'A:', A,
                 'B:', B,
-                'A <comp-mult> B:', A.compMult(B),
-                'B <comp-mult> A:', B.compMult(A)
+                'A <comp-mult> B:', AB,
+                'B <comp-mult> A:', BA,
             );
 
-            let a = await A.read();
-            let b = await B.read();
-            let c = await C.read();
-            let ab = await A.compMult(B).read();
-            let ba = await B.compMult(A).read();
+            let a = A.read();
+            let b = B.read();
+            let c = C.read();
+            let ab = AB.read();
+            let ba = BA.read();
             let _ab = a.map((ai, i) => ai * b[i]);
 
             expect(ab).toBeElementwiseEqual(c);
@@ -431,15 +457,15 @@ describe('Matrix', function() {
                 ]);
             }
 
-            await u.assign(A.times(v)); // u = A v = A [ 1 1 ... 1 ]^T
+            await u.setTo(A.times(v)); // u = A v = A [ 1 1 ... 1 ]^T
             await printm(
                 'A:', A,
                 'v:', v,
                 'A v:', u
             );
 
-            const _u = await u.read();
-            const _w = await w.read();
+            const _u = u.read();
+            const _w = w.read();
             const result = [ ...(new Array(A.rows).keys()) ].map(i => A.columns * i);
 
             expect(_u).toBeElementwiseEqual(_w);
@@ -456,21 +482,29 @@ describe('Matrix', function() {
                 1, 2, 3,
                 4, 5, 6,
             ]);
+            let At_ = Speedy.Matrix.Zeros(A.columns, A.rows);
+            let Att_ = Speedy.Matrix.Zeros(A.rows, A.columns);
+            let Att__ = Speedy.Matrix.Zeros(A.rows, A.columns);
+
+            await At_.setTo(A.transpose());
+            await Att_.setTo(At_.transpose());
+            await Att__.setTo(A.transpose().transpose());
 
             await printm(A);
-            await printm(A.transpose());
+            await printm(At_);
 
-            let at = await At.read();
-            let at_ = await A.transpose().read();
-            let att = await At.transpose().read();
-            let att_ = await A.transpose().transpose().read();
+            let at = At.read();
+            let at_ = At_.read();
+            let att = Att__.read();
+            let att_ = Att_.read();
 
             expect(at).toBeElementwiseEqual(at_);
             expect(att).toBeElementwiseEqual(att_);
         });
 
         it('evaluates expressions with multiple operations', async function() {
-            let Z = Speedy.Matrix.Zeros(3), I = Speedy.Matrix.Eye(3);
+            let I = Speedy.Matrix.Eye(3);
+            let Z = Speedy.Matrix.Zeros(3);
             let T = Speedy.Matrix(3, 3, [
                 1, 0, 0,
                 0, 1, 0,
@@ -516,67 +550,48 @@ describe('Matrix', function() {
             let y10 = R.times(x.plus(t));
             let y11 = RtimesXplusT;
 
+            let z11 = await Speedy.Matrix.Zeros(3, 1).setTo(y11);
+            let z10 = await Speedy.Matrix.Zeros(3, 1).setTo(y10);
+            let z9 = await Speedy.Matrix.Zeros(3, 1).setTo(y9);
+            let z8 = await Speedy.Matrix.Zeros(3, 1).setTo(y8);
+            let z7 = await Speedy.Matrix.Zeros(3, 1).setTo(y7);
+            let z6 = await Speedy.Matrix.Zeros(3, 1).setTo(y6);
+            let z5 = await Speedy.Matrix.Zeros(3, 1).setTo(y5);
+            let z4 = await Speedy.Matrix.Zeros(3, 1).setTo(y4);
+            let z3 = await Speedy.Matrix.Zeros(3, 1).setTo(y3);
+            let z2 = await Speedy.Matrix.Zeros(3, 1).setTo(y2);
+            let z1 = await Speedy.Matrix.Zeros(3, 1).setTo(y1);
+
             await printm('----------------');
-            await printm('R T x:', y11);
-            await printm('R (T x):', y8);
-            await printm('(R T) x:', y9);
-            await printm('R (x+t):', y10);
+            await printm('R T x:', z11);
+            await printm('R (T x):', z8);
+            await printm('(R T) x:', z9);
+            await printm('R (x+t):', z10);
             await printm('----------------');
-            await printm('S R T x:', y7);
-            await printm('S ( R ( Tx ) ):', y1);
-            await printm('(S R) (T x):', y2);
-            await printm('( (S R) T ) x:', y3);
-            await printm('(S R) (x + t):', y4);
-            await printm('S ( R(x+t) ):', y5);
-            await printm('SR(x+t):', y6);
+            await printm('S R T x:', z7);
+            await printm('S ( R ( Tx ) ):', z1);
+            await printm('(S R) (T x):', z2);
+            await printm('( (S R) T ) x:', z3);
+            await printm('(S R) (x + t):', z4);
+            await printm('S ( R(x+t) ):', z5);
+            await printm('SR(x+t):', z6);
 
-            let z1 = await y1.read();
-            let z2 = await y2.read();
-            let z3 = await y3.read();
-            let z4 = await y4.read();
-            let z5 = await y5.read();
-            let z6 = await y6.read();
-            let z7 = await y7.read();
-            let z8 = await y8.read();
-            let z9 = await y9.read();
-            let z10 = await y10.read();
-            let z11 = await y11.read();
-            expect(z1).toBeElementwiseEqual(z7);
-            expect(z2).toBeElementwiseEqual(z7);
-            expect(z3).toBeElementwiseEqual(z7);
-            expect(z4).toBeElementwiseEqual(z7);
-            expect(z5).toBeElementwiseEqual(z7);
-            expect(z6).toBeElementwiseEqual(z7);
-            expect(z8).toBeElementwiseEqual(z11);
-            expect(z9).toBeElementwiseEqual(z11);
-            expect(z10).toBeElementwiseEqual(z11);
-        });
-
-        it('evaluates one expression and discards the other', async function() {
-            const one = Speedy.Matrix.Eye(3);
-            const two = one.times(2);
-
-            const expr = [
-                two.followedBy(one),
-                one.followedBy(two),
-                one.followedBy(two).followedBy(one.plus(two)),
-                two.followedBy(one.followedBy(two.times(two).times(two.followedBy(one)))),
-                one.followedBy(one).followedBy(two).followedBy(two.times(two).plus(one)),
-            ];
-            await printm(...expr);
-
-            for(let i = 0; i < expr.length; i++) {
-                const data = await expr[i].read();
-                for(let j = 0; j < data.length; j++)
-                    expect(data[j]).toBeElementwiseEqual(j % 4 == 0 ? i+1 : 0);
-            }
+            expect(z1.read()).toBeElementwiseEqual(z7.read());
+            expect(z2.read()).toBeElementwiseEqual(z7.read());
+            expect(z3.read()).toBeElementwiseEqual(z7.read());
+            expect(z4.read()).toBeElementwiseEqual(z7.read());
+            expect(z5.read()).toBeElementwiseEqual(z7.read());
+            expect(z6.read()).toBeElementwiseEqual(z7.read());
+            expect(z8.read()).toBeElementwiseEqual(z11.read());
+            expect(z9.read()).toBeElementwiseEqual(z11.read());
+            expect(z10.read()).toBeElementwiseEqual(z11.read());
         });
 
         describe('Inverse matrix', function() {
 
             it('computes the inverse of 1x1 matrices', async function() {
                 const eye = Speedy.Matrix.Eye(1);
-                const id = await eye.read();
+                const id = eye.read();
 
                 const mats = [
                     Speedy.Matrix(1, 1, [-5]),
@@ -586,20 +601,25 @@ describe('Matrix', function() {
                 ];
 
                 for(let mat of mats) {
-                    const inv = mat.inverse();
+                    const inv = Speedy.Matrix.Zeros(eye.rows);
+                    await inv.setTo(mat.inverse());
+
                     await printm('M:', mat, 'M^(-1):', inv, '--------------------');
 
-                    const m1 = await mat.times(inv).read();
-                    const m2 = await inv.times(mat).read();
+                    const mm1 = Speedy.Matrix.Zeros(eye.rows);
+                    const m1m = Speedy.Matrix.Zeros(eye.rows);
+                    
+                    await mm1.setTo(mat.times(inv));
+                    await m1m.setTo(inv.times(mat));
 
-                    expect(m1).toBeElementwiseNearlyEqual(id);
-                    expect(m2).toBeElementwiseNearlyEqual(id);
+                    expect(mm1.read()).toBeElementwiseNearlyEqual(id);
+                    expect(m1m.read()).toBeElementwiseNearlyEqual(id);
                 }
             });
 
             it('computes the inverse of 2x2 matrices', async function() {
                 const eye = Speedy.Matrix.Eye(2);
-                const id = await eye.read();
+                const id = eye.read();
 
                 const mats = [
                     Speedy.Matrix(2, 2, [5, -7, 2, -3]),
@@ -609,20 +629,25 @@ describe('Matrix', function() {
                 ];
 
                 for(let mat of mats) {
-                    const inv = mat.inverse();
+                    const inv = Speedy.Matrix.Zeros(eye.rows);
+                    await inv.setTo(mat.inverse());
+
                     await printm('M:', mat, 'M^(-1):', inv, '--------------------');
 
-                    const m1 = await mat.times(inv).read();
-                    const m2 = await inv.times(mat).read();
+                    const mm1 = Speedy.Matrix.Zeros(eye.rows);
+                    const m1m = Speedy.Matrix.Zeros(eye.rows);
+                    
+                    await mm1.setTo(mat.times(inv));
+                    await m1m.setTo(inv.times(mat));
 
-                    expect(m1).toBeElementwiseNearlyEqual(id);
-                    expect(m2).toBeElementwiseNearlyEqual(id);
+                    expect(mm1.read()).toBeElementwiseNearlyEqual(id);
+                    expect(m1m.read()).toBeElementwiseNearlyEqual(id);
                 }
             });
 
             it('computes the inverse of 3x3 matrices', async function() {
                 const eye = Speedy.Matrix.Eye(3);
-                const id = await eye.read();
+                const id = eye.read();
 
                 const mats = [
                     Speedy.Matrix(3, 3, [1, 0, 5, 2, 1, 6, 3, 4, 0]),
@@ -631,18 +656,24 @@ describe('Matrix', function() {
                 ];
 
                 for(let mat of mats) {
-                    const inv = mat.inverse();
+                    const inv = Speedy.Matrix.Zeros(eye.rows);
+                    await inv.setTo(mat.inverse());
+
                     await printm('M:', mat, 'M^(-1):', inv, '--------------------');
 
-                    const m1 = await mat.times(inv).read();
-                    const m2 = await inv.times(mat).read();
+                    const mm1 = Speedy.Matrix.Zeros(eye.rows);
+                    const m1m = Speedy.Matrix.Zeros(eye.rows);
+                    
+                    await mm1.setTo(mat.times(inv));
+                    await m1m.setTo(inv.times(mat));
 
-                    expect(m1).toBeElementwiseNearlyEqual(id);
-                    expect(m2).toBeElementwiseNearlyEqual(id);
+                    expect(mm1.read()).toBeElementwiseNearlyEqual(id);
+                    expect(m1m.read()).toBeElementwiseNearlyEqual(id);
                 }
             });
 
             it('fails to compute the inverse of singular matrices', async function() {
+                const eye = Speedy.Matrix.Eye(3);
                 const mats = [
                     Speedy.Matrix(1, 1, [0]),
                     Speedy.Matrix(2, 2, [8, 4, 2, 1]),
@@ -650,10 +681,12 @@ describe('Matrix', function() {
                 ];
 
                 for(let mat of mats) {
-                    const inv = mat.inverse();
+                    const inv = Speedy.Matrix.Zeros(mat.rows);
+                    await inv.setTo(mat.inverse());
+
                     await printm('M:', mat, 'M^(-1):', inv, '--------------------');
 
-                    const data = await inv.read();
+                    const data = inv.read();
                     const finite = data.map(Number.isFinite).reduce((a, b) => a || b, false);
 
                     expect(finite).toEqual(false);
@@ -665,186 +698,9 @@ describe('Matrix', function() {
     });
 
 
-    describe('Functional programming', function() {
-
-        describe('map()', function() {
-
-            it('computes the squared length of column-vectors', async function() {
-                const A = Speedy.Matrix(3, 5, [
-                    1, 0, 0,
-                    0, 1, 1,
-                    1,-1,-1,
-                    0, 0,-2,
-                    2, 1, 0,
-                ]);
-
-                const norms = A.map(3, 1, v => v.transpose().times(v));
-                const data = await norms.read();
-
-                await printm('A = ', A);
-                await printm('norms = ', norms);
-
-                expect(data).toBeElementwiseEqual([1, 2, 3, 4, 5]);
-            });
-
-            it('swaps odd and even columns of a matrix', async function() {
-                const A = Speedy.Matrix(3, 6, [
-                    0, 0, 0,
-                    1, 1, 1,
-                    2, 2, 2,
-                    3, 3, 3,
-                    4, 4, 4,
-                    5, 5, 5,
-                ]);
-                const S = Speedy.Matrix(2, 2, [
-                    0, 1,
-                    1, 0,
-                ]);
-                const B = Speedy.Matrix(A.rows, A.columns);
-
-                await B.assign(A.map(3, 2, M => M.times(S)));
-                await printm('A = ', A, 'B = ', B);
-
-                const data = await B.read();
-                expect(data).toBeElementwiseEqual([
-                    1, 1, 1,
-                    0, 0, 0,
-                    3, 3, 3,
-                    2, 2, 2,
-                    5, 5, 5,
-                    4, 4, 4,
-                ]);
-            });
-
-            it('fills the columns of a matrix with increasing values', async function() {
-                const A = Speedy.Matrix(3, 6, [
-                    0, 0, 0,
-                    1, 1, 1,
-                    2, 2, 2,
-                    3, 3, 3,
-                    4, 4, 4,
-                    5, 5, 5,
-                ]);
-                const B = Speedy.Matrix.Ones(3, 6).map(3, 1, (column, i) => column.times(i));
-
-                await printm(B);
-
-                const data = [ await A.read(), await B.read() ];
-                expect(data[0]).toBeElementwiseEqual(data[1]);
-            });
-
-        });
-
-        describe('reduce()', function() {
-            it('computes the squared Frobenius norm of a matrix', async function() {
-                const M = Speedy.Matrix(3, 3, [
-                    0, 1, 0,
-                    1, 1, 1,
-                    2, 2, 2,
-                ]);
-                const ones = Speedy.Matrix.Ones(1, 3);
-                const zeros = Speedy.Matrix.Zeros(3, 1);
-
-                const v = M.compMult(M).reduce(3, 1, (A, B) => A.plus(B), zeros);
-                const dot = ones.times(v);
-
-                await printm('M:', M, '||M||_F ^ 2:', dot);
-
-                expect(await dot.read()).toBeElementwiseEqual([ 16 ]);
-            });
-
-            it('adds and multiplies blocks of matrices', async function() {
-                const M = Speedy.Matrix(3, 12, [
-                    1, 0, 0, 0, 1, 0, 0, 0, 1,
-                    2, 0, 0, 0, 2, 0, 0, 0, 2,
-                    3, 0, 0, 0, 3, 0, 0, 0, 3,
-                    4, 0, 0, 0, 4, 0, 0, 0, 4,
-                ]);
-                const Z = Speedy.Matrix.Zeros(3);
-                const I = Speedy.Matrix.Eye(3);
-
-                const add = M.reduce(3, 3, (A, B) => A.plus(B), Z);
-                const mul = M.reduce(3, 3, (A, B) => A.times(B), I);
-
-                await printm('M:', M, 'add:', add, 'mul:', mul);
-
-                const _A = Speedy.Matrix(3, 3, [
-                    10, 0, 0, 0, 10, 0, 0, 0, 10,
-                ]);
-                const _M = Speedy.Matrix(3, 3, [
-                    24, 0, 0, 0, 24, 0, 0, 0, 24,
-                ]);
-
-                expect(await add.read()).toBeElementwiseEqual(await _A.read());
-                expect(await mul.read()).toBeElementwiseEqual(await _M.read());
-            });
-
-            it('computes the trace of a matrix', async function() {
-                const M = Speedy.Matrix(3, 3, [
-                    1, 2, 3,
-                    4, 5, 6,
-                    7, 8, 9,
-                ]), Z = Speedy.Matrix.Zeros(1, 1);
-
-                const tr = M.diagonal().reduce(1, 1, (A, B) => A.plus(B), Z);
-
-                await printm('M:', M, 'tr:', tr);
-
-                expect(await tr.read()).toBeElementwiseEqual([ 15 ]);
-            });
-        });
-
-        describe('sort()', function() {
-            it('sorts the column vectors of a matrix according to their magnitude', async function() {
-                const M = Speedy.Matrix(3, 5, [
-                    0, 2, 0, // magnitude: 2
-                    0, 0, 0, // magnitude: 0
-                    1, 0, 0, // magnitude: 1
-                    0, 4, 3, // magnitude: 5
-                    1, 1, 0, // magnitude: sqrt(2)
-                ]);
-                const answer = [
-                    0, 0, 0,
-                    1, 0, 0,
-                    1, 1, 0,
-                    0, 2, 0,
-                    0, 4, 3,
-                ];
-
-                const sorted = M.sort(3, 1, (u, v) => {
-                    const utu = u.transpose().times(u);
-                    const vtv = v.transpose().times(v);
-
-                    return utu.minus(vtv);
-                });
-
-                await printm('M:', M, 'Sorted M:', sorted);
-                expect(await sorted.read()).toBeElementwiseEqual(answer);
-            });
-
-            it('sorts regular arrays', async function() {
-                const numTests = 5;
-                for(let i = 0; i < numTests; i++) {
-                    const arr = (new Array(20 * (i + 1))).fill(0).map(_ => Math.round(Math.random() * 100));
-                    const v = Speedy.Matrix(1, arr.length, arr);
-
-                    const answer = [ ...arr ].sort((a, b) => a - b);
-                    const sorted = v.sort(1, 1, (a, b) => a.minus(b));
-
-                    await printm('----- Array #' + (i+1) + ': -----');
-                    await printm('v:', v, 'Sorted v:', sorted);
-                    expect(await sorted.read()).toBeElementwiseEqual(answer);
-                }
-            });
-        });
-
-    });
-
-
-
     describe('Linear algebra', function() {
 
-
+        const eps = 1e-4;
 
         describe('QR decomposition', function() {
 
@@ -854,174 +710,176 @@ describe('Matrix', function() {
                     1, 1, 0,
                     1, 2, 3,
                 ]);
-                let QR = Speedy.Matrix(3, 6);
-                let Q = QR.columnSpan(0, 2);
-                let R = QR.columnSpan(3, 5);
+                let Q = Speedy.Matrix.Zeros(3, 3);
+                let R = Speedy.Matrix.Zeros(3, 3);
+                let QR = Speedy.Matrix.Zeros(3, 3);
+                let QQt = Speedy.Matrix.Zeros(Q.rows, Q.rows);
+                let I = Speedy.Matrix.Eye(Q.rows, Q.columns);
 
-                await QR.assign(A.qr());
+                await Speedy.Matrix.qr(Q, R, A);
+                await QR.setTo(Q.times(R));
+                await QQt.setTo(Q.times(Q.transpose()));
 
                 await printm('A = ', A);
                 await printm('Q = ', Q);
                 await printm('R = ', R);
-                await printm('QR = ', Q.times(R));
+                await printm('QR = ', QR);
 
-                let a = await A.read();
-                let q = await Q.read();
-                let qr = await Q.times(R).read();
+                let a = A.read();
+                let q = Q.read();
+                let qr = QR.read();
 
                 // check if A = QR
-                expect(qr).toBeElementwiseNearlyEqual(a);
+                expect(qr).toBeElementwiseNearlyEqual(a, eps);
 
                 // check if Q^(-1) = Q^T
-                let I = Speedy.Matrix.Eye(Q.rows, Q.columns);
-                let QQt = await Q.times(Q.transpose());
-                let qqt = await QQt.read();
-                let i_ = await I.read();
-                expect(qqt).toBeElementwiseNearlyEqual(i_);
+                let qqt = QQt.read();
+                let i_ = I.read();
+                expect(qqt).toBeElementwiseNearlyEqual(i_, eps);
 
                 // check if P = Q (Q^T) is a projector (i.e., P = P^2)
-                let P = Q.times(Q.transpose());
-                let P2 = P.times(P);
-                let p = await P.read(), p2 = await P2.read();
-                expect(p2).toBeElementwiseNearlyEqual(p);
+                let P = Speedy.Matrix.Zeros(QQt.rows, QQt.columns);
+                await P.setTo(QQt);
+
+                let P2 = Speedy.Matrix.Zeros(P.rows, P.columns);
+                await P2.setTo(P.times(P));
+
+                let p = P.read(), p2 = P2.read();
+                expect(p2).toBeElementwiseNearlyEqual(p, eps);
 
                 // check if P = Q (Q^T) is an orthogonal projector (i.e., P = P^T)
-                let Pt = P.transpose();
-                let pt = await Pt.read();
-                expect(pt).toBeElementwiseNearlyEqual(p);
+                let Pt = Speedy.Matrix.Zeros(P.columns, P.rows);
+                await Pt.setTo(P.transpose());
+
+                let pt = Pt.read();
+                expect(pt).toBeElementwiseNearlyEqual(p, eps);
 
                 // check if R is upper triangular
                 for(let jj = 0; jj < R.columns; jj++) {
-                    let rj = await R.column(jj).rowSpan(jj, R.rows-1).read();
-                    let rjj = await R.column(jj).row(jj).read();
+                    let rj = R.block(jj, R.rows-1, jj, jj).read();
+                    let rjj = R.block(jj, jj, jj, jj).read();
                     expect(norm(rj)).toBeCloseTo(Math.abs(rjj[0]));
                 }
-                let dr = await R.diagonal().read();
+
+                let D = Speedy.Matrix.Zeros(Math.min(R.rows, R.columns), 1);
+                await D.setTo(R.diagonal());
+
+                let dr = D.read();
                 expect(norm(dr)).not.toBeCloseTo(0);
             });
 
             it('computes a full QR decomposition of a non-square matrix', async function() {
-                let A = RandomMatrix(4, 3, 'float64'); // m x n
-                let QR = Speedy.Matrix.Zeros(4, 7, 'float64'); // m x (m+n)
-                let Q = QR.block(0, 3, 0, 3); // m x m
-                let R = QR.block(0, 3, 4, 6); // m x n
+                let A = RandomMatrix(4, 3); // m x n
+                let Q = Speedy.Matrix.Zeros(4, 4); // m x m
+                let R = Speedy.Matrix.Zeros(4, 3); // m x n
+                let QR = Speedy.Matrix.Zeros(4, 3);
+                let QQt = Speedy.Matrix.Zeros(4, 4); // I
+                let I = Speedy.Matrix.Eye(Q.rows, Q.columns);
 
-                await QR.assign(A.qr('full'));
+                await Speedy.Matrix.qr(Q, R, A, { mode: 'full' });
+                await QR.setTo(Q.times(R));
+                await QQt.setTo(Q.times(Q.transpose()));
 
                 await printm('A = ', A);
                 await printm('Q = ', Q);
                 await printm('R = ', R);
-                await printm('QR = ', Q.times(R));
+                await printm('QR = ', QR);
 
-                let a = await A.read();
-                let qr = await Q.times(R).read();
+                let a = A.read();
+                let qr = QR.read();
 
                 // check if A = QR
-                qr.length = a.length;
-                expect(qr).toBeElementwiseNearlyEqual(a);
+                expect(qr).toBeElementwiseNearlyEqual(a, eps);
 
                 // check if Q^(-1) = Q^T
-                let I = Speedy.Matrix.Eye(Q.rows, Q.columns);
-                let QQt = await Q.times(Q.transpose());
-                let qqt = await QQt.read();
-                let i_ = await I.read();
-                expect(qqt).toBeElementwiseNearlyEqual(i_);
+                let qqt = QQt.read();
+                let i_ = I.read();
+                expect(qqt).toBeElementwiseNearlyEqual(i_, eps);
 
                 // check if P = Q (Q^T) is a projector (i.e., P = P^2)
-                let P = Q.times(Q.transpose());
-                let P2 = P.times(P);
-                let p = await P.read(), p2 = await P2.read();
-                expect(p2).toBeElementwiseNearlyEqual(p);
+                let P = Speedy.Matrix.Zeros(QQt.rows, QQt.columns);
+                await P.setTo(QQt);
+
+                let P2 = Speedy.Matrix.Zeros(P.rows, P.columns);
+                await P2.setTo(P.times(P));
+
+                let p = P.read(), p2 = P2.read();
+                expect(p2).toBeElementwiseNearlyEqual(p, eps);
 
                 // check if P = Q (Q^T) is an orthogonal projector (i.e., P = P^T)
-                let Pt = P.transpose();
-                let pt = await Pt.read();
-                expect(pt).toBeElementwiseNearlyEqual(p);
+                let Pt = Speedy.Matrix.Zeros(P.columns, P.rows);
+                await Pt.setTo(P.transpose());
+
+                let pt = Pt.read();
+                expect(pt).toBeElementwiseNearlyEqual(p, eps);
 
                 // check if R is upper triangular
                 for(let jj = 0; jj < R.columns; jj++) {
-                    let rj = await R.column(jj).rowSpan(jj, R.rows-1).read();
-                    let rjj = await R.column(jj).row(jj).read();
+                    let rj = R.block(jj, R.rows-1, jj, jj).read();
+                    let rjj = R.block(jj, jj, jj, jj).read();
                     expect(norm(rj)).toBeCloseTo(Math.abs(rjj[0]));
                 }
-                let dr = await R.diagonal().read();
+
+                let D = Speedy.Matrix.Zeros(Math.min(R.rows, R.columns), 1);
+                await D.setTo(R.diagonal());
+
+                let dr = D.read();
                 expect(norm(dr)).not.toBeCloseTo(0);
             });
 
             it('computes a reduced QR decomposition of a non-square matrix', async function() {
-                let A = RandomMatrix(4, 3, 'float64'); // m x n
-                let QR = Speedy.Matrix.Zeros(4, 6, 'float64'); // m x 2n
-                let Q = QR.block(0, 3, 0, 2); // m x n
-                let R = QR.block(0, 2, 3, 5); // n x n
+                let A = RandomMatrix(4, 3); // m x n
+                let Q = Speedy.Matrix.Zeros(4, 3); // m x n
+                let R = Speedy.Matrix.Zeros(3, 3); // n x n
+                let QR = Speedy.Matrix.Zeros(4, 3);
+                let QQt = Speedy.Matrix.Zeros(4, 4);
+                let I = Speedy.Matrix.Eye(Q.rows, Q.columns);
 
-                await QR.assign(A.qr('reduced'));
+                await Speedy.Matrix.qr(Q, R, A, { mode: 'reduced' });
+                await QR.setTo(Q.times(R));
+                await QQt.setTo(Q.times(Q.transpose()));
 
                 await printm('A = ', A);
                 await printm('Q = ', Q);
                 await printm('R = ', R);
-                await printm('QR = ', Q.times(R));
+                await printm('QR = ', QR);
 
-                let a = await A.read();
-                let qr = await Q.times(R).read();
+                let a = A.read();
+                let qr = QR.read();
 
                 // check if A = QR
-                qr.length = a.length;
-                expect(qr).toBeElementwiseNearlyEqual(a);
-
-                // check if (Q^T) Q = I
-                let qtq = await Q.transpose().times(Q).read();
-                let I = Speedy.Matrix.Eye(Q.columns, Q.columns);
-                let i_ = await I.read();
-                expect(qtq).toBeElementwiseNearlyEqual(i_);
+                expect(qr).toBeElementwiseNearlyEqual(a, eps);
 
                 // check if P = Q (Q^T) is a projector (i.e., P = P^2)
-                let P = Q.times(Q.transpose());
-                let P2 = P.times(P);
-                let p = await P.read(), p2 = await P2.read();
-                expect(p2).toBeElementwiseNearlyEqual(p);
+                let P = Speedy.Matrix.Zeros(QQt.rows, QQt.columns);
+                await P.setTo(QQt);
+
+                let P2 = Speedy.Matrix.Zeros(P.rows, P.columns);
+                await P2.setTo(P.times(P));
+
+                let p = P.read(), p2 = P2.read();
+                expect(p2).toBeElementwiseNearlyEqual(p, eps);
 
                 // check if P = Q (Q^T) is an orthogonal projector (i.e., P = P^T)
-                let Pt = P.transpose();
-                let pt = await Pt.read();
-                expect(pt).toBeElementwiseNearlyEqual(p);
+                let Pt = Speedy.Matrix.Zeros(P.columns, P.rows);
+                await Pt.setTo(P.transpose());
+
+                let pt = Pt.read();
+                expect(pt).toBeElementwiseNearlyEqual(p, eps);
 
                 // check if R is upper triangular
                 for(let jj = 0; jj < R.columns; jj++) {
-                    let rj = await R.column(jj).rowSpan(jj, R.rows-1).read();
-                    let rjj = await R.column(jj).row(jj).read();
+                    let rj = R.block(jj, R.rows-1, jj, jj).read();
+                    let rjj = R.block(jj, jj, jj, jj).read();
                     expect(norm(rj)).toBeCloseTo(Math.abs(rjj[0]));
                 }
-                let dr = await R.diagonal().read();
+
+                let D = Speedy.Matrix.Zeros(Math.min(R.rows, R.columns), 1);
+                await D.setTo(R.diagonal());
+
+                let dr = D.read();
                 expect(norm(dr)).not.toBeCloseTo(0);
             });
-
-            it('computes Q\'b using reduced QR', async function() {
-                let A = Speedy.Matrix(4, 3, [ // m x n
-                    1, 1, 0, 0,
-                    0, 0, 1, -1,
-                    -1, -3, 1, 1,
-                ]);
-                let b = Speedy.Matrix(4, 1, [ // m x 1
-                    4, 6, -1, 2
-                ]);
-
-                let QR = Speedy.Matrix.Zeros(4, 6); // m x 2n
-                let Q = QR.block(0, 3, 0, 2); // m x n
-                let R = QR.block(0, 2, 3, 5); // n x n
-                let Qtb = Speedy.Matrix.Zeros(3, 1); // n x 1
-
-                let QtbR = Speedy.Matrix.Zeros(4, 4); // m x (1+n) [Q'b | R]
-                let Qtb_ = QtbR.column(0).rowSpan(0, 2); // n x 1
-                let R_ = QtbR.block(0, 2, 1, 3); // n x n
-
-                await QR.assign(A.qr('reduced'));
-                await Qtb.assign(Q.transpose().times(b));
-                await QtbR.assign(A._qrSolve(b));
-
-                expect(await Qtb_.read()).toBeElementwiseNearlyEqual(await Qtb.read());
-                expect(await R_.read()).toBeElementwiseNearlyEqual(await R.read());
-            });
-
         });
 
 
@@ -1038,10 +896,10 @@ describe('Matrix', function() {
                         let b = Speedy.Matrix(2, 1, [
                             9, 6
                         ]);
-                        let x = Speedy.Matrix(2, 1);
+                        let x = Speedy.Matrix.Zeros(2, 1);
                         let soln = [ 7.5, -1.5 ];
 
-                        await x.assign(A.solve(b, method));
+                        await Speedy.Matrix.solve(x, A, b, { method });
 
                         await printm('A = ', A);
                         await printm('b = ', b);
@@ -1059,10 +917,10 @@ describe('Matrix', function() {
                         let b = Speedy.Matrix(3, 1, [
                             -2, 4, 0
                         ]);
-                        let x = Speedy.Matrix(3, 1);
+                        let x = Speedy.Matrix.Zeros(3, 1);
                         let soln = [ -2, -10, -2 ];
 
-                        await x.assign(A.solve(b, method));
+                        await Speedy.Matrix.solve(x, A, b, { method });
 
                         await printm('A = ', A);
                         await printm('b = ', b);
@@ -1080,10 +938,10 @@ describe('Matrix', function() {
                         let b = Speedy.Matrix(3, 1, [
                             4, -2, 2,
                         ]);
-                        let x = Speedy.Matrix(3, 1);
+                        let x = Speedy.Matrix.Zeros(3, 1);
                         let soln = [ -5/3, 7/3, -1 ];
 
-                        await x.assign(A.solve(b, method));
+                        await Speedy.Matrix.solve(x, A, b, { method });
 
                         await printm('A = ', A);
                         await printm('b = ', b);
@@ -1100,10 +958,10 @@ describe('Matrix', function() {
                         let b = Speedy.Matrix(2, 1, [
                             0, 1
                         ]);
-                        let x = Speedy.Matrix(2, 1);
+                        let x = Speedy.Matrix.Zeros(2, 1);
 
-                        await x.assign(A.solve(b, method));
-                        let soln = await x.read();
+                        await Speedy.Matrix.solve(x, A, b, { method });
+                        let soln = x.read();
 
                         await printm('A = ', A);
                         await printm('b = ', b);
@@ -1121,10 +979,10 @@ describe('Matrix', function() {
                         let b = Speedy.Matrix(2, 1, [
                             0, 0
                         ]);
-                        let x = Speedy.Matrix(2, 1);
+                        let x = Speedy.Matrix.Zeros(2, 1);
 
-                        await x.assign(A.solve(b, method));
-                        let soln = await x.read();
+                        await Speedy.Matrix.solve(x, A, b, { method });
+                        let soln = x.read();
 
                         await printm('A = ', A);
                         await printm('b = ', b);
@@ -1144,7 +1002,65 @@ describe('Matrix', function() {
                             4, 6, -1, 2
                         ]);
 
-                        expect(() => A.solve(b, method)).toThrow();
+                        expect(() => Speedy.Matrix.solve(x, A, b, { method })).toThrow();
+                    });
+
+                    it('solves a upper-triangular system', async function() {
+                        let R = Speedy.Matrix(4, 4, [
+                            1, 0, 0, 0,
+                            2, -4, 0, 0,
+                            1, 1, -2, 0,
+                            -1, 7, 1, -1,
+                        ]);
+                        let b = Speedy.Matrix(4, 1, [
+                            5, 1, 1, 3,
+                        ])
+                        let x = Speedy.Matrix.Zeros(4, 1);
+                        let soln = [16, -6, -2, -3];
+
+                        await Speedy.Matrix.solve(x, R, b, { method });
+                        await printm('R = ', R, 'b = ', b, 'Solution of Rx = b:', x);
+
+                        let actual = x.read();
+                        expect(actual).toBeElementwiseEqual(soln);
+                    });
+
+                    it('solves another upper-triangular system', async function() {
+                        let R = Speedy.Matrix(3, 3, [
+                            -1, 0, 0,
+                            2, 3, 0,
+                            -1, 6, -5,
+                        ]);
+                        let b = Speedy.Matrix(3, 1, [
+                            0, 24, -15,
+                        ])
+                        let x = Speedy.Matrix.Zeros(3, 1);
+                        let soln = [ 1, 2, 3 ];
+
+                        await Speedy.Matrix.solve(x, R, b, { method });
+                        await printm('R = ', R, 'b = ', b, 'Solution of Rx = b:', x);
+
+                        let actual = x.read();
+                        expect(actual).toBeElementwiseEqual(soln);
+                    });
+
+                    it('solves a diagonal system', async function() {
+                        let D = Speedy.Matrix(3, 3, [
+                            -1, 0, 0,
+                            0, 3, 0,
+                            0, 0, -5,
+                        ]);
+                        let b = Speedy.Matrix(3, 1, [
+                            -1, 6, -15,
+                        ])
+                        let x = Speedy.Matrix.Zeros(3, 1);
+                        let soln = [ 1, 2, 3 ];
+
+                        await Speedy.Matrix.solve(x, D, b, { method });
+                        await printm('D = ', D, 'b = ', b, 'Solution of Dx = b:', x);
+
+                        let actual = x.read();
+                        expect(actual).toBeElementwiseEqual(soln);
                     });
                 });
             }
@@ -1153,6 +1069,7 @@ describe('Matrix', function() {
 
 
             describe('Least squares', function() {
+                const method = 'qr';
                 it('finds the best fit solution for an overdetermined system of 3 equations and 2 unknowns', async function() {
                     let A = Speedy.Matrix(3, 2, [
                         1, 1, 2,
@@ -1161,17 +1078,20 @@ describe('Matrix', function() {
                     let b = Speedy.Matrix(3, 1, [
                         2, 4, 8
                     ]);
-                    let x = Speedy.Matrix(2, 1);
+                    let x = Speedy.Matrix.Zeros(2, 1);
                     let soln = [ 23/7, 8/7 ];
 
-                    await x.assign(A.lssolve(b));
+                    await Speedy.Matrix.ols(x, A, b, { method });
 
                     await printm('A = ', A);
                     await printm('b = ', b);
                     await printm('Best-fit solution for Ax = b:', x);
-                    await printm('Residual |b - Ax|:', norm(await b.minus(A.times(x)).read()));
 
-                    expect(await x.read()).toBeElementwiseNearlyEqual(soln);
+                    const r = Speedy.Matrix.Zeros(b.rows, b.columns);
+                    await r.setTo(b.minus(A.times(x)));
+                    await printm('Residual |b - Ax|:', norm(r.read()));
+
+                    expect(x.read()).toBeElementwiseNearlyEqual(soln);
                 });
 
                 it('finds the best fit solution for an overdetermined system of 4 equations and 3 unknowns', async function() {
@@ -1183,17 +1103,20 @@ describe('Matrix', function() {
                     let b = Speedy.Matrix(4, 1, [
                         4, 6, -1, 2
                     ]);
-                    let x = Speedy.Matrix(3, 1);
+                    let x = Speedy.Matrix.Zeros(3, 1);
                     let soln = [ 4.5, -1.5, -0.25 ];
 
-                    await x.assign(A.lssolve(b));
+                    await Speedy.Matrix.ols(x, A, b, { method });
 
                     await printm('A = ', A);
                     await printm('b = ', b);
                     await printm('Best-fit solution for Ax = b:', x);
-                    await printm('Residual |b - Ax|:', norm(await b.minus(A.times(x)).read()));
 
-                    expect(await x.read()).toBeElementwiseNearlyEqual(soln);
+                    const r = Speedy.Matrix.Zeros(b.rows, b.columns);
+                    await r.setTo(b.minus(A.times(x)));
+                    await printm('Residual |b - Ax|:', norm(r.read()));
+
+                    expect(x.read()).toBeElementwiseNearlyEqual(soln);
                 });
 
                 it('can\'t find the best-fit solution for an underdetermined system of equations', async function() {
@@ -1204,10 +1127,10 @@ describe('Matrix', function() {
                     let b = Speedy.Matrix(2, 1, [
                         0, 0
                     ]);
-                    let x = Speedy.Matrix(2, 1);
+                    let x = Speedy.Matrix.Zeros(2, 1);
 
-                    await x.assign(A.lssolve(b));
-                    let soln = await x.read();
+                    await Speedy.Matrix.ols(x, A, b, { method });
+                    let soln = x.read();
 
                     await printm('A = ', A);
                     await printm('b = ', b);
@@ -1225,77 +1148,29 @@ describe('Matrix', function() {
                     let b = Speedy.Matrix(3, 1, [
                         9, 9, 6
                     ]);
-                    let x = Speedy.Matrix(2, 1);
+                    let x = Speedy.Matrix.Zeros(2, 1);
                     let soln = [ 7.5, -1.5 ];
 
-                    await x.assign(A.lssolve(b));
-                    let r = norm(await b.minus(A.times(x)).read());
+                    await Speedy.Matrix.ols(x, A, b, { method });
 
                     await printm('A = ', A);
                     await printm('b = ', b);
                     await printm('Best-fit solution for Ax = b:', x);
-                    await printm('Residual |b - Ax|:', r);
 
-                    expect(await x.read()).toBeElementwiseNearlyEqual(soln);
-                    expect(r).toBeCloseTo(0);
+                    const r = Speedy.Matrix.Zeros(b.rows, b.columns);
+                    await r.setTo(b.minus(A.times(x)));
+                    await printm('Residual |b - Ax|:', norm(r.read()));
+
+                    expect(x.read()).toBeElementwiseNearlyEqual(soln);
+                    expect(norm(r.read())).toBeCloseTo(0);
                 });
             });
 
 
 
 
-            describe('Triangular systems', function() {
-                it('applies back-substitution on a upper-triangular system', async function() {
-                    let bR = Speedy.Matrix(4, 5, [
-                        5, 1, 1, 3,
-                        1, 0, 0, 0,
-                        2, -4, 0, 0,
-                        1, 1, -2, 0,
-                        -1, 7, 1, -1,
-                    ]);
-                    let x = Speedy.Matrix(4, 1);
-                    let soln = [16, -6, -2, -3];
+            xdescribe('Triangular systems', function() {
 
-                    await x.assign(bR._backSubstitution());
-                    await printm('[ b | R ] = ', bR, 'Solution of Rx = b:', x);
-
-                    let actual = await x.read();
-                    expect(actual).toBeElementwiseEqual(soln);
-                });
-
-                it('applies back-substitution on another upper-triangular system', async function() {
-                    let bR = Speedy.Matrix(3, 4, [
-                        0, 24, -15,
-                        -1, 0, 0,
-                        2, 3, 0,
-                        -1, 6, -5,
-                    ]);
-                    let x = Speedy.Matrix(3, 1);
-                    let soln = [ 1, 2, 3 ];
-
-                    await x.assign(bR._backSubstitution());
-                    await printm('[ b | R ] = ', bR, 'Solution of Rx = b:', x);
-
-                    let actual = await x.read();
-                    expect(actual).toBeElementwiseEqual(soln);
-                });
-
-                it('applies back-substitution on diagonal system', async function() {
-                    let bR = Speedy.Matrix(3, 4, [
-                        -1, 6, -15,
-                        -1, 0, 0,
-                        0, 3, 0,
-                        0, 0, -5,
-                    ]);
-                    let x = Speedy.Matrix(3, 1);
-                    let soln = [ 1, 2, 3 ];
-
-                    await x.assign(bR._backSubstitution());
-                    await printm('[ b | R ] = ', bR, 'Solution of Rx = b:', x);
-
-                    let actual = await x.read();
-                    expect(actual).toBeElementwiseEqual(soln);
-                });
             });
         });
     });
