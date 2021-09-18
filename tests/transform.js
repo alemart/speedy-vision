@@ -306,7 +306,7 @@ describe('Geometric transformations', function() {
 
     describe('Planar homography with PRANSAC', function() {
 
-        const countInliers = maskdata => maskdata.reduce((sum, val) => sum + val, 0);
+        const countInliers = maskdata => maskdata.reduce((sum, val) => sum + (val | 0), 0);
         const countOutliers = maskdata => maskdata.length - countInliers(maskdata);
         const noise = (w = 1.0) => (Math.random() - 0.5) * w;
 
