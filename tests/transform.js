@@ -859,6 +859,7 @@ describe('Geometric transformations', function() {
             await printm('From:', srcQuad);
             await printm('To:', dstQuad);
 
+            const homography = Speedy.Matrix.Zeros(3, 3);
             expect(() => Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
                 method: 'dlt',
             })).toThrow();
