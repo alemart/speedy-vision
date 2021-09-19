@@ -48,19 +48,13 @@ export class SpeedyMedia
         this._source = source;
 
         /** @type {object} options */
-        this._options = this._buildOptions(options, {
-            usage: (this._source.type == MediaType.Video) ? 'dynamic' : 'static',
-        });
+        this._options = Object.freeze(options);
 
         /** @type {ColorFormat} color format */
         this._colorFormat = colorFormat;
 
         /** @type {SpeedyGPU} GPU-accelerated routines */ // FIXME
         this._gpu = options.lightweight ? Object.create(null) : new SpeedyGPU();
-
-        // warning: loading a canvas without an explicit usage flag
-        if(this._source.type == MediaType.Canvas && this._options.usage === undefined)
-            Utils.warning('Loading a canvas without an explicit usage flag. I will set the usage to "static". This will result in suboptimal performance if the canvas is animated');
     }
 
     /**
@@ -70,7 +64,7 @@ export class SpeedyMedia
      * @param {object} [options] options object
      * @returns {SpeedyPromise<SpeedyMedia>}
      */
-    static load(mediaSource, options = { })
+    static load(mediaSource, options = {})
     {
         return SpeedyMediaSource.load(mediaSource).then(source => {
             Utils.assert(source.width !== 0 && source.height !== 0);
@@ -192,7 +186,7 @@ export class SpeedyMedia
             throw new IllegalOperationError(`Can't clone a SpeedyMedia that has been released`);
 
         // clone the object
-        const clone = new SpeedyMedia(this._source, this.options, this._colorFormat);
+        const clone = new SpeedyMedia(this._source, this._options, this._colorFormat);
 
         // done!
         return SpeedyPromise.resolve(clone);
@@ -233,28 +227,6 @@ export class SpeedyMedia
             throw new IllegalOperationError('Can\'t convert SpeedyMedia to bitmap: the media hasn\'t been loaded');
 
         return new SpeedyPromise((resolve, reject) => createImageBitmap(this._source.data).then(resolve, reject));
-    }
-
-    /**
-     * Build & validate options object
-     * @param {object} options
-     * @param {object} defaultOptions
-     * @returns {object}
-     */
-    _buildOptions(options, defaultOptions)
-    {
-        // build options object
-        options = Object.assign({ }, defaultOptions, options);
-
-        // validate
-        if(options.usage != 'dynamic' && options.usage != 'static') {
-            Utils.warning(`Can't load media. Unrecognized usage option: "${options.usage}"`);
-            options.usage = defaultOptions.usage;
-            Utils.assert(options.usage == 'dynamic' || options.usage == 'static');
-        }
-
-        // done!
-        return Object.freeze(options); // must be read-only
     }
 
     /**
