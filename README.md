@@ -1908,8 +1908,8 @@ Table of methods:
 
 | Method            | Description |
 |-------------------|-------------|
-| `"pransac"` | PRANSAC is a variant of RANSAC with bounded runtime that is designed for real-time tasks. It is able to reject outliers in the data set. This is the default method. |
-| `"dlt"` | Normalized Direct Linear Transform (DLT). You should only use this method if your data set isn't polluted with outliers. |
+| `"dlt"` | Normalized Direct Linear Transform (DLT). Use this method if your data set is **not** polluted with outliers. This is the default method. |
+| `"pransac"` | PRANSAC is a variant of RANSAC with bounded runtime that is designed for real-time tasks. It is able to reject outliers in the data set. |
 
 Table of parameters:
 

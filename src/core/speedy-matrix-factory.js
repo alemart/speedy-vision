@@ -273,7 +273,7 @@ export class SpeedyMatrixFactory extends Function
      * @param {SpeedyMatrix} src 2 x n input points - source coordinates
      * @param {SpeedyMatrix} dest 2 x n input points - destination coordinates
      * @param {object} [options]
-     * @param {'pransac'|'dlt'} [options.method] method of computation
+     * @param {'dlt'|'pransac'} [options.method] method of computation
      * @param {SpeedyMatrix|null} [options.mask] (pransac) 1 x n output: i-th entry will be 1 if the i-th input point is an inlier, or 0 otherwise
      * @param {number} [options.reprojectionError] (pransac) given in pixels, used to separate inliers from outliers of a particular model (e.g., 1 pixel)
      * @param {number} [options.numberOfHypotheses] (pransac) number of hypotheses to be generated up-front (e.g., 512)
@@ -281,7 +281,7 @@ export class SpeedyMatrixFactory extends Function
      * @returns {SpeedyPromise<SpeedyMatrix>} resolves to homography
      */
     findHomography(homography, src, dest, {
-        method = 'pransac',
+        method = 'dlt',
         mask = null,
         reprojectionError = 3,
         numberOfHypotheses = 500,
