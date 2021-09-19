@@ -1267,6 +1267,7 @@ Data storage.
 ##### SpeedyMatrix.step
 
 `SpeedyMatrix.step0: number, read-only`
+
 `SpeedyMatrix.step1: number, read-only`
 
 Storage step. The (`i`, `j`) entry of the matrix is stored at `data[i * step0 + j * step1]`.
