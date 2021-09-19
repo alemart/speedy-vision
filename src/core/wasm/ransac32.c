@@ -51,7 +51,7 @@ static int compareHypotheses(const void* a, const void *b, void* context)
  * Find a homography matrix using a set of correspondences with outliers
  * This is a new implementation inspired by Nister's preemptive RANSAC idea
  * @param result 3x3 output homography matrix
- * @param mask OPTIONAL 1 x n output matrix, n >= 4, an inliers mask whose i-th entry will be 1 if the i-th input point is an outlier or 0 otherwise
+ * @param mask OPTIONAL 1 x n output matrix, n >= 4, an inliers mask whose i-th entry will be 1 if the i-th input point is an inlier or 0 otherwise
  * @param src 2 x n input matrix, n >= 4, source coordinates (u,v)
  * @param dest 2 x n input matrix, n >= 4, destination coordinates (x,y)
  * @param numberOfHypotheses number of hypotheses to be generated up-front (e.g., 512)
