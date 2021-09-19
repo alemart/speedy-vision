@@ -24,9 +24,9 @@ Build real-time stuff with **speedy-vision.js**, a GPU-accelerated Computer Visi
   * Image normalization
   * Nightvision
 * Linear Algebra
-  * Beautiful matrix algebra with fluent interfaces
-  * Efficient computations with Web Workers & Typed Arrays
-  * Solve linear systems of equations
+  * Beautiful matrix algebra with a fluent interface
+  * Efficient computations with WebAssembly
+  * Systems of linear equations
   * QR decomposition
 
 ... and more in development!
