@@ -329,7 +329,7 @@ export class SpeedyMatrix extends SpeedyMatrixExpr
     /**
      * Fill this matrix with a scalar value
      * @param {number} value
-     * @returns {SpeedyMatrix} this
+     * @returns {SpeedyPromise<SpeedyMatrix>} resolves to this
      */
     fill(value)
     {
@@ -337,7 +337,7 @@ export class SpeedyMatrix extends SpeedyMatrixExpr
 
         if(this._rows * this._columns === this._data.length) {
             this._data.fill(value);
-            return this;
+            return SpeedyPromise.resolve(this);
         }
 
         for(let column = 0; column < this._columns; column++) {
@@ -346,7 +346,7 @@ export class SpeedyMatrix extends SpeedyMatrixExpr
             }
         }
 
-        return this;
+        return SpeedyPromise.resolve(this);
     }
 
     /**
