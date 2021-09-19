@@ -1,12 +1,12 @@
 /*!
- * speedy-vision.js v0.7.1
+ * speedy-vision.js v0.8.0-wip
  * GPU-accelerated Computer Vision for JavaScript
  * https://github.com/alemart/speedy-vision-js
  * 
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-09-10T15:59:58.061Z
+ * Date: 2021-09-19T02:59:15.578Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -292,7618 +292,6 @@ process.umask = function() { return 0; };
 
 /***/ }),
 
-/***/ "./src/core/matrix/bound-matrix-operation.js":
-/*!***************************************************!*\
-  !*** ./src/core/matrix/bound-matrix-operation.js ***!
-  \***************************************************/
-/*! exports provided: BoundMatrixOperation, BoundMatrixOperationTree */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "BoundMatrixOperation", function() { return BoundMatrixOperation; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "BoundMatrixOperationTree", function() { return BoundMatrixOperationTree; });
-/* harmony import */ var _matrix_operations__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix-operations */ "./src/core/matrix/matrix-operations.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix */ "./src/core/matrix/matrix.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * bound-matrix-operation.js
- * Bound matrix operations
- */
-
-
-
-
-
-
-/**
- * A MatrixOperation bound with input & output matrices
- */
-class BoundMatrixOperation
-{
-    /**
-     * Constructor
-     * @param {?MatrixOperation} operation if null, this is just a helper no-op
-     * @param {SpeedyMatrix} outputMatrix
-     * @param {SpeedyMatrix[]} inputMatrices
-     */
-    constructor(operation, outputMatrix, inputMatrices)
-    {
-        /** @type {?MatrixOperation} matrix operation */
-        this.operation = operation;
-
-        /** @type {SpeedyMatrix} output matrix */
-        this.outputMatrix = outputMatrix;
-
-        /** @type {SpeedyMatrix[]} input matrices */
-        this.inputMatrices = inputMatrices;
-
-        // validate
-        if(this.operation !== null)
-            _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(this.operation.numberOfInputMatrices() === this.inputMatrices.length);
-
-        // make it immutable
-        return Object.freeze(this);
-    }
-}
-
-/**
- * A tree of bound matrix operations
- */
-class BoundMatrixOperationTree
-{
-    /**
-     * Constructor
-     * @param {?MatrixOperation} operation operation of this node
-     * @param {SpeedyMatrix} outputMatrix output of this operation tree
-     * @param {BoundMatrixOperationTree[]} [children] child nodes
-     * @param {BoundMatrixOperationTree[]} [subroutines] callbacks
-     */
-    constructor(operation, outputMatrix, children = [], subroutines = [])
-    {
-        /** @type {BoundMatrixOperation} operation of this node */
-        this._boundOperation = new BoundMatrixOperation(
-            operation, // if operation is null, this is just an empty node to help construct the tree
-            outputMatrix,
-            children.map(child => child._boundOperation.outputMatrix)
-        );
-
-        /** @type {BoundMatrixOperationTree[]} child nodes */
-        this._children = children;
-
-        /** @type {Array<pair<string,BoundMatrixOperationTree>>} subroutines are packed within this node */
-        this._subroutines = subroutines;
-
-        // make it immutable
-        return Object.freeze(this);
-    }
-
-    /**
-     * The operation associated with this node of the tree
-     * @returns {MatrixOperation}
-     */
-    get operation()
-    {
-        return this._boundOperation.operation;
-    }
-
-    /**
-     * The output matrix of this node of the tree
-     * @returns {SpeedyMatrix}
-     */
-    get outputMatrix()
-    {
-        return this._boundOperation.outputMatrix;
-    }
-
-    /**
-     * Pack the tree into a single BoundMatrixOperation
-     * @returns {BoundMatrixOperation}
-     */
-    pack()
-    {
-        const matrices = []; // matrices of the ENTIRE tree
-        const stack = [ [ this, false ] ];
-        const steps = [];
-
-        // transform the tree into a sequence of operations
-        while(stack.length > 0) {
-            const [ node, done ] = stack.pop();
-            if(!done) {
-                // visit children (in increasing order)
-                stack.push([ node, true ]);
-                for(let i = node._children.length - 1; i >= 0; i--)
-                    stack.push([ node._children[i], false ]);
-            }
-            else if(node._boundOperation.operation !== null) {
-                // visit this node (we skip it if the operation is null)
-                const { operation, outputMatrix, inputMatrices } = node._boundOperation;
-                const indexOfOutputMatrix = this._findOrAdd(matrices, outputMatrix);
-                const indicesOfInputMatrices = inputMatrices.map(inputMatrix => this._findOrAdd(matrices, inputMatrix));
-
-                // the operation of this node contains other operations
-                for(let i = node._subroutines.length - 1; i >= 0; i--) {
-                    const [ subname, subtree ] = node._subroutines[i];
-                    const sub = subtree.pack();
-                    const remap = mat => this._findOrAdd(indicesOfInputMatrices, this._findOrAdd(matrices, mat));
-                    sub.operation.adjustIndices(remap, sub.inputMatrices);
-                    operation.setStepsOf(subname, sub.operation.steps());
-                }
-
-                // this node becomes a step in a sequence of operations
-                const step = _matrix_operations__WEBPACK_IMPORTED_MODULE_0__["MatrixOperationSequence"].step(operation, indexOfOutputMatrix, indicesOfInputMatrices)
-                step.header.updateMetadata(outputMatrix, inputMatrices);
-                steps.push(step);
-            }
-        }
-
-        // bind the sequence of operations to the appropriate matrices
-        return new BoundMatrixOperation(
-            new _matrix_operations__WEBPACK_IMPORTED_MODULE_0__["MatrixOperationSequence"](
-                matrices.length,
-                this.outputMatrix.shape,
-                steps
-            ),
-            this.outputMatrix,
-            matrices
-        );
-    }
-
-    /**
-     * Find an element in an array. If it doesn't exist, add it.
-     * @param {Array} array
-     * @param {object|number} element
-     * @return {number} index of the element in the array
-     */
-    _findOrAdd(array, element)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(element !== undefined);
-        const idx = array.lastIndexOf(element);
-        return idx >= 0 ? idx : array.push(element) - 1;
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/matrix/linalg/basic.js":
-/*!*****************************************!*\
-  !*** ./src/core/matrix/linalg/basic.js ***!
-  \*****************************************/
-/*! exports provided: nop, fill, copy, transpose, add, subtract, multiply, multiplylt, multiplyrt, multiply3, multiplyvec, scale, compmult, outer, addInPlace */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "nop", function() { return nop; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "fill", function() { return fill; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "copy", function() { return copy; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "transpose", function() { return transpose; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "add", function() { return add; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "subtract", function() { return subtract; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "multiply", function() { return multiply; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "multiplylt", function() { return multiplylt; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "multiplyrt", function() { return multiplyrt; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "multiply3", function() { return multiply3; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "multiplyvec", function() { return multiplyvec; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "scale", function() { return scale; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "compmult", function() { return compmult; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "outer", function() { return outer; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "addInPlace", function() { return addInPlace; });
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * basic.js
- * Basic matrix operations
- */
-
-/**
- * No-operation
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function nop(header, output, inputs)
-{
-}
-
-/**
- * Fill the matrix with a constant value
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function fill(header, output, inputs)
-{
-    const { rows, columns, stride } = header;
-    const { value } = header.custom;
-    const length = output.length;
-
-    // use a memset-like operation if possible
-    if(rows * columns == length) {
-        output.fill(value, 0, length);
-        return;
-    }
-
-    // fill the columns one by one
-    for(let j = 0; j < columns; j++)
-        output.fill(value, j * stride, j * stride + rows);
-}
-
-/**
- * Copy matrix
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function copy(header, output, inputs)
-{
-    const { rows, columns, stride } = header;
-    const [ istride ] = header.strideOfInputs;
-    const [ input ] = inputs;
-    const length = output.length;
-
-    // use a memcpy-like operation if possible
-    if(length == header.lengthOfInputs[0] && rows * columns == length) {
-        output.set(input, 0, length);
-        return;
-    }
-
-    // copy values one by one
-    let i, j, oj, ij;
-    for(oj = ij = j = 0; j < columns; j++, oj += stride, ij += istride) {
-        for(i = 0; i < rows; i++)
-            output[oj + i] = input[ij + i];
-    }
-}
-
-/**
- * Transpose matrix
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function transpose(header, output, inputs)
-{
-    const { rows, columns, stride } = header;
-    const [ strideT ] = header.strideOfInputs;
-    const [ input ] = inputs;
-
-    let i, j, ii, oj;
-    for(ii = i = 0; i < rows; i++, ii += strideT) {
-        for(oj = j = 0; j < columns; j++, oj += stride)
-            output[oj + i] = input[ii + j];
-    }
-}
-
-/**
- * Add two matrices
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function add(header, output, inputs)
-{
-    const { rows, columns, stride } = header;
-    const [ strideA, strideB ] = header.strideOfInputs;
-    const [ a, b ] = inputs;
-
-    let i, j, oj, aj, bj;
-    for(aj = bj = oj = j = 0; j < columns; j++, oj += stride, bj += strideB, aj += strideA) {
-        for(i = 0; i < rows; i++)
-            output[oj + i] = a[aj + i] + b[bj + i];
-    }
-}
-
-/**
- * Subtract two matrices
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function subtract(header, output, inputs)
-{
-    const { rows, columns, stride } = header;
-    const [ strideA, strideB ] = header.strideOfInputs;
-    const [ a, b ] = inputs;
-
-    let i, j, oj, aj, bj;
-    for(aj = bj = oj = j = 0; j < columns; j++, oj += stride, bj += strideB, aj += strideA) {
-        for(i = 0; i < rows; i++)
-            output[oj + i] = a[aj + i] - b[bj + i];
-    }
-}
-
-/**
- * Multiply two matrices (e.g., C = A B)
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function multiply(header, output, inputs)
-{
-    const { rows, columns, stride } = header;
-    const [ columnsA, columnsB ] = header.columnsOfInputs;
-    const [ strideA, strideB ] = header.strideOfInputs;
-    const [ a, b ] = inputs;
-    const length = output.length;
-
-    // clear matrix
-    if(rows * columns != length) {
-        for(let c = 0; c < columns; c++)
-            output.fill(0, c * stride, c * stride + rows);
-    }
-    else
-        output.fill(0, 0, length);
-
-    // multiply taking cache locality into account
-    let i, j, k, ok, aj, bk, bjk;
-    for(ok = bk = k = 0; k < columnsB; k++, ok += stride, bk += strideB) {
-        for(aj = j = 0; j < columnsA; j++, aj += strideA) {
-            bjk = b[bk + j];
-            for(i = 0; i < rows; i++)
-                output[ok + i] += a[aj + i] * bjk;
-        }
-    }
-}
-
-/**
- * Multiply two matrices, transposing the left operand
- * (e.g., C = A^T B)
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function multiplylt(header, output, inputs)
-{
-    const { rows, columns, stride } = header;
-    const [ columnsA, columnsB ] = header.columnsOfInputs;
-    const [ rowsA, rowsB ] = header.rowsOfInputs;
-    const [ strideA, strideB ] = header.strideOfInputs;
-    const [ a, b ] = inputs;
-
-    // multiply taking cache locality into account
-    let i, j, k, aj, bk, ok, ojk;
-    for(ok = bk = k = 0; k < columnsB; k++, ok += stride, bk += strideB) {
-        for(aj = j = 0; j < columnsA; j++, aj += strideA) {
-            output[ojk = ok + j] = 0;
-            for(i = 0; i < rowsB; i++)
-                output[ojk] += a[aj + i] * b[bk + i];
-        }
-    }
-}
-
-/**
- * Multiply two matrices, transposing the right operand
- * (e.g., C = A B^T)
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function multiplyrt(header, output, inputs)
-{
-    const { rows, columns, stride } = header;
-    const [ columnsA, columnsB ] = header.columnsOfInputs;
-    const [ rowsA, rowsB ] = header.rowsOfInputs;
-    const [ strideA, strideB ] = header.strideOfInputs;
-    const [ a, b ] = inputs;
-    const length = output.length;
-
-    // clear matrix
-    if(rows * columns != length) {
-        for(let c = 0; c < columns; c++)
-            output.fill(0, c * stride, c * stride + rows);
-    }
-    else
-        output.fill(0, 0, length);
-
-    // multiply taking cache locality into account
-    let i, j, k, ok, aj, bj, bkj;
-    for(aj = bj = j = 0; j < columnsA; j++, aj += strideA, bj += strideB) {
-        for(ok = k = 0; k < rowsB; k++, ok += stride) {
-            bkj = b[bj + k];
-            for(i = 0; i < rows; i++)
-                output[ok + i] += a[aj + i] * bkj;
-        }
-    }
-}
-
-/**
- * Fast multiplication of two 3x3 matrices (A * B)
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function multiply3(header, output, inputs)
-{
-    const { stride } = header;
-    const [ matA, matB ] = inputs;
-    const [ sa, sb ] = header.strideOfInputs;
-    const sa2 = sa + sa, sb2 = sb + sb;
-    const stride2 = stride + stride;
-    const a = matA[0], b = matA[0 + sa], c = matA[0 + sa2],
-          d = matA[1], e = matA[1 + sa], f = matA[1 + sa2],
-          g = matA[2], h = matA[2 + sa], i = matA[2 + sa2],
-          j = matB[0], k = matB[0 + sb], l = matB[0 + sb2],
-          m = matB[1], n = matB[1 + sb], o = matB[1 + sb2],
-          p = matB[2], q = matB[2 + sb], r = matB[2 + sb2];
-
-    output[0] = a*j + b*m + c*p;
-    output[1] = d*j + e*m + f*p;
-    output[2] = g*j + h*m + i*p;
-
-    output[0 + stride] = a*k + b*n + c*q;
-    output[1 + stride] = d*k + e*n + f*q;
-    output[2 + stride] = g*k + h*n + i*q;
-
-    output[0 + stride2] = a*l + b*o + c*r;
-    output[1 + stride2] = d*l + e*o + f*r;
-    output[2 + stride2] = g*l + h*o + i*r;
-}
-
-/**
- * Multiply by a column-vector
- * (i.e., y = A x)
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function multiplyvec(header, output, inputs)
-{
-    const [ irows ] = header.rowsOfInputs;
-    const [ icolumns ] = header.columnsOfInputs;
-    const [ istride ] = header.strideOfInputs;
-    const [ a, x ] = inputs;
-
-    output.fill(0, 0, irows);
-
-    let i, j, aj, xj;
-    for(aj = j = 0; j < icolumns; j++, aj += istride) {
-        xj = x[j];
-        for(i = 0; i < irows; i++)
-            output[i] += a[aj + i] * xj;
-    }
-}
-
-/**
- * Multiply by a constant
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function scale(header, output, inputs)
-{
-    const { rows, columns, stride } = header;
-    const { scalar } = header.custom;
-    const [ input ] = inputs;
-
-    let i, j, oj;
-    for(j = 0; j < columns; j++) {
-        oj = j * stride;
-        for(i = 0; i < rows; i++)
-            output[oj + i] = input[oj + i] * scalar;
-    }
-}
-
-/**
- * Component-wise multiplication
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function compmult(header, output, inputs)
-{
-    const { rows, columns, stride } = header;
-    const [ strideA, strideB ] = header.strideOfInputs;
-    const [ a, b ] = inputs;
-
-    let i, j, oj, aj, bj;
-    for(aj = bj = oj = j = 0; j < columns; j++, oj += stride, aj += strideA, bj += strideB) {
-        for(i = 0; i < rows; i++)
-            output[oj + i] = a[aj + i] * b[bj + i];
-    }
-}
-
-/**
- * Outer product (m x 1 vector by 1 x n vector)
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function outer(header, output, inputs)
-{
-    const { rows, columns, stride } = header;
-    const [ strideA, strideB ] = header.strideOfInputs;
-    const [ a, b ] = inputs;       
-
-    let i, j, bj, oj, obj;
-    for(obj = oj = j = 0; j < columns; j++, oj += stride, obj += strideB) {
-        bj = b[obj]; //b[j * strideB];
-        for(i = 0; i < rows; i++)
-            output[oj + i] = a[i] * bj;
-    }
-}
-
-/**
- * Given matrices A and B, scalars alpha and beta,
- * compute the sum (alpha A + beta B). The output
- * array can be one of the input arrays
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function addInPlace(header, output, inputs)
-{
-    const { rows, columns, stride } = header;
-    const [ strideA, strideB ] = header.strideOfInputs;
-    const { alpha, beta } = header.custom;
-    const [ a, b ] = inputs;
-
-    let i, j, oj, aj, bj;
-    for(aj = bj = oj = j = 0; j < columns; j++, oj += stride, aj += strideA, bj += strideB) {
-        for(i = 0; i < rows; i++)
-            output[oj + i] = alpha * a[aj + i] + beta * b[bj + i];
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/matrix/linalg/functional.js":
-/*!**********************************************!*\
-  !*** ./src/core/matrix/linalg/functional.js ***!
-  \**********************************************/
-/*! exports provided: map, reduce, sort */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "map", function() { return map; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "reduce", function() { return reduce; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "sort", function() { return sort; });
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * functional.js
- * Functional programming
- */
-
-/**
- * Map the blocks of a matrix
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function map(header, output, inputs)
-{
-    const [ input, mapfn, bi, index ] = inputs;
-    const { rows, columns, stride } = header;
-    const [ istride, mstride, bistride ] = header.strideOfInputs;
-    const [ outputBlockRows, outputBlockColumns ] = [ header.rowsOfInputs[1], header.columnsOfInputs[1] ];
-    const [ blockRows, blockColumns ] = [ header.rowsOfInputs[2], header.columnsOfInputs[2] ];
-    const [ ilength, bilength ] = [ inputs[0].length, inputs[2].length ];
-    const n = columns / blockColumns;
-    const biidx = 2; //inputs.indexOf(bi);
-    const blkopt = (bistride === istride && bilength === ilength);
-    const block = blkopt ? Array.from({ length: n }, (_, i) => input.subarray(i * istride * blockColumns, (i+1) * istride * blockColumns)) : null;
-    let b, i, j, ij, oj;
-
-    // for each block
-    for(b = 0; b < n; b++) {
-        // copy block[b] to bi
-        if(block != null)
-            inputs[biidx] = block[b];
-        else for(oj = 0, ij = b * istride * blockColumns, j = 0; j < blockColumns; j++, oj += bistride, ij += istride) {
-            for(i = 0; i < blockRows; i++)
-                bi[oj + i] = input[ij + i];
-        }
-
-        // call mapfn(bi, index)
-        index[0] = b;
-        this.subroutine('mapfn', header, inputs);
-
-        // copy mapfn to outputBlock[b]
-        for(oj = b * outputBlockColumns * stride, ij = 0, j = 0; j < outputBlockColumns; j++, oj += stride, ij += mstride) {
-            for(i = 0; i < outputBlockRows; i++)
-                output[oj + i] = mapfn[ij + i];
-        }
-    }
-
-    // restore pointer
-    inputs[biidx] = bi;
-}
-
-/**
- * Reduce the blocks of a matrix
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function reduce(header, output, inputs)
-{
-    const [ input, reducefn, accumulator, bi, index, initial ] = inputs;
-    const { rows, columns, stride } = header;
-    const [ istride, rstride, astride, bistride, indexstride, initialstride ] = header.strideOfInputs;
-    const [ ilength, rlength, alength, bilength, indexlength, initiallength ] = inputs.map(m => m.length);
-    const [ blockRows, blockColumns ] = [ header.rowsOfInputs[3], header.columnsOfInputs[3] ];
-    const length = output.length;
-    const begopt = (astride === initialstride && alength === initiallength);
-    const midopt = (astride === rstride && alength === rlength);
-    const endopt = (astride === stride && alength === length);
-    const blkopt = (bistride === istride && bilength === ilength);
-    const n = header.columnsOfInputs[0] / blockColumns;
-    const biidx = 3; //inputs.indexOf(bi);
-    const block = blkopt ? Array.from({ length: n }, (_, i) => input.subarray(i * istride * blockColumns, (i+1) * istride * blockColumns)) : null;
-    let b, i, j, ij, oj;
-
-    // copy the initial matrix to the accumulator
-    if(begopt) // optimize copy
-        accumulator.set(initial); // memcpy()-like - is it required that dtype of accumulator === dtype of initial ?
-    else for(oj = 0, ij = 0, j = 0; j < columns; j++, ij += initialstride, oj += astride) {
-        for(i = 0; i < rows; i++)
-            accumulator[oj + i] = initial[ij + i];
-    }
-
-    // for each block
-    for(b = 0; b < n; b++) {
-        // copy block[b] to bi
-        if(block != null)
-            inputs[biidx] = block[b];
-        else for(oj = 0, ij = b * istride * blockColumns, j = 0; j < blockColumns; j++, oj += bistride, ij += istride) {
-            for(i = 0; i < blockRows; i++)
-                bi[oj + i] = input[ij + i];
-        }
-
-        // call reducefn(accumulator, bi, index)
-        index[0] = b;
-        this.subroutine('reducefn', header, inputs);
-
-        // copy reducefn to the accumulator
-        if(midopt)
-            accumulator.set(reducefn);
-        else for(oj = 0, ij = 0, j = 0; j < columns; j++, ij += rstride, oj += astride) {
-            for(i = 0; i < rows; i++)
-                accumulator[oj + i] = reducefn[ij + i];
-        }
-    }
-
-    // copy the accumulator to the output
-    if(endopt)
-        output.set(accumulator);
-    else for(oj = 0, ij = 0, j = 0; j < columns; j++, ij += astride, oj += stride) {
-        for(i = 0; i < rows; i++)
-            output[oj + i] = accumulator[ij + i];
-    }
-
-    // restore pointer
-    inputs[biidx] = bi;
-}
-
-/**
- * Sort the blocks of a matrix
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function sort(header, output, inputs)
-{
-    const [ input, cmp, bi, bj ] = inputs;
-    const { rows, columns, stride } = header;
-    const [ istride, cmpstride, bistride, bjstride ] = header.strideOfInputs;
-    const [ ilength, cmplength, bilength, bjlength ] = inputs.map(m => m.length);
-    const [ blockRows, blockColumns ] = [ header.rowsOfInputs[2], header.columnsOfInputs[2] ];
-    const n = columns / blockColumns;
-    const biidx = 2, bjidx = 3; //const biidx = inputs.indexOf(bi), bjidx = inputs.indexOf(bj);
-    const biopt = (bistride === istride && bilength === ilength), bjopt = (bjstride === istride && bjlength === ilength); // note: bistride === bjstride
-    const block = biopt && bjopt ? Array.from({ length: n }, (_, i) => input.subarray(i * istride * blockColumns, (i+1) * istride * blockColumns)) : null;
-    const permutation = this.range(n);
-    const stack = (new Array(n)).fill(0);
-    let top = -1, l = 0, r = 0, p = 0, pivot = 0;
-    let i, j, oj, ij;
-    let a, b, c, t;
-
-    // quicksort on a permutation of indices of blocks
-    stack[++top] = 0;
-    stack[++top] = n - 1;
-    while(top >= 0) {
-        r = stack[top--];
-        l = stack[top--];
-
-        // partition
-        p = (l + r) >>> 1;
-        pivot = permutation[p];
-
-        // copy block[pivot] to bj
-        if(block != null)
-            inputs[bjidx] = block[pivot]; // it's faster if we just set a reference
-        else for(oj = 0, ij = pivot * istride * blockColumns, j = 0; j < blockColumns; j++, oj += bjstride, ij += istride) {
-            for(i = 0; i < blockRows; i++)
-                bj[oj + i] = input[ij + i];
-        }
-
-        a = l - 1; b = r + 1;
-        for(;;) {
-            do {
-                a++;
-
-                // copy block[permutation[a]] to bi
-                if(block != null)
-                    inputs[biidx] = block[permutation[a]];
-                else for(oj = 0, ij = permutation[a] * istride * blockColumns, j = 0; j < blockColumns; j++, oj += bistride, ij += istride) {
-                    for(i = 0; i < blockRows; i++)
-                        bi[oj + i] = input[ij + i];
-                }
-
-                // is block[permutation[a]] < block[pivot] ?
-                this.subroutine('cmp', header, inputs);
-            } while(cmp[0] < 0 && a < r);
-
-            do {
-                b--;
-
-                // copy block[permutation[b]] to bi
-                if(block != null)
-                    inputs[biidx] = block[permutation[b]];
-                else for(oj = 0, ij = permutation[b] * istride * blockColumns, j = 0; j < blockColumns; j++, oj += bistride, ij += istride) {
-                    for(i = 0; i < blockRows; i++)
-                        bi[oj + i] = input[ij + i];
-                }
-
-                // is block[permutation[b]] > block[pivot] ?
-                this.subroutine('cmp', header, inputs);
-            } while(cmp[0] > 0 && b > l);
-
-            // swap elements
-            if(a < b) {
-                t = permutation[a];
-                permutation[a] = permutation[b];
-                permutation[b] = t;
-            }
-            else break;
-        }
-
-        // recursion
-        p = b;
-        if(l < p) {
-            stack[++top] = l;
-            stack[++top] = p;
-        }
-        if(r > p + 1) {
-            stack[++top] = p + 1;
-            stack[++top] = r;
-        }
-    }
-
-    // apply permutation
-    for(b = 0; b < n; b++) { // for each block...
-        c = permutation[b] * blockColumns; // for each column...
-        for(oj = b * blockColumns * stride, ij = c * istride, j = 0; j < blockColumns; j++, oj += stride, ij += istride) {
-            for(i = 0; i < blockRows; i++)
-                output[oj + i] = input[ij + i];
-        }
-    }
-
-    // restore pointers
-    inputs[biidx] = bi;
-    inputs[bjidx] = bj;
-}
-
-/***/ }),
-
-/***/ "./src/core/matrix/linalg/homography.js":
-/*!**********************************************!*\
-  !*** ./src/core/matrix/linalg/homography.js ***!
-  \**********************************************/
-/*! exports provided: homography4p, homographynorm4p, homographydlt, homographynormdlt, dltnorm2d */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "homography4p", function() { return homography4p; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "homographynorm4p", function() { return homographynorm4p; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "homographydlt", function() { return homographydlt; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "homographynormdlt", function() { return homographynormdlt; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "dltnorm2d", function() { return dltnorm2d; });
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * homography.js
- * Find homography matrix
- */
-
-/*
-
-Suppose that we want to use 4 correspondences (uk, vk) <-> (xk, yk) to
-find a homography matrix H that maps (u,v) to (x,y):
-
-    [ a  b  c ]
-H = [ d  e  f ]
-    [ g  h  i ]
-
-One way to do it is to solve the equation below (we set i = 1):
-
-[ u0  v0  1   0   0   0  -u0*x0  -v0*x0 ] [ a ]   [ x0 ]
-[ u1  v1  1   0   0   0  -u1*x1  -v1*x1 ] [ b ]   [ x1 ]
-[ u2  v2  1   0   0   0  -u2*x2  -v2*x2 ] [ c ]   [ x2 ]
-[ u3  v3  1   0   0   0  -u3*x3  -v3*x3 ] [ d ] = [ x3 ]
-[ 0   0   0   u0  v0  1  -u0*y0  -v0*y0 ] [ e ]   [ y0 ]
-[ 0   0   0   u1  v1  1  -u1*y1  -v1*y1 ] [ f ]   [ y1 ]
-[ 0   0   0   u2  v2  1  -u2*y2  -v2*y2 ] [ g ]   [ y2 ]
-[ 0   0   0   u3  v3  1  -u3*y3  -v3*y3 ] [ h ]   [ y3 ]
-
-It turns out that this equation gets a bit simpler if we transform
-points to/from the unit square centered at 0.5, i.e., [0,1] x [0,1].
-
-In fact, I can solve this equation using pen and paper and type in a
-closed formula, which I did!
-
-No Gaussian elimination, no SVD, no loops, nothing! This should run
-very fast.
-
-Note: it's also possible to solve this equation directly (without the
-unit square). However, the algebra is quite messy and I'm not sure it
-will be any better, numerically speaking, than the approach I'm taking.
-
-*/
-
-/**
- * Find a homography using 4 correspondences of points. We'll map
- * (u,v) to (x,y). The input matrices are expected to have the form:
- * 
- * [ u0  u1  u2  u3 ] [ x0  x1  x2  x3 ]
- * [ v0  v1  v2  v3 ] [ y0  y1  y2  y3 ]
- * 
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function homography4p(header, output, inputs)
-{
-    const stride = header.stride;
-    const sstride = header.strideOfInputs[0];
-    const dstride = header.strideOfInputs[1];
-    const src = inputs[0], dest = inputs[1];
-    const eps = 1e-6; // avoid division by small numbers
-
-    let m00, m01, m10, m11, z0, z1, det, idet;
-    let a1, b1, c1, d1, e1, f1, g1, h1, i1;
-    let a2, b2, c2, d2, e2, f2, g2, h2, i2;
-    let a, b, c, d, e, f, g, h, i;
-
-    //
-    // Initialization
-    //
-
-    // Read (ui, vi) - source
-    const u0 = src[0],
-          v0 = src[1],
-          u1 = src[0 + sstride],
-          v1 = src[1 + sstride],
-          u2 = src[0 + 2 * sstride],
-          v2 = src[1 + 2 * sstride],
-          u3 = src[0 + 3 * sstride],
-          v3 = src[1 + 3 * sstride];
-
-    // Read (xi, yi) - destination
-    const x0 = dest[0],
-          y0 = dest[1],
-          x1 = dest[0 + dstride],
-          y1 = dest[1 + dstride],
-          x2 = dest[0 + 2 * dstride],
-          y2 = dest[1 + 2 * dstride],
-          x3 = dest[0 + 3 * dstride],
-          y3 = dest[1 + 3 * dstride];
-
-    // This is supposed to be executed many times.
-    // Should we normalize the input/output points
-    // at this stage? Let the user decide! See
-    // function homographynorm4p() below.
-
-    // Initialize homography H
-    a = b = c = d = e = f = g = h = i = Number.NaN;
-
-    do {
-
-    // Geometric constraint: given any three correspondences,
-    // the signed areas of the triangles formed by the points
-    // must have the same sign. This means that the points
-    // are in the same order, i.e., no flipping took place.
-    const s012 = u0 * (v1 - v2) + u1 * (v2 - v0) + u2 * (v0 - v1);
-    const s013 = u0 * (v1 - v3) + u1 * (v3 - v0) + u3 * (v0 - v1);
-    const s023 = u0 * (v2 - v3) + u2 * (v3 - v0) + u3 * (v0 - v2);
-    const s123 = u1 * (v2 - v3) + u2 * (v3 - v1) + u3 * (v1 - v2);
-    const z012 = x0 * (y1 - y2) + x1 * (y2 - y0) + x2 * (y0 - y1);
-    const z013 = x0 * (y1 - y3) + x1 * (y3 - y0) + x3 * (y0 - y1);
-    const z023 = x0 * (y2 - y3) + x2 * (y3 - y0) + x3 * (y0 - y2);
-    const z123 = x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2);
-    if(s012 * z012 < 0 || s013 * z013 < 0 || s023 * z023 < 0 || s123 * z123 < 0)
-        break; // goto end;
-
-    //
-    // From source to unit square
-    //
-
-    // Compute a few "cross products" (signed areas)
-    const alpha = (u3 - u0) * (v1 - v0) - (v3 - v0) * (u1 - u0);
-    const beta = (u3 - u0) * (v2 - v0) - (v3 - v0) * (u2 - u0);
-    const phi = (u1 - u0) * (v2 - v0) - (v1 - v0) * (u2 - u0);
-    const chi = (u3 - u1) * (v2 - v1) - (v3 - v1) * (u2 - u1);
-    const theta = -alpha;
-
-    // We require a quadrilateral, not a triangle,
-    // nor a line, nor a single point! Are 3 or 4
-    // points colinear?
-    if(
-        Math.abs(alpha) < eps || Math.abs(beta) < eps ||
-        Math.abs(phi) < eps || Math.abs(chi) < eps
-    )
-        break; // goto end;
-
-    // Find M and Z
-    m00 = u2 * alpha - u1 * beta;
-    m01 = v2 * alpha - v1 * beta;
-    m10 = u3 * phi - u2 * theta;
-    m11 = v3 * phi - v2 * theta;
-    z0 = beta - alpha;
-    z1 = theta - phi;
-
-    // Solve M p = z for p = [ g  h ]^t
-    det = m00 * m11 - m01 * m10;
-    if(Math.abs(det) < eps) break; // shouldn't happen
-    idet = 1.0 / det;
-    g1 = (m11 * z0 - m01 * z1) * idet;
-    h1 = (m00 * z1 - m10 * z0) * idet;
-
-    // Find the remaining entries of the homography
-    if(Math.abs(alpha) > Math.abs(beta)) {
-        a1 = (1.0 + g1 * u1 + h1 * v1) * (v3 - v0) / (-alpha);
-        b1 = (1.0 + g1 * u1 + h1 * v1) * (u3 - u0) / alpha;
-    }
-    else {
-        a1 = (1.0 + g1 * u2 + h1 * v2) * (v3 - v0) / (-beta);
-        b1 = (1.0 + g1 * u2 + h1 * v2) * (u3 - u0) / beta;
-    }
-
-    if(Math.abs(phi) > Math.abs(theta)) {
-        d1 = (1.0 + g1 * u2 + h1 * v2) * (v1 - v0) / (-phi);
-        e1 = (1.0 + g1 * u2 + h1 * v2) * (u1 - u0) / phi;
-    }
-    else {
-        d1 = (1.0 + g1 * u3 + h1 * v3) * (v1 - v0) / (-theta);
-        e1 = (1.0 + g1 * u3 + h1 * v3) * (u1 - u0) / theta;
-    }
-
-    c1 = -a1 * u0 - b1 * v0;
-    f1 = -d1 * u0 - e1 * v0;
-    i1 = 1.0;
-
-    // Bad homography?
-    det = a1*e1*i1 + b1*f1*g1 + c1*d1*h1 - b1*d1*i1 - a1*f1*h1 - c1*e1*g1;
-    if(Math.abs(det) < eps) break; // goto end;
-
-    //
-    // From unit square to destination
-    //
-
-    // Find M and z
-    m00 = x1 - x2;
-    m01 = x3 - x2;
-    m10 = y1 - y2;
-    m11 = y3 - y2;
-    z0 = (x0 - x1) + (x2 - x3);
-    z1 = (y0 - y1) + (y2 - y3);
-
-    // Solve M p = z for p = [ g  h ]^t
-    det = m00 * m11 - m01 * m10;
-    if(Math.abs(det) < eps) break; // goto end;
-    idet = 1.0 / det;
-    g2 = (m11 * z0 - m01 * z1) * idet;
-    h2 = (m00 * z1 - m10 * z0) * idet;
-
-    // Find the remaining entries of the homography
-    a2 = g2 * x1 + (x1 - x0);
-    b2 = h2 * x3 + (x3 - x0);
-    c2 = x0;
-    d2 = g2 * y1 + (y1 - y0);
-    e2 = h2 * y3 + (y3 - y0);
-    f2 = y0;
-    i2 = 1.0;
-
-    // Bad homography?
-    det = a2*e2*i2 + b2*f2*g2 + c2*d2*h2 - b2*d2*i2 - a2*f2*h2 - c2*e2*g2;
-    if(Math.abs(det) < eps) break; // goto end;
-
-    //
-    // From source to destination
-    //
-
-    // Find homography
-    a = a2 * a1 + b2 * d1 + c2 * g1;
-    b = a2 * b1 + b2 * e1 + c2 * h1;
-    c = a2 * c1 + b2 * f1 + c2 * i1;
-    d = d2 * a1 + e2 * d1 + f2 * g1;
-    e = d2 * b1 + e2 * e1 + f2 * h1;
-    f = d2 * c1 + e2 * f1 + f2 * i1;
-    g = g2 * a1 + h2 * d1 + i2 * g1;
-    h = g2 * b1 + h2 * e1 + i2 * h1;
-    i = g2 * c1 + h2 * f1 + i2 * i1;
-
-    } while(0);
-
-    // end:
-
-    // Write the matrix to the output
-    output[0] = a;
-    output[1] = d;
-    output[2] = g;
-    output[0 + stride] = b;
-    output[1 + stride] = e;
-    output[2 + stride] = h;
-    output[0 + 2 * stride] = c;
-    output[1 + 2 * stride] = f;
-    output[2 + 2 * stride] = i;
-}
-
-/**
- * Find a homography using 4 correspondences of points, given as
- * two 2 x 4 matrices. The points will be normalized FAST!
- * @param {object} header
- * @param {ArrayBufferView} output 3x3
- * @param {ArrayBufferView[]} inputs [src, dst] 2x4
- */
-function homographynorm4p(header, output, inputs)
-{
-    const stride = header.stride;
-    const sstride = header.strideOfInputs[0];
-    const dstride = header.strideOfInputs[1];
-    const stride2 = stride * 2;
-    const sstride2 = sstride * 2, sstride3 = sstride * 3;
-    const dstride2 = dstride * 2, dstride3 = dstride * 3;
-    const src = inputs[0], dst = inputs[1];
-
-    // store the points
-    const u0 = src[0],
-          v0 = src[1],
-          u1 = src[0 + sstride],
-          v1 = src[1 + sstride],
-          u2 = src[0 + sstride2],
-          v2 = src[1 + sstride2],
-          u3 = src[0 + sstride3],
-          v3 = src[1 + sstride3],
-          x0 = dst[0],
-          y0 = dst[1],
-          x1 = dst[0 + dstride],
-          y1 = dst[1 + dstride],
-          x2 = dst[0 + dstride2],
-          y2 = dst[1 + dstride2],
-          x3 = dst[0 + dstride3],
-          y3 = dst[1 + dstride3];
-
-    // find the centers of mass (scx, scy) and (dcx, dcy)
-    const scx = (u0 + u1 + u2 + u3) * 0.25,
-          scy = (v0 + v1 + v2 + v3) * 0.25,
-          dcx = (x0 + x1 + x2 + x3) * 0.25,
-          dcy = (y0 + y1 + y2 + y3) * 0.25;
-
-    // find suitable scale factors (via RMS distance)
-    const sdist = (u0 - scx) * (u0 - scx) + (v0 - scy) * (v0 - scy) +
-                  (u1 - scx) * (u1 - scx) + (v1 - scy) * (v1 - scy) +
-                  (u2 - scx) * (u2 - scx) + (v2 - scy) * (v2 - scy) +
-                  (u3 - scx) * (u3 - scx) + (v3 - scy) * (v3 - scy);
-    const ddist = (x0 - dcx) * (x0 - dcx) + (y0 - dcy) * (y0 - dcy) +
-                  (x1 - dcx) * (x1 - dcx) + (y1 - dcy) * (y1 - dcy) +
-                  (x2 - dcx) * (x2 - dcx) + (y2 - dcy) * (y2 - dcy) +
-                  (x3 - dcx) * (x3 - dcx) + (y3 - dcy) * (y3 - dcy);
-    const sscale = Math.sqrt(8.0 / sdist),
-          dscale = Math.sqrt(8.0 / ddist);
-
-    // normalize the points
-    src[0] = sscale * (u0 - scx);
-    src[1] = sscale * (v0 - scy);
-    src[0 + sstride] = sscale * (u1 - scx);
-    src[1 + sstride] = sscale * (v1 - scy);
-    src[0 + sstride2] = sscale * (u2 - scx);
-    src[1 + sstride2] = sscale * (v2 - scy);
-    src[0 + sstride3] = sscale * (u3 - scx);
-    src[1 + sstride3] = sscale * (v3 - scy);
-    dst[0] = dscale * (x0 - dcx);
-    dst[1] = dscale * (y0 - dcy);
-    dst[0 + dstride] = dscale * (x1 - dcx);
-    dst[1 + dstride] = dscale * (y1 - dcy);
-    dst[0 + dstride2] = dscale * (x2 - dcx);
-    dst[1 + dstride2] = dscale * (y2 - dcy);
-    dst[0 + dstride3] = dscale * (x3 - dcx);
-    dst[1 + dstride3] = dscale * (y3 - dcy);
-
-    // find a homography using the normalized points
-    this.homography4p(header, output, inputs);
-
-    // denormalize the points
-    src[0] = u0;
-    src[1] = v0;
-    src[0 + sstride] = u1;
-    src[1 + sstride] = v1;
-    src[0 + sstride2] = u2;
-    src[1 + sstride2] = v2;
-    src[0 + sstride3] = u3;
-    src[1 + sstride3] = v3;
-    dst[0] = x0;
-    dst[1] = y0;
-    dst[0 + dstride] = x1;
-    dst[1 + dstride] = y1;
-    dst[0 + dstride2] = x2;
-    dst[1 + dstride2] = y2;
-    dst[0 + dstride3] = x3;
-    dst[1 + dstride3] = y3;
-
-    // embed normalization and denormalization in the homography, i.e.,
-    // normalize (src space) -> apply homography -> denormalize (dst space)
-    const h00 = output[0], h01 = output[0 + stride], h02 = output[0 + stride2],
-          h10 = output[1], h11 = output[1 + stride], h12 = output[1 + stride2],
-          h20 = output[2], h21 = output[2 + stride], h22 = output[2 + stride2];
-    const s = sscale, z = 1.0 / dscale;
-    const tmp = h22 - s * (scx * h20 + scy * h21);
-
-    output[0] = s * (z * h00 + dcx * h20);
-    output[1] = s * (z * h10 + dcy * h20);
-    output[2] = s * h20;
-    output[0 + stride] = s * (z * h01 + dcx * h21);
-    output[1 + stride] = s * (z * h11 + dcy * h21);
-    output[2 + stride] = s * h21;
-    output[0 + stride2] = dcx * tmp + z * (h02 - s * (scx * h00 + scy * h01));
-    output[1 + stride2] = dcy * tmp + z * (h12 - s * (scx * h10 + scy * h11));
-    output[2 + stride2] = tmp;
-}
-
-/**
- * Find a homography using n >= 4 correspondences of points (u,v) to (x,y)
- * using Direct Linear Transform (DLT). It's recommended to normalize the
- * input before calling this function (see homographynormdlt() below).
- * The input matrices are expected to be 2 x n.
- * @param {object} header
- * @param {ArrayBufferView} output 3x3 homography matrix
- * @param {ArrayBufferView[]} inputs [ src, dest ]
- */
-function homographydlt(header, output, inputs)
-{
-    const dtype = header.dtype;
-    const n = header.columnsOfInputs[0]; // number of correspondences
-    const src = inputs[0], dest = inputs[1];
-    const stride = header.stride;
-    const sstride = header.strideOfInputs[0];
-    const dstride = header.strideOfInputs[1];
-    const astride = 2 * n;
-    const matA = this.createTypedArray(dtype, 16 * n).fill(0.0); // 2n x 8 matrix
-    const vecB = this.createTypedArray(dtype, 2 * n); // 2n x 1 matrix
-    const vecH = this.createTypedArray(dtype, 8); // 8x1 matrix
-    const eps = 1e-6;
-    let u, v, x, y, k, j, ij, iij;
-    let a, b, c, d, e, f, g, h, i, det;
-
-    /*
-    // create system of linear equations
-    [ uj  vj  1   0   0   0  -uj*xj  -vj*xj ] h  =  [ xj ]
-    [ 0   0   0   uj  vj  1  -uj*yj  -vj*yj ]       [ yj ]
-    */
-    for(ij = 0, iij = 0, j = 0, k = 0; k < n; k++, j += 2, ij += sstride, iij += dstride) {
-        u = src[ij + 0];
-        v = src[ij + 1];
-        x = dest[iij + 0];
-        y = dest[iij + 1];
-
-        matA[0 + j] = u;
-        //matA[1 + j] = 0;
-        matA[astride + 0 + j] = v;
-        //matA[astride + 1 + j] = 0.0;
-        matA[2 * astride + 0 + j] = 1.0;
-        //matA[2 * astride + 1 + j] = 0.0;
-        //matA[3 * astride + 0 + j] = 0.0;
-        matA[3 * astride + 1 + j] = u;
-        //matA[4 * astride + 0 + j] = 0.0;
-        matA[4 * astride + 1 + j] = v;
-        //matA[5 * astride + 0 + j] = 0.0;
-        matA[5 * astride + 1 + j] = 1.0;
-        matA[6 * astride + 0 + j] = -u*x;
-        matA[6 * astride + 1 + j] = -u*y;
-        matA[7 * astride + 0 + j] = -v*x;
-        matA[7 * astride + 1 + j] = -v*y;
-
-        vecB[0 + j] = x;
-        vecB[1 + j] = y;
-    }
-
-    // solve Ah = b for h
-    this.run(this.lssolve, dtype, [
-        // output
-        8, 1, 8,
-
-        // inputs
-        2*n, 8, 2*n,
-        2*n, 1, 2*n,
-    ], [ vecH, matA, vecB ]);
-
-    // read homography
-    a = vecH[0]; b = vecH[1]; c = vecH[2];
-    d = vecH[3]; e = vecH[4]; f = vecH[5];
-    g = vecH[6]; h = vecH[7]; i = 1.0;
-
-    // bad homography?
-    det = a*e*i + b*f*g + c*d*h - b*d*i - a*f*h - c*e*g;
-    if(Number.isNaN(det) || Math.abs(det) < eps)
-        a = b = c = d = e = f = g = h = i = Number.NaN;
-
-    // write homography to the output
-    const stride2 = stride + stride;
-    output[0] = a;
-    output[1] = d;
-    output[2] = g;
-    output[stride + 0] = b;
-    output[stride + 1] = e;
-    output[stride + 2] = h;
-    output[stride2 + 0] = c;
-    output[stride2 + 1] = f;
-    output[stride2 + 2] = i;
-}
-
-/**
- * Find a homography using n >= 4 correspondences of points (u,v) to (x,y)
- * using the normalized Direct Linear Transform (nDLT). The input matrices
- * are expected to be 2 x n.
- * @param {object} header
- * @param {ArrayBufferView} output 3x3 homography matrix
- * @param {ArrayBufferView[]} inputs [ src, dest ]
- */
-function homographynormdlt(header, output, inputs)
-{
-    const { dtype, stride } = header;
-    const n = header.columnsOfInputs[0];
-    const sstride = header.strideOfInputs[0];
-    const dstride = header.strideOfInputs[1];
-    const src = inputs[0], dst = inputs[1];
-    const ptsbuf = this.createTypedArray(dtype, 4 * n); // two 2 x n matrices
-    const matbuf = this.createTypedArray(dtype, 9 * 4); // four 3 x 3 matrices
-    const srcnormpts = ptsbuf.subarray(0, 2 * n);
-    const dstnormpts = ptsbuf.subarray(2 * n, 4 * n);
-    const srcnormmat = matbuf.subarray(0, 9);
-    const srcdenormmat = matbuf.subarray(9, 18); // unused results
-    const dstnormmat = matbuf.subarray(18, 27); // unused results
-    const dstdenormmat = matbuf.subarray(27, 36);
-    const hommat = dstnormmat;
-    const tmpmat = srcdenormmat;
-
-    // Normalize source points
-    this.run(this.dltnorm2d, dtype, [
-        // output
-        2, n, 2,
-
-        // inputs
-        2, n, sstride,
-        3, 3, 3,
-        3, 3, 3,
-    ], [ srcnormpts, src, srcnormmat, srcdenormmat ]);
-
-    // Normalize destination points
-    this.run(this.dltnorm2d, dtype, [
-        // output
-        2, n, 2,
-
-        // inputs
-        2, n, dstride,
-        3, 3, 3,
-        3, 3, 3,
-    ], [ dstnormpts, dst, dstnormmat, dstdenormmat ]);
-
-    // DLT using the normalized points
-    this.run(this.homographydlt, dtype, [
-        // output
-        3, 3, 3,
-
-        // inputs
-        2, n, 2,
-        2, n, 2,
-    ], [ hommat, srcnormpts, dstnormpts ]);
-
-    // Compute normalized DLT using matrix multiplications
-    this.run(this.multiply3, dtype, [
-        // output
-        3, 3, 3,
-
-        // inputs
-        3, 3, 3,
-        3, 3, 3,
-    ], [ tmpmat, hommat, srcnormmat ]);
-
-    this.run(this.multiply3, dtype, [
-        // output
-        3, 3, stride,
-
-        // inputs
-        3, 3, 3,
-        3, 3, 3,
-    ], [ output, dstdenormmat, tmpmat ]);
-
-    /*
-    // Normalize the entries of the resulting matrix
-    let i = 0;
-    let norm2 = 0.0, inorm = 0.0;
-    const stride2 = stride + stride;
-
-    for(i = 0; i < 3; i++) {
-        norm2 += output[i] * output[i];
-        norm2 += output[i + stride] * output[i + stride];
-        norm2 += output[i + stride2] * output[i + stride2];
-    }
-
-    inorm = 1.0 / Math.sqrt(norm2);
-    for(i = 0; i < 3; i++) {
-        output[i] *= inorm;
-        output[i + stride] *= inorm;
-        output[i + stride2] *= inorm;
-    }
-    */
-}
-
-/**
- * Given a set of n points (xi, yi) encoded in a 2 x n matrix,
- * find normalization and denormalization matrices (3x3) so that
- * the average distance of the normalized points to the origin
- * becomes a small constant. Returns the transformed points as
- * the output.
- * @param {object} header
- * @param {ArrayBufferView} output normalized points (2xn)
- * @param {ArrayBufferView[]} inputs [ input points (2xn), out norm matrix (3x3), out denorm matrix (3x3) ]
- */
-function dltnorm2d(header, output, inputs)
-{
-    const stride = header.stride;
-    const pstride = header.strideOfInputs[0];
-    const nstride = header.strideOfInputs[1];
-    const dstride = header.strideOfInputs[2];
-    const n = header.columnsOfInputs[0];
-    const pts = inputs[0], normmat = inputs[1], denormmat = inputs[2];
-    let cx = 0.0, cy = 0.0, dx = 0.0, dy = 0.0, d = 0.0, s = 0.0, z = 0.0;
-    let i = 0, ip = 0, io = 0;
-
-    // find the center of mass (cx, cy) = c
-    for(ip = i = 0; i < n; i++, ip += pstride) {
-        cx += pts[ip];
-        cy += pts[ip + 1];
-    }
-    cx /= n;
-    cy /= n;
-
-    // find the RMS distance to the center of mass
-    for(ip = i = 0; i < n; i++, ip += pstride) {
-        dx = pts[ip] - cx;
-        dy = pts[ip + 1] - cy;
-        d += dx * dx + dy * dy;
-    }
-    d = Math.sqrt(d / n);
-
-    // find the scale factor s
-    const SQRT2 = 1.4142135623730951;
-    s = SQRT2 / d;
-    z = d / SQRT2; // = 1/s
-
-    // write the normalization matrix
-    // given a point p, set p_normalized := s(p - c)
-    const nstride2 = nstride + nstride;
-    normmat[0] = s; normmat[0 + nstride] = 0; normmat[0 + nstride2] = -s * cx;
-    normmat[1] = 0; normmat[1 + nstride] = s; normmat[1 + nstride2] = -s * cy;
-    normmat[2] = 0; normmat[2 + nstride] = 0; normmat[2 + nstride2] = 1;
-
-    // write the denormalization matrix
-    // given a normalized point q, set q_denormalized := q/s + c
-    const dstride2 = dstride + dstride;
-    denormmat[0] = z; denormmat[0 + dstride] = 0; denormmat[0 + dstride2] = cx;
-    denormmat[1] = 0; denormmat[1 + dstride] = z; denormmat[1 + dstride2] = cy;
-    denormmat[2] = 0; denormmat[2 + dstride] = 0; denormmat[2 + dstride2] = 1;
-
-    // normalize the points
-    for(io = 0, ip = 0, i = 0; i < n; i++, ip += pstride, io += stride) {
-        output[io] = s * (pts[ip] - cx);
-        output[io + 1] = s * (pts[ip + 1] - cy);
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/matrix/linalg/inverse.js":
-/*!*******************************************!*\
-  !*** ./src/core/matrix/linalg/inverse.js ***!
-  \*******************************************/
-/*! exports provided: inverse1, inverse2, inverse3 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "inverse1", function() { return inverse1; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "inverse2", function() { return inverse2; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "inverse3", function() { return inverse3; });
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * inverse.js
- * Inverse of a matrix
- */
-
-/**
- * Inverse of a 1x1 matrix
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function inverse1(header, output, inputs)
-{
-    output[0] = 1.0 / inputs[0][0];
-}
-
-/**
- * Inverse of a 2x2 matrix
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function inverse2(header, output, inputs)
-{
-    const stride = header.stride;
-    const istride = header.strideOfInputs[0];
-    const input = inputs[0];
-
-    // read entries of the matrix
-    const a11 = input[0];
-    const a21 = input[1];
-    const a12 = input[0 + istride];
-    const a22 = input[1 + istride];
-
-    // compute the determinant
-    const det = a11 * a22 - a12 * a21;
-    const d = 1.0 / det;
-
-    // set up the inverse
-    output[0] = a22 * d;
-    output[1] = -a21 * d;
-    output[0 + stride] = -a12 * d;
-    output[1 + stride] = a11 * d;
-}
-
-/**
- * Inverse of a 3x3 matrix
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function inverse3(header, output, inputs)
-{
-    const stride = header.stride;
-    const istride = header.strideOfInputs[0];
-    const input = inputs[0];
-
-    // read entries of the matrix
-    const a11 = input[0];
-    const a21 = input[1];
-    const a31 = input[2];
-    const a12 = input[0 + istride];
-    const a22 = input[1 + istride];
-    const a32 = input[2 + istride];
-    const a13 = input[0 + istride + istride];
-    const a23 = input[1 + istride + istride];
-    const a33 = input[2 + istride + istride];
-
-    // compute auxiliary values
-    const b1 = a33 * a22 - a32 * a23;
-    const b2 = a33 * a12 - a32 * a13;
-    const b3 = a23 * a12 - a22 * a13;
-
-    // compute the determinant
-    const det = a11 * b1 - a21 * b2 + a31 * b3;
-    const d = 1.0 / det;
-
-    // set up the inverse
-    const stride2 = stride + stride;
-    output[0] = b1 * d;
-    output[1] = -(a33 * a21 - a31 * a23) * d;
-    output[2] = (a32 * a21 - a31 * a22) * d;
-    output[0 + stride] = -b2 * d;
-    output[1 + stride] = (a33 * a11 - a31 * a13) * d;
-    output[2 + stride] = -(a32 * a11 - a31 * a12) * d;
-    output[0 + stride2] = b3 * d;
-    output[1 + stride2] = -(a23 * a11 - a21 * a13) * d;
-    output[2 + stride2] = (a22 * a11 - a21 * a12) * d;
-}
-
-/***/ }),
-
-/***/ "./src/core/matrix/linalg/linalg.js":
-/*!******************************************!*\
-  !*** ./src/core/matrix/linalg/linalg.js ***!
-  \******************************************/
-/*! no static exports found */
-/***/ (function(module, exports, __webpack_require__) {
-
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * linalg.js
- * Plug & Play Linear algebra methods
- */
-
-const { MatrixType } = __webpack_require__(/*! ../matrix-type */ "./src/core/matrix/matrix-type.js");
-const LinAlgLib = {
-    ...__webpack_require__(/*! ./basic */ "./src/core/matrix/linalg/basic.js"),
-    ...__webpack_require__(/*! ./inverse */ "./src/core/matrix/linalg/inverse.js"),
-    ...__webpack_require__(/*! ./solve */ "./src/core/matrix/linalg/solve.js"),
-    ...__webpack_require__(/*! ./qr */ "./src/core/matrix/linalg/qr.js"),
-    ...__webpack_require__(/*! ./sequence */ "./src/core/matrix/linalg/sequence.js"),
-    ...__webpack_require__(/*! ./functional */ "./src/core/matrix/linalg/functional.js"),
-    ...__webpack_require__(/*! ./homography */ "./src/core/matrix/linalg/homography.js"),
-    ...__webpack_require__(/*! ./transform */ "./src/core/matrix/linalg/transform.js"),
-    ...__webpack_require__(/*! ./ransac */ "./src/core/matrix/linalg/ransac.js"),
-    ...__webpack_require__(/*! ./utils */ "./src/core/matrix/linalg/utils.js"),
-};
-
-/**
- * Plug & Play Linear Algebra methods
- * The actual Linear Algebra methods will be plugged in!
- * This is a class of static methods that can be "exported" to a WebWorker.
- * Currently, LinAlgLib methods cannot import things external to LinAlg.
- * @class
- */
-const LinAlg = (function() {
-'use strict';
-function LinAlg() { }
-
-/** @type {object} linear algebra library */
-LinAlg.lib = Object.create(null);
-
-/** @type {object} source code of methods */
-const _src = Object.create(null);
-
-/**
- * Register a method
- * @param {string} name method name
- * @param {Function} fn function code
- */
-LinAlg.register = function(name, fn)
-{
-    // validate
-    if(typeof fn !== `function`)
-        throw new Error(`Not a function: ${name}`);
-    else if(typeof name !== `string` || !name.match(/^[a-z_][0-9a-z_]*$/i))
-        throw new Error(`Undesirable identifier: ${name}`);
-    else if(LinAlg.hasMethod(name))
-        throw new Error(`Can't redefine method ${name}`);
-
-    // register method
-    const readonly = { enumerable: true, writable: false, configurable: false };
-    Object.defineProperty(LinAlg.lib, name, {
-        value: fn.bind(LinAlg.lib), // methods will be bound to LinAlg.lib
-        ...readonly
-    });
-    Object.defineProperty(_src, name, {
-        value: fn.toString(),
-        ...readonly
-    });
-};
-
-/**
- * Check if a method has been registered
- * @param {string} name method name
- * @returns {boolean}
- */
-LinAlg.hasMethod = function(name)
-{
-    return Object.prototype.hasOwnProperty.call(LinAlg.lib, name);
-}
-
-/**
- * Convert this Plug & Play class to a string
- * @returns {string}
- */
-LinAlg.toString = function()
-{
-    const methods = Object.keys(_src)
-            .map(x => `LinAlg.lib.${x} = (${_src[x]}).bind(LinAlg.lib);`)
-            .join('\n');
-
-    return `` + // IIFE
-`(function() {
-'use strict';
-function LinAlg() { }
-LinAlg.lib = Object.create(null);
-LinAlg.lib.MatrixType = (${MatrixType.toString()}).freeze();
-
-${methods}
-
-Object.freeze(LinAlg.lib);
-return Object.freeze(LinAlg);
-})()`;
-};
-
-// Import MatrixType into the lib
-Object.defineProperty(LinAlg.lib, 'MatrixType', {
-    value: MatrixType.freeze(),
-    writable: false,
-    configurable: false,
-    enumerable: false,
-});
-
-// Plug in the Linear Algebra methods
-Object.keys(LinAlgLib).forEach(method => {
-    LinAlg.register(method, LinAlgLib[method]);
-});
-
-// done!
-return Object.freeze(LinAlg);
-})();
-
-module.exports = { LinAlg };
-
-/***/ }),
-
-/***/ "./src/core/matrix/linalg/qr.js":
-/*!**************************************!*\
-  !*** ./src/core/matrix/linalg/qr.js ***!
-  \**************************************/
-/*! exports provided: qr */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "qr", function() { return qr; });
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * qr.js
- * QR decomposition
- */
-
-/**
- * QR decomposition
- * @param {object} header
- * @param {ArrayBufferView} output becomes [ Q | R ] or [ Q'x | R ] or [ Qx | R ]
- * @param {ArrayBufferView[]} inputs
- */
-function qr(header, output, inputs)
-{
-    const { stride, dtype } = header;
-    const [ orows, ocolumns ] = [ header.rows, header.columns ];
-    const [ irows, xrows ] = header.rowsOfInputs;
-    const [ icolumns, xcolumns ] = header.columnsOfInputs;
-    const [ istride ] = header.strideOfInputs;
-    const [ input, x ] = inputs;
-    const { mode } = header.custom;
-    const wantMatrices = (mode == 'full-qr' || mode == 'reduced-qr');
-
-    // create temporary storage
-    const storage = this.createTypedArray(dtype, 2 * irows * icolumns + icolumns);
-    const reflect = storage.subarray(0, irows * icolumns);
-    const tmprow = storage.subarray(irows * icolumns, irows * icolumns + icolumns);
-    const tmp = storage.subarray(irows * icolumns + icolumns, 2 * irows * icolumns + icolumns);
-
-    // create soon-to-be upper triangular matrix R
-    const rstride = stride;
-    const triangular = !wantMatrices ? output.subarray(stride) :
-        output.subarray(((mode == 'reduced-qr') ? icolumns : irows) * stride);
-
-    // input matrix is m x n and should be such that m >= n
-    if(irows < icolumns)
-        throw new Error(`Can't compute the QR decomposition of a ${irows} x ${icolumns} matrix`);
-
-    // validate the number of rows of the output
-    if(orows != irows)
-        throw new Error(`Can't compute the QR decomposition of a ${irows} x ${icolumns} matrix: expected an output matrix of ${irows} rows, but found a matrix of ${orows} rows`);
-
-    // copy input[:,:] to triangular[:,:]
-    if(input.length != triangular.length) {
-        this.runWithBlocks(this.copy, dtype, [
-            // output: 1st row, last row, 1st col, last col, stride
-            0, irows-1, 0, icolumns-1, rstride,
-
-            // inputs
-            0, irows-1, 0, icolumns-1, istride,
-        ], [ triangular, input ]);
-    }
-    else
-        triangular.set(input, 0, input.length);
-
-    // Compute the reflection vectors and the upper triangular matrix R
-    let i, j, k, n, norm, sign, fkk, rkk;
-    for(k = 0; k < icolumns; k++) {
-        fkk = k * irows + k; // reflector index
-        rkk = k * rstride + k; // upper-triangular R
-
-        n = irows - k; // the k-th reflection vector has n components
-        sign = (+(triangular[rkk] >= 0)) - (+(triangular[rkk] < 0)); // sign(triangular[k,k]) is +1 or -1
-
-        // use reflect[k:irows-1,k] to temporarily store the k-th reflection vector
-        for(i = 0; i < n; i++) // copy triangular[k:irows-1,k] to reflect[k:irows-1,k]
-            reflect[fkk + i] = triangular[rkk + i];
-        reflect[fkk] += sign * this.norm2(reflect, fkk, n); // 1st coordinate
-
-        // normalize the k-th reflection vector
-        norm = this.norm2(reflect, fkk, n);
-        // if(norm > 0) // error
-        for(i = fkk + n - 1; i >= fkk; i--)
-            reflect[i] /= norm;
-
-        // compute tmprow[0,0:icolumns-k-1] = reflect[k:irows-1,k]^T * triangular[k:irows-1,k:icolumns-1]
-        this.runWithBlocks(this.multiplylt, dtype, [
-            // output: 1st row, last row, 1st col, last col, stride
-            0, 0, 0, icolumns-k-1, 1, // row vector tmprow[0,0:icolumns-k-1]
-
-            // inputs
-            k, irows-1, k, k, irows, // reflect[k:irows-1,k]
-            k, irows-1, k, icolumns-1, rstride, // triangular[k:irows-1,k:icolumns-1]
-        ], [ tmprow, reflect, triangular ]);
-
-        // compute tmp[0:irows-k-1,0:icolumns-k-1] = reflect[k:irows-1,k] * tmprow[0,0:icolumns-k-1]
-        this.runWithBlocks(this.outer, dtype, [
-            // output: 1st row, last row, 1st col, last col, stride
-            0, irows-k-1, 0, icolumns-k-1, irows, // tmp[0:irows-k-1,0:icolumns-k-1]
-
-            // inputs
-            k, irows-1, k, k, irows, // reflect[k:irows-1,k]
-            0, 0, 0, icolumns-k-1, 1, // tmprow[0,0:icolumns-k-1], the result of the previous calculation
-        ], [ tmp, reflect, tmprow ]);
-
-        // apply Householder reflector to set the column vector triangular[k+1:irows-1,k] to zero
-        // i.e., run triangular[k:irows-1,k:icolumns-1] -= 2 * tmp[0:irows-k-1,0:icolumns-k-1]
-        this.runWithBlocks(this.addInPlace, dtype, [
-            // output: 1st row, last row, 1st col, last col, stride
-            k, irows-1, k, icolumns-1, rstride, // triangular[k:irows-1,k:icolumns-1]
-
-            // inputs
-            k, irows-1, k, icolumns-1, rstride, // triangular[k:irows-1,k:icolumns-1]
-            0, irows-k-1, 0, icolumns-k-1, irows, // tmp[0:irows-k-1,0:icolumns-k-1], the result of the previous calculation
-        ], [ triangular, triangular, tmp ], { alpha: 1, beta: -2 });
-    }
-
-    // Compute the unitary matrix Q
-    switch(mode) {
-
-        //
-        // Full QR decomposition
-        // Q: m x m, R: m x n
-        //
-        case 'full-qr': {
-            const qstride = stride;
-            const unitary = output.subarray(0, qstride * irows).fill(0);
-            let fk, qj, dot;
-
-            // validate output size
-            if(orows != irows || ocolumns != icolumns + irows)
-                throw new Error(`Can't compute the full QR decomposition of a ${irows} x ${icolumns} matrix: expected an output matrix of size ${irows} x ${icolumns + irows}, found ${orows} x ${ocolumns}`);
-
-            // apply Householder reflectors to e_j = e_1, ... , e_m
-            for(j = 0; j < irows; j++) { // for each e_j
-                qj = j * qstride;
-                unitary[qj + j] = 1; // setup e_j = [ 0 0 0 ... 1 ... 0 0 0 ]^T
-                for(k = icolumns - 1; k >= 0; k--) { // compute Q e_j = ( Q_1 ... Q_n ) e_j
-                    fk = k * irows;
-                    dot = -2 * this.dot(unitary, reflect, qj + k, fk + k, irows - k);
-                    for(i = irows - 1; i >= k; i--)
-                        unitary[qj + i] += dot * reflect[fk + i];
-                }
-            }
-
-            /*
-            // fill the lower part of R with zeros
-            let rk;
-            for(rk = k = 0; k < icolumns; k++, rk += rstride) {
-                for(i = icolumns; i < irows; i++)
-                    triangular[rk + i] = 0;
-            }
-            */
-
-            break;
-        }
-
-        //
-        // Reduced QR decomposition
-        // Q: m x n, R: n x n
-        //
-        case 'reduced-qr': {
-            const qstride = stride;
-            const unitary = output.subarray(0, qstride * icolumns).fill(0);
-            let fk, qj, dot;
-
-            // validate output size
-            if(orows != irows || ocolumns != icolumns + icolumns)
-                throw new Error(`Can't compute the reduced QR decomposition of a ${irows} x ${icolumns} matrix: expected an output matrix of size ${irows} x ${icolumns + icolumns}, found ${orows} x ${ocolumns}`);
-
-            // apply Householder reflectors to e_j = e_1, ... , e_n (n <= m)
-            for(j = 0; j < icolumns; j++) { // for each e_j
-                qj = j * qstride;
-                unitary[qj + j] = 1; // setup e_j = [ 0 0 0 ... 1 ... 0 0 0 ]^T
-                for(k = icolumns - 1; k >= 0; k--) { // compute Q e_j = ( Q_1 ... Q_n ) e_j
-                    fk = k * irows;
-                    dot = -2 * this.dot(unitary, reflect, qj + k, fk + k, irows - k);
-                    for(i = irows - 1; i >= k; i--)
-                        unitary[qj + i] += dot * reflect[fk + i];
-                }
-            }
-
-            break;
-        }
-
-        //
-        // Compute y = Q'x for an input vector x (Q' means Q^T)
-        // x: m x 1, y: m x 1
-        //
-        case 'Q\'x': {
-            const ystride = stride;
-            const y = output.subarray(0, ystride);
-            const m = irows, n = icolumns;
-            let fk, dot;
-
-            // validate input / output size
-            if(m != xrows || 1 != xcolumns)
-                throw new Error(`QR decomposition: the input vector is expected to be ${m} x 1, but is ${xrows} x ${xcolumns}`);
-            else if(m != orows || 1 + n != ocolumns)
-                throw new Error(`QR decomposition: the output matrix is expected to be ${m} x ${1+n}, but is ${orows} x ${ocolumns}`);
-
-            // initialize output vector
-            for(i = 0; i < m; i++)
-                y[i] = x[i];
-
-            // apply Householder reflectors to input x
-            for(k = 0; k < n; k++) { // compute Q'x = ( Q_n ... Q_1 ) x
-                fk = k * irows; // get the k-th reflector
-                dot = -2 * this.dot(y, reflect, k, fk + k, m - k);
-                for(i = k; i < m; i++)
-                    y[i] += dot * reflect[fk + i];
-            }
-
-            break;
-        }
-
-        //
-        // Compute Qx for an input vector x
-        // x: m x 1, y: m x 1
-        //
-        case 'Qx': {
-            const ystride = stride;
-            const y = output.subarray(0, ystride);
-            const m = irows, n = icolumns;
-            let fk, dot;
-
-            // validate input / output size
-            if(m != xrows || 1 != xcolumns)
-                throw new Error(`QR decomposition: the input vector is expected to be ${m} x 1, but is ${xrows} x ${xcolumns}`);
-            else if(m != orows || 1 + n != ocolumns)
-                throw new Error(`QR decomposition: the output matrix is expected to be ${m} x ${1+n}, but is ${orows} x ${ocolumns}`);
-
-            // initialize output vector
-            for(i = 0; i < m; i++)
-                y[i] = x[i];
-
-            // apply Householder reflectors to input x
-            for(k = n - 1; k >= 0; k--) { // compute Qx = ( Q_1 ... Q_n ) x
-                fk = k * irows; // get the k-th reflector
-                dot = -2 * this.dot(y, reflect, k, fk + k, m - k);
-                for(i = k; i < m; i++)
-                    y[i] += dot * reflect[fk + i];
-            }
-
-            break;
-        }
-
-        //
-        // Compute y = Q'x for an input vector x using reduced QR
-        // x: m x 1, y: m x 1
-        //
-        case 'reduced-Q\'x': {
-            const m = irows, n = icolumns;
-            const y = output.subarray(0, n); // output[n..m-1] is unused
-            const e = tmp.subarray(0, m); // e_j is m x 1, for all j = 0, 1 .. n-1
-            let fk, dot;
-
-            // validate input / output size
-            if(m != xrows || 1 != xcolumns)
-                throw new Error(`QR decomposition: the input vector is expected to be ${m} x 1, but is ${xrows} x ${xcolumns}`);
-            else if(m != orows || 1 + n != ocolumns)
-                throw new Error(`QR decomposition: the output matrix is expected to be ${m} x ${1+n}, but is ${orows} x ${ocolumns}`);
-
-            // apply Householder reflectors
-            for(j = 0; j < n; j++) { // for each e_j
-                // setup e_j = [ 0 0 0 ... 1 ... 0 0 0 ]^T
-                e.fill(0);
-                e[j] = 1;
-
-                // compute Q e_j = ( Q_1 ... Q_n ) e_j
-                for(k = n - 1; k >= 0; k--) {
-                    fk = k * irows;
-                    dot = -2 * this.dot(e, reflect, k, fk + k, m - k);
-                    for(i = m - 1; i >= k; i--)
-                        e[i] += dot * reflect[fk + i];
-                }
-
-                // compute y_j = dot(x, Q e_j)
-                y[j] = this.dot(x, e, 0, 0, m);
-            }
-
-            break;
-        }
-
-        default:
-            throw new Error(`QR decomposition: unknown mode "${mode}"`);
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/matrix/linalg/ransac.js":
-/*!******************************************!*\
-  !*** ./src/core/matrix/linalg/ransac.js ***!
-  \******************************************/
-/*! exports provided: pransacHomography */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "pransacHomography", function() { return pransacHomography; });
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * ransac.js
- * Variants of RANSAC
- */
-
-/**
- * P-RANSAC for homography estimation
- * This is a new JavaScript implementation based on Nister's preemptive RANSAC idea
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function pransacHomography(header, output, inputs)
-{
-    const { dtype, rows, columns, stride } = header;
-    const src = inputs[0], dst = inputs[1]; // 2 x n matrices featuring source & destination points
-    const mask = inputs[2]; // 1 x n matrix
-    const n = header.columnsOfInputs[0]; // number of points
-    const sstride = header.strideOfInputs[0];
-    const dstride = header.strideOfInputs[1];
-    const mstride = header.strideOfInputs[2];
-    const { numberOfHypotheses, bundleSize, reprojectionError } = header.custom;
-    const reprojErr2 = reprojectionError * reprojectionError;
-    const ptsPerHyp = 4 * numberOfHypotheses; // need 4 points per hypothesis
-    const len = ptsPerHyp + n - (ptsPerHyp % n); // pick a multiple of n that is >= ptsPerHyp
-    const ptidx = Array.from({ length: len }, (_, i) => i % n); // indices of points
-    const permutation = this.shuffle(this.range(n));
-    const hypbuf = this.createTypedArray(dtype, 9 * numberOfHypotheses);
-    function Hypothesis(mat) { this.mat = mat; this.err = 0; }
-    const hypothesis = Array.from({ length: numberOfHypotheses },
-        (_, i) => new Hypothesis(hypbuf.subarray(9 * i, 9 * (i+1)))
-    );
-    const smat = this.createTypedArray(dtype, 8), dmat = this.createTypedArray(dtype, 8);
-    const hompts = [ smat, dmat ];
-    const homheader = this.run(null, dtype, [ 3, 3, 3, 2, 4, 2, 2, 4, 2 ], [ hypothesis[0].mat, smat, dmat ]);
-    const cmp = (hi, hj) => hi.err - hj.err;
-    const b = bundleSize;
-    let m = numberOfHypotheses;
-    let h = 0, i = 0, j = 0, ij = 0, iij = 0, oj = 0;
-    let p0 = 0, p1 = 0, p2 = 0, p3 = 0;
-    let x = 0.0, y = 0.0, z = 0.0, dx = 0.0, dy = 0.0, sx = 0.0, sy = 0.0, hx = 0.0, hy = 0.0;
-    let hom = hypothesis[0].mat;
-    let badcnt = 0;
-
-    // Shuffle input
-    for(i = 0; i < len; i += n)
-        this.shuffle(ptidx, i, i+n);
-
-    // Generate m hypotheses
-    for(h = 0; h < m; h++) {
-        // pick 4 points at random
-        j = 4 * h;
-        p0 = ptidx[j]
-        p1 = ptidx[j + 1];
-        p2 = ptidx[j + 2];
-        p3 = ptidx[j + 3];
-
-        // set reference
-        hom = hypothesis[h].mat;
-
-        // grab source points
-        smat[0] = src[sstride * p0 + 0];
-        smat[1] = src[sstride * p0 + 1];
-        smat[2] = src[sstride * p1 + 0];
-        smat[3] = src[sstride * p1 + 1];
-        smat[4] = src[sstride * p2 + 0];
-        smat[5] = src[sstride * p2 + 1];
-        smat[6] = src[sstride * p3 + 0];
-        smat[7] = src[sstride * p3 + 1];
-
-        // grab destination points
-        dmat[0] = dst[dstride * p0 + 0];
-        dmat[1] = dst[dstride * p0 + 1];
-        dmat[2] = dst[dstride * p1 + 0];
-        dmat[3] = dst[dstride * p1 + 1];
-        dmat[4] = dst[dstride * p2 + 0];
-        dmat[5] = dst[dstride * p2 + 1];
-        dmat[6] = dst[dstride * p3 + 0];
-        dmat[7] = dst[dstride * p3 + 1];
-
-        // generate hypothesis
-        this.homographynorm4p(homheader, hom, hompts);
-        //this.homography4p(homheader, hom, hompts);
-
-        // bad homography?
-        if(Number.isNaN(hom[0])) {
-            hypothesis[h].err = n; // all points are outliers
-            badcnt++;
-        }
-    }
-
-    // Remove bad homographies
-    badcnt = badcnt < m ? badcnt : m - 1;
-    hypothesis.sort(cmp);
-    hypothesis.length = (m -= badcnt);
-
-    // For each correspondence
-    for(i = 0; i < n ; i++) {
-        // cut the number of hypotheses in half (every b iterations)
-        if(i % b == 0 && m > 1) {
-            hypothesis.sort(cmp); // keep the best ones
-            m = m >>> 1; // m div 2
-            hypothesis.length = m;
-        }
-
-        // we've got only 1 hypothesis left
-        if(m == 1)
-            break;
-
-        // pick a correspondence of points
-        //p0 = (Math.random() * n) | 0; // pick a random correspondence with replacement
-        p0 = permutation[i]; // pick a random correspondence without replacement
-        sx = src[sstride * p0 + 0]; // src_x
-        sy = src[sstride * p0 + 1]; // src_y
-        hx = dst[dstride * p0 + 0]; // dst_x
-        hy = dst[dstride * p0 + 1]; // dst_y
-
-        // evaluate the m best hypotheses so far using the p0-th correspondence
-        for(h = 0; h < m; h++) {
-            hom = hypothesis[h].mat;
-            z = hom[2] * sx + hom[5] * sy + hom[8];
-            x = (hom[0] * sx + hom[3] * sy + hom[6]) / z;
-            y = (hom[1] * sx + hom[4] * sy + hom[7]) / z;
-            dx = x - hx; dy = y - hy;
-            hypothesis[h].err += (dx * dx + dy * dy > reprojErr2) | 0;
-        }
-    }
-
-    // pick the best hypothesis j
-    for(j = 0, h = 1; h < m; h++) {
-        if(hypothesis[h].err < hypothesis[j].err)
-            j = h;
-    }
-    hom = hypothesis[j].mat;
-
-    // read the entries of the best homography
-    const h00 = hom[0], h01 = hom[3], h02 = hom[6],
-          h10 = hom[1], h11 = hom[4], h12 = hom[7],
-          h20 = hom[2], h21 = hom[5], h22 = hom[8];
-
-    // separate inliers from outliers
-    const inliers = [];
-    for(ij = 0, iij = 0, oj = 0, j = 0; j < n; j++, ij += sstride, iij += dstride, oj += mstride) {
-        sx = src[ij + 0];
-        sy = src[ij + 1];
-
-        z = h20 * sx + h21 * sy + h22;
-        x = (h00 * sx + h01 * sy + h02) / z;
-        y = (h10 * sx + h11 * sy + h12) / z;
-
-        dx = x - dst[iij + 0];
-        dy = y - dst[iij + 1];
-        if((mask[oj] = (dx * dx + dy * dy <= reprojErr2) | 0))
-            inliers.push(j);
-    }
-
-    // write the best homography to the output
-    const stride2 = stride + stride;
-    output[0] = h00;
-    output[1] = h10;
-    output[2] = h20;
-    output[0 + stride] = h01;
-    output[1 + stride] = h11;
-    output[2 + stride] = h21;
-    output[0 + stride2] = h02;
-    output[1 + stride2] = h12;
-    output[2 + stride2] = h22;
-
-    // refine the homography: use only inliers
-    if(inliers.length > 4) {
-        const cnt = inliers.length;
-        const buf = this.createTypedArray(dtype, 4 * cnt); // two 2 x cnt matrices
-        const isrc = buf.subarray(0, 2 * cnt);
-        const idst = buf.subarray(2 * cnt, 4 * cnt);
-
-        // copy the inliers to isrc and idst
-        for(i = j = 0; j < cnt; j++, i += 2) {
-            p0 = inliers[j];
-            isrc[i + 0] = src[sstride * p0 + 0];
-            isrc[i + 1] = src[sstride * p0 + 1];
-            idst[i + 0] = dst[dstride * p0 + 0];
-            idst[i + 1] = dst[dstride * p0 + 1];
-        }
-
-        // normalized DLT using inliers only
-        this.run(this.homographynormdlt, dtype, [
-            // output
-            rows, columns, stride,
-
-            // inputs
-            2, cnt, 2,
-            2, cnt, 2,
-        ], [ output, isrc, idst ]);
-
-        // Note: should we recompute the inliers mask?
-    }
-
-    // bad homography!
-    else if(inliers.length < 4) {
-        for(i = 0; i < 3; i++)
-            output[i] = output[i + stride] = output[i + stride2] = Number.NaN;
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/matrix/linalg/sequence.js":
-/*!********************************************!*\
-  !*** ./src/core/matrix/linalg/sequence.js ***!
-  \********************************************/
-/*! exports provided: sequence */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "sequence", function() { return sequence; });
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * sequence.js
- * Sequences of matrix operations
- */
-
-/**
- * A sequence of matrix operations encapsulated into one
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function sequence(header, output, inputs)
-{
-    this.subroutine('sequence', header, inputs);
-}
-
-/***/ }),
-
-/***/ "./src/core/matrix/linalg/solve.js":
-/*!*****************************************!*\
-  !*** ./src/core/matrix/linalg/solve.js ***!
-  \*****************************************/
-/*! exports provided: backsub, lssolve */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "backsub", function() { return backsub; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "lssolve", function() { return lssolve; });
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * solve.js
- * Utilities for solving linear systems of equations
- */
-
-/**
- * Back-substitution: solve Rx = b for x,
- * where R is n x n upper triangular
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs a single input of the form [ b | R ]
- */
-function backsub(header, output, inputs)
-{
-    const { rows, columns } = header;
-    const [ input ] = inputs;
-    const [ irows ] = header.rowsOfInputs;
-    const [ icolumns ] = header.columnsOfInputs;
-    const [ istride ] = header.strideOfInputs;
-
-    if(icolumns !== irows + 1)
-        throw new Error(`Invalid input for backsub: expected ${irows} x ${irows+1} or ${icolumns-1} x ${icolumns} matrix, but found ${irows} x ${icolumns} matrix`);
-    else if(rows !== irows || columns !== 1)
-        throw new Error(`Invalid output for backsub: expected ${irows} x 1 matrix, but found ${rows} x ${columns} matrix`);
-
-    // Back-substitution
-    const n = irows;
-    const x = output; // x is n x 1 vector (output)
-    const b = input.subarray(0, istride); // b is n x 1 vector
-    const r = input.subarray(istride); // R is n x n upper triangular
-    let i, j, rjj, rj = (n-1) * istride; // column index
-
-    x[n-1] = b[n-1] / r[rj + (n-1)];
-    for(j = n-2; j >= 0; j--) {
-        x[j] = b[j];
-        for(i = j+1; i < n; i++)
-            x[j] -= x[i] * r[istride * i + j];
-
-        rj -= istride;
-        rjj = r[rj + j];
-        /*
-        if(rjj === 0)
-            throw new Error(`Invalid input for backsub: ${j+1}-th diagonal element of the upper triangular matrix is zero`);
-        */
-        x[j] /= rjj;
-    }
-}
-
-/**
- * Find best-fit solution of Ax = b with least-squares method
- * A is m x n, b is m x 1, output x is n x 1
- * (m equations, n unknowns, m >= n)
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs [ A, b ]
- */
-function lssolve(header, output, inputs)
-{
-    const { stride, dtype } = header;
-    const [ m, n ] = [ header.rowsOfInputs[0], header.columnsOfInputs[0] ];
-    const [ matA, vecB ] = inputs;
-    const [ strideA, strideB ] = header.strideOfInputs;
-    const tmp = this.createTypedArray(dtype, m * (n+1));
-
-    // find [ Q'b | R ] with a reduced QR of A
-    this.run(this.qr, dtype, [
-        // output: rows, columns, stride
-        m, n+1, m,
-
-        // inputs
-        m, n, strideA,
-        m, 1, strideB,
-    ], [ tmp, matA, vecB ], { mode: "reduced-Q'x" });
-
-    // extract the top n x (n+1) submatrix of [ Q'b | R ]
-    // (the bottom rows are zeros) to solve R x = Q'b for x
-    this.runWithBlocks(this.backsub, dtype, [
-        // output: 1st row, last row, 1st col, last col, stride
-        0, n-1, 0, 0, stride, // output[0:n-1,0]
-
-        // inputs
-        0, n-1, 0, n, m, // tmp[0:n-1,0:n]
-    ], [ output, tmp ]);
-}
-
-/***/ }),
-
-/***/ "./src/core/matrix/linalg/transform.js":
-/*!*********************************************!*\
-  !*** ./src/core/matrix/linalg/transform.js ***!
-  \*********************************************/
-/*! exports provided: applyHomography, applyAffine, applyLinear2d */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "applyHomography", function() { return applyHomography; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "applyAffine", function() { return applyAffine; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "applyLinear2d", function() { return applyLinear2d; });
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * transform.js
- * Geometric transformations
- */
-
-/**
- * Apply a homography matrix to a set of 2D points
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function applyHomography(header, output, inputs)
-{
-    const { columns, stride } = header;
-    const [ hom, pts ] = inputs;
-    const [ hstride, pstride ] = header.strideOfInputs;
-    const hstride2 = hstride + hstride;
-
-    // read the entries of the homography
-    const h00 = hom[0];
-    const h10 = hom[1];
-    const h20 = hom[2];
-    const h01 = hom[0 + hstride];
-    const h11 = hom[1 + hstride];
-    const h21 = hom[2 + hstride];
-    const h02 = hom[0 + hstride2];
-    const h12 = hom[1 + hstride2];
-    const h22 = hom[2 + hstride2];
-
-    // for each point (column of pts), apply the homography
-    // (we use homogeneous coordinates internally)
-    let j, ij, oj, x, y, d;
-    for(ij = oj = j = 0; j < columns; j++, ij += pstride, oj += stride) {
-        x = pts[ij];
-        y = pts[ij + 1];
-        d = h20 * x + h21 * y + h22;
-        output[oj] = (h00 * x + h01 * y + h02) / d;
-        output[oj + 1] = (h10 * x + h11 * y + h12) / d;
-    }
-}
-
-/**
- * Apply an affine transformation to a set of 2D points
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function applyAffine(header, output, inputs)
-{
-    const { columns, stride } = header;
-    const [ mat, pts ] = inputs;
-    const [ mstride, pstride ] = header.strideOfInputs;
-    const mstride2 = mstride + mstride;
-
-    // read the entries of the transformation
-    const m00 = mat[0];
-    const m10 = mat[1];
-    const m01 = mat[0 + mstride];
-    const m11 = mat[1 + mstride];
-    const m02 = mat[0 + mstride2];
-    const m12 = mat[1 + mstride2];
-
-    // for each point (column of pts), apply the transformation
-    let j, ij, oj, x, y;
-    for(ij = oj = j = 0; j < columns; j++, ij += pstride, oj += stride) {
-        x = pts[ij];
-        y = pts[ij + 1];
-        output[oj] = m00 * x + m01 * y + m02;
-        output[oj + 1] = m10 * x + m11 * y + m12;
-    }
-}
-
-/**
- * Apply a 2x2 linear transformation to a set of 2D points
- * @param {object} header
- * @param {ArrayBufferView} output
- * @param {ArrayBufferView[]} inputs
- */
-function applyLinear2d(header, output, inputs)
-{
-    const { columns, stride } = header;
-    const [ mat, pts ] = inputs;
-    const [ mstride, pstride ] = header.strideOfInputs;
-
-    // read the entries of the transformation
-    const m00 = mat[0];
-    const m10 = mat[1];
-    const m01 = mat[0 + mstride];
-    const m11 = mat[1 + mstride];
-
-    // for each point (column of pts), apply the transformation
-    let j, ij, oj, x, y;
-    for(ij = oj = j = 0; j < columns; j++, ij += pstride, oj += stride) {
-        x = pts[ij];
-        y = pts[ij + 1];
-        output[oj] = m00 * x + m01 * y;
-        output[oj + 1] = m10 * x + m11 * y;
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/matrix/linalg/utils.js":
-/*!*****************************************!*\
-  !*** ./src/core/matrix/linalg/utils.js ***!
-  \*****************************************/
-/*! exports provided: execute, run, runWithBlocks, subroutine, createTypedArray, norm2, dot, shuffle, range */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "execute", function() { return execute; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "run", function() { return run; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "runWithBlocks", function() { return runWithBlocks; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "subroutine", function() { return subroutine; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "createTypedArray", function() { return createTypedArray; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "norm2", function() { return norm2; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "dot", function() { return dot; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "shuffle", function() { return shuffle; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "range", function() { return range; });
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * utils.js
- * Low-level utilities for Linear Algebra routines
- */
-
-/**
- * Call a Linear Algebra routine
- * @param {MatrixOperationHeader} header
- * @param {ArrayBuffer} outputBuffer
- * @param {ArrayBuffer[]} inputBuffers
- */
-function execute(header, outputBuffer, inputBuffers)
-{
-    // wrap the incoming buffers with the appropriate TypedArrays
-    const output = this.createTypedArray(header.dtype, outputBuffer, header.byteOffset, header.length);
-    const inputs = inputBuffers.map((inputBuffer, i) =>
-        this.createTypedArray(header.dtype, inputBuffer, header.byteOffsetOfInputs[i], header.lengthOfInputs[i])
-    );
-
-    // perform the computation
-    (this[header.method])(header, output, inputs);
-}
-
-/**
- * Fast & handy wrapper to run a Linear Algebra routine from another one
- * @param {?Function} fn the function that you wish to call
- * @param {string} dtypes data types
- * @param {number[]} shapes flattened triples (rows, columns, stride) of output, input1, input2, input3...
- * @param {ArrayBufferView[]} data flattened array containing output array, input1 array, input2 array...
- * @param {object} [custom] user-data
- * @returns {object} the header object that was used to call the routine
- */
-function run(fn, dtypes, shapes, data, custom = {})
-{
-    const n = data.length - 1; // number of input matrices
-    if(3 * n + 3 !== shapes.length || n < 0)
-        throw new Error(`Can't run() routine with invalid input`);
-
-    const inputs = new Array(n);
-    const rowsOfInputs = new Array(n);
-    const columnsOfInputs = new Array(n);
-    const strideOfInputs = new Array(n);
-    //const lengthOfInputs = new Array(n);
-    //const byteOffsetOfInputs = new Array(n);
-
-    for(let j = 3, i = 0; i < n; i++, j += 3) {
-        inputs[i] = data[i+1];
-        rowsOfInputs[i] = shapes[j];
-        columnsOfInputs[i] = shapes[j+1];
-        strideOfInputs[i] = shapes[j+2];
-        //lengthOfInputs[i] = data[i+1].length;
-        //byteOffsetOfInputs[i] = data[i+1].byteOffset;
-    }
-
-    const header = {
-        method: '', dtype: dtypes, custom: custom,
-
-        rows: shapes[0],
-        columns: shapes[1],
-        stride: shapes[2],
-
-        rowsOfInputs: rowsOfInputs,
-        columnsOfInputs: columnsOfInputs,
-        strideOfInputs: strideOfInputs,
-
-        /*length: data[0].length,
-        lengthOfInputs: lengthOfInputs,
-        byteOffset: data[0].byteOffset,
-        byteOffsetOfInputs: byteOffsetOfInputs,*/
-        length: 0, lengthOfInputs: [],
-        byteOffset: 0, byteOffsetOfInputs: [],
-    };
-
-    if(fn != null)
-        fn.call(this, header, data[0], inputs);
-
-    return header;
-}
-
-/**
- * Similar to run(), but this function extracts blocks of the matrices
- * Make sure you get the indices right, because they won't be checked!
- * @param {?Function} fn the function that you wish to call
- * @param {string} dtypes data types
- * @param {number[]} shapesOfBlocks flattened tuples (firstRow, lastRow, firstCol, lastCol, stride) of output, input1...
- * @param {ArrayBufferView[]} originalData flattened array containing output array, input1 array, input2 array...
- * @param {object} [custom] user-data
- * @returns {object} the header object that was used to call the routine
- */
-function runWithBlocks(fn, dtypes, shapesOfBlocks, originalData, custom = {})
-{
-    const n = originalData.length;
-    if(shapesOfBlocks.length !== 5 * n)
-        throw new Error(`Can't runWithBlocks() with invalid input`);
-
-    const newShapes = new Array(3 * n);
-    const newArrays = new Array(n);
-
-    for(let baseAddr = 0, stride = 0, j = 0, i = 0; i < n; i++, j += 3, baseAddr += 5) {
-        // compute the shape of the block
-        newShapes[j+0] = shapesOfBlocks[baseAddr+1] - shapesOfBlocks[baseAddr+0] + 1; // number of rows
-        newShapes[j+1] = shapesOfBlocks[baseAddr+3] - shapesOfBlocks[baseAddr+2] + 1; // number of columns
-        newShapes[j+2] = stride = shapesOfBlocks[baseAddr+4]; // stride
-
-        // extract subarray
-        newArrays[i] = originalData[i].subarray(
-            shapesOfBlocks[baseAddr+2] * stride + shapesOfBlocks[baseAddr+0], // 1st col * stride + 1st row
-            shapesOfBlocks[baseAddr+3] * stride + shapesOfBlocks[baseAddr+1] + 1
-        );
-    }
-
-    return this.run(fn, dtypes, newShapes, newArrays, custom);
-}
-
-/**
- * Call a stored subroutine
- * @param {string} subname
- * @param {object} header
- * @param {ArrayBufferView[]} inputs
- */
-function subroutine(subname, header, inputs)
-{
-    const steps = header.custom.subroutine[subname];
-
-    // run a sequence of operations
-    for(let i = 0, n = steps.length; i < n; i++) {
-        const step = steps[i];
-        const stepOutput = inputs[step.indexOfOutputMatrix];
-        const stepInputs = step.indicesOfInputMatrices.map(index => inputs[index]);
-        const stepMethod = this[step.header.method];
-
-        stepMethod(step.header, stepOutput, stepInputs);
-    }
-}
-
-/**
- * Create a TypedArray of the specified type
- * @param {MatrixDataType} dtype data type
- * @param {any[]} args will be passed to the constructor of the TypedArray
- * @returns {ArrayBufferView}
- */
-function createTypedArray(dtype, ...args)
-{
-    return this.MatrixType.createTypedArray(dtype, ...args);
-}
-
-/**
- * The 2-norm of a column vector
- * @param {ArrayBufferView} column
- * @param {number} [begin] first index
- * @param {number} [length]
- * @returns {number}
- */
-function norm2(column, begin = 0, length = column.length)
-{
-    let norm = 0, end = begin + length, i;
-
-    // Since we store data in column-major format,
-    // we don't need to use stride
-    for(i = begin; i < end; i++)
-        norm += column[i] * column[i];
-
-    return Math.sqrt(norm);
-}
-
-/**
- * The dot product of two column vectors
- * @param {ArrayBufferView} u
- * @param {ArrayBufferView} v
- * @param {number} [uBegin] first index 
- * @param {number} [vBegin] first index 
- * @param {number} [length] 
- */
-function dot(u, v, uBegin = 0, vBegin = 0, length = u.length)
-{
-    let dot = 0, i;
-
-    for(i = 0; i < length; i++)
-        dot += u[uBegin + i] * v[vBegin + i];
-
-    return dot;
-}
-
-/**
- * Fisher-Yates shuffle
- * @param {Array} array
- * @param {number} [begin] the index of the beginning of the subarray, inclusive
- * @param {number} [end] last index of the subarray, exclusive
- * @returns {Array} the input array, shuffled
- */
-function shuffle(array, begin = 0, end = array.length)
-{
-    begin = Math.max(begin, 0);
-    end = Math.min(end, array.length);
-
-    for(let t, j, i = end - 1; i > begin; i--) {
-        j = ((Math.random() * (i+1 - begin)) | 0) + begin;
-        t = array[i];
-        array[i] = array[j];
-        array[j] = t;
-    }
-
-    return array;
-}
-
-/**
- * Range from 0 to n-1
- * @param {number} n
- * @returns {number[]} array of length n
- */
-function range(n)
-{
-    return Array.from({ length: n }, (_, i) => i);
-}
-
-
-/***/ }),
-
-/***/ "./src/core/matrix/matrix-buffer.js":
-/*!******************************************!*\
-  !*** ./src/core/matrix/matrix-buffer.js ***!
-  \******************************************/
-/*! exports provided: MatrixBuffer */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixBuffer", function() { return MatrixBuffer; });
-/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix-type */ "./src/core/matrix/matrix-type.js");
-/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_matrix_type__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * matrix-buffer.js
- * Storage for elements of matrices
- */
-
-
-
-
-
-
-/**
- * Stores the contents of a matrix
- */
-class MatrixBuffer
-{
-    /**
-     * Class constructor
-     * @param {number} length number of elements of the buffer
-     * @param {number[]|ArrayBufferView|null} [values] initial values in column-major format
-     * @param {MatrixDataType} [dtype] the type of the elements of the matrix
-     * @param {?MatrixBuffer} [parent] the buffer that originated this one, if any
-     */
-    constructor(length, values = null, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_0__["MatrixType"].default, parent = null)
-    {
-        length |= 0;
-
-        // validate
-        if(!_matrix_type__WEBPACK_IMPORTED_MODULE_0__["MatrixType"].isValid(dtype))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Invalid data type: "${dtype}"`);
-        if(length <= 0)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Invalid matrix length`);
-
-        // allocate new TypedArray
-        const data =
-            (values == null) ? _matrix_type__WEBPACK_IMPORTED_MODULE_0__["MatrixType"].createTypedArray(dtype, length) : (
-            Array.isArray(values) ? _matrix_type__WEBPACK_IMPORTED_MODULE_0__["MatrixType"].createTypedArray(dtype, values) :
-            values);
-
-
-
-        // store data
-
-        /** @type {MatrixDataType} data type */
-        this._dtype = dtype;
-
-        /** @type {ArrayBufferView} a reference to the TypedArray (storage) */
-        this._data = data;
-
-        /** @type {number} TypedArray byte offset: assumed to be constant */
-        this._byteOffset = data.byteOffset;
-
-        /** @type {number} TypedArray length: assumed to be constant */
-        this._length = data.length;
-
-
-
-        // concurrency control
-
-        /** @type {number} number of pending operations that read from or write to the buffer */
-        this._pendingOperations = parent ? parent._pendingOperations : 0;
-
-        /** @type {Array<function()>} a list of Function<void> to be called as soon as there are no pending operations */
-        this._pendingAccessesQueue = [];
-
-        /** @type {MatrixBuffer[]} a list of MatrixBuffers that share their internal memory with this one (we create a tree structure) */
-        this._children = [];
-
-        /** @type {?MatrixBuffer} the buffer that originated this one, if any (null if none) */
-        this._parent = parent;
-    }
-
-    /**
-     * Data type
-     * @returns {MatrixDataType}
-     */
-    get dtype()
-    {
-        return this._dtype;
-    }
-
-    /**
-     * Get the internal TypedArray that holds the entries of the Matrix
-     * Make sure the buffer is ready() before accessing this property
-     * @returns {ArrayBufferView}
-     */
-    get data()
-    {
-        return this._data;
-    }
-
-    /**
-     * Wait for buffer readiness. Since the buffer holds
-     * a Transferable object, the data may or may not be
-     * available right now. The returned SpeedyPromise will be
-     * resolved as soon as the buffer is available for
-     * reading and writing
-     * @returns {SpeedyPromise<MatrixBuffer>}
-     */
-    ready()
-    {
-        if(this._pendingOperations > 0) {
-            // we're not ready yet: there are calculations taking place...
-            // we'll resolve this promise as soon as there are no pending calculations
-            return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"](resolve => {
-                this._pendingAccessesQueue.push(() => resolve(this));
-            });
-        }
-        else {
-            // we're ready to go!
-            // no pending operations
-            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(this);
-        }
-    }
-
-    /**
-     * Lock the buffer, so it can't be read from nor written to
-     * @param {boolean} [ascend] internal
-     */
-    lock(ascend = true)
-    {
-        let my = this;
-
-        // climb the tree
-        if(ascend && my._parent) {
-            do { my = my._parent; } while(my._parent);
-        }
-
-        // lock this buffer
-        ++my._pendingOperations;
-
-        // broadcast
-        for(let i = my._children.length - 1; i >= 0; i--)
-            my._children[i].lock(false);
-    }
-
-    /**
-     * Unlock the buffer and resolve all pending read/write operations
-     * @param {boolean} [ascend] internal
-     */
-    unlock(ascend = true)
-    {
-        let my = this;
-
-        // climb the tree
-        if(ascend && my._parent) {
-            do { my = my._parent; } while(my._parent);
-        }
-
-        // unlock this buffer
-        if(--my._pendingOperations <= 0) {
-            const callbackQueue = my._pendingAccessesQueue.slice(0); // fast clone
-            const n = callbackQueue.length;
-
-            my._pendingOperations = 0;
-            my._pendingAccessesQueue.length = 0;
-
-            for(let i = 0; i < n; i++) {
-                // if the buffer has been locked again, put the functions back in the queue
-                if(my._pendingOperations > 0) {
-                    for(let j = n - 1; j >= i; j--) {
-                        my._pendingAccessesQueue.unshift(callbackQueue[j]);
-                    }
-                    break; // note: for each lock() we need an unlock()
-                }
-
-                // if the buffer remains unlocked, we're cool
-                callbackQueue[i].call(my);
-            }
-        }
-
-        // broadcast
-        for(let i = my._children.length - 1; i >= 0; i--)
-            my._children[i].unlock(false);
-    }
-
-    /**
-     * Replace the internal buffer of the TypedArray
-     * @param {ArrayBuffer} arrayBuffer new internal buffer
-     */
-    replace(arrayBuffer)
-    {
-        if(this._data.buffer !== arrayBuffer)
-            this._replace(arrayBuffer, true);
-    }
-
-    /**
-     * Create a MatrixBuffer that shares its internal memory with this one
-     * @param {number} [begin] index of the first element of the TypedArray
-     * @param {number} [length] number of elements of the TypedArray
-     * @returns {SpeedyPromise<MatrixBuffer>}
-     */
-    createSharedBuffer(begin = 0, length = this._length)
-    {
-        return this.ready().then(() => {
-            // obtain shared area of memory
-            const end = Math.min(begin + length, this._length);
-            const data = this._data.subarray(begin, end); // the main thread must own this._data
-
-            // create shared buffer
-            const sharedBuffer = new MatrixBuffer(length, data, this._dtype, this);
-            this._children.push(sharedBuffer);
-
-            // done!
-            return sharedBuffer;
-        });
-    }
-
-    /**
-     * Replace the internal buffer of the TypedArray
-     * @param {ArrayBuffer} arrayBuffer new internal buffer
-     * @param {boolean} [ascend] internal
-     */
-    _replace(arrayBuffer, ascend = true)
-    {
-        let my = this;
-
-        // climb the tree
-        if(my._parent && ascend) {
-            do { my = my._parent; } while(my._parent);
-        }
-
-        // replace the internal buffer
-        my._data = _matrix_type__WEBPACK_IMPORTED_MODULE_0__["MatrixType"].createTypedArray(this._dtype, arrayBuffer, my._byteOffset, my._length);
-
-        // broadcast
-        for(let i = my._children.length - 1; i >= 0; i--)
-            my._children[i]._replace(arrayBuffer, false);
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/matrix/matrix-expression-factory.js":
-/*!******************************************************!*\
-  !*** ./src/core/matrix/matrix-expression-factory.js ***!
-  \******************************************************/
-/*! exports provided: SpeedyMatrixExprFactory */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixExprFactory", function() { return SpeedyMatrixExprFactory; });
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-type */ "./src/core/matrix/matrix-type.js");
-/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_matrix_type__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var _matrix_shape__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix-shape */ "./src/core/matrix/matrix-shape.js");
-/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./matrix */ "./src/core/matrix/matrix.js");
-/* harmony import */ var _matrix_settings__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./matrix-settings */ "./src/core/matrix/matrix-settings.js");
-/* harmony import */ var _speedy_point__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../speedy-point */ "./src/core/speedy-point.js");
-/* harmony import */ var _matrix_expressions__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./matrix-expressions */ "./src/core/matrix/matrix-expressions.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * matrix-expression-factory.js
- * A factory of matrix expressions
- */
-
-
-
-
-
-
-
-
-
-/**
- * A factory of matrix expressions
- */
-class SpeedyMatrixExprFactory extends Function
-{
-    // ==============================================
-    // Matrices with known entries
-    // ==============================================
-
-    /**
-     * The factory can be invoked as a function
-     * This is an alias to SpeedyMatrixExprFactory._create()
-     */
-    constructor()
-    {
-        super('...args', 'return this._create(...args)');
-        return this.bind(this);
-    }
-
-    /**
-     * Create a new matrix filled with zeroes
-     * @param {number} rows number of rows
-     * @param {number} [columns] number of columns (defaults to the number of rows)
-     * @param {number[]} [values] initial values in column-major format
-     * @param {MatrixDataType} [dtype] data type of the elements of the matrix
-     * @returns {SpeedyMatrixElementaryExpr}
-     */
-    Zeros(rows, columns = rows, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_1__["MatrixType"].default)
-    {
-        const values = (new Array(rows * columns)).fill(0);
-        return this._create(rows, columns, values, dtype);
-    }
-
-    /**
-     * Create a new matrix filled with ones
-     * @param {number} rows number of rows
-     * @param {number} [columns] number of columns (defaults to the number of rows)
-     * @param {number[]} [values] initial values in column-major format
-     * @param {MatrixDataType} [dtype] data type of the elements of the matrix
-     * @returns {SpeedyMatrixElementaryExpr}
-     */
-    Ones(rows, columns = rows, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_1__["MatrixType"].default)
-    {
-        const values = (new Array(rows * columns)).fill(1);
-        return this._create(rows, columns, values, dtype);
-    }
-
-    /**
-     * Create a new identity matrix
-     * @param {number} rows number of rows
-     * @param {number} [columns] number of columns (defaults to the number of rows)
-     * @param {number[]} [values] initial values in column-major format
-     * @param {MatrixDataType} [dtype] data type of the elements of the matrix
-     * @returns {SpeedyMatrixElementaryExpr}
-     */
-    Eye(rows, columns = rows, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_1__["MatrixType"].default)
-    {
-        const values = (new Array(rows * columns)).fill(0);
-        for(let j = Math.min(rows, columns) - 1; j >= 0; j--)
-            values[j * rows + j] = 1;
-
-        return this._create(rows, columns, values, dtype);
-    }
-
-    /**
-     * Create a new SpeedyMatrixExpr that evaluates to a user-defined matrix
-     * (or to a matrix without data if its entries are not provided)
-     * @param {number} rows number of rows
-     * @param {number} [columns] number of columns (defaults to the number of rows)
-     * @param {MatrixDataType} [dtype] data type of the elements of the matrix
-     * @param {number[]} [values] initial values in column-major format
-     * @returns {SpeedyMatrixElementaryExpr}
-     */
-    _create(rows, columns = rows, values = null, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_1__["MatrixType"].default)
-    {
-        let shape = new _matrix_shape__WEBPACK_IMPORTED_MODULE_2__["MatrixShape"](rows, columns, dtype), matrix = null;
-
-        if(values != null) {
-            if(!Array.isArray(values))
-                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't initialize SpeedyMatrix with values ${values}`);
-            if(values.length > 0)
-                matrix = new _matrix__WEBPACK_IMPORTED_MODULE_3__["SpeedyMatrix"](shape, values);
-        }
-
-        return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_6__["SpeedyMatrixElementaryExpr"](shape, matrix);
-    }
-
-
-
-
-    // ==============================================
-    // General Utilities
-    // ==============================================
-
-    /**
-     * Settings object
-     * @returns {SpeedyMatrixSettings}
-     */
-    get Settings()
-    {
-        return _matrix_settings__WEBPACK_IMPORTED_MODULE_4__["SpeedyMatrixSettings"].instance;
-    }
-
-    /**
-     * Evaluate the expression and store the result in a new matrix
-     * @param {SpeedyMatrixExpr} expr matrix expression
-     * @returns {SpeedyPromise<SpeedyMatrixLvalueExpr>}
-     */
-    evaluate(expr)
-    {
-        const mat = new _matrix_expressions__WEBPACK_IMPORTED_MODULE_6__["SpeedyMatrixElementaryExpr"](expr._shape);
-        return mat.assign(expr);
-    }
-
-    /**
-     * Convert an array of points to a matrix representation
-     * @param {SpeedyPoint2[]} points a non-empty array
-     * @param {MatrixDataType} [dtype] data type of the elements of the matrix
-     * @returns {SpeedyMatrixExpr} 2 x n matrix with the coordinates of the points
-     */
-    fromPoints(points, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_1__["MatrixType"].default)
-    {
-        if(!(Array.isArray(points) && points.length > 0))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't create matrix from points: ${points}`);
-
-        const entries = [], n = points.length;
-        for(let i = 0; i < n; i++) {
-            entries.push(points[i].x);
-            entries.push(points[i].y);
-        }
-
-        return this._create(2, n, entries, dtype);
-    }
-
-    /**
-     * Convert a 2 x n matrix to an array of points
-     * @param {SpeedyMatrixExpr} matrix
-     * @returns {SpeedyPromise<SpeedyPoint2[]>}
-     */
-    toPoints(matrix)
-    {
-        if(matrix.rows !== 2)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't convert ${matrix._shape.toString()} matrix to points`);
-
-        return matrix.read().then(entries => {
-            const points = [], n = entries.length;
-            for(let i = 0; i < n; i += 2)
-                points.push(new _speedy_point__WEBPACK_IMPORTED_MODULE_5__["SpeedyPoint2"](entries[i], entries[i+1]));
-
-            return points;
-        });
-    }
-
-
-
-    // ==============================================
-    // Matrix decompositions
-    // ==============================================
-
-    /**
-     * QR decomposition
-     * @param {SpeedyMatrixExpr} mat m x n matrix to be decomposed (m >= n)
-     * @param {QROptions} [options] configuration object
-     * @returns {SpeedyPromise<SpeedyMatrixExpr[]>} two matrices: [Q, R]
-     * 
-     * @typedef {object} QROptions
-     * @property {string} [mode] "reduced" | "full"
-     */
-    QR(mat, options = {})
-    {
-        const m = mat.rows, n = mat.columns, dtype = mat.dtype;
-
-        // if full, Q is m x m and R is m x n
-        // if reduced, Q is m x n and R is n x n
-        const full = (options.mode == 'full');
-        const matQR = full ? this._create(m, m+n, null, dtype) : this._create(m, n+n, null, dtype);
-        const matQ = full ? matQR.block(0, m-1, 0, m-1) : matQR.block(0, m-1, 0, n-1);
-        const matR = full ? matQR.block(0, m-1, m, m+n-1) : matQR.block(0, n-1, n, n+n-1);
-
-        return matQR.assign(mat.qr(options.mode)).then(() => [ matQ, matR ]).turbocharge();
-    }
-
-
-
-
-
-    // ==============================================
-    // Geometric transformations
-    // ==============================================
-
-    /**
-     * Compute a perspective transformation using 4 correspondences of points
-     * @param {SpeedyMatrixExpr} source 2x4 matrix with coordinates of 4 points (ui, vi)
-     * @param {SpeedyMatrixExpr} destination 2x4 matrix with coordinates of 4 points (xi, yi)
-     * @returns {SpeedyMatrixExpr} 3x3 matrix: perspective transformation
-     */
-    Perspective(source, destination)
-    {
-        if(!(source.rows === 2 && source.columns === 4 && source._shape.equals(destination._shape)))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't compute perspective transformation using ${source} and ${destination}. 4 correspondences of points are required`);
-
-        return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_6__["SpeedyMatrixHomography4pExpr"](source, destination);
-    }
-
-    /**
-     * Find a homography matrix using 4 or more correspondences of points
-     * @param {SpeedyMatrixExpr} source 2 x n matrix with coordinates of n points (n >= 4)
-     * @param {SpeedyMatrixExpr} destination 2 x n matrix with coordinates of n points
-     * @param {FindHomographyOptions} [options]
-     *
-     * @typedef {object} FindHomographyOptions
-     * @property {string} method One of the following: "p-ransac"
-     * @property {FindHomographyMethodParameters} [parameters]
-     *
-     * @typedef {object} FindHomographyMethodParameters
-     * @property {?SpeedyMatrixLvalueExpr} [mask] 1 x n output matrix to separate inliers (1) from outliers (0)
-     * @property {number} [reprojectionError] threshold in pixels to separate inliers from outliers (RANSAC variants)
-     * @property {number} [numberOfHypotheses] for p-ransac only
-     * @property {number} [bundleSize] for p-ransac only
-     */
-    findHomography(source, destination, options = {})
-    {
-        // default options
-        options.method = options.method || 'p-ransac';
-        options.parameters = Object.assign({
-            mask: null,
-            numberOfHypotheses: 500,
-            bundleSize: 100,
-            reprojectionError: 2
-        }, options.parameters || {});
-
-        // validate shapes
-        if(!(source.rows === 2 && source.columns >= 4 && source._shape.equals(destination._shape)))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't compute homography matrix using ${source} and ${destination}. 4 or more correspondences of points are required`);
-
-        // returns a node according to the method
-        const parameters = options.parameters;
-        if(options.method === 'p-ransac') {
-            // create an output inlier-outlier mask if one is not supplied
-            const maskShape = new _matrix_shape__WEBPACK_IMPORTED_MODULE_2__["MatrixShape"](1, source.columns, source.dtype); // expected shape
-            const mask = parameters.mask || new _matrix_expressions__WEBPACK_IMPORTED_MODULE_6__["SpeedyMatrixElementaryExpr"](maskShape, new _matrix__WEBPACK_IMPORTED_MODULE_3__["SpeedyMatrix"](maskShape));
-
-            // cast to number
-            const numberOfHypotheses = parameters.numberOfHypotheses | 0;
-            const bundleSize = parameters.bundleSize | 0;
-            const reprojectionError = +(parameters.reprojectionError);
-
-            // validate
-            if(!(mask instanceof _matrix_expressions__WEBPACK_IMPORTED_MODULE_6__["SpeedyMatrixLvalueExpr"] && mask._shape.equals(maskShape)))
-                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't compute homography matrix: invalid mask`);
-            else if(numberOfHypotheses <= 0 || bundleSize <= 0 || reprojectionError < 0)
-                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't compute homography matrix: invalid parameters for "${options.method}"`);
-
-            // done!
-            return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_6__["SpeedyMatrixPransacHomographyExpr"](
-                source,
-                destination,
-                numberOfHypotheses,
-                bundleSize,
-                reprojectionError,
-                mask,
-            );
-        }
-        else if(options.method === 'dlt') {
-            return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_6__["SpeedyMatrixHomographyDLTExpr"](
-                source,
-                destination
-            );
-        }
-        else {
-            // invalid method
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't compute homography matrix using method "${options.method}"`);
-        }
-    }
-
-    /**
-     * Apply a transformation matrix to a set of 2D points
-     * @param {SpeedyMatrixExpr} mat homography (3x3) or affine (2x3) or linear (2x2)
-     * @param {SpeedyMatrixExpr} points a set of n 2D points (2xn)
-     * @returns {SpeedyMatrixExpr} a 2xn matrix
-     */
-    transform(mat, points)
-    {
-        if(points.rows !== 2)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't apply transform: invalid set of points (${points._shape.toString()})`);
-
-        if(mat.columns === 3) {
-            if(mat.rows === 3)
-                return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_6__["SpeedyMatrixApplyHomographyExpr"](mat, points);
-            else if(mat.rows === 2)
-                return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_6__["SpeedyMatrixApplyAffineExpr"](mat, points);
-        }
-        else if(mat.columns === 2 && mat.rows === 2)
-            return new _matrix_expressions__WEBPACK_IMPORTED_MODULE_6__["SpeedyMatrixApplyLinear2dExpr"](mat, points);
-
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't apply transformation: invalid transformation matrix (${mat._shape.toString()})`);
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/matrix/matrix-expressions.js":
-/*!***********************************************!*\
-  !*** ./src/core/matrix/matrix-expressions.js ***!
-  \***********************************************/
-/*! exports provided: SpeedyMatrixExpr, SpeedyMatrixLvalueExpr, SpeedyMatrixElementaryExpr, SpeedyMatrixConstantExpr, SpeedyMatrixHomography4pExpr, SpeedyMatrixHomographyDLTExpr, SpeedyMatrixApplyHomographyExpr, SpeedyMatrixApplyAffineExpr, SpeedyMatrixApplyLinear2dExpr, SpeedyMatrixPransacHomographyExpr */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixExpr", function() { return SpeedyMatrixExpr; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixLvalueExpr", function() { return SpeedyMatrixLvalueExpr; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixElementaryExpr", function() { return SpeedyMatrixElementaryExpr; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixConstantExpr", function() { return SpeedyMatrixConstantExpr; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixHomography4pExpr", function() { return SpeedyMatrixHomography4pExpr; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixHomographyDLTExpr", function() { return SpeedyMatrixHomographyDLTExpr; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixApplyHomographyExpr", function() { return SpeedyMatrixApplyHomographyExpr; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixApplyAffineExpr", function() { return SpeedyMatrixApplyAffineExpr; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixApplyLinear2dExpr", function() { return SpeedyMatrixApplyLinear2dExpr; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixPransacHomographyExpr", function() { return SpeedyMatrixPransacHomographyExpr; });
-/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix */ "./src/core/matrix/matrix.js");
-/* harmony import */ var _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./bound-matrix-operation */ "./src/core/matrix/bound-matrix-operation.js");
-/* harmony import */ var _matrix_shape__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix-shape */ "./src/core/matrix/matrix-shape.js");
-/* harmony import */ var _matrix_operations_queue__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./matrix-operations-queue */ "./src/core/matrix/matrix-operations-queue.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_sorting_networks__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../utils/sorting-networks */ "./src/utils/sorting-networks.js");
-/* harmony import */ var _matrix_operations__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./matrix-operations */ "./src/core/matrix/matrix-operations.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * matrix-expressions.js
- * Abstract Matrix Algebra
- */
-
-
-
-
-
-
-
-
-
-
-
-// constants
-const matrixOperationsQueue = _matrix_operations_queue__WEBPACK_IMPORTED_MODULE_3__["MatrixOperationsQueue"].instance;
-
-
-// ================================================
-// ABSTRACT TYPES
-// ================================================
-
-/**
- * An abstract algebraic expression with matrices
- * All expressions must be immutable from the outside
- * @abstract
- */
-class SpeedyMatrixExpr
-{
-    /**
-     * Constructor
-     * @param {MatrixShape} shape the shape of the resulting (evaluated) expression
-     */
-    constructor(shape)
-    {
-        /** @type {MatrixShape} the shape of the evaluated matrix expression */
-        this._shape = shape;
-
-        /** @type {BoundMatrixOperation} this expression, compiled */
-        this._compiledExpr = null; // to be computed lazily
-    }
-
-    /**
-     * Number of rows of the resulting matrix
-     * @returns {number}
-     */
-    get rows()
-    {
-        return this._shape.rows;
-    }
-
-    /**
-     * Number of columns of the resulting matrix
-     * @returns {number}
-     */
-    get columns()
-    {
-        return this._shape.columns;
-    }
-
-    /**
-     * Type of the resulting matrix
-     * @returns {MatrixDataType}
-     */
-    get dtype()
-    {
-        return this._shape.dtype;
-    }
-
-    /**
-     * Compile this expression
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compile()
-    {
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["AbstractMethodError"]();
-    }
-
-    /**
-     * Compile and evaluate this expression, so
-     * that the WebWorker will be invoked ONCE
-     * for the entire expression
-     * @returns {SpeedyPromise<SpeedyMatrixExpr>}
-     */
-    _compileAndEvaluate()
-    {
-        // We can store an expression in compiled form as long
-        // as the pointers of the internal matrices, i.e., the
-        // matrices bound to the matrix operations, do not change
-        // in time. If they do change, we need to recompile the
-        // expression. It is assumed that the structure of the
-        // expression tree does not change. This means that all
-        // descendants of this node remain the same.
-        if(this._compiledExpr === null) {
-            return this._compile().then(result =>
-                this._compiledExpr = result.pack() // store the compiled object
-            ).then(compiledExpr =>
-                matrixOperationsQueue.enqueue(
-                    compiledExpr.operation,
-                    compiledExpr.outputMatrix, // should be === this._matrix
-                    compiledExpr.inputMatrices
-                )
-            ).then(() => this);
-        }
-        else {
-            return matrixOperationsQueue.enqueue(
-                this._compiledExpr.operation,
-                this._compiledExpr.outputMatrix,
-                this._compiledExpr.inputMatrices
-            ).then(() => this);
-        }
-    }
-
-    /**
-     * Get the matrix associated with the result of this expression
-     * This matrix must be guaranteed to be available after compiling this expression
-     * @returns {SpeedyMatrix}
-     */
-    get _matrix()
-    {
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["AbstractMethodError"]();
-    }
-
-    /**
-     * Assign a matrix
-     * @param {SpeedyMatrix} matrix
-     * @returns {SpeedyPromise<void>} resolves as soon as the assignment is done
-     */
-    _assign(matrix)
-    {
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`Can't assign matrix: not a l-value`);
-    }
-
-    /**
-     * Compile an assignment operation
-     * @param {BoundMatrixOperationTree} value
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compileAssignment(value)
-    {
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`Can't assign matrix: not a l-value`);
-    }
-
-    /**
-     * Assert matrix shape and type
-     * @param {MatrixShape} actual
-     * @param {MatrixShape} expected
-     */
-    static _assertSameShape(actual, expected)
-    {
-        if(actual.equals(expected))
-            return;
-        else if(actual.dtype !== expected.dtype)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`Incompatible matrix data type (expected "${expected.dtype}", found "${actual.dtype}")`);
-        else
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`Incompatible matrix shape (expected ${expected.rows} x ${expected.columns}, found ${actual.rows} x ${actual.columns})`);
-    }
-
-
-
-    //
-    // GENERIC UTILITIES
-    //
-
-    /**
-     * Assign an expression (i.e., this := expr)
-     * @param {SpeedyMatrixExpr|number[]} expr
-     * @returns {SpeedyPromise<SpeedyMatrixAssignmentExpr>}
-     */
-    assign(expr)
-    {
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`Can't assign matrix: not a l-value`);
-    }
-
-    /**
-     * Fill the matrix with a constant value
-     * @param {number} value
-     * @returns {SpeedyPromise<SpeedyMatrixAssignmentExpr>}
-     */
-    fill(value)
-    {
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`Can't fill matrix: not a l-value`);
-    }
-
-    /**
-     * Read the entries of this matrix
-     * Results are given in column-major format
-     * @returns {SpeedyPromise<number[]>}
-     */
-    read()
-    {
-        return this._compileAndEvaluate().then(expr => expr._matrix.read()).turbocharge();
-    }
-
-    /**
-     * Print the result of this matrix expression to the console
-     * @param {number} [decimals] format numbers to a number of decimals
-     * @param {Function} [printFunction] prints a string
-     * @returns {SpeedyPromise<void>} a promise that resolves as soon as the matrix is printed
-     */
-    print(decimals = undefined, printFunction = undefined)
-    {
-        return this._compileAndEvaluate().then(expr => expr._matrix.print(decimals, printFunction)).turbocharge();
-    }
-
-    /**
-     * Convert to string
-     * @returns {string}
-     */
-    toString()
-    {
-        return this._matrix.toString();
-    }
-
-
-
-
-
-
-    //
-    // ACCESS BY BLOCK
-    //
-
-    /**
-     * Extract a (lastRow - firstRow + 1) x (lastColumn - firstColumn + 1)
-     * block from the matrix. All indices are 0-based. Note that the
-     * memory of the block is shared with the memory of the matrix.
-     * @param {number} firstRow
-     * @param {number} lastRow
-     * @param {number} firstColumn
-     * @param {number} lastColumn
-     * @returns {SpeedyMatrixReadonlyBlockExpr}
-     */
-    block(firstRow, lastRow, firstColumn, lastColumn)
-    {
-        return new SpeedyMatrixReadonlyBlockExpr(this, firstRow, lastRow, firstColumn, lastColumn);
-    }
-
-    /**
-     * Get the i-th row of the matrix
-     * @param {number} i 0-based index
-     */
-    row(i)
-    {
-        return this.block(i, i, 0, this.columns - 1);
-    }
-
-    /**
-     * Get the j-th column of the matrix
-     * @param {number} j 0-based index
-     */
-    column(j)
-    {
-        return this.block(0, this.rows - 1, j, j);
-    }
-
-    /**
-     * Get (lastRow - firstRow + 1) contiguous rows. Both indices are inclusive.
-     * @param {number} firstRow
-     * @param {number} lastRow
-     */
-    rowSpan(firstRow, lastRow)
-    {
-        return this.block(firstRow, lastRow, 0, this.columns - 1);
-    }
-
-    /**
-     * Get (lastColumn - firstColumn + 1) contiguous columns. Both indices are inclusive.
-     * @param {number} firstColumn
-     * @param {number} lastColumn
-     */
-    columnSpan(firstColumn, lastColumn)
-    {
-        return this.block(0, this.rows - 1, firstColumn, lastColumn);
-    }
-
-    /**
-     * Get the main diagonal of the matrix. Internal buffer is shared.
-     * @returns {SpeedyMatrixReadonlyDiagonalExpr}
-     */
-    diagonal()
-    {
-        return new SpeedyMatrixReadonlyDiagonalExpr(this);
-    }
-
-
-
-
-    //
-    // GENERAL OPERATIONS
-    //
-
-
-    /**
-     * Transpose matrix
-     * @returns {SpeedyMatrixExpr}
-     */
-    transpose()
-    {
-        return new SpeedyMatrixTransposeExpr(this);
-    }
-
-    /**
-     * Add this matrix to another
-     * @param {SpeedyMatrixExpr} expr
-     * @returns {SpeedyMatrixExpr}
-     */
-    plus(expr)
-    {
-        return new SpeedyMatrixAddExpr(this, expr);
-    }
-
-    /**
-     * Subtract another matrix from this
-     * @param {SpeedyMatrixExpr} expr
-     * @returns {SpeedyMatrixExpr}
-     */
-    minus(expr)
-    {
-        return new SpeedyMatrixSubtractExpr(this, expr);
-    }
-
-    /**
-     * Multiply by a matrix or by a number
-     * @param {SpeedyMatrixExpr|number} expr
-     * @returns {SpeedyMatrixExpr}
-     */
-    times(expr)
-    {
-        if(expr instanceof SpeedyMatrixExpr)
-            return new SpeedyMatrixMultiplyExpr(this, expr);
-        else
-            return new SpeedyMatrixScaleExpr(this, expr);
-    }
-
-    /**
-     * Component-wise multiplication
-     * @param {SpeedyMatrixExpr} expr
-     * @returns {SpeedyMatrixExpr}
-     */
-    compMult(expr)
-    {
-        return new SpeedyMatrixCompMultExpr(this, expr);
-    }
-
-    /**
-     * Compute the inverse of this matrix
-     * @returns {SpeedyMatrixExpr}
-     */
-    inverse()
-    {
-        return new SpeedyMatrixInverseExpr(this);
-    }
-
-
-
-
-
-    //
-    // Misc
-    //
-
-    /**
-     * Similar to the comma operator in C/++
-     * @param {SpeedyMatrixExpr} expr
-     * @returns {SpeedyMatrixExpr}
-     */
-    followedBy(expr)
-    {
-        return new SpeedyMatrixSequenceExpr(this, expr);
-    }
-
-    /**
-     * Creates an assignment expression (i.e., this := expr),
-     * without actually computing or changing any numbers
-     * @param {SpeedyMatrixExpr | number[]} expr
-     * @returns {SpeedyMatrixAssignmentExpr}
-     */
-    setTo(expr)
-    {
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`Can't create an assignment expression: not a l-value`);
-    }
-
-
-
-
-
-
-
-
-    //
-    // Functional programming
-    //
-
-    /**
-     * Map function (applied per block), analogous to Array.prototype.map()
-     * @param {number} blockRows number of rows of each block (must be the same as the number of rows of the input matrix expression)
-     * @param {number} blockColumns number of columns of each block (the number of columns of the input matrix expression must be a multiple of this)
-     * @param {Function} fn mapping function: receives a blockRows x blockColumns matrix and must return a SpeedyMatrixExpr
-     */
-    map(blockRows, blockColumns, fn)
-    {
-        // validate arguments
-        if(typeof fn !== 'function')
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`map() expects a mapping function`);
-        if(blockRows !== this.rows)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`map() expects blockRows (${blockRows}) to be the number of rows of the matrix (${this.rows})`);
-        if(blockColumns <= 0 || this.columns % blockColumns !== 0)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`map() expects the number of columns of the matrix (${this.columns}) to be divisible by blockColumns (${blockColumns})`);
-
-        // What is the matrix expression returned by fn?
-        const blockShape = new _matrix_shape__WEBPACK_IMPORTED_MODULE_2__["MatrixShape"](blockRows, blockColumns, this.dtype);
-        const indexShape = new _matrix_shape__WEBPACK_IMPORTED_MODULE_2__["MatrixShape"](1, 1, this.dtype /*'int32'*/ );
-        const bi = new SpeedyMatrixElementaryExpr(blockShape, new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](blockShape));
-        const index = new SpeedyMatrixElementaryExpr(indexShape, new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](indexShape));
-        const input = new SpeedyMatrixConstantExpr(this);
-        const mapfn = fn(bi, index, input);
-        if(!(mapfn instanceof SpeedyMatrixExpr))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`map() expects that the mapping function returns a matrix expression for all input blocks`);
-
-        // create the map expression
-        return new SpeedyMatrixMapExpr(this, mapfn, bi._matrix, index._matrix);
-    }
-
-    /**
-     * Reduce function (applied per block), analogous to Array.prototype.reduce()
-     * @param {number} blockRows number of rows of each block (must be the same as the number of rows of the input matrix expression)
-     * @param {number} blockColumns number of columns of each block (the number of columns of the input matrix expression must be a multiple of this)
-     * @param {Function} fn reducer function: receives a blockRows x blockColumns matrix and must return a SpeedyMatrixExpr
-     * @param {SpeedyMatrixExpr} initialMatrix initial matrix, used as the accumulator on the first invocation of fn
-     */
-    reduce(blockRows, blockColumns, fn, initialMatrix)
-    {
-        // validate arguments
-        if(typeof fn !== 'function')
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`reduce() expects a reducer function`);
-        if(blockRows !== this.rows)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`reduce() expects blockRows (${blockRows}) to be the number of rows of the matrix (${this.rows})`);
-        if(blockColumns <= 0 || this.columns % blockColumns !== 0)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`reduce() expects the number of columns of the matrix (${this.columns}) to be divisible by blockColumns (${blockColumns})`);
-        if(!(initialMatrix instanceof SpeedyMatrixExpr))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`reduce() expects initialMatrix to be a SpeedyMatrixExpr`);
-
-        // What is the matrix expression returned by fn?
-        const blockShape = new _matrix_shape__WEBPACK_IMPORTED_MODULE_2__["MatrixShape"](blockRows, blockColumns, this.dtype);
-        const indexShape = new _matrix_shape__WEBPACK_IMPORTED_MODULE_2__["MatrixShape"](1, 1, this.dtype /*'int32'*/ );
-        const bi = new SpeedyMatrixElementaryExpr(blockShape, new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](blockShape));
-        const accumulator = new SpeedyMatrixElementaryExpr(initialMatrix._shape, new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](initialMatrix._shape));
-        const index = new SpeedyMatrixElementaryExpr(indexShape, new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](indexShape));
-        const input = new SpeedyMatrixConstantExpr(this);
-        const reducefn = fn(accumulator, bi, index, input);
-        if(!(reducefn instanceof SpeedyMatrixExpr))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`reduce() expects that the reducer function returns a SpeedyMatrixExpr for all input blocks`);
-        else if(!reducefn._shape.equals(initialMatrix._shape))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`reduce() expects that the reducer function returns matrices of the same shape as the initial matrix for all input blocks`);
-
-        // create the reduce expression
-        return new SpeedyMatrixReduceExpr(this, reducefn, accumulator._matrix, bi._matrix, index._matrix, initialMatrix);
-    }
-
-    /**
-     * Sort matrix blocks, analogous to Array.prototype.sort()
-     * @param {number} blockRows number of rows of each block (must be the same as the number of rows of the input matrix expression)
-     * @param {number} blockColumns number of columns of each block (the number of columns of the input matrix expression must be a multiple of this)
-     * @param {Function} cmp compare function: receives a pair of blockRows x blockColumns matrices and must return a 1x1 SpeedyMatrixExpr
-     */
-    sort(blockRows, blockColumns, cmp)
-    {
-         // validate arguments
-        if(typeof cmp !== 'function')
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`sort() expects a comparison function`);
-        if(blockRows !== this.rows)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`sort() expects blockRows (${blockRows}) to be the number of rows of the matrix (${this.rows})`);
-        if(blockColumns <= 0 || this.columns % blockColumns !== 0)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`sort() expects the number of columns of the matrix (${this.columns}) to be divisible by blockColumns (${blockColumns})`);
-
-        // create input blocks for cmp()
-        const blockShape = new _matrix_shape__WEBPACK_IMPORTED_MODULE_2__["MatrixShape"](blockRows, blockColumns, this.dtype);
-        const bi = new SpeedyMatrixElementaryExpr(blockShape, new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](blockShape));
-        const bj = new SpeedyMatrixElementaryExpr(blockShape, new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](blockShape));
-
-        // cmp() must return a 1x1 SpeedyMatrixExpr
-        const comparator = cmp(bi, bj);
-        if(!(comparator instanceof SpeedyMatrixExpr && comparator._shape.rows === 1 && comparator._shape.columns === 1))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`sort() expects that the comparator function returns a 1x1 matrix expression for all comparison pairs`);
-
-        // we're ready to sort the blocks
-        return new SpeedyMatrixSortExpr(this, comparator, bi._matrix, bj._matrix);
-    }
-
-
-
-    //
-    // Linear Algebra
-    //
-
-    /**
-     * QR decomposition
-     * @param {string} [mode] 'full' | 'reduced'
-     * @returns {SpeedyMatrixExpr}
-     */
-    qr(mode = 'reduced')
-    {
-        return new SpeedyMatrixQRExpr(this, mode);
-    }
-
-    /**
-     * Find least squares solution for a system of linear equations,
-     * i.e., find x such that the 2-norm |b - Ax| is minimized.
-     * A is this (m x n) matrix expression, satisfying m >= n
-     * m is the number of equations and n is the number of unknowns
-     * @param {SpeedyMatrixExpr} b m x 1 matrix
-     */
-    lssolve(b)
-    {
-        return new SpeedyMatrixLSSolveNodeExpr(this, b);
-    }
-
-    /**
-     * Solve a linear system of equations,
-     * i.e., solve Ax = b for x. A is this
-     * (m x m) expression and b is m x 1
-     * @param {SpeedyMatrixExpr} b
-     * @param {string} [method] 'qr'
-     */
-    solve(b, method = 'qr')
-    {
-        // m: rows (number of equations), n: columns (number of unknowns)
-        const rows = this.rows, columns = this.columns;
-
-        // validate size
-        if(rows !== columns)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`solve expects a square matrix, but received a ${rows} x ${columns} matrix`);
-        else if(b.rows !== rows || b.columns !== 1)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`solve expected a ${rows} x 1 input vector, but received a ${b.rows} x ${b.columns} matrix`);
-
-        // solve system of equations
-        switch(method)
-        {
-            case 'qr':
-                return this.lssolve(b);
-
-            // TODO: Gaussian elimination
-            //case 'lu':
-
-            default:
-                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Unknown method for solve: "${method}"`);
-        }
-    }
-
-
-
-
-
-
-
-    //
-    // Internal utilities
-    //
-
-    /**
-     * Create a new matrix expression
-     * @param {number} rows
-     * @param {number} columns
-     * @param {number[]} values in column-major format
-     * @returns {SpeedyMatrixElementaryExpr}
-     */
-    static create(rows, columns, values)
-    {
-        const shape = new _matrix_shape__WEBPACK_IMPORTED_MODULE_2__["MatrixShape"](rows, columns);
-        const matrix = new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](shape, values);
-
-        return new SpeedyMatrixElementaryExpr(shape, matrix);
-    }
-
-    /**
-     * Internal QR solver: Ax = b
-     * This creates a matrix [ (Q^T) b | R ] using reduced QR
-     * All (m-n) entries at the bottom are zeros
-     * @param {SpeedyMatrixExpr} b
-     * @returns {SpeedyMatrixExpr}
-     */
-    _qrSolve(b)
-    {
-        return new SpeedyMatrixQRSolverNodeExpr(this, b);
-    }
-
-    /**
-     * Internal back-substitution algorithm. It assumes this
-     * matrix expression is of the form [ b | R ] for some
-     * upper-triangular R matrix and some column-vector b
-     */
-    _backSubstitution()
-    {
-        return new SpeedyMatrixBackSubstitutionNodeExpr(this);
-    }
-}
-
-/**
- * The result of an intermediate calculation (e.g., A + B)
- * A temporary matrix for storing the result of the calculation is created
- * @abstract
- */
-class SpeedyMatrixTempExpr extends SpeedyMatrixExpr
-{
-    /**
-     * Constructor
-     * @param {MatrixShape} shape the shape of the resulting expression
-     */
-    constructor(shape)
-    {
-        super(shape);
-
-        /** @type {SpeedyMatrix} used for temporary calculations */
-        this._tmpmatrix = new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](shape);
-    }
-
-    /**
-     * Get the matrix associated with this expression
-     * This matrix must be guaranteed to be available after compiling this expression
-     * @returns {SpeedyMatrix}
-     */
-    get _matrix()
-    {
-        return this._tmpmatrix;
-    }
-}
-
-/**
- * Unary expression
- * @abstract
- */
-class SpeedyMatrixUnaryExpr extends SpeedyMatrixTempExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} expr input expression
-     * @param {MatrixOperation} operation unary operation
-     */
-    constructor(expr, operation)
-    {
-        super(operation.shape);
-
-        /** @type {SpeedyMatrixExpr} input expression */
-        this._expr = expr;
-
-        /** @type {MatrixOperation} unary operation */
-        this._operation = operation;
-
-        // validate
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(operation.numberOfInputMatrices() === 1); // must be unary
-    }
-
-    /**
-     * Compile this expression
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compile()
-    {
-        return this._expr._compile().then(node =>
-            new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](
-                this._operation,
-                this._matrix,
-                [ node ]
-            )
-        );
-    }
-
-    /**
-     * Input expression
-     * @returns {SpeedyMatrixExpr}
-     */
-    get child()
-    {
-        return this._expr;
-    }
-}
-
-/**
- * Binary expression
- * @abstract
- */
-class SpeedyMatrixBinaryExpr extends SpeedyMatrixTempExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} leftExpr left operand/expression
-     * @param {SpeedyMatrixExpr} rightExpr right operand/expression
-     * @param {MatrixOperation} operation binary operation
-     */
-    constructor(leftExpr, rightExpr, operation)
-    {
-        super(operation.shape);
-
-        /** @type {SpeedyMatrixExpr} left operand */
-        this._leftExpr = leftExpr;
-
-        /** @type {SpeedyMatrixExpr} right operand */
-        this._rightExpr = rightExpr;
-
-        /** @type {MatrixOperation} binary operation */
-        this._operation = operation;
-
-        // validate
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(operation.numberOfInputMatrices() === 2); // must be a binary operation
-        if(rightExpr.dtype !== leftExpr.dtype) // just in case...
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Found a binary expression with different data types: "${leftExpr.dtype}" (left operand) x "${rightExpr.dtype}" (right operand)`);
-    }
-
-    /**
-     * Compile this expression
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compile()
-    {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__["SpeedyPromise"].all([
-            this._leftExpr._compile().turbocharge(),
-            this._rightExpr._compile().turbocharge()
-        ]).then(([ leftNode, rightNode ]) =>
-            new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](
-                this._operation,
-                this._matrix,
-                [ leftNode, rightNode ]
-            )
-        );
-    }
-
-    /**
-     * Left input expression
-     * @returns {SpeedyMatrixExpr}
-     */
-    get leftChild()
-    {
-        return this._leftExpr;
-    }
-
-    /**
-     * Right input expression
-     * @returns {SpeedyMatrixExpr}
-     */
-    get rightChild()
-    {
-        return this._rightExpr;
-    }
-}
-
-/**
- * Ternary expression
- * @abstract
- */
-class SpeedyMatrixTernaryExpr extends SpeedyMatrixTempExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} firstExpr
-     * @param {SpeedyMatrixExpr} secondExpr
-     * @param {SpeedyMatrixExpr} thirdExpr
-     * @param {MatrixOperation} operation ternary operation
-     */
-    constructor(firstExpr, secondExpr, thirdExpr, operation)
-    {
-        super(operation.shape);
-
-        /** @type {SpeedyMatrixExpr} first operand */
-        this._firstExpr = firstExpr;
-
-        /** @type {SpeedyMatrixExpr} second operand */
-        this._secondExpr = secondExpr;
-
-        /** @type {SpeedyMatrixExpr} third operand */
-        this._thirdExpr = thirdExpr;
-
-        /** @type {MatrixOperation} ternary operation */
-        this._operation = operation;
-
-        // validate
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(operation.numberOfInputMatrices() === 3); // must be a ternary operation
-        if(firstExpr.dtype !== secondExpr.dtype || firstExpr.dtype !== thirdExpr.dtype)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Found a ternary expression with different data types: "${firstExpr.dtype}" (first operand) x "${secondExpr.dtype}" (second operand) x "${thirdExpr.dtype}" (third operand)`);
-    }
-
-    /**
-     * Compile this expression
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compile()
-    {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__["SpeedyPromise"].all([
-            this._firstExpr._compile().turbocharge(),
-            this._secondExpr._compile().turbocharge(),
-            this._thirdExpr._compile().turbocharge()
-        ]).then(([ firstNode, secondNode, thirdNode ]) =>
-            new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](
-                this._operation,
-                this._matrix,
-                [ firstNode, secondNode, thirdNode ]
-            )
-        );
-    }
-
-    /**
-     * First operand
-     * @returns {SpeedyMatrixExpr}
-     */
-    get firstChild()
-    {
-        return this._firstExpr;
-    }
-
-    /**
-     * Second operand
-     * @returns {SpeedyMatrixExpr}
-     */
-    get secondChild()
-    {
-        return this._secondExpr;
-    }
-
-    /**
-     * Third operand
-     * @returns {SpeedyMatrixExpr}
-     */
-    get thirdChild()
-    {
-        return this._thirdExpr;
-    }
-}
-
-/**
- * Extract a read-only block submatrix from a matrix expression
- */
-class SpeedyMatrixReadonlyBlockExpr extends SpeedyMatrixExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} expr originating matrix expression
-     * @param {number} firstRow indexed by 0
-     * @param {number} lastRow
-     * @param {number} firstColumn
-     * @param {number} lastColumn
-     */
-    constructor(expr, firstRow, lastRow, firstColumn, lastColumn)
-    {
-        super(new _matrix_shape__WEBPACK_IMPORTED_MODULE_2__["MatrixShape"](lastRow - firstRow + 1, lastColumn - firstColumn + 1, expr.dtype));
-
-        /** @type {SpeedyMatrixExpr} originating matrix expression */
-        this._expr = expr;
-
-        /** @type {number} index of the top-most row (starts at zero) */
-        this._firstRow = firstRow;
-
-        /** @type {number} index of the last row */
-        this._lastRow = lastRow;
-
-        /** @type {number} index of the left-most column (starts at zero) */
-        this._firstColumn = firstColumn;
-
-        /** @type {number} index of the right-most column */
-        this._lastColumn = lastColumn;
-
-        /** @type {?SpeedyMatrix} the matrix associated with this expression */
-        this._submatrix = null;
-
-        /** @type {?SpeedyMatrix} used for caching */
-        this._cachedMatrix = null;
-    }
-
-    /**
-     * Get the matrix associated with this expression
-     * This matrix must be guaranteed to be available after compiling this expression
-     * @returns {SpeedyMatrix}
-     */
-    get _matrix()
-    {
-        return this._submatrix;
-    }
-
-    /**
-     * Compile this expression
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compile()
-    {
-        return this._expr._compile().then(node => {
-            if(node.outputMatrix !== this._cachedMatrix || this._submatrix === null) {
-                this._cachedMatrix = node.outputMatrix;
-                return this._cachedMatrix.block(
-                    this._firstRow,
-                    this._lastRow,
-                    this._firstColumn,
-                    this._lastColumn
-                ).then(submatrix => {
-                    this._submatrix = submatrix;
-                    return node;
-                });
-            }
-            return node;
-        }).then(node =>
-            new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](
-                null,
-                this._matrix,
-                [ node ]
-            )
-        );
-    }
-}
-
-/**
- * Extract a read-only diagonal from a matrix expression
- */
-class SpeedyMatrixReadonlyDiagonalExpr extends SpeedyMatrixExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} expr originating matrix expression
-     */
-    constructor(expr)
-    {
-        const diagonalLength = Math.min(expr.rows, expr.columns);
-        super(new _matrix_shape__WEBPACK_IMPORTED_MODULE_2__["MatrixShape"](1, diagonalLength, expr.dtype));
-
-        /** @type {SpeedyMatrixExpr} originating matrix expression */
-        this._expr = expr;
-
-        /** @type {?SpeedyMatrix} the matrix associated with this expression */
-        this._diagonal = null;
-
-        /** @type {?SpeedyMatrix} used for caching */
-        this._cachedMatrix = null;
-    }
-
-    /**
-     * Get the matrix associated with this expression
-     * This matrix must be guaranteed to be available after compiling this expression
-     * @returns {SpeedyMatrix}
-     */
-    get _matrix()
-    {
-        return this._diagonal;
-    }
-
-    /**
-     * Compile this expression
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compile()
-    {
-        return this._expr._compile().then(node => {
-            if(node.outputMatrix !== this._cachedMatrix || this._diagonal === null) {
-                this._cachedMatrix = node.outputMatrix;
-                return this._cachedMatrix.diagonal().then(diagonal => {
-                    this._diagonal = diagonal;
-                    return node;
-                });
-            }
-            return node;
-        }).then(node =>
-            new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](
-                null,
-                this._matrix,
-                [ node ]
-            )
-        );
-    }
-}
-
-/**
- * Assignment expression
- * Assign rvalue to lvalue (i.e., lvalue := rvalue)
- */
-class SpeedyMatrixAssignmentExpr extends SpeedyMatrixExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixLvalueExpr} lvalue
-     * @param {SpeedyMatrixExpr} rvalue
-     */
-    constructor(lvalue, rvalue)
-    {
-        super(lvalue._shape);
-
-        /** @type {SpeedyMatrixLvalueExpr} */
-        this._lvalue = lvalue;
-
-        /** @type {SpeedyMatrixExpr} */
-        this._rvalue = rvalue;
-
-        // validate
-        SpeedyMatrixExpr._assertSameShape(lvalue._shape, rvalue._shape);
-        //Utils.assert(lvalue instanceof SpeedyMatrixLvalueExpr);
-    }
-
-    /**
-     * Get the matrix associated with this lvalue expression
-     * This matrix must be guaranteed to be available after compiling this expression
-     * @returns {SpeedyMatrix}
-     */
-    get _matrix()
-    {
-        return this._lvalue._matrix;
-    }
-
-    /**
-     * Compile this expression
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compile()
-    {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__["SpeedyPromise"].all([
-            this._lvalue._compile().turbocharge(),
-            this._rvalue._compile().turbocharge()
-        ]).then(([ lvalue, rvalue ]) =>
-            this._lvalue._compileAssignment(rvalue).then(assignment =>
-                new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](
-                    null,
-                    this._matrix, // this is lvalue.outputMatrix
-                    [ lvalue, assignment ]
-                )
-            )
-        );
-    }
-}
-
-/**
- * A sequence expression, similar to the comma operator in C/C++ and JavaScript
- * e.g., the (A, B) expression evaluates to B
- */
-class SpeedyMatrixSequenceExpr extends SpeedyMatrixExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} first we'll discard this result
-     * @param {SpeedyMatrixExpr} second we'll use this as the result of this expression
-     */
-    constructor(first, second)
-    {
-        super(second._shape);
-
-        /** @type {SpeedyMatrixExpr} we'll discard this result */
-        this._first = first;
-
-        /** @type {SpeedyMatrixExpr} the result of this expression */
-        this._second = second;
-    }
-
-    /**
-     * Get the matrix associated with this expression
-     * This matrix must be guaranteed to be available after compiling this expression
-     * @returns {SpeedyMatrix}
-     */
-    get _matrix()
-    {
-        return this._second._matrix;
-    }
-
-    /**
-     * Compile this expression
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compile()
-    {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__["SpeedyPromise"].all([
-            this._first._compile().turbocharge(),
-            this._second._compile().turbocharge(),
-        ]).then(([ first, second ]) =>
-            new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](
-                null,
-                this._matrix,
-                [ first, second ]
-            )
-        );
-    }
-}
-
-
-
-// ================================================
-// L-VALUES
-// ================================================
-
-/**
- * An lvalue (locator value) expression represents a user-owned object stored in memory
- * @abstract
- */
-class SpeedyMatrixLvalueExpr extends SpeedyMatrixExpr
-{
-    /**
-     * Get the matrix associated with this lvalue expression
-     * This matrix must be guaranteed to be available after compiling this expression
-     * @returns {SpeedyMatrix}
-     */
-    get _matrix()
-    {
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["AbstractMethodError"]();
-    }
-
-    /**
-     * Evaluate this lvalue
-     * @returns {SpeedyPromise<SpeedyMatrixLvalueExpr>}
-     */
-    _evaluateLvalue()
-    {
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["AbstractMethodError"]();
-    }
-
-    /**
-     * Assign a matrix
-     * @param {SpeedyMatrix} matrix
-     * @returns {SpeedyPromise<void>} resolves as soon as the assignment is done
-     */
-    _assign(matrix)
-    {
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["AbstractMethodError"]();
-    }
-
-    /**
-     * Compile an assignment operation
-     * @param {BoundMatrixOperationTree} value
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compileAssignment(value)
-    {
-        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["AbstractMethodError"]();
-    }
-
-    /**
-     * Assign an expression to this lvalue
-     * @param {SpeedyMatrixExpr|number[]} expr
-     * @returns {SpeedyPromise<SpeedyMatrixLvalueExpr>} resolves as soon as the assignment is done
-     */
-    assign(expr)
-    {
-        // got an array of numbers?
-        if(Array.isArray(expr)) {
-            const mat = new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](this._shape, expr);
-            return this._evaluateLvalue().then(lvalue =>
-                lvalue._assign(mat)
-            ).then(() => this);
-        }
-
-        // compile expr and get the data
-        return this._evaluateLvalue().then(lvalue =>
-            expr._compileAndEvaluate().then(result => lvalue._assign(result._matrix))
-        ).then(() => this);
-    }
-
-    /**
-     * Fill the matrix with a constant value
-     * @param {number} value
-     * @returns {SpeedyPromise<SpeedyMatrixLvalueExpr>}
-     */
-    fill(value)
-    {
-        // FIXME: currently inefficient (compiles new fill expr multiple times)
-        return this.assign(new SpeedyMatrixFillExpr(this._shape, +value));
-    }
-
-    /**
-     * Creates an assignment expression (i.e., this := expr),
-     * without actually computing or changing any numbers
-     * @param {SpeedyMatrixExpr|number[]} expr matrix expression or an array of numbers in column-major format
-     * @returns {SpeedyMatrixAssignmentExpr}
-     */
-    setTo(expr)
-    {
-        // got an array of numbers?
-        if(Array.isArray(expr)) {
-            const mat = new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](this._shape, expr);
-            expr = new SpeedyMatrixElementaryExpr(mat.shape, mat);
-        }
-
-        // return assignment expression
-        return new SpeedyMatrixAssignmentExpr(this, expr);
-    }
-
-    /**
-     * Extract a (lastRow - firstRow + 1) x (lastColumn - firstColumn + 1)
-     * block from the matrix. All indices are 0-based. Note that the
-     * memory of the block is shared with the memory of the matrix.
-     * @param {number} firstRow
-     * @param {number} lastRow
-     * @param {number} firstColumn
-     * @param {number} lastColumn
-     * @returns {SpeedyMatrixReadwriteBlockExpr}
-     */
-    block(firstRow, lastRow, firstColumn, lastColumn)
-    {
-        return new SpeedyMatrixReadwriteBlockExpr(this, firstRow, lastRow, firstColumn, lastColumn);
-    }
-
-    /**
-     * Get the main diagonal of the matrix. Internal buffer is shared.
-     * @returns {SpeedyMatrixReadwriteDiagonalExpr}
-     */
-    diagonal()
-    {
-        return new SpeedyMatrixReadwriteDiagonalExpr(this);
-    }
-}
-
-/**
- * An elementary expression representing a single matrix
- * (e.g., expression 'A' represents a single matrix)
- */
-class SpeedyMatrixElementaryExpr extends SpeedyMatrixLvalueExpr
-{
-    /**
-     * Constructor
-     * @param {MatrixShape} shape shape of the matrix
-     * @param {?SpeedyMatrix} [matrix] user matrix
-     */
-    constructor(shape, matrix = null)
-    {
-        super(shape);
-
-        /** @type {SpeedyMatrix} the matrix associated with this expression */
-        this._usermatrix = matrix || new _matrix__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrix"](this._shape);
-
-        /** @type {MatrixOperation} copy operation, used in compiled mode */
-        this._copy = new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationCopy"](this._shape);
-
-        // validate
-        if(matrix != null)
-            SpeedyMatrixExpr._assertSameShape(this._shape, matrix.shape);
-    }
-
-    /**
-     * Read the entries of this matrix
-     * Results are given in column-major format
-     * @returns {SpeedyPromise<number[]>}
-     */
-    read()
-    {
-        // this is an elementary expression, so we've got the data
-        return this._usermatrix.read().turbocharge();
-    }
-
-    /**
-     * Get the matrix associated with this lvalue expression
-     * This matrix must be guaranteed to be available after compiling this expression
-     * @returns {SpeedyMatrix}
-     */
-    get _matrix()
-    {
-        return this._usermatrix;
-    }
-
-    /**
-     * Evaluate this lvalue
-     * @returns {SpeedyPromise<SpeedyMatrixLvalueExpr>}
-     */
-    _evaluateLvalue()
-    {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__["SpeedyPromise"].resolve(this);
-    }
-
-    /**
-     * Assign a matrix
-     * @param {SpeedyMatrix} matrix
-     * @returns {SpeedyPromise<void>} resolves as soon as the assignment is done
-     */
-    _assign(matrix)
-    {
-        return matrixOperationsQueue.enqueue(
-            this._copy,
-            this._matrix,
-            [ matrix ]
-        );
-    }
-
-    /**
-     * Compile this expression
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compile()
-    {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__["SpeedyPromise"].resolve(new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](
-            null,
-            this._matrix,
-            []
-        ));
-    }
-
-    /**
-     * Compile an assignment operation
-     * @param {BoundMatrixOperationTree} value
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compileAssignment(value)
-    {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__["SpeedyPromise"].resolve(new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](
-            this._copy,
-            this._matrix,
-            [ value ]
-        ));
-    }
-}
-
-/**
- * Extract a read-write block submatrix from a matrix expression
- */
-class SpeedyMatrixReadwriteBlockExpr extends SpeedyMatrixLvalueExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixLvalueExpr} expr originating matrix expression
-     * @param {number} firstRow indexed by 0
-     * @param {number} lastRow
-     * @param {number} firstColumn
-     * @param {number} lastColumn
-     */
-    constructor(expr, firstRow, lastRow, firstColumn, lastColumn)
-    {
-        super(new _matrix_shape__WEBPACK_IMPORTED_MODULE_2__["MatrixShape"](lastRow - firstRow + 1, lastColumn - firstColumn + 1, expr.dtype));
-
-        /** @type {SpeedyMatrixLvalueExpr} originating matrix expression */
-        this._expr = expr;
-
-        /** @type {number} index of the top-most row (starts at zero) */
-        this._firstRow = firstRow;
-
-        /** @type {number} index of the last row */
-        this._lastRow = lastRow;
-
-        /** @type {number} index of the left-most column (starts at zero) */
-        this._firstColumn = firstColumn;
-
-        /** @type {number} index of the right-most column */
-        this._lastColumn = lastColumn;
-
-        /** @type {?SpeedyMatrix} the matrix associated with this expression */
-        this._submatrix = null;
-
-        /** @type {?SpeedyMatrix} used for caching */
-        this._cachedMatrix = null;
-
-        /** @type {MatrixOperation} matrix operation */
-        this._copy = new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationCopy"](this._shape);
-    }
-
-    /**
-     * Get the matrix associated with this lvalue expression
-     * This matrix must be guaranteed to be available after compiling this expression
-     * @returns {SpeedyMatrix}
-     */
-    get _matrix()
-    {
-        return this._submatrix;
-    }
-
-    /**
-     * Evaluate this lvalue
-     * @returns {SpeedyPromise<SpeedyMatrixLvalueExpr>}
-     */
-    _evaluateLvalue()
-    {
-        return this._expr._evaluateLvalue().then(result => {
-            if(result._matrix !== this._cachedMatrix || this._submatrix === null) {
-                this._cachedMatrix = result._matrix;
-                return this._cachedMatrix.block(this._firstRow, this._lastRow, this._firstColumn, this._lastColumn);
-            }
-            return this._submatrix; // we've already extracted the submatrix
-        }).then(submatrix => {
-            this._submatrix = submatrix;
-            return this;
-        });
-    }
-
-    /**
-     * Assign a matrix
-     * Since this is a submatrix, we can't just assign pointers.
-     * We need to copy the data
-     * @param {SpeedyMatrix} matrix
-     * @returns {SpeedyPromise<void>} resolves as soon as the assignment is done
-     */
-    _assign(matrix)
-    {
-        return matrixOperationsQueue.enqueue(
-            this._copy,
-            this._matrix,
-            [ matrix ]
-        );
-    }
-
-    /**
-     * Compile this expression
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compile()
-    {
-        return this._expr._compile().then(node => {
-            if(node.outputMatrix !== this._cachedMatrix || this._submatrix === null) {
-                this._cachedMatrix = node.outputMatrix;
-                return this._cachedMatrix.block(
-                    this._firstRow,
-                    this._lastRow,
-                    this._firstColumn,
-                    this._lastColumn
-                ).then(submatrix => {
-                    this._submatrix = submatrix;
-                    return node;
-                });
-            }
-            return node;
-        }).then(node =>
-            new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](
-                null,
-                this._matrix,
-                [ node ]
-            )
-        );
-    }
-
-    /**
-     * Compile an assignment operation
-     * @param {BoundMatrixOperationTree} value
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compileAssignment(value)
-    {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__["SpeedyPromise"].resolve(new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](
-            this._copy,
-            this._matrix,
-            [ value ]
-        ));
-    }
-}
-
-/**
- * Extract a read-write diagonal from a matrix expression
- */
-class SpeedyMatrixReadwriteDiagonalExpr extends SpeedyMatrixLvalueExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixLvalueExpr} expr originating matrix expression
-     */
-    constructor(expr)
-    {
-        const diagonalLength = Math.min(expr.rows, expr.columns);
-        super(new _matrix_shape__WEBPACK_IMPORTED_MODULE_2__["MatrixShape"](1, diagonalLength, expr.dtype));
-
-        /** @type {SpeedyMatrixLvalueExpr} originating matrix expression */
-        this._expr = expr;
-
-        /** @type {?SpeedyMatrix} the matrix associated with this expression */
-        this._diagonal = null;
-
-        /** @type {?SpeedyMatrix} used for caching */
-        this._cachedMatrix = null;
-
-        /** @type {MatrixOperation} copy operation */
-        this._copy = new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationCopy"](this._shape);
-    }
-
-    /**
-     * Get the matrix associated with this expression
-     * This matrix must be guaranteed to be available after compiling this expression
-     * @returns {SpeedyMatrix}
-     */
-    get _matrix()
-    {
-        return this._diagonal;
-    }
-
-    /**
-     * Evaluate this lvalue
-     * @returns {SpeedyPromise<SpeedyMatrixLvalueExpr>}
-     */
-    _evaluateLvalue()
-    {
-        return this._expr._evaluateLvalue().then(result => {
-            if(result._matrix !== this._cachedMatrix || this._diagonal === null) {
-                this._cachedMatrix = result._matrix;
-                return this._cachedMatrix.diagonal();
-            }
-            return this._diagonal; // we've already extracted the diagonal
-        }).then(diagonal => {
-            this._diagonal = diagonal;
-            return this;
-        });
-    }
-
-    /**
-     * Assign a matrix
-     * Since this is a diagonal, we can't just assign pointers.
-     * We need to copy the data
-     * @param {SpeedyMatrix} matrix
-     * @returns {SpeedyPromise<void>} resolves as soon as the assignment is done
-     */
-    _assign(matrix)
-    {
-        return matrixOperationsQueue.enqueue(
-            this._copy,
-            this._matrix,
-            [ matrix ]
-        );
-    }
-
-    /**
-     * Compile this expression
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compile()
-    {
-        return this._expr._compile().then(node => {
-            if(node.outputMatrix !== this._cachedMatrix || this._diagonal === null) {
-                this._cachedMatrix = node.outputMatrix;
-                return this._cachedMatrix.diagonal().then(diagonal => {
-                    this._diagonal = diagonal;
-                    return node;
-                });
-            }
-            return node;
-        }).then(node =>
-            new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](
-                null,
-                this._matrix,
-                [ node ]
-            )
-        );
-    }
-
-    /**
-     * Compile an assignment operation
-     * @param {BoundMatrixOperationTree} value
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compileAssignment(value)
-    {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__["SpeedyPromise"].resolve(new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](
-            this._copy,
-            this._matrix,
-            [ value ]
-        ));
-    }
-}
-
-
-// ================================================
-// BASIC OPERATIONS
-// ================================================
-
-/**
- * Make an expression constant
- */
-class SpeedyMatrixConstantExpr extends SpeedyMatrixExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} expr the expression to be made constant, possibly a lvalue
-     */
-    constructor(expr)
-    {
-        super(expr._shape);
-
-        /** @type {SpeedyMatrixExpr} the expression to be made constant, possibly a lvalue */
-        this._expr = expr;
-    }
-
-    /**
-     * Get the matrix associated with this expression
-     * This matrix must be guaranteed to be available after compiling this expression
-     * @returns {SpeedyMatrix}
-     */
-    get _matrix()
-    {
-        return this._expr._matrix;
-    }
-
-    /**
-     * Compile this expression
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compile()
-    {
-        return this._expr._compile();
-    }
-}
-
-/**
- * Fill the output matrix with a constant value
- */
-class SpeedyMatrixFillExpr extends SpeedyMatrixTempExpr
-{
-    /**
-     * Constructor
-     * @param {MatrixShape} shape the shape of the resulting expression
-     * @param {number} value will fill the output matrix with this constant value
-     */
-    constructor(shape, value)
-    {
-        super(shape);
-
-        /** @type {MatrixOperation} fill operation */
-        this._operation = new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationFill"](this._shape, value);
-    }
-
-    /**
-     * Compile this expression
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compile()
-    {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__["SpeedyPromise"].resolve(new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](
-            this._operation,
-            this._matrix,
-            []
-        ));
-    }
-}
-
-/**
- * Tranpose a matrix,
- * e.g., A = B^T
- */
-class SpeedyMatrixTransposeExpr extends SpeedyMatrixUnaryExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} expr
-     */
-    constructor(expr)
-    {
-        // optimize if the input expression is a transposition
-        if(expr instanceof SpeedyMatrixTransposeExpr) {
-            // A = (A^T)^T
-            return expr.child;
-        }
-
-        // regular transposition
-        super(expr, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationTranspose"](expr._shape));
-    }
-}
-
-/**
- * Compute the inverse of a matrix,
- * e.g., A = B^(-1)
- */
-class SpeedyMatrixInverseExpr extends SpeedyMatrixUnaryExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} expr
-     */
-    constructor(expr)
-    {
-        if(expr.rows !== expr.columns)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`Can't compute the inverse of a non-square matrix`);
-        if(expr.rows > 3)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["NotSupportedError"](`Currently, only matrices up to 3x3 may be inverted`);
-
-        super(expr, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationInverse"](expr._shape));
-    }
-}
-
-/**
- * Add two matrix expressions,
- * e.g., A = B + C
- */
-class SpeedyMatrixAddExpr extends SpeedyMatrixBinaryExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} leftExpr
-     * @param {SpeedyMatrixExpr} rightExpr
-     */
-    constructor(leftExpr, rightExpr)
-    {
-        SpeedyMatrixExpr._assertSameShape(leftExpr._shape, rightExpr._shape);
-        super(leftExpr, rightExpr, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationAdd"](leftExpr._shape, rightExpr._shape));
-    }
-}
-
-/**
- * Subtract two matrix expressions,
- * e.g., A = B - C
- */
-class SpeedyMatrixSubtractExpr extends SpeedyMatrixBinaryExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} leftExpr
-     * @param {SpeedyMatrixExpr} rightExpr
-     */
-    constructor(leftExpr, rightExpr)
-    {
-        SpeedyMatrixExpr._assertSameShape(leftExpr._shape, rightExpr._shape);
-        super(leftExpr, rightExpr, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationSubtract"](leftExpr._shape, rightExpr._shape));
-    }
-}
-
-/**
- * Multiply two matrix expressions,
- * e.g., A = B * C
- */
-class SpeedyMatrixMultiplyExpr extends SpeedyMatrixBinaryExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} leftExpr
-     * @param {SpeedyMatrixExpr} rightExpr
-     */
-    constructor(leftExpr, rightExpr)
-    {
-        // optimize if the input expressions are transposed
-        const lt = leftExpr instanceof SpeedyMatrixTransposeExpr;
-        const rt = rightExpr instanceof SpeedyMatrixTransposeExpr;
-        if(lt && rt) {
-            // A = (B^T) (C^T) = (C B)^T
-            return new SpeedyMatrixTransposeExpr(
-                new SpeedyMatrixMultiplyExpr(rightExpr.child, leftExpr.child)
-            );
-        }
-        else if(lt && !rt) {
-            // A = (B^T) C
-            return new SpeedyMatrixMultiplyLTExpr(leftExpr.child, rightExpr);
-        }
-        else if(!lt && rt) {
-            // A = B (C^T)
-            return new SpeedyMatrixMultiplyRTExpr(leftExpr, rightExpr.child);
-        }
-
-        // multiply by a column-vector
-        if(rightExpr.columns === 1)
-            return new SpeedyMatrixMultiplyVecExpr(leftExpr, rightExpr);
-
-        // regular multiplication
-        if(leftExpr.columns !== rightExpr.rows)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Can't multiply a ${leftExpr.rows} x ${leftExpr.columns} matrix by a ${rightExpr.rows} x ${rightExpr.columns} matrix`);
-
-        super(leftExpr, rightExpr, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationMultiply"](leftExpr._shape, rightExpr._shape));
-    }
-}
-
-/**
- * Multiply two matrix expressions, transposing the left operand
- * e.g., A = B^T * C
- */
-class SpeedyMatrixMultiplyLTExpr extends SpeedyMatrixBinaryExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} leftExpr
-     * @param {SpeedyMatrixExpr} rightExpr
-     */
-    constructor(leftExpr, rightExpr)
-    {
-        if(leftExpr.rows !== rightExpr.rows)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Can't multiply a ${leftExpr.columns} x ${leftExpr.rows} (transposed) matrix by a ${rightExpr.rows} x ${rightExpr.columns} matrix`);
-
-        super(leftExpr, rightExpr, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationMultiplyLT"](leftExpr._shape, rightExpr._shape));
-    }
-}
-
-/**
- * Multiply two matrix expressions, transposing the right operand
- * e.g., A = B * C^T
- */
-class SpeedyMatrixMultiplyRTExpr extends SpeedyMatrixBinaryExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} leftExpr
-     * @param {SpeedyMatrixExpr} rightExpr
-     */
-    constructor(leftExpr, rightExpr)
-    {
-        if(leftExpr.columns !== rightExpr.columns)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Can't multiply a ${leftExpr.rows} x ${leftExpr.columns} matrix by a ${rightExpr.columns} x ${rightExpr.rows} (transposed) matrix`);
-
-        super(leftExpr, rightExpr, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationMultiplyRT"](leftExpr._shape, rightExpr._shape));
-    }
-}
-
-/**
- * Multiply a matrix A by a column-vector x,
- * e.g., y = A x
- */
-class SpeedyMatrixMultiplyVecExpr extends SpeedyMatrixBinaryExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} leftExpr
-     * @param {SpeedyMatrixExpr} rightExpr
-     */
-    constructor(leftExpr, rightExpr)
-    {
-        if(leftExpr.columns !== rightExpr.rows || rightExpr.columns !== 1)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Can't multiply a ${leftExpr.rows} x ${leftExpr.columns} matrix by a ${rightExpr.rows} x ${rightExpr.columns} matrix / column-vector`);
-
-        super(leftExpr, rightExpr, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationMultiplyVec"](leftExpr._shape, rightExpr._shape));
-    }
-}
-
-/**
- * Multiply a matrix expression by a number,
- * e.g., A = alpha B
- */
-class SpeedyMatrixScaleExpr extends SpeedyMatrixUnaryExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} expr input expression
-     * @param {number} scalar
-     */
-    constructor(expr, scalar)
-    {
-        super(expr, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationScale"](expr._shape, scalar));
-    }
-}
-
-/**
- * Component-wise multiplication of two matrix expressions
- */
-class SpeedyMatrixCompMultExpr extends SpeedyMatrixBinaryExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} leftExpr
-     * @param {SpeedyMatrixExpr} rightExpr
-     */
-    constructor(leftExpr, rightExpr)
-    {
-        SpeedyMatrixExpr._assertSameShape(leftExpr._shape, rightExpr._shape);
-        super(leftExpr, rightExpr, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationCompMult"](leftExpr._shape, rightExpr._shape));
-    }
-}
-
-/**
- * QR decomposition
- */
-class SpeedyMatrixQRExpr extends SpeedyMatrixUnaryExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} expr
-     * @param {string} mode 'full' | 'reduced'
-     */
-    constructor(expr, mode)
-    {
-        if(expr.rows < expr.columns)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Can't compute the QR decomposition of a ${expr.rows} x ${expr.columns} matrix`);
-
-        super(expr, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationQR"](expr._shape, mode));
-    }
-}
-
-/**
- * map() expression
- */
-class SpeedyMatrixMapExpr extends SpeedyMatrixTempExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} inputMatrix input data
-     * @param {SpeedyMatrixExpr} mapfn mapping function
-     * @param {SpeedyMatrix} bi input to the mapping function - it has the shape of a block of the input matrix
-     * @param {SpeedyMatrix} index input to the mapping function - 1x1 index (0, 1, 2, 3, ... numBlocks-1)
-     */
-    constructor(inputMatrix, mapfn, bi, index)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(bi.shape.rows === inputMatrix.rows && inputMatrix.columns % bi.shape.columns === 0);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(inputMatrix.dtype === mapfn.dtype);
-        const numBlocks = inputMatrix.columns / bi.shape.columns;
-        const outputShape = new _matrix_shape__WEBPACK_IMPORTED_MODULE_2__["MatrixShape"](mapfn.rows, mapfn.columns * numBlocks, mapfn.dtype);
-        super(outputShape);
-
-        /** @type {SpeedyMatrixExpr} input data */
-        this._inputMatrix = inputMatrix;
-
-        /** @type {SpeedyMatrixExpr} mapping function to be applied to each block */
-        this._mapfn = mapfn;
-
-        /** @type {SpeedyMatrix} input to the mapping function - a block of the input matrix */
-        this._bi = bi;
-
-        /** @type {SpeedyMatrix} 1x1 index (0 represents the left-most block, 1 the block next to it, and so on) */
-        this._index = index;
-    }
-
-    /**
-     * Compile this expression
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compile()
-    {
-        return this._inputMatrix._compile().then(inputMatrix =>
-            this._mapfn._compile().then(mapfn =>
-                new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](
-                    new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationMap"](this._shape),
-                    this._matrix, [
-                        inputMatrix,
-                        new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](null, mapfn.outputMatrix),
-                        new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](null, this._bi),
-                        new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](null, this._index)
-                    ], [
-                        ['mapfn', mapfn]
-                    ]
-                )
-            )
-        );
-    }
-}
-
-/**
- * reduce() expression
- */
-class SpeedyMatrixReduceExpr extends SpeedyMatrixTempExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} inputMatrix input data
-     * @param {SpeedyMatrixExpr} reducefn reduce expression
-     * @param {SpeedyMatrix} accumulator partial output of reduce()
-     * @param {SpeedyMatrix} bi a block of the input matrix
-     * @param {SpeedyMatrix} index 1x1 matrix
-     * @param {SpeedyMatrixExpr} initialMatrix initial value to be used as the accumulator
-     */
-    constructor(inputMatrix, reducefn, accumulator, bi, index, initialMatrix)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(bi.shape.rows === inputMatrix.rows && inputMatrix.columns % bi.shape.columns === 0);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(inputMatrix.dtype === reducefn.dtype);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(reducefn._shape.equals(initialMatrix._shape));
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(reducefn._shape.equals(accumulator.shape));
-        super(reducefn._shape);
-
-        /** @type {SpeedyMatrixExpr} input data */
-        this._inputMatrix = inputMatrix;
-
-        /** @type {SpeedyMatrixExpr} reduce expression */
-        this._reducefn = reducefn;
-
-        /** @type {SpeedyMatrix} input to the reduce function - accumulator matrix */
-        this._accumulator = accumulator;
-
-        /** @type {SpeedyMatrix} input to the reduce function - a block of the input matrix */
-        this._bi = bi;
-
-        /** @type {SpeedyMatrix} 1x1 index (0 represents the left-most block, 1 the block next to it, and so on) */
-        this._index = index;
-
-        /** @type {SpeedyMatrixExpr} initial value to be used as the accumulator */
-        this._initialMatrix = initialMatrix;
-    }
-
-    /**
-     * Compile this expression
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compile()
-    {
-        return this._inputMatrix._compile().then(inputMatrix =>
-            this._initialMatrix._compile().then(initialMatrix =>
-                this._reducefn._compile().then(reducefn =>
-                    new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](
-                        new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationReduce"](this._shape),
-                        this._matrix, [
-                            inputMatrix,
-                            new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](null, reducefn.outputMatrix),
-                            new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](null, this._accumulator),
-                            new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](null, this._bi),
-                            new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](null, this._index),
-                            initialMatrix
-                        ], [
-                            [ 'reducefn', reducefn ]
-                        ]
-                    )
-                )
-            )
-        );
-    }
-}
-
-/**
- * sort() expression
- */
-class SpeedyMatrixSortExpr extends SpeedyMatrixTempExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} inputMatrix data to be sorted
-     * @param {SpeedyMatrixExpr} comparator compares bi to bj
-     * @param {SpeedyMatrix} bi
-     * @param {SpeedyMatrix} bj
-     */
-    constructor(inputMatrix, comparator, bi, bj)
-    {
-        super(inputMatrix._shape);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(bi.shape.equals(bj.shape));
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(bi.rows === inputMatrix.rows && inputMatrix.columns % bi.columns === 0);
-
-        /** @type {SpeedyMatrixExpr} data to be sorted */
-        this._inputMatrix = inputMatrix;
-
-        /** @type {SpeedyMatrixExpr} an expression comparing bi to bj */
-        this._comparator = comparator;
-
-        /** @type {MatrixShape} shape of the blocks */
-        this._blockShape = bi.shape;
-
-        /** @type {SpeedyMatrix} storage for block comparisons */
-        this._bi = bi;
-
-        /** @type {SpeedyMatrix} storage for block comparisons */
-        this._bj = bj;
-    }
-
-    /**
-     * Compile this expression
-     * @returns {SpeedyPromise<BoundMatrixOperationTree>}
-     */
-    _compile()
-    {
-        return this._inputMatrix._compile().then(inputMatrix => {
-            return this._comparator._compile().then(comparator => {
-                return new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](
-                    new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationSort"](this._shape, this._blockShape),
-                    this._matrix, [
-                        inputMatrix,
-                        new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](null, comparator.outputMatrix),
-                        new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](null, this._bi),
-                        new _bound_matrix_operation__WEBPACK_IMPORTED_MODULE_1__["BoundMatrixOperationTree"](null, this._bj),
-                    ], [
-                        [ 'cmp', comparator ]
-                    ]
-                );
-            });
-        });
-    }
-}
-
-
-
-// ==============================================
-// GEOMETRIC TRANSFORMATIONS
-// ==============================================
-
-/**
- * Compute a homography matrix using 4 correspondences of points
- */
-class SpeedyMatrixHomography4pExpr extends SpeedyMatrixBinaryExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} source 2x4 matrix: source points (ui, vi)
-     * @param {SpeedyMatrixExpr} destination 2x4 matrix: destination points (xi, vi)
-     */
-    constructor(source, destination)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(source._shape.rows === 2 && source._shape.columns === 4);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(source._shape.equals(destination._shape));
-        super(source, destination, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationHomography4p"](source._shape, destination._shape));
-    }
-}
-
-/**
- * Compute a homography matrix using n >= 4 correspondences of points via DLT
- */
-class SpeedyMatrixHomographyDLTExpr extends SpeedyMatrixBinaryExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} source 2 x n matrix: source points (ui, vi)
-     * @param {SpeedyMatrixExpr} destination 2 x n matrix: destination points (xi, vi)
-     */
-    constructor(source, destination)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(source._shape.rows === 2 && source._shape.columns >= 4);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(source._shape.equals(destination._shape));
-        super(source, destination, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationHomographyDLT"](source._shape, destination._shape));
-    }
-}
-
-/**
- * Apply a homography matrix to a set of 2D points
- */
-class SpeedyMatrixApplyHomographyExpr extends SpeedyMatrixBinaryExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} hom homography matrix (3x3)
-     * @param {SpeedyMatrixExpr} pts set of n 2D points (2xn)
-     */
-    constructor(hom, pts)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(hom.rows === 3 && hom.columns === 3);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(pts.rows === 2);
-        super(hom, pts, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationApplyHomography"](hom._shape, pts._shape));
-    }
-}
-
-/**
- * Apply an affine transformation to a set of 2D points
- */
-class SpeedyMatrixApplyAffineExpr extends SpeedyMatrixBinaryExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} mat transformation matrix (2x3)
-     * @param {SpeedyMatrixExpr} pts set of n 2D points (2xn)
-     */
-    constructor(mat, pts)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(mat.rows === 2 && mat.columns === 3);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(pts.rows === 2);
-        super(mat, pts, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationApplyAffine"](mat._shape, pts._shape));
-    }
-}
-
-/**
- * Apply a linear transformation to a set of 2D points
- * (this is basically matrix multiplication)
- */
-class SpeedyMatrixApplyLinear2dExpr extends SpeedyMatrixBinaryExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} mat transformation matrix (2x2)
-     * @param {SpeedyMatrixExpr} pts set of n 2D points (2xn)
-     */
-    constructor(mat, pts)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(mat.rows === 2 && mat.columns === 2);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(pts.rows === 2);
-        super(mat, pts, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationApplyLinear2d"](mat._shape, pts._shape));
-    }
-}
-
-/**
- * Compute a homography matrix using P-RANSAC
- */
-class SpeedyMatrixPransacHomographyExpr extends SpeedyMatrixTernaryExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} source 2 x n matrix: source points (ui, vi), n >= 4
-     * @param {SpeedyMatrixExpr} destination 2 x n matrix: destination points (xi, vi)
-     * @param {number} numberOfHypotheses positive integer
-     * @param {number} bundleSize positive integer
-     * @param {number} reprojectionError in pixels
-     * @param {SpeedyMatrixLvalueExpr} mask 1 x n output inlier-outlier mask
-     */
-    constructor(source, destination, numberOfHypotheses, bundleSize, reprojectionError, mask)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(source.rows === 2 && source.columns >= 4);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(source._shape.equals(destination._shape));
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(mask.rows === 1 && mask.columns === source.columns);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(mask.dtype === source.dtype);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(mask instanceof SpeedyMatrixLvalueExpr);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(numberOfHypotheses > 0 && bundleSize > 0 && reprojectionError >= 0);
-
-        super(source, destination, mask, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationPransacHomography"](
-            source._shape, destination._shape,
-            numberOfHypotheses, bundleSize,
-            reprojectionError, mask._shape
-        ));
-    }
-}
-
-
-
-
-
-// ==============================================
-// INTERNAL UTILITIES
-// ==============================================
-
-/**
- * Internal QR solver (Ax = b)
- */
-class SpeedyMatrixQRSolverNodeExpr extends SpeedyMatrixBinaryExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} matrixA m x n matrix
-     * @param {SpeedyMatrixExpr} vectorB m x 1 vector
-     */
-    constructor(matrixA, vectorB)
-    {
-        if(matrixA.rows < matrixA.columns)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Can't compute the QR decomposition of a ${matrixA.rows} x ${matrixA.columns} matrix`);
-        else if(vectorB.columns != 1 || vectorB.rows != matrixA.rows)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Expected a ${matrixA.rows} x 1 column-vector, but found a ${vectorB.rows} x ${vectorB.columns} matrix`);
-
-        super(matrixA, vectorB, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationQRSolve"](matrixA._shape, vectorB._shape));
-    }
-}
-
-/**
- * Back-substitution algorithm
- * (solve Rx = b for x, R is upper-triangular)
- */
-class SpeedyMatrixBackSubstitutionNodeExpr extends SpeedyMatrixUnaryExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} input [b | R] matrix
-     */
-    constructor(input)
-    {
-        if(input.columns != input.rows + 1)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Expected a ${input.rows} x ${input.rows + 1} matrix, but found a ${input.rows} x ${input.columns} matrix`);
-
-        super(input, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationBackSubstitution"](input._shape));
-    }
-}
-
-/**
- * Find best-fit solution x of Ax = b with least-squares method
- * A is m x n, b is m x 1, output x is n x 1
- * (m equations, n unknowns, m >= n)
- */
-class SpeedyMatrixLSSolveNodeExpr extends SpeedyMatrixBinaryExpr
-{
-    /**
-     * Constructor
-     * @param {SpeedyMatrixExpr} matrixA m x n matrix
-     * @param {SpeedyMatrixExpr} vectorB m x 1 vector
-     */
-    constructor(matrixA, vectorB)
-    {
-        const [ m, n ] = [ matrixA.rows, matrixA.columns ];
-
-        if(m < n)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Input matrix has more columns than rows - it's ${m} x ${n}`);
-        else if(vectorB.rows != m || vectorB.columns != 1)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Expected a ${m} x 1 column-vector, but found a ${vectorB.rows} x ${vectorB.columns} matrix`);
-
-        super(matrixA, vectorB, new _matrix_operations__WEBPACK_IMPORTED_MODULE_8__["MatrixOperationLSSolve"](matrixA._shape, vectorB._shape));
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/matrix/matrix-operation-header.js":
-/*!****************************************************!*\
-  !*** ./src/core/matrix/matrix-operation-header.js ***!
-  \****************************************************/
-/*! exports provided: MatrixOperationHeader */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationHeader", function() { return MatrixOperationHeader; });
-/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix */ "./src/core/matrix/matrix.js");
-/* harmony import */ var _matrix_shape__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-shape */ "./src/core/matrix/matrix-shape.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * matrix-operation-header.js
- * Serializable metadata for matrix operations
- */
-
-
-
-
-
-/**
- * Serializable metadata related to a matrix operation
- */
-class MatrixOperationHeader
-{
-    /**
-     * Constructor
-     * @param {string} method method name
-     * @param {number} numberOfInputMatrices how many input matrices do we require?
-     * @param {MatrixShape} outputShape shape of the output matrix
-     * @param {?object} [userData] custom serializable user-data
-     */
-    constructor(method, numberOfInputMatrices, outputShape, userData = null)
-    {
-        // ALL FIELDS ARE SERIALIZABLE
-        const n = numberOfInputMatrices | 0;
-        //Utils.assert(n >= 0);
-
-        /** @type {string} method name */
-        this.method = String(method);
-
-        /** @type {MatrixDataType} type of all matrices (input & output) */
-        this.dtype = outputShape.dtype;
-
-        /** @type {number} number of rows of the output matrix */
-        this.rows = outputShape.rows;
-
-        /** @type {number} number of columns of the output matrix */
-        this.columns = outputShape.columns;
-
-        /** @type {number} stride of the output matrix */
-        this.stride = 0; // initially unknown
-
-        /** @type {number} byte offset used to recover the data view */
-        this.byteOffset = 0; // initially unknown
-
-        /** @type {number} length in bytes used to recover the data view */
-        this.length = 0; // initially unknown
-
-        /** @type {number[]} number of rows of the input matrices */
-        this.rowsOfInputs = (new Array(n)).fill(0); // to be determined later
-
-        /** @type {number[]} number of columns of the input matrices */
-        this.columnsOfInputs = (new Array(n)).fill(0); // to be determined layer
-
-        /** @type {number[]} strides of the input matrices */
-        this.strideOfInputs = (new Array(n)).fill(0); // to be determined later - buffer may be locked
-
-        /** @type {number[]} byte offsets used to recover the data view */
-        this.byteOffsetOfInputs = (new Array(n)).fill(0); // to be determined later - buffer may be locked
-
-        /** @type {number[]} length in bytes used to recover the data view */
-        this.lengthOfInputs = (new Array(n)).fill(0); // to be determined later - buffer may be locked
-
-        /** @type {object} custom serializable user-data */
-        this.custom = new Object(userData);
-    }
-
-    /**
-     * Update fields (stride, byte offset, etc.)
-     * before executing an operation
-     * @param {SpeedyMatrix} outputMatrix 
-     * @param {SpeedyMatrix[]} inputMatrices 
-     */
-    updateMetadata(outputMatrix, inputMatrices)
-    {
-        this._updateOutputMetadata(outputMatrix);
-        this._updateInputMetadata(inputMatrices);
-    }
-
-    /**
-     * Update fields related to the output matrix
-     * @param {SpeedyMatrix} outputMatrix 
-     */
-    _updateOutputMetadata(outputMatrix)
-    {
-        const output = outputMatrix.buffer.data;
-
-        this.stride = outputMatrix.stride;
-        this.byteOffset = output.byteOffset;
-        this.length = output.length;
-
-        // can't change the shape of the output matrix
-        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(outputMatrix.rows === this.rows && outputMatrix.columns === this.columns && outputMatrix.dtype === this.dtype);
-    }
-
-    /**
-     * Update fields related to the input matrices
-     * The order of the input matrices shall be preserved
-     * @param {SpeedyMatrix[]} inputMatrices 
-     */
-    _updateInputMetadata(inputMatrices)
-    {
-        const n = inputMatrices.length;
-        const firstIteration = this.rowsOfInputs.length == 0 || this.rowsOfInputs[0] == 0; // short-circuit
-        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(this.rowsOfInputs.length === n);
-
-        for(let i = 0; i < n; i++) {
-            const inputMatrix = inputMatrices[i];
-            const input = inputMatrix.buffer.data;
-
-            this.strideOfInputs[i] = inputMatrix.stride;
-            this.byteOffsetOfInputs[i] = input.byteOffset;
-            this.lengthOfInputs[i] = input.length;
-
-            if(firstIteration) {
-                this.rowsOfInputs[i] = inputMatrix.rows;
-                this.columnsOfInputs[i] = inputMatrix.columns;
-            }
-            else {
-                // can't change the shape of the input matrices
-                _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(inputMatrix.rows === this.rowsOfInputs[i] && inputMatrix.columns === this.columnsOfInputs[i] && inputMatrix.dtype === this.dtype);
-            }
-        }
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/matrix/matrix-operations-queue.js":
-/*!****************************************************!*\
-  !*** ./src/core/matrix/matrix-operations-queue.js ***!
-  \****************************************************/
-/*! exports provided: MatrixOperationsQueue */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationsQueue", function() { return MatrixOperationsQueue; });
-/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix */ "./src/core/matrix/matrix.js");
-/* harmony import */ var _matrix_operations__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-operations */ "./src/core/matrix/matrix-operations.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * matrix-operations-queue.js
- * Run matrix operations in a FIFO fashion
- */
-
-
-
-
-
-let instance = null;
-
-/**
- * Used to run matrix operations in a FIFO fashion
- */
-class MatrixOperationsQueue
-{
-    /**
-     * Class constructor
-     */
-    constructor()
-    {
-        /** @type {Array<Array>} queue of operations */
-        this._queue = [];
-
-        /** @type {boolean} whether we have a calculation taking place */
-        this._busy = false;
-
-        /** @type {boolean} should we run the operations in a Web Worker? */
-        this._useWorker = true;
-    }
-
-    /**
-     * Get Singleton
-     * @returns {MatrixOperationsQueue}
-     */
-    static get instance()
-    {
-        return instance || (instance = new MatrixOperationsQueue());
-    }
-
-    /**
-     * Should we run the operations in a Web Worker?
-     * @param {boolean} value
-     */
-    set useWorker(value)
-    {
-        this._useWorker = Boolean(value);
-    }
-
-    /**
-     * Should we run the operations in a Web Worker?
-     * @returns {boolean}
-     */
-    get useWorker()
-    {
-        return this._useWorker;
-    }
-
-    /**
-     * Enqueue matrix operation
-     * @param {MatrixOperation} matrixOperation 
-     * @param {SpeedyMatrix} outputMatrix
-     * @param {SpeedyMatrix[]} inputMatrices
-     * @returns {SpeedyPromise<void>} a promise that resolves as soon as the operation is complete
-     */
-    enqueue(matrixOperation, outputMatrix, inputMatrices)
-    {
-        // enqueue operation
-        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"](resolve => {
-            this._queue.push([ matrixOperation, inputMatrices, outputMatrix, resolve ]);
-            if(!this._busy) {
-                this._busy = true;
-                this._resolveAll();
-            }
-        });
-    }
-
-    /**
-     * Run all enqueued matrix operations
-     */
-    _resolveAll()
-    {
-        // finished the processing?
-        if(this._queue.length == 0) {
-            this._busy = false;
-            return;
-        }
-
-        // obtain the next operation
-        const [ matrixOperation, inputMatrices, outputMatrix, resolve ] = this._queue.shift();
-
-        // lock matrices
-        outputMatrix.lock();
-        for(let i = inputMatrices.length - 1; i >= 0; i--)
-            inputMatrices[i].lock();
-
-        // run the next operation
-        matrixOperation.run(inputMatrices, outputMatrix, this._useWorker).then(() => {
-            // unlock matrices
-            for(let j = inputMatrices.length - 1; j >= 0; j--)
-                inputMatrices[j].unlock();
-            outputMatrix.unlock();
-
-            // this operation is done
-            resolve();
-            this._resolveAll();
-        }).turbocharge();
-
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/matrix/matrix-operations.js":
-/*!**********************************************!*\
-  !*** ./src/core/matrix/matrix-operations.js ***!
-  \**********************************************/
-/*! exports provided: MatrixOperation, MatrixOperationNop, MatrixOperationFill, MatrixOperationCopy, MatrixOperationTranspose, MatrixOperationInverse, MatrixOperationAdd, MatrixOperationSubtract, MatrixOperationMultiply, MatrixOperationScale, MatrixOperationCompMult, MatrixOperationMultiplyLT, MatrixOperationMultiplyRT, MatrixOperationMultiplyVec, MatrixOperationQR, MatrixOperationQRSolve, MatrixOperationBackSubstitution, MatrixOperationLSSolve, MatrixOperationWithSubroutine, MatrixOperationSequence, MatrixOperationSort, MatrixOperationMap, MatrixOperationReduce, MatrixOperationHomography4p, MatrixOperationHomographyDLT, MatrixOperationApplyHomography, MatrixOperationApplyAffine, MatrixOperationApplyLinear2d, MatrixOperationPransacHomography */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperation", function() { return MatrixOperation; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationNop", function() { return MatrixOperationNop; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationFill", function() { return MatrixOperationFill; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationCopy", function() { return MatrixOperationCopy; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationTranspose", function() { return MatrixOperationTranspose; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationInverse", function() { return MatrixOperationInverse; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationAdd", function() { return MatrixOperationAdd; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationSubtract", function() { return MatrixOperationSubtract; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationMultiply", function() { return MatrixOperationMultiply; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationScale", function() { return MatrixOperationScale; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationCompMult", function() { return MatrixOperationCompMult; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationMultiplyLT", function() { return MatrixOperationMultiplyLT; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationMultiplyRT", function() { return MatrixOperationMultiplyRT; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationMultiplyVec", function() { return MatrixOperationMultiplyVec; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationQR", function() { return MatrixOperationQR; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationQRSolve", function() { return MatrixOperationQRSolve; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationBackSubstitution", function() { return MatrixOperationBackSubstitution; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationLSSolve", function() { return MatrixOperationLSSolve; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationWithSubroutine", function() { return MatrixOperationWithSubroutine; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationSequence", function() { return MatrixOperationSequence; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationSort", function() { return MatrixOperationSort; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationMap", function() { return MatrixOperationMap; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationReduce", function() { return MatrixOperationReduce; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationHomography4p", function() { return MatrixOperationHomography4p; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationHomographyDLT", function() { return MatrixOperationHomographyDLT; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationApplyHomography", function() { return MatrixOperationApplyHomography; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationApplyAffine", function() { return MatrixOperationApplyAffine; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationApplyLinear2d", function() { return MatrixOperationApplyLinear2d; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixOperationPransacHomography", function() { return MatrixOperationPransacHomography; });
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _matrix__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./matrix */ "./src/core/matrix/matrix.js");
-/* harmony import */ var _matrix_shape__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./matrix-shape */ "./src/core/matrix/matrix-shape.js");
-/* harmony import */ var _matrix_worker__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./matrix-worker */ "./src/core/matrix/matrix-worker.js");
-/* harmony import */ var _matrix_operation_header__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./matrix-operation-header */ "./src/core/matrix/matrix-operation-header.js");
-/* harmony import */ var _linalg_linalg__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./linalg/linalg */ "./src/core/matrix/linalg/linalg.js");
-/* harmony import */ var _linalg_linalg__WEBPACK_IMPORTED_MODULE_7___default = /*#__PURE__*/__webpack_require__.n(_linalg_linalg__WEBPACK_IMPORTED_MODULE_7__);
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * matrix-operations.js
- * Matrix operations
- */
-
-
-
-
-
-
-
-
-
-
-// Worker
-const worker = _matrix_worker__WEBPACK_IMPORTED_MODULE_5__["MatrixWorker"].instance;
-
-/**
- * Abstract matrix operation
- * @abstract
- */
-class MatrixOperation
-{
-    /**
-     * (protected) Class constructor
-     * @param {string} method method name
-     * @param {number} requiredNumberOfInputMatrices how many input matrices do we require?
-     * @param {MatrixShape} outputShape shape of the output matrix
-     * @param {?object} [userData] custom user-data, serializable
-     */
-    constructor(method, requiredNumberOfInputMatrices, outputShape, userData = null)
-    {
-        // is it a valid operation?
-        //if(!LinAlg.hasMethod(method))
-        //    throw new IllegalArgumentError(`Invalid method: "${method}"`);
-
-        /** @type {MatrixShape} shape of the output matrix */
-        this._shape = outputShape;
-
-        /** @type {MatrixOperationHeader} metadata related to the operation */
-        this._header = new _matrix_operation_header__WEBPACK_IMPORTED_MODULE_6__["MatrixOperationHeader"](
-            method,
-            requiredNumberOfInputMatrices,
-            outputShape,
-            userData
-        );
-    }
-
-    /**
-     * The required number of rows of the output matrix
-     * @returns {number}
-     */
-    get rows()
-    {
-        return this._shape.rows;
-    }
-
-    /**
-     * The required number of columns of the output matrix
-     * @returns {number}
-     */
-    get columns()
-    {
-        return this._shape.columns;
-    }
-
-    /**
-     * The required type of the output matrix
-     * @returns {MatrixDataType}
-     */
-    get dtype()
-    {
-        return this._shape.dtype;
-    }
-
-    /**
-     * The required shape of the output matrix
-     * @returns {MatrixShape}
-     */
-    get shape()
-    {
-        return this._shape;
-    }
-
-    /**
-     * The expected number of input matrices
-     * @return {number} a non-negative integer
-     */
-    numberOfInputMatrices()
-    {
-        return this._header.rowsOfInputs.length;
-    }
-
-    /**
-     * Run the matrix operation
-     * @param {SpeedyMatrix[]} inputMatrices
-     * @param {SpeedyMatrix} outputMatrix
-     * @param {boolean} [useWorker] should we do the number crunching in a Web Worker?
-     * @returns {SpeedyPromise<void>} a promise that resolves as soon as the operation is complete
-     */
-    run(inputMatrices, outputMatrix, useWorker = true)
-    {
-        if(useWorker)
-            return this._runInWorker(inputMatrices, outputMatrix);
-        else
-            return this._runLocally(inputMatrices, outputMatrix);
-    }
-
-    /**
-     * Run the matrix operation in a Web Worker
-     * The internal buffers of the input & the output matrices are assumed to be locked
-     * @param {SpeedyMatrix[]} inputMatrices
-     * @param {SpeedyMatrix} outputMatrix
-     * @returns {SpeedyPromise<void>} a promise that resolves as soon as the operation is complete
-     */
-    _runInWorker(inputMatrices, outputMatrix)
-    {
-        // do we have a compatible output matrix?
-        this._assertCompatibility(outputMatrix.shape);
-
-        // optimization: drop if this is a sequence with no
-        // operations, such as a compiled constant expression
-        if(inputMatrices.length == 0)
-            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve();
-
-        // prepare the operation header
-        this._header.updateMetadata(outputMatrix, inputMatrices);
-        
-        // crunch numbers in a WebWorker
-        return worker.run(
-            this._header,
-            this._arrayBufferOf(outputMatrix),
-            this._arrayBuffersOf(inputMatrices)
-        ).then(([newOutputBuffer, newInputBuffers]) => {
-            // update the internal buffers with the new data
-            outputMatrix.buffer.replace(newOutputBuffer);
-            for(let i = inputMatrices.length - 1; i >= 0; i--)
-                inputMatrices[i].buffer.replace(newInputBuffers[i]);
-        });
-    }
-
-    /**
-     * Run matrix operation in the same thread
-     * @param {SpeedyMatrix[]} inputMatrices
-     * @param {SpeedyMatrix} outputMatrix
-     * @returns {SpeedyPromise<void>} a promise that resolves as soon as the operation is complete
-     */
-    _runLocally(inputMatrices, outputMatrix)
-    {
-        // do we have a compatible output matrix?
-        this._assertCompatibility(outputMatrix.shape);
-
-        // optimization: drop if this is a sequence with no
-        // operations, such as a compiled constant expression
-        if(inputMatrices.length == 0)
-            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve();
-
-        // prepare the operation header
-        this._header.updateMetadata(outputMatrix, inputMatrices);
-        
-        // crunch numbers locally
-        _linalg_linalg__WEBPACK_IMPORTED_MODULE_7__["LinAlg"].lib.execute(
-            this._header,
-            this._arrayBufferOf(outputMatrix),
-            this._arrayBuffersOf(inputMatrices)
-        );
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve();
-    }
-
-    /**
-     * Assert matrix size and type
-     * @param {MatrixShape} requiredShape will test the shape of the output matrix against requiredShape
-     */
-    _assertCompatibility(requiredShape)
-    {
-        if(this._shape.equals(requiredShape))
-            return;
-        else if(this.dtype !== requiredShape.dtype)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalOperationError"](`Incompatible matrix type: expected "${requiredShape.dtype}", found "${this.dtype}"`);
-        else
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalOperationError"](`Invalid matrix size: ${this.rows} x ${this.columns} (expected ${requiredShape.rows} x ${requiredShape.columns})`);
-    }
-
-    /**
-     * Compute a measure of the workload of an operation
-     * @param {SpeedyMatrix[]} matrices all matrices involved
-     * @returns {number}
-     */
-    _computeWorkload(matrices)
-    {
-        let w = 0;
-        for(let i = matrices.length - 1; i >= 0; i--)
-            w += matrices[i].rows * matrices[i].columns;
-
-        return w;
-    }
-
-    /**
-     * Get the internal buffers of the matrices passed as arguments
-     * Preserve the relative order of the matrices <-> buffers
-     * @param {SpeedyMatrix[]} matrices
-     * @return {ArrayBuffer[]}
-     */
-    _arrayBuffersOf(matrices)
-    {
-        const buffers = new Array(matrices.length);
-        for(let i = buffers.length - 1; i >= 0; i--)
-            buffers[i] = matrices[i].buffer.data.buffer;
-
-        return buffers;
-        //return matrices.map(this._arrayBufferOf);
-    }
-
-    /**
-     * Get the internal buffer of the matrix passed as argument
-     * @param {SpeedyMatrix} matrix
-     * @return {ArrayBuffer}
-     */
-    _arrayBufferOf(matrix)
-    {
-        return matrix.buffer.data.buffer;
-    }
-}
-
-/**
- * No-operation
- */
-class MatrixOperationNop extends MatrixOperation
-{
-    /**
-     * Class constructor
-     * @param {MatrixShape} shape the shape of the output matrix
-     */
-    constructor(shape)
-    {
-        super('nop', 0, shape);
-    }
-}
-
-/**
- * Fill matrix with a number
- */
-class MatrixOperationFill extends MatrixOperation
-{
-    /**
-     * Class constructor
-     * @param {MatrixShape} shape the shape of the output matrix
-     * @param {number} value the value we'll use to fill the matrix
-     */
-    constructor(shape, value)
-    {
-        super('fill', 0, shape, { value: +value });
-    }
-}
-
-/**
- * Copy matrix
- */
-class MatrixOperationCopy extends MatrixOperation
-{
-    /**
-     * Constructor
-     * @param {MatrixShape} shape the shape of the input & output matrices
-     */
-    constructor(shape)
-    {
-        super('copy', 1, shape);
-    }
-}
-
-/**
- * Transpose Matrix
- */
-class MatrixOperationTranspose extends MatrixOperation
-{
-    /**
-     * Class constructor
-     * @param {MatrixShape} shape the shape of the INPUT matrix
-     */
-    constructor(shape)
-    {
-        super('transpose', 1, new _matrix_shape__WEBPACK_IMPORTED_MODULE_4__["MatrixShape"](shape.columns, shape.rows, shape.dtype));
-    }
-}
-
-/**
- * Compute the inverse of a matrix
- */
-class MatrixOperationInverse extends MatrixOperation
-{
-    /**
-     * Class constructor
-     * @param {MatrixShape} shape the shape of the input matrix
-     */
-    constructor(shape)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(shape.rows === shape.columns && shape.rows <= 3);
-        super('inverse' + String(shape.rows), 1, shape);
-    }
-}
-
-/**
- * Add two matrices
- * e.g., A + B
- */
-class MatrixOperationAdd extends MatrixOperation
-{
-    /**
-     * Class constructor
-     * @param {MatrixShape} leftShape shape of the left operand
-     * @param {MatrixShape} rightShape shape of the right operand
-     */
-    constructor(leftShape, rightShape)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(leftShape.equals(rightShape));
-        super('add', 2, leftShape);
-    }
-}
-
-/**
- * Subtract two matrices
- * e.g., A - B
- */
-class MatrixOperationSubtract extends MatrixOperation
-{
-    /**
-     * Class constructor
-     * @param {MatrixShape} leftShape shape of the left operand
-     * @param {MatrixShape} rightShape shape of the right operand
-     */
-    constructor(leftShape, rightShape)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(leftShape.equals(rightShape));
-        super('subtract', 2, leftShape);
-    }
-}
-
-/**
- * Multiply two matrices
- * e.g., A * B
- */
-class MatrixOperationMultiply extends MatrixOperation
-{
-    /**
-     * Class constructor
-     * @param {MatrixShape} leftShape shape of the left operand
-     * @param {MatrixShape} rightShape shape of the right operand
-     */
-    constructor(leftShape, rightShape)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(leftShape.columns === rightShape.rows && leftShape.dtype === rightShape.dtype);
-        const opt3 = (leftShape.rows === 3 && leftShape.columns === 3 && rightShape.columns === 3);
-        const method = opt3 ? 'multiply3' : 'multiply'; // optimize for two 3x3 matrices
-
-        super(method, 2, new _matrix_shape__WEBPACK_IMPORTED_MODULE_4__["MatrixShape"](leftShape.rows, rightShape.columns, leftShape.dtype));
-    }
-}
-
-/**
- * Multiply by a scalar
- * e.g., alpha * A
- */
-class MatrixOperationScale extends MatrixOperation
-{
-    /**
-     * Constructor
-     * @param {MatrixShape} shape the shape of the input & output matrices
-     * @param {number} scalar
-     */
-    constructor(shape, scalar)
-    {
-        super('scale', 1, shape, { scalar: +scalar });
-    }
-}
-
-/**
- * Component-wise multiplication
- */
-class MatrixOperationCompMult extends MatrixOperation
-{
-    /**
-     * Class constructor
-     * @param {MatrixShape} leftShape shape of the left operand
-     * @param {MatrixShape} rightShape shape of the right operand
-     */
-    constructor(leftShape, rightShape)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(leftShape.equals(rightShape));
-        super('compmult', 2, leftShape);
-    }
-}
-
-/**
- * Multiply two matrices, transposing the left operand
- * e.g., A^T * B
- */
-class MatrixOperationMultiplyLT extends MatrixOperation
-{
-    /**
-     * Class constructor
-     * @param {MatrixShape} leftShape shape of the left operand
-     * @param {MatrixShape} rightShape shape of the right operand
-     */
-    constructor(leftShape, rightShape)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(leftShape.rows === rightShape.rows && leftShape.dtype === rightShape.dtype);
-        super('multiplylt', 2, new _matrix_shape__WEBPACK_IMPORTED_MODULE_4__["MatrixShape"](leftShape.columns, rightShape.columns, leftShape.dtype));
-    }
-}
-
-/**
- * Multiply two matrices, transposing the right operand
- * e.g., A * B^T
- */
-class MatrixOperationMultiplyRT extends MatrixOperation
-{
-    /**
-     * Class constructor
-     * @param {MatrixShape} leftShape shape of the left operand
-     * @param {MatrixShape} rightShape shape of the right operand
-     */
-    constructor(leftShape, rightShape)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(leftShape.columns === rightShape.columns && leftShape.dtype === rightShape.dtype);
-        super('multiplyrt', 2, new _matrix_shape__WEBPACK_IMPORTED_MODULE_4__["MatrixShape"](leftShape.rows, rightShape.rows, leftShape.dtype));
-    }
-}
-
-/**
- * Multiply by a column vector,
- * e.g., y = A x
- */
-class MatrixOperationMultiplyVec extends MatrixOperation
-{
-    /**
-     * Class constructor
-     * @param {MatrixShape} leftShape shape of the left operand
-     * @param {MatrixShape} rightShape shape of the right operand (must be a column-vector)
-     */
-    constructor(leftShape, rightShape)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(leftShape.columns === rightShape.rows && rightShape.columns === 1 && leftShape.dtype === rightShape.dtype);
-        super('multiplyvec', 2, new _matrix_shape__WEBPACK_IMPORTED_MODULE_4__["MatrixShape"](leftShape.rows, 1, leftShape.dtype));
-    }
-}
-
-/**
- * QR decomposition
- */
-class MatrixOperationQR extends MatrixOperation
-{
-    /**
-     * Constructor
-     * @param {MatrixShape} shape shape of the input matrix (must satisfy rows >= columns)
-     * @param {string} mode 'full' | 'reduced'
-     */
-    constructor(shape, mode)
-    {
-        const m = ({ 'full': 'full-qr', 'reduced': 'reduced-qr' })[mode];
-        if(m === undefined)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`QR decomposition: unknown mode "${mode}"`)
-
-        //Utils.assert(shape.rows >= shape.columns);
-        const columns = m == 'full-qr' ? shape.columns + shape.rows : 2 * shape.columns;
-        super('qr', 1, new _matrix_shape__WEBPACK_IMPORTED_MODULE_4__["MatrixShape"](shape.rows, columns, shape.dtype), { mode: m });
-    }
-}
-
-/**
- * Internal QR solver (Ax = b) produces
- * the matrix [(Q^T)b | R] using reduced QR(*)
- * A is m x n (m >= n), b is m x 1,
- * (Q^T)b is m x 1 and R is m x n
- *
- * (*) The last (m-n) rows of the output matrix
- * will be filled with zeros. Those rows are
- * required by the calculation. You may extract
- * the first n rows
- */
-class MatrixOperationQRSolve extends MatrixOperation
-{
-    /**
-     * Constructor
-     * @param {MatrixShape} shapeA required shape of the input matrix A
-     * @param {MatrixShape} shapeB required shape of the input matrix B (must be a column-vector)
-     */
-    constructor(shapeA, shapeB)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(shapeA.rows === shapeB.rows && shapeB.columns === 1 && shapeA.dtype === shapeB.dtype);
-        super('qr', 2, new _matrix_shape__WEBPACK_IMPORTED_MODULE_4__["MatrixShape"](shapeA.rows, shapeA.columns + 1, shapeA.dtype), { mode: 'reduced-Q\'x' });
-    }
-}
-
-/**
- * Given an input matrix of the form [b | R]
- * where b is n x 1 and R is an n x n upper
- * triangular matrix, solve Rx = b for x
- */
-class MatrixOperationBackSubstitution extends MatrixOperation
-{
-    /**
-     * Constructor
-     * @param {MatrixShape} shape shape of the input matrix
-     */
-    constructor(shape)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(shape.columns === shape.rows + 1);
-        super('backsub', 1, new _matrix_shape__WEBPACK_IMPORTED_MODULE_4__["MatrixShape"](shape.rows, 1, shape.dtype));
-    }
-}
-
-/**
- * Find best-fit solution x of Ax = b with least-squares method
- * A is m x n, b is m x 1, output x is n x 1
- * (m equations, n unknowns, m >= n)
- */
-class MatrixOperationLSSolve extends MatrixOperation
-{
-    /**
-     * Constructor
-     * @param {MatrixShape} shapeA required shape of the input matrix A
-     * @param {MatrixShape} shapeB required shape of the input matrix B (must be a column-vector)
-     */
-    constructor(shapeA, shapeB)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(shapeA.rows === shapeB.rows && shapeB.columns === 1 && shapeA.dtype === shapeB.dtype);
-        super('lssolve', 2, new _matrix_shape__WEBPACK_IMPORTED_MODULE_4__["MatrixShape"](shapeA.columns, 1, shapeA.dtype));
-    }
-}
-
-/**
- * A matrix operation containing other matrix operations within it
- * @abstract
- */
-class MatrixOperationWithSubroutine extends MatrixOperation
-{
-    /**
-     * Constructor
-     * @param {string} method method name
-     * @param {number} requiredNumberOfInputMatrices how many input matrices do we require?
-     * @param {MatrixShape} outputShape shape of the output matrix
-     * @param {string[]} [subroutines] names of the subroutines
-     * @param {object} [userData] custom user-data, serializable
-     */
-    constructor(method, requiredNumberOfInputMatrices, outputShape, subroutines, userData = {})
-    {
-        super(method, requiredNumberOfInputMatrices, outputShape, {
-            ...userData,
-            subroutine: subroutines.reduce((obj, sub) => Object.assign(obj, { [sub]: [] }), {})
-        });
-    }
-
-    /**
-     * New step of a subroutine
-     * @param {MatrixOperation} operation
-     * @param {number} indexOfOutputMatrix
-     * @param {number[]} indicesOfInputMatrices
-     * @returns {StepOfSubroutineOfMatrixOperation}
-     */
-    static step(operation, indexOfOutputMatrix, indicesOfInputMatrices)
-    {
-        // The trick is to map the input & output matrices of each step of
-        // all subroutines to specific input matrices of the entire operation
-        const header = operation._header;
-
-        /** @typedef {object} StepOfSubroutineOfMatrixOperation */
-        return { header, indexOfOutputMatrix, indicesOfInputMatrices };
-    }
-
-    /**
-     * The steps performed by a subroutine, as provided in the constructor
-     * @param {string} subname name of the subroutine
-     * @return {StepOfSubroutineOfMatrixOperation[]}
-     */
-    _stepsOf(subname)
-    {
-        const subroutine = this._header.custom.subroutine;
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(Object.prototype.hasOwnProperty.call(subroutine, subname));
-        return subroutine[subname];
-    }
-
-    /**
-     * Set the steps of a declared subroutine
-     * @param {string} subname name of the subroutine
-     * @param {StepOfSubroutineOfMatrixOperation[]} steps
-     */
-    setStepsOf(subname, steps)
-    {
-        const subroutine = this._header.custom.subroutine;
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(Array.isArray(subroutine[subname]) && subroutine[subname].length == 0);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(Array.isArray(steps));
-        subroutine[subname] = steps;
-    }
-
-    /**
-     * Adjust the indices of all steps of the subroutine according to a given function
-     * @param {Function} newIndexOf maps a matrix to new matrix index
-     * @param {SpeedyMatrix[]} mats matrices with original indexing
-     */
-    adjustIndices(newIndexOf, mats)
-    {
-        const subroutines = this._header.custom.subroutine;
-        //(function adjust(subroutines) {
-        for(let sub in subroutines) {
-            if(Object.prototype.hasOwnProperty.call(subroutines, sub)) {
-                const steps = subroutines[sub];
-                for(let i = 0, n = steps.length, step = null; i < n; i++) {
-                    step = steps[i];
-                    step.indexOfOutputMatrix = newIndexOf(mats[step.indexOfOutputMatrix]);
-                    for(let j = step.indicesOfInputMatrices.length - 1; j >= 0; j--)
-                        step.indicesOfInputMatrices[j] = newIndexOf(mats[step.indicesOfInputMatrices[j]]);
-                    /* // this is a no go when subroutines call other subroutines:
-                    if(Object.prototype.hasOwnProperty.call(step.header.custom, 'subroutine'))
-                        adjust(step.header.custom.subroutine); */
-                }
-            }
-        }
-        //})(this._header.custom.subroutine);
-    }
-}
-
-/**
- * A sequence of MatrixOperations encapsulated into one
- */
-class MatrixOperationSequence extends MatrixOperationWithSubroutine
-{
-    /**
-     * Constructor
-     * @param {number} n number of input matrices
-     * @param {MatrixShape} shape shape of the output matrix
-     * @param {StepOfSubroutineOfMatrixOperation[]} steps steps to be performed, as returned by step() <static>
-     */
-    constructor(n, shape, steps)
-    {
-        super('sequence', n, shape, ['sequence']);
-        this.setStepsOf('sequence', steps);
-    }
-
-    /**
-     * The steps performed by this sequence, as provided in the constructor
-     * @returns {StepOfSubroutineOfMatrixOperation[]}
-     */
-    steps()
-    {
-        return this._stepsOf('sequence');
-    }
-}
-
-/**
- * Sort blocks of a matrix
- */
-class MatrixOperationSort extends MatrixOperationWithSubroutine
-{
-    /**
-     * Constructor
-     * @param {MatrixShape} outputShape shape of the output matrix
-     */
-    constructor(outputShape)
-    {
-        super('sort', 4, outputShape, ['cmp']);
-    }
-}
-
-/**
- * Map blocks of a matrix
- */
-class MatrixOperationMap extends MatrixOperationWithSubroutine
-{
-    /**
-     * Constructor
-     * @param {MatrixShape} outputShape shape of the output matrix
-     */
-    constructor(outputShape)
-    {
-        super('map', 4, outputShape, ['mapfn']);
-    }
-}
-
-/**
- * Reduce blocks of a matrix
- */
-class MatrixOperationReduce extends MatrixOperationWithSubroutine
-{
-    /**
-     * Constructor
-     * @param {MatrixShape} outputShape shape of the output matrix
-     */
-    constructor(outputShape)
-    {
-        super('reduce', 6, outputShape, ['reducefn']);
-    }
-}
-
-/**
- * Compute a homography matrix using 4 correspondences of points
- */
-class MatrixOperationHomography4p extends MatrixOperation
-{
-    /**
-     * Class constructor
-     * @param {MatrixShape} srcShape shape of the src operand (must be 2x4)
-     * @param {MatrixShape} dstShape shape of the dst operand (must be 2x4)
-     */
-    constructor(srcShape, dstShape)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(srcShape.equals(dstShape));
-        super('homographynorm4p', 2, new _matrix_shape__WEBPACK_IMPORTED_MODULE_4__["MatrixShape"](3, 3, srcShape.dtype));
-    }
-}
-
-/**
- * Compute a homography matrix using n >= 4 correspondences of points via DLT
- */
-class MatrixOperationHomographyDLT extends MatrixOperation
-{
-    /**
-     * Class constructor
-     * @param {MatrixShape} srcShape shape of the src operand (must be 2 x n, n >= 4)
-     * @param {MatrixShape} dstShape shape of the dst operand (must be 2 x n)
-     */
-    constructor(srcShape, dstShape)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(srcShape.equals(dstShape));
-        super('homographynormdlt', 2, new _matrix_shape__WEBPACK_IMPORTED_MODULE_4__["MatrixShape"](3, 3, srcShape.dtype));
-    }
-}
-
-/**
- * Apply a homography matrix to a set of 2D points
- */
-class MatrixOperationApplyHomography extends MatrixOperation
-{
-    /**
-     * Constructor
-     * @param {MatrixShape} homShape shape of the homography matrix (must be 3x3)
-     * @param {MatrixShape} ptsShape shape of the matrix of the input points (must be 2xn)
-     */
-    constructor(homShape, ptsShape)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(ptsShape.dtype === homShape.dtype);
-        super('applyHomography', 2, ptsShape);
-    }
-}
-
-/**
- * Apply an affine transformation to a set of 2D points
- */
-class MatrixOperationApplyAffine extends MatrixOperation
-{
-    /**
-     * Constructor
-     * @param {MatrixShape} matShape shape of the transformation matrix (must be 2x3)
-     * @param {MatrixShape} ptsShape shape of the matrix of the input points (must be 2xn)
-     */
-    constructor(matShape, ptsShape)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(ptsShape.dtype === matShape.dtype);
-        super('applyAffine', 2, ptsShape);
-    }
-}
-
-/**
- * Apply a linear transformation to a set of 2D points
- */
-class MatrixOperationApplyLinear2d extends MatrixOperation
-{
-    /**
-     * Constructor
-     * @param {MatrixShape} matShape shape of the transformation matrix (must be 2x2)
-     * @param {MatrixShape} ptsShape shape of the matrix of the input points (must be 2xn)
-     */
-    constructor(matShape, ptsShape)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(ptsShape.dtype === matShape.dtype);
-        super('applyLinear2d', 2, ptsShape);
-    }
-}
-
-/**
- * Compute a homography matrix using P-RANSAC
- */
-class MatrixOperationPransacHomography extends MatrixOperation
-{
-    /**
-     * Class constructor
-     * @param {MatrixShape} srcShape source coordinates: must be 2 x n (n >= 4)
-     * @param {MatrixShape} dstShape destination coordinates: must be 2 x n
-     * @param {number} numberOfHypotheses positive integer
-     * @param {number} bundleSize positive integer
-     * @param {number} reprojectionError in pixels
-     * @param {MatrixShape} maskShape inlier-outlier output mask: must be 1 x n
-     */
-    constructor(srcShape, dstShape, numberOfHypotheses, bundleSize, reprojectionError, maskShape)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(srcShape.equals(dstShape));
-        _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(srcShape.columns === maskShape.columns);
-        super('pransacHomography', 3, new _matrix_shape__WEBPACK_IMPORTED_MODULE_4__["MatrixShape"](3, 3, srcShape.dtype), {
-            numberOfHypotheses, bundleSize, reprojectionError
-        });
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/matrix/matrix-settings.js":
-/*!********************************************!*\
-  !*** ./src/core/matrix/matrix-settings.js ***!
-  \********************************************/
-/*! exports provided: SpeedyMatrixSettings */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixSettings", function() { return SpeedyMatrixSettings; });
-/* harmony import */ var _matrix_operations_queue__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./matrix-operations-queue */ "./src/core/matrix/matrix-operations-queue.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * matrix-settings.js
- * Global settings singleton
- */
-
-
-
-let instance = null;
-
-/**
- * Global settings singleton
- */
-class SpeedyMatrixSettings
-{
-    /**
-     * Get singleton
-     * @returns {SpeedyMatrixSettings}
-     */
-    static get instance()
-    {
-        return instance || (instance = new SpeedyMatrixSettings());
-    }
-
-    /**
-     * Should we run the matrix operations in a Web Worker?
-     * @returns {boolean}
-     */
-    get useWorker()
-    {
-        return _matrix_operations_queue__WEBPACK_IMPORTED_MODULE_0__["MatrixOperationsQueue"].instance.useWorker;
-    }
-
-    /**
-     * Should we run the matrix operations in a Web Worker?
-     * @param {boolean} value
-     */
-    set useWorker(value)
-    {
-        _matrix_operations_queue__WEBPACK_IMPORTED_MODULE_0__["MatrixOperationsQueue"].instance.useWorker = Boolean(value);
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/matrix/matrix-shape.js":
-/*!*****************************************!*\
-  !*** ./src/core/matrix/matrix-shape.js ***!
-  \*****************************************/
-/*! exports provided: MatrixShape */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixShape", function() { return MatrixShape; });
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-type */ "./src/core/matrix/matrix-type.js");
-/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_matrix_type__WEBPACK_IMPORTED_MODULE_1__);
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * matrix-shape.js
- * A convenient immutable object that represents the shape of a matrix
- */
-
-
-
-
-/**
- * A convenient immutable object that represents the shape of a matrix
- */
-class MatrixShape
-{
-    /**
-     * Constructor
-     * @param {number} rows number of rows of the matrix
-     * @param {number} columns number of columns of the matrix
-     * @param {MatrixDataType} [dtype] data type of the matrix
-     */
-    constructor(rows, columns, dtype = _matrix_type__WEBPACK_IMPORTED_MODULE_1__["MatrixType"].default)
-    {
-        /** @type {number} number of rows of the matrix */
-        this.rows = rows | 0;
-
-        /** @type {number} number of columns of the matrix */
-        this.columns = columns | 0;
-
-        /** @type {MatrixDataType} data type of the matrix */
-        this.dtype = String(dtype);
-
-        // validate
-        if(!_matrix_type__WEBPACK_IMPORTED_MODULE_1__["MatrixType"].isValid(this.dtype))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Invalid matrix data type: "${this.dtype}"`);
-        else if(this.rows < 1 || this.columns < 1)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Invalid matrix size: ${this.rows} x ${this.columns}`);
-
-        // make it immutable
-        return Object.freeze(this);
-    }
-
-    /**
-     * Checks if two shapes are equal
-     * @param {MatrixShape} shape
-     * @returns {boolean}
-     */
-    equals(shape)
-    {
-        return this.rows === shape.rows && this.columns === shape.columns && this.dtype === shape.dtype;
-    }
-
-    /**
-     * String representation of the matrix shape
-     * @returns {string}
-     */
-    toString()
-    {
-        return `MatrixShape(rows=${this.rows},cols=${this.columns},dtype="${this.dtype}")`;
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/matrix/matrix-type.js":
-/*!****************************************!*\
-  !*** ./src/core/matrix/matrix-type.js ***!
-  \****************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * matrix-type.js
- * Data types of matrices
- */
-
-//! No imports here
-//! MatrixType is exported to a WebWorker
-
-/**
- * Types of matrices: utilities
- * 
- * Matrices store data of a certain type
- * (e.g., 'float32', 'float64', etc.)
- * 
- * @typedef {string} MatrixDataType
- */
-class MatrixType
-{
-    /**
-     * Is the specified matrix data type valid?
-     * @param {MatrixDataType} dtype data type
-     * @returns {boolean}
-     */
-    static isValid(dtype)
-    {
-        return Object.prototype.hasOwnProperty.call(this._classOf, dtype);
-    }
-
-    /**
-     * Create a TypedArray of the specified type
-     * @param {MatrixDataType} dtype data type
-     * @param {any[]} args will be passed to the constructor of the TypedArray
-     * @returns {ArrayBufferView}
-     */
-    static createTypedArray(dtype, ...args)
-    {
-        if(!this.isValid(dtype))
-            throw new Error(`Invalid matrix type: "${dtype}"`);
-
-        return Reflect.construct(this._classOf[dtype], args);
-    }
-
-    /**
-     * Default data type for matrices
-     * @returns {MatrixDataType}
-     */
-    static get default()
-    {
-        return 'float32';
-    }
-
-    /**
-     * A mapping between MatrixDataType and
-     * corresponding TypedArray constructors
-     * @returns {object}
-     */
-    static get _classOf()
-    {
-        return this._dataType || (this._dataType = Object.freeze({
-
-            /** 32-bit float */
-            'float32': Float32Array,
-
-            /** 64-bit float */
-            'float64': Float64Array,
-
-            /** 32-bit signed integer */
-            'int32': Int32Array,
-
-            /** 8-bit unsigned integer */
-            'uint8': Uint8Array,
-
-        }));
-    }
-
-    /**
-     * Freeze this class
-     * @returns {Function} this class
-     */
-    static freeze()
-    {
-        const target = (this._classOf, this);
-        return Object.freeze(target);
-    }
-}
-
-module.exports = { MatrixType: MatrixType.freeze() };
-
-/***/ }),
-
-/***/ "./src/core/matrix/matrix-worker.js":
-/*!******************************************!*\
-  !*** ./src/core/matrix/matrix-worker.js ***!
-  \******************************************/
-/*! exports provided: MatrixWorker */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MatrixWorker", function() { return MatrixWorker; });
-/* harmony import */ var _linalg_linalg__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./linalg/linalg */ "./src/core/matrix/linalg/linalg.js");
-/* harmony import */ var _linalg_linalg__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(_linalg_linalg__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var _matrix_operation_header__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-operation-header */ "./src/core/matrix/matrix-operation-header.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * matrix-worker.js
- * Web Worker bridge
- */
-
-
-
-
-
-
-// Constants
-const MAX_MESSAGE_ID = 0x7FFFFFFF; // use the form 2^n - 1
-const NOP = 'nop'; // no operation
-
-/**
- * A bridge between the main thread and a Web Worker
- * that performs matrix computations
- */
-class MatrixWorker
-{
-    /**
-     * Get Singleton
-     * @returns {MatrixWorker}
-     */
-    static get instance()
-    {
-        return this._instance || (this._instance = new MatrixWorker());
-    }
-
-    /**
-     * Class constructor
-     */
-    constructor()
-    {
-        /** @type {number} message counter */
-        this._msgId = 0;
-
-        /** @type {Map<number,Function>} callback table */
-        this._callbackTable = new Map();
-
-        /** @type {Worker} WebWorker */
-        this._worker = this._createWorker();
-    }
-
-    /**
-     * Run computation in a Web Worker
-     * @param {MatrixOperationHeader} header serializable data
-     * @param {ArrayBuffer} outputBuffer data of the output matrix
-     * @param {ArrayBuffer[]} inputBuffers data of the input matrices
-     * @returns {SpeedyPromise<Array>} resolves as soon as the computation is complete
-     */
-    run(header, outputBuffer, inputBuffers)
-    {
-        if(header.method === NOP) // save some time
-            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"].resolve([outputBuffer, inputBuffers]);
-
-        const id = (this._msgId = (this._msgId + 1) & MAX_MESSAGE_ID);
-        const transferables = inputBuffers.concat(outputBuffer).filter(
-            (x, i, arr) => arr.indexOf(x) === i // remove duplicates
-        );
-        const msg = { id, header, outputBuffer, inputBuffers, transferables };
-
-        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"](resolve => {
-            this._callbackTable.set(id, resolve);
-            this._worker.postMessage(msg, transferables);
-        });
-    }
-
-    /**
-     * Create a Web Worker capable of performing Matrix computations
-     * @returns {Worker}
-     */
-    _createWorker()
-    {
-        // setup the code
-        const js = 'self.LinAlg = ' + _linalg_linalg__WEBPACK_IMPORTED_MODULE_0__["LinAlg"].toString() + ';\n' +
-                   'self.onmessage = ' + onmessage.toString() + ';';
-        const blob = new Blob([ js ], { type: 'application/javascript' });
-        //console.log(js);
-
-        // setup the Worker
-        const worker = new Worker(URL.createObjectURL(blob));
-        worker.onmessage = ev => {
-            const msg = ev.data;
-            const resolve = this._callbackTable.get(msg.id);
-            resolve([msg.outputBuffer, msg.inputBuffers]);
-            this._callbackTable.delete(msg.id);
-        };
-        worker.onerror = ev => {
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`Worker error: ${ev.message}`);
-        };
-
-        // done!
-        return worker;
-    }
-}
-
-/**
- * This function runs in the Web Worker
- * @param {MessageEvent} ev
- */
-function onmessage(ev)
-{
-    // extract input
-    const { id, header, outputBuffer, inputBuffers, transferables } = ev.data;
-
-    // perform the computation
-    self.LinAlg.lib.execute(header, outputBuffer, inputBuffers);
-
-    // send the result of the computation back to the main thread
-    const msg = { id, outputBuffer, inputBuffers };
-    self.postMessage(msg, transferables);
-}
-
-/***/ }),
-
-/***/ "./src/core/matrix/matrix.js":
-/*!***********************************!*\
-  !*** ./src/core/matrix/matrix.js ***!
-  \***********************************/
-/*! exports provided: SpeedyMatrix */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrix", function() { return SpeedyMatrix; });
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./matrix-type */ "./src/core/matrix/matrix-type.js");
-/* harmony import */ var _matrix_type__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(_matrix_type__WEBPACK_IMPORTED_MODULE_1__);
-/* harmony import */ var _matrix_shape__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./matrix-shape */ "./src/core/matrix/matrix-shape.js");
-/* harmony import */ var _matrix_buffer__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./matrix-buffer */ "./src/core/matrix/matrix-buffer.js");
-/* harmony import */ var _matrix_operations_queue__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./matrix-operations-queue */ "./src/core/matrix/matrix-operations-queue.js");
-/* harmony import */ var _matrix_operations__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./matrix-operations */ "./src/core/matrix/matrix-operations.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * matrix.js
- * Matrix type
- */
-
-
-
-
-
-
-
-
-
-
-
-// Constants
-const matrixOperationsQueue = _matrix_operations_queue__WEBPACK_IMPORTED_MODULE_4__["MatrixOperationsQueue"].instance;
-
-
-
-/**
- * Matrix class
- */
-class SpeedyMatrix
-{
-    /**
-     * Class constructor
-     * @param {MatrixShape} shape shape of the matrix
-     * @param {?number[]} [values] initial values in column-major format
-     * @param {number} [stride] custom stride
-     * @param {MatrixBuffer} [buffer] custom buffer
-     */
-    constructor(shape, values = null, stride = shape.rows, buffer = null)
-    {
-        /** @type {MatrixShape} the shape of the matrix */
-        this._shape = shape;
-
-        /** @type {number} the number of entries, in the internal buffer, between the beginning of two columns */
-        this._stride = stride | 0;
-
-        /** @type {MatrixBuffer} internal buffer */
-        this._buffer = buffer || new _matrix_buffer__WEBPACK_IMPORTED_MODULE_3__["MatrixBuffer"](this.stride * this.columns, values, this.dtype);
-
-        /** @type {MatrixOperationNop} no-op utility, spawned lazily */
-        this._nop = null;
-
-        // validate
-        if(this.stride < this.rows)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Invalid stride (expected ${this.rows} or greater, found ${this.stride})`);
-        else if(Array.isArray(values) && values.length != this.rows * this.columns)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Incorrect number of matrix elements (expected ${this.rows * this.columns}, found ${values.length})`);
-    }
-
-
-
-    // ====================================
-    // MATRIX PROPERTIES
-    // ====================================
-
-    /**
-     * Number of rows of the matrix
-     * @returns {number}
-     */
-    get rows()
-    {
-        return this._shape.rows;
-    }
-
-    /**
-     * Number of columns of the matrix
-     * @returns {number}
-     */
-    get columns()
-    {
-        return this._shape.columns;
-    }
-
-    /**
-     * Data type
-     * @returns {MatrixDataType}
-     */
-    get dtype()
-    {
-        return this._shape.dtype;
-    }
-
-    /**
-     * The number of entries, in the MatrixBuffer,
-     * between the beginning of two columns
-     * @returns {number}
-     */
-    get stride()
-    {
-        return this._stride;
-    }
-
-    /**
-     * The shape of the matrix
-     * @returns {MatrixShape}
-     */
-    get shape()
-    {
-        return this._shape;
-    }
-
-
-
-    // ====================================
-    // READ MATRIX
-    // ====================================
-
-    /**
-     * Read entries of the matrix. Note that this method is asynchronous.
-     * It will read the data as soon as all relevant calculations have been
-     * completed. Make sure you await.
-     * The entries of the matrix will be returned as a flattened array of
-     * numbers in column-major format.
-     * @returns {SpeedyPromise<number[]>} a promise that resolves to the requested entries
-     */
-    read()
-    {
-        const rows = this.rows, cols = this.columns, stride = this.stride;
-
-        return this.sync().then(() => this._buffer.ready().turbocharge()).then(buffer => {
-            const data = buffer.data;
-            const n = rows * cols;
-            const result = new Array(n);
-
-            // write entries in column-major format
-            let i, j, k = 0;
-            for(j = 0; j < cols; j++) {
-                for(i = 0; i < rows; i++)
-                    result[k++] = data[j * stride + i];
-            }
-
-            // done!
-            return result;
-        }).turbocharge();
-    }
-
-    /**
-     * Print the matrix. Useful for debugging
-     * @param {number} [decimals] format numbers to a number of decimals
-     * @param {Function} [printFunction] prints a string
-     * @returns {SpeedyPromise<void>} a promise that resolves as soon as the matrix is printed
-     */
-    print(decimals = undefined, printFunction = console.log)
-    {
-        return this.read().then(data => {
-            const rows = this.rows, columns = this.columns;
-            const row = new Array(rows);
-            let i, j;
-
-            for(i = 0; i < rows; i++) {
-                row[i] = new Array(columns);
-                for(j = 0; j < columns; j++)
-                    row[i][j] = data[j * rows + i];
-            }
-
-            const fix = decimals !== undefined ? x => x.toFixed(decimals) : x => x;
-            const fmt = row.map(r => '    ' + r.map(fix).join(', ')).join(',\n');
-            const str = `SpeedyMatrix(rows=${rows}, cols=${columns}, dtype="${this.dtype}", data=[\n${fmt}\n])`;
-            printFunction(str);
-        });
-    }
-
-
-
-
-
-    // ====================================
-    // ACCESS BY BLOCK
-    // ====================================
-
-    /**
-     * Create a submatrix using the range [firstRow:lastRow, firstColumn:lastColumn].
-     * It will have size (lastRow - firstRow + 1) x (lastColumn - firstColumn + 1).
-     * The internal buffer of the matrix will be shared with the submatrix,
-     * so if you modify one, you'll modify the other.
-     * @param {number} firstRow indexed by 0
-     * @param {number} lastRow indexed by 0
-     * @param {number} firstColumn indexed by 0
-     * @param {number} lastColumn indexed by 0
-     * @returns {SpeedyPromise<SpeedyMatrix>}
-     */
-    block(firstRow, lastRow, firstColumn, lastColumn)
-    {
-        const rows = this.rows, columns = this.columns;
-
-        // validate range
-        if(lastRow < firstRow || lastColumn < firstColumn)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't create empty submatrix - invalid range [${firstRow}:${lastRow}, ${firstColumn}:${lastColumn}]`);
-        else if(firstRow < 0 || lastRow >= rows || firstColumn < 0 || lastColumn >= columns)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_0__["IllegalArgumentError"](`Can't create submatrix - invalid range [${firstRow}:${lastRow}, ${firstColumn}:${lastColumn}] of ${rows} x ${columns} matrix`);
-
-        // compute the dimensions of the new submatrix
-        const subRows = lastRow - firstRow + 1;
-        const subColumns = lastColumn - firstColumn + 1;
-        const subShape = new _matrix_shape__WEBPACK_IMPORTED_MODULE_2__["MatrixShape"](subRows, subColumns, this.dtype);
-
-        // obtain the relevant portion of the data
-        const stride = this.stride;
-        const begin = firstColumn * stride + firstRow;
-        const length = (lastColumn - firstColumn) * stride + subRows;
-
-        // create submatrix
-        return this._buffer.createSharedBuffer(begin, length).then(sharedBuffer =>
-            new SpeedyMatrix(subShape, undefined, stride, sharedBuffer)
-        );
-    }
-
-    /**
-     * Creates a vector featuring the elements of the main diagonal
-     * of the matrix. The internal buffers of the column-vector and of the
-     * matrix are shared, so if you change the data in one, you'll change
-     * the data in the other.
-     * @returns {SpeedyPromise<SpeedyMatrix>}
-     */
-    diagonal()
-    {
-        const rows = this.rows, stride = this.stride;
-        const diagonalLength = Math.min(rows, this.columns);
-        const bufferLength = (diagonalLength - 1) * stride + rows;
-        const shape = new _matrix_shape__WEBPACK_IMPORTED_MODULE_2__["MatrixShape"](1, diagonalLength, this.dtype);
-
-        return this._buffer.createSharedBuffer(0, bufferLength).then(sharedBuffer =>
-            new SpeedyMatrix(shape, undefined, stride + 1, sharedBuffer)
-        );
-    }
-
-
-
-
-
-    // ====================================
-    // MATRIX UTILITIES
-    // ====================================
-
-    /**
-     * Convert to string
-     * @returns {string}
-     */
-    toString()
-    {
-        return `SpeedyMatrix(rows=${this.rows}, cols=${this.columns}, dtype="${this.dtype}")`;
-    }
-
-    /**
-     * Locks the internal buffer of this matrix,
-     * so it can't be read from nor written to
-     */
-    lock()
-    {
-        this._buffer.lock();
-    }
-
-    /**
-     * Unlocks the internal buffer of this matrix and
-     * resolves all pending read/write operations
-     */
-    unlock()
-    {
-        this._buffer.unlock();
-    }
-
-    /**
-     * The internal buffer of this matrix
-     * @returns {MatrixBuffer}
-     */
-    get buffer()
-    {
-        return this._buffer;
-    }
-
-    /**
-     * Returns a promise that resolves as soon as all
-     * operations submitted UP TO NOW have finished
-     * @returns {SpeedyPromise<void>}
-     */
-    sync()
-    {
-        this._nop = this._nop || (this._nop = new _matrix_operations__WEBPACK_IMPORTED_MODULE_5__["MatrixOperationNop"](this.shape));
-        return matrixOperationsQueue.enqueue(this._nop, this, []);
-    }
-}
-
-/***/ }),
-
 /***/ "./src/core/pipeline/factories/filter-factory.js":
 /*!*******************************************************!*\
   !*** ./src/core/pipeline/factories/filter-factory.js ***!
@@ -7925,7 +313,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -8049,7 +437,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -8157,7 +545,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -8367,7 +755,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -8437,13 +825,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _matrix_matrix__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../matrix/matrix */ "./src/core/matrix/matrix.js");
-/* harmony import */ var _matrix_matrix_shape__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../../../matrix/matrix-shape */ "./src/core/matrix/matrix-shape.js");
-/* harmony import */ var _matrix_matrix_expressions__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../../../matrix/matrix-expressions */ "./src/core/matrix/matrix-expressions.js");
+/* harmony import */ var _speedy_matrix__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../speedy-matrix */ "./src/core/speedy-matrix.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -8460,8 +846,6 @@ __webpack_require__.r(__webpack_exports__);
  * convolution.js
  * Image convolution
  */
-
-
 
 
 
@@ -8498,14 +882,13 @@ class SpeedyPipelineNodeConvolution extends _pipeline_node__WEBPACK_IMPORTED_MOD
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
         ]);
 
-
-        /** @type {SpeedyMatrixExpr} convolution kernel (square matrix) */
-        this._kernel = _matrix_matrix_expressions__WEBPACK_IMPORTED_MODULE_12__["SpeedyMatrixExpr"].create(3, 3, [0, 0, 0, 0, 1, 0, 0, 0, 0]); // identity transform
+        /** @type {SpeedyMatrix} convolution kernel (square matrix) */
+        this._kernel = _speedy_matrix__WEBPACK_IMPORTED_MODULE_10__["SpeedyMatrix"].Create(3, 3, [0, 0, 0, 0, 1, 0, 0, 0, 0]); // identity transform
     }
 
     /**
      * Convolution kernel
-     * @returns {SpeedyMatrixExpr}
+     * @returns {SpeedyMatrix}
      */
     get kernel()
     {
@@ -8514,7 +897,7 @@ class SpeedyPipelineNodeConvolution extends _pipeline_node__WEBPACK_IMPORTED_MOD
 
     /**
      * Convolution kernel
-     * @param {SpeedyMatrixExpr} kernel
+     * @param {SpeedyMatrix} kernel
      */
     set kernel(kernel)
     {
@@ -8538,14 +921,13 @@ class SpeedyPipelineNodeConvolution extends _pipeline_node__WEBPACK_IMPORTED_MOD
         const outputTexture = this._tex[0];
         const ksize = this._kernel.rows;
         const conv = CONVOLUTION[ksize];
+        const kernel = this._kernel.read();
 
-        return this._kernel.read().then(kernel => {
-            (gpu.programs.filters[conv]
-                .outputs(width, height, outputTexture)
-            )(image, kernel);
+        (gpu.programs.filters[conv]
+            .outputs(width, height, outputTexture)
+        )(image, kernel);
 
-            this.output().swrite(outputTexture, format);
-        });
+        this.output().swrite(outputTexture, format);
     }
 }
 
@@ -8575,7 +957,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -8790,7 +1172,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -8878,7 +1260,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9007,7 +1389,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9221,7 +1603,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9384,7 +1766,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9550,7 +1932,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9678,7 +2060,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9791,7 +2173,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -9916,7 +2298,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10025,7 +2407,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10134,7 +2516,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10267,7 +2649,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10424,7 +2806,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10519,7 +2901,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10616,7 +2998,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10731,7 +3113,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -10994,7 +3376,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -11145,7 +3527,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -11344,7 +3726,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -11491,7 +3873,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -11675,7 +4057,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -11851,7 +4233,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12111,7 +4493,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _matrix_matrix_expressions__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../matrix/matrix-expressions */ "./src/core/matrix/matrix-expressions.js");
+/* harmony import */ var _speedy_matrix__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../speedy-matrix */ "./src/core/speedy-matrix.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
@@ -12161,13 +4543,13 @@ class SpeedyPipelineNodeKeypointTransformer extends _pipeline_node__WEBPACK_IMPO
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Keypoints)
         ]);
 
-        /** @type {SpeedyMatrixExpr} transformation matrix */
-        this._transform = _matrix_matrix_expressions__WEBPACK_IMPORTED_MODULE_7__["SpeedyMatrixExpr"].create(3, 3, [1, 0, 0, 0, 1, 0, 0, 0, 1]); // identity matrix
+        /** @type {SpeedyMatrix} transformation matrix */
+        this._transform = _speedy_matrix__WEBPACK_IMPORTED_MODULE_7__["SpeedyMatrix"].Create(3, 3, [1, 0, 0, 0, 1, 0, 0, 0, 1]); // identity matrix
     }
 
     /**
      * Transformation matrix
-     * @returns {SpeedyMatrixExpr}
+     * @returns {SpeedyMatrix}
      */
     get transform()
     {
@@ -12176,7 +4558,7 @@ class SpeedyPipelineNodeKeypointTransformer extends _pipeline_node__WEBPACK_IMPO
 
     /**
      * Transformation matrix. Must be 3x3
-     * @param {SpeedyMatrixExpr} transform
+     * @param {SpeedyMatrix} transform
      */
     set transform(transform)
     {
@@ -12195,18 +4577,15 @@ class SpeedyPipelineNodeKeypointTransformer extends _pipeline_node__WEBPACK_IMPO
     {
         const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input().read();
         const outputTexture = this._tex[0];
+        const homography = this._transform.read();
 
-        return this._transform.read().then(homography => {
+        // apply homography
+        (gpu.programs.keypoints.applyHomography
+            .outputs(encodedKeypoints.width, encodedKeypoints.height, outputTexture)
+        )(homography, encodedKeypoints, descriptorSize, extraSize, encoderLength);
 
-            // apply homography
-            (gpu.programs.keypoints.applyHomography
-                .outputs(encodedKeypoints.width, encodedKeypoints.height, outputTexture)
-            )(homography, encodedKeypoints, descriptorSize, extraSize, encoderLength);
-
-            // done!
-            this.output().swrite(outputTexture, descriptorSize, extraSize, encoderLength);
-
-        });
+        // done!
+        this.output().swrite(outputTexture, descriptorSize, extraSize, encoderLength);
     }
 }
 
@@ -12231,13 +4610,11 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _matrix_matrix__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../matrix/matrix */ "./src/core/matrix/matrix.js");
-/* harmony import */ var _matrix_matrix_shape__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../matrix/matrix-shape */ "./src/core/matrix/matrix-shape.js");
-/* harmony import */ var _matrix_matrix_expressions__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../../../matrix/matrix-expressions */ "./src/core/matrix/matrix-expressions.js");
+/* harmony import */ var _speedy_matrix__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../speedy-matrix */ "./src/core/speedy-matrix.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12254,8 +4631,6 @@ __webpack_require__.r(__webpack_exports__);
  * perspective-warp.js
  * Warp an image using a perspective transformation
  */
-
-
 
 
 
@@ -12287,13 +4662,13 @@ class SpeedyPipelineNodePerspectiveWarp extends _pipeline_node__WEBPACK_IMPORTED
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
         ]);
 
-        /** @type {SpeedyMatrixExpr} perspective transformation */
-        this._transform = _matrix_matrix_expressions__WEBPACK_IMPORTED_MODULE_11__["SpeedyMatrixExpr"].create(3, 3, [1, 0, 0, 0, 1, 0, 0, 0, 1]); // identity matrix
+        /** @type {SpeedyMatrix} perspective transformation */
+        this._transform = _speedy_matrix__WEBPACK_IMPORTED_MODULE_9__["SpeedyMatrix"].Create(3, 3, [1, 0, 0, 0, 1, 0, 0, 0, 1]); // identity matrix
     }
 
     /**
      * Perspective transform, a 3x3 homography matrix
-     * @returns {SpeedyMatrixExpr}
+     * @returns {SpeedyMatrix}
      */
     get transform()
     {
@@ -12302,7 +4677,7 @@ class SpeedyPipelineNodePerspectiveWarp extends _pipeline_node__WEBPACK_IMPORTED
 
     /**
      * Perspective transform, a 3x3 homography matrix
-     * @param {SpeedyMatrixExpr} transform
+     * @param {SpeedyMatrix} transform
      */
     set transform(transform)
     {
@@ -12322,17 +4697,14 @@ class SpeedyPipelineNodePerspectiveWarp extends _pipeline_node__WEBPACK_IMPORTED
         const { image, format } = this.input().read();
         const width = image.width, height = image.height;
         const outputTexture = this._tex[0];
+        const homography = this._transform.read();
+        const inverseHomography = this._inverse3(homography);
+        const isValidHomography = !Number.isNaN(inverseHomography[0]);
 
-        return this._transform.read().then(homography => {
-            let inverseHomography = this._inverse3(homography);
-            if(Number.isNaN(inverseHomography[0]))
-                inverseHomography = SINGULAR_MATRIX;
+        gpu.programs.transforms.warpPerspective.outputs(width, height, outputTexture);
+        gpu.programs.transforms.warpPerspective(image, isValidHomography ? inverseHomography : SINGULAR_MATRIX);
 
-            gpu.programs.transforms.warpPerspective.outputs(width, height, outputTexture);
-            gpu.programs.transforms.warpPerspective(image, inverseHomography);
-
-            this.output().swrite(outputTexture, format);
-        });
+        this.output().swrite(outputTexture, format);
     }
 
     /**
@@ -12409,7 +4781,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12578,7 +4950,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12928,7 +5300,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13275,7 +5647,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13613,7 +5985,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13742,7 +6114,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13863,7 +6235,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14176,7 +6548,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14254,7 +6626,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14379,6 +6751,1733 @@ class SpeedyKeypoint
     get descriptor()
     {
         return this._descriptor;
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/speedy-matrix-expr.js":
+/*!****************************************!*\
+  !*** ./src/core/speedy-matrix-expr.js ***!
+  \****************************************/
+/*! exports provided: SpeedyMatrixExpr */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixExpr", function() { return SpeedyMatrixExpr; });
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-matrix-wasm */ "./src/core/speedy-matrix-wasm.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-matrix-expr.js
+ * Symbolic matrix expressions
+ */
+
+
+
+
+
+
+/**
+ * @typedef {'float32'} SpeedyMatrixType data type
+ */
+
+/** @type {object.<SpeedyMatrixType,Function>} */
+const DTYPE_TO_BUFFER_TYPE = Object.freeze({
+    'float32': Float32Array
+});
+
+
+/**
+ * @abstract Matrix expression
+ * It's an opaque object representing an algebraic
+ * expression. It has no data attached to it.
+ */
+class SpeedyMatrixExpr
+{
+    /**
+     * Constructor
+     * @param {number} rows
+     * @param {number} columns
+     * @param {SpeedyMatrixType} dtype
+     */
+    constructor(rows, columns, dtype)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(rows > 0 && columns > 0);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(dtype === SpeedyMatrixExpr.DEFAULT_DTYPE); // we only support float32 for now
+
+        /** @type {number} number of rows */
+        this._rows = rows | 0;
+
+        /** @type {number} number of columns */
+        this._columns = columns | 0;
+
+        /** @type {SpeedyMatrixType} data type */
+        this._dtype = dtype;
+    }
+
+    /**
+     * Number of rows
+     * @returns {number}
+     */
+    get rows()
+    {
+        return this._rows;
+    }
+
+    /**
+     * Number of rows
+     * @returns {number}
+     */
+    get columns()
+    {
+        return this._columns;
+    }
+
+    /**
+     * Data type
+     * @returns {SpeedyMatrixType}
+     */
+    get dtype()
+    {
+        return this._dtype;
+    }
+
+    /**
+     * Default data type
+     * @returns {SpeedyMatrixType}
+     */
+    static get DEFAULT_DTYPE()
+    {
+        return 'float32';
+    }
+
+    /**
+     * Buffer types
+     * @returns {object.<SpeedyMatrixType,Function>}
+     */
+    static get BUFFER_TYPE()
+    {
+        return DTYPE_TO_BUFFER_TYPE;
+    }
+
+    /**
+     * Matrix addition
+     * @param {SpeedyMatrixExpr} expr
+     * @returns {SpeedyMatrixExpr}
+     */
+    plus(expr)
+    {
+        return new SpeedyMatrixAddExpr(this, expr);
+    }
+
+    /**
+     * Matrix subtraction
+     * @param {SpeedyMatrixExpr} expr
+     * @returns {SpeedyMatrixExpr}
+     */
+    minus(expr)
+    {
+        return new SpeedyMatrixSubtractExpr(this, expr);
+    }
+
+    /**
+     * Matrix multiplication
+     * @param {SpeedyMatrixExpr|number} expr
+     * @returns {SpeedyMatrixExpr}
+     */
+    times(expr)
+    {
+        if(typeof expr === 'number')
+            return new SpeedyMatrixScaleExpr(this, expr);
+        else
+            return new SpeedyMatrixMultiplyExpr(this, expr);
+    }
+
+    /**
+     * Matrix transposition
+     * @returns {SpeedyMatrixExpr}
+     */
+    transpose()
+    {
+        return new SpeedyMatrixTransposeExpr(this);
+    }
+
+    /**
+     * Matrix inversion
+     * @returns {SpeedyMatrixExpr}
+     */
+    inverse()
+    {
+        return new SpeedyMatrixInvertExpr(this);
+    }
+
+    /**
+     * Component-wise multiplication
+     * @param {SpeedyMatrixExpr} expr
+     * @returns {SpeedyMatrixExpr}
+     */
+    compMult(expr)
+    {
+        return new SpeedyMatrixCompMultExpr(this, expr);
+    }
+
+    /**
+     * Returns a human-readable string representation of the matrix expression
+     * @returns {string}
+     */
+    toString()
+    {
+        return `SpeedyMatrixExpr(rows=${this.rows}, columns=${this.columns})`;
+    }
+
+    /**
+     * Evaluate this expression
+     * @param {WebAssembly.Instance} wasm
+     * @param {AugmentedMemory} memory
+     * @returns {SpeedyMatrix}
+     */
+    _evaluate(wasm, memory)
+    {
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["AbstractMethodError"]();
+    }
+}
+
+const { SpeedyMatrix } = __webpack_require__(/*! ./speedy-matrix */ "./src/core/speedy-matrix.js");
+
+/**
+ * @abstract operation storing a temporary matrix
+ */
+class SpeedyMatrixTempExpr extends SpeedyMatrixExpr
+{
+    /**
+     * Constructor
+     * @param {number} rows
+     * @param {number} columns
+     * @param {SpeedyMatrixType} dtype
+     */
+    constructor(rows, columns, dtype)
+    {
+        super(rows, columns, dtype);
+
+        /** @type {SpeedyMatrix} holds the results of a computation */
+        this._tempMatrix = SpeedyMatrix.Zeros(this.rows, this.columns, this.dtype);
+    }
+}
+
+/**
+ * @abstract unary operation
+ */
+class SpeedyMatrixUnaryOperationExpr extends SpeedyMatrixTempExpr
+{
+    /**
+     * Constructor
+     * @param {number} rows rows of the output matrix
+     * @param {number} columns columns of the output matrix
+     * @param {SpeedyMatrixExpr} operand
+     */
+    constructor(rows, columns, operand)
+    {
+        super(rows, columns, operand.dtype);
+
+        /** @type {SpeedyMatrixExpr} operand */
+        this._operand = operand;
+    }
+
+    /**
+     * Evaluate this expression
+     * @param {WebAssembly.Instance} wasm
+     * @param {AugmentedMemory} memory
+     * @returns {SpeedyMatrix}
+     */
+    _evaluate(wasm, memory)
+    {
+        const operand = this._operand._evaluate(wasm, memory);
+        const result = this._tempMatrix;
+
+        // allocate matrices
+        const resultptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].allocateMat32(wasm, memory, result);
+        const operandptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].allocateMat32(wasm, memory, operand);
+
+        // copy operand to WASM memory
+        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].copyToMat32(wasm, memory, operandptr, operand);
+
+        // run the WASM routine
+        this._compute(wasm, memory, resultptr, operandptr);
+
+        // copy result from WASM memory
+        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].copyFromMat32(wasm, memory, resultptr, result);
+
+        // deallocate matrices
+        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].deallocateMat32(wasm, memory, operandptr);
+        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].deallocateMat32(wasm, memory, resultptr);
+
+        // done!
+        return result;
+    }
+
+    /**
+     * Compute the result of this operation
+     * @param {WebAssembly.Instance} wasm
+     * @param {AugmentedMemory} memory
+     * @param {number} resultptr pointer to Mat32
+     * @param {number} operandptr pointer to Mat32
+     */
+    _compute(wasm, memory, resultptr, operandptr)
+    {
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["AbstractMethodError"]();
+    }
+}
+
+/**
+ * @abstract binary operation
+ */
+class SpeedyMatrixBinaryOperationExpr extends SpeedyMatrixTempExpr
+{
+    /**
+     * Constructor
+     * @param {number} rows rows of the output matrix
+     * @param {number} columns columns of the output matrix
+     * @param {SpeedyMatrixExpr} left left operand
+     * @param {SpeedyMatrixExpr} right right operand
+     */
+    constructor(rows, columns, left, right)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(left.dtype === right.dtype);
+        super(rows, columns, left.dtype);
+
+        /** @type {SpeedyMatrixExpr} left operand */
+        this._left = left;
+
+        /** @type {SpeedyMatrixExpr} right operand */
+        this._right = right;
+    }
+
+    /**
+     * Evaluate this expression
+     * @param {WebAssembly.Instance} wasm
+     * @param {AugmentedMemory} memory
+     * @returns {SpeedyMatrix}
+     */
+    _evaluate(wasm, memory)
+    {
+        const left = this._left._evaluate(wasm, memory);
+        const right = this._right._evaluate(wasm, memory);
+        const result = this._tempMatrix;
+
+        // allocate matrices
+        const resultptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].allocateMat32(wasm, memory, result);
+        const leftptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].allocateMat32(wasm, memory, left);
+        const rightptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].allocateMat32(wasm, memory, right);
+
+        // copy input matrices to WASM memory
+        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].copyToMat32(wasm, memory, leftptr, left);
+        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].copyToMat32(wasm, memory, rightptr, right);
+
+        // run the WASM routine
+        this._compute(wasm, memory, resultptr, leftptr, rightptr);
+
+        // copy output matrix from WASM memory
+        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].copyFromMat32(wasm, memory, resultptr, result);
+
+        // deallocate matrices
+        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].deallocateMat32(wasm, memory, rightptr);
+        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].deallocateMat32(wasm, memory, leftptr);
+        _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].deallocateMat32(wasm, memory, resultptr);
+
+        // done!
+        return result;
+    }
+
+    /**
+     * Compute the result of this operation
+     * @param {WebAssembly.Instance} wasm
+     * @param {AugmentedMemory} memory
+     * @param {number} resultptr pointer to Mat32
+     * @param {number} leftptr pointer to Mat32
+     * @param {number} rightptr pointer to Mat32
+     */
+    _compute(wasm, memory, resultptr, leftptr, rightptr)
+    {
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["AbstractMethodError"]();
+    }
+}
+
+/**
+ * Transpose matrix
+ */
+class SpeedyMatrixTransposeExpr extends SpeedyMatrixUnaryOperationExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} operand
+     */
+    constructor(operand)
+    {
+        super(operand.columns, operand.rows, operand);
+    }
+
+    /**
+     * Compute result = operand^T
+     * @param {WebAssembly.Instance} wasm
+     * @param {AugmentedMemory} memory
+     * @param {number} resultptr pointer to Mat32
+     * @param {number} operandptr pointer to Mat32
+     */
+    _compute(wasm, memory, resultptr, operandptr)
+    {
+        wasm.exports.Mat32_transpose(resultptr, operandptr);
+    }
+}
+
+/**
+ * Invert square matrix
+ */
+class SpeedyMatrixInvertExpr extends SpeedyMatrixUnaryOperationExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} operand
+     */
+    constructor(operand)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(operand.rows === operand.columns);
+        super(operand.rows, operand.columns, operand);
+
+        /** @type {number} size of the matrix */
+        this._size = operand.rows;
+    }
+
+    /**
+     * Compute result = operand ^ (-1)
+     * @param {WebAssembly.Instance} wasm
+     * @param {AugmentedMemory} memory
+     * @param {number} resultptr pointer to Mat32
+     * @param {number} operandptr pointer to Mat32
+     */
+    _compute(wasm, memory, resultptr, operandptr)
+    {
+        switch(this._size) {
+            case 0: break;
+            case 1:
+                wasm.exports.Mat32_inverse1(resultptr, operandptr);
+                break;
+
+            case 2:
+                wasm.exports.Mat32_inverse2(resultptr, operandptr);
+                break;
+
+            case 3:
+                wasm.exports.Mat32_inverse3(resultptr, operandptr);
+                break;
+
+            default:
+                wasm.exports.Mat32_qr_inverse(resultptr, operandptr);
+                break;
+        }
+    }
+}
+
+/**
+ * Multiply matrix by a scalar value
+ */
+class SpeedyMatrixScaleExpr extends SpeedyMatrixUnaryOperationExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} operand
+     * @param {number} scalar
+     */
+    constructor(operand, scalar)
+    {
+        super(operand.rows, operand.columns, operand);
+
+        /** @type {number} scalar value */
+        this._scalar = +scalar;
+    }
+
+    /**
+     * Compute result = scalar * operand
+     * @param {WebAssembly.Instance} wasm
+     * @param {AugmentedMemory} memory
+     * @param {number} resultptr pointer to Mat32
+     * @param {number} operandptr pointer to Mat32
+     */
+    _compute(wasm, memory, resultptr, operandptr)
+    {
+        wasm.exports.Mat32_scale(resultptr, operandptr, this._scalar);
+    }
+}
+
+/**
+ * Matrix addition
+ */
+class SpeedyMatrixAddExpr extends SpeedyMatrixBinaryOperationExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} left left operand
+     * @param {SpeedyMatrixExpr} right right operand
+     */
+    constructor(left, right)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(left.rows === right.rows && left.columns === right.columns);
+        super(left.rows, left.columns, left, right);
+    }
+
+    /**
+     * Compute result = left + right
+     * @param {WebAssembly.Instance} wasm
+     * @param {AugmentedMemory} memory
+     * @param {number} resultptr pointer to Mat32
+     * @param {number} leftptr pointer to Mat32
+     * @param {number} rightptr pointer to Mat32
+     */
+    _compute(wasm, memory, resultptr, leftptr, rightptr)
+    {
+        wasm.exports.Mat32_add(resultptr, leftptr, rightptr);
+    }
+}
+
+/**
+ * Matrix subtraction
+ */
+class SpeedyMatrixSubtractExpr extends SpeedyMatrixBinaryOperationExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} left left operand
+     * @param {SpeedyMatrixExpr} right right operand
+     */
+    constructor(left, right)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(left.rows === right.rows && left.columns === right.columns);
+        super(left.rows, left.columns, left, right);
+    }
+
+    /**
+     * Compute result = left - right
+     * @param {WebAssembly.Instance} wasm
+     * @param {AugmentedMemory} memory
+     * @param {number} resultptr pointer to Mat32
+     * @param {number} leftptr pointer to Mat32
+     * @param {number} rightptr pointer to Mat32
+     */
+    _compute(wasm, memory, resultptr, leftptr, rightptr)
+    {
+        wasm.exports.Mat32_subtract(resultptr, leftptr, rightptr);
+    }
+}
+
+/**
+ * Matrix multiplication
+ */
+class SpeedyMatrixMultiplyExpr extends SpeedyMatrixBinaryOperationExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} left left operand
+     * @param {SpeedyMatrixExpr} right right operand
+     */
+    constructor(left, right)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(left.columns === right.rows);
+        super(left.rows, right.columns, left, right);
+    }
+
+    /**
+     * Compute result = left * right
+     * @param {WebAssembly.Instance} wasm
+     * @param {AugmentedMemory} memory
+     * @param {number} resultptr pointer to Mat32
+     * @param {number} leftptr pointer to Mat32
+     * @param {number} rightptr pointer to Mat32
+     */
+    _compute(wasm, memory, resultptr, leftptr, rightptr)
+    {
+        wasm.exports.Mat32_multiply(resultptr, leftptr, rightptr);
+    }
+}
+
+/**
+ * Component-wise multiplication
+ */
+class SpeedyMatrixCompMultExpr extends SpeedyMatrixBinaryOperationExpr
+{
+    /**
+     * Constructor
+     * @param {SpeedyMatrixExpr} left left operand
+     * @param {SpeedyMatrixExpr} right right operand
+     */
+    constructor(left, right)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_2__["Utils"].assert(left.rows === right.rows && left.columns === right.columns);
+        super(right.rows, right.columns, left, right);
+    }
+
+    /**
+     * Compute result = left <compMult> right
+     * @param {WebAssembly.Instance} wasm
+     * @param {AugmentedMemory} memory
+     * @param {number} resultptr pointer to Mat32
+     * @param {number} leftptr pointer to Mat32
+     * @param {number} rightptr pointer to Mat32
+     */
+    _compute(wasm, memory, resultptr, leftptr, rightptr)
+    {
+        wasm.exports.Mat32_compmult(resultptr, leftptr, rightptr);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/speedy-matrix-factory.js":
+/*!*******************************************!*\
+  !*** ./src/core/speedy-matrix-factory.js ***!
+  \*******************************************/
+/*! exports provided: SpeedyMatrixFactory */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixFactory", function() { return SpeedyMatrixFactory; });
+/* harmony import */ var _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-matrix-expr */ "./src/core/speedy-matrix-expr.js");
+/* harmony import */ var _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-matrix-wasm */ "./src/core/speedy-matrix-wasm.js");
+/* harmony import */ var _speedy_matrix__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-matrix */ "./src/core/speedy-matrix.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-matrix-factory.js
+ * A factory of matrices
+ */
+
+
+
+
+
+
+
+
+/**
+ * A factory of matrices
+ */
+class SpeedyMatrixFactory extends Function
+{
+    /**
+     * Constructor
+     */
+    constructor()
+    {
+        // This factory can be invoked as a function
+        super('...args', 'return this._create(...args)');
+        return this.bind(this);
+    }
+
+    /**
+     * Create a new matrix filled with the specified size and entries
+     * @param {number} rows
+     * @param {number} [columns]
+     * @param {number[]} [entries] in column-major format
+     * @returns {SpeedyMatrix}
+     */
+    _create(rows, columns = rows, entries = [])
+    {
+        return _speedy_matrix__WEBPACK_IMPORTED_MODULE_2__["SpeedyMatrix"].Create(rows, columns, entries);
+    }
+
+    /**
+     * Create a new matrix filled with zeros with the specified size
+     * @param {number} rows
+     * @param {number} [columns]
+     * @returns {SpeedyMatrix}
+     */
+    Zeros(rows, columns = rows)
+    {
+        return _speedy_matrix__WEBPACK_IMPORTED_MODULE_2__["SpeedyMatrix"].Zeros(rows, columns);
+    }
+
+    /**
+     * Create a new matrix filled with ones with the specified size
+     * @param {number} rows
+     * @param {number} [columns]
+     * @returns {SpeedyMatrix}
+     */
+    Ones(rows, columns = rows)
+    {
+        return _speedy_matrix__WEBPACK_IMPORTED_MODULE_2__["SpeedyMatrix"].Ones(rows, columns);
+    }
+
+    /**
+     * Create an identity matrix with the specified size
+     * @param {number} rows
+     * @param {number} [columns]
+     * @returns {SpeedyMatrix}
+     */
+    Eye(rows, columns = rows)
+    {
+        return _speedy_matrix__WEBPACK_IMPORTED_MODULE_2__["SpeedyMatrix"].Eye(rows, columns);
+    }
+
+    /**
+     * QR decomposition
+     * @param {SpeedyMatrix} Q is m x n (reduced) or m x m (full), output
+     * @param {SpeedyMatrix} R is n x n (reduced) or m x n (full), output
+     * @param {SpeedyMatrix} mat is m x n, input
+     * @param {object} [options]
+     * @param {'reduced'|'full'} [options.mode]
+     * @returns {SpeedyPromise<void>}
+     */
+    qr(Q, R, mat, { mode = 'reduced' } = {})
+    {
+        const A = mat, m = mat.rows, n = mat.columns;
+
+        // validate shapes & mode
+        if(mode == 'reduced') {
+            if(Q.rows != m || Q.columns != n || R.rows != n || R.columns != n)
+                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Invalid shape for reduced QR`);
+        }
+        else if(mode == 'full') {
+            if(Q.rows != m || Q.columns != m || R.rows != m || R.columns != n)
+                throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Invalid shape for full QR`);
+        }
+        else
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Invalid mode for QR: "${mode}"`);
+
+        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].ready().then(([wasm, memory]) => {
+            // allocate matrices
+            const Qptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].allocateMat32(wasm, memory, Q);
+            const Rptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].allocateMat32(wasm, memory, R);
+            const Aptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].allocateMat32(wasm, memory, A);
+
+            // copy input matrices to WASM memory
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].copyToMat32(wasm, memory, Aptr, A);
+
+            // run the WASM routine
+            if(mode == 'reduced')
+                wasm.exports.Mat32_qr_reduced(Qptr, Rptr, Aptr);
+            else
+                wasm.exports.Mat32_qr_full(Qptr, Rptr, Aptr);
+
+            // copy output matrices from WASM memory
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].copyFromMat32(wasm, memory, Qptr, Q);
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].copyFromMat32(wasm, memory, Rptr, R);
+
+            // deallocate matrices
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].deallocateMat32(wasm, memory, Aptr);
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].deallocateMat32(wasm, memory, Rptr);
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].deallocateMat32(wasm, memory, Qptr);
+        });
+    }
+
+    /**
+     * Solve a possibly overdetermined system of linear
+     * equations Ax = b for x using ordinary least squares
+     * @param {SpeedyMatrix} solution n x 1, output
+     * @param {SpeedyMatrix} A m x n, m >= n, input
+     * @param {SpeedyMatrix} b m x 1, output
+     * @param {object} [options]
+     * @param {'qr'} [options.method] method of resolution
+     * @returns {SpeedyPromise<SpeedyMatrix>} resolves to solution
+     */
+    ols(solution, A, b, { method = 'qr' } = {})
+    {
+        const m = A.rows, n = A.columns;
+        const x = solution;
+
+        // validate shapes
+        if(m < n || n == 0)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't solve an underdetermined system of equations`);
+        else if(b.rows != m || b.columns != 1 || x.rows != n || x.columns != 1)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Invalid shapes`);
+
+        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].ready().then(([wasm, memory]) => {
+            // allocate matrices
+            const Aptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].allocateMat32(wasm, memory, A);
+            const bptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].allocateMat32(wasm, memory, b);
+            const xptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].allocateMat32(wasm, memory, x);
+
+            // copy input matrices to WASM memory
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].copyToMat32(wasm, memory, Aptr, A);
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].copyToMat32(wasm, memory, bptr, b);
+
+            // run the WASM routine
+            switch(method) {
+                case 'qr':
+                    wasm.exports.Mat32_qr_ols(xptr, Aptr, bptr, 2);
+                    break;
+
+                default: 
+                    throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Invalid method: "${method}"`);
+            }
+
+            // copy output matrix from WASM memory
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].copyFromMat32(wasm, memory, xptr, x);
+
+            // deallocate matrices
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].deallocateMat32(wasm, memory, xptr);
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].deallocateMat32(wasm, memory, bptr);
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].deallocateMat32(wasm, memory, Aptr);
+
+            // done!
+            return solution;
+        });
+    }
+
+    /**
+     * Solve a system of linear equations Ax = b for x
+     * @param {SpeedyMatrix} solution m x 1, output
+     * @param {SpeedyMatrix} A m x m, input
+     * @param {SpeedyMatrix} b m x 1, output
+     * @param {object} [options]
+     * @param {'qr'} [options.method] method of resolution
+     * @returns {SpeedyPromise<SpeedyMatrix>} resolves to solution
+     */
+    solve(solution, A, b, { method = 'qr' } = {})
+    {
+        const m = A.rows, n = A.columns;
+        const x = solution;
+
+        // validate shapes
+        if(m != n)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't solve an over or underdetermined system of equations`);
+        else if(b.rows != m || b.columns != 1 || x.rows != m || x.columns != 1)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Invalid shapes`);
+
+        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].ready().then(([wasm, memory]) => {
+            // select method
+            switch(method) {
+                case 'qr':
+                    return this.ols(x, A, b, { method });
+
+                /*case 'lu':
+                    break;*/
+
+                default:
+                    throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Invalid method: "${method}"`);
+            }
+        });
+    }
+
+    /**
+     * Compute a perspective transformation using 4 correspondences of points
+     * @param {SpeedyMatrix} homography 3x3 output - homography matrix
+     * @param {SpeedyMatrix} src 2x4 input points - source coordinates
+     * @param {SpeedyMatrix} dest 2x4 input points - destination coordinates
+     * @returns {SpeedyPromise<SpeedyMatrix>} resolves to homography
+     */
+    perspective(homography, src, dest)
+    {
+        // validate shapes
+        if(src.rows != 2 || src.columns != 4 || dest.rows != 2 || dest.columns != 4)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`You need two 2x4 input matrices to compute a perspective transformation`);
+        else if(homography.rows != 3 || homography.columns != 3)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`The output of perspective() is a 3x3 homography`);
+
+        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].ready().then(([wasm, memory]) => {
+            // allocate matrices
+            const homptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].allocateMat32(wasm, memory, homography);
+            const srcptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].allocateMat32(wasm, memory, src);
+            const destptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].allocateMat32(wasm, memory, dest);
+
+            // copy input matrices to WASM memory
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].copyToMat32(wasm, memory, srcptr, src);
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].copyToMat32(wasm, memory, destptr, dest);
+
+            // run the WASM routine
+            wasm.exports.Mat32_homography_ndlt4(homptr, srcptr, destptr);
+
+            // copy output matrix from WASM memory
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].copyFromMat32(wasm, memory, homptr, homography);
+
+            // deallocate matrices
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].deallocateMat32(wasm, memory, destptr);
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].deallocateMat32(wasm, memory, srcptr);
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].deallocateMat32(wasm, memory, homptr);
+
+            // done!
+            return homography;
+        });
+    }
+
+    /**
+     * Compute a perspective transformation using n >= 4 correspondences of points
+     * @param {SpeedyMatrix} homography 3x3 output - homography matrix
+     * @param {SpeedyMatrix} src 2 x n input points - source coordinates
+     * @param {SpeedyMatrix} dest 2 x n input points - destination coordinates
+     * @param {object} [options]
+     * @param {'pransac'|'dlt'} [options.method] method of computation
+     * @param {SpeedyMatrix|null} [options.mask] (pransac) 1 x n output: i-th entry will be 1 if the i-th input point is an inlier, or 0 otherwise
+     * @param {number} [options.reprojectionError] (pransac) given in pixels, used to separate inliers from outliers of a particular model (e.g., 1 pixel)
+     * @param {number} [options.numberOfHypotheses] (pransac) number of hypotheses to be generated up-front (e.g., 512)
+     * @param {number} [options.bundleSize] (pransac) how many points should we check before reducing the number of viable hypotheses (e.g., 128)
+     * @returns {SpeedyPromise<SpeedyMatrix>} resolves to homography
+     */
+    findHomography(homography, src, dest, {
+        method = 'pransac',
+        mask = null,
+        reprojectionError = 3,
+        numberOfHypotheses = 500,
+        bundleSize = 100,
+    } = {})
+    {
+        // validate shapes
+        if(src.rows != 2 || src.columns < 4 || dest.rows != 2 || dest.columns != src.columns)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`You need two 2 x n (n >= 4) input matrices to compute a homography`);
+        else if(homography.rows != 3 || homography.columns != 3)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`The output of findHomography() is a 3x3 homography`);
+        else if(mask != null && (mask.rows != 1 || mask.columns != src.columns))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Invalid shape of the inliers mask`);
+
+        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].ready().then(([wasm, memory]) => {
+            // allocate matrices
+            const homptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].allocateMat32(wasm, memory, homography);
+            const srcptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].allocateMat32(wasm, memory, src);
+            const destptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].allocateMat32(wasm, memory, dest);
+            const maskptr = mask != null ? _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].allocateMat32(wasm, memory, mask) : 0;
+
+            // copy input matrices to WASM memory
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].copyToMat32(wasm, memory, srcptr, src);
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].copyToMat32(wasm, memory, destptr, dest);
+
+            // run the WASM routine
+            switch(method) {
+                case 'pransac':
+                    _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(reprojectionError >= 0 && numberOfHypotheses > 0 && bundleSize > 0);
+                    wasm.exports.Mat32_pransac_homography(homptr, maskptr, srcptr, destptr, numberOfHypotheses, bundleSize, reprojectionError);
+                    break;
+
+                case 'dlt':
+                    wasm.exports.Mat32_homography_ndlt(homptr, srcptr, destptr);
+                    break;
+
+                default:
+                    throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Illegal method for findHomography(): "${method}"`);
+            }
+
+            // copy output matrices from WASM memory
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].copyFromMat32(wasm, memory, homptr, homography);
+            if(mask != null)
+                _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].copyFromMat32(wasm, memory, maskptr, mask);
+
+            // deallocate matrices
+            if(mask != null)
+                _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].deallocateMat32(wasm, memory, maskptr);
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].deallocateMat32(wasm, memory, destptr);
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].deallocateMat32(wasm, memory, srcptr);
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].deallocateMat32(wasm, memory, homptr);
+
+            // done!
+            return homography;
+        });
+    }
+
+    /**
+     * Apply a perspective transformation to a set of 2D points
+     * @param {SpeedyMatrix} dest 2 x n output matrix
+     * @param {SpeedyMatrix} src 2 x n input matrix (a set of points)
+     * @param {SpeedyMatrix} transform 3x3 homography matrix
+     * @returns {SpeedyPromise<SpeedyMatrix>} resolves to dest
+     */
+    perspectiveTransform(dest, src, transform)
+    {
+        // validate shapes
+        if(src.rows != 2 || dest.rows != 2 || src.columns != dest.columns)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Invalid shapes`);
+        else if(transform.rows != 3 || transform.columns != 3)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`The perspective transformation must be a 3x3 matrix`);
+
+        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].ready().then(([wasm, memory]) => {
+            // allocate matrices
+            const homptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].allocateMat32(wasm, memory, transform);
+            const srcptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].allocateMat32(wasm, memory, src);
+            const destptr = _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].allocateMat32(wasm, memory, dest);
+
+            // copy input matrices to WASM memory
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].copyToMat32(wasm, memory, srcptr, src);
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].copyToMat32(wasm, memory, homptr, transform);
+
+            // run the WASM routine
+            wasm.exports.Mat32_transform_perspective(destptr, srcptr, homptr);
+
+            // copy output matrix from WASM memory
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].copyFromMat32(wasm, memory, destptr, dest);
+
+            // deallocate matrices
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].deallocateMat32(wasm, memory, destptr);
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].deallocateMat32(wasm, memory, srcptr);
+            _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].deallocateMat32(wasm, memory, homptr);
+
+            // done!
+            return dest;
+        });
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/speedy-matrix-wasm.js":
+/*!****************************************!*\
+  !*** ./src/core/speedy-matrix-wasm.js ***!
+  \****************************************/
+/*! exports provided: SpeedyMatrixWASM */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrixWASM", function() { return SpeedyMatrixWASM; });
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-matrix-wasm.js
+ * WebAssembly bridge
+ */
+
+
+
+
+
+
+/** @type {Uint8Array} WebAssembly binary */
+const WASM_BINARY = __webpack_require__(/*! ./wasm/speedy-matrix.wasm.txt */ "./src/core/wasm/speedy-matrix.wasm.txt");
+
+/** @type {WebAssembly.Instance|null} WebAssembly Instance, to be loaded asynchronously */
+let _instance = null;
+
+/** @type {WebAssembly.Module|null} WebAssembly Module, to be loaded asynchronously */
+let _module = null;
+
+/**
+ * @typedef {object} AugmentedMemory a union-like helper for accessing a WebAssembly.Memory
+ * @property {object} as
+ * @property {WebAssembly.Memory} as.object
+ * @property {Uint8Array} as.uint8
+ * @property {Int32Array} as.int32
+ * @property {Uint32Array} as.uint32
+ * @property {Float32Array} as.float32
+ * @property {Float64Array} as.float64
+ */
+
+/** @type {AugmentedMemory} Augmented WebAssembly Memory object */
+const _memory = (mem => ({
+    as: {
+        object: mem,
+        uint8: new Uint8Array(mem.buffer),
+        int32: new Int32Array(mem.buffer),
+        uint32: new Uint32Array(mem.buffer),
+        float32: new Float32Array(mem.buffer),
+        float64: new Float64Array(mem.buffer),
+    },
+}))(new WebAssembly.Memory({
+    initial: 16, // 1 MB
+    maximum: 256
+}));
+
+/**
+ * WebAssembly utilities
+ */
+class SpeedyMatrixWASM
+{
+    /**
+     * Gets you the WASM instance, augmented memory & module
+     * @returns {SpeedyPromise<[WebAssembly.Instance, AugmentedMemory, WebAssembly.Module]>}
+     */
+    static ready()
+    {
+        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"]((resolve, reject) => {
+            SpeedyMatrixWASM._ready(resolve, reject);
+        }).turbocharge();
+    }
+
+    /**
+     * Gets you the WASM imports bound to a memory object
+     * @param {AugmentedMemory} memory
+     * @returns {Object.<string,Function>}
+     */
+    static imports(memory)
+    {
+        const obj = new SpeedyMatrixWASMImports(memory);
+
+        return Object.getOwnPropertyNames(SpeedyMatrixWASMImports.prototype)
+        .filter(property => typeof obj[property] === 'function' && property !== 'constructor')
+        .reduce(
+            (imports, methodName) => ((imports[methodName] = obj[methodName]), imports),
+            Object.create(null)
+        );
+    }
+
+    /**
+     * Allocate a Mat32 in WebAssembly memory without copying any data
+     * @param {WebAssembly.Instance} wasm
+     * @param {AugmentedMemory} memory
+     * @param {SpeedyMatrix} matrix
+     * @returns {number} pointer to the new Mat32
+     */
+    static allocateMat32(wasm, memory, matrix)
+    {
+        const dataptr = wasm.exports.malloc(matrix.data.byteLength);
+        const matptr = wasm.exports.Mat32_create(matrix.rows, matrix.columns, matrix.step0, matrix.step1, matrix._data.length, dataptr);
+
+        return matptr;
+    }
+
+    /**
+     * Deallocate a Mat32 in WebAssembly
+     * @param {WebAssembly.Instance} wasm
+     * @param {AugmentedMemory} memory
+     * @param {number} matptr pointer to the allocated Mat32
+     * @returns {number} NULL
+     */
+    static deallocateMat32(wasm, memory, matptr)
+    {
+        const dataptr = wasm.exports.Mat32_data(matptr);
+
+        wasm.exports.free(matptr);
+        wasm.exports.free(dataptr);
+
+        return 0;
+    }
+
+    /**
+     * Copy the data of a matrix to a WebAssembly Mat32
+     * @param {WebAssembly.Instance} wasm
+     * @param {AugmentedMemory} memory
+     * @param {number} matptr pointer to a Mat32
+     * @param {SpeedyMatrix} matrix
+     * @returns {number} matptr
+     */
+    static copyToMat32(wasm, memory, matptr, matrix)
+    {
+        // We assume the following:
+        // 1. the host uses little-endian byte ordering (just like WebAssembly)
+        // 2. the allocated pointers are 4-byte aligned (the bump allocator guarantees this)
+        // 3. the data type is float32
+
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(
+            //matrix.dtype === 'float32' &&
+            matrix.data.byteLength === wasm.exports.Mat32_dataSize(matptr)
+        );
+
+        const dataptr = wasm.exports.Mat32_data(matptr);
+        memory.as.float32.set(matrix.data, dataptr / Float32Array.BYTES_PER_ELEMENT);
+
+        return matptr;
+    }
+
+    /**
+     * Copy the data of a WebAssembly Mat32 to a matrix
+     * @param {WebAssembly.Instance} wasm
+     * @param {AugmentedMemory} memory
+     * @param {number} matptr pointer to a Mat32
+     * @param {SpeedyMatrix} matrix
+     * @returns {number} matptr
+     */
+    static copyFromMat32(wasm, memory, matptr, matrix)
+    {
+        // We assume the following:
+        // 1. the host uses little-endian byte ordering (just like WebAssembly)
+        // 2. the allocated pointers are 4-byte aligned (the bump allocator guarantees this)
+        // 3. the data type is float32
+
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(
+            //matrix.dtype === 'float32' &&
+            matrix.data.byteLength === wasm.exports.Mat32_dataSize(matptr)
+        );
+
+        const base = wasm.exports.Mat32_data(matptr) / Float32Array.BYTES_PER_ELEMENT;
+        for(let offset = matrix.data.length - 1; offset >= 0; offset--)
+            matrix.data[offset] = memory.as.float32[base + offset];
+
+        return matptr;
+    }
+
+    /**
+     * Polls the WebAssembly instance until it's ready
+     * @param {Function} resolve
+     * @param {Function} reject
+     * @param {number} [counter]
+     */
+    static _ready(resolve, reject, counter = 1000)
+    {
+        if(_instance !== null && _module !== null)
+            resolve([_instance, _memory, _module]);
+        else if(counter <= 0)
+            reject(new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["TimeoutError"](`Can't load WASM instance`));
+        else
+            setTimeout(SpeedyMatrixWASM._ready, 0, resolve, reject, counter - 1);
+    }
+}
+
+/**
+ * Methods called from WASM
+ */
+class SpeedyMatrixWASMImports
+{
+    /**
+     * Constructor
+     * @param {AugmentedMemory} memory will be bound to this object
+     */
+    constructor(memory)
+    {
+        // find all methods of this object
+        const methodNames = Object.getOwnPropertyNames(this.constructor.prototype)
+                            .filter(property => typeof this[property] === 'function')
+                            .filter(property => property !== 'constructor');
+
+        // bind all methods to this object
+        methodNames.forEach(methodName => {
+            this[methodName] = this[methodName].bind(this);
+        });
+
+        /** @type {AugmentedMemory} WASM memory */
+        this.memory = memory;
+
+        /** @type {CStringUtils} utilities related to C strings */
+        this.cstring = new CStringUtils(memory);
+
+        // done!
+        return Object.freeze(this);
+    }
+
+    /**
+     * Prints a message
+     * @param {number} ptr pointer to char
+     */
+    print(ptr)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].log(this.cstring.get(ptr));
+    }
+
+    /**
+     * Throws an error
+     * @param {number} ptr pointer to char
+     */
+    fatal(ptr)
+    {
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["WebAssemblyError"](this.cstring.get(ptr));
+    }
+
+    /**
+     * Fills a memory segment with a byte
+     * @param {number} value byte
+     * @param {number} start memory address, inclusive
+     * @param {number} end memory address greater than start, exclusive
+     */
+    bytefill(value, start, end)
+    {
+        this.memory.as.uint8.fill(value, start, end);
+    }
+
+    /**
+     * Copy a memory segment to another segment
+     * @param {number} target memory address, where we'll start writing
+     * @param {number} start memory address, where we'll start copying (inclusive)
+     * @param {number} end memory address, where we'll end the copy (exclusive)
+     */
+    copyWithin(target, start, end)
+    {
+        this.memory.as.uint8.copyWithin(target, start, end);
+    }
+}
+
+/**
+ * Utilities related to C strings
+ */
+class CStringUtils
+{
+    /**
+     * Constructor
+     * @param {AugmentedMemory} memory
+     */
+    constructor(memory)
+    {
+        /** @type {TextDecoder} */
+        this._decoder = new TextDecoder('utf-8');
+
+        /** @type {AugmentedMemory} */
+        this._memory = memory;
+    }
+
+    /**
+     * Convert a C string to a JavaScript string
+     * @param {number} ptr pointer to char
+     * @returns {string}
+     */
+    get(ptr)
+    {
+        const byte = this._memory.as.uint8;
+        const size = this._memory.as.uint8.byteLength;
+
+        let p = ptr;
+        while(p < size && 0 !== byte[p])
+            ++p;
+
+        return this._decoder.decode(byte.subarray(ptr, p));
+    }
+}
+
+/**
+ * WebAssembly loader
+ * @param {AugmentedMemory} memory
+ */
+(function loadWASM(memory) {
+    const base64decode = data => Uint8Array.from(atob(data), v => v.charCodeAt(0));
+
+    // Endianness check
+    if(!_utils_globals__WEBPACK_IMPORTED_MODULE_0__["LITTLE_ENDIAN"])
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["NotSupportedError"](`Can't run WebAssembly code: not in a little-endian machine!`);
+
+    // Load the WASM binary
+    _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"].resolve(WASM_BINARY)
+    .then(data => base64decode(data))
+    .then(bytes => WebAssembly.instantiate(bytes, {
+        env: {
+            memory: memory.as.object,
+            ...SpeedyMatrixWASM.imports(memory),
+        }
+    }))
+    .then(wasm => {
+        _instance = wasm.instance;
+        _module = wasm.module;
+
+        wasm.instance.exports.srand((Date.now() * 0.001) & 0xffffffff); // srand(time(NULL))
+
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].log(`The WebAssembly code has been loaded!`);
+    })
+    .catch(err => {
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["WebAssemblyError"](`Can't load WebAssembly code: ${err}`, err);
+    });
+})(_memory);
+
+/***/ }),
+
+/***/ "./src/core/speedy-matrix.js":
+/*!***********************************!*\
+  !*** ./src/core/speedy-matrix.js ***!
+  \***********************************/
+/*! exports provided: SpeedyMatrix */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyMatrix", function() { return SpeedyMatrix; });
+/* harmony import */ var _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-matrix-expr */ "./src/core/speedy-matrix-expr.js");
+/* harmony import */ var _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./speedy-matrix-wasm */ "./src/core/speedy-matrix-wasm.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * speedy-matrix.js
+ * Matrix class
+ */
+
+
+
+
+
+
+
+/**
+ * Matrix class
+ */
+class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrixExpr"]
+{
+    /**
+     * @private
+     * 
+     * Low-level constructor
+     * @param {number} rows number of rows
+     * @param {number} columns number of columns
+     * @param {number} step0 step size between two consecutive elements (e.g., 1)
+     * @param {number} step1 step size between two consecutive columns (e.g., rows)
+     * @param {ArrayBufferView} data entries in column-major format
+     */
+    constructor(rows, columns, step0, step1, data)
+    {
+        super(rows, columns, _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrixExpr"].DEFAULT_DTYPE);
+
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(data.constructor === _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrixExpr"].BUFFER_TYPE[this.dtype]);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(step0 > 0 && step1 >= step0);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(
+            data.length + rows * columns === 0 || // empty matrix and empty buffer, or
+            data.length === 1 + step0 * (rows - 1) + step1 * (columns - 1) // correctly sized buffer
+        );
+
+        /** @type {number} step size between two consecutive elements */
+        this._step0 = step0 | 0;
+
+        /** @type {number} step size between two consecutive columns */
+        this._step1 = step1 | 0;
+
+        /** @type {ArrayBufferView} buffer containing the entries of the matrix in column-major order */
+        this._data = data;
+    }
+
+    /**
+     * Create a new matrix with the specified size and entries
+     * @param {number} rows number of rows
+     * @param {number} columns number of columns
+     * @param {number[]} entries in column-major format
+     * @param {SpeedyMatrixType} [dtype] data type
+     * @returns {SpeedyMatrix}
+     */
+    static Create(rows, columns, entries, dtype = _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrixExpr"].DEFAULT_DTYPE)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(rows * columns > 0, `Can't create a matrix without a shape`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(rows * columns === entries.length, `Can't create matrix: expected ${rows * columns} entries, but found ${entries.length}`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(Object.prototype.hasOwnProperty.call(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrixExpr"].BUFFER_TYPE, dtype), `Invalid dtype: "${dtype}"`);
+
+        return new SpeedyMatrix(rows, columns, 1, rows, Reflect.construct(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrixExpr"].BUFFER_TYPE[dtype], [entries]));
+    }
+
+    /**
+     * Create a new matrix filled with zeros with the specified size
+     * @param {number} rows number of rows
+     * @param {number} [columns] number of columns
+     * @param {SpeedyMatrixType} [dtype] data type
+     * @returns {SpeedyMatrix}
+     */
+    static Zeros(rows, columns = rows, dtype = _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrixExpr"].DEFAULT_DTYPE)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(rows * columns > 0, `Can't create a matrix without a shape`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(Object.prototype.hasOwnProperty.call(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrixExpr"].BUFFER_TYPE, dtype), `Invalid dtype: "${dtype}"`);
+
+        return new SpeedyMatrix(rows, columns, 1, rows, Reflect.construct(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrixExpr"].BUFFER_TYPE[dtype], [rows * columns]));
+    }
+
+    /**
+     * Create a new matrix filled with ones with the specified size
+     * @param {number} rows number of rows
+     * @param {number} [columns] number of columns
+     * @param {SpeedyMatrixType} [dtype] data type
+     * @returns {SpeedyMatrix}
+     */
+    static Ones(rows, columns = rows, dtype = _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrixExpr"].DEFAULT_DTYPE)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(rows * columns > 0, `Can't create a matrix without a shape`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(Object.prototype.hasOwnProperty.call(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrixExpr"].BUFFER_TYPE, dtype), `Invalid dtype: "${dtype}"`);
+
+        return new SpeedyMatrix(rows, columns, 1, rows, Reflect.construct(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrixExpr"].BUFFER_TYPE[dtype], [rows * columns]).fill(1));
+    }
+
+    /**
+     * Create a new identity matrix with the specified size
+     * @param {number} rows number of rows
+     * @param {number} [columns] number of columns
+     * @param {SpeedyMatrixType} [dtype] data type
+     * @returns {SpeedyMatrix}
+     */
+    static Eye(rows, columns = rows, dtype = _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrixExpr"].DEFAULT_DTYPE)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(rows * columns > 0, `Can't create a matrix without a shape`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(Object.prototype.hasOwnProperty.call(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrixExpr"].BUFFER_TYPE, dtype), `Invalid dtype: "${dtype}"`);
+
+        const data = Reflect.construct(_speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__["SpeedyMatrixExpr"].BUFFER_TYPE[dtype], [rows * columns]);
+        for(let j = Math.min(rows, columns) - 1; j >= 0; j--)
+            data[j * rows + j] = 1;
+
+        return new SpeedyMatrix(rows, columns, 1, rows, data);
+    }
+
+    /**
+     * Get the underlying buffer
+     * @returns {ArrayBufferView}
+     */
+    get data()
+    {
+        return this._data;
+    }
+
+    /**
+     * Row-step
+     * @returns {number} defaults to 1
+     */
+    get step0()
+    {
+        return this._step0;
+    }
+
+    /**
+     * Column-step
+     * @returns {number} defaults to this.rows
+     */
+    get step1()
+    {
+        return this._step1;
+    }
+
+    /**
+     * Extract a block from this matrix. Use a shared underlying buffer
+     * @param {number} firstRow
+     * @param {number} lastRow
+     * @param {number} firstColumn
+     * @param {number} lastColumn
+     * @returns {SpeedyMatrix}
+     */
+    block(firstRow, lastRow, firstColumn, lastColumn)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(
+            firstRow <= lastRow && firstColumn <= lastColumn,
+            `Invalid indices: [${firstRow}:${lastRow},${firstColumn}:${lastColumn}]`
+        );
+
+        // ensure that the indices are within bounds
+        firstRow = Math.max(firstRow, 0);
+        lastRow = Math.min(lastRow, this._rows - 1);
+        firstColumn = Math.max(firstColumn, 0);
+        lastColumn = Math.min(lastColumn, this._columns - 1);
+
+        // compute the dimensions of the new submatrix
+        const rows = lastRow - firstRow + 1;
+        const columns = lastColumn - firstColumn + 1;
+
+        // obtain the relevant portion of the data
+        const step0 = this._step0, step1 = this._step1;
+        const begin = firstRow * step0 + firstColumn * step1; // inclusive
+        const end = 1 + lastRow * step0 + lastColumn * step1; // exclusive
+
+        // create new matrix
+        return new SpeedyMatrix(rows, columns, step0, step1, this._data.subarray(begin, end));
+    }
+
+    /**
+     * Extract a row from this matrix
+     * @param {number} index 0-based
+     * @returns {SpeedyMatrix}
+     */
+    row(index)
+    {
+        return this.block(index, index, 0, this._columns - 1);
+    }
+
+    /**
+     * Extract a column from this matrix
+     * @param {number} index 0-based
+     * @returns {SpeedyMatrix}
+     */
+    column(index)
+    {
+        return this.block(0, this._rows - 1, index, index);
+    }
+
+    /**
+     * Extract the main diagonal from this matrix
+     * @returns {SpeedyMatrix} as a column-vector
+     */
+    diagonal()
+    {
+        const diagsize = Math.min(this._rows, this._columns);
+
+        // compute the dimensions of the new submatrix
+        const rows = diagsize; // make it a column vector
+        const columns = 1;
+
+        // obtain the relevant portion of the data
+        const diagstep = this._step0 + this._step1; // jump a row and a column
+        const begin = 0; // inclusive
+        const end = 1 + (diagsize - 1) * diagstep; // exclusive
+
+        // create new matrix
+        return new SpeedyMatrix(rows, columns, diagstep, diagstep, this._data.subarray(begin, end));
+    }
+
+    /**
+     * Read a single entry of this matrix
+     * @param {number} row 0-based index
+     * @param {number} column 0-based index
+     * @returns {number}
+     */
+    at(row, column)
+    {
+        if(row >= 0 && row < this._rows && column >= 0 && column < this._columns)
+            return this._data[this._step0 * row + this._step1 * column];
+        else
+            return undefined;
+    }
+
+    /**
+     * Read the entries of the matrix in column-major format
+     * @returns {number[]}
+     */
+    read()
+    {
+        const entries = new Array(this._rows * this._columns);
+        const step0 = this._step0, step1 = this._step1;
+        let i = 0;
+
+        for(let column = 0; column < this._columns; column++) {
+            for(let row = 0; row < this._rows; row++)
+                entries[i++] = this._data[row * step0 + column * step1];
+        }
+
+        return entries;
+    }
+
+    /**
+     * Returns a human-readable string representation of the matrix
+     * @returns {string}
+     */
+    toString()
+    {
+        const DECIMALS = 5;
+        const rows = this.rows, columns = this.columns;
+        const entries = this.read();
+        const mat = new Array(rows);
+
+        for(let i = 0; i < rows; i++) {
+            mat[i] = new Array(columns);
+            for(let j = 0; j < columns; j++)
+                mat[i][j] = entries[j * rows + i];
+        }
+
+        const fix = x => x.toFixed(DECIMALS);
+        const fmt = mat.map(row => '    ' + row.map(fix).join(', ')).join(',\n');
+        const str = `SpeedyMatrix(rows=${rows}, columns=${columns}, data=[\n${fmt}\n])`;
+
+        return str;
+    }
+
+    /**
+     * Set the contents of this matrix to the result of an expression
+     * @param {SpeedyMatrixExpr} expr matrix expression
+     * @returns {SpeedyPromise<SpeedyMatrix>}
+     */
+    setTo(expr)
+    {
+        return _speedy_matrix_wasm__WEBPACK_IMPORTED_MODULE_1__["SpeedyMatrixWASM"].ready().then(([wasm, memory]) => {
+            // evaluate the expression
+            const result = expr._evaluate(wasm, memory);
+
+            /*
+            // shallow copy the results to this matrix
+            // limitation: can't handle blocks properly
+            // (a tree-like structure could be useful)
+            this._rows = result.rows;
+            this._columns = result.columns;
+            //this._dtype = result.dtype;
+            this._data = result.data;
+            this._step0 = result.step0;
+            this._step1 = result.step1;
+            */
+
+            // validate shape
+            _utils_utils__WEBPACK_IMPORTED_MODULE_3__["Utils"].assert(
+                this._rows === result._rows && this._columns === result._columns && this.dtype === result.dtype,
+                `Can't set the values of a ${this.rows} x ${this.columns} ${this.dtype} matrix to those of a ${result.rows} x ${result.columns} ${result.dtype} matrix`
+            );
+
+            // deep copy
+            const step0 = this._step0, step1 = this._step1, rstep0 = result._step0, rstep1 = result._step1;
+            for(let column = this._columns - 1; column >= 0; column--) {
+                for(let row = this._rows - 1; row >= 0; row--)
+                    this._data[row * step0 + column * step1] = result._data[row * rstep0 + column * rstep1];
+            }
+
+            // done!
+            return this;
+        }).turbocharge();
+    }
+
+    /**
+     * Fill this matrix with a scalar value
+     * @param {number} value
+     * @returns {SpeedyPromise<SpeedyMatrix>} resolves to this
+     */
+    fill(value)
+    {
+        value = +value;
+
+        if(this._rows * this._columns === this._data.length) {
+            this._data.fill(value);
+            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(this);
+        }
+
+        for(let column = 0; column < this._columns; column++) {
+            for(let row = 0; row < this._rows; row++) {
+                this._data[row * this._step0 + column * this._step1] = value;
+            }
+        }
+
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(this);
+    }
+
+    /**
+     * Evaluate this expression
+     * @param {WebAssembly.Instance} wasm
+     * @param {AugmentedMemory} memory
+     * @returns {SpeedyMatrix}
+     */
+    _evaluate(wasm, memory)
+    {
+        return this;
     }
 }
 
@@ -14829,19 +8928,13 @@ class SpeedyMedia
         this._source = source;
 
         /** @type {object} options */
-        this._options = this._buildOptions(options, {
-            usage: (this._source.type == _utils_types__WEBPACK_IMPORTED_MODULE_2__["MediaType"].Video) ? 'dynamic' : 'static',
-        });
+        this._options = Object.freeze(options);
 
         /** @type {ColorFormat} color format */
         this._colorFormat = colorFormat;
 
         /** @type {SpeedyGPU} GPU-accelerated routines */ // FIXME
         this._gpu = options.lightweight ? Object.create(null) : new _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_0__["SpeedyGPU"]();
-
-        // warning: loading a canvas without an explicit usage flag
-        if(this._source.type == _utils_types__WEBPACK_IMPORTED_MODULE_2__["MediaType"].Canvas && this._options.usage === undefined)
-            _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].warning('Loading a canvas without an explicit usage flag. I will set the usage to "static". This will result in suboptimal performance if the canvas is animated');
     }
 
     /**
@@ -14851,7 +8944,7 @@ class SpeedyMedia
      * @param {object} [options] options object
      * @returns {SpeedyPromise<SpeedyMedia>}
      */
-    static load(mediaSource, options = { })
+    static load(mediaSource, options = {})
     {
         return _speedy_media_source__WEBPACK_IMPORTED_MODULE_5__["SpeedyMediaSource"].load(mediaSource).then(source => {
             _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(source.width !== 0 && source.height !== 0);
@@ -14973,7 +9066,7 @@ class SpeedyMedia
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`Can't clone a SpeedyMedia that has been released`);
 
         // clone the object
-        const clone = new SpeedyMedia(this._source, this.options, this._colorFormat);
+        const clone = new SpeedyMedia(this._source, this._options, this._colorFormat);
 
         // done!
         return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__["SpeedyPromise"].resolve(clone);
@@ -15017,28 +9110,6 @@ class SpeedyMedia
     }
 
     /**
-     * Build & validate options object
-     * @param {object} options
-     * @param {object} defaultOptions
-     * @returns {object}
-     */
-    _buildOptions(options, defaultOptions)
-    {
-        // build options object
-        options = Object.assign({ }, defaultOptions, options);
-
-        // validate
-        if(options.usage != 'dynamic' && options.usage != 'static') {
-            _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].warning(`Can't load media. Unrecognized usage option: "${options.usage}"`);
-            options.usage = defaultOptions.usage;
-            _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(options.usage == 'dynamic' || options.usage == 'static');
-        }
-
-        // done!
-        return Object.freeze(options); // must be read-only
-    }
-
-    /**
      * Upload the media to the GPU
      * @returns {SpeedyTexture}
      */
@@ -15064,7 +9135,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15118,7 +9189,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15221,7 +9292,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15470,7 +9541,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_vector__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-vector */ "./src/core/speedy-vector.js");
 /* harmony import */ var _speedy_point__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-point */ "./src/core/speedy-point.js");
 /* harmony import */ var _speedy_size__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./speedy-size */ "./src/core/speedy-size.js");
-/* harmony import */ var _matrix_matrix_expression_factory__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./matrix/matrix-expression-factory */ "./src/core/matrix/matrix-expression-factory.js");
+/* harmony import */ var _speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./speedy-matrix-factory */ "./src/core/speedy-matrix-factory.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /* harmony import */ var _pipeline_pipeline__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./pipeline/pipeline */ "./src/core/pipeline/pipeline.js");
 /* harmony import */ var _pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./pipeline/factories/image-factory */ "./src/core/pipeline/factories/image-factory.js");
@@ -15516,7 +9587,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // Constants
-const matrixExprFactory = new _matrix_matrix_expression_factory__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixExprFactory"]();
+const matrixFactory = new _speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixFactory"]();
 
 /**
  * Speedy's main class
@@ -15553,7 +9624,7 @@ class Speedy
      */
     static get version()
     {
-        return "0.7.1";
+        return "0.8.0-wip";
     }
 
     /**
@@ -15597,11 +9668,11 @@ class Speedy
 
     /**
      * Matrix routines
-     * @returns {SpeedyMatrixExprFactory}
+     * @returns {SpeedyMatrixFactory}
      */
     static get Matrix()
     {
-        return matrixExprFactory;
+        return matrixFactory;
     }
 
     /**
@@ -15665,6 +9736,406 @@ if(!_utils_globals__WEBPACK_IMPORTED_MODULE_13__["LITTLE_ENDIAN"])
 
 /***/ }),
 
+/***/ "./src/core/wasm/speedy-matrix.wasm.txt":
+/*!**********************************************!*\
+  !*** ./src/core/wasm/speedy-matrix.wasm.txt ***!
+  \**********************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = `AGFzbQEAAAABiwETYAABfmADf39/AX9gAX8AYAN/f38AYAF9AX9gAX8Bf2ACf38Bf2AFf39/f38B
+f2AFf39/f38AYAZ/f39/f38Bf2AAAX9gAn99AX9gA39/fQF/YAJ/fwF9YAF/AX1gBH9/f38AYAR/
+f39/AX9gEX98fHx8fHx8fHx8fHx8fHx8AGAHf39/f39/fQF/AjsEA2VudgZtZW1vcnkCAAIDZW52
+BWZhdGFsAAIDZW52CGJ5dGVmaWxsAAMDZW52CmNvcHlXaXRoaW4AAwM7OgQFBgIGAQECBwgGAwAJ
+AgYCBgYKBQUFCQsFBgEBDAEBBgYGAQEMAQ0OAwgPAxAIAwYBEQEBAQ8SAQEEBQFwAQUFBggBfwFB
+0JcECwfGAxoGbWFsbG9jAAQEZnJlZQAGBXNyYW5kAAoMTWF0MzJfY3JlYXRlABANTWF0MzJfZGVz
+dHJveQAXCk1hdDMyX2RhdGEAGA5NYXQzMl9kYXRhU2l6ZQAZD01hdDMyX3RyYW5zcG9zZQAdCU1h
+dDMyX2FkZAAeDk1hdDMyX3N1YnRyYWN0AB8LTWF0MzJfc2NhbGUAIA5NYXQzMl9jb21wbXVsdAAh
+Dk1hdDMyX211bHRpcGx5ACIOTWF0MzJfaW52ZXJzZTEAIw5NYXQzMl9pbnZlcnNlMgAkDk1hdDMy
+X2ludmVyc2UzACUNTWF0MzJfcXJfZnVsbAAsEE1hdDMyX3FyX3JlZHVjZWQALwxNYXQzMl9xcl9v
+bHMAMBBNYXQzMl9xcl9pbnZlcnNlADMVTWF0MzJfaG9tb2dyYXBoeV9kbHQ0ADQWTWF0MzJfaG9t
+b2dyYXBoeV9uZGx0NAA2FE1hdDMyX2hvbW9ncmFwaHlfZGx0ADcVTWF0MzJfaG9tb2dyYXBoeV9u
+ZGx0ADgYTWF0MzJfcHJhbnNhY19ob21vZ3JhcGh5ADobTWF0MzJfdHJhbnNmb3JtX3BlcnNwZWN0
+aXZlADwJCgEAQQELBA8REzsKs5cBOiMBAX8gALwiAUGAgID8B3FBgICA/AdGIAFB////A3FBAEdx
+C2kBAX9BAEEAKAKgl4CAAEEBajYCoJeAgABBAEEAKAKMl4CAACIBQQdxIAFqIgEgAGo2AoyXgIAA
+AkBB0JeEgABBB3EgAWpB0JeEgABqIgA/AEEQdEkNAEGEiICAABCAgICAAEEADwsgAAt1AQJ/QQAh
+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
+JyAoIABBAXRqQQJ0aiADtjgCACAnIClBA3RqIAW2OAIAC58ICgF/AX0BfwJ9AX8KfQF/AX0DfwF9
+AkACQCAAKAIIQQNHDQAgACgCDEEDRw0AIAEoAghBAkcNACABKAIMQQRHDQAgAigCCEECRw0AIAIo
+AgxBBEYNAQtBspOAgAAQgICAgAALIAAgASgCACIDKgIAIgQgBCADIAFBFGooAgAiBUECdGoqAgAi
+BpIgAyAFQQN0aioCACIHkiADIAVBA2wiCEECdGoqAgAiCZJDAACAPpQiCpMiBEMAAABBIAMgCCAB
+KAIQIgFqQQJ0aioCACILIAsgAyABQQJ0aioCACIMIAMgBSABakECdGoqAgAiDZIgAyAFQQF0IAFq
+QQJ0aioCACIOkpJDAACAPpQiD5MiCyALlCAJIAqTIgkgCZQgDiAPkyIOIA6UIAcgCpMiByAHlCAN
+IA+TIg0gDZQgBiAKkyIGIAaUIAQgBJQgDCAPkyIMIAyUkpKSkpKSkpWRIgSUuyAMIASUuyAGIASU
+uyANIASUuyAHIASUuyAOIASUuyAJIASUuyALIASUuyACKAIAIgMqAgAiCyALIAMgAkEUaigCACIF
+QQJ0aioCACIQkiADIAVBA3RqKgIAIgySIAMgBUEDbCIIQQJ0aioCACINkkMAAIA+lCIJkyILQwAA
+AEEgAyAIIAIoAhAiAWpBAnRqKgIAIg4gDiADIAFBAnRqKgIAIhEgAyAFIAFqQQJ0aioCACISkiAD
+IAVBAXQgAWpBAnRqKgIAIgaSkkMAAIA+lCIOkyIHIAeUIA0gCZMiDSANlCAGIA6TIgYgBpQgDCAJ
+kyIMIAyUIBIgDpMiEiASlCAQIAmTIhAgEJQgCyALlCARIA6TIhEgEZSSkpKSkpKSlZEiC5S7IBEg
+C5S7IBAgC5S7IBIgC5S7IAwgC5S7IAYgC5S7IA0gC5S7IAcgC5S7ELWAgIAAIAAoAgAiAyAAQRRq
+KAIAIgVBAXQiAiAAKAIQIgFBAXQiCGpBAnRqKgIAIRAgAyAIIAVqQQJ0aiIIKgIAIQcgAyACIAFq
+QQJ0aiICKgIAIREgAyAFQQN0aiITKgIAIRQgAyAFIAFqIhVBAnRqIhYqAgAhBiADIAVBAnRqIgUq
+AgAhDCADIAFBAnRqIhcqAgAhEiADIAQgCSADIAFBA3RqIgEqAgAiDZQgAyoCACIYQwAAgD8gC5Ui
+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
+FJU4AgAgBCACaiAJIA4gEpQgCyATlJKSIBSVOAIAIAQgDGohBCAFIBFqIQUgA0F/aiIDDQALCyAA
+DwsgAEEAKgKAiICAABCbgICAAAsLzg8DAEGACAuKDwAA+H9PdXQgb2YgbWVtb3J5IQBEb3VibGUg
+ZnJlZQBBc3NlcnRpb24gZmFpbGVkIGF0IG1hdDMyLmM6NjEAT3V0IG9mIG1lbW9yeSBhdCBtYXQz
+Mi5jOjYzAEFzc2VydGlvbiBmYWlsZWQgYXQgbWF0MzIuYzo4NABPdXQgb2YgbWVtb3J5IGF0IG1h
+dDMyLmM6ODYAT3V0IG9mIG1lbW9yeSBhdCBtYXQzMi5jOjg5AE91dCBvZiBtZW1vcnkgYXQgbWF0
+MzIuYzoxMzYAAADACwAAAQAAAAAAAAAAAAAAAQAAAAEAAAACAAAARG91YmxlIGZyZWUgYXQgbWF0
+MzIuYzoxNDkAQXNzZXJ0aW9uIGZhaWxlZCBhdCBtYXQzMi5jOjE4NABBc3NlcnRpb24gZmFpbGVk
+IGF0IG1hdDMyLmM6MTg4AEFzc2VydGlvbiBmYWlsZWQgYXQgbWF0MzIuYzoyNzUARG91YmxlIGZy
+ZWUgYXQgbWF0MzIuYzoyOQBBc3NlcnRpb24gZmFpbGVkIGF0IGFyaXRobWV0aWMzMi5jOjM2AEFz
+c2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6NTgAQXNzZXJ0aW9uIGZhaWxlZCBhdCBh
+cml0aG1ldGljMzIuYzo4MABBc3NlcnRpb24gZmFpbGVkIGF0IGFyaXRobWV0aWMzMi5jOjk5AEFz
+c2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6MTIxAEFzc2VydGlvbiBmYWlsZWQgYXQg
+YXJpdGhtZXRpYzMyLmM6MTQzAEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6MTY4
+AEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6MTg5AEFzc2VydGlvbiBmYWlsZWQg
+YXQgYXJpdGhtZXRpYzMyLmM6MjE4AEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6
+MjcxAEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6Mjk2AEFzc2VydGlvbiBmYWls
+ZWQgYXQgYXJpdGhtZXRpYzMyLmM6MzMwAEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMy
+LmM6MzUyAEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6Mzk0AEFzc2VydGlvbiBm
+YWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6NDEwAEFzc2VydGlvbiBmYWlsZWQgYXQgcXIzMi5jOjI2
+MQBBc3NlcnRpb24gZmFpbGVkIGF0IHFyMzIuYzoyNjUAQXNzZXJ0aW9uIGZhaWxlZCBhdCBxcjMy
+LmM6Mjg2AEFzc2VydGlvbiBmYWlsZWQgYXQgcXIzMi5jOjI5MABBc3NlcnRpb24gZmFpbGVkIGF0
+IHFyMzIuYzozMjEAQXNzZXJ0aW9uIGZhaWxlZCBhdCBxcjMyLmM6MzI1AEFzc2VydGlvbiBmYWls
+ZWQgYXQgcXIzMi5jOjM3OQBPdXQgb2YgbWVtb3J5IGF0IHFyMzIuYzozNgBBc3NlcnRpb24gZmFp
+bGVkIGF0IHFyMzIuYzo2OQBBc3NlcnRpb24gZmFpbGVkIGF0IHFyMzIuYzo3MwBBc3NlcnRpb24g
+ZmFpbGVkIGF0IHFyMzIuYzoxODQARG91YmxlIGZyZWUgYXQgcXIzMi5jOjU1AEFzc2VydGlvbiBm
+YWlsZWQgYXQgcXIzMi5jOjE0OABBc3NlcnRpb24gZmFpbGVkIGF0IHFyMzIuYzoyMjQAQXNzZXJ0
+aW9uIGZhaWxlZCBhdCBxcjMyLmM6MjI4AEFzc2VydGlvbiBmYWlsZWQgYXQgaG9tb2dyYXBoeTMy
+LmM6MzI0AEFzc2VydGlvbiBmYWlsZWQgYXQgaG9tb2dyYXBoeTMyLmM6MzU5AEFzc2VydGlvbiBm
+YWlsZWQgYXQgaG9tb2dyYXBoeTMyLmM6NDQ0AEFzc2VydGlvbiBmYWlsZWQgYXQgaG9tb2dyYXBo
+eTMyLmM6NTI0AEFzc2VydGlvbiBmYWlsZWQgYXQgaG9tb2dyYXBoeTMyLmM6MjQyAEFzc2VydGlv
+biBmYWlsZWQgYXQgcmFuc2FjMzIuYzo3MABPdXQgb2YgbWVtb3J5IGF0IHJhbnNhYzMyLmM6ODMA
+T3V0IG9mIG1lbW9yeSBhdCByYW5zYWMzMi5jOjg3AE91dCBvZiBtZW1vcnkgYXQgcmFuc2FjMzIu
+Yzo5MgBPdXQgb2YgbWVtb3J5IGF0IHJhbnNhYzMyLmM6MTA2AERvdWJsZSBmcmVlIGF0IHJhbnNh
+YzMyLmM6MjM3AERvdWJsZSBmcmVlIGF0IHJhbnNhYzMyLmM6MjQ0AERvdWJsZSBmcmVlIGF0IHJh
+bnNhYzMyLmM6MjQ3AERvdWJsZSBmcmVlIGF0IHJhbnNhYzMyLmM6MjUwAEFzc2VydGlvbiBmYWls
+ZWQgYXQgdHJhbnNmb3JtMzIuYzozOQAAQYwXCwwIAAAAsAsAAAEAAAAAQaAXCyQAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+`
+
+/***/ }),
+
 /***/ "./src/gpu/gl-utils.js":
 /*!*****************************!*\
   !*** ./src/gpu/gl-utils.js ***!
@@ -15681,7 +10152,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16390,7 +10861,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17961,7 +12432,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19393,7 +13864,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20662,7 +15133,7 @@ class SpeedyDrawableTexture extends SpeedyTexture
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20688,7 +15159,7 @@ module.exports = __webpack_require__(/*! ./core/speedy */ "./src/core/speedy.js"
 /*!*****************************!*\
   !*** ./src/utils/errors.js ***!
   \*****************************/
-/*! exports provided: SpeedyError, NotSupportedError, NotImplementedError, GLError, AbstractMethodError, IllegalArgumentError, IllegalOperationError, OutOfMemoryError, FileNotFoundError, TimeoutError, ParseError, AssertionError, AccessDeniedError */
+/*! exports provided: SpeedyError, NotSupportedError, NotImplementedError, GLError, AbstractMethodError, IllegalArgumentError, IllegalOperationError, OutOfMemoryError, FileNotFoundError, TimeoutError, ParseError, AssertionError, AccessDeniedError, WebAssemblyError */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -20706,6 +15177,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ParseError", function() { return ParseError; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "AssertionError", function() { return AssertionError; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "AccessDeniedError", function() { return AccessDeniedError; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "WebAssemblyError", function() { return WebAssemblyError; });
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -20973,6 +15445,22 @@ class AccessDeniedError extends SpeedyError
     }
 }
 
+/**
+ * WebAssembly error
+ */
+class WebAssemblyError extends SpeedyError
+{
+    /**
+     * Class constructor
+     * @param {string} [message] additional text
+     * @param {SpeedyError} [cause] cause of the error
+     */
+    constructor(message = '', cause = null)
+    {
+        super(`WebAssembly error. ${message}`, cause);
+    }
+}
+
 /***/ }),
 
 /***/ "./src/utils/fps-counter.js":
@@ -20989,7 +15477,7 @@ __webpack_require__.r(__webpack_exports__);
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020 Alexandre Martins <alemartf(at)gmail.com>
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21253,157 +15741,6 @@ class Observable
     {
         for(const fn of this._subscribers)
             fn(data);
-    }
-}
-
-/***/ }),
-
-/***/ "./src/utils/sorting-networks.js":
-/*!***************************************!*\
-  !*** ./src/utils/sorting-networks.js ***!
-  \***************************************/
-/*! exports provided: OddEvenMergesort */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "OddEvenMergesort", function() { return OddEvenMergesort; });
-/* harmony import */ var _errors__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./errors */ "./src/utils/errors.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * sorting-networks.js
- * Sorting Networks
- */
-
-
-
-/**
- * An abstract Sorting Network
- * @abstract
- */
-class SortingNetwork
-{
-    /**
-     * Generate a sequence of comparators for a
-     * sorting network supporting n data points
-     * @param {number} n number of data points
-     * @returns {Array<number[2]>}
-     */
-    static generate(n)
-    {
-        throw new _errors__WEBPACK_IMPORTED_MODULE_0__["AbstractMethodError"]();
-    }
-
-    /**
-     * Sort the given data points using this network
-     * @param {Array} data data points
-     * @param {Function} [cmp] comparator function, as in Array.prototype.sort()
-     * @returns {Array} sorted data
-     */
-    static sort(data, cmp = ((a, b) => (+a) - (+b)))
-    {
-        const network = this.generate(data.length);
-
-        for(const [a, b] of network) {
-            if(cmp(data[a], data[b]) > 0)
-                [ data[a], data[b] ] = [ data[b], data[a] ];
-        }
-
-        return data;
-    }
-}
-
-/**
- * An implementation of Batcher's Odd-Even Mergesort
- */
-class OddEvenMergesort extends SortingNetwork
-{
-    /*
-
-    A reference for this algorithm can be found at:
-    https://www.inf.hs-flensburg.de/lang/algorithmen/sortieren/networks/oemen.htm
-
-    The algorithm will work if the size of the input array is a power of 2. In
-    order to extend the algorithm so that it works with arrays of any size - say
-    it's n - we use a very simple idea: extend the input array so that its size
-    becomes a power of 2. Set the new entries to infinity. Sort the extended
-    array and return its first n elements.
-
-    Any comparator [i,j] where j >= n is comparing some value with infinity,
-    meaning that no exchange will need to take place. Therefore, [i,j] can be
-    dropped from the network.
-
-    */
-
-    /**
-     * Generate a sequence of comparators for a
-     * sorting network supporting n data points
-     * @param {number} n number of data points
-     * @returns {Array<number[2]>}
-     */
-    static generate(n)
-    {
-        const nextPot = 1 << Math.ceil(Math.log2(Math.max(n, 1)));
-        return this._mergesort(n, [], 0, nextPot);
-    }
-
-    /**
-     * Odd-Even Mergesort
-     * @param {number} count number of data points
-     * @param {Array<number[2]>} net sorting network
-     * @param {number} lo starting index
-     * @param {number} n sequence length, a power of 2
-     * @returns {Array<number[2]>} net
-     */
-    static _mergesort(count, net, lo, n)
-    {
-        if(n > 1) {
-            const m = n / 2;
-
-            this._mergesort(count, net, lo, m);
-            this._mergesort(count, net, lo + m, m);
-            this._merge(count, net, lo, n, 1);
-        }
-
-        return net;
-    }
-
-    /**
-     * Odd-Even Merge
-     * @param {number} count number of data points
-     * @param {Array<number[2]>} net sorting network
-     * @param {number} lo starting index
-     * @param {number} n a power of 2
-     * @param {number} jmp a power of 2
-     */
-    static _merge(count, net, lo, n, jmp)
-    {
-        const dbljmp = jmp * 2;
-
-        if(dbljmp < n) {
-            this._merge(count, net, lo, n, dbljmp); // merge even subsequence
-            this._merge(count, net, lo + jmp, n, dbljmp); // merge odd subsequence
-
-            for(let i = lo + jmp; i + jmp < lo + n && i + jmp < count; i += dbljmp)
-                net.push([i, i + jmp]);
-        }
-        else if(lo + jmp < count)
-            net.push([lo, lo + jmp]);
     }
 }
 
