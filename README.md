@@ -69,7 +69,7 @@ For general enquiries, contact me at alemartf `at` gmail `dot` com.
     * [Keypoint description](#keypoint-description)
     * [Keypoint tracking (optical-flow)](#keypoint-tracking)
     * [Keypoint matching](#keypoint-matching)
-  * [Matrices & Linear Algebra](#matrices-linear-algebra)
+  * [Linear Algebra](#linear-algebra)
     * [Creating new matrices](#creating-new-matrices)
     * [Matrix properties](#matrix-properties)
     * [Reading from the matrices](#reading-from-the-matrices)
@@ -1116,11 +1116,11 @@ Soon!
 
 
 
-### Matrices & Linear Algebra
+### Linear Algebra
 
-Matrix computations play a crucial role in computer vision applications. Speedy includes its own implementation of matrices. Matrix computations are specified using a fluent interface that has been crafted to be easy to use and to somewhat mirror how we write matrix algebra using pen-and-paper.
+Matrix computations play a crucial role in computer vision applications. Speedy includes its own implementation of matrices and linear algebra routines. Matrix computations are specified using a fluent interface that has been crafted to be easy to use and to mirror how we write matrix algebra using pen-and-paper.
 
-Since matrix computations may be demanding, Speedy uses WebAssembly for extra performance. Most matrix routines are written in C language. Matrices are stored in [column-major format](https://en.wikipedia.org/wiki/Row-_and_column-major_order). We use Typed Arrays for storage.
+Since matrix computations may be demanding, Speedy uses WebAssembly for extra performance. Most matrix-related routines are written in C language. Matrices are stored in [column-major format](https://en.wikipedia.org/wiki/Row-_and_column-major_order). We use Typed Arrays for storage.
 
 There are two basic classes you need to be aware of: `SpeedyMatrix` and `SpeedyMatrixExpr`. The latter represents a symbolic expression, whereas the former represents an actual matrix with data. A `SpeedyMatrix` is a `SpeedyMatrixExpr`. A `SpeedyMatrixExpr` may be evaluated to a `SpeedyMatrix`.
 
