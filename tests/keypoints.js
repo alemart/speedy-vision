@@ -171,7 +171,7 @@ describe('Keypoint routines', function() {
             );
 
             const output = (await pipeline.run()).keypoints;
-            await printm('Transform:', transformer.transform);
+            printm('Transform:', transformer.transform);
             print(`Input: ${serialize(testKeypoints)}`);
             print(`Output: ${serialize(output)}`);
 
@@ -199,7 +199,7 @@ describe('Keypoint routines', function() {
             );
 
             const output = (await pipeline.run()).keypoints;
-            await printm('Transform:', transformer.transform);
+            printm('Transform:', transformer.transform);
             print(`Input: ${serialize(testKeypoints)}`);
             print(`Output: ${serialize(output)}`);
 
@@ -227,7 +227,7 @@ describe('Keypoint routines', function() {
             );
 
             const output = (await pipeline.run()).keypoints;
-            await printm('Transform:', transformer.transform);
+            printm('Transform:', transformer.transform);
             print(`Input: ${serialize(testKeypoints)}`);
             print(`Output: ${serialize(output)}`);
 
@@ -255,7 +255,7 @@ describe('Keypoint routines', function() {
             );
 
             const output = (await pipeline.run()).keypoints;
-            await printm('Transform:', transformer.transform);
+            printm('Transform:', transformer.transform);
             print(`Input: ${serialize(testKeypoints)}`);
             print(`Output: ${serialize(output)}`);
 

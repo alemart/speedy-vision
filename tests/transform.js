@@ -65,9 +65,9 @@ describe('Geometric transformations', function() {
 
             await Speedy.Matrix.perspective(homography, srcQuad, dstQuad);
 
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
+            printm('From:', srcQuad);
+            printm('To:', dstQuad);
+            printm('Homography:', homography);
 
             await Speedy.Matrix.perspectiveTransform(tstQuad, srcQuad, homography);
             expect(tstQuad.read()).toBeElementwiseNearlyEqual(dstQuad.read());
@@ -95,9 +95,9 @@ describe('Geometric transformations', function() {
 
             await Speedy.Matrix.perspective(homography, srcQuad, dstQuad);
 
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
+            printm('From:', srcQuad);
+            printm('To:', dstQuad);
+            printm('Homography:', homography);
 
             await Speedy.Matrix.perspectiveTransform(tstQuad, srcQuad, homography);
             expect(tstQuad.read()).toBeElementwiseNearlyEqual(dstQuad.read());
@@ -125,9 +125,9 @@ describe('Geometric transformations', function() {
 
             await Speedy.Matrix.perspective(homography, srcQuad, dstQuad);
 
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
+            printm('From:', srcQuad);
+            printm('To:', dstQuad);
+            printm('Homography:', homography);
 
             await Speedy.Matrix.perspectiveTransform(tstQuad, srcQuad, homography);
             expect(tstQuad.read()).toBeElementwiseNearlyEqual(dstQuad.read());
@@ -152,9 +152,9 @@ describe('Geometric transformations', function() {
             const homography = Speedy.Matrix.Zeros(3, 3);
             await Speedy.Matrix.perspective(homography, srcQuad, dstQuad);
 
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
+            printm('From:', srcQuad);
+            printm('To:', dstQuad);
+            printm('Homography:', homography);
 
             const eye = Speedy.Matrix.Eye(3, 3);
             expect(homography.read()).toBeElementwiseNearlyEqual(eye.read());
@@ -180,9 +180,9 @@ describe('Geometric transformations', function() {
             const homography = Speedy.Matrix.Zeros(3, 3);
             await Speedy.Matrix.perspective(homography, srcQuad, dstQuad);
 
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
+            printm('From:', srcQuad);
+            printm('To:', dstQuad);
+            printm('Homography:', homography);
 
             const homdata = homography.read();
             expect(homdata).toBeElementwiseNaN();
@@ -192,9 +192,9 @@ describe('Geometric transformations', function() {
             const homography2 = Speedy.Matrix.Zeros(3, 3);
             await Speedy.Matrix.perspective(homography2, dstQuad, srcQuad);
 
-            await printm('From:', dstQuad);
-            await printm('To:', srcQuad);
-            await printm('Homography:', homography2);
+            printm('From:', dstQuad);
+            printm('To:', srcQuad);
+            printm('Homography:', homography2);
 
             const homdata2 = homography2.read();
             expect(homdata2).toBeElementwiseNaN();
@@ -272,7 +272,7 @@ describe('Geometric transformations', function() {
             const dstQuad = Speedy.Matrix.Zeros(2, 4);
 
             await Speedy.Matrix.perspectiveTransform(dstQuad, srcQuad, homography);
-            await printm('homography:', homography, 'srcQuad:', srcQuad, 'dstQuad:', dstQuad);
+            printm('homography:', homography, 'srcQuad:', srcQuad, 'dstQuad:', dstQuad);
 
             const actual = dstQuad.read();
             const expected = [2, 1, 5, 1, 5, 3, 2, 3];
@@ -295,7 +295,7 @@ describe('Geometric transformations', function() {
             const dstQuad = Speedy.Matrix.Zeros(2, 4);
             await dstQuad.setTo(mat.times(srcQuad));
 
-            await printm('linear transform:', mat, 'srcQuad:', srcQuad, 'dstQuad:', dstQuad);
+            printm('linear transform:', mat, 'srcQuad:', srcQuad, 'dstQuad:', dstQuad);
 
             const actual = dstQuad.read();
             const expected = [0, 0, 3, 0, 3, 2, 0, 2];
@@ -334,10 +334,10 @@ describe('Geometric transformations', function() {
                 mask: mask
             });
 
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
-            await printm('Inliers mask:', mask);
+            printm('From:', srcQuad);
+            printm('To:', dstQuad);
+            printm('Homography:', homography);
+            printm('Inliers mask:', mask);
 
             const tstQuad = Speedy.Matrix.Zeros(srcQuad.rows, srcQuad.columns);
             await Speedy.Matrix.perspectiveTransform(tstQuad, srcQuad, homography);
@@ -381,10 +381,10 @@ describe('Geometric transformations', function() {
                 mask: mask
             });
 
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
-            await printm('Inliers mask:', mask);
+            printm('From:', srcQuad);
+            printm('To:', dstQuad);
+            printm('Homography:', homography);
+            printm('Inliers mask:', mask);
 
             const tstQuad = Speedy.Matrix.Zeros(srcQuad.rows, srcQuad.columns);
             await Speedy.Matrix.perspectiveTransform(tstQuad, srcQuad, homography);
@@ -439,10 +439,10 @@ describe('Geometric transformations', function() {
                 mask: mask
             });
 
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
-            await printm('Inliers mask:', mask);
+            printm('From:', srcQuad);
+            printm('To:', dstQuad);
+            printm('Homography:', homography);
+            printm('Inliers mask:', mask);
 
             const tstQuadInliers = Speedy.Matrix.Zeros(srcQuadInliers.rows, srcQuadInliers.columns);
             const difQuadInliers = Speedy.Matrix.Zeros(srcQuadInliers.rows, srcQuadInliers.columns);
@@ -451,8 +451,8 @@ describe('Geometric transformations', function() {
             await difQuadInliers.setTo(tstQuadInliers.minus(dstQuadInliers));
             const err2 = difQuadInliers.read().reduce((err, x) => err + x*x, 0);
 
-            await printm('Reprojection:', tstQuadInliers, 'vs', dstQuadInliers);
-            await printm('Reprojection error: ' + Math.sqrt(err2));
+            printm('Reprojection:', tstQuadInliers, 'vs', dstQuadInliers);
+            printm('Reprojection error: ' + Math.sqrt(err2));
 
             expect(maskOutliers.read()).toBeElementwiseZero();
             expect(countInliers(mask.read())).toEqual(numInliers);
@@ -500,10 +500,10 @@ describe('Geometric transformations', function() {
                 mask: mask
             });
 
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
-            await printm('Inliers mask:', mask);
+            printm('From:', srcQuad);
+            printm('To:', dstQuad);
+            printm('Homography:', homography);
+            printm('Inliers mask:', mask);
 
             const tstQuadInliers = Speedy.Matrix.Zeros(srcQuadInliers.rows, srcQuadInliers.columns);
             const difQuadInliers = Speedy.Matrix.Zeros(srcQuadInliers.rows, srcQuadInliers.columns);
@@ -512,8 +512,8 @@ describe('Geometric transformations', function() {
             await difQuadInliers.setTo(tstQuadInliers.minus(dstQuadInliers));
             const err2 = difQuadInliers.read().reduce((err, x) => err + x*x, 0);
 
-            await printm('Reprojection:', tstQuadInliers, 'vs', dstQuadInliers);
-            await printm('Reprojection error: ' + Math.sqrt(err2));
+            printm('Reprojection:', tstQuadInliers, 'vs', dstQuadInliers);
+            printm('Reprojection error: ' + Math.sqrt(err2));
 
             expect(maskOutliers.read()).toBeElementwiseZero();
             expect(countInliers(mask.read())).toEqual(numInliers);
@@ -580,10 +580,10 @@ describe('Geometric transformations', function() {
                 reprojectionError: 0.5,
             });
 
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
-            await printm('Inliers mask:', mask);
+            printm('From:', srcQuad);
+            printm('To:', dstQuad);
+            printm('Homography:', homography);
+            printm('Inliers mask:', mask);
 
             const tstQuadInliers = Speedy.Matrix.Zeros(srcQuadInliers.rows, srcQuadInliers.columns);
             const difQuadInliers = Speedy.Matrix.Zeros(srcQuadInliers.rows, srcQuadInliers.columns);
@@ -592,8 +592,8 @@ describe('Geometric transformations', function() {
             await difQuadInliers.setTo(tstQuadInliers.minus(dstQuadInliers));
             const err2 = difQuadInliers.read().reduce((err, x) => err + x*x, 0);
 
-            await printm('Reprojection:', tstQuadInliers, 'vs', dstQuadInliers);
-            await printm('Reprojection error: ' + Math.sqrt(err2));
+            printm('Reprojection:', tstQuadInliers, 'vs', dstQuadInliers);
+            printm('Reprojection error: ' + Math.sqrt(err2));
 
             expect(maskOutliers.read()).toBeElementwiseZero();
             expect(countInliers(mask.read())).toEqual(numInliers);
@@ -616,8 +616,8 @@ describe('Geometric transformations', function() {
 
             const homography = Speedy.Matrix.Zeros(3, 3);
 
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
+            printm('From:', srcQuad);
+            printm('To:', dstQuad);
 
             expect(() => Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
                 method: 'pransac',
@@ -654,10 +654,10 @@ describe('Geometric transformations', function() {
                 method: 'pransac',
                 mask: mask,
             });
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
-            await printm('Inliers mask:', mask);
+            printm('From:', srcQuad);
+            printm('To:', dstQuad);
+            printm('Homography:', homography);
+            printm('Inliers mask:', mask);
 
             expect(homography.read()).toBeElementwiseNaN();
             expect(countInliers(mask.read())).toEqual(0);
@@ -675,10 +675,10 @@ describe('Geometric transformations', function() {
                 method: 'pransac',
                 mask: mask,
             });
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
-            await printm('Inliers mask:', mask);
+            printm('From:', srcQuad);
+            printm('To:', dstQuad);
+            printm('Homography:', homography);
+            printm('Inliers mask:', mask);
 
             expect(homography.read()).toBeElementwiseNaN();
             expect(countInliers(mask.read())).toEqual(0);
@@ -714,10 +714,10 @@ describe('Geometric transformations', function() {
                         reprojectionError: reprojErrTolerance,
                     });
 
-                    await printm('From:', srcQuad);
-                    await printm('To:', dstQuad);
-                    await printm('Inliers mask:', mask);
-                    await printm('Homography:', homography);
+                    printm('From:', srcQuad);
+                    printm('To:', dstQuad);
+                    printm('Inliers mask:', mask);
+                    printm('Homography:', homography);
 
                     const tstQuad = Speedy.Matrix.Zeros(srcQuad.rows, srcQuad.columns);
                     const difQuad = Speedy.Matrix.Zeros(srcQuad.rows, srcQuad.columns);
@@ -730,8 +730,8 @@ describe('Geometric transformations', function() {
                     const numberOfInliers = mask.read().reduce((cnt, x) => cnt + x, 0);
                     const percentageOfInliers = 100 * numberOfInliers / numPoints;
 
-                    await printm('Percentage of inliers:', percentageOfInliers + '%');
-                    await printm('Average reprojection error:', reprojectionError / numPoints);
+                    printm('Percentage of inliers:', percentageOfInliers + '%');
+                    printm('Average reprojection error:', reprojectionError / numPoints);
 
                     expect(reprojectionError).toBeLessThan(numPoints * reprojErrTolerance);
                 });
@@ -762,9 +762,9 @@ describe('Geometric transformations', function() {
             await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
                 method: 'dlt',
             });
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
+            printm('From:', srcQuad);
+            printm('To:', dstQuad);
+            printm('Homography:', homography);
 
             const tstQuad = Speedy.Matrix.Zeros(srcQuad.rows, srcQuad.columns);
             await Speedy.Matrix.perspectiveTransform(tstQuad, srcQuad, homography);
@@ -794,9 +794,9 @@ describe('Geometric transformations', function() {
             await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
                 method: 'dlt',
             });
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
+            printm('From:', srcQuad);
+            printm('To:', dstQuad);
+            printm('Homography:', homography);
 
             const tstQuad = Speedy.Matrix.Zeros(srcQuad.rows, srcQuad.columns);
             await Speedy.Matrix.perspectiveTransform(tstQuad, srcQuad, homography);
@@ -832,9 +832,9 @@ describe('Geometric transformations', function() {
             await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
                 method: 'dlt',
             });
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
+            printm('From:', srcQuad);
+            printm('To:', dstQuad);
+            printm('Homography:', homography);
 
             const tstQuad = Speedy.Matrix.Zeros(srcQuad.rows, srcQuad.columns);
             await Speedy.Matrix.perspectiveTransform(tstQuad, srcQuad, homography);
@@ -856,8 +856,8 @@ describe('Geometric transformations', function() {
                 300, 200,
             ]);
 
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
+            printm('From:', srcQuad);
+            printm('To:', dstQuad);
 
             const homography = Speedy.Matrix.Zeros(3, 3);
             expect(() => Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
@@ -886,9 +886,9 @@ describe('Geometric transformations', function() {
             await Speedy.Matrix.findHomography(homography, srcQuad, dstQuad, {
                 method: 'dlt',
             });
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
+            printm('From:', srcQuad);
+            printm('To:', dstQuad);
+            printm('Homography:', homography);
 
             expect(homography.read()).toBeElementwiseNaN();
 
@@ -904,9 +904,9 @@ describe('Geometric transformations', function() {
                 method: 'dlt',
             });
 
-            await printm('From:', srcQuad);
-            await printm('To:', dstQuad);
-            await printm('Homography:', homography);
+            printm('From:', srcQuad);
+            printm('To:', dstQuad);
+            printm('Homography:', homography);
 
             expect(homography.read()).toBeElementwiseNaN();
 

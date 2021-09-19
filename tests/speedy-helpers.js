@@ -125,8 +125,6 @@ function printm(...matrices) {
             printm(...matrices);
         }
     }
-
-    return Promise.resolve();
 }
 
 // Displays a SpeedyMedia, Image or Canvas
