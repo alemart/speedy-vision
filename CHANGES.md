@@ -1,5 +1,9 @@
 # Release notes
 
+## 0.8.0 - September 20th, 2021
+
+* Ported the Matrix routines to WebAssembly and updated the API
+
 ## 0.7.1 - September 10th, 2021
 
 * Improved homography estimation
