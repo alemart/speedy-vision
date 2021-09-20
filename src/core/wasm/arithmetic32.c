@@ -282,6 +282,32 @@ const Mat32* Mat32_multiplylt(const Mat32* result, const Mat32* left, const Mat3
 }
 
 /**
+ * Matrix multiplication: left * right^T
+ * @param result output matrix
+ * @param left left operand
+ * @param right right operand, to be transposed before multiplying
+ * @returns result
+ */
+const Mat32* Mat32_multiplyrt(const Mat32* result, const Mat32* left, const Mat32* right)
+{
+    assert(
+        left->columns == right->columns &&
+        result->rows == left->rows && result->columns == right->rows
+    );
+
+    Mat32_clear(result);
+    for(int c = 0; c < right->columns; c++) {
+        for(int column = 0; column < result->columns; column++) {
+            float x = Mat32_at(right, column, c);
+            for(int row = 0; row < result->rows; row++)
+                Mat32_at(result, row, column) += Mat32_at(left, row, c) * x;
+        }
+    }
+
+    return result;
+}
+
+/**
  * Fast multiplication of two 3x3 matrices
  * @param result output matrix
  * @param left left operand

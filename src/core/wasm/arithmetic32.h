@@ -35,6 +35,7 @@ const Mat32* Mat32_inverse2(const Mat32* result, const Mat32* operand);
 const Mat32* Mat32_inverse3(const Mat32* result, const Mat32* operand);
 
 const Mat32* Mat32_multiplylt(const Mat32* result, const Mat32* left, const Mat32* right);
+const Mat32* Mat32_multiplyrt(const Mat32* result, const Mat32* left, const Mat32* right);
 const Mat32* Mat32_multiply3(const Mat32* result, const Mat32* left, const Mat32* right);
 const Mat32* Mat32_outer(const Mat32* result, const Mat32* left, const Mat32* right);
 const Mat32* Mat32_inner(const Mat32* result, const Mat32* left, const Mat32* right);
