@@ -1118,9 +1118,11 @@ Soon!
 
 ### Linear Algebra
 
-Matrix computations play a crucial role in computer vision applications. Speedy includes its own implementation of matrices and linear algebra routines. Matrix computations are specified using a fluent interface that has been crafted to be easy to use and to mirror how we write matrix algebra using pen-and-paper.
+Matrix computations play a crucial role in computer vision applications. Speedy includes its own implementation of numerical linear algebra algorithms.
 
-Since matrix computations may be demanding, Speedy uses WebAssembly for extra performance. Most matrix-related routines are written in C language. Matrices are stored in [column-major format](https://en.wikipedia.org/wiki/Row-_and_column-major_order). We use Typed Arrays for storage.
+Matrix operations are specified using a fluent interface that has been crafted to be easy to use and to mirror how we write matrix algebra using pen-and-paper.
+
+Since numerical algorithms may be computationally demanding, Speedy uses WebAssembly for extra performance. Most matrix-related routines are written in C language. Matrices are stored in [column-major format](https://en.wikipedia.org/wiki/Row-_and_column-major_order). Typed Arrays are used for storage.
 
 There are two basic classes you need to be aware of: `SpeedyMatrix` and `SpeedyMatrixExpr`. The latter represents a symbolic expression, whereas the former represents an actual matrix with data. A `SpeedyMatrix` is a `SpeedyMatrixExpr`. A `SpeedyMatrixExpr` may be evaluated to a `SpeedyMatrix`.
 
@@ -1270,7 +1272,7 @@ Data storage.
 
 `SpeedyMatrix.step1: number, read-only`
 
-Storage step. The (`i`, `j`) entry of the matrix is stored at `data[i * step0 + j * step1]`.
+Storage steps. The (`i`, `j`) entry of the matrix is stored at `data[i * step0 + j * step1]`.
 
 #### Reading from the matrices
 
@@ -1311,7 +1313,7 @@ Read a single entry of the matrix.
 
 ###### Returns
 
-The specified entry of the matrix.
+The requested entry of the matrix, or `undefined` if the entry is outside bounds.
 
 ###### Example
 
@@ -1394,11 +1396,11 @@ console.log(matC.toString());
 
 `SpeedyMatrix.fill(value: number): SpeedyPromise<SpeedyMatrix>`
 
-Fill a matrix with a scalar.
+Fill `this` matrix with a scalar.
 
 ###### Arguments
 
-* `value: number`. We'll fill the matrix with this number.
+* `value: number`. Scalar value.
 
 ###### Returns
 
@@ -1420,7 +1422,7 @@ Speedy lets you work with blocks of matrices. This is a very handy feature! Bloc
 
 `SpeedyMatrix.block(firstRow: number, lastRow: number, firstColumn: number, lastColumn: number): SpeedyMatrix`
 
-Extract a `lastRow - firstRow + 1` x `lastColumn - firstColumn + 1` block from the matrix. All indices are 0-based. They are all inclusive. The memory of the block is shared with the matrix.
+Extract a `lastRow - firstRow + 1` x `lastColumn - firstColumn + 1` block from the matrix. All indices are 0-based. They are all inclusive. The memory of the matrix is shared with the block.
 
 ###### Arguments
 
@@ -1671,13 +1673,13 @@ Compute the component-wise multiplication between `this` matrix expression and `
 
 ###### Returns
 
-A `SpeedyMatrixExpr` representing the component-wise multiplication between `this` matrix expression and `expr`.
+A `SpeedyMatrixExpr` representing the component-wise multiplication.
 
 ##### SpeedyMatrixExpr.inverse()
 
 `SpeedyMatrixExpr.inverse(): SpeedyMatrixExpr`
 
-Compute the inverse of `this` matrix expression. Its shape must be square.
+Compute the inverse of `this` matrix expression. Make sure it's square.
 
 ###### Returns
 
@@ -1689,13 +1691,13 @@ A `SpeedyMatrixExpr` representing the inverse of `this` matrix expression.
 
 `Speedy.Matrix.solve(solution: SpeedyMatrix, A: SpeedyMatrix, b: SpeedyMatrix, options?: object): SpeedyPromise<SpeedyMatrix>`
 
-Solve a system of linear equations *Ax = b* for *x* (the `solution`), where `A` is a *m* x *m* square matrix, `b` is a *m* x *1* column vector and `solution` is a *n* x *1* column vector of unknowns. *m* is the number of equations and *n* is the number of unknowns.
+Solve a system of linear equations *Ax = b* for *x*, the `solution`, where `A` is a *n* x *n* square matrix, `b` is a *n* x *1* column vector and `solution` is a *n* x *1* column vector of unknowns. *n* is the number of equations and the number of unknowns.
 
 ###### Arguments
 
-* `solution: SpeedyMatrix`. Output column vector.
-* `A: SpeedyMatrix`. Square matrix.
-* `b: SpeedyMatrix`. Column vector.
+* `solution: SpeedyMatrix`. The output column vector.
+* `A: SpeedyMatrix`. A square matrix.
+* `b: SpeedyMatrix`. A column vector.
 * `options: object, optional`. Options to be passed to the solver. Available keys:
     * `method: string`. One of the following: `"qr"`. Defaults to `"qr"`.
 
@@ -1740,15 +1742,15 @@ console.log(solution.read()); // [ 7.5, -1.5 ]
 
 Ordinary least squares.
 
-Given an overdetermined system of linear equations *Ax = b*, where `A` is a *m* x *n* matrix, `b` is a *m* x *1* column vector and `x` is a *n* x 1 column vector of unknowns, find a `solution` `x` that minimizes the Euclidean norm of the residual *b - Ax*.
+Given an overdetermined system of linear equations *Ax = b*, where `A` is a *m* x *n* matrix, `b` is a *m* x *1* column vector and `solution` *x* is a *n* x 1 column vector of unknowns, find a `solution` *x* that minimizes the Euclidean norm of the residual *b - Ax*.
 
 *m* is the number of equations and *n* is the number of unknowns. We require *m* >= *n*.
 
 ###### Arguments
 
-* `solution: SpeedyMatrix`. Output column vector.
-* `A: SpeedyMatrix`. Square matrix.
-* `b: SpeedyMatrix`. Column vector.
+* `solution: SpeedyMatrix`. The output column vector.
+* `A: SpeedyMatrix`. A matrix.
+* `b: SpeedyMatrix`. A column vector.
 * `options: object, optional`. Options to be passed to the solver. Available keys:
     * `method: string`. One of the following: `"qr"`. Defaults to `"qr"`.
 
@@ -1770,7 +1772,7 @@ Compute a QR decomposition of a *m* x *n* matrix `A` using Householder reflector
 
 * `Q: SpeedyMatrix`. Output matrix (*m* x *n* if reduced, *m* x *m* if full).
 * `R: SpeedyMatrix`. Output matrix (*n* x *n* if reduced, *m* x *n* if full).
-* `A: SpeedyMatrix`. Square matrix.
+* `A: SpeedyMatrix`. The matrix to be decomposed.
 * `options: object, optional`. A configuration object that accepts the following keys:
     * `mode: string`. Either `"full"` or `"reduced"`. Defaults to `"reduced"`.
 
@@ -1812,13 +1814,13 @@ console.log(QR.toString());
 
 `Speedy.Matrix.perspectiveTransform(dest: SpeedyMatrix, src: SpeedyMatrix, transform: SpeedyMatrix): SpeedyPromise<SpeedyMatrix>`
 
-Apply a perspective `transformation` to a set of 2D points described by `src` and store the results in `dest`.
+Apply a perspective `transform` to a set of 2D points described by `src` and store the results in `dest`.
 
 ###### Arguments
 
 * `dest: SpeedyMatrix`. A 2 x *n* output matrix.
 * `src: SpeedyMatrix`. A 2 x *n* matrix encoding a set of *n* points, one per column.
-* `transformation: SpeedyMatrix`. A 3x3 homography matrix.
+* `transform: SpeedyMatrix`. A 3x3 homography matrix.
 
 ###### Returns
 
@@ -1860,8 +1862,8 @@ Compute a `homography` matrix using four correspondences of points.
 ###### Arguments
 
 * `homography: SpeedyMatrix`. A 3x3 output matrix.
-* `src: SpeedyMatrix`. A 2x4 matrix with the coordinates of 4 points (one per column) representing the corners of the source quadrilateral.
-* `dest: SpeedyMatrix`. A 2x4 matrix with the coordinates of 4 points (one per column) representing the corners of the destination quadrilateral.
+* `src: SpeedyMatrix`. A 2x4 matrix with the coordinates of four points (one per column) representing the corners of the source quadrilateral.
+* `dest: SpeedyMatrix`. A 2x4 matrix with the coordinates of four points (one per column) representing the corners of the destination quadrilateral.
 
 ###### Returns
 
@@ -1908,14 +1910,14 @@ Table of methods:
 
 | Method            | Description |
 |-------------------|-------------|
-| `"dlt"` | Normalized Direct Linear Transform (DLT). Use this method if your data set is **not** polluted with outliers. This is the default method. |
+| `"dlt"` | Normalized Direct Linear Transform (DLT). All points will be used to estimate the homography. Use this method if your data set is **not** polluted with outliers. This is the default method. |
 | `"pransac"` | PRANSAC is a variant of RANSAC with bounded runtime that is designed for real-time tasks. It is able to reject outliers in the data set. |
 
 Table of parameters:
 
 | Parameter | Supported methods | Description |
 |-----------|-------------------|-------------|
-| `reprojectionError: number` | `"pransac"` | A threshold, measured in pixels, that lets Speedy decide if a data point is an inlier or an outlier for a given model. A data point is an inlier for a given model if the model maps its `src` coordinates near its `dest` coordinates (i.e., if the Euclidean distance is not greater than the threshold). A data point is an outlier if it's not an inlier. |
+| `reprojectionError: number` | `"pransac"` | A threshold, measured in pixels, that lets Speedy decide if a data point is an inlier or an outlier for a given model. A data point is an inlier for a given model if the model maps its `src` coordinates near its `dest` coordinates (i.e., if the Euclidean distance is not greater than the threshold). A data point is an outlier if it's not an inlier. Defaults to 3 pixels. |
 | `mask: SpeedyMatrix` | `"pransac"` | An optional output matrix of shape 1 x *n*. Its i-th entry will be set to 1 if the i-th data point is an inlier for the best model found by the method, or 0 if it's an outlier. |
 | `numberOfHypotheses: number` | `"pransac"` | A positive integer specifying the number of models that will be generated and tested. The best model found by the method will be refined and then returned. If your inlier ratio is "high", this parameter can be set to a "low" number, making the algorithm run even faster. Defaults to 500. |
 | `bundleSize: number` | `"pransac"` | A positive integer specifying the number of data points to be tested against all viable models before the set of viable models gets cut in half, over and over again. Defaults to 100. |
