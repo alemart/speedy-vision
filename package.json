@@ -1,6 +1,6 @@
 {
   "name": "speedy-vision.js",
-  "version": "0.8.0-wip",
+  "version": "0.8.0",
   "description": "GPU-accelerated Computer Vision for JavaScript",
   "author": "Alexandre Martins <alemartf@gmail.com> (https://github.com/alemart)",
   "homepage": "https://github.com/alemart/speedy-vision-js",
