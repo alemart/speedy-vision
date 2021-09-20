@@ -28,8 +28,8 @@ import { NotSupportedError } from '../utils/errors';
 const SINGLETON_KEY = Symbol();
 
 //
-// We use the smallest possible canvas to improve the
-// performance of createImageBitmap() on Firefox.
+// We use a small canvas to improve the performance
+// of createImageBitmap() on Firefox.
 //
 // A large canvas (2048x2048) causes a FPS drop, even
 // if we only extract a small region of it (this is
