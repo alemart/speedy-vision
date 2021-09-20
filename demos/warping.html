@@ -237,7 +237,7 @@ window.onload = async function()
             const homography = Speedy.Matrix.Zeros(3, 3);
             await Speedy.Matrix.perspective(homography, src, dest);
 
-            const entries = await homography.read();
+            const entries = homography.read();
             for(let i = 0; i < entries.length; i++)
                 homographyElement[i].value = entries[i];
         }

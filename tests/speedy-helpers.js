@@ -640,7 +640,6 @@ jasmine.getEnv().addReporter({
 // add disclaimer
 window.addEventListener('load', () => {
     header('Speedy testing!');
-    const msg = `Testing results may be impacted due to varying floating point precision across ` +
-                `different GPUs.\nResults are available for visual inspection.`;
+    const msg = `Results are available for visual inspection.`;
     print(msg);
 });

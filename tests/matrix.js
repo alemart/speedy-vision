@@ -991,7 +991,7 @@ describe('Matrix', function() {
                         printm('b = ', b);
                         printm('Solution for Ax = b:', x);
 
-                        expect(await x.read()).toBeElementwiseNearlyEqual(soln);
+                        expect(x.read()).toBeElementwiseNearlyEqual(soln);
                     });
 
                     it('solves a system of 3 equations and 3 unknowns', async function() {
@@ -1012,7 +1012,7 @@ describe('Matrix', function() {
                         printm('b = ', b);
                         printm('Solution for Ax = b:', x);
 
-                        expect(await x.read()).toBeElementwiseNearlyEqual(soln);
+                        expect(x.read()).toBeElementwiseNearlyEqual(soln);
                     });
 
                     it('solves another system of 3 equations and 3 unknowns', async function() {
@@ -1033,7 +1033,7 @@ describe('Matrix', function() {
                         printm('b = ', b);
                         printm('Solution for Ax = b:', x);
 
-                        expect(await x.read()).toBeElementwiseNearlyEqual(soln);
+                        expect(x.read()).toBeElementwiseNearlyEqual(soln);
                     });
 
                     it('can\'t solve an impossible system of equations', async function() {
