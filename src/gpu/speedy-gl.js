@@ -25,9 +25,20 @@ import { SpeedyPromise } from '../utils/speedy-promise';
 import { NotSupportedError } from '../utils/errors';
 
 // Constants
-const CANVAS_WIDTH = 2048; // this size should be compatible with everything...
-const CANVAS_HEIGHT = 2048;
 const SINGLETON_KEY = Symbol();
+
+//
+// We use the smallest possible canvas to improve the
+// performance of createImageBitmap() on Firefox.
+//
+// A large canvas (2048x2048) causes a FPS drop, even
+// if we only extract a small region of it (this is
+// unlike Chrome, which is fast).
+//
+// Note: we automatically increase the size of the
+// canvas (as needed) when rendering to it.
+//
+const CANVAS_WIDTH = 16, CANVAS_HEIGHT = 16;
 
 /** @type {SpeedyGL} Singleton */
 let instance = null;
