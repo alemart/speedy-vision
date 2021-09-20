@@ -1313,7 +1313,7 @@ Read a single entry of the matrix.
 
 ###### Returns
 
-The requested entry of the matrix, or `undefined` if the entry is outside bounds.
+The requested entry of the matrix, or a NaN if the entry is outside bounds.
 
 ###### Example
 

@@ -240,7 +240,7 @@ export class SpeedyMatrix extends SpeedyMatrixExpr
         if(row >= 0 && row < this._rows && column >= 0 && column < this._columns)
             return this._data[this._step0 * row + this._step1 * column];
         else
-            return undefined;
+            return Number.NaN;
     }
 
     /**
