@@ -1,12 +1,12 @@
 /*!
- * speedy-vision.js v0.8.0-wip
+ * speedy-vision.js v0.8.0
  * GPU-accelerated Computer Vision for JavaScript
  * https://github.com/alemart/speedy-vision-js
  * 
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-09-19T02:59:15.578Z
+ * Date: 2021-09-20T22:49:05.450Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -7640,7 +7640,7 @@ class SpeedyMatrixFactory extends Function
      * @param {SpeedyMatrix} src 2 x n input points - source coordinates
      * @param {SpeedyMatrix} dest 2 x n input points - destination coordinates
      * @param {object} [options]
-     * @param {'pransac'|'dlt'} [options.method] method of computation
+     * @param {'dlt'|'pransac'} [options.method] method of computation
      * @param {SpeedyMatrix|null} [options.mask] (pransac) 1 x n output: i-th entry will be 1 if the i-th input point is an inlier, or 0 otherwise
      * @param {number} [options.reprojectionError] (pransac) given in pixels, used to separate inliers from outliers of a particular model (e.g., 1 pixel)
      * @param {number} [options.numberOfHypotheses] (pransac) number of hypotheses to be generated up-front (e.g., 512)
@@ -7648,7 +7648,7 @@ class SpeedyMatrixFactory extends Function
      * @returns {SpeedyPromise<SpeedyMatrix>} resolves to homography
      */
     findHomography(homography, src, dest, {
-        method = 'pransac',
+        method = 'dlt',
         mask = null,
         reprojectionError = 3,
         numberOfHypotheses = 500,
@@ -8360,7 +8360,7 @@ class SpeedyMatrix extends _speedy_matrix_expr__WEBPACK_IMPORTED_MODULE_0__["Spe
         if(row >= 0 && row < this._rows && column >= 0 && column < this._columns)
             return this._data[this._step0 * row + this._step1 * column];
         else
-            return undefined;
+            return Number.NaN;
     }
 
     /**
@@ -9624,7 +9624,7 @@ class Speedy
      */
     static get version()
     {
-        return "0.8.0-wip";
+        return "0.8.0";
     }
 
     /**
@@ -10060,7 +10060,7 @@ EEEDdGogESAhIBtsIhlBAnRqKAIANgIAIA8gICAQQQF0akECdGogESAfIBlqQQJ0aigCADYCACAM
 IA1BA3RqIBIgHiAbbCIZQQJ0aigCADYCACAMIB0gDUEBdGpBAnRqIBIgHCAZakECdGooAgA2AgAg
 DyAQQQNsIhBBAnRqIBEgISAHKAIMIhlsIiFBAnRqKAIANgIAIA8gICAQakECdGogESAfICFqQQJ0
 aigCADYCACAMIA1BA2wiD0ECdGogEiAeIBlsIhFBAnRqKAIANgIAIAwgHSAPakECdGogEiAcIBFq
-QQJ0aigCADYCAEEDQQMQkoCAgAAhDCAXQQRqIhJBADYCACAXIAw2AgAgDCATIBQQtoCAgAAaAkAg
+QQJ0aigCADYCAEEDQQMQkoCAgAAhDCAXQQRqIhJBADYCACAXIAw2AgAgDCATIBQQtICAgAAaAkAg
 FygCACgCACoCABCDgICAAEUNACASQX82AgAgFkF/aiEWCyAXQQhqIRcgCUEQaiEJIBhBf2oiGA0A
 CwsCQAJAIBYNACAAQQAqAoCIgIAAEJuAgIAAGgwBCyAGIAaUISNBACEXIBUgBEEIQYSAgIAAQQAQ
 i4CAgAAaAkACQCAIQQFIDQBBACEcA0AgHCISQQFqIhwgBW8hDAJAIBZBAkgNACAMDQAgFSAWQQhB
@@ -10110,10 +10110,10 @@ c2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6MTIxAEFzc2VydGlvbiBmYWlsZWQgYXQg
 YXJpdGhtZXRpYzMyLmM6MTQzAEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6MTY4
 AEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6MTg5AEFzc2VydGlvbiBmYWlsZWQg
 YXQgYXJpdGhtZXRpYzMyLmM6MjE4AEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6
-MjcxAEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6Mjk2AEFzc2VydGlvbiBmYWls
-ZWQgYXQgYXJpdGhtZXRpYzMyLmM6MzMwAEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMy
-LmM6MzUyAEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6Mzk0AEFzc2VydGlvbiBm
-YWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6NDEwAEFzc2VydGlvbiBmYWlsZWQgYXQgcXIzMi5jOjI2
+MjcxAEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6MzIyAEFzc2VydGlvbiBmYWls
+ZWQgYXQgYXJpdGhtZXRpYzMyLmM6MzU2AEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMy
+LmM6Mzc4AEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6NDIwAEFzc2VydGlvbiBm
+YWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6NDM2AEFzc2VydGlvbiBmYWlsZWQgYXQgcXIzMi5jOjI2
 MQBBc3NlcnRpb24gZmFpbGVkIGF0IHFyMzIuYzoyNjUAQXNzZXJ0aW9uIGZhaWxlZCBhdCBxcjMy
 LmM6Mjg2AEFzc2VydGlvbiBmYWlsZWQgYXQgcXIzMi5jOjI5MABBc3NlcnRpb24gZmFpbGVkIGF0
 IHFyMzIuYzozMjEAQXNzZXJ0aW9uIGZhaWxlZCBhdCBxcjMyLmM6MzI1AEFzc2VydGlvbiBmYWls
@@ -12456,9 +12456,20 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // Constants
-const CANVAS_WIDTH = 2048; // this size should be compatible with everything...
-const CANVAS_HEIGHT = 2048;
 const SINGLETON_KEY = Symbol();
+
+//
+// We use a small canvas to improve the performance
+// of createImageBitmap() on Firefox.
+//
+// A large canvas (2048x2048) causes a FPS drop, even
+// if we only extract a small region of it (this is
+// unlike Chrome, which is fast).
+//
+// Note: we automatically increase the size of the
+// canvas (as needed) when rendering to it.
+//
+const CANVAS_WIDTH = 16, CANVAS_HEIGHT = 16;
 
 /** @type {SpeedyGL} Singleton */
 let instance = null;
