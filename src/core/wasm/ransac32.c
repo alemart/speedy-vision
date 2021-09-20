@@ -123,7 +123,7 @@ WASM_EXPORT const Mat32* Mat32_pransac_homography(const Mat32* result, const Mat
 
         // compute the model (must be fast)
         Mat32_homography_dlt4(hypothesis[h].homography, src4, dest4);
-        //Mat32_homography_ndlt4(hypothesis[h].homography, src4, dest4); // points should already be normalized when invoking RANSAC
+        //Mat32_homography_ndlt4(hypothesis[h].homography, src4, dest4); // the points should already be normalized when invoking RANSAC
 
         // got an invalid model?
         if(isnan(Mat32_at(hypothesis[h].homography, 0, 0))) {
