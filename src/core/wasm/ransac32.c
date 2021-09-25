@@ -232,7 +232,7 @@ WASM_EXPORT const Mat32* Mat32_pransac_homography(const Mat32* result, const Mat
     }
 
     // release hypotheses
-    for(int h = m-1; h >= 0; h--)
+    for(int h = numberOfHypotheses - 1; h >= 0; h--)
         Mat32_destroy(hypothesis[h].homography);
     sfree(hypothesis);
 
