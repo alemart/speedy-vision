@@ -65,10 +65,7 @@
  * Get a specific subpixel at a specific level-of-detail
  * Similar to pyrPixelAtEx(), expect that this works with subpixel accuracy
  * @param {sampler2D} pyr pyramid
- * @param {vec2} pos pixel position considerifloat encodeLod(float lod)
-{
-    return (LOG2_PYRAMID_MAX_SCALE + lod) / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS);
-}ng lod = 0
+ * @param {ivec2} pos pixel position considering lod = 0
  * @param {float} lod level-of-detail
  * @param {ivec2} pyrBaseSize this is textureSize(pyr, 0)
  * @returns {vec4} pixel data
