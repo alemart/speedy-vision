@@ -96,14 +96,14 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
     set windowSize(windowSize)
     {
         Utils.assert(windowSize.width == windowSize.height && windowSize.area() > 0);
-        Utils.assert(windowSize.width % 2 == 1 && windowSize.height % 2 == 1);
+        Utils.assert(windowSize.width % 2 == 1 /*&& windowSize.height % 2 == 1*/);
         this._windowSize = windowSize;
 
         const wsize = this._windowSize.width;
         if(wsize > MAX_WINDOW_SIZE)
-            throw new NotSupportedError(`LK: window ${this._windowSize} is too large!`);
+            throw new NotSupportedError(`LK: window of size ${this._windowSize} is too large!`);
         else if(wsize < MIN_WINDOW_SIZE)
-            throw new NotSupportedError(`LK: window ${this._windowSize} is too small!`);
+            throw new NotSupportedError(`LK: window of size ${this._windowSize} is too small!`);
     }
 
     /**

@@ -31,6 +31,7 @@ import { SpeedyPipelineNodeHarrisKeypointDetector } from '../nodes/keypoints/det
 import { SpeedyPipelineNodeORBKeypointDescriptor } from '../nodes/keypoints/descriptors/orb';
 import { SpeedyPipelineNodeDiscardKeypointDescriptor } from '../nodes/keypoints/descriptors/discard';
 import { SpeedyPipelineNodeLKKeypointTracker } from '../nodes/keypoints/trackers/lk';
+import { SpeedyPipelineNodeNCCKeypointTracker } from '../nodes/keypoints/trackers/ncc';
 
 /**
  * Keypoint detectors
@@ -97,6 +98,16 @@ class SpeedyPipelineKeypointTrackerFactory extends SpeedyNamespace
     static LK(name = undefined)
     {
         return new SpeedyPipelineNodeLKKeypointTracker(name);
+    }
+
+    /**
+     * NCC-based tracking
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeNCCKeypointTracker}
+     */
+    static NCC(name = undefined)
+    {
+        return new SpeedyPipelineNodeNCCKeypointTracker(name);
     }
 }
 
