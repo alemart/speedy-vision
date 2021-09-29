@@ -107,6 +107,7 @@ Try the demos and take a look at their source code:
 * Image processing
   * [Image convolution](https://alemart.github.io/speedy-vision-js/demos/convolution.html)
   * [Image warping](https://alemart.github.io/speedy-vision-js/demos/warping.html)
+  * [Alpha blending](https://alemart.github.io/speedy-vision-js/demos/alpha-blending.html)
   * [Resize image](https://alemart.github.io/speedy-vision-js/demos/resize-image.html)
   * [Nightvision camera](https://alemart.github.io/speedy-vision-js/demos/nightvision-camera.html)
   * [Convert image to greyscale](https://alemart.github.io/speedy-vision-js/demos/greyscale-image.html)
@@ -562,6 +563,34 @@ An image buffer outputs at time *t* the input image received at time *t-1*. It's
 |-----------|-----------|-------------|
 | `"in"`    | Image     | Input image at time *t*. |
 | `"out"`   | Image     | Output image: the input image at time *t-1*. |
+
+##### Speedy.Image.Mixer()
+
+`Speedy.Image.Mixer(name?: string): SpeedyPipelineNodeImageMixer`
+
+An image mixer combines two images, *image0* and *image1*, as follows:
+
+*output* = `alpha` * *image0* + `beta` * *image1* + `gamma`
+
+The above expression will be computed for each pixel of the resulting image and then clamped to the [0,1] interval. The dimensions of the resulting image will be the dimensions of the larger of the input images.
+
+**Note:** Both input images must have the same format. If they're colored, the above expression will be evaluated in each color channel independently.
+
+**Tip:** if you pick an `alpha` between 0 and 1, set `beta` to `1 - alpha` and set `gamma` to 0, you'll get a nice alpha blending effect.
+
+###### Parameters
+
+* `alpha: number`. A scalar value. Defaults to 0.5.
+* `beta: number`. A scalar value. Defaults to 0.5.
+* `gamma: number`. A scalar value. Defaults to 0.0.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in0"`   | Image     | Input image: the *image0* above |
+| `"in1"`   | Image     | Input image: the *image1* above |
+| `"out"`   | Image     | Output image |
 
 #### Image filters
 

@@ -1,0 +1,174 @@
+<!--
+  speedy-vision.js
+  GPU-accelerated Computer Vision for JavaScript
+  Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  alpha-blending.html
+  Alpha blending
+-->
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
+        <meta name="author" content="Alexandre Martins">
+        <title>Alpha blending</title>
+        <script src="../dist/speedy-vision.js"></script>
+        <link href="style.css" rel="stylesheet">
+    </head>
+    <body>
+        <h1>Alpha blending</h1>
+        <form autocomplete="off">
+            <div>
+                <label for="alpha">Alpha</label>
+                <input type="range" min="0.0" max="1.0" value="0.5" step="0.01" id="alpha">
+            </div>
+        </form>
+        <video
+            src="../assets/flying-eagle.mp4"
+            poster="../assets/loading.jpg"
+            preload="auto"
+            loop muted controls autoplay hidden
+            title="Free video by Cinema Professionals, https://www.pexels.com/pt-br/video/assistindo-a-aguia-voar-3635378/">
+        </video>
+        <img src="../assets/speedy-wall.jpg" title="Image by Bride of Frankenstein (CC-BY)" hidden>
+        <script>
+window.onload = async function()
+{
+    // Form elements
+    const alpha = document.getElementById('alpha');
+
+    // Load media
+    const image = document.querySelector('img');
+    const video = document.querySelector('video');
+    const media = [
+        await Speedy.load(video),
+        await Speedy.load(image),
+    ];
+    video.play();
+
+    // Dimensions of the display canvas
+    const width = Math.max(media[0].width, media[1].width);
+    const height = Math.max(media[0].height, media[1].height);
+
+    // Setup an animated canvas
+    const animatedCanvas = createCanvas(width, height);
+    (() => {
+        const [ background, sprite ] = media;
+        const position = Speedy.Point2(0, 0);
+        const speed = Speedy.Vector2(100, 100);
+        const ctx = animatedCanvas.getContext('2d');
+        let lastTime = Date.now();
+
+        async function animate()
+        {
+            // update timer
+            const now = Date.now();
+            const dt = 0.001 * (now - lastTime);
+            lastTime = now;
+
+            // move sprite
+            position.x += speed.x * dt;
+            position.y += speed.y * dt;
+
+            if(position.x + sprite.width > width)
+                speed.x = -Math.abs(speed.x);
+            else if(position.x < 0)
+                speed.x = Math.abs(speed.x);
+
+            if(position.y + sprite.height > height)
+                speed.y = -Math.abs(speed.y);
+            else if(position.y < 0)
+                speed.y = Math.abs(speed.y);
+
+            // draw animation
+            background.draw(animatedCanvas);
+            sprite.draw(animatedCanvas, position.x, position.y);
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+        animatedCanvas.hidden = true;
+    })();
+
+    // Setup the pipeline
+    const pipeline = Speedy.Pipeline(); // create the pipeline and the nodes
+    const videoSource = Speedy.Image.Source();
+    const animationSource = Speedy.Image.Source();
+    const mixer = Speedy.Image.Mixer();
+    const sink = Speedy.Image.Sink();
+
+    videoSource.media = media[0]; // set the media source
+    animationSource.media = await Speedy.load(animatedCanvas);
+
+    videoSource.output().connectTo(mixer.input('in1')); // connect the nodes
+    animationSource.output().connectTo(mixer.input('in0'));
+    mixer.output().connectTo(sink.input());
+
+    pipeline.init(videoSource, animationSource, mixer, sink); // add the nodes to the pipeline
+
+    // Display the result
+    const canvas = createCanvas(width, height, video.title + ' | ' + image.title);
+    async function render()
+    {
+        mixer.alpha = Number(alpha.value);
+        mixer.beta = 1 - mixer.alpha;
+        mixer.gamma = 0;
+
+        const { image } = await pipeline.run(); // run the pipeline
+
+        image.draw(canvas);
+        renderStatus(canvas);
+
+        setTimeout(render, 1000 / 60);
+    }
+    render();
+}
+
+function createCanvas(width, height, title)
+{
+    const canvas = document.getElementById('canvas-demo') || document.createElement('canvas');
+
+    canvas.width = width;
+    canvas.height = height;
+    canvas.title = title;
+
+    if(!document.body.contains(canvas))
+        document.body.appendChild(canvas);
+
+    return canvas;
+}
+
+function renderStatus(canvas, color = 'white', size = 18)
+{
+    const context = canvas.getContext('2d');
+
+    context.font = `bold ${size}px sans-serif`;
+    context.fillStyle = color;
+    context.textBaseline = 'top';
+
+    context.shadowOffsetX = 2;
+    context.shadowOffsetY = 2;
+    context.shadowBlur = 2;
+    context.shadowColor = 'rgba(0, 0, 0, 0.5)';
+
+    context.fillText(`FPS: ${Speedy.fps}`, 8, 8);
+
+    context.shadowColor = 'rgba(0, 0, 0, 0)';
+}
+        </script>
+        <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>
+    </body>
+</html>
