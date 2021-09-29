@@ -31,7 +31,7 @@ import { SpeedyPromise } from '../../../../utils/speedy-promise';
 
 // Constants
 const MAX_LEVELS = PYRAMID_MAX_LEVELS;
-const MAX_TEXTURES = 2 * MAX_LEVELS - 1;
+const MAX_TEXTURES = 2 * MAX_LEVELS;
 
 /**
  * Generate pyramid
@@ -68,8 +68,11 @@ export class SpeedyPipelineNodeImagePyramid extends SpeedyPipelineNode
         // get work textures
         const mip = new Array(MAX_TEXTURES + 1);
         for(let i = MAX_TEXTURES; i >= 1; i--)
-            mip[i] = this._tex[i];
-        mip[0] = image;
+            mip[i-1] = this._tex[i];
+
+        // get a copy of the input image
+        mip[0].resize(width, height);
+        image.copyTo(mip[0]);
 
         // generate gaussian pyramid
         const numLevels = Math.min(mipLevels, MAX_LEVELS);
