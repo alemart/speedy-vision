@@ -69,7 +69,6 @@ window.onload = async function()
         const [ background, sprite ] = media;
         const position = Speedy.Point2(0, 0);
         const speed = Speedy.Vector2(100, 100);
-        const ctx = animatedCanvas.getContext('2d');
         let lastTime = Date.now();
 
         async function animate()
