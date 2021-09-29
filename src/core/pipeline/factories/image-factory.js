@@ -25,6 +25,7 @@ import { SpeedyPipelineNodeImageSink } from '../nodes/images/sink';
 import { SpeedyPipelineNodeImageMultiplexer } from '../nodes/images/multiplexer';
 import { SpeedyPipelineNodeImageBuffer } from '../nodes/images/buffer';
 import { SpeedyPipelineNodeImagePyramid } from '../nodes/images/pyramid';
+import { SpeedyPipelineNodeImageMixer } from '../nodes/images/mixer';
 
 /**
  * Image nodes
@@ -79,5 +80,15 @@ export class SpeedyPipelineImageFactory extends SpeedyNamespace
     static Pyramid(name = undefined)
     {
         return new SpeedyPipelineNodeImagePyramid(name);
+    }
+
+    /**
+     * Image Mixer (blending)
+     * @param {string} [name] name of the node
+     * @returns {SpeedyPipelineNodeImageMixer}
+     */
+    static Mixer(name = undefined)
+    {
+        return new SpeedyPipelineNodeImageMixer(name);
     }
 }

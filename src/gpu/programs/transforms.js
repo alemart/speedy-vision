@@ -46,6 +46,9 @@ const resizeBI = importShader('transforms/resize.glsl')
                  })
                  .withArguments('image');
 
+// Additive mix (TODO create a new program group?)
+const additiveMix = importShader('transforms/additive-mix.glsl')
+                    .withArguments('image0', 'image1', 'alpha', 'beta', 'gamma');
 
 /**
  * SpeedyProgramGroupTransforms
@@ -64,6 +67,7 @@ export class SpeedyProgramGroupTransforms extends SpeedyProgramGroup
             .declare('warpPerspective', warpPerspective)
             .declare('resizeNN', resizeNN)
             .declare('resizeBI', resizeBI)
+            .declare('additiveMix', additiveMix)
         ;
     }
 }
