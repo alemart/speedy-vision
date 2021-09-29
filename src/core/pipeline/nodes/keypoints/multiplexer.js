@@ -16,11 +16,11 @@
  * limitations under the License.
  *
  * multiplexer.js
- * Image multiplexer
+ * Keypoint multiplexer
  */
 
 import { SpeedyPipelineNode, SpeedyPipelineSourceNode } from '../../pipeline-node';
-import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithImage } from '../../pipeline-message';
+import { SpeedyPipelineMessageType } from '../../pipeline-message';
 import { InputPort, OutputPort } from '../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../../../gpu/speedy-texture';
@@ -33,9 +33,9 @@ import { SpeedyPromise } from '../../../../utils/speedy-promise';
 const INPUT_PORT = [ 'in0', 'in1' ];
 
 /**
- * Image multiplexer
+ * Keypoint multiplexer
  */
-export class SpeedyPipelineNodeImageMultiplexer extends SpeedyPipelineNode
+export class SpeedyPipelineNodeKeypointMultiplexer extends SpeedyPipelineNode
 {
     /**
      * Constructor
@@ -44,8 +44,8 @@ export class SpeedyPipelineNodeImageMultiplexer extends SpeedyPipelineNode
     constructor(name = undefined)
     {
         super(name, 0, [
-            ...(INPUT_PORT.map(portName => InputPort(portName).expects(SpeedyPipelineMessageType.Image))),
-            OutputPort().expects(SpeedyPipelineMessageType.Image),
+            ...(INPUT_PORT.map(portName => InputPort(portName).expects(SpeedyPipelineMessageType.Keypoints))),
+            OutputPort().expects(SpeedyPipelineMessageType.Keypoints),
         ]);
 
         /** @type {number} which port should be linked to the output? */
@@ -63,7 +63,7 @@ export class SpeedyPipelineNodeImageMultiplexer extends SpeedyPipelineNode
 
     /**
      * The number of the port that should be linked to the output
-     * @param {numver} port
+     * @param {number} port
      */
     set port(port)
     {

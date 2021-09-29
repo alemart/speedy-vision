@@ -25,6 +25,7 @@ import { SpeedyPipelineNodeKeypointSink } from '../nodes/keypoints/sink';
 import { SpeedyPipelineNodeKeypointClipper } from '../nodes/keypoints/clipper';
 import { SpeedyPipelineNodeKeypointBuffer } from '../nodes/keypoints/buffer';
 import { SpeedyPipelineNodeKeypointMixer } from '../nodes/keypoints/mixer';
+import { SpeedyPipelineNodeKeypointMultiplexer } from '../nodes/keypoints/multiplexer';
 import { SpeedyPipelineNodeKeypointTransformer } from '../nodes/keypoints/transformer';
 import { SpeedyPipelineNodeFASTKeypointDetector } from '../nodes/keypoints/detectors/fast';
 import { SpeedyPipelineNodeHarrisKeypointDetector } from '../nodes/keypoints/detectors/harris';
@@ -191,6 +192,16 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
     static Mixer(name = undefined)
     {
         return new SpeedyPipelineNodeKeypointMixer(name);
+    }
+
+    /**
+     * Create a keypoint multiplexer
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeKeypointMultiplexer}
+     */
+    static Multiplexer(name = undefined)
+    {
+        return new SpeedyPipelineNodeKeypointMultiplexer(name);
     }
 
     /**

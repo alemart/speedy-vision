@@ -61,6 +61,7 @@ For general enquiries, contact me at alemartf `at` gmail `dot` com.
     * [Basic properties](#basic-properties)
     * [Basic nodes](#basic-nodes)
   * [Image processing](#image-processing)
+    * [Image basics](#image-basics)
     * [Image filters](#image-filters)
     * [General transformations](#general-transformations)
   * [Keypoints and descriptors](#keypoints-and-descriptors)
@@ -520,7 +521,7 @@ Creates an image sink with the specified name. If the name is not specified, Spe
 
 ### Image processing
 
-#### Basic tools
+#### Image basics
 
 ##### Speedy.Image.Pyramid()
 
@@ -938,6 +939,24 @@ A keypoint buffer outputs at time *t* the keypoints received at time *t-1*.
 |-----------|-----------|-------------|
 | `"in"`    | Keypoints | A set of keypoints at time *t*. |
 | `"out"`   | Keypoints | The set of keypoints received at time *t-1*. |
+
+##### Speedy.Keypoint.Multiplexer()
+
+`Speedy.Keypoint.Multiplexer(name?: string): SpeedyPipelineNodeKeypointMultiplexer`
+
+A keypoint multiplexer receives two sets of keypoints as input and outputs one of the them.
+
+###### Parameters
+
+* `port: number`. Which input set of keypoints should be redirected to the output: `0` or `1`? Defaults to `0`.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in0"`   | Image     | First set of keypoints. |
+| `"in1"`   | Image     | Second set of keypoints. |
+| `"out"`   | Image     | Either the first or the second set of keypoints, depending on the value of `port`. |
 
 ##### Speedy.Keypoint.Transformer()
 
