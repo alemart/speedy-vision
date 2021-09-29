@@ -197,8 +197,8 @@ export class SpeedyPipelineNodeNCCKeypointTracker extends SpeedyPipelineNode
         //flow = gpu.programs.keypoints.ncc(flow, previousKeypoints, pyrPreviousImage, pyrNextImage, 2*r1+1, p1, 1, descriptorSize, extraSize, encoderLength);
 
         // fine flow estimation (lod = 0)
-        r0 = 2;
-        p0 = 2;
+        r0 = 15;
+        p0 = 7;
         flow = gpu.programs.keypoints.ncc(flow, previousKeypoints, pyrPreviousImage, pyrNextImage, 2*r0+1, p0, 0, descriptorSize, extraSize, encoderLength);
 
         // transfer optical-flow to nextKeypoints

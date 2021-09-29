@@ -180,7 +180,7 @@ float computeNCC(ivec2 offset)
 {
     int r = windowRadius();
     int x = clamp(offset.x, -r, r), y = clamp(offset.y, -r, r);
-    #if 0
+    #if 1
     float win = 0.0f, tpl = 0.0f;
     float covar = 0.0f, winvar = 0.0f, tplvar = 0.0f;
 
@@ -242,8 +242,8 @@ vec2 refineSubpixel(ivec2 flow)
     Now let { pi | i = 1,2,...,9 } be a 3x3 window of
     points around the initial estimate given by the NCC.
     Let's find the vector v = (a,b,c,d,e,f,g)^t that
-    minimizes the length of the residual r = u - Av of
-    the overdetermined system of linear equations Av = u:
+    minimizes the length of the residual r = q - Av of
+    the overdetermined system of linear equations Av = q:
 
     [ x1^2   x1 y1   y1^2   x1   y1   1 ]         [ q1 ]
     [ x2^2   x2 y2   y2^2   x2   y2   1 ] [ a ]   [ q2 ]
@@ -274,7 +274,7 @@ vec2 refineSubpixel(ivec2 flow)
     [ 0   0   1   0   1   1 ]         [ q8 ]
     [ 1   1   1   1   1   1 ]         [ q9 ]
 
-    A least squares solution v* = (A'A)^-1 * A' * u
+    A least squares solution v* = (A'A)^-1 * A' * q
     can be found in terms of qi using a symbolic solver :)
 
     */
@@ -310,7 +310,7 @@ vec2 refineSubpixel(ivec2 flow)
 
     //return pixelFlow;
     return subpixelFlow;
-    //return distance(subpixelFlow, pixelFlow) < 2.0f ? subpixelFlow : pixelFlow;
+    return distance(subpixelFlow, pixelFlow) < 2.0f ? subpixelFlow : pixelFlow;
 
     /*
     float x = subpixelFlow.x, y = subpixelFlow.y;
@@ -367,6 +367,6 @@ void main()
     flow += refineSubpixel(bestOffset);
 
     // done!
-    //color = bestNCC >= 0.3f ? encodeFlow(flow) : encodeInvalidFlow();
-    color = encodeFlow(flow);
+    color = bestNCC >= 0.3f ? encodeFlow(flow) : encodeInvalidFlow();
+    //color = encodeFlow(flow);
 }
