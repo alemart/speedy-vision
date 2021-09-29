@@ -56,6 +56,27 @@ export class SpeedyPipelineNodeImageBuffer extends SpeedyPipelineNode
 
         /** @type {ImageFormat} previous image format */
         this._previousFormat = ImageFormat.RGBA;
+
+        /** @type {boolean} frozen buffer? */
+        this._frozen = false;
+    }
+
+    /**
+     * A frozen buffer discards the input, effectively increasing the buffering time
+     * @returns {boolean}
+     */
+    get frozen()
+    {
+        return this._frozen;
+    }
+
+    /**
+     * A frozen buffer discards the input, effectively increasing the buffering time
+     * @param {boolean} value
+     */
+    set frozen(value)
+    {
+        this._frozen = Boolean(value);
     }
 
     /**
@@ -85,13 +106,16 @@ export class SpeedyPipelineNodeImageBuffer extends SpeedyPipelineNode
         if(image.hasMipmaps())
             throw new NotSupportedError(`Can't bufferize a pyramid`);
 
-        // store input
-        this._previousFormat = format;
-        previousInputTexture.resize(image.width, image.height);
-        image.copyTo(previousInputTexture);
+        // bufferize
+        if(!this._frozen || !this._initialized) {
+            // store input
+            this._previousFormat = format;
+            previousInputTexture.resize(image.width, image.height);
+            image.copyTo(previousInputTexture);
 
-        // page flipping
-        this._pageIndex = 1 - this._pageIndex;
+            // page flipping
+            this._pageIndex = 1 - this._pageIndex;
+        }
 
         // first run?
         if(!this._initialized) {

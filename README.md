@@ -559,6 +559,12 @@ An image buffer outputs at time *t* the input image received at time *t-1*. It's
 
 **Note:** an image buffer cannot be used to store a pyramid at this time.
 
+###### Parameters
+
+* `frozen: boolean`. A frozen buffer discards the input, effectively increasing the buffering time. Defaults to `false`.
+
+###### Ports
+
 | Port name | Data type | Description |
 |-----------|-----------|-------------|
 | `"in"`    | Image     | Input image at time *t*. |
@@ -921,6 +927,10 @@ Mixes (merges) two sets of keypoints.
 `Speedy.Keypoint.Buffer(name?: string): SpeedyPipelineNodeKeypointBuffer`
 
 A keypoint buffer outputs at time *t* the keypoints received at time *t-1*.
+
+###### Parameters
+
+* `frozen: boolean`. A frozen buffer discards the input, effectively increasing the buffering time. Defaults to `false`.
 
 ###### Ports
 

@@ -61,6 +61,27 @@ export class SpeedyPipelineNodeKeypointBuffer extends SpeedyPipelineNode
 
         /** @type {number} previous encoder length */
         this._previousEncoderLength = 0;
+
+        /** @type {boolean} frozen buffer? */
+        this._frozen = false;
+    }
+
+    /**
+     * A frozen buffer discards the input, effectively increasing the buffering time
+     * @returns {boolean}
+     */
+    get frozen()
+    {
+        return this._frozen;
+    }
+
+    /**
+     * A frozen buffer discards the input, effectively increasing the buffering time
+     * @param {boolean} value
+     */
+    set frozen(value)
+    {
+        this._frozen = Boolean(value);
     }
 
     /**
@@ -88,15 +109,18 @@ export class SpeedyPipelineNodeKeypointBuffer extends SpeedyPipelineNode
         const previousInputTexture = page[1 - this._pageIndex];
         const outputTexture = page[this._pageIndex];
 
-        // store input
-        this._previousDescriptorSize = descriptorSize;
-        this._previousExtraSize = extraSize;
-        this._previousEncoderLength = encoderLength;
-        previousInputTexture.resize(encoderLength, encoderLength);
-        encodedKeypoints.copyTo(previousInputTexture);
+        // bufferize
+        if(!this._frozen || !this._initialized) {
+            // store input
+            this._previousDescriptorSize = descriptorSize;
+            this._previousExtraSize = extraSize;
+            this._previousEncoderLength = encoderLength;
+            previousInputTexture.resize(encoderLength, encoderLength);
+            encodedKeypoints.copyTo(previousInputTexture);
 
-        // page flipping
-        this._pageIndex = 1 - this._pageIndex;
+            // page flipping
+            this._pageIndex = 1 - this._pageIndex;
+        }
 
         // first run?
         if(!this._initialized) {
