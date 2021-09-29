@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-09-29T01:27:07.766Z
+ * Date: 2021-09-29T03:32:42.023Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -2011,6 +2011,27 @@ class SpeedyPipelineNodeImageBuffer extends _pipeline_node__WEBPACK_IMPORTED_MOD
 
         /** @type {ImageFormat} previous image format */
         this._previousFormat = _utils_types__WEBPACK_IMPORTED_MODULE_3__["ImageFormat"].RGBA;
+
+        /** @type {boolean} frozen buffer? */
+        this._frozen = false;
+    }
+
+    /**
+     * A frozen buffer discards the input, effectively increasing the buffering time
+     * @returns {boolean}
+     */
+    get frozen()
+    {
+        return this._frozen;
+    }
+
+    /**
+     * A frozen buffer discards the input, effectively increasing the buffering time
+     * @param {boolean} value
+     */
+    set frozen(value)
+    {
+        this._frozen = Boolean(value);
     }
 
     /**
@@ -2040,13 +2061,16 @@ class SpeedyPipelineNodeImageBuffer extends _pipeline_node__WEBPACK_IMPORTED_MOD
         if(image.hasMipmaps())
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__["NotSupportedError"](`Can't bufferize a pyramid`);
 
-        // store input
-        this._previousFormat = format;
-        previousInputTexture.resize(image.width, image.height);
-        image.copyTo(previousInputTexture);
+        // bufferize
+        if(!this._frozen || !this._initialized) {
+            // store input
+            this._previousFormat = format;
+            previousInputTexture.resize(image.width, image.height);
+            image.copyTo(previousInputTexture);
 
-        // page flipping
-        this._pageIndex = 1 - this._pageIndex;
+            // page flipping
+            this._pageIndex = 1 - this._pageIndex;
+        }
 
         // first run?
         if(!this._initialized) {
@@ -2759,6 +2783,27 @@ class SpeedyPipelineNodeKeypointBuffer extends _pipeline_node__WEBPACK_IMPORTED_
 
         /** @type {number} previous encoder length */
         this._previousEncoderLength = 0;
+
+        /** @type {boolean} frozen buffer? */
+        this._frozen = false;
+    }
+
+    /**
+     * A frozen buffer discards the input, effectively increasing the buffering time
+     * @returns {boolean}
+     */
+    get frozen()
+    {
+        return this._frozen;
+    }
+
+    /**
+     * A frozen buffer discards the input, effectively increasing the buffering time
+     * @param {boolean} value
+     */
+    set frozen(value)
+    {
+        this._frozen = Boolean(value);
     }
 
     /**
@@ -2786,15 +2831,18 @@ class SpeedyPipelineNodeKeypointBuffer extends _pipeline_node__WEBPACK_IMPORTED_
         const previousInputTexture = page[1 - this._pageIndex];
         const outputTexture = page[this._pageIndex];
 
-        // store input
-        this._previousDescriptorSize = descriptorSize;
-        this._previousExtraSize = extraSize;
-        this._previousEncoderLength = encoderLength;
-        previousInputTexture.resize(encoderLength, encoderLength);
-        encodedKeypoints.copyTo(previousInputTexture);
+        // bufferize
+        if(!this._frozen || !this._initialized) {
+            // store input
+            this._previousDescriptorSize = descriptorSize;
+            this._previousExtraSize = extraSize;
+            this._previousEncoderLength = encoderLength;
+            previousInputTexture.resize(encoderLength, encoderLength);
+            encodedKeypoints.copyTo(previousInputTexture);
 
-        // page flipping
-        this._pageIndex = 1 - this._pageIndex;
+            // page flipping
+            this._pageIndex = 1 - this._pageIndex;
+        }
 
         // first run?
         if(!this._initialized) {
