@@ -1984,7 +1984,7 @@ console.log(chkCoords.toString());
 
 `Speedy.Vector2(x: number, y: number): SpeedyVector2`
 
-Creates a new immutable 2D vector with the given coordinates.
+Creates a new 2D vector with the given coordinates.
 
 ###### Arguments
 
@@ -2135,7 +2135,7 @@ Returns `true` if the coordinates of `this` are equal to the coordinates of `v`,
 
 `Speedy.Point2(x: number, y: number): SpeedyPoint2`
 
-Creates a new immutable 2D point with the given coordinates.
+Creates a new 2D point with the given coordinates.
 
 ###### Arguments
 
@@ -2208,7 +2208,7 @@ Returns `true` if the coordinates of `this` are equal to the coordinates of `p`,
 
 `Speedy.Size(width: number, height: number): SpeedySize`
 
-Creates a new immutable object that represents the size of a rectangle.
+Creates a new object that represents the size of a rectangle.
 
 ###### Arguments
 

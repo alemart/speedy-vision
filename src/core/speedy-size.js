@@ -32,13 +32,10 @@ export class SpeedySize
     constructor(width, height)
     {
         /** @type {number} width */
-        this.width = Math.max(0, +width);
+        this._width = Math.max(0, +width);
 
         /** @type {number} height */
-        this.height = Math.max(0, +height);
-
-        // make it immutable
-        return Object.freeze(this);
+        this._height = Math.max(0, +height);
     }
 
 
@@ -46,6 +43,42 @@ export class SpeedySize
     //
     // ===== METHODS =====
     //
+
+    /**
+     * Width
+     * @returns {number}
+     */
+    get width()
+    {
+        return this._width;
+    }
+
+    /**
+     * Width
+     * @param {number} value
+     */
+    set width(value)
+    {
+        this._width = Math.max(0, +value);
+    }
+
+    /**
+     * Height
+     * @returns {number}
+     */
+    get height()
+    {
+        return this._height;
+    }
+
+    /**
+     * Height
+     * @param {number} value
+     */
+    set height(value)
+    {
+        this._height = Math.max(0, +value);
+    }
 
     /**
      * Convert to string

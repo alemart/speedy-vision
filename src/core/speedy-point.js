@@ -34,13 +34,10 @@ export class SpeedyPoint2
     constructor(x, y)
     {
         /** @type {number} x coordinate */
-        this.x = +x;
+        this._x = +x;
 
         /** @type {number} y coordinate */
-        this.y = +y;
-
-        // make it immutable
-        return Object.freeze(this);
+        this._y = +y;
     }
 
 
@@ -48,6 +45,42 @@ export class SpeedyPoint2
     //
     // ===== METHODS =====
     //
+
+    /**
+     * x-coordinate
+     * @returns {number}
+     */
+    get x()
+    {
+        return this._x;
+    }
+
+    /**
+     * x-coordinate
+     * @param {number} value
+     */
+    set x(value)
+    {
+        this._x = +value;
+    }
+
+    /**
+     * y-coordinate
+     * @returns {number}
+     */
+    get y()
+    {
+        return this._y;
+    }
+
+    /**
+     * y-coordinate
+     * @param {number} value
+     */
+    set y(value)
+    {
+        this._y = +value;
+    }
 
     /**
      * Convert to string
