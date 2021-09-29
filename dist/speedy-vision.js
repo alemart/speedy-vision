@@ -1,12 +1,12 @@
 /*!
- * speedy-vision.js v0.8.0
+ * speedy-vision.js v0.8.1-wip
  * GPU-accelerated Computer Vision for JavaScript
  * https://github.com/alemart/speedy-vision-js
  * 
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-09-20T22:49:05.450Z
+ * Date: 2021-09-29T01:27:07.766Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -434,6 +434,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _nodes_images_multiplexer__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../nodes/images/multiplexer */ "./src/core/pipeline/nodes/images/multiplexer.js");
 /* harmony import */ var _nodes_images_buffer__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../nodes/images/buffer */ "./src/core/pipeline/nodes/images/buffer.js");
 /* harmony import */ var _nodes_images_pyramid__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../nodes/images/pyramid */ "./src/core/pipeline/nodes/images/pyramid.js");
+/* harmony import */ var _nodes_images_mixer__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../nodes/images/mixer */ "./src/core/pipeline/nodes/images/mixer.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -454,6 +455,7 @@ __webpack_require__.r(__webpack_exports__);
  * image-factory.js
  * Image-related nodes
  */
+
 
 
 
@@ -516,6 +518,16 @@ class SpeedyPipelineImageFactory extends _speedy_namespace__WEBPACK_IMPORTED_MOD
     {
         return new _nodes_images_pyramid__WEBPACK_IMPORTED_MODULE_5__["SpeedyPipelineNodeImagePyramid"](name);
     }
+
+    /**
+     * Image Mixer (blending)
+     * @param {string} [name] name of the node
+     * @returns {SpeedyPipelineNodeImageMixer}
+     */
+    static Mixer(name = undefined)
+    {
+        return new _nodes_images_mixer__WEBPACK_IMPORTED_MODULE_6__["SpeedyPipelineNodeImageMixer"](name);
+    }
 }
 
 /***/ }),
@@ -542,6 +554,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/orb */ "./src/core/pipeline/nodes/keypoints/descriptors/orb.js");
 /* harmony import */ var _nodes_keypoints_descriptors_discard__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/discard */ "./src/core/pipeline/nodes/keypoints/descriptors/discard.js");
 /* harmony import */ var _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../nodes/keypoints/trackers/lk */ "./src/core/pipeline/nodes/keypoints/trackers/lk.js");
+/* harmony import */ var _nodes_keypoints_trackers_ncc__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../nodes/keypoints/trackers/ncc */ "./src/core/pipeline/nodes/keypoints/trackers/ncc.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -562,6 +575,7 @@ __webpack_require__.r(__webpack_exports__);
  * keypoint-factory.js
  * Keypoint-related nodes
  */
+
 
 
 
@@ -641,6 +655,16 @@ class SpeedyPipelineKeypointTrackerFactory extends _speedy_namespace__WEBPACK_IM
     static LK(name = undefined)
     {
         return new _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_11__["SpeedyPipelineNodeLKKeypointTracker"](name);
+    }
+
+    /**
+     * NCC-based tracking
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeNCCKeypointTracker}
+     */
+    static NCC(name = undefined)
+    {
+        return new _nodes_keypoints_trackers_ncc__WEBPACK_IMPORTED_MODULE_12__["SpeedyPipelineNodeNCCKeypointTracker"](name);
     }
 }
 
@@ -2033,6 +2057,165 @@ class SpeedyPipelineNodeImageBuffer extends _pipeline_node__WEBPACK_IMPORTED_MOD
 
         // done!
         this.output().swrite(outputTexture, previousFormat);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/images/mixer.js":
+/*!*************************************************!*\
+  !*** ./src/core/pipeline/nodes/images/mixer.js ***!
+  \*************************************************/
+/*! exports provided: SpeedyPipelineNodeImageMixer */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeImageMixer", function() { return SpeedyPipelineNodeImageMixer; });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * mixer.js
+ * Image Mixer
+ */
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Image Mixer
+ */
+class SpeedyPipelineNodeImageMixer extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNode"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, 1, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])('in0').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])('in1').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
+        ]);
+
+        /** @type {number} alpha coefficient (applied to image0) */
+        this._alpha = 0.5;
+
+        /** @type {number} beta coefficient (applied to image1) */
+        this._beta = 0.5;
+
+        /** @type {number} gamma coefficient (brightness control) */
+        this._gamma = 0.0;
+    }
+
+    /**
+     * Alpha coefficient (applied to image0)
+     * @returns {number}
+     */
+    get alpha()
+    {
+        return this._alpha;
+    }
+
+    /**
+     * Alpha coefficient (applied to image0)
+     * @param {number} value
+     */
+    set alpha(value)
+    {
+        this._alpha = +value;
+    }
+
+    /**
+     * Beta coefficient (applied to image1)
+     * @returns {number}
+     */
+    get beta()
+    {
+        return this._beta;
+    }
+
+    /**
+     * Beta coefficient (applied to image1)
+     * @param {number} value
+     */
+    set beta(value)
+    {
+        this._beta = +value;
+    }
+
+    /**
+     * Gamma coefficient (brightness control)
+     * @returns {number}
+     */
+    get gamma()
+    {
+        return this._gamma;
+    }
+
+    /**
+     * Gamma coefficient (brightness control)
+     * @param {number} value
+     */
+    set gamma(value)
+    {
+        this._gamma = +value;
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const in0 = this.input('in0').read();
+        const in1 = this.input('in1').read();
+        const image0 = in0.image, image1 = in1.image;
+        const format0 = in0.format, format1 = in1.format;
+        const width = Math.max(image0.width, image1.width);
+        const height = Math.max(image0.height, image1.height);
+        const alpha = this._alpha, beta = this._beta, gamma = this._gamma;
+        const outputTexture = this._tex[0];
+
+        if(format0 != format1)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["NotSupportedError"](`Can't mix images of different formats`);
+
+        gpu.programs.transforms.additiveMix.outputs(width, height, outputTexture);
+        gpu.programs.transforms.additiveMix(image0, image1, alpha, beta, gamma);
+
+        this.output().swrite(outputTexture, format0);
     }
 }
 
@@ -4328,14 +4511,14 @@ class SpeedyPipelineNodeLKKeypointTracker extends _pipeline_node__WEBPACK_IMPORT
     set windowSize(windowSize)
     {
         _utils_utils__WEBPACK_IMPORTED_MODULE_8__["Utils"].assert(windowSize.width == windowSize.height && windowSize.area() > 0);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_8__["Utils"].assert(windowSize.width % 2 == 1 && windowSize.height % 2 == 1);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_8__["Utils"].assert(windowSize.width % 2 == 1 /*&& windowSize.height % 2 == 1*/);
         this._windowSize = windowSize;
 
         const wsize = this._windowSize.width;
         if(wsize > MAX_WINDOW_SIZE)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__["NotSupportedError"](`LK: window ${this._windowSize} is too large!`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__["NotSupportedError"](`LK: window of size ${this._windowSize} is too large!`);
         else if(wsize < MIN_WINDOW_SIZE)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__["NotSupportedError"](`LK: window ${this._windowSize} is too small!`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__["NotSupportedError"](`LK: window of size ${this._windowSize} is too small!`);
     }
 
     /**
@@ -4468,6 +4651,246 @@ class SpeedyPipelineNodeLKKeypointTracker extends _pipeline_node__WEBPACK_IMPORT
         // discard "bad" keypoints
         keypoints.lkDiscard.outputs(encoderLength, encoderLength, outputTexture);
         const goodKeypoints = keypoints.lkDiscard(nextImage, wsize, nextKeypoints, descriptorSize, extraSize, encoderLength);
+
+        // done!
+        this.output().swrite(goodKeypoints, descriptorSize, extraSize, encoderLength);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/keypoints/trackers/ncc.js":
+/*!***********************************************************!*\
+  !*** ./src/core/pipeline/nodes/keypoints/trackers/ncc.js ***!
+  \***********************************************************/
+/*! exports provided: SpeedyPipelineNodeNCCKeypointTracker */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeNCCKeypointTracker", function() { return SpeedyPipelineNodeNCCKeypointTracker; });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _detectors_detector__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../detectors/detector */ "./src/core/pipeline/nodes/keypoints/detectors/detector.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _speedy_size__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../speedy-size */ "./src/core/speedy-size.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../../../../../utils/globals */ "./src/utils/globals.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * ncc.js
+ * Coarse-to-fine NCC-based sparse optical-flow
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// Constants
+const DEFAULT_WINDOW_SIZE = new _speedy_size__WEBPACK_IMPORTED_MODULE_7__["SpeedySize"](31, 31);
+const DEFAULT_PATCH_SIZE = new _speedy_size__WEBPACK_IMPORTED_MODULE_7__["SpeedySize"](8, 8);
+const MAX_WINDOW_SIZE = 31;
+const MIN_WINDOW_SIZE = 11;
+const MAX_PATCH_SIZE = 12;
+const MIN_PATCH_SIZE = 4;
+
+
+/**
+ * Coarse-to-fine NCC-based sparse optical-flow (Normalized Cross Correlation)
+ */
+class SpeedyPipelineNodeNCCKeypointTracker extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNode"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, 10, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__["InputPort"])('previousImage').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineMessageType"].Image).satisfying(
+                msg => msg.format === _utils_types__WEBPACK_IMPORTED_MODULE_6__["ImageFormat"].GREY
+            ),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__["InputPort"])('nextImage').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineMessageType"].Image).satisfying(
+                msg => msg.format === _utils_types__WEBPACK_IMPORTED_MODULE_6__["ImageFormat"].GREY
+            ),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__["InputPort"])('previousKeypoints').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineMessageType"].Keypoints),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineMessageType"].Keypoints),
+        ]);
+
+        /** @type {SpeedySize} size of the search window */
+        this._windowSize = DEFAULT_WINDOW_SIZE;
+
+        /** @type {SpeedySize} size of the template, i.e., the patch around the keypoint */
+        this._patchSize = DEFAULT_PATCH_SIZE;
+    }
+
+    /**
+     * Window size (use odd numbers)
+     * @returns {SpeedySize}
+     */
+    get windowSize()
+    {
+        return this._windowSize;
+    }
+
+    /**
+     * Window size (use odd numbers)
+     * @param {SpeedySize} windowSize must be a square window
+     */
+    set windowSize(windowSize)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_8__["Utils"].assert(windowSize.width == windowSize.height && windowSize.area() > 0);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_8__["Utils"].assert(windowSize.width % 2 == 1 /*&& windowSize.height % 2 == 1*/);
+        this._windowSize = windowSize;
+
+        const wsize = this._windowSize.width;
+        if(wsize > MAX_WINDOW_SIZE)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__["NotSupportedError"](`NCC: window of size ${this._windowSize} is too large!`);
+        else if(wsize < MIN_WINDOW_SIZE)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__["NotSupportedError"](`NCC: window of size ${this._windowSize} is too small!`);
+    }
+
+    /**
+     * Patch size
+     * @returns {SpeedySize}
+     */
+    get patchSize()
+    {
+        return this._patchSize;
+    }
+
+    /**
+     * Patch size
+     * @param {SpeedySize} patchSize must be square
+     */
+    set patchSize(patchSize)
+    {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_8__["Utils"].assert(patchSize.width === patchSize.height && patchSize.area() > 0);
+        this._patchSize = patchSize;
+
+        const psize = this._patchSize.width;
+        if(psize > MAX_PATCH_SIZE)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__["NotSupportedError"](`NCC: patch of size ${this._patchSize} is too large!`);
+        else if(psize < MIN_PATCH_SIZE)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__["NotSupportedError"](`NCC: patch of size ${this._patchSize} is too small!`);
+    }
+
+    /**
+     * Pyramid operation: reduce (50% of size)
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyDrawableTexture} outtex output texture with two mipmap levels (0 and 1)
+     * @param {SpeedyDrawableTexture} intex input texture
+     * @param {SpeedyDrawableTexture} halftex temporary texture that will store the reduce()'d input texture (50% size)
+     * @param {SpeedyDrawableTexture} tmptex temporary texture (100% size) used to compute reduce()
+     * @returns {SpeedyDrawableTexture} outtex
+     */
+    _reduce(gpu, outtex, intex, halftex, tmptex)
+    {
+        const pyramids = gpu.programs.pyramids;
+        const width = intex.width, height = intex.height;
+        const halfWidth = Math.max(1, width >>> 1), halfHeight = Math.max(1, height >>> 1);
+
+        (pyramids.smoothX.outputs(width, height, tmptex))(intex);
+        (pyramids.smoothY.outputs(width, height, outtex))(tmptex);
+        (pyramids.downsample2.outputs(halfWidth, halfHeight, halftex))(outtex);
+
+        outtex.clear();
+        intex.copyTo(outtex);
+        //halftex.copyTo(outtex, 1);
+        outtex.generateMipmaps([intex, halftex]);
+
+        return outtex;
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input('previousKeypoints').read();
+        const previousImage = this.input('previousImage').read().image;
+        const nextImage = this.input('nextImage').read().image;
+        const previousKeypoints = encodedKeypoints;
+        const wsize = this._windowSize.width; // square window
+        const psize = this._patchSize.width; // square patch
+        const outputTexture = this._tex[0];
+
+        // compute mipmap levels 0 and 1 of previousImage
+        const pyrPreviousImage = this._tex[1];
+        const halfPreviousImage = this._tex[2];
+        const tmpPreviousImage = this._tex[3];
+        this._reduce(gpu, pyrPreviousImage, previousImage, halfPreviousImage, tmpPreviousImage);
+
+        // compute mipmap levels 0 and 1 of nextImage
+        const pyrNextImage = this._tex[4];
+        const halfNextImage = this._tex[5];
+        const tmpNextImage = this._tex[6];
+        this._reduce(gpu, pyrNextImage, nextImage, halfNextImage, tmpNextImage);
+
+        // initialize flow textures
+        const maxKeypoints = _detectors_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodeKeypointDetector"].encoderCapacity(descriptorSize, extraSize, encoderLength);
+        const nccEncoderLength = Math.max(1, Math.ceil(Math.sqrt(maxKeypoints)));
+        const flow0 = this._tex[7], flow1 = this._tex[8];
+        gpu.programs.keypoints.ncc.outputs(nccEncoderLength, nccEncoderLength, flow1, flow0);
+        //flow0.clear(); flow1.clear();
+        //lk.outputs(lkEncoderLength, lkEncoderLength, tex[0], tex[1]);
+
+        // compute the search radii ri for lod = i, i = 0,1
+        // note that 2 * r1 + 1 = (1/2^lod) * wsize
+        let r0 = 2; // fair enough
+        const r1 = Math.max(r0, (0.25 * wsize - 0.5) | 0);
+
+        // compute the patch size pi for lod = i, i = 0,1
+        let p0 = psize;
+        const p1 = Math.max(1, p0 >>> 1);
+
+        // coarse flow estimation (lod = 1)
+        let flow = flow0.clear();
+        //flow = gpu.programs.keypoints.ncc(flow, previousKeypoints, pyrPreviousImage, pyrNextImage, 2*r1+1, p1, 1, descriptorSize, extraSize, encoderLength);
+
+        // fine flow estimation (lod = 0)
+        r0 = 15;
+        p0 = 7;
+        flow = gpu.programs.keypoints.ncc(flow, previousKeypoints, pyrPreviousImage, pyrNextImage, 2*r0+1, p0, 0, descriptorSize, extraSize, encoderLength);
+
+        // transfer optical-flow to nextKeypoints
+        gpu.programs.keypoints.transferFlow.outputs(encoderLength, encoderLength, this._tex[9]);
+        const nextKeypoints = gpu.programs.keypoints.transferFlow(flow, previousKeypoints, descriptorSize, extraSize, encoderLength);
+
+        // discard "bad" keypoints
+        gpu.programs.keypoints.lkDiscard.outputs(encoderLength, encoderLength, outputTexture);
+        const goodKeypoints = gpu.programs.keypoints.lkDiscard(pyrNextImage, wsize, nextKeypoints, descriptorSize, extraSize, encoderLength);
 
         // done!
         this.output().swrite(goodKeypoints, descriptorSize, extraSize, encoderLength);
@@ -9222,13 +9645,10 @@ class SpeedyPoint2
     constructor(x, y)
     {
         /** @type {number} x coordinate */
-        this.x = +x;
+        this._x = +x;
 
         /** @type {number} y coordinate */
-        this.y = +y;
-
-        // make it immutable
-        return Object.freeze(this);
+        this._y = +y;
     }
 
 
@@ -9236,6 +9656,42 @@ class SpeedyPoint2
     //
     // ===== METHODS =====
     //
+
+    /**
+     * x-coordinate
+     * @returns {number}
+     */
+    get x()
+    {
+        return this._x;
+    }
+
+    /**
+     * x-coordinate
+     * @param {number} value
+     */
+    set x(value)
+    {
+        this._x = +value;
+    }
+
+    /**
+     * y-coordinate
+     * @returns {number}
+     */
+    get y()
+    {
+        return this._y;
+    }
+
+    /**
+     * y-coordinate
+     * @param {number} value
+     */
+    set y(value)
+    {
+        this._y = +value;
+    }
 
     /**
      * Convert to string
@@ -9323,13 +9779,10 @@ class SpeedySize
     constructor(width, height)
     {
         /** @type {number} width */
-        this.width = Math.max(0, +width);
+        this._width = Math.max(0, +width);
 
         /** @type {number} height */
-        this.height = Math.max(0, +height);
-
-        // make it immutable
-        return Object.freeze(this);
+        this._height = Math.max(0, +height);
     }
 
 
@@ -9337,6 +9790,42 @@ class SpeedySize
     //
     // ===== METHODS =====
     //
+
+    /**
+     * Width
+     * @returns {number}
+     */
+    get width()
+    {
+        return this._width;
+    }
+
+    /**
+     * Width
+     * @param {number} value
+     */
+    set width(value)
+    {
+        this._width = Math.max(0, +value);
+    }
+
+    /**
+     * Height
+     * @returns {number}
+     */
+    get height()
+    {
+        return this._height;
+    }
+
+    /**
+     * Height
+     * @param {number} value
+     */
+    set height(value)
+    {
+        this._height = Math.max(0, +value);
+    }
 
     /**
      * Convert to string
@@ -9413,13 +9902,10 @@ class SpeedyVector2
     constructor(x, y)
     {
         /** @type {number} x coordinate */
-        this.x = +x;
+        this._x = +x;
 
         /** @type {number} y coordinate */
-        this.y = +y;
-
-        // make it immutable
-        return Object.freeze(this);
+        this._y = +y;
     }
 
 
@@ -9427,6 +9913,42 @@ class SpeedyVector2
     //
     // ===== METHODS =====
     //
+
+    /**
+     * x-coordinate
+     * @returns {number}
+     */
+    get x()
+    {
+        return this._x;
+    }
+
+    /**
+     * x-coordinate
+     * @param {number} value
+     */
+    set x(value)
+    {
+        this._x = +value;
+    }
+
+    /**
+     * y-coordinate
+     * @returns {number}
+     */
+    get y()
+    {
+        return this._y;
+    }
+
+    /**
+     * y-coordinate
+     * @param {number} value
+     */
+    set y(value)
+    {
+        this._y = +value;
+    }
 
     /**
      * Convert to string
@@ -9624,7 +10146,7 @@ class Speedy
      */
     static get version()
     {
-        return "0.8.0";
+        return "0.8.1-wip";
     }
 
     /**
@@ -9756,7 +10278,7 @@ X2ludmVyc2UzACUNTWF0MzJfcXJfZnVsbAAsEE1hdDMyX3FyX3JlZHVjZWQALwxNYXQzMl9xcl9v
 bHMAMBBNYXQzMl9xcl9pbnZlcnNlADMVTWF0MzJfaG9tb2dyYXBoeV9kbHQ0ADQWTWF0MzJfaG9t
 b2dyYXBoeV9uZGx0NAA2FE1hdDMyX2hvbW9ncmFwaHlfZGx0ADcVTWF0MzJfaG9tb2dyYXBoeV9u
 ZGx0ADgYTWF0MzJfcHJhbnNhY19ob21vZ3JhcGh5ADobTWF0MzJfdHJhbnNmb3JtX3BlcnNwZWN0
-aXZlADwJCgEAQQELBA8REzsKs5cBOiMBAX8gALwiAUGAgID8B3FBgICA/AdGIAFB////A3FBAEdx
+aXZlADwJCgEAQQELBA8REzsKqJcBOiMBAX8gALwiAUGAgID8B3FBgICA/AdGIAFB////A3FBAEdx
 C2kBAX9BAEEAKAKgl4CAAEEBajYCoJeAgABBAEEAKAKMl4CAACIBQQdxIAFqIgEgAGo2AoyXgIAA
 AkBB0JeEgABBB3EgAWpB0JeEgABqIgA/AEEQdEkNAEGEiICAABCAgICAAEEADwsgAAt1AQJ/QQAh
 AkEAQQAoAqCXgIAAQQFqNgKgl4CAAEEAQQAoAoyXgIAAIgNBB3EgA2oiAyAAajYCjJeAgAACQAJA
@@ -10042,7 +10564,7 @@ AnRqIAc4AgAgBiAKIAxBAXRqQQJ0aiAIIAWUOAIAIAYgCkEDdGpBADYCACAGIAwgCkEBdGpBAnRq
 QQA2AgAgBiALQQN0akGAgID8AzYCACADKAIAIgYgDTgCACAGIANBFGooAgAiDEECdGpBADYCACAG
 IAxBA3RqIAk4AgAgBiADKAIQIgpBAnRqQQA2AgAgBiAKIAxqIgtBAnRqIA04AgAgBiAKIAxBAXRq
 QQJ0aiAIOAIAIAYgCkEDdGpBADYCACAGIAwgCkEBdGpBAnRqQQA2AgAgBiALQQN0akGAgID8AzYC
-AAukFAIcfw19I4CAgIAAQRBrIgckgICAgAACQAJAIAAoAghBA0cNACAAKAIMQQNHDQAgAigCCEEC
+AAuZFAIcfw19I4CAgIAAQRBrIgckgICAgAACQAJAIAAoAghBA0cNACAAKAIMQQNHDQAgAigCCEEC
 Rw0AIAIoAgwiCEEESA0AIAMoAghBAkcNACADKAIMIAhHDQACQCABRQ0AIAEoAghBAUcNASABKAIM
 IAhHDQELIARBAUgNACAFQQFIDQAgBkMAAAAAYA0BC0HOlICAABCAgICAACACKAIMIQgLAkAgAUUN
 ACABQwAAAAAQm4CAgAAaCyAIQQJ0IglB8JSAgAAQhYCAgAAhCiAJQY+VgIAAEIWAgIAAIAgQjYCA
@@ -10064,74 +10586,74 @@ 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
-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
-IAQqAgAiDyAJlJOUkiAPIAuUIAcgDpSTIAQgCCAMakECdGoqAgAiEJSSi7tEje21oPfGsD5jDQAC
-QCADQQFIDQAgACgCEEECdCECIAEoAhBBAnQhCCAAQRRqKAIAQQJ0IQwgAUEUaigCAEECdCERIAAo
-AgAhBCABKAIAIQUDQCAEIAogDyAFKgIAIhKUIAcgBSAIaioCACITlJKSIBAgBiASlCANIBOUkpIi
-FJU4AgAgBCACaiAJIA4gEpQgCyATlJKSIBSVOAIAIAQgDGohBCAFIBFqIQUgA0F/aiIDDQALCyAA
-DwsgAEEAKgKAiICAABCbgICAAAsLzg8DAEGACAuKDwAA+H9PdXQgb2YgbWVtb3J5IQBEb3VibGUg
-ZnJlZQBBc3NlcnRpb24gZmFpbGVkIGF0IG1hdDMyLmM6NjEAT3V0IG9mIG1lbW9yeSBhdCBtYXQz
-Mi5jOjYzAEFzc2VydGlvbiBmYWlsZWQgYXQgbWF0MzIuYzo4NABPdXQgb2YgbWVtb3J5IGF0IG1h
-dDMyLmM6ODYAT3V0IG9mIG1lbW9yeSBhdCBtYXQzMi5jOjg5AE91dCBvZiBtZW1vcnkgYXQgbWF0
-MzIuYzoxMzYAAADACwAAAQAAAAAAAAAAAAAAAQAAAAEAAAACAAAARG91YmxlIGZyZWUgYXQgbWF0
-MzIuYzoxNDkAQXNzZXJ0aW9uIGZhaWxlZCBhdCBtYXQzMi5jOjE4NABBc3NlcnRpb24gZmFpbGVk
-IGF0IG1hdDMyLmM6MTg4AEFzc2VydGlvbiBmYWlsZWQgYXQgbWF0MzIuYzoyNzUARG91YmxlIGZy
-ZWUgYXQgbWF0MzIuYzoyOQBBc3NlcnRpb24gZmFpbGVkIGF0IGFyaXRobWV0aWMzMi5jOjM2AEFz
-c2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6NTgAQXNzZXJ0aW9uIGZhaWxlZCBhdCBh
-cml0aG1ldGljMzIuYzo4MABBc3NlcnRpb24gZmFpbGVkIGF0IGFyaXRobWV0aWMzMi5jOjk5AEFz
-c2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6MTIxAEFzc2VydGlvbiBmYWlsZWQgYXQg
-YXJpdGhtZXRpYzMyLmM6MTQzAEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6MTY4
-AEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6MTg5AEFzc2VydGlvbiBmYWlsZWQg
-YXQgYXJpdGhtZXRpYzMyLmM6MjE4AEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6
-MjcxAEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6MzIyAEFzc2VydGlvbiBmYWls
-ZWQgYXQgYXJpdGhtZXRpYzMyLmM6MzU2AEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMy
-LmM6Mzc4AEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6NDIwAEFzc2VydGlvbiBm
-YWlsZWQgYXQgYXJpdGhtZXRpYzMyLmM6NDM2AEFzc2VydGlvbiBmYWlsZWQgYXQgcXIzMi5jOjI2
-MQBBc3NlcnRpb24gZmFpbGVkIGF0IHFyMzIuYzoyNjUAQXNzZXJ0aW9uIGZhaWxlZCBhdCBxcjMy
-LmM6Mjg2AEFzc2VydGlvbiBmYWlsZWQgYXQgcXIzMi5jOjI5MABBc3NlcnRpb24gZmFpbGVkIGF0
-IHFyMzIuYzozMjEAQXNzZXJ0aW9uIGZhaWxlZCBhdCBxcjMyLmM6MzI1AEFzc2VydGlvbiBmYWls
-ZWQgYXQgcXIzMi5jOjM3OQBPdXQgb2YgbWVtb3J5IGF0IHFyMzIuYzozNgBBc3NlcnRpb24gZmFp
-bGVkIGF0IHFyMzIuYzo2OQBBc3NlcnRpb24gZmFpbGVkIGF0IHFyMzIuYzo3MwBBc3NlcnRpb24g
-ZmFpbGVkIGF0IHFyMzIuYzoxODQARG91YmxlIGZyZWUgYXQgcXIzMi5jOjU1AEFzc2VydGlvbiBm
-YWlsZWQgYXQgcXIzMi5jOjE0OABBc3NlcnRpb24gZmFpbGVkIGF0IHFyMzIuYzoyMjQAQXNzZXJ0
-aW9uIGZhaWxlZCBhdCBxcjMyLmM6MjI4AEFzc2VydGlvbiBmYWlsZWQgYXQgaG9tb2dyYXBoeTMy
-LmM6MzI0AEFzc2VydGlvbiBmYWlsZWQgYXQgaG9tb2dyYXBoeTMyLmM6MzU5AEFzc2VydGlvbiBm
-YWlsZWQgYXQgaG9tb2dyYXBoeTMyLmM6NDQ0AEFzc2VydGlvbiBmYWlsZWQgYXQgaG9tb2dyYXBo
-eTMyLmM6NTI0AEFzc2VydGlvbiBmYWlsZWQgYXQgaG9tb2dyYXBoeTMyLmM6MjQyAEFzc2VydGlv
-biBmYWlsZWQgYXQgcmFuc2FjMzIuYzo3MABPdXQgb2YgbWVtb3J5IGF0IHJhbnNhYzMyLmM6ODMA
-T3V0IG9mIG1lbW9yeSBhdCByYW5zYWMzMi5jOjg3AE91dCBvZiBtZW1vcnkgYXQgcmFuc2FjMzIu
-Yzo5MgBPdXQgb2YgbWVtb3J5IGF0IHJhbnNhYzMyLmM6MTA2AERvdWJsZSBmcmVlIGF0IHJhbnNh
-YzMyLmM6MjM3AERvdWJsZSBmcmVlIGF0IHJhbnNhYzMyLmM6MjQ0AERvdWJsZSBmcmVlIGF0IHJh
-bnNhYzMyLmM6MjQ3AERvdWJsZSBmcmVlIGF0IHJhbnNhYzMyLmM6MjUwAEFzc2VydGlvbiBmYWls
-ZWQgYXQgdHJhbnNmb3JtMzIuYzozOQAAQYwXCwwIAAAAsAsAAAEAAAAAQaAXCyQAAAAAAAAAAAAA
-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+hICAgABBABCLgICAABogFkEBdiEWCwJAIBZBAUcNAEEAIRcMAwsCQCAWQQFIDQAgAygCACIMIAMo
+AhQgCyASQQJ0aigCACISbCIPQQJ0aioCACEkIAIoAgAiESACKAIUIBJsIhJBAnRqKgIAIQYgDCAP
+IAMoAhBqQQJ0aioCACElIBEgEiACKAIQakECdGoqAgAhJiAVIREgFiEJA0AgEUEEaiIMIAwoAgAg
+ESgCACIPKAIAIgwgD0EUaigCACISQQF0Ig0gDygCECIPakECdGoqAgAgBiAMIA9BAnRqKgIAlCAm
+IAwgEiAPakECdGoqAgCUkpIgDCANIA9BAXQiEGpBAnRqKgIAIAYgDCAPQQN0aioCAJQgJiAMIBAg
+EmpBAnRqKgIAlJKSIieVICWTIiggKJQgDCASQQN0aioCACAGIAwqAgCUICYgDCASQQJ0aioCAJSS
+kiAnlSAkkyInICeUkiAjX2o2AgAgEUEIaiERIAlBf2oiCQ0ACwsgHCAIRw0ACwsgFkECSA0AIBVB
+DGohDEEAIRdBASESA0AgEiAXIAwoAgAgFSAXQQN0aigCBEobIRcgDEEIaiEMIBYgEkEBaiISRw0A
+CwsCQCAIQQFIDQAgFSAXQQN0aigCACIPKAIAIgwgDygCECISQQN0aioCACEkIAwgEkECdGoqAgAh
+JSAMIA9BFGooAgAiD0EDdGoqAgAhKSAMIA9BAnRqKgIAISogDCASQQF0IhEgD2pBAnRqKgIAISsg
+DCAPIBJqQQJ0aioCACEsIAwgD0EBdCIPIBFqQQJ0aioCACEtIAwgDyASakECdGoqAgAhLiAMKgIA
+IS8gAygCACEPIAIoAgAhEUEAIRJBACEMA0ACQCApIC8gESACKAIUIAxsIglBAnRqKgIAIgaUICog
+ESAJIAIoAhBqQQJ0aioCACImlJKSIC0gJCAGlCArICaUkpIiJ5UgDyADKAIUIAxsIglBAnRqKgIA
+kyIoICiUIC4gJSAGlCAsICaUkpIgJ5UgDyAJIAMoAhBqQQJ0aioCAJMiBiAGlJIgI19BAXMNACAK
+IBJBAnRqIAw2AgAgEkEBaiESIAFFDQAgASgCACABKAIUIAxsQQJ0akGAgID8AzYCAAsgCCAMQQFq
+IgxHDQALIBJBA0wNAEECIBIQkoCAgAAhFkECIBIQkoCAgAAiGSgCEEECdCEXIBZBFGooAgBBAnQh
+HCAWKAIQQQJ0IR0gGUEUaigCAEECdCEeIBkoAgAhDCADQRRqKAIAIR8gFigCACEPIAJBFGooAgAh
+ICADKAIQISEgAygCACEIIAIoAhAhAyACKAIAIQkgCiERA0AgDyAJICAgESgCACINbCIQQQJ0aigC
+ADYCACAPIB1qIAkgAyAQakECdGooAgA2AgAgDCAIIB8gDWwiDUECdGooAgA2AgAgDCAXaiAIICEg
+DWpBAnRqKAIANgIAIAwgHmohDCAPIBxqIQ8gEUEEaiERIBJBf2oiEg0ACyAAIBYgGRC4gICAABog
+GRCXgICAABogFhCXgICAABoMAQsgAEEAKgKAiICAABCbgICAABoLAkAgBEEBSA0AIARBAWohEiAE
+QQN0IBVqQXhqIQwDQCAMKAIAEJeAgIAAGiAMQXhqIQwgEkF/aiISQQFKDQALCyAVQe2VgIAAEIeA
+gIAAGiAUEJeAgIAAGiATEJeAgIAAGiAOQYuWgIAAEIeAgIAAGiALQamWgIAAEIeAgIAAGiAKQceW
+gIAAEIeAgIAAGiAHQRBqJICAgIAAIAALDQAgASgCBCAAKAIEawviAwgDfwJ9AX8DfQF/BH0BfwN9
+AkACQCAAKAIIQQJHDQAgASgCCEECRw0AIAAoAgwiAyABKAIMRw0AIAIoAghBA0cNACACKAIMQQNG
+DQELQeWWgIAAEICAgIAAIAEoAgwhAwsCQCACKAIAIgQgAigCECIFQQN0aioCACIGIAQgAkEUaigC
+ACICQQJ0aioCACIHIAQgAkEBdCIIIAVqQQJ0aioCACIJlCAEIAJBA3RqKgIAIgogBCACIAVqQQJ0
+aioCACILlJOUIAQgBUEBdCIMIAJqQQJ0aioCACINIAogBCAFQQJ0aioCACIOlCAEKgIAIg8gCZST
+lJIgDyALlCAHIA6UkyAEIAggDGpBAnRqKgIAIhCUkou7RI3ttaD3xrA+Yw0AAkAgA0EBSA0AIAAo
+AhBBAnQhAiABKAIQQQJ0IQggAEEUaigCAEECdCEMIAFBFGooAgBBAnQhESAAKAIAIQQgASgCACEF
+A0AgBCAKIA8gBSoCACISlCAHIAUgCGoqAgAiE5SSkiAQIAYgEpQgDSATlJKSIhSVOAIAIAQgAmog
+CSAOIBKUIAsgE5SSkiAUlTgCACAEIAxqIQQgBSARaiEFIANBf2oiAw0ACwsgAA8LIABBACoCgIiA
+gAAQm4CAgAALC84PAwBBgAgLig8AAPh/T3V0IG9mIG1lbW9yeSEARG91YmxlIGZyZWUAQXNzZXJ0
+aW9uIGZhaWxlZCBhdCBtYXQzMi5jOjYxAE91dCBvZiBtZW1vcnkgYXQgbWF0MzIuYzo2MwBBc3Nl
+cnRpb24gZmFpbGVkIGF0IG1hdDMyLmM6ODQAT3V0IG9mIG1lbW9yeSBhdCBtYXQzMi5jOjg2AE91
+dCBvZiBtZW1vcnkgYXQgbWF0MzIuYzo4OQBPdXQgb2YgbWVtb3J5IGF0IG1hdDMyLmM6MTM2AAAA
+wAsAAAEAAAAAAAAAAAAAAAEAAAABAAAAAgAAAERvdWJsZSBmcmVlIGF0IG1hdDMyLmM6MTQ5AEFz
+c2VydGlvbiBmYWlsZWQgYXQgbWF0MzIuYzoxODQAQXNzZXJ0aW9uIGZhaWxlZCBhdCBtYXQzMi5j
+OjE4OABBc3NlcnRpb24gZmFpbGVkIGF0IG1hdDMyLmM6Mjc1AERvdWJsZSBmcmVlIGF0IG1hdDMy
+LmM6MjkAQXNzZXJ0aW9uIGZhaWxlZCBhdCBhcml0aG1ldGljMzIuYzozNgBBc3NlcnRpb24gZmFp
+bGVkIGF0IGFyaXRobWV0aWMzMi5jOjU4AEFzc2VydGlvbiBmYWlsZWQgYXQgYXJpdGhtZXRpYzMy
+LmM6ODAAQXNzZXJ0aW9uIGZhaWxlZCBhdCBhcml0aG1ldGljMzIuYzo5OQBBc3NlcnRpb24gZmFp
+bGVkIGF0IGFyaXRobWV0aWMzMi5jOjEyMQBBc3NlcnRpb24gZmFpbGVkIGF0IGFyaXRobWV0aWMz
+Mi5jOjE0MwBBc3NlcnRpb24gZmFpbGVkIGF0IGFyaXRobWV0aWMzMi5jOjE2OABBc3NlcnRpb24g
+ZmFpbGVkIGF0IGFyaXRobWV0aWMzMi5jOjE4OQBBc3NlcnRpb24gZmFpbGVkIGF0IGFyaXRobWV0
+aWMzMi5jOjIxOABBc3NlcnRpb24gZmFpbGVkIGF0IGFyaXRobWV0aWMzMi5jOjI3MQBBc3NlcnRp
+b24gZmFpbGVkIGF0IGFyaXRobWV0aWMzMi5jOjMyMgBBc3NlcnRpb24gZmFpbGVkIGF0IGFyaXRo
+bWV0aWMzMi5jOjM1NgBBc3NlcnRpb24gZmFpbGVkIGF0IGFyaXRobWV0aWMzMi5jOjM3OABBc3Nl
+cnRpb24gZmFpbGVkIGF0IGFyaXRobWV0aWMzMi5jOjQyMABBc3NlcnRpb24gZmFpbGVkIGF0IGFy
+aXRobWV0aWMzMi5jOjQzNgBBc3NlcnRpb24gZmFpbGVkIGF0IHFyMzIuYzoyNjEAQXNzZXJ0aW9u
+IGZhaWxlZCBhdCBxcjMyLmM6MjY1AEFzc2VydGlvbiBmYWlsZWQgYXQgcXIzMi5jOjI4NgBBc3Nl
+cnRpb24gZmFpbGVkIGF0IHFyMzIuYzoyOTAAQXNzZXJ0aW9uIGZhaWxlZCBhdCBxcjMyLmM6MzIx
+AEFzc2VydGlvbiBmYWlsZWQgYXQgcXIzMi5jOjMyNQBBc3NlcnRpb24gZmFpbGVkIGF0IHFyMzIu
+YzozNzkAT3V0IG9mIG1lbW9yeSBhdCBxcjMyLmM6MzYAQXNzZXJ0aW9uIGZhaWxlZCBhdCBxcjMy
+LmM6NjkAQXNzZXJ0aW9uIGZhaWxlZCBhdCBxcjMyLmM6NzMAQXNzZXJ0aW9uIGZhaWxlZCBhdCBx
+cjMyLmM6MTg0AERvdWJsZSBmcmVlIGF0IHFyMzIuYzo1NQBBc3NlcnRpb24gZmFpbGVkIGF0IHFy
+MzIuYzoxNDgAQXNzZXJ0aW9uIGZhaWxlZCBhdCBxcjMyLmM6MjI0AEFzc2VydGlvbiBmYWlsZWQg
+YXQgcXIzMi5jOjIyOABBc3NlcnRpb24gZmFpbGVkIGF0IGhvbW9ncmFwaHkzMi5jOjMyNABBc3Nl
+cnRpb24gZmFpbGVkIGF0IGhvbW9ncmFwaHkzMi5jOjM1OQBBc3NlcnRpb24gZmFpbGVkIGF0IGhv
+bW9ncmFwaHkzMi5jOjQ0NABBc3NlcnRpb24gZmFpbGVkIGF0IGhvbW9ncmFwaHkzMi5jOjUyNABB
+c3NlcnRpb24gZmFpbGVkIGF0IGhvbW9ncmFwaHkzMi5jOjI0MgBBc3NlcnRpb24gZmFpbGVkIGF0
+IHJhbnNhYzMyLmM6NzAAT3V0IG9mIG1lbW9yeSBhdCByYW5zYWMzMi5jOjgzAE91dCBvZiBtZW1v
+cnkgYXQgcmFuc2FjMzIuYzo4NwBPdXQgb2YgbWVtb3J5IGF0IHJhbnNhYzMyLmM6OTIAT3V0IG9m
+IG1lbW9yeSBhdCByYW5zYWMzMi5jOjEwNgBEb3VibGUgZnJlZSBhdCByYW5zYWMzMi5jOjIzNwBE
+b3VibGUgZnJlZSBhdCByYW5zYWMzMi5jOjI0NABEb3VibGUgZnJlZSBhdCByYW5zYWMzMi5jOjI0
+NwBEb3VibGUgZnJlZSBhdCByYW5zYWMzMi5jOjI1MABBc3NlcnRpb24gZmFpbGVkIGF0IHRyYW5z
+Zm9ybTMyLmM6MzkAAEGMFwsMCAAAALALAAABAAAAAEGgFwskAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAA
 `
 
 /***/ }),
@@ -10570,7 +11092,7 @@ const multiscaleNonMaxSuppression = Object(_shader_declaration__WEBPACK_IMPORTED
                                    .withDefines({ 'MULTISCALE': 1 })
                                    .withArguments('image', 'lodStep');
 
-// LK optical-flow
+// Keypoint tracking & optical-flow
 const lk = [7, 11, 15, 21].reduce((obj, win) => ((obj[win] = 
                Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/lk.glsl')
                .withDefines({ 'MAX_WINDOW_SIZE': win })
@@ -10582,6 +11104,11 @@ const lkDiscard = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["impor
 
 const transferFlow = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/transfer-flow.glsl')
                      .withArguments('encodedFlow', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
+
+const ncc = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/ncc.glsl')
+            .withDefines({ 'MAX_WINDOW_SIZE_LOD1': 15, 'MAX_PATCH_SIZE': 12 })
+            .withArguments('encodedFlow', 'prevKeypoints', 'prevPyramid', 'nextPyramid', 'windowSize', 'patchSize', 'level', 'descriptorSize', 'extraSize', 'encoderLength');
+
 
 // Keypoint sorting
 const sortCreatePermutation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/sort-createperm.glsl')
@@ -10710,6 +11237,9 @@ class SpeedyProgramGroupKeypoints extends _speedy_program_group__WEBPACK_IMPORTE
             })
             .declare('lkDiscard', lkDiscard)
             .declare('transferFlow', transferFlow)
+            .declare('ncc', ncc, {
+                ...this.program.usesPingpongRendering()
+            })
 
             //
             // Keypoint sorting
@@ -10906,6 +11436,9 @@ const resizeBI = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["import
                  })
                  .withArguments('image');
 
+// Additive mix (TODO create a new program group?)
+const additiveMix = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_1__["importShader"])('transforms/additive-mix.glsl')
+                    .withArguments('image0', 'image1', 'alpha', 'beta', 'gamma');
 
 /**
  * SpeedyProgramGroupTransforms
@@ -10924,6 +11457,7 @@ class SpeedyProgramGroupTransforms extends _speedy_program_group__WEBPACK_IMPORT
             .declare('warpPerspective', warpPerspective)
             .declare('resizeNN', resizeNN)
             .declare('resizeBI', resizeBI)
+            .declare('additiveMix', additiveMix)
         ;
     }
 }
@@ -11618,6 +12152,7 @@ var map = {
 	"./keypoints/lk-discard.glsl": "./src/gpu/shaders/keypoints/lk-discard.glsl",
 	"./keypoints/lk.glsl": "./src/gpu/shaders/keypoints/lk.glsl",
 	"./keypoints/mix-keypoints.glsl": "./src/gpu/shaders/keypoints/mix-keypoints.glsl",
+	"./keypoints/ncc.glsl": "./src/gpu/shaders/keypoints/ncc.glsl",
 	"./keypoints/nonmax-suppression.glsl": "./src/gpu/shaders/keypoints/nonmax-suppression.glsl",
 	"./keypoints/orb-descriptor.glsl": "./src/gpu/shaders/keypoints/orb-descriptor.glsl",
 	"./keypoints/orb-orientation.glsl": "./src/gpu/shaders/keypoints/orb-orientation.glsl",
@@ -11630,6 +12165,7 @@ var map = {
 	"./keypoints/upload-keypoints.glsl": "./src/gpu/shaders/keypoints/upload-keypoints.glsl",
 	"./pyramids/downsample2.glsl": "./src/gpu/shaders/pyramids/downsample2.glsl",
 	"./pyramids/upsample2.glsl": "./src/gpu/shaders/pyramids/upsample2.glsl",
+	"./transforms/additive-mix.glsl": "./src/gpu/shaders/transforms/additive-mix.glsl",
 	"./transforms/resize.glsl": "./src/gpu/shaders/transforms/resize.glsl",
 	"./transforms/warp-perspective.glsl": "./src/gpu/shaders/transforms/warp-perspective.glsl",
 	"./utils/copy-components.glsl": "./src/gpu/shaders/utils/copy-components.glsl",
@@ -12195,6 +12731,17 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoint
 
 /***/ }),
 
+/***/ "./src/gpu/shaders/keypoints/ncc.glsl":
+/*!********************************************!*\
+  !*** ./src/gpu/shaders/keypoints/ncc.glsl ***!
+  \********************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D encodedFlow;\nuniform sampler2D prevKeypoints;\nuniform sampler2D prevPyramid;\nuniform sampler2D nextPyramid;\nuniform int windowSize;\nuniform int patchSize;\nuniform int level;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#if !defined(MAX_WINDOW_SIZE_LOD1)\n#error Must define MAX_WINDOW_SIZE_LOD1\n#elif !defined(MAX_PATCH_SIZE)\n#define Must define MAX_PATCH_SIZE\n#endif\nconst int MAX_WINDOW_RADIUS = (MAX_WINDOW_SIZE_LOD1 - 1) / 2;\nconst int WINDOW_BUFFER_STRIDE = MAX_WINDOW_SIZE_LOD1 + (MAX_PATCH_SIZE - 1);\nconst int WINDOW_BUFFER_SIZE = WINDOW_BUFFER_STRIDE * WINDOW_BUFFER_STRIDE;\nfloat windowBuffer[WINDOW_BUFFER_SIZE];\nfloat windowMean;\nconst int PATCH_BUFFER_SIZE = MAX_PATCH_SIZE * MAX_PATCH_SIZE;\nfloat patchBuffer[PATCH_BUFFER_SIZE];\nfloat patchMean;\n#define windowIndex(i, j) (((j) + MAX_WINDOW_RADIUS) * WINDOW_BUFFER_STRIDE + ((i) + MAX_WINDOW_RADIUS))\n#define patchIndex(i, j) (((j) * MAX_PATCH_SIZE) + (i))\n#define windowRadius() ((windowSize - 1) / 2)\n#define windowPixel(i, j) windowBuffer[windowIndex((i), (j))]\n#define patchPixel(i, j) patchBuffer[patchIndex((i), (j))]\nvoid readWindow(vec2 center, float lod)\n{\nivec2 pyrBaseSize = textureSize(nextPyramid, 0);\nfloat pot = exp2(lod);\nint r = windowRadius();\nint i, j;\nivec2 offset;\nfloat sum = 0.0f;\nfor(j = 0; j < windowSize; j++) {\nfor(i = 0; i < windowSize; i++) {\noffset = ivec2(i-r, j-r);\nsum += (windowPixel(i-r, j-r) = pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g);\n}\n}\nfor(j = 1; j < patchSize; j++) {\nfor(i = 0; i < windowSize; i++) {\noffset = ivec2(i-r, r+j);\nsum += (windowPixel(i-r, r+j) = pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g);\nsum += (windowPixel(r+j, i-r) = pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset.yx, pyrBaseSize).g);\n}\n}\nfor(j = 1; j < patchSize; j++) {\nfor(i = 1; i < patchSize; i++) {\noffset = ivec2(r+i, r+j);\nsum += (windowPixel(r+i, r+j) = pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g);\n}\n}\nint p = patchSize, w = windowSize;\nint windowArea = w * w + 2 * w * (p-1) + (p-1) * (p-1);\nwindowMean = sum / float(windowArea);\n}\nvoid readPatch(vec2 center, float lod)\n{\nivec2 pyrBaseSize = textureSize(prevPyramid, 0);\nfloat pot = exp2(lod);\nfloat sum = 0.0f;\nint r = patchSize / 2;\nivec2 offset;\nfor(int j = 0; j < patchSize; j++) {\nfor(int i = 0; i < patchSize; i++) {\noffset = ivec2(i-r, j-r);\nsum += (patchPixel(i, j) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g);\n}\n}\nint patchArea = patchSize * patchSize;\npatchMean = sum / float(patchArea);\n}\nvec4 encodeFlow(vec2 flow)\n{\nreturn vec4(encodeFloat16(flow.x), encodeFloat16(flow.y));\n}\nvec2 decodeFlow(vec4 pix)\n{\nreturn vec2(decodeFloat16(pix.rg), decodeFloat16(pix.ba));\n}\n#define encodeInvalidFlow() (vec4(1.0f))\nfloat computeNCC(ivec2 offset)\n{\nint r = windowRadius();\nint x = clamp(offset.x, -r, r), y = clamp(offset.y, -r, r);\n#if 1\nfloat win = 0.0f, tpl = 0.0f;\nfloat covar = 0.0f, winvar = 0.0f, tplvar = 0.0f;\nfor(int i = 0; i < patchSize; i++) {\nfor(int j = 0; j < patchSize; j++) {\nwin = windowPixel(x+i, y+j) - windowMean;\ntpl = patchPixel(i, j) - patchMean;\ncovar += win * tpl;\nwinvar += win * win;\ntplvar += tpl * tpl;\n}\n}\nreturn covar / sqrt(winvar * tplvar);\n#else\nint covar = 0, winvar = 0, tplvar = 0;\nint wmean = int(round(255.0f * windowMean)), pmean = int(round(255.0f * patchMean));\nfor(int i = 0; i < patchSize; i++) {\nfor(int j = 0; j < patchSize; j++) {\nint win = int(255.0f * windowPixel(x+i, y+j)) - wmean;\nint tpl = int(255.0f * patchPixel(i, j)) - pmean;\ncovar += win * tpl;\nwinvar += win * win;\ntplvar += tpl * tpl;\n}\n}\nreturn (float(covar) / 65025.0f) / sqrt((float(winvar) / 65025.0f) * (float(tplvar) / 65025.0f));\n#endif\n}\nvec2 refineSubpixel(ivec2 flow)\n{\nfloat q1 = computeNCC(flow + ivec2(-1,-1));\nfloat q2 = computeNCC(flow + ivec2( 0,-1));\nfloat q3 = computeNCC(flow + ivec2( 1,-1));\nfloat q4 = computeNCC(flow + ivec2(-1, 0));\nfloat q5 = computeNCC(flow + ivec2( 0, 0));\nfloat q6 = computeNCC(flow + ivec2( 1, 0));\nfloat q7 = computeNCC(flow + ivec2(-1, 1));\nfloat q8 = computeNCC(flow + ivec2( 0, 1));\nfloat q9 = computeNCC(flow + ivec2( 1, 1));\nfloat a = (q1 - 2.0f * q2 + q3 + q4 - 2.0f * q5 + q6 + q7 - 2.0f * q8 + q9) / 6.0f;\nfloat b = (q1 - q3 - q7 + q9) / 4.0f;\nfloat c = (q1 + q2 + q3 - 2.0f * q4 - 2.0f * q5 - 2.0f * q6 + q7 + q8 + q9) / 6.0f;\nfloat d = (-q1 + q3 - q4 + q6 - q7 + q9) / 6.0f;\nfloat e = (-q1 - q2 - q3 + q7 + q8 + q9) / 6.0f;\nfloat hdet = 4.0f * a * c - b * b;\nbool hasMax = hdet > 0.0f && a < 0.0f;\nfloat det = hdet;\nvec2 pixelFlow = vec2(flow);\nvec2 subpixelFlow = hasMax ? vec2(b * e - 2.0f * c * d, b * d - 2.0f * a * e) / det : pixelFlow;\nreturn subpixelFlow;\nreturn distance(subpixelFlow, pixelFlow) < 2.0f ? subpixelFlow : pixelFlow;\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedFlow);\nivec2 thread = threadLocation();\nint keypointIndex = thread.x + thread.y * outputSize().x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(prevKeypoints, encoderLength, address);\ncolor = encodeFlow(vec2(0.0f));\nif(isBadKeypoint(keypoint))\nreturn;\nconst int MAX_LOD = 1;\nvec2 flow = level < MAX_LOD ? decodeFlow(pixel) : vec2(0.0f);\nflow *= 2.0f;\nfloat lod = float(level);\nreadWindow(keypoint.position + flow, lod);\nreadPatch(keypoint.position + flow, lod);\nivec2 bestOffset = ivec2(0), currOffset;\nfloat bestNCC = -2.0f, currNCC;\nint r = windowRadius();\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\ncurrOffset = ivec2(i-r, j-r);\ncurrNCC = computeNCC(currOffset);\nif(currNCC > bestNCC) {\nbestNCC = currNCC;\nbestOffset = currOffset;\n}\n}\n}\nflow += refineSubpixel(bestOffset);\ncolor = bestNCC >= 0.3f ? encodeFlow(flow) : encodeInvalidFlow();\n}"
+
+/***/ }),
+
 /***/ "./src/gpu/shaders/keypoints/nonmax-suppression.glsl":
 /*!***********************************************************!*\
   !*** ./src/gpu/shaders/keypoints/nonmax-suppression.glsl ***!
@@ -12324,6 +12871,17 @@ module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threa
 /***/ (function(module, exports) {
 
 module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = pixelAt(image, thread / 2);\ncolor = (((thread.x + thread.y) & 1) == 0) ? pixel : vec4(0.0f, 0.0f, 0.0f, pixel.a);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/transforms/additive-mix.glsl":
+/*!******************************************************!*\
+  !*** ./src/gpu/shaders/transforms/additive-mix.glsl ***!
+  \******************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"subpixel.glsl\"\nuniform sampler2D image0;\nuniform sampler2D image1;\nuniform float alpha;\nuniform float beta;\nuniform float gamma;\nconst vec4 BACKGROUND = vec4(0.0f);\nvoid main()\n{\nivec2 location = threadLocation();\nivec2 size0 = textureSize(image0, 0);\nivec2 size1 = textureSize(image1, 0);\nvec4 pix0 = all(lessThan(location, size0)) ? pixelAt(image0, location) : BACKGROUND;\nvec4 pix1 = all(lessThan(location, size1)) ? pixelAt(image1, location) : BACKGROUND;\nvec4 pix = clamp(alpha * pix0 + beta * pix1 + gamma, 0.0f, 1.0f);\ncolor = vec4(pix.rgb, 1.0f);\n}"
 
 /***/ }),
 
