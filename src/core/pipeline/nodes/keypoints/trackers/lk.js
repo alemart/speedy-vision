@@ -53,7 +53,7 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
      */
     constructor(name = undefined)
     {
-        super(name, 4, [
+        super(name, 3, [
             InputPort('previousImage').expects(SpeedyPipelineMessageType.Image).satisfying(
                 msg => msg.format === ImageFormat.GREY
             ),
@@ -201,11 +201,13 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
         const epsilon = this._epsilon;
         const keypoints = gpu.programs.keypoints;
         const tex = this._tex;
-        const outputTexture = this._tex[3];
+        const outputTexture = this._tex[2];
 
         // do we need a pyramid?
         if(!(levels == 1 || (previousImage.hasMipmaps() && nextImage.hasMipmaps())))
             throw new IllegalOperationError(`LK: a pyramid is required if levels > 1`);
+        else if(previousImage.width !== nextImage.width || previousImage.height !== nextImage.height)
+            throw new IllegalOperationError(`LK: can't use input images of different size`);
 
         // select the appropriate program
         const lk = (
@@ -228,14 +230,10 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
             flow = lk(flow, previousKeypoints, nextImage, previousImage, wsize, lod, levels, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);
 
         // transfer optical-flow to nextKeypoints
-        keypoints.transferFlow.outputs(encoderLength, encoderLength, tex[2]);
+        keypoints.transferFlow.outputs(encoderLength, encoderLength, outputTexture);
         const nextKeypoints = keypoints.transferFlow(flow, previousKeypoints, descriptorSize, extraSize, encoderLength);
 
-        // discard "bad" keypoints
-        keypoints.lkDiscard.outputs(encoderLength, encoderLength, outputTexture);
-        const goodKeypoints = keypoints.lkDiscard(nextImage, wsize, nextKeypoints, descriptorSize, extraSize, encoderLength);
-
         // done!
-        this.output().swrite(goodKeypoints, descriptorSize, extraSize, encoderLength);
+        this.output().swrite(nextKeypoints, descriptorSize, extraSize, encoderLength);
     }
 }

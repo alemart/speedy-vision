@@ -28,13 +28,6 @@ uniform int descriptorSize;
 uniform int extraSize;
 uniform int encoderLength;
 
-/**
- * Checks if we've encoded an invalid flow
- * @param {vec4} pix
- * @returns {bool}
- */
-#define isInvalidFlow(pix) all(bvec2(isEncodedFloat16NaN((pix).rg), isEncodedFloat16NaN((pix).ba)))
-
 // main
 void main()
 {
@@ -46,16 +39,16 @@ void main()
     Keypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);
     int myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);
 
-    // find the corresponding location in the encoded positions texture
+    // find the corresponding location in the encoded flow texture
     int len = textureSize(encodedFlow, 0).x;
     ivec2 location = ivec2(myIndex % len, myIndex / len);
-    vec4 targetPixel = pixelAt(encodedFlow, location);
+    vec4 encodedFlow = pixelAt(encodedFlow, location);
 
     // compute the new position of the keypoint
-    vec2 flow = decodePairOfFloat16(targetPixel);
+    vec2 flow = decodePairOfFloat16(encodedFlow);
     vec4 newPosition = encodeKeypointPosition(keypoint.position + flow);
-    vec4 encodedPosition = isInvalidFlow(targetPixel) ? encodeKeypointPositionAtInfinity() : newPosition;
 
     // transfer the position
-    color = myAddress.offset == 0 ? encodedPosition : pixel;
+    vec4 newPixel = myAddress.offset == 0 ? newPosition : pixel;
+    color = !isDiscardedPairOfFloat16(encodedFlow) ? newPixel : encodeDiscardedKeypoint();
 }

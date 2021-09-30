@@ -262,12 +262,20 @@ vec2 computeMismatch(vec2 pyrGuess, vec2 localGuess)
 }
 
 /**
- * Encode an invalid flow vector into a RGBA pixel
- * @returns {vec4} in [0,1]^4
+ * Checks if a position is inside the image, considering a pre-defined border
+ * @param {vec2} position
+ * @return {bool}
  */
-#define encodeInvalidFlow() vec4(encodeFloat16NaN(), encodeFloat16NaN())
+bool isInsideImage(vec2 position)
+{
+    vec2 imageSize = vec2(textureSize(nextPyramid, 0));
+    vec2 border = vec2(windowSize);
 
-
+    return all(bvec4(
+        greaterThanEqual(position, border),
+        lessThan(position, imageSize - border)
+    ));
+}
 
 // main
 void main()
@@ -288,8 +296,8 @@ void main()
     if(isNullKeypoint(keypoint))
         return;
 
-    // bad keypoint? don't track it
-    color = encodePairOfFloat16(vec2(0.0f));
+    // bad keypoint? it will be discarded later
+    color = encodeDiscardedPairOfFloat16();
     if(isBadKeypoint(keypoint))
         return;
 
@@ -328,8 +336,9 @@ void main()
     bool goodKeypoint = (level > 0) || (niceNumbers != 0);
 
     // iterative LK
-    float eps2 = epsilon * epsilon;
+    highp float eps2 = epsilon * epsilon;
     highp vec2 mismatch, delta, localGuess = vec2(0.0f); // guess for this level of the pyramid
+
     for(int k = 0; k < numberOfIterations; k++) { // meant to reach convergence
         mismatch = niceNumbers != 0 ? computeMismatch(pyrGuess, localGuess) : vec2(0.0f); // bottleneck*
         delta = mismatch * invHarris * invDet;
@@ -350,6 +359,12 @@ void main()
     // update our guess of the optical flow
     vec2 opticalFlow = pyrGuess + localGuess;
 
+    // discard the "bad" keypoints on the last pass of the shader (when level == 0)
+    bool mustDiscard = (level == 0) && any(bvec2(
+        !goodKeypoint,
+        !isInsideImage(keypoint.position + opticalFlow)
+    ));
+
     // done!
-    color = goodKeypoint ? encodePairOfFloat16(opticalFlow) : encodeInvalidFlow(); // discard "bad" keypoints
+    color = !mustDiscard ? encodePairOfFloat16(opticalFlow) : encodeDiscardedPairOfFloat16();
 }

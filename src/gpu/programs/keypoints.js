@@ -71,9 +71,6 @@ const lk = [7, 9, 11, 13, 15, 21].reduce((obj, win) => ((obj[win] =
                .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'level', 'depth', 'numberOfIterations', 'discardThreshold', 'epsilon', 'descriptorSize', 'extraSize', 'encoderLength')
            ), obj), {});
 
-const lkDiscard = importShader('keypoints/lk-discard.glsl')
-                  .withArguments('pyramid', 'windowSize', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
-
 const transferFlow = importShader('keypoints/transfer-flow.glsl')
                      .withArguments('encodedFlow', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
@@ -213,7 +210,6 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             .declare('lk7', lk[7], { // up to 7x7 window (faster)
                 ...this.program.usesPingpongRendering()
             })
-            .declare('lkDiscard', lkDiscard)
             .declare('transferFlow', transferFlow)
             .declare('ncc', ncc, {
                 ...this.program.usesPingpongRendering()
