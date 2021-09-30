@@ -214,11 +214,11 @@ int readBufferedSubpixel(int imageCode, vec2 offset)
     vec2 ifrc = vec2(1.0f) - frc;
 
     // Read 2x2 window around offset
-    vec4 pixels = vec4(
+    vec4 pix = vec4(
         readBufferedPixel(imageCode, p),
-        readBufferedPixel(imageCode, ivec2(p.x + 1, p.y)),
-        readBufferedPixel(imageCode, ivec2(p.x, p.y + 1)),
-        readBufferedPixel(imageCode, ivec2(p.x + 1, p.y + 1))
+        readBufferedPixel(imageCode, p + ivec2(1,0)),
+        readBufferedPixel(imageCode, p + ivec2(0,1)),
+        readBufferedPixel(imageCode, p + ivec2(1,1))
     );
 
     // Bilinear interpolation
@@ -229,7 +229,7 @@ int readBufferedSubpixel(int imageCode, vec2 offset)
         frc.x * frc.y
     );
 
-    return int(0.5f + dot(sub*pixels, vec4(1.0f)));
+    return int(0.5f + dot(sub*pix, vec4(1.0f)));
 }
 
 /**
@@ -262,30 +262,10 @@ vec2 computeMismatch(vec2 pyrGuess, vec2 localGuess)
 }
 
 /**
- * Encode a flow vector into a RGBA pixel
- * @param {vec2} flow
- * @return {vec4} in [0,1]^4
- */
-vec4 encodeFlow(vec2 flow)
-{
-    return vec4(encodeFloat16(flow.x), encodeFloat16(flow.y));
-}
-
-/**
- * Decode a flow vector from a RGBA pixel
- * @param {vec4} pix
- * @return {vec2}
- */
-vec2 decodeFlow(vec4 pix)
-{
-    return vec2(decodeFloat16(pix.rg), decodeFloat16(pix.ba));
-}
-
-/**
  * Encode an invalid flow vector into a RGBA pixel
  * @returns {vec4} in [0,1]^4
  */
-#define encodeInvalidFlow() (vec4(1.0f))
+#define encodeInvalidFlow() vec4(encodeFloat16NaN(), encodeFloat16NaN())
 
 
 
@@ -303,13 +283,18 @@ void main()
     KeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);
     Keypoint keypoint = decodeKeypoint(prevKeypoints, encoderLength, address);
 
+    // end of list?
+    color = encodeNullPairOfFloat16();
+    if(isNullKeypoint(keypoint))
+        return;
+
     // bad keypoint? don't track it
-    color = encodeFlow(vec2(0.0f));
+    color = encodePairOfFloat16(vec2(0.0f));
     if(isBadKeypoint(keypoint))
         return;
 
     // in each pass of this shader, we guess the optical-flow in a particular level of the pyramid
-    vec2 pyrGuess = (level < depth - 1) ? decodeFlow(pixel) : vec2(0.0f); // we start with zero
+    vec2 pyrGuess = (level < depth - 1) ? decodePairOfFloat16(pixel) : vec2(0.0f); // we start with zero
     pyrGuess *= 2.0f;
 
     // read pixels surrounding the keypoint
@@ -366,5 +351,5 @@ void main()
     vec2 opticalFlow = pyrGuess + localGuess;
 
     // done!
-    color = goodKeypoint ? encodeFlow(opticalFlow) : encodeInvalidFlow(); // discard "bad" keypoints
+    color = goodKeypoint ? encodePairOfFloat16(opticalFlow) : encodeInvalidFlow(); // discard "bad" keypoints
 }

@@ -145,30 +145,10 @@ void readPatch(vec2 center, float lod)
 }
 
 /**
- * Encode a flow vector into a RGBA pixel
- * @param {vec2} flow
- * @return {vec4} in [0,1]^4
- */
-vec4 encodeFlow(vec2 flow)
-{
-    return vec4(encodeFloat16(flow.x), encodeFloat16(flow.y));
-}
-
-/**
- * Decode a flow vector from a RGBA pixel
- * @param {vec4} pix
- * @return {vec2}
- */
-vec2 decodeFlow(vec4 pix)
-{
-    return vec2(decodeFloat16(pix.rg), decodeFloat16(pix.ba));
-}
-
-/**
  * Encode an invalid flow vector into a RGBA pixel
  * @returns {vec4} in [0,1]^4
  */
-#define encodeInvalidFlow() (vec4(1.0f))
+#define encodeInvalidFlow() vec4(encodeFloat16NaN(), encodeFloat16NaN())
 
 /**
  * Compute the Normalized Cross-Correlation at a window
@@ -331,14 +311,19 @@ void main()
     KeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);
     Keypoint keypoint = decodeKeypoint(prevKeypoints, encoderLength, address);
 
+    // end of list?
+    color = encodeNullPairOfFloat16();
+    if(isNullKeypoint(keypoint))
+        return;
+
     // bad keypoint? don't track it
-    color = encodeFlow(vec2(0.0f));
+    color = encodePairOfFloat16(vec2(0.0f));
     if(isBadKeypoint(keypoint))
         return;
 
     // get the current estimate of the flow vector for this keypoint
     const int MAX_LOD = 0;//1;
-    vec2 flow = level < MAX_LOD ? decodeFlow(pixel) : vec2(0.0f);
+    vec2 flow = level < MAX_LOD ? decodePairOfFloat16(pixel) : vec2(0.0f);
 
     // update the estimate of the flow for this level of the pyramid
     flow *= 2.0f;
@@ -366,6 +351,6 @@ void main()
     flow += refineSubpixel(bestOffset);
 
     // done!
-    color = bestNCC >= discardThreshold ? encodeFlow(flow) : encodeInvalidFlow();
+    color = bestNCC >= discardThreshold ? encodePairOfFloat16(flow) : encodeInvalidFlow();
     //color = encodeFlow(flow);
 }

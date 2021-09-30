@@ -29,21 +29,11 @@ uniform int extraSize;
 uniform int encoderLength;
 
 /**
- * Decode a flow vector from a RGBA pixel
- * @param {vec4} pix
- * @return {vec2}
- */
-vec2 decodeFlow(vec4 pix)
-{
-    return vec2(decodeFloat16(pix.rg), decodeFloat16(pix.ba));
-}
-
-/**
  * Checks if we've encoded an invalid flow
  * @param {vec4} pix
  * @returns {bool}
  */
-#define isInvalidFlow(pix) (all(equal((pix), vec4(1.0f))))
+#define isInvalidFlow(pix) all(bvec2(isEncodedFloat16NaN((pix).rg), isEncodedFloat16NaN((pix).ba)))
 
 // main
 void main()
@@ -62,7 +52,7 @@ void main()
     vec4 targetPixel = pixelAt(encodedFlow, location);
 
     // compute the new position of the keypoint
-    vec2 flow = decodeFlow(targetPixel);
+    vec2 flow = decodePairOfFloat16(targetPixel);
     vec4 newPosition = encodeKeypointPosition(keypoint.position + flow);
     vec4 encodedPosition = isInvalidFlow(targetPixel) ? encodeKeypointPositionAtInfinity() : newPosition;
 
