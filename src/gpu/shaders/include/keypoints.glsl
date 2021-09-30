@@ -94,7 +94,8 @@ struct KeypointAddress
  */
 const int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@); // in bytes
 const uint KPF_NONE = 0u; // no flags
-const uint KPF_INFINITY = 1u; // keypoint at infinity
+const uint KPF_NULL = 1u; // "null" keypoint (end of list)
+const uint KPF_INFINITY = 2u; // keypoint at infinity
 
 /**
  * Encode keypoint score
@@ -138,6 +139,26 @@ const uint KPF_INFINITY = 1u; // keypoint at infinity
  * @returns {vec4} RGBA
  */
 #define encodeDiscardedKeypoint() (vec4(0.0f))
+
+/**
+ * Encode the position of a keypoint at "infinity"
+ * @returns {vec4} RGBA
+ */
+#define encodeKeypointPositionAtInfinity() (vec4(254, 255, 255, 255) / 255.0f)
+
+/**
+ * Checks whether the given keypoint is at "infinity"
+ * @param {Keypoint} keypoint
+ * @returns {bool}
+ */
+#define isKeypointAtInfinity(keypoint) ((((keypoint).flags) & KPF_INFINITY) != 0u)
+
+/**
+ * Checks if the keypoint is "null" (i.e., end of list)
+ * @param {Keypoint} keypoint
+ * @returns {bool}
+ */
+#define isNullKeypoint(keypoint) ((((keypoint).flags) & KPF_NULL) != 0u)
 
 /**
  * Checks whether the given keypoint is "bad",
@@ -241,6 +262,7 @@ Keypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointA
 
     // keypoint flags
     keypoint.flags = KPF_NONE;
+    keypoint.flags |= KPF_NULL * uint(isNull);
     keypoint.flags |= KPF_INFINITY * uint(all(equal(encodedPosition, ivec4(254, 255, 255, 255))));
 
     // done!
@@ -261,18 +283,5 @@ vec4 encodeKeypointPosition(vec2 position)
 
     return vec4(lo.x, hi.x, lo.y, hi.y) / 255.0f;
 }
-
-/**
- * Encode the position of a keypoint at "infinity"
- * @returns {vec4} RGBA
- */
-#define encodeKeypointPositionAtInfinity() (vec4(254, 255, 255, 255) / 255.0f)
-
-/**
- * Checks whether the given keypoint is at "infinity"
- * @param {keypoint} keypoint
- * @returns {bool}
- */
-#define isKeypointAtInfinity(keypoint) (((keypoint.flags) & KPF_INFINITY) != 0u)
 
 #endif
