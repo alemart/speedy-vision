@@ -49,6 +49,6 @@ void main()
     vec4 pix0 = all(lessThan(location, size0)) ? pixelAt(image0, location) : BACKGROUND;
     vec4 pix1 = all(lessThan(location, size1)) ? pixelAt(image1, location) : BACKGROUND;
 
-    vec4 pix = clamp(alpha * pix0 + beta * pix1 + gamma, 0.0f, 1.0f);
+    vec4 pix = clamp(alpha * pix0 + beta * pix1 + vec4(gamma), 0.0f, 1.0f);
     color = vec4(pix.rgb, 1.0f);
 }
