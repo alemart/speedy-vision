@@ -214,7 +214,7 @@ int readBufferedSubpixel(int imageCode, vec2 offset)
     vec2 ifrc = vec2(1.0f) - frc;
 
     // Read 2x2 window around offset
-    vec4 pix4 = vec4(
+    vec4 pixels = vec4(
         readBufferedPixel(imageCode, p),
         readBufferedPixel(imageCode, ivec2(p.x + 1, p.y)),
         readBufferedPixel(imageCode, ivec2(p.x, p.y + 1)),
@@ -222,14 +222,14 @@ int readBufferedSubpixel(int imageCode, vec2 offset)
     );
 
     // Bilinear interpolation
-    vec4 bi = vec4(
-        pix4.x * ifrc.x * ifrc.y,
-        pix4.y * frc.x * ifrc.y,
-        pix4.z * ifrc.x * frc.y,
-        pix4.w * frc.x * frc.y
+    vec4 sub = vec4(
+        ifrc.x * ifrc.y,
+        frc.x * ifrc.y,
+        ifrc.x * frc.y,
+        frc.x * frc.y
     );
 
-    return int(0.5f + dot(bi, vec4(1.0f)));
+    return int(0.5f + dot(sub*pixels, vec4(1.0f)));
 }
 
 /**
