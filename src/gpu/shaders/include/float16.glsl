@@ -61,6 +61,18 @@
 #define encodeNullPairOfFloat16() vec4(1.0f) // this is a pair of NaN according to the OpenGL ES 3 spec sec 2.1.2
 
 /**
+ * Encode a 16-bit NaN float into a (x,y) pair in [0,1]^2
+ * @returns {vec2}
+ */
+#define encodeFloat16NaN() vec2(0.0f, 1.0f) // this is another NaN according to the OpenGL ES 3 spec sec 2.1.2
+
+/**
+ * Checks if the input is a 16-bit NaN encoded as above
+ * @returns {bool}
+ */
+#define isEncodedFloat16NaN(v) all(equal((v), encodeFloat16NaN()))
+
+/**
  * Convert a float to a 16-bit half-float and pack
  * it into a uvec2 (a,b) such that 0 <= a,b <= 255
  * @param {float} f input
