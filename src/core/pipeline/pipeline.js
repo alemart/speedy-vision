@@ -293,7 +293,7 @@ export class SpeedyPipeline
             throw new IllegalOperationError(`Pipeline doesn't have nodes`);
         else if(!sequence[0].isSource())
             throw new IllegalOperationError(`Pipeline doesn't have a source`);
-        else if(!sequence[sequence.length - 1].isSink())
+        else if(!sequence.find(node => node.isSink()))
             throw new IllegalOperationError(`Pipeline doesn't have a sink`);
     }
 }
