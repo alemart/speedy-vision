@@ -24,7 +24,7 @@
  *
  * The main reference for the algorithm is:
  * Bouguet, Jean-Yves. "Pyramidal Implementation of the Lucas Kanade Feature Tracker", 1999.
- * (the OpenCV implementation is based on it)
+ * (the OpenCV implementation is based on it - as far as I know!)
  */
 
 @include "keypoints.glsl"
@@ -46,7 +46,7 @@ uniform int encoderLength;
 
 // maximum window size
 #ifndef MAX_WINDOW_SIZE
-#error Must define MAX_WINDOW_SIZE // typically 21 or 15 (odd number)
+#error Must define MAX_WINDOW_SIZE // typically 21, 15 or 11 (odd number)
 #endif
 
 // image "enum"
@@ -60,26 +60,25 @@ const int MAX_WINDOW_SIZE_PLUS_SQUARED = MAX_WINDOW_SIZE_PLUS * MAX_WINDOW_SIZE_
 const int DBL_MAX_WINDOW_SIZE_PLUS_SQUARED = 2 * MAX_WINDOW_SIZE_PLUS_SQUARED;
 const int MAX_WINDOW_RADIUS_PLUS = (MAX_WINDOW_SIZE_PLUS - 1) / 2;
 const int MAX_WINDOW_RADIUS = ((MAX_WINDOW_SIZE) - 1) / 2;
-const highp float FLT_SCALE = 0.00000095367431640625f; // this is 1 / 2^20, for numeric compatibility with OpenCV (discardThreshold)
+const highp float FLT_SCALE = 9.5367431640625e-7; // 1 / 2^20, as in OpenCV, for a compatible discardThreshold
 const highp float FLT_EPSILON = 0.00000011920929f;
 
 /*
- * Note this:
- * (2^8 * 2^8) / 2^20 = 2^(-4) = 1/16 = 0.0625
- *
- * so, for any 0 <= pix <= 255,
+ * For any 0 <= pix <= 255, we have:
  * 0 <= pix^2 <= 65025 and
  * 0 <= pix^2 * FLT_SCALE <= 0.062012...
- *
- * additionally, 2^(-8) = 1/256 = 0.00390625 and
  * 0 <= (pix^2 * FLT_SCALE)^2 <= 0.00384557...
+ *
+ * also,
+ * (2^8 * 2^8 / 2^20) = 2^(-4) = 1/16 = 0.0625
+ * (2^8 * 2^8 / 2^20)^2 = 2^(-8) = 1/256 = 0.00390625
  */
 
 // convert windowSize to windowRadius (size = 2 * radius + 1)
 #define windowRadius() ((windowSize - 1) / 2)
 
 // pixel storage (greyscale values)
-float pixelBuffer[DBL_MAX_WINDOW_SIZE_PLUS_SQUARED];
+int pixelBuffer[DBL_MAX_WINDOW_SIZE_PLUS_SQUARED];
 #define prevPixel(index) pixelBuffer[(index)] // previous image
 #define nextPixel(index) pixelBuffer[MAX_WINDOW_SIZE_PLUS_SQUARED + (index)] // next image
 
@@ -106,8 +105,8 @@ void readWindow(vec2 center, float lod)
     // define macro to read pixels from both images
     #define readPixelsAt(ox, oy) offset = ivec2((ox), (oy)); \
                                  idx = pixelIndex(offset.x, offset.y); \
-                                 nextPixel(idx) = pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g; \
-                                 prevPixel(idx) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g
+                                 nextPixel(idx) = int(255.0f * pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g); \
+                                 prevPixel(idx) = int(255.0f * pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g)
 
     // We only use uniforms and constant values (i.e., zero) when
     // defining the loops below, so that the compiler MAY unroll them
@@ -140,9 +139,9 @@ void readWindow(vec2 center, float lod)
  * at an offset from the center specified in readWindow()
  * @param {int} imageCode NEXT_IMAGE or PREV_IMAGE
  * @param {ivec2} offset such that max(|offset.x|, |offset.y|) <= windowRadius
- * @returns {vec2} image derivatives at (center+offset)
+ * @returns {ivec2} image derivatives at (center+offset)
  */
-vec2 computeDerivatives(int imageCode, ivec2 offset)
+ivec2 computeDerivatives(int imageCode, ivec2 offset)
 {
     // Scharr filter
     const mat3 dx = mat3(
@@ -176,7 +175,7 @@ vec2 computeDerivatives(int imageCode, ivec2 offset)
 
     // compute derivatives: sum all elements of fx and fy
     const vec3 ones = vec3(1.0f);
-    return vec2(
+    return ivec2(
         dot(fx[0], ones) + dot(fx[1], ones) + dot(fx[2], ones),
         dot(fy[0], ones) + dot(fy[1], ones) + dot(fy[2], ones)
     );
@@ -187,13 +186,13 @@ vec2 computeDerivatives(int imageCode, ivec2 offset)
  * using the buffered values
  * @param {int} imageCode NEXT_IMAGE or PREV_IMAGE
  * @param {ivec2} offset such that max(|offset.x|, |offset.y|) <= windowRadius
- * @returns {float} pixel intensity
+ * @returns {int} pixel intensity
  */
-float readBufferedPixel(int imageCode, ivec2 offset)
+int readBufferedPixel(int imageCode, ivec2 offset)
 {
     // Clamp offset
-    ivec2 limit = ivec2(windowRadius());
-    offset = clamp(offset, -limit, limit);
+    int r = windowRadius();
+    offset = clamp(offset, -r, r);
 
     // Read pixel intensity
     int indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;
@@ -205,9 +204,9 @@ float readBufferedPixel(int imageCode, ivec2 offset)
  * using the buffered values
  * @param {int} imageCode NEXT_IMAGE or PREV_IMAGE
  * @param {vec2} offset such that max(|offset.x|, |offset.y|) <= windowRadius
- * @returns {float} subpixel intensity
+ * @returns {int} subpixel intensity
  */
-float readBufferedSubpixel(int imageCode, vec2 offset)
+int readBufferedSubpixel(int imageCode, vec2 offset)
 {
     // Split integer and fractional parts
     ivec2 p = ivec2(floor(offset));
@@ -223,41 +222,43 @@ float readBufferedSubpixel(int imageCode, vec2 offset)
     );
 
     // Bilinear interpolation
-    return dot(vec4(
+    vec4 bi = vec4(
         pix4.x * ifrc.x * ifrc.y,
         pix4.y * frc.x * ifrc.y,
         pix4.z * ifrc.x * frc.y,
         pix4.w * frc.x * frc.y
-    ), vec4(1.0f));
+    );
+
+    return int(0.5f + dot(bi, vec4(1.0f)));
 }
 
 /**
  * Compute image mismatch in a window
  * @param {vec2} pyrGuess
  * @param {vec2} localGuess for the iterative method
- * @returns {ivec2}
+ * @returns {vec2}
  */
-ivec2 computeMismatch(highp vec2 pyrGuess, highp vec2 localGuess)
+vec2 computeMismatch(vec2 pyrGuess, vec2 localGuess)
 {
     int timeDerivative;
     ivec2 mismatch = ivec2(0);
     int x, y, r = windowRadius();
-    highp vec2 d = pyrGuess + localGuess;
+    vec2 d = pyrGuess + localGuess;
 
     for(int _y = 0; _y < windowSize; _y++) {
         for(int _x = 0; _x < windowSize; _x++) {
             x = _x - r; y = _y - r;
 
-            timeDerivative = int(round(255.0f * (
+            timeDerivative = (
                 readBufferedSubpixel(NEXT_IMAGE, vec2(x, y) + d) -
                 readBufferedPixel(PREV_IMAGE, ivec2(x, y))
-            )));
+            );
 
             mismatch += derivativesAt(x, y) * timeDerivative;
         }
     }
 
-    return mismatch;
+    return vec2(mismatch) * FLT_SCALE;
 }
 
 /**
@@ -308,7 +309,8 @@ void main()
         return;
 
     // in each pass of this shader, we guess the optical-flow in a particular level of the pyramid
-    highp vec2 pyrGuess = (level < depth - 1) ? decodeFlow(pixel) : vec2(0.0f); // we start with zero
+    vec2 pyrGuess = (level < depth - 1) ? decodeFlow(pixel) : vec2(0.0f); // we start with zero
+    pyrGuess *= 2.0f;
 
     // read pixels surrounding the keypoint
     readWindow(keypoint.position, float(level)); // keypoint.position may actually point to a subpixel
@@ -318,7 +320,7 @@ void main()
     ivec3 harris3i = ivec3(0);
     for(int j = 0; j < windowSize; j++) {
         for(int i = 0; i < windowSize; i++) {
-            derivatives = ivec2(floor(255.0f * computeDerivatives(PREV_IMAGE, ivec2(i-r, j-r))));
+            derivatives = computeDerivatives(PREV_IMAGE, ivec2(i-r, j-r));
             harris3i += ivec3(
                 derivatives.x * derivatives.x,
                 derivatives.x * derivatives.y,
@@ -327,33 +329,42 @@ void main()
             derivativesAt(i-r, j-r) = derivatives;
         }
     }
+
     highp vec3 harris = vec3(harris3i) * FLT_SCALE; // [0,255^2] scale to FLT_SCALE
-    highp float det = harris.x * harris.z - harris.y * harris.y; // determinant (>= 0)
-    highp float invDet = 1.0f / det;
-    highp mat2 invHarris = mat2(harris.z, -harris.y, -harris.y, harris.x); // inverse * det
+    highp mat2 invHarris = mat2(harris.z, -harris.y, -harris.y, harris.x); // inverse(harris) * det
+    highp float det = harris.x * harris.z - harris.y * harris.y; // determinant
+    highp float invDet = abs(det) >= FLT_EPSILON ? 1.0f / det : 0.0f;
     highp float minEigenvalue = 0.5f * ((harris.x + harris.z) - sqrt(
         (harris.x - harris.z) * (harris.x - harris.z) + 4.0f * (harris.y * harris.y)
     ));
 
     // good keypoint? Will check when level == 0
-    int niceNumbers = int(det >= FLT_EPSILON && minEigenvalue >= discardThreshold * windowArea);
+    int niceNumbers = int(abs(det) >= FLT_EPSILON && minEigenvalue >= discardThreshold * windowArea);
     bool goodKeypoint = (level > 0) || (niceNumbers != 0);
 
     // iterative LK
-    highp float eps2 = epsilon * epsilon;
+    float eps2 = epsilon * epsilon;
     highp vec2 mismatch, delta, localGuess = vec2(0.0f); // guess for this level of the pyramid
     for(int k = 0; k < numberOfIterations; k++) { // meant to reach convergence
-        mismatch = vec2(computeMismatch(pyrGuess, localGuess)) * FLT_SCALE;
+        mismatch = niceNumbers != 0 ? computeMismatch(pyrGuess, localGuess) : vec2(0.0f); // bottleneck*
         delta = mismatch * invHarris * invDet;
         niceNumbers *= int(eps2 <= dot(delta, delta)); // stop when ||delta|| < epsilon
-        //localGuess += niceNumbers != 0 ? delta : vec2(0.0f);
         localGuess += float(niceNumbers) * delta;
+        //if(niceNumbers == 0) break; // skip computeMismatch()**
     }
 
-    // update our guess of the optical flow for the next level of the pyramid
-    pyrGuess = 2.0f * (pyrGuess + localGuess);
+    //
+    // * tip: reduce the windowSize, the numberOfIterations and
+    //        the number of keypoints!
+    //
+    // ** note: according to the GLSL ES 3.0 spec secction 5.9,
+    //    the ternary selection operator will only evaluate
+    //    computeMismatch() if niceNumbers is not zero.
+    //
+
+    // update our guess of the optical flow
+    vec2 opticalFlow = pyrGuess + localGuess;
 
     // done!
-    vec2 opticalFlow = pyrGuess;
     color = goodKeypoint ? encodeFlow(opticalFlow) : encodeInvalidFlow(); // discard "bad" keypoints
 }

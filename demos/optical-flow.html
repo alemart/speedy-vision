@@ -29,25 +29,28 @@
         <link href="style.css" rel="stylesheet">
     </head>
     <body>
-        <h1>Optical flow</h1>
-        <p><em>Click on a <strong>_moving region_</strong> of the video to track it</em></p>
+        <h1>LK optical flow</h1>
+        <p><em>Click on a <strong>moving region</strong> of the video to track it!</em></p>
         <form autocomplete="off">
             <div>
                 <label for="window-size">Window size</label>
                 <select id="window-size">
+                    <option value="5">5x5</option>
                     <option value="7">7x7</option>
+                    <option value="9">9x9</option>
                     <option value="11" selected>11x11</option>
+                    <option value="13">13x13</option>
                     <option value="15">15x15</option>
                     <option value="21">21x21</option>
                 </select>
-                <label for="levels">Levels</label>
+                <label for="levels">Pyramid levels</label>
                 <select id="levels">
                     <option value="1">1</option>
                     <option value="2">2</option>
                     <option value="3">3</option>
                     <option value="4">4</option>
-                    <option value="5">5</option>
-                    <option value="6" selected>6</option>
+                    <option value="5" selected>5</option>
+                    <option value="6">6</option>
                     <option value="7">7</option>
                 </select>
                 <label for="discard-threshold">Discard threshold</label>
@@ -57,10 +60,6 @@
                     <option value="0.001">0.001</option>
                     <option value="0.01">0.01</option>
                 </select>
-                <span>
-                    &nbsp;&nbsp;
-                    <a href="javascript:reset()">Reset values</a>
-                </span>
             </div>
             <div class="separator"></div>
             <div>
@@ -68,17 +67,24 @@
                 <select id="number-of-iterations">
                     <option value="3">3</option>
                     <option value="5">5</option>
-                    <option value="8" selected>8</option>
+                    <option value="8">8</option>
                     <option value="15">15</option>
                     <option value="20">20</option>
-                    <option value="30">30</option>
+                    <option value="30" selected>30</option>
                 </select>
-                <label for="epsilon">Epsilon</label>
+                <label for="epsilon">Epsilon for early termination</label>
                 <select id="epsilon">
                     <option value="0">0</option>
                     <option value="0.01" selected>0.01</option>
                     <option value="0.03">0.03</option>
                 </select>
+                <span>
+                    &nbsp;&nbsp;
+                    <a href="javascript:reset()">Reset values</a>
+                </span>
+            </div>
+            <div class="separator"></div>
+            <div>
                 <label for="speed-slider">Video speed</label>
                 <input type="range" id="speed-slider" min="0.10" max="2" value="1" step="0.01">
             </div>
@@ -159,6 +165,9 @@ window.onload = async function()
     const canvas = createCanvas(media.width, media.height, video.title);
     async function loop()
     {
+        // clip the number of features
+        features.length = Math.min(features.length, 200);
+
         // find new features
         harris.capacity = 0;
         if(detect) {
@@ -191,7 +200,7 @@ window.onload = async function()
 
         // render features
         media.draw(canvas);
-        renderFeatures(canvas, features, 2, '#0fa');
+        renderFeatures(canvas, features, 2, '#f22');
         renderStatus(canvas, features);
 
         // next frame
@@ -209,7 +218,7 @@ window.onload = async function()
 
     // detect features
     const detectButton = document.getElementById('detect');
-    detectButton.onclick = () => detect = true;
+    detectButton.onclick = () => detect = (features.length < 400); //true;
 
     // clear features
     const clearButton = document.getElementById('clear');

@@ -33,9 +33,9 @@ import { SpeedyPromise } from '../../../../../utils/speedy-promise';
 import { MIN_KEYPOINT_SIZE, PYRAMID_MAX_LEVELS } from '../../../../../utils/globals';
 
 // Constants
-const DEFAULT_WINDOW_SIZE = new SpeedySize(15, 15);
-const DEFAULT_DEPTH = Math.min(6, PYRAMID_MAX_LEVELS);
-const DEFAULT_NUMBER_OF_ITERATIONS = 5;
+const DEFAULT_WINDOW_SIZE = new SpeedySize(11, 11);
+const DEFAULT_DEPTH = Math.min(3, PYRAMID_MAX_LEVELS);
+const DEFAULT_NUMBER_OF_ITERATIONS = 30;
 const DEFAULT_DISCARD_THRESHOLD = 0.0001;
 const DEFAULT_EPSILON = 0.01;
 const MIN_WINDOW_SIZE = 5;
@@ -210,16 +210,14 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
         // select the appropriate program
         const lk = (
             (wsize <= 7  ? keypoints.lk7  :
+            (wsize <= 9  ? keypoints.lk9  :
             (wsize <= 11 ? keypoints.lk11 : 
+            (wsize <= 13 ? keypoints.lk13 :
             (wsize <= 15 ? keypoints.lk15 :
             (wsize <= 21 ? keypoints.lk21 : null
-        )))));
+        )))))));
 
-        //
-        // Optimization!
-        // because this is such a demanding algorithm, we'll
-        // split the work into multiple passes of the shader
-        //
+        // find the dimensions of the flow texture (1 pixel per flow vector)
         const numKeypoints = SpeedyPipelineNodeKeypointDetector.encoderCapacity(descriptorSize, extraSize, encoderLength);
         const lkEncoderLength = Math.max(1, Math.ceil(Math.sqrt(numKeypoints)));
         lk.outputs(lkEncoderLength, lkEncoderLength, tex[0], tex[1]);

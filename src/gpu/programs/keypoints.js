@@ -65,7 +65,7 @@ const multiscaleNonMaxSuppression = importShader('keypoints/nonmax-suppression.g
                                    .withArguments('image', 'lodStep');
 
 // Keypoint tracking & optical-flow
-const lk = [7, 11, 15, 21].reduce((obj, win) => ((obj[win] = 
+const lk = [7, 9, 11, 13, 15, 21].reduce((obj, win) => ((obj[win] =
                importShader('keypoints/lk.glsl')
                .withDefines({ 'MAX_WINDOW_SIZE': win })
                .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'level', 'depth', 'numberOfIterations', 'discardThreshold', 'epsilon', 'descriptorSize', 'extraSize', 'encoderLength')
@@ -79,7 +79,7 @@ const transferFlow = importShader('keypoints/transfer-flow.glsl')
 
 const ncc = importShader('keypoints/ncc.glsl')
             .withDefines({ 'MAX_WINDOW_SIZE_LOD1': 15, 'MAX_PATCH_SIZE': 12 })
-            .withArguments('encodedFlow', 'prevKeypoints', 'prevPyramid', 'nextPyramid', 'windowSize', 'patchSize', 'level', 'descriptorSize', 'extraSize', 'encoderLength');
+            .withArguments('encodedFlow', 'prevKeypoints', 'prevPyramid', 'nextPyramid', 'windowSize', 'patchSize', 'discardThreshold', 'level', 'descriptorSize', 'extraSize', 'encoderLength');
 
 
 // Keypoint sorting
@@ -201,7 +201,13 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             .declare('lk15', lk[15], { // up to 15x15 window
                 ...this.program.usesPingpongRendering()
             })
+            .declare('lk13', lk[13], { // up to 13x13
+                ...this.program.usesPingpongRendering()
+            })
             .declare('lk11', lk[11], { // up to 11x11 window (nice on mobile)
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('lk9', lk[9], { // up to 9x9 window
                 ...this.program.usesPingpongRendering()
             })
             .declare('lk7', lk[7], { // up to 7x7 window (faster)
