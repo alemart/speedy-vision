@@ -35,10 +35,10 @@ import { PYRAMID_MAX_LEVELS } from '../../../../../utils/globals';
 // Constants
 const DEFAULT_WINDOW_SIZE = new SpeedySize(31, 31);
 const DEFAULT_PATCH_SIZE = new SpeedySize(8, 8);
-const MAX_WINDOW_SIZE = 31;
-const MIN_WINDOW_SIZE = 11;
+const MAX_WINDOW_SIZE = 31; // 31x31
+const MIN_WINDOW_SIZE = 5; // 5x5
 const MAX_PATCH_SIZE = 12;
-const MIN_PATCH_SIZE = 4;
+const MIN_PATCH_SIZE = 1;
 
 
 /**
@@ -68,6 +68,9 @@ export class SpeedyPipelineNodeNCCKeypointTracker extends SpeedyPipelineNode
 
         /** @type {SpeedySize} size of the template, i.e., the patch around the keypoint */
         this._patchSize = DEFAULT_PATCH_SIZE;
+
+        /** @type {number} a threshold in [-1,1] used to decide when a target should be considered "lost" */
+        this._discardThreshold = 0.0;
     }
 
     /**
@@ -122,6 +125,26 @@ export class SpeedyPipelineNodeNCCKeypointTracker extends SpeedyPipelineNode
     }
 
     /**
+     * If the correlation value gets below this threshold, the target is considered to be "lost"
+     * -1 <= ZNCC <= 1; 0 means no correlation; 1 means perfect correlation
+     * @returns {number}
+     */
+    get discardThreshold()
+    {
+        return this._discardThreshold;
+    }
+
+    /**
+     * If the correlation value gets below this threshold, the target is considered to be "lost"
+     * -1 <= ZNCC <= 1; 0 means no correlation; 1 means perfect correlation
+     * @param {number} value
+     */
+    set discardThreshold(value)
+    {
+        this._discardThreshold = +value;
+    }
+
+    /**
      * Pyramid operation: reduce (50% of size)
      * @param {SpeedyGPU} gpu
      * @param {SpeedyDrawableTexture} outtex output texture with two mipmap levels (0 and 1)
@@ -161,6 +184,7 @@ export class SpeedyPipelineNodeNCCKeypointTracker extends SpeedyPipelineNode
         const previousKeypoints = encodedKeypoints;
         const wsize = this._windowSize.width; // square window
         const psize = this._patchSize.width; // square patch
+        const discardThreshold = this._discardThreshold;
         const outputTexture = this._tex[0];
 
         // compute mipmap levels 0 and 1 of previousImage
@@ -193,13 +217,12 @@ export class SpeedyPipelineNodeNCCKeypointTracker extends SpeedyPipelineNode
         const p1 = Math.max(1, p0 >>> 1);
 
         // coarse flow estimation (lod = 1)
-        let flow = flow0.clear();
-        //flow = gpu.programs.keypoints.ncc(flow, previousKeypoints, pyrPreviousImage, pyrNextImage, 2*r1+1, p1, 1, descriptorSize, extraSize, encoderLength);
+        let flow = flow0.clearToColor(0, 0, 0, 0);
+        //flow = gpu.programs.keypoints.ncc(flow, previousKeypoints, pyrPreviousImage, pyrNextImage, 2*r1+1, p1, discardThreshold, 1, descriptorSize, extraSize, encoderLength);
 
         // fine flow estimation (lod = 0)
-        r0 = 15;
-        p0 = 7;
-        flow = gpu.programs.keypoints.ncc(flow, previousKeypoints, pyrPreviousImage, pyrNextImage, 2*r0+1, p0, 0, descriptorSize, extraSize, encoderLength);
+        r0 = (0.25 * wsize - 0.5) | 0;
+        flow = gpu.programs.keypoints.ncc(flow, previousKeypoints, pyrPreviousImage, pyrNextImage, 2*r0+1, p0, discardThreshold, 0, descriptorSize, extraSize, encoderLength);
 
         // transfer optical-flow to nextKeypoints
         gpu.programs.keypoints.transferFlow.outputs(encoderLength, encoderLength, this._tex[9]);

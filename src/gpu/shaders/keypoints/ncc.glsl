@@ -28,6 +28,7 @@ uniform sampler2D prevPyramid; // image pyramid at time t-1
 uniform sampler2D nextPyramid; // image pyramid at time t
 uniform int windowSize; // odd number - window size for the current level of detail
 uniform int patchSize; // patch size for the current level of detail
+uniform float discardThreshold; // used to decide when a target is considered to be "lost"
 uniform int level; // current level of detail (0 or 1)
 uniform int descriptorSize; // in bytes
 uniform int extraSize; // in bytes
@@ -336,7 +337,7 @@ void main()
         return;
 
     // get the current estimate of the flow vector for this keypoint
-    const int MAX_LOD = 1;
+    const int MAX_LOD = 0;//1;
     vec2 flow = level < MAX_LOD ? decodeFlow(pixel) : vec2(0.0f);
 
     // update the estimate of the flow for this level of the pyramid
@@ -355,10 +356,8 @@ void main()
         for(int i = 0; i < windowSize; i++) {
             currOffset = ivec2(i-r, j-r);
             currNCC = computeNCC(currOffset);
-            if(currNCC > bestNCC) {
-                bestNCC = currNCC;
-                bestOffset = currOffset;
-            }
+            bestOffset = bestNCC > currNCC ? bestOffset : currOffset;
+            bestNCC = max(currNCC, bestNCC);
         }
     }
 
@@ -367,6 +366,6 @@ void main()
     flow += refineSubpixel(bestOffset);
 
     // done!
-    color = bestNCC >= 0.3f ? encodeFlow(flow) : encodeInvalidFlow();
+    color = bestNCC >= discardThreshold ? encodeFlow(flow) : encodeInvalidFlow();
     //color = encodeFlow(flow);
 }
