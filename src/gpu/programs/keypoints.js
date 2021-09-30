@@ -74,10 +74,6 @@ const lk = [7, 9, 11, 13, 15, 21].reduce((obj, win) => ((obj[win] =
 const transferFlow = importShader('keypoints/transfer-flow.glsl')
                      .withArguments('encodedFlow', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const ncc = importShader('keypoints/ncc.glsl')
-            .withDefines({ 'MAX_WINDOW_SIZE_LOD1': 15, 'MAX_PATCH_SIZE': 12 })
-            .withArguments('encodedFlow', 'prevKeypoints', 'prevPyramid', 'nextPyramid', 'windowSize', 'patchSize', 'discardThreshold', 'level', 'descriptorSize', 'extraSize', 'encoderLength');
-
 
 // Keypoint sorting
 const sortCreatePermutation = importShader('keypoints/sort-createperm.glsl')
@@ -211,9 +207,6 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
                 ...this.program.usesPingpongRendering()
             })
             .declare('transferFlow', transferFlow)
-            .declare('ncc', ncc, {
-                ...this.program.usesPingpongRendering()
-            })
 
             //
             // Keypoint sorting
