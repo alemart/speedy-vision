@@ -43,12 +43,13 @@ void main()
     int len = textureSize(encodedFlow, 0).x;
     ivec2 location = ivec2(myIndex % len, myIndex / len);
     vec4 encodedFlow = pixelAt(encodedFlow, location);
+    bool discardFlow = isDiscardedPairOfFloat16(encodedFlow);
 
     // compute the new position of the keypoint
-    vec2 flow = decodePairOfFloat16(encodedFlow);
+    vec2 flow = !discardFlow ? decodePairOfFloat16(encodedFlow) : vec2(0.0f);
     vec4 newPosition = encodeKeypointPosition(keypoint.position + flow);
 
     // transfer the position
     vec4 newPixel = myAddress.offset == 0 ? newPosition : pixel;
-    color = !isDiscardedPairOfFloat16(encodedFlow) ? newPixel : encodeDiscardedKeypoint();
+    color = !discardFlow ? newPixel : encodeDiscardedKeypoint();
 }
