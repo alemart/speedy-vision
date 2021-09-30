@@ -1085,9 +1085,9 @@ descriptor.output().connectTo(sink.input());
 pipeline.init(source, greyscale, pyramid, gaussian, blurredPyramid, fast, clipper, descriptor, sink);
 ```
 
-##### Speedy.Keypoint.Detector.Discard()
+##### Speedy.Keypoint.Descriptor.Discard()
 
-`Speedy.Keypoint.Detector.Discard(name?: string): SpeedyPipelineNodeDiscardKeypointDescriptor`
+`Speedy.Keypoint.Descriptor.Discard(name?: string): SpeedyPipelineNodeDiscardKeypointDescriptor`
 
 Discard the descriptors from a set of keypoints. This is used to reduce the size of the data.
 
@@ -1109,14 +1109,14 @@ Speedy uses sparse optical-flow algorithms to track keypoints in a video. Applic
 
 `Speedy.Keypoint.Tracker.LK(name?: string): SpeedyPipelineNodeLKKeypointTracker`
 
-Pyramid LK optical-flow.
+Pyramid-based LK optical-flow.
 
 ###### Parameters
 
-* `windowSize: number`. The size of the window to be used by the feature tracker. The algorithm will read neighbor pixels to determine the motion of a keypoint. Typical values for this property include: `21`, `15`, `11`, `7`. This must be a positive odd integer. Defaults to `15`.
-* `levels: number`. Specifies how many pyramid levels will be used in the computation. You should generally leave this as it is.
+* `windowSize: number`. The size of the window to be used by the feature tracker. The algorithm will read neighbor pixels to determine the motion of a keypoint. Typical values for this property include: `7`, `11`, `15`. This must be a positive odd integer. Defaults to `11`.
+* `levels: number`. Specifies how many pyramid levels will be used in the computation. The more levels you use, the faster the motions you can capture. Defaults to `3`.
 * `discardThreshold: number`. A threshold used to discard keypoints that are not "good" candidates for tracking. The higher the value, the more keypoints will be discarded. Defaults to `0.0001`.
-* `numberOfIterations: number`. Maximum number of iterations for computing the local optical-flow on each level of the pyramid. Defaults to `5`.
+* `numberOfIterations: number`. Maximum number of iterations for computing the local optical-flow on each level of the pyramid. Defaults to `30`.
 * `epsilon: number`. An accuracy threshold used to stop the computation of the local optical-flow of any level of the pyramid. The local optical-flow is computed iteratively and in small increments. If the length of an increment is too small, we discard it. This property defaults to `0.01`.
 
 ###### Ports
@@ -1128,45 +1128,7 @@ Pyramid LK optical-flow.
 | `"previousKeypoints"` | Keypoints | Input keypoints at time *t-1*. |
 | `"out"` | Keypoints | Output keypoints at time *t*. |
 
-###### Example
-
-```js
-const pipeline = Speedy.Pipeline();
-const imgsrc = Speedy.Image.Source();
-const kpsrc = Speedy.Keypoint.Source();
-
-const grey = Speedy.Filter.Greyscale();
-const pyr = Speedy.Image.Pyramid();
-const harris = Speedy.Keypoint.Detector.Harris();
-
-const buf = Speedy.Image.Buffer();
-const bufpyr = Speedy.Image.Pyramid();
-
-const lk = Speedy.Keypoint.Tracker.LK();
-const mixer = Speedy.Keypoint.Mixer();
-const sink = Speedy.Keypoint.Sink();
-
-imgsrc.media = media;
-harris.quality = 0.10;
-lk.numberOfIterations = 15;
-
-imgsrc.output().connectTo(grey.input());
-grey.output().connectTo(pyr.input());
-pyr.output().connectTo(harris.input());
-harris.output().connectTo(mixer.input('in1'));
-
-grey.output().connectTo(buf.input());
-buf.output().connectTo(bufpyr.input());
-
-bufpyr.output().connectTo(lk.input('previousImage'));
-pyr.output().connectTo(lk.input('nextImage'));
-kpsrc.output().connectTo(lk.input('previousKeypoints'));
-
-lk.output().connectTo(mixer.input('in0'));
-mixer.output().connectTo(sink.input());
-
-pipeline.init(imgsrc, grey, pyr, harris, kpsrc, buf, bufpyr, lk, mixer, sink);
-```
+**Note**: you need to provide pyramids as input if `levels > 1`.
 
 #### Keypoint matching
 
