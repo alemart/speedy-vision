@@ -39,6 +39,28 @@
 #define decodeFloat16(v) unpackf16(uvec2((v) * 255.0f))
 
 /**
+ * Encode a pair of 16-bit floats into a 32-bit vector
+ * suitable for storage in RGBA8 textures
+ * @param {vec2} f
+ * @returns {vec4}
+ */
+#define encodePairOfFloat16(f) vec4(encodeFloat16((f).x), encodeFloat16((f).y))
+
+/**
+ * The inverse of encodePairOfFloat16()
+ * @param {vec4} v in [0,1]^4
+ * @returns {vec2}
+ */
+#define decodePairOfFloat16(v) vec2(decodeFloat16((v).rg), decodeFloat16((v).ba))
+
+/**
+ * Encode a "null" (invalid, end of list) pair of
+ * 16-bit floats into a 32-bit vector
+ * @returns {vec4}
+ */
+#define encodeNullPairOfFloat16() vec4(1.0f) // this is a pair of NaN according to the OpenGL ES 3 spec sec 2.1.2
+
+/**
  * Convert a float to a 16-bit half-float and pack
  * it into a uvec2 (a,b) such that 0 <= a,b <= 255
  * @param {float} f input
