@@ -120,7 +120,7 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
             w = (pixels[i+7] << 8) | pixels[i+6];
 
             // the keypoint is "null": we have reached the end of the list
-            if(x >= 0xFFFF && y >= 0xFFFF)
+            if(x == 0xFFFF && y == 0xFFFF)
                 break;
 
             // the header is zero: discard the keypoint
