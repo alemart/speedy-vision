@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-09-30T04:16:07.042Z
+ * Date: 2021-10-01T01:59:12.349Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -555,7 +555,6 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/orb */ "./src/core/pipeline/nodes/keypoints/descriptors/orb.js");
 /* harmony import */ var _nodes_keypoints_descriptors_discard__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/discard */ "./src/core/pipeline/nodes/keypoints/descriptors/discard.js");
 /* harmony import */ var _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../nodes/keypoints/trackers/lk */ "./src/core/pipeline/nodes/keypoints/trackers/lk.js");
-/* harmony import */ var _nodes_keypoints_trackers_ncc__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../nodes/keypoints/trackers/ncc */ "./src/core/pipeline/nodes/keypoints/trackers/ncc.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -576,7 +575,6 @@ __webpack_require__.r(__webpack_exports__);
  * keypoint-factory.js
  * Keypoint-related nodes
  */
-
 
 
 
@@ -657,16 +655,6 @@ class SpeedyPipelineKeypointTrackerFactory extends _speedy_namespace__WEBPACK_IM
     static LK(name = undefined)
     {
         return new _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_12__["SpeedyPipelineNodeLKKeypointTracker"](name);
-    }
-
-    /**
-     * NCC-based tracking
-     * @param {string} [name]
-     * @returns {SpeedyPipelineNodeNCCKeypointTracker}
-     */
-    static NCC(name = undefined)
-    {
-        return new _nodes_keypoints_trackers_ncc__WEBPACK_IMPORTED_MODULE_13__["SpeedyPipelineNodeNCCKeypointTracker"](name);
     }
 }
 
@@ -836,6 +824,81 @@ class SpeedyPipelineTransformFactory extends _speedy_namespace__WEBPACK_IMPORTED
     static PerspectiveWarp(name = undefined)
     {
         return new _nodes_transforms_perspective_warp__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodePerspectiveWarp"](name);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/pipeline/factories/vector2-factory.js":
+/*!********************************************************!*\
+  !*** ./src/core/pipeline/factories/vector2-factory.js ***!
+  \********************************************************/
+/*! exports provided: SpeedyPipelineVector2Factory */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineVector2Factory", function() { return SpeedyPipelineVector2Factory; });
+/* harmony import */ var _speedy_vector__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../speedy-vector */ "./src/core/speedy-vector.js");
+/* harmony import */ var _nodes_vector2_sink__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/vector2/sink */ "./src/core/pipeline/nodes/vector2/sink.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * vector2-factory.js
+ * 2D vectors
+ */
+
+
+
+
+/**
+ * 2D vectors
+ */
+class SpeedyPipelineVector2Factory extends Function
+{
+    /**
+     * Constructor
+     */
+    constructor()
+    {
+        // This factory can be invoked as a function
+        super('...args', 'return this._create(...args)');
+        return this.bind(this);
+    }
+
+    /**
+     * Create a 2D vector
+     * @param {number} x x-coordinate
+     * @param {number} y y-coordinate
+     * @returns {SpeedyVector2}
+     */
+    _create(x, y)
+    {
+        return new _speedy_vector__WEBPACK_IMPORTED_MODULE_0__["SpeedyVector2"](x, y);
+    }
+
+    /**
+     * Create a Vector2 sink
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeVector2Sink}
+     */
+    Sink(name = undefined)
+    {
+        return new _nodes_vector2_sink__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodeVector2Sink"](name);
     }
 }
 
@@ -4339,7 +4402,7 @@ class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MO
             w = (pixels[i+7] << 8) | pixels[i+6];
 
             // the keypoint is "null": we have reached the end of the list
-            if(x >= 0xFFFF && y >= 0xFFFF)
+            if(x == 0xFFFF && y == 0xFFFF)
                 break;
 
             // the header is zero: discard the keypoint
@@ -4636,7 +4699,7 @@ class SpeedyPipelineNodeLKKeypointTracker extends _pipeline_node__WEBPACK_IMPORT
      */
     constructor(name = undefined)
     {
-        super(name, 4, [
+        super(name, 3, [
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__["InputPort"])('previousImage').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineMessageType"].Image).satisfying(
                 msg => msg.format === _utils_types__WEBPACK_IMPORTED_MODULE_6__["ImageFormat"].GREY
             ),
@@ -4645,6 +4708,7 @@ class SpeedyPipelineNodeLKKeypointTracker extends _pipeline_node__WEBPACK_IMPORT
             ),
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__["InputPort"])('previousKeypoints').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineMessageType"].Keypoints),
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineMessageType"].Keypoints),
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__["OutputPort"])('flow').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineMessageType"].Vector2),
         ]);
 
         /** @type {SpeedySize} window size */
@@ -4784,11 +4848,13 @@ class SpeedyPipelineNodeLKKeypointTracker extends _pipeline_node__WEBPACK_IMPORT
         const epsilon = this._epsilon;
         const keypoints = gpu.programs.keypoints;
         const tex = this._tex;
-        const outputTexture = this._tex[3];
+        const nextKeypoints = this._tex[2];
 
         // do we need a pyramid?
         if(!(levels == 1 || (previousImage.hasMipmaps() && nextImage.hasMipmaps())))
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__["IllegalOperationError"](`LK: a pyramid is required if levels > 1`);
+        else if(previousImage.width !== nextImage.width || previousImage.height !== nextImage.height)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__["IllegalOperationError"](`LK: can't use input images of different size`);
 
         // select the appropriate program
         const lk = (
@@ -4811,278 +4877,12 @@ class SpeedyPipelineNodeLKKeypointTracker extends _pipeline_node__WEBPACK_IMPORT
             flow = lk(flow, previousKeypoints, nextImage, previousImage, wsize, lod, levels, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);
 
         // transfer optical-flow to nextKeypoints
-        keypoints.transferFlow.outputs(encoderLength, encoderLength, tex[2]);
-        const nextKeypoints = keypoints.transferFlow(flow, previousKeypoints, descriptorSize, extraSize, encoderLength);
-
-        // discard "bad" keypoints
-        keypoints.lkDiscard.outputs(encoderLength, encoderLength, outputTexture);
-        const goodKeypoints = keypoints.lkDiscard(nextImage, wsize, nextKeypoints, descriptorSize, extraSize, encoderLength);
+        keypoints.transferFlow.outputs(encoderLength, encoderLength, nextKeypoints);
+        keypoints.transferFlow(flow, previousKeypoints, descriptorSize, extraSize, encoderLength);
 
         // done!
-        this.output().swrite(goodKeypoints, descriptorSize, extraSize, encoderLength);
-    }
-}
-
-/***/ }),
-
-/***/ "./src/core/pipeline/nodes/keypoints/trackers/ncc.js":
-/*!***********************************************************!*\
-  !*** ./src/core/pipeline/nodes/keypoints/trackers/ncc.js ***!
-  \***********************************************************/
-/*! exports provided: SpeedyPipelineNodeNCCKeypointTracker */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-__webpack_require__.r(__webpack_exports__);
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeNCCKeypointTracker", function() { return SpeedyPipelineNodeNCCKeypointTracker; });
-/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
-/* harmony import */ var _detectors_detector__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../detectors/detector */ "./src/core/pipeline/nodes/keypoints/detectors/detector.js");
-/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
-/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
-/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
-/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../../utils/types */ "./src/utils/types.js");
-/* harmony import */ var _speedy_size__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../speedy-size */ "./src/core/speedy-size.js");
-/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../../../utils/errors */ "./src/utils/errors.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../../../../../utils/globals */ "./src/utils/globals.js");
-/*
- * speedy-vision.js
- * GPU-accelerated Computer Vision for JavaScript
- * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- * ncc.js
- * Coarse-to-fine NCC-based sparse optical-flow
- */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// Constants
-const DEFAULT_WINDOW_SIZE = new _speedy_size__WEBPACK_IMPORTED_MODULE_7__["SpeedySize"](31, 31);
-const DEFAULT_PATCH_SIZE = new _speedy_size__WEBPACK_IMPORTED_MODULE_7__["SpeedySize"](8, 8);
-const MAX_WINDOW_SIZE = 31; // 31x31
-const MIN_WINDOW_SIZE = 5; // 5x5
-const MAX_PATCH_SIZE = 12;
-const MIN_PATCH_SIZE = 1;
-
-
-/**
- * Coarse-to-fine NCC-based sparse optical-flow (Normalized Cross Correlation)
- */
-class SpeedyPipelineNodeNCCKeypointTracker extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNode"]
-{
-    /**
-     * Constructor
-     * @param {string} [name] name of the node
-     */
-    constructor(name = undefined)
-    {
-        super(name, 10, [
-            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__["InputPort"])('previousImage').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineMessageType"].Image).satisfying(
-                msg => msg.format === _utils_types__WEBPACK_IMPORTED_MODULE_6__["ImageFormat"].GREY
-            ),
-            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__["InputPort"])('nextImage').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineMessageType"].Image).satisfying(
-                msg => msg.format === _utils_types__WEBPACK_IMPORTED_MODULE_6__["ImageFormat"].GREY
-            ),
-            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__["InputPort"])('previousKeypoints').expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineMessageType"].Keypoints),
-            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineMessageType"].Keypoints),
-        ]);
-
-        /** @type {SpeedySize} size of the search window */
-        this._windowSize = DEFAULT_WINDOW_SIZE;
-
-        /** @type {SpeedySize} size of the template, i.e., the patch around the keypoint */
-        this._patchSize = DEFAULT_PATCH_SIZE;
-
-        /** @type {number} a threshold in [-1,1] used to decide when a target should be considered "lost" */
-        this._discardThreshold = 0.0;
-    }
-
-    /**
-     * Window size (use odd numbers)
-     * @returns {SpeedySize}
-     */
-    get windowSize()
-    {
-        return this._windowSize;
-    }
-
-    /**
-     * Window size (use odd numbers)
-     * @param {SpeedySize} windowSize must be a square window
-     */
-    set windowSize(windowSize)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_8__["Utils"].assert(windowSize.width == windowSize.height && windowSize.area() > 0);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_8__["Utils"].assert(windowSize.width % 2 == 1 /*&& windowSize.height % 2 == 1*/);
-        this._windowSize = windowSize;
-
-        const wsize = this._windowSize.width;
-        if(wsize > MAX_WINDOW_SIZE)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__["NotSupportedError"](`NCC: window of size ${this._windowSize} is too large!`);
-        else if(wsize < MIN_WINDOW_SIZE)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__["NotSupportedError"](`NCC: window of size ${this._windowSize} is too small!`);
-    }
-
-    /**
-     * Patch size
-     * @returns {SpeedySize}
-     */
-    get patchSize()
-    {
-        return this._patchSize;
-    }
-
-    /**
-     * Patch size
-     * @param {SpeedySize} patchSize must be square
-     */
-    set patchSize(patchSize)
-    {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_8__["Utils"].assert(patchSize.width === patchSize.height && patchSize.area() > 0);
-        this._patchSize = patchSize;
-
-        const psize = this._patchSize.width;
-        if(psize > MAX_PATCH_SIZE)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__["NotSupportedError"](`NCC: patch of size ${this._patchSize} is too large!`);
-        else if(psize < MIN_PATCH_SIZE)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_9__["NotSupportedError"](`NCC: patch of size ${this._patchSize} is too small!`);
-    }
-
-    /**
-     * If the correlation value gets below this threshold, the target is considered to be "lost"
-     * -1 <= ZNCC <= 1; 0 means no correlation; 1 means perfect correlation
-     * @returns {number}
-     */
-    get discardThreshold()
-    {
-        return this._discardThreshold;
-    }
-
-    /**
-     * If the correlation value gets below this threshold, the target is considered to be "lost"
-     * -1 <= ZNCC <= 1; 0 means no correlation; 1 means perfect correlation
-     * @param {number} value
-     */
-    set discardThreshold(value)
-    {
-        this._discardThreshold = +value;
-    }
-
-    /**
-     * Pyramid operation: reduce (50% of size)
-     * @param {SpeedyGPU} gpu
-     * @param {SpeedyDrawableTexture} outtex output texture with two mipmap levels (0 and 1)
-     * @param {SpeedyDrawableTexture} intex input texture
-     * @param {SpeedyDrawableTexture} halftex temporary texture that will store the reduce()'d input texture (50% size)
-     * @param {SpeedyDrawableTexture} tmptex temporary texture (100% size) used to compute reduce()
-     * @returns {SpeedyDrawableTexture} outtex
-     */
-    _reduce(gpu, outtex, intex, halftex, tmptex)
-    {
-        const pyramids = gpu.programs.pyramids;
-        const width = intex.width, height = intex.height;
-        const halfWidth = Math.max(1, width >>> 1), halfHeight = Math.max(1, height >>> 1);
-
-        (pyramids.smoothX.outputs(width, height, tmptex))(intex);
-        (pyramids.smoothY.outputs(width, height, outtex))(tmptex);
-        (pyramids.downsample2.outputs(halfWidth, halfHeight, halftex))(outtex);
-
-        outtex.clear();
-        intex.copyTo(outtex);
-        //halftex.copyTo(outtex, 1);
-        outtex.generateMipmaps([intex, halftex]);
-
-        return outtex;
-    }
-
-    /**
-     * Run the specific task of this node
-     * @param {SpeedyGPU} gpu
-     * @returns {void|SpeedyPromise<void>}
-     */
-    _run(gpu)
-    {
-        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input('previousKeypoints').read();
-        const previousImage = this.input('previousImage').read().image;
-        const nextImage = this.input('nextImage').read().image;
-        const previousKeypoints = encodedKeypoints;
-        const wsize = this._windowSize.width; // square window
-        const psize = this._patchSize.width; // square patch
-        const discardThreshold = this._discardThreshold;
-        const outputTexture = this._tex[0];
-
-        // compute mipmap levels 0 and 1 of previousImage
-        const pyrPreviousImage = this._tex[1];
-        const halfPreviousImage = this._tex[2];
-        const tmpPreviousImage = this._tex[3];
-        this._reduce(gpu, pyrPreviousImage, previousImage, halfPreviousImage, tmpPreviousImage);
-
-        // compute mipmap levels 0 and 1 of nextImage
-        const pyrNextImage = this._tex[4];
-        const halfNextImage = this._tex[5];
-        const tmpNextImage = this._tex[6];
-        this._reduce(gpu, pyrNextImage, nextImage, halfNextImage, tmpNextImage);
-
-        // initialize flow textures
-        const maxKeypoints = _detectors_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodeKeypointDetector"].encoderCapacity(descriptorSize, extraSize, encoderLength);
-        const nccEncoderLength = Math.max(1, Math.ceil(Math.sqrt(maxKeypoints)));
-        const flow0 = this._tex[7], flow1 = this._tex[8];
-        gpu.programs.keypoints.ncc.outputs(nccEncoderLength, nccEncoderLength, flow1, flow0);
-        //flow0.clear(); flow1.clear();
-        //lk.outputs(lkEncoderLength, lkEncoderLength, tex[0], tex[1]);
-
-        // compute the search radii ri for lod = i, i = 0,1
-        // note that 2 * r1 + 1 = (1/2^lod) * wsize
-        let r0 = 2; // fair enough
-        const r1 = Math.max(r0, (0.25 * wsize - 0.5) | 0);
-
-        // compute the patch size pi for lod = i, i = 0,1
-        let p0 = psize;
-        const p1 = Math.max(1, p0 >>> 1);
-
-        // coarse flow estimation (lod = 1)
-        let flow = flow0.clearToColor(0, 0, 0, 0);
-        //flow = gpu.programs.keypoints.ncc(flow, previousKeypoints, pyrPreviousImage, pyrNextImage, 2*r1+1, p1, discardThreshold, 1, descriptorSize, extraSize, encoderLength);
-
-        // fine flow estimation (lod = 0)
-        r0 = (0.25 * wsize - 0.5) | 0;
-        flow = gpu.programs.keypoints.ncc(flow, previousKeypoints, pyrPreviousImage, pyrNextImage, 2*r0+1, p0, discardThreshold, 0, descriptorSize, extraSize, encoderLength);
-
-        // transfer optical-flow to nextKeypoints
-        gpu.programs.keypoints.transferFlow.outputs(encoderLength, encoderLength, this._tex[9]);
-        const nextKeypoints = gpu.programs.keypoints.transferFlow(flow, previousKeypoints, descriptorSize, extraSize, encoderLength);
-
-        // discard "bad" keypoints
-        gpu.programs.keypoints.lkDiscard.outputs(encoderLength, encoderLength, outputTexture);
-        const goodKeypoints = gpu.programs.keypoints.lkDiscard(pyrNextImage, wsize, nextKeypoints, descriptorSize, extraSize, encoderLength);
-
-        // done!
-        this.output().swrite(goodKeypoints, descriptorSize, extraSize, encoderLength);
+        this.output().swrite(nextKeypoints, descriptorSize, extraSize, encoderLength);
+        this.output('flow').swrite(flow);
     }
 }
 
@@ -5541,11 +5341,155 @@ class SpeedyPipelineNodeResize extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0
 
 /***/ }),
 
+/***/ "./src/core/pipeline/nodes/vector2/sink.js":
+/*!*************************************************!*\
+  !*** ./src/core/pipeline/nodes/vector2/sink.js ***!
+  \*************************************************/
+/*! exports provided: SpeedyPipelineNodeVector2Sink */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeVector2Sink", function() { return SpeedyPipelineNodeVector2Sink; });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture_reader__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-texture-reader */ "./src/gpu/speedy-texture-reader.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_vector__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../speedy-vector */ "./src/core/speedy-vector.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * sink.js
+ * Gets keypoints out of the pipeline
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Gets 2D vectors out of the pipeline
+ */
+class SpeedyPipelineNodeVector2Sink extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineSinkNode"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = 'vec2')
+    {
+        super(name, 0, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Vector2)
+        ]);
+
+        /** @type {SpeedyVector2[]} 2D vectors (output) */
+        this._vectors = [];
+
+        /** @type {SpeedyTextureReader} texture reader */
+        this._textureReader = new _gpu_speedy_texture_reader__WEBPACK_IMPORTED_MODULE_4__["SpeedyTextureReader"]();
+    }
+
+    /**
+     * Export data from this node to the user
+     * @returns {SpeedyPromise<SpeedyVector2[]>}
+     */
+    export()
+    {
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_7__["SpeedyPromise"].resolve(this._vectors);
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const vectors = this.input().read().vectors;
+
+        return this._textureReader.readPixelsAsync(vectors).then(pixels => {
+            this._vectors = SpeedyPipelineNodeVector2Sink._decode(pixels, vectors.width);
+        });
+    }
+
+    /**
+     * Decode a sequence of vectors, given a flattened image of encoded pixels
+     * @param {Uint8Array} pixels pixels in the [r,g,b,a,...] format
+     * @param {number} encoderLength
+     * @returns {SpeedyVector2[]} vectors
+     */
+    static _decode(pixels, encoderLength)
+    {
+        const bytesPerVector = 4; // 1 pixel per vector
+        const vectors = [];
+        let hi = 0, lo = 0;
+        let x = 0, y = 0;
+
+        // how many bytes should we read?
+        const e = encoderLength;
+        const e2 = e * e * bytesPerVector;
+        const size = Math.min(pixels.length, e2);
+
+        // for each encoded vector
+        for(let i = 0; i < size; i += bytesPerVector) {
+            // extract 16-bit words
+            lo = (pixels[i+1] << 8) | pixels[i];
+            hi = (pixels[i+3] << 8) | pixels[i+2];
+
+            // the vector is "null": we have reached the end of the list
+            if(lo == 0xFFFF && hi == 0xFFFF)
+                break;
+
+            // the vector must be discarded
+            if(lo == 0xFF00 && hi == 0xFF00)
+                continue;
+
+            // decode floats
+            x = _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].decodeFloat16(lo);
+            y = _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].decodeFloat16(hi);
+
+            // register vector
+            vectors.push(new _speedy_vector__WEBPACK_IMPORTED_MODULE_8__["SpeedyVector2"](x, y));
+        }
+
+        // done!
+        return vectors;
+    }
+}
+
+/***/ }),
+
 /***/ "./src/core/pipeline/pipeline-message.js":
 /*!***********************************************!*\
   !*** ./src/core/pipeline/pipeline-message.js ***!
   \***********************************************/
-/*! exports provided: SpeedyPipelineMessageType, SpeedyPipelineMessage, SpeedyPipelineMessageWithNothing, SpeedyPipelineMessageWithImage, SpeedyPipelineMessageWithKeypoints */
+/*! exports provided: SpeedyPipelineMessageType, SpeedyPipelineMessage, SpeedyPipelineMessageWithNothing, SpeedyPipelineMessageWithImage, SpeedyPipelineMessageWithKeypoints, SpeedyPipelineMessageWith2DVectors */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -5555,6 +5499,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineMessageWithNothing", function() { return SpeedyPipelineMessageWithNothing; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineMessageWithImage", function() { return SpeedyPipelineMessageWithImage; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineMessageWithKeypoints", function() { return SpeedyPipelineMessageWithKeypoints; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineMessageWith2DVectors", function() { return SpeedyPipelineMessageWith2DVectors; });
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/types */ "./src/utils/types.js");
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/errors */ "./src/utils/errors.js");
@@ -5587,12 +5532,13 @@ __webpack_require__.r(__webpack_exports__);
 
 /**
  * Types of messages
- * @enum {number}
+ * @enum {Symbol}
  */
 const SpeedyPipelineMessageType = Object.freeze({
-    Nothing: 0,
-    Image: 1,
-    Keypoints: 2,
+    Nothing: Symbol('Nothing'),
+    Image: Symbol('Image'),
+    Keypoints: Symbol('Keypoints'),
+    Vector2: Symbol('Vector2'),
 });
 
 /**
@@ -5856,6 +5802,46 @@ class SpeedyPipelineMessageWithKeypoints extends SpeedyPipelineMessage
     }
 }
 
+/**
+ * A message transporting a set of 2D vectors
+ */
+class SpeedyPipelineMessageWith2DVectors extends SpeedyPipelineMessage
+{
+    /**
+     * Constructor
+     */
+    constructor()
+    {
+        super(SpeedyPipelineMessageType.Vector2);
+
+        /** @type {SpeedyTexture} the set of vectors */
+        this._vectors = null;
+    }
+
+    /**
+     * Set parameters
+     * @param {SpeedyTexture} vectors the set of vectors
+     * @returns {SpeedyPipelineMessage} this message
+     */
+    set(vectors)
+    {
+        // set parameters
+        this._vectors = vectors;
+
+        // done!
+        return this;
+    }
+
+    /**
+     * The set of vectors
+     * @returns {SpeedyTexture}
+     */
+    get vectors()
+    {
+        return this._vectors;
+    }
+}
+
 
 
 
@@ -5873,6 +5859,7 @@ const MESSAGE_CLASS = Object.freeze({
     [SpeedyPipelineMessageType.Nothing]: SpeedyPipelineMessageWithNothing,
     [SpeedyPipelineMessageType.Image]: SpeedyPipelineMessageWithImage,
     [SpeedyPipelineMessageType.Keypoints]: SpeedyPipelineMessageWithKeypoints,
+    [SpeedyPipelineMessageType.Vector2]: SpeedyPipelineMessageWith2DVectors,
 });
 
 /**
@@ -10249,16 +10236,16 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "Speedy", function() { return Speedy; });
 /* harmony import */ var _speedy_media__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./speedy-media */ "./src/core/speedy-media.js");
 /* harmony import */ var _utils_fps_counter__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/fps-counter */ "./src/utils/fps-counter.js");
-/* harmony import */ var _speedy_vector__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-vector */ "./src/core/speedy-vector.js");
-/* harmony import */ var _speedy_point__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-point */ "./src/core/speedy-point.js");
-/* harmony import */ var _speedy_size__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./speedy-size */ "./src/core/speedy-size.js");
-/* harmony import */ var _speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./speedy-matrix-factory */ "./src/core/speedy-matrix-factory.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _pipeline_pipeline__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./pipeline/pipeline */ "./src/core/pipeline/pipeline.js");
-/* harmony import */ var _pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./pipeline/factories/image-factory */ "./src/core/pipeline/factories/image-factory.js");
-/* harmony import */ var _pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./pipeline/factories/filter-factory */ "./src/core/pipeline/factories/filter-factory.js");
-/* harmony import */ var _pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./pipeline/factories/transform-factory */ "./src/core/pipeline/factories/transform-factory.js");
-/* harmony import */ var _pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./pipeline/factories/keypoint-factory */ "./src/core/pipeline/factories/keypoint-factory.js");
+/* harmony import */ var _speedy_point__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-point */ "./src/core/speedy-point.js");
+/* harmony import */ var _speedy_size__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-size */ "./src/core/speedy-size.js");
+/* harmony import */ var _speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./speedy-matrix-factory */ "./src/core/speedy-matrix-factory.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _pipeline_pipeline__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./pipeline/pipeline */ "./src/core/pipeline/pipeline.js");
+/* harmony import */ var _pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./pipeline/factories/image-factory */ "./src/core/pipeline/factories/image-factory.js");
+/* harmony import */ var _pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./pipeline/factories/filter-factory */ "./src/core/pipeline/factories/filter-factory.js");
+/* harmony import */ var _pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./pipeline/factories/transform-factory */ "./src/core/pipeline/factories/transform-factory.js");
+/* harmony import */ var _pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./pipeline/factories/keypoint-factory */ "./src/core/pipeline/factories/keypoint-factory.js");
+/* harmony import */ var _pipeline_factories_vector2_factory__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./pipeline/factories/vector2-factory */ "./src/core/pipeline/factories/vector2-factory.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../utils/globals */ "./src/utils/globals.js");
 /*
@@ -10298,7 +10285,8 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // Constants
-const matrixFactory = new _speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_5__["SpeedyMatrixFactory"]();
+const matrixFactory = new _speedy_matrix_factory__WEBPACK_IMPORTED_MODULE_4__["SpeedyMatrixFactory"]();
+const vector2Factory = new _pipeline_factories_vector2_factory__WEBPACK_IMPORTED_MODULE_11__["SpeedyPipelineVector2Factory"]();
 
 /**
  * Speedy's main class
@@ -10348,13 +10336,12 @@ class Speedy
     }
 
     /**
-     * Create a 2D vector
-     * @param {number} x
-     * @param {number} y
+     * 2D vector instantiation and related nodes
+     * @returns {SpeedyPipelineVector2Factory}
      */
-    static Vector2(x, y)
+    static get Vector2()
     {
-        return new _speedy_vector__WEBPACK_IMPORTED_MODULE_2__["SpeedyVector2"](x, y);
+        return vector2Factory;
     }
 
     /**
@@ -10364,7 +10351,7 @@ class Speedy
      */
     static Point2(x, y)
     {
-        return new _speedy_point__WEBPACK_IMPORTED_MODULE_3__["SpeedyPoint2"](x, y);
+        return new _speedy_point__WEBPACK_IMPORTED_MODULE_2__["SpeedyPoint2"](x, y);
     }
 
     /**
@@ -10374,7 +10361,7 @@ class Speedy
      */
     static Size(width, height)
     {
-        return new _speedy_size__WEBPACK_IMPORTED_MODULE_4__["SpeedySize"](width, height);
+        return new _speedy_size__WEBPACK_IMPORTED_MODULE_3__["SpeedySize"](width, height);
     }
 
     /**
@@ -10392,7 +10379,7 @@ class Speedy
      */
     static get Promise()
     {
-        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__["SpeedyPromise"];
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_5__["SpeedyPromise"];
     }
 
     /**
@@ -10401,7 +10388,7 @@ class Speedy
      */
     static Pipeline()
     {
-        return new _pipeline_pipeline__WEBPACK_IMPORTED_MODULE_7__["SpeedyPipeline"]();
+        return new _pipeline_pipeline__WEBPACK_IMPORTED_MODULE_6__["SpeedyPipeline"]();
     }
 
     /**
@@ -10410,7 +10397,7 @@ class Speedy
      */
     static get Image()
     {
-        return _pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_8__["SpeedyPipelineImageFactory"];
+        return _pipeline_factories_image_factory__WEBPACK_IMPORTED_MODULE_7__["SpeedyPipelineImageFactory"];
     }
 
     /**
@@ -10419,7 +10406,7 @@ class Speedy
      */
     static get Filter()
     {
-        return _pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_9__["SpeedyPipelineFilterFactory"];
+        return _pipeline_factories_filter_factory__WEBPACK_IMPORTED_MODULE_8__["SpeedyPipelineFilterFactory"];
     }
 
     /**
@@ -10428,7 +10415,7 @@ class Speedy
      */
     static get Transform()
     {
-        return _pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_10__["SpeedyPipelineTransformFactory"];
+        return _pipeline_factories_transform_factory__WEBPACK_IMPORTED_MODULE_9__["SpeedyPipelineTransformFactory"];
     }
 
     /**
@@ -10437,7 +10424,7 @@ class Speedy
      */
     static get Keypoint()
     {
-        return _pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_11__["SpeedyPipelineKeypointFactory"];
+        return _pipeline_factories_keypoint_factory__WEBPACK_IMPORTED_MODULE_10__["SpeedyPipelineKeypointFactory"];
     }
 }
 
@@ -11288,15 +11275,8 @@ const lk = [7, 9, 11, 13, 15, 21].reduce((obj, win) => ((obj[win] =
                .withArguments('encodedFlow', 'prevKeypoints', 'nextPyramid', 'prevPyramid', 'windowSize', 'level', 'depth', 'numberOfIterations', 'discardThreshold', 'epsilon', 'descriptorSize', 'extraSize', 'encoderLength')
            ), obj), {});
 
-const lkDiscard = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/lk-discard.glsl')
-                  .withArguments('pyramid', 'windowSize', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
-
 const transferFlow = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/transfer-flow.glsl')
                      .withArguments('encodedFlow', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
-
-const ncc = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/ncc.glsl')
-            .withDefines({ 'MAX_WINDOW_SIZE_LOD1': 15, 'MAX_PATCH_SIZE': 12 })
-            .withArguments('encodedFlow', 'prevKeypoints', 'prevPyramid', 'nextPyramid', 'windowSize', 'patchSize', 'discardThreshold', 'level', 'descriptorSize', 'extraSize', 'encoderLength');
 
 
 // Keypoint sorting
@@ -11430,11 +11410,7 @@ class SpeedyProgramGroupKeypoints extends _speedy_program_group__WEBPACK_IMPORTE
             .declare('lk7', lk[7], { // up to 7x7 window (faster)
                 ...this.program.usesPingpongRendering()
             })
-            .declare('lkDiscard', lkDiscard)
             .declare('transferFlow', transferFlow)
-            .declare('ncc', ncc, {
-                ...this.program.usesPingpongRendering()
-            })
 
             //
             // Keypoint sorting
@@ -12344,10 +12320,8 @@ var map = {
 	"./keypoints/harris-cutoff.glsl": "./src/gpu/shaders/keypoints/harris-cutoff.glsl",
 	"./keypoints/harris-derivatives.glsl": "./src/gpu/shaders/keypoints/harris-derivatives.glsl",
 	"./keypoints/harris.glsl": "./src/gpu/shaders/keypoints/harris.glsl",
-	"./keypoints/lk-discard.glsl": "./src/gpu/shaders/keypoints/lk-discard.glsl",
 	"./keypoints/lk.glsl": "./src/gpu/shaders/keypoints/lk.glsl",
 	"./keypoints/mix-keypoints.glsl": "./src/gpu/shaders/keypoints/mix-keypoints.glsl",
-	"./keypoints/ncc.glsl": "./src/gpu/shaders/keypoints/ncc.glsl",
 	"./keypoints/nonmax-suppression.glsl": "./src/gpu/shaders/keypoints/nonmax-suppression.glsl",
 	"./keypoints/orb-descriptor.glsl": "./src/gpu/shaders/keypoints/orb-descriptor.glsl",
 	"./keypoints/orb-orientation.glsl": "./src/gpu/shaders/keypoints/orb-orientation.glsl",
@@ -12702,7 +12676,7 @@ module.exports = "#ifndef _FIXEDPOINT_GLSL\n#define _FIXEDPOINT_GLSL\n#define fi
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "#ifndef _FLOAT16_GLSL\n#define _FLOAT16_GLSL\n#define encodeFloat16(f) (vec2(packf16(f)) / 255.0f)\n#define decodeFloat16(v) unpackf16(uvec2((v) * 255.0f))\nuvec2 packf16( float f)\n{\nuint y = packHalf2x16(vec2(f, 0.0f));\nreturn uvec2(y, y >> 8u) & 0xFFu;\n}\nfloat unpackf16(uvec2 v)\n{\nv &= 0xFFu;\nreturn unpackHalf2x16(v.x | (v.y << 8u)).x;\n}\nbool isEncodedFloat16Zero(vec2 v)\n{\nuvec2 w = uvec2(v * 255.0f);\nreturn 0u == w.x + w.y * (0x80u - w.y);\n}\n#endif"
+module.exports = "#ifndef _FLOAT16_GLSL\n#define _FLOAT16_GLSL\n#define encodeFloat16(f) (vec2(packf16(f)) / 255.0f)\n#define decodeFloat16(v) unpackf16(uvec2((v) * 255.0f))\n#define encodePairOfFloat16(f) vec4(encodeFloat16((f).x), encodeFloat16((f).y))\n#define decodePairOfFloat16(v) vec2(decodeFloat16((v).rg), decodeFloat16((v).ba))\n#define encodeNullPairOfFloat16() vec4(1.0f)\n#define encodeDiscardedPairOfFloat16() vec4(0.0f, 1.0f, 0.0f, 1.0f)\n#define isDiscardedPairOfFloat16(v) all(equal((v), encodeDiscardedPairOfFloat16()))\n#define encodeFloat16NaN() vec2(0.5f, 1.0f)\n#define isEncodedFloat16NaN(v) all(equal((v), encodeFloat16NaN()))\nuvec2 packf16( float f)\n{\nuint y = packHalf2x16(vec2(f, 0.0f));\nreturn uvec2(y, y >> 8u) & 0xFFu;\n}\nfloat unpackf16(uvec2 v)\n{\nv &= 0xFFu;\nreturn unpackHalf2x16(v.x | (v.y << 8u)).x;\n}\nbool isEncodedFloat16Zero(vec2 v)\n{\nuvec2 w = uvec2(v * 255.0f);\nreturn 0u == w.x + w.y * (0x80u - w.y);\n}\n#endif"
 
 /***/ }),
 
@@ -12724,7 +12698,7 @@ module.exports = "#ifndef _GLOBAL_GLSL\n#define _GLOBAL_GLSL\n#define threadLoca
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "#ifndef _KEYPOINTS_GLSL\n#define _KEYPOINTS_GLSL\n@include \"math.glsl\"\n@include \"fixed-point.glsl\"\n@include \"float16.glsl\"\n@include \"pyramids.glsl\"\nstruct Keypoint\n{\nvec2 position;\nfloat lod;\nfloat orientation;\nfloat score;\nuint flags;\n};\nstruct KeypointAddress\n{\nint base;\nint offset;\n};\nconst int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@);\nconst uint KPF_NONE = 0u;\nconst uint KPF_INFINITY = 1u;\n#define encodeKeypointScore(score) encodeFloat16(score)\n#define decodeKeypointScore(encodedScore) decodeFloat16(encodedScore)\n#define encodeKeypointOrientation(angle) ((angle) * INV_PI_OVER_2 + 0.5f)\n#define decodeKeypointOrientation(value) ((value) * TWO_PI - PI)\n#define encodeNullKeypoint() (vec4(1.0f))\n#define encodeDiscardedKeypoint() (vec4(0.0f))\n#define isBadKeypoint(keypoint) ((keypoint).score < 0.0f)\n#define sizeofEncodedKeypoint(descriptorSize, extraSize) (MIN_KEYPOINT_SIZE + (descriptorSize) + (extraSize))\n#define findKeypointIndex(address, descriptorSize, extraSize) ((address).base / ((sizeofEncodedKeypoint((descriptorSize), (extraSize))) / 4))\nvec4 readKeypointData(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nint rasterIndex = address.base + address.offset;\nvec4 data = pixelAt(encodedKeypoints, ivec2(rasterIndex % encoderLength, rasterIndex / encoderLength));\nreturn rasterIndex < encoderLength * encoderLength ? data : encodeNullKeypoint();\n}\nKeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descriptorSize, int extraSize)\n{\nint threadRaster = thread.y * encoderLength + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nint keypointIndex = int(threadRaster / pixelsPerKeypoint);\nKeypointAddress address = KeypointAddress(\nkeypointIndex * pixelsPerKeypoint,\nthreadRaster % pixelsPerKeypoint\n);\nreturn address;\n}\nKeypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nKeypoint keypoint;\nKeypointAddress positionAddress = KeypointAddress(address.base, 0);\nKeypointAddress propertiesAddress = KeypointAddress(address.base, 1);\nvec4 rawEncodedPosition = readKeypointData(encodedKeypoints, encoderLength, positionAddress);\nivec4 encodedPosition = ivec4(rawEncodedPosition * 255.0f);\nkeypoint.position = fixtovec2(fixed2_t(\nencodedPosition.r | (encodedPosition.g << 8),\nencodedPosition.b | (encodedPosition.a << 8)\n));\nvec4 encodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);\nkeypoint.lod = decodeLod(encodedProperties.r);\nkeypoint.orientation = decodeKeypointOrientation(encodedProperties.g);\nkeypoint.score = decodeKeypointScore(encodedProperties.ba);\nbool isNull = all(equal(rawEncodedPosition, vec4(1)));\nbool isDiscarded = all(equal(rawEncodedPosition + encodedProperties, vec4(0)));\nkeypoint.score = (isNull || isDiscarded) ? -1.0f : keypoint.score;\nkeypoint.flags = KPF_NONE;\nkeypoint.flags |= KPF_INFINITY * uint(all(equal(encodedPosition, ivec4(254, 255, 255, 255))));\nreturn keypoint;\n}\nvec4 encodeKeypointPosition(vec2 position)\n{\nconst vec2 zeros = vec2(0.0f);\nfixed2_t pos = vec2tofix(max(position, zeros));\nfixed2_t lo = pos & 255;\nfixed2_t hi = pos >> 8;\nreturn vec4(lo.x, hi.x, lo.y, hi.y) / 255.0f;\n}\n#define encodeKeypointPositionAtInfinity() (vec4(254, 255, 255, 255) / 255.0f)\n#define isKeypointAtInfinity(keypoint) (((keypoint.flags) & KPF_INFINITY) != 0u)\n#endif"
+module.exports = "#ifndef _KEYPOINTS_GLSL\n#define _KEYPOINTS_GLSL\n@include \"math.glsl\"\n@include \"fixed-point.glsl\"\n@include \"float16.glsl\"\n@include \"pyramids.glsl\"\nstruct Keypoint\n{\nvec2 position;\nfloat lod;\nfloat orientation;\nfloat score;\nuint flags;\n};\nstruct KeypointAddress\n{\nint base;\nint offset;\n};\nconst int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@);\nconst uint KPF_NONE = 0u;\nconst uint KPF_NULL = 1u;\nconst uint KPF_INFINITY = 2u;\n#define encodeKeypointScore(score) encodeFloat16(score)\n#define decodeKeypointScore(encodedScore) decodeFloat16(encodedScore)\n#define encodeKeypointOrientation(angle) ((angle) * INV_PI_OVER_2 + 0.5f)\n#define decodeKeypointOrientation(value) ((value) * TWO_PI - PI)\n#define encodeNullKeypoint() (vec4(1.0f))\n#define encodeDiscardedKeypoint() (vec4(0.0f))\n#define encodeKeypointPositionAtInfinity() (vec4(254, 255, 255, 255) / 255.0f)\n#define isKeypointAtInfinity(keypoint) ((((keypoint).flags) & KPF_INFINITY) != 0u)\n#define isNullKeypoint(keypoint) ((((keypoint).flags) & KPF_NULL) != 0u)\n#define isBadKeypoint(keypoint) ((keypoint).score < 0.0f)\n#define sizeofEncodedKeypoint(descriptorSize, extraSize) (MIN_KEYPOINT_SIZE + (descriptorSize) + (extraSize))\n#define findKeypointIndex(address, descriptorSize, extraSize) ((address).base / ((sizeofEncodedKeypoint((descriptorSize), (extraSize))) / 4))\nvec4 readKeypointData(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nint rasterIndex = address.base + address.offset;\nvec4 data = pixelAt(encodedKeypoints, ivec2(rasterIndex % encoderLength, rasterIndex / encoderLength));\nreturn rasterIndex < encoderLength * encoderLength ? data : encodeNullKeypoint();\n}\nKeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descriptorSize, int extraSize)\n{\nint threadRaster = thread.y * encoderLength + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nint keypointIndex = int(threadRaster / pixelsPerKeypoint);\nKeypointAddress address = KeypointAddress(\nkeypointIndex * pixelsPerKeypoint,\nthreadRaster % pixelsPerKeypoint\n);\nreturn address;\n}\nKeypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nKeypoint keypoint;\nKeypointAddress positionAddress = KeypointAddress(address.base, 0);\nKeypointAddress propertiesAddress = KeypointAddress(address.base, 1);\nvec4 rawEncodedPosition = readKeypointData(encodedKeypoints, encoderLength, positionAddress);\nivec4 encodedPosition = ivec4(rawEncodedPosition * 255.0f);\nkeypoint.position = fixtovec2(fixed2_t(\nencodedPosition.r | (encodedPosition.g << 8),\nencodedPosition.b | (encodedPosition.a << 8)\n));\nvec4 encodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);\nkeypoint.lod = decodeLod(encodedProperties.r);\nkeypoint.orientation = decodeKeypointOrientation(encodedProperties.g);\nkeypoint.score = decodeKeypointScore(encodedProperties.ba);\nbool isNull = all(equal(rawEncodedPosition, vec4(1)));\nbool isDiscarded = all(equal(rawEncodedPosition + encodedProperties, vec4(0)));\nkeypoint.score = (isNull || isDiscarded) ? -1.0f : keypoint.score;\nkeypoint.flags = KPF_NONE;\nkeypoint.flags |= KPF_NULL * uint(isNull);\nkeypoint.flags |= KPF_INFINITY * uint(all(equal(encodedPosition, ivec4(254, 255, 255, 255))));\nreturn keypoint;\n}\nvec4 encodeKeypointPosition(vec2 position)\n{\nconst vec2 zeros = vec2(0.0f);\nfixed2_t pos = vec2tofix(max(position, zeros));\nfixed2_t lo = pos & 255;\nfixed2_t hi = pos >> 8;\nreturn vec4(lo.x, hi.x, lo.y, hi.y) / 255.0f;\n}\n#endif"
 
 /***/ }),
 
@@ -12893,17 +12867,6 @@ module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform
 
 /***/ }),
 
-/***/ "./src/gpu/shaders/keypoints/lk-discard.glsl":
-/*!***************************************************!*\
-  !*** ./src/gpu/shaders/keypoints/lk-discard.glsl ***!
-  \***************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D pyramid;\nuniform int windowSize;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nbool isInsideImage(vec2 position)\n{\nvec2 imageSize = vec2(textureSize(pyramid, 0));\nfloat border = float(windowSize);\nreturn (\nposition.x > border && position.x < imageSize.x - border &&\nposition.y > border && position.y < imageSize.y - border\n);\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nbool shouldDiscard = isBadKeypoint(keypoint) || isKeypointAtInfinity(keypoint) || !isInsideImage(keypoint.position);\ncolor = shouldDiscard ? encodeDiscardedKeypoint() : pixel;\n}"
-
-/***/ }),
-
 /***/ "./src/gpu/shaders/keypoints/lk.glsl":
 /*!*******************************************!*\
   !*** ./src/gpu/shaders/keypoints/lk.glsl ***!
@@ -12911,7 +12874,7 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D pyramid;\nunifo
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D nextPyramid;\nuniform sampler2D prevPyramid;\nuniform sampler2D encodedFlow;\nuniform sampler2D prevKeypoints;\nuniform int windowSize;\nuniform int level;\nuniform int depth;\nuniform int numberOfIterations;\nuniform float discardThreshold;\nuniform float epsilon;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#ifndef MAX_WINDOW_SIZE\n#error Must define MAX_WINDOW_SIZE\n#endif\n#define NEXT_IMAGE 1\n#define PREV_IMAGE 0\nconst int MAX_WINDOW_SIZE_SQUARED = (MAX_WINDOW_SIZE) * (MAX_WINDOW_SIZE);\nconst int MAX_WINDOW_SIZE_PLUS = (MAX_WINDOW_SIZE) + 2;\nconst int MAX_WINDOW_SIZE_PLUS_SQUARED = MAX_WINDOW_SIZE_PLUS * MAX_WINDOW_SIZE_PLUS;\nconst int DBL_MAX_WINDOW_SIZE_PLUS_SQUARED = 2 * MAX_WINDOW_SIZE_PLUS_SQUARED;\nconst int MAX_WINDOW_RADIUS_PLUS = (MAX_WINDOW_SIZE_PLUS - 1) / 2;\nconst int MAX_WINDOW_RADIUS = ((MAX_WINDOW_SIZE) - 1) / 2;\nconst highp float FLT_SCALE = 9.5367431640625e-7;\nconst highp float FLT_EPSILON = 0.00000011920929f;\n#define windowRadius() ((windowSize - 1) / 2)\nint pixelBuffer[DBL_MAX_WINDOW_SIZE_PLUS_SQUARED];\n#define prevPixel(index) pixelBuffer[(index)]\n#define nextPixel(index) pixelBuffer[MAX_WINDOW_SIZE_PLUS_SQUARED + (index)]\n#define pixelIndex(i, j) (((j) + MAX_WINDOW_RADIUS_PLUS) * MAX_WINDOW_SIZE_PLUS + ((i) + MAX_WINDOW_RADIUS_PLUS))\nivec2 derivBuffer[MAX_WINDOW_SIZE_SQUARED];\n#define derivativesAt(x, y) derivBuffer[((y) + MAX_WINDOW_RADIUS) * MAX_WINDOW_SIZE + ((x) + MAX_WINDOW_RADIUS)]\nvoid readWindow(vec2 center, float lod)\n{\nivec2 pyrBaseSize = textureSize(prevPyramid, 0);\nfloat pot = exp2(lod);\nint r = windowRadius();\nivec2 offset; int idx;\n#define readPixelsAt(ox, oy) offset = ivec2((ox), (oy)); \\\nidx = pixelIndex(offset.x, offset.y); \\\nnextPixel(idx) = int(255.0f * pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g); \\\nprevPixel(idx) = int(255.0f * pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g)\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nreadPixelsAt(i-r, j-r);\n}\n}\nint r1 = r+1;\nfor(int k = 0; k < windowSize; k++) {\nreadPixelsAt(-r1, k-r);\nreadPixelsAt( r1, k-r);\nreadPixelsAt(k-r,-r1);\nreadPixelsAt(k-r, r1);\n}\nreadPixelsAt(-r1,-r1);\nreadPixelsAt( r1,-r1);\nreadPixelsAt(-r1, r1);\nreadPixelsAt( r1, r1);\n}\nivec2 computeDerivatives(int imageCode, ivec2 offset)\n{\nconst mat3 dx = mat3(\n3, 0, -3,\n10, 0, -10,\n3, 0, -3\n);\nconst mat3 dy = mat3(\n3, 10, 3,\n0, 0, 0,\n-3, -10, -3\n);\nint indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;\nmat3 window = mat3(\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y+0)],\n0.0f,\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y+0)],\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y+1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y+1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y+1)]\n);\nmat3 fx = matrixCompMult(dx, window);\nmat3 fy = matrixCompMult(dy, window);\nconst vec3 ones = vec3(1.0f);\nreturn ivec2(\ndot(fx[0], ones) + dot(fx[1], ones) + dot(fx[2], ones),\ndot(fy[0], ones) + dot(fy[1], ones) + dot(fy[2], ones)\n);\n}\nint readBufferedPixel(int imageCode, ivec2 offset)\n{\nint r = windowRadius();\noffset = clamp(offset, -r, r);\nint indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;\nreturn pixelBuffer[indexOffset + pixelIndex(offset.x, offset.y)];\n}\nint readBufferedSubpixel(int imageCode, vec2 offset)\n{\nivec2 p = ivec2(floor(offset));\nvec2 frc = fract(offset);\nvec2 ifrc = vec2(1.0f) - frc;\nvec4 pix4 = vec4(\nreadBufferedPixel(imageCode, p),\nreadBufferedPixel(imageCode, ivec2(p.x + 1, p.y)),\nreadBufferedPixel(imageCode, ivec2(p.x, p.y + 1)),\nreadBufferedPixel(imageCode, ivec2(p.x + 1, p.y + 1))\n);\nvec4 bi = vec4(\npix4.x * ifrc.x * ifrc.y,\npix4.y * frc.x * ifrc.y,\npix4.z * ifrc.x * frc.y,\npix4.w * frc.x * frc.y\n);\nreturn int(0.5f + dot(bi, vec4(1.0f)));\n}\nvec2 computeMismatch(vec2 pyrGuess, vec2 localGuess)\n{\nint timeDerivative;\nivec2 mismatch = ivec2(0);\nint x, y, r = windowRadius();\nvec2 d = pyrGuess + localGuess;\nfor(int _y = 0; _y < windowSize; _y++) {\nfor(int _x = 0; _x < windowSize; _x++) {\nx = _x - r; y = _y - r;\ntimeDerivative = (\nreadBufferedSubpixel(NEXT_IMAGE, vec2(x, y) + d) -\nreadBufferedPixel(PREV_IMAGE, ivec2(x, y))\n);\nmismatch += derivativesAt(x, y) * timeDerivative;\n}\n}\nreturn vec2(mismatch) * FLT_SCALE;\n}\nvec4 encodeFlow(vec2 flow)\n{\nreturn vec4(encodeFloat16(flow.x), encodeFloat16(flow.y));\n}\nvec2 decodeFlow(vec4 pix)\n{\nreturn vec2(decodeFloat16(pix.rg), decodeFloat16(pix.ba));\n}\n#define encodeInvalidFlow() (vec4(1.0f))\nvoid main()\n{\nvec4 pixel = threadPixel(encodedFlow);\nivec2 thread = threadLocation();\nfloat windowArea = float(windowSize * windowSize);\nint r = windowRadius();\nint keypointIndex = thread.x + thread.y * outputSize().x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(prevKeypoints, encoderLength, address);\ncolor = encodeFlow(vec2(0.0f));\nif(isBadKeypoint(keypoint))\nreturn;\nvec2 pyrGuess = (level < depth - 1) ? decodeFlow(pixel) : vec2(0.0f);\npyrGuess *= 2.0f;\nreadWindow(keypoint.position, float(level));\nivec2 derivatives;\nivec3 harris3i = ivec3(0);\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nderivatives = computeDerivatives(PREV_IMAGE, ivec2(i-r, j-r));\nharris3i += ivec3(\nderivatives.x * derivatives.x,\nderivatives.x * derivatives.y,\nderivatives.y * derivatives.y\n);\nderivativesAt(i-r, j-r) = derivatives;\n}\n}\nhighp vec3 harris = vec3(harris3i) * FLT_SCALE;\nhighp mat2 invHarris = mat2(harris.z, -harris.y, -harris.y, harris.x);\nhighp float det = harris.x * harris.z - harris.y * harris.y;\nhighp float invDet = abs(det) >= FLT_EPSILON ? 1.0f / det : 0.0f;\nhighp float minEigenvalue = 0.5f * ((harris.x + harris.z) - sqrt(\n(harris.x - harris.z) * (harris.x - harris.z) + 4.0f * (harris.y * harris.y)\n));\nint niceNumbers = int(abs(det) >= FLT_EPSILON && minEigenvalue >= discardThreshold * windowArea);\nbool goodKeypoint = (level > 0) || (niceNumbers != 0);\nfloat eps2 = epsilon * epsilon;\nhighp vec2 mismatch, delta, localGuess = vec2(0.0f);\nfor(int k = 0; k < numberOfIterations; k++) {\nmismatch = niceNumbers != 0 ? computeMismatch(pyrGuess, localGuess) : vec2(0.0f);\ndelta = mismatch * invHarris * invDet;\nniceNumbers *= int(eps2 <= dot(delta, delta));\nlocalGuess += float(niceNumbers) * delta;\n}\nvec2 opticalFlow = pyrGuess + localGuess;\ncolor = goodKeypoint ? encodeFlow(opticalFlow) : encodeInvalidFlow();\n}"
+module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D nextPyramid;\nuniform sampler2D prevPyramid;\nuniform sampler2D encodedFlow;\nuniform sampler2D prevKeypoints;\nuniform int windowSize;\nuniform int level;\nuniform int depth;\nuniform int numberOfIterations;\nuniform float discardThreshold;\nuniform float epsilon;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#ifndef MAX_WINDOW_SIZE\n#error Must define MAX_WINDOW_SIZE\n#endif\n#define NEXT_IMAGE 1\n#define PREV_IMAGE 0\nconst int MAX_WINDOW_SIZE_SQUARED = (MAX_WINDOW_SIZE) * (MAX_WINDOW_SIZE);\nconst int MAX_WINDOW_SIZE_PLUS = (MAX_WINDOW_SIZE) + 2;\nconst int MAX_WINDOW_SIZE_PLUS_SQUARED = MAX_WINDOW_SIZE_PLUS * MAX_WINDOW_SIZE_PLUS;\nconst int DBL_MAX_WINDOW_SIZE_PLUS_SQUARED = 2 * MAX_WINDOW_SIZE_PLUS_SQUARED;\nconst int MAX_WINDOW_RADIUS_PLUS = (MAX_WINDOW_SIZE_PLUS - 1) / 2;\nconst int MAX_WINDOW_RADIUS = ((MAX_WINDOW_SIZE) - 1) / 2;\nconst highp float FLT_SCALE = 9.5367431640625e-7;\nconst highp float FLT_EPSILON = 0.00000011920929f;\n#define windowRadius() ((windowSize - 1) / 2)\nint pixelBuffer[DBL_MAX_WINDOW_SIZE_PLUS_SQUARED];\n#define prevPixel(index) pixelBuffer[(index)]\n#define nextPixel(index) pixelBuffer[MAX_WINDOW_SIZE_PLUS_SQUARED + (index)]\n#define pixelIndex(i, j) (((j) + MAX_WINDOW_RADIUS_PLUS) * MAX_WINDOW_SIZE_PLUS + ((i) + MAX_WINDOW_RADIUS_PLUS))\nivec2 derivBuffer[MAX_WINDOW_SIZE_SQUARED];\n#define derivativesAt(x, y) derivBuffer[((y) + MAX_WINDOW_RADIUS) * MAX_WINDOW_SIZE + ((x) + MAX_WINDOW_RADIUS)]\nvoid readWindow(vec2 center, float lod)\n{\nivec2 pyrBaseSize = textureSize(prevPyramid, 0);\nfloat pot = exp2(lod);\nint r = windowRadius();\nivec2 offset; int idx;\n#define readPixelsAt(ox, oy) offset = ivec2((ox), (oy)); \\\nidx = pixelIndex(offset.x, offset.y); \\\nnextPixel(idx) = int(255.0f * pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g); \\\nprevPixel(idx) = int(255.0f * pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g)\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nreadPixelsAt(i-r, j-r);\n}\n}\nint r1 = r+1;\nfor(int k = 0; k < windowSize; k++) {\nreadPixelsAt(-r1, k-r);\nreadPixelsAt( r1, k-r);\nreadPixelsAt(k-r,-r1);\nreadPixelsAt(k-r, r1);\n}\nreadPixelsAt(-r1,-r1);\nreadPixelsAt( r1,-r1);\nreadPixelsAt(-r1, r1);\nreadPixelsAt( r1, r1);\n}\nivec2 computeDerivatives(int imageCode, ivec2 offset)\n{\nconst mat3 dx = mat3(\n3, 0, -3,\n10, 0, -10,\n3, 0, -3\n);\nconst mat3 dy = mat3(\n3, 10, 3,\n0, 0, 0,\n-3, -10, -3\n);\nint indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;\nmat3 window = mat3(\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y-1)],\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y+0)],\n0.0f,\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y+0)],\npixelBuffer[indexOffset + pixelIndex(offset.x-1, offset.y+1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+0, offset.y+1)],\npixelBuffer[indexOffset + pixelIndex(offset.x+1, offset.y+1)]\n);\nmat3 fx = matrixCompMult(dx, window);\nmat3 fy = matrixCompMult(dy, window);\nconst vec3 ones = vec3(1.0f);\nreturn ivec2(\ndot(fx[0], ones) + dot(fx[1], ones) + dot(fx[2], ones),\ndot(fy[0], ones) + dot(fy[1], ones) + dot(fy[2], ones)\n);\n}\nint readBufferedPixel(int imageCode, ivec2 offset)\n{\nint r = windowRadius();\noffset = clamp(offset, -r, r);\nint indexOffset = imageCode * MAX_WINDOW_SIZE_PLUS_SQUARED;\nreturn pixelBuffer[indexOffset + pixelIndex(offset.x, offset.y)];\n}\nint readBufferedSubpixel(int imageCode, vec2 offset)\n{\nivec2 p = ivec2(floor(offset));\nvec2 frc = fract(offset);\nvec2 ifrc = vec2(1.0f) - frc;\nvec4 pix = vec4(\nreadBufferedPixel(imageCode, p),\nreadBufferedPixel(imageCode, p + ivec2(1,0)),\nreadBufferedPixel(imageCode, p + ivec2(0,1)),\nreadBufferedPixel(imageCode, p + ivec2(1,1))\n);\nvec4 sub = vec4(\nifrc.x * ifrc.y,\nfrc.x * ifrc.y,\nifrc.x * frc.y,\nfrc.x * frc.y\n);\nreturn int(0.5f + dot(sub*pix, vec4(1.0f)));\n}\nvec2 computeMismatch(vec2 pyrGuess, vec2 localGuess)\n{\nint timeDerivative;\nivec2 mismatch = ivec2(0);\nint x, y, r = windowRadius();\nvec2 d = pyrGuess + localGuess;\nfor(int _y = 0; _y < windowSize; _y++) {\nfor(int _x = 0; _x < windowSize; _x++) {\nx = _x - r; y = _y - r;\ntimeDerivative = (\nreadBufferedSubpixel(NEXT_IMAGE, vec2(x, y) + d) -\nreadBufferedPixel(PREV_IMAGE, ivec2(x, y))\n);\nmismatch += derivativesAt(x, y) * timeDerivative;\n}\n}\nreturn vec2(mismatch) * FLT_SCALE;\n}\nbool isInsideImage(vec2 position)\n{\nvec2 imageSize = vec2(textureSize(nextPyramid, 0));\nvec2 border = vec2(windowSize);\nreturn all(bvec4(\ngreaterThanEqual(position, border),\nlessThan(position, imageSize - border)\n));\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedFlow);\nivec2 thread = threadLocation();\nfloat windowArea = float(windowSize * windowSize);\nint r = windowRadius();\nint keypointIndex = thread.x + thread.y * outputSize().x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(prevKeypoints, encoderLength, address);\ncolor = encodeNullPairOfFloat16();\nif(isNullKeypoint(keypoint))\nreturn;\ncolor = encodeDiscardedPairOfFloat16();\nif(isBadKeypoint(keypoint))\nreturn;\nvec2 pyrGuess = (level < depth - 1) ? decodePairOfFloat16(pixel) : vec2(0.0f);\npyrGuess *= 2.0f;\nreadWindow(keypoint.position, float(level));\nivec2 derivatives;\nivec3 harris3i = ivec3(0);\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\nderivatives = computeDerivatives(PREV_IMAGE, ivec2(i-r, j-r));\nharris3i += ivec3(\nderivatives.x * derivatives.x,\nderivatives.x * derivatives.y,\nderivatives.y * derivatives.y\n);\nderivativesAt(i-r, j-r) = derivatives;\n}\n}\nhighp vec3 harris = vec3(harris3i) * FLT_SCALE;\nhighp mat2 invHarris = mat2(harris.z, -harris.y, -harris.y, harris.x);\nhighp float det = harris.x * harris.z - harris.y * harris.y;\nhighp float invDet = abs(det) >= FLT_EPSILON ? 1.0f / det : 0.0f;\nhighp float minEigenvalue = 0.5f * ((harris.x + harris.z) - sqrt(\n(harris.x - harris.z) * (harris.x - harris.z) + 4.0f * (harris.y * harris.y)\n));\nint niceNumbers = int(abs(det) >= FLT_EPSILON && minEigenvalue >= discardThreshold * windowArea);\nbool goodKeypoint = (level > 0) || (niceNumbers != 0);\nhighp float eps2 = epsilon * epsilon;\nhighp vec2 mismatch, delta, localGuess = vec2(0.0f);\nfor(int k = 0; k < numberOfIterations; k++) {\nmismatch = niceNumbers != 0 ? computeMismatch(pyrGuess, localGuess) : vec2(0.0f);\ndelta = mismatch * invHarris * invDet;\nniceNumbers *= int(eps2 <= dot(delta, delta));\nlocalGuess += float(niceNumbers) * delta;\n}\nvec2 opticalFlow = pyrGuess + localGuess;\nbool mustDiscard = (level == 0) && any(bvec2(\n!goodKeypoint,\n!isInsideImage(keypoint.position + opticalFlow)\n));\ncolor = !mustDiscard ? encodePairOfFloat16(opticalFlow) : encodeDiscardedPairOfFloat16();\n}"
 
 /***/ }),
 
@@ -12923,17 +12886,6 @@ module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nunifor
 /***/ (function(module, exports) {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints[2];\nuniform int encoderLength[2];\nuniform int encoderCapacity[2];\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int outEncoderLength;\nvoid main()\n{\nivec2 thread = threadLocation();\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress outAddr = findKeypointAddress(thread, outEncoderLength, descriptorSize, extraSize);\nint outIndex = findKeypointIndex(outAddr, descriptorSize, extraSize);\nint encoderIndex = int(outIndex >= encoderCapacity[0]);\nint inIndex = (outIndex - encoderCapacity[0] * encoderIndex);\nKeypointAddress inAddr = KeypointAddress(\ninIndex * pixelsPerKeypoint,\noutAddr.offset\n);\nvec4 data[2] = vec4[2](\nreadKeypointData(encodedKeypoints[0], encoderLength[0], inAddr),\nreadKeypointData(encodedKeypoints[1], encoderLength[1], inAddr)\n);\nbool valid = (inIndex < max(encoderCapacity[0], encoderCapacity[1]));\ncolor = valid ? data[encoderIndex] : encodeNullKeypoint();\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/keypoints/ncc.glsl":
-/*!********************************************!*\
-  !*** ./src/gpu/shaders/keypoints/ncc.glsl ***!
-  \********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D encodedFlow;\nuniform sampler2D prevKeypoints;\nuniform sampler2D prevPyramid;\nuniform sampler2D nextPyramid;\nuniform int windowSize;\nuniform int patchSize;\nuniform float discardThreshold;\nuniform int level;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#if !defined(MAX_WINDOW_SIZE_LOD1)\n#error Must define MAX_WINDOW_SIZE_LOD1\n#elif !defined(MAX_PATCH_SIZE)\n#define Must define MAX_PATCH_SIZE\n#endif\nconst int MAX_WINDOW_RADIUS = (MAX_WINDOW_SIZE_LOD1 - 1) / 2;\nconst int WINDOW_BUFFER_STRIDE = MAX_WINDOW_SIZE_LOD1 + (MAX_PATCH_SIZE - 1);\nconst int WINDOW_BUFFER_SIZE = WINDOW_BUFFER_STRIDE * WINDOW_BUFFER_STRIDE;\nfloat windowBuffer[WINDOW_BUFFER_SIZE];\nfloat windowMean;\nconst int PATCH_BUFFER_SIZE = MAX_PATCH_SIZE * MAX_PATCH_SIZE;\nfloat patchBuffer[PATCH_BUFFER_SIZE];\nfloat patchMean;\n#define windowIndex(i, j) (((j) + MAX_WINDOW_RADIUS) * WINDOW_BUFFER_STRIDE + ((i) + MAX_WINDOW_RADIUS))\n#define patchIndex(i, j) (((j) * MAX_PATCH_SIZE) + (i))\n#define windowRadius() ((windowSize - 1) / 2)\n#define windowPixel(i, j) windowBuffer[windowIndex((i), (j))]\n#define patchPixel(i, j) patchBuffer[patchIndex((i), (j))]\nvoid readWindow(vec2 center, float lod)\n{\nivec2 pyrBaseSize = textureSize(nextPyramid, 0);\nfloat pot = exp2(lod);\nint r = windowRadius();\nint i, j;\nivec2 offset;\nfloat sum = 0.0f;\nfor(j = 0; j < windowSize; j++) {\nfor(i = 0; i < windowSize; i++) {\noffset = ivec2(i-r, j-r);\nsum += (windowPixel(i-r, j-r) = pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g);\n}\n}\nfor(j = 1; j < patchSize; j++) {\nfor(i = 0; i < windowSize; i++) {\noffset = ivec2(i-r, r+j);\nsum += (windowPixel(i-r, r+j) = pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g);\nsum += (windowPixel(r+j, i-r) = pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset.yx, pyrBaseSize).g);\n}\n}\nfor(j = 1; j < patchSize; j++) {\nfor(i = 1; i < patchSize; i++) {\noffset = ivec2(r+i, r+j);\nsum += (windowPixel(r+i, r+j) = pyrSubpixelAtExOffset(nextPyramid, center, lod, pot, offset, pyrBaseSize).g);\n}\n}\nint p = patchSize, w = windowSize;\nint windowArea = w * w + 2 * w * (p-1) + (p-1) * (p-1);\nwindowMean = sum / float(windowArea);\n}\nvoid readPatch(vec2 center, float lod)\n{\nivec2 pyrBaseSize = textureSize(prevPyramid, 0);\nfloat pot = exp2(lod);\nfloat sum = 0.0f;\nint r = patchSize / 2;\nivec2 offset;\nfor(int j = 0; j < patchSize; j++) {\nfor(int i = 0; i < patchSize; i++) {\noffset = ivec2(i-r, j-r);\nsum += (patchPixel(i, j) = pyrSubpixelAtExOffset(prevPyramid, center, lod, pot, offset, pyrBaseSize).g);\n}\n}\nint patchArea = patchSize * patchSize;\npatchMean = sum / float(patchArea);\n}\nvec4 encodeFlow(vec2 flow)\n{\nreturn vec4(encodeFloat16(flow.x), encodeFloat16(flow.y));\n}\nvec2 decodeFlow(vec4 pix)\n{\nreturn vec2(decodeFloat16(pix.rg), decodeFloat16(pix.ba));\n}\n#define encodeInvalidFlow() (vec4(1.0f))\nfloat computeNCC(ivec2 offset)\n{\nint r = windowRadius();\nint x = clamp(offset.x, -r, r), y = clamp(offset.y, -r, r);\n#if 1\nfloat win = 0.0f, tpl = 0.0f;\nfloat covar = 0.0f, winvar = 0.0f, tplvar = 0.0f;\nfor(int i = 0; i < patchSize; i++) {\nfor(int j = 0; j < patchSize; j++) {\nwin = windowPixel(x+i, y+j) - windowMean;\ntpl = patchPixel(i, j) - patchMean;\ncovar += win * tpl;\nwinvar += win * win;\ntplvar += tpl * tpl;\n}\n}\nreturn covar / sqrt(winvar * tplvar);\n#else\nint covar = 0, winvar = 0, tplvar = 0;\nint wmean = int(round(255.0f * windowMean)), pmean = int(round(255.0f * patchMean));\nfor(int i = 0; i < patchSize; i++) {\nfor(int j = 0; j < patchSize; j++) {\nint win = int(255.0f * windowPixel(x+i, y+j)) - wmean;\nint tpl = int(255.0f * patchPixel(i, j)) - pmean;\ncovar += win * tpl;\nwinvar += win * win;\ntplvar += tpl * tpl;\n}\n}\nreturn (float(covar) / 65025.0f) / sqrt((float(winvar) / 65025.0f) * (float(tplvar) / 65025.0f));\n#endif\n}\nvec2 refineSubpixel(ivec2 flow)\n{\nfloat q1 = computeNCC(flow + ivec2(-1,-1));\nfloat q2 = computeNCC(flow + ivec2( 0,-1));\nfloat q3 = computeNCC(flow + ivec2( 1,-1));\nfloat q4 = computeNCC(flow + ivec2(-1, 0));\nfloat q5 = computeNCC(flow + ivec2( 0, 0));\nfloat q6 = computeNCC(flow + ivec2( 1, 0));\nfloat q7 = computeNCC(flow + ivec2(-1, 1));\nfloat q8 = computeNCC(flow + ivec2( 0, 1));\nfloat q9 = computeNCC(flow + ivec2( 1, 1));\nfloat a = (q1 - 2.0f * q2 + q3 + q4 - 2.0f * q5 + q6 + q7 - 2.0f * q8 + q9) / 6.0f;\nfloat b = (q1 - q3 - q7 + q9) / 4.0f;\nfloat c = (q1 + q2 + q3 - 2.0f * q4 - 2.0f * q5 - 2.0f * q6 + q7 + q8 + q9) / 6.0f;\nfloat d = (-q1 + q3 - q4 + q6 - q7 + q9) / 6.0f;\nfloat e = (-q1 - q2 - q3 + q7 + q8 + q9) / 6.0f;\nfloat hdet = 4.0f * a * c - b * b;\nbool hasMax = hdet > 0.0f && a < 0.0f;\nfloat det = hdet;\nvec2 pixelFlow = vec2(flow);\nvec2 subpixelFlow = hasMax ? vec2(b * e - 2.0f * c * d, b * d - 2.0f * a * e) / det : pixelFlow;\nreturn subpixelFlow;\nreturn distance(subpixelFlow, pixelFlow) < 2.0f ? subpixelFlow : pixelFlow;\n}\nvoid main()\n{\nvec4 pixel = threadPixel(encodedFlow);\nivec2 thread = threadLocation();\nint keypointIndex = thread.x + thread.y * outputSize().x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(prevKeypoints, encoderLength, address);\ncolor = encodeFlow(vec2(0.0f));\nif(isBadKeypoint(keypoint))\nreturn;\nconst int MAX_LOD = 0;\nvec2 flow = level < MAX_LOD ? decodeFlow(pixel) : vec2(0.0f);\nflow *= 2.0f;\nfloat lod = float(level);\nreadWindow(keypoint.position + flow, lod);\nreadPatch(keypoint.position + flow, lod);\nivec2 bestOffset = ivec2(0), currOffset;\nfloat bestNCC = -2.0f, currNCC;\nint r = windowRadius();\nfor(int j = 0; j < windowSize; j++) {\nfor(int i = 0; i < windowSize; i++) {\ncurrOffset = ivec2(i-r, j-r);\ncurrNCC = computeNCC(currOffset);\nbestOffset = bestNCC > currNCC ? bestOffset : currOffset;\nbestNCC = max(currNCC, bestNCC);\n}\n}\nflow += refineSubpixel(bestOffset);\ncolor = bestNCC >= discardThreshold ? encodeFlow(flow) : encodeInvalidFlow();\n}"
 
 /***/ }),
 
@@ -13021,7 +12973,7 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D permutation;\nu
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D encodedFlow;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvec2 decodeFlow(vec4 pix)\n{\nreturn vec2(decodeFloat16(pix.rg), decodeFloat16(pix.ba));\n}\n#define isInvalidFlow(pix) (all(equal((pix), vec4(1.0f))))\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nint len = textureSize(encodedFlow, 0).x;\nivec2 location = ivec2(myIndex % len, myIndex / len);\nvec4 targetPixel = pixelAt(encodedFlow, location);\nvec2 flow = decodeFlow(targetPixel);\nvec4 newPosition = encodeKeypointPosition(keypoint.position + flow);\nvec4 encodedPosition = isInvalidFlow(targetPixel) ? encodeKeypointPositionAtInfinity() : newPosition;\ncolor = myAddress.offset == 0 ? encodedPosition : pixel;\n}"
+module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D encodedFlow;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\ncolor = pixel;\nif(isNullKeypoint(keypoint))\nreturn;\nint len = textureSize(encodedFlow, 0).x;\nivec2 location = ivec2(myIndex % len, myIndex / len);\nvec4 encodedFlow = pixelAt(encodedFlow, location);\nbool discardFlow = isDiscardedPairOfFloat16(encodedFlow);\nvec2 flow = !discardFlow ? decodePairOfFloat16(encodedFlow) : vec2(0.0f);\nvec4 newPosition = encodeKeypointPosition(keypoint.position + flow);\nvec4 newPixel = myAddress.offset == 0 ? newPosition : pixel;\ncolor = !discardFlow ? newPixel : encodeDiscardedKeypoint();\n}"
 
 /***/ }),
 
