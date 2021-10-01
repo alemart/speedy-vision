@@ -39,6 +39,11 @@ void main()
     Keypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);
     int myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);
 
+    // end of list?
+    color = pixel;
+    if(isNullKeypoint(keypoint))
+        return;
+
     // find the corresponding location in the encoded flow texture
     int len = textureSize(encodedFlow, 0).x;
     ivec2 location = ivec2(myIndex % len, myIndex / len);
