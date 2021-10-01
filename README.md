@@ -70,6 +70,8 @@ For general enquiries, contact me at alemartf `at` gmail `dot` com.
     * [Keypoint description](#keypoint-description)
     * [Keypoint tracking (optical-flow)](#keypoint-tracking)
     * [Keypoint matching](#keypoint-matching)
+  * [Portals](#portals)
+    * [Image Portals](#image-portals)
   * [Linear Algebra](#linear-algebra)
     * [Creating new matrices](#creating-new-matrices)
     * [Matrix properties](#matrix-properties)
@@ -116,6 +118,8 @@ Try the demos and take a look at their source code:
   * [Blurring an image](https://alemart.github.io/speedy-vision-js/demos/image-blurring.html)
   * [Blurring a video with a median filter](https://alemart.github.io/speedy-vision-js/demos/median-filter.html)
   * [Normalize camera stream](https://alemart.github.io/speedy-vision-js/demos/normalize-demo.html)
+  * [Normalize camera stream](https://alemart.github.io/speedy-vision-js/demos/normalize-demo.html)
+  * [Image Portals](https://alemart.github.io/speedy-vision-js/demos/image-portal.html)
 * Linear Algebra
   * [System of equations](https://alemart.github.io/speedy-vision-js/demos/system-of-equations.html)
   * [QR decomposition](https://alemart.github.io/speedy-vision-js/demos/qr-decomposition.html)
@@ -1134,6 +1138,44 @@ Pyramid-based LK optical-flow.
 #### Keypoint matching
 
 Soon!
+
+### Portals
+
+Portals let you create loops within a pipeline. They also let you transfer data between different pipelines.
+
+A portal is defined by a set of nodes: a portal sink and one or more portal sources. The portal sink receives data from a pipeline, which is then read by the portal source(s). The portal source(s) feed(s) one or more pipelines. The portal nodes may or may not belong to the same pipeline.
+
+#### Image Portals
+
+##### Speedy.Image.Portal.Source()
+
+`Speedy.Image.Portal.Source(name?: string): SpeedyPipelineNodeImagePortalSource`
+
+Create a source of an Image Portal.
+
+###### Parameters
+
+* `source: SpeedyPipelineNodeImagePortalSink`. A sink of an Image Portal.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"out"`   | Image     | An image.   |
+
+##### Speedy.Image.Portal.Sink()
+
+`Speedy.Image.Portal.Sink(name?: string): SpeedyPipelineNodeImagePortalSink`
+
+Create a sink of an Image Portal.
+
+**Note:** pyramids can't travel through portals at this time.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Image     | An image.   |
 
 
 
