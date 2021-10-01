@@ -141,6 +141,48 @@ describe('Keypoint routines', function() {
         }
     });
 
+    it('travels through portals', async function() {
+        const cmp = (a, b) => (a.position.x - b.position.x) || (a.position.y - b.position.y);
+        const createPipeline1 = (keypoints) => {
+            const pipeline = Speedy.Pipeline();
+            const source = Speedy.Keypoint.Source();
+            const sink = Speedy.Keypoint.Sink();
+            const portal = Speedy.Keypoint.Portal.Sink('portal');
+
+            source.keypoints = keypoints;
+
+            source.output().connectTo(sink.input());
+            source.output().connectTo(portal.input());
+            pipeline.init(source, sink, portal);
+
+            return pipeline;
+        };
+        const createPipeline2 = (source) => {
+            const pipeline = Speedy.Pipeline();
+            const sink = Speedy.Keypoint.Sink();
+            const portal = Speedy.Keypoint.Portal.Source();
+
+            portal.source = source;
+
+            portal.output().connectTo(sink.input());
+            pipeline.init(sink, portal);
+
+            return pipeline;
+        };
+
+        const pipeline1 = createPipeline1(testKeypoints);
+        const pipeline2 = createPipeline2(pipeline1.node('portal'));
+
+        const output1 = (await pipeline1.run()).keypoints;
+        const output2 = (await pipeline2.run()).keypoints;
+
+        print(`These keypoints will travel through a portal: ${serialize(output1)}`);
+        print(`These keypoints have traveled through a portal: ${serialize(output2)}`);
+
+        expect(serialize(output2.sort(cmp))).toEqual(serialize(output1.sort(cmp)));
+        expect(serialize(output2.sort(cmp))).toEqual(serialize(testKeypoints.sort(cmp)));
+    });
+
     describe('transformations', function() {
         const createPipeline = () => {
             const pipeline = Speedy.Pipeline();

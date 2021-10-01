@@ -524,4 +524,53 @@ describe('Image processing', function() {
         expect(pix1).toBeElementwiseNearlyTheSamePixels(pix2);
     });
 
+    it('travels through portals', async function() {
+        const createPipeline1 = (media) => {
+            const pipeline = Speedy.Pipeline();
+            const source = Speedy.Image.Source();
+            const convolution = Speedy.Filter.Convolution();
+            const sink = Speedy.Image.Sink();
+            const portal = Speedy.Image.Portal.Sink('portal');
+
+            source.media = media;
+            convolution.kernel = Speedy.Matrix(3, 3, [
+                0, 1, 1,
+                1,-5, 1,
+                0, 1, 0,
+            ]);
+
+            source.output().connectTo(convolution.input());
+            convolution.output().connectTo(sink.input());
+            convolution.output().connectTo(portal.input());
+            pipeline.init(source, convolution, sink, portal);
+
+            return pipeline;
+        };
+        const createPipeline2 = (source) => {
+            const pipeline = Speedy.Pipeline();
+            const sink = Speedy.Image.Sink();
+            const portal = Speedy.Image.Portal.Source();
+
+            portal.source = source;
+
+            portal.output().connectTo(sink.input());
+            pipeline.init(sink, portal);
+
+            return pipeline;
+        };
+
+        const pipeline1 = createPipeline1(media);
+        const pipeline2 = createPipeline2(pipeline1.node('portal'));
+
+        const image1 = (await pipeline1.run()).image;
+        const image2 = (await pipeline2.run()).image;
+
+        print(`This image will travel through a portal:`);
+        display(image1);
+        print(`This image have traveled through a portal:`);
+        display(image2);
+
+        expect(imerr(image1, image2)).toBeAnAcceptableImageError();
+    });
+
 });
