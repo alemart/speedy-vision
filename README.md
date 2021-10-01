@@ -1127,6 +1127,7 @@ Pyramid-based LK optical-flow.
 | `"nextImage"` | Image | Input image at time *t*. Must be greyscale. |
 | `"previousKeypoints"` | Keypoints | Input keypoints at time *t-1*. |
 | `"out"` | Keypoints | Output keypoints at time *t*. |
+| `"flow"` | Vector2 | Flow vectors (output) at time *t*. |
 
 **Note**: you need to provide pyramids as input if `levels > 1`.
 

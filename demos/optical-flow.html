@@ -131,6 +131,7 @@ window.onload = async function()
     const grey = Speedy.Filter.Greyscale();
     const pyr = Speedy.Image.Pyramid();
     const harris = Speedy.Keypoint.Detector.Harris();
+    const clipper = Speedy.Keypoint.Clipper();
 
     const buf = Speedy.Image.Buffer();
     const bufpyr = Speedy.Image.Pyramid();
@@ -138,6 +139,7 @@ window.onload = async function()
     const lk = Speedy.Keypoint.Tracker.LK();
     const mixer = Speedy.Keypoint.Mixer();
     const sink = Speedy.Keypoint.Sink();
+    const vec2sink = Speedy.Vector2.Sink('flow');
 
     imgsrc.media = media;
     harris.quality = 0.10;
@@ -145,29 +147,28 @@ window.onload = async function()
 
     imgsrc.output().connectTo(grey.input());
     grey.output().connectTo(pyr.input());
-    pyr.output().connectTo(harris.input());
-    harris.output().connectTo(mixer.input('in1'));
-
     grey.output().connectTo(buf.input());
     buf.output().connectTo(bufpyr.input());
 
+    bufpyr.output().connectTo(harris.input());
+    harris.output().connectTo(clipper.input());
+    clipper.output().connectTo(mixer.input('in1'));
+    kpsrc.output().connectTo(mixer.input('in0'));
+
     bufpyr.output().connectTo(lk.input('previousImage'));
     pyr.output().connectTo(lk.input('nextImage'));
-    kpsrc.output().connectTo(lk.input('previousKeypoints'));
+    mixer.output().connectTo(lk.input('previousKeypoints'));
 
-    lk.output().connectTo(mixer.input('in0'));
-    mixer.output().connectTo(sink.input());
+    lk.output().connectTo(sink.input());
+    lk.output('flow').connectTo(vec2sink.input());
 
-    pipeline.init(imgsrc, grey, pyr, harris, kpsrc, buf, bufpyr, lk, mixer, sink);
+    pipeline.init(imgsrc, grey, pyr, harris, kpsrc, clipper, buf, bufpyr, lk, mixer, sink, vec2sink);
 
     // update features
     let features = [], detect = false, clear = false;
     const canvas = createCanvas(media.width, media.height, video.title);
     async function loop()
     {
-        // clip the number of features
-        features.length = Math.min(features.length, 200);
-
         // find new features
         harris.capacity = 0;
         if(detect) {
@@ -194,13 +195,16 @@ window.onload = async function()
         lk.discardThreshold = Number(discardThreshold.value);
         lk.numberOfIterations = Number(numberOfIterations.value);
         lk.epsilon = Number(epsilon.value);
+        clipper.size = 200;
         
         // run the pipeline
-        features = (await pipeline.run()).keypoints;
+        const result = await pipeline.run();
+        features = result.keypoints;
 
         // render features
         media.draw(canvas);
-        renderFeatures(canvas, features, 2, '#f22');
+        renderFlowVectors(canvas, features, result.flow, 3, '#f22');
+        renderFeatures(canvas, features, 1, '#f22');
         renderStatus(canvas, features);
 
         // next frame
@@ -268,6 +272,24 @@ function renderFeatures(canvas, features, size = 2, color = 'yellow')
         const cos = Math.cos(feature.rotation);
         context.moveTo(feature.x, feature.y);
         context.lineTo(feature.x + radius * cos, feature.y + radius * sin);
+    }
+    context.strokeStyle = color;
+    context.lineWidth = 2;
+    context.stroke();
+}
+
+function renderFlowVectors(canvas, features, flow, length = 1, color = 'red')
+{
+    const context = canvas.getContext('2d');
+
+    context.beginPath();
+    for(let i = 0; i < flow.length; i++) {
+        const feature = features[i];
+        const v = flow[i];
+
+        // draw flow vector
+        context.moveTo(feature.x - v.x * length, feature.y - v.y * length);
+        context.lineTo(feature.x, feature.y);
     }
     context.strokeStyle = color;
     context.lineWidth = 2;
