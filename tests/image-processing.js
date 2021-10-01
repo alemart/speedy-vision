@@ -524,6 +524,69 @@ describe('Image processing', function() {
         expect(pix1).toBeElementwiseNearlyTheSamePixels(pix2);
     });
 
+    it('mixes two images', async function() {
+        const pipeline = Speedy.Pipeline();
+        const source = Speedy.Image.Source();
+        const convolution = Speedy.Filter.Convolution();
+        const white = Speedy.Image.Mixer();
+        const black = Speedy.Image.Mixer();
+        const blend = Speedy.Image.Mixer();
+        const sink1 = Speedy.Image.Sink('image0');
+        const sink2 = Speedy.Image.Sink('image1');
+        const sink3 = Speedy.Image.Sink('whiteImage');
+        const sink4 = Speedy.Image.Sink('blackImage');
+        const sink5 = Speedy.Image.Sink('blendedImage');
+
+        source.media = media;
+        convolution.kernel = Speedy.Matrix(3, 3, [
+            0, 1, 1,
+            1,-5, 1,
+            0, 1, 0,
+        ]);
+
+        white.alpha = white.beta = 0; white.gamma = 1;
+        black.alpha = black.beta = black.gamma = 0;
+        blend.alpha = blend.beta = 0.5; blend.gamma = 0;
+
+        source.output().connectTo(white.input('in0'));
+        source.output().connectTo(black.input('in0'));
+        source.output().connectTo(blend.input('in0'));
+
+        source.output().connectTo(convolution.input());
+        convolution.output().connectTo(white.input('in1'));
+        convolution.output().connectTo(black.input('in1'));
+        convolution.output().connectTo(blend.input('in1'));
+
+        source.output().connectTo(sink1.input());
+        convolution.output().connectTo(sink2.input());
+        white.output().connectTo(sink3.input());
+        black.output().connectTo(sink4.input());
+        blend.output().connectTo(sink5.input());
+
+        pipeline.init(source, convolution, white, black, blend, sink1, sink2, sink3, sink4, sink5);
+
+        const { image0, image1, whiteImage, blackImage, blendedImage } = await pipeline.run();
+
+        print(`We'll blend two images:`);
+        display(image0); display(image1);
+        print(`Result:`);
+        display(blendedImage, 'Blend');
+        display(blackImage, 'Black');
+        display(whiteImage, 'White');
+
+        const pix0 = pixels(image0);
+        const pix1 = pixels(image1);
+        expect(pix0.length).toEqual(pix1.length);
+
+        const pixwhite = Array.from({ length: pix0.length }, () => 255); // rgba(255,255,255,255)
+        const pixblack = Array.from({ length: pix0.length }, (_, i) => (i % 4 == 3) ? 255 : 0); // rgba(0,0,0,255)
+        expect(pixels(whiteImage)).toBeElementwiseNearlyTheSamePixels(pixwhite);
+        expect(pixels(blackImage)).toBeElementwiseNearlyTheSamePixels(pixblack);
+
+        const pixblend = Array.from({ length: pix0.length }, (_, i) => Math.floor((pix0[i] + pix1[i]) / 2));
+        expect(pixels(blendedImage)).toBeElementwiseNearlyTheSamePixels(pixblend);
+    });
+
     it('travels through portals', async function() {
         const createPipeline1 = (media) => {
             const pipeline = Speedy.Pipeline();
