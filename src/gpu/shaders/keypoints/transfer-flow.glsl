@@ -39,9 +39,9 @@ void main()
     Keypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);
     int myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);
 
-    // end of list?
+    // bad keypoint? end of list?
     color = pixel;
-    if(isNullKeypoint(keypoint))
+    if(isBadKeypoint(keypoint))
         return;
 
     // find the corresponding location in the encoded flow texture

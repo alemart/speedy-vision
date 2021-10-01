@@ -296,7 +296,7 @@ void main()
     if(isNullKeypoint(keypoint))
         return;
 
-    // bad keypoint? it will be discarded later
+    // bad keypoint?
     color = encodeDiscardedPairOfFloat16();
     if(isBadKeypoint(keypoint))
         return;
