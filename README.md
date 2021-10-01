@@ -2021,6 +2021,18 @@ A new `SpeedyVector2` instance.
 const zero = Speedy.Vector2(0, 0);
 ```
 
+##### Speedy.Vector2.Sink()
+
+`Speedy.Vector2.Sink(name?: string): SpeedyPipelineNodeVector2Sink`
+
+Creates a sink of 2D vectors using the specified name. If the name is not specified, Speedy will call this node `"vec2"`. An array of `SpeedyVector2` objects will be exported from the pipeline.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Vector2   | A set of 2D vectors to be exported from the pipeline. |
+
 ##### SpeedyVector2.x
 
 `SpeedyVector2.x: number`

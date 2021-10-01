@@ -21,7 +21,6 @@
 
 import { SpeedyMedia } from './speedy-media';
 import { FPSCounter } from '../utils/fps-counter';
-import { SpeedyVector2 } from './speedy-vector';
 import { SpeedyPoint2 } from './speedy-point';
 import { SpeedySize } from './speedy-size';
 import { SpeedyMatrixFactory } from './speedy-matrix-factory';
@@ -31,11 +30,13 @@ import { SpeedyPipelineImageFactory } from './pipeline/factories/image-factory';
 import { SpeedyPipelineFilterFactory } from './pipeline/factories/filter-factory';
 import { SpeedyPipelineTransformFactory } from './pipeline/factories/transform-factory';
 import { SpeedyPipelineKeypointFactory } from './pipeline/factories/keypoint-factory';
+import { SpeedyPipelineVector2Factory } from './pipeline/factories/vector2-factory';
 import { Utils } from '../utils/utils';
 import { LITTLE_ENDIAN } from '../utils/globals';
 
 // Constants
 const matrixFactory = new SpeedyMatrixFactory();
+const vector2Factory = new SpeedyPipelineVector2Factory();
 
 /**
  * Speedy's main class
@@ -85,13 +86,12 @@ export class Speedy
     }
 
     /**
-     * Create a 2D vector
-     * @param {number} x
-     * @param {number} y
+     * 2D vector instantiation and related nodes
+     * @returns {SpeedyPipelineVector2Factory}
      */
-    static Vector2(x, y)
+    static get Vector2()
     {
-        return new SpeedyVector2(x, y);
+        return vector2Factory;
     }
 
     /**

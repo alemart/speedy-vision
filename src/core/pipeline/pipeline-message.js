@@ -26,12 +26,13 @@ import { SpeedyTexture } from '../../gpu/speedy-texture';
 
 /**
  * Types of messages
- * @enum {number}
+ * @enum {Symbol}
  */
 export const SpeedyPipelineMessageType = Object.freeze({
-    Nothing: 0,
-    Image: 1,
-    Keypoints: 2,
+    Nothing: Symbol('Nothing'),
+    Image: Symbol('Image'),
+    Keypoints: Symbol('Keypoints'),
+    Vector2: Symbol('Vector2'),
 });
 
 /**
@@ -295,6 +296,46 @@ export class SpeedyPipelineMessageWithKeypoints extends SpeedyPipelineMessage
     }
 }
 
+/**
+ * A message transporting a set of 2D vectors
+ */
+export class SpeedyPipelineMessageWith2DVectors extends SpeedyPipelineMessage
+{
+    /**
+     * Constructor
+     */
+    constructor()
+    {
+        super(SpeedyPipelineMessageType.Vector2);
+
+        /** @type {SpeedyTexture} the set of vectors */
+        this._vectors = null;
+    }
+
+    /**
+     * Set parameters
+     * @param {SpeedyTexture} vectors the set of vectors
+     * @returns {SpeedyPipelineMessage} this message
+     */
+    set(vectors)
+    {
+        // set parameters
+        this._vectors = vectors;
+
+        // done!
+        return this;
+    }
+
+    /**
+     * The set of vectors
+     * @returns {SpeedyTexture}
+     */
+    get vectors()
+    {
+        return this._vectors;
+    }
+}
+
 
 
 
@@ -312,6 +353,7 @@ const MESSAGE_CLASS = Object.freeze({
     [SpeedyPipelineMessageType.Nothing]: SpeedyPipelineMessageWithNothing,
     [SpeedyPipelineMessageType.Image]: SpeedyPipelineMessageWithImage,
     [SpeedyPipelineMessageType.Keypoints]: SpeedyPipelineMessageWithKeypoints,
+    [SpeedyPipelineMessageType.Vector2]: SpeedyPipelineMessageWith2DVectors,
 });
 
 /**
