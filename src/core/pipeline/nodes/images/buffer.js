@@ -104,7 +104,7 @@ export class SpeedyPipelineNodeImageBuffer extends SpeedyPipelineNode
 
         // can't store pyramids
         if(image.hasMipmaps())
-            throw new NotSupportedError(`Can't bufferize a pyramid`);
+            throw new NotSupportedError(`${this.fullName} can't bufferize a pyramid`);
 
         // bufferize
         if(!this._frozen || !this._initialized) {
