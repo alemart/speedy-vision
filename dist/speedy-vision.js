@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-10-01T01:59:12.349Z
+ * Date: 2021-10-01T23:42:27.140Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -422,11 +422,12 @@ class SpeedyPipelineFilterFactory extends _speedy_namespace__WEBPACK_IMPORTED_MO
 /*!******************************************************!*\
   !*** ./src/core/pipeline/factories/image-factory.js ***!
   \******************************************************/
-/*! exports provided: SpeedyPipelineImageFactory */
+/*! exports provided: SpeedyPipelineImagePortalFactory, SpeedyPipelineImageFactory */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineImagePortalFactory", function() { return SpeedyPipelineImagePortalFactory; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineImageFactory", function() { return SpeedyPipelineImageFactory; });
 /* harmony import */ var _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../speedy-namespace */ "./src/core/speedy-namespace.js");
 /* harmony import */ var _nodes_images_source__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/images/source */ "./src/core/pipeline/nodes/images/source.js");
@@ -435,6 +436,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _nodes_images_buffer__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../nodes/images/buffer */ "./src/core/pipeline/nodes/images/buffer.js");
 /* harmony import */ var _nodes_images_pyramid__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../nodes/images/pyramid */ "./src/core/pipeline/nodes/images/pyramid.js");
 /* harmony import */ var _nodes_images_mixer__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../nodes/images/mixer */ "./src/core/pipeline/nodes/images/mixer.js");
+/* harmony import */ var _nodes_images_portal__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../nodes/images/portal */ "./src/core/pipeline/nodes/images/portal.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -463,6 +465,33 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
+/**
+ * Portal nodes
+ */
+class SpeedyPipelineImagePortalFactory extends _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__["SpeedyNamespace"]
+{
+    /**
+     * Create an image portal source
+     * @param {string} [name] name of the node
+     * @returns {SpeedyPipelineNodeImagePortalSource}
+     */
+    static Source(name = undefined)
+    {
+        return new _nodes_images_portal__WEBPACK_IMPORTED_MODULE_7__["SpeedyPipelineNodeImagePortalSource"](name);
+    }
+
+    /**
+     * Create an image portal sink
+     * @param {string} [name] name of the node
+     * @returns {SpeedyPipelineNodeImagePortalSink}
+     */
+    static Sink(name = undefined)
+    {
+        return new _nodes_images_portal__WEBPACK_IMPORTED_MODULE_7__["SpeedyPipelineNodeImagePortalSink"](name);
+    }
+}
 
 /**
  * Image nodes
@@ -528,6 +557,15 @@ class SpeedyPipelineImageFactory extends _speedy_namespace__WEBPACK_IMPORTED_MOD
     {
         return new _nodes_images_mixer__WEBPACK_IMPORTED_MODULE_6__["SpeedyPipelineNodeImageMixer"](name);
     }
+
+    /**
+     * Image Portals
+     * @returns {Function}
+     */
+    static get Portal()
+    {
+        return SpeedyPipelineImagePortalFactory;
+    }
 }
 
 /***/ }),
@@ -536,11 +574,12 @@ class SpeedyPipelineImageFactory extends _speedy_namespace__WEBPACK_IMPORTED_MOD
 /*!*********************************************************!*\
   !*** ./src/core/pipeline/factories/keypoint-factory.js ***!
   \*********************************************************/
-/*! exports provided: SpeedyPipelineKeypointFactory */
+/*! exports provided: SpeedyPipelineKeypointPortalFactory, SpeedyPipelineKeypointFactory */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineKeypointPortalFactory", function() { return SpeedyPipelineKeypointPortalFactory; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineKeypointFactory", function() { return SpeedyPipelineKeypointFactory; });
 /* harmony import */ var _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../speedy-namespace */ "./src/core/speedy-namespace.js");
 /* harmony import */ var _nodes_keypoints_source__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../nodes/keypoints/source */ "./src/core/pipeline/nodes/keypoints/source.js");
@@ -555,6 +594,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _nodes_keypoints_descriptors_orb__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/orb */ "./src/core/pipeline/nodes/keypoints/descriptors/orb.js");
 /* harmony import */ var _nodes_keypoints_descriptors_discard__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../nodes/keypoints/descriptors/discard */ "./src/core/pipeline/nodes/keypoints/descriptors/discard.js");
 /* harmony import */ var _nodes_keypoints_trackers_lk__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../nodes/keypoints/trackers/lk */ "./src/core/pipeline/nodes/keypoints/trackers/lk.js");
+/* harmony import */ var _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../nodes/keypoints/portal */ "./src/core/pipeline/nodes/keypoints/portal.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -575,6 +615,7 @@ __webpack_require__.r(__webpack_exports__);
  * keypoint-factory.js
  * Keypoint-related nodes
  */
+
 
 
 
@@ -659,6 +700,32 @@ class SpeedyPipelineKeypointTrackerFactory extends _speedy_namespace__WEBPACK_IM
 }
 
 /**
+ * Portal nodes
+ */
+class SpeedyPipelineKeypointPortalFactory extends _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__["SpeedyNamespace"]
+{
+    /**
+     * Create an image portal source
+     * @param {string} [name] name of the node
+     * @returns {SpeedyPipelineNodeKeypointPortalSource}
+     */
+    static Source(name = undefined)
+    {
+        return new _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_13__["SpeedyPipelineNodeKeypointPortalSource"](name);
+    }
+
+    /**
+     * Create an image portal sink
+     * @param {string} [name] name of the node
+     * @returns {SpeedyPipelineNodeKeypointPortalSink}
+     */
+    static Sink(name = undefined)
+    {
+        return new _nodes_keypoints_portal__WEBPACK_IMPORTED_MODULE_13__["SpeedyPipelineNodeKeypointPortalSink"](name);
+    }
+}
+
+/**
  * Keypoint-related nodes
  */
 class SpeedyPipelineKeypointFactory extends _speedy_namespace__WEBPACK_IMPORTED_MODULE_0__["SpeedyNamespace"]
@@ -688,6 +755,15 @@ class SpeedyPipelineKeypointFactory extends _speedy_namespace__WEBPACK_IMPORTED_
     static get Tracker()
     {
         return SpeedyPipelineKeypointTrackerFactory;
+    }
+
+    /**
+     * Keypoint Portals
+     * @returns {Function}
+     */
+    static get Portal()
+    {
+        return SpeedyPipelineKeypointPortalFactory;
     }
 
     /**
@@ -2134,7 +2210,7 @@ class SpeedyPipelineNodeImageBuffer extends _pipeline_node__WEBPACK_IMPORTED_MOD
 
         // can't store pyramids
         if(image.hasMipmaps())
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__["NotSupportedError"](`Can't bufferize a pyramid`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__["NotSupportedError"](`${this.fullName} can't bufferize a pyramid`);
 
         // bufferize
         if(!this._frozen || !this._initialized) {
@@ -2424,6 +2500,209 @@ class SpeedyPipelineNodeImageMultiplexer extends _pipeline_node__WEBPACK_IMPORTE
         const message = this.input(INPUT_PORT[this._port]).read();
 
         this.output().write(message);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/images/portal.js":
+/*!**************************************************!*\
+  !*** ./src/core/pipeline/nodes/images/portal.js ***!
+  \**************************************************/
+/*! exports provided: SpeedyPipelineNodeImagePortalSink, SpeedyPipelineNodeImagePortalSource */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeImagePortalSink", function() { return SpeedyPipelineNodeImagePortalSink; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeImagePortalSource", function() { return SpeedyPipelineNodeImagePortalSource; });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _utils_types__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../../utils/types */ "./src/utils/types.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * portal.js
+ * Image Portals
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * A sink of an Image Portal
+ * This is not a pipeline sink - it doesn't export any data!
+ */
+class SpeedyPipelineNodeImagePortalSink extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNode"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, 1, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
+        ]);
+
+        /** @type {ImageFormat} stored image format */
+        this._format = _utils_types__WEBPACK_IMPORTED_MODULE_3__["ImageFormat"].RGBA;
+
+        /** @type {boolean} is this node initialized? */
+        this._initialized = false;
+    }
+
+    /**
+     * Stored image
+     * @returns {SpeedyTexture}
+     */
+    get image()
+    {
+        if(!this._initialized)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__["IllegalOperationError"](`Portal error: ${this.fullName} holds no data`);
+
+        return this._tex[0];
+    }
+
+    /**
+     * Stored image format
+     * @returns {ImageFormat}
+     */
+    get format()
+    {
+        if(!this._initialized)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__["IllegalOperationError"](`Portal error: ${this.fullName} holds no data`);
+
+        return this._format;
+    }
+
+    /**
+     * Initializes this node
+     * @param {SpeedyGPU} gpu
+     */
+    init(gpu)
+    {
+        super.init(gpu);
+
+        this._tex[0].resize(1, 1).clear(); // initial texture
+        this._format = _utils_types__WEBPACK_IMPORTED_MODULE_3__["ImageFormat"].RGBA;
+
+        this._initialized = true;
+    }
+
+    /**
+     * Releases this node
+     * @param {SpeedyGPU} gpu
+     */
+    release(gpu)
+    {
+        this._initialized = false;
+        super.release(gpu);
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { image, format } = this.input().read();
+        const tex = this._tex[0];
+
+        // can't store pyramids
+        if(image.hasMipmaps())
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__["NotSupportedError"](`${this.fullName} can't store a pyramid`);
+
+        // copy input
+        this._format = format;
+        tex.resize(image.width, image.height);
+        image.copyTo(tex);
+    }
+}
+
+
+
+/**
+ * A source of an Image Portal
+ */
+class SpeedyPipelineNodeImagePortalSource extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineSourceNode"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, 0, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image),
+        ]);
+
+        /** @type {SpeedyPipelineNodeImagePortalSink} portal sink */
+        this._source = null;
+    }
+
+    /**
+     * Data source
+     * @returns {SpeedyPipelineNodeImagePortalSink}
+     */
+    get source()
+    {
+        return this._source;
+    }
+
+    /**
+     * Data source
+     * @param {SpeedyPipelineNodeImagePortalSink} node
+     */
+    set source(node)
+    {
+        if(node !== null && !(node instanceof SpeedyPipelineNodeImagePortalSink))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__["IllegalArgumentError"](`Incompatible source for ${this.fullName}`);
+
+        this._source = node;
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        if(this._source == null)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__["IllegalOperationError"](`${this.fullName} has no source`);
+
+        this.output().swrite(this._source.image, this._source.format);
     }
 }
 
@@ -4255,6 +4534,239 @@ class SpeedyPipelineNodeKeypointMultiplexer extends _pipeline_node__WEBPACK_IMPO
         const message = this.input(INPUT_PORT[this._port]).read();
 
         this.output().write(message);
+    }
+}
+
+/***/ }),
+
+/***/ "./src/core/pipeline/nodes/keypoints/portal.js":
+/*!*****************************************************!*\
+  !*** ./src/core/pipeline/nodes/keypoints/portal.js ***!
+  \*****************************************************/
+/*! exports provided: SpeedyPipelineNodeKeypointPortalSink, SpeedyPipelineNodeKeypointPortalSource */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeKeypointPortalSink", function() { return SpeedyPipelineNodeKeypointPortalSink; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyPipelineNodeKeypointPortalSource", function() { return SpeedyPipelineNodeKeypointPortalSource; });
+/* harmony import */ var _pipeline_node__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../pipeline-node */ "./src/core/pipeline/pipeline-node.js");
+/* harmony import */ var _pipeline_message__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../pipeline-message */ "./src/core/pipeline/pipeline-message.js");
+/* harmony import */ var _detectors_detector__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./detectors/detector */ "./src/core/pipeline/nodes/keypoints/detectors/detector.js");
+/* harmony import */ var _pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../pipeline-portbuilder */ "./src/core/pipeline/pipeline-portbuilder.js");
+/* harmony import */ var _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../../gpu/speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../../gpu/speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/*
+ * speedy-vision.js
+ * GPU-accelerated Computer Vision for JavaScript
+ * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * portal.js
+ * Keypoint Portals
+ */
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * A sink of a Keypoint Portal
+ * This is not a pipeline sink - it doesn't export any data!
+ */
+class SpeedyPipelineNodeKeypointPortalSink extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineNode"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, 1, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Keypoints),
+        ]);
+
+        /** @type {number} descriptor size, in bytes */
+        this._descriptorSize = 0;
+
+        /** @type {number} extra size, in bytes */
+        this._extraSize = 0;
+
+        /** @type {number} extra size */
+        this._encoderLength = 0;
+
+        /** @type {boolean} is this node initialized? */
+        this._initialized = false;
+    }
+
+    /**
+     * Encoded keypoints
+     * @returns {SpeedyTexture}
+     */
+    get encodedKeypoints()
+    {
+        if(!this._initialized)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__["IllegalOperationError"](`Portal error: ${this.fullName} holds no data`);
+
+        return this._tex[0];
+    }
+
+    /**
+     * Descriptor size, in bytes
+     * @returns {number}
+     */
+    get descriptorSize()
+    {
+        if(!this._initialized)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__["IllegalOperationError"](`Portal error: ${this.fullName} holds no data`);
+
+        return this._descriptorSize;
+    }
+
+    /**
+     * Extra size, in bytes
+     * @returns {number}
+     */
+    get extraSize()
+    {
+        if(!this._initialized)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__["IllegalOperationError"](`Portal error: ${this.fullName} holds no data`);
+
+        return this._extraSize;
+    }
+
+    /**
+     * Encoder length
+     * @returns {number}
+     */
+    get encoderLength()
+    {
+        if(!this._initialized)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__["IllegalOperationError"](`Portal error: ${this.fullName} holds no data`);
+
+        return this._encoderLength;
+    }
+
+    /**
+     * Initializes this node
+     * @param {SpeedyGPU} gpu
+     */
+    init(gpu)
+    {
+        super.init(gpu);
+
+        const encoderLength = _detectors_detector__WEBPACK_IMPORTED_MODULE_2__["SpeedyPipelineNodeKeypointDetector"].encoderLength(0, 0, 0);
+        this._tex[0].resize(encoderLength, encoderLength).clearToColor(1,1,1,1); // initial texture
+        this._descriptorSize = this._extraSize = 0;
+        this._encoderLength = encoderLength;
+
+        this._initialized = true;
+    }
+
+    /**
+     * Releases this node
+     * @param {SpeedyGPU} gpu
+     */
+    release(gpu)
+    {
+        this._initialized = false;
+        super.release(gpu);
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input().read();
+        const tex = this._tex[0];
+
+        // copy input
+        tex.resize(encodedKeypoints.width, encodedKeypoints.height);
+        encodedKeypoints.copyTo(tex);
+        this._descriptorSize = descriptorSize;
+        this._extraSize = extraSize;
+        this._encoderLength = encoderLength;
+    }
+}
+
+
+
+/**
+ * A source of a Keypoint Portal
+ */
+class SpeedyPipelineNodeKeypointPortalSource extends _pipeline_node__WEBPACK_IMPORTED_MODULE_0__["SpeedyPipelineSourceNode"]
+{
+    /**
+     * Constructor
+     * @param {string} [name] name of the node
+     */
+    constructor(name = undefined)
+    {
+        super(name, 0, [
+            Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_3__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Keypoints),
+        ]);
+
+        /** @type {SpeedyPipelineNodeKeypointPortalSink} portal sink */
+        this._source = null;
+    }
+
+    /**
+     * Data source
+     * @returns {SpeedyPipelineNodeKeypointPortalSink}
+     */
+    get source()
+    {
+        return this._source;
+    }
+
+    /**
+     * Data source
+     * @param {SpeedyPipelineNodeKeypointPortalSink} node
+     */
+    set source(node)
+    {
+        if(node !== null && !(node instanceof SpeedyPipelineNodeKeypointPortalSink))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__["IllegalArgumentError"](`Incompatible source for ${this.fullName}`);
+
+        this._source = node;
+    }
+
+    /**
+     * Run the specific task of this node
+     * @param {SpeedyGPU} gpu
+     * @returns {void|SpeedyPromise<void>}
+     */
+    _run(gpu)
+    {
+        if(this._source == null)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__["IllegalOperationError"](`${this.fullName} has no source`);
+
+        this.output().swrite(this._source.encodedKeypoints, this._source.descriptorSize, this._source.extraSize, this._source.encoderLength);
     }
 }
 
@@ -6136,21 +6648,24 @@ class SpeedyPipelineNode
     }
 
     /**
-     * Is this a source node, i.e., it has no input ports?
+     * Is this a source of the pipeline?
      * @returns {boolean}
      */
     isSource()
     {
-        return Object.keys(this._inputPorts).length == 0;
+        return false;
     }
 
     /**
-     * Is this a sink node, i.e., it has no output ports?
+     * Is this a sink of the pipeline?
      * @returns {boolean}
      */
     isSink()
     {
-        return Object.keys(this._outputPorts).length == 0;
+        return false;
+
+        // note: a portal sink has no output ports, but it isn't a sink of the pipeline!
+        //return Object.keys(this._outputPorts).length == 0;
     }
 
     /**
@@ -6192,7 +6707,16 @@ class SpeedyPipelineSourceNode extends SpeedyPipelineNode
     constructor(name = undefined, texCount = undefined, portBuilders = undefined)
     {
         super(name, texCount, portBuilders);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(this.isSource());
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(Object.keys(this._inputPorts).length == 0);
+    }
+
+    /**
+     * Is this a source of the pipeline?
+     * @returns {boolean}
+     */
+    isSource()
+    {
+        return true;
     }
 }
 
@@ -6211,7 +6735,7 @@ class SpeedyPipelineSinkNode extends SpeedyPipelineNode
     constructor(name = undefined, texCount = undefined, portBuilders = undefined)
     {
         super(name, texCount, portBuilders);
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(this.isSink());
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(Object.keys(this._outputPorts).length == 0);
     }
 
     /**
@@ -6221,6 +6745,15 @@ class SpeedyPipelineSinkNode extends SpeedyPipelineNode
     export()
     {
         throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["AbstractMethodError"]();
+    }
+
+    /**
+     * Is this a sink of the pipeline?
+     * @returns {boolean}
+     */
+    isSink()
+    {
+        return true;
     }
 }
 
@@ -12973,7 +13506,7 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D permutation;\nu
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D encodedFlow;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\ncolor = pixel;\nif(isNullKeypoint(keypoint))\nreturn;\nint len = textureSize(encodedFlow, 0).x;\nivec2 location = ivec2(myIndex % len, myIndex / len);\nvec4 encodedFlow = pixelAt(encodedFlow, location);\nbool discardFlow = isDiscardedPairOfFloat16(encodedFlow);\nvec2 flow = !discardFlow ? decodePairOfFloat16(encodedFlow) : vec2(0.0f);\nvec4 newPosition = encodeKeypointPosition(keypoint.position + flow);\nvec4 newPixel = myAddress.offset == 0 ? newPosition : pixel;\ncolor = !discardFlow ? newPixel : encodeDiscardedKeypoint();\n}"
+module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D encodedFlow;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\ncolor = pixel;\nif(isBadKeypoint(keypoint))\nreturn;\nint len = textureSize(encodedFlow, 0).x;\nivec2 location = ivec2(myIndex % len, myIndex / len);\nvec4 encodedFlow = pixelAt(encodedFlow, location);\nbool discardFlow = isDiscardedPairOfFloat16(encodedFlow);\nvec2 flow = !discardFlow ? decodePairOfFloat16(encodedFlow) : vec2(0.0f);\nvec4 newPosition = encodeKeypointPosition(keypoint.position + flow);\nvec4 newPixel = myAddress.offset == 0 ? newPosition : pixel;\ncolor = !discardFlow ? newPixel : encodeDiscardedKeypoint();\n}"
 
 /***/ }),
 
