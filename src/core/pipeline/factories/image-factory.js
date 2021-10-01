@@ -26,6 +26,33 @@ import { SpeedyPipelineNodeImageMultiplexer } from '../nodes/images/multiplexer'
 import { SpeedyPipelineNodeImageBuffer } from '../nodes/images/buffer';
 import { SpeedyPipelineNodeImagePyramid } from '../nodes/images/pyramid';
 import { SpeedyPipelineNodeImageMixer } from '../nodes/images/mixer';
+import { SpeedyPipelineNodeImagePortalSource, SpeedyPipelineNodeImagePortalSink } from '../nodes/images/portal';
+
+/**
+ * Portal nodes
+ */
+export class SpeedyPipelineImagePortalFactory extends SpeedyNamespace
+{
+    /**
+     * Create an image portal source
+     * @param {string} [name] name of the node
+     * @returns {SpeedyPipelineNodeImagePortalSource}
+     */
+    static Source(name = undefined)
+    {
+        return new SpeedyPipelineNodeImagePortalSource(name);
+    }
+
+    /**
+     * Create an image portal sink
+     * @param {string} [name] name of the node
+     * @returns {SpeedyPipelineNodeImagePortalSink}
+     */
+    static Sink(name = undefined)
+    {
+        return new SpeedyPipelineNodeImagePortalSink(name);
+    }
+}
 
 /**
  * Image nodes
@@ -90,5 +117,14 @@ export class SpeedyPipelineImageFactory extends SpeedyNamespace
     static Mixer(name = undefined)
     {
         return new SpeedyPipelineNodeImageMixer(name);
+    }
+
+    /**
+     * Image Portals
+     * @returns {Function}
+     */
+    static get Portal()
+    {
+        return SpeedyPipelineImagePortalFactory;
     }
 }

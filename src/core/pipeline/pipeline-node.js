@@ -238,21 +238,24 @@ export class SpeedyPipelineNode
     }
 
     /**
-     * Is this a source node, i.e., it has no input ports?
+     * Is this a source of the pipeline?
      * @returns {boolean}
      */
     isSource()
     {
-        return Object.keys(this._inputPorts).length == 0;
+        return false;
     }
 
     /**
-     * Is this a sink node, i.e., it has no output ports?
+     * Is this a sink of the pipeline?
      * @returns {boolean}
      */
     isSink()
     {
-        return Object.keys(this._outputPorts).length == 0;
+        return false;
+
+        // note: a portal sink has no output ports, but it isn't a sink of the pipeline!
+        //return Object.keys(this._outputPorts).length == 0;
     }
 
     /**
@@ -294,7 +297,16 @@ export class SpeedyPipelineSourceNode extends SpeedyPipelineNode
     constructor(name = undefined, texCount = undefined, portBuilders = undefined)
     {
         super(name, texCount, portBuilders);
-        Utils.assert(this.isSource());
+        Utils.assert(Object.keys(this._inputPorts).length == 0);
+    }
+
+    /**
+     * Is this a source of the pipeline?
+     * @returns {boolean}
+     */
+    isSource()
+    {
+        return true;
     }
 }
 
@@ -313,7 +325,7 @@ export class SpeedyPipelineSinkNode extends SpeedyPipelineNode
     constructor(name = undefined, texCount = undefined, portBuilders = undefined)
     {
         super(name, texCount, portBuilders);
-        Utils.assert(this.isSink());
+        Utils.assert(Object.keys(this._outputPorts).length == 0);
     }
 
     /**
@@ -323,5 +335,14 @@ export class SpeedyPipelineSinkNode extends SpeedyPipelineNode
     export()
     {
         throw new AbstractMethodError();
+    }
+
+    /**
+     * Is this a sink of the pipeline?
+     * @returns {boolean}
+     */
+    isSink()
+    {
+        return true;
     }
 }
