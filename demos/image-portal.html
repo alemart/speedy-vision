@@ -1,0 +1,143 @@
+<!--
+  speedy-vision.js
+  GPU-accelerated Computer Vision for JavaScript
+  Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com>
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+  
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+  image-portal.html
+  Image Portals
+-->
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="description" content="speedy-vision.js: GPU-accelerated Computer Vision for JavaScript">
+        <meta name="author" content="Alexandre Martins">
+        <title>Image Portals</title>
+        <script src="../dist/speedy-vision.js"></script>
+        <link href="style.css" rel="stylesheet">
+    </head>
+    <body>
+        <h1>Image Portals</h1>
+        <form autocomplete="off">
+            <div>
+                <label for="mux-port">Select your source:</label>
+                <select id="mux-port">
+                    <option value="0" selected>Video</option>
+                    <option value="1">Portal</option>
+                </select>
+            </div>
+        </form>
+        <video
+            src="../assets/bird-walking.mp4"
+            poster="../assets/loading.jpg"
+            preload="auto"
+            loop muted hidden
+            title="Free video by Wendy Laplume, https://www.pexels.com/pt-br/video/passaro-ave-passarinho-concreto-4168986/">
+        </video>
+        <script>
+window.onload = async function()
+{
+    /*
+
+    This is our pipeline:
+
+    Image  ---> Image --------> Image
+    Source      Multiplexer     Sink
+                ^   |
+                |   |
+    Image ------+   +----> Gaussian ---> Image
+    Portal                 Blur          Portal
+
+    */
+
+    // Form elements
+    const muxPort = document.getElementById('mux-port');
+
+    // Load a video
+    const video = document.querySelector('video');
+    const media = await Speedy.load(video);
+    video.play();
+
+    // Setup the pipeline
+    const pipeline = Speedy.Pipeline();
+    const source = Speedy.Image.Source();
+    const sink = Speedy.Image.Sink();
+    const mux = Speedy.Image.Multiplexer();
+    const blur = Speedy.Filter.GaussianBlur();
+    const portal = Speedy.Image.Portal.Source();
+    const portalSink = Speedy.Image.Portal.Sink();
+
+    source.media = media;
+    portal.source = portalSink;
+    mux.port = 0;
+
+    source.output().connectTo(mux.input('in0'));
+    portal.output().connectTo(mux.input('in1'));
+    mux.output().connectTo(sink.input());
+    mux.output().connectTo(blur.input());
+    blur.output().connectTo(portalSink.input());
+
+    pipeline.init(source, sink, mux, blur, portal, portalSink);
+
+    // Display the result
+    const canvas = createCanvas(media.width, media.height, video.title);
+    async function render()
+    {
+        mux.port = Number(muxPort.value);
+
+        const { image } = await pipeline.run();
+
+        image.draw(canvas, 0, 0);
+        renderStatus(canvas);
+        setTimeout(render, 1000 / 60);
+    }
+    render();
+}
+
+function createCanvas(width, height, title)
+{
+    const canvas = document.getElementById('canvas-demo') || document.createElement('canvas');
+
+    canvas.width = width;
+    canvas.height = height;
+    canvas.title = title;
+
+    if(!document.body.contains(canvas))
+        document.body.appendChild(canvas);
+
+    return canvas;
+}
+
+function renderStatus(canvas, color = 'white', size = 18)
+{
+    const context = canvas.getContext('2d');
+
+    context.font = `bold ${size}px sans-serif`;
+    context.fillStyle = color;
+    context.textBaseline = 'top';
+
+    context.shadowOffsetX = 2;
+    context.shadowOffsetY = 2;
+    context.shadowBlur = 2;
+    context.shadowColor = 'rgba(0, 0, 0, 0.5)';
+
+    context.fillText(`FPS: ${Speedy.fps}`, 8, 8);
+
+    context.shadowColor = 'rgba(0, 0, 0, 0)';
+}
+        </script>
+        <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>
+    </body>
+</html>
