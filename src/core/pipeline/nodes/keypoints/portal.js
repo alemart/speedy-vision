@@ -16,26 +16,26 @@
  * limitations under the License.
  *
  * portal.js
- * Image Portals
+ * Keypoint Portals
  */
 
 import { SpeedyPipelineNode, SpeedyPipelineSourceNode } from '../../pipeline-node';
-import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithImage } from '../../pipeline-message';
+import { SpeedyPipelineMessageType } from '../../pipeline-message';
+import { SpeedyPipelineNodeKeypointDetector } from './detectors/detector';
 import { InputPort, OutputPort } from '../../pipeline-portbuilder';
-import { ImageFormat } from '../../../../utils/types';
 import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
 import { SpeedyTexture } from '../../../../gpu/speedy-texture';
 import { Utils } from '../../../../utils/utils';
-import { NotSupportedError, IllegalOperationError, IllegalArgumentError } from '../../../../utils/errors';
+import { IllegalOperationError, IllegalArgumentError } from '../../../../utils/errors';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 
 
 
 /**
- * A sink of an Image Portal
+ * A sink of a Keypoint Portal
  * This is not a pipeline sink - it doesn't export any data!
  */
-export class SpeedyPipelineNodeImagePortalSink extends SpeedyPipelineNode
+export class SpeedyPipelineNodeKeypointPortalSink extends SpeedyPipelineNode
 {
     /**
      * Constructor
@@ -44,21 +44,27 @@ export class SpeedyPipelineNodeImagePortalSink extends SpeedyPipelineNode
     constructor(name = undefined)
     {
         super(name, 1, [
-            InputPort().expects(SpeedyPipelineMessageType.Image),
+            InputPort().expects(SpeedyPipelineMessageType.Keypoints),
         ]);
 
-        /** @type {ImageFormat} stored image format */
-        this._format = ImageFormat.RGBA;
+        /** @type {number} descriptor size, in bytes */
+        this._descriptorSize = 0;
+
+        /** @type {number} extra size, in bytes */
+        this._extraSize = 0;
+
+        /** @type {number} extra size */
+        this._encoderLength = 0;
 
         /** @type {boolean} is this node initialized? */
         this._initialized = false;
     }
 
     /**
-     * Stored image
+     * Encoded keypoints
      * @returns {SpeedyTexture}
      */
-    get image()
+    get encodedKeypoints()
     {
         if(!this._initialized)
             throw new IllegalOperationError(`Portal error: ${this.fullName} holds no data`);
@@ -67,15 +73,39 @@ export class SpeedyPipelineNodeImagePortalSink extends SpeedyPipelineNode
     }
 
     /**
-     * Stored image format
-     * @returns {ImageFormat}
+     * Descriptor size, in bytes
+     * @returns {number}
      */
-    get format()
+    get descriptorSize()
     {
         if(!this._initialized)
             throw new IllegalOperationError(`Portal error: ${this.fullName} holds no data`);
 
-        return this._format;
+        return this._descriptorSize;
+    }
+
+    /**
+     * Extra size, in bytes
+     * @returns {number}
+     */
+    get extraSize()
+    {
+        if(!this._initialized)
+            throw new IllegalOperationError(`Portal error: ${this.fullName} holds no data`);
+
+        return this._extraSize;
+    }
+
+    /**
+     * Encoder length
+     * @returns {number}
+     */
+    get encoderLength()
+    {
+        if(!this._initialized)
+            throw new IllegalOperationError(`Portal error: ${this.fullName} holds no data`);
+
+        return this._encoderLength;
     }
 
     /**
@@ -86,8 +116,10 @@ export class SpeedyPipelineNodeImagePortalSink extends SpeedyPipelineNode
     {
         super.init(gpu);
 
-        this._tex[0].resize(1, 1).clear(); // initial texture
-        this._format = ImageFormat.RGBA;
+        const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(0, 0, 0);
+        this._tex[0].resize(encoderLength, encoderLength).clearToColor(1,1,1,1); // initial texture
+        this._descriptorSize = this._extraSize = 0;
+        this._encoderLength = encoderLength;
 
         this._initialized = true;
     }
@@ -109,26 +141,24 @@ export class SpeedyPipelineNodeImagePortalSink extends SpeedyPipelineNode
      */
     _run(gpu)
     {
-        const { image, format } = this.input().read();
+        const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input().read();
         const tex = this._tex[0];
 
-        // can't store pyramids
-        if(image.hasMipmaps())
-            throw new NotSupportedError(`${this.fullName} can't store a pyramid`);
-
         // copy input
-        this._format = format;
-        tex.resize(image.width, image.height);
-        image.copyTo(tex);
+        tex.resize(encodedKeypoints.width, encodedKeypoints.height);
+        encodedKeypoints.copyTo(tex);
+        this._descriptorSize = descriptorSize;
+        this._extraSize = extraSize;
+        this._encoderLength = encoderLength;
     }
 }
 
 
 
 /**
- * A source of an Image Portal
+ * A source of a Keypoint Portal
  */
-export class SpeedyPipelineNodeImagePortalSource extends SpeedyPipelineSourceNode
+export class SpeedyPipelineNodeKeypointPortalSource extends SpeedyPipelineSourceNode
 {
     /**
      * Constructor
@@ -137,16 +167,16 @@ export class SpeedyPipelineNodeImagePortalSource extends SpeedyPipelineSourceNod
     constructor(name = undefined)
     {
         super(name, 0, [
-            OutputPort().expects(SpeedyPipelineMessageType.Image),
+            OutputPort().expects(SpeedyPipelineMessageType.Keypoints),
         ]);
 
-        /** @type {SpeedyPipelineNodeImagePortalSink} portal sink */
+        /** @type {SpeedyPipelineNodeKeypointPortalSink} portal sink */
         this._source = null;
     }
 
     /**
      * Data source
-     * @returns {SpeedyPipelineNodeImagePortalSink}
+     * @returns {SpeedyPipelineNodeKeypointPortalSink}
      */
     get source()
     {
@@ -155,11 +185,11 @@ export class SpeedyPipelineNodeImagePortalSource extends SpeedyPipelineSourceNod
 
     /**
      * Data source
-     * @param {SpeedyPipelineNodeImagePortalSink} node
+     * @param {SpeedyPipelineNodeKeypointPortalSink} node
      */
     set source(node)
     {
-        if(node !== null && !(node instanceof SpeedyPipelineNodeImagePortalSink))
+        if(node !== null && !(node instanceof SpeedyPipelineNodeKeypointPortalSink))
             throw new IllegalArgumentError(`Incompatible source for ${this.fullName}`);
 
         this._source = node;
@@ -175,6 +205,6 @@ export class SpeedyPipelineNodeImagePortalSource extends SpeedyPipelineSourceNod
         if(this._source == null)
             throw new IllegalOperationError(`${this.fullName} has no source`);
 
-        this.output().swrite(this._source.image, this._source.format);
+        this.output().swrite(this._source.encodedKeypoints, this._source.descriptorSize, this._source.extraSize, this._source.encoderLength);
     }
 }

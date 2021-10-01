@@ -72,6 +72,7 @@ For general enquiries, contact me at alemartf `at` gmail `dot` com.
     * [Keypoint matching](#keypoint-matching)
   * [Portals](#portals)
     * [Image Portals](#image-portals)
+    * [Keypoint Portals](#keypoint-portals)
   * [Linear Algebra](#linear-algebra)
     * [Creating new matrices](#creating-new-matrices)
     * [Matrix properties](#matrix-properties)
@@ -1176,6 +1177,36 @@ Create a sink of an Image Portal.
 | Port name | Data type | Description |
 |-----------|-----------|-------------|
 | `"in"`    | Image     | An image.   |
+
+#### Keypoint Portals
+
+##### Speedy.Keypoint.Portal.Source()
+
+`Speedy.Keypoint.Portal.Source(name?: string): SpeedyPipelineNodeKeypointPortalSource`
+
+Create a source of a Keypoint Portal.
+
+###### Parameters
+
+* `source: SpeedyPipelineNodeKeypointPortalSink`. A sink of a Keypoint Portal.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"out"`   | Keypoints | A set of keypoints. |
+
+##### Speedy.Keypoint.Portal.Sink()
+
+`Speedy.Keypoint.Portal.Sink(name?: string): SpeedyPipelineNodeKeypointPortalSink`
+
+Create a sink of a Keypoint Portal.
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"in"`    | Keypoints | A set of keypoints. |
 
 
 

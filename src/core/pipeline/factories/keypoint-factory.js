@@ -32,6 +32,7 @@ import { SpeedyPipelineNodeHarrisKeypointDetector } from '../nodes/keypoints/det
 import { SpeedyPipelineNodeORBKeypointDescriptor } from '../nodes/keypoints/descriptors/orb';
 import { SpeedyPipelineNodeDiscardKeypointDescriptor } from '../nodes/keypoints/descriptors/discard';
 import { SpeedyPipelineNodeLKKeypointTracker } from '../nodes/keypoints/trackers/lk';
+import { SpeedyPipelineNodeKeypointPortalSource, SpeedyPipelineNodeKeypointPortalSink } from '../nodes/keypoints/portal';
 
 /**
  * Keypoint detectors
@@ -102,6 +103,32 @@ class SpeedyPipelineKeypointTrackerFactory extends SpeedyNamespace
 }
 
 /**
+ * Portal nodes
+ */
+export class SpeedyPipelineKeypointPortalFactory extends SpeedyNamespace
+{
+    /**
+     * Create an image portal source
+     * @param {string} [name] name of the node
+     * @returns {SpeedyPipelineNodeKeypointPortalSource}
+     */
+    static Source(name = undefined)
+    {
+        return new SpeedyPipelineNodeKeypointPortalSource(name);
+    }
+
+    /**
+     * Create an image portal sink
+     * @param {string} [name] name of the node
+     * @returns {SpeedyPipelineNodeKeypointPortalSink}
+     */
+    static Sink(name = undefined)
+    {
+        return new SpeedyPipelineNodeKeypointPortalSink(name);
+    }
+}
+
+/**
  * Keypoint-related nodes
  */
 export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
@@ -131,6 +158,15 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
     static get Tracker()
     {
         return SpeedyPipelineKeypointTrackerFactory;
+    }
+
+    /**
+     * Keypoint Portals
+     * @returns {Function}
+     */
+    static get Portal()
+    {
+        return SpeedyPipelineKeypointPortalFactory;
     }
 
     /**
