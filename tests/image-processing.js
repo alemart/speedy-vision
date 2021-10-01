@@ -539,7 +539,7 @@ describe('Image processing', function() {
 
         source.media = media;
         convolution.kernel = Speedy.Matrix(3, 3, [
-            0, 1, 1,
+            0, 1, 0,
             1,-5, 1,
             0, 1, 0,
         ]);

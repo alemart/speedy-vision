@@ -1144,7 +1144,7 @@ Soon!
 
 Portals let you create loops within a pipeline. They also let you transfer data between different pipelines.
 
-A portal is defined by a set of nodes: a portal sink and one or more portal sources. The portal sink receives data from a pipeline, which is then read by the portal source(s). The portal source(s) feed(s) one or more pipelines. The portal nodes may or may not belong to the same pipeline.
+A portal is defined by a set of nodes: a portal sink and one or more portal sources. The portal sink receives data from a node of a pipeline, which is then read by the portal source(s). The portal source(s) feed(s) one or more pipelines. The portal nodes may or may not belong to the same pipeline.
 
 #### Image Portals
 
