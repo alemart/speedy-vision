@@ -39,7 +39,7 @@ export const LOG2_PYRAMID_MAX_SCALE = Math.log2(PYRAMID_MAX_SCALE);
 // -----------------------------------------------------------------
 
 /** @type {number} How many bits do we use to store fractional data? */
-export const FIX_BITS = 4; // step size: 0.0625
+export const FIX_BITS = 3; // step size: 0.125 = 1/2^FIX_BITS
 
 /** @type {number} Fixed-point resolution */
 export const FIX_RESOLUTION = 1 << FIX_BITS; // float(2^(FIX_BITS))
