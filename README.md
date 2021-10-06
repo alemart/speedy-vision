@@ -971,7 +971,7 @@ Applies a transformation matrix to a set of keypoints.
 
 ###### Parameters
 
-* `transform: SpeedyMatrixExpr`. A 3x3 homography matrix. Defaults to the identity matrix.
+* `transform: SpeedyMatrix`. A 3x3 homography matrix. Defaults to the identity matrix.
 
 ###### Ports
 
@@ -979,6 +979,44 @@ Applies a transformation matrix to a set of keypoints.
 |-----------|-----------|-------------|
 | `"in"`    | Keypoints | A set of keypoints. |
 | `"out"`   | Keypoints | A transformed set of keypoints. |
+
+##### Speedy.Keypoint.SubpixelRefiner()
+
+`Speedy.Keypoint.SubpixelRefiner(name?: string): SpeedyPipelineNodeKeypointSubpixelRefiner`
+
+Refines the position of a set of keypoints down to the subpixel level.
+
+**Note 1:** filter the image to reduce the noise before working at the subpixel level.
+
+**Note 2:** if there are keypoints in multiple scales, make sure to provide a pyramid as input.
+
+**Note 3:** the position of the keypoints is stored as fixed-point. This representation may introduce a loss of accuracy (~0.1 pixel). This is probably enough already, but if you need higher accuracy, ignore the output keypoints and work with the displacement vectors instead. These are encoded as floating-point. In addition, use the upsampling methods.
+
+###### Parameters
+
+* `method: string`. The method to be used to compute the subpixel displacement. See the table below.
+* `maxIterations: number`. The maximum number of iterations used by methods `"bicubic-upsample"` and `"bilinear-upsample"`. Defaults to 6.
+* `epsilon: number`. The threshold used to determine when the subpixel displacement has reached convergence. Used with methods `"bicubic-upsample"` and `"bilinear-upsample"`. Defaults to 0.1 pixel.
+
+Table of methods:
+
+| Method            | Description |
+|-------------------|-------------|
+| `"quadratic1d"` | Maximize a 1D parabola fit to a corner strength function. This is the default method. |
+| `"taylor2d"` | Maximize a second-order 2D Taylor expansion of a corner strength function. Method `"quadratic1d"` seems to perform slightly better than this, but your mileage may vary.
+| `"bicubic-upsample"` | Iteratively upsample the image using bicubic interpolation in order to maximize a corner strength function. Repeat until convergence or until a maximum number of iterations is reached. |
+| `"bilinear-upsample"` | Analogous to bicubic upsample, but this method uses bilinear interpolation instead. |
+
+###### Ports
+
+| Port name | Data type | Description |
+|-----------|-----------|-------------|
+| `"image"` | Image     | An image or pyramid from which you extracted the keypoints. |
+| `"keypoints"` | Keypoints | Input set of keypoints. |
+| `"out"`   | Keypoints | Subpixel-refined output set of keypoints. |
+| `"displacements"` | Vector2 | Displacement vectors (output). |
+
+
 
 #### Keypoint detection
 

@@ -45,6 +45,23 @@ const harrisScoreFindMax = importShader('keypoints/score-findmax.glsl')
 const harrisScoreCutoff = importShader('keypoints/harris-cutoff.glsl')
                          .withArguments('corners', 'maxScore', 'quality');
 
+// Subpixel refinement
+const subpixelQuadratic1d = importShader('keypoints/subpixel-refinement.glsl')
+                           .withDefines({ 'METHOD': 0 })
+                           .withArguments('pyramid', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'maxIterations', 'epsilon');
+
+const subpixelTaylor2d = importShader('keypoints/subpixel-refinement.glsl')
+                        .withDefines({ 'METHOD': 1 })
+                        .withArguments('pyramid', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'maxIterations', 'epsilon');
+
+const subpixelBilinear = importShader('keypoints/subpixel-refinement.glsl')
+                        .withDefines({ 'METHOD': 2 })
+                        .withArguments('pyramid', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'maxIterations', 'epsilon');
+
+const subpixelBicubic = importShader('keypoints/subpixel-refinement.glsl')
+                       .withDefines({ 'METHOD': 3 })
+                       .withArguments('pyramid', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'maxIterations', 'epsilon');
+
 // ORB descriptors
 const allocateDescriptors = importShader('keypoints/allocate-descriptors.glsl')
                             .withArguments('inputEncodedKeypoints', 'inputDescriptorSize', 'inputExtraSize', 'inputEncoderLength', 'outputDescriptorSize', 'outputExtraSize', 'outputEncoderLength');
@@ -73,7 +90,6 @@ const lk = [7, 9, 11, 13, 15, 21].reduce((obj, win) => ((obj[win] =
 
 const transferFlow = importShader('keypoints/transfer-flow.glsl')
                      .withArguments('encodedFlow', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
-
 
 // Keypoint sorting
 const sortCreatePermutation = importShader('keypoints/sort-createperm.glsl')
@@ -171,6 +187,14 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
                 ...this.program.usesPingpongRendering()
             })
             .declare('harrisScoreCutoff', harrisScoreCutoff)
+
+            //
+            // Subpixel refinement
+            //
+            .declare('subpixelQuadratic1d', subpixelQuadratic1d)
+            .declare('subpixelTaylor2d', subpixelTaylor2d)
+            .declare('subpixelBicubic', subpixelBicubic)
+            .declare('subpixelBilinear', subpixelBilinear)
 
             //
             // ORB descriptors

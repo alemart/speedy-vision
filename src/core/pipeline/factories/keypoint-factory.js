@@ -27,6 +27,7 @@ import { SpeedyPipelineNodeKeypointBuffer } from '../nodes/keypoints/buffer';
 import { SpeedyPipelineNodeKeypointMixer } from '../nodes/keypoints/mixer';
 import { SpeedyPipelineNodeKeypointMultiplexer } from '../nodes/keypoints/multiplexer';
 import { SpeedyPipelineNodeKeypointTransformer } from '../nodes/keypoints/transformer';
+import { SpeedyPipelineNodeKeypointSubpixelRefiner } from '../nodes/keypoints/subpixel';
 import { SpeedyPipelineNodeFASTKeypointDetector } from '../nodes/keypoints/detectors/fast';
 import { SpeedyPipelineNodeHarrisKeypointDetector } from '../nodes/keypoints/detectors/harris';
 import { SpeedyPipelineNodeORBKeypointDescriptor } from '../nodes/keypoints/descriptors/orb';
@@ -237,5 +238,15 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
     static Transformer(name = undefined)
     {
         return new SpeedyPipelineNodeKeypointTransformer(name);
+    }
+
+    /**
+     * Create a subpixel refiner of keypoint locations
+     * @param {string} [name]
+     * @returns {SpeedyPipelineNodeKeypointSubpixelRefiner}
+     */
+    static SubpixelRefiner(name = undefined)
+    {
+        return new SpeedyPipelineNodeKeypointSubpixelRefiner(name);
     }
 }

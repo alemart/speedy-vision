@@ -101,6 +101,8 @@ void main()
     // compute corner response (Shi-Tomasi)
     float response = 0.5f * (h.x + h.z - sqrt((h.x - h.z) * (h.x - h.z) + 4.0f * h.y * h.y));
 
+    // FIXME corner response should be normalized across scales...
+
     // write the result it if the response is higher than at the previous lod
     vec3 result = vec3(encodeFloat16(response), encodeLod(lod));
     float prevResponse = decodeFloat16(pixel.rb);
