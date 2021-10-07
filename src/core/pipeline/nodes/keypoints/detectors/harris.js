@@ -142,10 +142,10 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
 
         // compute corner response map
         harris.outputs(width, height, tex[0], tex[1]);
-        keypoints.harrisDerivatives.outputs(width, height, tex[2]);
+        gpu.programs.utils.sobelDerivatives.outputs(width, height, tex[2]);
         let corners = tex[1].clear();
         for(let i = 0, lod = 0.0; i < levels && lod < PYRAMID_MAX_LEVELS; i++, lod += lodStep) {
-            const derivatives = keypoints.harrisDerivatives(image, lod);
+            const derivatives = gpu.programs.utils.sobelDerivatives(image, lod);
             corners = harris(corners, derivatives, lod);
         }
 

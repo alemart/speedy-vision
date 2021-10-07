@@ -48,6 +48,11 @@ const copyComponents = importShader('utils/copy-components.glsl').withArguments(
 // Scan the entire image and find the minimum & maximum pixel intensity
 const scanMinMax2D = importShader('utils/scan-minmax2d.glsl').withArguments('image', 'iterationNumber');
 
+// Compute the partial derivatives of an image
+const sobelDerivatives = importShader('utils/sobel-derivatives.glsl').withArguments('pyramid', 'lod');
+
+
+
 
 
 /**
@@ -85,6 +90,9 @@ export class SpeedyProgramGroupUtils extends SpeedyProgramGroup
             .declare('scanMinMax2D', scanMinMax2D, {
                 ...this.program.usesPingpongRendering()
             })
+
+            // Compute the partial derivatives of an image
+            .declare('sobelDerivatives', sobelDerivatives)
         ;
     }
 }

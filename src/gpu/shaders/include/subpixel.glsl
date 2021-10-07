@@ -41,9 +41,9 @@ vec4 subpixelAtBI(sampler2D image, vec2 pos)
     // Split integer and fractional parts
     vec2 frc = fract(pos);
     vec2 ifrc = vec2(1.0f) - frc;
+    vec2 p = (floor(pos) + vec2(0.5f)) / vec2(textureSize(image, 0));
 
     // Read 2x2 window around the target location
-    vec2 p = (floor(pos) + vec2(0.5f)) / vec2(textureSize(image, 0));
     vec4 pix00 = textureLod(image, p, 0.0f);
     vec4 pix10 = textureLodOffset(image, p, 0.0f, ivec2(1,0));
     vec4 pix01 = textureLodOffset(image, p, 0.0f, ivec2(0,1));

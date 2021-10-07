@@ -36,9 +36,6 @@ const harris = [1, 3, 5, 7].reduce((obj, win) => ((obj[win] =
                   .withArguments('corners', 'derivatives', 'lod')
                ), obj), {});
 
-const harrisDerivatives = importShader('keypoints/harris-derivatives.glsl')
-                         .withArguments('pyramid', 'lod');
-
 const harrisScoreFindMax = importShader('keypoints/score-findmax.glsl')
                           .withArguments('corners', 'iterationNumber');
 
@@ -182,7 +179,6 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             .declare('harris7', harris[7], {
                 ...this.program.usesPingpongRendering()
             })
-            .declare('harrisDerivatives', harrisDerivatives)
             .declare('harrisScoreFindMax', harrisScoreFindMax, {
                 ...this.program.usesPingpongRendering()
             })

@@ -32,10 +32,6 @@ import { SpeedyVector2 } from '../../../speedy-vector';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 
 /**
- * @typedef {"nearest"|"bilinear"} ResizeInterpolationMethod
- */
-
-/**
  * Resize image
  */
 export class SpeedyPipelineNodeResize extends SpeedyPipelineNode
@@ -57,7 +53,7 @@ export class SpeedyPipelineNodeResize extends SpeedyPipelineNode
         /** @type {SpeedyVector2} size of the output relative to the size of the input */
         this._scale = new SpeedyVector2(1, 1);
 
-        /** @type {ResizeInterpolationMethod} interpolation method */
+        /** @type {string} interpolation method */
         this._method = 'bilinear';
     }
 
@@ -99,7 +95,7 @@ export class SpeedyPipelineNodeResize extends SpeedyPipelineNode
 
     /**
      * Interpolation method
-     * @returns {ResizeInterpolationMethod}
+     * @returns {string}
      */
     get method()
     {
@@ -108,7 +104,7 @@ export class SpeedyPipelineNodeResize extends SpeedyPipelineNode
 
     /**
      * Interpolation method
-     * @param {ResizeInterpolationMethod} method
+     * @param {string} method
      */
     set method(method)
     {
@@ -133,12 +129,12 @@ export class SpeedyPipelineNodeResize extends SpeedyPipelineNode
         const newHeight = this._size.height || Math.max(1, this._scale.y * height);
 
         if(method == 'bilinear') {
-            (gpu.programs.transforms.resizeBI
+            (gpu.programs.transforms.resizeBilinear
                 .outputs(newWidth, newHeight, outputTexture)
             )(image);
         }
         else if(method == 'nearest') {
-            (gpu.programs.transforms.resizeNN
+            (gpu.programs.transforms.resizeNearest
                 .outputs(newWidth, newHeight, outputTexture)
             )(image);
         }

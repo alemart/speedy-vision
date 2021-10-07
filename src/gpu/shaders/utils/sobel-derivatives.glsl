@@ -15,8 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * harris-derivatives.glsl
- * Compute image derivatives to be used in the Harris corner detector
+ * sobel-derivatives.glsl
+ * Compute the partial derivatives of an image
  */
 
 @include "pyramids.glsl"
@@ -60,5 +60,5 @@ void main()
     );
 
     // store result
-    color = vec4(encodeFloat16(df.x), encodeFloat16(df.y));
+    color = encodePairOfFloat16(df);
 }

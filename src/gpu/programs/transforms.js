@@ -34,17 +34,17 @@ const warpPerspective = importShader('transforms/warp-perspective.glsl')
                         .withArguments('image', 'inverseHomography');
 
 // Resize image
-const resizeNN = importShader('transforms/resize.glsl')
-                 .withDefines({
-                     'INTERPOLATION_METHOD': 0 // Nearest neighbors
-                 })
-                 .withArguments('image');
+const resizeNearest = importShader('transforms/resize.glsl')
+                     .withDefines({
+                         'INTERPOLATION_METHOD': 0 // Nearest neighbors
+                     })
+                     .withArguments('image');
 
-const resizeBI = importShader('transforms/resize.glsl')
-                 .withDefines({
-                     'INTERPOLATION_METHOD': 1 // Bilinear interpolation
-                 })
-                 .withArguments('image');
+const resizeBilinear = importShader('transforms/resize.glsl')
+                      .withDefines({
+                          'INTERPOLATION_METHOD': 1 // Bilinear interpolation
+                      })
+                      .withArguments('image');
 
 // Additive mix (TODO create a new program group?)
 const additiveMix = importShader('transforms/additive-mix.glsl')
@@ -65,8 +65,8 @@ export class SpeedyProgramGroupTransforms extends SpeedyProgramGroup
         super(gpu);
         this
             .declare('warpPerspective', warpPerspective)
-            .declare('resizeNN', resizeNN)
-            .declare('resizeBI', resizeBI)
+            .declare('resizeNearest', resizeNearest)
+            .declare('resizeBilinear', resizeBilinear)
             .declare('additiveMix', additiveMix)
         ;
     }

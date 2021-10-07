@@ -45,7 +45,7 @@ uniform float lod; // level-of-detail
  * @param {const int} oy y-offset from the thread pixel
  */
 #define H(ox,oy) dpix = pixelAtShortOffset(derivatives, ivec2((ox),(oy))); \
-                 df = vec2(decodeFloat16(dpix.xy), decodeFloat16(dpix.zw)); \
+                 df = decodePairOfFloat16(dpix); \
                  h += vec3(df.x * df.x, df.x * df.y, df.y * df.y)
 
 /*
