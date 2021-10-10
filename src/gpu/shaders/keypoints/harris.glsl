@@ -45,10 +45,10 @@ uniform sampler2D pyramid;
 uniform sampler2D derivatives; // corresponding to lod
 uniform float lod; // level-of-detail
 uniform float lodStep; // 0 if not multiscale
-uniform float gaussian[@WINDOW_SIZE_SQUARED@];
+uniform float gaussian[@WINDOW_SIZE_SQUARED@]; // column-major format
 
 // Gaussian kernel
-#define G(x,y) gaussian[((y) + WINDOW_RADIUS) * WINDOW_SIZE + ((x) + WINDOW_RADIUS)]
+#define G(x,y) gaussian[((x) + WINDOW_RADIUS) * WINDOW_SIZE + ((y) + WINDOW_RADIUS)]
 //#define G(x,y) 1.0
 
 /*
@@ -66,7 +66,7 @@ lod   intensity
  3    g(1) * g(1) * g(1) * I(x,y)
 
  and so on, where * denotes convolution.
- 
+
  The convolution of two Gaussians g(a) and g(b) generates[1]
  a third Gaussian of sigma^2 = a+b, i.e., g(a+b). Therefore,
  the intensity value at (x,y) for lod = t > 0 is g(t) * I(x,y).
