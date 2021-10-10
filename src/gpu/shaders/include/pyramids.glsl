@@ -155,11 +155,25 @@ float decodeLod(float encodedLod)
 }
 
 /**
+ * Used to decide whether two LODs are actually the same
+ * Note: 8 layers => 1/8 = 0.125
+ */
+#define LOD_EPS 0.0625f /*0.125f*/
+
+/**
  * This constant is used to separate different encoded LODs
  * It must be < 0.25 / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS)
  * because min(|lod_i - lod_j|) >= 0.25 for any i, j (previously 0.5)
  */
-const float ENCODED_LOD_EPS = 0.125f / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS);
+const float ENCODED_LOD_EPS = (LOD_EPS / (LOG2_PYRAMID_MAX_SCALE + F_PYRAMID_MAX_LEVELS));
+
+/**
+ * Decide whether two LODs are really the same
+ * @param {float} lod1
+ * @param {float} lod2
+ * @returns {bool}
+ */
+#define isSameLod(lod1, lod2) (abs((lod1) - (lod2)) < LOD_EPS)
 
 /**
  * Decide whether two encoded LODs are really the same
