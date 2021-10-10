@@ -35,8 +35,8 @@
 @include "pyramids.glsl"
 @include "float16.glsl"
 
-#if !defined(WINDOW_SIZE) || !defined(WINDOW_SIZE_SQUARED) || (WINDOW_SIZE % 2 == 0)
-#error Must define WINDOW_SIZE and WINDOW_SIZE_SQUARED
+#if !defined(WINDOW_SIZE)
+#error Undefined WINDOW_SIZE
 #endif
 #define WINDOW_RADIUS ((WINDOW_SIZE - 1) / 2)
 
@@ -45,11 +45,12 @@ uniform sampler2D pyramid;
 uniform sampler2D derivatives; // corresponding to lod
 uniform float lod; // level-of-detail
 uniform float lodStep; // 0 if not multiscale
-uniform float gaussian[@WINDOW_SIZE_SQUARED@]; // column-major format
+uniform float gaussian[@WINDOW_SIZE@]; // 1D gaussian
 
 // Gaussian kernel
-#define G(x,y) gaussian[((x) + WINDOW_RADIUS) * WINDOW_SIZE + ((y) + WINDOW_RADIUS)]
-//#define G(x,y) 1.0
+//#define G1(x,y) 1.0
+#define G1(x) gaussian[(x) + WINDOW_RADIUS]
+#define G(x,y) (G1(x) * G1(y))
 
 /*
 
@@ -74,7 +75,7 @@ lod   intensity
  Let L(x,y,t) = g(t) * I(x,y) be the scale-space representation[2]
  of I. The scale-normalized Laplacian of L(x,y,t) is given by[3,4]:
 
- \/^2 L = t (Lxx(x,y;t) + Lyy(x,y;t)) = t tr(H(L_t))
+ t \/^2 L = t (Lxx(x,y;t) + Lyy(x,y;t)) = t tr(H(L_t))
 
  where tr(H(L_t)) is trace of the Hessian of L(x,y;t) (fixed t)
 
@@ -184,12 +185,13 @@ void main()
     float response = 0.5f * (h.x + h.z - sqrt((h.x - h.z) * (h.x - h.z) + 4.0f * h.y * h.y));
 
     // write the result it if the Laplacian response is higher than at the previous lod
-    vec3 result = vec3(encodeFloat16(response), encodeLod(lod));
     float currentScaleStrength = abs(laplacian(lod));
-    float previousScaleStrength = (min(lod, lodStep) > 0.0f) ? abs(laplacian(lod - lodStep)) : -1.0f;
-    color.rba = currentScaleStrength > previousScaleStrength ? result : pixel.rba;
+    float previousScaleStrength = (min(lod, lodStep) > 0.0f) ? abs(laplacian(lod - lodStep)) : 0.0f;
+    float previousResponse = decodeFloat16(pixel.rb);
+
+    vec3 result = vec3(encodeFloat16(response), encodeLod(lod));
+    color.rba = (currentScaleStrength > previousScaleStrength || previousResponse == 0.0f) ? result : pixel.rba;
 /*
-    float prevResponse = decodeFloat16(pixel.rb);
-    color.rba = response > prevResponse ? result : pixel.rba;
+    color.rba = response > previousResponse ? result : pixel.rba;
 */
 }

@@ -264,8 +264,14 @@ export class Utils
             sum += fp;
         }
 
+        // normalize the kernel
+        if(normalized) {
+            for(let j = 0; j < kernelSize; j++)
+                kernel[j] /= sum;
+        }
+
         // done!
-        return normalized ? kernel.map(k => k / sum) : kernel;
+        return kernel;
     }
 
     /**

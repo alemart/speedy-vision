@@ -52,7 +52,7 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
      */
     constructor(name = undefined)
     {
-        super(name, 4, [
+        super(name, 5, [
             InputPort().expects(SpeedyPipelineMessageType.Image).satisfying(
                 msg => msg.format === ImageFormat.GREY
             ),
@@ -118,7 +118,7 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
         const image = this.input().read().image;
         const width = image.width, height = image.height;
         const tex = this._tex;
-        const outputTexture = this._tex[3];
+        const outputTexture = this._tex[4];
         const capacity = this._capacity;
         const quality = this._quality;
         const windowSize = this._windowSize.width;
@@ -144,12 +144,14 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
 
         // compute corner response map
         harris.outputs(width, height, tex[0], tex[1]);
+        nonmax.outputs(width, height, tex[3]);
         gpu.programs.utils.sobelDerivatives.outputs(width, height, tex[2]);
         let corners = tex[1].clear();
         for(let i = 0, lod = 0.0; i < levels && lod < PYRAMID_MAX_LEVELS; i++, lod += lodStep) {
-            const gaussian = Utils.kernel2d(Utils.gaussianKernel(intFactor * (1+lod), windowSize));
+            const gaussian = Utils.gaussianKernel(intFactor * (1+lod), windowSize);
             const derivatives = gpu.programs.utils.sobelDerivatives(image, lod);
             corners = harris(corners, image, derivatives, lod, levels > 1 ? lodStep : 0, gaussian);
+            corners = nonmax(corners, levels > 1 ? lodStep : 0);
         }
 
         // non-maximum suppression

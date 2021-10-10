@@ -32,7 +32,7 @@ const fast9_16 = importShader('keypoints/fast.glsl')
 // Harris corner detector
 const harris = [1, 3, 5, 7].reduce((obj, win) => ((obj[win] =
                    importShader('keypoints/harris.glsl')
-                  .withDefines({ 'WINDOW_SIZE': win, 'WINDOW_SIZE_SQUARED': win*win })
+                  .withDefines({ 'WINDOW_SIZE': win })
                   .withArguments('corners', 'pyramid', 'derivatives', 'lod', 'lodStep', 'gaussian')
                ), obj), {});
 
