@@ -55,7 +55,7 @@ export class SpeedyProgramGroupPyramids extends SpeedyProgramGroup
 
             // separable kernels for gaussian smoothing
             // use [c, b, a, b, c] where a+2c = 2b and a+2b+2c = 1
-            // pick a = 0.4 for gaussian approximation
+            // pick a = 0.4 for gaussian approximation (sigma = 1)
             .declare('smoothX', convX([
                 0.05, 0.25, 0.4, 0.25, 0.05
             ]))

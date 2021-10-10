@@ -121,12 +121,14 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
         const outputTexture = this._tex[3];
         const capacity = this._capacity;
         const quality = this._quality;
-        const windowSize = this._windowSize;
+        const windowSize = this._windowSize.width;
         const lodStep = Math.log2(this.scaleFactor);
         const levels = this.levels;
         const keypoints = gpu.programs.keypoints;
-        const nonmax = levels > 1 ? keypoints.pyrnonmax : keypoints.nonmax;
-        const harris = keypoints[HARRIS[windowSize.width]];
+        const harris = keypoints[HARRIS[windowSize]];
+        //const nonmax = levels > 1 ? keypoints.pyrnonmax : keypoints.nonmax;
+        const nonmax = keypoints.nonmax;
+        const intFactor = levels > 1 ? this.scaleFactor : 1;
 
         // validate pyramid
         if(!(levels == 1 || image.hasMipmaps()))
@@ -145,8 +147,9 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
         gpu.programs.utils.sobelDerivatives.outputs(width, height, tex[2]);
         let corners = tex[1].clear();
         for(let i = 0, lod = 0.0; i < levels && lod < PYRAMID_MAX_LEVELS; i++, lod += lodStep) {
+            const gaussian = Utils.kernel2d(Utils.gaussianKernel(intFactor * (1+lod), windowSize));
             const derivatives = gpu.programs.utils.sobelDerivatives(image, lod);
-            corners = harris(corners, derivatives, lod);
+            corners = harris(corners, image, derivatives, lod, levels > 1 ? lodStep : 0, gaussian);
         }
 
         // non-maximum suppression
