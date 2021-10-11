@@ -50,9 +50,12 @@ lod   intensity
  where tr(H(L_t)) is trace of the Hessian of L(x,y;t) (fixed t).
 
  We adjust for lod = 0 by imagining an image J, twice the size of I,
- such that I(x,y) = g(1) * J(x,y). The scale-space representation of
- J is therefore L(x,y,t) = g(t) * J(x,y) [we set 1+lod = t >= 1].
- The scale-normalized Laplacian of L(x,y,t) is (1+lod) tr(H(L_t)).
+ such that I(x,y) = g(1) * J(x,y) in normalized [0,1]x[0,1] space.
+ The scale-space representation of J is therefore:
+
+ L'(x,y,t) = g(t) * J(x,y) [we set 1+lod = t >= 1].
+
+ The scale-normalized Laplacian of L'(x,y,t) is (1+lod) tr(H(L'_t)).
 
  [1] Bromiley, Paul. "Products and convolutions of Gaussian probability density functions"
  [2] Lindeberg, Tony. "Scale selection" available at https://people.kth.se/~tony/papers/Lin14-ScSel-CompVisRefGuide.pdf
