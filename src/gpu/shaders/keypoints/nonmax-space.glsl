@@ -63,7 +63,7 @@ void main()
         S(6), S(7), S(8)
     );
 
-    #define B(j) float(isSameEncodedLod(pix[j].a, encodedLod))
+    #define B(j) float(isSameLod(decodeLod(pix[j].a), lod))
     mat3 sameLod = mat3(
         B(0), B(1), B(2),
         B(3), B(4), B(5),

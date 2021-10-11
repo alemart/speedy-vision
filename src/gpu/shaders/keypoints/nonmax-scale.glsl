@@ -23,10 +23,17 @@
 @include "float16.glsl"
 @include "filters.glsl"
 
+#if !defined(USE_LAPLACIAN)
+#error Undefined USE_LAPLACIAN
+#endif
+
 uniform sampler2D corners;
 uniform sampler2D pyramid;
-uniform sampler2D pyrLaplacian; // scale-normalized Laplacian of (lod-lodStep, lod+lodStep); lod = corner lod
 uniform float lodStep;
+
+#if USE_LAPLACIAN
+uniform sampler2D pyrLaplacian; // scale-normalized Laplacian of (lod-lodStep, lod+lodStep); lod = corner lod
+#endif
 
 void main()
 {
@@ -92,6 +99,8 @@ void main()
         E(15), E(16), E(17)
     );
 
+    #if USE_LAPLACIAN
+
     //#define L(p,u,v) abs(laplacian(pyramid, texCoord + (p) * vec2((u),(v)), decodeLod(encodedLod[((v)+1)*3+(u)+1])))
     #define L(p,u,v) textureLod(pyrLaplacian, texCoord + (p) * vec2((u),(v)) / texSize, 0.0f)
     mat3 strengths[2] = mat3[2](mat3(
@@ -107,6 +116,25 @@ void main()
         Lp(-1,0), Lp(0,0), Lp(1,0),
         Lp(-1,1), Lp(0,1), Lp(1,1)
     ));
+    float myStrength = abs(laplacian(pyramid, vec2(thread), lod));
+
+    #else
+
+    #define L(u,v) (((v)+1)*3 + ((u)+1))
+    mat3 strengths[2] = mat3[2](mat3(
+        #define Lm(u,v) scores[L((u),(v))]
+        Lm(-1,-1), Lm(0,-1), Lm(1,-1),
+        Lm(-1,0), Lm(0,0), Lm(1,0),
+        Lm(-1,1), Lm(0,1), Lm(1,1)
+    ), mat3(
+        #define Lp(u,v) scores[9 + L((u),(v))]
+        Lp(-1,-1), Lp(0,-1), Lp(1,-1),
+        Lp(-1,0), Lp(0,0), Lp(1,0),
+        Lp(-1,1), Lp(0,1), Lp(1,1)
+    ));
+    float myStrength = score;
+
+    #endif
 
     #define B(j,lod) float(isSameLod(lods[j], (lod))) * float(scores[j] > 0.0f)
     mat3 nearLod[2] = mat3[2](mat3(
@@ -130,6 +158,5 @@ void main()
     float maxStrength = max(maxStrength3.x, max(maxStrength3.y, maxStrength3.z));
 
     // Non-maximum suppression
-    float myStrength = abs(laplacian(pyramid, vec2(thread), lod));
     color.rb = encodeFloat16(score * step(maxStrength, myStrength));
 }

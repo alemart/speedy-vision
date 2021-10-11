@@ -82,7 +82,12 @@ const nonmaxSpace = importShader('keypoints/nonmax-space.glsl')
                     .withArguments('corners');
 
 const nonmaxScale = importShader('keypoints/nonmax-scale.glsl')
+                    .withDefines({ 'USE_LAPLACIAN': 1 })
                     .withArguments('corners', 'pyramid', 'pyrLaplacian', 'lodStep');
+
+const nonmaxScaleSimple = importShader('keypoints/nonmax-scale.glsl')
+                         .withDefines({ 'USE_LAPLACIAN': 0 })
+                         .withArguments('corners', 'pyramid', 'lodStep');
 
 const laplacian = importShader('keypoints/laplacian.glsl')
                  .withArguments('corners', 'pyramid', 'lodStep', 'lodOffset');
@@ -215,6 +220,7 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             .declare('pyrnonmax', multiscaleNonMaxSuppression)
             .declare('nonmaxSpace', nonmaxSpace)
             .declare('nonmaxScale', nonmaxScale)
+            .declare('nonmaxScaleSimple', nonmaxScaleSimple)
             .declare('laplacian', laplacian)
 
             //

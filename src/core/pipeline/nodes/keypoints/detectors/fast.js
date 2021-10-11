@@ -90,8 +90,6 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
         const threshold = this._threshold;
         const lodStep = Math.log2(this.scaleFactor);
         const levels = this.levels;
-        const keypoints = gpu.programs.keypoints;
-        const nonmax = levels > 1 ? keypoints.pyrnonmax : keypoints.nonmax;
 
         // validate pyramid
         if(!(levels == 1 || image.hasMipmaps()))
@@ -106,19 +104,44 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
         }
 
         // FAST
-        keypoints.fast9_16.outputs(width, height, tex[0], tex[1]);
+        gpu.programs.keypoints.fast9_16.outputs(width, height, tex[0], tex[1]);
+        gpu.programs.keypoints.nonmaxSpace.outputs(width, height, tex[2]);
         let corners = tex[1].clear();
-        let last = Math.min(PYRAMID_MAX_LEVELS - 1, (levels - 1) * lodStep);
-        for(let i = 0, lod = 0.0; i < levels && lod < PYRAMID_MAX_LEVELS; i++, lod += lodStep)
-            corners = keypoints.fast9_16(corners, image, last - lod, threshold);
+        let numPasses = Math.max(1, Math.min(levels, (PYRAMID_MAX_LEVELS / lodStep) | 0));
+        for(let lod = lodStep * (numPasses - 1); numPasses-- > 0; lod -= lodStep) {
+            corners = gpu.programs.keypoints.fast9_16(corners, image, lod, threshold);
+            corners = gpu.programs.keypoints.nonmaxSpace(corners); // see below*
+        }
 
-        // non-maximum suppression
-        const finalCorners = (nonmax
-            .outputs(width, height, tex[2])
+        // Same-scale non-maximum suppression
+        // *performs better inside the loop
+        //corners = gpu.programs.keypoints.nonmaxSpace(corners);
+
+        // Multi-scale non-maximum suppression
+        // (doesn't seem to remove many keypoints)
+        if(levels > 1) {
+            const laplacian = (gpu.programs.keypoints.laplacian
+                .outputs(width, height, tex[0])
+            )(corners, image, lodStep, 0);
+
+            corners = (gpu.programs.keypoints.nonmaxScale
+                .outputs(width, height, tex[1])
+            )(corners, image, laplacian, lodStep);
+
+/*
+            corners = (gpu.programs.keypoints.nonmaxScaleSimple
+                .outputs(width, height, tex[1])
+            )(corners, image, lodStep);
+*/
+        }
+
+        // More aggressive non-maximum suppression
+        corners = (gpu.programs.keypoints[levels > 1 ? 'pyrnonmax' : 'nonmax']
+            .outputs(width, height, tex[0])
         )(corners, lodStep);
 
         // encode keypoints
-        const encodedKeypoints = this._encodeKeypoints(gpu, finalCorners, outputTexture);
+        const encodedKeypoints = this._encodeKeypoints(gpu, corners, outputTexture);
         const encoderLength = encodedKeypoints.width;
 
         // done!
