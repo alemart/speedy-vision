@@ -78,6 +78,15 @@ const multiscaleNonMaxSuppression = importShader('keypoints/nonmax-suppression.g
                                    .withDefines({ 'MULTISCALE': 1 })
                                    .withArguments('image', 'lodStep');
 
+const nonmaxSpace = importShader('keypoints/nonmax-space.glsl')
+                    .withArguments('corners');
+
+const nonmaxScale = importShader('keypoints/nonmax-scale.glsl')
+                    .withArguments('corners', 'pyramid', 'pyrLaplacian', 'lodStep');
+
+const laplacian = importShader('keypoints/laplacian.glsl')
+                 .withArguments('corners', 'pyramid', 'lodStep', 'lodOffset');
+
 // Keypoint tracking & optical-flow
 const lk = [7, 9, 11, 13, 15, 21].reduce((obj, win) => ((obj[win] =
                importShader('keypoints/lk.glsl')
@@ -204,6 +213,9 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             //
             .declare('nonmax', nonMaxSuppression)
             .declare('pyrnonmax', multiscaleNonMaxSuppression)
+            .declare('nonmaxSpace', nonmaxSpace)
+            .declare('nonmaxScale', nonmaxScale)
+            .declare('laplacian', laplacian)
 
             //
             // LK optical-flow

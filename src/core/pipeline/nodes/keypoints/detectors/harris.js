@@ -32,14 +32,12 @@ import { SpeedyPromise } from '../../../../../utils/speedy-promise';
 import { PYRAMID_MAX_LEVELS } from '../../../../../utils/globals';
 
 // Constants
-const DEFAULT_QUALITY = 0.1;
 const HARRIS = {
     1: 'harris1',
     3: 'harris3',
     5: 'harris5',
     7: 'harris7',
 };
-
 
 /**
  * Harris corner detector
@@ -63,7 +61,7 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
         this._windowSize = new SpeedySize(3, 3);
 
         /** @type {number} min corner quality in [0,1] */
-        this._quality = DEFAULT_QUALITY;
+        this._quality = 0.1;
     }
 
     /**
@@ -117,18 +115,15 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
     {
         const image = this.input().read().image;
         const width = image.width, height = image.height;
-        const tex = this._tex;
-        const outputTexture = this._tex[4];
         const capacity = this._capacity;
         const quality = this._quality;
         const windowSize = this._windowSize.width;
-        const lodStep = Math.log2(this.scaleFactor);
         const levels = this.levels;
-        const keypoints = gpu.programs.keypoints;
-        const harris = keypoints[HARRIS[windowSize]];
-        //const nonmax = levels > 1 ? keypoints.pyrnonmax : keypoints.nonmax;
-        const nonmax = keypoints.nonmax;
+        const lodStep = Math.log2(this.scaleFactor);
         const intFactor = levels > 1 ? this.scaleFactor : 1;
+        const harris = gpu.programs.keypoints[HARRIS[windowSize]];
+        const tex = this._tex;
+        const outputTexture = this._tex[4];
 
         // validate pyramid
         if(!(levels == 1 || image.hasMipmaps()))
@@ -144,32 +139,44 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
 
         // compute corner response map
         harris.outputs(width, height, tex[0], tex[1]);
-        nonmax.outputs(width, height, tex[3]);
         gpu.programs.utils.sobelDerivatives.outputs(width, height, tex[2]);
+        gpu.programs.keypoints.nonmaxSpace.outputs(width, height, tex[3]);
         let corners = tex[1].clear();
-        for(let i = 0, lod = 0.0; i < levels && lod < PYRAMID_MAX_LEVELS; i++, lod += lodStep) {
-            const gaussian = Utils.gaussianKernel(intFactor * (1+lod), windowSize);
+        let numPasses = Math.max(1, Math.min(levels, (PYRAMID_MAX_LEVELS / lodStep) | 0));
+        for(let lod = lodStep * (numPasses - 1); numPasses-- > 0; lod -= lodStep) {
+            const gaussian = Utils.gaussianKernel(intFactor * (1 + lod), windowSize);
             const derivatives = gpu.programs.utils.sobelDerivatives(image, lod);
-            corners = harris(corners, image, derivatives, lod, levels > 1 ? lodStep : 0, gaussian);
-            corners = nonmax(corners, levels > 1 ? lodStep : 0);
+            corners = harris(corners, image, derivatives, lod, lodStep, gaussian);
+            corners = gpu.programs.keypoints.nonmaxSpace(corners); // see below*
         }
 
-        // non-maximum suppression
-        const suppressedCorners = (nonmax
-            .outputs(width, height, tex[2])
-        )(corners, lodStep);
+        // Same-scale non-maximum suppression
+        // *performs better inside the loop
+        //corners = gpu.programs.keypoints.nonmaxSpace(corners);
+
+        // Multi-scale non-maximum suppression
+        // (doesn't seem to remove many keypoints)
+        if(levels > 1) {
+            const laplacian = (gpu.programs.keypoints.laplacian
+                .outputs(width, height, tex[0])
+            )(corners, image, lodStep, 0);
+
+            corners = (gpu.programs.keypoints.nonmaxScale
+                .outputs(width, height, tex[2])
+            )(corners, image, laplacian, lodStep);
+        }
 
         // find the maximum corner response over the entire image
-        keypoints.harrisScoreFindMax.outputs(width, height, tex[0], tex[1]);
+        gpu.programs.keypoints.harrisScoreFindMax.outputs(width, height, tex[0], tex[1]);
         const npasses = Math.ceil(Math.log2(Math.max(width, height)));
-        let maxScore = suppressedCorners;
+        let maxScore = corners;
         for(let j = 0; j < npasses; j++)
-            maxScore = keypoints.harrisScoreFindMax(maxScore, j);
+            maxScore = gpu.programs.keypoints.harrisScoreFindMax(maxScore, j);
 
         // discard corners below a quality level
-        const niceCorners = (keypoints.harrisScoreCutoff
+        const niceCorners = (gpu.programs.keypoints.harrisScoreCutoff
             .outputs(width, height, maxScore == tex[0] ? tex[1] : tex[0])
-        )(suppressedCorners, maxScore, quality);
+        )(corners, maxScore, quality);
 
         // encode keypoints
         const encodedKeypoints = this._encodeKeypoints(gpu, niceCorners, outputTexture);

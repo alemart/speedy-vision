@@ -54,7 +54,6 @@ const sobelDerivatives = importShader('utils/sobel-derivatives.glsl').withArgume
 
 
 
-
 /**
  * SpeedyProgramGroupUtils
  * Utility operations
