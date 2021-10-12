@@ -10,7 +10,6 @@ Build real-time stuff with **speedy-vision.js**, a GPU-accelerated Computer Visi
   * Harris corner detector
   * FAST feature detector
   * ORB feature descriptor
-  * BRISK feature detector & descriptor (soon)
 * Feature tracking
   * LK optical flow
 * Feature matching
@@ -18,11 +17,12 @@ Build real-time stuff with **speedy-vision.js**, a GPU-accelerated Computer Visi
 * Geometric transformations
   * Homography matrix
 * Image processing
-  * Greyscale
-  * Gaussian blur & box blur
-  * Custom convolution filters
-  * Image normalization
-  * Nightvision
+  * Convert to greyscale
+  * Convolution
+  * Gaussian blur, box & median filters
+  * Contrast and brightness adjustment
+  * Image normalization & warping
+  * Image pyramids
 * Linear Algebra
   * Beautiful matrix algebra with a fluent interface
   * Efficient computations with WebAssembly
@@ -1028,11 +1028,13 @@ The following nodes expect greyscale images as input. They output a set of keypo
 
 FAST keypoint detector. Speedy implements the FAST-9,16 variant of the algorithm.
 
+To use the multi-scale version of the algorithm, pass a pyramid as input, set the number of levels you want to scan and optionally set the scale factor. After scanning all levels and performing non-maximum suppression, the scale of the keypoints will be set by means of interpolation using the scale that maximizes a response measure and its adjacent scales.
+
 ###### Parameters
 
 * `threshold: number`. An integer between `0` and `255`, inclusive. The larger the number, the "stronger" your keypoints will be. The smaller the number, the more keypoint you will get. Numbers between `20` and `50` are usually meaningful.
-* `levels: number`. The number of pyramid levels you want to use. Defaults to `1` (i.e., no pyramid is used).
-* `scaleFactor: number`. The scale factor between two consecutive levels of the pyramid. This is a value between `1` (exclusive) and `2` (inclusive). Since a standard pyramid with a scale factor of two is too coarse, this value is set to the square root of two by default. This is applicable only when using a pyramid.
+* `levels: number`. The number of pyramid levels you want to use. Defaults to `1` (i.e., no pyramid is used). When using a pyramid, a value such as `7` is a reasonable choice.
+* `scaleFactor: number`. The scale factor between two consecutive levels of the pyramid. This is a value between `1` (exclusive) and `2` (inclusive). Defaults to the square root of two. This is applicable only when using a pyramid.
 * `capacity: number`. The maximum number of keypoints that can be detected by this node. Currently, this number can be set to at most `8192`.
 
 ###### Ports
@@ -1048,11 +1050,13 @@ FAST keypoint detector. Speedy implements the FAST-9,16 variant of the algorithm
 
 Harris corner detector. Speedy implements the Shi-Tomasi corner response for best results.
 
+To use the multi-scale version of the algorithm, pass a pyramid as input, set the number of levels you want to scan and optionally set the scale factor. After scanning all levels and performing non-maximum suppression, the scale of the keypoints will be set by means of interpolation using the scale that maximizes a response measure and its adjacent scales.
+
 ###### Parameters
 
 * `quality: number`. A value between `0` and `1` representing the minimum "quality" of the returned keypoints. Speedy will discard any keypoint whose score is lower than the specified percentage of the maximum keypoint score found in the image. A typical value for this parameter is `0.10` (10%).
-* `levels: number`. The number of pyramid levels you want to use. Defaults to `1` (i.e., no pyramid is used).
-* `scaleFactor: number`. The scale factor between two consecutive levels of the pyramid. This is a value between `1` (exclusive) and `2` (inclusive). Since a standard pyramid with a scale factor of two is too coarse, this value is set to the square root of two by default. This is applicable only when using a pyramid.
+* `levels: number`. The number of pyramid levels you want to use. Defaults to `1` (i.e., no pyramid is used). When using a pyramid, a value such as `7` is a reasonable choice.
+* `scaleFactor: number`. The scale factor between two consecutive levels of the pyramid. This is a value between `1` (exclusive) and `2` (inclusive). Defaults to the square root of two. This is applicable only when using a pyramid.
 * `capacity: number`. The maximum number of keypoints that can be detected by this node. Currently, this number can be set to at most `8192`.
 
 ###### Ports
