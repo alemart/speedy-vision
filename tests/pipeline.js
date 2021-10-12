@@ -28,7 +28,7 @@ describe('Pipeline system', function() {
     });
 
     beforeEach(async function() {
-        const image = await loadImage('peregrine-falcon.jpg');
+        const image = await loadImage('masp.jpg');
         media = await Speedy.load(image);
     });
 
