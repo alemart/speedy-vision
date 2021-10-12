@@ -67,18 +67,6 @@ export class Utils
     }
 
     /**
-     * Generates an enumeration
-     * @param {...string} values enumeration options
-     * @returns {object} enum object
-     */
-    static enum(...values)
-    {
-        return Object.freeze(
-            values.reduce((acc, cur) => ((acc[cur] = Symbol(cur)), acc), { })
-        );
-    }
-
-    /**
      * Similar to setTimeout(fn, 0), but without the ~4ms delay.
      * Although much faster than setTimeout, this may be resource-hungry
      * (heavy on battery) if used in a loop. Use with caution.
