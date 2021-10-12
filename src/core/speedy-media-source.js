@@ -106,7 +106,7 @@ export class SpeedyMediaSource
 
     /**
      * The type of the underlying media source
-     * @returns {Symbol} MediaType enum
+     * @returns {MediaType}
      */
     get type()
     {
@@ -163,7 +163,7 @@ class SpeedyImageMediaSource extends SpeedyMediaSource
 {
     /**
      * The type of the underlying media source
-     * @returns {Symbol} MediaType enum
+     * @returns {MediaType}
      */
     get type()
     {
@@ -218,7 +218,7 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource
 {
     /**
      * The type of the underlying media source
-     * @returns {Symbol} MediaType enum
+     * @returns {MediaType}
      */
     get type()
     {
@@ -274,7 +274,7 @@ class SpeedyCanvasMediaSource extends SpeedyMediaSource
 {
     /**
      * The type of the underlying media source
-     * @returns {Symbol} MediaType enum
+     * @returns {MediaType}
      */
     get type()
     {
@@ -322,7 +322,7 @@ class SpeedyBitmapMediaSource extends SpeedyMediaSource
 {
     /**
      * The type of the underlying media source
-     * @returns {Symbol} MediaType enum
+     * @returns {MediaType}
      */
     get type()
     {

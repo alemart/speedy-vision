@@ -19,26 +19,24 @@
  * Types & formats
  */
 
-import { Utils } from './utils';
-
 /**
  * Media types
- * @enum {MediaType}
+ * @enum {Symbol}
  */
-export const MediaType = Utils.enum(
-    'Image',
-    'Video',
-    'Canvas',
-    'Bitmap'
-);
+export const MediaType = Object.freeze({
+    Image: Symbol('Image'),
+    Video: Symbol('Video'),
+    Canvas: Symbol('Canvas'),
+    Bitmap: Symbol('Bitmap'),
+});
 
 /**
  * Image formats
- * @enum {number}
+ * @enum {Symbol}
  */
 export const ImageFormat = Object.freeze({
-    RGBA: 0,
-    GREY: 1,
+    RGBA: Symbol('RGBA'),
+    GREY: Symbol('GREY'),
 });
 
 /**
