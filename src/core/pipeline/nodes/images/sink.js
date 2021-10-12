@@ -61,7 +61,7 @@ export class SpeedyPipelineNodeImageSink extends SpeedyPipelineSinkNode
         Utils.assert(this._bitmap != null);
 
         return SpeedyMediaSource.load(this._bitmap).then(source =>
-            new SpeedyMedia(source, { lightweight: 1 /* FIXME */ }) //, this._format ?
+            new SpeedyMedia(source, {}, this._format)
         );
     }
 

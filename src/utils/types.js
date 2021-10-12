@@ -42,16 +42,6 @@ export const ImageFormat = Object.freeze({
 });
 
 /**
- * Color formats
- * @enum
- */
-export const ColorFormat = Utils.enum(
-    'RGB',
-    'Greyscale',
-    'Binary'
-);
-
-/**
  * Pixel component (bitwise flags)
  * @typedef {number} PixelComponent
  */

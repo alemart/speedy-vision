@@ -21,7 +21,7 @@
 
 import { SpeedyGPU } from '../gpu/speedy-gpu';
 import { SpeedyTexture } from '../gpu/speedy-texture';
-import { MediaType, ColorFormat } from '../utils/types'
+import { MediaType, ImageFormat } from '../utils/types'
 import { IllegalOperationError } from '../utils/errors';
 import { Utils } from '../utils/utils';
 import { SpeedyMediaSource } from './speedy-media-source';
@@ -38,23 +38,20 @@ export class SpeedyMedia
      * @private
      * @param {SpeedyMediaSource} source
      * @param {object} [options] options object
-     * @param {ColorFormat} [colorFormat]
+     * @param {ImageFormat} [format]
      */
-    constructor(source, options = {}, colorFormat = ColorFormat.RGB)
+    constructor(source, options = {}, format = ImageFormat.RGBA)
     {
         Utils.assert(source.isLoaded());
 
-        /** @type {SpeedyMediaSource} media source */
+        /** @type {SpeedyMediaSource|null} media source */
         this._source = source;
 
         /** @type {object} options */
         this._options = Object.freeze(options);
 
-        /** @type {ColorFormat} color format */
-        this._colorFormat = colorFormat;
-
-        /** @type {SpeedyGPU} GPU-accelerated routines */ // FIXME
-        this._gpu = options.lightweight ? Object.create(null) : new SpeedyGPU();
+        /** @type {ImageFormat} format */
+        this._format = format;
     }
 
     /**
@@ -97,7 +94,7 @@ export class SpeedyMedia
      */
     get source()
     {
-        return this._source.data;
+        return this._source ? this._source.data : null;
     }
 
     /**
@@ -106,7 +103,7 @@ export class SpeedyMedia
      */
     get width()
     {
-        return this._source.width;
+        return this._source ? this._source.width : 0;
     }
 
     /**
@@ -115,7 +112,7 @@ export class SpeedyMedia
      */
     get height()
     {
-        return this._source.height;
+        return this._source ? this._source.height : 0;
     }
 
     /**
@@ -124,6 +121,9 @@ export class SpeedyMedia
      */
     get type()
     {
+        if(this.isReleased())
+            return 'unknown';
+
         switch(this._source.type) {
             case MediaType.Image:
                 return 'image';
@@ -160,7 +160,7 @@ export class SpeedyMedia
     {
         if(!this.isReleased()) {
             Utils.log('Releasing SpeedyMedia object...');
-            this._gpu = this._gpu.release();
+            this._source = null;
         }
 
         return null;
@@ -172,7 +172,7 @@ export class SpeedyMedia
      */
     isReleased()
     {
-        return this._gpu == null;
+        return this._source == null;
     }
 
     /**
@@ -186,7 +186,7 @@ export class SpeedyMedia
             throw new IllegalOperationError(`Can't clone a SpeedyMedia that has been released`);
 
         // clone the object
-        const clone = new SpeedyMedia(this._source, this._options, this._colorFormat);
+        const clone = new SpeedyMedia(this._source, this._options, this._format);
 
         // done!
         return SpeedyPromise.resolve(clone);
