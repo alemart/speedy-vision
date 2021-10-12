@@ -122,10 +122,10 @@ export class SpeedyGPU
     /**
      * Upload an image to the GPU
      * @param {SpeedyMediaSource} source
-     * @param {SpeedyTexture} [outputTexture]
-     * @returns {SpeedyTexture} an internal texture if an output texture is not provided
+     * @param {SpeedyTexture} outputTexture
+     * @returns {SpeedyTexture} outputTexture
      */
-    upload(source, outputTexture = null)
+    upload(source, outputTexture)
     {
         return this._textureUploader.upload(source, outputTexture);
     }

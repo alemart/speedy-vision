@@ -72,7 +72,9 @@ export class SpeedyPipelineNodeKeypointSource extends SpeedyPipelineSourceNode
      */
     set keypoints(keypoints)
     {
-        Utils.assert(Array.isArray(keypoints));
+        if(!Array.isArray(keypoints))
+            throw new IllegalArgumentError(`Not an array of keypoints`);
+
         this._keypoints = keypoints;
     }
 

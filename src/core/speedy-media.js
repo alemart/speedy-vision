@@ -228,13 +228,4 @@ export class SpeedyMedia
 
         return new SpeedyPromise((resolve, reject) => createImageBitmap(this._source.data).then(resolve, reject));
     }
-
-    /**
-     * Upload the media to the GPU
-     * @returns {SpeedyTexture}
-     */
-    _upload()
-    {
-        return this._gpu.upload(this._source);
-    }
 }

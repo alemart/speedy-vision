@@ -30,6 +30,9 @@ import { ImageFormat } from '../../../../utils/types';
 import { IllegalArgumentError, IllegalOperationError } from '../../../../utils/errors';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 
+// Constants
+const UPLOAD_BUFFER_SIZE = 2; // how many textures we allocate for uploading data
+
 /**
  * Gets an image into a pipeline
  */
@@ -41,12 +44,15 @@ export class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode
      */
     constructor(name = undefined)
     {
-        super(name, 1, [
+        super(name, UPLOAD_BUFFER_SIZE, [
             OutputPort().expects(SpeedyPipelineMessageType.Image)
         ]);
 
         /** @type {SpeedyMedia} source media */
         this._media = null;
+
+        /** @type {SpeedyTexture} texture index */
+        this._textureIndex = 0;
     }
 
     /**
@@ -64,7 +70,7 @@ export class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode
      */
     set media(media)
     {
-        if(!(media instanceof SpeedyMedia))
+        if(media !== null && !(media instanceof SpeedyMedia))
             throw new IllegalArgumentError(`Not a SpeedyMedia: ${media}`);
 
         this._media = media;
@@ -77,11 +83,15 @@ export class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode
      */
     _run(gpu)
     {
-        const outputTexture = this._tex[0];
-
         if(this._media == null)
             throw new IllegalOperationError(`Did you forget to set the media of ${this.fullName}?`);
 
+        // use round-robin to mitigate WebGL's implicit synchronization
+        // and maybe minimize texture upload times
+        this._textureIndex = (this._textureIndex + 1) % this._tex.length;
+
+        // upload texture
+        const outputTexture = this._tex[this._textureIndex];
         gpu.upload(this._media._source, outputTexture);
         this.output().swrite(outputTexture, ImageFormat.RGBA);
     }
