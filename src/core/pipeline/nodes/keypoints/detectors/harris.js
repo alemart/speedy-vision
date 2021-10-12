@@ -123,7 +123,6 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
         const intFactor = levels > 1 ? this.scaleFactor : 1;
         const harris = gpu.programs.keypoints[HARRIS[windowSize]];
         const tex = this._tex;
-        const outputTexture = this._tex[5];
 
         // validate pyramid
         if(!(levels == 1 || image.hasMipmaps()))
@@ -131,7 +130,7 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
 
         // skip if the capacity is zero
         if(capacity == 0) {
-            const encodedKeypoints = this._encodeZeroKeypoints(gpu, outputTexture);
+            const encodedKeypoints = this._encodeZeroKeypoints(gpu, tex[5]);
             const encoderLength = encodedKeypoints.width;
             this.output().swrite(encodedKeypoints, 0, 0, encoderLength);
             return;
@@ -185,7 +184,7 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
         // scale refinement
         if(levels > 1) {
             encodedKeypoints = (gpu.programs.keypoints.refineScaleLoG
-                .outputs(encoderLength, encoderLength, outputTexture)
+                .outputs(encoderLength, encoderLength, tex[5])
             )(image, lodStep, encodedKeypoints, 0, 0, encoderLength);
         }
 
