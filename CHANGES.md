@@ -1,5 +1,15 @@
 # Release notes
 
+## 0.8.1 - October 12th, 2021
+
+* Improved multi-scale keypoint detection
+* Improved the LK optical-flow
+* Introduced portals
+* Introduced subpixel refinement for keypoints
+* Introduced the image mixer
+* Image & keypoint buffers can now be frozen
+* New demos + general improvements and fixes
+
 ## 0.8.0 - September 20th, 2021
 
 * Ported the Matrix routines to WebAssembly and updated the API
