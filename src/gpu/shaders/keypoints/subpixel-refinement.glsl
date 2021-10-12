@@ -193,12 +193,7 @@ vec2 quadratic1d()
     float f = responseAt(0,0);
 
     bool hasMax = a < -EPS && d < -EPS;
-
-    vec2 guess = hasMax ? vec2(
-        -b / (2.0f * a),
-        -e / (2.0f * d)
-    ) : vec2(0.0f);
-    return guess;
+    return hasMax ? -0.5f * vec2(b / a, e / d) : vec2(0.0f);
 }
 #endif
 
@@ -217,10 +212,9 @@ vec2 taylor2d()
 
     float det = dxx * dyy - dxy * dxy;
     mat2 inv = mat2(dyy, -dxy, -dxy, dxx);
-    bool hasMax = det > EPS && dxx < 0.0f; // Hessian test
 
-    vec2 guess = hasMax ? inv * vec2(dx, dy) / (-det) : vec2(0.0f);
-    return guess;
+    bool hasMax = det > EPS && dxx < 0.0f; // Hessian test
+    return hasMax ? inv * vec2(dx, dy) / (-det) : vec2(0.0f);
 }
 #endif
 
