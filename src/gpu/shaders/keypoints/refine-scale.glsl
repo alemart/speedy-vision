@@ -62,7 +62,7 @@ void main()
 
     // find the corner strength of 3 levels of the pyramid
     vec3 strength = vec3(
-        cornerStrength(keypoint.position, keypoint.lod - lodStep),
+        cornerStrength(keypoint.position, max(0.0f, keypoint.lod - lodStep)),
         cornerStrength(keypoint.position, keypoint.lod),
         cornerStrength(keypoint.position, keypoint.lod + lodStep)
     );
@@ -78,7 +78,7 @@ void main()
     float maxStrength = max(strength.x, max(strength.y, strength.z));
     vec3 diffStrength = abs(strength - vec3(maxStrength));
     vec3 strengthIndicators = vec3(lessThan(diffStrength, vec3(eps))); // in {0,1}^3
-    float maxPoint = min(1.0f, dot(vec3(0.0f, 0.5f, 1.0f), strengthIndicators)); // multiple maxima?
+    float maxPoint = min(1.0f, dot(vec3(0.0f, 0.5f, 1.0f), strengthIndicators)); // multiple indicators set to 1?
 
     bool hasMax = p.x < -eps;
     float pmax = hasMax ? -0.5f * p.y / p.x : maxPoint;
