@@ -50,7 +50,7 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
      */
     constructor(name = undefined)
     {
-        super(name, 5, [
+        super(name, 6, [
             InputPort().expects(SpeedyPipelineMessageType.Image).satisfying(
                 msg => msg.format === ImageFormat.GREY
             ),
@@ -123,7 +123,7 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
         const intFactor = levels > 1 ? this.scaleFactor : 1;
         const harris = gpu.programs.keypoints[HARRIS[windowSize]];
         const tex = this._tex;
-        const outputTexture = this._tex[4];
+        const outputTexture = this._tex[5];
 
         // validate pyramid
         if(!(levels == 1 || image.hasMipmaps()))
@@ -168,19 +168,26 @@ export class SpeedyPipelineNodeHarrisKeypointDetector extends SpeedyPipelineNode
 
         // find the maximum corner response over the entire image
         gpu.programs.keypoints.harrisScoreFindMax.outputs(width, height, tex[0], tex[1]);
-        const npasses = Math.ceil(Math.log2(Math.max(width, height)));
+        numPasses = Math.ceil(Math.log2(Math.max(width, height)));
         let maxScore = corners;
-        for(let j = 0; j < npasses; j++)
+        for(let j = 0; j < numPasses; j++)
             maxScore = gpu.programs.keypoints.harrisScoreFindMax(maxScore, j);
 
         // discard corners below a quality level
-        const niceCorners = (gpu.programs.keypoints.harrisScoreCutoff
+        corners = (gpu.programs.keypoints.harrisScoreCutoff
             .outputs(width, height, maxScore == tex[0] ? tex[1] : tex[0])
         )(corners, maxScore, quality);
 
         // encode keypoints
-        const encodedKeypoints = this._encodeKeypoints(gpu, niceCorners, outputTexture);
+        let encodedKeypoints = this._encodeKeypoints(gpu, corners, tex[4]);
         const encoderLength = encodedKeypoints.width;
+
+        // scale refinement
+        if(levels > 1) {
+            encodedKeypoints = (gpu.programs.keypoints.refineScaleLoG
+                .outputs(encoderLength, encoderLength, outputTexture)
+            )(image, lodStep, encodedKeypoints, 0, 0, encoderLength);
+        }
 
         // done!
         this.output().swrite(encodedKeypoints, 0, 0, encoderLength);

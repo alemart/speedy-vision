@@ -59,6 +59,10 @@ const subpixelBicubic = importShader('keypoints/subpixel-refinement.glsl')
                        .withDefines({ 'METHOD': 3 })
                        .withArguments('pyramid', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'maxIterations', 'epsilon');
 
+// Scale refinement
+const refineScaleLoG = importShader('keypoints/refine-scale.glsl')
+                      .withArguments('pyramid', 'lodStep', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
+
 // ORB descriptors
 const allocateDescriptors = importShader('keypoints/allocate-descriptors.glsl')
                             .withArguments('inputEncodedKeypoints', 'inputDescriptorSize', 'inputExtraSize', 'inputEncoderLength', 'outputDescriptorSize', 'outputExtraSize', 'outputEncoderLength');
@@ -205,6 +209,7 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             .declare('subpixelTaylor2d', subpixelTaylor2d)
             .declare('subpixelBicubic', subpixelBicubic)
             .declare('subpixelBilinear', subpixelBilinear)
+            .declare('refineScaleLoG', refineScaleLoG)
 
             //
             // ORB descriptors
