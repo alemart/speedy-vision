@@ -40,12 +40,13 @@ void main()
 #if 1
     // Discard misaligned corners
     vec2 gridSize = vec2(pot);
-    vec2 gridLocation = mod(texCoord * texSize, gridSize);
-    vec2 gridDelta = gridLocation / gridSize - vec2(0.5f);
+    vec2 gridLocation = floor(mod(texCoord * texSize, gridSize));
+    vec2 gridDelta = gridLocation / gridSize - vec2(0.5f); // in [-0.5, 0.5]^2
     float gridStep = 1.0f / pot;
+    const float adjustment = 1.25f; // smaller values discard more corners (e.g. 1.0)
 
     color.rb = encodeFloat16(0.0f);
-    if(max(abs(gridDelta.x), abs(gridDelta.y)) >= gridStep)
+    if(max(abs(gridDelta.x), abs(gridDelta.y)) > adjustment * gridStep)
         return;
 #endif
     // Read 3x3 patch

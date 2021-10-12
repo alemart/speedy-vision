@@ -52,17 +52,7 @@ void main()
     color = pixel;
     if(score == 0.0f)
         return;
-#if 0
-    // Discard misaligned corners
-    vec2 gridSize = vec2(pot);
-    vec2 gridLocation = mod(texCoord * texSize, gridSize);
-    vec2 gridDelta = gridLocation / gridSize - vec2(0.5f);
-    float gridStep = 1.0f / pot;
 
-    color.rb = encodeFloat16(0.0f);
-    if(max(abs(gridDelta.x), abs(gridDelta.y)) >= gridStep)
-        return;
-#endif
     // Read two 3x3 patches: up and down in the pyramid
     #define P(p,u,v) textureLod(corners, texCoord + (p) * vec2((u),(v)) / texSize, 0.0f)
     vec4 pix[18] = vec4[18](
