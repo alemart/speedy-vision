@@ -643,3 +643,6 @@ window.addEventListener('load', () => {
     const msg = `Results are available for visual inspection.`;
     print(msg);
 });
+
+// run test sequentially
+jasmine.getEnv().configure({ random: false });
