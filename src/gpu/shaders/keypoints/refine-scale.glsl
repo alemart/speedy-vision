@@ -22,6 +22,10 @@
 @include "keypoints.glsl"
 @include "filters.glsl"
 
+#if !defined(METHOD)
+#error Undefined METHOD
+#endif
+
 uniform sampler2D pyramid;
 uniform float lodStep;
 
@@ -29,6 +33,10 @@ uniform sampler2D encodedKeypoints;
 uniform int descriptorSize;
 uniform int extraSize;
 uniform int encoderLength;
+
+#if METHOD == 1
+uniform int threshold; // FAST threshold
+#endif
 
 const float eps = 1e-6;
 
@@ -40,8 +48,45 @@ const float eps = 1e-6;
  */
 float cornerStrength(vec2 position, float lod)
 {
+#if METHOD == 0
+
+    //
     // Laplacian of Gaussian (pyramid)
+    //
     return laplacian(pyramid, position, lod);
+
+#elif METHOD == 1
+
+    //
+    // FAST-9,16 score
+    //
+    float pot = exp2(lod);
+    float t = float(clamp(threshold, 0, 255)) / 255.0f;
+
+    #define P(x,y) pyrPixelAtOffset(pyramid, lod, pot, ivec2((x),(y))).g
+    mat4 mp = mat4(
+        P(0,3),P(3,0),P(0,-3),P(-3,0),
+        P(1,3),P(2,2),P(3,1),P(3,-1),
+        P(2,-2),P(1,-3),P(-1,-3),P(-2,-2),
+        P(-3,-1),P(-3,1),P(-2,2),P(-1,3)
+    );
+
+    float c = P(0,0);
+    float ct = c + t, c_t = c - t;
+    mat4 mct = mp - mat4(ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct);
+    mat4 mc_t = mat4(c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t) - mp;
+
+    const vec4 zeros = vec4(0.0f), ones = vec4(1.0f);
+    vec4 bs = max(mct[0], zeros), ds = max(mc_t[0], zeros);
+    bs += max(mct[1], zeros);     ds += max(mc_t[1], zeros);
+    bs += max(mct[2], zeros);     ds += max(mc_t[2], zeros);
+    bs += max(mct[3], zeros);     ds += max(mc_t[3], zeros);
+
+    return max(dot(bs, ones), dot(ds, ones)) / 16.0f;
+
+#else
+#error Invalid method
+#endif
 }
 
 void main()

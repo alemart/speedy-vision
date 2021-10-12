@@ -46,7 +46,7 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
      */
     constructor(name = undefined)
     {
-        super(name, 4, [
+        super(name, 5, [
             InputPort().expects(SpeedyPipelineMessageType.Image).satisfying(
                 msg => msg.format === ImageFormat.GREY
             ),
@@ -85,7 +85,6 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
         const image = this.input().read().image;
         const width = image.width, height = image.height;
         const tex = this._tex;
-        const outputTexture = this._tex[3];
         const capacity = this._capacity;
         const threshold = this._threshold;
         const lodStep = Math.log2(this.scaleFactor);
@@ -97,7 +96,7 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
 
         // skip if the capacity is zero
         if(capacity == 0) {
-            const encodedKeypoints = this._encodeZeroKeypoints(gpu, outputTexture);
+            const encodedKeypoints = this._encodeZeroKeypoints(gpu, tex[4]);
             const encoderLength = encodedKeypoints.width;
             this.output().swrite(encodedKeypoints, 0, 0, encoderLength);
             return;
@@ -141,8 +140,15 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
         )(corners, lodStep);
 
         // encode keypoints
-        const encodedKeypoints = this._encodeKeypoints(gpu, corners, outputTexture);
+        let encodedKeypoints = this._encodeKeypoints(gpu, corners, tex[3]);
         const encoderLength = encodedKeypoints.width;
+
+        // scale refinement
+        if(levels > 1) {
+            encodedKeypoints = (gpu.programs.keypoints.refineScaleFAST916
+                .outputs(encoderLength, encoderLength, tex[4])
+            )(image, lodStep, encodedKeypoints, 0, 0, encoderLength, threshold);
+        }
 
         // done!
         this.output().swrite(encodedKeypoints, 0, 0, encoderLength);
