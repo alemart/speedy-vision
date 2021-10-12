@@ -112,7 +112,7 @@ void main()
         cornerStrength(keypoint.position, keypoint.lod + lodStep)
     );
 
-    // fit a 1D parabola p = (a,b,c) => ax^2 + bx + c = 0 using
+    // fit a parabola p = (a,b,c) <=> ax^2 + bx + c = 0 using
     // points { (0,x), (0.5,y), (1,z) } where (x,y,z) = strength
     vec3 p = mat3(
         2, -3, 1,
