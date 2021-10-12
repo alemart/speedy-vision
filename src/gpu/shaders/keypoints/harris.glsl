@@ -118,6 +118,7 @@ void main()
 
     // compute corner response (Shi-Tomasi)
     float response = 0.5f * (h.x + h.z - sqrt((h.x - h.z) * (h.x - h.z) + 4.0f * h.y * h.y));
+    response /= float(WINDOW_SIZE * WINDOW_SIZE);
 
     // write the result it if the Laplacian response is higher than at the previous lod
     float lodPlus = min(float(PYRAMID_MAX_LEVELS - 1), lod + lodStep);
