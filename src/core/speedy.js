@@ -62,7 +62,7 @@ export class Speedy
      */
     static camera(widthOrConstraints = 640, height = 360)
     {
-        const constraints = (typeof(width) === 'object') ? widthOrConstraints : ({
+        const constraints = (typeof(widthOrConstraints) === 'object') ? widthOrConstraints : ({
             audio: false,
             video: {
                 width: widthOrConstraints | 0,
