@@ -224,16 +224,17 @@ window.onload = async function() {
 
 ##### Speedy.camera()
 
-`Speedy.camera(width?: number, height?: number, cameraOptions?: object, options?: object): SpeedyPromise<SpeedyMedia>`
+`Speedy.camera(width?: number, height?: number): SpeedyPromise<SpeedyMedia>`
 
-Loads a camera stream into a new `SpeedyMedia` object. This is a wrapper around `navigator.mediaDevices.getUserMedia()` provided for your convenience.
+`Speedy.camera(constraints: MediaStreamConstraints): SpeedyPromise<SpeedyMedia>`
+
+Loads a camera stream into a new `SpeedyMedia` object. This is a wrapper around `navigator.mediaDevices.getUserMedia()`, provided for your convenience.
 
 ###### Arguments
 
-* `width: number, optional`. The width of the stream. Defaults to `640`.
-* `height: number, optional`. The height of the stream. Defaults to `360`.
-* `cameraOptions: object, optional`. Additional options to be passed to `navigator.mediaDevices.getUserMedia()`.
-* `options: object, optional`. Additional options for advanced configuration. See [SpeedyMedia.options](#speedymediaoptions) for details.
+* `width: number, optional`. The ideal width of the stream. The browser will use this value or a close match. Defaults to `640`.
+* `height: number, optional`. The ideal height of the stream. The browser will use this value or a close match. Defaults to `360`.
+* `constraints: MediaStreamConstraints`. A [MediaStreamConstraints](https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamConstraints) dictionary to be passed to `getUserMedia()` for complete customization.
 
 ###### Returns
 
@@ -259,9 +260,11 @@ window.onload = async function() {
 function createCanvas(width, height)
 {
     const canvas = document.createElement('canvas');
+
     canvas.width = width;
     canvas.height = height;
     document.body.appendChild(canvas);
+
     return canvas;
 }
 ```

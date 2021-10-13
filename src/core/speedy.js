@@ -56,15 +56,23 @@ export class Speedy
 
     /**
      * Loads a camera stream
-     * @param {number} [width] width of the stream
+     * @param {number|MediaStreamConstraints} [widthOrConstraints] width of the stream or contraints object
      * @param {number} [height] height of the stream
-     * @param {object} [cameraOptions] additional options to pass to getUserMedia()
-     * @param {object} [mediaOptions] additional options for advanced configuration of the SpeedyMedia
-     * @returns {Promise<SpeedyMedia>}
+     * @returns {SpeedyPromise<SpeedyMedia>}
      */
-    static camera(width = 640, height = 360, cameraOptions = {}, mediaOptions = {})
+    static camera(widthOrConstraints = 640, height = 360)
     {
-        return SpeedyMedia.loadCameraStream(width, height, cameraOptions, mediaOptions);
+        const constraints = (typeof(width) === 'object') ? widthOrConstraints : ({
+            audio: false,
+            video: {
+                width: widthOrConstraints | 0,
+                height: height | 0,
+            },
+        });
+
+        return Utils.requestCameraStream(constraints).then(
+            video => SpeedyMedia.load(video)
+        );
     }
 
     /**

@@ -347,13 +347,11 @@ export class Utils
     }
 
     /**
-     * Request webcam access (WebRTC)
-     * @param {number} width in pixels
-     * @param {number} height in pixels
-     * @param {object} [options] will be passed to navigator.mediaDevices.getUserMedia() 
+     * Wrapper around getUserMedia()
+     * @param {MediaStreamConstraints} [constraints] will be passed to getUserMedia()
      * @returns {SpeedyPromise<HTMLVideoElement>}
      */
-    static requestCameraStream(width, height, options = {})
+    static requestCameraStream(constraints = { audio: false, video: true })
     {
         Utils.log('Accessing the webcam...');
 
@@ -361,23 +359,11 @@ export class Utils
             throw new NotSupportedError('Unsupported browser: no mediaDevices.getUserMedia()');
 
         return new SpeedyPromise((resolve, reject) => {
-            navigator.mediaDevices.getUserMedia({
-                audio: false,
-                video: {
-                    width: { ideal: width },
-                    height: { ideal: height },
-                    aspectRatio: width / height,
-                    //resizeMode: 'crop-and-scale',
-                    facingMode: 'environment',
-                    frameRate: 30,
-                },
-                ...options
-            })
-            .then(stream => {
+            navigator.mediaDevices.getUserMedia(constraints).then(stream => {
                 const video = document.createElement('video');
                 video.onloadedmetadata = () => {
                     video.play();
-                    Utils.log('The camera device is turned on!');
+                    Utils.log(`The camera is on! Resolution: ${video.videoWidth} x ${video.videoHeight}`);
                     resolve(video);
                 };
                 video.srcObject = stream;
