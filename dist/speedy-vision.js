@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-10-12T16:57:04.463Z
+ * Date: 2021-10-13T01:09:10.064Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -2930,7 +2930,7 @@ class SpeedyPipelineNodeImageSink extends _pipeline_node__WEBPACK_IMPORTED_MODUL
         _utils_utils__WEBPACK_IMPORTED_MODULE_7__["Utils"].assert(this._bitmap != null);
 
         return _speedy_media_source__WEBPACK_IMPORTED_MODULE_6__["SpeedyMediaSource"].load(this._bitmap).then(source =>
-            new _speedy_media__WEBPACK_IMPORTED_MODULE_5__["SpeedyMedia"](source, { lightweight: 1 /* FIXME */ }) //, this._format ?
+            new _speedy_media__WEBPACK_IMPORTED_MODULE_5__["SpeedyMedia"](source, {}, this._format)
         );
     }
 
@@ -3008,6 +3008,9 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+// Constants
+const UPLOAD_BUFFER_SIZE = 2; // how many textures we allocate for uploading data
+
 /**
  * Gets an image into a pipeline
  */
@@ -3019,12 +3022,15 @@ class SpeedyPipelineNodeImageSource extends _pipeline_node__WEBPACK_IMPORTED_MOD
      */
     constructor(name = undefined)
     {
-        super(name, 1, [
+        super(name, UPLOAD_BUFFER_SIZE, [
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["OutputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Image)
         ]);
 
         /** @type {SpeedyMedia} source media */
         this._media = null;
+
+        /** @type {SpeedyTexture} texture index */
+        this._textureIndex = 0;
     }
 
     /**
@@ -3042,7 +3048,7 @@ class SpeedyPipelineNodeImageSource extends _pipeline_node__WEBPACK_IMPORTED_MOD
      */
     set media(media)
     {
-        if(!(media instanceof _speedy_media__WEBPACK_IMPORTED_MODULE_5__["SpeedyMedia"]))
+        if(media !== null && !(media instanceof _speedy_media__WEBPACK_IMPORTED_MODULE_5__["SpeedyMedia"]))
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["IllegalArgumentError"](`Not a SpeedyMedia: ${media}`);
 
         this._media = media;
@@ -3055,11 +3061,15 @@ class SpeedyPipelineNodeImageSource extends _pipeline_node__WEBPACK_IMPORTED_MOD
      */
     _run(gpu)
     {
-        const outputTexture = this._tex[0];
-
         if(this._media == null)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_8__["IllegalOperationError"](`Did you forget to set the media of ${this.fullName}?`);
 
+        // use round-robin to mitigate WebGL's implicit synchronization
+        // and maybe minimize texture upload times
+        this._textureIndex = (this._textureIndex + 1) % this._tex.length;
+
+        // upload texture
+        const outputTexture = this._tex[this._textureIndex];
         gpu.upload(this._media._source, outputTexture);
         this.output().swrite(outputTexture, _utils_types__WEBPACK_IMPORTED_MODULE_7__["ImageFormat"].RGBA);
     }
@@ -5113,7 +5123,9 @@ class SpeedyPipelineNodeKeypointSource extends _pipeline_node__WEBPACK_IMPORTED_
      */
     set keypoints(keypoints)
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_6__["Utils"].assert(Array.isArray(keypoints));
+        if(!Array.isArray(keypoints))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_7__["IllegalArgumentError"](`Not an array of keypoints`);
+
         this._keypoints = keypoints;
     }
 
@@ -9909,12 +9921,6 @@ class SpeedyMediaSource
     {
         /** @type {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} underlying media object */
         this._data = null;
-
-        /** @type {number} media width, in pixels */
-        this._width = 0;
-
-        /** @type {number} media height, in pixels */
-        this._height = 0;
     }
 
     /**
@@ -9948,24 +9954,6 @@ class SpeedyMediaSource
     }
 
     /**
-     * Media width, in pixels
-     * @returns {number}
-     */
-    get width()
-    {
-        return this._width;
-    }
-
-    /**
-     * Media height, in pixels
-     * @returns {number}
-     */
-    get height()
-    {
-        return this._height;
-    }
-
-    /**
      * Is the underlying media loaded?
      * @returns {boolean}
      */
@@ -9976,9 +9964,27 @@ class SpeedyMediaSource
 
     /**
      * The type of the underlying media source
-     * @returns {Symbol} MediaType enum
+     * @returns {MediaType}
      */
     get type()
+    {
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["AbstractMethodError"]();
+    }
+
+    /**
+     * Media width, in pixels
+     * @returns {number}
+     */
+    get width()
+    {
+        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["AbstractMethodError"]();
+    }
+
+    /**
+     * Media height, in pixels
+     * @returns {number}
+     */
+    get height()
     {
         throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["AbstractMethodError"]();
     }
@@ -9993,6 +9999,15 @@ class SpeedyMediaSource
     }
 
     /**
+     * Release resources associated with this object
+     * @returns {null}
+     */
+    release()
+    {
+        return (this._data = null);
+    }
+
+    /**
      * Load the underlying media
      * @returns {SpeedyPromise<SpeedyMediaSource>}
      */
@@ -10002,13 +10017,13 @@ class SpeedyMediaSource
     }
 
     /**
-     * Wait for an event to be triggered in this._data
+     * Wait for an event to be triggered in an element
      * @param {Element} element
      * @param {string} eventName
      * @param {number} [timeout] in ms
      * @returns {SpeedyPromise<Element>}
      */
-    _waitUntil(element, eventName, timeout = 30000)
+    static _waitUntil(element, eventName, timeout = 30000)
     {
         return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"]((resolve, reject) => {
             _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].log(`Waiting for ${eventName} to be triggered in ${element}...`);
@@ -10033,11 +10048,29 @@ class SpeedyImageMediaSource extends SpeedyMediaSource
 {
     /**
      * The type of the underlying media source
-     * @returns {Symbol} MediaType enum
+     * @returns {MediaType}
      */
     get type()
     {
         return _utils_types__WEBPACK_IMPORTED_MODULE_3__["MediaType"].Image;
+    }
+
+    /**
+     * Media width, in pixels
+     * @returns {number}
+     */
+    get width()
+    {
+        return this._data ? this._data.naturalWidth : 0;
+    }
+
+    /**
+     * Media height, in pixels
+     * @returns {number}
+     */
+    get height()
+    {
+        return this._data ? this._data.naturalHeight : 0;
     }
 
     /**
@@ -10061,19 +10094,18 @@ class SpeedyImageMediaSource extends SpeedyMediaSource
      */
     _load(image)
     {
+        if(this.isLoaded())
+            this.release();
+
         if(image.complete && image.naturalWidth !== 0) { // already loaded?
             return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"].resolve().then(() => {
                 this._data = image;
-                this._width = image.naturalWidth;
-                this._height = image.naturalHeight;
                 return this;
             });
         }
         else {
-            return this._waitUntil(image, 'load').then(() => {
+            return SpeedyMediaSource._waitUntil(image, 'load').then(() => {
                 this._data = image;
-                this._width = image.naturalWidth;
-                this._height = image.naturalHeight;
                 return this;
             });
         }
@@ -10088,11 +10120,31 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource
 {
     /**
      * The type of the underlying media source
-     * @returns {Symbol} MediaType enum
+     * @returns {MediaType}
      */
     get type()
     {
         return _utils_types__WEBPACK_IMPORTED_MODULE_3__["MediaType"].Video;
+    }
+
+    /**
+     * Media width, in pixels
+     * @returns {number}
+     */
+    get width()
+    {
+        // Warning: videoWidth & videoHeight may change at any time !!!
+        // so you can't cache these dimensions
+        return this._data ? this._data.videoWidth : 0;
+    }
+
+    /**
+     * Media height, in pixels
+     * @returns {number}
+     */
+    get height()
+    {
+        return this._data ? this._data.videoHeight : 0;
     }
 
     /**
@@ -10116,20 +10168,19 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource
      */
     _load(video)
     {
+        if(this.isLoaded())
+            this.release();
+
         if(video.readyState >= 4) { // already loaded?
             return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"].resolve().then(() => {
                 this._data = video;
-                this._width = video.videoWidth;
-                this._height = video.videoHeight;
                 return this;
             });
         }
         else {
             // waitUntil('canplay'); // use readyState >= 3
-            return this._waitUntil(video, 'canplaythrough').then(() => {
+            return SpeedyMediaSource._waitUntil(video, 'canplaythrough').then(() => {
                 this._data = video;
-                this._width = video.videoWidth;
-                this._height = video.videoHeight;
                 return this;
             })
         }
@@ -10144,11 +10195,29 @@ class SpeedyCanvasMediaSource extends SpeedyMediaSource
 {
     /**
      * The type of the underlying media source
-     * @returns {Symbol} MediaType enum
+     * @returns {MediaType}
      */
     get type()
     {
         return _utils_types__WEBPACK_IMPORTED_MODULE_3__["MediaType"].Canvas;
+    }
+
+    /**
+     * Media width, in pixels
+     * @returns {number}
+     */
+    get width()
+    {
+        return this._data ? this._data.width : 0;
+    }
+
+    /**
+     * Media height, in pixels
+     * @returns {number}
+     */
+    get height()
+    {
+        return this._data ? this._data.height : 0;
     }
 
     /**
@@ -10160,7 +10229,7 @@ class SpeedyCanvasMediaSource extends SpeedyMediaSource
         if(this._data == null)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`Media not loaded`);
 
-        const newCanvas = _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].createCanvas(this._width, this._height);
+        const newCanvas = _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].createCanvas(this.width, this.height);
         const newContext = newCanvas.getContext('2d');
         newContext.draw(this._data, 0, 0);
 
@@ -10175,10 +10244,11 @@ class SpeedyCanvasMediaSource extends SpeedyMediaSource
      */
     _load(canvas)
     {
+        if(this.isLoaded())
+            this.release();
+
         return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"].resolve().then(() => {
             this._data = canvas;
-            this._width = canvas.width;
-            this._height = canvas.height;
             return this;
         });
     }
@@ -10192,11 +10262,29 @@ class SpeedyBitmapMediaSource extends SpeedyMediaSource
 {
     /**
      * The type of the underlying media source
-     * @returns {Symbol} MediaType enum
+     * @returns {MediaType}
      */
     get type()
     {
         return _utils_types__WEBPACK_IMPORTED_MODULE_3__["MediaType"].Bitmap;
+    }
+
+    /**
+     * Media width, in pixels
+     * @returns {number}
+     */
+    get width()
+    {
+        return this._data ? this._data.width : 0;
+    }
+
+    /**
+     * Media height, in pixels
+     * @returns {number}
+     */
+    get height()
+    {
+        return this._data ? this._data.height : 0;
     }
 
     /**
@@ -10208,10 +10296,27 @@ class SpeedyBitmapMediaSource extends SpeedyMediaSource
         if(this._data == null)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`Media not loaded`);
 
-        const newSource = new SpeedyBitmapMediaSource();
-        return createImageBitmap(this._data).then(
-            newBitmap => newSource._load(newBitmap)
-        );
+        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"]((resolve, reject) => {
+            createImageBitmap(this._data).then(
+                newBitmap => {
+                    const newSource = new SpeedyBitmapMediaSource();
+                    newSource._load(newBitmap).then(resolve, reject);
+                },
+                reject
+            );
+        });
+    }
+
+    /**
+     * Release resources associated with this object
+     * @returns {null}
+     */
+    release()
+    {
+        if(this._data != null)
+            this._data.close();
+
+        return super.release();
     }
 
     /**
@@ -10221,10 +10326,11 @@ class SpeedyBitmapMediaSource extends SpeedyMediaSource
      */
     _load(bitmap)
     {
+        if(this.isLoaded())
+            this.release();
+
         return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"].resolve().then(() => {
             this._data = bitmap;
-            this._width = bitmap.width;
-            this._height = bitmap.height;
             return this;
         });
     }
@@ -10289,23 +10395,20 @@ class SpeedyMedia
      * @private
      * @param {SpeedyMediaSource} source
      * @param {object} [options] options object
-     * @param {ColorFormat} [colorFormat]
+     * @param {ImageFormat} [format]
      */
-    constructor(source, options = {}, colorFormat = _utils_types__WEBPACK_IMPORTED_MODULE_2__["ColorFormat"].RGB)
+    constructor(source, options = {}, format = _utils_types__WEBPACK_IMPORTED_MODULE_2__["ImageFormat"].RGBA)
     {
         _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].assert(source.isLoaded());
 
-        /** @type {SpeedyMediaSource} media source */
+        /** @type {SpeedyMediaSource|null} media source */
         this._source = source;
 
         /** @type {object} options */
         this._options = Object.freeze(options);
 
-        /** @type {ColorFormat} color format */
-        this._colorFormat = colorFormat;
-
-        /** @type {SpeedyGPU} GPU-accelerated routines */ // FIXME
-        this._gpu = options.lightweight ? Object.create(null) : new _gpu_speedy_gpu__WEBPACK_IMPORTED_MODULE_0__["SpeedyGPU"]();
+        /** @type {ImageFormat} format */
+        this._format = format;
     }
 
     /**
@@ -10348,7 +10451,7 @@ class SpeedyMedia
      */
     get source()
     {
-        return this._source.data;
+        return this._source ? this._source.data : null;
     }
 
     /**
@@ -10357,7 +10460,7 @@ class SpeedyMedia
      */
     get width()
     {
-        return this._source.width;
+        return this._source ? this._source.width : 0;
     }
 
     /**
@@ -10366,7 +10469,7 @@ class SpeedyMedia
      */
     get height()
     {
-        return this._source.height;
+        return this._source ? this._source.height : 0;
     }
 
     /**
@@ -10375,6 +10478,9 @@ class SpeedyMedia
      */
     get type()
     {
+        if(this.isReleased())
+            return 'unknown';
+
         switch(this._source.type) {
             case _utils_types__WEBPACK_IMPORTED_MODULE_2__["MediaType"].Image:
                 return 'image';
@@ -10411,7 +10517,7 @@ class SpeedyMedia
     {
         if(!this.isReleased()) {
             _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].log('Releasing SpeedyMedia object...');
-            this._gpu = this._gpu.release();
+            this._source = this._source.release();
         }
 
         return null;
@@ -10423,7 +10529,7 @@ class SpeedyMedia
      */
     isReleased()
     {
-        return this._gpu == null;
+        return this._source == null;
     }
 
     /**
@@ -10437,7 +10543,7 @@ class SpeedyMedia
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"](`Can't clone a SpeedyMedia that has been released`);
 
         // clone the object
-        const clone = new SpeedyMedia(this._source, this._options, this._colorFormat);
+        const clone = new SpeedyMedia(this._source, this._options, this._format);
 
         // done!
         return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__["SpeedyPromise"].resolve(clone);
@@ -10478,15 +10584,6 @@ class SpeedyMedia
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalOperationError"]('Can\'t convert SpeedyMedia to bitmap: the media hasn\'t been loaded');
 
         return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_6__["SpeedyPromise"]((resolve, reject) => createImageBitmap(this._source.data).then(resolve, reject));
-    }
-
-    /**
-     * Upload the media to the GPU
-     * @returns {SpeedyTexture}
-     */
-    _upload()
-    {
-        return this._gpu.upload(this._source);
     }
 }
 
@@ -14403,10 +14500,10 @@ class SpeedyGPU
     /**
      * Upload an image to the GPU
      * @param {SpeedyMediaSource} source
-     * @param {SpeedyTexture} [outputTexture]
-     * @returns {SpeedyTexture} an internal texture if an output texture is not provided
+     * @param {SpeedyTexture} outputTexture
+     * @returns {SpeedyTexture} outputTexture
      */
-    upload(source, outputTexture = null)
+    upload(source, outputTexture)
     {
         return this._textureUploader.upload(source, outputTexture);
     }
@@ -15966,9 +16063,6 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-// Constants
-const UPLOAD_BUFFER_SIZE = 2; // how many textures we allocate for uploading data
-
 /**
  * A utility that helps uploading data to textures
  */
@@ -15982,30 +16076,17 @@ class SpeedyTextureUploader
     {
         /** @type {SpeedyGPU} GPU instance */
         this._gpu = gpu;
-
-        /** @type {SpeedyTexture[]} upload textures (lazy instantiation) */
-        this._texture = (new Array(UPLOAD_BUFFER_SIZE)).fill(null);
-
-        /** @type {number} index of the texture that was just uploaded to the GPU */
-        this._textureIndex = 0;
     }
 
     /**
      * Upload an image to the GPU
      * @param {SpeedyMediaSource} source
-     * @param {SpeedyTexture} [outputTexture]
-     * @returns {SpeedyTexture} an internal texture if an output texture is not provided
+     * @param {SpeedyTexture} outputTexture
+     * @returns {SpeedyTexture} output texture
      */
-    upload(source, outputTexture = null)
+    upload(source, outputTexture)
     {
-        const gl = this._gpu.gl;
         const data = source.data;
-
-        // create upload textures lazily
-        if(outputTexture == null && this._texture[0] == null) {
-            for(let i = 0; i < this._texture.length; i++)
-                this._texture[i] = new _speedy_texture__WEBPACK_IMPORTED_MODULE_1__["SpeedyTexture"](gl, source.width, source.height);
-        }
 
         // bugfix: if the media is a video, we can't really
         // upload it to the GPU unless it's ready
@@ -16014,20 +16095,12 @@ class SpeedyTextureUploader
                 // this may happen when the video loops (Firefox)
                 // return the previously uploaded texture
                 //Utils.warning(`Trying to process a video that isn't ready yet`);
-                return outputTexture || this._texture[this._textureIndex];
+                return outputTexture;
             }
         }
 
-        // upload to the output texture, if one is provided
-        if(outputTexture != null)
-            return outputTexture.upload(data, source.width, source.height);
-
-        // use round-robin to mitigate WebGL's implicit synchronization
-        // and maybe minimize texture upload times
-        this._textureIndex = (this._textureIndex + 1) % UPLOAD_BUFFER_SIZE;
-
-        // upload to an internal texture
-        return this._texture[this._textureIndex].upload(data, source.width, source.height);
+        // upload to the output texture
+        return outputTexture.upload(data, source.width, source.height);
     }
 
     /**
@@ -16036,11 +16109,6 @@ class SpeedyTextureUploader
      */
     release()
     {
-        for(let i = 0; i < this._texture.length; i++) {
-            if(this._texture[i] != null)
-                this._texture[i] = this._texture[i].release();
-        }
-
         return null;
     }
 }
@@ -16521,30 +16589,6 @@ class SpeedyDrawableTexture extends SpeedyTexture
 
         // copy to texture
         SpeedyDrawableTexture._copyToTexture(gl, this._glFbo, texture.glTexture, 0, 0, this._width, this._height, lod);
-    }
-
-    /*
-     **
-     * Clone this texture
-     * @returns {SpeedyDrawableTexture}
-     *
-    drawableClone()
-    {
-        const clone = new SpeedyDrawableTexture(this._gl, this._width, this._height);
-        this.copyTo(clone);
-        return clone;
-    }
-    */
-
-    /**
-     * Clone this texture. Note that the clone doesn't include a framebuffer
-     * @returns {SpeedyTexture} non-drawable
-     */
-    clone()
-    {
-        const clone = new SpeedyTexture(this._gl, this._width, this._height);
-        this.copyTo(clone);
-        return clone;
     }
 
     /**
@@ -17822,17 +17866,15 @@ Promise.prototype.turbocharge = function() { return this };
 /*!****************************!*\
   !*** ./src/utils/types.js ***!
   \****************************/
-/*! exports provided: MediaType, ImageFormat, ColorFormat, PixelComponent, ColorComponentId */
+/*! exports provided: MediaType, ImageFormat, PixelComponent, ColorComponentId */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MediaType", function() { return MediaType; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ImageFormat", function() { return ImageFormat; });
-/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ColorFormat", function() { return ColorFormat; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "PixelComponent", function() { return PixelComponent; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "ColorComponentId", function() { return ColorComponentId; });
-/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./utils */ "./src/utils/utils.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -17854,37 +17896,25 @@ __webpack_require__.r(__webpack_exports__);
  * Types & formats
  */
 
-
-
 /**
  * Media types
- * @enum {MediaType}
+ * @enum {Symbol}
  */
-const MediaType = _utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].enum(
-    'Image',
-    'Video',
-    'Canvas',
-    'Bitmap'
-);
-
-/**
- * Image formats
- * @enum {number}
- */
-const ImageFormat = Object.freeze({
-    RGBA: 0,
-    GREY: 1,
+const MediaType = Object.freeze({
+    Image: Symbol('Image'),
+    Video: Symbol('Video'),
+    Canvas: Symbol('Canvas'),
+    Bitmap: Symbol('Bitmap'),
 });
 
 /**
- * Color formats
- * @enum
+ * Image formats
+ * @enum {Symbol}
  */
-const ColorFormat = _utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].enum(
-    'RGB',
-    'Greyscale',
-    'Binary'
-);
+const ImageFormat = Object.freeze({
+    RGBA: Symbol('RGBA'),
+    GREY: Symbol('GREY'),
+});
 
 /**
  * Pixel component (bitwise flags)
@@ -17988,18 +18018,6 @@ class Utils
     {
         if(!expr)
             throw new _errors__WEBPACK_IMPORTED_MODULE_0__["AssertionError"](text);
-    }
-
-    /**
-     * Generates an enumeration
-     * @param {...string} values enumeration options
-     * @returns {object} enum object
-     */
-    static enum(...values)
-    {
-        return Object.freeze(
-            values.reduce((acc, cur) => ((acc[cur] = Symbol(cur)), acc), { })
-        );
     }
 
     /**
