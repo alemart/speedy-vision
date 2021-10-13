@@ -21,6 +21,7 @@
 
 import { Utils } from '../utils/utils';
 import { GLUtils } from './gl-utils';
+import { SpeedyGL } from './speedy-gl';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { SpeedyDrawableTexture } from './speedy-texture';
 import { IllegalArgumentError, IllegalOperationError } from '../utils/errors';
@@ -52,6 +53,25 @@ export class SpeedyTextureReader
 
         /** @type {number[]} for async data transfers (stores buffer indices) */
         this._producerQueue = [];
+
+        /** @type {WebGLBuffer} lazily allocated PBO */
+        this._pbo = null;
+    }
+
+    /**
+     * Release resources
+     * @returns {null}
+     */
+    release()
+    {
+        const gl = SpeedyGL.instance.gl; // FIXME want a better way
+
+        if(gl.isBuffer(this._pbo)) { // should account for context loss
+            gl.deleteBuffer(this._pbo);
+            this._pbo = null;
+        }
+
+        return null;
     }
 
     /**
@@ -122,9 +142,12 @@ export class SpeedyTextureReader
         if(gl.isContextLost())
             return SpeedyPromise.resolve(this._pixelBuffer[0].subarray(0, sizeofBuffer));
 
+        // lazily allocate a PBO using the current WebGL2 rendering context
+        const pbo = gl.isBuffer(this._pbo) ? this._pbo : (this._pbo = gl.createBuffer());
+
         // do not optimize?
         if(!useBufferedDownloads) {
-            return SpeedyTextureReader._readPixelsViaPBO(gl, this._pixelBuffer[0], fbo, x, y, width, height).then(() =>
+            return SpeedyTextureReader._readPixelsViaPBO(gl, pbo, this._pixelBuffer[0], fbo, x, y, width, height).then(() =>
                 this._pixelBuffer[0].subarray(0, sizeofBuffer)
             );
         }
@@ -132,13 +155,13 @@ export class SpeedyTextureReader
         // GPU needs to produce data
         if(this._producerQueue.length > 0) {
             const nextBufferIndex = this._producerQueue.shift();
-            SpeedyTextureReader._readPixelsViaPBO(gl, this._pixelBuffer[nextBufferIndex], fbo, x, y, width, height).then(() => {
+            SpeedyTextureReader._readPixelsViaPBO(gl, pbo, this._pixelBuffer[nextBufferIndex], fbo, x, y, width, height).then(() => {
                 this._consumerQueue.push(nextBufferIndex);
             });
         }
-        else this._waitForQueueNotEmpty(this._producerQueue).then(() => {
+        else SpeedyTextureReader._waitForQueueNotEmpty(this._producerQueue).then(() => {
             const nextBufferIndex = this._producerQueue.shift();
-            SpeedyTextureReader._readPixelsViaPBO(gl, this._pixelBuffer[nextBufferIndex], fbo, x, y, width, height).then(() => {
+            SpeedyTextureReader._readPixelsViaPBO(gl, pbo, this._pixelBuffer[nextBufferIndex], fbo, x, y, width, height).then(() => {
                 this._consumerQueue.push(nextBufferIndex);
             });
         }).turbocharge();
@@ -152,7 +175,7 @@ export class SpeedyTextureReader
             });
         }
         else return new SpeedyPromise(resolve => {
-            this._waitForQueueNotEmpty(this._consumerQueue).then(() => {
+            SpeedyTextureReader._waitForQueueNotEmpty(this._consumerQueue).then(() => {
                 const readyBufferIndex = this._consumerQueue.shift();
                 resolve(this._pixelBuffer[readyBufferIndex].subarray(0, sizeofBuffer));
                 this._producerQueue.push(readyBufferIndex); // enqueue AFTER resolve()
@@ -184,7 +207,7 @@ export class SpeedyTextureReader
      * @param {Array} queue
      * @returns {SpeedyPromise<void>}
      */
-    _waitForQueueNotEmpty(queue)
+    static _waitForQueueNotEmpty(queue)
     {
         return new SpeedyPromise(resolve => {
             (function wait() {
@@ -201,6 +224,7 @@ export class SpeedyTextureReader
      * Read pixels to a Uint8Array, asynchronously, using a Pixel Buffer Object (PBO)
      * It's assumed that the target texture is in the RGBA8 format
      * @param {WebGL2RenderingContext} gl
+     * @param {WebGLBuffer} pbo
      * @param {Uint8Array} outputBuffer with size >= width * height * 4
      * @param {WebGLFramebuffer} fbo
      * @param {GLint} x
@@ -209,11 +233,8 @@ export class SpeedyTextureReader
      * @param {GLsizei} height
      * @returns {SpeedyPromise}
      */
-    static _readPixelsViaPBO(gl, outputBuffer, fbo, x, y, width, height)
+    static _readPixelsViaPBO(gl, pbo, outputBuffer, fbo, x, y, width, height)
     {
-        // create temp buffer
-        const pbo = gl.createBuffer();
-
         // validate outputBuffer
         if(!(outputBuffer.byteLength >= width * height * 4))
             throw new IllegalArgumentError(`Can't read pixels: invalid buffer size`);
@@ -239,8 +260,6 @@ export class SpeedyTextureReader
             0
         ).catch(err => {
             throw new IllegalOperationError(`Can't read pixels`, err);
-        }).finally(() => {
-            gl.deleteBuffer(pbo);
         });
     }
 }

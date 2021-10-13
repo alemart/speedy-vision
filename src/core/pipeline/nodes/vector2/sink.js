@@ -54,6 +54,16 @@ export class SpeedyPipelineNodeVector2Sink extends SpeedyPipelineSinkNode
     }
 
     /**
+     * Releases this node
+     * @param {SpeedyGPU} gpu
+     */
+    release(gpu)
+    {
+        this._textureReader = this._textureReader.release();
+        super.release(gpu);
+    }
+
+    /**
      * Export data from this node to the user
      * @returns {SpeedyPromise<SpeedyVector2[]>}
      */
