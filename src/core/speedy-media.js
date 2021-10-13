@@ -160,7 +160,7 @@ export class SpeedyMedia
     {
         if(!this.isReleased()) {
             Utils.log('Releasing SpeedyMedia object...');
-            this._source = null;
+            this._source = this._source.release();
         }
 
         return null;

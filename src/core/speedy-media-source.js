@@ -39,12 +39,6 @@ export class SpeedyMediaSource
     {
         /** @type {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} underlying media object */
         this._data = null;
-
-        /** @type {number} media width, in pixels */
-        this._width = 0;
-
-        /** @type {number} media height, in pixels */
-        this._height = 0;
     }
 
     /**
@@ -78,24 +72,6 @@ export class SpeedyMediaSource
     }
 
     /**
-     * Media width, in pixels
-     * @returns {number}
-     */
-    get width()
-    {
-        return this._width;
-    }
-
-    /**
-     * Media height, in pixels
-     * @returns {number}
-     */
-    get height()
-    {
-        return this._height;
-    }
-
-    /**
      * Is the underlying media loaded?
      * @returns {boolean}
      */
@@ -114,12 +90,39 @@ export class SpeedyMediaSource
     }
 
     /**
+     * Media width, in pixels
+     * @returns {number}
+     */
+    get width()
+    {
+        throw new AbstractMethodError();
+    }
+
+    /**
+     * Media height, in pixels
+     * @returns {number}
+     */
+    get height()
+    {
+        throw new AbstractMethodError();
+    }
+
+    /**
      * Clone this media source
      * @returns {SpeedyPromise<SpeedyMediaSource>}
      */
     clone()
     {
         throw new AbstractMethodError();
+    }
+
+    /**
+     * Release resources associated with this object
+     * @returns {null}
+     */
+    release()
+    {
+        return (this._data = null);
     }
 
     /**
@@ -132,13 +135,13 @@ export class SpeedyMediaSource
     }
 
     /**
-     * Wait for an event to be triggered in this._data
+     * Wait for an event to be triggered in an element
      * @param {Element} element
      * @param {string} eventName
      * @param {number} [timeout] in ms
      * @returns {SpeedyPromise<Element>}
      */
-    _waitUntil(element, eventName, timeout = 30000)
+    static _waitUntil(element, eventName, timeout = 30000)
     {
         return new SpeedyPromise((resolve, reject) => {
             Utils.log(`Waiting for ${eventName} to be triggered in ${element}...`);
@@ -171,6 +174,24 @@ class SpeedyImageMediaSource extends SpeedyMediaSource
     }
 
     /**
+     * Media width, in pixels
+     * @returns {number}
+     */
+    get width()
+    {
+        return this._data ? this._data.naturalWidth : 0;
+    }
+
+    /**
+     * Media height, in pixels
+     * @returns {number}
+     */
+    get height()
+    {
+        return this._data ? this._data.naturalHeight : 0;
+    }
+
+    /**
      * Clone this media source
      * @returns {SpeedyPromise<SpeedyMediaSource>}
      */
@@ -191,19 +212,18 @@ class SpeedyImageMediaSource extends SpeedyMediaSource
      */
     _load(image)
     {
+        if(this.isLoaded())
+            this.release();
+
         if(image.complete && image.naturalWidth !== 0) { // already loaded?
             return SpeedyPromise.resolve().then(() => {
                 this._data = image;
-                this._width = image.naturalWidth;
-                this._height = image.naturalHeight;
                 return this;
             });
         }
         else {
-            return this._waitUntil(image, 'load').then(() => {
+            return SpeedyMediaSource._waitUntil(image, 'load').then(() => {
                 this._data = image;
-                this._width = image.naturalWidth;
-                this._height = image.naturalHeight;
                 return this;
             });
         }
@@ -223,6 +243,26 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource
     get type()
     {
         return MediaType.Video;
+    }
+
+    /**
+     * Media width, in pixels
+     * @returns {number}
+     */
+    get width()
+    {
+        // Warning: videoWidth & videoHeight may change at any time !!!
+        // so you can't cache these dimensions
+        return this._data ? this._data.videoWidth : 0;
+    }
+
+    /**
+     * Media height, in pixels
+     * @returns {number}
+     */
+    get height()
+    {
+        return this._data ? this._data.videoHeight : 0;
     }
 
     /**
@@ -246,20 +286,19 @@ class SpeedyVideoMediaSource extends SpeedyMediaSource
      */
     _load(video)
     {
+        if(this.isLoaded())
+            this.release();
+
         if(video.readyState >= 4) { // already loaded?
             return SpeedyPromise.resolve().then(() => {
                 this._data = video;
-                this._width = video.videoWidth;
-                this._height = video.videoHeight;
                 return this;
             });
         }
         else {
             // waitUntil('canplay'); // use readyState >= 3
-            return this._waitUntil(video, 'canplaythrough').then(() => {
+            return SpeedyMediaSource._waitUntil(video, 'canplaythrough').then(() => {
                 this._data = video;
-                this._width = video.videoWidth;
-                this._height = video.videoHeight;
                 return this;
             })
         }
@@ -282,6 +321,24 @@ class SpeedyCanvasMediaSource extends SpeedyMediaSource
     }
 
     /**
+     * Media width, in pixels
+     * @returns {number}
+     */
+    get width()
+    {
+        return this._data ? this._data.width : 0;
+    }
+
+    /**
+     * Media height, in pixels
+     * @returns {number}
+     */
+    get height()
+    {
+        return this._data ? this._data.height : 0;
+    }
+
+    /**
      * Clone this media source
      * @returns {SpeedyPromise<SpeedyMediaSource>}
      */
@@ -290,7 +347,7 @@ class SpeedyCanvasMediaSource extends SpeedyMediaSource
         if(this._data == null)
             throw new IllegalOperationError(`Media not loaded`);
 
-        const newCanvas = Utils.createCanvas(this._width, this._height);
+        const newCanvas = Utils.createCanvas(this.width, this.height);
         const newContext = newCanvas.getContext('2d');
         newContext.draw(this._data, 0, 0);
 
@@ -305,10 +362,11 @@ class SpeedyCanvasMediaSource extends SpeedyMediaSource
      */
     _load(canvas)
     {
+        if(this.isLoaded())
+            this.release();
+
         return SpeedyPromise.resolve().then(() => {
             this._data = canvas;
-            this._width = canvas.width;
-            this._height = canvas.height;
             return this;
         });
     }
@@ -330,6 +388,24 @@ class SpeedyBitmapMediaSource extends SpeedyMediaSource
     }
 
     /**
+     * Media width, in pixels
+     * @returns {number}
+     */
+    get width()
+    {
+        return this._data ? this._data.width : 0;
+    }
+
+    /**
+     * Media height, in pixels
+     * @returns {number}
+     */
+    get height()
+    {
+        return this._data ? this._data.height : 0;
+    }
+
+    /**
      * Clone this media source
      * @returns {SpeedyPromise<SpeedyMediaSource>}
      */
@@ -338,10 +414,27 @@ class SpeedyBitmapMediaSource extends SpeedyMediaSource
         if(this._data == null)
             throw new IllegalOperationError(`Media not loaded`);
 
-        const newSource = new SpeedyBitmapMediaSource();
-        return createImageBitmap(this._data).then(
-            newBitmap => newSource._load(newBitmap)
-        );
+        return new SpeedyPromise((resolve, reject) => {
+            createImageBitmap(this._data).then(
+                newBitmap => {
+                    const newSource = new SpeedyBitmapMediaSource();
+                    newSource._load(newBitmap).then(resolve, reject);
+                },
+                reject
+            );
+        });
+    }
+
+    /**
+     * Release resources associated with this object
+     * @returns {null}
+     */
+    release()
+    {
+        if(this._data != null)
+            this._data.close();
+
+        return super.release();
     }
 
     /**
@@ -351,10 +444,11 @@ class SpeedyBitmapMediaSource extends SpeedyMediaSource
      */
     _load(bitmap)
     {
+        if(this.isLoaded())
+            this.release();
+
         return SpeedyPromise.resolve().then(() => {
             this._data = bitmap;
-            this._width = bitmap.width;
-            this._height = bitmap.height;
             return this;
         });
     }
