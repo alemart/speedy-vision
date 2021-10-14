@@ -93,6 +93,6 @@ export class SpeedyPipelineNodeImageSource extends SpeedyPipelineSourceNode
         // upload texture
         const outputTexture = this._tex[this._textureIndex];
         gpu.upload(this._media._source, outputTexture);
-        this.output().swrite(outputTexture, ImageFormat.RGBA);
+        this.output().swrite(outputTexture, this._media._format);
     }
 }
