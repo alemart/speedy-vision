@@ -21,7 +21,6 @@
 
 import { Utils } from '../utils/utils';
 import { GLUtils } from './gl-utils';
-import { SpeedyGL } from './speedy-gl';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { SpeedyDrawableTexture } from './speedy-texture';
 import { IllegalArgumentError, IllegalOperationError } from '../utils/errors';
@@ -54,8 +53,8 @@ export class SpeedyTextureReader
         /** @type {number[]} for async data transfers (stores buffer indices) */
         this._producerQueue = [];
 
-        /** @type {WebGLBuffer} lazily allocated PBO */
-        this._pbo = null;
+        /** @type {[WebGL2RenderingContext,WebGLBuffer]} lazily allocated PBO */
+        this._glPbo = [null, null];
     }
 
     /**
@@ -64,11 +63,11 @@ export class SpeedyTextureReader
      */
     release()
     {
-        const gl = SpeedyGL.instance.gl; // FIXME want a better way
+        const [ gl, pbo ] = this._glPbo;
 
-        if(gl.isBuffer(this._pbo)) { // should account for context loss
-            gl.deleteBuffer(this._pbo);
-            this._pbo = null;
+        if(gl && gl.isBuffer(pbo)) { // should account for context loss
+            gl.deleteBuffer(pbo);
+            this._glPbo.fill(null);
         }
 
         return null;
@@ -143,7 +142,13 @@ export class SpeedyTextureReader
             return SpeedyPromise.resolve(this._pixelBuffer[0].subarray(0, sizeofBuffer));
 
         // lazily allocate a PBO using the current WebGL2 rendering context
-        const pbo = gl.isBuffer(this._pbo) ? this._pbo : (this._pbo = gl.createBuffer());
+        if(gl !== this._glPbo[0]) {
+            const [ _gl, _pbo ] = this._glPbo;
+            if(_gl && _gl.isBuffer(_pbo))
+                _gl.deleteBuffer(_pbo);
+            this._glPbo = [ gl, gl.createBuffer() ];
+        }
+        const pbo = this._glPbo[1];
 
         // do not optimize?
         if(!useBufferedDownloads) {
