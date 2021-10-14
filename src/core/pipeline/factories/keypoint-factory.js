@@ -53,7 +53,7 @@ class SpeedyPipelineKeypointDetectorFactory extends SpeedyNamespace
     /**
      * Harris corner detector
      * @param {string} [name]
-     * @returns {SpeedyPipelineNodeFASTKeypointDetector}
+     * @returns {SpeedyPipelineNodeHarrisKeypointDetector}
      */
     static Harris(name = undefined)
     {
