@@ -29,11 +29,12 @@ import { SpeedyPromise } from '../../../../../utils/speedy-promise';
 import { MIN_KEYPOINT_SIZE, MIN_ENCODER_LENGTH, MAX_ENCODER_CAPACITY } from '../../../../../utils/globals';
 
 // Constants
-const ENCODER_PASSES = 8; // number of passes of the keypoint encoder: directly impacts performance
+const ENCODER_PASSES = 4; // number of passes of the keypoint encoder: directly impacts performance
 const LONG_SKIP_OFFSET_PASSES = 2; // number of passes of the long skip offsets shader
 const MAX_CAPACITY = MAX_ENCODER_CAPACITY; // maximum capacity of the encoder (up to this many keypoints can be stored)
 const DEFAULT_CAPACITY = 2048; // default capacity of the encoder (64x64 texture with 2 pixels per keypoint)
 const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // sqrt(2)
+const NUMBER_OF_INTERNAL_TEXTURES = 5; // number of internal textures used to encode the keypoints
 
 /**
  * Abstract keypoint detector
@@ -49,10 +50,58 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
      */
     constructor(name = undefined, texCount = 0, portBuilders = undefined)
     {
-        super(name, texCount + 4, portBuilders);
+        super(name, texCount + NUMBER_OF_INTERNAL_TEXTURES, portBuilders);
 
         /** @type {number} encoder capacity */
         this._capacity = DEFAULT_CAPACITY; // must not be greater than MAX_ENCODER_CAPACITY
+
+        /** @type {GLint} auxiliary storage */
+        this._oldWrapS = 0;
+    }
+
+    /**
+     * Initialize this node
+     * @param {SpeedyGPU} gpu
+     */
+    init(gpu)
+    {
+        // initialize
+        super.init(gpu);
+
+        // encodeKeypointSkipOffsets() relies on this
+        this._oldWrapS = this._setupSpecialTexture(gpu.gl.TEXTURE_WRAP_S, gpu.gl.REPEAT);
+    }
+
+    /**
+     * Release this node
+     * @param {SpeedyGPU} gpu
+     */
+    release(gpu)
+    {
+        // we need to restore the texture parameter because textures come from a pool!
+        this._setupSpecialTexture(gpu.gl.TEXTURE_WRAP_S, this._oldWrapS);
+
+        // release
+        super.release(gpu);
+    }
+
+    /**
+     * Set a parameter of the special texture
+     * @param {GLenum} pname
+     * @param {GLint} param new value
+     * @returns {GLint} old value of param
+     */
+    _setupSpecialTexture(pname, param)
+    {
+        const texture = this._tex[this._tex.length - 1];
+        const gl = texture.gl;
+
+        gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
+        const oldval = gl.getTexParameter(gl.TEXTURE_2D, pname);
+        gl.texParameteri(gl.TEXTURE_2D, pname, param);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
+        return oldval;
     }
 
     /**
@@ -91,8 +140,9 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(capacity, descriptorSize, extraSize);
         const width = corners.width, height = corners.height;
         const imageSize = [ width, height ];
-        const tex = this._tex.slice(this._tex.length - 4);
+        const tex = this._tex.slice(this._tex.length - NUMBER_OF_INTERNAL_TEXTURES); // array of internal textures
         const keypoints = gpu.programs.keypoints;
+        const specialTexture = tex.pop(); // gl.TEXTURE_WRAP_S is set to gl.REPEAT
 
         // prepare programs
         keypoints.encodeKeypointSkipOffsets.outputs(width, height, tex[0]);
@@ -100,21 +150,23 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         keypoints.encodeKeypointPositions.outputs(encoderLength, encoderLength, tex[2], tex[3]);
         keypoints.encodeKeypointProperties.outputs(encoderLength, encoderLength, encodedKeypoints);
 
+        // copy the input corners to a special texture
+        // that is needed by encodeKeypointSkipOffsets()
+        corners = (gpu.programs.utils.identity
+            .outputs(width, height, specialTexture)
+        )(corners);
+
         // encode skip offsets
         let offsets = keypoints.encodeKeypointSkipOffsets(corners, imageSize);
-        for(let i = 0; i < LONG_SKIP_OFFSET_PASSES; i++) // to boost performance
-            offsets = keypoints.encodeKeypointLongSkipOffsets(offsets, imageSize);
+        for(let i = 0; i < LONG_SKIP_OFFSET_PASSES; i++) { // to boost performance
+            // the maximum skip offset of pass p=1,2,3... is 7 * (1+m)^p,
+            // where m = MAX_ITERATIONS of encodeKeypointLongSkipOffsets()
+            offsets = keypoints.encodeKeypointLongSkipOffsets(offsets, imageSize); // **bottleneck**
+        }
 
         /*
         // debug: view corners
         let cornerview = offsets;
-        gpu.programs.utils.fillComponents.outputs(width,height,null);
-        gpu.programs.utils.identity.outputs(width,height,null);
-        cornerview = gpu.programs.utils.fillComponents(cornerview, PixelComponent.GREEN, 0);
-        cornerview = gpu.programs.utils.identity(cornerview);
-        cornerview = gpu.programs.utils.fillComponents(cornerview, PixelComponent.RED, 0);
-        cornerview = gpu.programs.utils.identity(cornerview);
-        cornerview = gpu.programs.utils.fillComponents(cornerview, PixelComponent.ALPHA, 1);
         const canvas = gpu.renderToCanvas(cornerview);
         if(!window._ww) document.body.appendChild(canvas);
         window._ww = 1;

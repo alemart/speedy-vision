@@ -123,11 +123,10 @@ const sortApplyPermutation = importShader('keypoints/sort-applyperm.glsl')
 
 // Keypoint encoding
 const encodeKeypointSkipOffsets = importShader('keypoints/encode-keypoint-offsets.glsl')
-                                 .withDefines({ 'MAX_ITERATIONS': 32 })
                                  .withArguments('corners', 'imageSize');
 
 const encodeKeypointLongSkipOffsets = importShader('keypoints/encode-keypoint-long-offsets.glsl')
-                                     .withDefines({ 'MAX_ITERATIONS': 32 })
+                                     .withDefines({ 'MAX_ITERATIONS': 6 }) // dependent texture reads :(
                                      .withArguments('offsetsImage', 'imageSize');
 
 const encodeKeypointPositions = importShader('keypoints/encode-keypoint-positions.glsl')

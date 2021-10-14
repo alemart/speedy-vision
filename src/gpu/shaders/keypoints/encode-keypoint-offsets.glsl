@@ -24,12 +24,6 @@
 uniform sampler2D corners;
 uniform ivec2 imageSize;
 
-#if !defined(MAX_ITERATIONS)
-#error Must define MAX_ITERATIONS // any value between 32 and 48 works fine on both PC and mobile (determined experimentally)
-#elif MAX_ITERATIONS > 255
-#error MAX_ITERATIONS must be less than 256
-#endif
-
 //
 // We'll encode the following in the RGBA channels:
 //
@@ -45,16 +39,34 @@ void main()
     vec4 pixel = threadPixel(corners);
     ivec2 pos = threadLocation();
     vec2 encodedScore = pixel.rb;
-    int offset = 0, allow = 1;
-
+    int offset = 0, allow = 1, jumped = 0;
+/*
     // branchless
-    for(int i = 0; i < MAX_ITERATIONS; i++) {
+    for(int i = 0; i < MAX_ITERATIONS; i++) { // e.g., 32 or 48. Must be less than 256
         allow *= int(pos.y < imageSize.y) * int(isEncodedFloat16Zero(pixel.rb));
         offset += allow;
         pos.x = (pos.x + 1) % imageSize.x;
         pos.y += int(pos.x == 0);
         pixel = pixelAt(corners, pos);
     }
+*/
+    //
+    // almost branchless algorithm with no dependent texture reads
+    // this algorithm assumes that:
+    //
+    // a) j ranges from 1 to 7, inclusive
+    // b) the width of the input corners texture is >= 7
+    // c) the gl.TEXTURE_WRAP_S parameter of the input corners texture is set to gl.REPEAT
+    //
+
+    #define READ(j) ; \
+        allow *= int(pos.y < imageSize.y) * int(isEncodedFloat16Zero(pixel.rb)); \
+        offset += allow; \
+        pos.x = (pos.x + 1) % imageSize.x; \
+        pos.y += int(pos.x == 0); \
+        pixel = (0 != (jumped |= int(pos.x == 0))) ? pixelAtShortOffset(corners, ivec2((j),1)) : pixelAtShortOffset(corners, ivec2((j),0))
+
+    READ(1); READ(2); READ(3); READ(4); READ(5); READ(6); READ(7);
 
     // write data
     color.rb = encodedScore;

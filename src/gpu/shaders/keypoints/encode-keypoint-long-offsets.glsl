@@ -25,7 +25,7 @@ uniform sampler2D offsetsImage;
 uniform ivec2 imageSize;
 
 #ifndef MAX_ITERATIONS
-#error Must define MAX_ITERATIONS
+#error Undefined MAX_ITERATIONS
 #endif
 
 // helper macros
@@ -43,14 +43,17 @@ void main()
 
     // branchless
     ivec2 pos = thread; int allow = 1;
+
+    @unroll
     for(int i = 0; i < MAX_ITERATIONS; i++) {
         allow *= int(pos.y < imageSize.y) * int(isEncodedFloat16Zero(pixel.rb));
         rasterIndex += allow * offset;
         pos = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);
-        pixel = pixelAt(offsetsImage, pos);
+        pixel = pixelAt(offsetsImage, pos); // **bottleneck** dependent texture read
         offset = decodeSkipOffset(pixel);
         totalOffset += allow * offset;
     }
+
     totalOffset = min(totalOffset, 65535);
 
     // write data
