@@ -28,7 +28,7 @@ import { GLError, IllegalArgumentError, IllegalOperationError } from '../utils/e
 //
 // Constants
 //
-const IS_FIREFOX = navigator.userAgent.includes('Firefox');
+//const IS_FIREFOX = navigator.userAgent.includes('Firefox');
 
 
 
@@ -114,18 +114,22 @@ export class GLUtils
      * @param {GLbitfield} flags
      * @param {Function} resolve
      * @param {Function} reject
+     * @param {number} [pollInterval] in milliseconds
      */
-    static _checkStatus(gl, sync, flags, resolve, reject)
+    static _checkStatus(gl, sync, flags, resolve, reject, pollInterval = 10)
     {
         const status = gl.clientWaitSync(sync, flags, 0);
+        const nextPollInterval = pollInterval > 2 ? pollInterval - 2 : 0; // adaptive poll interval
+        //const nextPollInterval = pollInterval >>> 1; // adaptive poll interval
+
         if(status == gl.TIMEOUT_EXPIRED) {
-            //Utils.setZeroTimeout(GLUtils._checkStatus, gl, sync, flags, resolve, reject); // no ~4ms delay
-            setTimeout(GLUtils._checkStatus, 0, gl, sync, flags, resolve, reject); // easier on the CPU
+            //Utils.setZeroTimeout(GLUtils._checkStatus, gl, sync, flags, resolve, reject); // no ~4ms delay, resource-hungry
+            setTimeout(GLUtils._checkStatus, pollInterval, gl, sync, flags, resolve, reject, nextPollInterval); // easier on the CPU
         }
         else if(status == gl.WAIT_FAILED) {
-            if(IS_FIREFOX && gl.getError() == gl.NO_ERROR) { // firefox bug?
+            if(/*IS_FIREFOX &&*/ gl.getError() == gl.NO_ERROR) { // firefox bug?
                 //Utils.setZeroTimeout(GLUtils._checkStatus, gl, sync, flags, resolve, reject);
-                setTimeout(GLUtils._checkStatus, 0, gl, sync, flags, resolve, reject);
+                setTimeout(GLUtils._checkStatus, pollInterval, gl, sync, flags, resolve, reject, nextPollInterval);
             }
             else {
                 reject(GLUtils.getError(gl));
