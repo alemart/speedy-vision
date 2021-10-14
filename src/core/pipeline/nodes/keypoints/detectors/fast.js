@@ -109,35 +109,21 @@ export class SpeedyPipelineNodeFASTKeypointDetector extends SpeedyPipelineNodeMu
         let numPasses = Math.max(1, Math.min(levels, (PYRAMID_MAX_LEVELS / lodStep) | 0));
         for(let lod = lodStep * (numPasses - 1); numPasses-- > 0; lod -= lodStep) {
             corners = gpu.programs.keypoints.fast9_16(corners, image, lod, threshold);
-            corners = gpu.programs.keypoints.nonmaxSpace(corners); // see below*
+            //corners = gpu.programs.keypoints.nonmaxSpace(corners); // see below*
         }
 
         // Same-scale non-maximum suppression
-        // *performs better inside the loop
-        //corners = gpu.programs.keypoints.nonmaxSpace(corners);
+        // *nicer results inside the loop; faster outside
+        // Hard to notice a difference when using FAST
+        corners = gpu.programs.keypoints.nonmaxSpace(corners);
 
         // Multi-scale non-maximum suppression
         // (doesn't seem to remove many keypoints)
         if(levels > 1) {
-            const laplacian = (gpu.programs.keypoints.laplacian
-                .outputs(width, height, tex[0])
-            )(corners, image, lodStep, 0);
-
-            corners = (gpu.programs.keypoints.nonmaxScale
-                .outputs(width, height, tex[1])
-            )(corners, image, laplacian, lodStep);
-
-/*
             corners = (gpu.programs.keypoints.nonmaxScaleSimple
                 .outputs(width, height, tex[1])
             )(corners, image, lodStep);
-*/
         }
-
-        // More aggressive non-maximum suppression
-        corners = (gpu.programs.keypoints[levels > 1 ? 'pyrnonmax' : 'nonmax']
-            .outputs(width, height, tex[0])
-        )(corners, lodStep);
 
         // encode keypoints
         let encodedKeypoints = this._encodeKeypoints(gpu, corners, tex[3]);
