@@ -26,18 +26,21 @@ import { SpeedyTexturePool } from './speedy-texture-pool';
 import { SpeedyTextureUploader } from './speedy-texture-uploader';
 import { SpeedyMediaSource } from '../core/speedy-media-source';
 import { Utils } from '../utils/utils';
+import { Observable } from '../utils/observable';
 
 
 /**
  * GPU-accelerated routines for Computer Vision
  */
-export class SpeedyGPU
+export class SpeedyGPU extends Observable
 {
     /**
      * Constructor
      */
     constructor()
     {
+        super();
+
         /** @type {SpeedyGL} cached reference */
         this._speedyGL = SpeedyGL.instance;
 
@@ -169,8 +172,9 @@ export class SpeedyGPU
     /**
      * Reset the internal state
      * (called on context reset)
+     * @param {WebGL2RenderingContext} gl
      */
-    _reset()
+    _reset(gl)
     {
         if(this.isReleased())
             return;
@@ -178,5 +182,7 @@ export class SpeedyGPU
         this._programs = new SpeedyProgramCenter(this);
         this._texturePool = new SpeedyTexturePool(this);
         this._textureUploader = new SpeedyTextureUploader(this);
+
+        this._notify(gl);
     }
 }
