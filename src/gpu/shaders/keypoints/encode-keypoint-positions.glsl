@@ -94,7 +94,7 @@ void main()
     int lastIndexFromPrevPass = passId * maxKeypointsPerPass - 1;
     KeypointAddress lastAddressFromPrevPass = KeypointAddress(max(0, lastIndexFromPrevPass) * pixelsPerKeypoint, 0);
     Keypoint lastKeypointFromPrevPass = decodeKeypoint(encodedKeypoints, encoderLength, lastAddressFromPrevPass);
-    ivec2 position = ivec2(lastKeypointFromPrevPass.position);
+    ivec2 position = passId > 0 ? ivec2(lastKeypointFromPrevPass.position) : ivec2(0);
     /*
     // no optimization
     int lastIndexFromPrevPass = -1; ivec2 position = ivec2(0);
