@@ -48,7 +48,7 @@ void main()
     ivec2 next2 = clusterPos + ((thread - clusterPos + ivec2(0, jump)) & clusterMask);
     ivec2 next3 = clusterPos + ((thread - clusterPos + ivec2(jump, jump)) & clusterMask);
 
-    vec4 p0 = texelFetch(corners, thread, 0);
+    vec4 p0 = threadPixel(corners); //texelFetch(corners, thread, 0);
     vec4 p1 = texelFetch(corners, next1 % bounds, 0);
     vec4 p2 = texelFetch(corners, next2 % bounds, 0);
     vec4 p3 = texelFetch(corners, next3 % bounds, 0);
