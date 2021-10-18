@@ -96,6 +96,9 @@ export class SpeedyPipelineNode
         // got some ports?
         if(portBuilders.length == 0)
             throw new IllegalArgumentError(`No ports have been found in node ${this.fullName}`);
+
+        // bind this function (subscriber)
+        this._allocateTextures = this._allocateTextures.bind(this);
     }
 
     /**
@@ -190,9 +193,8 @@ export class SpeedyPipelineNode
      */
     init(gpu)
     {
-        // allocate work texture(s)
-        for(let j = 0; j < this._tex.length; j++)
-            this._tex[j] = gpu.texturePool.allocate();
+        gpu.subscribe(this._allocateTextures);
+        this._allocateTextures(gpu);
     }
 
     /**
@@ -201,9 +203,8 @@ export class SpeedyPipelineNode
      */
     release(gpu)
     {
-        // deallocate work texture(s)
-        for(let j = this._tex.length - 1; j >= 0; j--)
-            this._tex[j] = gpu.texturePool.free(this._tex[j]);
+        this._deallocateTextures(gpu);
+        gpu.unsubscribe(this._allocateTextures);
     }
 
     /**
@@ -256,6 +257,26 @@ export class SpeedyPipelineNode
 
         // note: a portal sink has no output ports, but it isn't a sink of the pipeline!
         //return Object.keys(this._outputPorts).length == 0;
+    }
+
+    /**
+     * Allocate work texture(s)
+     * @param {SpeedyGPU} gpu
+     */
+    _allocateTextures(gpu)
+    {
+        for(let j = 0; j < this._tex.length; j++)
+            this._tex[j] = gpu.texturePool.allocate();
+    }
+
+    /**
+     * Deallocate work texture(s)
+     * @param {SpeedyGPU} gpu
+     */
+    _deallocateTextures(gpu)
+    {
+        for(let j = this._tex.length - 1; j >= 0; j--)
+            this._tex[j] = gpu.texturePool.free(this._tex[j]);
     }
 
     /**

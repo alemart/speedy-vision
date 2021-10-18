@@ -183,6 +183,6 @@ export class SpeedyGPU extends Observable
         this._texturePool = new SpeedyTexturePool(this);
         this._textureUploader = new SpeedyTextureUploader(this);
 
-        this._notify(gl);
+        this._notify(this);
     }
 }
