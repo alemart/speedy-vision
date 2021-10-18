@@ -122,6 +122,22 @@ const sortApplyPermutation = importShader('keypoints/sort-applyperm.glsl')
                             .withArguments('permutation', 'maxKeypoints', 'encodedKeypoints', 'descriptorSize', 'extraSize');
 
 // Keypoint encoding
+const computeLookupOfLocations = importShader('keypoints/lookup-of-locations.glsl')
+                                .withDefines({ 'INITIAL': 0, 'SUMTABLE': 0 })
+                                .withArguments('lookupTable', 'sumTable', 'prevSumTable', 'blockSize', 'dblBlockSize', 'stride');
+
+const initLookupOfLocations = importShader('keypoints/lookup-of-locations.glsl')
+                             .withDefines({ 'INITIAL': 1, 'SUMTABLE': 0 })
+                             .withArguments('corners', 'stride');
+
+const computeSumTable = importShader('keypoints/lookup-of-locations.glsl')
+                       .withDefines({ 'INITIAL': 0, 'SUMTABLE': 1 })
+                       .withArguments('prevSumTable', 'blockSize', 'dblBlockSize', 'stride');
+
+const initSumTable = importShader('keypoints/lookup-of-locations.glsl')
+                    .withDefines({ 'INITIAL': 1, 'SUMTABLE': 1 })
+                    .withArguments('corners', 'stride');
+
 const encodeKeypointSkipOffsets = importShader('keypoints/encode-keypoint-offsets.glsl')
                                  .withArguments('corners', 'imageSize');
 
@@ -272,6 +288,15 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             //
             // Keypoint encoders
             //
+            .declare('computeLookupOfLocations', computeLookupOfLocations, {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('computeSumTable', computeSumTable, {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('initLookupOfLocations', initLookupOfLocations)
+            .declare('initSumTable', initSumTable)
+
             .declare('encodeKeypointSkipOffsets', encodeKeypointSkipOffsets)
             .declare('encodeKeypointLongSkipOffsets', encodeKeypointLongSkipOffsets, {
                 ...this.program.usesPingpongRendering()

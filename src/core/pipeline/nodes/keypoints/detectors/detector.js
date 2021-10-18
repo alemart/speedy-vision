@@ -181,6 +181,49 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         return keypoints.encodeKeypointProperties(corners, encodedKps, descriptorSize, extraSize, encoderLength);
     }
 
+    _encodeKeypoints2(gpu, corners, encodedKeypoints, descriptorSize = 0, extraSize = 0)
+    {
+        const capacity = this._capacity;
+        const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(capacity, descriptorSize, extraSize);
+        const width = corners.width, height = corners.height;
+        const tex = this._tex.slice(this._tex.length - NUMBER_OF_INTERNAL_TEXTURES); // array of internal textures
+        const keypoints = gpu.programs.keypoints;
+
+        // pad textures to a power of two
+        const exp2 = Math.ceil(Math.log2(width * height));
+        const paddedWidth = 1 << (exp2 >>> 1);
+        const paddedHeight = 1 << ((exp2 >>> 1) + (exp2 & 1));
+        keypoints.initLookupOfLocations.outputs(paddedWidth, paddedHeight, tex[1]);
+        keypoints.computeLookupOfLocations.outputs(paddedWidth, paddedHeight, tex[0], tex[1]);
+        keypoints.initSumTable.outputs(paddedWidth, paddedHeight, tex[3]);
+        keypoints.computeSumTable.outputs(paddedWidth, paddedHeight, tex[2], tex[3]);
+
+        // compute lookup table
+        const stride = paddedWidth;
+        let sumTable = keypoints.initSumTable(corners, stride);
+        let lookupTable = keypoints.initLookupOfLocations(corners, stride);
+
+        const npasses = exp2; // = log2(paddedWidth * paddedHeight)
+        for(let i = 0; i < npasses; i++) {
+            const prevSumTable = sumTable;
+            const blockSize = 1 << i;
+            sumTable = keypoints.computeSumTable(prevSumTable, blockSize, 2 * blockSize, stride);
+            lookupTable = keypoints.computeLookupOfLocations(lookupTable, sumTable, prevSumTable, blockSize, 2 * blockSize, stride);
+        }
+
+        /*
+        // debug: view lookup table
+        const canvas = gpu.renderToCanvas(lookupTable);
+        if(!window._ww) document.body.appendChild(canvas);
+        window._ww = 1;
+        */
+
+        // encode keypoints
+        return encodedKeypoints.resize(encoderLength, encoderLength).clear(1,1,1,1);
+    }
+
+
+
     /**
      * Create a tiny texture with zero encoded keypoints
      * @param {SpeedyGPU} gpu
