@@ -27,26 +27,28 @@ import { NotSupportedError, IllegalArgumentError, IllegalOperationError, GLError
 
 // Map uniform type to a gl function
 const UNIFORM_SETTERS = Object.freeze({
-    'sampler2D':'uniform1i',
-    'float':    'uniform1f',
-    'int':      'uniform1i',
-    'uint':     'uniform1ui',
-    'bool':     'uniform1i',
-    'vec2':     'uniform2f',
-    'vec3':     'uniform3f',
-    'vec4':     'uniform4f',
-    'ivec2':    'uniform2i',
-    'ivec3':    'uniform3i',
-    'ivec4':    'uniform4i',
-    'uvec2':    'uniform2ui',
-    'uvec3':    'uniform3ui',
-    'uvec4':    'uniform4ui',
-    'bvec2':    'uniform2i',
-    'bvec3':    'uniform3i',
-    'bvec4':    'uniform4i',
-    'mat2':     'uniformMatrix2fv',
-    'mat3':     'uniformMatrix3fv',
-    'mat4':     'uniformMatrix4fv',
+    'sampler2D': 'uniform1i',
+    'isampler2D':'uniform1i',
+    'usampler2D':'uniform1i',
+    'float':     'uniform1f',
+    'int':       'uniform1i',
+    'uint':      'uniform1ui',
+    'bool':      'uniform1i',
+    'vec2':      'uniform2f',
+    'vec3':      'uniform3f',
+    'vec4':      'uniform4f',
+    'ivec2':     'uniform2i',
+    'ivec3':     'uniform3i',
+    'ivec4':     'uniform4i',
+    'uvec2':     'uniform2ui',
+    'uvec3':     'uniform3ui',
+    'uvec4':     'uniform4ui',
+    'bvec2':     'uniform2i',
+    'bvec3':     'uniform3i',
+    'bvec4':     'uniform4i',
+    'mat2':      'uniformMatrix2fv',
+    'mat3':      'uniformMatrix3fv',
+    'mat4':      'uniformMatrix4fv',
 });
 
 
@@ -581,7 +583,7 @@ UniformVariable.prototype.setValue = function(gl, value, texNo)
     const setValue = gl[this.setter];
 
     // check uniform type
-    if(this.type == 'sampler2D') {
+    if(this.type.endsWith('sampler2D')) {
         // set texture
         if(texNo > gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
             throw new NotSupportedError(`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);

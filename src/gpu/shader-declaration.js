@@ -46,8 +46,20 @@ const DEFAULT_FRAGMENT_SHADER_PREFIX = `#version 300 es
 precision highp int; // int32
 precision mediump float; // ~float16
 precision mediump sampler2D;
+precision highp isampler2D;
+precision highp usampler2D;
 
-out vec4 color;
+#if @FS_OUTPUT_TYPE@ == 0
+#define OUT_TYPE vec4
+#elif @FS_OUTPUT_TYPE@ == 1
+#define OUT_TYPE ivec4
+#elif @FS_OUTPUT_TYPE@ == 2
+#define OUT_TYPE uvec4
+#else
+#error Unknown FS_OUTPUT_TYPE
+#endif
+
+out OUT_TYPE color;
 in vec2 texCoord;
 uniform vec2 texSize;
 

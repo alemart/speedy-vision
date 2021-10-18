@@ -34,6 +34,9 @@ const constants = Object.freeze({
     // numeric globals
     ...numericGlobals,
 
+    // fragment shader
+    'FS_OUTPUT_TYPE': 0, // normalized RGBA
+
     // colors
     'PIXELCOMPONENT_RED': PixelComponent.RED,
     'PIXELCOMPONENT_GREEN': PixelComponent.GREEN,
@@ -79,9 +82,9 @@ export class ShaderPreprocessor
                     ShaderPreprocessor.run(readfileSync(filename), defines)
                 )
                 .replace(constantRegex, (_, name) => String(
-                    // Find a global constant. If not possible, find a defined constant
-                    constants[name] !== undefined ? Number(constants[name]) : (
-                        defines.has(name) ? Number(defines.get(name)) : (
+                    // Find a defined constant. If not possible, find a global constant
+                    defines.has(name) ? Number(defines.get(name)) : (
+                        constants[name] !== undefined ? Number(constants[name]) : (
                             errors.push(`Undefined constant: ${name}`), 0
                         )
                     )
