@@ -52,10 +52,14 @@ export class SpeedyTexture
      * @param {WebGL2RenderingContext} gl
      * @param {number} width texture width in pixels
      * @param {number} height texture height in pixels
+     * @param {number} [format]
+     * @param {number} [internalFormat]
+     * @param {number} [type]
+     * @param {number} [filter]
      */
-    constructor(gl, width, height)
+    constructor(gl, width, height, format = gl.RGBA, internalFormat = gl.RGBA8, type = gl.UNSIGNED_BYTE, filter = gl.NEAREST)
     {
-        /** @type {WebGL2RenderingContext} */
+        /** @type {WebGL2RenderingContext} rendering context */
         this._gl = gl;
 
         /** @type {number} width of the texture */
@@ -64,11 +68,23 @@ export class SpeedyTexture
         /** @type {number} height of the texture */
         this._height = Math.max(1, height | 0);
 
-        /** @type {WebGLTexture} internal texture object */
-        this._glTexture = SpeedyTexture._createTexture(this._gl, this._width, this._height);
-
         /** @type {boolean} have we generated mipmaps for this texture? */
         this._hasMipmaps = false;
+
+        /** @type {number} texture format */
+        this._format = format;
+
+        /** @type {number} internal format (usually a sized format) */
+        this._internalFormat = internalFormat;
+
+        /** @type {number} data type */
+        this._type = type;
+
+        /** @type {number} texture filtering (min & mag) */
+        this._filter = filter;
+
+        /** @type {WebGLTexture} internal texture object */
+        this._glTexture = SpeedyTexture._createTexture(this._gl, this._width, this._height, this._format, this._internalFormat, this._type, this._filter);
     }
 
     /**
@@ -102,13 +118,17 @@ export class SpeedyTexture
      */
     upload(pixels, width = this._width, height = this._height)
     {
+        const gl = this._gl;
         Utils.assert(width > 0 && height > 0);
 
         this.discardMipmaps();
         this._width = width;
         this._height = height;
+        this._internalFormat = gl.RGBA8;
+        this._format = gl.RGBA;
+        this._type = gl.UNSIGNED_BYTE;
 
-        SpeedyTexture._upload(this._gl, this._glTexture, width, height, pixels, 0);
+        SpeedyTexture._upload(gl, this._glTexture, this._width, this._height, pixels, 0, this._format, this._internalFormat, this._type);
         return this;
     }
 
@@ -126,7 +146,7 @@ export class SpeedyTexture
 
         // clear texture data
         gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, this._width, this._height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texImage2D(gl.TEXTURE_2D, 0, this._internalFormat, this._width, this._height, 0, this._format, this._type, null);
         gl.bindTexture(gl.TEXTURE_2D, null);
 
         // no mipmaps
@@ -168,7 +188,7 @@ export class SpeedyTexture
         // resize
         // Note: this is fast on Chrome, but seems slow on Firefox
         gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texImage2D(gl.TEXTURE_2D, 0, this._internalFormat, this._width, this._height, 0, this._format, this._type, null);
         gl.bindTexture(gl.TEXTURE_2D, null);
 
         // no mipmaps
@@ -239,7 +259,7 @@ export class SpeedyTexture
 
         // reset the min filter
         gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this._filter);
         gl.bindTexture(gl.TEXTURE_2D, null);
 
         // done!
@@ -315,9 +335,13 @@ export class SpeedyTexture
      * @param {WebGL2RenderingContext} gl
      * @param {number} width in pixels
      * @param {number} height in pixels
+     * @param {number} format usually gl.RGBA
+     * @param {number} internalFormat usually gl.RGBA8
+     * @param {number} type usually gl.UNSIGNED_BYTE
+     * @param {number} filter usually gl.NEAREST or gl.LINEAR
      * @returns {WebGLTexture}
      */
-    static _createTexture(gl, width, height)
+    static _createTexture(gl, width, height, format, internalFormat, type, filter)
     {
         Utils.assert(width > 0 && height > 0);
 
@@ -326,12 +350,12 @@ export class SpeedyTexture
         gl.bindTexture(gl.TEXTURE_2D, texture);
 
         // setup
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
-        //gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, width, height);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        //gl.texStorage2D(gl.TEXTURE_2D, 1, internalFormat, width, height);
+        gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, null);
 
         // unbind & return
         gl.bindTexture(gl.TEXTURE_2D, null);
@@ -345,10 +369,13 @@ export class SpeedyTexture
      * @param {GLsizei} width texture width
      * @param {GLsizei} height texture height
      * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} pixels 
-     * @param {GLint} [lod] mipmap level-of-detail
+     * @param {GLint} lod mipmap level-of-detail
+     * @param {number} format
+     * @param {number} internalFormat
+     * @param {number} type
      * @returns {WebGLTexture} texture
      */
-    static _upload(gl, texture, width, height, pixels, lod = 0)
+    static _upload(gl, texture, width, height, pixels, lod, format, internalFormat, type)
     {
         // Prefer calling _upload() before gl.useProgram() to avoid the
         // needless switching of GL programs internally. See also:
@@ -370,12 +397,12 @@ export class SpeedyTexture
 
         gl.texImage2D(gl.TEXTURE_2D,        // target
                       lod,                  // mip level
-                      gl.RGBA8,             // internal format
-                      width,              // texture width
-                      height,             // texture height
-                      0,                  // border
-                      gl.RGBA,              // source format
-                      gl.UNSIGNED_BYTE,     // source type
+                      internalFormat,       // internal format
+                      width,                // texture width
+                      height,               // texture height
+                      0,                    // border
+                      format,               // source format
+                      type,                 // source type
                       pixels);              // source data
 
         gl.bindTexture(gl.TEXTURE_2D, null);
@@ -393,10 +420,14 @@ export class SpeedyDrawableTexture extends SpeedyTexture
      * @param {WebGL2RenderingContext} gl
      * @param {number} width texture width in pixels
      * @param {number} height texture height in pixels
+     * @param {number} [format]
+     * @param {number} [internalFormat]
+     * @param {number} [type]
+     * @param {number} [filter]
      */
-    constructor(gl, width, height)
+    constructor(gl, width, height, format = undefined, internalFormat = undefined, type = undefined, filter = undefined)
     {
-        super(gl, width, height);
+        super(gl, width, height, format, internalFormat, type, filter);
 
         /** @type {WebGLFramebuffer} framebuffer */
         this._glFbo = SpeedyDrawableTexture._createFramebuffer(gl, this._glTexture);
