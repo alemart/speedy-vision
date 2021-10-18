@@ -98,7 +98,7 @@ export class SpeedyPipelineNode
             throw new IllegalArgumentError(`No ports have been found in node ${this.fullName}`);
 
         // bind this function (subscriber)
-        this._allocateTextures = this._allocateTextures.bind(this);
+        this._allocateWorkTextures = this._allocateWorkTextures.bind(this);
     }
 
     /**
@@ -193,8 +193,8 @@ export class SpeedyPipelineNode
      */
     init(gpu)
     {
-        gpu.subscribe(this._allocateTextures);
-        this._allocateTextures(gpu);
+        gpu.subscribe(this._allocateWorkTextures);
+        this._allocateWorkTextures(gpu);
     }
 
     /**
@@ -203,8 +203,8 @@ export class SpeedyPipelineNode
      */
     release(gpu)
     {
-        this._deallocateTextures(gpu);
-        gpu.unsubscribe(this._allocateTextures);
+        this._deallocateWorkTextures(gpu);
+        gpu.unsubscribe(this._allocateWorkTextures);
     }
 
     /**
@@ -263,7 +263,7 @@ export class SpeedyPipelineNode
      * Allocate work texture(s)
      * @param {SpeedyGPU} gpu
      */
-    _allocateTextures(gpu)
+    _allocateWorkTextures(gpu)
     {
         for(let j = 0; j < this._tex.length; j++)
             this._tex[j] = gpu.texturePool.allocate();
@@ -273,7 +273,7 @@ export class SpeedyPipelineNode
      * Deallocate work texture(s)
      * @param {SpeedyGPU} gpu
      */
-    _deallocateTextures(gpu)
+    _deallocateWorkTextures(gpu)
     {
         for(let j = this._tex.length - 1; j >= 0; j--)
             this._tex[j] = gpu.texturePool.free(this._tex[j]);
