@@ -21,7 +21,7 @@
 
 import { Utils } from '../utils/utils';
 import { SpeedyPromise } from '../utils/speedy-promise';
-import { GLError, IllegalArgumentError, IllegalOperationError } from '../utils/errors';
+import { GLError, IllegalOperationError, TimeoutError } from '../utils/errors';
 
 
 
@@ -115,21 +115,25 @@ export class GLUtils
      * @param {Function} resolve
      * @param {Function} reject
      * @param {number} [pollInterval] in milliseconds
+     * @param {number} [remainingAttempts] for timeout
      */
-    static _checkStatus(gl, sync, flags, resolve, reject, pollInterval = 10)
+    static _checkStatus(gl, sync, flags, resolve, reject, pollInterval = 10, remainingAttempts = 1000)
     {
         const status = gl.clientWaitSync(sync, flags, 0);
         const nextPollInterval = pollInterval > 2 ? pollInterval - 2 : 0; // adaptive poll interval
         //const nextPollInterval = pollInterval >>> 1; // adaptive poll interval
 
-        if(status == gl.TIMEOUT_EXPIRED) {
-            //Utils.setZeroTimeout(GLUtils._checkStatus, gl, sync, flags, resolve, reject); // no ~4ms delay, resource-hungry
-            setTimeout(GLUtils._checkStatus, pollInterval, gl, sync, flags, resolve, reject, nextPollInterval); // easier on the CPU
+        if(remainingAttempts <= 0) {
+            reject(new TimeoutError(`_checkStatus() is taking too long.`, GLUtils.getError(gl)));
+        }
+        else if(status == gl.TIMEOUT_EXPIRED) {
+            //Utils.setZeroTimeout(GLUtils._checkStatus, gl, sync, flags, resolve, reject, 0, remainingAttempts - 1); // no ~4ms delay, resource-hungry
+            setTimeout(GLUtils._checkStatus, pollInterval, gl, sync, flags, resolve, reject, nextPollInterval, remainingAttempts - 1); // easier on the CPU
         }
         else if(status == gl.WAIT_FAILED) {
             if(IS_FIREFOX /*&& gl.getError() == gl.NO_ERROR*/) { // firefox bug? gl.getError() may be slow
-                //Utils.setZeroTimeout(GLUtils._checkStatus, gl, sync, flags, resolve, reject);
-                setTimeout(GLUtils._checkStatus, pollInterval, gl, sync, flags, resolve, reject, nextPollInterval);
+                //Utils.setZeroTimeout(GLUtils._checkStatus, gl, sync, flags, resolve, reject, 0, remainingAttempts - 1);
+                setTimeout(GLUtils._checkStatus, pollInterval, gl, sync, flags, resolve, reject, nextPollInterval, remainingAttempts - 1);
             }
             else {
                 reject(GLUtils.getError(gl));
