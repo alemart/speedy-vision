@@ -259,7 +259,7 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
 
         // RGBA16UI is color renderable according to the OpenGL ES 3 spec
         for(let i = 0; i < this._tex16.length; i++)
-            this._tex16[i] = new SpeedyDrawableTexture(gl, 1, 1, gl.RGBA_INTEGER, gl.RGBA16UI, gl.UNSIGNED_SHORT, gl.NEAREST);
+            this._tex16[i] = new SpeedyDrawableTexture(gl, 1, 1, gl.RGBA_INTEGER, gl.RGBA16UI, gl.UNSIGNED_SHORT, gl.NEAREST, gl.CLAMP_TO_EDGE);
     }
 
     /**

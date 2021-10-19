@@ -54,10 +54,11 @@ export class SpeedyTexture
      * @param {number} height texture height in pixels
      * @param {number} [format]
      * @param {number} [internalFormat]
-     * @param {number} [type]
+     * @param {number} [dataType]
      * @param {number} [filter]
+     * @param {number} [wrap]
      */
-    constructor(gl, width, height, format = gl.RGBA, internalFormat = gl.RGBA8, type = gl.UNSIGNED_BYTE, filter = gl.NEAREST)
+    constructor(gl, width, height, format = gl.RGBA, internalFormat = gl.RGBA8, dataType = gl.UNSIGNED_BYTE, filter = gl.NEAREST, wrap = gl.MIRRORED_REPEAT)
     {
         /** @type {WebGL2RenderingContext} rendering context */
         this._gl = gl;
@@ -78,13 +79,16 @@ export class SpeedyTexture
         this._internalFormat = internalFormat;
 
         /** @type {number} data type */
-        this._type = type;
+        this._dataType = dataType;
 
         /** @type {number} texture filtering (min & mag) */
         this._filter = filter;
 
+        /** @type {number} texture wrapping */
+        this._wrap = wrap;
+
         /** @type {WebGLTexture} internal texture object */
-        this._glTexture = SpeedyTexture._createTexture(this._gl, this._width, this._height, this._format, this._internalFormat, this._type, this._filter);
+        this._glTexture = SpeedyTexture._createTexture(this._gl, this._width, this._height, this._format, this._internalFormat, this._dataType, this._filter, this._wrap);
     }
 
     /**
@@ -126,9 +130,9 @@ export class SpeedyTexture
         this._height = height;
         this._internalFormat = gl.RGBA8;
         this._format = gl.RGBA;
-        this._type = gl.UNSIGNED_BYTE;
+        this._dataType = gl.UNSIGNED_BYTE;
 
-        SpeedyTexture._upload(gl, this._glTexture, this._width, this._height, pixels, 0, this._format, this._internalFormat, this._type);
+        SpeedyTexture._upload(gl, this._glTexture, this._width, this._height, pixels, 0, this._format, this._internalFormat, this._dataType);
         return this;
     }
 
@@ -146,7 +150,7 @@ export class SpeedyTexture
 
         // clear texture data
         gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, this._internalFormat, this._width, this._height, 0, this._format, this._type, null);
+        gl.texImage2D(gl.TEXTURE_2D, 0, this._internalFormat, this._width, this._height, 0, this._format, this._dataType, null);
         gl.bindTexture(gl.TEXTURE_2D, null);
 
         // no mipmaps
@@ -188,7 +192,7 @@ export class SpeedyTexture
         // resize
         // Note: this is fast on Chrome, but seems slow on Firefox
         gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, this._internalFormat, this._width, this._height, 0, this._format, this._type, null);
+        gl.texImage2D(gl.TEXTURE_2D, 0, this._internalFormat, this._width, this._height, 0, this._format, this._dataType, null);
         gl.bindTexture(gl.TEXTURE_2D, null);
 
         // no mipmaps
@@ -337,11 +341,12 @@ export class SpeedyTexture
      * @param {number} height in pixels
      * @param {number} format usually gl.RGBA
      * @param {number} internalFormat usually gl.RGBA8
-     * @param {number} type usually gl.UNSIGNED_BYTE
+     * @param {number} dataType usually gl.UNSIGNED_BYTE
      * @param {number} filter usually gl.NEAREST or gl.LINEAR
+     * @param {number} wrap gl.REPEAT, gl.MIRRORED_REPEAT or gl.CLAMP_TO_EDGE
      * @returns {WebGLTexture}
      */
-    static _createTexture(gl, width, height, format, internalFormat, type, filter)
+    static _createTexture(gl, width, height, format, internalFormat, dataType, filter, wrap)
     {
         Utils.assert(width > 0 && height > 0);
 
@@ -352,10 +357,10 @@ export class SpeedyTexture
         // setup
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap);
         //gl.texStorage2D(gl.TEXTURE_2D, 1, internalFormat, width, height);
-        gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, null);
+        gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, width, height, 0, format, dataType, null);
 
         // unbind & return
         gl.bindTexture(gl.TEXTURE_2D, null);
@@ -372,10 +377,10 @@ export class SpeedyTexture
      * @param {GLint} lod mipmap level-of-detail
      * @param {number} format
      * @param {number} internalFormat
-     * @param {number} type
+     * @param {number} dataType
      * @returns {WebGLTexture} texture
      */
-    static _upload(gl, texture, width, height, pixels, lod, format, internalFormat, type)
+    static _upload(gl, texture, width, height, pixels, lod, format, internalFormat, dataType)
     {
         // Prefer calling _upload() before gl.useProgram() to avoid the
         // needless switching of GL programs internally. See also:
@@ -402,7 +407,7 @@ export class SpeedyTexture
                       height,               // texture height
                       0,                    // border
                       format,               // source format
-                      type,                 // source type
+                      dataType,             // source type
                       pixels);              // source data
 
         gl.bindTexture(gl.TEXTURE_2D, null);
@@ -422,12 +427,13 @@ export class SpeedyDrawableTexture extends SpeedyTexture
      * @param {number} height texture height in pixels
      * @param {number} [format]
      * @param {number} [internalFormat]
-     * @param {number} [type]
+     * @param {number} [dataType]
      * @param {number} [filter]
+     * @param {number} [wrap]
      */
-    constructor(gl, width, height, format = undefined, internalFormat = undefined, type = undefined, filter = undefined)
+    constructor(gl, width, height, format = undefined, internalFormat = undefined, dataType = undefined, filter = undefined, wrap = undefined)
     {
-        super(gl, width, height, format, internalFormat, type, filter);
+        super(gl, width, height, format, internalFormat, dataType, filter);
 
         /** @type {WebGLFramebuffer} framebuffer */
         this._glFbo = SpeedyDrawableTexture._createFramebuffer(gl, this._glTexture);
