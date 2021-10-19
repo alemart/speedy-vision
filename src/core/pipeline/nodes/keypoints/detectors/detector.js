@@ -34,7 +34,8 @@ const LONG_SKIP_OFFSET_PASSES = 2; // number of passes of the long skip offsets 
 const MAX_CAPACITY = MAX_ENCODER_CAPACITY; // maximum capacity of the encoder (up to this many keypoints can be stored)
 const DEFAULT_CAPACITY = 2048; // default capacity of the encoder (64x64 texture with 2 pixels per keypoint)
 const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // sqrt(2)
-const NUMBER_OF_INTERNAL_TEXTURES = 5; // number of internal textures used to encode the keypoints
+const NUMBER_OF_INTERNAL_TEXTURES = 0; //5; // number of internal textures used to encode the keypoints
+const NUMBER_OF_RGBA16_TEXTURES = 2;
 
 /**
  * Abstract keypoint detector
@@ -57,6 +58,12 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
 
         /** @type {GLint} auxiliary storage */
         this._oldWrapS = 0;
+
+        /** @type {SpeedyDrawableTexture[]} textures with 8-bytes per pixel */
+        this._tex16 = new Array(NUMBER_OF_RGBA16_TEXTURES).fill(null);
+
+        /** @type {Function} helper for tex16 */
+        this._allocateTex16 = this._allocateTex16.bind(this);
     }
 
     /**
@@ -70,6 +77,10 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
 
         // encodeKeypointSkipOffsets() relies on this
         this._oldWrapS = this._setupSpecialTexture(gpu.gl.TEXTURE_WRAP_S, gpu.gl.REPEAT);
+
+        // allocate RGBA16 textures
+        this._allocateTex16(gpu);
+        gpu.subscribe(this._allocateTex16);
     }
 
     /**
@@ -78,6 +89,10 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
      */
     release(gpu)
     {
+        // deallocate RGBA16 textures
+        gpu.unsubscribe(this._allocateTex16);
+        this._deallocateTex16(gpu);
+
         // we need to restore the texture parameter because textures come from a pool!
         this._setupSpecialTexture(gpu.gl.TEXTURE_WRAP_S, this._oldWrapS);
 
@@ -139,6 +154,39 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         const capacity = this._capacity;
         const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(capacity, descriptorSize, extraSize);
         const width = corners.width, height = corners.height;
+        const keypoints = gpu.programs.keypoints;
+
+        // prepare programs
+        keypoints.initLookupTable.outputs(width, height, this._tex16[1]);
+        keypoints.sortLookupTable.outputs(width, height, this._tex16[0], this._tex16[1]);
+
+        // compute lookup table
+        const npasses = Math.ceil(Math.log2(width * height));
+        let lookupTable = keypoints.initLookupTable(corners);
+        for(let i = 0; i < npasses; i++)
+            lookupTable = keypoints.sortLookupTable(lookupTable, 1 << i);
+
+        // encode keypoints
+        (keypoints.encodeKeypoints
+            .outputs(encoderLength, encoderLength, encodedKeypoints)
+        )(corners, lookupTable, width, descriptorSize, extraSize, encoderLength, capacity);
+
+        /*
+        // debug: view texture
+        const canvas = gpu.renderToCanvas(encodedKeypoints);
+        if(!window._ww) document.body.appendChild(canvas);
+        window._ww = 1;
+        */
+
+        // done!
+        return encodedKeypoints;
+    }
+
+    _encodeKeypointsOLD(gpu, corners, encodedKeypoints, descriptorSize = 0, extraSize = 0)
+    {
+        const capacity = this._capacity;
+        const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(capacity, descriptorSize, extraSize);
+        const width = corners.width, height = corners.height;
         const imageSize = [ width, height ];
         const tex = this._tex.slice(this._tex.length - NUMBER_OF_INTERNAL_TEXTURES); // array of internal textures
         const keypoints = gpu.programs.keypoints;
@@ -181,49 +229,6 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         return keypoints.encodeKeypointProperties(corners, encodedKps, descriptorSize, extraSize, encoderLength);
     }
 
-    _encodeKeypoints2(gpu, corners, encodedKeypoints, descriptorSize = 0, extraSize = 0)
-    {
-        const capacity = this._capacity;
-        const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(capacity, descriptorSize, extraSize);
-        const width = corners.width, height = corners.height;
-        const tex = this._tex.slice(this._tex.length - NUMBER_OF_INTERNAL_TEXTURES); // array of internal textures
-        const keypoints = gpu.programs.keypoints;
-
-        // pad textures to a power of two
-        const exp2 = Math.ceil(Math.log2(width * height));
-        const paddedWidth = 1 << (exp2 >>> 1);
-        const paddedHeight = 1 << ((exp2 >>> 1) + (exp2 & 1));
-        keypoints.initLookupOfLocations.outputs(paddedWidth, paddedHeight, tex[1]);
-        keypoints.computeLookupOfLocations.outputs(paddedWidth, paddedHeight, tex[0], tex[1]);
-        keypoints.initSumTable.outputs(paddedWidth, paddedHeight, tex[3]);
-        keypoints.computeSumTable.outputs(paddedWidth, paddedHeight, tex[2], tex[3]);
-
-        // compute lookup table
-        const stride = paddedWidth;
-        let sumTable = keypoints.initSumTable(corners, stride);
-        let lookupTable = keypoints.initLookupOfLocations(corners, stride);
-
-        const npasses = exp2; // = log2(paddedWidth * paddedHeight)
-        for(let i = 0; i < npasses; i++) {
-            const prevSumTable = sumTable;
-            const blockSize = 1 << i;
-            sumTable = keypoints.computeSumTable(prevSumTable, blockSize, 2 * blockSize, stride);
-            lookupTable = keypoints.computeLookupOfLocations(lookupTable, sumTable, prevSumTable, blockSize, 2 * blockSize, stride);
-        }
-
-        /*
-        // debug: view lookup table
-        const canvas = gpu.renderToCanvas(lookupTable);
-        if(!window._ww) document.body.appendChild(canvas);
-        window._ww = 1;
-        */
-
-        // encode keypoints
-        return encodedKeypoints.resize(encoderLength, encoderLength).clear(1,1,1,1);
-    }
-
-
-
     /**
      * Create a tiny texture with zero encoded keypoints
      * @param {SpeedyGPU} gpu
@@ -242,6 +247,29 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         keypoints.encodeNullKeypoints();
 
         return encodedKeypoints;
+    }
+
+    /**
+     * Allocate RGBA16 textures
+     * @param {SpeedyGPU} gpu
+     */
+    _allocateTex16(gpu)
+    {
+        const gl = gpu.gl;
+
+        // RGBA16UI is color renderable according to the OpenGL ES 3 spec
+        for(let i = 0; i < this._tex16.length; i++)
+            this._tex16[i] = new SpeedyDrawableTexture(gl, 1, 1, gl.RGBA_INTEGER, gl.RGBA16UI, gl.UNSIGNED_SHORT, gl.NEAREST);
+    }
+
+    /**
+     * Deallocate RGBA16 textures
+     * @param {SpeedyGPU} gpu
+     */
+    _deallocateTex16(gpu)
+    {
+        for(let i = 0; i < this._tex16.length; i++)
+            this._tex16[i] = this._tex16[i].release();
     }
 
     /**

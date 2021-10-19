@@ -122,21 +122,16 @@ const sortApplyPermutation = importShader('keypoints/sort-applyperm.glsl')
                             .withArguments('permutation', 'maxKeypoints', 'encodedKeypoints', 'descriptorSize', 'extraSize');
 
 // Keypoint encoding
-const computeLookupOfLocations = importShader('keypoints/lookup-of-locations.glsl')
-                                .withDefines({ 'INITIAL': 0, 'SUMTABLE': 0 })
-                                .withArguments('lookupTable', 'sumTable', 'prevSumTable', 'blockSize', 'dblBlockSize', 'stride');
+const initLookupTable = importShader('keypoints/lookup-of-locations.glsl')
+                       .withDefines({ 'FS_OUTPUT_TYPE': 2, 'INITIALIZE': 1 })
+                       .withArguments('corners');
 
-const initLookupOfLocations = importShader('keypoints/lookup-of-locations.glsl')
-                             .withDefines({ 'INITIAL': 1, 'SUMTABLE': 0 })
-                             .withArguments('corners', 'stride');
+const sortLookupTable = importShader('keypoints/lookup-of-locations.glsl')
+                       .withDefines({ 'FS_OUTPUT_TYPE': 2, 'INITIALIZE': 0 })
+                       .withArguments('lookupTable', 'blockSize');
 
-const computeSumTable = importShader('keypoints/lookup-of-locations.glsl')
-                       .withDefines({ 'INITIAL': 0, 'SUMTABLE': 1 })
-                       .withArguments('prevSumTable', 'blockSize', 'dblBlockSize', 'stride');
-
-const initSumTable = importShader('keypoints/lookup-of-locations.glsl')
-                    .withDefines({ 'INITIAL': 1, 'SUMTABLE': 1 })
-                    .withArguments('corners', 'stride');
+const encodeKeypoints = importShader('keypoints/encode-keypoints.glsl')
+                       .withArguments('corners', 'lookupTable', 'stride', 'descriptorSize', 'extraSize', 'encoderLength', 'encoderCapacity');
 
 const encodeKeypointSkipOffsets = importShader('keypoints/encode-keypoint-offsets.glsl')
                                  .withArguments('corners', 'imageSize');
@@ -288,14 +283,13 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             //
             // Keypoint encoders
             //
-            .declare('computeLookupOfLocations', computeLookupOfLocations, {
+            .declare('encodeNullKeypoints', encodeNullKeypoints)
+            .declare('encodeKeypoints', encodeKeypoints)
+            .declare('initLookupTable', initLookupTable)
+            .declare('sortLookupTable', sortLookupTable, {
                 ...this.program.usesPingpongRendering()
             })
-            .declare('computeSumTable', computeSumTable, {
-                ...this.program.usesPingpongRendering()
-            })
-            .declare('initLookupOfLocations', initLookupOfLocations)
-            .declare('initSumTable', initSumTable)
+
 
             .declare('encodeKeypointSkipOffsets', encodeKeypointSkipOffsets)
             .declare('encodeKeypointLongSkipOffsets', encodeKeypointLongSkipOffsets, {
@@ -305,7 +299,9 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
                 ...this.program.usesPingpongRendering()
             })
             .declare('encodeKeypointProperties', encodeKeypointProperties)
-            .declare('encodeNullKeypoints', encodeNullKeypoints)
+
+
+
             .declare('transferOrientation', transferOrientation)
             .declare('discardDescriptors', discardDescriptors)
             .declare('uploadKeypoints', uploadKeypoints, {

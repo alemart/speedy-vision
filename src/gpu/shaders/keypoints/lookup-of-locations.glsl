@@ -64,82 +64,51 @@ relative order of these elements. In addition, the remaining 2b - S2b[k]
 null elements are placed at the end.
 
 In practice, this means that A can be sorted quickly with few dependent
-texture lookups in a fragment shader (at most 1 per pass). Additionally, we
-only require log2(n) passes to sort the array! Very fast!
+texture lookups in a fragment shader. Additionally, we only require log2(n)
+passes to sort the array! Very fast!
 
 Note: if n is not a power of two, simply extend the array with "null" values
 so that the length of the extended array is the smallest power of two greater
-than n. It follows that S1[k] = 0 for all k >= n. This is still efficient
-provided that the input array isn't too large.
+than n. It follows that S1[k] = 0 for all k >= n. Furthermore, the definition
+of Sb tells you that, for all k >= n:
+
+Sb[k] = Sb[n-1] if floor(k/b) == floor((n-1)/b)
+        0 otherwise
+
+We consider that Sb has the length of the extended array A. The explicit
+storage of the extended arrays is not required.
 
 */
 
-@include "int32.glsl"
 @include "float16.glsl"
 
-#if !defined(SUMTABLE) || !defined(INITIAL)
-#error Undefined settings
-#endif
+#if !defined(INITIALIZE)
+#error Undefined INITIALIZE
+#elif INITIALIZE
 
-#if INITIAL
 uniform sampler2D corners;
-#elif SUMTABLE
-uniform sampler2D prevSumTable;
-uniform int blockSize; // 1, 2, 4, 8...
-uniform int dblBlockSize; // 2 * blockSize
+
 #else
-uniform sampler2D lookupTable;
-uniform sampler2D sumTable;
-uniform sampler2D prevSumTable;
-uniform int blockSize; // 1, 2, 4, 8...
-uniform int dblBlockSize; // 2 * blockSize
+
+precision mediump usampler2D; // between 16 and 32 bits of precision (GLSL ES 3 spec sec 4.5.1)
+uniform usampler2D lookupTable;
+uniform int blockSize;
+
 #endif
 
-uniform int stride; // width of the output texture (power of two)
+const uvec2 NULL_ELEMENT = uvec2(0xFFFFu);
 
-const vec4 NULL_LOCATION = vec4(1.0f);
-
-// main
 void main()
 {
+    ivec2 outSize = outputSize();
     ivec2 thread = threadLocation();
+    int stride = outSize.x;
     int location = thread.y * stride + thread.x; // this is the "k"
 
-#if SUMTABLE && INITIAL
+#if INITIALIZE
 
     //
-    // Initialize S1
-    //
-
-    ivec2 size = textureSize(corners, 0);
-    int width = size.x, height = size.y;
-
-    ivec2 pos = ivec2(location % width, location / width);
-    vec4 pixel = location < width * height ? texelFetch(corners, pos, 0) : vec4(0.0f);
-    bool isCorner = !isEncodedFloat16Zero(pixel.rb);
-
-    color = encodeUint32(uint(isCorner));
-
-#elif SUMTABLE && !INITIAL
-
-    //
-    // Compute S2b given Sb
-    //
-
-    int s = 2 * int(location % dblBlockSize < blockSize) - 1; // 1 or -1
-    int queryLocation = location + s * blockSize;
-    ivec2 queryPosition = ivec2(queryLocation % stride, queryLocation / stride);
-
-    vec4 pixel = threadPixel(prevSumTable);
-    vec4 queryPixel = texelFetch(prevSumTable, queryPosition, 0);
-    uint s2b = decodeUint32(pixel) + decodeUint32(queryPixel);
-
-    color = encodeUint32(s2b);
-
-#elif !SUMTABLE && INITIAL
-
-    //
-    // Initialize A1
+    // Initialize A1 and S1
     //
 
     ivec2 size = textureSize(corners, 0);
@@ -149,30 +118,43 @@ void main()
     vec4 pixel = location < width * height ? texelFetch(corners, pos, 0) : vec4(0.0f);
     bool isCorner = !isEncodedFloat16Zero(pixel.rb);
 
-    color = isCorner ? encodeUint32(uint(pos.y * width + pos.x)) : NULL_LOCATION;
+    color = isCorner ? uvec4(uvec2(pos), 1u, 0u) : uvec4(NULL_ELEMENT, 0u, 0u);
 
 #else
 
     //
-    // Compute A2b given Ab, Sb and S2b
+    // Compute A2b and S2b
     //
 
+    int dblBlockSize = 2 * blockSize;
     int offset = location % dblBlockSize;
+    uvec4 entry = threadPixel(lookupTable);
 
-    int s2b = int(decodeUint32(threadPixel(sumTable)));
-    color = NULL_LOCATION;
+    int s = 2 * int(offset < blockSize) - 1; // 1 or -1
+    int wantedLocation = location + s * blockSize;
+    int lastLocation = outSize.x * outSize.y - 1;
+    int queryLocation = min(wantedLocation, lastLocation);
+    ivec2 queryPosition = ivec2(queryLocation % stride, queryLocation / stride);
+    uvec4 queryEntry = texelFetch(lookupTable, queryPosition, 0);
+    queryEntry.z *= uint(wantedLocation <= lastLocation ||
+        wantedLocation / blockSize == lastLocation / blockSize);
+
+    int sb = int(entry.z);
+    int s2b = sb + int(queryEntry.z);
+
+    color = uvec4(NULL_ELEMENT, uint(s2b), 0u);
     if(offset >= s2b)
         return;
 
-    int sb = int(decodeUint32(threadPixel(prevSumTable)));
     int l2b = offset < blockSize ? sb : s2b - sb;
-    color = threadPixel(lookupTable);
+    color = uvec4(entry.xy, uint(s2b), 0u);
     if(offset < l2b)
         return;
 
-    int queryLocation = location - l2b + blockSize;
-    ivec2 queryPosition = ivec2(queryLocation % stride, queryLocation / stride);
-    color = texelFetch(lookupTable, queryPosition, 0);
+    queryLocation = location - l2b + blockSize;
+    queryPosition = ivec2(queryLocation % stride, queryLocation / stride);
+    queryEntry = texelFetch(lookupTable, queryPosition, 0);
+    color = uvec4(queryEntry.xy, uint(s2b), 0u);
 
 #endif
 }
