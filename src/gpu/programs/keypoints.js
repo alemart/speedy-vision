@@ -127,7 +127,7 @@ const initLookupTable = importShader('keypoints/lookup-of-locations.glsl')
                        .withArguments('corners');
 
 const sortLookupTable = importShader('keypoints/lookup-of-locations.glsl')
-                       .withDefines({ 'FS_OUTPUT_TYPE': 2, 'INITIALIZE': 0 })
+                       .withDefines({ 'FS_OUTPUT_TYPE': 2, 'FS_USE_CUSTOM_PRECISION': 0, 'INITIALIZE': 0 })
                        .withArguments('lookupTable', 'blockSize');
 
 const encodeKeypoints = importShader('keypoints/encode-keypoints.glsl')

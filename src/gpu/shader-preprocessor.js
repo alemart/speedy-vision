@@ -35,6 +35,7 @@ const constants = Object.freeze({
     ...numericGlobals,
 
     // fragment shader
+    'FS_USE_CUSTOM_PRECISION': 0, // use default precision settings
     'FS_OUTPUT_TYPE': 0, // normalized RGBA
 
     // colors

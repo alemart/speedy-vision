@@ -80,19 +80,22 @@ storage of the extended arrays is not required.
 
 */
 
-@include "float16.glsl"
+#if @FS_USE_CUSTOM_PRECISION@
+precision mediump int; // between 16 and 32 bits of precision (GLSL ES 3 spec sec 4.5.1)
+precision mediump float; // ~float16
+#endif
 
 #if !defined(INITIALIZE)
 #error Undefined INITIALIZE
 #elif INITIALIZE
 
+@include "float16.glsl"
 uniform sampler2D corners;
 
 #else
 
-precision mediump usampler2D; // between 16 and 32 bits of precision (GLSL ES 3 spec sec 4.5.1)
-uniform usampler2D lookupTable;
-uniform int blockSize;
+uniform mediump usampler2D lookupTable;
+uniform uint blockSize;
 
 #endif
 
@@ -100,10 +103,10 @@ const uvec2 NULL_ELEMENT = uvec2(0xFFFFu);
 
 void main()
 {
-    ivec2 outSize = outputSize();
-    ivec2 thread = threadLocation();
-    int stride = outSize.x;
-    int location = thread.y * stride + thread.x; // this is the "k"
+    uvec2 outSize = uvec2(outputSize());
+    uvec2 thread = uvec2(threadLocation());
+    uint stride = outSize.x;
+    uint location = thread.y * stride + thread.x; // this is the "k"
 
 #if INITIALIZE
 
@@ -111,8 +114,8 @@ void main()
     // Initialize A1 and S1
     //
 
-    ivec2 size = textureSize(corners, 0);
-    int width = size.x, height = size.y;
+    uvec2 size = uvec2(textureSize(corners, 0));
+    uint width = size.x, height = size.y;
 
     ivec2 pos = ivec2(location % width, location / width);
     vec4 pixel = location < width * height ? texelFetch(corners, pos, 0) : vec4(0.0f);
@@ -123,38 +126,39 @@ void main()
 #else
 
     //
-    // Compute A2b and S2b
+    // Compute A2b and S2b (need highp int)
     //
 
-    int dblBlockSize = 2 * blockSize;
-    int offset = location % dblBlockSize;
-    uvec4 entry = threadPixel(lookupTable);
+    uint dblBlockSize = 2u * blockSize;
+    uint offset = uint(location % dblBlockSize);
 
-    int s = 2 * int(offset < blockSize) - 1; // 1 or -1
-    int wantedLocation = location + s * blockSize;
-    int lastLocation = outSize.x * outSize.y - 1;
-    int queryLocation = min(wantedLocation, lastLocation);
+    uint s = 2u * uint(offset < blockSize) - 1u; // 1 or -1
+    uint wantedLocation = location + s * blockSize;
+    uint lastLocation = outSize.x * outSize.y - 1u;
+    uint queryLocation = min(wantedLocation, lastLocation);
     ivec2 queryPosition = ivec2(queryLocation % stride, queryLocation / stride);
     uvec4 queryEntry = texelFetch(lookupTable, queryPosition, 0);
     queryEntry.z *= uint(wantedLocation <= lastLocation ||
         wantedLocation / blockSize == lastLocation / blockSize);
+    uvec4 entry = texture(lookupTable, texCoord); //threadPixel(lookupTable);
 
-    int sb = int(entry.z);
-    int s2b = sb + int(queryEntry.z);
+    uint sb = entry.z;
+    uint s2b = sb + queryEntry.z;
+    s2b = s2b < sb ? 0xFFFFu : min(0xFFFFu, s2b); // overflows at 64k corners
 
-    color = uvec4(NULL_ELEMENT, uint(s2b), 0u);
+    color = uvec4(NULL_ELEMENT, s2b, 0u);
     if(offset >= s2b)
         return;
 
-    int l2b = offset < blockSize ? sb : s2b - sb;
-    color = uvec4(entry.xy, uint(s2b), 0u);
+    uint l2b = offset < blockSize ? sb : s2b - sb;
+    color = uvec4(entry.xy, s2b, 0u);
     if(offset < l2b)
         return;
 
     queryLocation = location - l2b + blockSize;
     queryPosition = ivec2(queryLocation % stride, queryLocation / stride);
     queryEntry = texelFetch(lookupTable, queryPosition, 0);
-    color = uvec4(queryEntry.xy, uint(s2b), 0u);
+    color = uvec4(queryEntry.xy, s2b, 0u);
 
 #endif
 }
