@@ -28,7 +28,7 @@ import { GLError, IllegalArgumentError, IllegalOperationError } from '../utils/e
 //
 // Constants
 //
-//const IS_FIREFOX = navigator.userAgent.includes('Firefox');
+const IS_FIREFOX = navigator.userAgent.includes('Firefox');
 
 
 
@@ -127,7 +127,7 @@ export class GLUtils
             setTimeout(GLUtils._checkStatus, pollInterval, gl, sync, flags, resolve, reject, nextPollInterval); // easier on the CPU
         }
         else if(status == gl.WAIT_FAILED) {
-            if(/*IS_FIREFOX &&*/ gl.getError() == gl.NO_ERROR) { // firefox bug?
+            if(IS_FIREFOX /*&& gl.getError() == gl.NO_ERROR*/) { // firefox bug? gl.getError() may be slow
                 //Utils.setZeroTimeout(GLUtils._checkStatus, gl, sync, flags, resolve, reject);
                 setTimeout(GLUtils._checkStatus, pollInterval, gl, sync, flags, resolve, reject, nextPollInterval);
             }
