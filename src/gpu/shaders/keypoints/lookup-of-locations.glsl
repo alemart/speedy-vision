@@ -178,6 +178,13 @@ Parallel Ale Combine is itself a sorting algorithm that may be used to sort
 1D arrays: just think that each element is an array of length 1. When you
 set n = 1, the algorithm becomes Parallel Ale Sort!
 
+If you need to sort a m x n x z 3D array, sort each of the z 2D arrays using
+Parallel Ale Sort and Parallel Ale Combine. Next, think of each sorted 2D
+array as a 1D array of length m * n. Reapply Parallel Ale Combine to the 3D
+array viewed as a (m * n) x z 2D array. You'll need log2(m) + log2(n) + log2(z)
+passes to sort the 3D array. In general, you can sort a n-dimensional array
+with successive applications of the algorithm.
+
 */
 
 #if @FS_USE_CUSTOM_PRECISION@
