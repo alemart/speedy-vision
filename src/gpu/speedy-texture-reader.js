@@ -27,8 +27,7 @@ import { IllegalArgumentError, IllegalOperationError } from '../utils/errors';
 
 // number of pixel buffer objects
 // used to get a performance boost in gl.readPixels()
-// (1 seems to perform better on mobile, 2 on the PC?)
-const DEFAULT_NUMBER_OF_BUFFERS = 1; //2;
+const DEFAULT_NUMBER_OF_BUFFERS = 2;
 
 
 /**
@@ -122,7 +121,7 @@ export class SpeedyTextureReader
      * @param {boolean} [useBufferedDownloads] accelerate downloads by returning pixels from the texture of the previous call (useful for streaming)
      * @returns {SpeedyPromise<Uint8Array>} resolves to an array of pixels in the RGBA format
      */
-    readPixelsAsync(texture, x = 0, y = 0, width = texture.width, height = texture.height, useBufferedDownloads = false)
+    readPixelsAsync(texture, x = 0, y = 0, width = texture.width, height = texture.height, useBufferedDownloads = true)
     {
         const gl = texture.gl;
         const fbo = texture.glFbo;
