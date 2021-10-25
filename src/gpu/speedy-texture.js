@@ -433,7 +433,7 @@ export class SpeedyDrawableTexture extends SpeedyTexture
      */
     constructor(gl, width, height, format = undefined, internalFormat = undefined, dataType = undefined, filter = undefined, wrap = undefined)
     {
-        super(gl, width, height, format, internalFormat, dataType, filter);
+        super(gl, width, height, format, internalFormat, dataType, filter, wrap);
 
         /** @type {WebGLFramebuffer} framebuffer */
         this._glFbo = SpeedyDrawableTexture._createFramebuffer(gl, this._glTexture);
