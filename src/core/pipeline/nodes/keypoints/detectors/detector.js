@@ -151,31 +151,34 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
      */
     _encodeKeypoints(gpu, corners, encodedKeypoints, descriptorSize = 0, extraSize = 0)
     {
-        const capacity = this._capacity;
-        const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(capacity, descriptorSize, extraSize);
-        const width = corners.width, height = corners.height;
+        const encoderCapacity = this._capacity;
+        const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(encoderCapacity, descriptorSize, extraSize);
+        const width = 1 << (Math.ceil(Math.log2(corners.width * corners.height)) >>> 1); // power of two
+        const height = Math.ceil(corners.width * corners.height / width);
+        const maxSize = Math.max(width, height);
         const keypoints = gpu.programs.keypoints;
 
         // prepare programs
         keypoints.initLookupTable.outputs(width, height, this._tex16[1]);
         keypoints.sortLookupTable.outputs(width, height, this._tex16[0], this._tex16[1]);
+        keypoints.encodeKeypoints.outputs(encoderLength, encoderLength, encodedKeypoints);
 
         // compute lookup table
-        const npasses = Math.ceil(Math.log2(width * height));
         let lookupTable = keypoints.initLookupTable(corners);
-        for(let i = 0; i < npasses; i++)
-            lookupTable = keypoints.sortLookupTable(lookupTable, 1 << i);
+        for(let b = 1; b < maxSize; b *= 2)
+            lookupTable = keypoints.sortLookupTable(lookupTable, b, width, height);
 
         // encode keypoints
-        (keypoints.encodeKeypoints
-            .outputs(encoderLength, encoderLength, encodedKeypoints)
-        )(corners, lookupTable, width, descriptorSize, extraSize, encoderLength, capacity);
+        keypoints.encodeKeypoints(corners, lookupTable, width, descriptorSize, extraSize, encoderLength, encoderCapacity);
 
         /*
         // debug: view texture
-        const canvas = gpu.renderToCanvas(encodedKeypoints);
-        if(!window._ww) document.body.appendChild(canvas);
-        window._ww = 1;
+        const lookupView = (keypoints.viewLookupTable.outputs(
+            width, height, this._tex[0]
+        ))(lookupTable);
+        const canvas = gpu.renderToCanvas(lookupView);
+        if(!this._ww) document.body.appendChild(canvas);
+        this._ww = 1;
         */
 
         // done!

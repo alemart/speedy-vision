@@ -123,12 +123,16 @@ const sortApplyPermutation = importShader('keypoints/sort-applyperm.glsl')
 
 // Keypoint encoding
 const initLookupTable = importShader('keypoints/lookup-of-locations.glsl')
-                       .withDefines({ 'FS_OUTPUT_TYPE': 2, 'INITIALIZE': 1 })
+                       .withDefines({ 'FS_OUTPUT_TYPE': 2, 'STAGE': 1 })
                        .withArguments('corners');
 
 const sortLookupTable = importShader('keypoints/lookup-of-locations.glsl')
-                       .withDefines({ 'FS_OUTPUT_TYPE': 2, 'FS_USE_CUSTOM_PRECISION': 0, 'INITIALIZE': 0 })
-                       .withArguments('lookupTable', 'blockSize');
+                       .withDefines({ 'FS_OUTPUT_TYPE': 2, 'FS_USE_CUSTOM_PRECISION': 1, 'STAGE': 2 })
+                       .withArguments('lookupTable', 'blockSize', 'width', 'height');
+
+const viewLookupTable = importShader('keypoints/lookup-of-locations.glsl')
+                       .withDefines({ 'STAGE': -1 })
+                       .withArguments('lookupTable');
 
 const encodeKeypoints = importShader('keypoints/encode-keypoints.glsl')
                        .withArguments('corners', 'lookupTable', 'stride', 'descriptorSize', 'extraSize', 'encoderLength', 'encoderCapacity');
@@ -289,6 +293,7 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             .declare('sortLookupTable', sortLookupTable, {
                 ...this.program.usesPingpongRendering()
             })
+            .declare('viewLookupTable', viewLookupTable)
 
 
             .declare('encodeKeypointSkipOffsets', encodeKeypointSkipOffsets)
