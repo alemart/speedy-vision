@@ -63,12 +63,22 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
     }
 
     /**
+     * Initializes this node
+     * @param {SpeedyGPU} gpu
+     */
+    init(gpu)
+    {
+        super.init(gpu);
+        this._textureReader.init(gpu);
+    }
+
+    /**
      * Releases this node
      * @param {SpeedyGPU} gpu
      */
     release(gpu)
     {
-        this._textureReader = this._textureReader.release();
+        this._textureReader.release(gpu);
         super.release(gpu);
     }
 

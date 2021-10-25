@@ -64,28 +64,33 @@ export class GLUtils
      * This is like gl.getBufferSubData(), but async
      * @param {WebGL2RenderingContext} gl
      * @param {WebGLBuffer} glBuffer will be bound to target
-     * @param {GLenum} target
+     * @param {GLenum} target e.g., gl.PIXEL_PACK_BUFFER
      * @param {GLintptr} srcByteOffset usually 0
      * @param {ArrayBufferView} destBuffer
      * @param {GLuint} [destOffset]
      * @param {GLuint} [length]
-     * @returns {SpeedyPromise<number>} a promise that resolves to the time it took to read the data (in ms)
+     * @returns {SpeedyPromise<void>}
      */
     static getBufferSubDataAsync(gl, glBuffer, target, srcByteOffset, destBuffer, destOffset = 0, length = 0)
     {
         const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-        //const start = performance.now();
 
         // empty internal command queues and send them to the GPU asap
         gl.flush(); // make sure the sync command is read
 
         // wait for the commands to be processed by the GPU
-        return this.clientWaitAsync(gl, sync).then(() => {
+        return new SpeedyPromise((resolve, reject) => {
+            // according to the WebGL2 spec sec 3.7.14 Sync objects,
+            // "sync objects may only transition to the signaled state
+            // when the user agent's event loop is not executing a task"
+            // in other words, it won't be signaled in the same frame
+            setTimeout(() => {
+                GLUtils._checkStatus(gl, sync, 0, resolve, reject);
+            }, 0);
+        }).then(() => {
             gl.bindBuffer(target, glBuffer);
             gl.getBufferSubData(target, srcByteOffset, destBuffer, destOffset, length);
             gl.bindBuffer(target, null);
-            return 0; // disable timers
-            //return performance.now() - start;
         }).catch(err => {
             throw new IllegalOperationError(`Can't getBufferSubDataAsync(): error in clientWaitAsync()`, err);
         }).finally(() => {
@@ -96,22 +101,8 @@ export class GLUtils
     /**
      * Waits for a sync object to become signaled
      * @param {WebGL2RenderingContext} gl
-     * @param {WebGLSync} sync sync object
-     * @param {GLbitfield} [flags] may be gl.SYNC_FLUSH_COMMANDS_BIT or 0
-     * @returns {SpeedyPromise} a promise that resolves as soon as the sync object becomes signaled
-     */
-    static clientWaitAsync(gl, sync, flags = 0)
-    {
-        return new SpeedyPromise((resolve, reject) => {
-            this._checkStatus(gl, sync, flags, resolve, reject);
-        });
-    }
-
-    /**
-     * Auxiliary method for clientWaitAsync()
-     * @param {WebGL2RenderingContext} gl
      * @param {WebGLSync} sync
-     * @param {GLbitfield} flags
+     * @param {GLbitfield} flags may be gl.SYNC_FLUSH_COMMANDS_BIT or 0
      * @param {Function} resolve
      * @param {Function} reject
      * @param {number} [pollInterval] in milliseconds

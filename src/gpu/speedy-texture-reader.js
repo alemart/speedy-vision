@@ -21,6 +21,7 @@
 
 import { Utils } from '../utils/utils';
 import { GLUtils } from './gl-utils';
+import { SpeedyGPU } from './speedy-gpu';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { SpeedyDrawableTexture } from './speedy-texture';
 import { IllegalArgumentError, IllegalOperationError } from '../utils/errors';
@@ -52,23 +53,37 @@ export class SpeedyTextureReader
         /** @type {number[]} for async data transfers (stores buffer indices) */
         this._producerQueue = [];
 
-        /** @type {[WebGL2RenderingContext,WebGLBuffer]} lazily allocated PBO */
-        this._glPbo = [null, null];
+        /** @type {WebGLBuffer[]} Pixel Buffer Objects (PBOs) */
+        this._pbo = (new Array(numberOfBuffers)).fill(null);
+
+        /** @type {boolean} is this object initialized? */
+        this._initialized = false;
+    }
+
+    /**
+     * Initialize this object
+     * @param {SpeedyGPU} gpu
+     */
+    init(gpu)
+    {
+        this._allocatePBOs = this._allocatePBOs.bind(this);
+        this._allocatePBOs(gpu);
+        gpu.subscribe(this._allocatePBOs);
+
+        this._initialized = true;
     }
 
     /**
      * Release resources
+     * @param {SpeedyGPU} gpu
      * @returns {null}
      */
-    release()
+    release(gpu)
     {
-        const [ gl, pbo ] = this._glPbo;
+        gpu.unsubscribe(this._allocatePBOs);
+        this._deallocatePBOs(gpu);
 
-        if(gl && gl.isBuffer(pbo)) { // should account for context loss
-            gl.deleteBuffer(pbo);
-            this._glPbo.fill(null);
-        }
-
+        this._initialized = false;
         return null;
     }
 
@@ -84,6 +99,8 @@ export class SpeedyTextureReader
      */
     readPixelsSync(texture, x = 0, y = 0, width = texture.width, height = texture.height)
     {
+        Utils.assert(this._initialized);
+
         const gl = texture.gl;
         const fbo = texture.glFbo;
 
@@ -121,8 +138,10 @@ export class SpeedyTextureReader
      * @param {boolean} [useBufferedDownloads] accelerate downloads by returning pixels from the texture of the previous call (useful for streaming)
      * @returns {SpeedyPromise<Uint8Array>} resolves to an array of pixels in the RGBA format
      */
-    readPixelsAsync(texture, x = 0, y = 0, width = texture.width, height = texture.height, useBufferedDownloads = true)
+    readPixelsAsync(texture, x = 0, y = 0, width = texture.width, height = texture.height, useBufferedDownloads = false)
     {
+        Utils.assert(this._initialized);
+
         const gl = texture.gl;
         const fbo = texture.glFbo;
 
@@ -140,18 +159,9 @@ export class SpeedyTextureReader
         if(gl.isContextLost())
             return SpeedyPromise.resolve(this._pixelBuffer[0].subarray(0, sizeofBuffer));
 
-        // lazily allocate a PBO using the current WebGL2 rendering context
-        if(gl !== this._glPbo[0]) {
-            const [ _gl, _pbo ] = this._glPbo;
-            if(_gl && _gl.isBuffer(_pbo))
-                _gl.deleteBuffer(_pbo);
-            this._glPbo = [ gl, gl.createBuffer() ];
-        }
-        const pbo = this._glPbo[1];
-
         // do not optimize?
         if(!useBufferedDownloads) {
-            return SpeedyTextureReader._readPixelsViaPBO(gl, pbo, this._pixelBuffer[0], fbo, x, y, width, height).then(() =>
+            return SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[0], this._pixelBuffer[0], fbo, x, y, width, height).then(() =>
                 this._pixelBuffer[0].subarray(0, sizeofBuffer)
             );
         }
@@ -159,13 +169,13 @@ export class SpeedyTextureReader
         // GPU needs to produce data
         if(this._producerQueue.length > 0) {
             const nextBufferIndex = this._producerQueue.shift();
-            SpeedyTextureReader._readPixelsViaPBO(gl, pbo, this._pixelBuffer[nextBufferIndex], fbo, x, y, width, height).then(() => {
+            SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[nextBufferIndex], this._pixelBuffer[nextBufferIndex], fbo, x, y, width, height).then(() => {
                 this._consumerQueue.push(nextBufferIndex);
             });
         }
         else SpeedyTextureReader._waitForQueueNotEmpty(this._producerQueue).then(() => {
             const nextBufferIndex = this._producerQueue.shift();
-            SpeedyTextureReader._readPixelsViaPBO(gl, pbo, this._pixelBuffer[nextBufferIndex], fbo, x, y, width, height).then(() => {
+            SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[nextBufferIndex], this._pixelBuffer[nextBufferIndex], fbo, x, y, width, height).then(() => {
                 this._consumerQueue.push(nextBufferIndex);
             });
         }).turbocharge();
@@ -265,5 +275,31 @@ export class SpeedyTextureReader
         ).catch(err => {
             throw new IllegalOperationError(`Can't read pixels`, err);
         });
+    }
+
+    /**
+     * Allocate PBOs
+     * @param {SpeedyGPU} gpu
+     */
+    _allocatePBOs(gpu)
+    {
+        const gl = gpu.gl;
+
+        for(let i = 0; i < this._pbo.length; i++)
+            this._pbo[i] = gl.createBuffer();
+    }
+
+    /**
+     * Deallocate PBOs
+     * @param {SpeedyGPU} gpu
+     */
+    _deallocatePBOs(gpu)
+    {
+        const gl = gpu.gl;
+
+        for(let i = this._pbo.length - 1; i >= 0; i--) {
+            gl.destroyBuffer(this._pbo[i]);
+            this._pbo[i] = null;
+        }
     }
 }
