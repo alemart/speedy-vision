@@ -63,7 +63,7 @@ export const MAX_TEXTURE_LENGTH = (1 << (16 - FIX_BITS)) - 2; // must be 2^n - 2
 export const MIN_KEYPOINT_SIZE = 8;
 
 /** @type {number} Minimum length of a keypoint encoder, in pixels (encodes at least 1 keypoint) */
-export const MIN_ENCODER_LENGTH = 16; // 16 is faster than 2 on my system //Math.ceil(Math.sqrt(MIN_KEYPOINT_SIZE / 4)); // encodes 2, actually
+export const MIN_ENCODER_LENGTH = 2; // capacity computations are based on this // Math.ceil(Math.sqrt(MIN_KEYPOINT_SIZE / 4));
 
 /** @type {number} Maximum number of keypoints we can encode (the actual length of the encoder may vary) */
 export const MAX_ENCODER_CAPACITY = 8192;
