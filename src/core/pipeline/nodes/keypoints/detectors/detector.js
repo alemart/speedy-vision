@@ -29,13 +29,15 @@ import { SpeedyPromise } from '../../../../../utils/speedy-promise';
 import { MIN_KEYPOINT_SIZE, MIN_ENCODER_LENGTH, MAX_ENCODER_CAPACITY } from '../../../../../utils/globals';
 
 // Constants
-const ENCODER_PASSES = 4; // number of passes of the keypoint encoder: directly impacts performance
-const LONG_SKIP_OFFSET_PASSES = 2; // number of passes of the long skip offsets shader
 const MAX_CAPACITY = MAX_ENCODER_CAPACITY; // maximum capacity of the encoder (up to this many keypoints can be stored)
 const DEFAULT_CAPACITY = 2048; // default capacity of the encoder (64x64 texture with 2 pixels per keypoint)
 const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // sqrt(2)
-const NUMBER_OF_INTERNAL_TEXTURES = 0; //5; // number of internal textures used to encode the keypoints
 const NUMBER_OF_RGBA16_TEXTURES = 2;
+
+// legacy constants
+const NUMBER_OF_INTERNAL_TEXTURES = 0; //5; // number of internal textures used to encode the keypoints
+const ENCODER_PASSES = 4; // number of passes of the keypoint encoder: directly impacts performance
+const LONG_SKIP_OFFSET_PASSES = 2; // number of passes of the long skip offsets shader
 
 /**
  * Abstract keypoint detector
@@ -108,6 +110,10 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
      */
     _setupSpecialTexture(pname, param)
     {
+        if(NUMBER_OF_INTERNAL_TEXTURES == 0)
+            return;
+
+        // legacy code
         const texture = this._tex[this._tex.length - 1];
         const gl = texture.gl;
 
@@ -168,9 +174,6 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         for(let b = 1; b < maxSize; b *= 2)
             lookupTable = keypoints.sortLookupTable(lookupTable, b, width, height);
 
-        // encode keypoints
-        keypoints.encodeKeypoints(corners, lookupTable, width, descriptorSize, extraSize, encoderLength, encoderCapacity);
-
         /*
         // debug: view texture
         const lookupView = (keypoints.viewLookupTable.outputs(
@@ -181,8 +184,8 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         this._ww = 1;
         */
 
-        // done!
-        return encodedKeypoints;
+        // encode keypoints
+        return keypoints.encodeKeypoints(corners, lookupTable, width, descriptorSize, extraSize, encoderLength, encoderCapacity);
     }
 
     _encodeKeypointsOLD(gpu, corners, encodedKeypoints, descriptorSize = 0, extraSize = 0)
