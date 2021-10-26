@@ -30,12 +30,6 @@ import { IllegalOperationError } from '../../../../utils/errors';
 import { MAX_ENCODER_CAPACITY } from '../../../../utils/globals';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 
-
-// Constants
-const LOG2_STRIDE = 5;
-
-
-
 /**
  * Keypoint Mixer: merges two sets of keypoints
  */
