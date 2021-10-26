@@ -123,9 +123,10 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
         let descriptorBytes, extraBytes, descriptor;
 
         // how many bytes should we read?
-        const e = encoderLength;
-        const e2 = e * e * bytesPerKeypoint;
-        const size = Math.min(pixels.length, e2);
+        const e2 = encoderLength * encoderLength * 4;
+        const size = pixels.byteLength;
+        if(size != e2)
+            Utils.warning(`Expected ${e2} bytes when decoding a set of keypoints, found ${size}`);
 
         // copy the data (we use shared buffers when receiving pixels[])
         if(descriptorSize + extraSize > 0)

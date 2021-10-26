@@ -33,6 +33,7 @@ void main()
 {
     vec4 pixel = threadPixel(encodedKeypoints);
     ivec2 thread = threadLocation();
+    int len = textureSize(encodedFlow, 0).x;
 
     // find my keypoint and its index in raster order
     KeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);
@@ -45,9 +46,8 @@ void main()
         return;
 
     // find the corresponding location in the encoded flow texture
-    int len = textureSize(encodedFlow, 0).x;
     ivec2 location = ivec2(myIndex % len, myIndex / len);
-    vec4 encodedFlow = pixelAt(encodedFlow, location);
+    vec4 encodedFlow = myIndex < len * len ? pixelAt(encodedFlow, location) : encodeDiscardedKeypoint();
     bool discardFlow = isDiscardedPairOfFloat16(encodedFlow);
 
     // compute the new position of the keypoint

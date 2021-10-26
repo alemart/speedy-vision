@@ -247,9 +247,7 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         const keypoints = gpu.programs.keypoints;
 
         keypoints.encodeNullKeypoints.outputs(encoderLength, encoderLength, encodedKeypoints);
-        keypoints.encodeNullKeypoints();
-
-        return encodedKeypoints;
+        return keypoints.encodeNullKeypoints();
     }
 
     /**

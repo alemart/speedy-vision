@@ -191,7 +191,7 @@ const uint KPF_INFINITY = 2u; // keypoint at infinity
  * @param {sampler2D} encodedKeypoints texture sampler
  * @param {int} encoderLength encoded keypoint texture is encoderLength x encoderLength
  * @param {KeypointAddress} address keypoint address
- * @returns {vec4} 32-bit encoded data
+ * @returns {vec4} 32-bit encoded data - must return null if the address is invalid!
  */
 vec4 readKeypointData(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)
 {
@@ -279,7 +279,7 @@ vec4 encodeKeypointPosition(vec2 position)
     const vec2 zeros = vec2(0.0f); // position can't be negative
     fixed2_t pos = vec2tofix(max(position, zeros));
     fixed2_t lo = pos & 255;
-    fixed2_t hi = pos >> 8;
+    fixed2_t hi = (pos >> 8) & 255;
 
     return vec4(lo.x, hi.x, lo.y, hi.y) / 255.0f;
 }

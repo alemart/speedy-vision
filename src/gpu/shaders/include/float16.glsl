@@ -61,6 +61,14 @@
 #define encodeNullPairOfFloat16() vec4(1.0f) // this is a pair of NaN according to the OpenGL ES 3 spec sec 2.1.2
 
 /**
+ * Checks if the input is a "null" pair of 16-bit
+ * floats encoded as above
+ * @param {vec4} v
+ * @returns {bool}
+ */
+#define isNullPairOfFloat16(v) all(equal((v), encodeNullPairOfFloat16()))
+
+/**
  * Encoded a "discarded" (skipped) pair of 16-bit
  * floats into a 32-bit vector
  * @returns {vec4} in [0,1]^4
@@ -69,7 +77,8 @@
 
 /**
  * Checks if the input is a "discarded" pair of 16-bit
- * encoded as above
+ * floats encoded as above
+ * @param {vec4} v
  * @returns {bool}
  */
 #define isDiscardedPairOfFloat16(v) all(equal((v), encodeDiscardedPairOfFloat16()))

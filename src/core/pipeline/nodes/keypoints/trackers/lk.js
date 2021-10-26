@@ -202,7 +202,6 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
         const epsilon = this._epsilon;
         const keypoints = gpu.programs.keypoints;
         const tex = this._tex;
-        const nextKeypoints = this._tex[2];
 
         // do we need a pyramid?
         if(!(levels == 1 || (previousImage.hasMipmaps() && nextImage.hasMipmaps())))
@@ -226,13 +225,13 @@ export class SpeedyPipelineNodeLKKeypointTracker extends SpeedyPipelineNode
         lk.outputs(lkEncoderLength, lkEncoderLength, tex[0], tex[1]);
 
         // compute optical-flow
-        let flow = tex[1].clear();
+        let flow = lk.clear();
         for(let lod = levels - 1; lod >= 0; lod--)
             flow = lk(flow, previousKeypoints, nextImage, previousImage, wsize, lod, levels, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);
 
         // transfer optical-flow to nextKeypoints
-        keypoints.transferFlow.outputs(encoderLength, encoderLength, nextKeypoints);
-        keypoints.transferFlow(flow, previousKeypoints, descriptorSize, extraSize, encoderLength);
+        keypoints.transferFlow.outputs(encoderLength, encoderLength, tex[2]);
+        const nextKeypoints = keypoints.transferFlow(flow, previousKeypoints, descriptorSize, extraSize, encoderLength);
 
         // done!
         this.output().swrite(nextKeypoints, descriptorSize, extraSize, encoderLength);

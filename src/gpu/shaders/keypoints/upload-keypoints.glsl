@@ -60,10 +60,7 @@ void main()
     switch(address.offset) {
         case 0: {
             // keypoint position
-            fixed2_t pos = vec2tofix(data.xy);
-            fixed2_t lo = pos & 255;
-            fixed2_t hi = (pos >> 8) & 255;
-            color = vec4(float(lo.x), float(hi.x), float(lo.y), float(hi.y)) / 255.0f;
+            color = encodeKeypointPosition(data.xy);
             break;
         }
 
