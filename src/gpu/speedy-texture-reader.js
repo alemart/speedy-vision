@@ -211,7 +211,7 @@ export class SpeedyTextureReader
         // reallocate
         for(let i = 0; i < this._pixelBuffer.length; i++) {
             const newBuffer = new Uint8Array(size);
-            newBuffer.set(this._pixelBuffer[i]); // make this optional?
+            //newBuffer.set(this._pixelBuffer[i]); // make this optional?
             this._pixelBuffer[i] = newBuffer;
         }
     }
@@ -298,7 +298,7 @@ export class SpeedyTextureReader
         const gl = gpu.gl;
 
         for(let i = this._pbo.length - 1; i >= 0; i--) {
-            gl.destroyBuffer(this._pbo[i]);
+            gl.deleteBuffer(this._pbo[i]);
             this._pbo[i] = null;
         }
     }
