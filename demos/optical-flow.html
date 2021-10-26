@@ -172,20 +172,21 @@ window.onload = async function()
         // find new features
         harris.capacity = 0;
         if(detect) {
-            harris.capacity = 2048;
+            if(features.length < 400)
+                harris.capacity = 2048;
             detect = false;
-        }
-
-        // clear all features
-        if(clear) {
-            features.length = userPoints.length = 0;
-            clear = false;
         }
 
         // handle new points added by the user
         if(userPoints.length > 0) {
             features.push(...userPoints);
             userPoints.length = 0;
+        }
+
+        // clear all features
+        if(clear) {
+            features.length = userPoints.length = 0;
+            clear = false;
         }
 
         // update parameters
@@ -222,7 +223,7 @@ window.onload = async function()
 
     // detect features
     const detectButton = document.getElementById('detect');
-    detectButton.onclick = () => detect = (features.length < 400); //true;
+    detectButton.onclick = () => detect = true;
 
     // clear features
     const clearButton = document.getElementById('clear');
