@@ -63,6 +63,27 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
 
         /** @type {number} page flipping index */
         this._page = 0;
+
+        /** @type {boolean} accelerate GPU-CPU transfers by means of buffered downloads */
+        this._lightspeed = false;
+    }
+
+    /**
+     * Accelerate GPU-CPU transfers by means of buffered downloads
+     * @returns {boolean}
+     */
+    get lightspeed()
+    {
+        return this._lightspeed;
+    }
+
+    /**
+     * Accelerate GPU-CPU transfers by means of buffered downloads
+     * @param {boolean} value
+     */
+    set lightspeed(value)
+    {
+        this._lightspeed = Boolean(value);
     }
 
     /**
@@ -102,6 +123,7 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
     _run(gpu)
     {
         const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input().read();
+        const useBufferedDownloads = this._lightspeed;
 
         // copy the set of keypoints to an internal texture
         const copiedTexture = this._tex[this._page];
@@ -112,7 +134,7 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
         this._page = 1 - this._page;
 
         // download the internal texture
-        return this._textureReader.readPixelsAsync(copiedTexture, 0, 0, copiedTexture.width, copiedTexture.height, false).then(pixels => {
+        return this._textureReader.readPixelsAsync(copiedTexture, 0, 0, copiedTexture.width, copiedTexture.height, useBufferedDownloads).then(pixels => {
             this._keypoints = SpeedyPipelineNodeKeypointSink._decode(pixels, descriptorSize, extraSize, encoderLength);
         });
     }

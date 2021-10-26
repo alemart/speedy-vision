@@ -894,6 +894,10 @@ Creates a source of keypoints. Only the position, score and scale of the provide
 
 Creates a sink of keypoints using the specified name. If the name is not specified, Speedy will call this node `"keypoints"`. An array of `SpeedyKeypoint` objects will be exported from the pipeline.
 
+###### Parameters
+
+* `lightspeed: boolean`. Accelerate GPU-CPU transfers by means of an additional buffer used to download the data. You'll get the data from the previous frame. Defaults to `false`.
+
 ###### Ports
 
 | Port name | Data type | Description |
@@ -2145,6 +2149,10 @@ const zero = Speedy.Vector2(0, 0);
 `Speedy.Vector2.Sink(name?: string): SpeedyPipelineNodeVector2Sink`
 
 Creates a sink of 2D vectors using the specified name. If the name is not specified, Speedy will call this node `"vec2"`. An array of `SpeedyVector2` objects will be exported from the pipeline.
+
+###### Parameters
+
+* `lightspeed: boolean`. Accelerate GPU-CPU transfers by means of an additional buffer used to download the data. You'll get the data from the previous frame. Defaults to `false`.
 
 ###### Ports
 
