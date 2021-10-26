@@ -20,7 +20,7 @@
  */
 
 import { SpeedyPipelineNode, SpeedyPipelineSinkNode } from '../../pipeline-node';
-import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithImage } from '../../pipeline-message';
+import { SpeedyPipelineMessageType } from '../../pipeline-message';
 import { InputPort, OutputPort } from '../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
 import { SpeedyTextureReader } from '../../../../gpu/speedy-texture-reader';
@@ -51,7 +51,7 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
      */
     constructor(name = 'keypoints')
     {
-        super(name, 0, [
+        super(name, 2, [
             InputPort().expects(SpeedyPipelineMessageType.Keypoints)
         ]);
 
@@ -60,6 +60,9 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
 
         /** @type {SpeedyTextureReader} texture reader */
         this._textureReader = new SpeedyTextureReader();
+
+        /** @type {number} page flipping index */
+        this._page = 0;
     }
 
     /**
@@ -100,7 +103,16 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
     {
         const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input().read();
 
-        return this._textureReader.readPixelsAsync(encodedKeypoints).then(pixels => {
+        // copy the set of keypoints to an internal texture
+        const copiedTexture = this._tex[this._page];
+        copiedTexture.resize(encodedKeypoints.width, encodedKeypoints.height);
+        encodedKeypoints.copyTo(copiedTexture);
+
+        // flip page
+        this._page = 1 - this._page;
+
+        // download the internal texture
+        return this._textureReader.readPixelsAsync(copiedTexture, 0, 0, copiedTexture.width, copiedTexture.height, false).then(pixels => {
             this._keypoints = SpeedyPipelineNodeKeypointSink._decode(pixels, descriptorSize, extraSize, encoderLength);
         });
     }

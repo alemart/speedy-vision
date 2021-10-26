@@ -42,7 +42,7 @@ export class SpeedyPipelineNodeVector2Sink extends SpeedyPipelineSinkNode
      */
     constructor(name = 'vec2')
     {
-        super(name, 0, [
+        super(name, 2, [
             InputPort().expects(SpeedyPipelineMessageType.Vector2)
         ]);
 
@@ -51,6 +51,9 @@ export class SpeedyPipelineNodeVector2Sink extends SpeedyPipelineSinkNode
 
         /** @type {SpeedyTextureReader} texture reader */
         this._textureReader = new SpeedyTextureReader();
+
+        /** @type {number} page flipping index */
+        this._page = 0;
     }
 
     /**
@@ -91,7 +94,16 @@ export class SpeedyPipelineNodeVector2Sink extends SpeedyPipelineSinkNode
     {
         const vectors = this.input().read().vectors;
 
-        return this._textureReader.readPixelsAsync(vectors).then(pixels => {
+        // copy the set of keypoints to an internal texture
+        const copiedTexture = this._tex[this._page];
+        copiedTexture.resize(vectors.width, vectors.height);
+        vectors.copyTo(copiedTexture);
+
+        // flip page
+        this._page = 1 - this._page;
+
+        // download the internal texture
+        return this._textureReader.readPixelsAsync(copiedTexture, 0, 0, copiedTexture.width, copiedTexture.height, false).then(pixels => {
             this._vectors = SpeedyPipelineNodeVector2Sink._decode(pixels, vectors.width);
         });
     }
