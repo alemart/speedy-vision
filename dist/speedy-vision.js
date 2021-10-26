@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-10-13T01:09:10.064Z
+ * Date: 2021-10-26T02:31:49.228Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -651,7 +651,7 @@ class SpeedyPipelineKeypointDetectorFactory extends _speedy_namespace__WEBPACK_I
     /**
      * Harris corner detector
      * @param {string} [name]
-     * @returns {SpeedyPipelineNodeFASTKeypointDetector}
+     * @returns {SpeedyPipelineNodeHarrisKeypointDetector}
      */
     static Harris(name = undefined)
     {
@@ -848,6 +848,7 @@ class SpeedyPipelineKeypointFactory extends _speedy_namespace__WEBPACK_IMPORTED_
         return new _nodes_keypoints_subpixel__WEBPACK_IMPORTED_MODULE_8__["SpeedyPipelineNodeKeypointSubpixelRefiner"](name);
     }
 }
+
 
 /***/ }),
 
@@ -3071,7 +3072,7 @@ class SpeedyPipelineNodeImageSource extends _pipeline_node__WEBPACK_IMPORTED_MOD
         // upload texture
         const outputTexture = this._tex[this._textureIndex];
         gpu.upload(this._media._source, outputTexture);
-        this.output().swrite(outputTexture, _utils_types__WEBPACK_IMPORTED_MODULE_7__["ImageFormat"].RGBA);
+        this.output().swrite(outputTexture, this._media._format);
     }
 }
 
@@ -3376,7 +3377,7 @@ class SpeedyPipelineNodeKeypointClipper extends _pipeline_node__WEBPACK_IMPORTED
 
         /*
         // debug (read the contents of the permutation)
-        const pixels = this._inspect(permutation), debug = [];
+        const pixels = this._inspect(gpu, permutation), debug = [];
         for(let i = 0; i < pixels.length; i += 4) {
             let id = pixels[i] | (pixels[i+1] << 8);
             let score = pixels[i+2] / 255.0;
@@ -3747,11 +3748,13 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // Constants
-const ENCODER_PASSES = 8; // number of passes of the keypoint encoder: directly impacts performance
+const ENCODER_PASSES = 4; // number of passes of the keypoint encoder: directly impacts performance
 const LONG_SKIP_OFFSET_PASSES = 2; // number of passes of the long skip offsets shader
 const MAX_CAPACITY = _utils_globals__WEBPACK_IMPORTED_MODULE_7__["MAX_ENCODER_CAPACITY"]; // maximum capacity of the encoder (up to this many keypoints can be stored)
 const DEFAULT_CAPACITY = 2048; // default capacity of the encoder (64x64 texture with 2 pixels per keypoint)
 const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // sqrt(2)
+const NUMBER_OF_INTERNAL_TEXTURES = 0; //5; // number of internal textures used to encode the keypoints
+const NUMBER_OF_RGBA16_TEXTURES = 2;
 
 /**
  * Abstract keypoint detector
@@ -3767,10 +3770,72 @@ class SpeedyPipelineNodeKeypointDetector extends _pipeline_node__WEBPACK_IMPORTE
      */
     constructor(name = undefined, texCount = 0, portBuilders = undefined)
     {
-        super(name, texCount + 4, portBuilders);
+        super(name, texCount + NUMBER_OF_INTERNAL_TEXTURES, portBuilders);
 
         /** @type {number} encoder capacity */
         this._capacity = DEFAULT_CAPACITY; // must not be greater than MAX_ENCODER_CAPACITY
+
+        /** @type {GLint} auxiliary storage */
+        this._oldWrapS = 0;
+
+        /** @type {SpeedyDrawableTexture[]} textures with 8-bytes per pixel */
+        this._tex16 = new Array(NUMBER_OF_RGBA16_TEXTURES).fill(null);
+
+        /** @type {Function} helper for tex16 */
+        this._allocateTex16 = this._allocateTex16.bind(this);
+    }
+
+    /**
+     * Initialize this node
+     * @param {SpeedyGPU} gpu
+     */
+    init(gpu)
+    {
+        // initialize
+        super.init(gpu);
+
+        // encodeKeypointSkipOffsets() relies on this
+        this._oldWrapS = this._setupSpecialTexture(gpu.gl.TEXTURE_WRAP_S, gpu.gl.REPEAT);
+
+        // allocate RGBA16 textures
+        this._allocateTex16(gpu);
+        gpu.subscribe(this._allocateTex16);
+    }
+
+    /**
+     * Release this node
+     * @param {SpeedyGPU} gpu
+     */
+    release(gpu)
+    {
+        // deallocate RGBA16 textures
+        gpu.unsubscribe(this._allocateTex16);
+        this._deallocateTex16(gpu);
+
+        // we need to restore the texture parameter because textures come from a pool!
+        this._setupSpecialTexture(gpu.gl.TEXTURE_WRAP_S, this._oldWrapS);
+
+        // release
+        super.release(gpu);
+    }
+
+    /**
+     * Set a parameter of the special texture
+     * @param {GLenum} pname
+     * @param {GLint} param new value
+     * @returns {GLint} old value of param
+     */
+    _setupSpecialTexture(pname, param)
+    {
+        const texture = this._tex[this._tex.length - 1];
+        const gl = texture.gl;
+
+        gl.bindTexture(gl.TEXTURE_2D, texture.glTexture);
+        const oldval = gl.getTexParameter(gl.TEXTURE_2D, pname);
+        gl.texParameteri(gl.TEXTURE_2D, pname, param);
+        gl.bindTexture(gl.TEXTURE_2D, null);
+
+        return oldval;
     }
 
     /**
@@ -3805,12 +3870,49 @@ class SpeedyPipelineNodeKeypointDetector extends _pipeline_node__WEBPACK_IMPORTE
      */
     _encodeKeypoints(gpu, corners, encodedKeypoints, descriptorSize = 0, extraSize = 0)
     {
+        const encoderCapacity = this._capacity;
+        const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(encoderCapacity, descriptorSize, extraSize);
+        const width = 1 << (Math.ceil(Math.log2(corners.width * corners.height)) >>> 1); // power of two
+        const height = Math.ceil(corners.width * corners.height / width);
+        const maxSize = Math.max(width, height);
+        const keypoints = gpu.programs.keypoints;
+
+        // prepare programs
+        keypoints.initLookupTable.outputs(width, height, this._tex16[1]);
+        keypoints.sortLookupTable.outputs(width, height, this._tex16[0], this._tex16[1]);
+        keypoints.encodeKeypoints.outputs(encoderLength, encoderLength, encodedKeypoints);
+
+        // compute lookup table
+        let lookupTable = keypoints.initLookupTable(corners);
+        for(let b = 1; b < maxSize; b *= 2)
+            lookupTable = keypoints.sortLookupTable(lookupTable, b, width, height);
+
+        // encode keypoints
+        keypoints.encodeKeypoints(corners, lookupTable, width, descriptorSize, extraSize, encoderLength, encoderCapacity);
+
+        /*
+        // debug: view texture
+        const lookupView = (keypoints.viewLookupTable.outputs(
+            width, height, this._tex[0]
+        ))(lookupTable);
+        const canvas = gpu.renderToCanvas(lookupView);
+        if(!this._ww) document.body.appendChild(canvas);
+        this._ww = 1;
+        */
+
+        // done!
+        return encodedKeypoints;
+    }
+
+    _encodeKeypointsOLD(gpu, corners, encodedKeypoints, descriptorSize = 0, extraSize = 0)
+    {
         const capacity = this._capacity;
         const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(capacity, descriptorSize, extraSize);
         const width = corners.width, height = corners.height;
         const imageSize = [ width, height ];
-        const tex = this._tex.slice(this._tex.length - 4);
+        const tex = this._tex.slice(this._tex.length - NUMBER_OF_INTERNAL_TEXTURES); // array of internal textures
         const keypoints = gpu.programs.keypoints;
+        const specialTexture = tex.pop(); // gl.TEXTURE_WRAP_S is set to gl.REPEAT
 
         // prepare programs
         keypoints.encodeKeypointSkipOffsets.outputs(width, height, tex[0]);
@@ -3818,21 +3920,23 @@ class SpeedyPipelineNodeKeypointDetector extends _pipeline_node__WEBPACK_IMPORTE
         keypoints.encodeKeypointPositions.outputs(encoderLength, encoderLength, tex[2], tex[3]);
         keypoints.encodeKeypointProperties.outputs(encoderLength, encoderLength, encodedKeypoints);
 
+        // copy the input corners to a special texture
+        // that is needed by encodeKeypointSkipOffsets()
+        corners = (gpu.programs.utils.identity
+            .outputs(width, height, specialTexture)
+        )(corners);
+
         // encode skip offsets
         let offsets = keypoints.encodeKeypointSkipOffsets(corners, imageSize);
-        for(let i = 0; i < LONG_SKIP_OFFSET_PASSES; i++) // to boost performance
-            offsets = keypoints.encodeKeypointLongSkipOffsets(offsets, imageSize);
+        for(let i = 0; i < LONG_SKIP_OFFSET_PASSES; i++) { // to boost performance
+            // the maximum skip offset of pass p=1,2,3... is 7 * (1+m)^p,
+            // where m = MAX_ITERATIONS of encodeKeypointLongSkipOffsets()
+            offsets = keypoints.encodeKeypointLongSkipOffsets(offsets, imageSize); // **bottleneck**
+        }
 
         /*
         // debug: view corners
         let cornerview = offsets;
-        gpu.programs.utils.fillComponents.outputs(width,height,null);
-        gpu.programs.utils.identity.outputs(width,height,null);
-        cornerview = gpu.programs.utils.fillComponents(cornerview, PixelComponent.GREEN, 0);
-        cornerview = gpu.programs.utils.identity(cornerview);
-        cornerview = gpu.programs.utils.fillComponents(cornerview, PixelComponent.RED, 0);
-        cornerview = gpu.programs.utils.identity(cornerview);
-        cornerview = gpu.programs.utils.fillComponents(cornerview, PixelComponent.ALPHA, 1);
         const canvas = gpu.renderToCanvas(cornerview);
         if(!window._ww) document.body.appendChild(canvas);
         window._ww = 1;
@@ -3862,9 +3966,30 @@ class SpeedyPipelineNodeKeypointDetector extends _pipeline_node__WEBPACK_IMPORTE
         const keypoints = gpu.programs.keypoints;
 
         keypoints.encodeNullKeypoints.outputs(encoderLength, encoderLength, encodedKeypoints);
-        keypoints.encodeNullKeypoints();
+        return keypoints.encodeNullKeypoints();
+    }
 
-        return encodedKeypoints;
+    /**
+     * Allocate RGBA16 textures
+     * @param {SpeedyGPU} gpu
+     */
+    _allocateTex16(gpu)
+    {
+        const gl = gpu.gl;
+
+        // RGBA16UI is color renderable according to the OpenGL ES 3 spec
+        for(let i = 0; i < this._tex16.length; i++)
+            this._tex16[i] = new _gpu_speedy_texture__WEBPACK_IMPORTED_MODULE_4__["SpeedyDrawableTexture"](gl, 1, 1, gl.RGBA_INTEGER, gl.RGBA16UI, gl.UNSIGNED_SHORT, gl.NEAREST, gl.CLAMP_TO_EDGE);
+    }
+
+    /**
+     * Deallocate RGBA16 textures
+     * @param {SpeedyGPU} gpu
+     */
+    _deallocateTex16(gpu)
+    {
+        for(let i = 0; i < this._tex16.length; i++)
+            this._tex16[i] = this._tex16[i].release();
     }
 
     /**
@@ -4090,35 +4215,21 @@ class SpeedyPipelineNodeFASTKeypointDetector extends _detector__WEBPACK_IMPORTED
         let numPasses = Math.max(1, Math.min(levels, (_utils_globals__WEBPACK_IMPORTED_MODULE_9__["PYRAMID_MAX_LEVELS"] / lodStep) | 0));
         for(let lod = lodStep * (numPasses - 1); numPasses-- > 0; lod -= lodStep) {
             corners = gpu.programs.keypoints.fast9_16(corners, image, lod, threshold);
-            corners = gpu.programs.keypoints.nonmaxSpace(corners); // see below*
+            //corners = gpu.programs.keypoints.nonmaxSpace(corners); // see below*
         }
 
         // Same-scale non-maximum suppression
-        // *performs better inside the loop
-        //corners = gpu.programs.keypoints.nonmaxSpace(corners);
+        // *nicer results inside the loop; faster outside
+        // Hard to notice a difference when using FAST
+        corners = gpu.programs.keypoints.nonmaxSpace(corners);
 
         // Multi-scale non-maximum suppression
         // (doesn't seem to remove many keypoints)
         if(levels > 1) {
-            const laplacian = (gpu.programs.keypoints.laplacian
-                .outputs(width, height, tex[0])
-            )(corners, image, lodStep, 0);
-
-            corners = (gpu.programs.keypoints.nonmaxScale
-                .outputs(width, height, tex[1])
-            )(corners, image, laplacian, lodStep);
-
-/*
             corners = (gpu.programs.keypoints.nonmaxScaleSimple
                 .outputs(width, height, tex[1])
             )(corners, image, lodStep);
-*/
         }
-
-        // More aggressive non-maximum suppression
-        corners = (gpu.programs.keypoints[levels > 1 ? 'pyrnonmax' : 'nonmax']
-            .outputs(width, height, tex[0])
-        )(corners, lodStep);
 
         // encode keypoints
         let encodedKeypoints = this._encodeKeypoints(gpu, corners, tex[3]);
@@ -4445,7 +4556,6 @@ class SpeedyPipelineNodeKeypointMixer extends _pipeline_node__WEBPACK_IMPORTED_M
         const extraSize = kps0.extraSize;
         const keypoints = gpu.programs.keypoints;
         const tex = this._tex;
-        const outputTexture = this._tex[4];
 
         // ensure that the format of kps0 equals the format of kps1
         if(!(kps0.descriptorSize === kps1.descriptorSize && kps0.extraSize === kps0.extraSize))
@@ -4458,42 +4568,45 @@ class SpeedyPipelineNodeKeypointMixer extends _pipeline_node__WEBPACK_IMPORTED_M
 
         // find the dimensions of the output texture
         const encoderLength = _detectors_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodeKeypointDetector"].encoderLength(capacity, descriptorSize, extraSize);
+        const mixEncoderLength = Math.max(1, Math.ceil(Math.sqrt(capacity)));
+
+        // prepare programs
+        keypoints.mixKeypointsPreInit.outputs(encoderLength, encoderLength, tex[0]);
+        keypoints.mixKeypointsInit.outputs(mixEncoderLength, mixEncoderLength, tex[1]);
+        keypoints.mixKeypointsSort.outputs(mixEncoderLength, mixEncoderLength, tex[2], tex[3]);
+        keypoints.mixKeypointsApply.outputs(encoderLength, encoderLength, tex[4]);
 
         // mix keypoints
-        keypoints.mixKeypoints.outputs(encoderLength, encoderLength, tex[3]);
-        const mixedKeypoints = keypoints.mixKeypoints(
-            [ kps0.encodedKeypoints, kps1.encodedKeypoints ],
-            [ kps0.encoderLength, kps1.encoderLength ],
-            [ cap0, cap1 ],
+        let mixedKeypoints = keypoints.mixKeypointsPreInit(
+            kps0.encodedKeypoints, kps1.encodedKeypoints,
+            kps0.encoderLength, kps1.encoderLength,
+            cap0, cap1,
             descriptorSize,
             extraSize,
             encoderLength
         );
 
-        // find the dimensions of the sorting shaders
-        const stride = 1 << LOG2_STRIDE; // must be a power of 2
-        const height = Math.ceil(capacity / stride);
-        const numberOfPixels = stride * height;
+        let sortedKeypoints = keypoints.mixKeypointsInit(
+            mixedKeypoints, descriptorSize, extraSize, encoderLength, capacity
+        );
 
-        // generate permutation of keypoints
-        keypoints.sortCreatePermutation.outputs(stride, height, tex[0]);
-        let permutation = keypoints.sortCreatePermutation(mixedKeypoints, descriptorSize, extraSize, encoderLength);
+        for(let b = 1; b < capacity; b *= 2)
+            sortedKeypoints = keypoints.mixKeypointsSort(sortedKeypoints, b);
 
-        // sort permutation
-        const numPasses = Math.ceil(Math.log2(numberOfPixels));
-        keypoints.sortMergePermutation.outputs(stride, height, tex[1], tex[2]);
-        for(let i = 1; i <= numPasses; i++) {
-            const blockSize = 1 << i; // 2, 4, 8...
-            const dblLog2BlockSize = i << 1; // 2 * log2(blockSize)
-            permutation = keypoints.sortMergePermutation(permutation, blockSize, dblLog2BlockSize);
-        }
+        mixedKeypoints = keypoints.mixKeypointsApply(
+            sortedKeypoints, mixedKeypoints, descriptorSize, extraSize, encoderLength
+        );
 
-        // apply permutation
-        keypoints.sortApplyPermutation.outputs(encoderLength, encoderLength, outputTexture);
-        keypoints.sortApplyPermutation(permutation, capacity, mixedKeypoints, descriptorSize, extraSize);
+        /*
+        // debug: view keypoints
+        keypoints.mixKeypointsView.outputs(mixEncoderLength, mixEncoderLength, tex[1]);
+        const view = keypoints.mixKeypointsView(sortedKeypoints);
+        const canvas = gpu.renderToCanvas(view);
+        if(!window._ww) document.body.appendChild(canvas);
+        window._ww = 1;
+        */
 
-        // done!
-        this.output().swrite(outputTexture, descriptorSize, extraSize, encoderLength);
+        this.output().swrite(mixedKeypoints, descriptorSize, extraSize, encoderLength);
     }
 }
 
@@ -4926,6 +5039,26 @@ class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MO
     }
 
     /**
+     * Initializes this node
+     * @param {SpeedyGPU} gpu
+     */
+    init(gpu)
+    {
+        super.init(gpu);
+        this._textureReader.init(gpu);
+    }
+
+    /**
+     * Releases this node
+     * @param {SpeedyGPU} gpu
+     */
+    release(gpu)
+    {
+        this._textureReader.release(gpu);
+        super.release(gpu);
+    }
+
+    /**
      * Export data from this node to the user
      * @returns {SpeedyPromise<SpeedyKeypoint[]>}
      */
@@ -4966,9 +5099,10 @@ class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MO
         let descriptorBytes, extraBytes, descriptor;
 
         // how many bytes should we read?
-        const e = encoderLength;
-        const e2 = e * e * bytesPerKeypoint;
-        const size = Math.min(pixels.length, e2);
+        const e2 = encoderLength * encoderLength * 4;
+        const size = pixels.byteLength;
+        if(size != e2)
+            _utils_utils__WEBPACK_IMPORTED_MODULE_7__["Utils"].warning(`Expected ${e2} bytes when decoding a set of keypoints, found ${size}`);
 
         // copy the data (we use shared buffers when receiving pixels[])
         if(descriptorSize + extraSize > 0)
@@ -5615,7 +5749,6 @@ class SpeedyPipelineNodeLKKeypointTracker extends _pipeline_node__WEBPACK_IMPORT
         const epsilon = this._epsilon;
         const keypoints = gpu.programs.keypoints;
         const tex = this._tex;
-        const nextKeypoints = this._tex[2];
 
         // do we need a pyramid?
         if(!(levels == 1 || (previousImage.hasMipmaps() && nextImage.hasMipmaps())))
@@ -5639,13 +5772,13 @@ class SpeedyPipelineNodeLKKeypointTracker extends _pipeline_node__WEBPACK_IMPORT
         lk.outputs(lkEncoderLength, lkEncoderLength, tex[0], tex[1]);
 
         // compute optical-flow
-        let flow = tex[1].clear();
+        let flow = lk.clear();
         for(let lod = levels - 1; lod >= 0; lod--)
             flow = lk(flow, previousKeypoints, nextImage, previousImage, wsize, lod, levels, numberOfIterations, discardThreshold, epsilon, descriptorSize, extraSize, encoderLength);
 
         // transfer optical-flow to nextKeypoints
-        keypoints.transferFlow.outputs(encoderLength, encoderLength, nextKeypoints);
-        keypoints.transferFlow(flow, previousKeypoints, descriptorSize, extraSize, encoderLength);
+        keypoints.transferFlow.outputs(encoderLength, encoderLength, tex[2]);
+        const nextKeypoints = keypoints.transferFlow(flow, previousKeypoints, descriptorSize, extraSize, encoderLength);
 
         // done!
         this.output().swrite(nextKeypoints, descriptorSize, extraSize, encoderLength);
@@ -6176,6 +6309,26 @@ class SpeedyPipelineNodeVector2Sink extends _pipeline_node__WEBPACK_IMPORTED_MOD
 
         /** @type {SpeedyTextureReader} texture reader */
         this._textureReader = new _gpu_speedy_texture_reader__WEBPACK_IMPORTED_MODULE_4__["SpeedyTextureReader"]();
+    }
+
+    /**
+     * Initializes this node
+     * @param {SpeedyGPU} gpu
+     */
+    init(gpu)
+    {
+        super.init(gpu);
+        this._textureReader.init(gpu);
+    }
+
+    /**
+     * Releases this node
+     * @param {SpeedyGPU} gpu
+     */
+    release(gpu)
+    {
+        this._textureReader.release(gpu);
+        super.release(gpu);
     }
 
     /**
@@ -6757,6 +6910,9 @@ class SpeedyPipelineNode
         // got some ports?
         if(portBuilders.length == 0)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`No ports have been found in node ${this.fullName}`);
+
+        // bind this function (subscriber)
+        this._allocateWorkTextures = this._allocateWorkTextures.bind(this);
     }
 
     /**
@@ -6851,9 +7007,8 @@ class SpeedyPipelineNode
      */
     init(gpu)
     {
-        // allocate work texture(s)
-        for(let j = 0; j < this._tex.length; j++)
-            this._tex[j] = gpu.texturePool.allocate();
+        gpu.subscribe(this._allocateWorkTextures);
+        this._allocateWorkTextures(gpu);
     }
 
     /**
@@ -6862,9 +7017,8 @@ class SpeedyPipelineNode
      */
     release(gpu)
     {
-        // deallocate work texture(s)
-        for(let j = this._tex.length - 1; j >= 0; j--)
-            this._tex[j] = gpu.texturePool.free(this._tex[j]);
+        this._deallocateWorkTextures(gpu);
+        gpu.unsubscribe(this._allocateWorkTextures);
     }
 
     /**
@@ -6920,26 +7074,51 @@ class SpeedyPipelineNode
     }
 
     /**
+     * Allocate work texture(s)
+     * @param {SpeedyGPU} gpu
+     */
+    _allocateWorkTextures(gpu)
+    {
+        for(let j = 0; j < this._tex.length; j++)
+            this._tex[j] = gpu.texturePool.allocate();
+    }
+
+    /**
+     * Deallocate work texture(s)
+     * @param {SpeedyGPU} gpu
+     */
+    _deallocateWorkTextures(gpu)
+    {
+        for(let j = this._tex.length - 1; j >= 0; j--)
+            this._tex[j] = gpu.texturePool.free(this._tex[j]);
+    }
+
+    /**
      * Inspect the pixels of a texture for debugging purposes
+     * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} texture
      * @returns {Uint8Array}
      */
-    _inspect(texture)
+    _inspect(gpu, texture)
     {
-        this._textureReader = this._textureReader || new _gpu_speedy_texture_reader__WEBPACK_IMPORTED_MODULE_8__["SpeedyTextureReader"]();
-        const pixels = this._textureReader.readPixelsSync(texture);
+        const textureReader = new _gpu_speedy_texture_reader__WEBPACK_IMPORTED_MODULE_8__["SpeedyTextureReader"]();
+        textureReader.init(gpu);
+        const pixels = textureReader.readPixelsSync(texture);
+        textureReader.release(gpu);
+
         return new Uint8Array(pixels); // copy the array
     }
 
     /**
      * Inspect the pixels of a texture as unsigned 32-bit integers
+     * @param {SpeedyGPU} gpu
      * @param {SpeedyTexture} texture
      * @returns {Uint32Array}
      */
-    _inspect32(texture)
+    _inspect32(gpu, texture)
     {
         _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(_utils_globals__WEBPACK_IMPORTED_MODULE_1__["LITTLE_ENDIAN"]); // make sure we use little-endian
-        return new Uint32Array(this._inspect(texture).buffer);
+        return new Uint32Array(this._inspect(gpu, texture).buffer);
     }
 }
 
@@ -7810,12 +7989,12 @@ class SpeedyPipeline
      */
     static _runSequence(sequence, gpu, i = 0, n = sequence.length)
     {
-        if(i >= n)
+        if(i >= n) {
+            gpu.gl.flush();
             return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"].resolve();
+        }
 
         const runTask = sequence[i].execute(gpu);
-        gpu.gl.flush();
-
         if(runTask == undefined)
             return SpeedyPipeline._runSequence(sequence, gpu, i+1, n);
 
@@ -10431,21 +10610,6 @@ class SpeedyMedia
     }
 
     /**
-     * Loads a camera stream
-     * @param {number} width width of the stream
-     * @param {number} height height of the stream
-     * @param {object} [cameraOptions] additional options to pass to getUserMedia()
-     * @param {object} [mediaOptions] additional options for advanced configuration of the SpeedyMedia
-     * @returns {SpeedyPromise<SpeedyMedia>}
-     */
-    static loadCameraStream(width, height, cameraOptions = { }, mediaOptions = { })
-    {
-        return _utils_utils__WEBPACK_IMPORTED_MODULE_4__["Utils"].requestCameraStream(width, height, cameraOptions).then(
-            video => SpeedyMedia.load(video, mediaOptions)
-        );
-    }
-
-    /**
      * The media element (image, video, canvas) encapsulated by this SpeedyMedia object
      * @returns {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} the media element
      */
@@ -11175,15 +11339,23 @@ class Speedy
 
     /**
      * Loads a camera stream
-     * @param {number} [width] width of the stream
+     * @param {number|MediaStreamConstraints} [widthOrConstraints] width of the stream or contraints object
      * @param {number} [height] height of the stream
-     * @param {object} [cameraOptions] additional options to pass to getUserMedia()
-     * @param {object} [mediaOptions] additional options for advanced configuration of the SpeedyMedia
-     * @returns {Promise<SpeedyMedia>}
+     * @returns {SpeedyPromise<SpeedyMedia>}
      */
-    static camera(width = 640, height = 360, cameraOptions = {}, mediaOptions = {})
+    static camera(widthOrConstraints = 640, height = 360)
     {
-        return _speedy_media__WEBPACK_IMPORTED_MODULE_0__["SpeedyMedia"].loadCameraStream(width, height, cameraOptions, mediaOptions);
+        const constraints = (typeof(widthOrConstraints) === 'object') ? widthOrConstraints : ({
+            audio: false,
+            video: {
+                width: widthOrConstraints | 0,
+                height: height | 0,
+            },
+        });
+
+        return _utils_utils__WEBPACK_IMPORTED_MODULE_12__["Utils"].requestCameraStream(constraints).then(
+            video => _speedy_media__WEBPACK_IMPORTED_MODULE_0__["SpeedyMedia"].load(video)
+        );
     }
 
     /**
@@ -11782,28 +11954,33 @@ class GLUtils
      * This is like gl.getBufferSubData(), but async
      * @param {WebGL2RenderingContext} gl
      * @param {WebGLBuffer} glBuffer will be bound to target
-     * @param {GLenum} target
+     * @param {GLenum} target e.g., gl.PIXEL_PACK_BUFFER
      * @param {GLintptr} srcByteOffset usually 0
      * @param {ArrayBufferView} destBuffer
      * @param {GLuint} [destOffset]
      * @param {GLuint} [length]
-     * @returns {SpeedyPromise<number>} a promise that resolves to the time it took to read the data (in ms)
+     * @returns {SpeedyPromise<void>}
      */
     static getBufferSubDataAsync(gl, glBuffer, target, srcByteOffset, destBuffer, destOffset = 0, length = 0)
     {
         const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-        //const start = performance.now();
 
         // empty internal command queues and send them to the GPU asap
         gl.flush(); // make sure the sync command is read
 
         // wait for the commands to be processed by the GPU
-        return this.clientWaitAsync(gl, sync).then(() => {
+        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"]((resolve, reject) => {
+            // according to the WebGL2 spec sec 3.7.14 Sync objects,
+            // "sync objects may only transition to the signaled state
+            // when the user agent's event loop is not executing a task"
+            // in other words, it won't be signaled in the same frame
+            setTimeout(() => {
+                GLUtils._checkStatus(gl, sync, 0, resolve, reject);
+            }, 0);
+        }).then(() => {
             gl.bindBuffer(target, glBuffer);
             gl.getBufferSubData(target, srcByteOffset, destBuffer, destOffset, length);
             gl.bindBuffer(target, null);
-            return 0; // disable timers
-            //return performance.now() - start;
         }).catch(err => {
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["IllegalOperationError"](`Can't getBufferSubDataAsync(): error in clientWaitAsync()`, err);
         }).finally(() => {
@@ -11814,36 +11991,30 @@ class GLUtils
     /**
      * Waits for a sync object to become signaled
      * @param {WebGL2RenderingContext} gl
-     * @param {WebGLSync} sync sync object
-     * @param {GLbitfield} [flags] may be gl.SYNC_FLUSH_COMMANDS_BIT or 0
-     * @returns {SpeedyPromise} a promise that resolves as soon as the sync object becomes signaled
-     */
-    static clientWaitAsync(gl, sync, flags = 0)
-    {
-        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"]((resolve, reject) => {
-            this._checkStatus(gl, sync, flags, resolve, reject);
-        });
-    }
-
-    /**
-     * Auxiliary method for clientWaitAsync()
-     * @param {WebGL2RenderingContext} gl
      * @param {WebGLSync} sync
-     * @param {GLbitfield} flags
+     * @param {GLbitfield} flags may be gl.SYNC_FLUSH_COMMANDS_BIT or 0
      * @param {Function} resolve
      * @param {Function} reject
+     * @param {number} [pollInterval] in milliseconds
+     * @param {number} [remainingAttempts] for timeout
      */
-    static _checkStatus(gl, sync, flags, resolve, reject)
+    static _checkStatus(gl, sync, flags, resolve, reject, pollInterval = 10, remainingAttempts = 1000)
     {
         const status = gl.clientWaitSync(sync, flags, 0);
-        if(status == gl.TIMEOUT_EXPIRED) {
-            //Utils.setZeroTimeout(GLUtils._checkStatus, gl, sync, flags, resolve, reject); // no ~4ms delay
-            setTimeout(GLUtils._checkStatus, 0, gl, sync, flags, resolve, reject); // easier on the CPU
+        const nextPollInterval = pollInterval > 2 ? pollInterval - 2 : 0; // adaptive poll interval
+        //const nextPollInterval = pollInterval >>> 1; // adaptive poll interval
+
+        if(remainingAttempts <= 0) {
+            reject(new _utils_errors__WEBPACK_IMPORTED_MODULE_2__["TimeoutError"](`_checkStatus() is taking too long.`, GLUtils.getError(gl)));
+        }
+        else if(status == gl.TIMEOUT_EXPIRED) {
+            //Utils.setZeroTimeout(GLUtils._checkStatus, gl, sync, flags, resolve, reject, 0, remainingAttempts - 1); // no ~4ms delay, resource-hungry
+            setTimeout(GLUtils._checkStatus, pollInterval, gl, sync, flags, resolve, reject, nextPollInterval, remainingAttempts - 1); // easier on the CPU
         }
         else if(status == gl.WAIT_FAILED) {
-            if(IS_FIREFOX && gl.getError() == gl.NO_ERROR) { // firefox bug?
-                //Utils.setZeroTimeout(GLUtils._checkStatus, gl, sync, flags, resolve, reject);
-                setTimeout(GLUtils._checkStatus, 0, gl, sync, flags, resolve, reject);
+            if(IS_FIREFOX /*&& gl.getError() == gl.NO_ERROR*/) { // firefox bug? gl.getError() may be slow
+                //Utils.setZeroTimeout(GLUtils._checkStatus, gl, sync, flags, resolve, reject, 0, remainingAttempts - 1);
+                setTimeout(GLUtils._checkStatus, pollInterval, gl, sync, flags, resolve, reject, nextPollInterval, remainingAttempts - 1);
             }
             else {
                 reject(GLUtils.getError(gl));
@@ -12194,13 +12365,51 @@ const sortMergePermutation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE
 const sortApplyPermutation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/sort-applyperm.glsl')
                             .withArguments('permutation', 'maxKeypoints', 'encodedKeypoints', 'descriptorSize', 'extraSize');
 
+// Keypoint mixing
+const mixKeypointsPreInit = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/mix-keypoints.glsl')
+                           .withDefines({ 'STAGE': 1 })
+                           .withArguments('encodedKeypointsA', 'encodedKeypointsB', 'encoderLengthA', 'encoderLengthB', 'encoderCapacityA', 'encoderCapacityB', 'descriptorSize', 'extraSize', 'encoderLength');
+
+const mixKeypointsInit = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/mix-keypoints.glsl')
+                        .withDefines({ 'STAGE': 2 })
+                        .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'maxKeypoints');
+
+const mixKeypointsSort = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/mix-keypoints.glsl')
+                        .withDefines({ 'STAGE': 3 })
+                        .withArguments('array', 'blockSize');
+
+const mixKeypointsView = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/mix-keypoints.glsl')
+                        .withDefines({ 'STAGE': 5 })
+                        .withArguments('array');
+
+const mixKeypointsApply = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/mix-keypoints.glsl')
+                         .withDefines({ 'STAGE': 4 })
+                         .withArguments('array', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
+
+
+
+
 // Keypoint encoding
+const initLookupTable = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/lookup-of-locations.glsl')
+                       .withDefines({ 'FS_OUTPUT_TYPE': 2, 'STAGE': 1 })
+                       .withArguments('corners');
+
+const sortLookupTable = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/lookup-of-locations.glsl')
+                       .withDefines({ 'FS_OUTPUT_TYPE': 2, 'FS_USE_CUSTOM_PRECISION': 1, 'STAGE': 2 })
+                       .withArguments('lookupTable', 'blockSize', 'width', 'height');
+
+const viewLookupTable = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/lookup-of-locations.glsl')
+                       .withDefines({ 'STAGE': -1 })
+                       .withArguments('lookupTable');
+
+const encodeKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/encode-keypoints.glsl')
+                       .withArguments('corners', 'lookupTable', 'stride', 'descriptorSize', 'extraSize', 'encoderLength', 'encoderCapacity');
+
 const encodeKeypointSkipOffsets = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/encode-keypoint-offsets.glsl')
-                                 .withDefines({ 'MAX_ITERATIONS': 32 })
                                  .withArguments('corners', 'imageSize');
 
 const encodeKeypointLongSkipOffsets = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/encode-keypoint-long-offsets.glsl')
-                                     .withDefines({ 'MAX_ITERATIONS': 32 })
+                                     .withDefines({ 'MAX_ITERATIONS': 6 }) // dependent texture reads :(
                                      .withArguments('offsetsImage', 'imageSize');
 
 const encodeKeypointPositions = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/encode-keypoint-positions.glsl')
@@ -12227,9 +12436,6 @@ const uploadKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__[
                            'BUFFER_SIZE': 1024 //16384 / 16
                         })
                        .withArguments('encodedKeypoints', 'startIndex', 'endIndex', 'descriptorSize', 'extraSize', 'encoderLength');
-
-const mixKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/mix-keypoints.glsl')
-                    .withArguments('encodedKeypoints', 'encoderLength', 'encoderCapacity', 'descriptorSize', 'extraSize', 'outEncoderLength');
 
 // Geometric transformations
 const applyHomography = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/apply-homography.glsl')
@@ -12344,8 +12550,28 @@ class SpeedyProgramGroupKeypoints extends _speedy_program_group__WEBPACK_IMPORTE
             .declare('sortApplyPermutation', sortApplyPermutation)
 
             //
+            // Keypoint mixing
+            //
+            .declare('mixKeypointsPreInit', mixKeypointsPreInit)
+            .declare('mixKeypointsInit', mixKeypointsInit)
+            .declare('mixKeypointsSort', mixKeypointsSort, {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('mixKeypointsView', mixKeypointsView)
+            .declare('mixKeypointsApply', mixKeypointsApply)
+
+            //
             // Keypoint encoders
             //
+            .declare('encodeNullKeypoints', encodeNullKeypoints)
+            .declare('encodeKeypoints', encodeKeypoints)
+            .declare('initLookupTable', initLookupTable)
+            .declare('sortLookupTable', sortLookupTable, {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('viewLookupTable', viewLookupTable)
+
+
             .declare('encodeKeypointSkipOffsets', encodeKeypointSkipOffsets)
             .declare('encodeKeypointLongSkipOffsets', encodeKeypointLongSkipOffsets, {
                 ...this.program.usesPingpongRendering()
@@ -12354,13 +12580,14 @@ class SpeedyProgramGroupKeypoints extends _speedy_program_group__WEBPACK_IMPORTE
                 ...this.program.usesPingpongRendering()
             })
             .declare('encodeKeypointProperties', encodeKeypointProperties)
-            .declare('encodeNullKeypoints', encodeNullKeypoints)
+
+
+
             .declare('transferOrientation', transferOrientation)
             .declare('discardDescriptors', discardDescriptors)
             .declare('uploadKeypoints', uploadKeypoints, {
                 ...this.program.usesPingpongRendering()
             })
-            .declare('mixKeypoints', mixKeypoints)
 
             //
             // Geometric transformations
@@ -12730,13 +12957,26 @@ void main() {
 }\n`;
 
 const DEFAULT_FRAGMENT_SHADER_PREFIX = `#version 300 es
-precision highp int; // int32
+
+#if !(@FS_USE_CUSTOM_PRECISION@)
 precision mediump float; // ~float16
 precision mediump sampler2D;
+precision highp int; // int32
+#endif
 
-out vec4 color;
-in vec2 texCoord;
-uniform vec2 texSize;
+#if @FS_OUTPUT_TYPE@ == 0
+#define OUT_TYPE mediump vec4
+#elif @FS_OUTPUT_TYPE@ == 1
+#define OUT_TYPE mediump ivec4
+#elif @FS_OUTPUT_TYPE@ == 2
+#define OUT_TYPE mediump uvec4
+#else
+#error Unknown FS_OUTPUT_TYPE
+#endif
+
+out OUT_TYPE color;
+in mediump vec2 texCoord;
+uniform mediump vec2 texSize;
 
 @include "global.glsl"\n\n`;
 
@@ -13051,6 +13291,10 @@ const constants = Object.freeze({
     // numeric globals
     ...numericGlobals,
 
+    // fragment shader
+    'FS_USE_CUSTOM_PRECISION': 0, // use default precision settings
+    'FS_OUTPUT_TYPE': 0, // normalized RGBA
+
     // colors
     'PIXELCOMPONENT_RED': _utils_types__WEBPACK_IMPORTED_MODULE_1__["PixelComponent"].RED,
     'PIXELCOMPONENT_GREEN': _utils_types__WEBPACK_IMPORTED_MODULE_1__["PixelComponent"].GREEN,
@@ -13096,9 +13340,9 @@ class ShaderPreprocessor
                     ShaderPreprocessor.run(readfileSync(filename), defines)
                 )
                 .replace(constantRegex, (_, name) => String(
-                    // Find a global constant. If not possible, find a defined constant
-                    constants[name] !== undefined ? Number(constants[name]) : (
-                        defines.has(name) ? Number(defines.get(name)) : (
+                    // Find a defined constant. If not possible, find a global constant
+                    defines.has(name) ? Number(defines.get(name)) : (
+                        constants[name] !== undefined ? Number(constants[name]) : (
                             errors.push(`Undefined constant: ${name}`), 0
                         )
                     )
@@ -13234,6 +13478,7 @@ var map = {
 	"./include/fixed-point.glsl": "./src/gpu/shaders/include/fixed-point.glsl",
 	"./include/float16.glsl": "./src/gpu/shaders/include/float16.glsl",
 	"./include/global.glsl": "./src/gpu/shaders/include/global.glsl",
+	"./include/int32.glsl": "./src/gpu/shaders/include/int32.glsl",
 	"./include/keypoints.glsl": "./src/gpu/shaders/include/keypoints.glsl",
 	"./include/math.glsl": "./src/gpu/shaders/include/math.glsl",
 	"./include/pyramids.glsl": "./src/gpu/shaders/include/pyramids.glsl",
@@ -13245,12 +13490,14 @@ var map = {
 	"./keypoints/encode-keypoint-offsets.glsl": "./src/gpu/shaders/keypoints/encode-keypoint-offsets.glsl",
 	"./keypoints/encode-keypoint-positions.glsl": "./src/gpu/shaders/keypoints/encode-keypoint-positions.glsl",
 	"./keypoints/encode-keypoint-properties.glsl": "./src/gpu/shaders/keypoints/encode-keypoint-properties.glsl",
+	"./keypoints/encode-keypoints.glsl": "./src/gpu/shaders/keypoints/encode-keypoints.glsl",
 	"./keypoints/encode-null-keypoints.glsl": "./src/gpu/shaders/keypoints/encode-null-keypoints.glsl",
 	"./keypoints/fast.glsl": "./src/gpu/shaders/keypoints/fast.glsl",
 	"./keypoints/harris-cutoff.glsl": "./src/gpu/shaders/keypoints/harris-cutoff.glsl",
 	"./keypoints/harris.glsl": "./src/gpu/shaders/keypoints/harris.glsl",
 	"./keypoints/laplacian.glsl": "./src/gpu/shaders/keypoints/laplacian.glsl",
 	"./keypoints/lk.glsl": "./src/gpu/shaders/keypoints/lk.glsl",
+	"./keypoints/lookup-of-locations.glsl": "./src/gpu/shaders/keypoints/lookup-of-locations.glsl",
 	"./keypoints/mix-keypoints.glsl": "./src/gpu/shaders/keypoints/mix-keypoints.glsl",
 	"./keypoints/nonmax-scale.glsl": "./src/gpu/shaders/keypoints/nonmax-scale.glsl",
 	"./keypoints/nonmax-space.glsl": "./src/gpu/shaders/keypoints/nonmax-space.glsl",
@@ -13555,6 +13802,7 @@ var map = {
 	"./fixed-point.glsl": "./src/gpu/shaders/include/fixed-point.glsl",
 	"./float16.glsl": "./src/gpu/shaders/include/float16.glsl",
 	"./global.glsl": "./src/gpu/shaders/include/global.glsl",
+	"./int32.glsl": "./src/gpu/shaders/include/int32.glsl",
 	"./keypoints.glsl": "./src/gpu/shaders/include/keypoints.glsl",
 	"./math.glsl": "./src/gpu/shaders/include/math.glsl",
 	"./pyramids.glsl": "./src/gpu/shaders/include/pyramids.glsl",
@@ -13623,7 +13871,7 @@ module.exports = "#ifndef _FIXEDPOINT_GLSL\n#define _FIXEDPOINT_GLSL\n#define fi
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "#ifndef _FLOAT16_GLSL\n#define _FLOAT16_GLSL\n#define encodeFloat16(f) (vec2(packf16(f)) / 255.0f)\n#define decodeFloat16(v) unpackf16(uvec2((v) * 255.0f))\n#define encodePairOfFloat16(f) vec4(encodeFloat16((f).x), encodeFloat16((f).y))\n#define decodePairOfFloat16(v) vec2(decodeFloat16((v).rg), decodeFloat16((v).ba))\n#define encodeNullPairOfFloat16() vec4(1.0f)\n#define encodeDiscardedPairOfFloat16() vec4(0.0f, 1.0f, 0.0f, 1.0f)\n#define isDiscardedPairOfFloat16(v) all(equal((v), encodeDiscardedPairOfFloat16()))\n#define encodeFloat16NaN() vec2(0.5f, 1.0f)\n#define isEncodedFloat16NaN(v) all(equal((v), encodeFloat16NaN()))\nuvec2 packf16( float f)\n{\nuint y = packHalf2x16(vec2(f, 0.0f));\nreturn uvec2(y, y >> 8u) & 0xFFu;\n}\nfloat unpackf16(uvec2 v)\n{\nv &= 0xFFu;\nreturn unpackHalf2x16(v.x | (v.y << 8u)).x;\n}\nbool isEncodedFloat16Zero(vec2 v)\n{\nuvec2 w = uvec2(v * 255.0f);\nreturn 0u == w.x + w.y * (0x80u - w.y);\n}\n#endif"
+module.exports = "#ifndef _FLOAT16_GLSL\n#define _FLOAT16_GLSL\n#define encodeFloat16(f) (vec2(packf16(f)) / 255.0f)\n#define decodeFloat16(v) unpackf16(uvec2((v) * 255.0f))\n#define encodePairOfFloat16(f) vec4(encodeFloat16((f).x), encodeFloat16((f).y))\n#define decodePairOfFloat16(v) vec2(decodeFloat16((v).rg), decodeFloat16((v).ba))\n#define encodeNullPairOfFloat16() vec4(1.0f)\n#define isNullPairOfFloat16(v) all(equal((v), encodeNullPairOfFloat16()))\n#define encodeDiscardedPairOfFloat16() vec4(0.0f, 1.0f, 0.0f, 1.0f)\n#define isDiscardedPairOfFloat16(v) all(equal((v), encodeDiscardedPairOfFloat16()))\n#define encodeFloat16NaN() vec2(0.5f, 1.0f)\n#define isEncodedFloat16NaN(v) all(equal((v), encodeFloat16NaN()))\nuvec2 packf16( float f)\n{\nuint y = packHalf2x16(vec2(f, 0.0f));\nreturn uvec2(y, y >> 8u) & 0xFFu;\n}\nfloat unpackf16(uvec2 v)\n{\nv &= 0xFFu;\nreturn unpackHalf2x16(v.x | (v.y << 8u)).x;\n}\nbool isEncodedFloat16Zero(vec2 v)\n{\nuvec2 w = uvec2(v * 255.0f);\nreturn 0u == w.x + w.y * (0x80u - w.y);\n}\n#endif"
 
 /***/ }),
 
@@ -13638,6 +13886,17 @@ module.exports = "#ifndef _GLOBAL_GLSL\n#define _GLOBAL_GLSL\n#define threadLoca
 
 /***/ }),
 
+/***/ "./src/gpu/shaders/include/int32.glsl":
+/*!********************************************!*\
+  !*** ./src/gpu/shaders/include/int32.glsl ***!
+  \********************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "#ifndef _INT32_GLSL\n#define _INT32_GLSL\nuint decodeUint32(vec4 rgba)\n{\nuvec4 v = uvec4(rgba * 255.0f) & 255u;\nreturn v.x | (v.y << 8u) | (v.z << 16u) | (v.w << 24u);\n}\nvec4 encodeUint32(uint value)\n{\nuvec4 v = uvec4(value, value >> 8u, value >> 16u, value >> 24u) & 255u;\nreturn vec4(v) / 255.0f;\n}\n#endif"
+
+/***/ }),
+
 /***/ "./src/gpu/shaders/include/keypoints.glsl":
 /*!************************************************!*\
   !*** ./src/gpu/shaders/include/keypoints.glsl ***!
@@ -13645,7 +13904,7 @@ module.exports = "#ifndef _GLOBAL_GLSL\n#define _GLOBAL_GLSL\n#define threadLoca
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "#ifndef _KEYPOINTS_GLSL\n#define _KEYPOINTS_GLSL\n@include \"math.glsl\"\n@include \"fixed-point.glsl\"\n@include \"float16.glsl\"\n@include \"pyramids.glsl\"\nstruct Keypoint\n{\nvec2 position;\nfloat lod;\nfloat orientation;\nfloat score;\nuint flags;\n};\nstruct KeypointAddress\n{\nint base;\nint offset;\n};\nconst int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@);\nconst uint KPF_NONE = 0u;\nconst uint KPF_NULL = 1u;\nconst uint KPF_INFINITY = 2u;\n#define encodeKeypointScore(score) encodeFloat16(score)\n#define decodeKeypointScore(encodedScore) decodeFloat16(encodedScore)\n#define encodeKeypointOrientation(angle) ((angle) * INV_PI_OVER_2 + 0.5f)\n#define decodeKeypointOrientation(value) ((value) * TWO_PI - PI)\n#define encodeNullKeypoint() (vec4(1.0f))\n#define encodeDiscardedKeypoint() (vec4(0.0f))\n#define encodeKeypointPositionAtInfinity() (vec4(254, 255, 255, 255) / 255.0f)\n#define isKeypointAtInfinity(keypoint) ((((keypoint).flags) & KPF_INFINITY) != 0u)\n#define isNullKeypoint(keypoint) ((((keypoint).flags) & KPF_NULL) != 0u)\n#define isBadKeypoint(keypoint) ((keypoint).score < 0.0f)\n#define sizeofEncodedKeypoint(descriptorSize, extraSize) (MIN_KEYPOINT_SIZE + (descriptorSize) + (extraSize))\n#define findKeypointIndex(address, descriptorSize, extraSize) ((address).base / ((sizeofEncodedKeypoint((descriptorSize), (extraSize))) / 4))\nvec4 readKeypointData(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nint rasterIndex = address.base + address.offset;\nvec4 data = pixelAt(encodedKeypoints, ivec2(rasterIndex % encoderLength, rasterIndex / encoderLength));\nreturn rasterIndex < encoderLength * encoderLength ? data : encodeNullKeypoint();\n}\nKeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descriptorSize, int extraSize)\n{\nint threadRaster = thread.y * encoderLength + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nint keypointIndex = int(threadRaster / pixelsPerKeypoint);\nKeypointAddress address = KeypointAddress(\nkeypointIndex * pixelsPerKeypoint,\nthreadRaster % pixelsPerKeypoint\n);\nreturn address;\n}\nKeypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nKeypoint keypoint;\nKeypointAddress positionAddress = KeypointAddress(address.base, 0);\nKeypointAddress propertiesAddress = KeypointAddress(address.base, 1);\nvec4 rawEncodedPosition = readKeypointData(encodedKeypoints, encoderLength, positionAddress);\nivec4 encodedPosition = ivec4(rawEncodedPosition * 255.0f);\nkeypoint.position = fixtovec2(fixed2_t(\nencodedPosition.r | (encodedPosition.g << 8),\nencodedPosition.b | (encodedPosition.a << 8)\n));\nvec4 encodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);\nkeypoint.lod = decodeLod(encodedProperties.r);\nkeypoint.orientation = decodeKeypointOrientation(encodedProperties.g);\nkeypoint.score = decodeKeypointScore(encodedProperties.ba);\nbool isNull = all(equal(rawEncodedPosition, vec4(1)));\nbool isDiscarded = all(equal(rawEncodedPosition + encodedProperties, vec4(0)));\nkeypoint.score = (isNull || isDiscarded) ? -1.0f : keypoint.score;\nkeypoint.flags = KPF_NONE;\nkeypoint.flags |= KPF_NULL * uint(isNull);\nkeypoint.flags |= KPF_INFINITY * uint(all(equal(encodedPosition, ivec4(254, 255, 255, 255))));\nreturn keypoint;\n}\nvec4 encodeKeypointPosition(vec2 position)\n{\nconst vec2 zeros = vec2(0.0f);\nfixed2_t pos = vec2tofix(max(position, zeros));\nfixed2_t lo = pos & 255;\nfixed2_t hi = pos >> 8;\nreturn vec4(lo.x, hi.x, lo.y, hi.y) / 255.0f;\n}\n#endif"
+module.exports = "#ifndef _KEYPOINTS_GLSL\n#define _KEYPOINTS_GLSL\n@include \"math.glsl\"\n@include \"fixed-point.glsl\"\n@include \"float16.glsl\"\n@include \"pyramids.glsl\"\nstruct Keypoint\n{\nvec2 position;\nfloat lod;\nfloat orientation;\nfloat score;\nuint flags;\n};\nstruct KeypointAddress\n{\nint base;\nint offset;\n};\nconst int MIN_KEYPOINT_SIZE = int(@MIN_KEYPOINT_SIZE@);\nconst uint KPF_NONE = 0u;\nconst uint KPF_NULL = 1u;\nconst uint KPF_INFINITY = 2u;\n#define encodeKeypointScore(score) encodeFloat16(score)\n#define decodeKeypointScore(encodedScore) decodeFloat16(encodedScore)\n#define encodeKeypointOrientation(angle) ((angle) * INV_PI_OVER_2 + 0.5f)\n#define decodeKeypointOrientation(value) ((value) * TWO_PI - PI)\n#define encodeNullKeypoint() (vec4(1.0f))\n#define encodeDiscardedKeypoint() (vec4(0.0f))\n#define encodeKeypointPositionAtInfinity() (vec4(254, 255, 255, 255) / 255.0f)\n#define isKeypointAtInfinity(keypoint) ((((keypoint).flags) & KPF_INFINITY) != 0u)\n#define isNullKeypoint(keypoint) ((((keypoint).flags) & KPF_NULL) != 0u)\n#define isBadKeypoint(keypoint) ((keypoint).score < 0.0f)\n#define sizeofEncodedKeypoint(descriptorSize, extraSize) (MIN_KEYPOINT_SIZE + (descriptorSize) + (extraSize))\n#define findKeypointIndex(address, descriptorSize, extraSize) ((address).base / ((sizeofEncodedKeypoint((descriptorSize), (extraSize))) / 4))\nvec4 readKeypointData(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nint rasterIndex = address.base + address.offset;\nvec4 data = pixelAt(encodedKeypoints, ivec2(rasterIndex % encoderLength, rasterIndex / encoderLength));\nreturn rasterIndex < encoderLength * encoderLength ? data : encodeNullKeypoint();\n}\nKeypointAddress findKeypointAddress(ivec2 thread, int encoderLength, int descriptorSize, int extraSize)\n{\nint threadRaster = thread.y * encoderLength + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nint keypointIndex = int(threadRaster / pixelsPerKeypoint);\nKeypointAddress address = KeypointAddress(\nkeypointIndex * pixelsPerKeypoint,\nthreadRaster % pixelsPerKeypoint\n);\nreturn address;\n}\nKeypoint decodeKeypoint(sampler2D encodedKeypoints, int encoderLength, KeypointAddress address)\n{\nKeypoint keypoint;\nKeypointAddress positionAddress = KeypointAddress(address.base, 0);\nKeypointAddress propertiesAddress = KeypointAddress(address.base, 1);\nvec4 rawEncodedPosition = readKeypointData(encodedKeypoints, encoderLength, positionAddress);\nivec4 encodedPosition = ivec4(rawEncodedPosition * 255.0f);\nkeypoint.position = fixtovec2(fixed2_t(\nencodedPosition.r | (encodedPosition.g << 8),\nencodedPosition.b | (encodedPosition.a << 8)\n));\nvec4 encodedProperties = readKeypointData(encodedKeypoints, encoderLength, propertiesAddress);\nkeypoint.lod = decodeLod(encodedProperties.r);\nkeypoint.orientation = decodeKeypointOrientation(encodedProperties.g);\nkeypoint.score = decodeKeypointScore(encodedProperties.ba);\nbool isNull = all(equal(rawEncodedPosition, vec4(1)));\nbool isDiscarded = all(equal(rawEncodedPosition + encodedProperties, vec4(0)));\nkeypoint.score = (isNull || isDiscarded) ? -1.0f : keypoint.score;\nkeypoint.flags = KPF_NONE;\nkeypoint.flags |= KPF_NULL * uint(isNull);\nkeypoint.flags |= KPF_INFINITY * uint(all(equal(encodedPosition, ivec4(254, 255, 255, 255))));\nreturn keypoint;\n}\nvec4 encodeKeypointPosition(vec2 position)\n{\nconst vec2 zeros = vec2(0.0f);\nfixed2_t pos = vec2tofix(max(position, zeros));\nfixed2_t lo = pos & 255;\nfixed2_t hi = (pos >> 8) & 255;\nreturn vec4(lo.x, hi.x, lo.y, hi.y) / 255.0f;\n}\n#endif"
 
 /***/ }),
 
@@ -13722,7 +13981,7 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoint
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"float16.glsl\"\nuniform sampler2D offsetsImage;\nuniform ivec2 imageSize;\n#ifndef MAX_ITERATIONS\n#error Must define MAX_ITERATIONS\n#endif\n#define decodeSkipOffset(pixel) (int((pixel).g * 255.0f) | (int((pixel).a * 255.0f) << 8))\n#define encodeSkipOffset(offset) (vec2((offset) & 255, (offset) >> 8) / 255.0f)\nvoid main()\n{\nvec4 pixel = threadPixel(offsetsImage);\nivec2 thread = threadLocation();\nint rasterIndex = thread.y * imageSize.x + thread.x;\nint offset = decodeSkipOffset(pixel);\nint totalOffset = offset;\nvec2 encodedScore = pixel.rb;\nivec2 pos = thread; int allow = 1;\nfor(int i = 0; i < MAX_ITERATIONS; i++) {\nallow *= int(pos.y < imageSize.y) * int(isEncodedFloat16Zero(pixel.rb));\nrasterIndex += allow * offset;\npos = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);\npixel = pixelAt(offsetsImage, pos);\noffset = decodeSkipOffset(pixel);\ntotalOffset += allow * offset;\n}\ntotalOffset = min(totalOffset, 65535);\ncolor.rb = encodedScore;\ncolor.ga = encodeSkipOffset(totalOffset);\n}"
+module.exports = "@include \"float16.glsl\"\nuniform sampler2D offsetsImage;\nuniform ivec2 imageSize;\n#ifndef MAX_ITERATIONS\n#error Undefined MAX_ITERATIONS\n#endif\n#define decodeSkipOffset(pixel) (int((pixel).g * 255.0f) | (int((pixel).a * 255.0f) << 8))\n#define encodeSkipOffset(offset) (vec2((offset) & 255, (offset) >> 8) / 255.0f)\nvoid main()\n{\nvec4 pixel = threadPixel(offsetsImage);\nivec2 thread = threadLocation();\nint rasterIndex = thread.y * imageSize.x + thread.x;\nint offset = decodeSkipOffset(pixel);\nint totalOffset = offset;\nvec2 encodedScore = pixel.rb;\nivec2 pos = thread; int allow = 1;\n@unroll\nfor(int i = 0; i < MAX_ITERATIONS; i++) {\nallow *= int(pos.y < imageSize.y) * int(isEncodedFloat16Zero(pixel.rb));\nrasterIndex += allow * offset;\npos = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);\npixel = pixelAt(offsetsImage, pos);\noffset = decodeSkipOffset(pixel);\ntotalOffset += allow * offset;\n}\ntotalOffset = min(totalOffset, 65535);\ncolor.rb = encodedScore;\ncolor.ga = encodeSkipOffset(totalOffset);\n}"
 
 /***/ }),
 
@@ -13733,7 +13992,7 @@ module.exports = "@include \"float16.glsl\"\nuniform sampler2D offsetsImage;\nun
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"float16.glsl\"\nuniform sampler2D corners;\nuniform ivec2 imageSize;\n#if !defined(MAX_ITERATIONS)\n#error Must define MAX_ITERATIONS\n#elif MAX_ITERATIONS > 255\n#error MAX_ITERATIONS must be less than 256\n#endif\nvoid main()\n{\nvec4 pixel = threadPixel(corners);\nivec2 pos = threadLocation();\nvec2 encodedScore = pixel.rb;\nint offset = 0, allow = 1;\nfor(int i = 0; i < MAX_ITERATIONS; i++) {\nallow *= int(pos.y < imageSize.y) * int(isEncodedFloat16Zero(pixel.rb));\noffset += allow;\npos.x = (pos.x + 1) % imageSize.x;\npos.y += int(pos.x == 0);\npixel = pixelAt(corners, pos);\n}\ncolor.rb = encodedScore;\ncolor.ga = vec2(offset, 0) / 255.0f;\n}"
+module.exports = "@include \"float16.glsl\"\nuniform sampler2D corners;\nuniform ivec2 imageSize;\nvoid main()\n{\nvec4 pixel = threadPixel(corners);\nivec2 pos = threadLocation();\nvec2 encodedScore = pixel.rb;\nint offset = 0, allow = 1, jumped = 0;\n#define READ(j) ; \\\nallow *= int(pos.y < imageSize.y) * int(isEncodedFloat16Zero(pixel.rb)); \\\noffset += allow; \\\npos.x = (pos.x + 1) % imageSize.x; \\\npos.y += int(pos.x == 0); \\\npixel = (0 != (jumped |= int(pos.x == 0))) ? pixelAtShortOffset(corners, ivec2((j),1)) : pixelAtShortOffset(corners, ivec2((j),0))\nREAD(1); READ(2); READ(3); READ(4); READ(5); READ(6); READ(7);\ncolor.rb = encodedScore;\ncolor.ga = vec2(offset, 0) / 255.0f;\n}"
 
 /***/ }),
 
@@ -13744,7 +14003,7 @@ module.exports = "@include \"float16.glsl\"\nuniform sampler2D corners;\nuniform
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D offsetsImage;\nuniform ivec2 imageSize;\nuniform int passId;\nuniform int numPasses;\nuniform int keypointLimit;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#define decodeSkipOffset(pixel) (int((pixel).g * 255.0f) | (int((pixel).a * 255.0f) << 8))\nbool findQthKeypoint(int q, int p, inout ivec2 position, out vec4 pixel)\n{\nint notFirstPass = int(passId > 0);\nposition *= notFirstPass;\np |= -(1 - notFirstPass);\np -= notFirstPass;\nint rasterIndex = position.y * imageSize.x + position.x;\nwhile(position.y < imageSize.y && p != q) {\nposition = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);\npixel = texelFetch(offsetsImage, position, 0);\np += int(!isEncodedFloat16Zero(pixel.rb));\nrasterIndex += max(1, decodeSkipOffset(pixel));\n}\nreturn (p == q);\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint q = findKeypointIndex(address, descriptorSize, extraSize);\ncolor = vec4(0.0f);\nif(address.offset != 0)\nreturn;\ncolor = threadPixel(encodedKeypoints);\nint numPixels = encoderLength * encoderLength;\nint maxKeypoints = numPixels / pixelsPerKeypoint;\nint maxKeypointsPerPass = maxKeypoints / numPasses + int(maxKeypoints % numPasses != 0);\nint targetPassId = q / maxKeypointsPerPass;\nif(passId != targetPassId)\nreturn;\nint lastIndexFromPrevPass = passId * maxKeypointsPerPass - 1;\nKeypointAddress lastAddressFromPrevPass = KeypointAddress(max(0, lastIndexFromPrevPass) * pixelsPerKeypoint, 0);\nKeypoint lastKeypointFromPrevPass = decodeKeypoint(encodedKeypoints, encoderLength, lastAddressFromPrevPass);\nivec2 position = ivec2(lastKeypointFromPrevPass.position);\nvec4 pixel;\ncolor = encodeNullKeypoint();\nif(q >= min(maxKeypoints, keypointLimit) || !findQthKeypoint(q, lastIndexFromPrevPass, position, pixel))\nreturn;\ncolor = encodeKeypointPosition(vec2(position));\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D offsetsImage;\nuniform ivec2 imageSize;\nuniform int passId;\nuniform int numPasses;\nuniform int keypointLimit;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#define decodeSkipOffset(pixel) (int((pixel).g * 255.0f) | (int((pixel).a * 255.0f) << 8))\nbool findQthKeypoint(int q, int p, inout ivec2 position, out vec4 pixel)\n{\nint notFirstPass = int(passId > 0);\nposition *= notFirstPass;\np |= -(1 - notFirstPass);\np -= notFirstPass;\nint rasterIndex = position.y * imageSize.x + position.x;\nwhile(position.y < imageSize.y && p != q) {\nposition = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);\npixel = texelFetch(offsetsImage, position, 0);\np += int(!isEncodedFloat16Zero(pixel.rb));\nrasterIndex += max(1, decodeSkipOffset(pixel));\n}\nreturn (p == q);\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint q = findKeypointIndex(address, descriptorSize, extraSize);\ncolor = vec4(0.0f);\nif(address.offset != 0)\nreturn;\ncolor = threadPixel(encodedKeypoints);\nint numPixels = encoderLength * encoderLength;\nint maxKeypoints = numPixels / pixelsPerKeypoint;\nint maxKeypointsPerPass = maxKeypoints / numPasses + int(maxKeypoints % numPasses != 0);\nint targetPassId = q / maxKeypointsPerPass;\nif(passId != targetPassId)\nreturn;\nint lastIndexFromPrevPass = passId * maxKeypointsPerPass - 1;\nKeypointAddress lastAddressFromPrevPass = KeypointAddress(max(0, lastIndexFromPrevPass) * pixelsPerKeypoint, 0);\nKeypoint lastKeypointFromPrevPass = decodeKeypoint(encodedKeypoints, encoderLength, lastAddressFromPrevPass);\nivec2 position = passId > 0 ? ivec2(lastKeypointFromPrevPass.position) : ivec2(0);\nvec4 pixel;\ncolor = encodeNullKeypoint();\nif(q >= min(maxKeypoints, keypointLimit) || !findQthKeypoint(q, lastIndexFromPrevPass, position, pixel))\nreturn;\ncolor = encodeKeypointPosition(vec2(position));\n}"
 
 /***/ }),
 
@@ -13756,6 +14015,17 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D offsetsImage;\n
 /***/ (function(module, exports) {
 
 module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D corners;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvoid main()\n{\nivec2 thread = threadLocation();\nvec4 pixel = threadPixel(encodedKeypoints);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint q = findKeypointIndex(address, descriptorSize, extraSize);\ncolor = pixel;\nif(address.offset != 1)\nreturn;\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nvec4 kpix = pixelAt(corners, ivec2(keypoint.position));\nkeypoint.score = decodeFloat16(kpix.rb);\ncolor.r = kpix.a;\ncolor.g = encodeKeypointOrientation(0.0f);\ncolor.ba = encodeKeypointScore(keypoint.score);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/encode-keypoints.glsl":
+/*!*********************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/encode-keypoints.glsl ***!
+  \*********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D corners;\nprecision mediump usampler2D;\nuniform usampler2D lookupTable;\nuniform int stride;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int encoderCapacity;\nconst uvec2 NULL_ELEMENT = uvec2(0xFFFFu);\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint index = findKeypointIndex(address, descriptorSize, extraSize);\nivec2 pos = ivec2(index % stride, index / stride);\nuvec4 entry = texelFetch(lookupTable, pos, 0);\ncolor = encodeNullKeypoint();\nif(all(equal(entry.xy, NULL_ELEMENT)) || index >= encoderCapacity)\nreturn;\ncolor = encodeKeypointPosition(vec2(entry.xy));\nif(address.offset == 0)\nreturn;\ncolor = vec4(0.0f);\nif(address.offset > 1)\nreturn;\nvec4 pixel = texelFetch(corners, ivec2(entry.xy), 0);\nvec2 encodedScore = encodeKeypointScore(decodeFloat16(pixel.rb));\nfloat encodedOrientation = encodeKeypointOrientation(0.0f);\nfloat encodedLod = pixel.a;\ncolor = vec4(encodedLod, encodedOrientation, encodedScore);\n}"
 
 /***/ }),
 
@@ -13825,6 +14095,17 @@ module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nunifor
 
 /***/ }),
 
+/***/ "./src/gpu/shaders/keypoints/lookup-of-locations.glsl":
+/*!************************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/lookup-of-locations.glsl ***!
+  \************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "#if @FS_USE_CUSTOM_PRECISION@\nprecision mediump int;\nprecision mediump float;\n#endif\n#if !defined(STAGE)\n#error Undefined STAGE\n#elif STAGE == 1\n@include \"float16.glsl\"\nuniform sampler2D corners;\n#else\n#define SKIP_TEXTURE_READS 1\n#define DENSITY_FACTOR 0.10\nuniform mediump usampler2D lookupTable;\nuniform int blockSize;\nuniform int width;\nuniform int height;\n#endif\nconst uvec2 NULL_ELEMENT = uvec2(0xFFFFu);\nvoid main()\n{\n#if STAGE == 1\nuvec2 outSize = uvec2(outputSize());\nuvec2 thread = uvec2(threadLocation());\nuvec2 size = uvec2(textureSize(corners, 0));\nuint location = thread.y * outSize.x + thread.x;\nivec2 pos = ivec2(location % size.x, location / size.x);\nvec4 pixel = location < size.x * size.y ? texelFetch(corners, pos, 0) : vec4(0.0f);\nbool isCorner = !isEncodedFloat16Zero(pixel.rb);\ncolor = isCorner ? uvec4(uvec2(pos), 1u, 0u) : uvec4(NULL_ELEMENT, 0u, 0u);\n#elif STAGE > 1\nint dblBlockSize = 2 * blockSize;\nivec2 thread = threadLocation();\nivec2 offset = thread % dblBlockSize;\nivec2 delta = thread - offset;\n#if SKIP_TEXTURE_READS\nif(blockSize >= 8) {\nuint sb = texture(lookupTable, texCoord).z;\nfloat p = max((float(sb) / float(blockSize)) / float(blockSize), DENSITY_FACTOR);\nfloat rowthr = float(dblBlockSize) * p + 3.0f * sqrt(p * (1.0f - p));\ncolor = uvec4(NULL_ELEMENT, 4u * sb, 0u);\nif(offset.y >= max(1, int(ceil(rowthr))))\nreturn;\n}\n#endif\n#define deltaCenter ivec2(0,0)\n#define deltaTop ivec2(0,-blockSize)\n#define deltaTopRight ivec2(blockSize,-blockSize)\n#define deltaRight ivec2(blockSize,0)\n#define deltaBottomRight ivec2(blockSize,blockSize)\n#define deltaBottom ivec2(0,blockSize)\n#define deltaBottomLeft ivec2(-blockSize,blockSize)\n#define deltaLeft ivec2(-blockSize,0)\n#define deltaTopLeft ivec2(-blockSize,-blockSize)\nivec2 boundary = ivec2(width - 1, height - 1) / blockSize;\nivec2 bottomRightPos = thread + deltaBottomRight;\nuvec2 valid = uvec2(\nbottomRightPos.x < width  || bottomRightPos.x / blockSize == boundary.x,\nbottomRightPos.y < height || bottomRightPos.y / blockSize == boundary.y\n);\nuvec4 mask[4] = uvec4[4](\nuvec4(1u, valid.x, valid.y, valid.x * valid.y),\nuvec4(1u, 1u, valid.y, valid.y),\nuvec4(1u, valid.x, 1u, valid.x),\nuvec4(1u)\n);\n#define calcSb(delta) texelFetch(lookupTable, blockSize * ((thread + (delta)) / blockSize), 0).z\nuint center = calcSb(deltaCenter);\nuint top = calcSb(deltaTop);\nuint topRight = calcSb(deltaTopRight);\nuint right = calcSb(deltaRight);\nuint bottomRight = calcSb(deltaBottomRight);\nuint bottom = calcSb(deltaBottom);\nuint bottomLeft = calcSb(deltaBottomLeft);\nuint left = calcSb(deltaLeft);\nuint topLeft = calcSb(deltaTopLeft);\nuvec4 sums[4] = uvec4[4](\nuvec4(center, right, bottom, bottomRight),\nuvec4(left, center, bottomLeft, bottom),\nuvec4(top, topRight, center, right),\nuvec4(topLeft, top, left, center)\n);\nivec2 cmp = ivec2(greaterThanEqual(offset, ivec2(blockSize)));\nint option = 2 * cmp.y + cmp.x;\nuvec4 cdef = sums[option] * mask[option];\nuint c2b = cdef.x, d2b = cdef.y, e2b = cdef.z, f2b = cdef.w;\nuint sb = center;\nuint s2b = c2b + d2b + e2b + f2b;\ns2b = s2b < sb ? 0xFFFFu : min(0xFFFFu, s2b);\nuint w2b = uint(min(dblBlockSize, width - delta.x));\nuvec2 uoffset = uvec2(offset);\nuint ceiling = s2b >= uoffset.x ? (s2b - uoffset.x) / w2b + uint((s2b - uoffset.x) % w2b > 0u) : 0u;\ncolor = uvec4(NULL_ELEMENT, s2b, 0u);\nif(uoffset.y >= ceiling)\nreturn;\nuint i2b = uoffset.y * w2b + uoffset.x;\nuint j2b = i2b >= c2b ? i2b - c2b : 0u;\nuint k2b = j2b >= d2b ? j2b - d2b : 0u;\nuint l2b = k2b >= e2b ? k2b - e2b : 0u;\nuint wl = uint(min(blockSize, width - delta.x));\nuint wr = uint(min(blockSize, width - delta.x - blockSize));\nivec2 magicOffset = (\n(i2b < c2b) ? ivec2(i2b % wl, i2b / wl) : (\n(j2b < d2b) ? ivec2(j2b % wr, j2b / wr) + ivec2(blockSize, 0) : (\n(k2b < e2b) ? ivec2(k2b % wl, k2b / wl) + ivec2(0, blockSize) : (\n(l2b < f2b) ? ivec2(l2b % wr, l2b / wr) + ivec2(blockSize) : ivec2(0)\n))));\nuvec2 a2b = texelFetch(lookupTable, delta + magicOffset, 0).xy;\ncolor = uvec4(a2b, s2b, 0u);\n#else\nuvec4 pix = texture(lookupTable, texCoord);\ncolor = all(equal(pix.xy, NULL_ELEMENT)) ? vec4(0,1,1,1) : vec4(1,0,0,1);\n#endif\n}"
+
+/***/ }),
+
 /***/ "./src/gpu/shaders/keypoints/mix-keypoints.glsl":
 /*!******************************************************!*\
   !*** ./src/gpu/shaders/keypoints/mix-keypoints.glsl ***!
@@ -13832,7 +14113,7 @@ module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nunifor
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints[2];\nuniform int encoderLength[2];\nuniform int encoderCapacity[2];\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int outEncoderLength;\nvoid main()\n{\nivec2 thread = threadLocation();\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress outAddr = findKeypointAddress(thread, outEncoderLength, descriptorSize, extraSize);\nint outIndex = findKeypointIndex(outAddr, descriptorSize, extraSize);\nint encoderIndex = int(outIndex >= encoderCapacity[0]);\nint inIndex = (outIndex - encoderCapacity[0] * encoderIndex);\nKeypointAddress inAddr = KeypointAddress(\ninIndex * pixelsPerKeypoint,\noutAddr.offset\n);\nvec4 data[2] = vec4[2](\nreadKeypointData(encodedKeypoints[0], encoderLength[0], inAddr),\nreadKeypointData(encodedKeypoints[1], encoderLength[1], inAddr)\n);\nbool valid = (inIndex < max(encoderCapacity[0], encoderCapacity[1]));\ncolor = valid ? data[encoderIndex] : encodeNullKeypoint();\n}"
+module.exports = "@include \"keypoints.glsl\"\n@include \"int32.glsl\"\n#if !defined(STAGE)\n#error Undefined STAGE\n#elif STAGE == 1\nuniform sampler2D encodedKeypointsA;\nuniform sampler2D encodedKeypointsB;\nuniform int encoderLengthA;\nuniform int encoderLengthB;\nuniform int encoderCapacityA;\nuniform int encoderCapacityB;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#elif STAGE == 2\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int maxKeypoints;\n#elif STAGE == 3\nuniform sampler2D array;\nuniform int blockSize;\n#elif STAGE == 4\nuniform sampler2D array;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#elif STAGE == 5\nuniform sampler2D array;\n#else\n#error Invalid STAGE\n#endif\n#define NULL_KEYPOINT_INDEX 0xFFFF\nvoid main()\n{\n#if STAGE == 1\nivec2 thread = threadLocation();\nKeypointAddress addr = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint keypointIndex = findKeypointIndex(addr, descriptorSize, extraSize);\nint newKeypointIndex = keypointIndex < encoderCapacityA ? keypointIndex : keypointIndex - encoderCapacityA;\ncolor = encodeNullKeypoint();\nif(newKeypointIndex >= max(encoderCapacityA, encoderCapacityB))\nreturn;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\naddr = KeypointAddress(newKeypointIndex * pixelsPerKeypoint, addr.offset);\nvec4 dataA = readKeypointData(encodedKeypointsA, encoderLengthA, addr);\nvec4 dataB = readKeypointData(encodedKeypointsB, encoderLengthB, addr);\ncolor = keypointIndex < encoderCapacityA ? dataA : dataB;\n#elif STAGE == 2\nivec2 thread = threadLocation();\nint keypointIndex = thread.y * outputSize().x + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress addr = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, addr);\nbool isValid = !isNullKeypoint(keypoint) && keypointIndex < maxKeypoints;\nkeypointIndex = isValid ? keypointIndex : NULL_KEYPOINT_INDEX;\ncolor = encodeUint32(uint(keypointIndex & 0xFFFF) | (uint(isValid) << 16u));\n#elif STAGE == 3\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nint arrayLength = size.x * size.y;\nint arrayIndex = thread.y * size.x + thread.x;\nint arrayIndexLeft = arrayIndex - blockSize;\nint arrayIndexRight = arrayIndex + blockSize;\nint mask = int(arrayIndexRight < arrayLength || arrayIndexRight / blockSize == (arrayLength - 1) / blockSize);\narrayIndexLeft = max(0, arrayIndexLeft);\narrayIndexRight = min(arrayLength - 1, arrayIndexRight);\n#define raster2pos(k) ivec2((k) % size.x, (k) / size.x)\nuvec3 entries32 = uvec3(\ndecodeUint32(threadPixel(array)),\ndecodeUint32(texelFetch(array, raster2pos(arrayIndexLeft), 0)),\ndecodeUint32(texelFetch(array, raster2pos(arrayIndexRight), 0))\n);\nivec3 sb = ivec3(entries32 >> 16u);\nsb.z *= mask;\nint dblBlockSize = 2 * blockSize;\nint offset = arrayIndex % dblBlockSize;\nint s2b = sb.x + (offset < blockSize ? sb.z : sb.y);\nint l2b = offset < blockSize ? sb.x : sb.y;\nint keypointIndex = int(entries32.x & 0xFFFFu);\nuint shiftedS2b = uint(s2b << 16);\ncolor = encodeUint32(uint(NULL_KEYPOINT_INDEX) | shiftedS2b);\nif(offset >= s2b)\nreturn;\ncolor = encodeUint32(uint(keypointIndex) | shiftedS2b);\nif(offset < l2b)\nreturn;\nkeypointIndex = int(decodeUint32(\ntexelFetch(array, raster2pos(arrayIndex + blockSize - l2b), 0)\n) & 0xFFFFu);\ncolor = encodeUint32(uint(keypointIndex) | shiftedS2b);\n#elif STAGE == 4\nivec2 thread = threadLocation();\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress addr = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint keypointIndex = findKeypointIndex(addr, descriptorSize, extraSize);\n#define raster2pos(k) ivec2((k) % size.x, (k) / size.x)\nivec2 size = textureSize(array, 0);\nuint sortedPair = decodeUint32(texelFetch(array, raster2pos(keypointIndex), 0));\nint newKeypointIndex = int(sortedPair & 0xFFFFu);\ncolor = encodeNullKeypoint();\nif(newKeypointIndex == NULL_KEYPOINT_INDEX || keypointIndex >= size.x * size.y)\nreturn;\nKeypointAddress newAddr = KeypointAddress(newKeypointIndex * pixelsPerKeypoint, addr.offset);\ncolor = readKeypointData(encodedKeypoints, encoderLength, newAddr);\n#elif STAGE == 5\nuint val = decodeUint32(threadPixel(array));\ncolor = (val & 0xFFFFu) == 0xFFFFu ? vec4(0,1,1,1) : vec4(1,0,0,1);\n#endif\n}"
 
 /***/ }),
 
@@ -13909,7 +14190,7 @@ module.exports = "@include \"keypoints.glsl\"\n@include \"filters.glsl\"\n#if !d
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"float16.glsl\"\nuniform sampler2D corners;\nuniform int iterationNumber;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 bounds = outputSize();\nint jump = (1 << iterationNumber);\nint clusterLength = jump << 1;\nint clusterMask = clusterLength - 1;\nivec2 clusterPos = ivec2(thread >> (1 + iterationNumber)) << (1 + iterationNumber);\nivec2 next1 = clusterPos + ((thread - clusterPos + ivec2(jump, 0)) & clusterMask);\nivec2 next2 = clusterPos + ((thread - clusterPos + ivec2(0, jump)) & clusterMask);\nivec2 next3 = clusterPos + ((thread - clusterPos + ivec2(jump, jump)) & clusterMask);\nvec4 p0 = texelFetch(corners, thread, 0);\nvec4 p1 = texelFetch(corners, next1 % bounds, 0);\nvec4 p2 = texelFetch(corners, next2 % bounds, 0);\nvec4 p3 = texelFetch(corners, next3 % bounds, 0);\nfloat s0 = decodeFloat16(p0.rb);\nfloat s1 = decodeFloat16(p1.rb);\nfloat s2 = decodeFloat16(p2.rb);\nfloat s3 = decodeFloat16(p3.rb);\nbool b0 = s0 >= s1 && s0 >= s2 && s0 >= s3;\nbool b1 = s1 >= s0 && s1 >= s2 && s1 >= s3;\nbool b2 = s2 >= s0 && s2 >= s1 && s2 >= s3;\ncolor = vec4(0.0f);\ncolor.rb = b0 ? p0.rb : (\nb1 ? p1.rb : (\nb2 ? p2.rb : p3.rb\n)\n);\n}"
+module.exports = "@include \"float16.glsl\"\nuniform sampler2D corners;\nuniform int iterationNumber;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 bounds = outputSize();\nint jump = (1 << iterationNumber);\nint clusterLength = jump << 1;\nint clusterMask = clusterLength - 1;\nivec2 clusterPos = ivec2(thread >> (1 + iterationNumber)) << (1 + iterationNumber);\nivec2 next1 = clusterPos + ((thread - clusterPos + ivec2(jump, 0)) & clusterMask);\nivec2 next2 = clusterPos + ((thread - clusterPos + ivec2(0, jump)) & clusterMask);\nivec2 next3 = clusterPos + ((thread - clusterPos + ivec2(jump, jump)) & clusterMask);\nvec4 p0 = threadPixel(corners);\nvec4 p1 = texelFetch(corners, next1 % bounds, 0);\nvec4 p2 = texelFetch(corners, next2 % bounds, 0);\nvec4 p3 = texelFetch(corners, next3 % bounds, 0);\nfloat s0 = decodeFloat16(p0.rb);\nfloat s1 = decodeFloat16(p1.rb);\nfloat s2 = decodeFloat16(p2.rb);\nfloat s3 = decodeFloat16(p3.rb);\nbool b0 = s0 >= s1 && s0 >= s2 && s0 >= s3;\nbool b1 = s1 >= s0 && s1 >= s2 && s1 >= s3;\nbool b2 = s2 >= s0 && s2 >= s1 && s2 >= s3;\ncolor = vec4(0.0f);\ncolor.rb = b0 ? p0.rb : (\nb1 ? p1.rb : (\nb2 ? p2.rb : p3.rb\n)\n);\n}"
 
 /***/ }),
 
@@ -13964,7 +14245,7 @@ module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\n#if !d
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D encodedFlow;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\ncolor = pixel;\nif(isBadKeypoint(keypoint))\nreturn;\nint len = textureSize(encodedFlow, 0).x;\nivec2 location = ivec2(myIndex % len, myIndex / len);\nvec4 encodedFlow = pixelAt(encodedFlow, location);\nbool discardFlow = isDiscardedPairOfFloat16(encodedFlow);\nvec2 flow = !discardFlow ? decodePairOfFloat16(encodedFlow) : vec2(0.0f);\nvec4 newPosition = encodeKeypointPosition(keypoint.position + flow);\nvec4 newPixel = myAddress.offset == 0 ? newPosition : pixel;\ncolor = !discardFlow ? newPixel : encodeDiscardedKeypoint();\n}"
+module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D encodedFlow;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nint len = textureSize(encodedFlow, 0).x;\nKeypointAddress myAddress = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, myAddress);\nint myIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\ncolor = pixel;\nif(isBadKeypoint(keypoint))\nreturn;\nivec2 location = ivec2(myIndex % len, myIndex / len);\nvec4 encodedFlow = myIndex < len * len ? pixelAt(encodedFlow, location) : encodeDiscardedKeypoint();\nbool discardFlow = isDiscardedPairOfFloat16(encodedFlow);\nvec2 flow = !discardFlow ? decodePairOfFloat16(encodedFlow) : vec2(0.0f);\nvec4 newPosition = encodeKeypointPosition(keypoint.position + flow);\nvec4 newPixel = myAddress.offset == 0 ? newPosition : pixel;\ncolor = !discardFlow ? newPixel : encodeDiscardedKeypoint();\n}"
 
 /***/ }),
 
@@ -13986,7 +14267,7 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedOrientat
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int startIndex;\nuniform int endIndex;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#ifndef BUFFER_SIZE\n#error Undefined BUFFER_SIZE\n#endif\nlayout(std140) uniform KeypointBuffer\n{\nvec4 keypointBuffer[BUFFER_SIZE];\n};\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint index = findKeypointIndex(address, descriptorSize, extraSize);\ncolor = pixel;\nif(index < startIndex)\nreturn;\ncolor = encodeNullKeypoint();\nif(index >= endIndex)\nreturn;\nvec4 data = keypointBuffer[index - startIndex];\nswitch(address.offset) {\ncase 0: {\nfixed2_t pos = vec2tofix(data.xy);\nfixed2_t lo = pos & 255;\nfixed2_t hi = (pos >> 8) & 255;\ncolor = vec4(float(lo.x), float(hi.x), float(lo.y), float(hi.y)) / 255.0f;\nbreak;\n}\ncase 1: {\nvec2 score = encodeKeypointScore(max(data.w, 0.0f));\nfloat scale = encodeLod(data.z);\nfloat rotation = encodeKeypointOrientation(0.0f);\ncolor = vec4(scale, rotation, score);\nbreak;\n}\ndefault: {\ncolor = vec4(0.0f);\nbreak;\n}\n}\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int startIndex;\nuniform int endIndex;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#ifndef BUFFER_SIZE\n#error Undefined BUFFER_SIZE\n#endif\nlayout(std140) uniform KeypointBuffer\n{\nvec4 keypointBuffer[BUFFER_SIZE];\n};\nvoid main()\n{\nvec4 pixel = threadPixel(encodedKeypoints);\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint index = findKeypointIndex(address, descriptorSize, extraSize);\ncolor = pixel;\nif(index < startIndex)\nreturn;\ncolor = encodeNullKeypoint();\nif(index >= endIndex)\nreturn;\nvec4 data = keypointBuffer[index - startIndex];\nswitch(address.offset) {\ncase 0: {\ncolor = encodeKeypointPosition(data.xy);\nbreak;\n}\ncase 1: {\nvec2 score = encodeKeypointScore(max(data.w, 0.0f));\nfloat scale = encodeLod(data.z);\nfloat rotation = encodeKeypointOrientation(0.0f);\ncolor = vec4(scale, rotation, score);\nbreak;\n}\ndefault: {\ncolor = vec4(0.0f);\nbreak;\n}\n}\n}"
 
 /***/ }),
 
@@ -14376,6 +14657,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _speedy_texture_uploader__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./speedy-texture-uploader */ "./src/gpu/speedy-texture-uploader.js");
 /* harmony import */ var _core_speedy_media_source__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../core/speedy-media-source */ "./src/core/speedy-media-source.js");
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
+/* harmony import */ var _utils_observable__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../utils/observable */ "./src/utils/observable.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -14406,16 +14688,19 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 /**
  * GPU-accelerated routines for Computer Vision
  */
-class SpeedyGPU
+class SpeedyGPU extends _utils_observable__WEBPACK_IMPORTED_MODULE_7__["Observable"]
 {
     /**
      * Constructor
      */
     constructor()
     {
+        super();
+
         /** @type {SpeedyGL} cached reference */
         this._speedyGL = _speedy_gl__WEBPACK_IMPORTED_MODULE_0__["SpeedyGL"].instance;
 
@@ -14547,8 +14832,9 @@ class SpeedyGPU
     /**
      * Reset the internal state
      * (called on context reset)
+     * @param {WebGL2RenderingContext} gl
      */
-    _reset()
+    _reset(gl)
     {
         if(this.isReleased())
             return;
@@ -14556,6 +14842,8 @@ class SpeedyGPU
         this._programs = new _speedy_program_center__WEBPACK_IMPORTED_MODULE_2__["SpeedyProgramCenter"](this);
         this._texturePool = new _speedy_texture_pool__WEBPACK_IMPORTED_MODULE_3__["SpeedyTexturePool"](this);
         this._textureUploader = new _speedy_texture_uploader__WEBPACK_IMPORTED_MODULE_4__["SpeedyTextureUploader"](this);
+
+        this._notify(this);
     }
 }
 
@@ -14886,26 +15174,28 @@ __webpack_require__.r(__webpack_exports__);
 
 // Map uniform type to a gl function
 const UNIFORM_SETTERS = Object.freeze({
-    'sampler2D':'uniform1i',
-    'float':    'uniform1f',
-    'int':      'uniform1i',
-    'uint':     'uniform1ui',
-    'bool':     'uniform1i',
-    'vec2':     'uniform2f',
-    'vec3':     'uniform3f',
-    'vec4':     'uniform4f',
-    'ivec2':    'uniform2i',
-    'ivec3':    'uniform3i',
-    'ivec4':    'uniform4i',
-    'uvec2':    'uniform2ui',
-    'uvec3':    'uniform3ui',
-    'uvec4':    'uniform4ui',
-    'bvec2':    'uniform2i',
-    'bvec3':    'uniform3i',
-    'bvec4':    'uniform4i',
-    'mat2':     'uniformMatrix2fv',
-    'mat3':     'uniformMatrix3fv',
-    'mat4':     'uniformMatrix4fv',
+    'sampler2D': 'uniform1i',
+    'isampler2D':'uniform1i',
+    'usampler2D':'uniform1i',
+    'float':     'uniform1f',
+    'int':       'uniform1i',
+    'uint':      'uniform1ui',
+    'bool':      'uniform1i',
+    'vec2':      'uniform2f',
+    'vec3':      'uniform3f',
+    'vec4':      'uniform4f',
+    'ivec2':     'uniform2i',
+    'ivec3':     'uniform3i',
+    'ivec4':     'uniform4i',
+    'uvec2':     'uniform2ui',
+    'uvec3':     'uniform3ui',
+    'uvec4':     'uniform4ui',
+    'bvec2':     'uniform2i',
+    'bvec3':     'uniform3i',
+    'bvec4':     'uniform4i',
+    'mat2':      'uniformMatrix2fv',
+    'mat3':      'uniformMatrix3fv',
+    'mat4':      'uniformMatrix4fv',
 });
 
 
@@ -15440,7 +15730,7 @@ UniformVariable.prototype.setValue = function(gl, value, texNo)
     const setValue = gl[this.setter];
 
     // check uniform type
-    if(this.type == 'sampler2D') {
+    if(this.type.endsWith('sampler2D')) {
         // set texture
         if(texNo > gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["NotSupportedError"](`Can't bind ${texNo} textures to a program: max is ${gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS}`);
@@ -15773,9 +16063,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyTextureReader", function() { return SpeedyTextureReader; });
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
 /* harmony import */ var _gl_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./gl-utils */ "./src/gpu/gl-utils.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _speedy_gpu__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -15803,10 +16094,10 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 // number of pixel buffer objects
 // used to get a performance boost in gl.readPixels()
-// (1 seems to perform better on mobile, 2 on the PC?)
-const DEFAULT_NUMBER_OF_BUFFERS = 1; //2;
+const DEFAULT_NUMBER_OF_BUFFERS = 2;
 
 
 /**
@@ -15830,6 +16121,39 @@ class SpeedyTextureReader
 
         /** @type {number[]} for async data transfers (stores buffer indices) */
         this._producerQueue = [];
+
+        /** @type {WebGLBuffer[]} Pixel Buffer Objects (PBOs) */
+        this._pbo = (new Array(numberOfBuffers)).fill(null);
+
+        /** @type {boolean} is this object initialized? */
+        this._initialized = false;
+    }
+
+    /**
+     * Initialize this object
+     * @param {SpeedyGPU} gpu
+     */
+    init(gpu)
+    {
+        this._allocatePBOs = this._allocatePBOs.bind(this);
+        this._allocatePBOs(gpu);
+        gpu.subscribe(this._allocatePBOs);
+
+        this._initialized = true;
+    }
+
+    /**
+     * Release resources
+     * @param {SpeedyGPU} gpu
+     * @returns {null}
+     */
+    release(gpu)
+    {
+        gpu.unsubscribe(this._allocatePBOs);
+        this._deallocatePBOs(gpu);
+
+        this._initialized = false;
+        return null;
     }
 
     /**
@@ -15844,6 +16168,8 @@ class SpeedyTextureReader
      */
     readPixelsSync(texture, x = 0, y = 0, width = texture.width, height = texture.height)
     {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(this._initialized);
+
         const gl = texture.gl;
         const fbo = texture.glFbo;
 
@@ -15883,6 +16209,8 @@ class SpeedyTextureReader
      */
     readPixelsAsync(texture, x = 0, y = 0, width = texture.width, height = texture.height, useBufferedDownloads = false)
     {
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(this._initialized);
+
         const gl = texture.gl;
         const fbo = texture.glFbo;
 
@@ -15898,11 +16226,11 @@ class SpeedyTextureReader
 
         // lost context?
         if(gl.isContextLost())
-            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"].resolve(this._pixelBuffer[0].subarray(0, sizeofBuffer));
+            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"].resolve(this._pixelBuffer[0].subarray(0, sizeofBuffer));
 
         // do not optimize?
         if(!useBufferedDownloads) {
-            return SpeedyTextureReader._readPixelsViaPBO(gl, this._pixelBuffer[0], fbo, x, y, width, height).then(() =>
+            return SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[0], this._pixelBuffer[0], fbo, x, y, width, height).then(() =>
                 this._pixelBuffer[0].subarray(0, sizeofBuffer)
             );
         }
@@ -15910,13 +16238,13 @@ class SpeedyTextureReader
         // GPU needs to produce data
         if(this._producerQueue.length > 0) {
             const nextBufferIndex = this._producerQueue.shift();
-            SpeedyTextureReader._readPixelsViaPBO(gl, this._pixelBuffer[nextBufferIndex], fbo, x, y, width, height).then(() => {
+            SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[nextBufferIndex], this._pixelBuffer[nextBufferIndex], fbo, x, y, width, height).then(() => {
                 this._consumerQueue.push(nextBufferIndex);
             });
         }
-        else this._waitForQueueNotEmpty(this._producerQueue).then(() => {
+        else SpeedyTextureReader._waitForQueueNotEmpty(this._producerQueue).then(() => {
             const nextBufferIndex = this._producerQueue.shift();
-            SpeedyTextureReader._readPixelsViaPBO(gl, this._pixelBuffer[nextBufferIndex], fbo, x, y, width, height).then(() => {
+            SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[nextBufferIndex], this._pixelBuffer[nextBufferIndex], fbo, x, y, width, height).then(() => {
                 this._consumerQueue.push(nextBufferIndex);
             });
         }).turbocharge();
@@ -15924,13 +16252,13 @@ class SpeedyTextureReader
         // CPU needs to consume data
         if(this._consumerQueue.length > 0) {
             const readyBufferIndex = this._consumerQueue.shift();
-            return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"](resolve => {
+            return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"](resolve => {
                 resolve(this._pixelBuffer[readyBufferIndex].subarray(0, sizeofBuffer));
                 this._producerQueue.push(readyBufferIndex); // enqueue AFTER resolve()
             });
         }
-        else return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"](resolve => {
-            this._waitForQueueNotEmpty(this._consumerQueue).then(() => {
+        else return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"](resolve => {
+            SpeedyTextureReader._waitForQueueNotEmpty(this._consumerQueue).then(() => {
                 const readyBufferIndex = this._consumerQueue.shift();
                 resolve(this._pixelBuffer[readyBufferIndex].subarray(0, sizeofBuffer));
                 this._producerQueue.push(readyBufferIndex); // enqueue AFTER resolve()
@@ -15952,7 +16280,7 @@ class SpeedyTextureReader
         // reallocate
         for(let i = 0; i < this._pixelBuffer.length; i++) {
             const newBuffer = new Uint8Array(size);
-            newBuffer.set(this._pixelBuffer[i]); // make this optional?
+            //newBuffer.set(this._pixelBuffer[i]); // make this optional?
             this._pixelBuffer[i] = newBuffer;
         }
     }
@@ -15962,9 +16290,9 @@ class SpeedyTextureReader
      * @param {Array} queue
      * @returns {SpeedyPromise<void>}
      */
-    _waitForQueueNotEmpty(queue)
+    static _waitForQueueNotEmpty(queue)
     {
-        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_2__["SpeedyPromise"](resolve => {
+        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"](resolve => {
             (function wait() {
                 if(queue.length > 0)
                     resolve();
@@ -15979,6 +16307,7 @@ class SpeedyTextureReader
      * Read pixels to a Uint8Array, asynchronously, using a Pixel Buffer Object (PBO)
      * It's assumed that the target texture is in the RGBA8 format
      * @param {WebGL2RenderingContext} gl
+     * @param {WebGLBuffer} pbo
      * @param {Uint8Array} outputBuffer with size >= width * height * 4
      * @param {WebGLFramebuffer} fbo
      * @param {GLint} x
@@ -15987,14 +16316,11 @@ class SpeedyTextureReader
      * @param {GLsizei} height
      * @returns {SpeedyPromise}
      */
-    static _readPixelsViaPBO(gl, outputBuffer, fbo, x, y, width, height)
+    static _readPixelsViaPBO(gl, pbo, outputBuffer, fbo, x, y, width, height)
     {
-        // create temp buffer
-        const pbo = gl.createBuffer();
-
         // validate outputBuffer
         if(!(outputBuffer.byteLength >= width * height * 4))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalArgumentError"](`Can't read pixels: invalid buffer size`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't read pixels: invalid buffer size`);
 
         // bind the PBO
         gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
@@ -16016,10 +16342,34 @@ class SpeedyTextureReader
             0,
             0
         ).catch(err => {
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_4__["IllegalOperationError"](`Can't read pixels`, err);
-        }).finally(() => {
-            gl.deleteBuffer(pbo);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalOperationError"](`Can't read pixels`, err);
         });
+    }
+
+    /**
+     * Allocate PBOs
+     * @param {SpeedyGPU} gpu
+     */
+    _allocatePBOs(gpu)
+    {
+        const gl = gpu.gl;
+
+        for(let i = 0; i < this._pbo.length; i++)
+            this._pbo[i] = gl.createBuffer();
+    }
+
+    /**
+     * Deallocate PBOs
+     * @param {SpeedyGPU} gpu
+     */
+    _deallocatePBOs(gpu)
+    {
+        const gl = gpu.gl;
+
+        for(let i = this._pbo.length - 1; i >= 0; i--) {
+            gl.deleteBuffer(this._pbo[i]);
+            this._pbo[i] = null;
+        }
     }
 }
 
@@ -16184,10 +16534,15 @@ class SpeedyTexture
      * @param {WebGL2RenderingContext} gl
      * @param {number} width texture width in pixels
      * @param {number} height texture height in pixels
+     * @param {number} [format]
+     * @param {number} [internalFormat]
+     * @param {number} [dataType]
+     * @param {number} [filter]
+     * @param {number} [wrap]
      */
-    constructor(gl, width, height)
+    constructor(gl, width, height, format = gl.RGBA, internalFormat = gl.RGBA8, dataType = gl.UNSIGNED_BYTE, filter = gl.NEAREST, wrap = gl.MIRRORED_REPEAT)
     {
-        /** @type {WebGL2RenderingContext} */
+        /** @type {WebGL2RenderingContext} rendering context */
         this._gl = gl;
 
         /** @type {number} width of the texture */
@@ -16196,11 +16551,26 @@ class SpeedyTexture
         /** @type {number} height of the texture */
         this._height = Math.max(1, height | 0);
 
-        /** @type {WebGLTexture} internal texture object */
-        this._glTexture = SpeedyTexture._createTexture(this._gl, this._width, this._height);
-
         /** @type {boolean} have we generated mipmaps for this texture? */
         this._hasMipmaps = false;
+
+        /** @type {number} texture format */
+        this._format = format;
+
+        /** @type {number} internal format (usually a sized format) */
+        this._internalFormat = internalFormat;
+
+        /** @type {number} data type */
+        this._dataType = dataType;
+
+        /** @type {number} texture filtering (min & mag) */
+        this._filter = filter;
+
+        /** @type {number} texture wrapping */
+        this._wrap = wrap;
+
+        /** @type {WebGLTexture} internal texture object */
+        this._glTexture = SpeedyTexture._createTexture(this._gl, this._width, this._height, this._format, this._internalFormat, this._dataType, this._filter, this._wrap);
     }
 
     /**
@@ -16234,13 +16604,17 @@ class SpeedyTexture
      */
     upload(pixels, width = this._width, height = this._height)
     {
+        const gl = this._gl;
         _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(width > 0 && height > 0);
 
         this.discardMipmaps();
         this._width = width;
         this._height = height;
+        this._internalFormat = gl.RGBA8;
+        this._format = gl.RGBA;
+        this._dataType = gl.UNSIGNED_BYTE;
 
-        SpeedyTexture._upload(this._gl, this._glTexture, width, height, pixels, 0);
+        SpeedyTexture._upload(gl, this._glTexture, this._width, this._height, pixels, 0, this._format, this._internalFormat, this._dataType);
         return this;
     }
 
@@ -16258,7 +16632,7 @@ class SpeedyTexture
 
         // clear texture data
         gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, this._width, this._height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texImage2D(gl.TEXTURE_2D, 0, this._internalFormat, this._width, this._height, 0, this._format, this._dataType, null);
         gl.bindTexture(gl.TEXTURE_2D, null);
 
         // no mipmaps
@@ -16300,7 +16674,7 @@ class SpeedyTexture
         // resize
         // Note: this is fast on Chrome, but seems slow on Firefox
         gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texImage2D(gl.TEXTURE_2D, 0, this._internalFormat, this._width, this._height, 0, this._format, this._dataType, null);
         gl.bindTexture(gl.TEXTURE_2D, null);
 
         // no mipmaps
@@ -16371,7 +16745,7 @@ class SpeedyTexture
 
         // reset the min filter
         gl.bindTexture(gl.TEXTURE_2D, this._glTexture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this._filter);
         gl.bindTexture(gl.TEXTURE_2D, null);
 
         // done!
@@ -16447,9 +16821,14 @@ class SpeedyTexture
      * @param {WebGL2RenderingContext} gl
      * @param {number} width in pixels
      * @param {number} height in pixels
+     * @param {number} format usually gl.RGBA
+     * @param {number} internalFormat usually gl.RGBA8
+     * @param {number} dataType usually gl.UNSIGNED_BYTE
+     * @param {number} filter usually gl.NEAREST or gl.LINEAR
+     * @param {number} wrap gl.REPEAT, gl.MIRRORED_REPEAT or gl.CLAMP_TO_EDGE
      * @returns {WebGLTexture}
      */
-    static _createTexture(gl, width, height)
+    static _createTexture(gl, width, height, format, internalFormat, dataType, filter, wrap)
     {
         _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(width > 0 && height > 0);
 
@@ -16458,12 +16837,12 @@ class SpeedyTexture
         gl.bindTexture(gl.TEXTURE_2D, texture);
 
         // setup
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
-        //gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, width, height);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap);
+        //gl.texStorage2D(gl.TEXTURE_2D, 1, internalFormat, width, height);
+        gl.texImage2D(gl.TEXTURE_2D, 0, internalFormat, width, height, 0, format, dataType, null);
 
         // unbind & return
         gl.bindTexture(gl.TEXTURE_2D, null);
@@ -16477,10 +16856,13 @@ class SpeedyTexture
      * @param {GLsizei} width texture width
      * @param {GLsizei} height texture height
      * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} pixels 
-     * @param {GLint} [lod] mipmap level-of-detail
+     * @param {GLint} lod mipmap level-of-detail
+     * @param {number} format
+     * @param {number} internalFormat
+     * @param {number} dataType
      * @returns {WebGLTexture} texture
      */
-    static _upload(gl, texture, width, height, pixels, lod = 0)
+    static _upload(gl, texture, width, height, pixels, lod, format, internalFormat, dataType)
     {
         // Prefer calling _upload() before gl.useProgram() to avoid the
         // needless switching of GL programs internally. See also:
@@ -16502,12 +16884,12 @@ class SpeedyTexture
 
         gl.texImage2D(gl.TEXTURE_2D,        // target
                       lod,                  // mip level
-                      gl.RGBA8,             // internal format
-                      width,              // texture width
-                      height,             // texture height
-                      0,                  // border
-                      gl.RGBA,              // source format
-                      gl.UNSIGNED_BYTE,     // source type
+                      internalFormat,       // internal format
+                      width,                // texture width
+                      height,               // texture height
+                      0,                    // border
+                      format,               // source format
+                      dataType,             // source type
                       pixels);              // source data
 
         gl.bindTexture(gl.TEXTURE_2D, null);
@@ -16525,10 +16907,15 @@ class SpeedyDrawableTexture extends SpeedyTexture
      * @param {WebGL2RenderingContext} gl
      * @param {number} width texture width in pixels
      * @param {number} height texture height in pixels
+     * @param {number} [format]
+     * @param {number} [internalFormat]
+     * @param {number} [dataType]
+     * @param {number} [filter]
+     * @param {number} [wrap]
      */
-    constructor(gl, width, height)
+    constructor(gl, width, height, format = undefined, internalFormat = undefined, dataType = undefined, filter = undefined, wrap = undefined)
     {
-        super(gl, width, height);
+        super(gl, width, height, format, internalFormat, dataType, filter, wrap);
 
         /** @type {WebGLFramebuffer} framebuffer */
         this._glFbo = SpeedyDrawableTexture._createFramebuffer(gl, this._glTexture);
@@ -17314,7 +17701,7 @@ const MAX_TEXTURE_LENGTH = (1 << (16 - FIX_BITS)) - 2; // must be 2^n - 2 due to
 const MIN_KEYPOINT_SIZE = 8;
 
 /** @type {number} Minimum length of a keypoint encoder, in pixels (encodes at least 1 keypoint) */
-const MIN_ENCODER_LENGTH = Math.ceil(Math.sqrt(MIN_KEYPOINT_SIZE / 4)); // encodes 2, actually
+const MIN_ENCODER_LENGTH = 2; // capacity computations are based on this // Math.ceil(Math.sqrt(MIN_KEYPOINT_SIZE / 4));
 
 /** @type {number} Maximum number of keypoints we can encode (the actual length of the encoder may vary) */
 const MAX_ENCODER_CAPACITY = 8192;
@@ -18301,13 +18688,11 @@ class Utils
     }
 
     /**
-     * Request webcam access (WebRTC)
-     * @param {number} width in pixels
-     * @param {number} height in pixels
-     * @param {object} [options] will be passed to navigator.mediaDevices.getUserMedia() 
+     * Wrapper around getUserMedia()
+     * @param {MediaStreamConstraints} [constraints] will be passed to getUserMedia()
      * @returns {SpeedyPromise<HTMLVideoElement>}
      */
-    static requestCameraStream(width, height, options = {})
+    static requestCameraStream(constraints = { audio: false, video: true })
     {
         Utils.log('Accessing the webcam...');
 
@@ -18315,23 +18700,11 @@ class Utils
             throw new _errors__WEBPACK_IMPORTED_MODULE_0__["NotSupportedError"]('Unsupported browser: no mediaDevices.getUserMedia()');
 
         return new _speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"]((resolve, reject) => {
-            navigator.mediaDevices.getUserMedia({
-                audio: false,
-                video: {
-                    width: { ideal: width },
-                    height: { ideal: height },
-                    aspectRatio: width / height,
-                    //resizeMode: 'crop-and-scale',
-                    facingMode: 'environment',
-                    frameRate: 30,
-                },
-                ...options
-            })
-            .then(stream => {
+            navigator.mediaDevices.getUserMedia(constraints).then(stream => {
                 const video = document.createElement('video');
                 video.onloadedmetadata = () => {
                     video.play();
-                    Utils.log('The camera device is turned on!');
+                    Utils.log(`The camera is on! Resolution: ${video.videoWidth} x ${video.videoHeight}`);
                     resolve(video);
                 };
                 video.srcObject = stream;
