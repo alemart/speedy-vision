@@ -67,7 +67,6 @@ export class SpeedyPipelineNodeKeypointMixer extends SpeedyPipelineNode
         const extraSize = kps0.extraSize;
         const keypoints = gpu.programs.keypoints;
         const tex = this._tex;
-        const outputTexture = this._tex[4];
 
         // ensure that the format of kps0 equals the format of kps1
         if(!(kps0.descriptorSize === kps1.descriptorSize && kps0.extraSize === kps0.extraSize))
@@ -80,41 +79,44 @@ export class SpeedyPipelineNodeKeypointMixer extends SpeedyPipelineNode
 
         // find the dimensions of the output texture
         const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(capacity, descriptorSize, extraSize);
+        const mixEncoderLength = Math.max(1, Math.ceil(Math.sqrt(capacity)));
+
+        // prepare programs
+        keypoints.mixKeypointsPreInit.outputs(encoderLength, encoderLength, tex[0]);
+        keypoints.mixKeypointsInit.outputs(mixEncoderLength, mixEncoderLength, tex[1]);
+        keypoints.mixKeypointsSort.outputs(mixEncoderLength, mixEncoderLength, tex[2], tex[3]);
+        keypoints.mixKeypointsApply.outputs(encoderLength, encoderLength, tex[4]);
 
         // mix keypoints
-        keypoints.mixKeypoints.outputs(encoderLength, encoderLength, tex[3]);
-        const mixedKeypoints = keypoints.mixKeypoints(
-            [ kps0.encodedKeypoints, kps1.encodedKeypoints ],
-            [ kps0.encoderLength, kps1.encoderLength ],
-            [ cap0, cap1 ],
+        let mixedKeypoints = keypoints.mixKeypointsPreInit(
+            kps0.encodedKeypoints, kps1.encodedKeypoints,
+            kps0.encoderLength, kps1.encoderLength,
+            cap0, cap1,
             descriptorSize,
             extraSize,
             encoderLength
         );
 
-        // find the dimensions of the sorting shaders
-        const stride = 1 << LOG2_STRIDE; // must be a power of 2
-        const height = Math.ceil(capacity / stride);
-        const numberOfPixels = stride * height;
+        let sortedKeypoints = keypoints.mixKeypointsInit(
+            mixedKeypoints, descriptorSize, extraSize, encoderLength, capacity
+        );
 
-        // generate permutation of keypoints
-        keypoints.sortCreatePermutation.outputs(stride, height, tex[0]);
-        let permutation = keypoints.sortCreatePermutation(mixedKeypoints, descriptorSize, extraSize, encoderLength);
+        for(let b = 1; b < capacity; b *= 2)
+            sortedKeypoints = keypoints.mixKeypointsSort(sortedKeypoints, b);
 
-        // sort permutation
-        const numPasses = Math.ceil(Math.log2(numberOfPixels));
-        keypoints.sortMergePermutation.outputs(stride, height, tex[1], tex[2]);
-        for(let i = 1; i <= numPasses; i++) {
-            const blockSize = 1 << i; // 2, 4, 8...
-            const dblLog2BlockSize = i << 1; // 2 * log2(blockSize)
-            permutation = keypoints.sortMergePermutation(permutation, blockSize, dblLog2BlockSize);
-        }
+        mixedKeypoints = keypoints.mixKeypointsApply(
+            sortedKeypoints, mixedKeypoints, descriptorSize, extraSize, encoderLength
+        );
 
-        // apply permutation
-        keypoints.sortApplyPermutation.outputs(encoderLength, encoderLength, outputTexture);
-        keypoints.sortApplyPermutation(permutation, capacity, mixedKeypoints, descriptorSize, extraSize);
+        /*
+        // debug: view keypoints
+        keypoints.mixKeypointsView.outputs(mixEncoderLength, mixEncoderLength, tex[1]);
+        const view = keypoints.mixKeypointsView(sortedKeypoints);
+        const canvas = gpu.renderToCanvas(view);
+        if(!window._ww) document.body.appendChild(canvas);
+        window._ww = 1;
+        */
 
-        // done!
-        this.output().swrite(outputTexture, descriptorSize, extraSize, encoderLength);
+        this.output().swrite(mixedKeypoints, descriptorSize, extraSize, encoderLength);
     }
 }

@@ -121,6 +121,30 @@ const sortMergePermutation = importShader('keypoints/sort-mergeperm.glsl')
 const sortApplyPermutation = importShader('keypoints/sort-applyperm.glsl')
                             .withArguments('permutation', 'maxKeypoints', 'encodedKeypoints', 'descriptorSize', 'extraSize');
 
+// Keypoint mixing
+const mixKeypointsPreInit = importShader('keypoints/mix-keypoints.glsl')
+                           .withDefines({ 'STAGE': 1 })
+                           .withArguments('encodedKeypointsA', 'encodedKeypointsB', 'encoderLengthA', 'encoderLengthB', 'encoderCapacityA', 'encoderCapacityB', 'descriptorSize', 'extraSize', 'encoderLength');
+
+const mixKeypointsInit = importShader('keypoints/mix-keypoints.glsl')
+                        .withDefines({ 'STAGE': 2 })
+                        .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength', 'maxKeypoints');
+
+const mixKeypointsSort = importShader('keypoints/mix-keypoints.glsl')
+                        .withDefines({ 'STAGE': 3 })
+                        .withArguments('array', 'blockSize');
+
+const mixKeypointsView = importShader('keypoints/mix-keypoints.glsl')
+                        .withDefines({ 'STAGE': 5 })
+                        .withArguments('array');
+
+const mixKeypointsApply = importShader('keypoints/mix-keypoints.glsl')
+                         .withDefines({ 'STAGE': 4 })
+                         .withArguments('array', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
+
+
+
+
 // Keypoint encoding
 const initLookupTable = importShader('keypoints/lookup-of-locations.glsl')
                        .withDefines({ 'FS_OUTPUT_TYPE': 2, 'STAGE': 1 })
@@ -168,9 +192,6 @@ const uploadKeypoints = importShader('keypoints/upload-keypoints.glsl')
                            'BUFFER_SIZE': 1024 //16384 / 16
                         })
                        .withArguments('encodedKeypoints', 'startIndex', 'endIndex', 'descriptorSize', 'extraSize', 'encoderLength');
-
-const mixKeypoints = importShader('keypoints/mix-keypoints.glsl')
-                    .withArguments('encodedKeypoints', 'encoderLength', 'encoderCapacity', 'descriptorSize', 'extraSize', 'outEncoderLength');
 
 // Geometric transformations
 const applyHomography = importShader('keypoints/apply-homography.glsl')
@@ -285,6 +306,17 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             .declare('sortApplyPermutation', sortApplyPermutation)
 
             //
+            // Keypoint mixing
+            //
+            .declare('mixKeypointsPreInit', mixKeypointsPreInit)
+            .declare('mixKeypointsInit', mixKeypointsInit)
+            .declare('mixKeypointsSort', mixKeypointsSort, {
+                ...this.program.usesPingpongRendering()
+            })
+            .declare('mixKeypointsView', mixKeypointsView)
+            .declare('mixKeypointsApply', mixKeypointsApply)
+
+            //
             // Keypoint encoders
             //
             .declare('encodeNullKeypoints', encodeNullKeypoints)
@@ -312,7 +344,6 @@ export class SpeedyProgramGroupKeypoints extends SpeedyProgramGroup
             .declare('uploadKeypoints', uploadKeypoints, {
                 ...this.program.usesPingpongRendering()
             })
-            .declare('mixKeypoints', mixKeypoints)
 
             //
             // Geometric transformations

@@ -16,40 +16,179 @@
  * limitations under the License.
  *
  * mix-keypoints.glsl
- * Merges two sets of keypoints
+ * Mix two sets of keypoints
  */
 
 @include "keypoints.glsl"
+@include "int32.glsl"
 
-uniform sampler2D encodedKeypoints[2]; // input
-uniform int encoderLength[2];
-uniform int encoderCapacity[2];
+#if !defined(STAGE)
+#error Undefined STAGE
+#elif STAGE == 1
 
+uniform sampler2D encodedKeypointsA; // input
+uniform sampler2D encodedKeypointsB;
+uniform int encoderLengthA;
+uniform int encoderLengthB;
+uniform int encoderCapacityA;
+uniform int encoderCapacityB;
 uniform int descriptorSize; // input & output
 uniform int extraSize;
+uniform int encoderLength; // output
 
-uniform int outEncoderLength; // output
+#elif STAGE == 2
+
+uniform sampler2D encodedKeypoints;
+uniform int descriptorSize;
+uniform int extraSize;
+uniform int encoderLength;
+uniform int maxKeypoints;
+
+#elif STAGE == 3
+
+uniform sampler2D array;
+uniform int blockSize; // 1, 2, 4, 8...
+
+#elif STAGE == 4
+
+uniform sampler2D array;
+uniform sampler2D encodedKeypoints;
+uniform int descriptorSize;
+uniform int extraSize;
+uniform int encoderLength;
+
+#elif STAGE == 5
+
+uniform sampler2D array;
+
+#else
+#error Invalid STAGE
+#endif
+
+#define NULL_KEYPOINT_INDEX 0xFFFF
 
 void main()
 {
+#if STAGE == 1
+
+    //
+    // Mix two sets of keypoint without sorting the nulls
+    // (meaning, there will be nulls in-between)
+    //
+
+    ivec2 thread = threadLocation();
+    KeypointAddress addr = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);
+    int keypointIndex = findKeypointIndex(addr, descriptorSize, extraSize);
+    int newKeypointIndex = keypointIndex < encoderCapacityA ? keypointIndex : keypointIndex - encoderCapacityA;
+
+    color = encodeNullKeypoint();
+    if(newKeypointIndex >= max(encoderCapacityA, encoderCapacityB))
+        return;
+
+    int pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;
+    addr = KeypointAddress(newKeypointIndex * pixelsPerKeypoint, addr.offset);
+    vec4 dataA = readKeypointData(encodedKeypointsA, encoderLengthA, addr);
+    vec4 dataB = readKeypointData(encodedKeypointsB, encoderLengthB, addr);
+
+    color = keypointIndex < encoderCapacityA ? dataA : dataB;
+
+#elif STAGE == 2
+
+    //
+    // For each keypoint, generate a pair (keypointIndex, s1),
+    // where s1 = 1 if the keypoint is not null, or 0 otherwise
+    //
+
+    ivec2 thread = threadLocation();
+    int keypointIndex = thread.y * outputSize().x + thread.x;
+    int pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;
+    KeypointAddress addr = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);
+
+    Keypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, addr);
+    bool isValid = !isNullKeypoint(keypoint) && keypointIndex < maxKeypoints;
+    keypointIndex = isValid ? keypointIndex : NULL_KEYPOINT_INDEX;
+
+    color = encodeUint32(uint(keypointIndex & 0xFFFF) | (uint(isValid) << 16u));
+
+#elif STAGE == 3
+
+    //
+    // Sort the (keypointIndex, s2b) pairs with Parallel Ale Sort
+    // (see lookup-of-locations.glsl for details)
+    //
+
+    ivec2 thread = threadLocation();
+    ivec2 size = outputSize();
+    int arrayLength = size.x * size.y;
+    int arrayIndex = thread.y * size.x + thread.x;
+    int arrayIndexLeft = arrayIndex - blockSize;
+    int arrayIndexRight = arrayIndex + blockSize;
+
+    int mask = int(arrayIndexRight < arrayLength || arrayIndexRight / blockSize == (arrayLength - 1) / blockSize);
+    arrayIndexLeft = max(0, arrayIndexLeft);
+    arrayIndexRight = min(arrayLength - 1, arrayIndexRight);
+
+    #define raster2pos(k) ivec2((k) % size.x, (k) / size.x)
+    uvec3 entries32 = uvec3(
+        decodeUint32(threadPixel(array)),
+        decodeUint32(texelFetch(array, raster2pos(arrayIndexLeft), 0)),
+        decodeUint32(texelFetch(array, raster2pos(arrayIndexRight), 0))
+    );
+
+    ivec3 sb = ivec3(entries32 >> 16u);
+    sb.z *= mask; // adjustment (if arrayLength is not a power of two)
+
+    int dblBlockSize = 2 * blockSize;
+    int offset = arrayIndex % dblBlockSize;
+    int s2b = sb.x + (offset < blockSize ? sb.z : sb.y);
+    int l2b = offset < blockSize ? sb.x : sb.y;
+    int keypointIndex = int(entries32.x & 0xFFFFu);
+    uint shiftedS2b = uint(s2b << 16);
+
+    color = encodeUint32(uint(NULL_KEYPOINT_INDEX) | shiftedS2b);
+    if(offset >= s2b)
+        return;
+
+    color = encodeUint32(uint(keypointIndex) | shiftedS2b);
+    if(offset < l2b)
+        return;
+
+    keypointIndex = int(decodeUint32(
+        texelFetch(array, raster2pos(arrayIndex + blockSize - l2b), 0)
+    ) & 0xFFFFu);
+    color = encodeUint32(uint(keypointIndex) | shiftedS2b);
+
+#elif STAGE == 4
+
+    //
+    // Obtain the mixed keypoints via sorted pairs
+    //
+
     ivec2 thread = threadLocation();
     int pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;
-    KeypointAddress outAddr = findKeypointAddress(thread, outEncoderLength, descriptorSize, extraSize);
-    int outIndex = findKeypointIndex(outAddr, descriptorSize, extraSize);
+    KeypointAddress addr = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);
+    int keypointIndex = findKeypointIndex(addr, descriptorSize, extraSize);
 
-    int encoderIndex = int(outIndex >= encoderCapacity[0]); // 0 or 1
-    int inIndex = (outIndex - encoderCapacity[0] * encoderIndex); // outIndex or (outIndex - encoderCapacity[0])
-    KeypointAddress inAddr = KeypointAddress(
-        inIndex * pixelsPerKeypoint,
-        outAddr.offset
-    );
+    #define raster2pos(k) ivec2((k) % size.x, (k) / size.x)
+    ivec2 size = textureSize(array, 0);
+    uint sortedPair = decodeUint32(texelFetch(array, raster2pos(keypointIndex), 0));
+    int newKeypointIndex = int(sortedPair & 0xFFFFu);
 
-    vec4 data[2] = vec4[2](
-        readKeypointData(encodedKeypoints[0], encoderLength[0], inAddr),
-        readKeypointData(encodedKeypoints[1], encoderLength[1], inAddr)
-    );
+    color = encodeNullKeypoint();
+    if(newKeypointIndex == NULL_KEYPOINT_INDEX || keypointIndex >= size.x * size.y)
+        return;
 
-    // need further sorting (there will be null keypoints in the middle)
-    bool valid = (inIndex < max(encoderCapacity[0], encoderCapacity[1]));
-    color = valid ? data[encoderIndex] : encodeNullKeypoint();
+    KeypointAddress newAddr = KeypointAddress(newKeypointIndex * pixelsPerKeypoint, addr.offset);
+    color = readKeypointData(encodedKeypoints, encoderLength, newAddr);
+
+#elif STAGE == 5
+
+    //
+    // View the (keypointIndex, s2b) pairs
+    //
+
+    uint val = decodeUint32(threadPixel(array));
+    color = (val & 0xFFFFu) == 0xFFFFu ? vec4(0,1,1,1) : vec4(1,0,0,1);
+
+#endif
 }
