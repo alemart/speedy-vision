@@ -173,12 +173,12 @@ export class SpeedyTextureReader
                 this._consumerQueue.push(nextBufferIndex);
             });
         }
-        else SpeedyTextureReader._waitForQueueNotEmpty(this._producerQueue).then(() => {
+        else SpeedyTextureReader._waitForQueueNotEmpty(this._producerQueue, () => {
             const nextBufferIndex = this._producerQueue.shift();
             SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[nextBufferIndex], this._pixelBuffer[nextBufferIndex], fbo, x, y, width, height).then(() => {
                 this._consumerQueue.push(nextBufferIndex);
             });
-        }).turbocharge();
+        });
 
         // CPU needs to consume data
         if(this._consumerQueue.length > 0) {
@@ -189,11 +189,11 @@ export class SpeedyTextureReader
             });
         }
         else return new SpeedyPromise(resolve => {
-            SpeedyTextureReader._waitForQueueNotEmpty(this._consumerQueue).then(() => {
+            SpeedyTextureReader._waitForQueueNotEmpty(this._consumerQueue, () => {
                 const readyBufferIndex = this._consumerQueue.shift();
                 resolve(this._pixelBuffer[readyBufferIndex].subarray(0, sizeofBuffer));
                 this._producerQueue.push(readyBufferIndex); // enqueue AFTER resolve()
-            }).turbocharge();
+            });
         });
     }
 
@@ -219,19 +219,22 @@ export class SpeedyTextureReader
     /**
      * Wait for a queue to be not empty
      * @param {Array} queue
-     * @returns {SpeedyPromise<void>}
+     * @param {Function} callback
+     * @param {number} [pollInterval] in milliseconds
      */
-    static _waitForQueueNotEmpty(queue)
+    static _waitForQueueNotEmpty(queue, callback, pollInterval = 10)
     {
-        return new SpeedyPromise(resolve => {
-            (function wait() {
-                if(queue.length > 0)
-                    resolve();
-                else
-                    setTimeout(wait, 0); // Utils.setZeroTimeout may hinder performance (GLUtils already calls it)
-                    //Utils.setZeroTimeout(wait);
-            })();
-        });
+        const nextPollInterval = pollInterval >>> 1; // adaptive poll interval
+
+        if(queue.length != 0) {
+            callback();
+            return;
+        }
+
+        setTimeout(
+            SpeedyTextureReader._waitForQueueNotEmpty,
+            pollInterval, queue, callback, nextPollInterval
+        );
     }
 
     /**
