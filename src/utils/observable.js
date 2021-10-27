@@ -32,16 +32,22 @@ export class Observable
     {
         /** @type {Function[]} subscribers / callbacks */
         this._subscribers = [];
+
+        /** @type {object[]} "this" pointers */
+        this._thisptr = [];
     }
 
     /**
      * Add subscriber
      * @param {Function} fn callback
+     * @param {object} [thisptr] "this" pointer to be used when invoking the callback
      */
-    subscribe(fn)
+    subscribe(fn, thisptr = null)
     {
-        if(this._subscribers.indexOf(fn) < 0)
+        if(this._subscribers.indexOf(fn) < 0) {
             this._subscribers.push(fn);
+            this._thisptr.push(thisptr);
+        }
     }
 
     /**
@@ -50,17 +56,21 @@ export class Observable
      */
     unsubscribe(fn)
     {
-        this._subscribers = this._subscribers.filter(subscriber => subscriber !== fn);
+        const j = this._subscribers.indexOf(fn);
+        if(j >= 0) {
+            this._subscribers.splice(j, 1);
+            this._thisptr.splice(j, 1);
+        }
     }
 
     /**
      * Notify all subscribers about a state change
-     * @param {any} data generic data
+     * @param {...any} [data] generic data
      * @protected
      */
-    _notify(data)
+    _notify(...data)
     {
-        for(const fn of this._subscribers)
-            fn(data);
+        for(let i = 0, len = this._subscribers.length; i < len; i++)
+            this._subscribers[i].call(this._thisptr[i], ...data);
     }
 }
