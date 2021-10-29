@@ -35,42 +35,48 @@ export class Observable
 
         /** @type {object[]} "this" pointers */
         this._thisptr = [];
+
+        /** @type {Array<any[]>} function arguments */
+        this._args = [];
     }
 
     /**
      * Add subscriber
      * @param {Function} fn callback
      * @param {object} [thisptr] "this" pointer to be used when invoking the callback
+     * @param {...any} [args] arguments to be passed to the callback
      */
-    subscribe(fn, thisptr = null)
+    subscribe(fn, thisptr, ...args)
     {
-        if(this._subscribers.indexOf(fn) < 0) {
-            this._subscribers.push(fn);
-            this._thisptr.push(thisptr);
-        }
+        this._subscribers.push(fn);
+        this._thisptr.push(thisptr);
+        this._args.push(args);
     }
 
     /**
      * Remove subscriber
      * @param {Function} fn previously added callback
+     * @param {object} [thisptr] "this" pointer
      */
-    unsubscribe(fn)
+    unsubscribe(fn, thisptr)
     {
-        const j = this._subscribers.indexOf(fn);
-        if(j >= 0) {
-            this._subscribers.splice(j, 1);
-            this._thisptr.splice(j, 1);
+        for(let j = this._subscribers.length - 1; j >= 0; j--) {
+            if(this._subscribers[j] === fn && this._thisptr[j] === thisptr) {
+                this._subscribers.splice(j, 1);
+                this._thisptr.splice(j, 1);
+                this._args.splice(j, 1);
+                break;
+            }
         }
     }
 
     /**
      * Notify all subscribers about a state change
-     * @param {...any} [data] generic data
      * @protected
      */
-    _notify(...data)
+    _notify()
     {
         for(let i = 0, len = this._subscribers.length; i < len; i++)
-            this._subscribers[i].call(this._thisptr[i], ...data);
+            this._subscribers[i].call(this._thisptr[i], ...(this._args[i]));
     }
 }
