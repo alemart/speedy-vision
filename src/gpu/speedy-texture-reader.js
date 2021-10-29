@@ -20,6 +20,7 @@
  */
 
 import { Utils } from '../utils/utils';
+import { Observable } from '../utils/observable';
 import { GLUtils } from './gl-utils';
 import { SpeedyGPU } from './speedy-gpu';
 import { SpeedyPromise } from '../utils/speedy-promise';
@@ -30,6 +31,51 @@ import { IllegalArgumentError, IllegalOperationError } from '../utils/errors';
 // used to get a performance boost in gl.readPixels()
 const DEFAULT_NUMBER_OF_BUFFERS = 2;
 
+/**
+ * A Queue that notifies observers when it's not empty
+ */
+class ObservableQueue extends Observable
+{
+    /**
+     * Constructor
+     */
+    constructor()
+    {
+        super();
+
+        /** @type {any[]} elements of the queue */
+        this._data = [];
+    }
+
+    /**
+     * Number of elements in the queue
+     * @returns {number}
+     */
+    get size()
+    {
+        return this._data.length;
+    }
+
+    /**
+     * Enqueue an element
+     * @param {any} x
+     */
+    enqueue(x)
+    {
+        this._data.push(x);
+        this._notify();
+    }
+
+    /**
+     * Remove and return the first element of the queue
+     * @returns {any}
+     */
+    dequeue()
+    {
+        Utils.assert(this._data.length > 0);
+        return this._data.shift();
+    }
+}
 
 /**
  * Reads data from textures
@@ -47,17 +93,20 @@ export class SpeedyTextureReader
         /** @type {Uint8Array[]} pixel buffers for data transfers (each stores RGBA data) */
         this._pixelBuffer = (new Array(numberOfBuffers)).fill(null).map(() => new Uint8Array(0));
 
-        /** @type {number[]} for async data transfers (stores buffer indices) */
-        this._consumerQueue = (new Array(numberOfBuffers)).fill(0).map((_, i) => i);
+        /** @type {ObservableQueue} for async data transfers (stores buffer indices) */
+        this._consumer = new ObservableQueue();
 
-        /** @type {number[]} for async data transfers (stores buffer indices) */
-        this._producerQueue = [];
+        /** @type {ObservableQueue} for async data transfers (stores buffer indices) */
+        this._producer = new ObservableQueue();
 
         /** @type {WebGLBuffer[]} Pixel Buffer Objects (PBOs) */
         this._pbo = (new Array(numberOfBuffers)).fill(null);
 
         /** @type {boolean} is this object initialized? */
         this._initialized = false;
+
+        /** @type {boolean} is the producer-consumer mechanism initialized? */
+        this._initializedProducerConsumer = false;
     }
 
     /**
@@ -167,34 +216,46 @@ export class SpeedyTextureReader
         }
 
         // GPU needs to produce data
-        if(this._producerQueue.length > 0) {
-            const nextBufferIndex = this._producerQueue.shift();
-            SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[nextBufferIndex], this._pixelBuffer[nextBufferIndex], fbo, x, y, width, height).then(() => {
-                this._consumerQueue.push(nextBufferIndex);
+        this._producer.subscribe(function cb(gl, fbo, x, y, width, height) {
+            this._producer.unsubscribe(cb, this);
+
+            const bufferIndex = this._producer.dequeue();
+            SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[bufferIndex], this._pixelBuffer[bufferIndex], fbo, x, y, width, height).then(() => {
+                // this._pixelBuffer[bufferIndex] is ready to be consumed
+                this._consumer.enqueue(bufferIndex);
             });
-        }
-        else SpeedyTextureReader._waitForQueueNotEmpty(this._producerQueue, () => {
-            const nextBufferIndex = this._producerQueue.shift();
-            SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[nextBufferIndex], this._pixelBuffer[nextBufferIndex], fbo, x, y, width, height).then(() => {
-                this._consumerQueue.push(nextBufferIndex);
-            });
-        });
+        }, this, gl, fbo, x, y, width, height);
 
         // CPU needs to consume data
-        if(this._consumerQueue.length > 0) {
-            const readyBufferIndex = this._consumerQueue.shift();
-            return new SpeedyPromise(resolve => {
-                resolve(this._pixelBuffer[readyBufferIndex].subarray(0, sizeofBuffer));
-                this._producerQueue.push(readyBufferIndex); // enqueue AFTER resolve()
-            });
-        }
-        else return new SpeedyPromise(resolve => {
-            SpeedyTextureReader._waitForQueueNotEmpty(this._consumerQueue, () => {
-                const readyBufferIndex = this._consumerQueue.shift();
-                resolve(this._pixelBuffer[readyBufferIndex].subarray(0, sizeofBuffer));
-                this._producerQueue.push(readyBufferIndex); // enqueue AFTER resolve()
-            });
+        const promise = new SpeedyPromise(resolve => {
+            function callback(sizeofBuffer) {
+                this._consumer.unsubscribe(callback, this);
+
+                const bufferIndex = this._consumer.dequeue();
+                resolve(this._pixelBuffer[bufferIndex].subarray(0, sizeofBuffer));
+
+                // this._pixelBuffer[bufferIndex] can now be reused
+                this._producer.enqueue(bufferIndex); // enqueue AFTER resolve()
+            }
+
+            if(this._consumer.size > 0)
+                callback.call(this, sizeofBuffer);
+            else
+                this._consumer.subscribe(callback, this, sizeofBuffer);
         });
+
+        // initialize the producer-consumer mechanism
+        if(!this._initializedProducerConsumer) {
+            this._initializedProducerConsumer = true;
+            setTimeout(() => {
+                const numberOfBuffers = this._pixelBuffer.length;
+                for(let i = 0; i < numberOfBuffers; i++)
+                    this._consumer.enqueue(i);
+            }, 0);
+        }
+
+        // done!
+        return promise;
     }
 
     /**
@@ -214,27 +275,6 @@ export class SpeedyTextureReader
             //newBuffer.set(this._pixelBuffer[i]); // make this optional?
             this._pixelBuffer[i] = newBuffer;
         }
-    }
-
-    /**
-     * Wait for a queue to be not empty
-     * @param {Array} queue
-     * @param {Function} callback
-     * @param {number} [pollInterval] in milliseconds
-     */
-    static _waitForQueueNotEmpty(queue, callback, pollInterval = 10)
-    {
-        const nextPollInterval = pollInterval >>> 1; // adaptive poll interval
-
-        if(queue.length != 0) {
-            callback();
-            return;
-        }
-
-        setTimeout(
-            SpeedyTextureReader._waitForQueueNotEmpty,
-            pollInterval, queue, callback, nextPollInterval
-        );
     }
 
     /**
