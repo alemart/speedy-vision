@@ -49,9 +49,6 @@ export class SpeedyPipeline
         /** @type {SpeedyPipelineNode[]} a sequence of nodes: from the source(s) to the sink */
         this._sequence = [];
 
-        /** @type {SpeedyPipelineOutput} output template */
-        this._template = SpeedyPipeline._createOutputTemplate();
-
         /** @type {SpeedyGPU} GPU instance */
         this._gpu = null;
 
@@ -97,9 +94,6 @@ export class SpeedyPipeline
                 this._nodes.push(node);
         }
 
-        // generate the output template
-        this._template = SpeedyPipeline._createOutputTemplate(this._nodes);
-
         // generate the sequence of nodes
         this._sequence = SpeedyPipeline._tsort(this._nodes);
         SpeedyPipeline._validateSequence(this._sequence);
@@ -130,9 +124,6 @@ export class SpeedyPipeline
         // release GPU
         this._gpu = this._gpu.release();
 
-        // release other properties
-        this._template = SpeedyPipeline._createOutputTemplate();
-
         // done!
         return null;
     }
@@ -143,7 +134,7 @@ export class SpeedyPipeline
      */
     run()
     {
-        Utils.assert(this._gpu != null, `Pipeline has not been initialized or has been released`);
+        Utils.assert(this._gpu != null, `The pipeline has not been initialized or has been released`);
 
         // is the pipeline busy?
         if(this._busy) {
@@ -161,6 +152,9 @@ export class SpeedyPipeline
         // find the sinks
         const sinks = this._sequence.filter(node => node.isSink());
 
+        // create output template
+        const template = SpeedyPipeline._createOutputTemplate(sinks);
+
         // run the pipeline
         return SpeedyPipeline._runSequence(this._sequence, this._gpu).then(() =>
 
@@ -168,18 +162,16 @@ export class SpeedyPipeline
             SpeedyPromise.all(sinks.map(sink => sink.export())).then(results =>
 
                 // aggregate results by the names of the sinks
-                results.reduce((obj, val, idx) => ((obj[sinks[idx].name] = val), obj), this._template)
+                results.reduce((obj, val, idx) => ((obj[sinks[idx].name] = val), obj), template)
             )
-        ).then(aggregate => {
+
+        ).finally(() => {
             // clear all ports
             for(let i = this._sequence.length - 1; i >= 0; i--)
                 this._sequence[i].clearPorts();
 
             // the pipeline is no longer busy
             this._busy = false;
-
-            // done!
-            return aggregate;
         }).turbocharge();
     }
 
@@ -272,15 +264,17 @@ export class SpeedyPipeline
 
     /**
      * Generate the output template by aggregating the names of the sinks
-     * @param {SpeedyPipelineNode[]} [nodes]
+     * @param {SpeedyPipelineNode[]} [sinks]
      * @returns {SpeedyPipelineOutput}
      */
-    static _createOutputTemplate(nodes = [])
+    static _createOutputTemplate(sinks = [])
     {
         const template = Object.create(null);
-        const sinks = nodes.filter(node => node.isSink());
 
-        return sinks.reduce((obj, sink) => ((obj[sink.name] = null), obj), template);
+        for(let i = sinks.length - 1; i >= 0; i--)
+            template[sinks[i].name] = null;
+
+        return template;
     }
 
     /**
