@@ -185,16 +185,14 @@ export class SpeedyPipeline
      */
     static _runSequence(sequence, gpu, i = 0, n = sequence.length)
     {
-        if(i >= n) {
-            gpu.gl.flush();
-            return SpeedyPromise.resolve();
+        for(; i < n; i++) {
+            const runTask = sequence[i].execute(gpu);
+            if(runTask !== undefined)
+                return runTask.then(() => SpeedyPipeline._runSequence(sequence, gpu, i+1, n));
         }
 
-        const runTask = sequence[i].execute(gpu);
-        if(runTask == undefined)
-            return SpeedyPipeline._runSequence(sequence, gpu, i+1, n);
-
-        return runTask.then(() => SpeedyPipeline._runSequence(sequence, gpu, i+1, n));
+        gpu.gl.flush();
+        return SpeedyPromise.resolve();
     }
 
     /**
