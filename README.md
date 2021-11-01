@@ -1075,9 +1075,9 @@ To use the multi-scale version of the algorithm, pass a pyramid as input, set th
 
 #### Keypoint description
 
-##### Speedy.Keypoint.Detector.ORB()
+##### Speedy.Keypoint.Descriptor.ORB()
 
-`Speedy.Keypoint.Detector.ORB(name?: string): SpeedyPipelineNodeORBKeypointDescriptor`
+`Speedy.Keypoint.Descriptor.ORB(name?: string): SpeedyPipelineNodeORBKeypointDescriptor`
 
 ORB descriptors. In order to improve robustness to noise, apply a Gaussian filter to the image before computing the descriptors.
 
