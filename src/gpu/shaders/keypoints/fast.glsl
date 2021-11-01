@@ -41,6 +41,17 @@ uniform sampler2D pyramid;
 uniform float lod; // level-of-detail
 uniform int threshold; // a value in [0,255] - measured in pixel intensity
 
+#define USE_VARYINGS 1 // whether or not to use v_pix*
+
+#if !defined(FAST_TYPE)
+#error Undefined FAST_TYPE
+#elif FAST_TYPE == 916
+in vec2 v_pix0, v_pix1, v_pix2, v_pix3, v_pix4, v_pix5, v_pix6, v_pix7,
+        v_pix8, v_pix9, v_pix10,v_pix11,v_pix12,v_pix13,v_pix14,v_pix15;
+#else
+#error Invalid FAST_TYPE
+#endif
+
 /**
  * Read pixel intensity at an offset from the thread location
  * @param {number} x offset in the x-axis
@@ -48,6 +59,13 @@ uniform int threshold; // a value in [0,255] - measured in pixel intensity
  * @returns {float} pixel intensity in [0,1]
  */
 #define PIX(x,y) pyrPixelAtOffset(pyramid, lod, pot, ivec2((x),(y))).g
+
+/**
+ * Cheap alternative to PIX() using dependent texture reads
+ * @param {vec2} varying offset
+ * @returns {float} pixel intensity
+ */
+#define XIP(v) textureLod(pyramid, (v), lod).g
 
 /*
 
@@ -72,9 +90,7 @@ void main()
     // assume it's not a corner (at this lod)
     color = vec4(prev.r, pixel, prev.ba);
 
-    #if !defined(FAST_TYPE)
-    #error Must define FAST_TYPE
-    #elif FAST_TYPE == 916
+    #if FAST_TYPE == 916
     
     //
     // FAST-9,16
@@ -87,7 +103,11 @@ void main()
 
     // quick test: pixel c is not a corner unless at least one pair of
     // consecutive, equidistant points are all brighter or darker than c
+    #if USE_VARYINGS
+    float p0 = XIP(v_pix0), p4 = XIP(v_pix4), p8 = XIP(v_pix8), p12 = XIP(v_pix12);
+    #else
     float p0 = PIX(0,3), p4 = PIX(3,0), p8 = PIX(0,-3), p12 = PIX(-3,0);
+    #endif
 
     bvec4 brighter = bvec4(p0 > ct, p4 > ct, p8 > ct, p12 > ct);
     bvec4 darker = bvec4(p0 < c_t, p4 < c_t, p8 < c_t, p12 < c_t);
@@ -98,10 +118,17 @@ void main()
         return;
 
     // full test: magical!
-    float p1 = PIX(1,3), p2 = PIX(2,2), p3 = PIX(3,1);
-    float p5 = PIX(3,-1), p6 = PIX(2,-2), p7 = PIX(1,-3);
-    float p9 = PIX(-1,-3), p10 = PIX(-2,-2), p11 = PIX(-3,-1);
-    float p13 = PIX(-3,1), p14 = PIX(-2,2), p15 = PIX(-1,3);
+    #if USE_VARYINGS
+    float p1 = XIP(v_pix1), p2 = XIP(v_pix2), p3 = XIP(v_pix3),
+          p5 = XIP(v_pix5), p6 = XIP(v_pix6), p7 = XIP(v_pix7),
+          p9 = XIP(v_pix9), p10 = XIP(v_pix10), p11 = XIP(v_pix11),
+          p13 = XIP(v_pix13), p14 = XIP(v_pix14), p15 = XIP(v_pix15);
+    #else
+    float p1 = PIX(1,3), p2 = PIX(2,2), p3 = PIX(3,1),
+          p5 = PIX(3,-1), p6 = PIX(2,-2), p7 = PIX(1,-3),
+          p9 = PIX(-1,-3), p10 = PIX(-2,-2), p11 = PIX(-3,-1),
+          p13 = PIX(-3,1), p14 = PIX(-2,2), p15 = PIX(-1,3);
+    #endif
 
     bool A=(p0>ct),B=(p1>ct),C=(p2>ct),D=(p3>ct),E=(p4>ct),F=(p5>ct),G=(p6>ct),H=(p7>ct),I=(p8>ct),J=(p9>ct),K=(p10>ct),L=(p11>ct),M=(p12>ct),N=(p13>ct),O=(p14>ct),P=(p15>ct),a=(p0<c_t),b=(p1<c_t),c=(p2<c_t),d=(p3<c_t),e=(p4<c_t),f=(p5<c_t),g=(p6<c_t),h=(p7<c_t),i=(p8<c_t),j=(p9<c_t),k=(p10<c_t),l=(p11<c_t),m=(p12<c_t),n=(p13<c_t),o=(p14<c_t),p=(p15<c_t);
     bool isCorner=A&&(B&&(K&&L&&J&&(M&&N&&O&&P||G&&H&&I&&(M&&N&&O||F&&(M&&N||E&&(M||D))))||C&&(K&&L&&M&&(N&&O&&P||G&&H&&I&&J&&(N&&O||F&&(N||E)))||D&&(N&&(L&&M&&(K&&G&&H&&I&&J&&(O||F)||O&&P)||k&&l&&m&&e&&f&&g&&h&&i&&j)||E&&(O&&(M&&N&&(K&&L&&G&&H&&I&&J||P)||k&&l&&m&&n&&f&&g&&h&&i&&j)||F&&(P&&(N&&O||k&&l&&m&&n&&o&&g&&h&&i&&j)||G&&(O&&P||H&&(P||I)||k&&l&&m&&n&&o&&p&&h&&i&&j)||k&&l&&m&&n&&o&&h&&i&&j&&(p||g))||k&&l&&m&&n&&h&&i&&j&&(o&&(p||g)||f&&(o&&p||g)))||k&&l&&m&&h&&i&&j&&(n&&(o&&p||g&&(o||f))||e&&(n&&o&&p||g&&(n&&o||f))))||k&&l&&h&&i&&j&&(m&&(n&&o&&p||g&&(n&&o||f&&(n||e)))||d&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e)))))||k&&h&&i&&j&&(l&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d))))))||K&&I&&J&&(L&&M&&N&&O&&P||G&&H&&(L&&M&&N&&O||F&&(L&&M&&N||E&&(L&&M||D&&(L||C)))))||h&&i&&j&&(b&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c)))))||k&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c)))))))||B&&(H&&I&&J&&(K&&L&&M&&N&&O&&P&&a||G&&(K&&L&&M&&N&&O&&a||F&&(K&&L&&M&&N&&a||E&&(K&&L&&M&&a||D&&(K&&L&&a||C)))))||a&&k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||C&&(K&&H&&I&&J&&(L&&M&&N&&O&&P&&a&&b||G&&(L&&M&&N&&O&&a&&b||F&&(L&&M&&N&&a&&b||E&&(L&&M&&a&&b||D))))||a&&b&&k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d)))))||D&&(K&&L&&H&&I&&J&&(M&&N&&O&&P&&a&&b&&c||G&&(M&&N&&O&&a&&b&&c||F&&(M&&N&&a&&b&&c||E)))||a&&b&&k&&l&&m&&c&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e))))||E&&(K&&L&&M&&H&&I&&J&&(N&&O&&P&&a&&b&&c&&d||G&&(N&&O&&a&&b&&c&&d||F))||a&&b&&l&&m&&n&&c&&d&&(k&&g&&h&&i&&j&&(o||f)||o&&p))||F&&(K&&L&&M&&N&&H&&I&&J&&(O&&P&&a&&b&&c&&d&&e||G)||a&&b&&m&&n&&o&&c&&d&&e&&(k&&l&&g&&h&&i&&j||p))||G&&(K&&L&&M&&N&&O&&H&&I&&J||a&&b&&n&&o&&p&&c&&d&&e&&f)||H&&(K&&L&&M&&N&&O&&P&&I&&J||a&&b&&o&&p&&c&&d&&e&&f&&g)||a&&(b&&(k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(k&&l&&m&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e)))||d&&(l&&m&&n&&(k&&g&&h&&i&&j&&(o||f)||o&&p)||e&&(m&&n&&o&&(k&&l&&g&&h&&i&&j||p)||f&&(n&&o&&p||g&&(o&&p||h&&(p||i)))))))||k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||h&&i&&j&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c&&(b||k))))));
@@ -129,7 +156,5 @@ void main()
     vec3 thisResult = vec3(encodeFloat16(thisScore), encodeLod(lod));
     color.rba = thisScore > prevScore ? thisResult : color.rba;
 
-    #else
-    #error Unrecognized FAST_TYPE
     #endif
 }

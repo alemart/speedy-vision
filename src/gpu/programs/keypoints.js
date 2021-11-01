@@ -25,7 +25,7 @@ import { importShader } from '../shader-declaration';
 
 
 // FAST corner detector
-const fast9_16 = importShader('keypoints/fast.glsl')
+const fast9_16 = importShader('keypoints/fast.glsl', 'keypoints/fast.vs.glsl')
                 .withDefines({ 'FAST_TYPE': 916 })
                 .withArguments('corners', 'pyramid', 'lod', 'threshold');
 
