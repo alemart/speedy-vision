@@ -34,7 +34,7 @@ import { Utils } from '../../utils/utils';
 const copy = importShader('utils/copy.glsl').withArguments('image');
 
 // Flip y-axis for output
-const flipY = importShader('utils/flip-y.glsl').withArguments('image');
+const flipY = importShader('utils/copy.glsl', 'utils/flip-y.vs.glsl').withArguments('image');
 
 // Fill image with a constant
 const fill = importShader('utils/fill.glsl').withArguments('value');

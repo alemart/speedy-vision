@@ -15,15 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * flip-y.glsl
+ * flip-y.vs.glsl
  * Flip y-axis
  */
 
-uniform sampler2D image;
-
-void main() {
-    ivec2 pos = threadLocation();
-    pos.y = int(texSize.y) - 1 - pos.y;
-
-    color = pixelAt(image, pos);
+void main()
+{
+    setupVertexShader();
+    gl_Position *= vec4(1,-1,1,1);
 }
