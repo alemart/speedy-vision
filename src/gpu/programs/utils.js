@@ -49,7 +49,7 @@ const copyComponents = importShader('utils/copy-components.glsl').withArguments(
 const scanMinMax2D = importShader('utils/scan-minmax2d.glsl').withArguments('image', 'iterationNumber');
 
 // Compute the partial derivatives of an image
-const sobelDerivatives = importShader('utils/sobel-derivatives.glsl').withArguments('pyramid', 'lod');
+const sobelDerivatives = importShader('utils/sobel-derivatives.glsl', 'utils/sobel-derivatives.vs.glsl').withArguments('pyramid', 'lod');
 
 
 
