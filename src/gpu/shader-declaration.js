@@ -37,10 +37,10 @@ layout (location=${DEFAULT_ATTRIBUTES_LOCATION.position}) in vec2 ${DEFAULT_ATTR
 layout (location=${DEFAULT_ATTRIBUTES_LOCATION.texCoord}) in vec2 ${DEFAULT_ATTRIBUTES.texCoord};
 out vec2 texCoord;
 
-void setupVertexShader() {
-    gl_Position = vec4(${DEFAULT_ATTRIBUTES.position}, 0.0f, 1.0f);
-    texCoord = ${DEFAULT_ATTRIBUTES.texCoord};
-}\n\n`;
+#define setupVertexShader() \
+gl_Position = vec4(${DEFAULT_ATTRIBUTES.position}, 0.0f, 1.0f); \
+texCoord = ${DEFAULT_ATTRIBUTES.texCoord}
+\n\n`;
 
 const DEFAULT_VERTEX_SHADER_SUFFIX = `void main() { setupVertexShader(); }`;
 
