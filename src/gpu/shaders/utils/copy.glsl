@@ -15,8 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * identity.glsl
- * Identity shader: no-operation
+ * copy.glsl
+ * Copy an image
  */
 
 uniform sampler2D image;

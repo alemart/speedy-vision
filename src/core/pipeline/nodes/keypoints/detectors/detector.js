@@ -203,7 +203,7 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
 
         // copy the input corners to a special texture
         // that is needed by encodeKeypointSkipOffsets()
-        corners = (gpu.programs.utils.identity
+        corners = (gpu.programs.utils.copy
             .outputs(width, height, specialTexture)
         )(corners);
 

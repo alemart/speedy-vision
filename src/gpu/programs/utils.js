@@ -30,8 +30,8 @@ import { Utils } from '../../utils/utils';
 // Shaders
 //
 
-// Identity shader: no-operation
-const identity = importShader('utils/identity.glsl').withArguments('image');
+// Copy image
+const copy = importShader('utils/copy.glsl').withArguments('image');
 
 // Flip y-axis for output
 const flipY = importShader('utils/flip-y.glsl').withArguments('image');
@@ -68,8 +68,8 @@ export class SpeedyProgramGroupUtils extends SpeedyProgramGroup
     {
         super(gpu);
         this
-            // no-operation
-            .declare('identity', identity)
+            // copy image
+            .declare('copy', copy)
 
             // render to the canvas
             .declare('renderToCanvas', flipY, {
