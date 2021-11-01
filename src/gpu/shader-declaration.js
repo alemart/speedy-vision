@@ -32,15 +32,17 @@ const DEFAULT_ATTRIBUTES_LOCATION = Object.freeze({
     texCoord: 1,
 });
 
-const DEFAULT_VERTEX_SHADER = `#version 300 es
+const DEFAULT_VERTEX_SHADER_PREFIX = `#version 300 es
 layout (location=${DEFAULT_ATTRIBUTES_LOCATION.position}) in vec2 ${DEFAULT_ATTRIBUTES.position};
 layout (location=${DEFAULT_ATTRIBUTES_LOCATION.texCoord}) in vec2 ${DEFAULT_ATTRIBUTES.texCoord};
 out vec2 texCoord;
 
-void main() {
+void setupVertexShader() {
     gl_Position = vec4(${DEFAULT_ATTRIBUTES.position}, 0.0f, 1.0f);
     texCoord = ${DEFAULT_ATTRIBUTES.texCoord};
-}\n`;
+}\n\n`;
+
+const DEFAULT_VERTEX_SHADER_SUFFIX = `void main() { setupVertexShader(); }`;
 
 const DEFAULT_FRAGMENT_SHADER_PREFIX = `#version 300 es
 
@@ -66,6 +68,10 @@ uniform mediump vec2 texSize;
 
 @include "global.glsl"\n\n`;
 
+const PRIVATE_TOKEN = Symbol();
+
+
+
 /**
  * Shader Declaration
  */
@@ -75,32 +81,44 @@ export class ShaderDeclaration
      * @private Constructor
      * @param {object} options
      * @param {string} [options.filepath]
+     * @param {string?} [options.vsfilepath]
      * @param {string} [options.source]
+     * @param {string?} [options.vssource]
+     * @param {Symbol} privateToken
      */
-    constructor(options)
+    constructor(options, privateToken)
     {
+        if(privateToken !== PRIVATE_TOKEN)
+            throw new IllegalOperationError(); // private constructor!
+
         const filepath = options.filepath || null;
-        const source = filepath ? require('./shaders/' + filepath) : (options.source || '');
-        if(source.length == 0)
-            throw new IllegalArgumentError(`Can't import shader: empty code`);
+        const vsfilepath = options.vsfilepath || null;
 
-        /** @type {string} original source code provided by the user */
-        this._userSource = source;
 
-        /** @type {string} preprocessed source code of the vertex shader */
-        this._vertexSource = ShaderPreprocessor.run(DEFAULT_VERTEX_SHADER);
+
+        /** @type {string} original source code provided by the user (fragment shader) */
+        this._source = filepath ? require('./shaders/' + filepath) : (options.source || '');
+
+        /** @type {string} vertex shader source code (without preprocessing) */
+        this._vssource = vsfilepath ? require('./shaders/' + vsfilepath) : (options.vssource || DEFAULT_VERTEX_SHADER_SUFFIX);
 
         /** @type {string} preprocessed source code of the fragment shader */
-        this._fragmentSource = ShaderPreprocessor.run(DEFAULT_FRAGMENT_SHADER_PREFIX + this._userSource);
+        this._fragmentSource = ShaderPreprocessor.run(DEFAULT_FRAGMENT_SHADER_PREFIX + this._source);
 
-        /** @type {string} the filepath from which the (fragment) shader was imported */
+        /** @type {string} preprocessed source code of the vertex shader */
+        this._vertexSource = ShaderPreprocessor.run(DEFAULT_VERTEX_SHADER_PREFIX + this._vssource);
+
+        /** @type {string} filepath of the fragment shader */
         this._filepath = filepath || '<in-memory>';
+
+        /** @type {string} filepath of the vertex shader */
+        this._vsfilepath = vsfilepath || '<in-memory>';
 
         /** @type {string[]} an ordered list of uniform names */
         this._arguments = [];
 
         /** @type {Map<string,string>} it maps uniform names to their types */
-        this._uniforms = this._autodetectUniforms(this._fragmentSource);
+        this._uniforms = this._autodetectUniforms(this._fragmentSource + '\n' + this._vertexSource);
 
         /** @type {Map<string,number>} it maps externally #defined constants to their values */
         this._defines = new Map();
@@ -108,25 +126,29 @@ export class ShaderDeclaration
 
     /**
      * Creates a new Shader directly from a GLSL source
-     * @param {string} source
+     * @param {string} source fragment shader
+     * @param {string?} [vssource] vertex shader
      * @returns {ShaderDeclaration}
      */
-    static create(source)
+    static create(source, vssource = null)
     {
-        return new ShaderDeclaration({ source });
+        return new ShaderDeclaration({ source, vssource }, PRIVATE_TOKEN);
     }
 
     /**
      * Import a Shader from a file containing a GLSL source
      * @param {string} filepath path to .glsl file relative to the shaders/ folder
+     * @param {string?} [vsfilepath] path to a .vs.glsl file relative to the shaders/ folder
      * @returns {ShaderDeclaration}
      */
-    static import(filepath)
+    static import(filepath, vsfilepath = null)
     {
         if(!String(filepath).match(/^[a-zA-Z0-9_\-\/]+\.glsl$/))
-            throw new FileNotFoundError(`Can't import shader: "${filepath}"`);
+            throw new FileNotFoundError(`Can't import fragment shader at "${filepath}"`);
+        else if(vsfilepath != null && !String(vsfilepath).match(/^[a-zA-Z0-9_\-\/]+\.vs\.glsl$/))
+            throw new FileNotFoundError(`Can't import vertex shader at "${vsfilepath}"`);
 
-        return new ShaderDeclaration({ filepath });
+        return new ShaderDeclaration({ filepath, vsfilepath }, PRIVATE_TOKEN);
     }
 
     /**
@@ -175,10 +197,12 @@ export class ShaderDeclaration
             defs.push(`#define ${key} ${value}\n`);
         }
 
-        // update the fragment shader & the uniforms
-        const source = DEFAULT_FRAGMENT_SHADER_PREFIX + defs.join('') + this._userSource;
+        // update the shaders & the uniforms
+        const source = DEFAULT_FRAGMENT_SHADER_PREFIX + defs.join('') + this._source;
+        const vssource = DEFAULT_VERTEX_SHADER_PREFIX + defs.join('') + this._vssource;
         this._fragmentSource = ShaderPreprocessor.run(source, this._defines);
-        this._uniforms = this._autodetectUniforms(this._fragmentSource);
+        this._vertexSource = ShaderPreprocessor.run(vssource, this._defines);
+        this._uniforms = this._autodetectUniforms(this._fragmentSource + '\n' + this._vertexSource);
 
         // done!
         return this;
@@ -297,7 +321,10 @@ export class ShaderDeclaration
                 }
                 else {
                     // register a regular uniform
-                    uniforms.set(name, type);
+                    if(!uniforms.has(name) || uniforms.get(name) === type)
+                        uniforms.set(name, type);
+                    else
+                        throw new IllegalOperationError(`Redefinition of uniform "${name}" in the shader`);
                 }
             }
         }
@@ -308,20 +335,22 @@ export class ShaderDeclaration
 
 /**
  * Import a ShaderDeclaration from a GLSL file
- * @param {string} filepath relative to the shaders/ folder
+ * @param {string} filepath relative to the shaders/ folder (a .glsl file)
+ * @param {string?} [vsfilepath] optional vertex shader (a .vs.glsl file)
  * @returns {ShaderDeclaration}
  */
-export function importShader(filepath)
+export function importShader(filepath, vsfilepath = null)
 {
-    return ShaderDeclaration.import(filepath);
+    return ShaderDeclaration.import(filepath, vsfilepath);
 }
 
 /**
- * Create a ShaderDeclaration from a GLSL source
- * @param {string} source
+ * Create a ShaderDeclaration from a GLSL source code
+ * @param {string} source fragment shader
+ * @param {string?} [vssource] optional vertex shader
  * @returns {ShaderDeclaration}
  */
-export function createShader(source)
+export function createShader(source, vssource = null)
 {
-    return ShaderDeclaration.create(source);
+    return ShaderDeclaration.create(source, vssource);
 }
