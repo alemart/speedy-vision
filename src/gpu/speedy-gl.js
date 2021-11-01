@@ -167,7 +167,7 @@ export class SpeedyGL extends Observable
 
         // notify observers: we have a new context!
         // we need to recreate all textures...
-        this._notify(this._gl);
+        this._notify();
     }
 
     /**

@@ -96,9 +96,6 @@ export class SpeedyPipelineNode
         // got some ports?
         if(portBuilders.length == 0)
             throw new IllegalArgumentError(`No ports have been found in node ${this.fullName}`);
-
-        // bind this function (subscriber)
-        this._allocateWorkTextures = this._allocateWorkTextures.bind(this);
     }
 
     /**
@@ -193,7 +190,7 @@ export class SpeedyPipelineNode
      */
     init(gpu)
     {
-        gpu.subscribe(this._allocateWorkTextures);
+        gpu.subscribe(this._allocateWorkTextures, this, gpu);
         this._allocateWorkTextures(gpu);
     }
 
@@ -204,7 +201,7 @@ export class SpeedyPipelineNode
     release(gpu)
     {
         this._deallocateWorkTextures(gpu);
-        gpu.unsubscribe(this._allocateWorkTextures);
+        gpu.unsubscribe(this._allocateWorkTextures, this);
     }
 
     /**

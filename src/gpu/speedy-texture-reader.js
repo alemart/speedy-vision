@@ -115,9 +115,8 @@ export class SpeedyTextureReader
      */
     init(gpu)
     {
-        this._allocatePBOs = this._allocatePBOs.bind(this);
         this._allocatePBOs(gpu);
-        gpu.subscribe(this._allocatePBOs);
+        gpu.subscribe(this._allocatePBOs, this, gpu);
 
         this._initialized = true;
     }
@@ -129,7 +128,7 @@ export class SpeedyTextureReader
      */
     release(gpu)
     {
-        gpu.unsubscribe(this._allocatePBOs);
+        gpu.unsubscribe(this._allocatePBOs, this);
         this._deallocatePBOs(gpu);
 
         this._initialized = false;

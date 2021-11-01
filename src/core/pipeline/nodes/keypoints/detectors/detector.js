@@ -63,9 +63,6 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
 
         /** @type {SpeedyDrawableTexture[]} textures with 8-bytes per pixel */
         this._tex16 = new Array(NUMBER_OF_RGBA16_TEXTURES).fill(null);
-
-        /** @type {Function} helper for tex16 */
-        this._allocateTex16 = this._allocateTex16.bind(this);
     }
 
     /**
@@ -82,7 +79,7 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
 
         // allocate RGBA16 textures
         this._allocateTex16(gpu);
-        gpu.subscribe(this._allocateTex16);
+        gpu.subscribe(this._allocateTex16, this, gpu);
     }
 
     /**
@@ -92,7 +89,7 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
     release(gpu)
     {
         // deallocate RGBA16 textures
-        gpu.unsubscribe(this._allocateTex16);
+        gpu.unsubscribe(this._allocateTex16, this);
         this._deallocateTex16(gpu);
 
         // we need to restore the texture parameter because textures come from a pool!

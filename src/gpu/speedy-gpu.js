@@ -56,7 +56,7 @@ export class SpeedyGPU extends Observable
 
 
         // recreate the state if necessary
-        this._speedyGL.subscribe(this._reset = this._reset.bind(this));
+        this._speedyGL.subscribe(this._reset, this);
     }
 
     /**
@@ -172,9 +172,8 @@ export class SpeedyGPU extends Observable
     /**
      * Reset the internal state
      * (called on context reset)
-     * @param {WebGL2RenderingContext} gl
      */
-    _reset(gl)
+    _reset()
     {
         if(this.isReleased())
             return;
@@ -183,6 +182,6 @@ export class SpeedyGPU extends Observable
         this._texturePool = new SpeedyTexturePool(this);
         this._textureUploader = new SpeedyTextureUploader(this);
 
-        this._notify(this);
+        this._notify();
     }
 }
