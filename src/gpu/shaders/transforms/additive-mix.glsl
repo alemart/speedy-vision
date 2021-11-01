@@ -33,7 +33,7 @@ The resulting image is computed as follows:
 
 Image = alpha * image0 + beta * image1 + gamma
 
-If you pick an alpha in [0,1] and set beta = alpha and gamma = 0,
+If you pick an alpha in [0,1] and set beta = 1 - alpha and gamma = 0,
 you get a nice alpha blending effect
 
 */
