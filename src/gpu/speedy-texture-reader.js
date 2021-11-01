@@ -72,7 +72,9 @@ class ObservableQueue extends Observable
      */
     dequeue()
     {
-        Utils.assert(this._data.length > 0);
+        if(this._data.length == 0)
+            throw new IllegalOperationError(`Empty queue`);
+
         return this._data.shift();
     }
 }
