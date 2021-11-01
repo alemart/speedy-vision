@@ -33,9 +33,13 @@ const DEFAULT_ATTRIBUTES_LOCATION = Object.freeze({
 });
 
 const DEFAULT_VERTEX_SHADER_PREFIX = `#version 300 es
+precision highp float;
+precision highp int;
+
 layout (location=${DEFAULT_ATTRIBUTES_LOCATION.position}) in vec2 ${DEFAULT_ATTRIBUTES.position};
 layout (location=${DEFAULT_ATTRIBUTES_LOCATION.texCoord}) in vec2 ${DEFAULT_ATTRIBUTES.texCoord};
 out vec2 texCoord;
+uniform mediump vec2 texSize;
 
 #define setupVertexShader() \
 gl_Position = vec4(${DEFAULT_ATTRIBUTES.position}, 0.0f, 1.0f); \
