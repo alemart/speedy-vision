@@ -134,10 +134,11 @@ export class SpeedyGL extends Observable
             premultipliedAlpha: false,
             preserveDrawingBuffer: false,
             //preferLowPowerToHighPerformance: false, // TODO user option?
-            alpha: true,
+            alpha: false,
             antialias: false,
             depth: false,
             stencil: false,
+            desynchronized: true,
         });
 
         if(!gl)
