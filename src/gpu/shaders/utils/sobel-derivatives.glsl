@@ -52,7 +52,7 @@ const mat3 hkern = mat3(
 #define PIX(x,y) pyrPixelAtOffset(pyramid, lod, pot, ivec2((x),(y))).g
 
 /**
- * Cheap alternative to PIX() using dependent texture reads
+ * Cheap alternative to PIX() using independent texture reads
  * @param {vec2} varying offset
  * @returns {float} pixel intensity
  */

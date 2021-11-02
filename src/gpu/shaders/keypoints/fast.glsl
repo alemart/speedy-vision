@@ -61,7 +61,7 @@ in vec2 v_pix0, v_pix1, v_pix2, v_pix3, v_pix4, v_pix5, v_pix6, v_pix7,
 #define PIX(x,y) pyrPixelAtOffset(pyramid, lod, pot, ivec2((x),(y))).g
 
 /**
- * Cheap alternative to PIX() using dependent texture reads
+ * Cheap alternative to PIX() using independent texture reads
  * @param {vec2} varying offset
  * @returns {float} pixel intensity
  */
