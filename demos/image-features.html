@@ -40,6 +40,10 @@
                 <input type="checkbox" id="multiscale">
             </div>
         </form>
+        <div>
+            <span id="status"></span>
+            <canvas id="canvas-demo"></canvas><br>
+        </div>
         <img src="../assets/masp.jpg" title="Free photo by ckturistando (pexels.com)" hidden>
         <script>
 window.onload = async function()
@@ -86,7 +90,7 @@ window.onload = async function()
         // render features
         media.draw(canvas);
         renderFeatures(canvas, keypoints);
-        renderStatus(canvas, keypoints);
+        renderStatus(keypoints);
     }
     update();
 
@@ -110,7 +114,7 @@ function createCanvas(width, height, title)
     return canvas;
 }
 
-function renderFeatures(canvas, features, size = 4, color = 'yellow')
+function renderFeatures(canvas, features, size = 2, color = 'yellow')
 {
     const context = canvas.getContext('2d');
 
@@ -132,22 +136,10 @@ function renderFeatures(canvas, features, size = 4, color = 'yellow')
     context.stroke();
 }
 
-function renderStatus(canvas, features, color = 'lightslategrey', size = 18)
+function renderStatus(features)
 {
-    const context = canvas.getContext('2d');
-
-    context.font = `bold ${size}px sans-serif`;
-    context.fillStyle = color;
-    context.textBaseline = 'top';
-
-    context.shadowOffsetX = 2;
-    context.shadowOffsetY = 2;
-    context.shadowBlur = 2;
-    context.shadowColor = 'rgba(0, 0, 0, 0.15)';
-
-    context.fillText(`Keypoints: ${features.length}`, 8, 8);
-
-    context.shadowColor = 'rgba(0, 0, 0, 0)';
+    const status = document.getElementById('status');
+    status.innerText = `Keypoints: ${features.length}`;
 }
         </script>
         <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>

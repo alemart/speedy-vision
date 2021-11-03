@@ -39,6 +39,10 @@
                 </select>
             </div>
         </form>
+        <div>
+            <span id="status"></span>
+            <canvas id="canvas-demo"></canvas>
+        </div>
         <video
             src="../assets/bird-walking.mp4"
             poster="../assets/loading.jpg"
@@ -100,8 +104,8 @@ window.onload = async function()
         const { image } = await pipeline.run();
 
         image.draw(canvas, 0, 0);
-        renderStatus(canvas);
-        setTimeout(render, 1000 / 60);
+        renderStatus();
+        requestAnimationFrame(render);
     }
     render();
 }
@@ -120,22 +124,10 @@ function createCanvas(width, height, title)
     return canvas;
 }
 
-function renderStatus(canvas, color = 'white', size = 18)
+function renderStatus()
 {
-    const context = canvas.getContext('2d');
-
-    context.font = `bold ${size}px sans-serif`;
-    context.fillStyle = color;
-    context.textBaseline = 'top';
-
-    context.shadowOffsetX = 2;
-    context.shadowOffsetY = 2;
-    context.shadowBlur = 2;
-    context.shadowColor = 'rgba(0, 0, 0, 0.5)';
-
-    context.fillText(`FPS: ${Speedy.fps}`, 8, 8);
-
-    context.shadowColor = 'rgba(0, 0, 0, 0)';
+    const status = document.getElementById('status');
+    status.innerText = `FPS: ${Speedy.fps}`;
 }
         </script>
         <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>

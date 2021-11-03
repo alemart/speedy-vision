@@ -90,8 +90,10 @@
             </div>
         </form>
         <div>
+            <span id="status"></span>
             <canvas id="canvas-demo" style="cursor:pointer"></canvas>
-            <br>
+        </div>
+        <div>
             <button id="play">Play / pause</button>
             &nbsp;
             <button id="detect">Detect features</button>
@@ -206,10 +208,10 @@ window.onload = async function()
         media.draw(canvas);
         renderFlowVectors(canvas, features, result.flow, 3, '#f22');
         renderFeatures(canvas, features, 1, '#f22');
-        renderStatus(canvas, features);
+        renderStatus(features);
 
-        // next frame
-        setTimeout(loop, 1000 / 60);
+        // repeat
+        requestAnimationFrame(loop);
     }
     loop();
 
@@ -297,22 +299,10 @@ function renderFlowVectors(canvas, features, flow, length = 1, color = 'red')
     context.stroke();
 }
 
-function renderStatus(canvas, features, color = 'white', size = 18)
+function renderStatus(features)
 {
-    const context = canvas.getContext('2d');
-
-    context.font = `bold ${size}px sans-serif`;
-    context.fillStyle = color;
-    context.textBaseline = 'top';
-
-    context.shadowOffsetX = 2;
-    context.shadowOffsetY = 2;
-    context.shadowBlur = 2;
-    context.shadowColor = 'rgba(0, 0, 0, 0.5)';
-
-    context.fillText(`FPS: ${Speedy.fps} | Keypoints: ${features.length}`, 8, 8);
-
-    context.shadowColor = 'rgba(0, 0, 0, 0)';
+    const status = document.getElementById('status');
+    status.innerText = `FPS: ${Speedy.fps} | Keypoints: ${features.length}`;
 }
 
 function cursorPosition(canvas, event)

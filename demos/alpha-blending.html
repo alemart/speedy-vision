@@ -44,6 +44,10 @@
             title="Free video by Cinema Professionals, https://www.pexels.com/pt-br/video/assistindo-a-aguia-voar-3635378/">
         </video>
         <img src="../assets/speedy-wall.jpg" title="Image by Bride of Frankenstein (CC-BY)" hidden>
+        <div>
+            <span id="status"></span>
+            <canvas id="canvas-demo"></canvas>
+        </div>
         <script>
 window.onload = async function()
 {
@@ -118,8 +122,13 @@ window.onload = async function()
 
     pipeline.init(videoSource, animationSource, mixer, sink); // add the nodes to the pipeline
 
+    // Setup a canvas
+    const canvas = document.getElementById('canvas-demo');
+    canvas.width = width;
+    canvas.height = height;
+    canvas.title = video.title + ' | ' + image.title;
+
     // Display the result
-    const canvas = createCanvas(width, height, video.title + ' | ' + image.title);
     async function render()
     {
         mixer.alpha = Number(alpha.value);
@@ -129,7 +138,7 @@ window.onload = async function()
         const { image } = await pipeline.run(); // run the pipeline
 
         image.draw(canvas);
-        renderStatus(canvas);
+        renderStatus();
 
         setTimeout(render, 1000 / 60);
     }
@@ -138,7 +147,7 @@ window.onload = async function()
 
 function createCanvas(width, height, title)
 {
-    const canvas = document.getElementById('canvas-demo') || document.createElement('canvas');
+    const canvas = document.createElement('canvas');
 
     canvas.width = width;
     canvas.height = height;
@@ -150,22 +159,10 @@ function createCanvas(width, height, title)
     return canvas;
 }
 
-function renderStatus(canvas, color = 'white', size = 18)
+function renderStatus()
 {
-    const context = canvas.getContext('2d');
-
-    context.font = `bold ${size}px sans-serif`;
-    context.fillStyle = color;
-    context.textBaseline = 'top';
-
-    context.shadowOffsetX = 2;
-    context.shadowOffsetY = 2;
-    context.shadowBlur = 2;
-    context.shadowColor = 'rgba(0, 0, 0, 0.5)';
-
-    context.fillText(`FPS: ${Speedy.fps}`, 8, 8);
-
-    context.shadowColor = 'rgba(0, 0, 0, 0)';
+    const status = document.getElementById('status');
+    status.innerText = `FPS: ${Speedy.fps}`;
 }
         </script>
         <mark>Powered by <a href="https://github.com/alemart/speedy-vision-js">speedy-vision.js</a></mark>

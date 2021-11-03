@@ -58,6 +58,7 @@
             </div>
         </form>
         <div>
+            <span id="status"></span>
             <canvas id="canvas-demo"></canvas>
         </div>
         <div>
@@ -272,7 +273,7 @@ window.onload = async function()
         context.stroke();
 
         // render the status
-        renderStatus(canvas);
+        renderStatus();
         requestAnimationFrame(render);
     }
     render();
@@ -311,22 +312,10 @@ function createCanvas(width, height, title)
     return canvas;
 }
 
-function renderStatus(canvas, color = 'white', size = 18)
+function renderStatus()
 {
-    const context = canvas.getContext('2d');
-
-    context.font = `bold ${size}px sans-serif`;
-    context.fillStyle = color;
-    context.textBaseline = 'top';
-
-    context.shadowOffsetX = 2;
-    context.shadowOffsetY = 2;
-    context.shadowBlur = 2;
-    context.shadowColor = 'rgba(0, 0, 0, 0.5)';
-
-    context.fillText(`FPS: ${Speedy.fps}`, 8, 8);
-
-    context.shadowColor = 'rgba(0, 0, 0, 0)';
+    const status = document.getElementById('status');
+    status.innerText = `FPS: ${Speedy.fps}`;
 }
 
 function cursorPosition(canvas, event)

@@ -127,6 +127,13 @@ input[type=number] {
     width: 100%;
 }
 
+#status {
+    position: absolute;
+    background: rgb(119, 136, 153);
+    color: #fff;
+    padding: 4px;
+}
+
 /* Checkboxes */
 input[type=checkbox] {
   -webkit-appearance: none;
