@@ -157,7 +157,8 @@ export class SpeedyPipelineNodeKeypointDetector extends SpeedyPipelineNode
         const encoderCapacity = this._capacity;
         const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(encoderCapacity, descriptorSize, extraSize);
         const width = 1 << (Math.ceil(Math.log2(corners.width * corners.height)) >>> 1); // power of two
-        const height = Math.ceil(corners.width * corners.height / width);
+        const height = Math.ceil(corners.width * corners.height / width); // probabilistic approach in Parallel Ale Sort 2D
+        //const width = corners.width, height = corners.height; // independent texture reads approach in Parallel Ale Sort 2D
         const maxSize = Math.max(width, height);
         const keypoints = gpu.programs.keypoints;
 

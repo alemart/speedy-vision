@@ -334,7 +334,8 @@ this means that they are a bit more dense. Increase the constant a bit (say,
 to 20%) and try again. If your arrays are more sparse, you can decrease this
 number to skip a few more texture fetches. If you set it to a large fraction
 (e.g., near 1), you are saying that your arrays are very dense and therefore
-this performance optimization will not as be as effective.
+this performance optimization will not as be as effective (you might swap
+your definition of null and not-null, however).
 
 If you have previously sorted a few arrays and your arrays are known to have
 blocks of similar density (the fraction # not-nulls / # elements in a block),
@@ -354,6 +355,15 @@ Sb[i-(i%b)][j-(j%b)] for the correct numbers.
 In my own experiments, I found that this simple test does indeed improve
 performance for large block sizes and is worth pursuing.
 
+Note: a different optimization approach consists of transforming each of the
+Sb[i+-b][j+-b] reads into independent texture reads by means of appropriately
+computed varyings. It's not yet clear to me whether or not this approach is
+superior than the probabilistic method. I still need to test it in some more
+devices. I believe it depends on the device and on the WebGL implementation.
+The benefit of this approach is that you don't need to set width of the texture
+to a power of two, nor do you need to set up any DENSITY_FACTOR constant. Maybe
+we can combine both approaches?
+
 */
 
 #if @FS_USE_CUSTOM_PRECISION@
@@ -369,15 +379,23 @@ precision mediump float; // ~float16
 @include "float16.glsl"
 uniform sampler2D corners;
 
+#elif STAGE < 1
+
+uniform mediump usampler2D lookupTable;
+
 #else
 
-#define SKIP_TEXTURE_READS 1 // skip texture reads for highly probable null elements?
+#define SKIP_TEXTURE_READS 1 // 1: skip texture reads for highly probable null elements; 0: use independent texture reads
 #define DENSITY_FACTOR 0.10 // works well enough
 
 uniform mediump usampler2D lookupTable;
 uniform int blockSize;
 uniform int width; // size of the output texture, up to 32k (16 bit signed integers)
 uniform int height;
+
+in vec2 v_topLeft, v_top, v_topRight,
+        v_left, v_center, v_right,
+        v_bottomLeft, v_bottom, v_bottomRight;
 
 #endif
 
@@ -473,12 +491,9 @@ void main()
         uvec4(1u)
     );
 
-    // We assume that the parameters gl.TEXTURE_WRAP_S and
-    // gl.TEXTURE_WRAP_T of the output texture are set to
-    // gl.CLAMP_TO_EDGE
-    #define calcSb(delta) texelFetch(lookupTable, blockSize * ((thread + (delta)) / blockSize), 0).z
+    #if SKIP_TEXTURE_READS
 
-    //#if 1
+    #define calcSb(delta) texelFetch(lookupTable, blockSize * ((thread + (delta)) / blockSize), 0).z
 
     // It's not clear whether or not it's beneficial to perform only the required
     // texture fetches with dynamic branching. I guess it depends on the GPU / vendor.
@@ -491,6 +506,24 @@ void main()
     uint bottomLeft = calcSb(deltaBottomLeft);
     uint left = calcSb(deltaLeft);
     uint topLeft = calcSb(deltaTopLeft);
+
+    #else
+
+    // We assume that the parameters gl.TEXTURE_WRAP_S and gl.TEXTURE_WRAP_T
+    // of the output texture are both set to gl.CLAMP_TO_EDGE
+    #define calcSb(pos) texture(lookupTable, (pos)).z // independent texture reads
+
+    uint center = calcSb(v_center);
+    uint top = calcSb(v_top);
+    uint topRight = calcSb(v_topRight);
+    uint right = calcSb(v_right);
+    uint bottomRight = calcSb(v_bottomRight);
+    uint bottom = calcSb(v_bottom);
+    uint bottomLeft = calcSb(v_bottomLeft);
+    uint left = calcSb(v_left);
+    uint topLeft = calcSb(v_topLeft);
+
+    #endif
 
     uvec4 sums[4] = uvec4[4](
         uvec4(center, right, bottom, bottomRight),
@@ -505,40 +538,6 @@ void main()
 
     uint c2b = cdef.x, d2b = cdef.y, e2b = cdef.z, f2b = cdef.w;
     uint sb = center; // = cdef[option];
-
-    //#else
-
-    /*
-    #define quadruple(a,b,c,d) uvec4(calcSb(a), calcSb(b), calcSb(c), calcSb(d))
-    uvec4 cdef = uvec4(0u);
-    uint sb = 0u, c2b = 0u, d2b = 0u, e2b = 0u, f2b = 0u;
-    ivec2 cmp = ivec2(greaterThanEqual(offset, ivec2(blockSize)));
-
-    int option = 2 * cmp.y + cmp.x; // 0 <= option <= 3
-    switch(option) { // remove switch?
-        case 0: // C
-            cdef = quadruple(deltaCenter, deltaRight, deltaBottom, deltaBottomRight);
-            break;
-
-        case 1: // D
-            cdef = quadruple(deltaLeft, deltaCenter, deltaBottomLeft, deltaBottom);
-            break;
-
-        case 2: // E
-            cdef = quadruple(deltaTop, deltaTopRight, deltaCenter, deltaRight);
-            break;
-
-        case 3: // F
-            cdef = quadruple(deltaTopLeft, deltaTop, deltaLeft, deltaCenter);
-            break;
-    }
-
-    cdef *= mask[option];
-    c2b = cdef.x; d2b = cdef.y; e2b = cdef.z; f2b = cdef.w;
-    sb = cdef[option];
-    */
-
-    //#endif
 
     uint s2b = c2b + d2b + e2b + f2b;
     s2b = s2b < sb ? 0xFFFFu : min(0xFFFFu, s2b); // watch out for overflow! (really?! up to 64k points on uint16)

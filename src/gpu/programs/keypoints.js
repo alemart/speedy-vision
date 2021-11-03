@@ -150,7 +150,7 @@ const initLookupTable = importShader('keypoints/lookup-of-locations.glsl')
                        .withDefines({ 'FS_OUTPUT_TYPE': 2, 'STAGE': 1 })
                        .withArguments('corners');
 
-const sortLookupTable = importShader('keypoints/lookup-of-locations.glsl')
+const sortLookupTable = importShader('keypoints/lookup-of-locations.glsl', 'keypoints/lookup-of-locations.vs.glsl')
                        .withDefines({ 'FS_OUTPUT_TYPE': 2, 'FS_USE_CUSTOM_PRECISION': 1, 'STAGE': 2 })
                        .withArguments('lookupTable', 'blockSize', 'width', 'height');
 
