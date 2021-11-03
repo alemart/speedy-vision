@@ -6,7 +6,7 @@
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-10-26T02:31:49.228Z
+ * Date: 2021-11-03T04:28:18.498Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -3748,13 +3748,15 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // Constants
-const ENCODER_PASSES = 4; // number of passes of the keypoint encoder: directly impacts performance
-const LONG_SKIP_OFFSET_PASSES = 2; // number of passes of the long skip offsets shader
 const MAX_CAPACITY = _utils_globals__WEBPACK_IMPORTED_MODULE_7__["MAX_ENCODER_CAPACITY"]; // maximum capacity of the encoder (up to this many keypoints can be stored)
 const DEFAULT_CAPACITY = 2048; // default capacity of the encoder (64x64 texture with 2 pixels per keypoint)
 const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // sqrt(2)
-const NUMBER_OF_INTERNAL_TEXTURES = 0; //5; // number of internal textures used to encode the keypoints
 const NUMBER_OF_RGBA16_TEXTURES = 2;
+
+// legacy constants
+const NUMBER_OF_INTERNAL_TEXTURES = 0; //5; // number of internal textures used to encode the keypoints
+const ENCODER_PASSES = 4; // number of passes of the keypoint encoder: directly impacts performance
+const LONG_SKIP_OFFSET_PASSES = 2; // number of passes of the long skip offsets shader
 
 /**
  * Abstract keypoint detector
@@ -3780,9 +3782,6 @@ class SpeedyPipelineNodeKeypointDetector extends _pipeline_node__WEBPACK_IMPORTE
 
         /** @type {SpeedyDrawableTexture[]} textures with 8-bytes per pixel */
         this._tex16 = new Array(NUMBER_OF_RGBA16_TEXTURES).fill(null);
-
-        /** @type {Function} helper for tex16 */
-        this._allocateTex16 = this._allocateTex16.bind(this);
     }
 
     /**
@@ -3799,7 +3798,7 @@ class SpeedyPipelineNodeKeypointDetector extends _pipeline_node__WEBPACK_IMPORTE
 
         // allocate RGBA16 textures
         this._allocateTex16(gpu);
-        gpu.subscribe(this._allocateTex16);
+        gpu.subscribe(this._allocateTex16, this, gpu);
     }
 
     /**
@@ -3809,7 +3808,7 @@ class SpeedyPipelineNodeKeypointDetector extends _pipeline_node__WEBPACK_IMPORTE
     release(gpu)
     {
         // deallocate RGBA16 textures
-        gpu.unsubscribe(this._allocateTex16);
+        gpu.unsubscribe(this._allocateTex16, this);
         this._deallocateTex16(gpu);
 
         // we need to restore the texture parameter because textures come from a pool!
@@ -3827,6 +3826,10 @@ class SpeedyPipelineNodeKeypointDetector extends _pipeline_node__WEBPACK_IMPORTE
      */
     _setupSpecialTexture(pname, param)
     {
+        if(NUMBER_OF_INTERNAL_TEXTURES == 0)
+            return;
+
+        // legacy code
         const texture = this._tex[this._tex.length - 1];
         const gl = texture.gl;
 
@@ -3873,7 +3876,8 @@ class SpeedyPipelineNodeKeypointDetector extends _pipeline_node__WEBPACK_IMPORTE
         const encoderCapacity = this._capacity;
         const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(encoderCapacity, descriptorSize, extraSize);
         const width = 1 << (Math.ceil(Math.log2(corners.width * corners.height)) >>> 1); // power of two
-        const height = Math.ceil(corners.width * corners.height / width);
+        const height = Math.ceil(corners.width * corners.height / width); // probabilistic approach in Parallel Ale Sort 2D
+        //const width = corners.width, height = corners.height; // independent texture reads approach in Parallel Ale Sort 2D
         const maxSize = Math.max(width, height);
         const keypoints = gpu.programs.keypoints;
 
@@ -3887,9 +3891,6 @@ class SpeedyPipelineNodeKeypointDetector extends _pipeline_node__WEBPACK_IMPORTE
         for(let b = 1; b < maxSize; b *= 2)
             lookupTable = keypoints.sortLookupTable(lookupTable, b, width, height);
 
-        // encode keypoints
-        keypoints.encodeKeypoints(corners, lookupTable, width, descriptorSize, extraSize, encoderLength, encoderCapacity);
-
         /*
         // debug: view texture
         const lookupView = (keypoints.viewLookupTable.outputs(
@@ -3900,8 +3901,8 @@ class SpeedyPipelineNodeKeypointDetector extends _pipeline_node__WEBPACK_IMPORTE
         this._ww = 1;
         */
 
-        // done!
-        return encodedKeypoints;
+        // encode keypoints
+        return keypoints.encodeKeypoints(corners, lookupTable, width, descriptorSize, extraSize, encoderLength, encoderCapacity);
     }
 
     _encodeKeypointsOLD(gpu, corners, encodedKeypoints, descriptorSize = 0, extraSize = 0)
@@ -3922,7 +3923,7 @@ class SpeedyPipelineNodeKeypointDetector extends _pipeline_node__WEBPACK_IMPORTE
 
         // copy the input corners to a special texture
         // that is needed by encodeKeypointSkipOffsets()
-        corners = (gpu.programs.utils.identity
+        corners = (gpu.programs.utils.copy
             .outputs(width, height, specialTexture)
         )(corners);
 
@@ -4519,12 +4520,6 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-
-// Constants
-const LOG2_STRIDE = 5;
-
-
-
 /**
  * Keypoint Mixer: merges two sets of keypoints
  */
@@ -5027,7 +5022,7 @@ class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MO
      */
     constructor(name = 'keypoints')
     {
-        super(name, 0, [
+        super(name, 2, [
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Keypoints)
         ]);
 
@@ -5036,6 +5031,30 @@ class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MO
 
         /** @type {SpeedyTextureReader} texture reader */
         this._textureReader = new _gpu_speedy_texture_reader__WEBPACK_IMPORTED_MODULE_4__["SpeedyTextureReader"]();
+
+        /** @type {number} page flipping index */
+        this._page = 0;
+
+        /** @type {boolean} accelerate GPU-CPU transfers by means of buffered downloads */
+        this._lightspeed = false;
+    }
+
+    /**
+     * Accelerate GPU-CPU transfers by means of buffered downloads
+     * @returns {boolean}
+     */
+    get lightspeed()
+    {
+        return this._lightspeed;
+    }
+
+    /**
+     * Accelerate GPU-CPU transfers by means of buffered downloads
+     * @param {boolean} value
+     */
+    set lightspeed(value)
+    {
+        this._lightspeed = Boolean(value);
     }
 
     /**
@@ -5075,8 +5094,18 @@ class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MO
     _run(gpu)
     {
         const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input().read();
+        const useBufferedDownloads = this._lightspeed;
 
-        return this._textureReader.readPixelsAsync(encodedKeypoints).then(pixels => {
+        // copy the set of keypoints to an internal texture
+        const copiedTexture = this._tex[this._page];
+        copiedTexture.resize(encodedKeypoints.width, encodedKeypoints.height);
+        encodedKeypoints.copyTo(copiedTexture);
+
+        // flip page
+        this._page = 1 - this._page;
+
+        // download the internal texture
+        return this._textureReader.readPixelsAsync(copiedTexture, 0, 0, copiedTexture.width, copiedTexture.height, useBufferedDownloads).then(pixels => {
             this._keypoints = SpeedyPipelineNodeKeypointSink._decode(pixels, descriptorSize, extraSize, encoderLength);
         });
     }
@@ -6300,7 +6329,7 @@ class SpeedyPipelineNodeVector2Sink extends _pipeline_node__WEBPACK_IMPORTED_MOD
      */
     constructor(name = 'vec2')
     {
-        super(name, 0, [
+        super(name, 2, [
             Object(_pipeline_portbuilder__WEBPACK_IMPORTED_MODULE_2__["InputPort"])().expects(_pipeline_message__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineMessageType"].Vector2)
         ]);
 
@@ -6309,6 +6338,30 @@ class SpeedyPipelineNodeVector2Sink extends _pipeline_node__WEBPACK_IMPORTED_MOD
 
         /** @type {SpeedyTextureReader} texture reader */
         this._textureReader = new _gpu_speedy_texture_reader__WEBPACK_IMPORTED_MODULE_4__["SpeedyTextureReader"]();
+
+        /** @type {number} page flipping index */
+        this._page = 0;
+
+        /** @type {boolean} accelerate GPU-CPU transfers by means of buffered downloads */
+        this._lightspeed = false;
+    }
+
+    /**
+     * Accelerate GPU-CPU transfers by means of buffered downloads
+     * @returns {boolean}
+     */
+    get lightspeed()
+    {
+        return this._lightspeed;
+    }
+
+    /**
+     * Accelerate GPU-CPU transfers by means of buffered downloads
+     * @param {boolean} value
+     */
+    set lightspeed(value)
+    {
+        this._lightspeed = Boolean(value);
     }
 
     /**
@@ -6348,8 +6401,18 @@ class SpeedyPipelineNodeVector2Sink extends _pipeline_node__WEBPACK_IMPORTED_MOD
     _run(gpu)
     {
         const vectors = this.input().read().vectors;
+        const useBufferedDownloads = this._lightspeed;
 
-        return this._textureReader.readPixelsAsync(vectors).then(pixels => {
+        // copy the set of keypoints to an internal texture
+        const copiedTexture = this._tex[this._page];
+        copiedTexture.resize(vectors.width, vectors.height);
+        vectors.copyTo(copiedTexture);
+
+        // flip page
+        this._page = 1 - this._page;
+
+        // download the internal texture
+        return this._textureReader.readPixelsAsync(copiedTexture, 0, 0, copiedTexture.width, copiedTexture.height, useBufferedDownloads).then(pixels => {
             this._vectors = SpeedyPipelineNodeVector2Sink._decode(pixels, vectors.width);
         });
     }
@@ -6910,9 +6973,6 @@ class SpeedyPipelineNode
         // got some ports?
         if(portBuilders.length == 0)
             throw new _utils_errors__WEBPACK_IMPORTED_MODULE_3__["IllegalArgumentError"](`No ports have been found in node ${this.fullName}`);
-
-        // bind this function (subscriber)
-        this._allocateWorkTextures = this._allocateWorkTextures.bind(this);
     }
 
     /**
@@ -7007,7 +7067,7 @@ class SpeedyPipelineNode
      */
     init(gpu)
     {
-        gpu.subscribe(this._allocateWorkTextures);
+        gpu.subscribe(this._allocateWorkTextures, this, gpu);
         this._allocateWorkTextures(gpu);
     }
 
@@ -7018,7 +7078,7 @@ class SpeedyPipelineNode
     release(gpu)
     {
         this._deallocateWorkTextures(gpu);
-        gpu.unsubscribe(this._allocateWorkTextures);
+        gpu.unsubscribe(this._allocateWorkTextures, this);
     }
 
     /**
@@ -7845,9 +7905,6 @@ class SpeedyPipeline
         /** @type {SpeedyPipelineNode[]} a sequence of nodes: from the source(s) to the sink */
         this._sequence = [];
 
-        /** @type {SpeedyPipelineOutput} output template */
-        this._template = SpeedyPipeline._createOutputTemplate();
-
         /** @type {SpeedyGPU} GPU instance */
         this._gpu = null;
 
@@ -7893,9 +7950,6 @@ class SpeedyPipeline
                 this._nodes.push(node);
         }
 
-        // generate the output template
-        this._template = SpeedyPipeline._createOutputTemplate(this._nodes);
-
         // generate the sequence of nodes
         this._sequence = SpeedyPipeline._tsort(this._nodes);
         SpeedyPipeline._validateSequence(this._sequence);
@@ -7926,9 +7980,6 @@ class SpeedyPipeline
         // release GPU
         this._gpu = this._gpu.release();
 
-        // release other properties
-        this._template = SpeedyPipeline._createOutputTemplate();
-
         // done!
         return null;
     }
@@ -7939,7 +7990,7 @@ class SpeedyPipeline
      */
     run()
     {
-        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(this._gpu != null, `Pipeline has not been initialized or has been released`);
+        _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(this._gpu != null, `The pipeline has not been initialized or has been released`);
 
         // is the pipeline busy?
         if(this._busy) {
@@ -7957,6 +8008,9 @@ class SpeedyPipeline
         // find the sinks
         const sinks = this._sequence.filter(node => node.isSink());
 
+        // create output template
+        const template = SpeedyPipeline._createOutputTemplate(sinks);
+
         // run the pipeline
         return SpeedyPipeline._runSequence(this._sequence, this._gpu).then(() =>
 
@@ -7964,18 +8018,16 @@ class SpeedyPipeline
             _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"].all(sinks.map(sink => sink.export())).then(results =>
 
                 // aggregate results by the names of the sinks
-                results.reduce((obj, val, idx) => ((obj[sinks[idx].name] = val), obj), this._template)
+                results.reduce((obj, val, idx) => ((obj[sinks[idx].name] = val), obj), template)
             )
-        ).then(aggregate => {
+
+        ).finally(() => {
             // clear all ports
             for(let i = this._sequence.length - 1; i >= 0; i--)
                 this._sequence[i].clearPorts();
 
             // the pipeline is no longer busy
             this._busy = false;
-
-            // done!
-            return aggregate;
         }).turbocharge();
     }
 
@@ -7989,16 +8041,14 @@ class SpeedyPipeline
      */
     static _runSequence(sequence, gpu, i = 0, n = sequence.length)
     {
-        if(i >= n) {
-            gpu.gl.flush();
-            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"].resolve();
+        for(; i < n; i++) {
+            const runTask = sequence[i].execute(gpu);
+            if(runTask !== undefined)
+                return runTask.then(() => SpeedyPipeline._runSequence(sequence, gpu, i+1, n));
         }
 
-        const runTask = sequence[i].execute(gpu);
-        if(runTask == undefined)
-            return SpeedyPipeline._runSequence(sequence, gpu, i+1, n);
-
-        return runTask.then(() => SpeedyPipeline._runSequence(sequence, gpu, i+1, n));
+        gpu.gl.flush();
+        return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_1__["SpeedyPromise"].resolve();
     }
 
     /**
@@ -8068,15 +8118,17 @@ class SpeedyPipeline
 
     /**
      * Generate the output template by aggregating the names of the sinks
-     * @param {SpeedyPipelineNode[]} [nodes]
+     * @param {SpeedyPipelineNode[]} [sinks]
      * @returns {SpeedyPipelineOutput}
      */
-    static _createOutputTemplate(nodes = [])
+    static _createOutputTemplate(sinks = [])
     {
         const template = Object.create(null);
-        const sinks = nodes.filter(node => node.isSink());
 
-        return sinks.reduce((obj, sink) => ((obj[sink.name] = null), obj), template);
+        for(let i = sinks.length - 1; i >= 0; i--)
+            template[sinks[i].name] = null;
+
+        return template;
     }
 
     /**
@@ -12269,7 +12321,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // FAST corner detector
-const fast9_16 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/fast.glsl')
+const fast9_16 = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/fast.glsl', 'keypoints/fast.vs.glsl')
                 .withDefines({ 'FAST_TYPE': 916 })
                 .withArguments('corners', 'pyramid', 'lod', 'threshold');
 
@@ -12394,7 +12446,7 @@ const initLookupTable = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__[
                        .withDefines({ 'FS_OUTPUT_TYPE': 2, 'STAGE': 1 })
                        .withArguments('corners');
 
-const sortLookupTable = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/lookup-of-locations.glsl')
+const sortLookupTable = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/lookup-of-locations.glsl', 'keypoints/lookup-of-locations.vs.glsl')
                        .withDefines({ 'FS_OUTPUT_TYPE': 2, 'FS_USE_CUSTOM_PRECISION': 1, 'STAGE': 2 })
                        .withArguments('lookupTable', 'blockSize', 'width', 'height');
 
@@ -12830,11 +12882,11 @@ __webpack_require__.r(__webpack_exports__);
 // Shaders
 //
 
-// Identity shader: no-operation
-const identity = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('utils/identity.glsl').withArguments('image');
+// Copy image
+const copy = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('utils/copy.glsl').withArguments('image');
 
 // Flip y-axis for output
-const flipY = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('utils/flip-y.glsl').withArguments('image');
+const flipY = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('utils/copy.glsl', 'utils/flip-y.vs.glsl').withArguments('image');
 
 // Fill image with a constant
 const fill = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('utils/fill.glsl').withArguments('value');
@@ -12849,7 +12901,7 @@ const copyComponents = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["
 const scanMinMax2D = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('utils/scan-minmax2d.glsl').withArguments('image', 'iterationNumber');
 
 // Compute the partial derivatives of an image
-const sobelDerivatives = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('utils/sobel-derivatives.glsl').withArguments('pyramid', 'lod');
+const sobelDerivatives = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('utils/sobel-derivatives.glsl', 'utils/sobel-derivatives.vs.glsl').withArguments('pyramid', 'lod');
 
 
 
@@ -12868,8 +12920,8 @@ class SpeedyProgramGroupUtils extends _speedy_program_group__WEBPACK_IMPORTED_MO
     {
         super(gpu);
         this
-            // no-operation
-            .declare('identity', identity)
+            // copy image
+            .declare('copy', copy)
 
             // render to the canvas
             .declare('renderToCanvas', flipY, {
@@ -12946,15 +12998,21 @@ const DEFAULT_ATTRIBUTES_LOCATION = Object.freeze({
     texCoord: 1,
 });
 
-const DEFAULT_VERTEX_SHADER = `#version 300 es
+const DEFAULT_VERTEX_SHADER_PREFIX = `#version 300 es
+precision highp float;
+precision highp int;
+
 layout (location=${DEFAULT_ATTRIBUTES_LOCATION.position}) in vec2 ${DEFAULT_ATTRIBUTES.position};
 layout (location=${DEFAULT_ATTRIBUTES_LOCATION.texCoord}) in vec2 ${DEFAULT_ATTRIBUTES.texCoord};
 out vec2 texCoord;
+uniform mediump vec2 texSize;
 
-void main() {
-    gl_Position = vec4(${DEFAULT_ATTRIBUTES.position}, 0.0f, 1.0f);
-    texCoord = ${DEFAULT_ATTRIBUTES.texCoord};
-}\n`;
+#define setupVertexShader() \
+gl_Position = vec4(${DEFAULT_ATTRIBUTES.position}, 0.0f, 1.0f); \
+texCoord = ${DEFAULT_ATTRIBUTES.texCoord};
+\n\n`;
+
+const DEFAULT_VERTEX_SHADER_SUFFIX = `void main() { setupVertexShader(); }`;
 
 const DEFAULT_FRAGMENT_SHADER_PREFIX = `#version 300 es
 
@@ -12980,6 +13038,10 @@ uniform mediump vec2 texSize;
 
 @include "global.glsl"\n\n`;
 
+const PRIVATE_TOKEN = Symbol();
+
+
+
 /**
  * Shader Declaration
  */
@@ -12989,32 +13051,44 @@ class ShaderDeclaration
      * @private Constructor
      * @param {object} options
      * @param {string} [options.filepath]
+     * @param {string?} [options.vsfilepath]
      * @param {string} [options.source]
+     * @param {string?} [options.vssource]
+     * @param {Symbol} privateToken
      */
-    constructor(options)
+    constructor(options, privateToken)
     {
+        if(privateToken !== PRIVATE_TOKEN)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalOperationError"](); // private constructor!
+
         const filepath = options.filepath || null;
-        const source = filepath ? __webpack_require__("./src/gpu/shaders sync recursive ^\\.\\/.*$")("./" + filepath) : (options.source || '');
-        if(source.length == 0)
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalArgumentError"](`Can't import shader: empty code`);
+        const vsfilepath = options.vsfilepath || null;
 
-        /** @type {string} original source code provided by the user */
-        this._userSource = source;
 
-        /** @type {string} preprocessed source code of the vertex shader */
-        this._vertexSource = _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__["ShaderPreprocessor"].run(DEFAULT_VERTEX_SHADER);
+
+        /** @type {string} original source code provided by the user (fragment shader) */
+        this._source = filepath ? __webpack_require__("./src/gpu/shaders sync recursive ^\\.\\/.*$")("./" + filepath) : (options.source || '');
+
+        /** @type {string} vertex shader source code (without preprocessing) */
+        this._vssource = vsfilepath ? __webpack_require__("./src/gpu/shaders sync recursive ^\\.\\/.*$")("./" + vsfilepath) : (options.vssource || DEFAULT_VERTEX_SHADER_SUFFIX);
 
         /** @type {string} preprocessed source code of the fragment shader */
-        this._fragmentSource = _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__["ShaderPreprocessor"].run(DEFAULT_FRAGMENT_SHADER_PREFIX + this._userSource);
+        this._fragmentSource = _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__["ShaderPreprocessor"].run(DEFAULT_FRAGMENT_SHADER_PREFIX + this._source);
 
-        /** @type {string} the filepath from which the (fragment) shader was imported */
+        /** @type {string} preprocessed source code of the vertex shader */
+        this._vertexSource = _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__["ShaderPreprocessor"].run(DEFAULT_VERTEX_SHADER_PREFIX + this._vssource);
+
+        /** @type {string} filepath of the fragment shader */
         this._filepath = filepath || '<in-memory>';
+
+        /** @type {string} filepath of the vertex shader */
+        this._vsfilepath = vsfilepath || '<in-memory>';
 
         /** @type {string[]} an ordered list of uniform names */
         this._arguments = [];
 
         /** @type {Map<string,string>} it maps uniform names to their types */
-        this._uniforms = this._autodetectUniforms(this._fragmentSource);
+        this._uniforms = this._autodetectUniforms(this._fragmentSource + '\n' + this._vertexSource);
 
         /** @type {Map<string,number>} it maps externally #defined constants to their values */
         this._defines = new Map();
@@ -13022,25 +13096,29 @@ class ShaderDeclaration
 
     /**
      * Creates a new Shader directly from a GLSL source
-     * @param {string} source
+     * @param {string} source fragment shader
+     * @param {string?} [vssource] vertex shader
      * @returns {ShaderDeclaration}
      */
-    static create(source)
+    static create(source, vssource = null)
     {
-        return new ShaderDeclaration({ source });
+        return new ShaderDeclaration({ source, vssource }, PRIVATE_TOKEN);
     }
 
     /**
      * Import a Shader from a file containing a GLSL source
      * @param {string} filepath path to .glsl file relative to the shaders/ folder
+     * @param {string?} [vsfilepath] path to a .vs.glsl file relative to the shaders/ folder
      * @returns {ShaderDeclaration}
      */
-    static import(filepath)
+    static import(filepath, vsfilepath = null)
     {
         if(!String(filepath).match(/^[a-zA-Z0-9_\-\/]+\.glsl$/))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["FileNotFoundError"](`Can't import shader: "${filepath}"`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["FileNotFoundError"](`Can't import fragment shader at "${filepath}"`);
+        else if(vsfilepath != null && !String(vsfilepath).match(/^[a-zA-Z0-9_\-\/]+\.vs\.glsl$/))
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["FileNotFoundError"](`Can't import vertex shader at "${vsfilepath}"`);
 
-        return new ShaderDeclaration({ filepath });
+        return new ShaderDeclaration({ filepath, vsfilepath }, PRIVATE_TOKEN);
     }
 
     /**
@@ -13089,10 +13167,12 @@ class ShaderDeclaration
             defs.push(`#define ${key} ${value}\n`);
         }
 
-        // update the fragment shader & the uniforms
-        const source = DEFAULT_FRAGMENT_SHADER_PREFIX + defs.join('') + this._userSource;
+        // update the shaders & the uniforms
+        const source = DEFAULT_FRAGMENT_SHADER_PREFIX + defs.join('') + this._source;
+        const vssource = DEFAULT_VERTEX_SHADER_PREFIX + defs.join('') + this._vssource;
         this._fragmentSource = _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__["ShaderPreprocessor"].run(source, this._defines);
-        this._uniforms = this._autodetectUniforms(this._fragmentSource);
+        this._vertexSource = _shader_preprocessor__WEBPACK_IMPORTED_MODULE_0__["ShaderPreprocessor"].run(vssource, this._defines);
+        this._uniforms = this._autodetectUniforms(this._fragmentSource + '\n' + this._vertexSource);
 
         // done!
         return this;
@@ -13211,7 +13291,10 @@ class ShaderDeclaration
                 }
                 else {
                     // register a regular uniform
-                    uniforms.set(name, type);
+                    if(!uniforms.has(name) || uniforms.get(name) === type)
+                        uniforms.set(name, type);
+                    else
+                        throw new _utils_errors__WEBPACK_IMPORTED_MODULE_1__["IllegalOperationError"](`Redefinition of uniform "${name}" in the shader`);
                 }
             }
         }
@@ -13222,22 +13305,24 @@ class ShaderDeclaration
 
 /**
  * Import a ShaderDeclaration from a GLSL file
- * @param {string} filepath relative to the shaders/ folder
+ * @param {string} filepath relative to the shaders/ folder (a .glsl file)
+ * @param {string?} [vsfilepath] optional vertex shader (a .vs.glsl file)
  * @returns {ShaderDeclaration}
  */
-function importShader(filepath)
+function importShader(filepath, vsfilepath = null)
 {
-    return ShaderDeclaration.import(filepath);
+    return ShaderDeclaration.import(filepath, vsfilepath);
 }
 
 /**
- * Create a ShaderDeclaration from a GLSL source
- * @param {string} source
+ * Create a ShaderDeclaration from a GLSL source code
+ * @param {string} source fragment shader
+ * @param {string?} [vssource] optional vertex shader
  * @returns {ShaderDeclaration}
  */
-function createShader(source)
+function createShader(source, vssource = null)
 {
-    return ShaderDeclaration.create(source);
+    return ShaderDeclaration.create(source, vssource);
 }
 
 /***/ }),
@@ -13493,11 +13578,13 @@ var map = {
 	"./keypoints/encode-keypoints.glsl": "./src/gpu/shaders/keypoints/encode-keypoints.glsl",
 	"./keypoints/encode-null-keypoints.glsl": "./src/gpu/shaders/keypoints/encode-null-keypoints.glsl",
 	"./keypoints/fast.glsl": "./src/gpu/shaders/keypoints/fast.glsl",
+	"./keypoints/fast.vs.glsl": "./src/gpu/shaders/keypoints/fast.vs.glsl",
 	"./keypoints/harris-cutoff.glsl": "./src/gpu/shaders/keypoints/harris-cutoff.glsl",
 	"./keypoints/harris.glsl": "./src/gpu/shaders/keypoints/harris.glsl",
 	"./keypoints/laplacian.glsl": "./src/gpu/shaders/keypoints/laplacian.glsl",
 	"./keypoints/lk.glsl": "./src/gpu/shaders/keypoints/lk.glsl",
 	"./keypoints/lookup-of-locations.glsl": "./src/gpu/shaders/keypoints/lookup-of-locations.glsl",
+	"./keypoints/lookup-of-locations.vs.glsl": "./src/gpu/shaders/keypoints/lookup-of-locations.vs.glsl",
 	"./keypoints/mix-keypoints.glsl": "./src/gpu/shaders/keypoints/mix-keypoints.glsl",
 	"./keypoints/nonmax-scale.glsl": "./src/gpu/shaders/keypoints/nonmax-scale.glsl",
 	"./keypoints/nonmax-space.glsl": "./src/gpu/shaders/keypoints/nonmax-space.glsl",
@@ -13519,12 +13606,13 @@ var map = {
 	"./transforms/resize.glsl": "./src/gpu/shaders/transforms/resize.glsl",
 	"./transforms/warp-perspective.glsl": "./src/gpu/shaders/transforms/warp-perspective.glsl",
 	"./utils/copy-components.glsl": "./src/gpu/shaders/utils/copy-components.glsl",
+	"./utils/copy.glsl": "./src/gpu/shaders/utils/copy.glsl",
 	"./utils/fill-components.glsl": "./src/gpu/shaders/utils/fill-components.glsl",
 	"./utils/fill.glsl": "./src/gpu/shaders/utils/fill.glsl",
-	"./utils/flip-y.glsl": "./src/gpu/shaders/utils/flip-y.glsl",
-	"./utils/identity.glsl": "./src/gpu/shaders/utils/identity.glsl",
+	"./utils/flip-y.vs.glsl": "./src/gpu/shaders/utils/flip-y.vs.glsl",
 	"./utils/scan-minmax2d.glsl": "./src/gpu/shaders/utils/scan-minmax2d.glsl",
-	"./utils/sobel-derivatives.glsl": "./src/gpu/shaders/utils/sobel-derivatives.glsl"
+	"./utils/sobel-derivatives.glsl": "./src/gpu/shaders/utils/sobel-derivatives.glsl",
+	"./utils/sobel-derivatives.vs.glsl": "./src/gpu/shaders/utils/sobel-derivatives.vs.glsl"
 };
 
 
@@ -14047,7 +14135,18 @@ module.exports = "@include \"keypoints.glsl\"\nvoid main()\n{\ncolor = encodeNul
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D corners;\nuniform sampler2D pyramid;\nuniform float lod;\nuniform int threshold;\n#define PIX(x,y) pyrPixelAtOffset(pyramid, lod, pot, ivec2((x),(y))).g\nvoid main()\n{\nfloat pixel = threadPixel(pyramid).g;\nvec4 prev = threadPixel(corners);\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nfloat pot = exp2(lod);\nfloat t = float(clamp(threshold, 0, 255)) / 255.0f;\nfloat ct = pixel + t, c_t = pixel - t;\ncolor = vec4(prev.r, pixel, prev.ba);\n#if !defined(FAST_TYPE)\n#error Must define FAST_TYPE\n#elif FAST_TYPE == 916\nconst ivec4 margin = ivec4(3, 3, 4, 4);\nif(any(lessThan(ivec4(thread, size - thread), margin)))\nreturn;\nfloat p0 = PIX(0,3), p4 = PIX(3,0), p8 = PIX(0,-3), p12 = PIX(-3,0);\nbvec4 brighter = bvec4(p0 > ct, p4 > ct, p8 > ct, p12 > ct);\nbvec4 darker = bvec4(p0 < c_t, p4 < c_t, p8 < c_t, p12 < c_t);\nbvec4 bpairs = bvec4(all(brighter.xy), all(brighter.yz), all(brighter.zw), all(brighter.wx));\nbvec4 dpairs = bvec4(all(darker.xy), all(darker.yz), all(darker.zw), all(darker.wx));\nif(!(any(bpairs) || any(dpairs)))\nreturn;\nfloat p1 = PIX(1,3), p2 = PIX(2,2), p3 = PIX(3,1);\nfloat p5 = PIX(3,-1), p6 = PIX(2,-2), p7 = PIX(1,-3);\nfloat p9 = PIX(-1,-3), p10 = PIX(-2,-2), p11 = PIX(-3,-1);\nfloat p13 = PIX(-3,1), p14 = PIX(-2,2), p15 = PIX(-1,3);\nbool A=(p0>ct),B=(p1>ct),C=(p2>ct),D=(p3>ct),E=(p4>ct),F=(p5>ct),G=(p6>ct),H=(p7>ct),I=(p8>ct),J=(p9>ct),K=(p10>ct),L=(p11>ct),M=(p12>ct),N=(p13>ct),O=(p14>ct),P=(p15>ct),a=(p0<c_t),b=(p1<c_t),c=(p2<c_t),d=(p3<c_t),e=(p4<c_t),f=(p5<c_t),g=(p6<c_t),h=(p7<c_t),i=(p8<c_t),j=(p9<c_t),k=(p10<c_t),l=(p11<c_t),m=(p12<c_t),n=(p13<c_t),o=(p14<c_t),p=(p15<c_t);\nbool isCorner=A&&(B&&(K&&L&&J&&(M&&N&&O&&P||G&&H&&I&&(M&&N&&O||F&&(M&&N||E&&(M||D))))||C&&(K&&L&&M&&(N&&O&&P||G&&H&&I&&J&&(N&&O||F&&(N||E)))||D&&(N&&(L&&M&&(K&&G&&H&&I&&J&&(O||F)||O&&P)||k&&l&&m&&e&&f&&g&&h&&i&&j)||E&&(O&&(M&&N&&(K&&L&&G&&H&&I&&J||P)||k&&l&&m&&n&&f&&g&&h&&i&&j)||F&&(P&&(N&&O||k&&l&&m&&n&&o&&g&&h&&i&&j)||G&&(O&&P||H&&(P||I)||k&&l&&m&&n&&o&&p&&h&&i&&j)||k&&l&&m&&n&&o&&h&&i&&j&&(p||g))||k&&l&&m&&n&&h&&i&&j&&(o&&(p||g)||f&&(o&&p||g)))||k&&l&&m&&h&&i&&j&&(n&&(o&&p||g&&(o||f))||e&&(n&&o&&p||g&&(n&&o||f))))||k&&l&&h&&i&&j&&(m&&(n&&o&&p||g&&(n&&o||f&&(n||e)))||d&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e)))))||k&&h&&i&&j&&(l&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d))))))||K&&I&&J&&(L&&M&&N&&O&&P||G&&H&&(L&&M&&N&&O||F&&(L&&M&&N||E&&(L&&M||D&&(L||C)))))||h&&i&&j&&(b&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c)))))||k&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c)))))))||B&&(H&&I&&J&&(K&&L&&M&&N&&O&&P&&a||G&&(K&&L&&M&&N&&O&&a||F&&(K&&L&&M&&N&&a||E&&(K&&L&&M&&a||D&&(K&&L&&a||C)))))||a&&k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||C&&(K&&H&&I&&J&&(L&&M&&N&&O&&P&&a&&b||G&&(L&&M&&N&&O&&a&&b||F&&(L&&M&&N&&a&&b||E&&(L&&M&&a&&b||D))))||a&&b&&k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d)))))||D&&(K&&L&&H&&I&&J&&(M&&N&&O&&P&&a&&b&&c||G&&(M&&N&&O&&a&&b&&c||F&&(M&&N&&a&&b&&c||E)))||a&&b&&k&&l&&m&&c&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e))))||E&&(K&&L&&M&&H&&I&&J&&(N&&O&&P&&a&&b&&c&&d||G&&(N&&O&&a&&b&&c&&d||F))||a&&b&&l&&m&&n&&c&&d&&(k&&g&&h&&i&&j&&(o||f)||o&&p))||F&&(K&&L&&M&&N&&H&&I&&J&&(O&&P&&a&&b&&c&&d&&e||G)||a&&b&&m&&n&&o&&c&&d&&e&&(k&&l&&g&&h&&i&&j||p))||G&&(K&&L&&M&&N&&O&&H&&I&&J||a&&b&&n&&o&&p&&c&&d&&e&&f)||H&&(K&&L&&M&&N&&O&&P&&I&&J||a&&b&&o&&p&&c&&d&&e&&f&&g)||a&&(b&&(k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(k&&l&&m&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e)))||d&&(l&&m&&n&&(k&&g&&h&&i&&j&&(o||f)||o&&p)||e&&(m&&n&&o&&(k&&l&&g&&h&&i&&j||p)||f&&(n&&o&&p||g&&(o&&p||h&&(p||i)))))))||k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||h&&i&&j&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c&&(b||k))))));\nif(!isCorner)\nreturn;\nmat4 mp = mat4(p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15);\nmat4 mct = mp - mat4(ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct);\nmat4 mc_t = mat4(c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t) - mp;\nconst vec4 zeros = vec4(0.0f), ones = vec4(1.0f);\nvec4 bs = max(mct[0], zeros), ds = max(mc_t[0], zeros);\nbs += max(mct[1], zeros);     ds += max(mc_t[1], zeros);\nbs += max(mct[2], zeros);     ds += max(mc_t[2], zeros);\nbs += max(mct[3], zeros);     ds += max(mc_t[3], zeros);\nfloat thisScore = max(dot(bs, ones), dot(ds, ones)) / 16.0f;\nfloat prevScore = decodeFloat16(prev.rb);\nvec3 thisResult = vec3(encodeFloat16(thisScore), encodeLod(lod));\ncolor.rba = thisScore > prevScore ? thisResult : color.rba;\n#else\n#error Unrecognized FAST_TYPE\n#endif\n}"
+module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D corners;\nuniform sampler2D pyramid;\nuniform float lod;\nuniform int threshold;\n#define USE_VARYINGS 1\n#if !defined(FAST_TYPE)\n#error Undefined FAST_TYPE\n#elif FAST_TYPE == 916\nin vec2 v_pix0, v_pix1, v_pix2, v_pix3, v_pix4, v_pix5, v_pix6, v_pix7,\nv_pix8, v_pix9, v_pix10,v_pix11,v_pix12,v_pix13,v_pix14,v_pix15;\n#else\n#error Invalid FAST_TYPE\n#endif\n#define PIX(x,y) pyrPixelAtOffset(pyramid, lod, pot, ivec2((x),(y))).g\n#define XIP(v) textureLod(pyramid, (v), lod).g\nvoid main()\n{\nfloat pixel = threadPixel(pyramid).g;\nvec4 prev = threadPixel(corners);\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nfloat pot = exp2(lod);\nfloat t = float(clamp(threshold, 0, 255)) / 255.0f;\nfloat ct = pixel + t, c_t = pixel - t;\ncolor = vec4(prev.r, pixel, prev.ba);\n#if FAST_TYPE == 916\nconst ivec4 margin = ivec4(3, 3, 4, 4);\nif(any(lessThan(ivec4(thread, size - thread), margin)))\nreturn;\n#if USE_VARYINGS\nfloat p0 = XIP(v_pix0), p4 = XIP(v_pix4), p8 = XIP(v_pix8), p12 = XIP(v_pix12);\n#else\nfloat p0 = PIX(0,3), p4 = PIX(3,0), p8 = PIX(0,-3), p12 = PIX(-3,0);\n#endif\nbvec4 brighter = bvec4(p0 > ct, p4 > ct, p8 > ct, p12 > ct);\nbvec4 darker = bvec4(p0 < c_t, p4 < c_t, p8 < c_t, p12 < c_t);\nbvec4 bpairs = bvec4(all(brighter.xy), all(brighter.yz), all(brighter.zw), all(brighter.wx));\nbvec4 dpairs = bvec4(all(darker.xy), all(darker.yz), all(darker.zw), all(darker.wx));\nif(!(any(bpairs) || any(dpairs)))\nreturn;\n#if USE_VARYINGS\nfloat p1 = XIP(v_pix1), p2 = XIP(v_pix2), p3 = XIP(v_pix3),\np5 = XIP(v_pix5), p6 = XIP(v_pix6), p7 = XIP(v_pix7),\np9 = XIP(v_pix9), p10 = XIP(v_pix10), p11 = XIP(v_pix11),\np13 = XIP(v_pix13), p14 = XIP(v_pix14), p15 = XIP(v_pix15);\n#else\nfloat p1 = PIX(1,3), p2 = PIX(2,2), p3 = PIX(3,1),\np5 = PIX(3,-1), p6 = PIX(2,-2), p7 = PIX(1,-3),\np9 = PIX(-1,-3), p10 = PIX(-2,-2), p11 = PIX(-3,-1),\np13 = PIX(-3,1), p14 = PIX(-2,2), p15 = PIX(-1,3);\n#endif\nbool A=(p0>ct),B=(p1>ct),C=(p2>ct),D=(p3>ct),E=(p4>ct),F=(p5>ct),G=(p6>ct),H=(p7>ct),I=(p8>ct),J=(p9>ct),K=(p10>ct),L=(p11>ct),M=(p12>ct),N=(p13>ct),O=(p14>ct),P=(p15>ct),a=(p0<c_t),b=(p1<c_t),c=(p2<c_t),d=(p3<c_t),e=(p4<c_t),f=(p5<c_t),g=(p6<c_t),h=(p7<c_t),i=(p8<c_t),j=(p9<c_t),k=(p10<c_t),l=(p11<c_t),m=(p12<c_t),n=(p13<c_t),o=(p14<c_t),p=(p15<c_t);\nbool isCorner=A&&(B&&(K&&L&&J&&(M&&N&&O&&P||G&&H&&I&&(M&&N&&O||F&&(M&&N||E&&(M||D))))||C&&(K&&L&&M&&(N&&O&&P||G&&H&&I&&J&&(N&&O||F&&(N||E)))||D&&(N&&(L&&M&&(K&&G&&H&&I&&J&&(O||F)||O&&P)||k&&l&&m&&e&&f&&g&&h&&i&&j)||E&&(O&&(M&&N&&(K&&L&&G&&H&&I&&J||P)||k&&l&&m&&n&&f&&g&&h&&i&&j)||F&&(P&&(N&&O||k&&l&&m&&n&&o&&g&&h&&i&&j)||G&&(O&&P||H&&(P||I)||k&&l&&m&&n&&o&&p&&h&&i&&j)||k&&l&&m&&n&&o&&h&&i&&j&&(p||g))||k&&l&&m&&n&&h&&i&&j&&(o&&(p||g)||f&&(o&&p||g)))||k&&l&&m&&h&&i&&j&&(n&&(o&&p||g&&(o||f))||e&&(n&&o&&p||g&&(n&&o||f))))||k&&l&&h&&i&&j&&(m&&(n&&o&&p||g&&(n&&o||f&&(n||e)))||d&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e)))))||k&&h&&i&&j&&(l&&(m&&n&&o&&p||g&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d))))))||K&&I&&J&&(L&&M&&N&&O&&P||G&&H&&(L&&M&&N&&O||F&&(L&&M&&N||E&&(L&&M||D&&(L||C)))))||h&&i&&j&&(b&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c)))))||k&&(l&&m&&n&&o&&p||g&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c)))))))||B&&(H&&I&&J&&(K&&L&&M&&N&&O&&P&&a||G&&(K&&L&&M&&N&&O&&a||F&&(K&&L&&M&&N&&a||E&&(K&&L&&M&&a||D&&(K&&L&&a||C)))))||a&&k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||C&&(K&&H&&I&&J&&(L&&M&&N&&O&&P&&a&&b||G&&(L&&M&&N&&O&&a&&b||F&&(L&&M&&N&&a&&b||E&&(L&&M&&a&&b||D))))||a&&b&&k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d)))))||D&&(K&&L&&H&&I&&J&&(M&&N&&O&&P&&a&&b&&c||G&&(M&&N&&O&&a&&b&&c||F&&(M&&N&&a&&b&&c||E)))||a&&b&&k&&l&&m&&c&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e))))||E&&(K&&L&&M&&H&&I&&J&&(N&&O&&P&&a&&b&&c&&d||G&&(N&&O&&a&&b&&c&&d||F))||a&&b&&l&&m&&n&&c&&d&&(k&&g&&h&&i&&j&&(o||f)||o&&p))||F&&(K&&L&&M&&N&&H&&I&&J&&(O&&P&&a&&b&&c&&d&&e||G)||a&&b&&m&&n&&o&&c&&d&&e&&(k&&l&&g&&h&&i&&j||p))||G&&(K&&L&&M&&N&&O&&H&&I&&J||a&&b&&n&&o&&p&&c&&d&&e&&f)||H&&(K&&L&&M&&N&&O&&P&&I&&J||a&&b&&o&&p&&c&&d&&e&&f&&g)||a&&(b&&(k&&l&&j&&(m&&n&&o&&p||g&&h&&i&&(m&&n&&o||f&&(m&&n||e&&(m||d))))||c&&(k&&l&&m&&(n&&o&&p||g&&h&&i&&j&&(n&&o||f&&(n||e)))||d&&(l&&m&&n&&(k&&g&&h&&i&&j&&(o||f)||o&&p)||e&&(m&&n&&o&&(k&&l&&g&&h&&i&&j||p)||f&&(n&&o&&p||g&&(o&&p||h&&(p||i)))))))||k&&i&&j&&(l&&m&&n&&o&&p||g&&h&&(l&&m&&n&&o||f&&(l&&m&&n||e&&(l&&m||d&&(l||c))))))||h&&i&&j&&(k&&l&&m&&n&&o&&p||g&&(k&&l&&m&&n&&o||f&&(k&&l&&m&&n||e&&(k&&l&&m||d&&(k&&l||c&&(b||k))))));\nif(!isCorner)\nreturn;\nmat4 mp = mat4(p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15);\nmat4 mct = mp - mat4(ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct,ct);\nmat4 mc_t = mat4(c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t,c_t) - mp;\nconst vec4 zeros = vec4(0.0f), ones = vec4(1.0f);\nvec4 bs = max(mct[0], zeros), ds = max(mc_t[0], zeros);\nbs += max(mct[1], zeros);     ds += max(mc_t[1], zeros);\nbs += max(mct[2], zeros);     ds += max(mc_t[2], zeros);\nbs += max(mct[3], zeros);     ds += max(mc_t[3], zeros);\nfloat thisScore = max(dot(bs, ones), dot(ds, ones)) / 16.0f;\nfloat prevScore = decodeFloat16(prev.rb);\nvec3 thisResult = vec3(encodeFloat16(thisScore), encodeLod(lod));\ncolor.rba = thisScore > prevScore ? thisResult : color.rba;\n#endif\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/fast.vs.glsl":
+/*!************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/fast.vs.glsl ***!
+  \************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform mediump float lod;\n#if !defined(FAST_TYPE)\n#error Undefined FAST_TYPE\n#elif FAST_TYPE == 916\nout vec2 v_pix0, v_pix1, v_pix2, v_pix3, v_pix4, v_pix5, v_pix6, v_pix7,\nv_pix8, v_pix9, v_pix10,v_pix11,v_pix12,v_pix13,v_pix14,v_pix15;\n#else\n#error Invalid FAST_TYPE\n#endif\n#define PIX(x,y) (texCoord + ((pot) * vec2((x),(y))) / texSize)\nvoid main()\n{\nfloat pot = exp2(lod);\nsetupVertexShader();\n#if FAST_TYPE == 916\nv_pix0 = PIX(0,3); v_pix1 = PIX(1,3), v_pix2 = PIX(2,2), v_pix3 = PIX(3,1);\nv_pix4 = PIX(3,0); v_pix5 = PIX(3,-1), v_pix6 = PIX(2,-2), v_pix7 = PIX(1,-3);\nv_pix8 = PIX(0,-3); v_pix9 = PIX(-1,-3), v_pix10 = PIX(-2,-2), v_pix11 = PIX(-3,-1);\nv_pix12 = PIX(-3,0); v_pix13 = PIX(-3,1), v_pix14 = PIX(-2,2), v_pix15 = PIX(-1,3);\n#endif\n}"
 
 /***/ }),
 
@@ -14102,7 +14201,18 @@ module.exports = "@include \"keypoints.glsl\"\n@include \"float16.glsl\"\nunifor
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "#if @FS_USE_CUSTOM_PRECISION@\nprecision mediump int;\nprecision mediump float;\n#endif\n#if !defined(STAGE)\n#error Undefined STAGE\n#elif STAGE == 1\n@include \"float16.glsl\"\nuniform sampler2D corners;\n#else\n#define SKIP_TEXTURE_READS 1\n#define DENSITY_FACTOR 0.10\nuniform mediump usampler2D lookupTable;\nuniform int blockSize;\nuniform int width;\nuniform int height;\n#endif\nconst uvec2 NULL_ELEMENT = uvec2(0xFFFFu);\nvoid main()\n{\n#if STAGE == 1\nuvec2 outSize = uvec2(outputSize());\nuvec2 thread = uvec2(threadLocation());\nuvec2 size = uvec2(textureSize(corners, 0));\nuint location = thread.y * outSize.x + thread.x;\nivec2 pos = ivec2(location % size.x, location / size.x);\nvec4 pixel = location < size.x * size.y ? texelFetch(corners, pos, 0) : vec4(0.0f);\nbool isCorner = !isEncodedFloat16Zero(pixel.rb);\ncolor = isCorner ? uvec4(uvec2(pos), 1u, 0u) : uvec4(NULL_ELEMENT, 0u, 0u);\n#elif STAGE > 1\nint dblBlockSize = 2 * blockSize;\nivec2 thread = threadLocation();\nivec2 offset = thread % dblBlockSize;\nivec2 delta = thread - offset;\n#if SKIP_TEXTURE_READS\nif(blockSize >= 8) {\nuint sb = texture(lookupTable, texCoord).z;\nfloat p = max((float(sb) / float(blockSize)) / float(blockSize), DENSITY_FACTOR);\nfloat rowthr = float(dblBlockSize) * p + 3.0f * sqrt(p * (1.0f - p));\ncolor = uvec4(NULL_ELEMENT, 4u * sb, 0u);\nif(offset.y >= max(1, int(ceil(rowthr))))\nreturn;\n}\n#endif\n#define deltaCenter ivec2(0,0)\n#define deltaTop ivec2(0,-blockSize)\n#define deltaTopRight ivec2(blockSize,-blockSize)\n#define deltaRight ivec2(blockSize,0)\n#define deltaBottomRight ivec2(blockSize,blockSize)\n#define deltaBottom ivec2(0,blockSize)\n#define deltaBottomLeft ivec2(-blockSize,blockSize)\n#define deltaLeft ivec2(-blockSize,0)\n#define deltaTopLeft ivec2(-blockSize,-blockSize)\nivec2 boundary = ivec2(width - 1, height - 1) / blockSize;\nivec2 bottomRightPos = thread + deltaBottomRight;\nuvec2 valid = uvec2(\nbottomRightPos.x < width  || bottomRightPos.x / blockSize == boundary.x,\nbottomRightPos.y < height || bottomRightPos.y / blockSize == boundary.y\n);\nuvec4 mask[4] = uvec4[4](\nuvec4(1u, valid.x, valid.y, valid.x * valid.y),\nuvec4(1u, 1u, valid.y, valid.y),\nuvec4(1u, valid.x, 1u, valid.x),\nuvec4(1u)\n);\n#define calcSb(delta) texelFetch(lookupTable, blockSize * ((thread + (delta)) / blockSize), 0).z\nuint center = calcSb(deltaCenter);\nuint top = calcSb(deltaTop);\nuint topRight = calcSb(deltaTopRight);\nuint right = calcSb(deltaRight);\nuint bottomRight = calcSb(deltaBottomRight);\nuint bottom = calcSb(deltaBottom);\nuint bottomLeft = calcSb(deltaBottomLeft);\nuint left = calcSb(deltaLeft);\nuint topLeft = calcSb(deltaTopLeft);\nuvec4 sums[4] = uvec4[4](\nuvec4(center, right, bottom, bottomRight),\nuvec4(left, center, bottomLeft, bottom),\nuvec4(top, topRight, center, right),\nuvec4(topLeft, top, left, center)\n);\nivec2 cmp = ivec2(greaterThanEqual(offset, ivec2(blockSize)));\nint option = 2 * cmp.y + cmp.x;\nuvec4 cdef = sums[option] * mask[option];\nuint c2b = cdef.x, d2b = cdef.y, e2b = cdef.z, f2b = cdef.w;\nuint sb = center;\nuint s2b = c2b + d2b + e2b + f2b;\ns2b = s2b < sb ? 0xFFFFu : min(0xFFFFu, s2b);\nuint w2b = uint(min(dblBlockSize, width - delta.x));\nuvec2 uoffset = uvec2(offset);\nuint ceiling = s2b >= uoffset.x ? (s2b - uoffset.x) / w2b + uint((s2b - uoffset.x) % w2b > 0u) : 0u;\ncolor = uvec4(NULL_ELEMENT, s2b, 0u);\nif(uoffset.y >= ceiling)\nreturn;\nuint i2b = uoffset.y * w2b + uoffset.x;\nuint j2b = i2b >= c2b ? i2b - c2b : 0u;\nuint k2b = j2b >= d2b ? j2b - d2b : 0u;\nuint l2b = k2b >= e2b ? k2b - e2b : 0u;\nuint wl = uint(min(blockSize, width - delta.x));\nuint wr = uint(min(blockSize, width - delta.x - blockSize));\nivec2 magicOffset = (\n(i2b < c2b) ? ivec2(i2b % wl, i2b / wl) : (\n(j2b < d2b) ? ivec2(j2b % wr, j2b / wr) + ivec2(blockSize, 0) : (\n(k2b < e2b) ? ivec2(k2b % wl, k2b / wl) + ivec2(0, blockSize) : (\n(l2b < f2b) ? ivec2(l2b % wr, l2b / wr) + ivec2(blockSize) : ivec2(0)\n))));\nuvec2 a2b = texelFetch(lookupTable, delta + magicOffset, 0).xy;\ncolor = uvec4(a2b, s2b, 0u);\n#else\nuvec4 pix = texture(lookupTable, texCoord);\ncolor = all(equal(pix.xy, NULL_ELEMENT)) ? vec4(0,1,1,1) : vec4(1,0,0,1);\n#endif\n}"
+module.exports = "#if @FS_USE_CUSTOM_PRECISION@\nprecision mediump int;\nprecision mediump float;\n#endif\n#if !defined(STAGE)\n#error Undefined STAGE\n#elif STAGE == 1\n@include \"float16.glsl\"\nuniform sampler2D corners;\n#elif STAGE < 1\nuniform mediump usampler2D lookupTable;\n#else\n#define SKIP_TEXTURE_READS 1\n#define DENSITY_FACTOR 0.10\nuniform mediump usampler2D lookupTable;\nuniform int blockSize;\nuniform int width;\nuniform int height;\nin vec2 v_topLeft, v_top, v_topRight,\nv_left, v_center, v_right,\nv_bottomLeft, v_bottom, v_bottomRight;\n#endif\nconst uvec2 NULL_ELEMENT = uvec2(0xFFFFu);\nvoid main()\n{\n#if STAGE == 1\nuvec2 outSize = uvec2(outputSize());\nuvec2 thread = uvec2(threadLocation());\nuvec2 size = uvec2(textureSize(corners, 0));\nuint location = thread.y * outSize.x + thread.x;\nivec2 pos = ivec2(location % size.x, location / size.x);\nvec4 pixel = location < size.x * size.y ? texelFetch(corners, pos, 0) : vec4(0.0f);\nbool isCorner = !isEncodedFloat16Zero(pixel.rb);\ncolor = isCorner ? uvec4(uvec2(pos), 1u, 0u) : uvec4(NULL_ELEMENT, 0u, 0u);\n#elif STAGE > 1\nint dblBlockSize = 2 * blockSize;\nivec2 thread = threadLocation();\nivec2 offset = thread % dblBlockSize;\nivec2 delta = thread - offset;\n#if SKIP_TEXTURE_READS\nif(blockSize >= 8) {\nuint sb = texture(lookupTable, texCoord).z;\nfloat p = max((float(sb) / float(blockSize)) / float(blockSize), DENSITY_FACTOR);\nfloat rowthr = float(dblBlockSize) * p + 3.0f * sqrt(p * (1.0f - p));\ncolor = uvec4(NULL_ELEMENT, 4u * sb, 0u);\nif(offset.y >= max(1, int(ceil(rowthr))))\nreturn;\n}\n#endif\n#define deltaCenter ivec2(0,0)\n#define deltaTop ivec2(0,-blockSize)\n#define deltaTopRight ivec2(blockSize,-blockSize)\n#define deltaRight ivec2(blockSize,0)\n#define deltaBottomRight ivec2(blockSize,blockSize)\n#define deltaBottom ivec2(0,blockSize)\n#define deltaBottomLeft ivec2(-blockSize,blockSize)\n#define deltaLeft ivec2(-blockSize,0)\n#define deltaTopLeft ivec2(-blockSize,-blockSize)\nivec2 boundary = ivec2(width - 1, height - 1) / blockSize;\nivec2 bottomRightPos = thread + deltaBottomRight;\nuvec2 valid = uvec2(\nbottomRightPos.x < width  || bottomRightPos.x / blockSize == boundary.x,\nbottomRightPos.y < height || bottomRightPos.y / blockSize == boundary.y\n);\nuvec4 mask[4] = uvec4[4](\nuvec4(1u, valid.x, valid.y, valid.x * valid.y),\nuvec4(1u, 1u, valid.y, valid.y),\nuvec4(1u, valid.x, 1u, valid.x),\nuvec4(1u)\n);\n#if SKIP_TEXTURE_READS\n#define calcSb(delta) texelFetch(lookupTable, blockSize * ((thread + (delta)) / blockSize), 0).z\nuint center = calcSb(deltaCenter);\nuint top = calcSb(deltaTop);\nuint topRight = calcSb(deltaTopRight);\nuint right = calcSb(deltaRight);\nuint bottomRight = calcSb(deltaBottomRight);\nuint bottom = calcSb(deltaBottom);\nuint bottomLeft = calcSb(deltaBottomLeft);\nuint left = calcSb(deltaLeft);\nuint topLeft = calcSb(deltaTopLeft);\n#else\n#define calcSb(pos) texture(lookupTable, (pos)).z\nuint center = calcSb(v_center);\nuint top = calcSb(v_top);\nuint topRight = calcSb(v_topRight);\nuint right = calcSb(v_right);\nuint bottomRight = calcSb(v_bottomRight);\nuint bottom = calcSb(v_bottom);\nuint bottomLeft = calcSb(v_bottomLeft);\nuint left = calcSb(v_left);\nuint topLeft = calcSb(v_topLeft);\n#endif\nuvec4 sums[4] = uvec4[4](\nuvec4(center, right, bottom, bottomRight),\nuvec4(left, center, bottomLeft, bottom),\nuvec4(top, topRight, center, right),\nuvec4(topLeft, top, left, center)\n);\nivec2 cmp = ivec2(greaterThanEqual(offset, ivec2(blockSize)));\nint option = 2 * cmp.y + cmp.x;\nuvec4 cdef = sums[option] * mask[option];\nuint c2b = cdef.x, d2b = cdef.y, e2b = cdef.z, f2b = cdef.w;\nuint sb = center;\nuint s2b = c2b + d2b + e2b + f2b;\ns2b = s2b < sb ? 0xFFFFu : min(0xFFFFu, s2b);\nuint w2b = uint(min(dblBlockSize, width - delta.x));\nuvec2 uoffset = uvec2(offset);\nuint ceiling = s2b >= uoffset.x ? (s2b - uoffset.x) / w2b + uint((s2b - uoffset.x) % w2b > 0u) : 0u;\ncolor = uvec4(NULL_ELEMENT, s2b, 0u);\nif(uoffset.y >= ceiling)\nreturn;\nuint i2b = uoffset.y * w2b + uoffset.x;\nuint j2b = i2b >= c2b ? i2b - c2b : 0u;\nuint k2b = j2b >= d2b ? j2b - d2b : 0u;\nuint l2b = k2b >= e2b ? k2b - e2b : 0u;\nuint wl = uint(min(blockSize, width - delta.x));\nuint wr = uint(min(blockSize, width - delta.x - blockSize));\nivec2 magicOffset = (\n(i2b < c2b) ? ivec2(i2b % wl, i2b / wl) : (\n(j2b < d2b) ? ivec2(j2b % wr, j2b / wr) + ivec2(blockSize, 0) : (\n(k2b < e2b) ? ivec2(k2b % wl, k2b / wl) + ivec2(0, blockSize) : (\n(l2b < f2b) ? ivec2(l2b % wr, l2b / wr) + ivec2(blockSize) : ivec2(0)\n))));\nuvec2 a2b = texelFetch(lookupTable, delta + magicOffset, 0).xy;\ncolor = uvec4(a2b, s2b, 0u);\n#else\nuvec4 pix = texture(lookupTable, texCoord);\ncolor = all(equal(pix.xy, NULL_ELEMENT)) ? vec4(0,1,1,1) : vec4(1,0,0,1);\n#endif\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/keypoints/lookup-of-locations.vs.glsl":
+/*!***************************************************************!*\
+  !*** ./src/gpu/shaders/keypoints/lookup-of-locations.vs.glsl ***!
+  \***************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "#if !defined(STAGE) || STAGE < 1\n#error Invalid STAGE\n#else\nuniform mediump int blockSize;\nout vec2 v_topLeft, v_top, v_topRight,\nv_left, v_center, v_right,\nv_bottomLeft, v_bottom, v_bottomRight;\nvoid main()\n{\nfloat b = float(blockSize);\nsetupVertexShader();\n#define V(x,y) (texCoord + (vec2((x),(y)) * b) / texSize)\nv_topLeft = V(-1,-1); v_top = V(0,-1); v_topRight = V(1,-1);\nv_left = V(-1,0); v_center = V(0,0); v_right = V(1,0);\nv_bottomLeft = V(-1,1); v_bottom = V(0,1); v_bottomRight = V(1,1);\n}\n#endif"
 
 /***/ }),
 
@@ -14337,6 +14447,17 @@ module.exports = "@include \"colors.glsl\"\nuniform sampler2D dest, src;\nunifor
 
 /***/ }),
 
+/***/ "./src/gpu/shaders/utils/copy.glsl":
+/*!*****************************************!*\
+  !*** ./src/gpu/shaders/utils/copy.glsl ***!
+  \*****************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform sampler2D image;\nvoid main()\n{\ncolor = threadPixel(image);\n}"
+
+/***/ }),
+
 /***/ "./src/gpu/shaders/utils/fill-components.glsl":
 /*!****************************************************!*\
   !*** ./src/gpu/shaders/utils/fill-components.glsl ***!
@@ -14359,25 +14480,14 @@ module.exports = "uniform float value;\nvoid main()\n{\ncolor = vec4(value);\n}"
 
 /***/ }),
 
-/***/ "./src/gpu/shaders/utils/flip-y.glsl":
-/*!*******************************************!*\
-  !*** ./src/gpu/shaders/utils/flip-y.glsl ***!
-  \*******************************************/
+/***/ "./src/gpu/shaders/utils/flip-y.vs.glsl":
+/*!**********************************************!*\
+  !*** ./src/gpu/shaders/utils/flip-y.vs.glsl ***!
+  \**********************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nvoid main() {\nivec2 pos = threadLocation();\npos.y = int(texSize.y) - 1 - pos.y;\ncolor = pixelAt(image, pos);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/utils/identity.glsl":
-/*!*********************************************!*\
-  !*** ./src/gpu/shaders/utils/identity.glsl ***!
-  \*********************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "uniform sampler2D image;\nvoid main()\n{\ncolor = threadPixel(image);\n}"
+module.exports = "void main()\n{\nsetupVertexShader();\ngl_Position *= vec4(1,-1,1,1);\n}"
 
 /***/ }),
 
@@ -14399,7 +14509,18 @@ module.exports = "uniform sampler2D image;\nuniform int iterationNumber;\nvoid m
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D pyramid;\nuniform float lod;\nconst mat3 hkern = mat3(\n1.0f, 0.0f,-1.0f,\n2.0f, 0.0f,-2.0f,\n1.0f, 0.0f,-1.0f\n), vkern = mat3(\n1.0f, 2.0f, 1.0f,\n0.0f, 0.0f, 0.0f,\n-1.0f,-2.0f,-1.0f\n);\n#define PIX(x,y) pyrPixelAtOffset(pyramid, lod, pot, ivec2((x),(y))).g\nconst vec3 ones = vec3(1.0f);\nvoid main()\n{\nfloat pot = exp2(lod);\nmat3 win = mat3(\nPIX(-1,-1), PIX(0,-1), PIX(1,-1),\nPIX(-1,0), PIX(0,0), PIX(1,0),\nPIX(-1,1), PIX(0,1), PIX(1,1)\n);\nmat3 dx = matrixCompMult(hkern, win);\nmat3 dy = matrixCompMult(vkern, win);\nvec2 df = vec2(\ndot(dx[0] + dx[1] + dx[2], ones),\ndot(dy[0] + dy[1] + dy[2], ones)\n);\ncolor = encodePairOfFloat16(df);\n}"
+module.exports = "@include \"pyramids.glsl\"\n@include \"float16.glsl\"\nuniform sampler2D pyramid;\nuniform float lod;\n#define USE_VARYINGS 1\nin vec2 v_pix0, v_pix1, v_pix2,\nv_pix3, v_pix4, v_pix5,\nv_pix6, v_pix7, v_pix8;\nconst mat3 hkern = mat3(\n1.0f, 0.0f,-1.0f,\n2.0f, 0.0f,-2.0f,\n1.0f, 0.0f,-1.0f\n), vkern = mat3(\n1.0f, 2.0f, 1.0f,\n0.0f, 0.0f, 0.0f,\n-1.0f,-2.0f,-1.0f\n);\n#define PIX(x,y) pyrPixelAtOffset(pyramid, lod, pot, ivec2((x),(y))).g\n#define XIP(v) textureLod(pyramid, (v), lod).g\nvoid main()\n{\nconst vec3 ones = vec3(1.0f);\nfloat pot = exp2(lod);\nmat3 win = mat3(\n#if USE_VARYINGS\nXIP(v_pix0), XIP(v_pix1), XIP(v_pix2),\nXIP(v_pix3), XIP(v_pix4), XIP(v_pix5),\nXIP(v_pix6), XIP(v_pix7), XIP(v_pix8)\n#else\nPIX(-1,-1), PIX(0,-1), PIX(1,-1),\nPIX(-1,0), PIX(0,0), PIX(1,0),\nPIX(-1,1), PIX(0,1), PIX(1,1)\n#endif\n);\nmat3 dx = matrixCompMult(hkern, win);\nmat3 dy = matrixCompMult(vkern, win);\nvec2 df = vec2(\ndot(dx[0] + dx[1] + dx[2], ones),\ndot(dy[0] + dy[1] + dy[2], ones)\n);\ncolor = encodePairOfFloat16(df);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/utils/sobel-derivatives.vs.glsl":
+/*!*********************************************************!*\
+  !*** ./src/gpu/shaders/utils/sobel-derivatives.vs.glsl ***!
+  \*********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "uniform mediump float lod;\nout vec2 v_pix0, v_pix1, v_pix2,\nv_pix3, v_pix4, v_pix5,\nv_pix6, v_pix7, v_pix8;\n#define PIX(x,y) (texCoord + ((pot) * vec2((x),(y))) / texSize)\nvoid main()\n{\nfloat pot = exp2(lod);\nsetupVertexShader();\nv_pix0 = PIX(-1,-1); v_pix1 = PIX(0,-1); v_pix2 = PIX(1,-1);\nv_pix3 = PIX(-1,0); v_pix4 = PIX(0,0); v_pix5 = PIX(1,0);\nv_pix6 = PIX(-1,1); v_pix7 = PIX(0,1); v_pix8 = PIX(1,1);\n}"
 
 /***/ }),
 
@@ -14553,10 +14674,11 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__["Observabl
             premultipliedAlpha: false,
             preserveDrawingBuffer: false,
             //preferLowPowerToHighPerformance: false, // TODO user option?
-            alpha: true,
+            alpha: true, // see https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices#avoid_alphafalse_which_can_be_expensive
             antialias: false,
             depth: false,
             stencil: false,
+            desynchronized: true,
         });
 
         if(!gl)
@@ -14586,7 +14708,7 @@ class SpeedyGL extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__["Observabl
 
         // notify observers: we have a new context!
         // we need to recreate all textures...
-        this._notify(this._gl);
+        this._notify();
     }
 
     /**
@@ -14716,7 +14838,7 @@ class SpeedyGPU extends _utils_observable__WEBPACK_IMPORTED_MODULE_7__["Observab
 
 
         // recreate the state if necessary
-        this._speedyGL.subscribe(this._reset = this._reset.bind(this));
+        this._speedyGL.subscribe(this._reset, this);
     }
 
     /**
@@ -14832,9 +14954,8 @@ class SpeedyGPU extends _utils_observable__WEBPACK_IMPORTED_MODULE_7__["Observab
     /**
      * Reset the internal state
      * (called on context reset)
-     * @param {WebGL2RenderingContext} gl
      */
-    _reset(gl)
+    _reset()
     {
         if(this.isReleased())
             return;
@@ -14843,7 +14964,7 @@ class SpeedyGPU extends _utils_observable__WEBPACK_IMPORTED_MODULE_7__["Observab
         this._texturePool = new _speedy_texture_pool__WEBPACK_IMPORTED_MODULE_3__["SpeedyTexturePool"](this);
         this._textureUploader = new _speedy_texture_uploader__WEBPACK_IMPORTED_MODULE_4__["SpeedyTextureUploader"](this);
 
-        this._notify(this);
+        this._notify();
     }
 }
 
@@ -16062,11 +16183,12 @@ class SpeedyTexturePool
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "SpeedyTextureReader", function() { return SpeedyTextureReader; });
 /* harmony import */ var _utils_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../utils/utils */ "./src/utils/utils.js");
-/* harmony import */ var _gl_utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./gl-utils */ "./src/gpu/gl-utils.js");
-/* harmony import */ var _speedy_gpu__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./speedy-gpu */ "./src/gpu/speedy-gpu.js");
-/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
-/* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./speedy-texture */ "./src/gpu/speedy-texture.js");
-/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
+/* harmony import */ var _utils_observable__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/observable */ "./src/utils/observable.js");
+/* harmony import */ var _gl_utils__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./gl-utils */ "./src/gpu/gl-utils.js");
+/* harmony import */ var _speedy_gpu__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./speedy-gpu */ "./src/gpu/speedy-gpu.js");
+/* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../utils/speedy-promise */ "./src/utils/speedy-promise.js");
+/* harmony import */ var _speedy_texture__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./speedy-texture */ "./src/gpu/speedy-texture.js");
+/* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../utils/errors */ "./src/utils/errors.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -16095,10 +16217,58 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
 // number of pixel buffer objects
 // used to get a performance boost in gl.readPixels()
 const DEFAULT_NUMBER_OF_BUFFERS = 2;
 
+/**
+ * A Queue that notifies observers when it's not empty
+ */
+class ObservableQueue extends _utils_observable__WEBPACK_IMPORTED_MODULE_1__["Observable"]
+{
+    /**
+     * Constructor
+     */
+    constructor()
+    {
+        super();
+
+        /** @type {any[]} elements of the queue */
+        this._data = [];
+    }
+
+    /**
+     * Number of elements in the queue
+     * @returns {number}
+     */
+    get size()
+    {
+        return this._data.length;
+    }
+
+    /**
+     * Enqueue an element
+     * @param {any} x
+     */
+    enqueue(x)
+    {
+        this._data.push(x);
+        this._notify();
+    }
+
+    /**
+     * Remove and return the first element of the queue
+     * @returns {any}
+     */
+    dequeue()
+    {
+        if(this._data.length == 0)
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_6__["IllegalOperationError"](`Empty queue`);
+
+        return this._data.shift();
+    }
+}
 
 /**
  * Reads data from textures
@@ -16116,17 +16286,20 @@ class SpeedyTextureReader
         /** @type {Uint8Array[]} pixel buffers for data transfers (each stores RGBA data) */
         this._pixelBuffer = (new Array(numberOfBuffers)).fill(null).map(() => new Uint8Array(0));
 
-        /** @type {number[]} for async data transfers (stores buffer indices) */
-        this._consumerQueue = (new Array(numberOfBuffers)).fill(0).map((_, i) => i);
+        /** @type {ObservableQueue} for async data transfers (stores buffer indices) */
+        this._consumer = new ObservableQueue();
 
-        /** @type {number[]} for async data transfers (stores buffer indices) */
-        this._producerQueue = [];
+        /** @type {ObservableQueue} for async data transfers (stores buffer indices) */
+        this._producer = new ObservableQueue();
 
         /** @type {WebGLBuffer[]} Pixel Buffer Objects (PBOs) */
         this._pbo = (new Array(numberOfBuffers)).fill(null);
 
         /** @type {boolean} is this object initialized? */
         this._initialized = false;
+
+        /** @type {boolean} is the producer-consumer mechanism initialized? */
+        this._initializedProducerConsumer = false;
     }
 
     /**
@@ -16135,9 +16308,8 @@ class SpeedyTextureReader
      */
     init(gpu)
     {
-        this._allocatePBOs = this._allocatePBOs.bind(this);
         this._allocatePBOs(gpu);
-        gpu.subscribe(this._allocatePBOs);
+        gpu.subscribe(this._allocatePBOs, this, gpu);
 
         this._initialized = true;
     }
@@ -16149,7 +16321,7 @@ class SpeedyTextureReader
      */
     release(gpu)
     {
-        gpu.unsubscribe(this._allocatePBOs);
+        gpu.unsubscribe(this._allocatePBOs, this);
         this._deallocatePBOs(gpu);
 
         this._initialized = false;
@@ -16226,7 +16398,7 @@ class SpeedyTextureReader
 
         // lost context?
         if(gl.isContextLost())
-            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"].resolve(this._pixelBuffer[0].subarray(0, sizeofBuffer));
+            return _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_4__["SpeedyPromise"].resolve(this._pixelBuffer[0].subarray(0, sizeofBuffer));
 
         // do not optimize?
         if(!useBufferedDownloads) {
@@ -16236,34 +16408,46 @@ class SpeedyTextureReader
         }
 
         // GPU needs to produce data
-        if(this._producerQueue.length > 0) {
-            const nextBufferIndex = this._producerQueue.shift();
-            SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[nextBufferIndex], this._pixelBuffer[nextBufferIndex], fbo, x, y, width, height).then(() => {
-                this._consumerQueue.push(nextBufferIndex);
+        this._producer.subscribe(function cb(gl, fbo, x, y, width, height) {
+            this._producer.unsubscribe(cb, this);
+
+            const bufferIndex = this._producer.dequeue();
+            SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[bufferIndex], this._pixelBuffer[bufferIndex], fbo, x, y, width, height).then(() => {
+                // this._pixelBuffer[bufferIndex] is ready to be consumed
+                this._consumer.enqueue(bufferIndex);
             });
-        }
-        else SpeedyTextureReader._waitForQueueNotEmpty(this._producerQueue).then(() => {
-            const nextBufferIndex = this._producerQueue.shift();
-            SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[nextBufferIndex], this._pixelBuffer[nextBufferIndex], fbo, x, y, width, height).then(() => {
-                this._consumerQueue.push(nextBufferIndex);
-            });
-        }).turbocharge();
+        }, this, gl, fbo, x, y, width, height);
 
         // CPU needs to consume data
-        if(this._consumerQueue.length > 0) {
-            const readyBufferIndex = this._consumerQueue.shift();
-            return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"](resolve => {
-                resolve(this._pixelBuffer[readyBufferIndex].subarray(0, sizeofBuffer));
-                this._producerQueue.push(readyBufferIndex); // enqueue AFTER resolve()
-            });
-        }
-        else return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"](resolve => {
-            SpeedyTextureReader._waitForQueueNotEmpty(this._consumerQueue).then(() => {
-                const readyBufferIndex = this._consumerQueue.shift();
-                resolve(this._pixelBuffer[readyBufferIndex].subarray(0, sizeofBuffer));
-                this._producerQueue.push(readyBufferIndex); // enqueue AFTER resolve()
-            }).turbocharge();
+        const promise = new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_4__["SpeedyPromise"](resolve => {
+            function callback(sizeofBuffer) {
+                this._consumer.unsubscribe(callback, this);
+
+                const bufferIndex = this._consumer.dequeue();
+                resolve(this._pixelBuffer[bufferIndex].subarray(0, sizeofBuffer));
+
+                // this._pixelBuffer[bufferIndex] can now be reused
+                this._producer.enqueue(bufferIndex); // enqueue AFTER resolve()
+            }
+
+            if(this._consumer.size > 0)
+                callback.call(this, sizeofBuffer);
+            else
+                this._consumer.subscribe(callback, this, sizeofBuffer);
         });
+
+        // initialize the producer-consumer mechanism
+        if(!this._initializedProducerConsumer) {
+            this._initializedProducerConsumer = true;
+            setTimeout(() => {
+                const numberOfBuffers = this._pixelBuffer.length;
+                for(let i = 0; i < numberOfBuffers; i++)
+                    this._consumer.enqueue(i);
+            }, 0);
+        }
+
+        // done!
+        return promise;
     }
 
     /**
@@ -16286,24 +16470,6 @@ class SpeedyTextureReader
     }
 
     /**
-     * Wait for a queue to be not empty
-     * @param {Array} queue
-     * @returns {SpeedyPromise<void>}
-     */
-    static _waitForQueueNotEmpty(queue)
-    {
-        return new _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_3__["SpeedyPromise"](resolve => {
-            (function wait() {
-                if(queue.length > 0)
-                    resolve();
-                else
-                    setTimeout(wait, 0); // Utils.setZeroTimeout may hinder performance (GLUtils already calls it)
-                    //Utils.setZeroTimeout(wait);
-            })();
-        });
-    }
-
-    /**
      * Read pixels to a Uint8Array, asynchronously, using a Pixel Buffer Object (PBO)
      * It's assumed that the target texture is in the RGBA8 format
      * @param {WebGL2RenderingContext} gl
@@ -16320,7 +16486,7 @@ class SpeedyTextureReader
     {
         // validate outputBuffer
         if(!(outputBuffer.byteLength >= width * height * 4))
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalArgumentError"](`Can't read pixels: invalid buffer size`);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_6__["IllegalArgumentError"](`Can't read pixels: invalid buffer size`);
 
         // bind the PBO
         gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
@@ -16335,14 +16501,14 @@ class SpeedyTextureReader
         gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
 
         // wait for DMA transfer
-        return _gl_utils__WEBPACK_IMPORTED_MODULE_1__["GLUtils"].getBufferSubDataAsync(gl, pbo,
+        return _gl_utils__WEBPACK_IMPORTED_MODULE_2__["GLUtils"].getBufferSubDataAsync(gl, pbo,
             gl.PIXEL_PACK_BUFFER,
             0,
             outputBuffer,
             0,
             0
         ).catch(err => {
-            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_5__["IllegalOperationError"](`Can't read pixels`, err);
+            throw new _utils_errors__WEBPACK_IMPORTED_MODULE_6__["IllegalOperationError"](`Can't read pixels`, err);
         });
     }
 
@@ -17763,36 +17929,52 @@ class Observable
     {
         /** @type {Function[]} subscribers / callbacks */
         this._subscribers = [];
+
+        /** @type {object[]} "this" pointers */
+        this._thisptr = [];
+
+        /** @type {Array<any[]>} function arguments */
+        this._args = [];
     }
 
     /**
      * Add subscriber
      * @param {Function} fn callback
+     * @param {object} [thisptr] "this" pointer to be used when invoking the callback
+     * @param {...any} [args] arguments to be passed to the callback
      */
-    subscribe(fn)
+    subscribe(fn, thisptr, ...args)
     {
-        if(this._subscribers.indexOf(fn) < 0)
-            this._subscribers.push(fn);
+        this._subscribers.push(fn);
+        this._thisptr.push(thisptr);
+        this._args.push(args);
     }
 
     /**
      * Remove subscriber
      * @param {Function} fn previously added callback
+     * @param {object} [thisptr] "this" pointer
      */
-    unsubscribe(fn)
+    unsubscribe(fn, thisptr)
     {
-        this._subscribers = this._subscribers.filter(subscriber => subscriber !== fn);
+        for(let j = this._subscribers.length - 1; j >= 0; j--) {
+            if(this._subscribers[j] === fn && this._thisptr[j] === thisptr) {
+                this._subscribers.splice(j, 1);
+                this._thisptr.splice(j, 1);
+                this._args.splice(j, 1);
+                break;
+            }
+        }
     }
 
     /**
      * Notify all subscribers about a state change
-     * @param {any} data generic data
      * @protected
      */
-    _notify(data)
+    _notify()
     {
-        for(const fn of this._subscribers)
-            fn(data);
+        for(let i = 0, len = this._subscribers.length; i < len; i++)
+            this._subscribers[i].call(this._thisptr[i], ...(this._args[i]));
     }
 }
 
