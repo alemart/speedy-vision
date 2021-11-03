@@ -134,7 +134,7 @@ export class SpeedyGL extends Observable
             premultipliedAlpha: false,
             preserveDrawingBuffer: false,
             //preferLowPowerToHighPerformance: false, // TODO user option?
-            alpha: false,
+            alpha: true, // see https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_best_practices#avoid_alphafalse_which_can_be_expensive
             antialias: false,
             depth: false,
             stencil: false,
