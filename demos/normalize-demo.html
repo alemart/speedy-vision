@@ -85,19 +85,25 @@ window.onload = async function()
     normalize.minValue = 0;
     normalize.maxValue = 255;
 
-    // display the result
-    const canvas = createCanvas(camera.width, camera.height * 2);
-    async function render()
-    {
-        const { grey, norm } = await pipeline.run();
+    // Main loop
+    (function() {
+        const canvas = createCanvas(camera.width, camera.height * 2);
 
-        norm.draw(canvas);
-        grey.draw(canvas, 0, norm.height);
-        renderStatus();
+        async function update()
+        {
+            const result = await pipeline.run();
+            const grey = result.grey;
+            const norm = result.norm;
 
-        requestAnimationFrame(render);
-    }
-    render();
+            norm.draw(canvas);
+            grey.draw(canvas, 0, norm.height);
+
+            setTimeout(update, 1000 / 60);
+        }
+        update();
+
+        setInterval(renderStatus, 200);
+    })();
 
     // setup sliders
     const minSlider = document.getElementById('min-value');

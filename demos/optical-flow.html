@@ -166,54 +166,60 @@ window.onload = async function()
 
     pipeline.init(imgsrc, grey, pyr, harris, kpsrc, clipper, buf, bufpyr, lk, mixer, sink, vec2sink);
 
-    // update features
-    let features = [], detect = false, clear = false;
-    const canvas = createCanvas(media.width, media.height, video.title);
-    async function loop()
-    {
-        // find new features
-        harris.capacity = 0;
-        if(detect) {
-            if(features.length < 400)
-                harris.capacity = 2048;
-            detect = false;
+    // Main loop
+    let detect = false, clear = false;
+    (function() {
+        let keypoints = [], flow = [];
+        const canvas = createCanvas(media.width, media.height, video.title);
+
+        async function update()
+        {
+            // find new keypoints
+            harris.capacity = 0;
+            if(detect) {
+                if(keypoints.length < 400)
+                    harris.capacity = 2048;
+                detect = false;
+            }
+
+            // handle new points added by the user
+            if(userPoints.length > 0) {
+                keypoints.push(...userPoints);
+                userPoints.length = 0;
+            }
+
+            // clear all keypoints
+            if(clear) {
+                keypoints.length = flow.length = userPoints.length = 0;
+                clear = false;
+            }
+
+            // update parameters
+            kpsrc.keypoints = keypoints;
+            lk.windowSize = Speedy.Size(Number(windowSize.value), Number(windowSize.value));
+            lk.levels = Number(levels.value);
+            lk.discardThreshold = Number(discardThreshold.value);
+            lk.numberOfIterations = Number(numberOfIterations.value);
+            lk.epsilon = Number(epsilon.value);
+            clipper.size = 200;
+
+            // run the pipeline
+            const result = await pipeline.run();
+            keypoints = result.keypoints;
+            flow = result.flow;
+
+            // render features
+            media.draw(canvas);
+            renderFlowVectors(canvas, keypoints, flow, 3, '#f22');
+            renderFeatures(canvas, keypoints, 1, '#f22');
+
+            // repeat
+            setTimeout(update, 1000 / 60);
         }
+        update();
 
-        // handle new points added by the user
-        if(userPoints.length > 0) {
-            features.push(...userPoints);
-            userPoints.length = 0;
-        }
-
-        // clear all features
-        if(clear) {
-            features.length = userPoints.length = 0;
-            clear = false;
-        }
-
-        // update parameters
-        kpsrc.keypoints = features;
-        lk.windowSize = Speedy.Size(Number(windowSize.value), Number(windowSize.value));
-        lk.levels = Number(levels.value);
-        lk.discardThreshold = Number(discardThreshold.value);
-        lk.numberOfIterations = Number(numberOfIterations.value);
-        lk.epsilon = Number(epsilon.value);
-        clipper.size = 200;
-        
-        // run the pipeline
-        const result = await pipeline.run();
-        features = result.keypoints;
-
-        // render features
-        media.draw(canvas);
-        renderFlowVectors(canvas, features, result.flow, 3, '#f22');
-        renderFeatures(canvas, features, 1, '#f22');
-        renderStatus(features);
-
-        // repeat
-        requestAnimationFrame(loop);
-    }
-    loop();
+        setInterval(() => renderStatus(keypoints), 200);
+    })();
 
     // play/pause
     const playButton = document.getElementById('play');

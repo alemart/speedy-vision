@@ -122,27 +122,30 @@ window.onload = async function()
 
     pipeline.init(videoSource, animationSource, mixer, sink); // add the nodes to the pipeline
 
-    // Setup a canvas
-    const canvas = document.getElementById('canvas-demo');
-    canvas.width = width;
-    canvas.height = height;
-    canvas.title = video.title + ' | ' + image.title;
+    // Main loop
+    (function() {
+        const canvas = document.getElementById('canvas-demo');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.title = video.title + ' | ' + image.title;
 
-    // Display the result
-    async function render()
-    {
-        mixer.alpha = Number(alpha.value);
-        mixer.beta = 1 - mixer.alpha;
-        mixer.gamma = 0;
+        async function update()
+        {
+            mixer.alpha = Number(alpha.value);
+            mixer.beta = 1 - mixer.alpha;
+            mixer.gamma = 0;
 
-        const { image } = await pipeline.run(); // run the pipeline
+            const result = await pipeline.run();
+            const blended = result.image;
 
-        image.draw(canvas);
-        renderStatus();
+            blended.draw(canvas);
 
-        setTimeout(render, 1000 / 60);
-    }
-    render();
+            setTimeout(update, 1000 / 60);
+        }
+        update();
+
+        setInterval(renderStatus, 200);
+    })();
 }
 
 function createCanvas(width, height, title)

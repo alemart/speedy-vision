@@ -120,36 +120,40 @@ window.onload = async function()
             brisk: null,
         };
 
-        // main loop
-        const canvas = createCanvas(media.width, media.height);
-        async function loop()
-        {
-            // pick a pipeline
-            const pipeline = pipelines[method.value];
+        // Main loop
+        (function() {
+            let keypoints = [];
+            const canvas = createCanvas(media.width, media.height);
+            canvas.style.width = (2 * media.width) + 'px';
 
-            // enhance illumination?
-            const mux = pipeline.node('mux');
-            mux.port = enhanceIllumination.checked ? 1 : 0;
+            async function update()
+            {
+                // pick a pipeline
+                const pipeline = pipelines[method.value];
 
-            // adjust the sensitivity
-            fast.threshold = 255 * (1.0 - Number(sensitivity.value));
-            harris.quality = 1.0 - Number(sensitivity.value);
+                // enhance illumination?
+                const mux = pipeline.node('mux');
+                mux.port = enhanceIllumination.checked ? 1 : 0;
 
-            // find the features
-            const { keypoints } = await pipeline.run();
+                // adjust the sensitivity
+                fast.threshold = 255 * (1.0 - Number(sensitivity.value));
+                harris.quality = 1.0 - Number(sensitivity.value);
 
-            // render the features
-            media.draw(canvas);
-            renderFeatures(canvas, keypoints, 2, '#ff0', 2);
-            renderStatus(keypoints);
+                // find the features
+                const result = await pipeline.run();
+                keypoints = result.keypoints;
 
-            // repeat
-            requestAnimationFrame(loop);
-        }
-        loop();
+                // render the features
+                media.draw(canvas);
+                renderFeatures(canvas, keypoints, 2, '#ff0', 2);
 
-        // zoom
-        canvas.style.width = (2 * media.width) + 'px';
+                // repeat
+                setTimeout(update, 1000 / 60);
+            }
+            update();
+
+            setInterval(() => renderStatus(keypoints), 200);
+        })();
     }
     catch(err) {
         alert(err.message);

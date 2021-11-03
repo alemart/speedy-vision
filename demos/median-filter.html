@@ -101,19 +101,25 @@ window.onload = async function()
     speedSlider.oninput = () => video.playbackRate = speedSlider.value;
     kernelSize.oninput = () => median.kernelSize = Speedy.Size(kernelSize.value, kernelSize.value);
 
-    // Display the result
-    const canvas = createCanvas(media.width * 2, media.height, video.title);
-    async function render()
-    {
-        const { median, greyscale } = await pipeline.run();
+    // Main loop
+    (function() {
+        const canvas = createCanvas(media.width * 2, media.height, video.title);
 
-        median.draw(canvas, 0, 0);
-        greyscale.draw(canvas, median.width, 0);
+        async function update()
+        {
+            const result = await pipeline.run();
+            const median = result.median;
+            const greyscale = result.greyscale;
 
-        renderStatus();
-        requestAnimationFrame(render);
-    }
-    render();
+            median.draw(canvas, 0, 0);
+            greyscale.draw(canvas, median.width, 0);
+
+            setTimeout(update, 1000 / 60);
+        }
+        update();
+
+        setInterval(renderStatus, 200);
+    })();
 }
 
 function createCanvas(width, height, title)

@@ -109,31 +109,30 @@ window.onload = async function()
     clipper.output().connectTo(sink.input());
     pipeline.init(source, greyscale, pyramid, detector, clipper, sink);
 
-    // display the keypoints
-    const canvas = createCanvas(media.width, media.height, video.title);
-    async function loop()
-    {
-        // multiscale?
-        detector.levels = multiscale.checked ? 6 : 1;
+    // Main loop
+    (function() {
+        let keypoints = [];
+        const canvas = createCanvas(media.width, media.height, video.title);
 
-        // adjust sensitivity
-        detector.quality = 1.0 - Number(sensitivity.value);
+        async function update()
+        {
+            detector.levels = multiscale.checked ? 6 : 1; // multiscale?
+            detector.quality = 1.0 - Number(sensitivity.value); // adjust sensitivity
+            clipper.size = Number(featureLimit.value); // cap the number of keypoints
 
-        // cap the number of keypoints
-        clipper.size = Number(featureLimit.value);
+            const result = await pipeline.run();
+            keypoints = result.keypoints;
 
-        // find keypoints
-        const { keypoints } = await pipeline.run();
+            media.draw(canvas);
+            renderFeatures(canvas, keypoints);
 
-        // render features
-        media.draw(canvas);
-        renderFeatures(canvas, keypoints);
-        renderStatus(keypoints);
+            setTimeout(update, 1000 / 60);
+        }
+        update();
 
-        // next frame
-        setTimeout(loop, 1000 / 60);
-    }
-    loop();
+        setInterval(() => renderStatus(keypoints), 200);
+    })();
+
 
     // misc
     playButton.onclick = () => video.paused ? video.play() : video.pause();

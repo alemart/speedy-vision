@@ -214,18 +214,23 @@ window.onload = async function()
         convolution.kernel = Speedy.Matrix(3, 3, entries);
     }
 
-    // render video
-    const canvas = createCanvas(media.width, media.height, video.title);
-    async function render()
-    {
-        const { image } = await pipeline.run();
+    // Main loop
+    (function() {
+        const canvas = createCanvas(media.width, media.height, video.title);
 
-        image.draw(canvas);
-        renderStatus();
+        async function update()
+        {
+            const result = await pipeline.run();
+            const image = result.image;
 
-        requestAnimationFrame(render);
-    }
-    render();
+            image.draw(canvas);
+
+            setTimeout(update, 1000 / 60);
+        }
+        update();
+
+        setInterval(renderStatus, 200);
+    })();
 }
 
 function createCanvas(width, height, title)

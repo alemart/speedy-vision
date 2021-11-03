@@ -150,33 +150,37 @@ window.onload = async function()
         harris: createPipelineWith(harris)
     };
 
-    // main loop
-    const canvas = createCanvas(media.width, media.height, video.title);
-    async function loop()
-    {
-        // pick a pipeline
-        const pipeline = pipelines[detectionMethod.value];
+    // Main loop
+    (function() {
+        let keypoints = [];
+        const canvas = createCanvas(media.width, media.height, video.title);
 
-        // adjust the sensitivity
-        fast.threshold = 255 * (1.0 - Number(sensitivity.value));
-        harris.quality = 1.0 - Number(sensitivity.value);
+        async function update()
+        {
+            // pick a pipeline
+            const pipeline = pipelines[detectionMethod.value];
+            const clipper = pipeline.node('clipper');
 
-        // adjust the clipper
-        const clipper = pipeline.node('clipper');
-        clipper.size = Number(maxFeatures.value);
+            // adjust the sensitivity and the clipper
+            fast.threshold = 255 * (1.0 - Number(sensitivity.value));
+            harris.quality = 1.0 - Number(sensitivity.value);
+            clipper.size = Number(maxFeatures.value);
 
-        // find the features
-        const { keypoints } = await pipeline.run();
+            // find the features
+            const result = await pipeline.run();
+            keypoints = result.keypoints;
 
-        // render the features
-        media.draw(canvas);
-        renderFeatures(canvas, keypoints, 2, '#0fa', 2);
-        renderStatus(keypoints);
+            // render
+            media.draw(canvas);
+            renderFeatures(canvas, keypoints, 2, '#0fa', 2);
 
-        // repeat
-        requestAnimationFrame(loop);
-    }
-    loop();
+            // repeat
+            setTimeout(update, 1000 / 60);
+        }
+        update();
+
+        setInterval(() => renderStatus(keypoints), 200);
+    })();
 
     // misc
     playButton.onclick = () => video.paused ? video.play() : video.pause();

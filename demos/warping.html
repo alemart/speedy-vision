@@ -273,10 +273,10 @@ window.onload = async function()
         context.stroke();
 
         // render the status
-        renderStatus();
-        requestAnimationFrame(render);
+        setTimeout(render, 1000 / 60);
     }
     render();
+    setInterval(renderStatus, 200);
 
     // play/pause
     const playButton = document.getElementById('play');

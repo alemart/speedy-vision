@@ -70,16 +70,23 @@ window.onload = async function()
 
     pipeline.init(source, sink, greyscale); // add the nodes to the pipeline
 
-    // Display the result
-    const canvas = createCanvas(media.width, media.height, video.title);
-    async function render()
-    {
-        const { image } = await pipeline.run(); // run the pipeline
-        image.draw(canvas);
-        renderStatus();
-        setTimeout(render, 1000 / 60);
-    }
-    render();
+    // Main loop
+    (function() {
+        const canvas = createCanvas(media.width, media.height, video.title);
+
+        async function update()
+        {
+            const result = await pipeline.run();
+            const image = result.image;
+
+            image.draw(canvas);
+
+            setTimeout(update, 1000 / 60);
+        }
+        update();
+
+        setInterval(renderStatus, 200);
+    })();
 }
 
 function createCanvas(width, height, title)

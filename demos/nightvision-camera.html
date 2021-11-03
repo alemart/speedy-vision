@@ -123,29 +123,32 @@ window.onload = async function()
 
     pipeline.init(source, sink, mux, greyscale, nightvision);
 
-    // create a canvas
-    const canvas = createCanvas(media.width, media.height, 'Nightvision');
-    canvas.style.width = (media.width * 2) + 'px';
+    // Main loop
+    (function() {
+        const canvas = createCanvas(media.width, media.height, 'Nightvision');
+        canvas.style.width = (media.width * 2) + 'px';
 
-    // display the result
-    async function render()
-    {
-        mux.port = greyscaleCheckbox.checked ? 1 : 0;
+        async function update()
+        {
+            mux.port = greyscaleCheckbox.checked ? 1 : 0;
 
-        nightvision.gain = Number(gainSlider.value);
-        nightvision.offset = Number(offsetSlider.value);
-        nightvision.decay = Number(decaySlider.value);
-        nightvision.quality = qualitySelect.value;
+            nightvision.gain = Number(gainSlider.value);
+            nightvision.offset = Number(offsetSlider.value);
+            nightvision.decay = Number(decaySlider.value);
+            nightvision.quality = qualitySelect.value;
 
-        const { image } = await pipeline.run();
+            const result = await pipeline.run();
+            const image = result.image;
 
-        image.draw(canvas);
-        media.draw(canvas, 0, 0, media.width / 3, media.height / 3);
-        renderStatus();
+            image.draw(canvas);
+            media.draw(canvas, 0, 0, media.width / 3, media.height / 3);
 
-        requestAnimationFrame(render);
-    }
-    render();
+            setTimeout(update, 1000 / 60);
+        }
+        update();
+
+        setInterval(renderStatus, 200);
+    })();
 }
 
 function createCanvas(width, height, title)
