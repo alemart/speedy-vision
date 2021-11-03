@@ -43,7 +43,7 @@ uniform mediump vec2 texSize;
 
 #define setupVertexShader() \
 gl_Position = vec4(${DEFAULT_ATTRIBUTES.position}, 0.0f, 1.0f); \
-texCoord = ${DEFAULT_ATTRIBUTES.texCoord}
+texCoord = ${DEFAULT_ATTRIBUTES.texCoord};
 \n\n`;
 
 const DEFAULT_VERTEX_SHADER_SUFFIX = `void main() { setupVertexShader(); }`;
