@@ -27,9 +27,12 @@ import { SpeedyPromise } from '../utils/speedy-promise';
 import { SpeedyDrawableTexture } from './speedy-texture';
 import { IllegalArgumentError, IllegalOperationError, TimeoutError } from '../utils/errors';
 
-// number of pixel buffer objects
-// used to get a performance boost in gl.readPixels()
-const DEFAULT_NUMBER_OF_BUFFERS = 2;
+const IS_FIREFOX = navigator.userAgent.includes('Firefox');
+
+/**
+ * @type {number} number of PBOs; used to get a performance boost in gl.readPixels()
+ */
+const DEFAULT_NUMBER_OF_BUFFERS = IS_FIREFOX ? 2 : 1;
 
 /**
  * A Queue that notifies observers when it's not empty
@@ -211,50 +214,57 @@ export class SpeedyTextureReader
 
         // do not optimize?
         if(!useBufferedDownloads) {
-            const data = this._pixelBuffer[0].subarray(0, sizeofBuffer);
-            return SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[0], data, fbo, x, y, width, height).then(() =>
-                data
+            const pixelBuffer = this._pixelBuffer[0].subarray(0, sizeofBuffer);
+            return SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[0], pixelBuffer, fbo, x, y, width, height).then(() =>
+                pixelBuffer
             );
         }
 
+        //console.log("------------- new frame");
+
         // GPU needs to produce data
-        this._producer.subscribe(function cb(gl, fbo, x, y, width, height, sizeofBuffer) {
-            this._producer.unsubscribe(cb, this);
+        this._producer.subscribe(function produce(gl, fbo, x, y, width, height, sizeofBuffer) {
+            this._producer.unsubscribe(produce, this);
 
             const bufferIndex = this._producer.dequeue();
-            SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[bufferIndex], this._pixelBuffer[bufferIndex].subarray(0, sizeofBuffer), fbo, x, y, width, height).then(() => {
+            const pixelBuffer = this._pixelBuffer[bufferIndex].subarray(0, sizeofBuffer);
+
+            //console.log("will produce",bufferIndex);
+            SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[bufferIndex], pixelBuffer, fbo, x, y, width, height).then(() => {
+                //console.log("has produced",bufferIndex);
                 // this._pixelBuffer[bufferIndex] is ready to be consumed
-                this._consumer.enqueue(bufferIndex);
+                this._consumer.enqueue({ bufferIndex, pixelBuffer });
             });
         }, this, gl, fbo, x, y, width, height, sizeofBuffer);
 
         // CPU needs to consume data
         const promise = new SpeedyPromise(resolve => {
-            function callback(sizeofBuffer) {
-                this._consumer.unsubscribe(callback, this);
+            function consume(resolve) {
+                this._consumer.unsubscribe(consume, this);
 
-                const bufferIndex = this._consumer.dequeue();
-                resolve(this._pixelBuffer[bufferIndex].subarray(0, sizeofBuffer));
+                const obj = this._consumer.dequeue();
+                const bufferIndex = obj.bufferIndex, pixelBuffer = obj.pixelBuffer;
 
-                // this._pixelBuffer[bufferIndex] can now be reused
+                //console.log("will CONSUME",bufferIndex);
+                resolve(pixelBuffer);
+
                 this._producer.enqueue(bufferIndex); // enqueue AFTER resolve()
             }
 
             if(this._consumer.size > 0)
-                callback.call(this, sizeofBuffer);
+                consume.call(this, resolve);
             else
-                this._consumer.subscribe(callback, this, sizeofBuffer);
+                this._consumer.subscribe(consume, this, resolve);
         });
 
         // initialize the producer-consumer mechanism
         if(!this._initializedProducerConsumer) {
             this._initializedProducerConsumer = true;
-            setTimeout(() => {
-                const numberOfBuffers = this._pixelBuffer.length;
-                for(let i = 0; i < numberOfBuffers; i++)
-                    this._consumer.enqueue(i);
-            }, 0);
+            for(let i = this._pixelBuffer.length - 1; i >= 0; i--)
+                this._consumer.enqueue({ bufferIndex: i, pixelBuffer: this._pixelBuffer[i] });
         }
+
+        //console.log("====== end of frame");
 
         // done!
         return promise;
