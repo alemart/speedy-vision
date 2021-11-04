@@ -218,7 +218,7 @@ export class SpeedyTextureReader
         }
 
         // GPU needs to produce data
-        this._producer.subscribe(function cb(gl, fbo, x, y, width, height) {
+        this._producer.subscribe(function cb(gl, fbo, x, y, width, height, sizeofBuffer) {
             this._producer.unsubscribe(cb, this);
 
             const bufferIndex = this._producer.dequeue();
@@ -226,7 +226,7 @@ export class SpeedyTextureReader
                 // this._pixelBuffer[bufferIndex] is ready to be consumed
                 this._consumer.enqueue(bufferIndex);
             });
-        }, this, gl, fbo, x, y, width, height);
+        }, this, gl, fbo, x, y, width, height, sizeofBuffer);
 
         // CPU needs to consume data
         const promise = new SpeedyPromise(resolve => {
@@ -323,13 +323,14 @@ export class SpeedyTextureReader
         /*
 
         When testing Speedy on Chrome (mobile) using about:tracing with the
-        --enable-gpu-service-tracing flag, I found that A LOT of time is spent in
-        TraceGLAPI::glMapBufferRange, which takes place just after
+        --enable-gpu-service-tracing flag, I found that A LOT of time is spent
+        in TraceGLAPI::glMapBufferRange, which takes place just after
         GLES2DecoderImpl::HandleReadPixels and GLES2DecoderImpl::glReadPixels.
 
         Using multiple PBOs doesn't seem to impact Chrome too much. Performance
         is much better on Firefox. This suggests there is room for improvement.
-        I do not yet understand clearly the cause for this lag on Chrome.
+        I do not yet understand clearly the cause for this lag on Chrome. It
+        may be a CPU-GPU synchronization issue.
 
         See also:
         https://www.khronos.org/registry/webgl/specs/latest/2.0/#3.7.3 (Buffer objects)
