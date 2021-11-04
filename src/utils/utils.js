@@ -82,10 +82,10 @@ export class Utils
                 if(ev.source === window) {
                     const ctx = Utils._setZeroTimeoutContext;
                     const msgId = ev.data;
-                    const { fn, args } = ctx.callbacks.get(msgId);
-                    if(fn !== undefined) {
+                    const obj = ctx.callbacks.get(msgId);
+                    if(obj !== undefined) {
                         ev.stopPropagation();
-                        fn.apply(window, args);
+                        obj.fn.apply(window, obj.args);
                         ctx.callbacks.delete(msgId);
                     }
                 }
