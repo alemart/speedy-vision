@@ -25,7 +25,7 @@ import { GLUtils } from './gl-utils';
 import { SpeedyGPU } from './speedy-gpu';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { SpeedyDrawableTexture } from './speedy-texture';
-import { IllegalArgumentError, IllegalOperationError } from '../utils/errors';
+import { IllegalArgumentError, IllegalOperationError, TimeoutError } from '../utils/errors';
 
 // number of pixel buffer objects
 // used to get a performance boost in gl.readPixels()
@@ -211,8 +211,9 @@ export class SpeedyTextureReader
 
         // do not optimize?
         if(!useBufferedDownloads) {
-            return SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[0], this._pixelBuffer[0], fbo, x, y, width, height).then(() =>
-                this._pixelBuffer[0].subarray(0, sizeofBuffer)
+            const data = this._pixelBuffer[0].subarray(0, sizeofBuffer);
+            return SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[0], data, fbo, x, y, width, height).then(() =>
+                data
             );
         }
 
@@ -221,7 +222,7 @@ export class SpeedyTextureReader
             this._producer.unsubscribe(cb, this);
 
             const bufferIndex = this._producer.dequeue();
-            SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[bufferIndex], this._pixelBuffer[bufferIndex], fbo, x, y, width, height).then(() => {
+            SpeedyTextureReader._readPixelsViaPBO(gl, this._pbo[bufferIndex], this._pixelBuffer[bufferIndex].subarray(0, sizeofBuffer), fbo, x, y, width, height).then(() => {
                 // this._pixelBuffer[bufferIndex] is ready to be consumed
                 this._consumer.enqueue(bufferIndex);
             });
@@ -279,49 +280,6 @@ export class SpeedyTextureReader
     }
 
     /**
-     * Read pixels to a Uint8Array, asynchronously, using a Pixel Buffer Object (PBO)
-     * It's assumed that the target texture is in the RGBA8 format
-     * @param {WebGL2RenderingContext} gl
-     * @param {WebGLBuffer} pbo
-     * @param {Uint8Array} outputBuffer with size >= width * height * 4
-     * @param {WebGLFramebuffer} fbo
-     * @param {GLint} x
-     * @param {GLint} y
-     * @param {GLsizei} width
-     * @param {GLsizei} height
-     * @returns {SpeedyPromise}
-     */
-    static _readPixelsViaPBO(gl, pbo, outputBuffer, fbo, x, y, width, height)
-    {
-        // validate outputBuffer
-        if(!(outputBuffer.byteLength >= width * height * 4))
-            throw new IllegalArgumentError(`Can't read pixels: invalid buffer size`);
-
-        // bind the PBO
-        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
-        gl.bufferData(gl.PIXEL_PACK_BUFFER, outputBuffer.byteLength, gl.STREAM_READ);
-
-        // read pixels into the PBO
-        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-        gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-        // unbind the PBO
-        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-
-        // wait for DMA transfer
-        return GLUtils.getBufferSubDataAsync(gl, pbo,
-            gl.PIXEL_PACK_BUFFER,
-            0,
-            outputBuffer,
-            0,
-            0
-        ).catch(err => {
-            throw new IllegalOperationError(`Can't read pixels`, err);
-        });
-    }
-
-    /**
      * Allocate PBOs
      * @param {SpeedyGPU} gpu
      */
@@ -344,6 +302,102 @@ export class SpeedyTextureReader
         for(let i = this._pbo.length - 1; i >= 0; i--) {
             gl.deleteBuffer(this._pbo[i]);
             this._pbo[i] = null;
+        }
+    }
+
+    /**
+     * Read pixels to a Uint8Array, asynchronously, using a Pixel Buffer Object (PBO)
+     * It's assumed that the target texture is in the RGBA8 format
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLBuffer} pbo
+     * @param {Uint8Array} outputBuffer with size >= width * height * 4
+     * @param {WebGLFramebuffer} fbo
+     * @param {GLint} x
+     * @param {GLint} y
+     * @param {GLsizei} width
+     * @param {GLsizei} height
+     * @returns {SpeedyPromise}
+     */
+    static _readPixelsViaPBO(gl, pbo, outputBuffer, fbo, x, y, width, height)
+    {
+        /*
+
+        When testing Speedy on Chrome (mobile) using about:tracing with the
+        --enable-gpu-service-tracing flag, I found that A LOT of time is spent in
+        TraceGLAPI::glMapBufferRange, which takes place just after
+        GLES2DecoderImpl::HandleReadPixels and GLES2DecoderImpl::glReadPixels.
+
+        Using multiple PBOs doesn't seem to impact Chrome too much. Performance
+        is much better on Firefox. This suggests there is room for improvement.
+        I do not yet understand clearly the cause for this lag on Chrome.
+
+        See also:
+        https://www.khronos.org/registry/webgl/specs/latest/2.0/#3.7.3 (Buffer objects)
+        https://github.com/chromium/chromium/blob/master/docs/gpu/debugging_gpu_related_code.md
+
+        */
+        const size = width * height * 4;
+
+        // validate outputBuffer
+        Utils.assert(outputBuffer.byteLength >= size, `Invalid buffer size`);
+
+        // read pixels into the PBO
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
+        gl.bufferData(gl.PIXEL_PACK_BUFFER, size, gl.DYNAMIC_READ);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.readPixels(x, y, width, height, gl.RGBA, gl.UNSIGNED_BYTE, 0);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+
+        // create a fence
+        const sync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+        gl.flush(); // make sure the sync command is read
+
+        // wait for the commands to be processed by the GPU
+        return new SpeedyPromise((resolve, reject) => {
+            // according to the WebGL2 spec sec 3.7.14 Sync objects,
+            // "sync objects may only transition to the signaled state
+            // when the user agent's event loop is not executing a task"
+            // in other words, it won't be signaled in the same frame
+            setTimeout(() => {
+                SpeedyTextureReader._clientWaitAsync(gl, sync, 0, resolve, reject);
+            }, 0);
+        }).then(() => {
+            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, pbo);
+            gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, outputBuffer);
+            gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+        }).catch(err => {
+            throw new IllegalOperationError(`Can't getBufferSubDataAsync(): error in clientWaitAsync()`, err);
+        }).finally(() => {
+            gl.deleteSync(sync);
+        });
+    }
+
+    /**
+     * Waits for a sync object to become signaled
+     * @param {WebGL2RenderingContext} gl
+     * @param {WebGLSync} sync
+     * @param {GLbitfield} flags may be gl.SYNC_FLUSH_COMMANDS_BIT or 0
+     * @param {Function} resolve
+     * @param {Function} reject
+     * @param {number} [pollInterval] in milliseconds
+     * @param {number} [remainingAttempts] for timeout
+     */
+    static _clientWaitAsync(gl, sync, flags, resolve, reject, pollInterval = 10, remainingAttempts = 1000)
+    {
+        const status = gl.clientWaitSync(sync, flags, 0);
+        const nextPollInterval = pollInterval > 2 ? pollInterval - 2 : 0; // adaptive poll interval
+        //const nextPollInterval = pollInterval >>> 1; // adaptive poll interval
+
+        if(remainingAttempts <= 0) {
+            reject(new TimeoutError(`_checkStatus() is taking too long.`, GLUtils.getError(gl)));
+        }
+        else if(status === gl.CONDITION_SATISFIED || status === gl.ALREADY_SIGNALED) {
+            resolve();
+        }
+        else {
+            //Utils.setZeroTimeout(SpeedyTextureReader._clientWaitAsync, gl, sync, flags, resolve, reject, 0, remainingAttempts - 1); // no ~4ms delay, resource-hungry
+            setTimeout(SpeedyTextureReader._clientWaitAsync, pollInterval, gl, sync, flags, resolve, reject, nextPollInterval, remainingAttempts - 1); // easier on the CPU
         }
     }
 }
