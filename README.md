@@ -2152,7 +2152,7 @@ Creates a sink of 2D vectors using the specified name. If the name is not specif
 
 ###### Parameters
 
-* `lightspeed: boolean`. Accelerate GPU-CPU transfers by means of an additional buffer used to download the data. You'll get the data from the previous frame. Defaults to `false`.
+* `turbo: boolean`. Accelerate GPU-CPU transfers. You'll get the data from the previous frame. Defaults to `false`.
 
 ###### Ports
 
