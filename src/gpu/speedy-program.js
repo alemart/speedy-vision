@@ -191,7 +191,8 @@ export class SpeedyProgram extends Function
         // update texSize uniform (available in all fragment shaders)
         const width = this._width, height = this._height;
         const texSize = this._uniform.get('texSize');
-        gl.uniform2f(texSize.location, width, height);
+        texSize.setValue(gl, [ width, height ]);
+        //gl.uniform2f(texSize.location, width, height);
 
         // set uniforms[i] to args[i]
         for(let i = 0, texNo = 0; i < args.length; i++) {
@@ -567,8 +568,8 @@ function UniformVariable(type, location)
     /** @type {number} required number of scalars */
     this.length = (this.dim == 2) ? n * n : n;
 
-    // done!
-    return Object.freeze(this);
+    /** @type {number|number[]|boolean|boolean[]|null} cached value */
+    this._value = null;
 }
 
 /**
@@ -595,6 +596,10 @@ UniformVariable.prototype.setValue = function(gl, value, texNo)
         gl.uniform1i(this.location, texNo);
         texNo++;
     }
+    else if(value === this._value) {
+        // do not update the uniform if it hasn't changed
+        void(0);
+    }
     else if(typeof value == 'number' || typeof value == 'boolean') {
         // set scalar value
         setValue.call(gl, this.location, value);
@@ -612,6 +617,9 @@ UniformVariable.prototype.setValue = function(gl, value, texNo)
     }
     else
         throw new IllegalArgumentError(`Can't run shader: unrecognized argument "${value}"`);
+
+    // cache the value
+    this._value = value;
 
     // done
     return texNo;
