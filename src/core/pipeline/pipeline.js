@@ -187,11 +187,14 @@ export class SpeedyPipeline
     {
         for(; i < n; i++) {
             const runTask = sequence[i].execute(gpu);
+
+            // this call greatly improves performance when downloading pixel data using PBOs
+            gpu.gl.flush();
+
             if(runTask !== undefined)
                 return runTask.then(() => SpeedyPipeline._runSequence(sequence, gpu, i+1, n));
         }
 
-        gpu.gl.flush();
         return SpeedyPromise.resolve();
     }
 

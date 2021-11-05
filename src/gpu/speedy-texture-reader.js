@@ -342,6 +342,9 @@ export class SpeedyTextureReader
         I do not yet understand clearly the cause for this lag on Chrome. It
         may be a CPU-GPU synchronization issue.
 
+        EDIT: I have found that using gl.flush() aggressively greatly improves
+              things. WebGL commands will be pushed frequently!
+
         See also:
         https://www.khronos.org/registry/webgl/specs/latest/2.0/#3.7.3 (Buffer objects)
         https://github.com/chromium/chromium/blob/master/docs/gpu/debugging_gpu_related_code.md
