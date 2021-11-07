@@ -115,6 +115,28 @@ export class GLError extends SpeedyError
     {
         super(`WebGL error. ${message}`, cause);
     }
+
+    /**
+     * Get an error object describing the latest WebGL error
+     * @param {WebGL2RenderingContext} gl
+     * @returns {GLError}
+     */
+    static from(gl)
+    {
+        const recognizedErrors = [
+            'NO_ERROR',
+            'INVALID_ENUM',
+            'INVALID_VALUE',
+            'INVALID_OPERATION',
+            'INVALID_FRAMEBUFFER_OPERATION',
+            'OUT_OF_MEMORY',
+            'CONTEXT_LOST_WEBGL',
+        ];
+
+        const glError = gl.getError();
+        const message = recognizedErrors.find(error => gl[error] == glError) || 'Unknown';
+        return new GLError(message);
+    }
 }
 
 /**

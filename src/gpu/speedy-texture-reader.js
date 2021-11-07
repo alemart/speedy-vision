@@ -21,11 +21,10 @@
 
 import { Utils } from '../utils/utils';
 import { Observable } from '../utils/observable';
-import { GLUtils } from './gl-utils';
 import { SpeedyGPU } from './speedy-gpu';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { SpeedyDrawableTexture } from './speedy-texture';
-import { IllegalArgumentError, IllegalOperationError, TimeoutError } from '../utils/errors';
+import { IllegalArgumentError, IllegalOperationError, TimeoutError, GLError } from '../utils/errors';
 
 const IS_FIREFOX = navigator.userAgent.includes('Firefox');
 
@@ -404,7 +403,7 @@ export class SpeedyTextureReader
         //const nextPollInterval = pollInterval >>> 1; // adaptive poll interval
 
         if(remainingAttempts <= 0) {
-            reject(new TimeoutError(`_checkStatus() is taking too long.`, GLUtils.getError(gl)));
+            reject(new TimeoutError(`_checkStatus() is taking too long.`, GLError.from(gl)));
         }
         else if(status === gl.CONDITION_SATISFIED || status === gl.ALREADY_SIGNALED) {
             resolve();
