@@ -37,7 +37,7 @@ describe('SpeedyMedia', function() {
 
     it('can load a video', function() {
        return expectAsync(new Promise((resolve => {
-           loadVideo('jelly.mp4').then(video => {
+           loadVideo('jelly.webm').then(video => {
                Speedy.load(video).then(media => {
                    resolve(media);
                    display(media, 'Video');
@@ -73,9 +73,9 @@ describe('SpeedyMedia', function() {
                 type: 'image',
                 data: await loadImage('masp.jpg'),
             },
-            'jelly.mp4': {
+            'jelly.webm': {
                 type: 'video',
-                data: await loadVideo('jelly.mp4'),
+                data: await loadVideo('jelly.webm'),
             },
             'bitmap': {
                 type: 'bitmap',
@@ -96,7 +96,7 @@ describe('SpeedyMedia', function() {
 
     it('has valid dimensions', async function() {
         const image = await loadImage('masp.jpg');
-        const video = await loadVideo('jelly.mp4');
+        const video = await loadVideo('jelly.webm');
         const media = [
             await Speedy.load(image),
             await Speedy.load(video),
