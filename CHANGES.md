@@ -1,5 +1,11 @@
 # Release notes
 
+## 0.8.2 - November 7th, 2021
+
+* Introduced a new and faster keypoint encoder using Parallel Ale Sort
+* Introduced the turbo flag in both Keypoint & Vector2 sinks
+* Various performance optimizations
+
 ## 0.8.1 - October 12th, 2021
 
 * Improved multi-scale keypoint detection
