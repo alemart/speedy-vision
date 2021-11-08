@@ -169,8 +169,8 @@ window.onload = async function()
     // Main loop
     let detect = false, clear = false;
     (function() {
-        let keypoints = [], flow = [];
         const canvas = createCanvas(media.width, media.height, video.title);
+        let keypoints = [], flow = [], frameReady = false;
 
         async function update()
         {
@@ -208,15 +208,24 @@ window.onload = async function()
             keypoints = result.keypoints;
             flow = result.flow;
 
-            // render features
-            media.draw(canvas);
-            renderFlowVectors(canvas, keypoints, flow, 3, '#f22');
-            renderFeatures(canvas, keypoints, 1, '#f22');
-
             // repeat
+            frameReady = true;
             setTimeout(update, 1000 / 60);
         }
         update();
+
+        function render()
+        {
+            if(frameReady) {
+                media.draw(canvas);
+                renderFlowVectors(canvas, keypoints, flow, 3, '#f22');
+                renderFeatures(canvas, keypoints, 1, '#f22');
+            }
+
+            frameReady = false;
+            requestAnimationFrame(render);
+        }
+        render();
 
         setInterval(() => renderStatus(keypoints), 200);
     })();

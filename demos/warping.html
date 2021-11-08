@@ -142,7 +142,6 @@ window.onload = async function()
 
     // create a canvas
     const canvas = createCanvas(media.width, media.height, video.title);
-    const context = canvas.getContext('2d');
 
     // create the pipeline
     const pipeline = Speedy.Pipeline();
@@ -197,8 +196,8 @@ window.onload = async function()
     homographyElement.map(el => el.oninput = syncVertices);
     syncVertices(); // initialize vertices
 
-    // update logic
-    async function update()
+    // update vertices
+    async function updateVertices()
     {
         // drag the vertices
         const r2 = VERTEX_RADIUS * VERTEX_RADIUS;
@@ -248,35 +247,53 @@ window.onload = async function()
         perspective.transform = homography;
 
         // loop
-        setTimeout(update, 1000 / 60);
+        setTimeout(updateVertices, 1000 / 60);
     }
-    update();
+    updateVertices();
 
-    // render video
-    async function render()
-    {
-        // perspective warp
-        const { image } = await pipeline.run();
-        image.draw(canvas);
+    // Main loop
+    (function() {
+        let image = null, frameReady = false;
 
-        // render the vertices
-        const TWO_PI = Math.PI * 2;
-        context.beginPath();
-        for(const vertex of vertices) {
-            context.moveTo(vertex.x + VERTEX_RADIUS, vertex.y);
-            context.arc(vertex.x, vertex.y, VERTEX_RADIUS, 0, TWO_PI);
-        }
+        const context = canvas.getContext('2d');
         context.fillStyle = '#ff0';
         context.strokeStyle = '#f00';
         context.lineWidth = 2;
-        context.fill();
-        context.stroke();
 
-        // render the status
-        setTimeout(render, 1000 / 60);
-    }
-    render();
-    setInterval(renderStatus, 200);
+        async function update()
+        {
+            const result = await pipeline.run();
+            image = result.image;
+
+            frameReady = true;
+            setTimeout(update, 1000 / 60);
+        }
+        update();
+
+        function render()
+        {
+            if(frameReady) {
+                // render the warped image
+                image.draw(canvas);
+
+                // render the vertices
+                const TWO_PI = Math.PI * 2;
+                context.beginPath();
+                for(const vertex of vertices) {
+                    context.moveTo(vertex.x + VERTEX_RADIUS, vertex.y);
+                    context.arc(vertex.x, vertex.y, VERTEX_RADIUS, 0, TWO_PI);
+                }
+                context.fill();
+                context.stroke();
+            }
+
+            frameReady = false;
+            requestAnimationFrame(render);
+        }
+        render();
+
+        setInterval(renderStatus, 200);
+    })();
 
     // play/pause
     const playButton = document.getElementById('play');

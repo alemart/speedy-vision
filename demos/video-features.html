@@ -86,6 +86,7 @@ window.onload = async function()
         const sink = Speedy.Keypoint.Sink();
 
         source.media = media;
+        sink.turbo = true;
 
         source.output().connectTo(greyscale.input());
         greyscale.output().connectTo(detector.input());
@@ -105,8 +106,8 @@ window.onload = async function()
 
     // Main loop
     (function() {
-        let keypoints = [];
         const canvas = createCanvas(media.width, media.height, video.title);
+        let keypoints = [], frameReady = false;
 
         async function update()
         {
@@ -122,15 +123,23 @@ window.onload = async function()
             const result = await pipeline.run();
             keypoints = result.keypoints;
 
-            // render the features
-            media.draw(canvas);
-            renderFeatures(canvas, keypoints, 2, '#ff0', 2);
-            renderStatus(keypoints);
-
             // repeat
+            frameReady = true;
             setTimeout(update, 1000 / 60);
         }
         update();
+
+        function render()
+        {
+            if(frameReady) {
+                media.draw(canvas);
+                renderFeatures(canvas, keypoints, 2, '#ff0', 2);
+            }
+
+            frameReady = false;
+            requestAnimationFrame(render);
+        }
+        render();
 
         setInterval(() => renderStatus(keypoints), 200);
     })();

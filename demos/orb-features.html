@@ -52,7 +52,7 @@
             <div class="separator"></div>
             <div>
                 <label for="sensitivity">Sensitivity</label>
-                <input type="range" min="0.0" max="0.90" value="0.70" step="0.01" id="sensitivity">
+                <input type="range" min="0.0" max="0.90" value="0.50" step="0.01" id="sensitivity">
             </div>
             <div>
                 <label for="speed-slider">Video speed</label>
@@ -124,6 +124,7 @@ window.onload = async function()
         detector.scaleFactor = 1.19; // approx. 2^0.25
         detector.capacity = 8192;
         clipper.size = 800; // up to how many features?
+        sink.turbo = true;
 
         source.output().connectTo(greyscale.input());
 
@@ -152,8 +153,8 @@ window.onload = async function()
 
     // Main loop
     (function() {
-        let keypoints = [];
         const canvas = createCanvas(media.width, media.height, video.title);
+        let keypoints = [], frameReady = false;
 
         async function update()
         {
@@ -170,14 +171,23 @@ window.onload = async function()
             const result = await pipeline.run();
             keypoints = result.keypoints;
 
-            // render
-            media.draw(canvas);
-            renderFeatures(canvas, keypoints, 2, '#0fa', 2);
-
             // repeat
+            frameReady = true;
             setTimeout(update, 1000 / 60);
         }
         update();
+
+        function render()
+        {
+            if(frameReady) {
+                media.draw(canvas);
+                renderFeatures(canvas, keypoints, 2, '#0fa', 2);
+            }
+
+            frameReady = false;
+            requestAnimationFrame(render);
+        }
+        render();
 
         setInterval(() => renderStatus(keypoints), 200);
     })();

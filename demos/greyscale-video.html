@@ -73,17 +73,28 @@ window.onload = async function()
     // Main loop
     (function() {
         const canvas = createCanvas(media.width, media.height, video.title);
+        let image = null, frameReady = false;
 
         async function update()
         {
             const result = await pipeline.run();
-            const image = result.image;
+            image = result.image;
 
-            image.draw(canvas);
-
+            frameReady = true;
             setTimeout(update, 1000 / 60);
         }
         update();
+
+        function render()
+        {
+            if(frameReady) {
+                image.draw(canvas);
+            }
+
+            frameReady = false;
+            requestAnimationFrame(render);
+        }
+        render();
 
         setInterval(renderStatus, 200);
     })();

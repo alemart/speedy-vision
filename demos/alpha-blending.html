@@ -129,6 +129,8 @@ window.onload = async function()
         canvas.height = height;
         canvas.title = video.title + ' | ' + image.title;
 
+        let blended = null, frameReady = false
+
         async function update()
         {
             mixer.alpha = Number(alpha.value);
@@ -136,13 +138,23 @@ window.onload = async function()
             mixer.gamma = 0;
 
             const result = await pipeline.run();
-            const blended = result.image;
+            blended = result.image;
 
-            blended.draw(canvas);
-
+            frameReady = true;
             setTimeout(update, 1000 / 60);
         }
         update();
+
+        function render()
+        {
+            if(frameReady) {
+                blended.draw(canvas);
+            }
+
+            frameReady = false;
+            requestAnimationFrame(render);
+        }
+        render();
 
         setInterval(renderStatus, 200);
     })();

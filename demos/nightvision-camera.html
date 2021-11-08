@@ -125,6 +125,7 @@ window.onload = async function()
 
     // Main loop
     (function() {
+        let image = null, frameReady = false;
         const canvas = createCanvas(media.width, media.height, 'Nightvision');
         canvas.style.width = (media.width * 2) + 'px';
 
@@ -138,14 +139,24 @@ window.onload = async function()
             nightvision.quality = qualitySelect.value;
 
             const result = await pipeline.run();
-            const image = result.image;
+            image = result.image;
 
-            image.draw(canvas);
-            media.draw(canvas, 0, 0, media.width / 3, media.height / 3);
-
+            frameReady = true;
             setTimeout(update, 1000 / 60);
         }
         update();
+
+        function render()
+        {
+            if(frameReady) {
+                image.draw(canvas);
+                media.draw(canvas, 0, 0, media.width / 3, media.height / 3);
+            }
+
+            frameReady = false;
+            requestAnimationFrame(render);
+        }
+        render();
 
         setInterval(renderStatus, 200);
     })();

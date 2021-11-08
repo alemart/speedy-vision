@@ -122,7 +122,7 @@ window.onload = async function()
 
         // Main loop
         (function() {
-            let keypoints = [];
+            let keypoints = [], frameReady = false;
             const canvas = createCanvas(media.width, media.height);
             canvas.style.width = (2 * media.width) + 'px';
 
@@ -143,14 +143,23 @@ window.onload = async function()
                 const result = await pipeline.run();
                 keypoints = result.keypoints;
 
-                // render the features
-                media.draw(canvas);
-                renderFeatures(canvas, keypoints, 2, '#ff0', 2);
-
                 // repeat
+                frameReady = true;
                 setTimeout(update, 1000 / 60);
             }
             update();
+
+            function render()
+            {
+                if(frameReady) {
+                    media.draw(canvas);
+                    renderFeatures(canvas, keypoints, 2, '#ff0', 2);
+                }
+
+                frameReady = false;
+                requestAnimationFrame(render);
+            }
+            render();
 
             setInterval(() => renderStatus(keypoints), 200);
         })();
