@@ -38,8 +38,8 @@ precision highp int;
 
 layout (location=${DEFAULT_ATTRIBUTES_LOCATION.position}) in vec2 ${DEFAULT_ATTRIBUTES.position};
 layout (location=${DEFAULT_ATTRIBUTES_LOCATION.texCoord}) in vec2 ${DEFAULT_ATTRIBUTES.texCoord};
-out vec2 texCoord;
-uniform mediump vec2 texSize;
+out highp vec2 texCoord;
+uniform highp vec2 texSize;
 
 #define setupVertexShader() \
 gl_Position = vec4(${DEFAULT_ATTRIBUTES.position}, 0.0f, 1.0f); \
@@ -67,8 +67,8 @@ precision highp int; // int32
 #endif
 
 out OUT_TYPE color;
-in mediump vec2 texCoord;
-uniform mediump vec2 texSize;
+in highp vec2 texCoord;
+uniform highp vec2 texSize;
 
 @include "global.glsl"\n\n`;
 
