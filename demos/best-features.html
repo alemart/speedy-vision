@@ -143,7 +143,6 @@ window.onload = async function()
         setInterval(() => renderStatus(keypoints), 200);
     })();
 
-
     // misc
     playButton.onclick = () => video.paused ? video.play() : video.pause();
     speedSlider.oninput = () => video.playbackRate = speedSlider.value;
