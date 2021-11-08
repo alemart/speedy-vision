@@ -24,14 +24,14 @@ import { Observable } from '../utils/observable';
 import { SpeedyGPU } from './speedy-gpu';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { SpeedyDrawableTexture } from './speedy-texture';
-import { IllegalArgumentError, IllegalOperationError, TimeoutError, GLError } from '../utils/errors';
+import { IllegalOperationError, TimeoutError, GLError } from '../utils/errors';
 
-const IS_FIREFOX = navigator.userAgent.includes('Firefox');
+const USE_TWO_BUFFERS = /Firefox|Opera|OPR\//.test(navigator.userAgent);
 
 /**
  * @type {number} number of PBOs; used to get a performance boost in gl.readPixels()
  */
-const DEFAULT_NUMBER_OF_BUFFERS = IS_FIREFOX ? 2 : 1;
+const DEFAULT_NUMBER_OF_BUFFERS = USE_TWO_BUFFERS ? 2 : 1;
 
 /**
  * A Queue that notifies observers when it's not empty
