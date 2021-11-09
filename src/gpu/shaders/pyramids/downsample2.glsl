@@ -23,8 +23,14 @@ uniform sampler2D image;
 
 void main()
 {
+#if 1
+    // the size of the output is half the size of the input and texCoord
+    // is already normalized
+    color = texture(image, texCoord);
+#else
     ivec2 thread = threadLocation();
     ivec2 pos = min(thread * 2, textureSize(image, 0) - ivec2(1));
 
     color = pixelAt(image, pos);
+#endif
 }
