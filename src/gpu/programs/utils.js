@@ -33,6 +33,9 @@ import { Utils } from '../../utils/utils';
 // Copy image
 const copy = importShader('utils/copy.glsl').withArguments('image');
 
+// Copy pixels in raster order
+const copyRaster = importShader('utils/copy-raster.glsl').withArguments('image');
+
 // Flip y-axis for output
 const flipY = importShader('utils/copy.glsl', 'utils/flip-y.vs.glsl').withArguments('image');
 
@@ -70,6 +73,9 @@ export class SpeedyProgramGroupUtils extends SpeedyProgramGroup
         this
             // copy image
             .declare('copy', copy)
+
+            // copy pixels in raster order
+            .declare('copyRaster', copyRaster)
 
             // render to the canvas
             .declare('renderToCanvas', flipY, {
