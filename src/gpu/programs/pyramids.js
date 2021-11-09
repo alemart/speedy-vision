@@ -23,7 +23,7 @@ import { SpeedyProgramGroup } from '../speedy-program-group';
 import { SpeedyGPU } from '../speedy-gpu';
 import { SpeedyTexture, SpeedyDrawableTexture } from '../speedy-texture';
 import { importShader } from '../shader-declaration';
-import { convX, convY } from '../shaders/filters/convolution';
+import { convX, convY, conv2D } from '../shaders/filters/convolution';
 
 
 
@@ -62,6 +62,15 @@ export class SpeedyProgramGroupPyramids extends SpeedyProgramGroup
             .declare('smoothY', convY([
                 0.05, 0.25, 0.4, 0.25, 0.05
             ]))
+            /*
+            .declare('reduce', conv2D([
+                0.00250, 0.01250, 0.02000, 0.01250, 0.00250,
+                0.01250, 0.06250, 0.10000, 0.06250, 0.01250,
+                0.02000, 0.10000, 0.16000, 0.10000, 0.02000,
+                0.01250, 0.06250, 0.10000, 0.06250, 0.01250,
+                0.00250, 0.01250, 0.02000, 0.01250, 0.00250
+            ]))
+            */
 
             // smoothing for 2x image
             // same rules as above with sum(k) = 2

@@ -224,9 +224,8 @@ export class SpeedyTexture
 
         // accept custom textures
         if(mipmap.length > 0) {
+            // expected number of mipmap levels according to the OpenGL ES 3.0 spec (sec 3.8.10.4)
             const width = this.width, height = this.height;
-
-            // expect number of mipmap images according to the OpenGL ES 3.0 spec (sec 3.8.10.4)
             const numMipmaps = 1 + Math.floor(Math.log2(Math.max(width, height)));
             Utils.assert(mipmap.length <= numMipmaps);
 
@@ -683,6 +682,19 @@ export class SpeedyDrawableTexture extends SpeedyTexture
             width, // width of the texture
             height // height of the texture
         );
+
+        /*
+        gl.copyTexImage2D(
+            gl.TEXTURE_2D, // target
+            lod, // mipmap level
+            gl.RGBA, // internal format
+            x, // xpos (where to start copying)
+            y, // ypos (where to start copying)
+            width, // width of the texture
+            height, // height of the texture
+            0 // border
+        );
+        */
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.bindTexture(gl.TEXTURE_2D, null);

@@ -30,8 +30,8 @@ import { ImageFormat } from '../../../../utils/types';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 
 // Constants
-const MAX_LEVELS = PYRAMID_MAX_LEVELS;
-const MAX_TEXTURES = 2 * MAX_LEVELS;
+const MAX_LEVELS = PYRAMID_MAX_LEVELS; //14; // supposing image size <= 8K = 2^13 (downto 1)
+const MAX_TEXTURES = 2 * MAX_LEVELS; //MAX_LEVELS;
 
 /**
  * Generate pyramid
@@ -62,7 +62,7 @@ export class SpeedyPipelineNodeImagePyramid extends SpeedyPipelineNode
         const pyramids = gpu.programs.pyramids;
         let width = image.width, height = image.height;
 
-        // number of mipmap images according to the OpenGL ES 3.0 spec (sec 3.8.10.4)
+        // number of mipmap levels according to the OpenGL ES 3.0 spec (sec 3.8.10.4)
         const mipLevels = 1 + Math.floor(Math.log2(Math.max(width, height)));
 
         // get work textures
@@ -83,14 +83,26 @@ export class SpeedyPipelineNodeImagePyramid extends SpeedyPipelineNode
             const halfHeight = Math.max(1, height >>> 1);
 
             // reduce operation
+            ///*
             const tmp = (level - 1) + MAX_LEVELS;
             (pyramids.smoothX.outputs(width, height, mip[tmp]))(mip[level-1]);
-            (pyramids.smoothY.outputs(width, height, mip[level-1]))(mip[tmp]);
-            (pyramids.downsample2.outputs(halfWidth, halfHeight, mip[level]))(mip[level-1]);
+            (pyramids.smoothY.outputs(halfWidth, halfHeight, mip[level]))(mip[tmp]);
+            //(pyramids.smoothY.outputs(width, height, mip[level-1]))(mip[tmp]);
+            //(pyramids.downsample2.outputs(halfWidth, halfHeight, mip[level]))(mip[level-1]);
+            //*/
+            //(pyramids.reduce.outputs(halfWidth, halfHeight, mip[level]))(mip[level-1]);
 
             // next level
             width = halfWidth;
             height = halfHeight;
+
+            /*
+            // debug: view pyramid
+            const view = mip[level-1];
+            const canvas = gpu.renderToCanvas(view);
+            if(!window._ww) document.body.appendChild(canvas);
+            window._ww = 1;
+            */
         }
 
         // copy to output & set mipmap
