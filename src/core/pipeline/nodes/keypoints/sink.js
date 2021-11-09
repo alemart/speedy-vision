@@ -38,6 +38,8 @@ import {
     LOG2_PYRAMID_MAX_SCALE, PYRAMID_MAX_LEVELS,
 } from '../../../../utils/globals';
 
+// next power of 2
+const nextPot = x => x > 1 ? 1 << Math.ceil(Math.log2(x)) : 1;
 
 
 /**
@@ -125,17 +127,32 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
         const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input().read();
         const useBufferedDownloads = this._turbo;
 
+        /*
+
+        I have found experimentally that, in Firefox, readPixelsAsync()
+        performs MUCH better if the width of the target texture is a power
+        of two. I have no idea why this is the case, nor if it's related to
+        some interaction with the GL drivers, somehow. This seems to make no
+        difference on Chrome, however. In any case, let's convert the input
+        texture to POT.
+
+        */
+        const encoderWidth = nextPot(encoderLength);
+        const encoderHeight = nextPot(Math.ceil(encoderLength * encoderLength / encoderWidth));
+        //const encoderHeight = (Math.ceil(encoderLength * encoderLength / encoderWidth));
+
         // copy the set of keypoints to an internal texture
         const copiedTexture = this._tex[this._page];
-        copiedTexture.resize(encodedKeypoints.width, encodedKeypoints.height);
-        encodedKeypoints.copyTo(copiedTexture);
+        (gpu.programs.utils.copyRaster
+            .outputs(encoderWidth, encoderHeight, copiedTexture)
+        )(encodedKeypoints);
 
         // flip page
         this._page = 1 - this._page;
 
         // download the internal texture
         return this._textureReader.readPixelsAsync(copiedTexture, 0, 0, copiedTexture.width, copiedTexture.height, useBufferedDownloads).then(pixels => {
-            this._keypoints = SpeedyPipelineNodeKeypointSink._decode(pixels, descriptorSize, extraSize, encoderLength);
+            this._keypoints = SpeedyPipelineNodeKeypointSink._decode(pixels, descriptorSize, extraSize, encoderWidth, encoderHeight);
         });
     }
 
@@ -144,10 +161,11 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
      * @param {Uint8Array} pixels pixels in the [r,g,b,a,...] format
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
-     * @param {number} encoderLength
+     * @param {number} encoderWidth
+     * @param {number} encoderHeight
      * @returns {SpeedyKeypoint[]} keypoints
      */
-    static _decode(pixels, descriptorSize, extraSize, encoderLength)
+    static _decode(pixels, descriptorSize, extraSize, encoderWidth, encoderHeight)
     {
         const bytesPerKeypoint = MIN_KEYPOINT_SIZE + descriptorSize + extraSize;
         const m = LOG2_PYRAMID_MAX_SCALE, h = PYRAMID_MAX_LEVELS;
@@ -157,7 +175,7 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
         let descriptorBytes, extraBytes, descriptor;
 
         // how many bytes should we read?
-        const e2 = encoderLength * encoderLength * 4;
+        const e2 = encoderWidth * encoderHeight * 4;
         const size = pixels.byteLength;
         if(size != e2)
             Utils.warning(`Expected ${e2} bytes when decoding a set of keypoints, found ${size}`);

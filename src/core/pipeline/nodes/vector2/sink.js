@@ -29,6 +29,8 @@ import { Utils } from '../../../../utils/utils';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 import { SpeedyVector2 } from '../../../speedy-vector';
 
+// next power of 2
+const nextPot = x => x > 1 ? 1 << Math.ceil(Math.log2(x)) : 1;
 
 
 /**
@@ -115,28 +117,45 @@ export class SpeedyPipelineNodeVector2Sink extends SpeedyPipelineSinkNode
     {
         const vectors = this.input().read().vectors;
         const useBufferedDownloads = this._turbo;
+        const encoderLength = vectors.width;
 
-        // copy the set of keypoints to an internal texture
+        /*
+
+        I have found experimentally that, in Firefox, readPixelsAsync()
+        performs MUCH better if the width of the target texture is a power
+        of two. I have no idea why this is the case, nor if it's related to
+        some interaction with the GL drivers, somehow. This seems to make no
+        difference on Chrome, however. In any case, let's convert the input
+        texture to POT.
+
+        */
+        const encoderWidth = nextPot(encoderLength);
+        const encoderHeight = nextPot(Math.ceil(encoderLength * encoderLength / encoderWidth));
+        //const encoderHeight = (Math.ceil(encoderLength * encoderLength / encoderWidth));
+
+        // copy the set of vectors to an internal texture
         const copiedTexture = this._tex[this._page];
-        copiedTexture.resize(vectors.width, vectors.height);
-        vectors.copyTo(copiedTexture);
+        (gpu.programs.utils.copyRaster
+            .outputs(encoderWidth, encoderHeight, copiedTexture)
+        )(vectors);
 
         // flip page
         this._page = 1 - this._page;
 
         // download the internal texture
         return this._textureReader.readPixelsAsync(copiedTexture, 0, 0, copiedTexture.width, copiedTexture.height, useBufferedDownloads).then(pixels => {
-            this._vectors = SpeedyPipelineNodeVector2Sink._decode(pixels, vectors.width);
+            this._vectors = SpeedyPipelineNodeVector2Sink._decode(pixels, encoderWidth, encoderHeight);
         });
     }
 
     /**
      * Decode a sequence of vectors, given a flattened image of encoded pixels
      * @param {Uint8Array} pixels pixels in the [r,g,b,a,...] format
-     * @param {number} encoderLength
+     * @param {number} encoderWidth
+     * @param {number} encoderHeight
      * @returns {SpeedyVector2[]} vectors
      */
-    static _decode(pixels, encoderLength)
+    static _decode(pixels, encoderWidth, encoderHeight)
     {
         const bytesPerVector = 4; // 1 pixel per vector
         const vectors = [];
@@ -144,8 +163,7 @@ export class SpeedyPipelineNodeVector2Sink extends SpeedyPipelineSinkNode
         let x = 0, y = 0;
 
         // how many bytes should we read?
-        const e = encoderLength;
-        const e2 = e * e * bytesPerVector;
+        const e2 = encoderWidth * encoderHeight * bytesPerVector;
         const size = Math.min(pixels.length, e2);
 
         // for each encoded vector
