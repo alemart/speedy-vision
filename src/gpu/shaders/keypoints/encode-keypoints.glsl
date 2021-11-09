@@ -23,8 +23,7 @@
 
 uniform sampler2D corners;
 
-precision mediump usampler2D;
-uniform usampler2D lookupTable;
+uniform mediump usampler2D lookupTable;
 uniform int stride; // width of the lookup table
 
 uniform int descriptorSize;
@@ -43,9 +42,15 @@ void main()
     ivec2 pos = ivec2(index % stride, index / stride);
     uvec4 entry = texelFetch(lookupTable, pos, 0);
 
+    int pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;
+    int rasterIndex = address.base + address.offset;
+    int numberOfPixels = encoderLength * encoderLength/8;
+    int numberOfValidPixels = numberOfPixels - (numberOfPixels % pixelsPerKeypoint);
+    int maxEncoderCapacity = numberOfValidPixels / pixelsPerKeypoint;
+
     // end of list?
     color = encodeNullKeypoint();
-    if(all(equal(entry.xy, NULL_ELEMENT)) || index >= encoderCapacity)
+    if(all(equal(entry.xy, NULL_ELEMENT)) || index >= min(encoderCapacity, maxEncoderCapacity))
         return;
 
     // position cell?

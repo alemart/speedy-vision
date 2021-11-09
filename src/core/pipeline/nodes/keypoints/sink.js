@@ -143,7 +143,7 @@ export class SpeedyPipelineNodeKeypointSink extends SpeedyPipelineSinkNode
 
         // copy the set of keypoints to an internal texture
         const copiedTexture = this._tex[this._page];
-        (gpu.programs.utils.copyRaster
+        (gpu.programs.utils.copyKeypoints
             .outputs(encoderWidth, encoderHeight, copiedTexture)
         )(encodedKeypoints);
 

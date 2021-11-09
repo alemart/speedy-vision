@@ -19,6 +19,24 @@
  * Copy pixels in raster order
  */
 
+#if !defined(TYPE)
+#error Undefined TYPE
+#elif TYPE == 1
+
+// Keypoints
+@include "keypoints.glsl"
+#define nullPixel() encodeNullKeypoint()
+
+#elif TYPE == 2
+
+// Set of 2D vectors
+@include "float16.glsl"
+#define nullPixel() encodeNullPairOfFloat16()
+
+#else
+#error Invalid TYPE
+#endif
+
 uniform sampler2D image;
 
 void main()
@@ -27,8 +45,9 @@ void main()
     ivec2 imageSize = textureSize(image, 0);
 
     int rasterIndex = thread.y * outputSize().x + thread.x;
+    bool isValidPixel = rasterIndex < imageSize.x * imageSize.y; // we need highp int, of course
     ivec2 pos = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);
-    pos = pos.y < imageSize.y ? pos : imageSize - ivec2(1);
 
-    color = texelFetch(image, pos, 0);
+    vec4 nullpix = nullPixel(); // the last pixel of the image (i.e., ivec2(w-1,h-1)) will not be null if the texture is "full"
+    color = isValidPixel ? texelFetch(image, pos, 0) : nullpix;
 }

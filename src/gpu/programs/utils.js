@@ -33,8 +33,11 @@ import { Utils } from '../../utils/utils';
 // Copy image
 const copy = importShader('utils/copy.glsl').withArguments('image');
 
-// Copy pixels in raster order
-const copyRaster = importShader('utils/copy-raster.glsl').withArguments('image');
+// Copy keypoints
+const copyKeypoints = importShader('utils/copy-raster.glsl').withDefines({ 'TYPE': 1 }).withArguments('image');
+
+// Copy 2D vectors
+const copy2DVectors = importShader('utils/copy-raster.glsl').withDefines({ 'TYPE': 2 }).withArguments('image');
 
 // Flip y-axis for output
 const flipY = importShader('utils/copy.glsl', 'utils/flip-y.vs.glsl').withArguments('image');
@@ -71,17 +74,20 @@ export class SpeedyProgramGroupUtils extends SpeedyProgramGroup
     {
         super(gpu);
         this
-            // copy image
-            .declare('copy', copy)
-
-            // copy pixels in raster order
-            .declare('copyRaster', copyRaster)
-
             // render to the canvas
             .declare('renderToCanvas', flipY, {
                 ...this.program.rendersToCanvas()
             })
-                
+
+            // copy image
+            .declare('copy', copy)
+
+            // copy keypoints
+            .declare('copyKeypoints', copyKeypoints)
+
+            // copy 2D vectors
+            .declare('copy2DVectors', copy2DVectors)
+
             // Fill image with a constant
             .declare('fill', fill)
 

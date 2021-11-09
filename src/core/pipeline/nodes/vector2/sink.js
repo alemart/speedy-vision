@@ -135,7 +135,7 @@ export class SpeedyPipelineNodeVector2Sink extends SpeedyPipelineSinkNode
 
         // copy the set of vectors to an internal texture
         const copiedTexture = this._tex[this._page];
-        (gpu.programs.utils.copyRaster
+        (gpu.programs.utils.copy2DVectors
             .outputs(encoderWidth, encoderHeight, copiedTexture)
         )(vectors);
 
