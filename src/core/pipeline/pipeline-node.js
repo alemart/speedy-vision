@@ -303,6 +303,20 @@ export class SpeedyPipelineNode
         Utils.assert(LITTLE_ENDIAN); // make sure we use little-endian
         return new Uint32Array(this._inspect(gpu, texture).buffer);
     }
+
+    /**
+     * Visually inspect a texture for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTexture} texture
+     */
+    _visualize(gpu, texture)
+    {
+        const canvas = gpu.renderToCanvas(texture);
+        if(!SpeedyPipelineNode._texView) {
+            document.body.appendChild(canvas);
+            SpeedyPipelineNode._texView = 1;
+        }
+    }
 }
 
 /**
