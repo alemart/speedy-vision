@@ -112,13 +112,16 @@ const transferFlow = importShader('keypoints/transfer-flow.glsl')
                      .withArguments('encodedFlow', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 // Keypoint sorting
-const sortCreatePermutation = importShader('keypoints/sort-createperm.glsl')
+const sortCreatePermutation = importShader('keypoints/sort-keypoints.glsl')
+                             .withDefines({ 'STAGE': 1 })
                              .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const sortMergePermutation = importShader('keypoints/sort-mergeperm.glsl')
+const sortMergePermutation = importShader('keypoints/sort-keypoints.glsl')
+                            .withDefines({ 'STAGE': 2 })
                             .withArguments('permutation', 'blockSize', 'dblLog2BlockSize');
 
-const sortApplyPermutation = importShader('keypoints/sort-applyperm.glsl')
+const sortApplyPermutation = importShader('keypoints/sort-keypoints.glsl')
+                            .withDefines({ 'STAGE': 3 })
                             .withArguments('permutation', 'maxKeypoints', 'encodedKeypoints', 'descriptorSize', 'extraSize');
 
 // Keypoint mixing
