@@ -166,6 +166,7 @@ PermutationElement readPermutationElement(sampler2D permutation, int elementInde
 /**
  * Given two sorted subarrays A[la..ra] and A[lb..rb], find
  * the k-th smallest* element of their concatenation in log time
+ * @param {sampler2D} permutation texture
  * @param {int} k element index 0, 1, 2...
  * @param {int} la array index
  * @param {int} ra array index
@@ -173,7 +174,7 @@ PermutationElement readPermutationElement(sampler2D permutation, int elementInde
  * @param {int} rb array index
  * @returns {PermutationElement}
  */
-PermutationElement selectKth(int k, int la, int ra, int lb, int rb)
+PermutationElement selectKth(sampler2D permutation, int k, int la, int ra, int lb, int rb)
 {
     //PermutationElement a, b;
     float scoreA, scoreB;
@@ -251,7 +252,7 @@ void main()
     PermutationElement element;
     element.keypointIndex = keypointIndex;
     element.score = keypoint.score;
-    element.valid = !isBadKeypoint(keypoint); // is this keypoint valid?
+    element.valid = !isBadKeypoint(keypoint);
 
     color = encodePermutationElement(element);
 
@@ -284,7 +285,7 @@ void main()
     // find the k-th element of A[la..rb], assuming
     // that A[la..ra] and A[lb..rb] are already sorted
     int k = blockOffset;
-    PermutationElement element = selectKth(k, la, ra, lb, rb);
+    PermutationElement element = selectKth(permutation, k, la, ra, lb, rb);
 
     // write permutation element to the output
     color = encodePermutationElement(element);

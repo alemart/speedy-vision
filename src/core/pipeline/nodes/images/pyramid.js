@@ -83,14 +83,14 @@ export class SpeedyPipelineNodeImagePyramid extends SpeedyPipelineNode
             const halfHeight = Math.max(1, height >>> 1);
 
             // reduce operation
-            ///*
             const tmp = (level - 1) + MAX_LEVELS;
             (pyramids.smoothX.outputs(width, height, mip[tmp]))(mip[level-1]);
-            (pyramids.smoothY.outputs(halfWidth, halfHeight, mip[level]))(mip[tmp]);
-            //(pyramids.smoothY.outputs(width, height, mip[level-1]))(mip[tmp]);
-            //(pyramids.downsample2.outputs(halfWidth, halfHeight, mip[level]))(mip[level-1]);
-            //*/
-            //(pyramids.reduce.outputs(halfWidth, halfHeight, mip[level]))(mip[level-1]);
+            (pyramids.smoothY.outputs(width, height, mip[level-1]))(mip[tmp]);
+            (pyramids.downsample2.outputs(halfWidth, halfHeight, mip[level]))(mip[level-1]);
+            /*
+            (pyramids.reduce.outputs(width, height, mip[tmp]))(mip[level-1]);
+            (pyramids.downsample2.outputs(halfWidth, halfHeight, mip[level]))(mip[tmp]);
+            */
 
             // next level
             width = halfWidth;

@@ -44,7 +44,7 @@ void main()
 
     int pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;
     int rasterIndex = address.base + address.offset;
-    int numberOfPixels = encoderLength * encoderLength/8;
+    int numberOfPixels = encoderLength * encoderLength;
     int numberOfValidPixels = numberOfPixels - (numberOfPixels % pixelsPerKeypoint);
     int maxEncoderCapacity = numberOfValidPixels / pixelsPerKeypoint;
 
