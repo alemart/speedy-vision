@@ -137,12 +137,13 @@ export class SpeedyPipelineNodeKeypointSource extends SpeedyPipelineSourceNode
         const n = end - start;
         for(let i = 0; i < n; i++) {
             const keypoint = keypoints[start + i];
+            const hasPos = keypoint.position !== undefined;
             const j = i * 4;
 
             // Format data as follows:
             // vec4(xpos, ypos, lod, score)
-            buffer[j]   = +(keypoint.position.x) || 0;
-            buffer[j+1] = +(keypoint.position.y) || 0;
+            buffer[j]   = +(hasPos ? keypoint.position.x : keypoint.x) || 0;
+            buffer[j+1] = +(hasPos ? keypoint.position.y : keypoint.y) || 0;
             buffer[j+2] = +(keypoint.lod) || 0;
             buffer[j+3] = +(keypoint.score) || 0;
         }
