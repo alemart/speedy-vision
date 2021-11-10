@@ -66,6 +66,7 @@ uniform sampler2D array;
 #endif
 
 #define NULL_KEYPOINT_INDEX 0xFFFF
+const highp uint UNIT = 0x10000u; // 1 << 16
 
 void main()
 {
@@ -108,7 +109,7 @@ void main()
     bool isValid = !isNullKeypoint(keypoint) && keypointIndex < maxKeypoints;
     keypointIndex = isValid ? keypointIndex : NULL_KEYPOINT_INDEX;
 
-    color = encodeUint32(uint(keypointIndex & 0xFFFF) | (uint(isValid) << 16u));
+    color = encodeUint32(uint(keypointIndex & 0xFFFF) | (isValid ? UNIT : 0u));
 
 #elif STAGE == 3
 
@@ -135,28 +136,27 @@ void main()
         decodeUint32(texelFetch(array, raster2pos(arrayIndexRight), 0))
     );
 
-    ivec3 sb = ivec3(entries32 >> 16u);
+    ivec3 sb = ivec3((entries32 >> 16u) & 0xFFFFu);
     sb.z *= mask; // adjustment (if arrayLength is not a power of two)
 
     int dblBlockSize = 2 * blockSize;
     int offset = arrayIndex % dblBlockSize;
     int s2b = sb.x + (offset < blockSize ? sb.z : sb.y);
     int l2b = offset < blockSize ? sb.x : sb.y;
-    int keypointIndex = int(entries32.x & 0xFFFFu);
-    uint shiftedS2b = uint(s2b << 16);
+    uint keypointIndex = entries32.x & 0xFFFFu;
+    uint shiftedS2b = uint(s2b) << 16u;
 
     color = encodeUint32(uint(NULL_KEYPOINT_INDEX) | shiftedS2b);
     if(offset >= s2b)
         return;
 
-    color = encodeUint32(uint(keypointIndex) | shiftedS2b);
+    color = encodeUint32(keypointIndex | shiftedS2b);
     if(offset < l2b)
         return;
 
-    keypointIndex = int(decodeUint32(
-        texelFetch(array, raster2pos(arrayIndex + blockSize - l2b), 0)
-    ) & 0xFFFFu);
-    color = encodeUint32(uint(keypointIndex) | shiftedS2b);
+    vec4 entry = texelFetch(array, raster2pos(arrayIndex + blockSize - l2b), 0);
+    keypointIndex = decodeUint32(entry) & 0xFFFFu;
+    color = encodeUint32(keypointIndex | shiftedS2b);
 
 #elif STAGE == 4
 
@@ -188,7 +188,8 @@ void main()
     //
 
     uint val = decodeUint32(threadPixel(array));
-    color = (val & 0xFFFFu) == 0xFFFFu ? vec4(0,1,1,1) : vec4(1,0,0,1);
+    color = (val & 0xFFFFu) == uint(NULL_KEYPOINT_INDEX) ? vec4(0,1,1,1) : vec4(1,0,0,1);
+    //color = (val >> 16u) == 0u ? vec4(0,0,1,1) : vec4(1,1,0,1);
 
 #endif
 }

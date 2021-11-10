@@ -105,10 +105,7 @@ export class SpeedyPipelineNodeKeypointMixer extends SpeedyPipelineNode
         /*
         // debug: view keypoints
         keypoints.mixKeypointsView.outputs(mixEncoderLength, mixEncoderLength, tex[1]);
-        const view = keypoints.mixKeypointsView(sortedKeypoints);
-        const canvas = gpu.renderToCanvas(view);
-        if(!window._ww) document.body.appendChild(canvas);
-        window._ww = 1;
+        this._visualize(gpu, keypoints.mixKeypointsView(sortedKeypoints));
         */
 
         this.output().swrite(mixedKeypoints, descriptorSize, extraSize, encoderLength);
