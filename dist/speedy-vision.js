@@ -1,12 +1,12 @@
 /*!
- * speedy-vision.js v0.8.2
+ * speedy-vision.js v0.8.3-wip
  * GPU-accelerated Computer Vision for JavaScript
  * https://github.com/alemart/speedy-vision-js
  * 
  * Copyright 2020-2021 Alexandre Martins <alemartf(at)gmail.com> (https://github.com/alemart)
  * @license Apache-2.0
  * 
- * Date: 2021-11-08T01:41:39.430Z
+ * Date: 2021-11-10T19:01:42.013Z
  */
 var Speedy =
 /******/ (function(modules) { // webpackBootstrap
@@ -2772,8 +2772,8 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // Constants
-const MAX_LEVELS = _utils_globals__WEBPACK_IMPORTED_MODULE_6__["PYRAMID_MAX_LEVELS"];
-const MAX_TEXTURES = 2 * MAX_LEVELS;
+const MAX_LEVELS = _utils_globals__WEBPACK_IMPORTED_MODULE_6__["PYRAMID_MAX_LEVELS"]; //14; // supposing image size <= 8K = 2^13 (downto 1)
+const MAX_TEXTURES = 2 * MAX_LEVELS; //MAX_LEVELS;
 
 /**
  * Generate pyramid
@@ -2804,7 +2804,7 @@ class SpeedyPipelineNodeImagePyramid extends _pipeline_node__WEBPACK_IMPORTED_MO
         const pyramids = gpu.programs.pyramids;
         let width = image.width, height = image.height;
 
-        // number of mipmap images according to the OpenGL ES 3.0 spec (sec 3.8.10.4)
+        // number of mipmap levels according to the OpenGL ES 3.0 spec (sec 3.8.10.4)
         const mipLevels = 1 + Math.floor(Math.log2(Math.max(width, height)));
 
         // get work textures
@@ -2829,10 +2829,22 @@ class SpeedyPipelineNodeImagePyramid extends _pipeline_node__WEBPACK_IMPORTED_MO
             (pyramids.smoothX.outputs(width, height, mip[tmp]))(mip[level-1]);
             (pyramids.smoothY.outputs(width, height, mip[level-1]))(mip[tmp]);
             (pyramids.downsample2.outputs(halfWidth, halfHeight, mip[level]))(mip[level-1]);
+            /*
+            (pyramids.reduce.outputs(width, height, mip[tmp]))(mip[level-1]);
+            (pyramids.downsample2.outputs(halfWidth, halfHeight, mip[level]))(mip[tmp]);
+            */
 
             // next level
             width = halfWidth;
             height = halfHeight;
+
+            /*
+            // debug: view pyramid
+            const view = mip[level-1];
+            const canvas = gpu.renderToCanvas(view);
+            if(!window._ww) document.body.appendChild(canvas);
+            window._ww = 1;
+            */
         }
 
         // copy to output & set mipmap
@@ -3749,7 +3761,7 @@ __webpack_require__.r(__webpack_exports__);
 
 // Constants
 const MAX_CAPACITY = _utils_globals__WEBPACK_IMPORTED_MODULE_7__["MAX_ENCODER_CAPACITY"]; // maximum capacity of the encoder (up to this many keypoints can be stored)
-const DEFAULT_CAPACITY = 2048; // default capacity of the encoder (64x64 texture with 2 pixels per keypoint)
+const DEFAULT_CAPACITY = _utils_globals__WEBPACK_IMPORTED_MODULE_7__["DEFAULT_ENCODER_CAPACITY"]; // default capacity of the encoder
 const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // sqrt(2)
 const NUMBER_OF_RGBA16_TEXTURES = 2;
 
@@ -4595,10 +4607,7 @@ class SpeedyPipelineNodeKeypointMixer extends _pipeline_node__WEBPACK_IMPORTED_M
         /*
         // debug: view keypoints
         keypoints.mixKeypointsView.outputs(mixEncoderLength, mixEncoderLength, tex[1]);
-        const view = keypoints.mixKeypointsView(sortedKeypoints);
-        const canvas = gpu.renderToCanvas(view);
-        if(!window._ww) document.body.appendChild(canvas);
-        window._ww = 1;
+        this._visualize(gpu, keypoints.mixKeypointsView(sortedKeypoints));
         */
 
         this.output().swrite(mixedKeypoints, descriptorSize, extraSize, encoderLength);
@@ -5009,6 +5018,8 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+// next power of 2
+const nextPot = x => x > 1 ? 1 << Math.ceil(Math.log2(x)) : 1;
 
 
 /**
@@ -5096,17 +5107,33 @@ class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MO
         const { encodedKeypoints, descriptorSize, extraSize, encoderLength } = this.input().read();
         const useBufferedDownloads = this._turbo;
 
+        /*
+
+        I have found experimentally that, in Firefox, readPixelsAsync()
+        performs MUCH better if the width of the target texture is a power
+        of two. I have no idea why this is the case, nor if it's related to
+        some interaction with the GL drivers, somehow. This seems to make no
+        difference on Chrome, however. In any case, let's convert the input
+        texture to POT.
+
+        */
+        const encoderWidth = nextPot(encoderLength);
+        const encoderHeight = nextPot(Math.ceil(encoderLength * encoderLength / encoderWidth));
+        //const encoderHeight = (Math.ceil(encoderLength * encoderLength / encoderWidth));
+        //const encoderWidth=encoderLength,encoderHeight=encoderLength;
+
         // copy the set of keypoints to an internal texture
         const copiedTexture = this._tex[this._page];
-        copiedTexture.resize(encodedKeypoints.width, encodedKeypoints.height);
-        encodedKeypoints.copyTo(copiedTexture);
+        (gpu.programs.utils.copyKeypoints
+            .outputs(encoderWidth, encoderHeight, copiedTexture)
+        )(encodedKeypoints);
 
         // flip page
         this._page = 1 - this._page;
 
         // download the internal texture
         return this._textureReader.readPixelsAsync(copiedTexture, 0, 0, copiedTexture.width, copiedTexture.height, useBufferedDownloads).then(pixels => {
-            this._keypoints = SpeedyPipelineNodeKeypointSink._decode(pixels, descriptorSize, extraSize, encoderLength);
+            this._keypoints = SpeedyPipelineNodeKeypointSink._decode(pixels, descriptorSize, extraSize, encoderWidth, encoderHeight);
         });
     }
 
@@ -5115,10 +5142,11 @@ class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MO
      * @param {Uint8Array} pixels pixels in the [r,g,b,a,...] format
      * @param {number} descriptorSize in bytes
      * @param {number} extraSize in bytes
-     * @param {number} encoderLength
+     * @param {number} encoderWidth
+     * @param {number} encoderHeight
      * @returns {SpeedyKeypoint[]} keypoints
      */
-    static _decode(pixels, descriptorSize, extraSize, encoderLength)
+    static _decode(pixels, descriptorSize, extraSize, encoderWidth, encoderHeight)
     {
         const bytesPerKeypoint = _utils_globals__WEBPACK_IMPORTED_MODULE_13__["MIN_KEYPOINT_SIZE"] + descriptorSize + extraSize;
         const m = _utils_globals__WEBPACK_IMPORTED_MODULE_13__["LOG2_PYRAMID_MAX_SCALE"], h = _utils_globals__WEBPACK_IMPORTED_MODULE_13__["PYRAMID_MAX_LEVELS"];
@@ -5128,7 +5156,7 @@ class SpeedyPipelineNodeKeypointSink extends _pipeline_node__WEBPACK_IMPORTED_MO
         let descriptorBytes, extraBytes, descriptor;
 
         // how many bytes should we read?
-        const e2 = encoderLength * encoderLength * 4;
+        const e2 = encoderWidth * encoderHeight * 4;
         const size = pixels.byteLength;
         if(size != e2)
             _utils_utils__WEBPACK_IMPORTED_MODULE_7__["Utils"].warning(`Expected ${e2} bytes when decoding a set of keypoints, found ${size}`);
@@ -5212,6 +5240,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _utils_errors__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../../utils/errors */ "./src/utils/errors.js");
 /* harmony import */ var _utils_speedy_promise__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../../utils/speedy-promise */ "./src/utils/speedy-promise.js");
 /* harmony import */ var _speedy_keypoint__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../speedy-keypoint */ "./src/core/speedy-keypoint.js");
+/* harmony import */ var _utils_globals__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../../utils/globals */ "./src/utils/globals.js");
 /*
  * speedy-vision.js
  * GPU-accelerated Computer Vision for JavaScript
@@ -5232,6 +5261,7 @@ __webpack_require__.r(__webpack_exports__);
  * source.js
  * Gets keypoints into the pipeline
  */
+
 
 
 
@@ -5269,6 +5299,9 @@ class SpeedyPipelineNodeKeypointSource extends _pipeline_node__WEBPACK_IMPORTED_
 
         /** @type {Float32Array} upload buffer (UBO) */
         this._buffer = SpeedyPipelineNodeKeypointSource._createUploadBuffer(BUFFER_SIZE);
+
+        /** @type {number} maximum number of keypoints */
+        this._capacity = _utils_globals__WEBPACK_IMPORTED_MODULE_10__["DEFAULT_ENCODER_CAPACITY"];
     }
 
     /**
@@ -5293,6 +5326,26 @@ class SpeedyPipelineNodeKeypointSource extends _pipeline_node__WEBPACK_IMPORTED_
     }
 
     /**
+     * The maximum number of keypoints we'll accept.
+     * This should be a tight bound for better performance.
+     * @returns {number}
+     */
+    get capacity()
+    {
+        return this._capacity;
+    }
+
+    /**
+     * The maximum number of keypoints we'll accept.
+     * This should be a tight bound for better performance.
+     * @param {number} capacity
+     */
+    set capacity(capacity)
+    {
+        this._capacity = Math.min(Math.max(0, capacity | 0), _utils_globals__WEBPACK_IMPORTED_MODULE_10__["MAX_ENCODER_CAPACITY"]);
+    }
+
+    /**
      * Run the specific task of this node
      * @param {SpeedyGPU} gpu
      * @returns {void|SpeedyPromise<void>}
@@ -5302,11 +5355,12 @@ class SpeedyPipelineNodeKeypointSource extends _pipeline_node__WEBPACK_IMPORTED_
         // Orientation, descriptors and extra bytes will be lost
         const descriptorSize = 0, extraSize = 0;
         const keypoints = this._keypoints;
-        const numKeypoints = keypoints.length;
+        const maxKeypoints = this._capacity;
+        const numKeypoints = Math.min(keypoints.length, maxKeypoints);
         const numPasses = Math.max(1, Math.ceil(numKeypoints / BUFFER_SIZE));
         const buffer = this._buffer;
         const uploadKeypoints = gpu.programs.keypoints.uploadKeypoints;
-        const encoderLength = _detectors_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodeKeypointDetector"].encoderLength(numKeypoints, descriptorSize, extraSize);
+        const encoderLength = _detectors_detector__WEBPACK_IMPORTED_MODULE_1__["SpeedyPipelineNodeKeypointDetector"].encoderLength(maxKeypoints, descriptorSize, extraSize); // we're using maxKeypoints to avoid constant texture resize (slow on Firefox)
 
         uploadKeypoints.outputs(encoderLength, encoderLength, this._tex[0], this._tex[1]);
 
@@ -5351,12 +5405,13 @@ class SpeedyPipelineNodeKeypointSource extends _pipeline_node__WEBPACK_IMPORTED_
         const n = end - start;
         for(let i = 0; i < n; i++) {
             const keypoint = keypoints[start + i];
+            const hasPos = keypoint.position !== undefined;
             const j = i * 4;
 
             // Format data as follows:
             // vec4(xpos, ypos, lod, score)
-            buffer[j]   = +(keypoint.position.x) || 0;
-            buffer[j+1] = +(keypoint.position.y) || 0;
+            buffer[j]   = +(hasPos ? keypoint.position.x : keypoint.x) || 0;
+            buffer[j+1] = +(hasPos ? keypoint.position.y : keypoint.y) || 0;
             buffer[j+2] = +(keypoint.lod) || 0;
             buffer[j+3] = +(keypoint.score) || 0;
         }
@@ -6316,6 +6371,8 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+// next power of 2
+const nextPot = x => x > 1 ? 1 << Math.ceil(Math.log2(x)) : 1;
 
 
 /**
@@ -6402,28 +6459,45 @@ class SpeedyPipelineNodeVector2Sink extends _pipeline_node__WEBPACK_IMPORTED_MOD
     {
         const vectors = this.input().read().vectors;
         const useBufferedDownloads = this._turbo;
+        const encoderLength = vectors.width;
 
-        // copy the set of keypoints to an internal texture
+        /*
+
+        I have found experimentally that, in Firefox, readPixelsAsync()
+        performs MUCH better if the width of the target texture is a power
+        of two. I have no idea why this is the case, nor if it's related to
+        some interaction with the GL drivers, somehow. This seems to make no
+        difference on Chrome, however. In any case, let's convert the input
+        texture to POT.
+
+        */
+        const encoderWidth = nextPot(encoderLength);
+        const encoderHeight = nextPot(Math.ceil(encoderLength * encoderLength / encoderWidth));
+        //const encoderHeight = (Math.ceil(encoderLength * encoderLength / encoderWidth));
+
+        // copy the set of vectors to an internal texture
         const copiedTexture = this._tex[this._page];
-        copiedTexture.resize(vectors.width, vectors.height);
-        vectors.copyTo(copiedTexture);
+        (gpu.programs.utils.copy2DVectors
+            .outputs(encoderWidth, encoderHeight, copiedTexture)
+        )(vectors);
 
         // flip page
         this._page = 1 - this._page;
 
         // download the internal texture
         return this._textureReader.readPixelsAsync(copiedTexture, 0, 0, copiedTexture.width, copiedTexture.height, useBufferedDownloads).then(pixels => {
-            this._vectors = SpeedyPipelineNodeVector2Sink._decode(pixels, vectors.width);
+            this._vectors = SpeedyPipelineNodeVector2Sink._decode(pixels, encoderWidth, encoderHeight);
         });
     }
 
     /**
      * Decode a sequence of vectors, given a flattened image of encoded pixels
      * @param {Uint8Array} pixels pixels in the [r,g,b,a,...] format
-     * @param {number} encoderLength
+     * @param {number} encoderWidth
+     * @param {number} encoderHeight
      * @returns {SpeedyVector2[]} vectors
      */
-    static _decode(pixels, encoderLength)
+    static _decode(pixels, encoderWidth, encoderHeight)
     {
         const bytesPerVector = 4; // 1 pixel per vector
         const vectors = [];
@@ -6431,8 +6505,7 @@ class SpeedyPipelineNodeVector2Sink extends _pipeline_node__WEBPACK_IMPORTED_MOD
         let x = 0, y = 0;
 
         // how many bytes should we read?
-        const e = encoderLength;
-        const e2 = e * e * bytesPerVector;
+        const e2 = encoderWidth * encoderHeight * bytesPerVector;
         const size = Math.min(pixels.length, e2);
 
         // for each encoded vector
@@ -7179,6 +7252,20 @@ class SpeedyPipelineNode
     {
         _utils_utils__WEBPACK_IMPORTED_MODULE_0__["Utils"].assert(_utils_globals__WEBPACK_IMPORTED_MODULE_1__["LITTLE_ENDIAN"]); // make sure we use little-endian
         return new Uint32Array(this._inspect(gpu, texture).buffer);
+    }
+
+    /**
+     * Visually inspect a texture for debugging purposes
+     * @param {SpeedyGPU} gpu
+     * @param {SpeedyTexture} texture
+     */
+    _visualize(gpu, texture)
+    {
+        const canvas = gpu.renderToCanvas(texture);
+        if(!SpeedyPipelineNode._texView) {
+            document.body.appendChild(canvas);
+            SpeedyPipelineNode._texView = 1;
+        }
     }
 }
 
@@ -11419,7 +11506,7 @@ class Speedy
      */
     static get version()
     {
-        return "0.8.2";
+        return "0.8.3-wip";
     }
 
     /**
@@ -12257,13 +12344,16 @@ const transferFlow = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["im
                      .withArguments('encodedFlow', 'encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
 // Keypoint sorting
-const sortCreatePermutation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/sort-createperm.glsl')
+const sortCreatePermutation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/sort-keypoints.glsl')
+                             .withDefines({ 'STAGE': 1 })
                              .withArguments('encodedKeypoints', 'descriptorSize', 'extraSize', 'encoderLength');
 
-const sortMergePermutation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/sort-mergeperm.glsl')
+const sortMergePermutation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/sort-keypoints.glsl')
+                            .withDefines({ 'STAGE': 2 })
                             .withArguments('permutation', 'blockSize', 'dblLog2BlockSize');
 
-const sortApplyPermutation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/sort-applyperm.glsl')
+const sortApplyPermutation = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('keypoints/sort-keypoints.glsl')
+                            .withDefines({ 'STAGE': 3 })
                             .withArguments('permutation', 'maxKeypoints', 'encodedKeypoints', 'descriptorSize', 'extraSize');
 
 // Keypoint mixing
@@ -12579,6 +12669,15 @@ class SpeedyProgramGroupPyramids extends _speedy_program_group__WEBPACK_IMPORTED
             .declare('smoothY', Object(_shaders_filters_convolution__WEBPACK_IMPORTED_MODULE_4__["convY"])([
                 0.05, 0.25, 0.4, 0.25, 0.05
             ]))
+            /*
+            .declare('reduce', conv2D([
+                0.00250, 0.01250, 0.02000, 0.01250, 0.00250,
+                0.01250, 0.06250, 0.10000, 0.06250, 0.01250,
+                0.02000, 0.10000, 0.16000, 0.10000, 0.02000,
+                0.01250, 0.06250, 0.10000, 0.06250, 0.01250,
+                0.00250, 0.01250, 0.02000, 0.01250, 0.00250
+            ]))
+            */
 
             // smoothing for 2x image
             // same rules as above with sum(k) = 2
@@ -12734,6 +12833,12 @@ __webpack_require__.r(__webpack_exports__);
 // Copy image
 const copy = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('utils/copy.glsl').withArguments('image');
 
+// Copy keypoints
+const copyKeypoints = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('utils/copy-raster.glsl').withDefines({ 'TYPE': 1 }).withArguments('image');
+
+// Copy 2D vectors
+const copy2DVectors = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('utils/copy-raster.glsl').withDefines({ 'TYPE': 2 }).withArguments('image');
+
 // Flip y-axis for output
 const flipY = Object(_shader_declaration__WEBPACK_IMPORTED_MODULE_2__["importShader"])('utils/copy.glsl', 'utils/flip-y.vs.glsl').withArguments('image');
 
@@ -12769,14 +12874,20 @@ class SpeedyProgramGroupUtils extends _speedy_program_group__WEBPACK_IMPORTED_MO
     {
         super(gpu);
         this
-            // copy image
-            .declare('copy', copy)
-
             // render to the canvas
             .declare('renderToCanvas', flipY, {
                 ...this.program.rendersToCanvas()
             })
-                
+
+            // copy image
+            .declare('copy', copy)
+
+            // copy keypoints
+            .declare('copyKeypoints', copyKeypoints)
+
+            // copy 2D vectors
+            .declare('copy2DVectors', copy2DVectors)
+
             // Fill image with a constant
             .declare('fill', fill)
 
@@ -12853,8 +12964,8 @@ precision highp int;
 
 layout (location=${DEFAULT_ATTRIBUTES_LOCATION.position}) in vec2 ${DEFAULT_ATTRIBUTES.position};
 layout (location=${DEFAULT_ATTRIBUTES_LOCATION.texCoord}) in vec2 ${DEFAULT_ATTRIBUTES.texCoord};
-out vec2 texCoord;
-uniform mediump vec2 texSize;
+out highp vec2 texCoord;
+uniform highp vec2 texSize;
 
 #define setupVertexShader() \
 gl_Position = vec4(${DEFAULT_ATTRIBUTES.position}, 0.0f, 1.0f); \
@@ -12882,8 +12993,8 @@ precision highp int; // int32
 #endif
 
 out OUT_TYPE color;
-in mediump vec2 texCoord;
-uniform mediump vec2 texSize;
+in highp vec2 texCoord;
+uniform highp vec2 texSize;
 
 @include "global.glsl"\n\n`;
 
@@ -13442,9 +13553,7 @@ var map = {
 	"./keypoints/orb-orientation.glsl": "./src/gpu/shaders/keypoints/orb-orientation.glsl",
 	"./keypoints/refine-scale.glsl": "./src/gpu/shaders/keypoints/refine-scale.glsl",
 	"./keypoints/score-findmax.glsl": "./src/gpu/shaders/keypoints/score-findmax.glsl",
-	"./keypoints/sort-applyperm.glsl": "./src/gpu/shaders/keypoints/sort-applyperm.glsl",
-	"./keypoints/sort-createperm.glsl": "./src/gpu/shaders/keypoints/sort-createperm.glsl",
-	"./keypoints/sort-mergeperm.glsl": "./src/gpu/shaders/keypoints/sort-mergeperm.glsl",
+	"./keypoints/sort-keypoints.glsl": "./src/gpu/shaders/keypoints/sort-keypoints.glsl",
 	"./keypoints/subpixel-refinement.glsl": "./src/gpu/shaders/keypoints/subpixel-refinement.glsl",
 	"./keypoints/transfer-flow.glsl": "./src/gpu/shaders/keypoints/transfer-flow.glsl",
 	"./keypoints/transfer-orientation.glsl": "./src/gpu/shaders/keypoints/transfer-orientation.glsl",
@@ -13455,6 +13564,7 @@ var map = {
 	"./transforms/resize.glsl": "./src/gpu/shaders/transforms/resize.glsl",
 	"./transforms/warp-perspective.glsl": "./src/gpu/shaders/transforms/warp-perspective.glsl",
 	"./utils/copy-components.glsl": "./src/gpu/shaders/utils/copy-components.glsl",
+	"./utils/copy-raster.glsl": "./src/gpu/shaders/utils/copy-raster.glsl",
 	"./utils/copy.glsl": "./src/gpu/shaders/utils/copy.glsl",
 	"./utils/fill-components.glsl": "./src/gpu/shaders/utils/fill-components.glsl",
 	"./utils/fill.glsl": "./src/gpu/shaders/utils/fill.glsl",
@@ -13962,7 +14072,7 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D corners;\nunifo
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D corners;\nprecision mediump usampler2D;\nuniform usampler2D lookupTable;\nuniform int stride;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int encoderCapacity;\nconst uvec2 NULL_ELEMENT = uvec2(0xFFFFu);\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint index = findKeypointIndex(address, descriptorSize, extraSize);\nivec2 pos = ivec2(index % stride, index / stride);\nuvec4 entry = texelFetch(lookupTable, pos, 0);\ncolor = encodeNullKeypoint();\nif(all(equal(entry.xy, NULL_ELEMENT)) || index >= encoderCapacity)\nreturn;\ncolor = encodeKeypointPosition(vec2(entry.xy));\nif(address.offset == 0)\nreturn;\ncolor = vec4(0.0f);\nif(address.offset > 1)\nreturn;\nvec4 pixel = texelFetch(corners, ivec2(entry.xy), 0);\nvec2 encodedScore = encodeKeypointScore(decodeFloat16(pixel.rb));\nfloat encodedOrientation = encodeKeypointOrientation(0.0f);\nfloat encodedLod = pixel.a;\ncolor = vec4(encodedLod, encodedOrientation, encodedScore);\n}"
+module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D corners;\nuniform mediump usampler2D lookupTable;\nuniform int stride;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int encoderCapacity;\nconst uvec2 NULL_ELEMENT = uvec2(0xFFFFu);\nvoid main()\n{\nivec2 thread = threadLocation();\nKeypointAddress address = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint index = findKeypointIndex(address, descriptorSize, extraSize);\nivec2 pos = ivec2(index % stride, index / stride);\nuvec4 entry = texelFetch(lookupTable, pos, 0);\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nint rasterIndex = address.base + address.offset;\nint numberOfPixels = encoderLength * encoderLength;\nint numberOfValidPixels = numberOfPixels - (numberOfPixels % pixelsPerKeypoint);\nint maxEncoderCapacity = numberOfValidPixels / pixelsPerKeypoint;\ncolor = encodeNullKeypoint();\nif(all(equal(entry.xy, NULL_ELEMENT)) || index >= min(encoderCapacity, maxEncoderCapacity))\nreturn;\ncolor = encodeKeypointPosition(vec2(entry.xy));\nif(address.offset == 0)\nreturn;\ncolor = vec4(0.0f);\nif(address.offset > 1)\nreturn;\nvec4 pixel = texelFetch(corners, ivec2(entry.xy), 0);\nvec2 encodedScore = encodeKeypointScore(decodeFloat16(pixel.rb));\nfloat encodedOrientation = encodeKeypointOrientation(0.0f);\nfloat encodedLod = pixel.a;\ncolor = vec4(encodedLod, encodedOrientation, encodedScore);\n}"
 
 /***/ }),
 
@@ -14072,7 +14182,7 @@ module.exports = "#if !defined(STAGE) || STAGE < 1\n#error Invalid STAGE\n#else\
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\n@include \"int32.glsl\"\n#if !defined(STAGE)\n#error Undefined STAGE\n#elif STAGE == 1\nuniform sampler2D encodedKeypointsA;\nuniform sampler2D encodedKeypointsB;\nuniform int encoderLengthA;\nuniform int encoderLengthB;\nuniform int encoderCapacityA;\nuniform int encoderCapacityB;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#elif STAGE == 2\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int maxKeypoints;\n#elif STAGE == 3\nuniform sampler2D array;\nuniform int blockSize;\n#elif STAGE == 4\nuniform sampler2D array;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#elif STAGE == 5\nuniform sampler2D array;\n#else\n#error Invalid STAGE\n#endif\n#define NULL_KEYPOINT_INDEX 0xFFFF\nvoid main()\n{\n#if STAGE == 1\nivec2 thread = threadLocation();\nKeypointAddress addr = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint keypointIndex = findKeypointIndex(addr, descriptorSize, extraSize);\nint newKeypointIndex = keypointIndex < encoderCapacityA ? keypointIndex : keypointIndex - encoderCapacityA;\ncolor = encodeNullKeypoint();\nif(newKeypointIndex >= max(encoderCapacityA, encoderCapacityB))\nreturn;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\naddr = KeypointAddress(newKeypointIndex * pixelsPerKeypoint, addr.offset);\nvec4 dataA = readKeypointData(encodedKeypointsA, encoderLengthA, addr);\nvec4 dataB = readKeypointData(encodedKeypointsB, encoderLengthB, addr);\ncolor = keypointIndex < encoderCapacityA ? dataA : dataB;\n#elif STAGE == 2\nivec2 thread = threadLocation();\nint keypointIndex = thread.y * outputSize().x + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress addr = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, addr);\nbool isValid = !isNullKeypoint(keypoint) && keypointIndex < maxKeypoints;\nkeypointIndex = isValid ? keypointIndex : NULL_KEYPOINT_INDEX;\ncolor = encodeUint32(uint(keypointIndex & 0xFFFF) | (uint(isValid) << 16u));\n#elif STAGE == 3\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nint arrayLength = size.x * size.y;\nint arrayIndex = thread.y * size.x + thread.x;\nint arrayIndexLeft = arrayIndex - blockSize;\nint arrayIndexRight = arrayIndex + blockSize;\nint mask = int(arrayIndexRight < arrayLength || arrayIndexRight / blockSize == (arrayLength - 1) / blockSize);\narrayIndexLeft = max(0, arrayIndexLeft);\narrayIndexRight = min(arrayLength - 1, arrayIndexRight);\n#define raster2pos(k) ivec2((k) % size.x, (k) / size.x)\nuvec3 entries32 = uvec3(\ndecodeUint32(threadPixel(array)),\ndecodeUint32(texelFetch(array, raster2pos(arrayIndexLeft), 0)),\ndecodeUint32(texelFetch(array, raster2pos(arrayIndexRight), 0))\n);\nivec3 sb = ivec3(entries32 >> 16u);\nsb.z *= mask;\nint dblBlockSize = 2 * blockSize;\nint offset = arrayIndex % dblBlockSize;\nint s2b = sb.x + (offset < blockSize ? sb.z : sb.y);\nint l2b = offset < blockSize ? sb.x : sb.y;\nint keypointIndex = int(entries32.x & 0xFFFFu);\nuint shiftedS2b = uint(s2b << 16);\ncolor = encodeUint32(uint(NULL_KEYPOINT_INDEX) | shiftedS2b);\nif(offset >= s2b)\nreturn;\ncolor = encodeUint32(uint(keypointIndex) | shiftedS2b);\nif(offset < l2b)\nreturn;\nkeypointIndex = int(decodeUint32(\ntexelFetch(array, raster2pos(arrayIndex + blockSize - l2b), 0)\n) & 0xFFFFu);\ncolor = encodeUint32(uint(keypointIndex) | shiftedS2b);\n#elif STAGE == 4\nivec2 thread = threadLocation();\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress addr = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint keypointIndex = findKeypointIndex(addr, descriptorSize, extraSize);\n#define raster2pos(k) ivec2((k) % size.x, (k) / size.x)\nivec2 size = textureSize(array, 0);\nuint sortedPair = decodeUint32(texelFetch(array, raster2pos(keypointIndex), 0));\nint newKeypointIndex = int(sortedPair & 0xFFFFu);\ncolor = encodeNullKeypoint();\nif(newKeypointIndex == NULL_KEYPOINT_INDEX || keypointIndex >= size.x * size.y)\nreturn;\nKeypointAddress newAddr = KeypointAddress(newKeypointIndex * pixelsPerKeypoint, addr.offset);\ncolor = readKeypointData(encodedKeypoints, encoderLength, newAddr);\n#elif STAGE == 5\nuint val = decodeUint32(threadPixel(array));\ncolor = (val & 0xFFFFu) == 0xFFFFu ? vec4(0,1,1,1) : vec4(1,0,0,1);\n#endif\n}"
+module.exports = "@include \"keypoints.glsl\"\n@include \"int32.glsl\"\n#if !defined(STAGE)\n#error Undefined STAGE\n#elif STAGE == 1\nuniform sampler2D encodedKeypointsA;\nuniform sampler2D encodedKeypointsB;\nuniform int encoderLengthA;\nuniform int encoderLengthB;\nuniform int encoderCapacityA;\nuniform int encoderCapacityB;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#elif STAGE == 2\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nuniform int maxKeypoints;\n#elif STAGE == 3\nuniform sampler2D array;\nuniform int blockSize;\n#elif STAGE == 4\nuniform sampler2D array;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#elif STAGE == 5\nuniform sampler2D array;\n#else\n#error Invalid STAGE\n#endif\n#define NULL_KEYPOINT_INDEX 0xFFFF\nconst highp uint UNIT = 0x10000u;\nvoid main()\n{\n#if STAGE == 1\nivec2 thread = threadLocation();\nKeypointAddress addr = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint keypointIndex = findKeypointIndex(addr, descriptorSize, extraSize);\nint newKeypointIndex = keypointIndex < encoderCapacityA ? keypointIndex : keypointIndex - encoderCapacityA;\ncolor = encodeNullKeypoint();\nif(newKeypointIndex >= max(encoderCapacityA, encoderCapacityB))\nreturn;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\naddr = KeypointAddress(newKeypointIndex * pixelsPerKeypoint, addr.offset);\nvec4 dataA = readKeypointData(encodedKeypointsA, encoderLengthA, addr);\nvec4 dataB = readKeypointData(encodedKeypointsB, encoderLengthB, addr);\ncolor = keypointIndex < encoderCapacityA ? dataA : dataB;\n#elif STAGE == 2\nivec2 thread = threadLocation();\nint keypointIndex = thread.y * outputSize().x + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress addr = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, addr);\nbool isValid = !isNullKeypoint(keypoint) && keypointIndex < maxKeypoints;\nkeypointIndex = isValid ? keypointIndex : NULL_KEYPOINT_INDEX;\ncolor = encodeUint32(uint(keypointIndex & 0xFFFF) | (isValid ? UNIT : 0u));\n#elif STAGE == 3\nivec2 thread = threadLocation();\nivec2 size = outputSize();\nint arrayLength = size.x * size.y;\nint arrayIndex = thread.y * size.x + thread.x;\nint arrayIndexLeft = arrayIndex - blockSize;\nint arrayIndexRight = arrayIndex + blockSize;\nint mask = int(arrayIndexRight < arrayLength || arrayIndexRight / blockSize == (arrayLength - 1) / blockSize);\narrayIndexLeft = max(0, arrayIndexLeft);\narrayIndexRight = min(arrayLength - 1, arrayIndexRight);\n#define raster2pos(k) ivec2((k) % size.x, (k) / size.x)\nuvec3 entries32 = uvec3(\ndecodeUint32(threadPixel(array)),\ndecodeUint32(texelFetch(array, raster2pos(arrayIndexLeft), 0)),\ndecodeUint32(texelFetch(array, raster2pos(arrayIndexRight), 0))\n);\nivec3 sb = ivec3((entries32 >> 16u) & 0xFFFFu);\nsb.z *= mask;\nint dblBlockSize = 2 * blockSize;\nint offset = arrayIndex % dblBlockSize;\nint s2b = sb.x + (offset < blockSize ? sb.z : sb.y);\nint l2b = offset < blockSize ? sb.x : sb.y;\nuint keypointIndex = entries32.x & 0xFFFFu;\nuint shiftedS2b = uint(s2b) << 16u;\ncolor = encodeUint32(uint(NULL_KEYPOINT_INDEX) | shiftedS2b);\nif(offset >= s2b)\nreturn;\ncolor = encodeUint32(keypointIndex | shiftedS2b);\nif(offset < l2b)\nreturn;\nvec4 entry = texelFetch(array, raster2pos(arrayIndex + blockSize - l2b), 0);\nkeypointIndex = decodeUint32(entry) & 0xFFFFu;\ncolor = encodeUint32(keypointIndex | shiftedS2b);\n#elif STAGE == 4\nivec2 thread = threadLocation();\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress addr = findKeypointAddress(thread, encoderLength, descriptorSize, extraSize);\nint keypointIndex = findKeypointIndex(addr, descriptorSize, extraSize);\n#define raster2pos(k) ivec2((k) % size.x, (k) / size.x)\nivec2 size = textureSize(array, 0);\nuint sortedPair = decodeUint32(texelFetch(array, raster2pos(keypointIndex), 0));\nint newKeypointIndex = int(sortedPair & 0xFFFFu);\ncolor = encodeNullKeypoint();\nif(newKeypointIndex == NULL_KEYPOINT_INDEX || keypointIndex >= size.x * size.y)\nreturn;\nKeypointAddress newAddr = KeypointAddress(newKeypointIndex * pixelsPerKeypoint, addr.offset);\ncolor = readKeypointData(encodedKeypoints, encoderLength, newAddr);\n#elif STAGE == 5\nuint val = decodeUint32(threadPixel(array));\ncolor = (val & 0xFFFFu) == uint(NULL_KEYPOINT_INDEX) ? vec4(0,1,1,1) : vec4(1,0,0,1);\n#endif\n}"
 
 /***/ }),
 
@@ -14153,36 +14263,14 @@ module.exports = "@include \"float16.glsl\"\nuniform sampler2D corners;\nuniform
 
 /***/ }),
 
-/***/ "./src/gpu/shaders/keypoints/sort-applyperm.glsl":
+/***/ "./src/gpu/shaders/keypoints/sort-keypoints.glsl":
 /*!*******************************************************!*\
-  !*** ./src/gpu/shaders/keypoints/sort-applyperm.glsl ***!
+  !*** ./src/gpu/shaders/keypoints/sort-keypoints.glsl ***!
   \*******************************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D permutation;\nuniform int maxKeypoints;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nstruct PermutationElement\n{\nint keypointIndex;\nfloat score;\nbool valid;\n};\nPermutationElement decodePermutationElement(vec4 pixel)\n{\nconst vec2 ones = vec2(1.0f);\nPermutationElement element;\nelement.keypointIndex = int(pixel.r * 255.0f) | (int(pixel.g * 255.0f) << 8);\nelement.valid = !all(equal(pixel.ba, ones));\nelement.score = element.valid ? decodeFloat16(pixel.ba) : -1.0f;\nreturn element;\n}\nPermutationElement readPermutationElement(sampler2D permutation, int elementIndex, int stride, int height)\n{\nconst vec4 INVALID_PIXEL = vec4(0.0f);\nivec2 pos = ivec2(elementIndex % stride, elementIndex / stride);\nvec4 pixel = pos.y < height ? pixelAt(permutation, pos) : INVALID_PIXEL;\nreturn decodePermutationElement(pixel);\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nint newEncoderLength = outputSize().x;\nKeypointAddress myAddress = findKeypointAddress(thread, newEncoderLength, descriptorSize, extraSize);\nint myKeypointIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nivec2 psize = textureSize(permutation, 0);\nPermutationElement element = readPermutationElement(permutation, myKeypointIndex, psize.x, psize.y);\nint oldEncoderLength = textureSize(encodedKeypoints, 0).x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(element.keypointIndex * pixelsPerKeypoint, myAddress.offset);\nvec4 keypointData = readKeypointData(encodedKeypoints, oldEncoderLength, address);\ncolor = myKeypointIndex < maxKeypoints && element.valid ? keypointData : encodeNullKeypoint();\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/keypoints/sort-createperm.glsl":
-/*!********************************************************!*\
-  !*** ./src/gpu/shaders/keypoints/sort-createperm.glsl ***!
-  \********************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\nstruct PermutationElement\n{\nint keypointIndex;\nfloat score;\nbool valid;\n};\nvec4 encodePermutationElement(PermutationElement element)\n{\nconst vec2 ones = vec2(1.0f);\nvec2 encodedScore = element.valid ? encodeFloat16(element.score) : ones;\nvec2 encodedIndex = vec2(element.keypointIndex & 255, (element.keypointIndex >> 8) & 255) / 255.0f;\nreturn vec4(encodedIndex, encodedScore);\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nint stride = outputSize().x;\nint keypointIndex = thread.y * stride + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nPermutationElement element;\nelement.keypointIndex = keypointIndex;\nelement.score = keypoint.score;\nelement.valid = !isBadKeypoint(keypoint);\ncolor = encodePermutationElement(element);\n}"
-
-/***/ }),
-
-/***/ "./src/gpu/shaders/keypoints/sort-mergeperm.glsl":
-/*!*******************************************************!*\
-  !*** ./src/gpu/shaders/keypoints/sort-mergeperm.glsl ***!
-  \*******************************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D permutation;\nuniform int blockSize;\nuniform int dblLog2BlockSize;\nstruct PermutationElement\n{\nint keypointIndex;\nfloat score;\nbool valid;\n};\nPermutationElement decodePermutationElement(vec4 pixel)\n{\nconst vec2 ones = vec2(1.0f);\nPermutationElement element;\nelement.keypointIndex = int(pixel.r * 255.0f) | (int(pixel.g * 255.0f) << 8);\nelement.valid = !all(equal(pixel.ba, ones));\nelement.score = element.valid ? decodeFloat16(pixel.ba) : -1.0f;\nreturn element;\n}\nvec4 encodePermutationElement(PermutationElement element)\n{\nconst vec2 ones = vec2(1.0f);\nvec2 encodedScore = element.valid ? encodeFloat16(element.score) : ones;\nvec2 encodedIndex = vec2(element.keypointIndex & 255, (element.keypointIndex >> 8) & 255) / 255.0f;\nreturn vec4(encodedIndex, encodedScore);\n}\nPermutationElement readPermutationElement(sampler2D permutation, int elementIndex, int stride, int height)\n{\nconst vec4 INVALID_PIXEL = vec4(0.0f);\nivec2 pos = ivec2(elementIndex % stride, elementIndex / stride);\nvec4 pixel = pos.y < height ? pixelAt(permutation, pos) : INVALID_PIXEL;\nreturn decodePermutationElement(pixel);\n}\nPermutationElement selectKth(int k, int la, int ra, int lb, int rb)\n{\nPermutationElement a, b;\nint ha, hb, ma, mb;\nbool discard1stHalf, altb;\nbool locked = false;\nint tmp, result = 0;\nint stride = outputSize().x;\nint height = outputSize().y;\nfor(int i = 0; i < dblLog2BlockSize; i++) {\ntmp = (lb > rb && !locked) ? (la+k) : result;\nresult = (la > ra && !locked) ? (lb+k) : tmp;\nlocked = locked || (la > ra) || (lb > rb);\nha = (ra - la + 1) / 2;\nhb = (rb - lb + 1) / 2;\nma = la + ha;\nmb = lb + hb;\na = readPermutationElement(permutation, ma, stride, height);\nb = readPermutationElement(permutation, mb, stride, height);\ndiscard1stHalf = (k > ha + hb);\naltb = (-a.score < -b.score);\nk -= int(discard1stHalf && altb) * (ha + 1);\nk -= int(discard1stHalf && !altb) * (hb + 1);\nla += int(discard1stHalf && altb) * (ma + 1 - la);\nlb += int(discard1stHalf && !altb) * (mb + 1 - lb);\nra += int(!discard1stHalf && !altb) * (ma - 1 - ra);\nrb += int(!discard1stHalf && altb) * (mb - 1 - rb);\n}\nreturn readPermutationElement(permutation, result, stride, height);\n}\nvoid main()\n{\nivec2 thread = threadLocation();\nint stride = outputSize().x;\nint elementIndex = thread.y * stride + thread.x;\nint blockIndex = elementIndex / blockSize;\nint blockOffset = elementIndex % blockSize;\nint la = blockIndex * blockSize;\nint lb = la + blockSize / 2;\nint ra = lb - 1;\nint rb = (blockIndex + 1) * blockSize - 1;\nint k = blockOffset;\nPermutationElement element = selectKth(k, la, ra, lb, rb);\ncolor = encodePermutationElement(element);\n}"
+module.exports = "@include \"keypoints.glsl\"\n#if !defined(STAGE)\n#error Undefined STAGE\n#elif STAGE == 1\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\nuniform int encoderLength;\n#elif STAGE == 2\nuniform sampler2D permutation;\nuniform int blockSize;\nuniform int dblLog2BlockSize;\n#elif STAGE == 3\nuniform sampler2D permutation;\nuniform int maxKeypoints;\nuniform sampler2D encodedKeypoints;\nuniform int descriptorSize;\nuniform int extraSize;\n#else\n#error Invalid STAGE\n#endif\nstruct PermutationElement\n{\nint keypointIndex;\nfloat score;\nbool valid;\n};\nvec4 encodePermutationElement(PermutationElement element)\n{\nconst vec2 ONES = vec2(1.0f);\nvec2 encodedScore = element.valid ? encodeFloat16(element.score) : ONES;\nvec2 encodedIndex = vec2(element.keypointIndex & 255, (element.keypointIndex >> 8) & 255) / 255.0f;\nreturn vec4(encodedIndex, encodedScore);\n}\nPermutationElement decodePermutationElement(vec4 pixel)\n{\nconst vec2 ONES = vec2(1.0f);\nPermutationElement element;\nelement.keypointIndex = int(pixel.r * 255.0f) | (int(pixel.g * 255.0f) << 8);\nelement.valid = !all(equal(pixel.ba, ONES));\nelement.score = element.valid ? decodeFloat16(pixel.ba) : -1.0f;\nreturn element;\n}\nPermutationElement readPermutationElement(sampler2D permutation, int elementIndex, int stride, int height)\n{\nconst vec4 INVALID_PIXEL = vec4(1.0f);\nivec2 pos = ivec2(elementIndex % stride, elementIndex / stride);\nvec4 pixel = pos.y < height ? pixelAt(permutation, pos) : INVALID_PIXEL;\nreturn decodePermutationElement(pixel);\n}\n#if STAGE == 2\nPermutationElement selectKth(sampler2D permutation, int k, int la, int ra, int lb, int rb)\n{\nfloat scoreA, scoreB;\nint ha, hb, ma, mb;\nbool discard1stHalf, altb;\nbool locked = false;\nint tmp, result = 0;\nint stride = outputSize().x;\nint height = outputSize().y;\nfor(int i = 0; i < dblLog2BlockSize; i++) {\ntmp = (lb > rb && !locked) ? (la+k) : result;\nresult = (la > ra && !locked) ? (lb+k) : tmp;\nlocked = locked || (la > ra) || (lb > rb);\nha = (ra - la + 1) / 2;\nhb = (rb - lb + 1) / 2;\nma = la + ha;\nmb = lb + hb;\nscoreA = readPermutationElement(permutation, ma, stride, height).score;\nscoreB = readPermutationElement(permutation, mb, stride, height).score;\ndiscard1stHalf = (k > ha + hb);\naltb = (-scoreA < -scoreB);\nk -= int(discard1stHalf && altb) * (ha + 1);\nk -= int(discard1stHalf && !altb) * (hb + 1);\nla += int(discard1stHalf && altb) * (ma + 1 - la);\nlb += int(discard1stHalf && !altb) * (mb + 1 - lb);\nra += int(!discard1stHalf && !altb) * (ma - 1 - ra);\nrb += int(!discard1stHalf && altb) * (mb - 1 - rb);\n}\nreturn readPermutationElement(permutation, result, stride, height);\n}\n#endif\nvoid main()\n{\n#if STAGE == 1\nivec2 thread = threadLocation();\nint stride = outputSize().x;\nint keypointIndex = thread.y * stride + thread.x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(keypointIndex * pixelsPerKeypoint, 0);\nKeypoint keypoint = decodeKeypoint(encodedKeypoints, encoderLength, address);\nPermutationElement element;\nelement.keypointIndex = keypointIndex;\nelement.score = keypoint.score;\nelement.valid = !isBadKeypoint(keypoint);\ncolor = encodePermutationElement(element);\n#elif STAGE == 2\nivec2 thread = threadLocation();\nint stride = outputSize().x;\nint elementIndex = thread.y * stride + thread.x;\nint blockIndex = elementIndex / blockSize;\nint blockOffset = elementIndex % blockSize;\nint la = blockIndex * blockSize;\nint lb = la + blockSize / 2;\nint ra = lb - 1;\nint rb = (blockIndex + 1) * blockSize - 1;\nint k = blockOffset;\nPermutationElement element = selectKth(permutation, k, la, ra, lb, rb);\ncolor = encodePermutationElement(element);\n#elif STAGE == 3\nivec2 thread = threadLocation();\nint newEncoderLength = outputSize().x;\nKeypointAddress myAddress = findKeypointAddress(thread, newEncoderLength, descriptorSize, extraSize);\nint myKeypointIndex = findKeypointIndex(myAddress, descriptorSize, extraSize);\nivec2 psize = textureSize(permutation, 0);\nPermutationElement element = readPermutationElement(permutation, myKeypointIndex, psize.x, psize.y);\nint oldEncoderLength = textureSize(encodedKeypoints, 0).x;\nint pixelsPerKeypoint = sizeofEncodedKeypoint(descriptorSize, extraSize) / 4;\nKeypointAddress address = KeypointAddress(element.keypointIndex * pixelsPerKeypoint, myAddress.offset);\nvec4 keypointData = readKeypointData(encodedKeypoints, oldEncoderLength, address);\ncolor = myKeypointIndex < maxKeypoints && element.valid ? keypointData : encodeNullKeypoint();\n#endif\n}"
 
 /***/ }),
 
@@ -14237,7 +14325,7 @@ module.exports = "@include \"keypoints.glsl\"\nuniform sampler2D encodedKeypoint
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = "uniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 pos = min(thread * 2, textureSize(image, 0) - ivec2(1));\ncolor = pixelAt(image, pos);\n}"
+module.exports = "uniform sampler2D image;\nvoid main()\n{\n#if 1\ncolor = texture(image, texCoord);\n#else\nivec2 thread = threadLocation();\nivec2 pos = min(thread * 2, textureSize(image, 0) - ivec2(1));\ncolor = pixelAt(image, pos);\n#endif\n}"
 
 /***/ }),
 
@@ -14293,6 +14381,17 @@ module.exports = "@include \"subpixel.glsl\"\nuniform sampler2D image;\nuniform 
 /***/ (function(module, exports) {
 
 module.exports = "@include \"colors.glsl\"\nuniform sampler2D dest, src;\nuniform int destComponents;\nuniform int srcComponentId;\nvoid main()\n{\nvec4 destPixel = threadPixel(dest);\nvec4 srcPixel = threadPixel(src);\nbvec4 flags = bvec4(\n(destComponents & PIXELCOMPONENT_RED) != 0,\n(destComponents & PIXELCOMPONENT_GREEN) != 0,\n(destComponents & PIXELCOMPONENT_BLUE) != 0,\n(destComponents & PIXELCOMPONENT_ALPHA) != 0\n);\ncolor = mix(destPixel, vec4(srcPixel[srcComponentId]), flags);\n}"
+
+/***/ }),
+
+/***/ "./src/gpu/shaders/utils/copy-raster.glsl":
+/*!************************************************!*\
+  !*** ./src/gpu/shaders/utils/copy-raster.glsl ***!
+  \************************************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+module.exports = "#if !defined(TYPE)\n#error Undefined TYPE\n#elif TYPE == 1\n@include \"keypoints.glsl\"\n#define nullPixel() encodeNullKeypoint()\n#elif TYPE == 2\n@include \"float16.glsl\"\n#define nullPixel() encodeNullPairOfFloat16()\n#else\n#error Invalid TYPE\n#endif\nuniform sampler2D image;\nvoid main()\n{\nivec2 thread = threadLocation();\nivec2 imageSize = textureSize(image, 0);\nint rasterIndex = thread.y * outputSize().x + thread.x;\nbool isValidPixel = rasterIndex < imageSize.x * imageSize.y;\nivec2 pos = ivec2(rasterIndex % imageSize.x, rasterIndex / imageSize.x);\nvec4 nullpix = nullPixel();\ncolor = isValidPixel ? texelFetch(image, pos, 0) : nullpix;\n}"
 
 /***/ }),
 
@@ -16072,12 +16171,12 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-const IS_FIREFOX = navigator.userAgent.includes('Firefox');
+const USE_TWO_BUFFERS = /Firefox|Opera|OPR\//.test(navigator.userAgent);
 
 /**
  * @type {number} number of PBOs; used to get a performance boost in gl.readPixels()
  */
-const DEFAULT_NUMBER_OF_BUFFERS = IS_FIREFOX ? 2 : 1;
+const DEFAULT_NUMBER_OF_BUFFERS = USE_TWO_BUFFERS ? 2 : 1;
 
 /**
  * A Queue that notifies observers when it's not empty
@@ -16794,9 +16893,8 @@ class SpeedyTexture
 
         // accept custom textures
         if(mipmap.length > 0) {
+            // expected number of mipmap levels according to the OpenGL ES 3.0 spec (sec 3.8.10.4)
             const width = this.width, height = this.height;
-
-            // expect number of mipmap images according to the OpenGL ES 3.0 spec (sec 3.8.10.4)
             const numMipmaps = 1 + Math.floor(Math.log2(Math.max(width, height)));
             _utils_utils__WEBPACK_IMPORTED_MODULE_1__["Utils"].assert(mipmap.length <= numMipmaps);
 
@@ -17253,6 +17351,19 @@ class SpeedyDrawableTexture extends SpeedyTexture
             width, // width of the texture
             height // height of the texture
         );
+
+        /*
+        gl.copyTexImage2D(
+            gl.TEXTURE_2D, // target
+            lod, // mipmap level
+            gl.RGBA, // internal format
+            x, // xpos (where to start copying)
+            y, // ypos (where to start copying)
+            width, // width of the texture
+            height, // height of the texture
+            0 // border
+        );
+        */
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
         gl.bindTexture(gl.TEXTURE_2D, null);
@@ -17731,7 +17842,7 @@ class FPSCounter
 /*!******************************!*\
   !*** ./src/utils/globals.js ***!
   \******************************/
-/*! exports provided: PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE, LOG2_PYRAMID_MAX_SCALE, FIX_BITS, FIX_RESOLUTION, MAX_TEXTURE_LENGTH, MIN_KEYPOINT_SIZE, MIN_ENCODER_LENGTH, MAX_ENCODER_CAPACITY, LITTLE_ENDIAN */
+/*! exports provided: PYRAMID_MAX_LEVELS, PYRAMID_MAX_SCALE, LOG2_PYRAMID_MAX_SCALE, FIX_BITS, FIX_RESOLUTION, MAX_TEXTURE_LENGTH, MIN_KEYPOINT_SIZE, MIN_ENCODER_LENGTH, MAX_ENCODER_CAPACITY, DEFAULT_ENCODER_CAPACITY, LITTLE_ENDIAN */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -17745,6 +17856,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MIN_KEYPOINT_SIZE", function() { return MIN_KEYPOINT_SIZE; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MIN_ENCODER_LENGTH", function() { return MIN_ENCODER_LENGTH; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "MAX_ENCODER_CAPACITY", function() { return MAX_ENCODER_CAPACITY; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "DEFAULT_ENCODER_CAPACITY", function() { return DEFAULT_ENCODER_CAPACITY; });
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "LITTLE_ENDIAN", function() { return LITTLE_ENDIAN; });
 /*
  * speedy-vision.js
@@ -17815,6 +17927,9 @@ const MIN_ENCODER_LENGTH = 2; // capacity computations are based on this // Math
 
 /** @type {number} Maximum number of keypoints we can encode (the actual length of the encoder may vary) */
 const MAX_ENCODER_CAPACITY = 8192;
+
+/** @type {number} Default capacity of a keypoint encoder (64x64 texture with 2 pixels per keypoint) */
+const DEFAULT_ENCODER_CAPACITY = 2048;
 
 
 
