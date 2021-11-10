@@ -68,6 +68,9 @@ export const MIN_ENCODER_LENGTH = 2; // capacity computations are based on this 
 /** @type {number} Maximum number of keypoints we can encode (the actual length of the encoder may vary) */
 export const MAX_ENCODER_CAPACITY = 8192;
 
+/** @type {number} Default capacity of a keypoint encoder (64x64 texture with 2 pixels per keypoint) */
+export const DEFAULT_ENCODER_CAPACITY = 2048;
+
 
 
 // -----------------------------------------------------------------
