@@ -29,6 +29,7 @@ import { Utils } from '../../../../utils/utils';
 import { IllegalArgumentError } from '../../../../utils/errors';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 import { SpeedyKeypoint } from '../../../speedy-keypoint';
+import { DEFAULT_ENCODER_CAPACITY, MAX_ENCODER_CAPACITY } from '../../../../utils/globals';
 
 // Constants
 const UBO_MAX_BYTES = 16384; // UBOs can hold at least 16KB of data: gl.MAX_UNIFORM_BLOCK_SIZE >= 16384 according to the GL ES 3 reference
@@ -55,6 +56,9 @@ export class SpeedyPipelineNodeKeypointSource extends SpeedyPipelineSourceNode
 
         /** @type {Float32Array} upload buffer (UBO) */
         this._buffer = SpeedyPipelineNodeKeypointSource._createUploadBuffer(BUFFER_SIZE);
+
+        /** @type {number} maximum number of keypoints */
+        this._capacity = DEFAULT_ENCODER_CAPACITY;
     }
 
     /**
@@ -79,6 +83,26 @@ export class SpeedyPipelineNodeKeypointSource extends SpeedyPipelineSourceNode
     }
 
     /**
+     * The maximum number of keypoints we'll accept.
+     * This should be a tight bound for better performance.
+     * @returns {number}
+     */
+    get capacity()
+    {
+        return this._capacity;
+    }
+
+    /**
+     * The maximum number of keypoints we'll accept.
+     * This should be a tight bound for better performance.
+     * @param {number} capacity
+     */
+    set capacity(capacity)
+    {
+        this._capacity = Math.min(Math.max(0, capacity | 0), MAX_ENCODER_CAPACITY);
+    }
+
+    /**
      * Run the specific task of this node
      * @param {SpeedyGPU} gpu
      * @returns {void|SpeedyPromise<void>}
@@ -88,11 +112,12 @@ export class SpeedyPipelineNodeKeypointSource extends SpeedyPipelineSourceNode
         // Orientation, descriptors and extra bytes will be lost
         const descriptorSize = 0, extraSize = 0;
         const keypoints = this._keypoints;
-        const numKeypoints = keypoints.length;
+        const maxKeypoints = this._capacity;
+        const numKeypoints = Math.min(keypoints.length, maxKeypoints);
         const numPasses = Math.max(1, Math.ceil(numKeypoints / BUFFER_SIZE));
         const buffer = this._buffer;
         const uploadKeypoints = gpu.programs.keypoints.uploadKeypoints;
-        const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(numKeypoints, descriptorSize, extraSize);
+        const encoderLength = SpeedyPipelineNodeKeypointDetector.encoderLength(maxKeypoints, descriptorSize, extraSize); // we're using maxKeypoints to avoid constant texture resize (slow on Firefox)
 
         uploadKeypoints.outputs(encoderLength, encoderLength, this._tex[0], this._tex[1]);
 
