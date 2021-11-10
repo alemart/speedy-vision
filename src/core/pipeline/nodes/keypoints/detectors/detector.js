@@ -26,11 +26,11 @@ import { SpeedyGPU } from '../../../../../gpu/speedy-gpu';
 import { SpeedyTexture, SpeedyDrawableTexture } from '../../../../../gpu/speedy-texture';
 import { Utils } from '../../../../../utils/utils';
 import { SpeedyPromise } from '../../../../../utils/speedy-promise';
-import { MIN_KEYPOINT_SIZE, MIN_ENCODER_LENGTH, MAX_ENCODER_CAPACITY } from '../../../../../utils/globals';
+import { MIN_KEYPOINT_SIZE, MIN_ENCODER_LENGTH, DEFAULT_ENCODER_CAPACITY, MAX_ENCODER_CAPACITY } from '../../../../../utils/globals';
 
 // Constants
 const MAX_CAPACITY = MAX_ENCODER_CAPACITY; // maximum capacity of the encoder (up to this many keypoints can be stored)
-const DEFAULT_CAPACITY = 2048; // default capacity of the encoder (64x64 texture with 2 pixels per keypoint)
+const DEFAULT_CAPACITY = DEFAULT_ENCODER_CAPACITY; // default capacity of the encoder
 const DEFAULT_SCALE_FACTOR = 1.4142135623730951; // sqrt(2)
 const NUMBER_OF_RGBA16_TEXTURES = 2;
 
