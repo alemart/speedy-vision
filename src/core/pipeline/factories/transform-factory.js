@@ -31,7 +31,7 @@ export class SpeedyPipelineTransformFactory extends SpeedyNamespace
     /**
      * Resize image
      * @param {string} [name]
-     * @returns {SpeedyPipelineNodeNormalize}
+     * @returns {SpeedyPipelineNodeResize}
      */
     static Resize(name = undefined)
     {
@@ -41,7 +41,7 @@ export class SpeedyPipelineTransformFactory extends SpeedyNamespace
     /**
      * Warp an image using a perspective transformation
      * @param {string} [name]
-     * @returns {SpeedyPipelineNodeNormalize}
+     * @returns {SpeedyPipelineNodePerspectiveWarp}
      */
     static PerspectiveWarp(name = undefined)
     {

@@ -19,29 +19,45 @@
  * An abstract group of programs that run on the GPU
  */
 
+import { ShaderDeclaration } from './shader-declaration';
 import { SpeedyProgram } from './speedy-program';
 import { SpeedyGPU } from './speedy-gpu';
 
-/** @type {object} Program settings generator */
-const PROGRAM_HELPERS = {
-    // Pingpong Rendering: the output texture of a
-    // program cannot be used as an input to itself.
-    // This is a convenient helper in these situations
+/** @typedef {import('./speedy-program').SpeedyProgramOptions} SpeedyProgramOptions */
+
+/**
+ * @typedef {object} SpeedyProgramHelpers
+ * @property {function(): SpeedyProgramOptions} usesPingpongRendering
+ * @property {function(): SpeedyProgramOptions} rendersToCanvas
+*/
+
+/** @const {SpeedyProgramHelpers} Program settings generator */
+const PROGRAM_HELPERS = Object.freeze({
+
+    /**
+     * Pingpong Rendering: the output texture of a
+     * program cannot be used as an input to itself.
+     * This is a convenient helper in these situations
+     * @returns {SpeedyProgramOptions}
+     */
     usesPingpongRendering() {
         return {
             pingpong: true
         };
     },
 
-    // Render to canvas
-    // Use it when we're supposed to see the texture
+    /**
+     * Render to canvas
+     * Use it when we're supposed to see the texture
+     * @returns {SpeedyProgramOptions}
+     */
     rendersToCanvas() {
         return {
             renderToTexture: false
         };
     },
-};
 
+});
 
 /**
  * SpeedyProgramGroup
@@ -70,17 +86,17 @@ export class SpeedyProgramGroup
      * @protected
      * @param {string} name Program name
      * @param {ShaderDeclaration} shaderdecl Shader declaration
-     * @param {object} [settings] Program settings
+     * @param {SpeedyProgramOptions} [options] Program settings
      * @returns {SpeedyProgramGroup} This object
      */
-    declare(name, shaderdecl, settings = {})
+    declare(name, shaderdecl, options = {})
     {
         // lazy instantiation of kernels
         Object.defineProperty(this, name, {
             get: (() => {
                 const key = Symbol(name);
                 return (function() {
-                    return this[key] || (this[key] = this._createProgram(shaderdecl, settings));
+                    return this[key] || (this[key] = this._createProgram(shaderdecl, options));
                 }).bind(this);
             })()
         });
@@ -90,7 +106,7 @@ export class SpeedyProgramGroup
 
     /**
      * Neat helpers to be used when declaring programs
-     * @returns {object}
+     * @returns {SpeedyProgramHelpers}
      */
     get program()
     {
@@ -112,12 +128,12 @@ export class SpeedyProgramGroup
     /**
      * Spawn a SpeedyProgram
      * @param {ShaderDeclaration} shaderdecl Shader declaration
-     * @param {object} [settings] Program settings
+     * @param {SpeedyProgramOptions} [options] Program settings
      * @returns {SpeedyProgram}
      */
-    _createProgram(shaderdecl, settings = {})
+    _createProgram(shaderdecl, options = {})
     {
-        const program = new SpeedyProgram(this._gpu.gl, shaderdecl, settings);
+        const program = new SpeedyProgram(this._gpu.gl, shaderdecl, options);
         this._programs.push(program);
         return program;
     }

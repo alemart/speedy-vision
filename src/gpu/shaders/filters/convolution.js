@@ -27,7 +27,7 @@ import { IllegalArgumentError } from '../../../utils/errors';
 
 /**
  * Generate a 2D convolution with a square kernel
- * @param {Array<number>} kernel convolution kernel
+ * @param {number[]} kernel convolution kernel
  * @param {number} [normalizationConstant] will be multiplied by all kernel entries
  */
 export function conv2D(kernel, normalizationConstant = 1.0)
@@ -81,7 +81,7 @@ export function conv2D(kernel, normalizationConstant = 1.0)
 
 /**
  * Generate a 1D convolution function on the x-axis
- * @param {Array<number>} kernel convolution kernel
+ * @param {number[]} kernel convolution kernel
  * @param {number} [normalizationConstant] will be multiplied by all kernel entries
  */
 export function convX(kernel, normalizationConstant = 1.0)
@@ -94,7 +94,7 @@ export function convX(kernel, normalizationConstant = 1.0)
 
 /**
  * Generate a 1D convolution function on the y-axis
- * @param {Array<number>} kernel convolution kernel
+ * @param {number[]} kernel convolution kernel
  * @param {number} [normalizationConstant] will be multiplied by all kernel entries
  */
 export function convY(kernel, normalizationConstant = 1.0)
@@ -108,7 +108,7 @@ export function convY(kernel, normalizationConstant = 1.0)
 /**
  * 1D convolution function generator
  * @param {string} axis either "x" or "y"
- * @param {Array<number>} kernel convolution kernel
+ * @param {number[]} kernel convolution kernel
  * @param {number} [normalizationConstant] will be multiplied by all kernel entries
  */
 function conv1D(axis, kernel, normalizationConstant = 1.0)

@@ -43,7 +43,7 @@ export class SpeedyMediaSource
 
     /**
      * Load a media source
-     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} wrapperObject
+     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} wrappedObject
      * @returns {SpeedyPromise<SpeedyMediaSource>}
      */
     static load(wrappedObject)

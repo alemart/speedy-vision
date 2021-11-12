@@ -54,7 +54,7 @@ export class SpeedyPipelineNodeImageSink extends SpeedyPipelineSinkNode
 
     /**
      * Export data from this node to the user
-     * @returns {SpeedyPromise<any>}
+     * @returns {SpeedyPromise<SpeedyMedia>}
      */
     export()
     {

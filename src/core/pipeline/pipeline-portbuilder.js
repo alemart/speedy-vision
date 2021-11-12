@@ -26,6 +26,10 @@ import { SpeedyPipelineMessage, SpeedyPipelineMessageType } from './pipeline-mes
 import { SpeedyPipelineNode } from './pipeline-node';
 
 /**
+ * @typedef {import('./pipeline-portspec').SpeedyPipelineMessageConstraint} SpeedyPipelineMessageConstraint
+ */
+
+/**
  * Builder of a port of a node of a pipeline
  */
 export class SpeedyPipelinePortBuilder

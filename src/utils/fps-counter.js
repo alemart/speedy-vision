@@ -21,21 +21,39 @@
 
 import { IllegalOperationError } from './errors';
 
-let instance = null;
-const UPDATE_INTERVAL = 500; // in ms
+/** @type {number} update interval in milliseconds */
+const UPDATE_INTERVAL = 500;
 
+/** @type {FPSCounter|null} Singleton */
+let instance = null;
+
+/**
+ * FPS counter
+ */
 export class FPSCounter
 {
     /**
      * Creates a new FPSCounter
+     * @private
      */
-    /* private */ constructor()
+    constructor()
     {
+        /** @type {number} current FPS rate */
         this._fps = 60;
+
+        /** @type {number} frame counter */
         this._frames = 0;
+
+        /** @type {number} update interval in milliseconds */
         this._updateInterval = UPDATE_INTERVAL;
+
+        /** @type {number} time of the last update */
         this._lastUpdate = performance.now();
+
+        /** @type {function(): void} bound update function */
         this._boundUpdate = this._update.bind(this);
+
+
 
         // this should never happen...
         if(instance !== null)

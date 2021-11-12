@@ -26,6 +26,10 @@ import { Utils } from '../utils/utils';
 import { IllegalArgumentError, AbstractMethodError } from '../utils/errors';
 
 /**
+ * @typedef {"float32"} SpeedyMatrixType Matrix data type
+ */
+
+/**
  * Matrix class
  */
 export class SpeedyMatrix extends SpeedyMatrixExpr

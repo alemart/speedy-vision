@@ -23,7 +23,7 @@ import { SpeedyPipelineNode } from '../../pipeline-node';
 import { SpeedyPipelineMessageType, SpeedyPipelineMessageWithImage } from '../../pipeline-message';
 import { InputPort, OutputPort } from '../../pipeline-portbuilder';
 import { SpeedyGPU } from '../../../../gpu/speedy-gpu';
-import { SpeedyTexture } from '../../../../gpu/speedy-texture';
+import { SpeedyTexture, SpeedyDrawableTexture } from '../../../../gpu/speedy-texture';
 import { Utils } from '../../../../utils/utils';
 import { ImageFormat, PixelComponent, ColorComponentId } from '../../../../utils/types';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';

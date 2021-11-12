@@ -28,6 +28,10 @@ import { SpeedyMediaSource } from './speedy-media-source';
 import { SpeedyPromise } from '../utils/speedy-promise';
 
 /**
+ * @typedef {object} SpeedyMediaOptions
+ */
+
+/**
  * SpeedyMedia encapsulates a media element
  * (e.g., image, video, canvas)
  */
@@ -37,7 +41,7 @@ export class SpeedyMedia
      * Constructor. It receives a VALID media source that is ALREADY LOADED.
      * @private
      * @param {SpeedyMediaSource} source
-     * @param {object} [options] options object
+     * @param {SpeedyMediaOptions} [options] options object
      * @param {ImageFormat} [format]
      */
     constructor(source, options = {}, format = ImageFormat.RGBA)
@@ -47,7 +51,7 @@ export class SpeedyMedia
         /** @type {SpeedyMediaSource|null} media source */
         this._source = source;
 
-        /** @type {object} options */
+        /** @type {SpeedyMediaOptions} options */
         this._options = Object.freeze(options);
 
         /** @type {ImageFormat} format */
@@ -58,7 +62,7 @@ export class SpeedyMedia
      * Load a media source
      * Will wait until the HTML media source is loaded
      * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement|ImageBitmap} mediaSource An image, video or canvas
-     * @param {object} [options] options object
+     * @param {SpeedyMediaOptions} [options] options object
      * @returns {SpeedyPromise<SpeedyMedia>}
      */
     static load(mediaSource, options = {})
@@ -130,7 +134,7 @@ export class SpeedyMedia
     /**
      * Returns a read-only object featuring advanced options
      * related to this SpeedyMedia object
-     * @returns {object}
+     * @returns {SpeedyMediaOptions}
      */
     get options()
     {

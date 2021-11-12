@@ -44,7 +44,7 @@ export class Observable
      * Add subscriber
      * @param {Function} fn callback
      * @param {object} [thisptr] "this" pointer to be used when invoking the callback
-     * @param {...any} [args] arguments to be passed to the callback
+     * @param {...any} args arguments to be passed to the callback
      */
     subscribe(fn, thisptr, ...args)
     {

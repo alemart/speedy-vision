@@ -19,8 +19,8 @@
  * Image pyramids
  */
 
-import { SpeedyProgramGroup } from '../speedy-program-group';
 import { SpeedyGPU } from '../speedy-gpu';
+import { SpeedyProgramGroup } from '../speedy-program-group';
 import { SpeedyTexture, SpeedyDrawableTexture } from '../speedy-texture';
 import { importShader } from '../shader-declaration';
 import { convX, convY, conv2D } from '../shaders/filters/convolution';

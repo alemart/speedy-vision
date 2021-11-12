@@ -22,7 +22,7 @@
 import { Utils } from '../../utils/utils';
 import { ImageFormat } from '../../utils/types';
 import { AbstractMethodError } from '../../utils/errors';
-import { SpeedyTexture } from '../../gpu/speedy-texture';
+import { SpeedyTexture, SpeedyDrawableTexture } from '../../gpu/speedy-texture';
 
 /**
  * Types of messages

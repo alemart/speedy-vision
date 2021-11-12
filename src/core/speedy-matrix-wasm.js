@@ -19,10 +19,11 @@
  * WebAssembly bridge
  */
 
-import { LITTLE_ENDIAN } from '../utils/globals';
+import { SpeedyMatrix } from './speedy-matrix';
 import { SpeedyPromise } from '../utils/speedy-promise';
 import { WebAssemblyError, TimeoutError, NotSupportedError } from '../utils/errors';
 import { Utils } from '../utils/utils';
+import { LITTLE_ENDIAN } from '../utils/globals';
 
 /** @type {Uint8Array} WebAssembly binary */
 const WASM_BINARY = require('./wasm/speedy-matrix.wasm.txt');

@@ -19,6 +19,7 @@
  * An access point to all programs that run on the GPU
  */
 
+import { SpeedyGPU } from './speedy-gpu';
 import { SpeedyProgramGroupUtils } from './programs/utils';
 import { SpeedyProgramGroupFilters } from './programs/filters';
 import { SpeedyProgramGroupKeypoints } from './programs/keypoints';

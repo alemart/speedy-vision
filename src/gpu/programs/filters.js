@@ -19,6 +19,7 @@
  * Image filtering on the GPU
  */
 
+import { SpeedyGPU } from '../speedy-gpu';
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
 import { convX, convY } from '../shaders/filters/convolution';

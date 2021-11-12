@@ -19,6 +19,7 @@
  * Geometric transformations
  */
 
+import { SpeedyGPU } from '../speedy-gpu';
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { importShader } from '../shader-declaration';
 import { IllegalArgumentError } from '../../utils/errors';

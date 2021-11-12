@@ -30,7 +30,7 @@ import { Utils } from '../../../../utils/utils';
 import { IllegalArgumentError } from '../../../../utils/errors';
 import { SpeedyPromise } from '../../../../utils/speedy-promise';
 
-/** @type {Object.<string,string>} method name to program name */
+/** @const {Object.<string,string>} method name to program name */
 const METHOD2PROGRAM = Object.freeze({
     'quadratic1d': 'subpixelQuadratic1d',
     'taylor2d': 'subpixelTaylor2d',

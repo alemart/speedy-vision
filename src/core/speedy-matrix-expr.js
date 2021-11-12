@@ -25,10 +25,18 @@ import { Utils } from '../utils/utils';
 import { AbstractMethodError } from '../utils/errors';
 
 /**
- * @typedef {'float32'} SpeedyMatrixType data type
+ * @typedef {import('./speedy-matrix').SpeedyMatrixType} SpeedyMatrixType
  */
 
-/** @type {object.<SpeedyMatrixType,Function>} */
+/**
+ * @typedef {import('./speedy-matrix-wasm').AugmentedMemory} AugmentedMemory
+ */
+
+/**
+ * @typedef {Object.<SpeedyMatrixType,Function>} Dtype2BufferType
+ */
+
+/** @const {Dtype2BufferType} */
 const DTYPE_TO_BUFFER_TYPE = Object.freeze({
     'float32': Float32Array
 });
@@ -100,7 +108,7 @@ export class SpeedyMatrixExpr
 
     /**
      * Buffer types
-     * @returns {object.<SpeedyMatrixType,Function>}
+     * @returns {Dtype2BufferType}
      */
     static get BUFFER_TYPE()
     {

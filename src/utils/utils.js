@@ -30,7 +30,7 @@ export class Utils
     /**
      * Generates a warning
      * @param {string} text message text
-     * @param  {...string} [args] optional text
+     * @param  {...string} args optional text
      * @returns {string} the message text
      */
     static warning(text, ...args)
@@ -43,7 +43,7 @@ export class Utils
     /**
      * Logs a message
      * @param {string} text message text
-     * @param  {...string} [args] optional text
+     * @param  {...string} args optional text
      * @returns {string} the message text
      */
     static log(text, ...args)
@@ -72,7 +72,7 @@ export class Utils
      * (heavy on battery) if used in a loop. Use with caution.
      * Implementation based on David Baron's, but adapted for ES6 classes
      * @param {Function} fn
-     * @param {...any} [args] optional arguments to be passed to fn
+     * @param {...any} args optional arguments to be passed to fn
      */
     static setZeroTimeout(fn, ...args)
     {
@@ -100,7 +100,7 @@ export class Utils
     /**
      * Gets the names of the arguments of the specified function
      * @param {Function} fun 
-     * @returns {Array<string>}
+     * @returns {string[]}
      */
     static functionArguments(fun)
     {
@@ -182,6 +182,7 @@ export class Utils
      * @param {number} sigma gaussian sigma
      * @param {number} [kernelSize] kernel size, odd number
      * @param {boolean} [normalized] normalize entries so that their sum is 1
+     * @returns {number[]}
      */
     static gaussianKernel(sigma, kernelSize = 0, normalized = true)
     {
@@ -286,9 +287,9 @@ export class Utils
 
     /**
      * Cartesian product a x b: [ [ai, bj] for all i, j ]
-     * @param {Array<number>} a
-     * @param {Array<number>} b
-     * @returns {Array<number[2]>}
+     * @param {number[]} a
+     * @param {number[]} b
+     * @returns {Array<[number,number]>}
      */
     static cartesian(a, b)
     {
@@ -298,7 +299,7 @@ export class Utils
     /**
      * Symmetric range
      * @param {number} n non-negative integer
-     * @returns {Array<number>} [ -n, ..., n ]
+     * @returns {number[]} [ -n, ..., n ]
      */
     static symmetricRange(n)
     {
@@ -311,7 +312,7 @@ export class Utils
     /**
      * Compute the [0, n) range of integers
      * @param {number} n positive integer
-     * @returns {Array<number>} [ 0, 1, ..., n-1 ]
+     * @returns {number[]} [ 0, 1, ..., n-1 ]
      */
     static range(n)
     {

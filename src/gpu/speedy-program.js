@@ -25,7 +25,7 @@ import { ShaderDeclaration } from './shader-declaration';
 import { Utils } from '../utils/utils';
 import { NotSupportedError, IllegalArgumentError, IllegalOperationError, GLError } from '../utils/errors';
 
-// Map uniform type to a gl function
+/** @const {Object.<string,string>} Map uniform type to a gl function */
 const UNIFORM_SETTERS = Object.freeze({
     'sampler2D': 'uniform1i',
     'isampler2D':'uniform1i',
@@ -51,7 +51,11 @@ const UNIFORM_SETTERS = Object.freeze({
     'mat4':      'uniformMatrix4fv',
 });
 
-
+/**
+ * @typedef {object} SpeedyProgramOptions
+ * @property {boolean} [renderToTexture] render results to a texture?
+ * @property {boolean} [pingpong] alternate output texture between calls
+ */
 
 /**
  * A SpeedyProgram is a Function that
@@ -63,12 +67,15 @@ export class SpeedyProgram extends Function
      * Creates a new SpeedyProgram
      * @param {WebGL2RenderingContext} gl WebGL context
      * @param {ShaderDeclaration} shaderdecl Shader declaration
-     * @param {object} [options] user options
+     * @param {SpeedyProgramOptions} [options] user options
      */
     constructor(gl, shaderdecl, options = { })
     {
         super('...args', 'return this._self._call(...args)');
+
+        /** @type {SpeedyProgram} this function bound to this function! */
         this._self = this.bind(this);
+
         this._self._init(gl, shaderdecl, options);
         return this._self;
     }
@@ -77,7 +84,7 @@ export class SpeedyProgram extends Function
      * Initialize the SpeedyProgram
      * @param {WebGL2RenderingContext} gl WebGL context
      * @param {ShaderDeclaration} shaderdecl Shader declaration
-     * @param {object} options user options
+     * @param {SpeedyProgramOptions} options user options
      */
     _init(gl, shaderdecl, options)
     {
@@ -88,8 +95,8 @@ export class SpeedyProgram extends Function
         // options object
         options = Object.assign({
             // default options
-            renderToTexture: true, // render results to a texture?
-            pingpong: false, // alternate output texture between calls
+            renderToTexture: true,
+            pingpong: false,
         }, options);
 
 
@@ -628,7 +635,13 @@ UniformVariable.prototype.setValue = function(gl, value, texNo)
 
 
 
-
+/**
+ * @typedef {object} UBOStuff
+ * @property {WebGLBuffer} buffer
+ * @property {number} blockBindingIndex "global" binding index
+ * @property {number} blockIndex UBO "location" in the program
+ * @property {ArrayBufferView|null} data user-data
+ */
 
 /**
  * A helper class for handling Uniform Buffer Objects (UBOs)
@@ -637,9 +650,16 @@ UniformVariable.prototype.setValue = function(gl, value, texNo)
  */
 function UBOHelper(gl, program)
 {
+    /** @type {WebGL2RenderingContext} */
     this._gl = gl;
+
+    /** @type {WebGLProgram} */
     this._program = program;
+
+    /** @type {number} auto-increment counter */
     this._nextIndex = 0;
+
+    /** @type {Object.<string,UBOStuff>} UBO dictionary */
     this._ubo = Object.create(null);
 }
 
@@ -657,8 +677,8 @@ UBOHelper.prototype.set = function(name, data)
     if(this._ubo[name] === undefined) {
         this._ubo[name] = {
             buffer: gl.createBuffer(),
-            blockBindingIndex: this._nextIndex++, // "global" binding index
-            blockIndex: null, // UBO "location" in the program
+            blockBindingIndex: this._nextIndex++,
+            blockIndex: -1,
             data: null
         };
     }
@@ -667,8 +687,8 @@ UBOHelper.prototype.set = function(name, data)
     const ubo = this._ubo[name];
 
     // read block index & assign binding point
-    if(ubo.blockIndex === null) {
-        const blockIndex = gl.getUniformBlockIndex(this._program, name);
+    if(ubo.blockIndex < 0) {
+        const blockIndex = gl.getUniformBlockIndex(this._program, name); // GLuint
         gl.uniformBlockBinding(this._program, blockIndex, ubo.blockBindingIndex);
         ubo.blockIndex = blockIndex;
     }

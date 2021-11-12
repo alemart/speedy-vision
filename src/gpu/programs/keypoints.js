@@ -19,6 +19,7 @@
  * Facade for various keypoint detection algorithms
  */
 
+import { SpeedyGPU } from '../speedy-gpu';
 import { SpeedyProgramGroup } from '../speedy-program-group';
 import { SpeedyTexture, SpeedyDrawableTexture } from '../speedy-texture';
 import { importShader } from '../shader-declaration';

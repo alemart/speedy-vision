@@ -35,6 +35,7 @@ const DEFAULT_NUMBER_OF_BUFFERS = USE_TWO_BUFFERS ? 2 : 1;
 
 /**
  * A Queue that notifies observers when it's not empty
+ * @template T
  */
 class ObservableQueue extends Observable
 {
@@ -45,7 +46,7 @@ class ObservableQueue extends Observable
     {
         super();
 
-        /** @type {any[]} elements of the queue */
+        /** @type {T[]} elements of the queue */
         this._data = [];
     }
 
@@ -60,7 +61,7 @@ class ObservableQueue extends Observable
 
     /**
      * Enqueue an element
-     * @param {any} x
+     * @param {T} x
      */
     enqueue(x)
     {
@@ -70,7 +71,7 @@ class ObservableQueue extends Observable
 
     /**
      * Remove and return the first element of the queue
-     * @returns {any}
+     * @returns {T}
      */
     dequeue()
     {
@@ -80,6 +81,14 @@ class ObservableQueue extends Observable
         return this._data.shift();
     }
 }
+
+/** @typedef {number} BufferIndex */
+
+/**
+ * @typedef {object} Consumable helper for async GPU-CPU transfers
+ * @property {BufferIndex} bufferIndex
+ * @property {Uint8Array} pixelBuffer
+ */
 
 /**
  * Reads data from textures
@@ -97,10 +106,10 @@ export class SpeedyTextureReader
         /** @type {Uint8Array[]} pixel buffers for data transfers (each stores RGBA data) */
         this._pixelBuffer = (new Array(numberOfBuffers)).fill(null).map(() => new Uint8Array(0));
 
-        /** @type {ObservableQueue} for async data transfers (stores buffer indices) */
+        /** @type {ObservableQueue<Consumable>} for async data transfers */
         this._consumer = new ObservableQueue();
 
-        /** @type {ObservableQueue} for async data transfers (stores buffer indices) */
+        /** @type {ObservableQueue<BufferIndex>} for async data transfers (stores buffer indices) */
         this._producer = new ObservableQueue();
 
         /** @type {WebGLBuffer[]} Pixel Buffer Objects (PBOs) */
@@ -325,7 +334,7 @@ export class SpeedyTextureReader
      * @param {GLint} y
      * @param {GLsizei} width
      * @param {GLsizei} height
-     * @returns {SpeedyPromise}
+     * @returns {SpeedyPromise<void>}
      */
     static _readPixelsViaPBO(gl, pbo, outputBuffer, fbo, x, y, width, height)
     {

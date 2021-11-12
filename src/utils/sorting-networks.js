@@ -22,6 +22,10 @@
 import { AbstractMethodError } from './errors';
 
 /**
+ * @typedef {Array<[number,number]>} Sortnet
+ */
+
+/**
  * An abstract Sorting Network
  * @abstract
  */
@@ -31,7 +35,7 @@ class SortingNetwork
      * Generate a sequence of comparators for a
      * sorting network supporting n data points
      * @param {number} n number of data points
-     * @returns {Array<number[2]>}
+     * @returns {Sortnet}
      */
     static generate(n)
     {
@@ -40,9 +44,10 @@ class SortingNetwork
 
     /**
      * Sort the given data points using this network
-     * @param {Array} data data points
-     * @param {Function} [cmp] comparator function, as in Array.prototype.sort()
-     * @returns {Array} sorted data
+     * @template T
+     * @param {T[]} data data points
+     * @param {function(T, T): number} [cmp] comparator function, as in Array.prototype.sort()
+     * @returns {T[]} sorted data
      */
     static sort(data, cmp = ((a, b) => (+a) - (+b)))
     {
@@ -83,7 +88,7 @@ export class OddEvenMergesort extends SortingNetwork
      * Generate a sequence of comparators for a
      * sorting network supporting n data points
      * @param {number} n number of data points
-     * @returns {Array<number[2]>}
+     * @returns {Sortnet}
      */
     static generate(n)
     {
@@ -94,10 +99,10 @@ export class OddEvenMergesort extends SortingNetwork
     /**
      * Odd-Even Mergesort
      * @param {number} count number of data points
-     * @param {Array<number[2]>} net sorting network
+     * @param {Sortnet} net sorting network
      * @param {number} lo starting index
      * @param {number} n sequence length, a power of 2
-     * @returns {Array<number[2]>} net
+     * @returns {Sortnet} net
      */
     static _mergesort(count, net, lo, n)
     {
@@ -115,7 +120,7 @@ export class OddEvenMergesort extends SortingNetwork
     /**
      * Odd-Even Merge
      * @param {number} count number of data points
-     * @param {Array<number[2]>} net sorting network
+     * @param {Sortnet} net sorting network
      * @param {number} lo starting index
      * @param {number} n a power of 2
      * @param {number} jmp a power of 2

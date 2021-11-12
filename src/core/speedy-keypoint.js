@@ -34,7 +34,7 @@ export class SpeedyKeypoint
      * @param {number} [lod] Level-of-detail
      * @param {number} [rotation] Rotation in radians
      * @param {number} [score] Cornerness measure
-     * @param {?SpeedyKeypointDescriptor} [descriptor] Keypoint descriptor, if any
+     * @param {SpeedyKeypointDescriptor|null} [descriptor] Keypoint descriptor, if any
      */
     constructor(x, y, lod = 0.0, rotation = 0.0, score = 0.0, descriptor = null)
     {
@@ -121,7 +121,7 @@ export class SpeedyKeypoint
 
     /**
      * Keypoint descriptor
-     * @return {?SpeedyKeypointDescriptor}
+     * @return {SpeedyKeypointDescriptor|null}
      */
     get descriptor()
     {

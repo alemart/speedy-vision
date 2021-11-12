@@ -29,16 +29,28 @@ const asap = (typeof queueMicrotask !== 'undefined' && queueMicrotask) || // bro
              (f => Promise.resolve().then(f)); // most compatible
 
 /**
+ * @callback SpeedyPromiseResolveCallback
+ * @param {T} [value]
+ * @returns {void}
+ */
+
+/**
+ * @callback SpeedyPromiseRejectCallback
+ * @param {Error} error
+ * @returns {void}
+ */
+
+/**
  * SpeedyPromise: Super Fast Promises. SpeedyPromises can
  * interoperate with ES6 Promises. This implementation is
  * based on the Promises/A+ specification.
- * @template
+ * @template T
  */
 export class SpeedyPromise
 {
     /**
      * Constructor
-     * @param {Function} callback
+     * @param {function(SpeedyPromiseResolveCallback, SpeedyPromiseRejectCallback): void} callback
      */
     constructor(callback)
     {
@@ -62,9 +74,10 @@ export class SpeedyPromise
 
     /**
      * Setup handlers
-     * @param {Function} onFulfillment called when the SpeedyPromise is fulfilled
-     * @param {Function} [onRejection] called when the SpeedyPromise is rejected
-     * @returns {SpeedyPromise}
+     * @template U
+     * @param {function(T): U} onFulfillment called when the SpeedyPromise is fulfilled
+     * @param {function(Error): U|void} [onRejection] called when the SpeedyPromise is rejected
+     * @returns {SpeedyPromise<U>}
      */
     then(onFulfillment, onRejection = null)
     {
@@ -82,8 +95,9 @@ export class SpeedyPromise
 
     /**
      * Setup rejection handler
-     * @param {Function} onRejection called when the SpeedyPromise is rejected
-     * @returns {SpeedyPromise}
+     * @template U
+     * @param {function(Error): U|void} onRejection called when the SpeedyPromise is rejected
+     * @returns {SpeedyPromise<U>}
      */
     catch(onRejection)
     {
@@ -93,8 +107,9 @@ export class SpeedyPromise
     /**
      * Execute a callback when the promise is settled
      * (i.e., fulfilled or rejected)
-     * @param {Function} onFinally
-     * @returns {SpeedyPromise}
+     * @template U
+     * @param {function(): void} onFinally
+     * @returns {SpeedyPromise<U>}
      */
     finally(onFinally)
     {
@@ -105,7 +120,7 @@ export class SpeedyPromise
     /**
      * Start the computation immediately, synchronously.
      * Can't afford to spend any time at all waiting for micro-tasks, etc.
-     * @returns {SpeedyPromise} this
+     * @returns {SpeedyPromise<T>} this
      */
     turbocharge()
     {
@@ -145,8 +160,9 @@ export class SpeedyPromise
 
     /**
      * Creates a resolved SpeedyPromise
-     * @param {any} value
-     * @returns {SpeedyPromise}
+     * @template U
+     * @param {U} value
+     * @returns {SpeedyPromise<U>}
      */
     static resolve(value)
     {
@@ -167,8 +183,9 @@ export class SpeedyPromise
 
     /**
      * Creates a rejected SpeedyPromise
-     * @param {any} reason usually an instance of Error
-     * @returns {SpeedyPromise}
+     * @template U
+     * @param {Error} reason usually an instance of Error
+     * @returns {SpeedyPromise<U>}
      */
     static reject(reason)
     {
@@ -184,8 +201,11 @@ export class SpeedyPromise
      * in their given order. The returned SpeedyPromise will
      * resolve if all input promises resolve, or reject if
      * any input promise rejects.
-     * @param {iterable} iterable e.g., a SpeedyPromise[]
-     * @returns {SpeedyPromise}
+     * @template U
+     * @param {Iterable<U>} iterable e.g., a SpeedyPromise[]
+     * @returns {SpeedyPromise<U>}
+     *
+     * FIXME iterables need not be all <U>
      */
     static all(iterable)
     {
@@ -221,8 +241,9 @@ export class SpeedyPromise
      * Returns a promise that gets fulfilled or rejected as soon
      * as the first promise in the iterable gets fulfilled or
      * rejected (with its value/reason).
-     * @param {iterable} iterable e.g., a SpeedyPromise[]
-     * @returns {SpeedyPromise}
+     * @template U
+     * @param {Iterable<U>} iterable e.g., a SpeedyPromise[]
+     * @returns {SpeedyPromise<U>}
      */
     static race(iterable)
     {
@@ -250,7 +271,7 @@ export class SpeedyPromise
 
     /**
      * Fulfill this promise with a value
-     * @param {any} value
+     * @param {T} value
      */
     _fulfill(value)
     {
@@ -259,7 +280,7 @@ export class SpeedyPromise
 
     /**
      * Reject this promise with a reason
-     * @param {any} reason
+     * @param {Error} reason
      */
     _reject(reason)
     {
@@ -269,7 +290,7 @@ export class SpeedyPromise
     /**
      * Set the state and the value of this promise
      * @param {number} state
-     * @param {any} value
+     * @param {T|Error} value
      */
     _setState(state, value)
     {
@@ -372,7 +393,7 @@ export class SpeedyPromise
     /**
      * Promise Resolution Procedure
      * based on the Promises/A+ spec
-     * @param {any} x
+     * @param {T} x
      */
     _resolve(x)
     {
