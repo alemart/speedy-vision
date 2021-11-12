@@ -92,6 +92,7 @@ export class SpeedyMediaSource
 
     /**
      * Media width, in pixels
+     * @abstract
      * @returns {number}
      */
     get width()
@@ -101,6 +102,7 @@ export class SpeedyMediaSource
 
     /**
      * Media height, in pixels
+     * @abstract
      * @returns {number}
      */
     get height()
@@ -110,6 +112,7 @@ export class SpeedyMediaSource
 
     /**
      * Clone this media source
+     * @abstract
      * @returns {SpeedyPromise<SpeedyMediaSource>}
      */
     clone()
@@ -128,6 +131,7 @@ export class SpeedyMediaSource
 
     /**
      * Load the underlying media
+     * @abstract
      * @returns {SpeedyPromise<SpeedyMediaSource>}
      */
     _load()
