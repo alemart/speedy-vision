@@ -82,6 +82,7 @@ export class SpeedyPipelinePort
 
     /**
      * Connect this port to another
+     * @abstract
      * @param {SpeedyPipelinePort} port
      */
     connectTo(port)
@@ -91,6 +92,7 @@ export class SpeedyPipelinePort
 
     /**
      * Is this an input port?
+     * @abstract
      * @returns {boolean}
      */
     isInputPort()
@@ -147,6 +149,7 @@ export class SpeedyPipelinePort
 
     /**
      * Default port name
+     * @abstract
      * @returns {string}
      */
     static get DEFAULT_NAME()

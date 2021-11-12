@@ -176,6 +176,7 @@ export class SpeedyPipelineNode
 
     /**
      * Run the specific task of this node
+     * @abstract
      * @param {SpeedyGPU} gpu
      * @returns {void|SpeedyPromise<void>}
      */
@@ -367,6 +368,7 @@ export class SpeedyPipelineSinkNode extends SpeedyPipelineNode
 
     /**
      * Export data from this node to the user
+     * @abstract
      * @returns {SpeedyPromise<any>}
      */
     export()

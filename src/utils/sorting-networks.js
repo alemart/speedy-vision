@@ -34,6 +34,7 @@ class SortingNetwork
     /**
      * Generate a sequence of comparators for a
      * sorting network supporting n data points
+     * @abstract
      * @param {number} n number of data points
      * @returns {Sortnet}
      */

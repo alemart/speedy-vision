@@ -94,6 +94,7 @@ export class SpeedyPipelineMessage
 
     /**
      * Set parameters
+     * @abstract
      * @param  {...any} args
      * @returns {SpeedyPipelineMessage} this message
      */

@@ -82,6 +82,7 @@ export class SpeedyMediaSource
 
     /**
      * The type of the underlying media source
+     * @abstract
      * @returns {MediaType}
      */
     get type()

@@ -30,6 +30,7 @@ export class SpeedyNamespace
     /**
      * Namespaces can't be instantiated.
      * Only static methods are allowed.
+     * @abstract
      * @throws SpeedyError
      */
     constructor()

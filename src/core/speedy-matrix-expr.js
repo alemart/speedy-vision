@@ -187,6 +187,7 @@ export class SpeedyMatrixExpr
 
     /**
      * Evaluate this expression
+     * @abstract
      * @param {WebAssembly.Instance} wasm
      * @param {AugmentedMemory} memory
      * @returns {SpeedyMatrix}
@@ -272,6 +273,7 @@ class SpeedyMatrixUnaryOperationExpr extends SpeedyMatrixTempExpr
 
     /**
      * Compute the result of this operation
+     * @abstract
      * @param {WebAssembly.Instance} wasm
      * @param {AugmentedMemory} memory
      * @param {number} resultptr pointer to Mat32
@@ -345,6 +347,7 @@ class SpeedyMatrixBinaryOperationExpr extends SpeedyMatrixTempExpr
 
     /**
      * Compute the result of this operation
+     * @abstract
      * @param {WebAssembly.Instance} wasm
      * @param {AugmentedMemory} memory
      * @param {number} resultptr pointer to Mat32
