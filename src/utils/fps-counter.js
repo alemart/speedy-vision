@@ -21,7 +21,7 @@
 
 import { IllegalOperationError } from './errors';
 
-/** @type {number} update interval in milliseconds */
+/** @const {number} update interval in milliseconds */
 const UPDATE_INTERVAL = 500;
 
 /** @type {FPSCounter|null} Singleton */
