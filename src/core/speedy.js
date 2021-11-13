@@ -34,6 +34,9 @@ import { SpeedyPipelineVector2Factory } from './pipeline/factories/vector2-facto
 import { Utils } from '../utils/utils';
 import { LITTLE_ENDIAN } from '../utils/globals';
 
+/** @typedef {import('./speedy-media').SpeedyMediaOptions} SpeedyMediaOptions */
+/** @typedef {import('./speedy-media-source').SpeedyMediaSourceNativeElement} SpeedyMediaSourceNativeElement */
+
 // Constants
 const matrixFactory = new SpeedyMatrixFactory();
 const vector2Factory = new SpeedyPipelineVector2Factory();
@@ -45,18 +48,18 @@ export class Speedy
 {
     /**
      * Loads a SpeedyMedia object based on the provided source element
-     * @param {HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} sourceElement The source media
-     * @param {object} [options] Additional options for advanced configuration
+     * @param {SpeedyMediaSourceNativeElement} sourceElement The source media
+     * @param {SpeedyMediaOptions} [options] Additional options for advanced configuration
      * @returns {SpeedyPromise<SpeedyMedia>}
      */
-    static load(sourceElement, options = { })
+    static load(sourceElement, options = {})
     {
         return SpeedyMedia.load(sourceElement, options);
     }
 
     /**
      * Loads a camera stream
-     * @param {number|MediaStreamConstraints} [widthOrConstraints] width of the stream or contraints object
+     * @param {number | MediaStreamConstraints} [widthOrConstraints] width of the stream or contraints object
      * @param {number} [height] height of the stream
      * @returns {SpeedyPromise<SpeedyMedia>}
      */
@@ -106,6 +109,7 @@ export class Speedy
      * Create a 2D point
      * @param {number} x
      * @param {number} y
+     * @returns {SpeedyPoint2}
      */
     static Point2(x, y)
     {
@@ -116,6 +120,7 @@ export class Speedy
      * Create a new size object
      * @param {number} width
      * @param {number} height
+     * @returns {SpeedySize}
      */
     static Size(width, height)
     {
@@ -133,7 +138,7 @@ export class Speedy
 
     /**
      * Speedy Promises
-     * @returns {Function}
+     * @returns {typeof SpeedyPromise}
      */
     static get Promise()
     {
@@ -151,7 +156,7 @@ export class Speedy
 
     /**
      * Image-related nodes
-     * @returns {Function}
+     * @returns {typeof SpeedyPipelineImageFactory}
      */
     static get Image()
     {
@@ -160,7 +165,7 @@ export class Speedy
 
     /**
      * Image filters
-     * @returns {Function}
+     * @returns {typeof SpeedyPipelineFilterFactory}
      */
     static get Filter()
     {
@@ -169,7 +174,7 @@ export class Speedy
 
     /**
      * Image transforms
-     * @returns {Function}
+     * @returns {typeof SpeedyPipelineTransformFactory}
      */
     static get Transform()
     {
@@ -178,7 +183,7 @@ export class Speedy
 
     /**
      * Keypoint-related nodes
-     * @returns {Function}
+     * @returns {typeof SpeedyPipelineKeypointFactory}
      */
     static get Keypoint()
     {

@@ -211,8 +211,8 @@ export class ShaderDeclaration
             throw new IllegalOperationError(`Redefinition of externally defined constants of a shader`);
 
         // store and write the #defines
-        const defs = [];
-        for(const key of Object.keys(defines)) {
+        const defs = [], keys = Object.keys(defines);
+        for(const key of keys) {
             const value = Number(defines[key]); // force numeric values (just in case)
             this._defines.set(key, value);
             defs.push(`#define ${key} ${value}\n`);

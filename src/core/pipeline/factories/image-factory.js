@@ -121,7 +121,7 @@ export class SpeedyPipelineImageFactory extends SpeedyNamespace
 
     /**
      * Image Portals
-     * @returns {Function}
+     * @returns {typeof SpeedyPipelineImagePortalFactory}
      */
     static get Portal()
     {

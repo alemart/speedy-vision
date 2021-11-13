@@ -24,6 +24,8 @@ import { WebAssemblyError, TimeoutError, NotSupportedError } from '../utils/erro
 import { Utils } from '../utils/utils';
 import { LITTLE_ENDIAN } from '../utils/globals';
 
+/** @typedef {import('./speedy-matrix').SpeedyMatrix} SpeedyMatrix */
+
 /** @type {Uint8Array} WebAssembly binary */
 const WASM_BINARY = require('./wasm/speedy-matrix.wasm.txt');
 
@@ -34,7 +36,7 @@ let _instance = null;
 let _module = null;
 
 /**
- * @typedef {object} AugmentedMemory a union-like helper for accessing a WebAssembly.Memory
+ * @typedef {object} AugmentedMemory a union-like helper for accessing a WebAssembly.Memory object
  * @property {object} as
  * @property {WebAssembly.Memory} as.object
  * @property {Uint8Array} as.uint8

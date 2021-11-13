@@ -136,7 +136,7 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
 {
     /**
      * Keypoint detectors
-     * @returns {Function}
+     * @returns {typeof SpeedyPipelineKeypointDetectorFactory}
      */
     static get Detector()
     {
@@ -145,7 +145,7 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
 
     /**
      * Keypoint descriptors
-     * @returns {Function}
+     * @returns {typeof SpeedyPipelineKeypointDescriptorFactory}
      */
     static get Descriptor()
     {
@@ -154,7 +154,7 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
 
     /**
      * Keypoint trackers
-     * @returns {Function}
+     * @returns {typeof SpeedyPipelineKeypointTrackerFactory}
      */
     static get Tracker()
     {
@@ -163,7 +163,7 @@ export class SpeedyPipelineKeypointFactory extends SpeedyNamespace
 
     /**
      * Keypoint Portals
-     * @returns {Function}
+     * @returns {typeof SpeedyPipelineKeypointPortalFactory}
      */
     static get Portal()
     {

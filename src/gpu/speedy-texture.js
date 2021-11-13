@@ -115,9 +115,9 @@ export class SpeedyTexture
 
     /**
      * Upload pixel data to the texture. The texture will be resized if needed.
+     * @param {TexImageSource} pixels
      * @param {number} [width] in pixels
      * @param {number} [height] in pixels
-     * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} pixels
      * @return {SpeedyTexture} this
      */
     upload(pixels, width = this._width, height = this._height)
@@ -365,14 +365,13 @@ export class SpeedyTexture
         gl.bindTexture(gl.TEXTURE_2D, null);
         return texture;
     }
-
     /**
      * Upload pixel data to a WebGL texture
      * @param {WebGL2RenderingContext} gl
      * @param {WebGLTexture} texture
      * @param {GLsizei} width texture width
      * @param {GLsizei} height texture height
-     * @param {ImageBitmap|ImageData|ArrayBufferView|HTMLImageElement|HTMLVideoElement|HTMLCanvasElement} pixels
+     * @param {TexImageSource} pixels
      * @param {GLint} lod mipmap level-of-detail
      * @param {number} format
      * @param {number} internalFormat

@@ -36,12 +36,12 @@ export class SpeedyPipelinePortBuilder
 {
     /**
      * Constructor
-     * @param {Function} portClass input or output?
+     * @param {typeof SpeedyPipelinePort} portClass input or output?
      * @param {string} portName
      */
     constructor(portClass, portName)
     {
-        /** @type {Function} input or output? */
+        /** @type {typeof SpeedyPipelinePort} input or output? */
         this._class = portClass;
 
         /** @type {string} port name */

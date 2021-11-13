@@ -94,7 +94,10 @@ export class SpeedyProgramGroup
         // lazy instantiation of kernels
         Object.defineProperty(this, name, {
             get: (() => {
-                const key = Symbol(name);
+                // Why cast a symbol to symbol?
+                // Suppress error TS9005: Declaration emit for this file requires using private name 'key'.
+                //const key = Symbol(name);
+                const key = /** @type {symbol} */ ( Symbol(name) );
                 return () => this[key] || (this[key] = this._createProgram(shaderdecl, options));
             })()
         });
